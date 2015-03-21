@@ -235,6 +235,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VCInstallDir)include;$(WindowsSdkDir)include;..\externals</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -279,8 +280,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -471,8 +471,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2013|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2010|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2012|Win32'">NotUsing</PrecompiledHeader>
-	  <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">NotUsing</PrecompiledHeader>
-	  <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2012|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2012|x64'">NotUsing</PrecompiledHeader>
@@ -480,6 +480,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2010|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="dfgTest.cpp" />
+    <ClCompile Include="dfgTestBase.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">Create</PrecompiledHeader>
