@@ -489,6 +489,14 @@
     <ClCompile Include="dfgTestFunc.cpp" />
     <ClCompile Include="dfgTestGuid.cpp" />
     <ClCompile Include="dfgTestHash.cpp" />
+    <ClCompile Include="dfgTestIter.cpp" />
+    <ClCompile Include="dfgTestMath.cpp" />
+    <ClCompile Include="dfgTestMemory.cpp" />
+    <ClCompile Include="dfgTestMisc.cpp" />
+    <ClCompile Include="dfgTestNumeric.cpp" />
+    <ClCompile Include="dfgTestPhysics.cpp" />
+    <ClCompile Include="dfgTestRand.cpp" />
+    <ClCompile Include="dfgTestStr.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">Create</PrecompiledHeader>
