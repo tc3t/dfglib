@@ -162,7 +162,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     auto buffer = DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::fileToVector("testfiles/matrix_200x200.txt", 271040);
     const size_t nSumExpected = 12997224;
 #else
-    #if 0
+    #if 1
         auto buffer = DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::fileToVector("testfiles/matrix_1000x1000.txt", 6778362);
         EXPECT_FALSE(buffer.empty());
         const size_t nSumExpected = 325307649;
