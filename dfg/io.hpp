@@ -330,7 +330,7 @@ void advanceWhileNextIsAnyOf(Strm_T& strm, const Str_T& sMatchChars)
 // TODO: test
 // TODO: Make interface compatible with std::ostream.
 template <class Char_T, class BaseClass_T = std::basic_ostream<Char_T>>
-class DFG_CLASS_NAME(NullSink()
+class DFG_CLASS_NAME(NullSink)
 {
 public:
     typedef BaseClass_T BaseClass;

@@ -497,12 +497,15 @@
     <ClCompile Include="dfgTestAlg.cpp" />
     <ClCompile Include="dfgTestBase.cpp" />
     <ClCompile Include="dfgTestBits.cpp" />
+    <ClCompile Include="dfgTestColour.cpp" />
     <ClCompile Include="dfgTestCont.cpp" />
+    <ClCompile Include="dfgTestCrypt.cpp" />
     <ClCompile Include="dfgTestDataAnalysis.cpp" />
     <ClCompile Include="dfgTestDebug.cpp" />
     <ClCompile Include="dfgTestFunc.cpp" />
     <ClCompile Include="dfgTestGuid.cpp" />
     <ClCompile Include="dfgTestHash.cpp" />
+    <ClCompile Include="dfgTestIncludeAll.cpp" />
     <ClCompile Include="dfgTestIo.cpp" />
     <ClCompile Include="dfgTestIoDelimitedTextReader.cpp" />
     <ClCompile Include="dfgTestIoDelimitedTextWriter.cpp" />

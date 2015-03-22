@@ -110,5 +110,14 @@
     <ClCompile Include="dlibSource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dfgTestColour.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dfgTestCrypt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dfgTestIncludeAll.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
