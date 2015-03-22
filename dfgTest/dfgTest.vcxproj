@@ -482,6 +482,8 @@
     <ClCompile Include="dfgTest.cpp" />
     <ClCompile Include="dfgTestAlg.cpp" />
     <ClCompile Include="dfgTestBase.cpp" />
+    <ClCompile Include="dfgTestBits.cpp" />
+    <ClCompile Include="dfgTestCont.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">Create</PrecompiledHeader>
