@@ -282,7 +282,7 @@
     <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath);..\externals;..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinGW|MinGW'">
-    <IncludePath>$(IncludePath)</IncludePath>
+    <IncludePath>..\;..\externals;$(IncludePath)</IncludePath>
     <LibraryPath>$(MinGWPath);$(WindowsSdkDir)Lib</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">

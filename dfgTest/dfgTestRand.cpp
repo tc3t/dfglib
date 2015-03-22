@@ -39,8 +39,10 @@ TEST(dfgRand, dfgRand)
         EXPECT_TRUE(low <= val && val <= up);
     }
 
+#ifdef _MSC_VER // rand() is not available in MinGW.
     // Test non-seeded rand.
     EXPECT_NE(DFG_MODULE_NS(rand)::rand(), DFG_MODULE_NS(rand)::rand());
+#endif
 }
 
 TEST(dfgRand, defaultRandEng)
