@@ -465,6 +465,20 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\dfg\dfgCppAll.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2010|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2012|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2013|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2012|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2010|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2012|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2013|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2012|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\externals\gtest\gtest-all.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2012|Win32'">NotUsing</PrecompiledHeader>
@@ -489,14 +503,20 @@
     <ClCompile Include="dfgTestFunc.cpp" />
     <ClCompile Include="dfgTestGuid.cpp" />
     <ClCompile Include="dfgTestHash.cpp" />
+    <ClCompile Include="dfgTestIo.cpp" />
+    <ClCompile Include="dfgTestIoDelimitedTextReader.cpp" />
+    <ClCompile Include="dfgTestIoDelimitedTextWriter.cpp" />
     <ClCompile Include="dfgTestIter.cpp" />
     <ClCompile Include="dfgTestMath.cpp" />
     <ClCompile Include="dfgTestMemory.cpp" />
     <ClCompile Include="dfgTestMisc.cpp" />
     <ClCompile Include="dfgTestNumeric.cpp" />
+    <ClCompile Include="dfgTestOs.cpp" />
     <ClCompile Include="dfgTestPhysics.cpp" />
     <ClCompile Include="dfgTestRand.cpp" />
     <ClCompile Include="dfgTestStr.cpp" />
+    <ClCompile Include="dfgTestUtf.cpp" />
+    <ClCompile Include="dlibSource.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">Create</PrecompiledHeader>

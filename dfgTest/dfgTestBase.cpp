@@ -21,7 +21,7 @@ std::tuple<std::string, std::string, std::string> FunctionNameTest()
 TEST(dfg, Endian)
 {
 #ifdef _WIN32
-    EXPECT_EQ(dfg::ByteOrderLittleEndian, dfg::byteOrderHost());
+    EXPECT_EQ(DFG_ROOT_NS::ByteOrderLittleEndian, DFG_ROOT_NS::byteOrderHost());
 #endif
 }
 
@@ -101,32 +101,32 @@ TEST(dfg, IntTypedefs)
 TEST(dfg, round)
 {
     using namespace DFG_ROOT_NS;
-    EXPECT_EQ( dfg::round(1.99), 2.0 );
-    EXPECT_EQ( dfg::round(1.5), 2.0 );
-    EXPECT_EQ( dfg::round(1.1), 1.0 );
-    EXPECT_EQ( dfg::round(0.5), 1.0 );
-    EXPECT_EQ( dfg::round(-0.1), 0.0 );
-    EXPECT_EQ( dfg::round(-0.5), -1.0 );
-    EXPECT_EQ( dfg::round(-0.9), -1.0 );
-    EXPECT_EQ( dfg::round(-1.4), -1.0 );
-    EXPECT_EQ( dfg::round(-1.7), -2.0 );
-    EXPECT_EQ( dfg::round<int32>(int32_max + 0.1), int32_max );
-    EXPECT_EQ( dfg::round<int32>(int32_max - 0.4), int32_max );
-    EXPECT_EQ( dfg::round<int32>(int32_max - 0.5), int32_max );
-    EXPECT_EQ( dfg::round<int32>(int32_min + 0.5), int32_min );
-    EXPECT_EQ( dfg::round<int32>(int32_min + 0.1), int32_min );
-    EXPECT_EQ( dfg::round<int32>(int32_min - 0.1), int32_min );
-    EXPECT_EQ( dfg::round<uint32>(uint32_max + 0.499), uint32_max );
-    EXPECT_EQ( dfg::round<int8>(110.1), 110 );
-    EXPECT_EQ( dfg::round<int8>(-110.1), -110 );
+    EXPECT_EQ( DFG_ROOT_NS::round(1.99), 2.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(1.5), 2.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(1.1), 1.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(0.5), 1.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(-0.1), 0.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(-0.5), -1.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(-0.9), -1.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(-1.4), -1.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round(-1.7), -2.0 );
+    EXPECT_EQ( DFG_ROOT_NS::round<int32>(int32_max + 0.1), int32_max );
+    EXPECT_EQ( DFG_ROOT_NS::round<int32>(int32_max - 0.4), int32_max );
+    EXPECT_EQ( DFG_ROOT_NS::round<int32>(int32_max - 0.5), int32_max );
+    EXPECT_EQ( DFG_ROOT_NS::round<int32>(int32_min + 0.5), int32_min );
+    EXPECT_EQ( DFG_ROOT_NS::round<int32>(int32_min + 0.1), int32_min );
+    EXPECT_EQ( DFG_ROOT_NS::round<int32>(int32_min - 0.1), int32_min );
+    EXPECT_EQ( DFG_ROOT_NS::round<uint32>(uint32_max + 0.499), uint32_max );
+    EXPECT_EQ( DFG_ROOT_NS::round<int8>(110.1), 110 );
+    EXPECT_EQ( DFG_ROOT_NS::round<int8>(-110.1), -110 );
 
     // These should fail to compile
-    //dfg::round<std::string>(1.0);
-    //dfg::round<int64>(1.0);
-    //dfg::round<uint64>(1.0);
+    //DFG_ROOT_NS::round<std::string>(1.0);
+    //DFG_ROOT_NS::round<int64>(1.0);
+    //DFG_ROOT_NS::round<uint64>(1.0);
 
     // This should trigger assert.
-    //EXPECT_EQ( dfg::round<int8>(-129), 0 );
+    //EXPECT_EQ( DFG_ROOT_NS::round<int8>(-129), 0 );
 }
 
 namespace
