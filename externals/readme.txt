@@ -1,0 +1,1 @@
+Test project searches external libraries such as boost and dlib folders from here. Either add them here physically or use e.g. mklink to create symbolic links.

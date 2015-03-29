@@ -1,0 +1,164 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;cxx;c;def</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug_VC2010">
+      <UniqueIdentifier>{a01b6851-5d5e-47de-9aa0-042f99f8e773}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug_VC2013">
+      <UniqueIdentifier>{80fbfd0c-2a88-4dfe-987f-7865e0f10ee8}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug_VC2012">
+      <UniqueIdentifier>{aa1538a1-53fa-4dc4-b32f-9f4df4f5295c}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\MinGW">
+      <UniqueIdentifier>{0b66aa27-9f83-4967-b369-66f4eb1190ed}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release_VC2010">
+      <UniqueIdentifier>{e93b3f7c-259b-4465-878e-3d897fc8601e}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release_VC2013">
+      <UniqueIdentifier>{9d16fd34-932d-4bcf-9e07-de3f99289fd6}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release_VC2012">
+      <UniqueIdentifier>{ca9e019f-1d01-47af-8780-0faacfc14e00}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CsvItemModelExample.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_CsvItemModelExample.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dfg\qt\CsvItemModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dfg\qt\CsvTableView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2010\moc_CsvItemModelExample.cpp">
+      <Filter>Generated Files\Debug_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2013\moc_CsvItemModelExample.cpp">
+      <Filter>Generated Files\Debug_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2012\moc_CsvItemModelExample.cpp">
+      <Filter>Generated Files\Debug_VC2012</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\MinGW\moc_CsvItemModelExample.cpp">
+      <Filter>Generated Files\MinGW</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2010\moc_CsvItemModelExample.cpp">
+      <Filter>Generated Files\Release_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2013\moc_CsvItemModelExample.cpp">
+      <Filter>Generated Files\Release_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2012\moc_CsvItemModelExample.cpp">
+      <Filter>Generated Files\Release_VC2012</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2010\moc_CsvItemModel.cpp">
+      <Filter>Generated Files\Debug_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2013\moc_CsvItemModel.cpp">
+      <Filter>Generated Files\Debug_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2012\moc_CsvItemModel.cpp">
+      <Filter>Generated Files\Debug_VC2012</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\MinGW\moc_CsvItemModel.cpp">
+      <Filter>Generated Files\MinGW</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2010\moc_CsvItemModel.cpp">
+      <Filter>Generated Files\Release_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2013\moc_CsvItemModel.cpp">
+      <Filter>Generated Files\Release_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2012\moc_CsvItemModel.cpp">
+      <Filter>Generated Files\Release_VC2012</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2010\moc_CsvTableView.cpp">
+      <Filter>Generated Files\Debug_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2013\moc_CsvTableView.cpp">
+      <Filter>Generated Files\Debug_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2012\moc_CsvTableView.cpp">
+      <Filter>Generated Files\Debug_VC2012</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\MinGW\moc_CsvTableView.cpp">
+      <Filter>Generated Files\MinGW</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2010\moc_CsvTableView.cpp">
+      <Filter>Generated Files\Release_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2013\moc_CsvTableView.cpp">
+      <Filter>Generated Files\Release_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2012\moc_CsvTableView.cpp">
+      <Filter>Generated Files\Release_VC2012</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="CsvItemModelExample.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CsvItemModelExample.qrc">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CsvItemModelExample.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\dfg\qt\CsvItemModel.hpp">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\dfg\qt\CsvTableView.hpp">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="GeneratedFiles\ui_CsvItemModelExample.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
