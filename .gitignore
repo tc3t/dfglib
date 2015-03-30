@@ -53,3 +53,10 @@
 /dfgExamples/spectrumColourExample/GeneratedFiles
 /dfgTest/Win32/Debug_VC2010
 /dfgTest/Win32/Debug_VC2012
+/dfgExamples/csvExample/Debug_VC2010
+/dfgExamples/csvExample/Release_VC2010
+/dfgExamples/csvExample/Debug_VC2012
+/dfgExamples/csvExample/MinGW/MinGW
+/dfgExamples/csvExample/Debug_VC2013
+/dfgExamples/csvExample/csvUtf32Be.csv
+/dfgExamples/csvExample/csvUtf8.csv

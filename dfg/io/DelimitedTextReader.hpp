@@ -822,7 +822,7 @@ public:
     }
 
     // Overload enabling the use of user-defined container of type Table<UserStringType>.
-    template <class Stream_T, class Char_T, class StrCont_T>
+    template <class Char_T, class Stream_T, class StrCont_T>
     static void readTableToStringContainer(Stream_T& strm, const Char_T cSeparator, const Char_T cEnc, const Char_T eol, StrCont_T& dest)
     {
         CellData<Char_T> cellDataHandler(cSeparator, cEnc, eol);

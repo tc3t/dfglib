@@ -261,6 +261,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 func(iter->first);
         }
 
+        template <class Func_T>
+        void forEachFwdColumnIndex(Func_T&& func) const
+        {
+            for (auto iter = m_charBuffers.cbegin(), iterEnd = m_charBuffers.cend(); iter != iterEnd; ++iter)
+                func(iter->first);
+        }
+
         // Functor is given two parameters: row index and null terminated string for cell in (row, nCol).
         template <class Func_T>
         void forEachFwdRowInColumn(const Index_T nCol, Func_T&& func)
@@ -295,6 +302,20 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             const auto pred = [](const IndexPtrPair& a, const IndexPtrPair& b) {return a.first < b.first; };
             auto iter = std::lower_bound(colToRowCont.begin(), colToRowCont.end(), searchItem, pred);
             return (iter != colToRowCont.end() && iter->first == row) ? iter->second : nullptr;
+        }
+
+        Index_T cellCountNonEmpty() const
+        {
+            Index_T nCount = 0;
+            forEachFwdColumnIndex([&](Index_T col)
+            {
+                forEachFwdRowInColumn(col, [&](const Index_T, const Char_T* const psz)
+                {
+                    if (!DFG_MODULE_NS(str)::isEmptyStr(psz))
+                        nCount++;
+                });
+            });
+            return nCount;
         }
 
         /*
