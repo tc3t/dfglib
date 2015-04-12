@@ -7,17 +7,13 @@
 #include "buildConfig.hpp"
 #include <limits> // For maxValueOfType
 #include <utility> // For to_string
-#include <stdlib.h> // For byte swap.
+#include <cstdlib> // For byte swap.
 #include <stdint.h> // For wchar_t numericTraits
 #include <iterator>
 #include "scopedCaller.hpp"
 #include "rangeIterator.hpp"
 #include <cmath>
 #include <algorithm> // for std::max
-
-#if (DFG_MSVC_VER == 0)
-    #include <stdint.h>
-#endif
 
 #include "dfgBaseTypedefs.hpp"
 #include "bits/byteSwap.hpp"

@@ -82,7 +82,7 @@ auto integrate_function_adapt_simp(
     typedef decltype(a * f(a)) ResultType;
     typedef typename ValueType<ResultType>::type value_type;
 
-    if (b < a) // Original implementation required a < b. Didn't check whether it actually requires that, simlpy follow that.
+    if (b < a) // Original implementation required a < b so follow that.
         return value_type(-1) * integrate_function_adapt_simp(f, b, a, tol);
     else if (a == b)
         return ResultType(0); // "The only literal value that ought to be converted to a quantity by generic code is zero" (http://www.boost.org/doc/libs/1_55_0/doc/html/boost_units/FAQ.html#boost_units.FAQ.NoConstructorFromValueType) 
