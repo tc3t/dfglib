@@ -10,6 +10,7 @@
 #include <set>
 #include <list>
 #include <dfg/cont/arrayWrapper.hpp>
+#include <dfg/baseConstructorDelegate.hpp>
 
 std::tuple<std::string, std::string, std::string> FunctionNameTest()
 {
@@ -280,5 +281,22 @@ TEST(dfg, sizeInBytes)
     TEST_SIZE_IN_BYTES(std::string);
 
 #undef TEST_SIZE_IN_BYTES
+}
+
+class ConstructorDelegateTest
+{
+public:
+    DFG_CONSTRUCTOR_INITIALIZATION_DELEGATE_2(ConstructorDelegateTest, m_vec) {}
+
+    std::vector<int> m_vec;
+};
+
+TEST(dfg, ConstructorInitializationDelegate)
+{
+    const std::array<int, 3> arr = { 1, 2, 3 };
+    ConstructorDelegateTest test(std::begin(arr), std::end(arr));
+    EXPECT_EQ(1, test.m_vec[0]);
+    EXPECT_EQ(2, test.m_vec[1]);
+    EXPECT_EQ(3, test.m_vec[2]);
 }
 
