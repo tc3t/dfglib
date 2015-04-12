@@ -45,7 +45,7 @@ double floatIndexInSorted(const Iterable_T& iterable, const T& val)
         {
             auto prev = iter;
             --prev;
-            return std::distance(iterBegin, prev) + (val - *prev) / (*iter - *prev);
+            return static_cast<double>(std::distance(iterBegin, prev)) + (val - *prev) / (*iter - *prev);
         }
         else // Case: iter == iterBegin which means that val is <= *iterBegin.
         {
@@ -65,7 +65,7 @@ double floatIndexInSorted(const Iterable_T& iterable, const T& val)
         auto iterOneBeforeLast = iterLast;
         --iterOneBeforeLast;
         const auto lastBinWidth = *iterLast - *iterOneBeforeLast;
-        return (count(iterable) - 1) + (val - *iterLast) / lastBinWidth;
+        return static_cast<double>(count(iterable) - 1) + (val - *iterLast) / lastBinWidth;
     }
 }
 
