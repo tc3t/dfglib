@@ -94,6 +94,98 @@ void CreateTestMatrixFile(const size_t nDim)
     }
 }
 
+TEST(dfgIo, readBytes)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
+
+    const char szFilePath[] = "testfiles/matrix_3x3.txt";
+
+    // Test reading from BasicImStream
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        DFG_CLASS_NAME(BasicImStream) imStrm(szFilePath, DFG_COUNTOF_SZ(szFilePath));
+        const auto nRead = readBytes(imStrm, arrDest, sizeof(arrDest));
+        EXPECT_EQ(DFG_COUNTOF_SZ(szFilePath), nRead);
+        lastOf(arrDest) = '\0';
+        EXPECT_STREQ(szFilePath, arrDest);
+    }
+
+    // Test reading from BasicIfStream
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        DFG_CLASS_NAME(BasicIfStream) ifStrm(szFilePath);
+        const auto nRead = readBytes(ifStrm, arrDest, 5);
+        EXPECT_EQ(5, nRead);
+        arrDest[5] = '\0';
+        EXPECT_STREQ("8925,", arrDest);
+    }
+
+    // Test reading from std::istrstream
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        std::istrstream imStrm(szFilePath, DFG_COUNTOF_SZ(szFilePath));
+        const auto nRead = readBytes(imStrm, arrDest, sizeof(arrDest));
+        EXPECT_EQ(DFG_COUNTOF_SZ(szFilePath), nRead);
+        lastOf(arrDest) = '\0';
+        EXPECT_STREQ(szFilePath, arrDest);
+    }
+
+    // Test reading from std::ifstream
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        std::ifstream ifStrm(szFilePath);
+        const auto nRead = readBytes(ifStrm, arrDest, 5);
+        EXPECT_EQ(5, nRead);
+        arrDest[5] = '\0';
+        EXPECT_STREQ("8925,", arrDest);
+    }
+
+    // Test reading bytes from wchar_t buffer with BasicImStream_T
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        const wchar_t szData[4] = L"dfg";
+        DFG_CLASS_NAME(BasicImStream_T)<wchar_t> imStrm(szData, DFG_COUNTOF_SZ(szData));
+        const auto nRead = readBytes(imStrm, arrDest, 2 * sizeof(wchar_t));
+        EXPECT_EQ(2 * sizeof(wchar_t), nRead);
+        arrDest[3] = '\0';
+        EXPECT_EQ(L'd', *reinterpret_cast<const wchar_t*>(arrDest));
+        EXPECT_EQ(L'f', *reinterpret_cast<const wchar_t*>(arrDest + sizeof(wchar_t)));
+    }
+
+    // The same as above for std::wistream
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        const wchar_t szData[4] = L"dfg";
+        std::wistringstream imStrm(szData);
+        const auto nRead = readBytes(imStrm, arrDest, 2 * sizeof(wchar_t));
+        EXPECT_EQ(2 * sizeof(wchar_t), nRead);
+        arrDest[3] = '\0';
+        EXPECT_EQ(L'd', *reinterpret_cast<const wchar_t*>(arrDest));
+        EXPECT_EQ(L'f', *reinterpret_cast<const wchar_t*>(arrDest + sizeof(wchar_t)));
+    }
+
+    // Test reading bytes from wchar_t buffer with uneven byte count.
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        const wchar_t szData[4] = L"dfg";
+        DFG_CLASS_NAME(BasicImStream_T)<wchar_t> imStrm(szData, DFG_COUNTOF_SZ(szData));
+        const auto nRead = readBytes(imStrm, arrDest, sizeof(wchar_t) + 1);
+        EXPECT_EQ(sizeof(wchar_t), nRead);
+        EXPECT_EQ(L'd', *reinterpret_cast<const wchar_t*>(arrDest));
+    }
+
+    // The same as above for std::wistream.
+    {
+        char arrDest[DFG_COUNTOF(szFilePath)] = "";
+        const wchar_t szData[4] = L"dfg";
+        std::wistringstream imStrm(szData);
+        const auto nRead = readBytes(imStrm, arrDest, sizeof(wchar_t) + 1);
+        EXPECT_EQ(sizeof(wchar_t), nRead);
+        EXPECT_EQ(L'd', *reinterpret_cast<const wchar_t*>(arrDest));
+    }
+}
+
 TEST(dfgIo, DFG_CLASS_NAME(BasicIfStream))
 {
     const size_t nSumExpected = 12997224;

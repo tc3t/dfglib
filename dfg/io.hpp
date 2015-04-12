@@ -121,6 +121,17 @@ template <class StrmT> StrmT& readBinary(StrmT& istrm, void* pBuf, const size_t 
     return static_cast<StrmT&>(istrm.read(reinterpret_cast<char*>(pBuf), static_cast<std::streamsize>(nBufSize)));
 }
 
+// Reads bytes from stream and returns the number of bytes read.
+// If nMaxReadSize is not multiple of sizeof(char_type), used read count is biggest multiple of sizeof(char_type) that is less than nMaxReadSize.
+template <class Stream_T> size_t readBytes(Stream_T& istrm, char* pDest, const size_t nMaxReadSize)
+{
+    typedef typename Stream_T::char_type CharType;
+    const auto nReadCountInChars = nMaxReadSize / sizeof(CharType);
+    istrm.read(reinterpret_cast<CharType*>(pDest), nReadCountInChars);
+    const auto nRead = istrm.gcount() * sizeof(CharType);
+    return static_cast<size_t>(nRead);
+}
+
 // Provided for convenience: reads bytes to object of type T from binary stream.
 template <class Strm_T, class T>
 Strm_T& readBinary(Strm_T& istrm, T& obj)
@@ -132,30 +143,42 @@ Strm_T& readBinary(Strm_T& istrm, T& obj)
     return readBinary(istrm, &obj, sizeof(obj));
 }
 
+template <class Cont_T, class Stream_T>
+Cont_T readAllFromStream(Stream_T& istrm,
+                         const size_t nReadStepSize = 512,
+                         const size_t nSizeHint = 0,
+                         const size_t nMaxSize = NumericTraits<size_t>::maxValue)
+{
+    Cont_T cont;
+    if (nSizeHint > 0)
+        cont.reserve(nSizeHint);
+    while (istrm.good() && cont.size() < nMaxSize)
+    {
+        const auto nOldSize = cont.size();
+        cont.resize(nOldSize + nReadStepSize);
+        const auto nRead = readBytes(istrm, ptrToContiguousMemory(cont) + nOldSize, cont.size() - nOldSize);
+        cont.resize(nOldSize + nRead);
+    }
+    if (cont.size() > nMaxSize)
+        cont.resize(nMaxSize);
+    return std::move(cont);
+}
+
 // Reads file to contiguous container of bytes (e.g. std::vector<char>).
 // TODO: If no hint given, test file size and reserve based on that.
 // TODO: test
 template <class Cont_T, class Char_T>
 Cont_T fileToByteContainerImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T> sFilePath,
-                            const size_t nReadStepSize = 512,
-                            const size_t nSizeHint = 0,
-                            const size_t nMaxSize = NumericTraits<size_t>::maxValue
-                         )
+                               const size_t nReadStepSize = 512,
+                               const size_t nSizeHint = 0,
+                               const size_t nMaxSize = NumericTraits<size_t>::maxValue
+                              )
 {
     Cont_T cont;
     if (nSizeHint)
         cont.reserve(nSizeHint);
     DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) istrm(sFilePath);
-    while(istrm.good() && cont.size() < nMaxSize)
-    {
-        const auto nOldSize = cont.size();
-        cont.resize(nOldSize + nReadStepSize);
-        const auto nRead = istrm.fread(ptrToContiguousMemory(cont) + nOldSize, cont.size() - nOldSize);
-        cont.resize(static_cast<size_t>(nOldSize + nRead));
-    }
-    if (cont.size() > nMaxSize)
-        cont.resize(nMaxSize);
-    return cont;
+    return readAllFromStream<Cont_T>(istrm, nReadStepSize, nSizeHint, nMaxSize);
 }
 
 template <class Cont_T>

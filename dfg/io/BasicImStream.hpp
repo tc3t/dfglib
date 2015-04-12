@@ -40,8 +40,10 @@ public:
     }
 
     size_t countInCharsTotal() const { return m_pEnd - m_pBegin; }
+    size_t countInBytesTotal() const { return countInCharsTotal() * sizeof(char_type); }
 
     size_t countInCharsRemaining() const { return m_pEnd - m_pCurrent; }
+    size_t countInBytesRemaining() const { return countInCharsRemaining() * sizeof(char_type); }
 
     template <class T>
     T get(T valueIfUnableToGet)
@@ -56,6 +58,20 @@ public:
         const auto nReadCharCount = Min(nCharCount, countInCharsRemaining());
         memcpy(p, m_pCurrent, nReadCharCount * sizeof(char_type));
         m_pCurrent += nReadCharCount;
+    }
+
+    size_t readBytes(char* p, const size_t nCount)
+    {
+        const auto nRemainingCharCount = countInCharsRemaining();
+        const auto nRequestedCharCount = nCount / sizeof(char_type); // Note: In case of nCount not being multiple of sizeof(char_type), using floor value.
+
+        const auto nReadCharCount = Min(nRemainingCharCount, nRequestedCharCount);
+
+        const auto nReadByteCount = nReadCharCount * sizeof(char_type);
+
+        memcpy(p, m_pCurrent, nReadByteCount);
+        m_pCurrent += nReadCharCount;
+        return nReadByteCount;
     }
 
     size_t tellg() const
@@ -104,6 +120,12 @@ public:
         m_streamBuffer.read(p, nCharCount);
         return *this;
     }
+
+    size_t readBytes(char* p, const size_t nCount)
+    {
+        return m_streamBuffer.readBytes(p, nCount);
+    }
+
     inline PosType tellg() const
     {
         return m_streamBuffer.tellg();
@@ -117,5 +139,11 @@ public:
 };
 
 typedef DFG_CLASS_NAME(BasicImStream_T<char>) DFG_CLASS_NAME(BasicImStream);
+
+
+template <class T> inline size_t readBytes(DFG_CLASS_NAME(BasicImStream_T)<T>& istrm, char* pDest, const size_t nMaxReadSize)
+{
+    return istrm.readBytes(pDest, nMaxReadSize);
+}
 
 }} // module io
