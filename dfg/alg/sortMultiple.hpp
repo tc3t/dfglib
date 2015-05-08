@@ -35,6 +35,42 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
         return computeSortIndexes(sortSeq, [](const ElementT& a, const ElementT& b) {return a < b; });
     }
 
+    namespace DFG_DETAIL_NS
+    {
+        template <class T>
+        void DefaultSwapImpl(T& a, T& b)
+        {
+            // ADL (http://en.cppreference.com/w/cpp/language/adl)
+            using std::swap; 
+            swap(a, b);
+        }
+
+        template <class Arr_T, class SwapImpl_T>
+        void sortByIndexArray_tN_sN_WithSwapImpl(Arr_T& arr, std::vector<size_t> indexMap, SwapImpl_T swapImpl)
+        {
+            // indexMap[i] tells which index in seq should be placed as i'th element in sorted order.
+
+            const auto nSize = indexMap.size();
+
+            for (size_t i = 0; i < nSize; ++i)
+            {
+                auto iSrc = indexMap[i];
+                if (iSrc == i)
+                    continue;
+                auto iDest = i;
+                while (iSrc != i)
+                {
+                    swapImpl(arr[iDest], arr[iSrc]);
+                    indexMap[iDest] = iDest;
+                    iDest = iSrc;
+                    iSrc = indexMap[iDest];
+                }
+                indexMap[iDest] = iDest;
+            }
+
+        }
+    }
+
     // Sorts given array to order given by indexMap. indexMap[i] gives the index of element which should be located at i in the sorted order.
     // i.e. {arr[0], arr[1],..., arr[n]} -> {arr[indexMap[0]], arr[indexMap[1]],..., arr[indexMap[n]]}
     // Precondition: for all indexes i in indexMap, indexMap[i] >= 0 && indexMap[i] < indexMap.size() 
@@ -46,26 +82,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
     template <class Arr_T>
     void sortByIndexArray_tN_sN(Arr_T& arr, std::vector<size_t> indexMap)
     {
-        // indexMap[i] tells which index in seq should be placed as i'th element in sorted order.
-
-        const auto nSize = indexMap.size();
-
-        for (size_t i = 0; i < nSize; ++i)
-        {
-            auto iSrc = indexMap[i];
-            if (iSrc == i)
-                continue;
-            auto iDest = i;
-            while (iSrc != i)
-            {
-                std::swap(arr[iDest], arr[iSrc]);
-                indexMap[iDest] = iDest;
-                iDest = iSrc;
-                iSrc = indexMap[iDest];
-            }
-            indexMap[iDest] = iDest;
-        }
-
+        DFG_DETAIL_NS::sortByIndexArray_tN_sN_WithSwapImpl(arr, indexMap, &DFG_DETAIL_NS::DefaultSwapImpl<decltype(arr[0])>);
     }
 
     // Sorts multiple ranges with respect to first.

@@ -156,17 +156,24 @@ TEST(dfgAlg, forEachFwd)
     });
 
     {
+#ifdef _MSC_VER
+        const auto randImpl = []() { return DFG_MODULE_NS(rand)::rand(); };
+#else
+        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
+        const auto randImpl = [&]() { return DFG_MODULE_NS(rand)::rand(randEng); };
+#endif
+
         std::array<uint32, 100000> vals;
-        uint32 randVal = static_cast<uint32>(1 + 9 * DFG_MODULE_NS(rand)::rand());
+        uint32 randVal = static_cast<uint32>(1 + 9 * randImpl());
         if (randVal % 2 == 0)
             randVal++; // Make uneven so that char array won't be full of null's  at some point.
 
         #if ENABLE_RUNTIME_COMPARISONS && !defined(_DEBUG)
-            const size_t nLoopCount = 10000 + static_cast<size_t>(3 * DFG_MODULE_NS(rand)::rand());
+            const size_t nLoopCount = 10000 + static_cast<size_t>(3 * randImpl());
         #elif ENABLE_RUNTIME_COMPARISONS && defined(_DEBUG)
-            const size_t nLoopCount = 100 + static_cast<size_t>(3 * DFG_MODULE_NS(rand)::rand());
+            const size_t nLoopCount = 100 + static_cast<size_t>(3 * randImpl());
         #else
-            const size_t nLoopCount = 1 + static_cast<size_t>(3 * DFG_MODULE_NS(rand)::rand());
+            const size_t nLoopCount = 1 + static_cast<size_t>(3 * randImpl());
         #endif
 
         const auto fillUint32 = [&](std::array<uint32, 100000>& cont) {std::fill(cont.begin(), cont.end(), randVal); };
@@ -289,6 +296,19 @@ TEST(dfgAlg, floatIndexInSorted)
         EXPECT_EQ(3, floatIndexInSorted(arr, 4));
         EXPECT_EQ(3.5, floatIndexInSorted(arr, 6));
         EXPECT_EQ(4, floatIndexInSorted(arr, 8));
+    }
+}
+
+namespace SortMultipleAdl
+{
+    bool gAdlSwapCalled = false;
+
+    struct IntClass { int a; };
+
+    void swap(IntClass& a, IntClass& b)
+    {
+        std::swap(a.a, b.a);
+        gAdlSwapCalled = true;
     }
 }
 
@@ -439,6 +459,18 @@ TEST(dfgAlg, sortMultiple)
         EXPECT_TRUE(std::is_sorted(std::begin(arr0), std::end(arr0)));
         for (size_t i = 0; i < nSize; ++i)
             EXPECT_EQ(expected[arr0[i]], arr1[i]);
+    }
+
+    // ADL-usage
+    {
+        std::array<int, 2> arr0 = { 1, 0 };
+        std::array<SortMultipleAdl::IntClass, 2> arr1 = { 1, 2 };
+        sortMultiple(arr0, arr1);
+        EXPECT_EQ(0, arr0[0]);
+        EXPECT_EQ(1, arr0[1]);
+        EXPECT_EQ(2, arr1[0].a);
+        EXPECT_EQ(1, arr1[1].a);
+        EXPECT_TRUE(SortMultipleAdl::gAdlSwapCalled);
     }
 }
 
