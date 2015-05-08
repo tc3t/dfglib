@@ -113,7 +113,7 @@ namespace
 TEST(dfgAlg, forEachFwd)
 {
     using namespace DFG_ROOT_NS;
-    using namespace DFG_ROOT_NS::DFG_SUB_NS_NAME(alg);
+    using namespace DFG_MODULE_NS(alg);
     const double valsArray[] = {1,2,3,4};
     std::vector<double> vals(std::begin(valsArray), std::end(valsArray));
 
@@ -155,9 +155,10 @@ TEST(dfgAlg, forEachFwd)
         EXPECT_EQ(i + 2, d);
     });
 
+#if DFG_MSVC_VER != DFG_MSVC_VER_2010 // With VC2010, randImpl lambda causes error "'alg' : a namespace with this name does not exist"
     {
-#ifdef _MSC_VER
-        const auto randImpl = []() { return DFG_MODULE_NS(rand)::rand(); };
+#if defined(_MSC_VER)
+        auto randImpl = [](){ return DFG_MODULE_NS(rand)::rand(); };
 #else
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
         const auto randImpl = [&]() { return DFG_MODULE_NS(rand)::rand(randEng); };
@@ -166,7 +167,7 @@ TEST(dfgAlg, forEachFwd)
         std::array<uint32, 100000> vals;
         uint32 randVal = static_cast<uint32>(1 + 9 * randImpl());
         if (randVal % 2 == 0)
-            randVal++; // Make uneven so that char array won't be full of null's  at some point.
+            randVal++; // Make uneven so that char array won't be full of null's at some point.
 
         #if ENABLE_RUNTIME_COMPARISONS && !defined(_DEBUG)
             const size_t nLoopCount = 10000 + static_cast<size_t>(3 * randImpl());
@@ -195,6 +196,7 @@ TEST(dfgAlg, forEachFwd)
         
         forEachFwdPerformance<std::false_type, uint8>(makeSzRange(chars.data()), nLoopCountFactor * nLoopCount, charFiller, funcChar);
     }
+#endif
 }
 
 TEST(dfgAlg, generateAdjacent)
