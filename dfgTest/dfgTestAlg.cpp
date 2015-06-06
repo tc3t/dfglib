@@ -17,6 +17,7 @@
 #include <dfg/math.hpp>
 #include <functional>
 #include <memory>
+#include <complex>
 
 namespace
 {
@@ -542,5 +543,67 @@ TEST(dfgAlg, rank)
         const auto rankArr1 = rank(arr0, RankStrategyFractional, 5);
         EXPECT_EQ(rankExp1.size(), rankArr1.size());
         EXPECT_TRUE(std::equal(rankExp1.begin(), rankExp1.end(), rankArr1.begin()));
+    }
+}
+
+TEST(dfgAlg, findNearest)
+{
+    using namespace DFG_MODULE_NS(alg);
+
+    // Basic tests
+    {
+        const std::array<double, 12> arr0 = { 2, 1, 3, 2, 1, 3, 4, 1, 2, 0, 3, 3 };
+
+        const auto nearestN1 = findNearest(arr0, -1);
+        const auto nearest0 = findNearest(arr0, 0);
+        const auto nearest0d4 = findNearest(arr0, 0.4);
+        const auto nearest0d5 = findNearest(arr0, 0.5);
+        const auto nearest0d51 = findNearest(arr0, 0.51);
+        const auto nearest1 = findNearest(arr0, 0.51);
+        const auto nearest3d4 = findNearest(arr0, 3.4);
+        const auto nearest4 = findNearest(arr0, 4);
+        const auto nearest10 = findNearest(arr0, 10);
+        EXPECT_EQ(0, *nearestN1);
+        EXPECT_EQ(9, nearestN1 - arr0.begin());
+        EXPECT_EQ(0, *nearest0);
+        EXPECT_EQ(9, nearest0 - arr0.begin());
+        EXPECT_EQ(0, *nearest0d4);
+        EXPECT_EQ(9, nearest0d4 - arr0.begin());
+        EXPECT_EQ(1, *nearest0d5);
+        EXPECT_EQ(1, nearest0d5 - arr0.begin());
+        EXPECT_EQ(1, *nearest0d51);
+        EXPECT_EQ(1, nearest0d51 - arr0.begin());
+        EXPECT_EQ(1, *nearest1);
+        EXPECT_EQ(1, nearest1 - arr0.begin());
+        EXPECT_EQ(3, *nearest3d4);
+        EXPECT_EQ(2, nearest3d4 - arr0.begin());
+        EXPECT_EQ(4, *nearest4);
+        EXPECT_EQ(6, nearest4 - arr0.begin());
+        EXPECT_EQ(4, *nearest10);
+        EXPECT_EQ(6, nearest10 - arr0.begin());
+    }
+
+    // Test custom difference function.
+    {
+        std::vector<std::complex<double>> vecVals;
+        vecVals.push_back(std::complex<double>(1));
+        vecVals.push_back(std::complex<double>(3));
+        vecVals.push_back(std::complex<double>(5));
+        vecVals.push_back(std::complex<double>(7));
+        vecVals.push_back(std::complex<double>(9));
+        std::array<double, 1> searchElem = {3};
+        const auto diffLb = [](const std::complex<double>& c, const std::array<double, 1>& val) {return std::abs(c.real() - val[0]); };
+        const auto diffUb = [](const std::array<double, 1>& val, const std::complex<double>& c) {return std::abs(c.real() - val[0]); };
+        std::lower_bound(vecVals.begin(), vecVals.end(), searchElem, diffLb);
+        std::upper_bound(vecVals.begin(), vecVals.end(), searchElem, diffUb);
+        const auto nearest = findNearest(vecVals, searchElem, diffLb);
+        EXPECT_EQ(3, nearest->real());
+        EXPECT_EQ(1, nearest - vecVals.begin());
+    }
+
+    // Test empty range
+    {
+        std::vector<double> v;
+        EXPECT_EQ(v.end(), findNearest(v, 0));
     }
 }

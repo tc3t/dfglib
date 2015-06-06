@@ -6,6 +6,7 @@
 #include "ptrToContiguousMemory.hpp"
 #include "alg/generateAdjacent.hpp"
 #include <iterator> // std::distance
+#include "cont/ElementType.hpp"
 
 // TODO: Check usage of std::begin/end. Should it use dfg-defined begin/end (e.g. in case that the used environment does not provide those?)
 
@@ -130,26 +131,26 @@ void fill(RangeT& range, const ValueT& val)
     std::fill(std::begin(range), std::end(range), val);
 }
 
-// Returns iterator to the element that is nearest to "val", where the distance is determined by diff abs.
-// TODO: test
-template <class Iterable_T, class Value_T>
-auto findNearest(const Iterable_T& iterable, const Value_T& val) -> decltype(iterable.begin())
+// Returns iterator to the element that is nearest to "val", where the distance is determined by given function.
+// DiffFunc_T shall return non-negative value.
+// DiffFunc_T takes two parameters: (ElementOfIterable, Value_T)
+// In case of multiple minimum value items, returns iterator to the first occurrence.
+template <class Iterable_T, class Value_T, class DiffFunc_T>
+auto findNearest(const Iterable_T& iterable, const Value_T& val, DiffFunc_T diffFunc) -> decltype(iterable.begin())
 {
-    typedef double DiffType;
-    auto diffFunc = std::minus<DiffType>();
     const auto iterEnd = iterable.end();
     if (iterable.begin() == iterEnd)
         return iterEnd;
     auto iter = iterable.begin();
-    auto smallestDiff = diffFunc(val, *iter);
+    auto smallestDiff = diffFunc(*iter, val);
     if (smallestDiff == 0)
         return iter;
     auto iterSmallest = iter;
     ++iter;
     for(; iter != iterEnd; ++iter)
     {
-        const DiffType newDiff = diffFunc(val, *iter);
-        if (std::abs(newDiff) < std::abs(smallestDiff))
+        const auto newDiff = diffFunc(*iter, val);
+        if (newDiff < smallestDiff)
         {
             smallestDiff = newDiff;
             iterSmallest = iter;
@@ -158,6 +159,14 @@ auto findNearest(const Iterable_T& iterable, const Value_T& val) -> decltype(ite
         }
     }
     return iterSmallest;
+}
+
+// Returns iterator to the element that is nearest to "val", where the distance is determined by absolute value of difference (operator-).
+template <class Iterable_T, class Value_T>
+auto findNearest(const Iterable_T& iterable, const Value_T& val) -> decltype(iterable.begin())
+{
+    typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Iterable_T>::type ElemT;
+    return findNearest(iterable, val, [](const ElemT& e, const Value_T& v) {return std::abs(v - e); });
 }
 
 // ForEach version where the function gets iterator instead of the object itself.
