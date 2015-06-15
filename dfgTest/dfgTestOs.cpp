@@ -83,7 +83,8 @@ TEST(dfgOs, TemporaryFile)
     EXPECT_FALSE(isPathFileAvailable(sTfPath.c_str(), FileModeExists));
     EXPECT_FALSE(isPathFileAvailable(sTfWPath.c_str(), FileModeExists));
 
-    // Test temp file path which has character outside latin1
+#ifdef _MSC_VER
+    // Test temp file path which has character outside latin1. 
     {
         const wchar_t cEuroSign[2] = { 0x20AC , 0 };
         DFG_CLASS_NAME(TemporaryFileStream) tf(nullptr, cEuroSign, nullptr, L"dfgTestTemp");
@@ -103,4 +104,5 @@ TEST(dfgOs, TemporaryFile)
         }
         EXPECT_TRUE(isPathFileAvailable(sPath.c_str(), FileModeExists));
     }
+#endif
 }
