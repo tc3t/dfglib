@@ -206,11 +206,11 @@ Iter_T removeIf(Iter_T begin, Iter_T end, Pred_T p)
     return begin;
 }
 
-// Given two ranges {a0, a1, ..., an} and {b0, b1, ..., bn), erases all items ai where corresponding
+// Given two ranges {a0, a1, ..., an} and {b0, b1, ..., bn}, erases all items ai where corresponding
 // bi is false.
 // TODO: test
 template <class Cont_T, class FlagCont_T>
-void eraseByFlags(Cont_T& cont, const FlagCont_T& flags)
+void keepByFlags(Cont_T& cont, const FlagCont_T& flags)
 {
     auto flagIter = cbegin(flags);
     auto iterValidEnd = removeIf(cont.begin(), cont.end(), [&](typename Cont_T::value_type&) -> bool
@@ -219,7 +219,7 @@ void eraseByFlags(Cont_T& cont, const FlagCont_T& flags)
         {
             const bool b = *flagIter;
             ++flagIter;
-            return b;
+            return !b;
         }
         else
             return false;
