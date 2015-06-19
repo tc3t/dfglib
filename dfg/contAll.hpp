@@ -10,4 +10,5 @@
 #include "cont/valueArray.hpp"
 #include "cont/vectorFixedCapacity.hpp"
 #include "cont/vectorSso.hpp"
+#include "cont/ViewableSharedPtr.hpp"
 

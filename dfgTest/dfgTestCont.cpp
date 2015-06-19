@@ -6,6 +6,7 @@
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/dfgBase.hpp>
 #include <dfg/cont/valueArray.hpp>
+#include <dfg/cont/ViewableSharedPtr.hpp>
 
 TEST(dfgCont, makeVector)
 {
@@ -252,3 +253,61 @@ TEST(dfgCont, ValueArray)
 
     // TODO: define interface for ValueArray by test cases.
 }
+
+#if DFG_LANGFEAT_MUTEX_11
+
+TEST(dfgCont, ViewableSharedPtr)
+{
+    using namespace DFG_MODULE_NS(cont);
+
+    int resetNotifier0 = 0;
+    int resetNotifier1 = 0;
+    int resetNotifier2 = 0;
+
+    DFG_CLASS_NAME(ViewableSharedPtr)<const int> sp(std::make_shared<int>(1));
+    auto spViewer0 = sp.createViewer();
+    auto spViewer1 = sp.createViewer();
+    sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer0.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier0; });
+    sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer1.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier1; });
+
+    EXPECT_EQ(1, *spViewer0->view());
+    EXPECT_EQ(1, *spViewer1->view());
+    EXPECT_EQ(0, resetNotifier0);
+    EXPECT_EQ(0, resetNotifier1);
+
+    sp.reset(std::make_shared<int>(2));
+
+    EXPECT_EQ(2, *spViewer0->view());
+    EXPECT_EQ(2, *spViewer0->view());
+    EXPECT_EQ(1, resetNotifier0);
+    EXPECT_EQ(1, resetNotifier1);
+
+    // Test automatic handling of short-lived viewer (e.g. automatic removal of reset notifier).
+    {
+        auto spViewer2 = sp.createViewer();
+        EXPECT_EQ(2, *spViewer2->view());
+        sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer2.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier2; });
+    }
+    sp.reset(std::make_shared<int>(3));
+    EXPECT_EQ(3, *spViewer0->view());
+    EXPECT_EQ(3, *spViewer1->view());
+    EXPECT_EQ(2, resetNotifier0);
+    EXPECT_EQ(2, resetNotifier1);
+    EXPECT_EQ(0, resetNotifier2);
+
+    spViewer0.reset();
+    sp.reset(std::make_shared<int>(4));
+    EXPECT_EQ(2, resetNotifier0);
+    EXPECT_EQ(3, resetNotifier1);
+    EXPECT_EQ(4, *spViewer1->view());
+    auto spCopy = sp.sharedPtrCopy();
+    auto pData = sp.get();
+    sp.reset();
+    EXPECT_EQ(4, resetNotifier1);
+    EXPECT_TRUE(spCopy.unique());
+    EXPECT_EQ(nullptr, spViewer1->view().get());
+    EXPECT_EQ(4, *spCopy);
+    EXPECT_EQ(pData, spCopy.get());
+}
+
+#endif // DFG_LANGFEAT_MUTEX_11

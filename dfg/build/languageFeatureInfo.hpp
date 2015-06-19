@@ -20,3 +20,9 @@
     #define DFG_LANGFEAT_TYPETRAITS_11  0
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2012)
+    #define DFG_LANGFEAT_MUTEX_11  0
+#else
+    #define DFG_LANGFEAT_MUTEX_11  1
+#endif
+
