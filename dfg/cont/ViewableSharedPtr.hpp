@@ -5,7 +5,9 @@
 
 #if DFG_LANGFEAT_MUTEX_11
 
-#include <mutex>
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS // VC2012 generates C4265 "class has virtual functions, but destructor is not virtual" from <mutex>.
+    #include <mutex>
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #include <map>
 #include <functional>
 
