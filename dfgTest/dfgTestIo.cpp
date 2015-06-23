@@ -659,7 +659,28 @@ TEST(dfgIo, IfStreamWithEncoding)
     EXPECT_EQ(strmStd.rdstate(), strm.rdstate());
     EXPECT_EQ(strmStd.good(), strm.good());
 }
-#endif
+
+TEST(dfgIo, IfStreamWithEncodingReadOnlyFile)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
+
+    const char szPath[] = "testfiles/IfStreamWithEncodingReadOnlyFile.temp";
+
+    OfStreamWithEncoding ostrm(szPath, encodingUTF32Be);
+    const char szText[] = "text";
+    ostrm << szText;
+    ostrm.flush(); // Note: this also tests OfStreamWithEncoding::flush().
+
+    DFG_CLASS_NAME(IfStreamWithEncoding) strm(szPath);
+    std::ifstream strmStd(szPath);
+    EXPECT_EQ(strmStd.is_open(), strm.is_open());
+    EXPECT_EQ(strmStd.good(), strm.good());
+    std::string s;
+    strm >> s;
+    EXPECT_EQ(szText, s);
+}
+#endif // __MINGW32__
 
 TEST(dfgIo, OfStreamWithEncoding)
 {

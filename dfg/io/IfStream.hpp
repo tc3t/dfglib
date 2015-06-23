@@ -5,6 +5,8 @@
 #include "IfmmStream.hpp"
 #include "ImStreamWithEncoding.hpp"
 #include "StreamBufferMem.hpp"
+#include "BasicIfStream.hpp"
+#include "fileToByteContainer.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -24,13 +26,21 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         DFG_CLASS_NAME(IfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding)
         {
             // Hack: for now just read it all and use in-memory parsing classes.
+            bool bRetry = true;
             try // open will throw e.g. if file is not found.
             {
                 m_memoryMappedFile.open(sPath);
                 m_spStreamBufferCont.reset(new DFG_CLASS_NAME(StreamBufferMemWithEncoding)(m_memoryMappedFile.data(), m_memoryMappedFile.size(), encoding));
+                bRetry = false;
             }
             catch (std::exception&)
             {
+            }
+            if (bRetry)
+            {
+                m_fallback = fileToVector(sPath);
+                if (!m_fallback.empty())
+                    m_spStreamBufferCont.reset(new DFG_CLASS_NAME(StreamBufferMemWithEncoding)(m_fallback.data(), m_fallback.size(), encoding));
             }
         }
 
@@ -50,6 +60,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         DFG_CLASS_NAME(FileMemoryMapped) m_memoryMappedFile;
+        std::vector<char> m_fallback; // Hack: Temporary solution for m_memoryMappedFile not being able to open if file is in use but readable. In this case read the file to a vector.
 
         // TODO: This member doesn't need to be heap allocated. Currently done like this to avoid need for reinitialization
         // of stream buffer.
@@ -67,6 +78,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
             if (!m_strmBuffer.is_open())
                 setstate(std::ios::failbit);
+        }
+
+        bool is_open() const
+        {
+            return m_strmBuffer.is_open();
         }
 
         DFG_CLASS_NAME(IfStreamBufferWithEncoding) m_strmBuffer;
