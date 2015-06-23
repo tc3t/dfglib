@@ -137,12 +137,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
 
             bool isOpen() const { return m_ostrm.is_open(); }
 
-            static StringT generateRandomFileNamePart(const int nCountRequest = 8)
+            static StringT generateRandomFileNamePart(const size_t nCountRequest = 8)
             {
                 StringT s;
                 std::random_device rd;
                 std::uniform_int_distribution<int> uid(0, 35);
-                const auto nEffectiveCount = Min(nCountRequest, 64); // Allow 64 random chars at max (rather arbitrary choice, change if need be).
+                const auto nEffectiveCount = Min(nCountRequest, size_t(64)); // Allow 64 random chars at max (rather arbitrary choice, change if need be).
                 for (int i = 0; i < nEffectiveCount; ++i)
                 {
                     const auto val = uid(rd);
