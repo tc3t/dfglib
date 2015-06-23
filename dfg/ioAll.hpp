@@ -7,6 +7,7 @@
 #include "io/BasicIStreamCRTP.hpp"
 #include "io/DelimitedTextReader.hpp"
 #include "io/DelimitedTextWriter.hpp"
+#include "io/fileToByteContainer.hpp"
 #include "io/IfmmStream.hpp"
 #include "io/IfStream.hpp"
 #include "io/ImcByteStream.hpp"
