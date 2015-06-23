@@ -7,6 +7,7 @@
 #include "cont/mapFlat.hpp"
 #include "cont/setFlat.hpp"
 #include "cont/table.hpp"
+#include "cont/TorRef.hpp"
 #include "cont/valueArray.hpp"
 #include "cont/vectorFixedCapacity.hpp"
 #include "cont/vectorSso.hpp"

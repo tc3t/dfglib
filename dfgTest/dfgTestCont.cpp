@@ -7,6 +7,7 @@
 #include <dfg/dfgBase.hpp>
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
+#include <dfg/cont/TorRef.hpp>
 
 TEST(dfgCont, makeVector)
 {
@@ -311,3 +312,87 @@ TEST(dfgCont, ViewableSharedPtr)
 }
 
 #endif // DFG_LANGFEAT_MUTEX_11
+
+namespace
+{
+    template <class T>
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<T> TorRefHelper(T& item, const bool bRef)
+    {
+        using namespace DFG_MODULE_NS(cont);
+        if (bRef)
+            return &item;
+        else
+            return DFG_CLASS_NAME(TorRef)<T>::makeInternallyOwned(item);
+    }
+}
+
+TEST(dfgCont, TorRef)
+{
+    using namespace DFG_MODULE_NS(cont);
+
+    // Basic test with non-const T.
+    {
+        DFG_CLASS_NAME(TorRef)<int> tor;
+        EXPECT_FALSE(tor.hasRef());
+        int& ref = tor;
+        EXPECT_EQ(0, ref);
+    }
+
+    // // Basic test with const T.
+    {
+        DFG_CLASS_NAME(TorRef)<const int> tor;
+        EXPECT_FALSE(tor.hasRef());
+        const int& ref = tor;
+        EXPECT_EQ(0, ref);
+    }
+
+    // Basic test with non-integral type.
+    {
+        std::vector<double> vec;
+        auto rvRef = TorRefHelper(vec, true);
+        EXPECT_TRUE(rvRef.hasRef());
+        EXPECT_EQ(&vec, &rvRef.item());
+        EXPECT_TRUE(rvRef->empty()); // Test operator-> overload.
+        rvRef->resize(2); // Test calling non-const.
+
+        const auto rvNonRef = TorRefHelper(vec, false);
+        EXPECT_FALSE(rvNonRef.hasRef());
+        EXPECT_EQ(rvNonRef.internalStorage().itemPtr(), &rvNonRef.item());
+    }
+
+    // Basic test with non-integral const type.
+    {
+        const std::vector<double> vec;
+        const auto rvRef = TorRefHelper(vec, true);
+        EXPECT_TRUE(rvRef.hasRef());
+        EXPECT_EQ(&vec, &rvRef.item());
+        EXPECT_TRUE(rvRef->empty()); // Test operator-> overload.
+        //rvRef->resize(2); // This should fail to compile because vec is const.
+
+        const auto rvNonRef = TorRefHelper(vec, false);
+        EXPECT_FALSE(rvNonRef.hasRef());
+        EXPECT_EQ(rvNonRef.internalStorage().itemPtr(), &rvNonRef.item());
+    }
+
+    // Basic test with shared_ptr reference.
+    {
+        auto sp = std::make_shared<const int>(10);
+        DFG_CLASS_NAME(TorRefShared)<const int> rv(sp);
+        EXPECT_TRUE(rv.hasRef());
+        EXPECT_EQ(10, rv.item());
+        EXPECT_EQ(2, sp.use_count());
+
+        // Test that reference is alive even after the original shared_ptr get's reset.
+        sp.reset();
+        EXPECT_EQ(1, rv.referenceObject().use_count());
+        EXPECT_EQ(10, rv.item());
+    }
+
+    // // Basic test with stack storage.
+    {
+        DFG_CLASS_NAME(TorRef)<const int, DFG_DETAIL_NS::TorRefInternalStorageStack<int>> tor;
+        EXPECT_FALSE(tor.hasRef());
+        const int& ref = tor;
+        EXPECT_EQ(0, ref);
+    }
+}
