@@ -30,15 +30,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
 		// Returns the smallest row index in the current view selection,
 		// row count if no selection exists.
-		int getFirstSelectedViewRow();
+		int getFirstSelectedViewRow() const;
 
-		QModelIndex getFirstSelectedItem(QAbstractProxyModel* pProxy);
+		QModelIndex getFirstSelectedItem(QAbstractProxyModel* pProxy) const;
 
 		// Returns list of row indexes of column @p nCol.
 		// If proxy model is given, the returned indexes will correspond
 		// to the indexes of the underlying model, otherwise they will be
 		// {0, 1,..., rowCount()-1}
-		std::vector<int> getRowsOfCol(const int nCol, QAbstractProxyModel* pProxy);
+		std::vector<int> getRowsOfCol(const int nCol, QAbstractProxyModel* pProxy) const;
 
 		// Returned list is free of duplicates. If @p pProxy != nullptr,
 		// the selected indexes will be mapped by the proxy.
