@@ -221,13 +221,13 @@ DFG_CLASS_NAME(CsvItemModel)* DFG_CLASS_NAME(CsvTableView)::csvModel()
 	return (pProxyModel) ? dynamic_cast<CsvModel*>(pProxyModel->sourceModel()) : nullptr;
 }
 
-int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow()
+int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow() const
 {
 	const auto& contItems = getRowsOfSelectedItems(nullptr);
 	return (!contItems.empty()) ? *contItems.begin() : model()->rowCount();
 }
 
-std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, QAbstractProxyModel* pProxy)
+std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, QAbstractProxyModel* pProxy) const
 {
 	std::vector<int> vec(model()->rowCount());
 	if (!pProxy)
@@ -276,7 +276,7 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(QAbstractP
 	return vRows;
 }
 
-QModelIndex DFG_CLASS_NAME(CsvTableView)::getFirstSelectedItem(QAbstractProxyModel* pProxy)
+QModelIndex DFG_CLASS_NAME(CsvTableView)::getFirstSelectedItem(QAbstractProxyModel* pProxy) const
 {
 	QModelIndexList listSelected = selectedIndexes();
 	if (listSelected.empty())
