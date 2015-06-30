@@ -184,7 +184,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 	signals:
 		void sigModifiedStatusChanged(bool bNewStatus);
 
-	private:
+	protected:
 		// Clears internal data. Caller should make sure this call
 		// is done within appropriate resetmodel-calls.
 		void clear();
@@ -193,7 +193,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 		//QUndoStack* m_pUndoStack;
 		std::vector<std::vector<QString>> m_vecData; // TODO: revise the data structure. Use Table?
 
-	private:
+	//private:
 
 		std::vector<ColInfo> m_vecColInfo;
 		QString m_sFilePath;
