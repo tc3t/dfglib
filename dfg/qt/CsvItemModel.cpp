@@ -418,9 +418,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnCells(const int n
 {
     if (!isValidColumn(nCol))
         return;
-    for(size_t i = 0; i<m_vecData.size(); ++i)
+    for (size_t r = 0, nCount = m_vecData.size(); r<nCount; ++r)
     {
-        m_vecData[i][nCol] = vecStrings[i];
+        setItem(r, nCol, vecStrings[r]);
     }
     if (!m_bResetting)
         emit dataChanged(this->index(0, nCol), this->index(getRowCount()-1, nCol));
