@@ -443,6 +443,45 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<QString> m_vecStringsNew;
     };
 
+    class DFG_CLASS_NAME(CsvTableViewHeaderActionRenameColumn) : public QUndoCommand
+    {
+    public:
+        DFG_CLASS_NAME(CsvTableViewHeaderActionRenameColumn)(DFG_CLASS_NAME(CsvTableView)* pView, const int nCol, const QString& sNew)
+            : m_pView(pView), m_nWhere(nCol), m_sColumnNameNew(sNew)
+        {
+            auto pModel = (m_pView) ? m_pView->csvModel() : nullptr;
+            if (!pModel)
+                return;
+ 
+            m_sColumnNameOld = pModel->getHeaderName(nCol);
+            QString sDesc;
+            sDesc = QString("Rename column %1, \"%2\" to \"%3\"").arg(m_nWhere).arg(m_sColumnNameOld).arg(m_sColumnNameNew);
+            setText(sDesc);
+        }
+
+        void undo()
+        {
+            auto pModel = (m_pView) ? m_pView->csvModel() : nullptr;
+            if (!pModel)
+                return;
+            pModel->setColumnName(m_nWhere, m_sColumnNameOld);
+
+        }
+        void redo()
+        {
+            auto pModel = (m_pView) ? m_pView->csvModel() : nullptr;
+            if (!pModel)
+                return;
+            pModel->setColumnName(m_nWhere, m_sColumnNameNew);
+        }
+    private:
+        DFG_CLASS_NAME(CsvTableView)* m_pView;
+        int m_nWhere;
+        QString m_sColumnNameOld;
+        QString m_sColumnNameNew;
+
+    };
+
     class DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader) : public QUndoCommand
     {
     public:
