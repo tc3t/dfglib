@@ -143,7 +143,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                 std::random_device rd;
                 std::uniform_int_distribution<int> uid(0, 35);
                 const auto nEffectiveCount = Min(nCountRequest, size_t(64)); // Allow 64 random chars at max (rather arbitrary choice, change if need be).
-                for (int i = 0; i < nEffectiveCount; ++i)
+                for (size_t i = 0; i < nEffectiveCount; ++i)
                 {
                     const auto val = uid(rd);
                     if (val < 10)
