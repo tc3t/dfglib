@@ -322,7 +322,7 @@ namespace
         if (bRef)
             return &item;
         else
-            return DFG_CLASS_NAME(TorRef)<T>::makeInternallyOwned(item);
+            return DFG_CLASS_NAME(TorRef)<T>::makeInternallyOwning(item);
     }
 }
 
