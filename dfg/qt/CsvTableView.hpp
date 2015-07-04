@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "TableView.hpp"
+#include "../cont/TorRef.hpp"
 #include <memory>
 
 class QUndoStack;
@@ -24,6 +25,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(CsvTableView) ThisClass;
         typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
         ThisClass(QWidget* pParent);
+
+        // If already present, old undo stack will be destroyed.
+        void createUndoStack();
+
+        void setExternalUndoStack(QUndoStack* pUndoStack);
 
         void setModel(QAbstractItemModel* pModel) override;
         CsvModel* csvModel();
@@ -69,6 +75,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class T, class Param0_T, class Param1_T, class Param2_T>
         bool executeAction(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2);
 
+        template <class T, class Param0_T>
+        void pushToUndoStack(Param0_T&& p0);
+
+        template <class T, class Param0_T, class Param1_T>
+        void pushToUndoStack(Param0_T&& p0, Param1_T&& p1);
+
+        template <class T, class Param0_T, class Param1_T, class Param2_T>
+        void pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2);
+
     public slots:
         bool openFromFile();
         bool saveToFile();
@@ -111,7 +126,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
 
     public:
-        std::unique_ptr<QUndoStack> m_spUndoStack;
+        std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
 
     };

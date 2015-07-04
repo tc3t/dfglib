@@ -111,7 +111,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
     }
 
     {
-        auto pAction = new QAction(tr("Invert selections"), this);
+        auto pAction = new QAction(tr("Invert selection"), this);
         pAction->setShortcut(tr("Ctrl+I"));
         connect(pAction, &QAction::triggered, this, &ThisClass::invertSelection);
         addAction(pAction);
@@ -159,6 +159,19 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
         connect(pAction, &QAction::triggered, this, &ThisClass::paste);
         addAction(pAction);
     }
+}
+
+void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
+{
+    m_spUndoStack.reset(new DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>);
+}
+
+void DFG_CLASS_NAME(CsvTableView)::setExternalUndoStack(QUndoStack* pUndoStack)
+{
+    if (!m_spUndoStack)
+        createUndoStack();
+    m_spUndoStack->setRef(pUndoStack);
+
 }
 
 void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
@@ -359,10 +372,7 @@ template <class T, class Param0_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
 {
     if (m_spUndoStack)
-    {
-        QUndoCommand* insertCommand = new T(std::forward<Param0_T>(p0));
-        m_spUndoStack->push(insertCommand);
-    }
+        pushToUndoStack<T>(std::forward<Param0_T>(p0));
     else
         T(std::forward<Param0_T>(p0)).redo();
 
@@ -373,10 +383,7 @@ template <class T, class Param0_T, class Param1_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
 {
     if (m_spUndoStack)
-    {
-        QUndoCommand* insertCommand = new T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
-        m_spUndoStack->push(insertCommand);
-    }
+        pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
     else
         T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1)).redo();
 
@@ -387,14 +394,38 @@ template <class T, class Param0_T, class Param1_T, class Param2_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
 {
     if (m_spUndoStack)
-    {
-        QUndoCommand* insertCommand = new T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
-        m_spUndoStack->push(insertCommand);
-    }
+        pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
     else
         T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2)).redo();
 
     return true;
+}
+
+template <class T, class Param0_T>
+void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0)
+{
+    if (!m_spUndoStack)
+        createUndoStack();
+    QUndoCommand* command = new T(std::forward<Param0_T>(p0));
+    (*m_spUndoStack)->push(command); // Stack takes ownership of command.
+}
+
+template <class T, class Param0_T, class Param1_T>
+void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0, Param1_T&& p1)
+{
+    if (!m_spUndoStack)
+        createUndoStack();
+    QUndoCommand* command = new T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
+    (*m_spUndoStack)->push(command); // Stack takes ownership of command.
+}
+
+template <class T, class Param0_T, class Param1_T, class Param2_T>
+void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
+{
+    if (!m_spUndoStack)
+        createUndoStack();
+    QUndoCommand* command = new T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
+    (*m_spUndoStack)->push(command); // Stack takes ownership of command.
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::clearSelected()
