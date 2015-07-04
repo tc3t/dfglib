@@ -10,6 +10,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS // VC2012 generates C4265 "class has vi
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #include <map>
 #include <functional>
+#include <memory>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -106,7 +107,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef std::mutex MutexT;
         typedef std::lock_guard<MutexT> LockGuardT;
 
-        DFG_CLASS_NAME(ViewableSharedPtr)(std::shared_ptr<T> sp) :
+        DFG_CLASS_NAME(ViewableSharedPtr)(std::shared_ptr<T> sp = std::shared_ptr<T>()) :
             m_spObj(std::move(sp))
         {
             m_spRouter = std::make_shared<RouterT>();
@@ -165,6 +166,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         {
             LockGuardT lock(m_mutex);
             return m_spObj.get();
+        }
+
+        DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED operator bool() const
+        {
+            return m_spObj;
         }
 
         std::shared_ptr<T> m_spObj;
