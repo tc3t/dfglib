@@ -3,6 +3,8 @@
 #include "../dfgDefs.hpp"
 #include <dfg/baseConstructorDelegate.hpp>
 #include <memory>
+#include <array>
+#include "../dfgAssert.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -75,7 +77,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         {}
 
-        static DFG_CLASS_NAME(TorRef) makeInternallyOwned(const T& other)
+        static DFG_CLASS_NAME(TorRef) makeInternallyOwning(const T& other)
         {
             DFG_CLASS_NAME(TorRef) tor;
             tor.internalStorage().setItem(other);
@@ -92,6 +94,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         operator T&() { return item(); }
         operator const T&() const { return item(); }
+
+        void setRef(Ref_T ref)
+        {
+            m_ref = std::move(ref);
+        }
 
         // Templated implementation to avoid non-const/const code duplication.
         template <class This_T>
