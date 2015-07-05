@@ -36,6 +36,21 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             m_strmBuf.close();
         }
 
+        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, std::ios_base::openmode openMode)
+        {
+            return m_strmBuf.open(sPath, openMode);
+        }
+
+        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, std::ios_base::openmode openMode)
+        {
+            return m_strmBuf.open(sPath, openMode);
+        }
+
+        bool is_open() const
+        {
+            return m_strmBuf.is_open();
+        }
+
         int_type overflow(int_type byte) override
         {
             const auto rv = m_encodingBuffer.overflow(byte);
@@ -58,6 +73,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         int sync() override
         {
             return m_strmBuf.pubsync();
+        }
+
+        // Writes bytes directly skipping encoding.
+        std::streamsize writeBytes(const char* p, const size_t nCount)
+        {
+            return m_strmBuf.sputn(p, nCount);
         }
 
         std::basic_filebuf<char> m_strmBuf;
@@ -85,6 +106,27 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
             m_streamBuffer.close();
         }
+
+        void open(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, std::ios_base::openmode openMode = std::ios_base::out | std::ios_base::binary)
+        {
+            auto p = m_streamBuffer.open(sPath, openMode);
+            if (p == nullptr)
+                setstate(std::ios_base::failbit);
+        }
+
+        void open(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, std::ios_base::openmode openMode = std::ios_base::out | std::ios_base::binary)
+        {
+            auto p = m_streamBuffer.open(sPath, std::ios_base::out | openMode);
+            if (p == nullptr)
+                setstate(std::ios_base::failbit);
+        }
+
+        bool is_open() const
+        {
+            return m_streamBuffer.is_open();
+        }
+
+        std::streamsize writeBytes(const char* psz, const size_t nCount) { return m_streamBuffer.writeBytes(psz, nCount); }
 
         DFG_CLASS_NAME(OfStreamBufferWithEncoding) m_streamBuffer;
     };
