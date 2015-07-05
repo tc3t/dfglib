@@ -178,6 +178,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
     {
     public:
         typedef std::pair<Index_T, const Char_T*> IndexPtrPair;
+        typedef std::vector<IndexPtrPair> ColumnIndexPairContainer;
+        typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
+        typedef std::map<Index_T, std::deque<std::vector<Char_T>>> CharBufferContainer;
 
         DFG_CLASS_NAME(TableSz)() : m_nBlockSize(2048)
         {
@@ -290,18 +293,105 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 func(iter->first, iter->second);
         }
 
+        // Returns row count defining it by maximum row index in all columns.
+        // Note: there's no simple rowCount() function because it's not clearly definable: for example if the table has only one cell and it's located at row 4, 
+        //       rowCount could be interpreted as 1 or as this function returns, 5.
+        // TODO: test
+        Index_T rowCountByMaxRowIndex() const
+        {
+            Index_T nRowCount = 0;
+            const auto nCount = m_colToRows.size();
+            for (size_t i = 0; i < nCount; ++i)
+            {
+                if (!m_colToRows[i].empty())
+                    nRowCount = Max(nRowCount, m_colToRows[i].back().first + 1);
+            }
+            return nRowCount;
+        }
+
+        // TODO: test
+        void insertColumnsAt(Index_T nCol, Index_T nInsertCount)
+        {
+            const Index_T nColCount = static_cast<Index_T>(m_colToRows.size());
+            if (nCol < 0 || nCol > nColCount)
+                nCol = nColCount;
+            m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, ColumnIndexPairContainer());
+
+            // Increment indexes of existing char buffer columns whose index is out-of-date after insertion. Implementation uses temporary map.
+            CharBufferContainer tempBuffers;
+            for(auto iter = m_charBuffers.begin(); iter != m_charBuffers.end(); ++iter)
+            {
+                const auto n = iter->first;
+                if (n < nCol)
+                    tempBuffers[n].swap(m_charBuffers[n]);
+                else
+                    tempBuffers[n + nInsertCount].swap(m_charBuffers[n]);
+            }
+            m_charBuffers.swap(tempBuffers);
+        }
+
+        // TODO: test
+        void eraseColumnsByPosAndCount(Index_T nCol, Index_T nRemoveCount)
+        {
+            const Index_T nColCount = static_cast<Index_T>(m_colToRows.size());
+            if (nCol < 0 || nCol > nColCount)
+                nCol = nColCount;
+            nRemoveCount = Min(nRemoveCount, nColCount - nCol);
+            m_colToRows.erase(m_colToRows.begin() + nCol, m_colToRows.begin() + nCol + nRemoveCount);
+            // Move char arrays whose index is more than nCol + nRemoveCount to match with new index, i.e. nCol -> nCol - nRemoveCount.
+            auto iter = m_charBuffers.lower_bound(nCol + nRemoveCount);
+            for(iter; iter != m_charBuffers.end(); ++iter)
+            {
+                const auto nThisIndex = iter->first;
+                const auto nTargetIndex = nThisIndex - nRemoveCount;
+                m_charBuffers[nTargetIndex].swap(m_charBuffers[nThisIndex]);
+            }
+            // Remove unused char buffers.
+            while(!m_charBuffers.empty() && m_charBuffers.rbegin()->first >= static_cast<Index_T>(m_colToRows.size()))
+            {
+                auto iter = m_charBuffers.end();
+                m_charBuffers.erase(--iter);
+            }
+        }
+
+        // Erases cell at (row, col) so that after this operator()(row, col) returns nullptr.
+        // TODO: test
+        void eraseCell(const Index_T row, const Index_T col)
+        {
+            auto iter = privIteratorToIndexPair(row, col);
+            if (iter.first)
+                m_colToRows[col].erase(iter.second);
+        }
+
         // Returns either pointer to null terminated string or nullptr, if no element exists.
         // Note: Returned pointer remains valid even if adding new strings. For behaviour in case of 
         //       overwriting item at (row, col), see documentation for AddString.
         const Char_T* operator()(Index_T row, Index_T col) const
         {
-            if (!isValidIndex(m_colToRows, col))
-                return nullptr;
-            const auto& colToRowCont = m_colToRows[col];
+            auto iter = privIteratorToIndexPair(row, col);
+            return (iter.first && iter.second->first == row) ? iter.second->second : nullptr;
+        }
+
+        template <class Iterator_T, class ThisClass>
+        static std::pair<bool, Iterator_T> privIteratorToIndexPairImpl(ThisClass& rThis, const Index_T row, const Index_T col)
+        {
+            if (!isValidIndex(rThis.m_colToRows, col))
+                return std::pair<bool, Iterator_T>(false, ColumnIndexPairContainer().begin());
+            auto& colToRowCont = rThis.m_colToRows[col];
             const IndexPtrPair searchItem(row, nullptr);
             const auto pred = [](const IndexPtrPair& a, const IndexPtrPair& b) {return a.first < b.first; };
             auto iter = std::lower_bound(colToRowCont.begin(), colToRowCont.end(), searchItem, pred);
-            return (iter != colToRowCont.end() && iter->first == row) ? iter->second : nullptr;
+            return std::pair<bool, Iterator_T>(iter != colToRowCont.end(), iter);
+        }
+
+        std::pair<bool, typename ColumnIndexPairContainer::iterator> privIteratorToIndexPair(const Index_T row, const Index_T col)
+        {
+            return privIteratorToIndexPairImpl<ColumnIndexPairContainer::iterator>(*this, row, col);
+        }
+
+        std::pair<bool, typename ColumnIndexPairContainer::const_iterator> privIteratorToIndexPair(const Index_T row, const Index_T col) const
+        {
+            return privIteratorToIndexPairImpl<ColumnIndexPairContainer::const_iterator>(*this, row, col);
         }
 
         Index_T cellCountNonEmpty() const
@@ -318,6 +408,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return nCount;
         }
 
+        void clear()
+        {
+            m_charBuffers.clear();
+            m_colToRows.clear();
+        }
+
         /*
         Storage implementation:
             -m_charBuffers stores null terminated strings in blocks of contiguous memory for each column.
@@ -325,8 +421,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             If table has cell at (row,col), it can be accessed by finding row from m_colToRows[nCol].
             Since m_colToRows[nCol] is ordered by row, it can be searched with binary search.
         */
-        std::map<Index_T, std::deque<std::vector<char>>> m_charBuffers;
-        std::vector<std::vector<IndexPtrPair>> m_colToRows;
+        CharBufferContainer m_charBuffers;
+        TableIndexPairContainer m_colToRows;
         size_t m_nBlockSize;
     };
 
