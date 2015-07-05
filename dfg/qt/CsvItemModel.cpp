@@ -7,6 +7,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 //#include <QFileDialog>
 #include <QFile>
 #include <QFileInfo>
+#include <QDir>
 #include <QCompleter>
 #include <QTextStream>
 #include <QStringListModel>
@@ -19,6 +20,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "qtBasic.hpp"
 #include "../io/DelimitedTextReader.hpp"
 #include <boost/range/irange.hpp>
+#include "../io/OfStream.hpp"
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
@@ -43,27 +45,20 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(QString sPath, const SaveOptions& options)
 {
-    QFile fileData(sPath);
-    // Commented out QFile::Text to prevent unwanted \n -> \r\n conversions.
-    if (!fileData.open(QFile::WriteOnly | QFile::Truncate/* | QFile::Text*/))
-    {
+    QDir().mkpath(QFileInfo(sPath).absolutePath()); // Make sure that the target folder exists, otherwise opening the file will fail.
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) strm(sPath.toStdString(), DFG_MODULE_NS(io)::encodingUTF8);
+
+    if (!strm.is_open())
         return false;
-    }
 
-    return saveToFile(fileData, options);
-}
-
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(QFile& file, const SaveOptions& options)
-{
-    QTextStream strm(&file);
     return save(strm, options);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(QTextStream& strm, const SaveOptions& options)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(EncodingStream& strm, const SaveOptions& options)
 {
     // TODO: revise implementation
-    strm.setCodec("UTF-8");
-    strm.setGenerateByteOrderMark(true);
+    //strm.setCodec("UTF-8");
+    //strm.setGenerateByteOrderMark(true);
 
     const char cSep = options.separatorChar();
     const char cEnc = options.enclosingChar();
@@ -74,33 +69,31 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(QTextStream& strm, co
     if (options.saveHeader())
     {
         const auto headerRange = boost::irange<int>(0, m_vecColInfo.size());
-        DFG_MODULE_NS(io)::writeDelimited(strm, dfg::makeRange(headerRange.begin(), headerRange.end()), cSep, [&](QTextStream& strm, int i)
+        DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), cSep, [&](EncodingStream& strm, int i)
         {
-            DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrStrm(strm, getHeaderName(i), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);
+            DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrStrm(strm, getHeaderName(i).toUtf8(), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);
         });
         strm << sEol;
     }
 
     QString sLine;
-    for (int r = 0; r<(int)m_vecData.size(); ++r)
+    const int nRowCount = m_table.rowCountByMaxRowIndex();
+    for (int r = 0; r<nRowCount; ++r)
     {
         sLine.clear();
         rowToString(r, sLine, cSep);
-        strm << sLine;
-        if (r + 1 < (int)m_vecData.size())
+        const auto& utf8 = sLine.toUtf8();
+        strm.writeBytes(utf8.data(), utf8.size());
+        if (r + 1 < nRowCount)
             strm << sEol;
     }
 
-    return (strm.status() == QTextStream::Ok);
+    return (strm.good());
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, const QString str)
 {
-    if (!DFG_ROOT_NS::isValidIndex(m_vecData, nRow))
-        m_vecData.resize(nRow+1);
-    if (!DFG_ROOT_NS::isValidIndex(m_vecData[nRow], nCol))
-        m_vecData[nRow].resize(nCol+1);
-    this->m_vecData[nRow][nCol] = str;
+    m_table.addString(str.toUtf8(), nRow, nCol);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QString sLine)
@@ -122,7 +115,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QSt
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
 {
-    m_vecData.clear();
+    m_table.clear();
     m_vecColInfo.clear();
     m_sFilePath.clear();
     m_bModified = false;
@@ -160,26 +153,27 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
         vecCompletionSet.push_back(std::set<QString>());
     }
 
-    while (DFG_MODULE_NS(io)::isStreamInReadableState(strm))
+    QString s;
+    for(int nRow = 0; DFG_MODULE_NS(io)::isStreamInReadableState(strm); ++nRow)
     {
-        m_vecData.push_back(std::vector<QString>(getColumnCount()));
+        //m_vecData.push_back(std::vector<QString>(getColumnCount()));
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow(strm, cSeparator, cEnclosing, cEol, [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
         {
             if (nCol >= size_t(getColumnCount()))
                 return;
 
-            setItem(int(m_vecData.size() - 1), nCol, QString::fromWCharArray(pszData));
+            s = QString::fromWCharArray(pszData);
+
+            setItem(nRow, nCol, s);
+
+            if (m_bEnableCompleter)
+            {
+                if (isValidIndex(vecCompletionSet, nCol))
+                    vecCompletionSet[nCol].insert(s);
+            }
 
         });
 
-        if (m_bEnableCompleter)
-        {
-            for (size_t i = 0; i < m_vecData.back().size(); ++i)
-            {
-                if (isValidIndex(vecCompletionSet, i))
-                    vecCompletionSet[i].insert(m_vecData.back()[i]);
-            }
-        }
     }
     for (size_t i = 0; i<vecCompletionSet.size(); ++i)
     {
@@ -213,9 +207,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
 
     if (fileData.open(QFile::ReadOnly))
     {
-        m_sFilePath = sDbFilePath;
         QTextStream strmFile(&fileData);
-        return openStream(strmFile, loadOptions);
+        const auto rv = openStream(strmFile, loadOptions);
+        m_sFilePath = sDbFilePath; // Note: openStream() calls clear() so this line must be after it.
+        return rv;
     }
     else
     {
@@ -245,13 +240,8 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
 
     if ((role == Qt::DisplayRole || role == Qt::EditRole || role == Qt::ToolTipRole) && this->hasIndex(nRow, nCol))
     {
-        if (isValidIndex(m_vecData, nRow) && isValidIndex(m_vecData[nRow], nCol))
-            return m_vecData[nRow][nCol];
-        else
-        {
-            DFG_ASSERT(false);
-            return QVariant();
-        }
+        const auto p = m_table(nRow, nCol);
+        return (p) ? QString::fromUtf8(p) : QVariant();
     }
     else
         return QVariant();
@@ -321,12 +311,13 @@ Qt::ItemFlags DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::flags(const QMode
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, int rows, const QModelIndex& parent /*= QModelIndex()*/)
 {
     if (position < 0)
-        position = m_vecData.size();
-    if (parent.isValid() || position < 0 || position > (int)m_vecData.size())
+        position = m_table.rowCountByMaxRowIndex();
+    if (parent.isValid() || position < 0 || position > m_table.rowCountByMaxRowIndex())
         return false;
     beginInsertRows(QModelIndex(), position, position+rows-1);
 
-    m_vecData.insert(m_vecData.begin() + position, rows, std::vector<QString>(getColumnCount(), ""));
+    for (int nCol = 0; nCol < getColumnCount(); ++nCol)
+        m_table.setElement(position, nCol, "");
     endInsertRows();
     setModifiedStatus(true);
     return true;
@@ -338,7 +329,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
         return false;
     beginRemoveRows(QModelIndex(), position, position+rows-1);
 
-    m_vecData.erase(m_vecData.begin() + position, m_vecData.begin() + position + rows);
+    const auto nColCount = getColumnCount();
+    for (int row = position; row < position + rows; ++row)
+    {
+        for (int col = 0; col < nColCount; ++col)
+        {
+            m_table.eraseCell(row, col);
+        }
+    }
 
     endRemoveRows();
     setModifiedStatus(true);
@@ -352,10 +350,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position
     if (parent.isValid() || position < 0 || position > getColumnCount())
         return false;
     beginInsertColumns(QModelIndex(), position, position+columns-1);
-    for(size_t i = 0; i<m_vecData.size(); ++i)
-    {
-        m_vecData[i].insert(m_vecData[i].begin() + position, columns, "");
-    }
+    m_table.insertColumnsAt(position, columns);
     for(int i = position; i<position + columns; ++i)
     {
         m_vecColInfo.insert(m_vecColInfo.begin() + i, ColInfo());
@@ -373,10 +368,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeColumns(int position
         return false;
     beginRemoveColumns(QModelIndex(), position, position+columns-1);
 
-    for(size_t i = 0; i<m_vecData.size(); ++i)
-    {
-        m_vecData[i].erase(m_vecData[i].begin() + position, m_vecData[i].begin() + nLast + 1);
-    }
+    m_table.eraseColumnsByPosAndCount(position, columns);
     m_vecColInfo.erase(m_vecColInfo.begin() + position, m_vecColInfo.begin() + nLast + 1);
 
     endRemoveColumns();
@@ -407,18 +399,20 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnToStrings(const int 
     vecStrings.clear();
     if (!isValidColumn(nCol))
         return;
-    vecStrings.reserve(m_vecData.size());
-    for(size_t i = 0; i<m_vecData.size(); ++i)
+    vecStrings.reserve(getColumnCount());
+    m_table.forEachFwdRowInColumn(nCol, [&](const int /*row*/, const char* psz)
     {
-        vecStrings.push_back(m_vecData[i][nCol]);
-    }
+        vecStrings.push_back(QString::fromUtf8(psz));
+
+    });
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnCells(const int nCol, const std::vector<QString>& vecStrings)
 {
     if (!isValidColumn(nCol))
         return;
-    for (size_t r = 0, nCount = m_vecData.size(); r<nCount; ++r)
+    const auto nRowCount = getRowCount();
+    for (int r = 0; r<nRowCount; ++r)
     {
         setItem(r, nCol, vecStrings[r]);
     }
