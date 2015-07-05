@@ -93,11 +93,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(VCInstallDir)include;$(WindowsSdkDir)include;..\..\externals;..\..\</IncludePath>
+    <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath)include;..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2012|Win32'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(VCInstallDir)include;$(WindowsSdkDir)include;..\..\externals;..\..\</IncludePath>
+    <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath)include;..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2010|Win32'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
@@ -105,11 +105,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2013|Win32'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(VCInstallDir)include;$(WindowsSdkDir)include;..\..\externals;..\..\</IncludePath>
+    <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath)include;..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2012|Win32'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(VCInstallDir)include;$(WindowsSdkDir)include;..\..\externals;..\..\</IncludePath>
+    <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath)include;..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2010|Win32'">
     <ClCompile>

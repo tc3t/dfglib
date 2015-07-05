@@ -67,3 +67,4 @@
 /dfgExamples/spectrumColourExample/Debug_VC2013
 *.temp
 /dfgTest/Win32/Debug_VC2013
+/dfgTestQt/testfiles/generated

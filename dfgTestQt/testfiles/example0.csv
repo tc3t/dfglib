@@ -1,0 +1,5 @@
+﻿,
+"Item on (0,0)","Item on (0,1)"
+"Multiline item
+on (1,0)","item on (1,1) with , and "" characters"
+non-enclosed item at row 2 col 0 with unicode char € (euro sign),
