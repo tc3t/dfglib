@@ -41,10 +41,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return m_strmBuf.open(sPath, openMode);
         }
 
+#ifdef _MSC_VER
         std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, std::ios_base::openmode openMode)
         {
             return m_strmBuf.open(sPath, openMode);
         }
+#endif
 
         bool is_open() const
         {

@@ -386,12 +386,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         std::pair<bool, typename ColumnIndexPairContainer::iterator> privIteratorToIndexPair(const Index_T row, const Index_T col)
         {
-            return privIteratorToIndexPairImpl<ColumnIndexPairContainer::iterator>(*this, row, col);
+            return privIteratorToIndexPairImpl<typename ColumnIndexPairContainer::iterator>(*this, row, col);
         }
 
         std::pair<bool, typename ColumnIndexPairContainer::const_iterator> privIteratorToIndexPair(const Index_T row, const Index_T col) const
         {
-            return privIteratorToIndexPairImpl<ColumnIndexPairContainer::const_iterator>(*this, row, col);
+            return privIteratorToIndexPairImpl<typename ColumnIndexPairContainer::const_iterator>(*this, row, col);
         }
 
         Index_T cellCountNonEmpty() const
