@@ -21,22 +21,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
             -std::tmpfile (http://en.cppreference.com/w/cpp/io/c/tmpfile)
         TODO: wchar_t -> char conversions assume that every wchar_t is an individual code point; while it should work in vast majority of cases, this is not correct.
         */
-        class DFG_CLASS_NAME(TemporaryFileStream)
+        template <class Stream_T = std::ofstream>
+        class DFG_CLASS_NAME(TemporaryFileStreamT)
         {
         public:
             typedef wchar_t CharT;
             typedef std::basic_string<CharT> StringT;
 
-            DFG_CLASS_NAME(TemporaryFileStream)()
+            DFG_CLASS_NAME(TemporaryFileStreamT)() : 
+                m_bRemoveFileOnClose(true)
             {
                 init(nullptr, nullptr, nullptr, nullptr);
             }
 
-            DFG_CLASS_NAME(TemporaryFileStream)(const char* pPszFolderPath,
+            DFG_CLASS_NAME(TemporaryFileStreamT)(const char* pPszFolderPath,
                 const char* pPszNamePrefix,
                 const char* pPszNameSuffix,
                 const char* pPszExtensionWithOrWithoutDot,
-                const size_t nRandomNameChars = 8)
+                const size_t nRandomNameChars = 8) :
+                    m_bRemoveFileOnClose(true)
             {
                 const auto charToWcharConverter = [](const char* psz) -> std::wstring
                                                     {
@@ -54,7 +57,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                     nRandomNameChars);
             }
 
-            DFG_CLASS_NAME(TemporaryFileStream)(const wchar_t* pPszFolderPath,
+            DFG_CLASS_NAME(TemporaryFileStreamT)(const wchar_t* pPszFolderPath,
                 const wchar_t* pPszNamePrefix,
                 const wchar_t* pPszNameSuffix,
                 const wchar_t* pPszExtensionWithOrWithoutDot,
@@ -89,9 +92,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                         sPath += '\\';
                     sPath += sFilename;
 #ifdef _MSC_VER
-                    m_ostrm.open(sPath, std::ios::binary | std::ios::trunc); // MSVC has wstring overload.
+                    m_ostrm.open(sPath, std::ios::out | std::ios::binary | std::ios::trunc); // MSVC has wstring overload.
 #else
-                    m_ostrm.open(DFG_MODULE_NS(utf)::codePointsToUtf8(sPath), std::ios::binary | std::ios::trunc); // TODO: check what encoding open() should receive; for now use UTF8.
+                    m_ostrm.open(DFG_MODULE_NS(utf)::codePointsToUtf8(sPath), std::ios::out | std::ios::binary | std::ios::trunc); // TODO: check what encoding open() should receive; for now use UTF8.
 #endif
                     if (m_ostrm.is_open() && m_ostrm.good())
                     {
@@ -103,7 +106,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                 }
             }
 
-            ~DFG_CLASS_NAME(TemporaryFileStream)()
+            ~DFG_CLASS_NAME(TemporaryFileStreamT)()
             {
                 close();
             }
@@ -111,12 +114,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
             void close()
             {
                 m_ostrm.close();
-                if (!m_sPath.empty())
+                if (m_bRemoveFileOnClose && !m_sPath.empty())
                     removeFile(m_sPath.c_str());
             }
 
             template <class T>
-            DFG_CLASS_NAME(TemporaryFileStream)& operator<<(const T& obj)
+            DFG_CLASS_NAME(TemporaryFileStreamT)& operator<<(const T& obj)
             {
                 stream() << obj;
                 return *this;
@@ -133,7 +136,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
 
             StringT path() const { return m_sPath; }
 
-            std::ofstream& stream() { return m_ostrm; }
+            Stream_T& stream() { return m_ostrm; }
 
             bool isOpen() const { return m_ostrm.is_open(); }
 
@@ -181,8 +184,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                 return tempFolderPathT<CharT>();
             }
 
-            std::ofstream m_ostrm;
+            void setAutoRemove(const bool b) {m_bRemoveFileOnClose = b;}
+            bool isAutoRemove() const {return m_bRemoveFileOnClose;}
+
+            Stream_T m_ostrm;
             StringT m_sPath;
-        };
+            bool m_bRemoveFileOnClose;
+        }; // Class 
+
+        typedef DFG_CLASS_NAME(TemporaryFileStreamT)<std::ofstream> DFG_CLASS_NAME(TemporaryFileStream);
 #endif // _WIN32
 }} // module namespace
