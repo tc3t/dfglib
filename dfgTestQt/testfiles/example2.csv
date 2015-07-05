@@ -1,4 +1,4 @@
-﻿A simple,CSV-file,
+﻿A simple,CSV-file,€
 with 4 rows,and 3 columns,
 ,,
-including an empty row.,,
+including an empty row,and an euro sign in header,

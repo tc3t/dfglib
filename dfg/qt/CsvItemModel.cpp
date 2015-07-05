@@ -68,10 +68,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(EncodingStream& strm,
 
     if (options.saveHeader())
     {
+        QString sEncodedTemp;
         const auto headerRange = boost::irange<int>(0, m_vecColInfo.size());
         DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), cSep, [&](EncodingStream& strm, int i)
         {
-            DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrStrm(strm, getHeaderName(i).toUtf8(), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);
+            sEncodedTemp.clear();
+            DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp), getHeaderName(i), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);
+            auto utf8Bytes = sEncodedTemp.toUtf8();
+            strm.writeBytes(utf8Bytes.data(), utf8Bytes.size());
         });
         strm << sEol;
     }
