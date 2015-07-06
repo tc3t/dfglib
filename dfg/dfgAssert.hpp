@@ -113,8 +113,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
 // Like MFC VERIFY: In debug version evaluates the expression and causes error message if x is not true.
 //                  In release version evaluates the expression but does not check the value.
 #if defined(_DEBUG)
-    #define DFG_VERIFY(x, msg) DFG_ASSERT(x)
-    #define DFG_VERIFY_WITH_MSG(x) DFG_ASSERT_WITH_MSG(x, msg)
+    #define DFG_VERIFY(x) DFG_ASSERT(x)
+    #define DFG_VERIFY_WITH_MSG(x,msg) DFG_ASSERT_WITH_MSG(x,msg)
 #else
     #define DFG_VERIFY(x)	x
     #define DFG_VERIFY_WITH_MSG(x,msg) x
