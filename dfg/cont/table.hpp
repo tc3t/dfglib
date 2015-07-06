@@ -309,6 +309,39 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return nRowCount;
         }
 
+        void privShiftRowIndexesInRowGreaterOrEqual(Index_T nRow, const Index_T nShift, const bool bPositiveShift)
+        {
+            bool bSomeShifted = false;
+            for(Index_T i = 0, nCount = m_colToRows.size(); i < nCount; ++i)
+            {
+                auto& colToRows = m_colToRows[i];
+                auto iter = privLowerBoundInColumn<ColumnIndexPairContainer::iterator>(colToRows, nRow);
+                if (iter != colToRows.end())
+                    bSomeShifted = true;
+                for(; iter != colToRows.end(); ++iter)
+                    iter->first = (bPositiveShift) ? iter->first + nShift : iter->first - nShift;
+            }
+        }
+
+        // TODO: test
+        // Note: appending rows at end will actually do nothing at the moment.
+        void insertRowsAt(Index_T nRow, Index_T nInsertCount)
+        {
+            privShiftRowIndexesInRowGreaterOrEqual(nRow, nInsertCount, true);
+        }
+
+        // TODO: test
+        void removeRows(Index_T nRow, Index_T nRemoveCount)
+        {
+            for(auto iterRowCont = m_colToRows.begin(); iterRowCont != m_colToRows.end(); ++iterRowCont)
+            {
+                auto iterFirst = privLowerBoundInColumn<ColumnIndexPairContainer::iterator>(*iterRowCont, nRow);
+                auto iterEnd = privLowerBoundInColumn<ColumnIndexPairContainer::iterator>(*iterRowCont, nRow + nRemoveCount);
+                iterRowCont->erase(iterFirst, iterEnd);
+            }
+            privShiftRowIndexesInRowGreaterOrEqual(nRow + nRemoveCount, nRemoveCount, false);
+        }
+
         // TODO: test
         void insertColumnsAt(Index_T nCol, Index_T nInsertCount)
         {
@@ -372,15 +405,22 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return (iter.first && iter.second->first == row) ? iter.second->second : nullptr;
         }
 
+        template <class Iter_T, class ColumnIndexPairContainer_T>
+        static Iter_T privLowerBoundInColumn(ColumnIndexPairContainer_T& cont, const Index_T nRow)
+        {
+            const IndexPtrPair searchItem(nRow, nullptr);
+            const auto pred = [](const IndexPtrPair& a, const IndexPtrPair& b) {return a.first < b.first; };
+            auto iter = std::lower_bound(cont.begin(), cont.end(), searchItem, pred);
+            return iter;
+        }
+
         template <class Iterator_T, class ThisClass>
         static std::pair<bool, Iterator_T> privIteratorToIndexPairImpl(ThisClass& rThis, const Index_T row, const Index_T col)
         {
             if (!isValidIndex(rThis.m_colToRows, col))
                 return std::pair<bool, Iterator_T>(false, ColumnIndexPairContainer().begin());
             auto& colToRowCont = rThis.m_colToRows[col];
-            const IndexPtrPair searchItem(row, nullptr);
-            const auto pred = [](const IndexPtrPair& a, const IndexPtrPair& b) {return a.first < b.first; };
-            auto iter = std::lower_bound(colToRowCont.begin(), colToRowCont.end(), searchItem, pred);
+            auto iter = privLowerBoundInColumn<Iterator_T>(colToRowCont, row);
             return std::pair<bool, Iterator_T>(iter != colToRowCont.end(), iter);
         }
 
