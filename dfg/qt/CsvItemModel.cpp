@@ -314,14 +314,17 @@ Qt::ItemFlags DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::flags(const QMode
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, int rows, const QModelIndex& parent /*= QModelIndex()*/)
 {
+    const auto nOldRowCount = m_table.rowCountByMaxRowIndex();
     if (position < 0)
-        position = m_table.rowCountByMaxRowIndex();
-    if (parent.isValid() || position < 0 || position > m_table.rowCountByMaxRowIndex())
+        position = nOldRowCount;
+    if (parent.isValid() || position < 0 || position > nOldRowCount)
         return false;
-    beginInsertRows(QModelIndex(), position, position+rows-1);
+    const auto nLastNewRowIndex = position + rows - 1;
+    beginInsertRows(QModelIndex(), position, nLastNewRowIndex);
 
-    for (int nCol = 0; nCol < getColumnCount(); ++nCol)
-        m_table.setElement(position, nCol, "");
+    m_table.insertRowsAt(position, rows);
+    if (position == nOldRowCount) // If appending at end, must add an empty element as otherwise table size won't change.
+        m_table.setElement(nLastNewRowIndex, 0, "");
     endInsertRows();
     setModifiedStatus(true);
     return true;
@@ -333,14 +336,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
         return false;
     beginRemoveRows(QModelIndex(), position, position+rows-1);
 
-    const auto nColCount = getColumnCount();
-    for (int row = position; row < position + rows; ++row)
-    {
-        for (int col = 0; col < nColCount; ++col)
-        {
-            m_table.eraseCell(row, col);
-        }
-    }
+    m_table.removeRows(position, rows);
 
     endRemoveRows();
     setModifiedStatus(true);
