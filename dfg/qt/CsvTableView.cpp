@@ -220,7 +220,6 @@ void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
 
 void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
 {
-    DFG_ASSERT_WITH_MSG(dynamic_cast<QAbstractProxyModel*>(pModel) == nullptr, "View currently does not work with proxy models.");
     BaseClass::setModel(pModel);
 }
 
