@@ -241,7 +241,7 @@ double DFG_ROOT_NS::DFG_SUB_NS_NAME(colour)::srjw::evaluateCieColourMatchAtFloat
 
     
 
-    const auto val = DFG_ROOT_NS::DFG_SUB_NS_NAME(math)::interpolationLinear(index,
+    const auto val = DFG_ROOT_NS::DFG_SUB_NS_NAME(math)::interpolationLinear_X_X0Y0_X1Y1(index,
                                         double(lowerBoundIndex),
                                         srjw::cie_colour_match[lowerBoundIndex][channel],
                                         double(nextIndex),
