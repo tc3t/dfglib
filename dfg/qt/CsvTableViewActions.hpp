@@ -271,7 +271,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read(strm, L'\t', L'"', L'\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t nSize)
                 {
                     DFG_UNUSED(nSize);
-                    QModelIndex indexTarget = pModel->index(m_where.row() + nRow, m_where.column() + nCol);
+                    QModelIndex indexTarget = pModel->index(m_where.row() + static_cast<int>(nRow), m_where.column() + static_cast<int>(nCol));
                     if (!indexTarget.isValid())
                         return;
                     m_cellMemoryUndo[indexTarget] = pModel->data(indexTarget).toString();
@@ -316,7 +316,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 auto pProxy = m_pView->getProxyModelPtr();
                 if (!pProxy)
                     return;
-                for (size_t i = 0; i<m_vecLines.size(); ++i)
+                for (int i = 0, nCount = static_cast<int>(m_vecLines.size()); i<nCount; ++i)
                 {
                     selection.select(pProxy->mapFromSource(pModel->index(m_nWhere + i, 0)),
                         pProxy->mapFromSource(pModel->index(m_nWhere + i, 0))
@@ -417,7 +417,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             if (m_vecStringsNew.size() > m_vecStringsOld.size())
             {
-                const size_t nDiff = m_vecStringsNew.size() - m_vecStringsOld.size();
+                const auto nDiff = static_cast<int>(m_vecStringsNew.size() - m_vecStringsOld.size());
                 pModel->removeRows(pModel->getRowCount() - nDiff, nDiff);
             }
             pModel->setColumnCells(m_nWhere, m_vecStringsOld);
@@ -427,8 +427,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             auto pModel = (m_pView) ? m_pView->csvModel() : nullptr;
             if (!pModel)
                 return;
-            if (pModel->getRowCount() < static_cast<int>(m_vecStringsNew.size()))
-                pModel->insertRows(pModel->getRowCount(), m_vecStringsNew.size() - pModel->getRowCount());
+            const auto nVecStringsNewSize = static_cast<int>(m_vecStringsNew.size());
+            if (pModel->getRowCount() < nVecStringsNewSize)
+                pModel->insertRows(pModel->getRowCount(), nVecStringsNewSize - pModel->getRowCount());
             pModel->setColumnCells(m_nWhere, m_vecStringsNew);
 
             // Select the whole column
@@ -516,11 +517,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             const auto& rFirstRowStrings = (m_bInverted) ? m_vecHdrStrings : m_vecFirstRowStrings;
 
-            DFG_MODULE_NS(alg)::forEachFwdWithIndex(rFirstRowStrings, [&](const QString& s, const size_t i)
+            DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(rFirstRowStrings, [&](const QString& s, const int i)
             {
                 pModel->setData(pModel->index(0, i), s);
             });
-            DFG_MODULE_NS(alg)::forEachFwdWithIndex(m_vecHdrStrings, [&](const QString& s, const size_t i)
+            DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(m_vecHdrStrings, [&](const QString& s, const int i)
             {
                 if (m_bInverted)
                     pModel->setColumnName(i, QString());
@@ -537,7 +538,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             //DFG_CLASS_NAME(CsvTableViewActionDelete)(*m_pView, m_pView->getProxyModelPtr(), true, ).redo();
             pModel->removeRow(0);
             const auto& headerNameStrings = (m_bInverted) ? m_vecHdrStrings : m_vecFirstRowStrings;
-            DFG_MODULE_NS(alg)::forEachFwdWithIndex(headerNameStrings, [&](const QString& s, const size_t i)
+            DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(headerNameStrings, [&](const QString& s, const int i)
             {
                 pModel->setColumnName(i, s);
             });

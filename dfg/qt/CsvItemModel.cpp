@@ -66,7 +66,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(EncodingStream& strm,
     if (options.saveHeader())
     {
         QString sEncodedTemp;
-        const auto headerRange = boost::irange<int>(0, m_vecColInfo.size());
+        const auto headerRange = boost::irange<int>(0, static_cast<int>(m_vecColInfo.size()));
         DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), cSep, [&](EncodingStream& strm, int i)
         {
             sEncodedTemp.clear();
@@ -107,7 +107,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QSt
     QTextStream strm(&sLine);
     DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
     {
-        setItem(nRow, nCol, QString::fromWCharArray(pszData));
+        setItem(nRow, static_cast<int>(nCol), QString::fromWCharArray(pszData));
     });
 
     if (!m_bResetting)
@@ -165,7 +165,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
 
             s = QString::fromWCharArray(pszData);
 
-            setItem(nRow, nCol, s);
+            setItem(nRow, static_cast<int>(nCol), s);
 
             if (m_bEnableCompleter)
             {

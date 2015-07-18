@@ -111,16 +111,22 @@ void forEachFwdFuncRef(Range_T&& range, Func&& f)
     DFG_DETAIL_NS::forEachFwdImpl(range, f, std::integral_constant<bool, IsContiguousRange<Range_T>::value>());
 }
 
+template <class Index_T, class RangeT, class Func>
+void forEachFwdWithIndexT(RangeT& range, Func f)
+{
+    auto iterEnd = std::end(range);
+    Index_T i = 0;
+    for (auto iter = std::begin(range); iter != iterEnd; ++iter, ++i)
+        f(*iter, i);
+}
+
 // Like ForEachFwd, but also provides item index to functor.
 // TODO: Should work also when range is rvalue.
 // TODO: test
 template <class RangeT, class Func>
 void forEachFwdWithIndex(RangeT& range, Func f)
 {
-    auto iterEnd = std::end(range);
-    size_t i = 0;
-    for(auto iter = std::begin(range); iter != iterEnd; ++iter, ++i)
-        f(*iter, i);
+    forEachFwdWithIndexT<size_t>(range, f);
 }
 
 // Like std::fill, but supports range-based semantics.

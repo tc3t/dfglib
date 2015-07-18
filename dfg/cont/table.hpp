@@ -312,7 +312,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         void privShiftRowIndexesInRowGreaterOrEqual(Index_T nRow, const Index_T nShift, const bool bPositiveShift)
         {
             bool bSomeShifted = false;
-            for(Index_T i = 0, nCount = m_colToRows.size(); i < nCount; ++i)
+            for(Index_T i = 0, nCount = static_cast<Index_T>(m_colToRows.size()); i < nCount; ++i)
             {
                 auto& colToRows = m_colToRows[i];
                 auto iter = privLowerBoundInColumn<ColumnIndexPairContainer::iterator>(colToRows, nRow);
