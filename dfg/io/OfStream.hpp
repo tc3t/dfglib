@@ -4,6 +4,7 @@
 #include "../readOnlyParamStr.hpp"
 #include "OmcStreamWithEncoding.hpp"
 #include "textEncodingTypes.hpp"
+#include "openOfStream.hpp"
 #include "../utf/utfBom.hpp"
 #include <fstream>
 
@@ -23,12 +24,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         }
 
-        DFG_CLASS_NAME(OfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding) :
+        template <class Char_T>
+        DFG_CLASS_NAME(OfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath, TextEncoding encoding) :
             m_encodingBuffer(nullptr, encoding)
         {
-            m_strmBuf.open(sPath.c_str(), std::ios_base::binary | std::ios_base::out);
-            const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
-            m_strmBuf.sputn(bomBytes.data(), bomBytes.size());
+            open(sPath, std::ios_base::binary | std::ios_base::out);
         }
 
         void close()
@@ -36,17 +36,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             m_strmBuf.close();
         }
 
-        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, std::ios_base::openmode openMode)
+        template <class Char_T>
+        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath, std::ios_base::openmode openMode)
         {
-            return m_strmBuf.open(sPath, openMode);
+            auto rv = openOfStream(&m_strmBuf, sPath, openMode);
+            writeBom(m_encodingBuffer.encoding());
+            return rv;
         }
 
-#ifdef _MSC_VER
-        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, std::ios_base::openmode openMode)
+        void writeBom(TextEncoding encoding)
         {
-            return m_strmBuf.open(sPath, openMode);
+            const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
+            m_strmBuf.sputn(bomBytes.data(), bomBytes.size());
         }
-#endif
 
         bool is_open() const
         {
@@ -99,6 +101,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding) :
+            BaseClass(&m_streamBuffer),
+            m_streamBuffer(sPath, encoding)
+        {
+        }
+
+        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, TextEncoding encoding) :
             BaseClass(&m_streamBuffer),
             m_streamBuffer(sPath, encoding)
         {

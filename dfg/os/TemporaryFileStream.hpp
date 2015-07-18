@@ -2,9 +2,11 @@
 
 #include "../dfgDefs.hpp"
 #include <random>
+#include <type_traits>
 #include "../utf.hpp"
 #include "../iter/szIterator.hpp"
 #include "removeFile.hpp"
+#include "../io/openOfStream.hpp"
 
 #ifdef _WIN32
     #include "win.hpp"
@@ -14,6 +16,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
 {
 
 #ifdef _WIN32
+        namespace DFG_DETAIL_NS
+        {
+            // Implement opening stream through open()-method for object of type other than std::ofstream.
+            template <class Stream_T, class String_T>
+            typename std::enable_if<!std::is_same<std::ofstream, Stream_T>::value, void>::type openStream(Stream_T& strm, const String_T& sPath) 
+            {
+                strm.open(sPath, std::ios::out | std::ios::binary | std::ios::trunc);
+            }
+ 
+            // Implement opening std::ofstream through openOfStream().
+            template <class String_T>
+            void openStream(std::ofstream& strm, const String_T& sPath) 
+            {
+                DFG_MODULE_NS(io)::openOfStream(strm, sPath, std::ios::out | std::ios::binary | std::ios::trunc);
+            }
+        }
+
+
         /* Creates temporary files guaranteeing std::ostream access to the created temp file.
         Related code
             -QTemporaryFile
@@ -91,11 +111,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                     if (!sPath.empty() && sPath.back() != '\\')
                         sPath += '\\';
                     sPath += sFilename;
-#ifdef _MSC_VER
-                    m_ostrm.open(sPath, std::ios::out | std::ios::binary | std::ios::trunc); // MSVC has wstring overload.
-#else
-                    m_ostrm.open(DFG_MODULE_NS(utf)::codePointsToUtf8(sPath), std::ios::out | std::ios::binary | std::ios::trunc); // TODO: check what encoding open() should receive; for now use UTF8.
-#endif
+
+                    DFG_DETAIL_NS::openStream(m_ostrm, sPath);
+
                     if (m_ostrm.is_open() && m_ostrm.good())
                     {
                         m_sPath = std::move(sPath);
