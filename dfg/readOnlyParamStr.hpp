@@ -81,7 +81,7 @@ public:
 	// Return c-string length of string.
 	size_t length() const
 	{
-		return strLen(m_pSz);
+		return DFG_MODULE_NS(str)::strLen(m_pSz);
 	}
 
 	const_iterator begin() const
