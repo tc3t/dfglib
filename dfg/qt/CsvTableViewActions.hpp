@@ -236,7 +236,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 {
                     auto pProxy = m_pView->getProxyModelPtr();
                     DFG_UNUSED(pProxy); // Silences warning in release build.
-                    DFG_ASSERT(!pProxy || m_nWhere == m_pView->getDataModelRowsOfSelectedItems(*pProxy).front());
+                    DFG_ASSERT(!pProxy || m_nWhere == m_pView->getDataModelRowsOfSelectedItems().front());
                 }
                 QString sText = QApplication::clipboard()->text();
 

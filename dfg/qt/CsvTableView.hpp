@@ -44,26 +44,27 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // If proxy model is given, the returned indexes will correspond
         // to the indexes of the underlying model, otherwise they will be
         // {0, 1,..., rowCount()-1}
-        std::vector<int> getRowsOfCol(const int nCol, QAbstractProxyModel* pProxy) const;
+        std::vector<int> getRowsOfCol(const int nCol, const QAbstractProxyModel* pProxy) const;
 
         // Returned list is free of duplicates. If @p pProxy != nullptr,
         // the selected indexes will be mapped by the proxy.
-        std::vector<int> getRowsOfSelectedItems(QAbstractProxyModel* pProxy, const bool bSort = true) const;
+        std::vector<int> getRowsOfSelectedItems(const QAbstractProxyModel* pProxy, const bool bSort = true) const;
 
         // Returned list of selected indexes. If @p pProxy != nullptr,
         // the selected indexes will be mapped by the proxy.
-        QModelIndexList getSelectedItemIndexes(QAbstractProxyModel* pProxy) const;
+        QModelIndexList getSelectedItemIndexes(const QAbstractProxyModel* pProxy) const;
 
-        std::vector<int> getDataModelRowsOfSelectedItems(QAbstractProxyModel& rProxy, const bool bSort = true) const
+        std::vector<int> getDataModelRowsOfSelectedItems(const bool bSort = true) const
         {
-            return getRowsOfSelectedItems(&rProxy, bSort);
+            return getRowsOfSelectedItems(getProxyModelPtr(), bSort);
         }
 
         void invertSelection();
 
         bool isRowMode() const;
 
-        QAbstractProxyModel* getProxyModelPtr() { return m_spProxyModel.get(); }
+        QAbstractProxyModel* getProxyModelPtr();
+        const QAbstractProxyModel* getProxyModelPtr() const;
 
     private:
         template <class T, class Param0_T>

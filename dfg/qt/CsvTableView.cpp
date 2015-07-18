@@ -240,7 +240,7 @@ int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow() const
     return (!contItems.empty()) ? *contItems.begin() : model()->rowCount();
 }
 
-std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, QAbstractProxyModel* pProxy) const
+std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, const QAbstractProxyModel* pProxy) const
 {
     std::vector<int> vec(model()->rowCount());
     if (!pProxy)
@@ -255,7 +255,7 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, QAbs
     return vec;
 }
 
-QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes(QAbstractProxyModel* pProxy) const
+QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes(const QAbstractProxyModel* pProxy) const
 {
     QModelIndexList listSelected = selectedIndexes();
     if (pProxy)
@@ -266,7 +266,7 @@ QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes(QAbstractPr
     return listSelected;
 }
 
-std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(QAbstractProxyModel* pProxy, const bool bSort) const
+std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbstractProxyModel* pProxy, const bool bSort) const
 {
     QModelIndexList listSelected = getSelectedItemIndexes(pProxy);
 
@@ -468,7 +468,7 @@ bool DFG_CLASS_NAME(CsvTableView)::cut()
 bool DFG_CLASS_NAME(CsvTableView)::copy()
 {
     auto vViewRows = getRowsOfSelectedItems(nullptr, false);
-    auto vRows = getRowsOfSelectedItems(m_spProxyModel.get(), false);
+    auto vRows = getRowsOfSelectedItems(getProxyModelPtr(), false);
     auto pModel = csvModel();
     if (vRows.empty() || !pModel)
         return false;
@@ -549,4 +549,14 @@ bool DFG_CLASS_NAME(CsvTableView)::moveFirstRowToHeader()
 bool DFG_CLASS_NAME(CsvTableView)::moveHeaderToFirstRow()
 {
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)>(this, true);
+}
+
+QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr()
+{
+    return dynamic_cast<QAbstractProxyModel*>(model());
+}
+
+const QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr() const
+{
+    return dynamic_cast<const QAbstractProxyModel*>(model());
 }
