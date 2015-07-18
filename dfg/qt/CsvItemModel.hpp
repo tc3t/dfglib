@@ -99,8 +99,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Calls saveToFile(m_sFilePath) and if saving is succesfull,
         // sets m_sFilePath and resets modified flag.
-        // [return] : If true iff. save is succesful.
-        bool saveToFile();
+        // [return] : Path of saved file if successful, empty path otherwise.
+        QString saveToFile();
 
         // Tries to save csv-data to given path. If given path is empty,
         // the path will be asked from the user.

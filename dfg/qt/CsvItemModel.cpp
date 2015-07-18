@@ -32,21 +32,18 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
 {
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
+QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
 {
-    QString sNewPath = saveToFile(m_sFilePath);
-    if (!sNewPath.isEmpty())
-    {
-        m_sFilePath = sNewPath;
+    const bool bSuccess = saveToFile(m_sFilePath);
+    if (bSuccess)
         m_bModified = false;
-    }
-    return !sNewPath.isEmpty();
+    return (bSuccess) ? m_sFilePath : QString();
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(QString sPath, const SaveOptions& options)
 {
     QDir().mkpath(QFileInfo(sPath).absolutePath()); // Make sure that the target folder exists, otherwise opening the file will fail.
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) strm(sPath.toStdString(), DFG_MODULE_NS(io)::encodingUTF8);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) strm(sPath.toStdWString(), DFG_MODULE_NS(io)::encodingUTF8);
 
     if (!strm.is_open())
         return false;
