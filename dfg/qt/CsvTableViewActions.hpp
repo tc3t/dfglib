@@ -186,8 +186,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 const auto nNewSelectedRow = Min(m_nFirstItemRow, m_pCsvModel->getRowCount() - 1);
                 if (m_pView->selectionBehavior() == QAbstractItemView::SelectRows)
                     m_pView->selectRow(nNewSelectedRow);
-                else // TODO: Check whether index should be mapped through proxy model.
-                    m_pView->selectionModel()->setCurrentIndex(m_pCsvModel->index(nNewSelectedRow, m_pView->currentIndex().column()), QItemSelectionModel::Select);
+                else
+                {
+                    QAbstractItemModel* pViewModel = (m_pProxyModel) ? static_cast<QAbstractItemModel*>(m_pProxyModel) : m_pCsvModel;
+                    m_pView->selectionModel()->setCurrentIndex(pViewModel->index(nNewSelectedRow, m_pView->currentIndex().column()), QItemSelectionModel::Select);
+                }
                 
             }
             else
