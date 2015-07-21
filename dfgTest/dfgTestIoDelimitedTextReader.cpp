@@ -566,7 +566,7 @@ TEST(DfgIo, DelimitedTextReader_readRowConsecutiveSeparators)
                                 std::array<std::string, 7> arrExpected = { "", "", "a", "", "", "b", "" };
                                 std::vector<std::string> vecExpected(arrExpected.begin(), arrExpected.end());
                                 std::istrstream strm(psz);
-                                DFG_CLASS_NAME(DelimitedTextReader)::readRow(strm, cDelim, '"', '\n', [&](const size_t /*nCol*/, const char* const psz, const size_t /*nSize*/)
+                                DFG_CLASS_NAME(DelimitedTextReader)::readRow<char>(strm, cDelim, '"', '\n', [&](const size_t /*nCol*/, const char* const psz, const size_t /*nSize*/)
                                 {
                                     vecRead.push_back(psz);
                                 });
@@ -1112,7 +1112,7 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
         std::string sA = "\"a\",, , \"b\" , \"c,d\", \"e \", f+62533b tr454f, \"\"\"a,b\"\"\",";
         std::string expectedTokens[] = { "a", "", "", "b", "c,d", "e ", "f+62533b tr454f", "\"a,b\"", "" };
         std::vector<std::string> vA;
-        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer(sA, ',', '"', vA);
+        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer<char>(sA, ',', '"', vA);
         EXPECT_TRUE(std::equal(vA.cbegin(), vA.cend(), expectedTokens));
     }
         
@@ -1120,7 +1120,7 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
         std::string sA = "a\t\tb\t\t\t";
         std::string expectedTokens[] = { "a", "", "b", "", "", "" };
         std::vector<std::string> vA;
-        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer(sA, '\t', '\0', vA);
+        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer<char>(sA, '\t', '\0', vA);
         EXPECT_TRUE(std::equal(vA.begin(), vA.end(), expectedTokens));
     }
 
@@ -1128,7 +1128,7 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
         dfg::StringA sA = "a\t\tb\t\t\t";
         dfg::StringA expectedTokens[] = { "a", "", "b", "", "", "" };
         std::vector<dfg::StringA> vA;
-        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer(sA, '\t', '\0', vA);
+        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer<char>(sA, '\t', '\0', vA);
         EXPECT_TRUE(std::equal(vA.begin(), vA.end(), expectedTokens));
     }
 
@@ -1137,7 +1137,7 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
         std::wstring sW = L"\"a\", \"b\" , \"c,d\", \"e \"";
         std::wstring expectedTokens[] = { L"a", L"b", L"c,d", L"e " };
         std::vector<std::wstring> vW;
-        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer(sW, wchar_t(','), wchar_t('"'), vW);
+        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer<wchar_t>(sW, wchar_t(','), wchar_t('"'), vW);
         EXPECT_TRUE(std::equal(vW.begin(), vW.end(), expectedTokens));
     }
 
@@ -1145,7 +1145,7 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
         const wchar_t s[] = L"\"a\", \"b\" , \"c,d\", \"e \", \"\"\"\", 1+2+3+";
         std::wstring expectedTokens[] = { L"a", L"b", L"c,d", L"e ", L"\"", L"1+2+3+" };
         std::vector<std::wstring> v;
-        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer(makeRange(s, s + DFG_COUNTOF_CSL(s)), wchar_t(','), wchar_t('"'), v);
+        DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer<wchar_t>(makeRange(s, s + DFG_COUNTOF_CSL(s)), wchar_t(','), wchar_t('"'), v);
         EXPECT_TRUE(std::equal(v.begin(), v.end(), expectedTokens));
     }
 #if 0

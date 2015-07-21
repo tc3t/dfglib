@@ -57,7 +57,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(EncodingStream& strm,
     //strm.setCodec("UTF-8");
     //strm.setGenerateByteOrderMark(true);
 
-    const char cSep = options.separatorChar();
+    const char cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
     const char cEnc = options.enclosingChar();
     const auto cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
     const auto sEolDummy = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
@@ -105,7 +105,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QSt
     const wchar_t cSeparator = (bHasTabs) ? L'\t' : L',';
     const wchar_t cEnclosing = (cSeparator == ',') ? L'"' : L'\0';
     QTextStream strm(&sLine);
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
     {
         setItem(nRow, static_cast<int>(nCol), QString::fromWCharArray(pszData));
     });
@@ -128,13 +128,13 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
     m_bResetting = true;
     clear();
     
-    const wchar_t cSeparator = loadOptions.separatorChar();
-    const wchar_t cEnclosing = loadOptions.enclosingChar();
-    const wchar_t cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(loadOptions.eolType());
+    const auto cSeparator = loadOptions.separatorChar();
+    const auto cEnclosing = loadOptions.enclosingChar();
+    const auto cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(loadOptions.eolType());
 
     // Read header cols ->
     QStringList headerNames;
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow(strm, cSeparator, cEnclosing, cEol, [&](const size_t /*nCol*/, const wchar_t* const pszData, const size_t /*nDataLength*/)
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, cEol, [&](const size_t /*nCol*/, const wchar_t* const pszData, const size_t /*nDataLength*/)
     {
         headerNames.push_back(QString::fromWCharArray(pszData));
     });
@@ -158,7 +158,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
     for(int nRow = 0; DFG_MODULE_NS(io)::isStreamInReadableState(strm); ++nRow)
     {
         //m_vecData.push_back(std::vector<QString>(getColumnCount()));
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow(strm, cSeparator, cEnclosing, cEol, [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, cEol, [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
         {
             if (nCol >= size_t(getColumnCount()))
                 return;
@@ -187,6 +187,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
     m_bModified = false;
     endResetModel();
     m_bResetting = false;
+
+    Q_EMIT sigOnNewSourceOpened();
 
     return true;
 }

@@ -13,6 +13,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 #include "../io/DelimitedTextWriter.hpp"
+#include "../io/DelimitedTextReader.hpp"
 #include <memory>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io)
@@ -67,7 +68,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         class SaveOptions
         {
         public:
-            SaveOptions(const char cSep = ',', const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeNative) :
+            SaveOptions(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeNative) :
                 m_cSep(cSep),
                 m_cEnc(cEnc),
                 m_eolType(eol),
@@ -189,6 +190,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     signals:
         void sigModifiedStatusChanged(bool bNewStatus);
+        void sigOnNewSourceOpened();
 
     protected:
         // Clears internal data. Caller should make sure this call
@@ -215,16 +217,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         if (!isValidRow(nRow))
             return;
         const auto nColCount = getColumnCount();
+        bool bNoneAdded = true;
         for (int nCol = 0; nCol < nColCount; ++nCol)
         {
             if (pSetIgnoreColumns != nullptr && pSetIgnoreColumns->find(nCol) != pSetIgnoreColumns->end())
                 continue;
-            if (nCol != 0)
+            if (!bNoneAdded)
                 str.push_back(cDelim);
             auto p = m_table(nRow, nCol);
             if (!p)
                 continue;
             dataCellToString(QString(p), str, cDelim); // TODO: handle encoding in p -> QString conversion.
+            bNoneAdded = false;
         }
     }
 

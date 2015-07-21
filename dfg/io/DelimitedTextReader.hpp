@@ -695,11 +695,11 @@ public:
     // column index, Pointer to null terminated buffer, buffer size.
     // For example: func(const size_t nCol, const char* const psz, const size_t nSize) 
     // TODO: test
-    template <class Stream_T, class Char_T, class ItemHandlerFunc>
+    template <class Char_T, class Stream_T, class ItemHandlerFunc>
     static void readRow(Stream_T& istrm,
-                        const Char_T cSeparator,
-                        const Char_T cEnclosing,
-                        const Char_T cEndOfLine,
+                        const int cSeparator,
+                        const int cEnclosing,
+                        const int cEndOfLine,
                         ItemHandlerFunc ihFunc)
     {
         CellData<Char_T> cd(cSeparator, cEnclosing, cEndOfLine);
@@ -712,24 +712,24 @@ public:
     }
 
     // TODO: test
-    template <class InputRange_T, class Char_T, class ItemHandlerFunc_T>
+    template <class Char_T, class InputRange_T, class ItemHandlerFunc_T>
     static void tokenizeLine(const InputRange_T& input,
-        const Char_T cSeparator,
-        const Char_T cEnclosing,
+        const int cSeparator,
+        const int cEnclosing,
         ItemHandlerFunc_T ihFunc)
     {
         const auto pData = DFG_ROOT_NS::ptrToContiguousMemory(input);
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream_T)<Char_T> strm(pData, input.size());
-        readRow(strm, cSeparator, cEnclosing, Char_T(-1), ihFunc);
+        readRow<Char_T>(strm, cSeparator, cEnclosing, -1, ihFunc);
     }
 
-    template <class InputRange_T, class Char_T, class Cont_T>
+    template <class Char_T, class InputRange_T, class Cont_T>
     static void tokenizeLineToContainer(const InputRange_T& input,
-        const Char_T cSeparator,
-        const Char_T cEnclosing,
+        const int cSeparator,
+        const int cEnclosing,
         Cont_T& cont)
     {
-        tokenizeLine(input, cSeparator, cEnclosing, [&](const size_t /*nCol*/, const Char_T* const psz, const size_t /*nSize*/)
+        tokenizeLine<Char_T>(input, cSeparator, cEnclosing, [&](const size_t /*nCol*/, const Char_T* const psz, const size_t /*nSize*/)
         {
             std::inserter(cont, cont.end()) = psz;
         });
