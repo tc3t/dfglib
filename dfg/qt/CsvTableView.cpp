@@ -481,26 +481,27 @@ bool DFG_CLASS_NAME(CsvTableView)::copy()
     const bool bRowMode = isRowMode();
     for (size_t i = 0; i<vRows.size(); ++i)
     {
+        QAbstractItemModel* pEffectiveModel = getProxyModelPtr();
+        if (pEffectiveModel == nullptr)
+            pEffectiveModel = pModel;
+
         if (!bRowMode)
         {
             std::unordered_set<int> setIgnoreCols;
-            QAbstractItemModel* pEffectiveModel = getProxyModelPtr();
-            if (pEffectiveModel == nullptr)
-                pEffectiveModel = pModel;
 
             for (int col = 0; col < pModel->columnCount(); ++col)
             {
                 if (!selectionModel()->isSelected(pEffectiveModel->index(vViewRows[i], col)))
                     setIgnoreCols.insert(col);
                 else
-                    selection.select(pModel->index(vViewRows[i], col), pModel->index(vViewRows[i], col));
+                    selection.select(pEffectiveModel->index(vViewRows[i], col), pEffectiveModel->index(vViewRows[i], col));
             }
             pModel->rowToString(vRows[i], str, '\t', &setIgnoreCols);
         }
         else
         {
             pModel->rowToString(vRows[i], str, '\t');
-            selection.select(pModel->index(vViewRows[i], 0), pModel->index(vViewRows[i], 0));
+            selection.select(pEffectiveModel->index(vViewRows[i], 0), pEffectiveModel->index(vViewRows[i], 0));
         }
         str.push_back('\n');
 
