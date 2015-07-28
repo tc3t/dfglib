@@ -40,7 +40,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
         static const QString s_sEmpty;
         typedef QAbstractTableModel BaseClass;
-        typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) EncodingStream;
+        typedef std::ostream StreamT;
         
         enum ColType
         {
@@ -108,7 +108,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // [return] : Returns true iff. save is successful.
         bool saveToFile(QString sPath, const SaveOptions& options = SaveOptions());
 
-        bool save(EncodingStream& strm, const SaveOptions& options = SaveOptions());
+        // Saves data to stream in UTF8-format including BOM.
+        // Note: Stream's write()-member must write bytes untranslated (i.e. no encoding nor eol translation)
+        // TODO: Make encoding to be user definable through options.
+        bool save(StreamT& strm, const SaveOptions& options = SaveOptions());
+
+    public:
 
         bool openFile(QString sDbFilePath, const LoadOptions& loadOptions = LoadOptions());
         bool openStream(QTextStream& strm, const LoadOptions& loadOptions = LoadOptions());

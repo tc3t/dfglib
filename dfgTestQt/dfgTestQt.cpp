@@ -1,6 +1,7 @@
 //#include <stdafx.h>
 #include <dfg/qt/CsvItemModel.hpp>
 #include <dfg/io.hpp>
+#include <dfg/io/OmcByteStream.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -48,6 +49,14 @@ TEST(dfgQt, CsvItemModel)
         const auto inputBytes = DFG_MODULE_NS(io)::fileToVector(sInputPath.toLatin1().data());
         const auto outputBytes = DFG_MODULE_NS(io)::fileToVector(sOutputPath.toLatin1().data());
         EXPECT_EQ(inputBytes, outputBytes);
+
+        // Test in-memory saving
+        {
+            DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<std::vector<char>> strm;
+            model.save(strm, saveOptions);
+            const auto& outputBytesMc = strm.container();
+            EXPECT_EQ(inputBytes, outputBytesMc);
+        }
 
     }
     

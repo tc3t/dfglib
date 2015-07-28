@@ -43,7 +43,7 @@ QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(QString sPath, const SaveOptions& options)
 {
     QDir().mkpath(QFileInfo(sPath).absolutePath()); // Make sure that the target folder exists, otherwise opening the file will fail.
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) strm(sPath.toStdWString(), DFG_MODULE_NS(io)::encodingUTF8);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) strm(sPath.toStdWString(), DFG_MODULE_NS(io)::encodingUnknown);
 
     if (!strm.is_open())
         return false;
@@ -51,28 +51,27 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(QString sPath, 
     return save(strm, options);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(EncodingStream& strm, const SaveOptions& options)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const SaveOptions& options)
 {
-    // TODO: revise implementation
-    //strm.setCodec("UTF-8");
-    //strm.setGenerateByteOrderMark(true);
-
     const char cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
     const char cEnc = options.enclosingChar();
     const auto cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
     const auto sEolDummy = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
     const auto sEol = sEolDummy.c_str();
 
+    const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(DFG_MODULE_NS(io)::encodingUTF8);
+    strm.write(bomBytes.data(), bomBytes.size());
+
     if (options.saveHeader())
     {
         QString sEncodedTemp;
         const auto headerRange = boost::irange<int>(0, static_cast<int>(m_vecColInfo.size()));
-        DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), cSep, [&](EncodingStream& strm, int i)
+        DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), cSep, [&](StreamT& strm, int i)
         {
             sEncodedTemp.clear();
             DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp), getHeaderName(i), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);
             auto utf8Bytes = sEncodedTemp.toUtf8();
-            strm.writeBytes(utf8Bytes.data(), utf8Bytes.size());
+            strm.write(utf8Bytes.data(), utf8Bytes.size());
         });
         strm << sEol;
     }
@@ -84,7 +83,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(EncodingStream& strm,
         sLine.clear();
         rowToString(r, sLine, cSep);
         const auto& utf8 = sLine.toUtf8();
-        strm.writeBytes(utf8.data(), utf8.size());
+        strm.write(utf8.data(), utf8.size());
         if (r + 1 < nRowCount)
             strm << sEol;
     }
