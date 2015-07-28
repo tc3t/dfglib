@@ -85,6 +85,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return m_strmBuf.sputn(p, nCount);
         }
 
+        TextEncoding encoding() const { return m_encodingBuffer.encoding(); }
+
         std::basic_filebuf<char> m_strmBuf;
         DFG_CLASS_NAME(OmcStreamBufferWithEncoding)<std::string> m_encodingBuffer;
     }; // class OfStreamBufferWithEncoding
@@ -135,6 +137,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
             return m_streamBuffer.is_open();
         }
+
+        TextEncoding encoding() const { return m_streamBuffer.encoding(); }
 
         std::streamsize writeBytes(const char* psz, const size_t nCount) { return m_streamBuffer.writeBytes(psz, nCount); }
 

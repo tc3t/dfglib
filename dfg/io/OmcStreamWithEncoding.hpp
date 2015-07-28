@@ -47,8 +47,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             DFG_ASSERT_UB(m_pData != nullptr);
             if (cp != EOF)
             {
-                const uint32 cpUnsigned = (cp >= 0) ? cp : uint8(int8(cp));
-                cpToEncoded(cpUnsigned, std::back_inserter(this->container()), m_encoding);
+                if (m_encoding == encodingUnknown)
+                    writeOne(static_cast<char>(cp));
+                else
+                {
+                    const uint32 cpUnsigned = (cp >= 0) ? cp : uint8(int8(cp));
+                    cpToEncoded(cpUnsigned, std::back_inserter(this->container()), m_encoding);
+                }
             }
             return cp;
         }
@@ -81,6 +86,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         }
 #endif
+
+        TextEncoding encoding() const { return m_streamBuf.encoding(); }
+
     }; // Class OmcStreamWithEncoding
 
 #if DFG_LANGFEAT_MOVABLE_STREAMS
