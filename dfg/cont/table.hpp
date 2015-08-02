@@ -182,7 +182,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
         typedef std::map<Index_T, std::deque<std::vector<Char_T>>> CharBufferContainer;
 
-        DFG_CLASS_NAME(TableSz)() : m_nBlockSize(2048)
+        DFG_CLASS_NAME(TableSz)() : 
+            m_nBlockSize(2048),
+            m_bAllowStringsLongerThanBlockSize(true)
+
         {
         }
 
@@ -190,6 +193,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         {
             m_nBlockSize = nBlockSize;
         }
+        size_t blockSize() const { return m_nBlockSize; }
+
+        void setAllowBlockSizeExceptions(bool b)
+        {
+            m_bAllowStringsLongerThanBlockSize = b;
+        }
+        bool isBlockSizeFixed() const { return m_bAllowStringsLongerThanBlockSize; }
 
         template <class Str_T>
         bool setElement(size_t nRow, size_t nCol, const Str_T& sSrc)
@@ -200,6 +210,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // Sets element to (nRow, nCol). This does not invalidate any previous pointers return by operator()(), but after this call all pointers returned for (nRow, nCol)
         // will point to the previous element, not current.
         // If element at (nRow, nCol) already exists, it is overwritten.
+        // Return: true if string was added, false otherwise.
         // Note: Even in case of overwrite, previous item is not cleared from string storage (this is implementation detail that is not part of the interface, i.e. it is not to be relied on).
         bool addString(const Char_T* const psz, const size_t nLength, const Index_T nRow, const Index_T nCol)
         {
@@ -207,7 +218,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (bufferCont.empty() || bufferCont.back().capacity() - bufferCont.back().size() < nLength + 1)
             {
                 bufferCont.push_back(std::vector<Char_T>());
-                bufferCont.back().reserve(m_nBlockSize);
+                const size_t nNewBlockSize = (m_bAllowStringsLongerThanBlockSize) ? Max(m_nBlockSize, nLength + 1) : m_nBlockSize;
+                bufferCont.back().reserve(nNewBlockSize);
             }
 
             auto& currentBuffer = bufferCont.back();
@@ -215,7 +227,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
             const auto nFreeSpace = currentBuffer.capacity() - currentBuffer.size();
             // Make sure that there's enough space in the buffer.
-            // This should trigger only if nLength > m_nBlockSize.
+            // This should trigger only if nLength >= m_nBlockSize and strings longer than block length is not allowed.
             // Note that reallocation is not allowed because it would invalidate existing data pointers.
             if (nLength >= nFreeSpace)
                 return false;
@@ -464,6 +476,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         CharBufferContainer m_charBuffers;
         TableIndexPairContainer m_colToRows;
         size_t m_nBlockSize;
+        bool m_bAllowStringsLongerThanBlockSize; // If false, strings longer than m_nBlockSize can't be added to table.
     };
 
 }} // module cont

@@ -93,7 +93,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, const QString str)
 {
-    m_table.addString(str.toUtf8(), nRow, nCol);
+    DFG_VERIFY(m_table.addString(str.toUtf8(), nRow, nCol)); // If VERIFY-triggers it means that string couldn't be added to table.
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QString sLine)

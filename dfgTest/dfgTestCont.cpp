@@ -171,8 +171,11 @@ TEST(dfgCont, TableSz)
     EXPECT_EQ(0, cols[0]);
     EXPECT_EQ(3, cols[1]);
 
-    std::string sTooLong(120, ' ');
-    EXPECT_FALSE(table.addString(sTooLong, 10, 10));
+    std::string sLongerThanBlockSize(120, '0');
+    EXPECT_TRUE(table.addString(sLongerThanBlockSize, 10, 10));
+    table.setAllowBlockSizeExceptions(false);
+    EXPECT_FALSE(table.addString(sLongerThanBlockSize, 11, 11));
+    
 
     EXPECT_STREQ("cde", table(4, 0));
     EXPECT_STREQ("r1c3", table(1, 3));
