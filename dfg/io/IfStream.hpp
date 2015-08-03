@@ -54,6 +54,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return (m_spStreamBufferCont) ? m_spStreamBufferCont->uflow() : EOF;
         }
 
+        std::streampos seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode om) override
+        {
+            return (m_spStreamBufferCont) ? m_spStreamBufferCont->seekoff(off, dir, om) : std::streampos(-1);
+        }
+
+        pos_type seekpos(pos_type pos, std::ios_base::openmode om) override
+        {
+            return (m_spStreamBufferCont) ? m_spStreamBufferCont->seekpos(pos, om) : pos_type(off_type(-1));
+        }
+
         bool is_open() const
         {
             return (m_spStreamBufferCont != nullptr);

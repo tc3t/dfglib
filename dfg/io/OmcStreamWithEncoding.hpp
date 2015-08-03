@@ -48,7 +48,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             if (cp != EOF)
             {
                 if (m_encoding == encodingUnknown)
-                    writeOne(static_cast<char>(cp));
+                    this->writeOne(static_cast<char>(cp));
                 else
                 {
                     const uint32 cpUnsigned = (cp >= 0) ? cp : uint8(int8(cp));
@@ -87,7 +87,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 #endif
 
-        TextEncoding encoding() const { return m_streamBuf.encoding(); }
+        TextEncoding encoding() const { return this->m_streamBuf.encoding(); }
 
     }; // Class OmcStreamWithEncoding
 

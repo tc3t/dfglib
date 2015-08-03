@@ -654,10 +654,27 @@ TEST(dfgIo, IfStreamWithEncoding)
     const char szNonExistentPath[] = "testfiles/nonExistentFile.invalid";
 
     // Test handling of non-existent path.
-    DFG_CLASS_NAME(IfStreamWithEncoding) strm(szNonExistentPath);
-    std::ifstream strmStd(szNonExistentPath);
-    EXPECT_EQ(strmStd.rdstate(), strm.rdstate());
-    EXPECT_EQ(strmStd.good(), strm.good());
+    {
+        DFG_CLASS_NAME(IfStreamWithEncoding) strm(szNonExistentPath);
+        std::ifstream strmStd(szNonExistentPath);
+        EXPECT_EQ(strmStd.rdstate(), strm.rdstate());
+        EXPECT_EQ(strmStd.good(), strm.good());
+    }
+
+    // Test seeking
+    {
+        DFG_CLASS_NAME(IfStreamWithEncoding) istrm("testfiles/matrix_3x3.txt");
+        char bytes[3];
+        EXPECT_TRUE(istrm.good());
+        readBytes(istrm, bytes, 3);
+        EXPECT_TRUE(istrm.good());
+        istrm.seekg(-3, std::ios_base::cur);
+        EXPECT_EQ(bytes[0], istrm.get());
+        EXPECT_TRUE(istrm.good());
+        istrm.seekg(1, std::ios_base::cur);
+        EXPECT_EQ(bytes[2], istrm.get());
+        EXPECT_TRUE(istrm.good());
+    }
 }
 
 TEST(dfgIo, IfStreamWithEncodingReadOnlyFile)
