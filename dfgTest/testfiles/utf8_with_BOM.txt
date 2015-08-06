@@ -1,0 +1,1 @@
+﻿This is UTF-8 with BOM encoded test file containing non-ascii characters € and µ.

@@ -697,6 +697,30 @@ TEST(dfgIo, IfStreamWithEncodingReadOnlyFile)
     strm >> s;
     EXPECT_EQ(szText, s);
 }
+
+TEST(DfgIo, IfStreamWithEncoding_rawByteReading)
+{
+    // Test to verify that it is possible to easily read plain bytes from UTF8-data with IfStreamWithEncoding.
+
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
+
+    const char szFilePath[] = "testfiles/utf8_with_BOM.txt";
+
+    auto bytes0 = fileToVector(szFilePath);
+    EXPECT_TRUE(bytes0.size() > 3);
+    bytes0.erase(bytes0.begin(), bytes0.begin() + 3); // Erase BOM.
+
+    DFG_CLASS_NAME(IfStreamWithEncoding) istrm;
+    istrm.open("testfiles/utf8_with_BOM.txt");
+
+    EXPECT_EQ(encodingUTF8, istrm.encoding());
+
+    istrm.setEncoding(encodingNone);
+    const auto bytes1 = readAllFromStream<std::vector<char>>(istrm);
+
+    EXPECT_EQ(bytes0, bytes1);
+}
 #endif // __MINGW32__
 
 TEST(dfgIo, OfStreamWithEncoding)
