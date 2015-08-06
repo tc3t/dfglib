@@ -93,7 +93,7 @@ public:
     DFG_CLASS_NAME(StreamBufferMemWithEncoding)(IteratorType p, const size_t nSize, TextEncoding encoding) :
         BaseClass(p, nSize),
         m_encoding(encoding),
-        m_pReadImpl(&readAndAdvanceAnsi)
+        m_pReadImpl(&readAndAdvanceByte)
     {
         using namespace DFG_MODULE_NS(utf);
         if (encoding == encodingUnknown)
@@ -102,7 +102,20 @@ public:
             m_encoding = checkBOM(istrm);
             this->m_pCurrent += bomSizeInBytes(m_encoding);
         }
-        switch (m_encoding)
+        setReaderByEncoding(m_encoding);
+    }
+
+    // Move constructor
+    DFG_CLASS_NAME(StreamBufferMemWithEncoding)(DFG_CLASS_NAME(StreamBufferMemWithEncoding)&& other) :
+        BaseClass(std::move(static_cast<BaseClass&>(other))),
+        m_encoding(other.m_encoding),
+        m_pReadImpl(other.m_pReadImpl)
+    {
+    }
+
+    void setReaderByEncoding(const TextEncoding encoding)
+    {
+        switch (encoding)
         {
             case encodingUTF8: m_pReadImpl = &readAndAdvanceUtf8; break;
             case encodingUTF16Le: m_pReadImpl = &readAndAdvanceUtf16Le; break;
@@ -113,17 +126,13 @@ public:
             case encodingUTF32Be: m_pReadImpl = &readAndAdvanceUtf32Be; break;
             case encodingUCS4Le: m_pReadImpl = &readAndAdvanceUcs4Le; break;
             case encodingUCS4Be: m_pReadImpl = &readAndAdvanceUcs4Be; break;
-            default: m_pReadImpl = &readAndAdvanceAnsi;
+            default: m_pReadImpl = &readAndAdvanceByte;
         }
-
     }
 
-    // Move constructor
-    DFG_CLASS_NAME(StreamBufferMemWithEncoding)(DFG_CLASS_NAME(StreamBufferMemWithEncoding)&& other) :
-        BaseClass(std::move(static_cast<BaseClass&>(other))),
-        m_encoding(other.m_encoding),
-        m_pReadImpl(other.m_pReadImpl)
+    TextEncoding encoding() const
     {
+        return m_encoding;
     }
 
     template <class Elem_T, class BswapFunc_T>
@@ -139,7 +148,7 @@ public:
         return rv;
     }
 
-    static int_type readAndAdvanceAnsi(IteratorType& iter, const IteratorType& end)
+    static int_type readAndAdvanceByte(IteratorType& iter, const IteratorType& end)
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
         return (iter != end) ? std::char_traits<char>::to_int_type(*iter++) : std::char_traits<char>::eof();
