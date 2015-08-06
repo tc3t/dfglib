@@ -8,6 +8,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 	enum TextEncoding
 	{
 		encodingUnknown,
+        encodingNone,
 		encodingUTF8,
 		encodingUTF16Le,
 		encodingUTF16Be,
