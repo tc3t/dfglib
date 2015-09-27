@@ -4,6 +4,7 @@
 #include "../dfgAssert.hpp"
 #include "../dfgBase.hpp"
 #include "../str.hpp"
+#include "../alg/sortMultiple.hpp"
 #include <algorithm>
 #include <vector>
 #include <numeric>
@@ -201,6 +202,31 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }
         bool isBlockSizeFixed() const { return m_bAllowStringsLongerThanBlockSize; }
 
+        void privSetRowContent(ColumnIndexPairContainer& rowsInCol, Index_T nRow, const Char_T* pData)
+        {
+            rowsInCol.push_back(IndexPtrPair(nRow, pData));
+
+            // Sort the row vector. Since the pre-add vector should have been sorted already, only the
+            // last item needs to be moved to the right position.
+            if (rowsInCol.size() > 1)
+            {
+                for (size_t i = rowsInCol.size() - 1; i >= 1; --i)
+                {
+                    if (rowsInCol[i].first < rowsInCol[i - 1].first)
+                        std::swap(rowsInCol[i], rowsInCol[i - 1]);
+                    else  // case: previous is less than or equal to newly added item.
+                    {
+                        if (rowsInCol[i].first == rowsInCol[i - 1].first) // If duplicate, erase previous.
+                        {
+                            // Note: the actual data is not cleared from char buffer.
+                            rowsInCol.erase(rowsInCol.begin() + (i - 1));
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
         template <class Str_T>
         bool setElement(size_t nRow, size_t nCol, const Str_T& sSrc)
         {
@@ -236,29 +262,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
             if (!isValidIndex(m_colToRows, nCol))
                 m_colToRows.resize(nCol + 1);
-            auto& rowsInCol = m_colToRows[nCol];
+            
 
-            rowsInCol.push_back(IndexPtrPair(nRow, pData));
-
-            // Sort the row vector. Since the pre-add vector should have been sorted already, only the
-            // last item needs to be moved to the right position.
-            if (rowsInCol.size() > 1)
-            {
-                for (size_t i = rowsInCol.size() - 1; i >= 1; --i)
-                {
-                    if (rowsInCol[i].first < rowsInCol[i - 1].first)
-                        std::swap(rowsInCol[i], rowsInCol[i - 1]);
-                    else  // case: previous is less than or equal to newly added item.
-                    {
-                        if (rowsInCol[i].first == rowsInCol[i - 1].first) // If duplicate, erase previous.
-                        {
-                            // Note: the actual data is not cleared from char buffer.
-                            rowsInCol.erase(rowsInCol.begin() + (i - 1));
-                        }
-                        break;
-                    }
-                }
-            }
+            privSetRowContent(m_colToRows[nCol], nRow, pData);
 
             return true;
         }
@@ -426,6 +432,16 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return iter;
         }
 
+        typename ColumnIndexPairContainer::iterator privLowerBoundInColumnNonConst(ColumnIndexPairContainer& cont, const Index_T nRow)
+        {
+            return privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(cont, nRow);
+        }
+
+        typename ColumnIndexPairContainer::const_iterator privLowerBoundInColumnConst(ColumnIndexPairContainer& cont, const Index_T nRow)
+        {
+            return privLowerBoundInColumn<typename ColumnIndexPairContainer::const_iterator>(static_cast<const ColumnIndexPairContainer&>(cont), nRow);
+        }
+
         template <class Iterator_T, class ThisClass>
         static std::pair<bool, Iterator_T> privIteratorToIndexPairImpl(ThisClass& rThis, const Index_T row, const Index_T col)
         {
@@ -466,6 +482,67 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_colToRows.clear();
         }
 
+        void swapCellContentInColumn(ColumnIndexPairContainer& colItems, const Index_T r0, const Index_T r1)
+        {
+            auto iterA = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(colItems, r0);
+            auto iterB = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(colItems, r1);
+            const bool br0Match = (iterA != colItems.end() && iterA->first == r0);
+            const bool br1Match = (iterB != colItems.end() && iterB->first == r1);
+            if (!br0Match && !br1Match) // Check whether of neither cell has content, no swapping is needed in that case.
+                return;
+            if (!br0Match)
+            {
+                privSetRowContent(colItems, r0, iterB->second); // Note: this may invalidate iters.
+                privSetRowContent(colItems, r1, nullptr);
+            }
+            else if (!br1Match)
+            {
+                privSetRowContent(colItems, r1, iterA->second); // Note: this may invalidate iters.
+                privSetRowContent(colItems, r0, nullptr);
+            }
+            else
+                std::swap(iterA->second, iterB->second);
+        }
+
+        // TODO: stable sorting.
+        template <class Pred>
+        void sortByColumn(Index_T nCol, Pred&& pred)
+        {
+            if (!DFG_ROOT_NS::isValidIndex(m_colToRows, nCol))
+                return;
+            const auto nCount = rowCountByMaxRowIndex();
+            auto& colItems = m_colToRows[nCol];
+            auto indexes = DFG_MODULE_NS(alg)::computeSortIndexesBySizeAndPred(nCount, [&](const size_t a, const size_t b) -> bool
+            {
+                auto iterA = privLowerBoundInColumnConst(colItems, a);
+                auto iterB = privLowerBoundInColumnConst(colItems, b);
+                auto pA = (iterA != colItems.end()) ? iterA->second : nullptr;
+                auto pB = (iterB != colItems.end()) ? iterB->second : nullptr;
+                return pred(pA, pB);
+            });
+            forEachFwdColumnIndex([&](const Index_T nCol)
+            {
+                auto& rowAtCol = m_colToRows[nCol];
+                DFG_MODULE_NS(alg)::DFG_DETAIL_NS::sortByIndexArray_tN_sN_WithSwapImpl(indexes, [&](size_t a, size_t b)
+                {
+                    swapCellContentInColumn(rowAtCol, a, b);
+                });
+            });
+        }
+
+        void sortByColumn(Index_T nCol)
+        {
+            sortByColumn(nCol, [](const Char_T* psz0, const Char_T* psz1) -> bool
+            {
+                if (psz0 == nullptr && psz1 != nullptr)
+                    return true;
+                else if (psz0 != nullptr && psz1 != nullptr)
+                    return (DFG_MODULE_NS(str)::strCmp(psz0, psz1) < 0);
+                else 
+                    return false;
+            });
+        }
+
         /*
         Storage implementation:
             -m_charBuffers stores null terminated strings in blocks of contiguous memory for each column.
@@ -478,5 +555,4 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         size_t m_nBlockSize;
         bool m_bAllowStringsLongerThanBlockSize; // If false, strings longer than m_nBlockSize can't be added to table.
     };
-
 }} // module cont

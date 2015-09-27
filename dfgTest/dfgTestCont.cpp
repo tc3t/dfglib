@@ -8,6 +8,7 @@
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
 #include <dfg/cont/TorRef.hpp>
+#include <dfg/rand.hpp>
 
 TEST(dfgCont, makeVector)
 {
@@ -181,6 +182,140 @@ TEST(dfgCont, TableSz)
     EXPECT_STREQ("r1c3", table(1, 3));
     EXPECT_STREQ(nullptr, table(3, 0));
     EXPECT_EQ(nullptr, table(0, 1));
+}
+
+TEST(dfgCont, TableSzSorting)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(rand);
+
+    DFG_CLASS_NAME(TableSz)<char> table;
+    std::vector<std::vector<std::string>> vecs;
+
+    const size_t nRowCount = 4;
+    const size_t nColCount = 3;
+
+    vecs.resize(nColCount);
+    auto randEng = createDefaultRandEngineRandomSeeded();
+    for (size_t c = 0; c < vecs.size(); ++c)
+    {
+        for (size_t r = 0; r < nRowCount; ++r)
+        {
+            const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, 0, NumericTraits<int>::maxValue);
+            const auto sVal = DFG_MODULE_NS(str)::toStrC(val);
+            vecs[c].push_back(sVal);
+            table.setElement(r, c, sVal);
+        }
+    }
+
+    // Test default text sorting.
+    {
+        for (size_t nSortCol = 0; nSortCol < nColCount; ++nSortCol)
+        {
+            DFG_STATIC_ASSERT(nColCount == 3, "Line below assumed value 3");
+            DFG_MODULE_NS(alg)::sortMultiple(vecs[nSortCol], vecs[(nSortCol + 1) % 3], vecs[(nSortCol + 2) % 3]);
+            table.sortByColumn(nSortCol);
+            for (size_t c = 0; c < vecs.size(); ++c)
+            {
+                const auto& curVec = vecs[c];
+                for (size_t r = 0; r < nRowCount; ++r)
+                {
+                    EXPECT_EQ(curVec[r], table(r, c));
+                }
+            }
+        }
+    }
+
+    // Test custom sorting (numeric sorting by str->int conversion)
+    {
+        for (size_t nSortCol = 0; nSortCol < nColCount; ++nSortCol)
+        {
+            const auto pred = [](const char* p0, const char* p1) -> bool
+                            {
+                                if (p0 == nullptr && p1 != nullptr)
+                                    return true;
+                                else if (p0 != nullptr && p1 != nullptr)
+                                    return DFG_MODULE_NS(str)::strTo<int>(p0) < DFG_MODULE_NS(str)::strTo<int>(p1);
+                                else
+                                    return false;
+                            };
+            const auto predStr = [&](const std::string& s0, const std::string& s1)
+                            {
+                                return pred(s0.c_str(), s1.c_str());
+                            };
+            DFG_STATIC_ASSERT(nColCount == 3, "Line below assumed value 3");
+            DFG_MODULE_NS(alg)::sortMultipleWithPred(predStr, vecs[nSortCol], vecs[(nSortCol + 1) % 3], vecs[(nSortCol + 2) % 3]);
+            table.sortByColumn(nSortCol, pred);
+            for (size_t c = 0; c < vecs.size(); ++c)
+            {
+                const auto& curVec = vecs[c];
+                for (size_t r = 0; r < nRowCount; ++r)
+                {
+                    EXPECT_EQ(curVec[r], table(r, c));
+                }
+            }
+        }
+    }
+
+    // Test trying to sort by invalid column (make sure it won't assert/crash etc.)
+    table.sortByColumn(23423);
+
+    // Test empty cell handling
+    {
+        DFG_CLASS_NAME(TableSz)<char> table;
+        table.setElement(0, 0, "c");
+        table.setElement(1, 0, "b");
+        table.setElement(2, 0, "a");
+
+        table.setElement(0, 1, "r0c1");
+        table.setElement(2, 1, "r2c1");
+
+        table.setElement(3, 2, "r3c2");
+
+        // Sort by column 0
+        {
+            table.sortByColumn(0);
+            EXPECT_EQ(table(0, 0), nullptr);
+            EXPECT_STREQ(table(1, 0), "a");
+            EXPECT_STREQ(table(2, 0), "b");
+            EXPECT_STREQ(table(3, 0), "c");
+
+            EXPECT_STREQ(table(1, 1), "r2c1");
+            EXPECT_STREQ(table(3, 1), "r0c1");
+
+            EXPECT_STREQ(table(0, 2), "r3c2");
+            EXPECT_EQ(table(3, 2), nullptr);
+        }
+
+        // Sort by column 1
+        {
+            table.sortByColumn(1);
+            EXPECT_EQ(table(0, 0), nullptr);
+            // Sorting is not stable so position of item "b" is not known.
+            EXPECT_STREQ(table(2, 0), "c");
+            EXPECT_STREQ(table(3, 0), "a");
+
+            EXPECT_EQ(table(0, 1), nullptr);
+            EXPECT_EQ(table(1, 1), nullptr);
+            EXPECT_STREQ(table(2, 1), "r0c1");
+            EXPECT_STREQ(table(3, 1), "r2c1");
+
+            // Sorting is not stable so position of item "r3c2" is not known.
+            EXPECT_EQ(table(2, 2), nullptr);
+            EXPECT_EQ(table(3, 2), nullptr);
+        }
+
+        // Sort by column 2
+        {
+            table.sortByColumn(2);
+            EXPECT_EQ(table(3, 0), nullptr);
+            EXPECT_EQ(table(3, 1), nullptr);
+            EXPECT_STREQ(table(3, 2), "r3c2");
+        }
+    }
+
+    // TODO: stable sorting (once implemented)
 }
 
 TEST(dfgCont, ArrayWrapper)
