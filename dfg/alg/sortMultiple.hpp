@@ -13,18 +13,26 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
 
     // For given iterable, returns a list of indexes that define the order of elements in sortSeq if it was sorted using predicate pred.
     // For example if sortSeq = {2.5, 3.1, 1.2} and pred is 'less than', returned list will be {2, 0, 1} which corresponds to sequence {1.2, 2.5, 3.1}.
-    template <class T, class Pred_T>
-    std::vector<size_t> computeSortIndexes(const T& sortSeq, Pred_T&& pred)
+    template <class Pred_T>
+    std::vector<size_t> computeSortIndexesBySizeAndPred(const size_t nMaxIndex, Pred_T&& pred)
     {
-        std::vector<size_t> indexMapNewToOld(count(sortSeq));
+        std::vector<size_t> indexMapNewToOld(nMaxIndex);
 
         generateAdjacent(indexMapNewToOld, 0, 1);
         std::sort(std::begin(indexMapNewToOld), std::end(indexMapNewToOld), [&](const size_t a, const size_t b)
         {
-            return pred(sortSeq[a], sortSeq[b]);
+            return pred(a, b);
         });
         // indexMapNewToOld[i] now tells which index of original source should be at position i in sorted order.
-        return std::move(indexMapNewToOld);
+        return indexMapNewToOld;
+    }
+
+    // For given iterable, returns a list of indexes that define the order of elements in sortSeq if it was sorted using predicate pred.
+    // For example if sortSeq = {2.5, 3.1, 1.2} and pred is 'less than', returned list will be {2, 0, 1} which corresponds to sequence {1.2, 2.5, 3.1}.
+    template <class T, class Pred_T>
+    std::vector<size_t> computeSortIndexes(const T& sortSeq, Pred_T&& pred)
+    {
+        return computeSortIndexesBySizeAndPred(count(sortSeq), [&](const size_t a, const size_t b) { return pred(sortSeq[a], sortSeq[b]); });
     }
 
     // Convenience overload using less-than comparison.
@@ -45,8 +53,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
             swap(a, b);
         }
 
-        template <class Arr_T, class SwapImpl_T>
-        void sortByIndexArray_tN_sN_WithSwapImpl(Arr_T& arr, std::vector<size_t> indexMap, SwapImpl_T swapImpl)
+        template <class SwapImpl_T>
+        void sortByIndexArray_tN_sN_WithSwapImpl(std::vector<size_t> indexMap, SwapImpl_T swapImpl)
         {
             // indexMap[i] tells which index in seq should be placed as i'th element in sorted order.
 
@@ -60,7 +68,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
                 auto iDest = i;
                 while (iSrc != i)
                 {
-                    swapImpl(arr[iDest], arr[iSrc]);
+                    swapImpl(iDest, iSrc);
                     indexMap[iDest] = iDest;
                     iDest = iSrc;
                     iSrc = indexMap[iDest];
@@ -68,6 +76,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
                 indexMap[iDest] = iDest;
             }
 
+        }
+
+        template <class Arr_T, class SwapImpl_T>
+        void sortByIndexArray_tN_sN_WithSwapImpl(Arr_T& arr, std::vector<size_t> indexMap, SwapImpl_T swapImpl)
+        {
+            sortByIndexArray_tN_sN_WithSwapImpl(indexMap, [&](const size_t a, const size_t b)
+            {
+                swapImpl(arr[a], arr[b]);
+            });
         }
     }
 
