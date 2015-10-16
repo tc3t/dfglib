@@ -24,6 +24,7 @@
 #include <dfg/ioAll.hpp>
 #include <dfg/build/languageFeatureInfo.hpp>
 #include <dfg/io/OfStream.hpp>
+#include <dfg/io/seekFwdToLine.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <dlib/compress_stream.h>
@@ -863,4 +864,12 @@ TEST(dfgIo, writeDelimited)
 
     writeDelimited(strm, arr, ',');
     EXPECT_EQ("a,b,c,d,e", strm.container());
+}
+
+TEST(dfgIo, seekFwdToLine)
+{
+    // TODO: add tests.
+    using namespace DFG_MODULE_NS(io);
+    DFG_CLASS_NAME(IStringStream) istrm;
+    seekFwdToLineBeginningWith(istrm, "a", dfg::CaseSensitivityYes, '\n'); // Just a dummy line to test building.
 }
