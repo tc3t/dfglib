@@ -24,7 +24,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(TableView) BaseClass;
         typedef DFG_CLASS_NAME(CsvTableView) ThisClass;
         typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
-        ThisClass(QWidget* pParent);
+
+        DFG_CLASS_NAME(CsvTableView)(QWidget* pParent);
+        ~DFG_CLASS_NAME(CsvTableView)();
 
         // If already present, old undo stack will be destroyed.
         void createUndoStack();

@@ -161,6 +161,10 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
     }
 }
 
+DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
+{
+}
+
 void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
 {
     m_spUndoStack.reset(new DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>);
