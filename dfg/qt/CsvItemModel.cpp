@@ -91,9 +91,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
     return (strm.good());
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, const QString str)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, const QString str)
 {
-    DFG_VERIFY(m_table.addString(str.toUtf8(), nRow, nCol)); // If VERIFY-triggers it means that string couldn't be added to table.
+    const auto bRv = m_table.addString(str.toUtf8(), nRow, nCol);
+    DFG_ASSERT(bRv); // Triggering ASSERT means that string couldn't be added to table.
+    return bRv;
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QString sLine)

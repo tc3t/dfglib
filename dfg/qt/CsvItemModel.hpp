@@ -158,7 +158,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // as cells of given row @p nRow.
         void setRow(const int nRow, QString sLine);
 
-        void setItem(const int nRow, const int nCol, const QString str);
+        // Returns true if item was set, false otherwise.
+        bool setItem(const int nRow, const int nCol, const QString str);
 
         // Sets data of given index without triggering undo.
         // Note: Given model index must be valid; this function does not check it.
