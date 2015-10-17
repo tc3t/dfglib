@@ -61,11 +61,21 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
     const QChar cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
     const auto sEolDummy = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
     const auto sEol = sEolDummy.c_str();
-    const std::string sSepEncoded = QString(cSep).toUtf8().data();
+
+    const auto encoding = options.textEncoding();
+    if (encoding != DFG_MODULE_NS(io)::encodingLatin1 && encoding != DFG_MODULE_NS(io)::encodingUTF8) // Unsupported encoding type.
+        return false;
+
+    const auto qStringToEncodedBytes = [&](const QString& s) -> std::string
+                                        {
+                                            return (encoding == DFG_MODULE_NS(io)::encodingUTF8) ? s.toUtf8().data() : s.toLatin1();
+                                        };
+
+    const std::string sSepEncoded = qStringToEncodedBytes(cSep);
 
     if (options.bomWriting())
     {
-        const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(DFG_MODULE_NS(io)::encodingUTF8);
+        const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
         strm.write(bomBytes.data(), bomBytes.size());
     }
 
@@ -77,7 +87,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
         {
             sEncodedTemp.clear();
             DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp), getHeaderName(i), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);
-            auto utf8Bytes = sEncodedTemp.toUtf8();
+            auto utf8Bytes = qStringToEncodedBytes(sEncodedTemp);
             strm.write(utf8Bytes.data(), utf8Bytes.size());
         });
         strm << sEol;
@@ -89,7 +99,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
     {
         sLine.clear();
         rowToString(r, sLine, cSep);
-        const auto& utf8 = sLine.toUtf8();
+        const auto& utf8 = qStringToEncodedBytes(sLine);
         strm.write(utf8.data(), utf8.size());
         if (r + 1 < nRowCount)
             strm << sEol;

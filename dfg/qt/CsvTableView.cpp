@@ -371,6 +371,7 @@ public:
     typedef QDialog BaseClass;
     CsvFormatDefinitionDialog()
     {
+        using namespace DFG_MODULE_NS(io);
         auto spLayout = std::unique_ptr<QFormLayout>(new QFormLayout);
         m_pSeparatorEdit = new QComboBox(this);
         m_pEnclosingEdit = new QComboBox(this);
@@ -385,7 +386,7 @@ public:
         m_pEnclosingEdit->setEditable(true);
         m_pEolEdit->addItems(QStringList() << "\\n" << "\\r" << "\\r\\n");
         m_pEolEdit->setEditable(false);
-        m_pEncodingEdit->addItem("UTF8");
+        m_pEncodingEdit->addItems(QStringList() << encodingToStrId(encodingUTF8) << encodingToStrId(encodingLatin1));
         m_pEncodingEdit->setEditable(false);
         m_pSaveHeader->setChecked(true);
         m_pWriteBOM->setChecked(true);
@@ -409,7 +410,8 @@ public:
 
     void accept() override
     {
-        if (!m_pSeparatorEdit || !m_pEnclosingEdit || !m_pEolEdit || !m_pSaveHeader || !m_pWriteBOM)
+        using namespace DFG_MODULE_NS(io);
+        if (!m_pSeparatorEdit || !m_pEnclosingEdit || !m_pEolEdit || !m_pSaveHeader || !m_pWriteBOM || !m_pEncodingEdit)
         {
             QMessageBox::information(this, tr("CSV saving"), tr("Internal error occurred; saving failed."));
             return;
@@ -433,7 +435,8 @@ public:
         // TODO: check for identical values (e.g. require that sep != enc)
         if (!sep.first || !enc.first || eolType == DFG_MODULE_NS(io)::EndOfLineTypeNative)
         {
-            QMessageBox::information(this, tr("CSV saving"), tr("Chosen settings can't be used. Please revise that selections."));
+            // TODO: more informative message for the user.
+            QMessageBox::information(this, tr("CSV saving"), tr("Chosen settings can't be used. Please revise the selections."));
             return;
         }
 
@@ -442,6 +445,8 @@ public:
         m_formatDef.m_eolType = eolType;
         m_formatDef.headerWriting(m_pSaveHeader->isChecked());
         m_formatDef.bomWriting(m_pWriteBOM->isChecked());
+        m_formatDef.textEncoding(strIdToEncoding(m_pEncodingEdit->currentText().toLatin1().data()));
+
         BaseClass::accept();
     }
 

@@ -2,6 +2,8 @@
 
 #include "../dfgDefs.hpp"
 #include "../bits/byteSwap.hpp"
+#include <algorithm>
+#include <cstring>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -29,6 +31,39 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     inline bool isBigEndianEncoding(TextEncoding encoding)
     {
         return (encoding == encodingUTF16Be || encoding == encodingUTF32Be);
+    }
+
+    namespace DFG_DETAIL_NS
+    {
+        const std::pair<TextEncoding, const char*> EncodingStrIdTable[] =
+        {
+            std::pair<TextEncoding, const char*>(encodingLatin1, "Latin1"),
+            std::pair<TextEncoding, const char*>(encodingUTF8, "UTF8"),
+            std::pair<TextEncoding, const char*>(encodingUTF16Be, "UTF16BE"),
+            std::pair<TextEncoding, const char*>(encodingUTF16Le, "UTF16LE"),
+            std::pair<TextEncoding, const char*>(encodingUTF32Be, "UTF32BE"),
+            std::pair<TextEncoding, const char*>(encodingUTF32Le, "UTF32LE"),
+        };
+    }
+
+    inline const char* encodingToStrId(const TextEncoding encoding)
+    {
+        using namespace DFG_DETAIL_NS;
+        auto iter = std::find_if(std::begin(EncodingStrIdTable), std::end(EncodingStrIdTable), [&](const std::pair<TextEncoding, const char*>& entry)
+        {
+            return (entry.first == encoding);
+        });
+        return (iter != std::end(EncodingStrIdTable)) ? iter->second : "";
+    }
+
+    inline TextEncoding strIdToEncoding(const char* const psz)
+    {
+        using namespace DFG_DETAIL_NS;
+        auto iter = std::find_if(std::begin(EncodingStrIdTable), std::end(EncodingStrIdTable), [&](const std::pair<TextEncoding, const char*>& entry)
+        {
+            return (strcmp(entry.second, psz) == 0);
+        });
+        return (iter != std::end(EncodingStrIdTable)) ? iter->first : encodingUnknown;
     }
 
     inline TextEncoding hostNativeFixedSizeUtfEncodingFromCharType(const size_t charSizeInBytes)
