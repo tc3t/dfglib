@@ -58,6 +58,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
                         return rv;
                     s.push_back(static_cast<char>(charVal));
                 }
+                if (n == 2 && base == 8)
+                    s = "0";
                 char* pEnd = nullptr;
                 auto val = strtoul(s.c_str(), &pEnd, base);
                 if (pEnd != s.c_str() && isValWithinLimitsOfType<Char_T>(val))

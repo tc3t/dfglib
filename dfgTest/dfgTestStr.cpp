@@ -343,6 +343,7 @@ TEST(dfgStr, stringLiteralCharToValue)
     testEscaped("\\\"", '\"');
     testEscaped("\\\\", '\\');
     testEscaped("\\\?", '\?');
+    testEscaped("\\0", '\0');
 
     for (int c = 0; c < 255; ++c)
     {
