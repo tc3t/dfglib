@@ -448,6 +448,22 @@ TEST(dfgIo, OmcStreamWithEncoding)
                 EXPECT_EQ(szAnsi[i], s[i]);
             }
         }
+
+        // Test writeUnicodeChar()
+        {
+            const auto nWritten = ostrm.writeUnicodeChar(0x20AC);
+            EXPECT_TRUE(nWritten >= 2);
+            const auto& cont = ostrm.container();
+            const auto nSize = cont.size();
+            const auto bytes = makeRange(cont.data() + nSize - nWritten, cont.data() + nSize);
+            std::vector<uint32> dest;
+            if (encoding == encodingUTF8)
+            {
+                utfToFixedChSizeStrIter<uint32>(bytes, std::back_inserter(dest), dfg::ByteOrderHost, dfg::ByteOrderHost, [](const UnconvertableCpHandlerParam&){return 0; });
+                EXPECT_TRUE(!dest.empty());
+                EXPECT_EQ(0x20AC, dest.front());
+            }
+        }
     };
 
     testCaseImpl(encodingUTF8, 6, sUtf8);

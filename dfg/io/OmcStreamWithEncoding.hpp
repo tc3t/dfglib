@@ -6,6 +6,7 @@
 #include <streambuf>
 #include "../utf.hpp"
 #include "OmcByteStream.hpp"
+#include "../numericTypeTools.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -65,6 +66,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return num;
         }
 
+        std::streamsize writeUnicodeChar(const uint32 c)
+        {
+            if (isValWithinLimitsOfType<int_type>(c))
+            {
+                const auto startPos = currentPosInBytes();
+                overflow(static_cast<int_type>(c));
+                return currentPosInBytes() - startPos;
+            }
+            else
+                return 0;
+        }
+
         TextEncoding m_encoding;
     };
 
@@ -88,6 +101,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 #endif
 
         TextEncoding encoding() const { return this->m_streamBuf.encoding(); }
+
+        std::streamsize writeUnicodeChar(const uint32 c)
+        {
+            return this->m_streamBuf.writeUnicodeChar(c);
+        }
 
     }; // Class OmcStreamWithEncoding
 
