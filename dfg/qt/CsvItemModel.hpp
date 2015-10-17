@@ -38,7 +38,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class DFG_CLASS_NAME(CsvFormatDefinition)
     {
     public:
-        DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeNative) :
+        DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeN) :
             m_cSep(cSep),
             m_cEnc(cEnc),
             m_eolType(eol),
