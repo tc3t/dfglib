@@ -300,3 +300,27 @@ TEST(dfg, ConstructorInitializationDelegate)
     EXPECT_EQ(3, test.m_vec[2]);
 }
 
+TEST(dfg, isValWithinLimitsOfType)
+{
+    using namespace DFG_ROOT_NS;
+
+    char a = 1;
+    EXPECT_FALSE(isValWithinLimitsOfType<char>(int(128)));
+    EXPECT_FALSE(isValWithinLimitsOfType(int(128), a));
+    EXPECT_TRUE(isValWithinLimitsOfType<char>(int(127)));
+    EXPECT_TRUE(isValWithinLimitsOfType(int(127), a));
+    EXPECT_TRUE(isValWithinLimitsOfType<char>(int(-127)));
+    EXPECT_FALSE(isValWithinLimitsOfType<int8>(int16(3210)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint8>(int16(3210)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint16>(int(-1)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint8>(char(-1)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint16>(char(-1)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint16>(int16(-1)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint32>(char(-1)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint32>(int(-1)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint64>(char(-1)));
+    EXPECT_FALSE(isValWithinLimitsOfType<uint64>(int64(-1)));
+    EXPECT_TRUE(isValWithinLimitsOfType<uint64>(uint8(255)));
+    EXPECT_TRUE(isValWithinLimitsOfType<uint8>(uint64(255)));
+}
+

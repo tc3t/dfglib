@@ -52,16 +52,51 @@ template <class T> inline T minValueOfType(const T&) {return minValueOfType<T>()
 // Returns maximum value of given integer type.
 template <class T> inline T maxValueOfType()
 {
-    DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true, "Only interger types are allowed.");
+    DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true, "Only integer types are allowed.");
     return (std::numeric_limits<T>::max)();
 }
 template <class T> inline T maxValueOfType(const T&) {return maxValueOfType<T>();}
 
+template <class To_T, class From_T>
+bool isValWithinLimitsOfType(const From_T& val, const std::true_type, const std::true_type) // Both unsigned
+{
+    return (val >= minValueOfType<To_T>() && val <= maxValueOfType<To_T>());
+}
+
+template <class To_T, class From_T>
+bool isValWithinLimitsOfType(const From_T& val, const std::false_type, const std::false_type) // Both signed
+{
+    return (val >= minValueOfType<To_T>() && val <= maxValueOfType<To_T>());
+}
+
+template <class To_T, class From_T>
+bool isValWithinLimitsOfType(const From_T& val, const std::true_type, const std::false_type) // To_T unsigned, From_T signed
+{
+    if (val < 0)
+        return false;
+    typedef std::make_unsigned<From_T>::type UFrom_T;
+    return isValWithinLimitsOfType<To_T>(static_cast<UFrom_T>(val));
+}
+
+template <class To_T, class From_T>
+bool isValWithinLimitsOfType(const From_T& val, const std::false_type, const std::true_type) // To_T signed, From_T unsigned
+{
+    typedef std::make_unsigned<To_T>::type UTo_T;
+    return val <= static_cast<UTo_T>(maxValueOfType<To_T>());
+}
+
 // Tests whether 'val' is within [minValueOfType<To_T>(), maxValueOfType<To_T>()].
+template <class To_T, class From_T>
+bool isValWithinLimitsOfType(const From_T& val)
+{
+    return isValWithinLimitsOfType<To_T>(val, std::is_unsigned<To_T>(), std::is_unsigned<From_T>());
+}
+
+// Convenience overload to allow using variables.
 template <class From_T, class To_T>
 bool isValWithinLimitsOfType(const From_T& val, const To_T)
 {
-    return (val >= minValueOfType<To_T>() && val <= maxValueOfType<To_T>());
+    return isValWithinLimitsOfType<To_T>(val);
 }
 
 // Note: Min and Max differ from normal naming to avoid problems with windows headers that
