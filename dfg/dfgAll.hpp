@@ -17,6 +17,7 @@
 #include "hash.hpp"
 #include "iterableForRange.hpp"
 #include "memsetZeroSecure.hpp"
+#include "numericTypeTools.hpp"
 #include "ptrToContiguousMemory.hpp"
 #include "rangeIterator.hpp"
 #include "readOnlyParamStr.hpp"
