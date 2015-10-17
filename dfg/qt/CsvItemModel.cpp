@@ -40,9 +40,12 @@ QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
     return (bSuccess) ? m_sFilePath : QString();
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(QString sPath, const SaveOptions& options)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath, const SaveOptions& options)
 {
     QDir().mkpath(QFileInfo(sPath).absolutePath()); // Make sure that the target folder exists, otherwise opening the file will fail.
+
+    // Note: This should be non-encoding stream. Encoding stream without encoding property is used here probably because it had the wchar_t-path version working
+    //       at the time of writing. TODO: use plain ofstream.
     DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) strm(sPath.toStdWString(), DFG_MODULE_NS(io)::encodingUnknown);
 
     if (!strm.is_open())
@@ -53,20 +56,24 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(QString sPath, 
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const SaveOptions& options)
 {
-    const char cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
-    const char cEnc = options.enclosingChar();
-    const auto cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
+    const QChar cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
+    const QChar cEnc = options.enclosingChar();
+    const QChar cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
     const auto sEolDummy = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
     const auto sEol = sEolDummy.c_str();
+    const std::string sSepEncoded = QString(cSep).toUtf8().data();
 
-    const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(DFG_MODULE_NS(io)::encodingUTF8);
-    strm.write(bomBytes.data(), bomBytes.size());
+    if (options.bomWriting())
+    {
+        const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(DFG_MODULE_NS(io)::encodingUTF8);
+        strm.write(bomBytes.data(), bomBytes.size());
+    }
 
-    if (options.saveHeader())
+    if (options.headerWriting())
     {
         QString sEncodedTemp;
         const auto headerRange = boost::irange<int>(0, static_cast<int>(m_vecColInfo.size()));
-        DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), cSep, [&](StreamT& strm, int i)
+        DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), sSepEncoded, [&](StreamT& strm, int i)
         {
             sEncodedTemp.clear();
             DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp), getHeaderName(i), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);

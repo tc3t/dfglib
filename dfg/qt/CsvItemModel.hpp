@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include "qtIncludeHelpers.hpp"
 #include "../cont/table.hpp"
+#include "../io/textencodingtypes.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMessageBox>
@@ -32,6 +33,43 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 #ifndef DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
     #define DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS  0
 #endif
+
+    // TODO: move out of qt-namespace.
+    class DFG_CLASS_NAME(CsvFormatDefinition)
+    {
+    public:
+        DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeNative) :
+            m_cSep(cSep),
+            m_cEnc(cEnc),
+            m_eolType(eol),
+            m_textEncoding(DFG_MODULE_NS(io)::encodingUTF8),
+            m_bWriteHeader(true),
+            m_bWriteBom(true)
+        {}
+
+        int32 separatorChar() const { return m_cSep; }
+        void separatorChar(int32 cSep) { m_cSep = cSep; }
+        int32 enclosingChar() const { return m_cEnc; }
+        void enclosingChar(int32 cEnc) { m_cEnc = cEnc; }
+        DFG_MODULE_NS(io)::EndOfLineType eolType() const { return m_eolType; }
+        void eolType(DFG_MODULE_NS(io)::EndOfLineType eolType) { m_eolType = eolType; }
+
+        bool headerWriting() const { return m_bWriteHeader; }
+        void headerWriting(bool bWriteHeader) { m_bWriteHeader = bWriteHeader; }
+
+        bool bomWriting() const { return m_bWriteBom; }
+        void bomWriting(bool bWriteBom) { m_bWriteBom = bWriteBom; }
+
+        DFG_MODULE_NS(io)::TextEncoding textEncoding() const { return m_textEncoding; }
+        void textEncoding(DFG_MODULE_NS(io)::TextEncoding encoding) { m_textEncoding = encoding; }
+
+        int32 m_cSep;
+        int32 m_cEnc;
+        DFG_MODULE_NS(io)::EndOfLineType m_eolType;
+        DFG_MODULE_NS(io)::TextEncoding m_textEncoding;
+        bool m_bWriteHeader;
+        bool m_bWriteBom;
+    };
 
     // TODO: test
     class DFG_CLASS_NAME(CsvItemModel) : public QAbstractTableModel
@@ -65,33 +103,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             std::shared_ptr<QCompleter> m_spCompleter;
         };
 
-        class SaveOptions
-        {
-        public:
-            SaveOptions(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeNative) :
-                m_cSep(cSep),
-                m_cEnc(cEnc),
-                m_eolType(eol),
-                m_bSaveHeader(true)
-            {}
-
-            char separatorChar() const { return m_cSep; }
-            void separatorChar(char cSep) { m_cSep = cSep; }
-            char enclosingChar() const { return m_cEnc; }
-            void enclosingChar(char cEnc) { m_cEnc = cEnc; }
-            DFG_MODULE_NS(io)::EndOfLineType eolType() const { return m_eolType; }
-            void eolType(DFG_MODULE_NS(io)::EndOfLineType eolType) { m_eolType = eolType; }
-
-            bool saveHeader() const { return m_bSaveHeader; }
-            void saveHeader(bool bSaveHeader) { m_bSaveHeader = bSaveHeader; }
-
-            char m_cSep;
-            char m_cEnc;
-            DFG_MODULE_NS(io)::EndOfLineType m_eolType;
-            bool m_bSaveHeader;
-        };
-
-        typedef SaveOptions LoadOptions;
+        typedef DFG_CLASS_NAME(CsvFormatDefinition) SaveOptions;
+        typedef DFG_CLASS_NAME(CsvFormatDefinition) LoadOptions;
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.
         static int internalRowIndexToVisible(const int nRow) { return nRow + 1; }
@@ -106,7 +119,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Tries to save csv-data to given path. If given path is empty,
         // the path will be asked from the user.
         // [return] : Returns true iff. save is successful.
-        bool saveToFile(QString sPath, const SaveOptions& options = SaveOptions());
+        bool saveToFile(const QString& sPath, const SaveOptions& options = SaveOptions());
 
         // Saves data to stream in UTF8-format including BOM.
         // Note: Stream's write()-member must write bytes untranslated (i.e. no encoding nor eol translation)
@@ -136,9 +149,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Appends data model row to string.
         template <class String>
-        void rowToString(const int nRow, String& str, const char cDelim, std::unordered_set<int>* pSetIgnoreColumns = nullptr) const;
+        void rowToString(const int nRow, String& str, const QChar cDelim, std::unordered_set<int>* pSetIgnoreColumns = nullptr) const;
 
-        QString rowToString(const int nRow, const char cDelim = '\t') const
+        QString rowToString(const int nRow, const QChar cDelim = '\t') const
         {
             QString str;
             rowToString(nRow, str, cDelim);
@@ -170,7 +183,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void removeRows(const std::vector<int>& vecIndexesAscSorted);
 
         template <class String>
-        String& dataCellToString(const QString& sSrc, String& sDst, const char cDelim) const;
+        String& dataCellToString(const QString& sSrc, String& sDst, const QChar cDelim) const;
 
         const QString& getFilePath() const
         { 
@@ -218,7 +231,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     };
 
     template <class String>
-    void DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow, String& str, const char cDelim, std::unordered_set<int>* pSetIgnoreColumns /*= nullptr*/) const
+    void DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow, String& str, const QChar cDelim, std::unordered_set<int>* pSetIgnoreColumns /*= nullptr*/) const
     {
         if (!isValidRow(nRow))
             return;
@@ -239,14 +252,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }
 
     template <class String>
-    String& DFG_CLASS_NAME(CsvItemModel)::dataCellToString(const QString& sSrc, String& sDst, const char cDelim) const
+    String& DFG_CLASS_NAME(CsvItemModel)::dataCellToString(const QString& sSrc, String& sDst, const QChar cDelim) const
     {
         QTextStream strm(&sDst);
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrStrm(strm,
             sSrc,
             cDelim,
-            '"',
-            '\n',
+            QChar('"'),
+            QChar('\n'),
             DFG_MODULE_NS(io)::EbEncloseIfNeeded);
         return sDst;
     }
