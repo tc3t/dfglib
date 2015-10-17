@@ -9,11 +9,16 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QFileDialog>
 #include <QUndoStack>
 #include <QHeaderView>
+#include <QFormLayout>
+#include <QComboBox>
+#include <QDialogButtonBox>
+#include <QCheckBox>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
 #include <unordered_set>
 #include "../alg.hpp"
+#include "../str/stringLiteralCharToValue.hpp"
 
 using namespace DFG_MODULE_NS(qt);
 
@@ -46,6 +51,12 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
     {
         auto pAction = new QAction(tr("Save to file..."), this);
         connect(pAction, &QAction::triggered, this, &ThisClass::saveToFile);
+        addAction(pAction);
+    }
+
+    {
+        auto pAction = new QAction(tr("Save to file with options..."), this);
+        connect(pAction, &QAction::triggered, this, &ThisClass::saveToFileWithOptions);
         addAction(pAction);
     }
 
@@ -324,14 +335,14 @@ bool DFG_CLASS_NAME(CsvTableView)::isRowMode() const
     return false;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
+bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
 {
     auto sPath = QFileDialog::getSaveFileName(this,
-                                            tr("Open file"),
-                                            QString()/*dir*/,
-                                            tr("CSV files (*.csv);;All files (*.*)"),
-                                            nullptr/*selected filter*/,
-                                            0/*options*/);
+        tr("Open file"),
+        QString()/*dir*/,
+        tr("CSV files (*.csv);;All files (*.*)"),
+        nullptr/*selected filter*/,
+        0/*options*/);
 
     if (sPath.isEmpty())
         return false;
@@ -341,11 +352,115 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
     if (!pModel)
         return false;
 
-    const auto bSuccess = pModel->saveToFile(sPath);
+    const auto bSuccess = pModel->saveToFile(sPath, formatDef);
     if (!bSuccess)
         QMessageBox::information(nullptr, tr("Save failed"), tr("Failed to save to path %1").arg(sPath));
 
     return bSuccess;
+}
+
+
+bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
+{
+    return saveToFileImpl(DFG_CLASS_NAME(CsvFormatDefinition)());
+}
+
+class CsvFormatDefinitionDialog : public QDialog
+{
+public:
+    typedef QDialog BaseClass;
+    CsvFormatDefinitionDialog()
+    {
+        auto spLayout = std::unique_ptr<QFormLayout>(new QFormLayout);
+        m_pSeparatorEdit = new QComboBox(this);
+        m_pEnclosingEdit = new QComboBox(this);
+        m_pEolEdit = new QComboBox(this);
+        m_pEncodingEdit = new QComboBox(this);
+        m_pSaveHeader = new QCheckBox(this);
+        m_pWriteBOM = new QCheckBox(this);
+
+        m_pSeparatorEdit->addItems(QStringList() << "," << "\\t" << ";");
+        m_pSeparatorEdit->setEditable(true);
+        m_pEnclosingEdit->addItem("\"");
+        m_pEnclosingEdit->setEditable(true);
+        m_pEolEdit->addItems(QStringList() << "\\n" << "\\r" << "\\r\\n");
+        m_pEolEdit->setEditable(false);
+        m_pEncodingEdit->addItem("UTF8");
+        m_pEncodingEdit->setEditable(false);
+        m_pSaveHeader->setChecked(true);
+        m_pWriteBOM->setChecked(true);
+
+        spLayout->addRow(tr("Separator char"), m_pSeparatorEdit);
+        spLayout->addRow(tr("Enclosing char"), m_pEnclosingEdit);
+        spLayout->addRow(tr("End-of-line"), m_pEolEdit);
+        spLayout->addRow(tr("Save header"), m_pSaveHeader);
+        spLayout->addRow(tr("Encoding"), m_pEncodingEdit);
+        spLayout->addRow(tr("Write BOM"), m_pWriteBOM);
+
+        auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
+
+        connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept()));
+        connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject()));
+
+
+        spLayout->addRow(QString(), &rButtonBox);
+        setLayout(spLayout.release());
+    }
+
+    void accept() override
+    {
+        if (!m_pSeparatorEdit || !m_pEnclosingEdit || !m_pEolEdit || !m_pSaveHeader || !m_pWriteBOM)
+        {
+            QMessageBox::information(this, tr("CSV saving"), tr("Internal error occurred; saving failed."));
+            return;
+        }
+        auto sSep = m_pSeparatorEdit->currentText().trimmed();
+        auto sEnc = m_pEnclosingEdit->currentText().trimmed();
+        auto sEol = m_pEolEdit->currentText().trimmed();
+
+        DFG_MODULE_NS(io)::EndOfLineType eolType = DFG_MODULE_NS(io)::EndOfLineTypeNative;
+
+        const auto sep = DFG_MODULE_NS(str)::stringLiteralCharToValue<wchar_t>(sSep.toStdWString());
+        const auto enc = DFG_MODULE_NS(str)::stringLiteralCharToValue<wchar_t>(sEnc.toStdWString());
+
+        if (sEol == "\\n")
+            eolType = DFG_MODULE_NS(io)::EndOfLineTypeN;
+        else if (sEol == "\\r")
+            eolType = DFG_MODULE_NS(io)::EndOfLineTypeR;
+        else if (sEol == "\\r\\n")
+            eolType = DFG_MODULE_NS(io)::EndOfLineTypeRN;
+
+        // TODO: check for identical values (e.g. require that sep != enc)
+        if (!sep.first || !enc.first || eolType == DFG_MODULE_NS(io)::EndOfLineTypeNative)
+        {
+            QMessageBox::information(this, tr("CSV saving"), tr("Chosen settings can't be used. Please revise that selections."));
+            return;
+        }
+
+        m_formatDef.m_cEnc = enc.second;
+        m_formatDef.m_cSep = sep.second;
+        m_formatDef.m_eolType = eolType;
+        m_formatDef.headerWriting(m_pSaveHeader->isChecked());
+        m_formatDef.bomWriting(m_pWriteBOM->isChecked());
+        BaseClass::accept();
+    }
+
+    DFG_CLASS_NAME(CsvFormatDefinition) m_formatDef;
+    QComboBox* m_pSeparatorEdit;
+    QComboBox* m_pEnclosingEdit;
+    QComboBox* m_pEolEdit;
+    QComboBox* m_pEncodingEdit;
+    QCheckBox* m_pSaveHeader;
+    QCheckBox* m_pWriteBOM;
+};
+
+bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
+{
+    CsvFormatDefinitionDialog dlg;
+    if (dlg.exec() != QDialog::Accepted)
+        return false;
+    return saveToFileImpl(dlg.m_formatDef);
+    
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
@@ -353,7 +468,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
     auto sPath = QFileDialog::getOpenFileName(this,
         tr("Open file"),
         QString()/*dir*/,
-        tr("CSV files (*.csv);;All files (*.*)"),
+        tr("CSV files (*.csv *.tsv);;All files (*.*)"),
                                                 nullptr/*selected filter*/,
                                                 0/*options*/);
     if (sPath.isEmpty())

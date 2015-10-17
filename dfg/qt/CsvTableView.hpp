@@ -12,6 +12,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
 
     class DFG_CLASS_NAME(CsvItemModel);
+    class DFG_CLASS_NAME(CsvFormatDefinition);
 
     // View for showing CsvItemModel.
     // TODO: test
@@ -68,6 +69,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QAbstractProxyModel* getProxyModelPtr();
         const QAbstractProxyModel* getProxyModelPtr() const;
 
+        bool saveToFileImpl(const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -90,6 +93,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public slots:
         bool openFromFile();
         bool saveToFile();
+        bool saveToFileWithOptions();
         bool clearSelected();
         bool insertRowHere();
         bool insertRowAfterCurrent();
