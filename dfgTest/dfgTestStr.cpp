@@ -4,6 +4,7 @@
 #include <dfg/alg.hpp>
 #include <dfg/str/hex.hpp>
 #include <dfg/dfgBaseTypedefs.hpp>
+#include <dfg/str/stringLiteralCharToValue.hpp>
 
 TEST(dfgStr, strLen)
 {
@@ -311,3 +312,72 @@ TEST(dfgStr, skipWhitespacesSz)
     EXPECT_EQ('2', sz3W[1]);
 
 }
+
+namespace
+{
+    template <class Char_T>
+    void testEscaped(const Char_T* psz, const Char_T val)
+    {
+        using namespace DFG_MODULE_NS(str);
+        std::basic_string<Char_T> s(psz);
+        EXPECT_TRUE(s.size() >= 2);
+        auto rv = stringLiteralCharToValue<Char_T>(s);
+        EXPECT_TRUE(rv.first);
+        EXPECT_EQ(val, rv.second);
+    }
+}
+
+TEST(dfgStr, stringLiteralCharToValue)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
+    testEscaped("\\a", '\a');
+    testEscaped("\\b", '\b');
+    testEscaped("\\f", '\f');
+    testEscaped("\\n", '\n');
+    testEscaped("\\r", '\r');
+    testEscaped("\\t", '\t');
+    testEscaped("\\v", '\v');
+    testEscaped("\\'", '\'');
+    testEscaped("\\\"", '\"');
+    testEscaped("\\\\", '\\');
+    testEscaped("\\\?", '\?');
+
+    for (int c = 0; c < 255; ++c)
+    {
+        std::string s(1, static_cast<char>(c));
+        auto vals = stringLiteralCharToValue<char>(s);
+        auto valu = stringLiteralCharToValue<uint8>(s);
+        EXPECT_TRUE(vals.first);
+        EXPECT_EQ(c < 128, valu.first);
+        EXPECT_EQ(static_cast<char>(c), vals.second);
+        if (valu.first)
+            EXPECT_EQ(c, valu.second);
+    }
+
+    auto rv0 = stringLiteralCharToValue<uint8>("\\xff");
+    EXPECT_TRUE(rv0.first);
+    EXPECT_EQ(0xff, rv0.second);
+
+    auto rv1 = stringLiteralCharToValue<int>("\\xffff");
+    EXPECT_TRUE(rv1.first);
+    EXPECT_EQ(0xffff, rv1.second);
+
+    auto rv2 = stringLiteralCharToValue<uint32>("\\xffffffff");
+    EXPECT_TRUE(rv2.first);
+    EXPECT_EQ(0xffffffff, rv2.second);
+
+    auto rv3 = stringLiteralCharToValue<int>("\\033");
+    EXPECT_TRUE(rv3.first);
+    EXPECT_EQ(033, rv3.second);
+
+    auto rv4 = stringLiteralCharToValue<char>(L"\xff");
+    EXPECT_FALSE(rv4.first);
+
+    auto rv5 = stringLiteralCharToValue<char>(L"\x7f");
+    EXPECT_TRUE(rv5.first);
+    EXPECT_EQ(0x7f, rv5.second);
+
+}
+

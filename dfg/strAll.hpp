@@ -4,5 +4,6 @@
 #include "str/hex.hpp"
 #include "str/string.hpp"
 #include "str/stringFixedCapacity.hpp"
+#include "str/stringLiteralCharToValue.hpp"
 #include "str/strlen.hpp"
 #include "str/strTo.hpp"
