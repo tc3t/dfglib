@@ -70,9 +70,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
             if (isValWithinLimitsOfType<int_type>(c))
             {
-                const auto startPos = currentPosInBytes();
+                const auto startPos = this->currentPosInBytes();
                 overflow(static_cast<int_type>(c));
-                return currentPosInBytes() - startPos;
+                return this->currentPosInBytes() - startPos;
             }
             else
                 return 0;

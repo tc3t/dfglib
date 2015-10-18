@@ -37,6 +37,7 @@ DFG_ROOT_NS_BEGIN
         DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true, "Only integer types are allowed.");
         return (std::numeric_limits<T>::max)();
     }
+
     template <class T> inline T maxValueOfType(const T&) { return maxValueOfType<T>(); }
 
     template <class To_T, class From_T>
@@ -56,14 +57,14 @@ DFG_ROOT_NS_BEGIN
     {
         if (val < 0)
             return false;
-        typedef std::make_unsigned<From_T>::type UFrom_T;
-        return isValWithinLimitsOfType<To_T>(static_cast<UFrom_T>(val));
+        typedef typename std::make_unsigned<From_T>::type UFrom_T;
+        return isValWithinLimitsOfType<To_T>(static_cast<UFrom_T>(val), std::true_type(), std::true_type());
     }
 
     template <class To_T, class From_T>
     bool isValWithinLimitsOfType(const From_T& val, const std::false_type, const std::true_type) // To_T signed, From_T unsigned
     {
-        typedef std::make_unsigned<To_T>::type UTo_T;
+        typedef typename std::make_unsigned<To_T>::type UTo_T;
         return val <= static_cast<UTo_T>(maxValueOfType<To_T>());
     }
 
