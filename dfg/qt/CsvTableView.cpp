@@ -335,7 +335,7 @@ bool DFG_CLASS_NAME(CsvTableView)::isRowMode() const
     return false;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
+bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
 {
     auto sPath = QFileDialog::getSaveFileName(this,
         tr("Open file"),
@@ -362,7 +362,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_CLASS_NAME(CsvFormat
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
 {
-    return saveToFileImpl(DFG_CLASS_NAME(CsvFormatDefinition)());
+    return saveToFileImpl(DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)());
 }
 
 class CsvFormatDefinitionDialog : public QDialog
@@ -450,7 +450,7 @@ public:
         BaseClass::accept();
     }
 
-    DFG_CLASS_NAME(CsvFormatDefinition) m_formatDef;
+    DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) m_formatDef;
     QComboBox* m_pSeparatorEdit;
     QComboBox* m_pEnclosingEdit;
     QComboBox* m_pEolEdit;

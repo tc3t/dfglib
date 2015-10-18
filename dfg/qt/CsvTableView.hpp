@@ -8,11 +8,14 @@
 class QUndoStack;
 class QAbstractProxyModel;
 
+namespace DFG_ROOT_NS
+{
+    class DFG_CLASS_NAME(CsvFormatDefinition);
+}
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
-
     class DFG_CLASS_NAME(CsvItemModel);
-    class DFG_CLASS_NAME(CsvFormatDefinition);
 
     // View for showing CsvItemModel.
     // TODO: test
