@@ -4,7 +4,7 @@
 #include <dfg/buildConfig.hpp> // To get rid of C4996 "Function call with parameters that may be unsafe" in MSVC.
 #include <unordered_set>
 #include "qtIncludeHelpers.hpp"
-#include "../cont/table.hpp"
+#include "../cont/tableCsv.hpp"
 #include "../io/textencodingtypes.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
@@ -33,43 +33,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 #ifndef DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
     #define DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS  0
 #endif
-
-    // TODO: move out of qt-namespace.
-    class DFG_CLASS_NAME(CsvFormatDefinition)
-    {
-    public:
-        DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeN) :
-            m_cSep(cSep),
-            m_cEnc(cEnc),
-            m_eolType(eol),
-            m_textEncoding(DFG_MODULE_NS(io)::encodingUTF8),
-            m_bWriteHeader(true),
-            m_bWriteBom(true)
-        {}
-
-        int32 separatorChar() const { return m_cSep; }
-        void separatorChar(int32 cSep) { m_cSep = cSep; }
-        int32 enclosingChar() const { return m_cEnc; }
-        void enclosingChar(int32 cEnc) { m_cEnc = cEnc; }
-        DFG_MODULE_NS(io)::EndOfLineType eolType() const { return m_eolType; }
-        void eolType(DFG_MODULE_NS(io)::EndOfLineType eolType) { m_eolType = eolType; }
-
-        bool headerWriting() const { return m_bWriteHeader; }
-        void headerWriting(bool bWriteHeader) { m_bWriteHeader = bWriteHeader; }
-
-        bool bomWriting() const { return m_bWriteBom; }
-        void bomWriting(bool bWriteBom) { m_bWriteBom = bWriteBom; }
-
-        DFG_MODULE_NS(io)::TextEncoding textEncoding() const { return m_textEncoding; }
-        void textEncoding(DFG_MODULE_NS(io)::TextEncoding encoding) { m_textEncoding = encoding; }
-
-        int32 m_cSep;
-        int32 m_cEnc;
-        DFG_MODULE_NS(io)::EndOfLineType m_eolType;
-        DFG_MODULE_NS(io)::TextEncoding m_textEncoding;
-        bool m_bWriteHeader;
-        bool m_bWriteBom;
-    };
 
     // TODO: test
     class DFG_CLASS_NAME(CsvItemModel) : public QAbstractTableModel
@@ -104,7 +67,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         };
 
         typedef DFG_CLASS_NAME(CsvFormatDefinition) SaveOptions;
-        typedef DFG_CLASS_NAME(CsvFormatDefinition) LoadOptions;
+        typedef SaveOptions LoadOptions;
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.
         static int internalRowIndexToVisible(const int nRow) { return nRow + 1; }
@@ -119,18 +82,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Tries to save csv-data to given path. If given path is empty,
         // the path will be asked from the user.
         // [return] : Returns true iff. save is successful.
-        bool saveToFile(const QString& sPath, const SaveOptions& options = SaveOptions());
+        bool saveToFile(const QString& sPath);
+        bool saveToFile(const QString& sPath, const SaveOptions& options);
 
         // Saves data to stream in UTF8-format including BOM.
         // Note: Stream's write()-member must write bytes untranslated (i.e. no encoding nor eol translation)
         // TODO: Make encoding to be user definable through options.
-        bool save(StreamT& strm, const SaveOptions& options = SaveOptions());
+        bool save(StreamT& strm);
+        bool save(StreamT& strm, const SaveOptions& options);
 
     public:
 
-        bool openFile(QString sDbFilePath, const LoadOptions& loadOptions = LoadOptions());
-        bool openStream(QTextStream& strm, const LoadOptions& loadOptions = LoadOptions());
-        bool openString(QString str, const LoadOptions& loadOptions = LoadOptions());
+        bool openFile(QString sDbFilePath);
+        bool openFile(QString sDbFilePath, const LoadOptions& loadOptions);
+        bool openStream(QTextStream& strm);
+        bool openStream(QTextStream& strm, const LoadOptions& loadOptions);
+        bool openString(QString str);
+        bool openString(QString str, const LoadOptions& loadOptions);
 
         bool isModified() const { return m_bModified; }
         void setModifiedStatus(const bool bMod = true);
@@ -218,8 +186,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public:
         //QUndoStack* m_pUndoStack;
-        //std::vector<std::vector<QString>> m_vecData; // TODO: revise the data structure. Use Table?
-        DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int> m_table;
+        DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int> m_table;
 
     //private:
 

@@ -40,6 +40,11 @@ QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
     return (bSuccess) ? m_sFilePath : QString();
 }
 
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath)
+{
+    return saveToFile(sPath, SaveOptions());
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath, const SaveOptions& options)
 {
     QDir().mkpath(QFileInfo(sPath).absolutePath()); // Make sure that the target folder exists, otherwise opening the file will fail.
@@ -52,6 +57,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
         return false;
 
     return save(strm, options);
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
+{
+    return save(strm, SaveOptions());
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const SaveOptions& options)
@@ -140,6 +150,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
     m_bModified = false;
 }
 
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& strm)
+{
+    return openStream(strm, LoadOptions());
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& strm, const LoadOptions& loadOptions)
 {
     beginResetModel();
@@ -175,7 +190,6 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
     QString s;
     for(int nRow = 0; DFG_MODULE_NS(io)::isStreamInReadableState(strm); ++nRow)
     {
-        //m_vecData.push_back(std::vector<QString>(getColumnCount()));
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, cEol, [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
         {
             if (nCol >= size_t(getColumnCount()))
@@ -211,10 +225,20 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
     return true;
 }
 
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str)
+{
+    return openString(str, LoadOptions());
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str, const LoadOptions& loadOptions)
 {
     QTextStream strm(&str);
     return openStream(strm, loadOptions);
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath)
+{
+    return openFile(sDbFilePath, LoadOptions());
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, const LoadOptions& loadOptions)
