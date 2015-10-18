@@ -209,7 +209,7 @@ void cpToUtf(const uint32 cp, IterUtf_T result, size_t encodedChSize, ByteOrder 
     size_t outputTypeSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
     if (outputTypeSize != 1 && outputTypeSize != encodedChSize)
     {
-        DFG_ASSERT_WITH_MSG(false, "This function expects either byte output of output whose character size matches with encoding.");
+        DFG_ASSERT_WITH_MSG(false, "This function expects either byte output or output whose character size matches with encoding.");
         return;
     }
 

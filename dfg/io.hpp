@@ -18,27 +18,10 @@
 #include "dfgBase.hpp"
 #include "utf/utfBom.hpp"
 #include "io/fileToByteContainer.hpp"
+#include "io/EndOfLineTypes.hpp"
 
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
-
-    
-
-#ifdef _WIN32
-#define DFG_NATIVE_ENDOFLINE_STR	"\r\n"
-#else
-#pragma message( "Note: Using default native end-of-line string." )
-#define DFG_NATIVE_ENDOFLINE_STR	"\n"
-#endif
-
-    enum EndOfLineType
-    {
-        EndOfLineTypeN,      // \n
-        EndOfLineTypeRN,     // \r\n
-        EndOfLineTypeR,      // \r
-        EndOfLineTypeNative,
-        EndOfLineTypeMixed,
-    };
 
     // Note: These are placeholder interfaces and are not guaranteed to be equal to base classes
     // (e.g. availability of freeze()-function for strstream)
@@ -89,11 +72,22 @@ inline std::ofstream createOutputStreamBinaryFile(DFG_CLASS_NAME(ReadOnlyParamSt
 // Returns input binary stream from given output path.
 // Note: Return type is not guaranteed to be std::ifstream.
 //inline std::ifstream createInputStreamBinaryFile(NonNullCStr pszPath)
-inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) createInputStreamBinaryFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
+template <class Char_T>
+inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) createInputStreamBinaryFile(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath)
 {
     //std::ifstream strm(pszPath, std::ios::binary | std::ios::in);
     DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) strm(sPath);
     return strm;
+}
+
+inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) createInputStreamBinaryFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
+{
+    return createInputStreamBinaryFile<char>(sPath);
+}
+
+inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) createInputStreamBinaryFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath)
+{
+    return createInputStreamBinaryFile<wchar_t>(sPath);
 }
 
 template <class Strm_T>
@@ -195,10 +189,21 @@ inline TextEncoding checkBOM(Stream_T& istrm)
 
 // Checks BOM marker from file in given path.
 // TODO: test, especially small files with less bytes than longest BOM-markers.
-inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
+template <class Char_T>
+inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath)
 {
     auto istrm = createInputStreamBinaryFile(sPath);
     return checkBOM(istrm);
+}
+
+inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
+{
+    return checkBOMFromFile<char>(sPath);
+}
+
+inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath)
+{
+    return checkBOMFromFile<wchar_t>(sPath);
 }
 
 // Ignores given number of items from stream.
