@@ -8,7 +8,10 @@
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
 #include <dfg/cont/TorRef.hpp>
+#include <dfg/cont/tableCsv.hpp>
 #include <dfg/rand.hpp>
+#include <dfg/io/OmcByteStream.hpp>
+#include <dfg/iter/szIterator.hpp>
 
 TEST(dfgCont, makeVector)
 {
@@ -532,5 +535,49 @@ TEST(dfgCont, TorRef)
         EXPECT_FALSE(tor.hasRef());
         const int& ref = tor;
         EXPECT_EQ(0, ref);
+    }
+}
+
+TEST(dfgCont, TableCsv)
+{
+    using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(io);
+    using namespace DFG_MODULE_NS(utf);
+
+    std::vector<std::string> paths;
+    paths.push_back("testfiles/csvtestUTF8_BOM_eol_n.csv");
+    paths.push_back("testfiles/csvtestUTF16BE_BOM_eol_n.csv");
+    paths.push_back("testfiles/csvtestUTF16LE_BOM_eol_n.csv");
+    paths.push_back("testfiles/csvtestUTF32BE_BOM_eol_n.csv");
+    paths.push_back("testfiles/csvtestUTF32LE_BOM_eol_n.csv");
+    std::array<DFG_CLASS_NAME(TableCsv)<char, int>, 5> tables;
+    EXPECT_EQ(tables.size(), paths.size());
+    std::vector<std::string> bytes;
+
+    for (size_t i = 0; i < paths.size(); ++i)
+    {
+        const auto& s = paths[i];
+        auto& table = tables[i];
+        table.readFromFile(s);
+        bytes.resize(bytes.size() + 1);
+        DFG_CLASS_NAME(OmcByteStream)<std::string> ostrm(&bytes.back());
+        table.writeToStream(ostrm, encodingUTF8);
+    }
+
+    {
+        std::wstring sFromFile;
+        DFG_CLASS_NAME(IfStreamWithEncoding) istrm(paths.front());
+        DFG_CLASS_NAME(DelimitedTextReader)::read(istrm, wchar_t(','), wchar_t('"'), wchar_t('\n'), [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t)
+        {
+            std::wstring sUtfConverted;
+            auto inputRange = DFG_ROOT_NS::makeSzRange(tables.front()(nRow, nCol));
+            utf8To16Native(inputRange, std::back_inserter(sUtfConverted));
+            EXPECT_EQ(psz, sUtfConverted);
+        });
+    }
+
+    for (size_t i = 1; i < bytes.size(); ++i)
+    {
+        EXPECT_EQ(bytes[0], bytes[i]);
     }
 }
