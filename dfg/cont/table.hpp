@@ -543,6 +543,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             });
         }
 
+        // TODO: Implement copying and moving. Currently hidden because default copy causes the pointers in m_colToRows in the new
+        //       object to refer to the old table strings.
+        DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(DFG_CLASS_NAME(TableSz));
+
+        public:
         /*
         Storage implementation:
             -m_charBuffers stores null terminated strings in blocks of contiguous memory for each column.

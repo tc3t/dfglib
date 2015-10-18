@@ -57,6 +57,8 @@ DFG_ROOT_NS_BEGIN{
         public:
             typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
 
+            DFG_CLASS_NAME(TableCsv)()
+            {}
         };
 
 } } // module namespace
