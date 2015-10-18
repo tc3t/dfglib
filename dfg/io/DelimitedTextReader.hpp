@@ -184,7 +184,7 @@ public:
         template <class Char_T>
         void operator()(Buffer_T& buffer, const Char_T& ch)
         {
-            DFG_MODULE_NS(utf)::cpToUtf(ch, std::back_inserter(buffer), sizeof(DFG_MODULE_NS(cont)::ElementType<decltype(buffer)>::type), DFG_ROOT_NS::ByteOrderHost);
+            DFG_MODULE_NS(utf)::cpToUtf(ch, std::back_inserter(buffer), sizeof(typename DFG_MODULE_NS(cont)::ElementType<decltype(buffer)>::type), DFG_ROOT_NS::ByteOrderHost);
         }
     };
 

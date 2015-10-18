@@ -57,6 +57,7 @@ DFG_ROOT_NS_BEGIN{
         {
         public:
             typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
+            typedef typename DFG_CLASS_NAME(TableSz)<Char_T, Index_T>::ColumnIndexPairContainer ColumnIndexPairContainer;
 
             DFG_CLASS_NAME(TableCsv)()
             {}
@@ -64,8 +65,8 @@ DFG_ROOT_NS_BEGIN{
             void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath) { readFromFileImpl(sPath); }
             void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath) { readFromFileImpl(sPath); }
 
-            template <class Char_T>
-            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath)
+            template <class Char_T1>
+            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T1>& sPath)
             {
                 bool bRead = false;
                 try
@@ -119,14 +120,14 @@ DFG_ROOT_NS_BEGIN{
             void read(Strm_T& strm, CharAppender_T)
             {
                 using namespace DFG_MODULE_NS(io);
-                clear();
+                this->clear();
                 // TODO: correct format settings.
                 DFG_CLASS_NAME(DelimitedTextReader)::CellData<Char_T, Char_T, std::basic_string<Char_T>, CharAppender_T> cellDataHandler(',', '"', '\n');
 
                 auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
                 auto cellHandler = [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& cdh)
                 {
-                    setElement(nRow, nCol, cdh.getBuffer());
+                    this->setElement(nRow, nCol, cdh.getBuffer());
                 };
                 DFG_CLASS_NAME(DelimitedTextReader)::read(reader, cellHandler);
             }
@@ -137,15 +138,15 @@ DFG_ROOT_NS_BEGIN{
             void writeToStream(Strm_T& strm, const DFG_MODULE_NS(io)::TextEncoding encoding) const
             {
                 // TODO: return value
-                if (m_colToRows.empty())
+                if (this->m_colToRows.empty())
                     return;
-                std::unordered_map<Index_T, ColumnIndexPairContainer::const_iterator> nextColItemRowIters;
-                forEachFwdColumnIndex([&](const Index_T nCol)
+                std::unordered_map<Index_T, typename ColumnIndexPairContainer::const_iterator> nextColItemRowIters;
+                this->forEachFwdColumnIndex([&](const Index_T nCol)
                 {
-                    if (!m_colToRows.empty())
-                        nextColItemRowIters[nCol] = m_colToRows[nCol].cbegin();
+                    if (!this->m_colToRows.empty())
+                        nextColItemRowIters[nCol] = this->m_colToRows[nCol].cbegin();
                 });
-                const auto nMaxColCount = static_cast<Index_T>(m_colToRows.size());
+                const auto nMaxColCount = static_cast<Index_T>(this->m_colToRows.size());
                 for (Index_T nRow = 0; !nextColItemRowIters.empty(); ++nRow)
                 {
                     for (Index_T nCol = 0; nCol < nMaxColCount; ++nCol)
@@ -158,7 +159,7 @@ DFG_ROOT_NS_BEGIN{
                             if (pData)
                                 strm.write(pData, strlen(pData)); // TODO encoding
                             ++rowEntryIter;
-                            if (rowEntryIter == m_colToRows[nCol].cend())
+                            if (rowEntryIter == this->m_colToRows[nCol].cend())
                                 nextColItemRowIters.erase(iter);
                         }
                         // TODO: write separator as defined in settings taking encoding into account.
