@@ -571,7 +571,7 @@ TEST(dfgCont, TableCsv)
         {
             std::wstring sUtfConverted;
             auto inputRange = DFG_ROOT_NS::makeSzRange(tables.front()(nRow, nCol));
-            utf8To16Native(inputRange, std::back_inserter(sUtfConverted));
+            DFG_MODULE_NS(utf)::utf8To16Native(inputRange, std::back_inserter(sUtfConverted));
             EXPECT_EQ(psz, sUtfConverted);
         });
     }
