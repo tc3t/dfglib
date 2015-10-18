@@ -36,10 +36,10 @@ TEST(dfgQt, CsvItemModel)
         EXPECT_EQ(true, bOpenSuccess);
 
         DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions saveOptions;
-        if (i == 1) // Example 1 needs non-native eol-settings.
-            saveOptions.eolType(DFG_MODULE_NS(io)::EndOfLineTypeN);
-        else if (i == 3)
+        if (i == 3)
             saveOptions = loadOptions;
+
+        saveOptions.eolType((i == 1) ? DFG_MODULE_NS(io)::EndOfLineTypeN : DFG_MODULE_NS(io)::EndOfLineTypeRN);
 
         // Note: EOL-setting does not affect in-cell EOL-items, i.e. saving of eol-chars inside cell content
         // is not affected by eol-setting.
