@@ -451,6 +451,10 @@ TEST(dfgIo, OmcStreamWithEncoding)
 
         // Test writeUnicodeChar()
         {
+            using namespace DFG_ROOT_NS;
+            using namespace DFG_MODULE_NS(io);
+            using namespace DFG_MODULE_NS(utf);
+
             const auto nWritten = ostrm.writeUnicodeChar(0x20AC);
             EXPECT_TRUE(nWritten >= 2);
             const auto& cont = ostrm.container();
