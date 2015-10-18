@@ -10,6 +10,8 @@
 #include "ImStreamWithEncoding.hpp"
 #include "IfStream.hpp"
 #include "../dfgAssert.hpp"
+#include "../utf.hpp"
+#include "../cont/elementType.hpp"
 
 #ifndef _MSC_VER // TODO: Add proper check, workaround originally introduced for gcc 4.8.1
     #include <boost/format/detail/compat_workarounds.hpp>
@@ -150,11 +152,47 @@ public:
         FlagContainer m_flags;
     };
 
+    template <class Buffer_T, class BufferChar_T>
+    class CharAppenderDefault
+    {
+    public:
+        typedef BufferChar_T BufferChar;
+        typedef typename std::make_unsigned<BufferChar>::type UnsignedBufferChar;
+
+        template <class Char_T>
+        void operator()(Buffer_T& buffer, const Char_T& ch)
+        {
+            // Check whether read value fits in data type used in buffer.
+            // Note that using unsigned char so that in common case of Char = signed char
+            // values [0x80, 0xFF] will be read.
+            if (isValWithinLimitsOfType(ch, UnsignedBufferChar()))
+            {
+                buffer.push_back(static_cast<BufferChar>(ch));
+            }
+            else // Case: read char doesn't fit in buffer char-type.
+            {
+                // TODO: Make this behaviour customisable (callback which receives this and read character, or handle through return value?)
+                buffer.push_back('?');
+            }
+        }
+    };
+
+    template <class Buffer_T>
+    class CharAppenderUtf
+    {
+    public:
+        template <class Char_T>
+        void operator()(Buffer_T& buffer, const Char_T& ch)
+        {
+            DFG_MODULE_NS(utf)::cpToUtf(ch, std::back_inserter(buffer), sizeof(DFG_MODULE_NS(cont)::ElementType<decltype(buffer)>::type), DFG_ROOT_NS::ByteOrderHost);
+        }
+    };
+
     /*
         -Defines reading from stream
         -Read buffer handling.
     */
-    template <class BufferChar_T, class InputChar_T = BufferChar_T, class Buffer_T = std::basic_string<BufferChar_T>>
+    template <class BufferChar_T, class InputChar_T = BufferChar_T, class Buffer_T = std::basic_string<BufferChar_T>, class CharAppender_T = CharAppenderDefault<Buffer_T, BufferChar_T>>
     class CellData
     {
     public:
@@ -162,6 +200,7 @@ public:
         typedef BufferChar_T BufferChar;
         typedef InputChar_T	InputChar;
         typedef Buffer_T	Buffer;
+        typedef CharAppender_T  CharAppender;
         typedef typename std::make_unsigned<BufferChar>::type UnsignedBufferChar;
         typedef typename std::make_unsigned<InputChar>::type UnsignedInputChar;
         typedef typename Buffer::iterator iterator;
@@ -286,18 +325,7 @@ public:
         template <class Char_T>
         void appendChar(const Char_T ch)
         {
-            // Check whether read value fits in data type used in buffer.
-            // Note that using unsigned char so that in common case of Char = signed char
-            // values [0x80, 0xFF] will be read.
-            if (isValWithinLimitsOfType(ch, UnsignedBufferChar()))
-            {
-                m_buffer.push_back(static_cast<BufferChar>(ch));
-            }
-            else // Case: read char doesn't fit in buffer char-type.
-            {
-                // TODO: Make this behaviour customisable (callback which receives this and read character, or handle through return value?)
-                m_buffer.push_back('?');
-            }
+            m_charAppender(getBuffer(), ch);
         }
 
         iterator end() {return m_buffer.end();}
@@ -394,7 +422,8 @@ public:
 
         Buffer m_whiteSpaces;
         FormatDef m_formatDef;
-        cellHandlerRv m_status; 
+        cellHandlerRv m_status;
+        CharAppender m_charAppender;
     };
 
     template <class CellBuffer_T, class Stream_T = std::basic_istream<typename CellBuffer_T::InputChar, std::char_traits<typename CellBuffer_T::InputChar>>>
