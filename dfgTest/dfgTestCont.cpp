@@ -543,27 +543,34 @@ TEST(dfgCont, TableCsv)
     using namespace DFG_MODULE_NS(cont);
     using namespace DFG_MODULE_NS(io);
     using namespace DFG_MODULE_NS(utf);
-
+    
+    // TODO: test files for \t and ; separated with automatic separator detection.
     std::vector<std::string> paths;
     paths.push_back("testfiles/csvtestUTF8_BOM_eol_n.csv");
     paths.push_back("testfiles/csvtestUTF16BE_BOM_eol_n.csv");
     paths.push_back("testfiles/csvtestUTF16LE_BOM_eol_n.csv");
     paths.push_back("testfiles/csvtestUTF32BE_BOM_eol_n.csv");
     paths.push_back("testfiles/csvtestUTF32LE_BOM_eol_n.csv");
-    std::array<DFG_CLASS_NAME(TableCsv)<char, int>, 5> tables;
+    std::array<DFG_CLASS_NAME(TableCsv)<char, size_t>, 5> tables;
     EXPECT_EQ(tables.size(), paths.size());
-    std::vector<std::string> bytes;
 
     for (size_t i = 0; i < paths.size(); ++i)
     {
         const auto& s = paths[i];
         auto& table = tables[i];
+        // Read from file...
         table.readFromFile(s);
-        bytes.resize(bytes.size() + 1);
-        DFG_CLASS_NAME(OmcByteStream)<std::string> ostrm(&bytes.back());
-        table.writeToStream(ostrm, encodingUTF8);
+        // ...write to memory using the same encoding as in file...
+        std::string bytes;
+        DFG_CLASS_NAME(OmcByteStream)<std::string> ostrm(&bytes);
+        table.writeToStream(ostrm);
+        // ...read file bytes...
+        const auto fileBytes = fileToByteContainer<std::string>(s);
+        // ...and check that bytes match.
+        EXPECT_EQ(fileBytes, bytes);
     }
 
+    // Test that results are the same as with DelimitedTextReader.
     {
         std::wstring sFromFile;
         DFG_CLASS_NAME(IfStreamWithEncoding) istrm(paths.front());
@@ -576,8 +583,9 @@ TEST(dfgCont, TableCsv)
         });
     }
 
-    for (size_t i = 1; i < bytes.size(); ++i)
+    for (size_t i = 1; i < tables.size(); ++i)
     {
-        EXPECT_EQ(bytes[0], bytes[i]);
+        EXPECT_TRUE(tables[0].isContentAndSizesIdenticalWith(tables[i]));
     }
+    
 }
