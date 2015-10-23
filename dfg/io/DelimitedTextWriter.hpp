@@ -20,13 +20,14 @@ enum EnclosementBehaviour
 class DFG_CLASS_NAME(DelimitedTextCellWriter)
 {
 public:
-    template <class OutputIter_T, class InputRange_T, class Char_T>
-    static void writeCellFromStrIter(OutputIter_T iterOut,
+    template <class Output_T, class InputRange_T, class Char_T, class WriteOne_T>
+    static void writeCellFromStrIter(Output_T& output,
                                     const InputRange_T& input,
-                                    const Char_T cSep,
-                                    const Char_T cEnc,
-                                    const Char_T cEol,
-                                    const EnclosementBehaviour eb)
+                                    const Char_T& cSep,
+                                    const Char_T& cEnc,
+                                    const Char_T& cEol,
+                                    const EnclosementBehaviour eb,
+                                    WriteOne_T&& writeItem)
     {
         bool bEnclose = (eb == EbEnclose);
         if (!bEnclose && eb == EbEncloseIfNeeded)
@@ -45,26 +46,40 @@ public:
         }
         if (!bEnclose)
         {
-            //*iterOut = input; // TODO: Use this when possible (notably with ostream_iterators).
-            // Can't be used as such because it will fail if iterator is element-wise such as std::back_inserter.
-            std::copy(input.begin(), input.end(), iterOut);
+            const auto iterEnd = input.cend();
+            for (auto iter = input.cbegin(); iter != iterEnd; ++iter)
+                writeItem(output, *iter);
         }
         else
         {
-            *iterOut++ = cEnc;
+            writeItem(output, cEnc);
             for (auto iter = input.begin(), iterEnd = input.end(); !isAtEnd(iter, iterEnd); ++iter)
             {
                 const auto c = *iter;
                 if (c == cEnc)
                 {
-                    *iterOut++ = c;
-                    *iterOut++ = c;
+                    writeItem(output, c);
+                    writeItem(output, c);
                 }
                 else
-                    *iterOut++ = c;
+                    writeItem(output, c);
             }
-            *iterOut++ = cEnc;
+            writeItem(output, cEnc);
         }
+    }
+    
+    template <class OutputIter_T, class InputRange_T, class Char_T>
+    static void writeCellFromStrIter(OutputIter_T iterOut,
+                                    const InputRange_T& input,
+                                    const Char_T& cSep,
+                                    const Char_T& cEnc,
+                                    const Char_T& cEol,
+                                    const EnclosementBehaviour eb)
+    {
+        typedef decltype(input.cbegin()) InputIterT;
+        typedef decltype(*input.cbegin()) InputT;
+        auto writeItem = [](OutputIter_T& out, const InputT& c) { *out++ = c; };
+        writeCellFromStrIter(iterOut, input, cSep, cEnc, cEol, eb, writeItem);
     }
 
     template <class Stream_T, class InputRange_T, class Char_T>
