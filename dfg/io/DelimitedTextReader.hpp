@@ -188,6 +188,15 @@ public:
         }
     };
 
+    class CharAppenderNone
+    {
+    public:
+        template <class Buffer_T, class Char_T>
+        void operator()(Buffer_T&, const Char_T&)
+        {
+        }
+    };
+
     /*
         -Defines reading from stream
         -Read buffer handling.
@@ -330,8 +339,9 @@ public:
 
         iterator end() {return m_buffer.end();}
         const_iterator end() const {return m_buffer.end();}
+        const_iterator cend() const { return m_buffer.cend(); }
 
-        bool isCharAt(const_iterator iter, const int c)
+        bool isCharAt(const_iterator iter, const int c) const
         {
             return (iter != end() && *iter == c);
         }
@@ -363,11 +373,11 @@ public:
             if (nBufSize > 0 && (buffer.isLastChar(m_formatDef.getEol())))
             {
                 if (m_formatDef.getEol() == '\n' && nBufSize >= 2 && buffer.isOneBeforeLast('\r')) // Case: \r\n
-                    return buffer.end() - 2;
+                    return buffer.cend() - 2;
                 else
-                    return buffer.end() - 1;
+                    return buffer.cend() - 1;
             }
-            return buffer.end();
+            return buffer.cend();
         }
 
         const_iterator iteratorToEndingEolItem() const
@@ -389,11 +399,11 @@ public:
             return isLastChar(m_formatDef.getEnc());
         }
 
-        const_iterator iteratorToEndingSeparatorItem()
+        const_iterator iteratorToEndingSeparatorItem() const
         {
             auto iter = iteratorToLastChar();
-            if (iter == getBuffer().end() || !isCharAt(iter, m_formatDef.getSep()))
-                return getBuffer().end();
+            if (iter == getBuffer().cend() || !isCharAt(iter, m_formatDef.getSep()))
+                return getBuffer().cend();
             else
                 return iter;
         }
