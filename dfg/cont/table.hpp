@@ -327,6 +327,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return nRowCount;
         }
 
+        Index_T colCountByMaxColIndex() const
+        {
+            return (!m_colToRows.empty()) ? static_cast<Index_T>(m_colToRows.size()) : 0;
+        }
+
         void privShiftRowIndexesInRowGreaterOrEqual(Index_T nRow, const Index_T nShift, const bool bPositiveShift)
         {
             bool bSomeShifted = false;
