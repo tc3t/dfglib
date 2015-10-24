@@ -13,6 +13,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QCheckBox>
+#include <QInputDialog>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
@@ -112,6 +113,13 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
         auto pAction = new QAction(tr("Delete current column"), this);
         pAction->setShortcut(tr("Ctrl+Del"));
         connect(pAction, SIGNAL(triggered()), this, SLOT(deleteCurrentColumn()));
+        addAction(pAction);
+    }
+
+    {
+        auto pAction = new QAction(tr("Resize table"), this);
+        //pAction->setShortcut(tr(""));
+        connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable);
         addAction(pAction);
     }
 
@@ -662,6 +670,22 @@ bool DFG_CLASS_NAME(CsvTableView)::deleteCurrentColumn(const int nCol)
 bool DFG_CLASS_NAME(CsvTableView)::deleteSelectedRow()
 {
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionDelete)>(*this, getProxyModelPtr(), true /*row mode*/);
+}
+
+bool DFG_CLASS_NAME(CsvTableView)::resizeTable()
+{
+    auto pModel = model();
+    if (!pModel)
+        return false;
+    // TODO: ask new dimensions with a single dialog rather than with two separate.
+    bool bOk = false;
+    const int nRows = QInputDialog::getInt(this, tr("Table resizing"), tr("New row count"), pModel->rowCount(), 0, NumericTraits<int>::maxValue, 1, &bOk);
+    if (!bOk)
+        return false;
+    const int nCols = QInputDialog::getInt(this, tr("Table resizing"), tr("New column count"), pModel->columnCount(), 0, NumericTraits<int>::maxValue, 1, &bOk);
+    if (!bOk || nRows < 0 || nCols < 0)
+        return false;
+    return executeAction<DFG_CLASS_NAME(CsvTableViewActionResizeTable)>(this, nRows, nCols);
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::moveFirstRowToHeader()

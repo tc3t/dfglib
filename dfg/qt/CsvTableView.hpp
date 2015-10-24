@@ -112,6 +112,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool moveFirstRowToHeader();
         bool moveHeaderToFirstRow();
+
+        bool resizeTable();
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);

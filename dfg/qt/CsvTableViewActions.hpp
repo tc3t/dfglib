@@ -572,4 +572,72 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<QString> m_vecFirstRowStrings;
     };
 
+    class DFG_CLASS_NAME(CsvTableViewActionResizeTable) : public QUndoCommand
+    {
+    public:
+        DFG_CLASS_NAME(CsvTableViewActionResizeTable)(DFG_CLASS_NAME(CsvTableView)* pView, const int nNewRowCount, const int nNewColCount)
+            : m_pView(pView),
+            m_nOldRowCount(-1),
+            m_nOldColCount(-1),
+            m_nNewRowCount(-1),
+            m_nNewColCount(-1)
+        {
+            auto pModel = (m_pView) ? m_pView->model() : nullptr;
+            if (!pModel)
+                return;
+
+            m_nOldRowCount = pModel->rowCount();
+            m_nOldColCount = pModel->columnCount();
+            m_nNewRowCount = nNewRowCount;
+            m_nNewColCount = nNewColCount;
+        }
+
+        void impl(const int nTargetRowCount, const int nTargetColCount)
+        {
+            auto pModel = (m_pView) ? m_pView->model() : nullptr;
+            if (!pModel)
+                return;
+
+            const int nCurrentRowCount = pModel->rowCount();
+            const int nCurrentColCount = pModel->columnCount();
+
+            // Change row count
+            if (nCurrentRowCount >= 0 && nTargetRowCount >= 0)
+            {
+                const auto nPositiveCount = (nCurrentRowCount < nTargetRowCount) ? nTargetRowCount - nCurrentRowCount : nCurrentRowCount - nTargetRowCount;
+                if (nCurrentRowCount < nTargetRowCount)
+                    pModel->insertRows(nCurrentRowCount, nPositiveCount);
+                else
+                    pModel->removeRows(nCurrentRowCount - nPositiveCount, nPositiveCount);
+            }
+
+            // Change column count
+            if (nCurrentColCount >= 0 && nTargetColCount >= 0)
+            {
+                const auto nPositiveCount = (nCurrentColCount < nTargetColCount) ? nTargetColCount - nCurrentColCount : nCurrentColCount - nTargetColCount;
+                if (nCurrentColCount < nTargetColCount)
+                    pModel->insertColumns(nCurrentColCount, nPositiveCount);
+                else
+                    pModel->removeColumns(nCurrentColCount - nPositiveCount, nPositiveCount);
+            }
+        }
+
+        void undo()
+        {
+            impl(m_nOldRowCount, m_nOldColCount);
+        }
+
+        void redo()
+        {
+            impl(m_nNewRowCount, m_nNewColCount);
+        }
+    private:
+        DFG_CLASS_NAME(CsvTableView)* m_pView;
+        int m_nOldRowCount;
+        int m_nOldColCount;
+        int m_nNewRowCount;
+        int m_nNewColCount;
+        
+    };
+
 }}
