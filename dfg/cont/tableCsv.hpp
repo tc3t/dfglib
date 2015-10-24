@@ -79,8 +79,8 @@ DFG_ROOT_NS_BEGIN{
             // TODO: test
             bool isContentAndSizesIdenticalWith(const DFG_CLASS_NAME(TableCsv)& other) const
             {
-                const auto nRows = rowCountByMaxRowIndex();
-                const auto nCols = colCountByMaxColIndex();
+                const auto nRows = this->rowCountByMaxRowIndex();
+                const auto nCols = this->colCountByMaxColIndex();
                 if (nRows != other.rowCountByMaxRowIndex() || nCols != other.colCountByMaxColIndex())
                     return false;
                 
@@ -271,7 +271,7 @@ DFG_ROOT_NS_BEGIN{
                     if (!this->m_colToRows.empty())
                         nextColItemRowIters[nCol] = this->m_colToRows[nCol].cbegin();
                 });
-                const auto nMaxColCount = colCountByMaxColIndex();
+                const auto nMaxColCount = this->colCountByMaxColIndex();
                 for (Index_T nRow = 0; !nextColItemRowIters.empty(); ++nRow)
                 {
                     for (Index_T nCol = 0; nCol < nMaxColCount; ++nCol)

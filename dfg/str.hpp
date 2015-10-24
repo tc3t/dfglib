@@ -107,14 +107,6 @@ void replaceSubStrsInplaceImpl(StrT& str, const StrTOld& sOldSub, const StrTNew&
     }
 }
 
-// Replaces occurrences of 'sOldSub' with 'sNewSub' and returns the new string.
-template <class StrT, class StrTOld, class StrTNew>
-StrT replaceSubStrs(StrT str, const StrTOld& sOldSub, const StrTNew& sNewSub)
-{
-    replaceSubStrsInplace(str, sOldSub, sNewSub);
-    return str;
-}
-
 // See replaceSubStrsInplaceImpl
 template <class StrTOld, class StrTNew>
 void replaceSubStrsInplace(std::string& str, const StrTOld& sOldSub, const StrTNew& sNewSub)
@@ -127,6 +119,14 @@ template <class StrTOld, class StrTNew>
 void replaceSubStrsInplace(std::wstring& str, const StrTOld& sOldSub, const StrTNew& sNewSub)
 {
     replaceSubStrsInplaceImpl(str, sOldSub, sNewSub);
+}
+
+// Replaces occurrences of 'sOldSub' with 'sNewSub' and returns the new string.
+template <class StrT, class StrTOld, class StrTNew>
+StrT replaceSubStrs(StrT str, const StrTOld& sOldSub, const StrTNew& sNewSub)
+{
+    replaceSubStrsInplace(str, sOldSub, sNewSub);
+    return str;
 }
 
 // Converts given string enclosed in 'cEnclosing'-characters and if 'str' contains any
