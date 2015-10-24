@@ -538,28 +538,61 @@ TEST(dfgCont, TorRef)
     }
 }
 
+#include <dfg/str.hpp>
+#include <dfg/os.hpp>
+#include <dfg/str/stringLiteralCharToValue.hpp>
+
 TEST(dfgCont, TableCsv)
 {
+    using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(cont);
     using namespace DFG_MODULE_NS(io);
     using namespace DFG_MODULE_NS(utf);
     
-    // TODO: test files for \t and ; separated with automatic separator detection.
     std::vector<std::string> paths;
-    paths.push_back("testfiles/csvtestUTF8_BOM_eol_n.csv");
-    paths.push_back("testfiles/csvtestUTF16BE_BOM_eol_n.csv");
-    paths.push_back("testfiles/csvtestUTF16LE_BOM_eol_n.csv");
-    paths.push_back("testfiles/csvtestUTF32BE_BOM_eol_n.csv");
-    paths.push_back("testfiles/csvtestUTF32LE_BOM_eol_n.csv");
-    std::array<DFG_CLASS_NAME(TableCsv)<char, size_t>, 5> tables;
-    EXPECT_EQ(tables.size(), paths.size());
+    std::vector<TextEncoding> encodings;
+    std::vector<char> separators;
+    // TODO: Read these properties from file names once "for-each-file-in-folder"-function is available.
+    const TextEncoding contEncodings[] = { encodingUTF8,
+                                            encodingUTF16Be,
+                                            encodingUTF16Le,
+                                            encodingUTF32Be,
+                                            encodingUTF32Le };
+    const std::string contSeparators[] = { "2C", "09", "3B" }; // ',' '\t', ';'
+    
+    const std::string sPathTemplate = "testfiles/csv_testfiles/csvtest%1%_BOM_sep_%2%_eol_n.csv";
+    for (size_t iE = 0; iE < count(contEncodings); ++iE)
+    {
+        for (size_t iS = 0; iS < count(contSeparators); ++iS)
+        {
+            auto s = DFG_MODULE_NS(str)::replaceSubStrs(sPathTemplate, "%1%", encodingToStrId(contEncodings[iE]));
+            DFG_MODULE_NS(str)::replaceSubStrsInplace(s, "%2%", contSeparators[iS]);
+            EXPECT_TRUE(DFG_MODULE_NS(os)::isPathFileAvailable(s.c_str(), DFG_MODULE_NS(os)::FileModeRead));
+            paths.push_back(std::move(s));
+            encodings.push_back(contEncodings[iE]);
+            const auto charValOpt = DFG_MODULE_NS(str)::stringLiteralCharToValue<char>(std::string("\\x") + contSeparators[iS]);
+            EXPECT_TRUE(charValOpt.first);
+            separators.push_back(charValOpt.second);
+            
+        }
+    }
+    typedef DFG_CLASS_NAME(TableCsv)<char, size_t> Table;
+    std::vector<std::unique_ptr<Table>> tables;
+    tables.resize(paths.size());
 
     for (size_t i = 0; i < paths.size(); ++i)
     {
         const auto& s = paths[i];
-        auto& table = tables[i];
+        tables[i].reset(new Table);
+        auto& table = *tables[i];
         // Read from file...
         table.readFromFile(s);
+        // ...check that read properties separator, separator char and encoding, matches
+        {
+            EXPECT_EQ(encodings[i], table.m_readFormat.textEncoding()); // TODO: use access function for format info.
+            EXPECT_EQ(separators[i], table.m_readFormat.separatorChar()); // TODO: use access function for format info.
+        }
+
         // ...write to memory using the same encoding as in file...
         std::string bytes;
         DFG_CLASS_NAME(OmcByteStream)<std::string> ostrm(&bytes);
@@ -577,7 +610,7 @@ TEST(dfgCont, TableCsv)
         DFG_CLASS_NAME(DelimitedTextReader)::read(istrm, wchar_t(','), wchar_t('"'), wchar_t('\n'), [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t)
         {
             std::wstring sUtfConverted;
-            auto inputRange = DFG_ROOT_NS::makeSzRange(tables.front()(nRow, nCol));
+            auto inputRange = DFG_ROOT_NS::makeSzRange((*tables.front())(nRow, nCol));
             DFG_MODULE_NS(utf)::utf8To16Native(inputRange, std::back_inserter(sUtfConverted));
             EXPECT_EQ(psz, sUtfConverted);
         });
@@ -585,7 +618,7 @@ TEST(dfgCont, TableCsv)
 
     for (size_t i = 1; i < tables.size(); ++i)
     {
-        EXPECT_TRUE(tables[0].isContentAndSizesIdenticalWith(tables[i]));
+        EXPECT_TRUE(tables[0]->isContentAndSizesIdenticalWith(*tables[i]));
     }
     
 }
