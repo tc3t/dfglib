@@ -72,7 +72,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
     const auto sEolDummy = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
     const auto sEol = sEolDummy.c_str();
 
-    const auto encoding = options.textEncoding();
+    const auto encoding = (options.textEncoding() != DFG_MODULE_NS(io)::encodingUnknown) ? options.textEncoding() : DFG_MODULE_NS(io)::encodingUTF8;
     if (encoding != DFG_MODULE_NS(io)::encodingLatin1 && encoding != DFG_MODULE_NS(io)::encodingUTF8) // Unsupported encoding type.
         return false;
 

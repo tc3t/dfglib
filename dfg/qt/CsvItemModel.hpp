@@ -66,8 +66,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             std::shared_ptr<QCompleter> m_spCompleter;
         };
 
-        typedef DFG_CLASS_NAME(CsvFormatDefinition) SaveOptions;
-        typedef SaveOptions LoadOptions;
+        class SaveOptions : public DFG_CLASS_NAME(CsvFormatDefinition)
+        {
+        public:
+            DFG_BASE_CONSTRUCTOR_DELEGATE_1(SaveOptions, DFG_CLASS_NAME(CsvFormatDefinition)) {}
+            SaveOptions() : DFG_CLASS_NAME(CsvFormatDefinition)(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
+            {}
+        };
+
+        class LoadOptions : public DFG_CLASS_NAME(CsvFormatDefinition)
+        {
+        public:
+            DFG_BASE_CONSTRUCTOR_DELEGATE_1(LoadOptions, DFG_CLASS_NAME(CsvFormatDefinition)) {}
+            LoadOptions() : DFG_CLASS_NAME(CsvFormatDefinition)(::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect,
+                                                                '"',
+                                                                DFG_MODULE_NS(io)::EndOfLineTypeN, 
+                                                                DFG_MODULE_NS(io)::encodingUnknown)
+            {}
+        };
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.
         static int internalRowIndexToVisible(const int nRow) { return nRow + 1; }

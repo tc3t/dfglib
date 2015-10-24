@@ -359,10 +359,9 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_N
     return bSuccess;
 }
 
-
 bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
 {
-    return saveToFileImpl(DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)());
+    return saveToFileImpl(DFG_CLASS_NAME(CsvItemModel)::SaveOptions());
 }
 
 class CsvFormatDefinitionDialog : public QDialog
@@ -450,7 +449,7 @@ public:
         BaseClass::accept();
     }
 
-    DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) m_formatDef;
+    DFG_CLASS_NAME(CsvItemModel)::SaveOptions m_formatDef;
     QComboBox* m_pSeparatorEdit;
     QComboBox* m_pEnclosingEdit;
     QComboBox* m_pEolEdit;
