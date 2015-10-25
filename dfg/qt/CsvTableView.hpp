@@ -74,6 +74,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool saveToFileImpl(const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
 
+        void privAddUndoRedoActions(QAction* pAddBefore = nullptr);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);

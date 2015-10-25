@@ -61,6 +61,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
         addAction(pAction);
     }
 
+    // -------------------------------------------------
     {
         auto pAction = new QAction(this);
         pAction->setSeparator(true);
@@ -152,6 +153,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
     }
     */
 
+    // -------------------------------------------------
     {
         auto pAction = new QAction(this);
         pAction->setSeparator(true);
@@ -178,6 +180,15 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
         connect(pAction, &QAction::triggered, this, &ThisClass::paste);
         addAction(pAction);
     }
+
+
+    // -------------------------------------------------
+    {
+        auto pAction = new QAction(this);
+        pAction->setSeparator(true);
+        addAction(pAction);
+    }
+    privAddUndoRedoActions();
 }
 
 DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
@@ -189,12 +200,49 @@ void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
     m_spUndoStack.reset(new DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>);
 }
 
+void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
+{
+    if (!m_spUndoStack)
+        createUndoStack();
+    if (m_spUndoStack)
+    {
+        auto pActionUndo = m_spUndoStack->item().createUndoAction(this, tr("&Undo"));
+        pActionUndo->setShortcuts(QKeySequence::Undo);
+        insertAction(pAddBefore, pActionUndo);
+
+        auto pActionRedo = m_spUndoStack->item().createRedoAction(this, tr("&Redo"));
+        pActionRedo->setShortcuts(QKeySequence::Redo);
+        insertAction(pAddBefore, pActionRedo);
+    }
+}
+
 void DFG_CLASS_NAME(CsvTableView)::setExternalUndoStack(QUndoStack* pUndoStack)
 {
     if (!m_spUndoStack)
         createUndoStack();
     m_spUndoStack->setRef(pUndoStack);
 
+    // Find and remove undo&redo actions from action list since they use the old undostack...
+    auto acts = actions();
+    std::vector<QAction*> removeList;
+    QAction* pAddNewBefore = nullptr;
+    for (auto iter = acts.begin(); iter != acts.end(); ++iter)
+    {
+        auto pAction = *iter;
+        if (pAction && pAction->shortcut() == QKeySequence::Undo)
+            removeList.push_back(pAction);
+        else if (pAction && pAction->shortcut() == QKeySequence::Redo)
+        {
+            removeList.push_back(pAction);
+            if (iter + 1 != acts.end())
+                pAddNewBefore = *(iter + 1);
+        }
+    }
+    for (auto iter = removeList.begin(); iter != removeList.end(); ++iter)
+        removeAction(*iter);
+
+    // ... and add the new undo&redo actions that refer to the new undostack.
+    privAddUndoRedoActions(pAddNewBefore);
 }
 
 void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
