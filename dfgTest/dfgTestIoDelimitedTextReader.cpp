@@ -379,6 +379,10 @@ TEST(DfgIo, DelimitedTextReader_readCell)
         ExpectedResultsT("\"abc\ndef\"", "abc\ndef", eofGetVal),
         ExpectedResultsT("\"abc\r\ndef\"", "abc\r\ndef", eofGetVal),
 
+        ExpectedResultsT("\"\"\"\"", "\"", eofGetVal), // Test reading of consecutive enclosing chars """" -> "
+        ExpectedResultsT("\"\"\"\"\"\"", "\"\"", eofGetVal), // Test reading of consecutive enclosing chars """""" -> ""
+        ExpectedResultsT("\"\"\",\"\"\"\"\"", "\",\"\"", eofGetVal), // Test reading of consecutive enclosing chars """,""""" -> ",""
+
         // Test empty cell reading.
         ExpectedResultsT("\"\"", "", eofGetVal),
         ExpectedResultsT("\"\", ", "", ' '),
