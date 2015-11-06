@@ -279,7 +279,7 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnCount(const QModelInd
 QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
 {
     if (!index.isValid())
-         return QVariant();
+        return QVariant();
     const int nRow = index.row();
     const int nCol = index.column();
 
@@ -295,7 +295,7 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
 QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
 {
     if (role != Qt::DisplayRole && role != Qt::ToolTipRole)
-         return QVariant();
+        return QVariant();
     if (orientation == Qt::Horizontal)
     {
         if (section >= 0 && section < getColumnCount())
@@ -353,17 +353,17 @@ Qt::ItemFlags DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::flags(const QMode
 
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, int rows, const QModelIndex& parent /*= QModelIndex()*/)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     const auto nOldRowCount = m_table.rowCountByMaxRowIndex();
     if (position < 0)
         position = nOldRowCount;
     if (parent.isValid() || position < 0 || position > nOldRowCount)
         return false;
-    const auto nLastNewRowIndex = position + rows - 1;
+    const auto nLastNewRowIndex = position + count - 1;
     beginInsertRows(QModelIndex(), position, nLastNewRowIndex);
 
-    m_table.insertRowsAt(position, rows);
+    m_table.insertRowsAt(position, count);
     if (position == nOldRowCount) // If appending at end, must add an empty element as otherwise table size won't change.
         m_table.setElement(nLastNewRowIndex, 0, "");
     endInsertRows();
@@ -371,28 +371,28 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, i
     return true;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, int rows, const QModelIndex& parent /*= QModelIndex()*/)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
-    if (rows < 0 || parent.isValid() || !isValidRow(position) || !isValidRow(position + rows - 1))
+    if (count < 0 || parent.isValid() || !isValidRow(position) || !isValidRow(position + count - 1))
         return false;
-    beginRemoveRows(QModelIndex(), position, position+rows-1);
+    beginRemoveRows(QModelIndex(), position, position + count - 1);
 
-    m_table.removeRows(position, rows);
-
+    m_table.removeRows(position, count);
+    
     endRemoveRows();
     setModifiedStatus(true);
     return true;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position, int columns, const QModelIndex& parent /*= QModelIndex()*/)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     if (position < 0)
         position = getColumnCount();
     if (parent.isValid() || position < 0 || position > getColumnCount())
         return false;
-    beginInsertColumns(QModelIndex(), position, position+columns-1);
-    m_table.insertColumnsAt(position, columns);
-    for(int i = position; i<position + columns; ++i)
+    beginInsertColumns(QModelIndex(), position, position + count - 1);
+    m_table.insertColumnsAt(position, count);
+    for(int i = position; i<position + count; ++i)
     {
         m_vecColInfo.insert(m_vecColInfo.begin() + i, ColInfo());
     }
@@ -402,14 +402,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position
     return true;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeColumns(int position, int columns, const QModelIndex& parent /*= QModelIndex()*/)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeColumns(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
-    const int nLast = position + columns - 1;
-    if (columns < 0 || parent.isValid() || !isValidColumn(position) || !isValidColumn(nLast))
+    const int nLast = position + count - 1;
+    if (count < 0 || parent.isValid() || !isValidColumn(position) || !isValidColumn(nLast))
         return false;
-    beginRemoveColumns(QModelIndex(), position, position+columns-1);
+    beginRemoveColumns(QModelIndex(), position, position + count - 1);
 
-    m_table.eraseColumnsByPosAndCount(position, columns);
+    m_table.eraseColumnsByPosAndCount(position, count);
     m_vecColInfo.erase(m_vecColInfo.begin() + position, m_vecColInfo.begin() + nLast + 1);
 
     endRemoveColumns();
