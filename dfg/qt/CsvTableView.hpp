@@ -76,6 +76,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void privAddUndoRedoActions(QAction* pAddBefore = nullptr);
 
+        bool generateContentImpl(const CsvModel& csvModel);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -116,6 +118,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool moveHeaderToFirstRow();
 
         bool resizeTable();
+
+        bool generateContent();
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);

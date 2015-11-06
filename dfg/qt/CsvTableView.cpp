@@ -14,6 +14,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QDialogButtonBox>
 #include <QCheckBox>
 #include <QInputDialog>
+#include <QLabel>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
@@ -121,6 +122,13 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
         auto pAction = new QAction(tr("Resize table"), this);
         //pAction->setShortcut(tr(""));
         connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable);
+        addAction(pAction);
+    }
+
+    {
+        auto pAction = new QAction(tr("Generate content..."), this);
+        //pAction->setShortcut(tr(""));
+        connect(pAction, &QAction::triggered, this, &ThisClass::generateContent);
         addAction(pAction);
     }
 
@@ -734,6 +742,478 @@ bool DFG_CLASS_NAME(CsvTableView)::resizeTable()
     if (!bOk || nRows < 0 || nCols < 0)
         return false;
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionResizeTable)>(this, nRows, nCols);
+}
+
+DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QDialog>
+    #include <QComboBox>
+    #include <QStyledItemDelegate>
+DFG_END_INCLUDE_QT_HEADERS
+
+#include "connectHelper.hpp"
+
+namespace
+{
+    // Note: ID's should match values in arrPropDefs-array.
+    enum PropertyId
+    {
+        PropertyIdInvalid = -1,
+        PropertyIdTarget,
+        PropertyIdGenerator,
+        LastNonParamPropertyId = PropertyIdGenerator,
+        PropertyIdMinValueInt,
+        PropertyIdMaxValueInt,
+        PropertyIdMinValueDouble,
+        PropertyIdMaxValueDouble,
+    };
+
+    enum GeneratorType
+    {
+        GeneratorTypeUnknown,
+        GeneratorTypeRandomIntegers,
+        GeneratorTypeRandomDoubles,
+        GeneratorType_last = GeneratorTypeRandomDoubles
+    };
+
+    enum TargetType
+    {
+        TargetTypeUnknown,
+        TargetTypeSelection,
+        TargetTypeWholeTable,
+        TargetType_last = TargetTypeWholeTable
+    };
+
+    enum ValueType
+    {
+        ValueTypeKeyList,
+        ValueTypeInteger,
+        ValueTypeDouble
+    };
+
+    struct PropertyDefinition
+    {
+        const char* m_pszName;
+        int m_nType;
+        const char* m_keyList;
+        const char* m_pszDefault;
+    };
+
+    // Note: this is a POD-table (for notes about initialization of PODs, see
+    //    -http://stackoverflow.com/questions/2960307/pod-global-object-initialization
+    //    -http://stackoverflow.com/questions/15212261/default-initialization-of-pod-types-in-c
+    const PropertyDefinition arrPropDefs[] =
+    {
+        // Key name       Value type         Value items (if key type is list)           Default value
+        //                                   In syntax |x;y;z... items x,y,z define
+        //                                   the indexes in this table that are 
+        //                                   parameters for given item.
+        { "Target"      , ValueTypeKeyList  , "Selection,Whole table"                   , "Selection"       },
+        { "Generator"   , ValueTypeKeyList  , "Random integers|2;3,Random doubles|4;5"  , "Random integers" },
+        { "Min value"   , ValueTypeInteger  , ""                                        , "0"               },
+        { "Max value"   , ValueTypeInteger  , ""                                        , "32767"           },
+        { "Min value"   , ValueTypeDouble   , ""                                        , "0.0"             },
+        { "Max value"   , ValueTypeDouble   , ""                                        , "1.0"             },
+    };
+
+    PropertyId rowToPropertyId(const int r)
+    {
+        if (r == 0)
+            return PropertyIdTarget;
+        else if (r == 1)
+            return PropertyIdGenerator;
+        else
+            return PropertyIdInvalid;
+    }
+
+    QStringList valueListFromProperty(const PropertyId id)
+    {
+        if (!::DFG_ROOT_NS::isValidIndex(arrPropDefs, id))
+            return QStringList();
+        QStringList items = QString(arrPropDefs[id].m_keyList).split(',');
+        for (auto iter = items.begin(); iter != items.end(); ++iter)
+        {
+            const auto n = iter->indexOf('|');
+            if (n < 0)
+                continue;
+            iter->remove(n, iter->length() - n);
+        }
+        return items;
+    }
+
+    class ContentGeneratorDialog;
+
+    class ComboBoxDelegate : public QStyledItemDelegate
+    {
+        typedef QStyledItemDelegate BaseClass;
+
+    public:
+        ComboBoxDelegate(ContentGeneratorDialog* parent);
+
+        QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+
+        void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+        void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
+
+        void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+
+        ContentGeneratorDialog* m_pParentDialog;
+    };
+
+    class ContentGeneratorDialog : public QDialog
+    {
+    public:
+        typedef QDialog BaseClass;
+        ContentGeneratorDialog(QWidget* pParent) : 
+            BaseClass(pParent),
+            m_pLayout(nullptr),
+            m_pGeneratorControlsLayout(nullptr),
+            m_nLatestComboBoxItemIndex(-1)
+        {
+            m_spSettingsTable.reset(new DFG_CLASS_NAME(CsvTableView(this)));
+            m_spSettingsModel.reset(new DFG_CLASS_NAME(CsvItemModel));
+            m_spSettingsTable->setModel(m_spSettingsModel.get());
+            m_spSettingsTable->setItemDelegate(new ComboBoxDelegate(this));
+
+
+            m_spSettingsModel->insertColumns(0, 2);
+
+            m_spSettingsModel->setColumnName(0, tr("Parameter"));
+            m_spSettingsModel->setColumnName(1, tr("Value"));
+
+            // Set streching for the last column
+            {
+                auto pHeader = m_spSettingsTable->horizontalHeader();
+                if (pHeader)
+                    pHeader->setStretchLastSection(true);
+            }
+            // 
+            {
+                auto pHeader = m_spSettingsTable->verticalHeader();
+                if (pHeader)
+                    pHeader->setDefaultSectionSize(30);
+            }
+            m_pLayout = new QVBoxLayout(this);
+
+
+            m_pLayout->addWidget(m_spSettingsTable.get());
+
+            for (size_t i = 0; i <= LastNonParamPropertyId; ++i)
+            {
+                const auto nRow = m_spSettingsModel->rowCount();
+                m_spSettingsModel->insertRows(nRow, 1);
+                m_spSettingsModel->setData(m_spSettingsModel->index(nRow, 0), tr(arrPropDefs[i].m_pszName));
+                m_spSettingsModel->setData(m_spSettingsModel->index(nRow, 1), arrPropDefs[i].m_pszDefault);
+            }
+
+            m_pLayout->addWidget(new QLabel(tr("Note: undo is not yet available for content generation"), this));
+
+            auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
+
+            connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept()));
+            connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject()));
+
+            m_pLayout->addWidget(&rButtonBox);
+
+            createPropertyParams(PropertyIdGenerator, 0);
+
+            DFG_QT_VERIFY_CONNECT(connect(m_spSettingsModel.get(), &QAbstractItemModel::dataChanged, this, &ContentGeneratorDialog::onDataChanged));
+        }
+
+        PropertyId rowToPropertyId(const int i) const
+        {
+            if (i == PropertyIdGenerator)
+                return PropertyIdGenerator;
+            else
+                return PropertyIdInvalid;
+        }
+
+        int propertyIdToRow(const PropertyId propId) const
+        {
+            if (propId == PropertyIdGenerator)
+                return 1;
+            else
+                return -1;
+        }
+
+        std::vector<std::reference_wrapper<const PropertyDefinition>> generatorParameters(const int itemIndex)
+        {
+            std::vector<std::reference_wrapper<const PropertyDefinition>> rv;
+            QString sKeyList = arrPropDefs[PropertyIdGenerator].m_keyList;
+            const auto keys = sKeyList.split(',');
+            if (!DFG_ROOT_NS::isValidIndex(keys, itemIndex))
+                return rv;
+            QString sName = keys[itemIndex];
+            const auto n = sName.indexOf('|');
+            if (n < 0)
+                return rv;
+            sName.remove(0, n + 1);
+            const auto paramIndexes = sName.split(';');
+            for (int i = 0, nCount = paramIndexes.size(); i < nCount; ++i)
+            {
+                bool bOk = false;
+                const auto index = paramIndexes[i].toInt(&bOk);
+                if (bOk && DFG_ROOT_NS::isValidIndex(arrPropDefs, index))
+                    rv.push_back(arrPropDefs[index]);
+                else
+                {
+                    DFG_ASSERT(false);
+                }
+            }
+            return rv;
+        }
+
+        void onDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>&/* roles*/)
+        {
+            const auto isCellInIndexRect = [](int r, int c, const QModelIndex& tl, const QModelIndex&  br)
+                                            {
+                                                return (r >= tl.row() && r <= br.row() && c >= tl.column() && c <= br.column());
+                                            };
+            if (isCellInIndexRect(1, 1, topLeft, bottomRight))
+                createPropertyParams(rowToPropertyId(1), m_nLatestComboBoxItemIndex);
+        }
+
+        void createPropertyParams(const PropertyId prop, const int itemIndex)
+        {
+            if (!m_spSettingsModel)
+            {
+                DFG_ASSERT(false);
+                return;
+            }
+            if (prop == PropertyIdGenerator)
+            {
+                const auto& params = generatorParameters(itemIndex);
+                const auto nParamCount = static_cast<int>(params.size());
+                auto nBaseRow = propertyIdToRow(PropertyIdGenerator);
+                if (nBaseRow < 0)
+                {
+                    DFG_ASSERT(false);
+                    return;
+                }
+                ++nBaseRow;
+                if (m_spSettingsModel->rowCount() < nBaseRow + nParamCount)
+                    m_spSettingsModel->insertRows(nBaseRow, nBaseRow + nParamCount - m_spSettingsModel->rowCount());
+                for (int i = 0; i < nParamCount; ++i)
+                {
+                    m_spSettingsModel->setData(m_spSettingsModel->index(nBaseRow + i, 0), params[i].get().m_pszName);
+                    m_spSettingsModel->setData(m_spSettingsModel->index(nBaseRow + i, 1), params[i].get().m_pszDefault);
+                }
+            }
+            else
+            {
+                DFG_ASSERT_IMPLEMENTED(false);
+            }
+        }
+
+        void setLatestComboBoxItemIndex(int index)
+        {
+            m_nLatestComboBoxItemIndex = index;
+        }
+
+        QVBoxLayout* m_pLayout;
+        QGridLayout* m_pGeneratorControlsLayout;
+        std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spSettingsTable;
+        std::unique_ptr<DFG_CLASS_NAME(CsvItemModel)> m_spSettingsModel;
+        int m_nLatestComboBoxItemIndex;
+    }; // Class ContentGeneratorDialog
+
+    ComboBoxDelegate::ComboBoxDelegate(ContentGeneratorDialog* parent) :
+        m_pParentDialog(parent)
+    {
+    }
+
+    QWidget* ComboBoxDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+    {
+        if (!index.isValid())
+            return nullptr;
+        const auto nRow = index.row();
+        const auto nCol = index.column();
+        if (nCol != 1) // Only second column is editable.
+            return nullptr;
+
+        else if (nRow < 2)
+        {
+            auto pComboBox = new QComboBox(parent);
+            DFG_QT_VERIFY_CONNECT(connect(pComboBox, SIGNAL(currentIndexChanged(int)), pComboBox, SLOT(close()))); // TODO: check this, Qt's star delegate example connects differently here.
+            return pComboBox;
+        }
+        else
+            return BaseClass::createEditor(parent, option, index);
+    }
+
+    void ComboBoxDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
+    {
+        auto pModel = index.model();
+        if (!pModel)
+            return;
+        auto pComboBoxDelegate = dynamic_cast<QComboBox*>(editor);
+        if (pComboBoxDelegate == nullptr)
+        {
+            BaseClass::setEditorData(editor, index);
+            return;
+        }
+        const auto keyVal = pModel->data(pModel->index(index.row(), index.column() - 1));
+        const auto value = index.data(Qt::EditRole).toString();
+
+        const auto& values = valueListFromProperty(rowToPropertyId(index.row()));
+
+        pComboBoxDelegate->addItems(values);
+        pComboBoxDelegate->setCurrentText(value);
+    }
+
+    void ComboBoxDelegate::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
+    {
+        if (!model)
+            return;
+        auto pComboBoxDelegate = dynamic_cast<QComboBox*>(editor);
+        if (pComboBoxDelegate)
+        {
+            const auto& value = pComboBoxDelegate->currentText();
+            const auto selectionIndex = pComboBoxDelegate->currentIndex();
+            if (m_pParentDialog)
+                m_pParentDialog->setLatestComboBoxItemIndex(selectionIndex);
+            model->setData(index, value, Qt::EditRole);
+        }
+        else
+            BaseClass::setModelData(editor, model, index);
+
+    }
+
+    void ComboBoxDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
+    {
+        DFG_UNUSED(index);
+        if (editor)
+            editor->setGeometry(option.rect);
+    }
+
+    TargetType targetType(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
+    {
+        // TODO: use more reliable detection (string comparison does not work with tr())
+        DFG_STATIC_ASSERT(TargetType_last == 2, "This implementation handles only two target types");
+        const auto& sTarget = csvModel.data(csvModel.index(0, 1)).toString();
+        if (sTarget == "Selection")
+            return TargetTypeSelection;
+        else if (sTarget == "Whole table")
+            return TargetTypeWholeTable;
+        else
+        {
+            DFG_ASSERT_IMPLEMENTED(false);
+            return TargetTypeUnknown;
+        }
+    }
+
+    GeneratorType generatorType(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
+    {
+        // TODO: use more reliable detection (string comparison does not work with tr())
+        DFG_STATIC_ASSERT(GeneratorType_last == 2, "This implementation handles only two generator types");
+        const auto& sGenerator = csvModel.data(csvModel.index(1, 1)).toString();
+        if (sGenerator == "Random integers")
+            return GeneratorTypeRandomIntegers;
+        else if (sGenerator == "Random doubles")
+            return GeneratorTypeRandomDoubles;
+        else
+        {
+            DFG_ASSERT_IMPLEMENTED(false);
+            return GeneratorTypeUnknown;
+        }
+    }
+
+} // unnamed namespace
+
+bool DFG_CLASS_NAME(CsvTableView)::generateContent()
+{
+    auto pModel = model();
+    if (!pModel)
+        return false;
+
+    ContentGeneratorDialog dlg(this);
+    dlg.resize(350, 300);
+    const auto rv = dlg.exec();
+    if (rv == QDialog::Accepted && dlg.m_spSettingsModel)
+        return generateContentImpl(*dlg.m_spSettingsModel);
+    else
+        return false;
+}
+
+#include "../rand.hpp"
+
+template <class Generator_T>
+void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(CsvTableView)& view, DFG_CLASS_NAME(CsvItemModel)& rModel, Generator_T generator)
+{
+    DFG_STATIC_ASSERT(GeneratorType_last == 2, "This implementation handles only two generator types");
+
+    if (targetType == TargetTypeWholeTable)
+    {
+        const auto nRows = rModel.rowCount();
+        const auto nCols = rModel.columnCount();
+        size_t nCounter = 0;
+        for (int c = 0; c < nCols; ++c)
+        {
+            for (int r = 0; r < nRows; ++r, ++nCounter)
+            {
+                rModel.setDataNoUndo(rModel.index(r, c), generator(r, c, nCounter));
+            }
+        }
+    }
+    else if (targetType == TargetTypeSelection)
+    {
+        auto pSelectionModel = view.selectionModel();
+        auto pModel = view.model();
+        if (pSelectionModel && pModel)
+        {
+            const auto& selected = pSelectionModel->selectedIndexes();
+            size_t nCounter = 0;
+            for (auto iter = selected.begin(); iter != selected.end(); ++iter, ++nCounter)
+            {
+                rModel.setDataNoUndo(*iter, generator(iter->row(), iter->column(), nCounter));
+            }
+        }
+    }
+    else
+    {
+        DFG_ASSERT_IMPLEMENTED(false);
+    }
+}
+
+bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvItemModel)& settingsModel)
+{
+    if (settingsModel.rowCount() < 2)
+    {
+        DFG_ASSERT(false);
+        return false;
+    }
+    const auto generator = generatorType(settingsModel);
+    const auto target = targetType(settingsModel);
+    auto pModel = csvModel();
+    if (!pModel)
+        return false;
+    auto& rModel = *pModel;
+
+    DFG_STATIC_ASSERT(GeneratorType_last == 2, "This implementation handles only two generator types");
+    if (generator == GeneratorTypeRandomIntegers)
+    {
+        if (settingsModel.rowCount() < 4) // Not enough parameters
+            return false;
+        const auto minVal = settingsModel.data(settingsModel.index(2, 1)).toString().toLongLong();
+        const auto maxVal = settingsModel.data(settingsModel.index(3, 1)).toString().toLongLong();
+        auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
+        generateForEachInTarget(target, *this, rModel, [&](int, int, size_t) { return QString::number(::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal)); });
+        return true;
+    }
+    else if (generator == GeneratorTypeRandomDoubles)
+    {
+        if (settingsModel.rowCount() < 4) // Not enough parameters
+            return false;
+        const auto minVal = settingsModel.data(settingsModel.index(2, 1)).toString().toDouble();
+        const auto maxVal = settingsModel.data(settingsModel.index(3, 1)).toString().toDouble();
+        auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
+        generateForEachInTarget(target, *this, rModel, [&](int, int, size_t) { return QString::number(::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal)); });
+        return true;
+    }
+    else
+    {
+        DFG_ASSERT_IMPLEMENTED(false);
+    }
+    return false;
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::moveFirstRowToHeader()
