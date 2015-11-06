@@ -315,6 +315,16 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModel
         DFG_ASSERT(false);
         return;
     }
+
+    // Check whether the new value is different from old to avoid setting modified even if nothing changes.
+    const auto pExisting = m_table(index.row(), index.column());
+    if (pExisting && static_cast<size_t>(str.length()) <= std::strlen(pExisting)) // Note: assuming that p is utf8.
+    {
+        const auto& sUtf8 = str.toUtf8();
+        if (std::strcmp(pExisting, sUtf8) == 0) // Identical item? If yes, skip rest to avoid setting modified.
+            return;
+    }
+
     setItem(index.row(), index.column(), str);
 
     emit dataChanged(index, index);
