@@ -1145,14 +1145,19 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
     {
         const auto nRows = rModel.rowCount();
         const auto nCols = rModel.columnCount();
+        if (nRows < 1 || nCols < 1) // Nothing to add?
+            return;
         size_t nCounter = 0;
-        for (int c = 0; c < nCols; ++c)
+        rModel.batchEditNoUndo([&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table)
         {
-            for (int r = 0; r < nRows; ++r, ++nCounter)
+            for (int c = 0; c < nCols; ++c)
             {
-                rModel.setDataNoUndo(rModel.index(r, c), generator(r, c, nCounter));
+                for (int r = 0; r < nRows; ++r, ++nCounter)
+                {
+                    generator(table, r, c, nCounter);
+                }
             }
-        }
+        });
     }
     else if (targetType == TargetTypeSelection)
     {
@@ -1162,10 +1167,13 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
         {
             const auto& selected = pSelectionModel->selectedIndexes();
             size_t nCounter = 0;
-            for (auto iter = selected.begin(); iter != selected.end(); ++iter, ++nCounter)
+            rModel.batchEditNoUndo([&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table)
             {
-                rModel.setDataNoUndo(*iter, generator(iter->row(), iter->column(), nCounter));
-            }
+                for (auto iter = selected.begin(); iter != selected.end(); ++iter, ++nCounter)
+                {
+                    generator(table, iter->row(), iter->column(), nCounter);
+                }
+            });
         }
     }
     else
@@ -1196,7 +1204,14 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         const auto minVal = settingsModel.data(settingsModel.index(2, 1)).toString().toLongLong();
         const auto maxVal = settingsModel.data(settingsModel.index(3, 1)).toString().toLongLong();
         auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
-        generateForEachInTarget(target, *this, rModel, [&](int, int, size_t) { return QString::number(::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal)); });
+        char szBuffer[32];
+        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
+                                {
+                                    const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal);
+                                    DFG_MODULE_NS(str)::toStr(val, szBuffer);
+                                    table.setElement(r, c, szBuffer); // Note: szBuffer is utf8 as it should
+                                };
+        generateForEachInTarget(target, *this, rModel, generator);
         return true;
     }
     else if (generator == GeneratorTypeRandomDoubles)
@@ -1206,7 +1221,14 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         const auto minVal = settingsModel.data(settingsModel.index(2, 1)).toString().toDouble();
         const auto maxVal = settingsModel.data(settingsModel.index(3, 1)).toString().toDouble();
         auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
-        generateForEachInTarget(target, *this, rModel, [&](int, int, size_t) { return QString::number(::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal)); });
+        char szBuffer[64];
+        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
+                                {
+                                    const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal);
+                                    DFG_MODULE_NS(str)::toStr(val, szBuffer, "%.6g");
+                                    table.setElement(r, c, szBuffer); // Note: szBuffer is utf8 as it should
+                                };
+        generateForEachInTarget(target, *this, rModel, generator);
         return true;
     }
     else
