@@ -6,6 +6,7 @@
 #include <string>
 #include "str/strlen.hpp"
 #include <boost/lexical_cast.hpp>
+#include <cstdio>
 
 #define DFG_TEXT_ANSI(str)	str	// Intended as marker for string literals that are promised
                                 // (by the programmer) to be ANSI-encoded.
@@ -75,6 +76,11 @@ std::wstring toStrW(const T& obj)
     DFG_INTERNAL_DEFINE_TOSTR(wchar_t,	int64,	_i64tow_s);
     DFG_INTERNAL_DEFINE_TOSTR(char,		uint64,	_ui64toa_s);
     DFG_INTERNAL_DEFINE_TOSTR(wchar_t,	uint64,	_ui64tow_s);
+    template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszFormat = "%.17g") // TODO: test
+    {
+        sprintf_s(buf, N, pszFormat, val);
+        return buf;
+    }
 #undef DFG_INTERNAL_DEFINE_TOSTR
 
 template <size_t N> inline char* strCpy(char (&dest)[N], NonNullCStr pszSrc) {return strcpy(dest, pszSrc);}
