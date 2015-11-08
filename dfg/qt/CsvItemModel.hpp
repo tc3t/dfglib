@@ -42,6 +42,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static const QString s_sEmpty;
         typedef QAbstractTableModel BaseClass;
         typedef std::ostream StreamT;
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int> DataTable;
         
         enum ColType
         {
@@ -174,6 +175,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return m_sFilePath; 
         }
 
+        // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
+        // Note: Does not check whether the table has actually changed and always sets the model modified.
+        template <class Func_T> void batchEditNoUndo(Func_T func);
+
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const;
         int columnCount(const QModelIndex& parent = QModelIndex()) const;
@@ -202,7 +207,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public:
         //QUndoStack* m_pUndoStack;
-        DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int> m_table;
+        DataTable m_table;
 
     //private:
 
@@ -211,7 +216,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bModified;
         bool m_bResetting;
         bool m_bEnableCompleter;
-    };
+    }; // class CsvItemModel
 
     template <class String>
     void DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow, String& str, const QChar cDelim, std::unordered_set<int>* pSetIgnoreColumns /*= nullptr*/) const
@@ -245,6 +250,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             QChar('\n'),
             DFG_MODULE_NS(io)::EbEncloseIfNeeded);
         return sDst;
+    }
+
+    template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)
+    {
+        beginResetModel(); // This might be a bit coarse for smaller edits.
+        m_bResetting = true;
+        func(m_table);
+        endResetModel();
+        m_bResetting = false;
+        setModifiedStatus(true);
     }
 
 } } // module namespace
