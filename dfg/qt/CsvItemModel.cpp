@@ -139,7 +139,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QSt
     });
 
     if (!m_bResetting)
-        emit dataChanged(this->index(nRow, 0), this->index(nRow, getColumnCount()-1));
+        Q_EMIT dataChanged(this->index(nRow, 0), this->index(nRow, getColumnCount()-1));
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
@@ -327,7 +327,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModel
 
     setItem(index.row(), index.column(), str);
 
-    emit dataChanged(index, index);
+    Q_EMIT dataChanged(index, index);
     setModifiedStatus(true);
 }
 
@@ -433,7 +433,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnName(const int nC
     {
         m_vecColInfo[nCol].m_name = sName;
         setModifiedStatus(true);
-        emit headerDataChanged(Qt::Horizontal, nCol, nCol);
+        Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
     }
 }
 
@@ -468,7 +468,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnCells(const int n
         setItem(r, nCol, vecStrings[r]);
     }
     if (!m_bResetting)
-        emit dataChanged(this->index(0, nCol), this->index(getRowCount()-1, nCol));
+        Q_EMIT dataChanged(this->index(0, nCol), this->index(getRowCount()-1, nCol));
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setModifiedStatus(const bool bMod /*= true*/)
@@ -476,7 +476,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setModifiedStatus(const bo
     if (bMod != m_bModified)
     {
         m_bModified = bMod;
-        emit sigModifiedStatusChanged(m_bModified);
+        Q_EMIT sigModifiedStatusChanged(m_bModified);
     }
 }
 
@@ -486,7 +486,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnType(const int nC
         return;
     m_vecColInfo[nCol].m_type = colType;
     setModifiedStatus(true);
-    emit headerDataChanged(Qt::Horizontal, nCol, nCol);
+    Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
 }
 
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
