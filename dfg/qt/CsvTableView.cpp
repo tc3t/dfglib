@@ -787,7 +787,9 @@ namespace
     {
         ValueTypeKeyList,
         ValueTypeInteger,
-        ValueTypeDouble
+        ValueTypeUInteger = ValueTypeInteger,
+        ValueTypeDouble,
+        ValueTypeString,
     };
 
     struct PropertyDefinition
@@ -807,12 +809,14 @@ namespace
         //                                   In syntax |x;y;z... items x,y,z define
         //                                   the indexes in this table that are 
         //                                   parameters for given item.
-        { "Target"      , ValueTypeKeyList  , "Selection,Whole table"                   , "Selection"       },
-        { "Generator"   , ValueTypeKeyList  , "Random integers|2;3,Random doubles|4;5"  , "Random integers" },
-        { "Min value"   , ValueTypeInteger  , ""                                        , "0"               },
-        { "Max value"   , ValueTypeInteger  , ""                                        , "32767"           },
-        { "Min value"   , ValueTypeDouble   , ""                                        , "0.0"             },
-        { "Max value"   , ValueTypeDouble   , ""                                        , "1.0"             },
+        { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                       , "Selection"       },
+        { "Generator"           , ValueTypeKeyList  , "Random integers|2;3,Random doubles|4;5;6;7"  , "Random integers" },
+        { "Min value"           , ValueTypeInteger  , ""                                            , "0"               },
+        { "Max value"           , ValueTypeInteger  , ""                                            , "32767"           },
+        { "Min value"           , ValueTypeDouble   , ""                                            , "0.0"             },
+        { "Max value"           , ValueTypeDouble   , ""                                            , "1.0"             },
+        { "Format type"         , ValueTypeString   , ""                                            , "g"               }, 
+        { "Format precision"    , ValueTypeUInteger , ""                                            , "6"               }, // Note: empty value must be supported as well.
     };
 
     PropertyId rowToPropertyId(const int r)
@@ -1125,13 +1129,23 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
     if (!pModel)
         return false;
 
+    // TODO: store settings and use them on next dialog open.
     ContentGeneratorDialog dlg(this);
     dlg.resize(350, 300);
-    const auto rv = dlg.exec();
-    if (rv == QDialog::Accepted && dlg.m_spSettingsModel)
-        return generateContentImpl(*dlg.m_spSettingsModel);
-    else
-        return false;
+    bool bStop = false;
+    while (!bStop) // Show dialog until values are accepted or cancel is selected.
+    {
+        const auto rv = dlg.exec();
+        if (rv == QDialog::Accepted && dlg.m_spSettingsModel)
+        {
+            bStop = generateContentImpl(*dlg.m_spSettingsModel);
+            if (bStop)
+                return true;
+        }
+        else
+            return false;
+    }
+    return false;
 }
 
 #include "../rand.hpp"
@@ -1182,6 +1196,49 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
     }
 }
 
+namespace
+{
+    // TODO: test
+    bool isValidFloatPrefix(const QStringRef& sPrefix)
+    {
+        return (sPrefix.isEmpty() ||
+            sPrefix == "l" ||
+            sPrefix == "L");
+    }
+
+    // TODO: test
+    bool isValidIntegerPrefix(const QStringRef& sPrefix)
+    {
+        return (sPrefix.isEmpty() ||
+            sPrefix == "I" ||
+            sPrefix == "l" ||
+            sPrefix == "L" ||
+            sPrefix == "ll" ||
+            sPrefix == "LL" ||
+            sPrefix == "I32" ||
+            sPrefix == "I64");
+    }
+
+    const char gszIntegerTypes[] = "diouxX";
+    const char gszFloatTypes[] = "gGeEfaA";
+
+    // TODO: test
+    bool isValidFormatType(const QString& s)
+    {
+        if (s.isEmpty())
+            return false;
+        const auto cLast = s[s.size() - 1].toLatin1();
+        
+        const bool bIsFloatType = (std::strchr(gszFloatTypes, cLast) != nullptr);
+        const bool bIsIntergerType = (!bIsFloatType && std::strchr(gszIntegerTypes, cLast) != nullptr);
+        if (!bIsFloatType && !bIsIntergerType)
+            return false;
+        const auto sPrefix = s.midRef(0, s.size() - 1);
+        return ((bIsFloatType && isValidFloatPrefix(sPrefix)) ||
+                (bIsIntergerType && isValidIntegerPrefix(sPrefix)));
+    }
+}
+
 bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvItemModel)& settingsModel)
 {
     if (settingsModel.rowCount() < 2)
@@ -1216,16 +1273,39 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
     }
     else if (generator == GeneratorTypeRandomDoubles)
     {
-        if (settingsModel.rowCount() < 4) // Not enough parameters
+        if (settingsModel.rowCount() < 6) // Not enough parameters
             return false;
-        const auto minVal = settingsModel.data(settingsModel.index(2, 1)).toString().toDouble();
-        const auto maxVal = settingsModel.data(settingsModel.index(3, 1)).toString().toDouble();
+        const auto minVal      = settingsModel.data(settingsModel.index(2, 1)).toString().toDouble();
+        const auto maxVal      = settingsModel.data(settingsModel.index(3, 1)).toString().toDouble();
+        if (minVal > maxVal)
+        {
+            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Minimum value is greater than maximum value, no content generation is done"));
+            return false;
+        }
+        const auto sFormatType = settingsModel.data(settingsModel.index(4, 1)).toString().trimmed();
+        auto sPrecision   = settingsModel.data(settingsModel.index(5, 1)).toString();
+        bool bPrecisionIsUint;
+        if (!sPrecision.isEmpty() && (sPrecision.toUInt(&bPrecisionIsUint) > 1000 || !bPrecisionIsUint)) // Not sure does this need to be limited; just cut it somewhere.
+        {
+            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Precision-parameter has invalid value; no content generation is done"));
+            return false;
+        }
+        if (!isValidFormatType(sFormatType))
+        {
+            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Format type parameter is not accepted. Note: only a subset of printf-valid items can be used."));
+            return false;
+        }
+        if (!sPrecision.isEmpty())
+            sPrecision.prepend('.');
+        std::string sFormat(("%" + sPrecision + sFormatType).toLatin1());
+        const auto pszFormat = sFormat.c_str();
+
         auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
         char szBuffer[64];
         const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
                                 {
                                     const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal);
-                                    DFG_MODULE_NS(str)::toStr(val, szBuffer, "%.6g");
+                                    DFG_MODULE_NS(str)::toStr(val, szBuffer, pszFormat);
                                     table.setElement(r, c, szBuffer); // Note: szBuffer is utf8 as it should
                                 };
         generateForEachInTarget(target, *this, rModel, generator);
