@@ -106,6 +106,13 @@ TEST(dfgDataAnalysis, smoothWithNeighbourAverages)
         smoothWithNeighbourAverages(temp, 2);
         EXPECT_EQ(arr5_exp2, temp);
 
+        // Verify that function accepts rvalue items (wrappers in particular)
+        {
+            temp = arr5;
+            smoothWithNeighbourAverages(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<double>(temp.data(), temp.size()), 2);
+            EXPECT_EQ(arr5_exp2, temp);
+        }
+
         temp = arr5;
         smoothWithNeighbourAverages(temp, 3);
         EXPECT_EQ(arr5_exp3, temp);
