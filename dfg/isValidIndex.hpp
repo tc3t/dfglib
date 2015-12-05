@@ -13,7 +13,7 @@ DFG_ROOT_NS_BEGIN
     //	isValidIndex(v, 3) == false
     template <class ContT, class IndexT> bool isValidIndex(const ContT& cont, const IndexT index)
     {
-        return (index >= 0 && static_cast<size_t>(index) < cont.size());
+        return (index >= 0 && static_cast<size_t>(index) < static_cast<size_t>(cont.size()));
     }
 
     // Overload of IsValidIndex for array.
