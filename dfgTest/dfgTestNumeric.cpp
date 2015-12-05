@@ -2,6 +2,7 @@
 #include <dfg/numericAll.hpp>
 #include <dfg/math/pow.hpp>
 #include <dfg/math/constants.hpp>
+#include <dfg/math.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/cont/arrayWrapper.hpp>
@@ -132,6 +133,49 @@ TEST(dfgNumeric, average)
 
     // Should fail to compile as average does not support integers.
     //EXPECT_EQ(average(DFG_ROOT_NS::dfcont::makeVector<int>(1,2)), 3);
+}
+
+TEST(dfgNumeric, median)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(math);
+    using namespace DFG_MODULE_NS(numeric);
+
+    const std::vector<float> emptyVector;
+    const std::array<long double, 1> vals1 = { 100 };
+    const std::array<double, 2> vals2 = { 1, 9 };
+    const double vals[5] = { 8, 1, 9, 2, 5 };
+    double vals6[6] = { 8, 1, 9, 2, 5, 7 };
+    EXPECT_TRUE(isNan(median(emptyVector)));
+    EXPECT_EQ(100, median(vals1));
+    EXPECT_EQ(median(vals2), 5);
+    EXPECT_EQ(median(vals), 5);
+    EXPECT_EQ(median(vals6), 6);
+    EXPECT_EQ(medianModifying(vals6), 6);
+    EXPECT_EQ(7, vals6[3]); // This is implementation specific test case: should be true when using nth_element-implementation.
+
+    std::sort(std::begin(vals6), std::end(vals6));
+    const double vals7[7] = { 4, 2, 2, 5, 7, 6, 9 };
+    EXPECT_EQ(6, medianInSorted(vals6));
+    EXPECT_EQ(5, medianInNthSorted(vals7));
+
+    {
+        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+        const size_t nSize = 1001;
+        std::vector<double> vals(nSize);
+        for (size_t i = 0; i < nSize; ++i)
+        {
+            vals[i] = DFG_MODULE_NS(rand)::rand(randEng, -200.0, 50.0);
+        }
+        const auto m = median(vals);
+        const auto mMod = medianModifying(vals);
+        std::sort(vals.begin(), vals.end());
+        const auto expected = vals[nSize / 2];
+        EXPECT_EQ(expected, m);
+        EXPECT_EQ(expected, mMod);
+        EXPECT_EQ(expected, medianInSorted(vals));
+    }
 }
 
 namespace
