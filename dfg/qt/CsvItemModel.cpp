@@ -157,65 +157,46 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& strm, const LoadOptions& loadOptions)
 {
+    auto s = strm.readAll();
+    return openString(s, loadOptions);
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char* data, const size_t nSize, const LoadOptions& loadOptions)
+{
+    return readData([&]()
+    {
+        m_table.readFromMemory(data, nSize, loadOptions);
+    });
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<void()> tableFiller)
+{
     beginResetModel();
     m_bResetting = true;
     clear();
-    
-    const auto cSeparator = loadOptions.separatorChar();
-    const auto cEnclosing = loadOptions.enclosingChar();
-    const auto cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(loadOptions.eolType());
 
-    // Read header cols ->
-    QStringList headerNames;
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, cEol, [&](const size_t /*nCol*/, const wchar_t* const pszData, const size_t /*nDataLength*/)
-    {
-        headerNames.push_back(QString::fromWCharArray(pszData));
-    });
-    m_vecColInfo.reserve(headerNames.size());
-    // <- read header cols
+    tableFiller();
 
-    std::vector<std::set<QString>> vecCompletionSet;
-    for (QStringList::const_iterator iter = headerNames.begin(); iter != headerNames.end(); ++iter)
+    // Set headers.
+    const auto nMaxColCount = m_table.colCountByMaxColIndex();
+    m_vecColInfo.reserve(nMaxColCount);
+    for (int c = 0; c < nMaxColCount; ++c)
     {
-        m_vecColInfo.push_back(ColInfo(*iter));
+        auto p = m_table(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
+        m_vecColInfo.push_back(ColInfo((p) ? QString::fromUtf8(p) : QString()));
         if (m_bEnableCompleter)
         {
             m_vecColInfo.back().m_spCompleter.reset(new QCompleter(this));
             m_vecColInfo.back().m_spCompleter->setCaseSensitivity(Qt::CaseInsensitive);
             m_vecColInfo.back().m_completerType = CompleterTypeTexts;
         }
-        vecCompletionSet.push_back(std::set<QString>());
     }
+    // Since the header is stored separately in this model, remove it row from table.
+    m_table.removeRows(0, 1);
 
-    QString s;
-    for(int nRow = 0; DFG_MODULE_NS(io)::isStreamInReadableState(strm); ++nRow)
-    {
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, cEol, [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
-        {
-            if (nCol >= size_t(getColumnCount()))
-                return;
+    if (m_bEnableCompleter)
+        initCompletionFeature();
 
-            s = QString::fromWCharArray(pszData);
-
-            setItem(nRow, static_cast<int>(nCol), s);
-
-            if (m_bEnableCompleter)
-            {
-                if (isValidIndex(vecCompletionSet, nCol))
-                    vecCompletionSet[nCol].insert(s);
-            }
-
-        });
-
-    }
-    for (size_t i = 0; i<vecCompletionSet.size(); ++i)
-    {
-        QStringList stringlist;
-        for each (const QString& str in vecCompletionSet[i])
-            stringlist << str;
-        if (m_vecColInfo[i].m_spCompleter)
-            m_vecColInfo[i].m_spCompleter->setModel(new QStringListModel(stringlist));
-    }
     m_bModified = false;
     endResetModel();
     m_bResetting = false;
@@ -225,6 +206,32 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
     return true;
 }
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
+{
+    std::vector<std::set<QString>> vecCompletionSet;
+    
+    m_table.forEachFwdColumnIndex([&](const int nCol)
+    {
+        if (isValidIndex(vecCompletionSet, nCol))
+            vecCompletionSet.resize(nCol + 1);
+        auto& completionSetForCurrentCol = vecCompletionSet[nCol];
+        m_table.forEachFwdRowInColumn(nCol, [&](const int /*nRow*/, const char* pData)
+        {
+            if (pData)
+                completionSetForCurrentCol.insert(QString::fromUtf8(pData));
+        });
+    });
+    for (size_t i = 0; i<vecCompletionSet.size(); ++i)
+    {
+        if (!m_vecColInfo[i].m_spCompleter)
+            continue;
+        QStringList stringlist;
+        for each (const QString& str in vecCompletionSet[i])
+            stringlist << str;
+        m_vecColInfo[i].m_spCompleter->setModel(new QStringListModel(stringlist));
+    }
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str)
 {
     return openString(str, LoadOptions());
@@ -232,14 +239,23 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str)
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str, const LoadOptions& loadOptions)
 {
-    QTextStream strm(&str);
-    return openStream(strm, loadOptions);
+    const auto bytes = str.toUtf8();
+    if (loadOptions.textEncoding() == DFG_MODULE_NS(io)::encodingUTF8)
+        return openFromMemory(bytes.data(), bytes.size(), loadOptions);
+    else
+    {
+        auto loadOptionsTemp = loadOptions;
+        loadOptionsTemp.textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
+        return openFromMemory(bytes.data(), bytes.size(), loadOptionsTemp);
+    }
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath)
 {
     return openFile(sDbFilePath, LoadOptions());
 }
+
+//#include "../time/timerCpu.hpp"
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, const LoadOptions& loadOptions)
 {
@@ -252,9 +268,19 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
 
     if (fileData.open(QFile::ReadOnly))
     {
-        QTextStream strmFile(&fileData);
-        const auto rv = openStream(strmFile, loadOptions);
-        m_sFilePath = sDbFilePath; // Note: openStream() calls clear() so this line must be after it.
+        //dfg::time::TimerCpu timer0;
+        auto rv = readData([&]()
+        {
+            m_table.readFromFile(sDbFilePath.toLocal8Bit().data(), loadOptions); // TODO: return value,
+                                                                                 // TODO: non-lossy conversion from QString to string type that readFromFile() accepts, 
+                                                                                 //       (essentially means that readFromFile should accept std::wstring)
+        });      
+        //const auto elapsed0 = timer0.elapsedWallSeconds();
+        m_sFilePath = sDbFilePath; // Note: readData() calls clear() so this line must be after it.
+
+        //QString s = QString("Read lasted %1 s").arg(elapsed0);
+        //QMessageBox::information(nullptr, "", s);
+
         return rv;
     }
     else

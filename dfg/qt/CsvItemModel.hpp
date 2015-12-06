@@ -116,6 +116,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openStream(QTextStream& strm, const LoadOptions& loadOptions);
         bool openString(QString str);
         bool openString(QString str, const LoadOptions& loadOptions);
+        bool openFromMemory(const char* data, const size_t nSize, const LoadOptions& loadOptions);
+
+        // Implementation level function.
+        // 1. Clears existing data and prepares model for table changes.
+        // 2. Calls actual table filling implementation.
+        // 3. Handles model-related finalization.
+        bool readData(std::function<void()> tableFiller);
 
         bool isModified() const { return m_bModified; }
         void setModifiedStatus(const bool bMod = true);
@@ -174,6 +181,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         { 
             return m_sFilePath; 
         }
+
+        void initCompletionFeature();
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
         // Note: Does not check whether the table has actually changed and always sets the model modified.
