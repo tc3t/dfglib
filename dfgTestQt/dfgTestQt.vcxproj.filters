@@ -138,6 +138,9 @@
     <ClCompile Include="GeneratedFiles\Release_VC2012\moc_qxtspanslider_p.cpp">
       <Filter>Generated Files\Release_VC2012</Filter>
     </ClCompile>
+    <ClCompile Include="..\dfg\os\memoryMappedFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\dfg\qt\CsvItemModel.hpp">
