@@ -135,7 +135,7 @@ DFG_ROOT_NS_BEGIN{
 
             void readFromMemory(const char* const pData, const size_t nSize)
             {
-                readFromMemory(pData, nSize, defaultFormat());
+                readFromMemory(pData, nSize, this->defaultFormat());
             }
 
             void readFromMemory(const char* const pData, const size_t nSize, const CsvFormatDefinition& formatDef)
