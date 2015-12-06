@@ -42,8 +42,6 @@ DFG_ROOT_NS_BEGIN{
         DFG_MODULE_NS(io)::EndOfLineType eolType() const { return m_eolType; }
         void eolType(DFG_MODULE_NS(io)::EndOfLineType eolType) { m_eolType = eolType; }
 
-        
-
         bool headerWriting() const { return m_bWriteHeader; }
         void headerWriting(bool bWriteHeader) { m_bWriteHeader = bWriteHeader; }
 
@@ -99,17 +97,19 @@ DFG_ROOT_NS_BEGIN{
             }
                 
 
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath) { readFromFileImpl(sPath); }
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath) { readFromFileImpl(sPath); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
 
             template <class Char_T1>
-            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T1>& sPath)
+            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T1>& sPath, const CsvFormatDefinition& formatDef)
             {
                 bool bRead = false;
                 try
                 {
                     auto bytes = DFG_MODULE_NS(io)::fileToVector(sPath);
-                    readFromMemory(bytes.data(), bytes.size());
+                    readFromMemory(bytes.data(), bytes.size(), formatDef);
                     bRead = true;
                 }
                 catch (...)
@@ -119,12 +119,26 @@ DFG_ROOT_NS_BEGIN{
                 {
                     DFG_MODULE_NS(io)::IfStreamWithEncoding istrm;
                     istrm.open(sPath);
-                    read(istrm);
+                    read(istrm, formatDef);
                     m_readFormat.textEncoding(istrm.encoding());
                 }
             }
 
+            CsvFormatDefinition defaultReadFormat()
+            {
+                return CsvFormatDefinition(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect,
+                                                            '"',
+                                                            DFG_MODULE_NS(io)::EndOfLineTypeN,
+                                                            DFG_MODULE_NS(io)::encodingUnknown);
+            }
+
+
             void readFromMemory(const char* const pData, const size_t nSize)
+            {
+                readFromMemory(pData, nSize, defaultFormat());
+            }
+
+            void readFromMemory(const char* const pData, const size_t nSize, const CsvFormatDefinition& formatDef)
             {
                 DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strmBom(pData, nSize);
                 const auto encoding = DFG_MODULE_NS(io)::checkBOM(strmBom);
@@ -132,36 +146,36 @@ DFG_ROOT_NS_BEGIN{
                 {
                     // TODO: read encoding/code page hint from options.
                     DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData, nSize);
-                    read(strm);
+                    read(strm, formatDef);
                 }
-                else if (encoding == DFG_MODULE_NS(io)::encodingUTF8)
+                else if (encoding == DFG_MODULE_NS(io)::encodingUTF8) // With UTF8 the data can be directly read as bytes.
                 {
                     const auto nBomSize = DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8);
                     DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData + nBomSize, nSize - nBomSize);
-                    read(strm, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<std::string, char>());
+                    read(strm, formatDef, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<std::string, char>());
                 }
-                else
+                else // Case: Known encoding, read using encoding istream.
                 {
                     DFG_MODULE_NS(io)::DFG_CLASS_NAME(ImStreamWithEncoding) strm(pData, nSize, DFG_MODULE_NS(io)::encodingUnknown);
-                    read(strm);
+                    read(strm, formatDef);
                 }
                 m_readFormat.textEncoding(encoding);
             }
 
             template <class Strm_T>
-            void read(Strm_T& strm)
+            void read(Strm_T& strm, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
             {
                 using namespace DFG_MODULE_NS(io);
-                read(strm, DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderUtf<std::string>());
+                read(strm, formatDef, DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderUtf<std::string>());
             }
 
             template <class Strm_T, class CharAppender_T>
-            void read(Strm_T& strm, CharAppender_T)
+            void read(Strm_T& strm, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef, CharAppender_T)
             {
                 using namespace DFG_MODULE_NS(io);
                 this->clear();
                 typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<Char_T, Char_T, std::basic_string<Char_T>, CharAppender_T> Cdt;
-                Cdt cellDataHandler(DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, '"', '\n');
+                Cdt cellDataHandler(formatDef.separatorChar(), formatDef.enclosingChar(), eolCharFromEndOfLineType(formatDef.eolType()));
 
                 auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
                 auto cellHandler = [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& cdh)
