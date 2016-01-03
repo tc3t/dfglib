@@ -9,16 +9,23 @@ TEST(dfgRand, dfgRand)
     using namespace DFG_ROOT_NS;
     std::mt19937 randEng((unsigned long)(time(nullptr)));
     auto distrEng = DFG_ROOT_NS::DFG_SUB_NS_NAME(rand)::makeDistributionEngineUniform(&randEng, int(-3), int(3));
+    auto distrEngSizet = DFG_ROOT_NS::DFG_SUB_NS_NAME(rand)::makeDistributionEngineUniform(&randEng, size_t(0), size_t(3));
 
     std::uniform_int_distribution<int> distrStd(-3, 3);
+    std::uniform_int_distribution<size_t> distrStdSizet(0, 3);
 
+    DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<size_t> minMaxSizet;
     DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<int> minMax;
     DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<int> minMaxStd;
+    DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<int> minMaxStdSizet;
+    
 
     for(int i = 0; i<500; ++i)
     {
         minMax(distrEng());
         minMaxStd(distrStd(randEng));
+        minMaxSizet(distrEngSizet());
+        minMaxStdSizet(distrStdSizet(randEng));
     }
 
     // Expect that in 500 calls both min and max values will be generated.
@@ -26,7 +33,15 @@ TEST(dfgRand, dfgRand)
     // This test already has proven it's worth: it catched a bug in VC2010 implementation of std::uniform_int_distribution<int>
     EXPECT_EQ(minMax.minValue(), -3);
     EXPECT_EQ(minMax.maxValue(), 3);
-
+#if (DFG_MSVC_VER != DFG_MSVC_VER_2010)
+    EXPECT_EQ(minMaxStd.minValue(), -3); // This fails on VC2010, minValue() returns -2.
+#endif
+    EXPECT_EQ(minMaxStd.maxValue(), 3);
+    EXPECT_EQ(minMaxSizet.minValue(), 0);
+    EXPECT_EQ(minMaxSizet.maxValue(), 3);
+    EXPECT_EQ(minMaxStdSizet.minValue(), 0);
+    EXPECT_EQ(minMaxStdSizet.maxValue(), 3);
+    
     // Test that generated value is within limits.
     for(int i = 0; i<1000; ++i)
     {

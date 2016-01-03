@@ -24,6 +24,7 @@ public:
 
     // Workaround for buggy uniform_int distribution in VC2010
     // http://connect.microsoft.com/VisualStudio/feedback/details/712984
+    // "std::uniform_int_distribution produces incorrect results when min0 is negative"
     template <class T2> class UniformIntDistributionImpl : public std::uniform_int_distribution<T2>
     {
     public:
@@ -31,9 +32,9 @@ public:
         typedef typename BaseClass::result_type result_type;
 
         explicit UniformIntDistributionImpl(result_type min0 = 0, result_type max0 = (std::numeric_limits<T2>::max)()) :
-            BaseClass((min0 < 0) ? min0 - 1 : min0, max0) // Note: Won't work correctly if min0 == std::numeric_limits<T>::min().
+            BaseClass((min0 < 0 && min0 > std::numeric_limits<result_type>::min()) ? min0 - 1 : min0, max0) // Note: Won't work correctly if min0 == std::numeric_limits<T>::min() for signed integer.
         {
-            if (min0 == std::numeric_limits<result_type>::min())
+            if (min0 < 0 && min0 == std::numeric_limits<result_type>::min()) // TODO: could use offset of 1 if max0 is less than max().
             {
                 DFG_ASSERT(false);
                 throw std::exception("Unable to initialize UniformIntDistributionImpl object with given values in VC2010 workaround.");
@@ -42,7 +43,6 @@ public:
                 #error Should not get here with current compiler
             #endif
             static_assert(_MSC_VER == 1600, "Build config bug.");
-            // TODO: Add debug assert for case min0 == std::numeric_limits<T>::min()
         }
     };
 
