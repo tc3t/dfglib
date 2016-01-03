@@ -3,6 +3,9 @@
 #include <dfg/alg.hpp>
 #include <array>
 #include <functional> 
+#include <dfg/math.hpp>
+#include <dfg/rand.hpp>
+#include <dfg/numeric/median.hpp>
 
 TEST(dfgFunc, MemFuncMinMax)
 {
@@ -57,6 +60,41 @@ TEST(dfgFunc, MemFuncAvg)
         DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<int, double> avg;
         DFG_MODULE_NS(alg)::forEachFwdFuncRef(valsInt, avg);
         EXPECT_EQ(1.5, avg.average());
+    }
+}
+
+TEST(dfgFunc, MemFuncMedian)
+{
+    using namespace DFG_MODULE_NS(func);
+    using namespace DFG_MODULE_NS(alg);
+    using namespace DFG_MODULE_NS(math);
+    using namespace DFG_MODULE_NS(numeric);
+
+    DFG_CLASS_NAME(MemFuncMedian)<double> mfMedian;
+
+    {
+        const std::array<double, 5> arr = { 9, 6, 3, 5, 1 };
+        const std::array<double, 5> expectedMedian = { 9, 7.5, 6, 5.5, 5 };
+        EXPECT_TRUE(isNan(mfMedian.median()));
+        for (size_t i = 0; i < arr.size(); ++i)
+        {
+            mfMedian(arr[i]);
+            EXPECT_EQ(expectedMedian[i], mfMedian.median());
+        }
+    }
+
+    // Test with random data and verify that the result is the same as with numeric::median().
+    {
+        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+        const size_t nSize = 501;
+        std::vector<double> vals;
+        DFG_CLASS_NAME(MemFuncMedian)<double> mfMedian;
+        for (size_t i = 0; i < nSize; ++i)
+        {
+            vals.push_back(DFG_MODULE_NS(rand)::rand(randEng, -200.0, 50.0));
+            mfMedian(vals.back());
+            EXPECT_EQ(median(vals), mfMedian.median());
+        }
     }
 }
 
