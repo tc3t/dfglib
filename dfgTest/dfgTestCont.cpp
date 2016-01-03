@@ -3,10 +3,13 @@
 #include <dfg/cont/table.hpp>
 #include <dfg/cont/arrayWrapper.hpp>
 #include <string>
+#include <deque>
+#include <list>
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/dfgBase.hpp>
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
+#include <dfg/cont/SortedSequence.hpp>
 #include <dfg/cont/TorRef.hpp>
 #include <dfg/cont/tableCsv.hpp>
 #include <dfg/rand.hpp>
@@ -621,4 +624,35 @@ TEST(dfgCont, TableCsv)
         EXPECT_TRUE(tables[0]->isContentAndSizesIdenticalWith(*tables[i]));
     }
     
+}
+
+TEST(dfgCont, SortedSequence)
+{
+    using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(alg);
+    using namespace DFG_MODULE_NS(rand);
+
+    auto randEng = createDefaultRandEngineRandomSeeded();
+    auto distrEng = makeDistributionEngineUniform(&randEng, -1000, 1000);
+
+    {
+        const size_t nCount = 100;
+
+        DFG_CLASS_NAME(SortedSequence)<std::vector<int>> sseq;
+        DFG_CLASS_NAME(SortedSequence)<std::deque<int>> sseqDeque;
+        DFG_CLASS_NAME(SortedSequence)<std::list<int>> sseqList;
+
+        sseq.reserve(nCount);
+
+        for (size_t i = 0; i < nCount; ++i)
+        {
+            auto val = distrEng();
+            sseq.insert(val);
+            sseqDeque.insert(val);
+            sseqList.insert(val);
+            EXPECT_TRUE(std::is_sorted(sseq.begin(), sseq.end()));
+            EXPECT_TRUE(std::equal(sseq.begin(), sseq.end(), sseqDeque.begin()));
+            EXPECT_TRUE(std::equal(sseq.begin(), sseq.end(), sseqList.begin()));
+        }
+    }
 }

@@ -7,6 +7,7 @@
 #include "cont/interleavedXsortedTwoChannelWrapper.hpp"
 #include "cont/mapFlat.hpp"
 #include "cont/setFlat.hpp"
+#include "cont/SortedSequence.hpp"
 #include "cont/table.hpp"
 #include "cont/TorRef.hpp"
 #include "cont/valueArray.hpp"
