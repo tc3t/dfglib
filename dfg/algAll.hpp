@@ -5,3 +5,4 @@
 #include "alg/generateAdjacent.hpp"
 #include "alg/rank.hpp"
 #include "alg/sortMultiple.hpp"
+#include "alg/sortSingleItem.hpp"

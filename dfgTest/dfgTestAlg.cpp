@@ -2,6 +2,7 @@
 #include <dfg/alg.hpp>
 #include <dfg/alg/sortMultiple.hpp>
 #include <dfg/alg/rank.hpp>
+#include <dfg/alg/sortSingleItem.hpp>
 #include <vector>
 #include <list>
 #include <map>
@@ -606,4 +607,85 @@ TEST(dfgAlg, findNearest)
         std::vector<double> v;
         EXPECT_EQ(v.end(), findNearest(v, 0));
     }
+}
+
+TEST(dfgAlg, sortSingleItem)
+{
+    using namespace DFG_MODULE_NS(alg);
+    using namespace DFG_MODULE_NS(rand);
+
+    auto randEng = createDefaultRandEngineRandomSeeded();
+    auto distrEng = makeDistributionEngineUniform(&randEng, -1000, 1000);
+    std::vector<int> vec;
+    
+    // Empty range handling
+    sortSingleItem(vec, vec.end());
+
+    // Single item handling
+    vec.push_back(10);
+    sortSingleItem(vec, vec.begin());
+    sortSingleItem(vec, vec.end());
+
+    // Two item handling
+    {
+        std::array<int, 2> arr2 = { 2, 1 };
+        std::array<int, 2> arr2Expected = { 1, 2 };
+        auto arr2_0 = arr2;
+        auto arr2_1 = arr2;
+        sortSingleItem(arr2_0, arr2_0.begin());
+        sortSingleItem(arr2_1, arr2_1.end());
+        EXPECT_EQ(arr2Expected, arr2_0);
+        EXPECT_EQ(arr2Expected, arr2_1);
+    }
+
+    const int nCount = 50;
+    
+    vec.reserve(vec.size() + 50 + nCount);
+    vec.resize(50);
+    for (size_t i = 0; i < vec.size(); ++i)
+        vec[i] = distrEng();
+    //std::generate(vec.begin(), vec.end(), [&]() {return distrEng(); }); // This didn't compile in VC2010
+    std::sort(vec.begin(), vec.end());
+
+    
+    auto vecSsi = vec;
+    for (int i = 0; i < nCount; ++i)
+    {
+        // Push back
+        vecSsi.push_back(distrEng());
+        sortSingleItem(vecSsi, vecSsi.end());
+        EXPECT_TRUE(std::is_sorted(vecSsi.begin(), vecSsi.end()));
+
+        // Push in middle.
+        const auto nPos = DFG_MODULE_NS(rand)::rand(randEng, size_t(0), vecSsi.size() - 1);
+        vecSsi.insert(vecSsi.begin() + nPos, distrEng());
+        sortSingleItem(vecSsi, vecSsi.begin() + nPos);
+        //EXPECT_TRUE(std::is_sorted(vecSsi.begin(), vecSsi.end()));
+    }
+
+#if 0 // Performance test for comparing sortSingleItem() and sort() in case of moving push_backed item to sorted place.
+    {
+        const int nPerfCount = 5000;
+        auto vecSsi = vec;
+        DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timerSsi;
+        for (int i = 0; i < nPerfCount; ++i)
+        {
+            vecSsi.push_back(distrEng());
+            sortSingleItem(vecSsi, vecSsi.end());
+        }
+        const auto timeSsi = timerSsi.elapsedWallSeconds();
+
+        auto vecStdSort = vec;
+        DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timerStdSort;
+        for (int i = 0; i < nPerfCount; ++i)
+        {
+            vecStdSort.push_back(distrEng());
+            std::sort(vecStdSort.begin(), vecStdSort.end());
+        }
+        const auto timeStdSort = timerStdSort.elapsedWallSeconds();
+        std::cout << "TimeSsi: " << timeSsi << ", timeStdSort: " << timeStdSort << '\n';
+        // In couple of tests the difference was almost 10x (sortSingleItem() faster). Tested with VC2012 and VC2013 release builds.
+        std::system("pause");
+    }
+#endif
 }
