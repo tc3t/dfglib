@@ -46,6 +46,11 @@ public:
 		return iter;
 	}
 
+	const Data_T& operator*() const
+	{
+		return *m_pData;
+	}
+
 	bool operator==(const DFG_CLASS_NAME(InterleavedSemiIterator)& other)
 	{
 		return (this->m_pData == other.m_pData);
@@ -54,6 +59,11 @@ public:
 	bool operator!=(const DFG_CLASS_NAME(InterleavedSemiIterator)& other)
 	{
 		return !(*this == other);
+	}
+
+	bool operator<(const DFG_CLASS_NAME(InterleavedSemiIterator)& other) const
+	{
+		return this->m_pData < other.m_pData;
 	}
 
 	DFG_CLASS_NAME(InterleavedSemiIterator) operator-(difference_type off) const
