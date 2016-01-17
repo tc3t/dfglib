@@ -85,7 +85,7 @@ template <class DataT> struct DFG_CLASS_NAME(MemFuncMinMax)
 	}
 
 	// Returns the difference max - min
-	DataT diff() const {return m_mfMax.Value() - m_mfMin.Value();}
+	DataT diff() const {return maxValue() - minValue();}
 	DataT minValue() const {return m_mfMin.value();}
 	DataT maxValue() const {return m_mfMax.value();}
 	DFG_CLASS_NAME(MemFuncMin)<DataT> m_mfMin;

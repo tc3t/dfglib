@@ -44,6 +44,7 @@ TEST(dfgFunc, MemFuncMinMax)
     DFG_MODULE_NS(alg)::forEachFwdFuncRef(testArrayUint64, mfMinMaxUint64);
     EXPECT_EQ(mfMinMaxUint64.minValue(), 2);
     EXPECT_EQ(mfMinMaxUint64.maxValue(), 9848916213);
+	EXPECT_EQ(mfMinMaxUint64.diff(), 9848916213 - 2);
 }
 
 TEST(dfgFunc, MemFuncAvg)
