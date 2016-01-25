@@ -117,7 +117,7 @@ DFG_ROOT_NS_BEGIN{
 
                 if (!bRead)
                 {
-                    DFG_MODULE_NS(io)::IfStreamWithEncoding istrm;
+                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(IfStreamWithEncoding) istrm;
                     istrm.open(sPath);
                     read(istrm, formatDef);
                     m_readFormat.textEncoding(istrm.encoding());
