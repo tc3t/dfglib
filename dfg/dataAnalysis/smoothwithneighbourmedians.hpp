@@ -42,7 +42,6 @@ void smoothWithNeighbourMedians(Cont_T&& cont, const size_t nWindowRadiusRequest
 	window.reserve(nMaxWindowSize);
 
 	size_t iWnd = 0;
-	ValueT latestReplaced;
 	for (size_t iCont = 0; iCont < nSize; ++iCont)
 	{
 		const auto lowerWindowItem = (iCont >= nWindowRadius) ? iCont - nWindowRadius : 0;

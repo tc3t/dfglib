@@ -15,6 +15,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef typename Cont_T::size_type size_type;
 		typedef typename Cont_T::iterator contTIterator;
         typedef typename Cont_T::const_iterator contTConstIterator;
+		typedef contTConstIterator const_iterator;
         typedef typename Cont_T::value_type value_type;
 
         void insert(ValueT val)
@@ -48,10 +49,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         size_type size() const { return m_cont.size(); }
 
-        contTConstIterator begin()  const   { return m_cont.begin();  }
-        contTConstIterator cbegin() const   { return m_cont.cbegin(); }
-        contTConstIterator end()    const   { return m_cont.end();    }
-        contTConstIterator cend()   const   { return m_cont.cend();   }
+		const_iterator begin()  const   { return m_cont.begin();  }
+		const_iterator cbegin() const   { return m_cont.cbegin(); }
+		const_iterator end()    const   { return m_cont.end();    }
+		const_iterator cend()   const   { return m_cont.cend();   }
 
 	private:
 		contTIterator find(const value_type& val)
