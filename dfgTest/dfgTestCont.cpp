@@ -660,22 +660,22 @@ TEST(dfgCont, SortedSequence)
 
 TEST(dfgCont, InterleavedXsortedTwoChannelWrapper)
 {
-	using namespace DFG_MODULE_NS(cont);
-	const std::array<double, 6> arr = { 1, 3, 5, 10, 15, 60 };
-	DFG_CLASS_NAME(InterleavedXsortedTwoChannelWrapper)<const double> wrap(arr);
-	EXPECT_EQ(3, wrap.getFirstY());
-	EXPECT_EQ(60, wrap.getLastY());
-	EXPECT_EQ(15, wrap.getXMax());
-	EXPECT_EQ(1, wrap.getXMin());
-	EXPECT_EQ(3, wrap.getY(0));
-	EXPECT_EQ(10, wrap.getY(1));
-	EXPECT_EQ(60, wrap.getY(2));
+    using namespace DFG_MODULE_NS(cont);
+    const std::array<double, 6> arr = { 1, 3, 5, 10, 15, 60 };
+    DFG_CLASS_NAME(InterleavedXsortedTwoChannelWrapper)<const double> wrap(arr);
+    EXPECT_EQ(3, wrap.getFirstY());
+    EXPECT_EQ(60, wrap.getLastY());
+    EXPECT_EQ(15, wrap.getXMax());
+    EXPECT_EQ(1, wrap.getXMin());
+    EXPECT_EQ(3, wrap.getY(0));
+    EXPECT_EQ(10, wrap.getY(1));
+    EXPECT_EQ(60, wrap.getY(2));
 
-	EXPECT_EQ(3, wrap(0));
-	EXPECT_EQ(3, wrap(1));
-	EXPECT_EQ(6.5, wrap(3));
-	EXPECT_EQ(10, wrap(5));
-	EXPECT_EQ(35, wrap(10));
-	EXPECT_EQ(60, wrap(15));
-	EXPECT_EQ(60, wrap(150));
+    EXPECT_EQ(3, wrap(0));
+    EXPECT_EQ(3, wrap(1));
+    EXPECT_EQ(6.5, wrap(3));
+    EXPECT_EQ(10, wrap(5));
+    EXPECT_EQ(35, wrap(10));
+    EXPECT_EQ(60, wrap(15));
+    EXPECT_EQ(60, wrap(150));
 }

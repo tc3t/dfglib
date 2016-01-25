@@ -33,33 +33,33 @@ void smoothWithNeighbourMedians(Cont_T&& cont, const size_t nWindowRadiusRequest
     ValueT originalValuesStatic[3] = { 0, 0, 0 };
     std::vector<ValueT> vecOriginalValues;
     if (nWindowRadius >= DFG_COUNTOF(originalValuesStatic))
-		vecOriginalValues.resize(nWindowRadius + 1, 0);
+        vecOriginalValues.resize(nWindowRadius + 1, 0);
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<ValueT> originalVals((vecOriginalValues.empty()) ? originalValuesStatic : &vecOriginalValues[0], nWindowRadius + 1);
 
-	DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<ValueT>> window;
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<ValueT>> window;
 
-	const auto nMaxWindowSize = Min(nSize, 1 + 2 * nWindowRadius);
-	window.reserve(nMaxWindowSize);
+    const auto nMaxWindowSize = Min(nSize, 1 + 2 * nWindowRadius);
+    window.reserve(nMaxWindowSize);
 
-	size_t iWnd = 0;
-	for (size_t iCont = 0; iCont < nSize; ++iCont)
-	{
-		const auto lowerWindowItem = (iCont >= nWindowRadius) ? iCont - nWindowRadius : 0;
-		const auto endWndItem = Min(iCont + nWindowRadius + 1, nSize);
-		const auto nCurrentWindowSize = endWndItem - lowerWindowItem;
+    size_t iWnd = 0;
+    for (size_t iCont = 0; iCont < nSize; ++iCont)
+    {
+        const auto lowerWindowItem = (iCont >= nWindowRadius) ? iCont - nWindowRadius : 0;
+        const auto endWndItem = Min(iCont + nWindowRadius + 1, nSize);
+        const auto nCurrentWindowSize = endWndItem - lowerWindowItem;
 
-		for (; iWnd < endWndItem; ++iWnd)
-		{
-			if (window.size() < nMaxWindowSize)
-				window.insert(cont[iWnd]);
-			else
-				window.replace(originalVals[iCont % originalVals.size()], cont[iWnd]);
-		}
-		if (window.size() > nCurrentWindowSize)
-			window.erase(originalVals[(iCont - nWindowRadius - 1) % originalVals.size()]);
-		originalVals[iCont % originalVals.size()] = cont[iCont];
-		cont[iCont] = DFG_MODULE_NS(numeric)::medianInSorted(window);
-	}
+        for (; iWnd < endWndItem; ++iWnd)
+        {
+            if (window.size() < nMaxWindowSize)
+                window.insert(cont[iWnd]);
+            else
+                window.replace(originalVals[iCont % originalVals.size()], cont[iWnd]);
+        }
+        if (window.size() > nCurrentWindowSize)
+            window.erase(originalVals[(iCont - nWindowRadius - 1) % originalVals.size()]);
+        originalVals[iCont % originalVals.size()] = cont[iCont];
+        cont[iCont] = DFG_MODULE_NS(numeric)::medianInSorted(window);
+    }
 }
 
 }} // module namespace

@@ -203,7 +203,7 @@ TEST(dfgDataAnalysis, smoothWithNeighbourMedians)
         const std::array<double, 5> arr5_exp5 = arr5_exp4;
         const std::array<double, 5> arr5_exp10 = arr5_exp4;
 
-		std::array<double, 5> temp;
+        std::array<double, 5> temp;
         temp = arr5;
         smoothWithNeighbourMedians(temp, 0);
         EXPECT_EQ(arr5_exp0, temp);
