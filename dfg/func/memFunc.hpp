@@ -88,6 +88,8 @@ template <class DataT> struct DFG_CLASS_NAME(MemFuncMinMax)
 	DataT diff() const {return maxValue() - minValue();}
 	DataT minValue() const {return m_mfMin.value();}
 	DataT maxValue() const {return m_mfMax.value();}
+    bool isValid() const { return maxValue() >= minValue(); } // Returns maxValue() >= minValue(), which should be false if and only if no operator() has been called.
+
 	DFG_CLASS_NAME(MemFuncMin)<DataT> m_mfMin;
 	DFG_CLASS_NAME(MemFuncMax)<DataT> m_mfMax;
 };

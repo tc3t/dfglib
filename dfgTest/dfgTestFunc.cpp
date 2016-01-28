@@ -12,6 +12,7 @@ TEST(dfgFunc, MemFuncMinMax)
     using namespace DFG_ROOT_NS;
 
     DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<double> mfMinMax;
+    EXPECT_FALSE(mfMinMax.isValid());
 
     EXPECT_EQ(mfMinMax.minValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMin<double>());
     EXPECT_EQ(mfMinMax.maxValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMax<double>());
@@ -19,6 +20,7 @@ TEST(dfgFunc, MemFuncMinMax)
     EXPECT_LT(std::numeric_limits<double>::max(), mfMinMax.minValue());
 
     DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<double> mfMinMaxFloat;
+    EXPECT_FALSE(mfMinMaxFloat.isValid());
     EXPECT_EQ(mfMinMaxFloat.minValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMin<float>());
     EXPECT_EQ(mfMinMaxFloat.maxValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMax<float>());
     EXPECT_GT(std::numeric_limits<float>::lowest(), mfMinMaxFloat.maxValue());
@@ -31,6 +33,9 @@ TEST(dfgFunc, MemFuncMinMax)
     EXPECT_LT(std::numeric_limits<long double>::max(), mfMinMaxLd.minValue());
 
     std::array<double, 6> testArray = {1.2, 3.6, -5.78, 6.3, 1e9, 1e-21};
+    EXPECT_FALSE(mfMinMax.isValid());
+    mfMinMax(1.0);
+    EXPECT_TRUE(mfMinMax.isValid());
     DFG_MODULE_NS(alg)::forEachFwdFuncRef(testArray, mfMinMax);
     EXPECT_EQ(mfMinMax.minValue(), -5.78);
     EXPECT_EQ(mfMinMax.maxValue(), 1e9);
@@ -42,6 +47,7 @@ TEST(dfgFunc, MemFuncMinMax)
     EXPECT_EQ(std::numeric_limits<uint64>::max(), mfMinMaxUint64.minValue());
     std::array<uint64, 6> testArrayUint64 = {5652, 2, 9848916213, 9, 9151515615, 3669941};
     DFG_MODULE_NS(alg)::forEachFwdFuncRef(testArrayUint64, mfMinMaxUint64);
+    EXPECT_TRUE(mfMinMaxUint64.isValid());
     EXPECT_EQ(mfMinMaxUint64.minValue(), 2);
     EXPECT_EQ(mfMinMaxUint64.maxValue(), 9848916213);
 	EXPECT_EQ(mfMinMaxUint64.diff(), 9848916213 - 2);
