@@ -4,11 +4,11 @@
 #include <dfg/colour.hpp>
 #include <dfg/physics.hpp>
 #include <array>
-#include <type_traits>
+#include <dfg/typeTraits.hpp>
 
 #ifdef _MSC_VER // In GCC 4.8.0 'has_trivial_assign' is not a member of 'std'
-    DFG_STATIC_ASSERT(std::has_trivial_assign<DFG_ROOT_NS::DFG_SUB_NS_NAME(colour)::DFG_CLASS_NAME(RgbF)>::value == true, "Expecting RGB-class to have trivial assign");
-    DFG_STATIC_ASSERT(std::has_trivial_assign<DFG_ROOT_NS::DFG_SUB_NS_NAME(colour)::DFG_CLASS_NAME(RgbD)>::value == true, "Expecting RGB-class to have trivial assign");
+    DFG_STATIC_ASSERT(DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyAssignable<DFG_ROOT_NS::DFG_SUB_NS_NAME(colour)::DFG_CLASS_NAME(RgbF)>::value == true, "Expecting RGB-class to have trivial assign");
+    DFG_STATIC_ASSERT(DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyAssignable<DFG_ROOT_NS::DFG_SUB_NS_NAME(colour)::DFG_CLASS_NAME(RgbD)>::value == true, "Expecting RGB-class to have trivial assign");
 #endif
 
 TEST(DfgColour, SpectrumToRgb)

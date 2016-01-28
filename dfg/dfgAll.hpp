@@ -25,6 +25,7 @@
 #include "staticMap.hpp"
 #include "textualLogic.hpp"
 #include "time.hpp"
+#include "typeTraits.hpp"
 
 #include "algAll.hpp"
 #include "contAll.hpp"
