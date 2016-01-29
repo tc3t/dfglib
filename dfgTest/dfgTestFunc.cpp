@@ -50,7 +50,7 @@ TEST(dfgFunc, MemFuncMinMax)
     EXPECT_TRUE(mfMinMaxUint64.isValid());
     EXPECT_EQ(mfMinMaxUint64.minValue(), 2);
     EXPECT_EQ(mfMinMaxUint64.maxValue(), 9848916213);
-	EXPECT_EQ(mfMinMaxUint64.diff(), 9848916213 - 2);
+    EXPECT_EQ(mfMinMaxUint64.diff(), 9848916213 - 2);
 }
 
 TEST(dfgFunc, MemFuncAvg)
