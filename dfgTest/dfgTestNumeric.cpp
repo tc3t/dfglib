@@ -194,21 +194,29 @@ namespace
             VC2012_64: 
             VC2013_32: yes
             VC2013_64:
+            VC2015_32: yes
+            VC2015_64: yes
         std::array<double, 4/20>
             VC2012_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2012_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
             VC2013_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2013_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
+            VC2015_32: yes
+            VC2015_64: yes
         std::vector<double>
             VC2012_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2012_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_32: TODO
+            VC2015_64: TODO
         ArrayWrapper from std::vector
             VC2012_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2012_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
         */
         {
             for (size_t i = 0; i < count(cont); ++i) // cont.size() vs count(cont) doesn't make a difference.
@@ -223,21 +231,29 @@ namespace
             VC2012_64:
             VC2013_32: yes
             VC2013_64:
+            VC2015_32: yes
+            VC2015_64: yes
         std::array<double, 4/20>
             VC2012_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2012_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
             VC2013_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2013_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
+            VC2015_32: yes
+            VC2015_64: yes
         std::vector<double>
             VC2012_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2012_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
             VC2013_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2013_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
+            VC2015_32: yes
+            VC2015_64: yes
         ArrayWrapper from std::vector
             VC2012_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2012_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
             VC2013_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2013_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
+            VC2015_32: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
+            VC2015_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
         */
         {
             for (size_t i = 0, nSize = count(cont); i < nSize; ++i) // cont.size() vs count(cont) doesn't make a difference.
@@ -252,21 +268,29 @@ namespace
             VC2012_64:
             VC2013_32: yes
             VC2013_64:
+            VC2015_32: yes
+            VC2015_64: yes
         std::array<double, 4/20>
             VC2012_32: yes
             VC2012_64: yes
             VC2013_32: yes
             VC2013_64: yes
+            VC2015_32: yes
+            VC2015_64: yes
         std::vector<double>
             VC2012_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2012_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
         ArrayWrapper from std::vector
             VC2012_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2012_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
         */
         {
             for (size_t i = 0; i < count(cont); ++i) // cont.size() or count(cont) makes no difference.
@@ -281,21 +305,29 @@ namespace
             VC2012_64:
             VC2013_32: yes
             VC2013_64:
+            VC2015_32: yes
+            VC2015_64: yes
         std::array<double, 4/20>
             VC2012_32: yes
             VC2012_64: yes
             VC2013_32: yes
             VC2013_64: yes
+            VC2015_32: yes
+            VC2015_64: yes
         std::vector<double>
             VC2012_32: yes
             VC2012_64: yes
             VC2013_32: yes
             VC2013_64: yes
+            VC2015_32: yes
+            VC2015_64: yes
         ArrayWrapper from std::vector
             VC2012_32: yes
             VC2012_64: yes
             VC2013_32: yes
             VC2013_64: yes
+            VC2015_32: yes
+            VC2015_64: yes
         */
         {
             for (size_t i = 0; i < nSize; ++i)
@@ -310,21 +342,29 @@ namespace
             VC2012_64:
             VC2013_32: yes
             VC2013_64:
+            VC2015_32: yes
+            VC2015_64: yes
         std::array<double, 4/20>
             VC2012_32: yes
             VC2012_64: yes
             VC2013_32: yes
             VC2013_64: yes
+            VC2015_32: yes
+            VC2015_64: yes
         std::vector<double>
             VC2012_32: yes
             VC2012_64: yes
             VC2013_32: yes
             VC2013_64: yes
+            VC2015_32: yes
+            VC2015_64: yes
         ArrayWrapper from std::vector
             VC2012_32: yes
             VC2012_64: yes
             VC2013_32: yes
             VC2013_64: yes
+            VC2015_32: yes
+            VC2015_64: yes
         */
         {
             for (size_t i = 0, nLength = count(cont); i < nLength; ++i) // cont.size() vs count(cont) doesn't make a difference.
@@ -339,21 +379,29 @@ namespace
             VC2012_64:
             VC2013_32: yes
             VC2013_64:
+            VC2015_32: yes
+            VC2015_64: yes
         std::array<double, 4/20>
             VC2012_32: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2012_64: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2013_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2013_64: no, reason 1301 "Loop stride is not +1"
+            VC2015_32: yes
+            VC2015_64: yes
         std::vector<double>
             VC2012_32: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2012_64: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2013_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_32: yes
+            VC2015_64: yes
         ArrayWrapper from std::vector
             VC2013_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2012_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
             VC2013_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_32: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
+            VC2015_64: no, reason 501 "Induction variable is not local; or upper bound is not loop-invariant."
         */
         {
             for (auto iter = std::begin(cont); iter != std::end(cont); ++iter)
@@ -368,21 +416,29 @@ namespace
             VC2012_64:
             VC2013_32: yes
             VC2013_64:
+            VC2015_32: yes
+            VC2015_64: yes
         std::array<double, 4/20>
             VC2012_32: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2012_64: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2013_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2013_64: no, reason 1301 "Loop stride is not +1"
+            VC2015_32: yes
+            VC2015_64: yes
         std::vector<double>
             VC2012_32: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2012_64: no, reason 502 "Induction variable is stepped in some manner other than a simple +1"
             VC2013_32: no, reason 1304 "Loop includes assignments that are of different sizes"
             VC2013_64: no, reason 1301 "Loop stride is not +1"
+            VC2015_32: yes
+            VC2015_64: yes
         ArrayWrapper from std::vector
             VC2012_32: no, reason 1301 "Loop stride is not +1"
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
             VC2013_64: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
+            VC2015_32: yes
+            VC2015_64: yes
         */
         {
             for (auto iter = std::begin(cont), iterEnd = std::end(cont); iter != iterEnd; ++iter)
@@ -397,21 +453,29 @@ namespace
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: yes?
             VC2013_64: yes?
+            VC2015_32: yes?
+            VC2015_64: yes?
         std::array<double, 4/20>
             VC2012_32: no, reason 1301 "Loop stride is not +1"
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: yes?
             VC2013_64: yes?
+            VC2015_32: TODO
+            VC2015_64: yes?
         std::vector<double>
             VC2012_32: no
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: no, reason 1200 "Loop contains loop-carried data dependences that prevent vectorization..."
             VC2013_64: no?
+            VC2015_32: TODO
+            VC2015_64: yes?
         ArrayWrapper from std::vector
             VC2012_32: no, reason 1301 "Loop stride is not +1"
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: yes?
             VC2013_64: no? (r1200?)
+            VC2015_32: yes?
+            VC2015_64: yes?
         */
         std::for_each(std::begin(cont), std::end(cont), [](double& val) {val += 1; });
 
@@ -421,21 +485,29 @@ namespace
         VC2012_64: TODO
         VC2013_32: TODO
         VC2013_64: TODO
+        VC2015_32: yes?
+        VC2015_64: yes?
         std::array<double, 4/20>
         VC2012_32: TODO
         VC2012_64: TODO
         VC2013_32: TODO
         VC2013_64: TODO
-        std::double
+        VC2015_32: yes?
+        VC2015_64: yes?
+        std::vector<double>
         VC2012_32: TODO
         VC2012_64: TODO
         VC2013_32: TODO
         VC2013_64: TODO
+        VC2015_32: yes?
+        VC2015_64: yes?
         ArrayWrapper from std::vector
         VC2012_32: TODO
         VC2012_64: TODO
         VC2013_32: TODO
         VC2013_64: TODO
+        VC2015_32: yes?
+        VC2015_64: yes?
         */
         DFG_MODULE_NS(alg)::forEachFwd(makeRange(cont), [](double& val) {val += 1; });
 
@@ -445,21 +517,29 @@ namespace
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: yes?
             VC2013_64: yes?
+            VC2015_32: yes?
+            VC2015_64: yes?
         std::array<double, 4/20>
             VC2012_32: no, reason 1301 "Loop stride is not +1"
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: yes?
             VC2013_64: yes?
+            VC2015_32: yes?
+            VC2015_64: yes?
         std::vector<double>
             VC2012_32: no, reason 1301 "Loop stride is not +1"
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: yes?
             VC2013_64: yes?
+            VC2015_32: yes?
+            VC2015_64: yes?
         ArrayWrapper from std::vector
             VC2012_32: no, reason 1301 "Loop stride is not +1"
             VC2012_64: no, reason 1301 "Loop stride is not +1"
             VC2013_32: yes?
             VC2013_64: yes?
+            VC2015_32: yes?
+            VC2015_64: yes?
         */
         std::transform(std::begin(cont), std::end(cont), std::begin(cont), [](double val) {return val + 1; });
     }
@@ -474,7 +554,7 @@ TEST(dfgNumeric, autoVectorization)
     std::array<double, 4> arrd4;
     std::array<double, 20> arrd20;
     std::vector<double> vec(static_cast<size_t>(DFG_MODULE_NS(rand)::rand() * 30));
-    //vectorizationTestsTemplate(rawStaticSizedArray);
+    vectorizationTestsTemplate(rawStaticSizedArray);
     vectorizationTestsTemplate(arrd4);
     vectorizationTestsTemplate(arrd20);
     vectorizationTestsTemplate(vec);
@@ -491,7 +571,9 @@ TEST(dfgNumeric, basicAlgs)
         VC2012_32: OK (all vectorized)
         VC2012_64: OK (all vectorized)
         VC2013_32: OK (some adds were not vectorized with reason 1300 ("Loop body contains no—or very little—computation")).
-        VC2012_64: OK (some adds were not vectorized with reason 1300 ("Loop body contains no—or very little—computation")).
+        VC2013_64: OK (some adds were not vectorized with reason 1300 ("Loop body contains no—or very little—computation")).
+        VC2015_32: TODO
+        VC2015_64: TODO
     */
 
 
