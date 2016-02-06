@@ -144,8 +144,19 @@ template <class DataT, class SumT = DataT, class CountT = size_t> struct DFG_CLA
     {
         *this = DFG_CLASS_NAME(MemFuncAvg)();
     }
+
+    static SumT privAverageValueForEmptyByHasNan(const std::true_type) { return std::numeric_limits<SumT>::quiet_NaN(); }
+    static SumT privAverageValueForEmptyByHasNan(const std::false_type) { return SumT(); }
+
+    static SumT averageValueForEmpty()
+    {
+        const std::integral_constant<bool, std::numeric_limits<SumT>::has_quiet_NaN> hasQNan;
+        return privAverageValueForEmptyByHasNan(hasQNan);
+    }
+
     SumT sum() const {return m_mfSum.value();}
-    SumT average() const {return (m_nCalls != 0) ? sum() / (SumT)m_nCalls : 0;}
+    // If SumT has quiet_NaN, returns quiet_NaN, else returns SumT().
+    SumT average() const {return (m_nCalls != 0) ? sum() / (SumT)m_nCalls : averageValueForEmpty();}
     CountT callCount() const {return m_nCalls;}
 
 private:

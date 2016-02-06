@@ -55,6 +55,16 @@ TEST(dfgFunc, MemFuncMinMax)
 
 TEST(dfgFunc, MemFuncAvg)
 {
+    // Test return value for empty.
+    {
+        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<int> avgI;
+        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<float> avgF;
+        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<double> avgD;
+        EXPECT_EQ(int(), avgI.average());
+        EXPECT_TRUE(DFG_MODULE_NS(math)::isNan(avgF.average()));
+        EXPECT_TRUE(DFG_MODULE_NS(math)::isNan(avgD.average()));
+    }
+
     {
         const double vals[] = { 1, 2, 3, 4, 5 };
         DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<double> avg;
