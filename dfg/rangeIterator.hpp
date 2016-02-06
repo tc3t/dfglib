@@ -23,6 +23,7 @@ DFG_ROOT_NS_BEGIN
             iterator end()  const	{ return m_iterEnd; }
             iterator cend() const	{ return end(); }
             size_t size() const		{ return std::distance(begin(), end()); }
+            bool empty() const      { return m_iterBegin == m_iterEnd; }
 
             iterator m_iterBegin;
             iterator m_iterEnd;
