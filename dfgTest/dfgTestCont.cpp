@@ -331,18 +331,45 @@ TEST(dfgCont, ArrayWrapper)
     using namespace DFG_MODULE_NS(cont);
     const double arr[] = { 1, 2, 3, 4, 5, 6 };
     std::vector<double> vec(cbegin(arr), cend(arr));
+    const std::vector<double> cvec(cbegin(arr), cend(arr));
+    std::array<double, DFG_COUNTOF(arr)> stdArr;
+    std::copy(std::begin(arr), std::end(arr), stdArr.begin());
+    std::string str;
+    const std::string strConst;
+
+    // Test existence of default constructor exists (doesn't compile if fails).
+    DFG_CLASS_NAME(ArrayWrapperT)<int> wrapEmpty;
+
+    // Test conversion from non-const to const wrapper.
+    DFG_CLASS_NAME(ArrayWrapperT)<const int> wrapEmptyConst = wrapEmpty;
+
     const auto wrapArr = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(arr);
     const auto wrapVec = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(vec);
+    const auto wrapcVec = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(cvec);
+    const auto wrapStdArr = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(stdArr);
+    //const auto wrapStr = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(str); // TODO: this should work, but for now commented out as it doesn't compile.
+    const auto wrapStrConst = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(strConst);
     EXPECT_EQ(count(arr), wrapArr.size());
     EXPECT_EQ(count(vec), wrapVec.size());
+    EXPECT_EQ(count(cvec), wrapcVec.size());
+    EXPECT_EQ(count(stdArr), wrapStdArr.size());
     for (size_t i = 0; i<wrapArr.size(); ++i)
     {
         EXPECT_EQ(&wrapArr[i], &arr[i]);
         EXPECT_EQ(&wrapVec[i], &vec[i]);
+        EXPECT_EQ(&wrapcVec[i], &cvec[i]);
+        EXPECT_EQ(&wrapStdArr[i], &stdArr[i]);
     }
 
     EXPECT_EQ(ptrToContiguousMemory(wrapArr), wrapArr.data());
     EXPECT_EQ(ptrToContiguousMemory(wrapVec), wrapVec.data());
+    EXPECT_EQ(ptrToContiguousMemory(wrapcVec), wrapcVec.data());
+    EXPECT_EQ(ptrToContiguousMemory(wrapStdArr), wrapStdArr.data());
+
+    *wrapVec.begin() = 9;
+    EXPECT_EQ(9, vec[0]);
+    EXPECT_EQ(9, wrapVec[0]);
+    //*wrapVec.cbegin() = 9; // This should fail to compile.
 }
 
 namespace
