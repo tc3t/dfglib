@@ -1190,5 +1190,109 @@ TEST(dfgNumeric, rescale)
         //std::array<int, 2> arr = { 1, 2 };
         //rescale(arr, 0, 1);
     }
+}
 
+TEST(dfgNumeric, percentileRange)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(numeric);
+
+    // Test single element
+    {
+        const double arr[] = { 1 };
+        const auto rvArr0_100 = percentileRangeInSortedII(arr, 0, 100);
+        EXPECT_EQ(rvArr0_100.first, std::begin(arr) + 0);
+        EXPECT_EQ(rvArr0_100.second, std::end(arr));
+
+        const auto rvArr40_60 = percentileRangeInSortedII(arr, 40, 60);
+        EXPECT_EQ(rvArr0_100, rvArr40_60);
+    }
+
+    // Test two elements
+    {
+        const double arr[] = { 1, 2 };
+        const auto rvArr0_50 = percentileRangeInSortedII(arr, 0, 50);
+        EXPECT_EQ(rvArr0_50.first, std::begin(arr));
+        EXPECT_EQ(rvArr0_50.second, std::end(arr));
+
+        const auto rvArr0_49 = percentileRangeInSortedII(arr, 0, 49);
+        EXPECT_EQ(rvArr0_49.first, std::begin(arr));
+        EXPECT_EQ(rvArr0_49.second, std::begin(arr) + 1);
+
+        const auto rvArr50_50 = percentileRangeInSortedII(arr, 50, 50);
+        EXPECT_EQ(rvArr50_50.first, std::begin(arr));
+        EXPECT_EQ(rvArr50_50.second, std::end(arr));
+
+        const auto rvArr51_50 = percentileRangeInSortedII(arr, 51, 50);
+        EXPECT_EQ(rvArr51_50.first, std::end(arr));
+        EXPECT_EQ(rvArr51_50.second, std::end(arr));
+
+        const auto rvArr51_100 = percentileRangeInSortedII(arr, 51, 100);
+        EXPECT_EQ(rvArr51_100.first, std::begin(arr) + 1);
+        EXPECT_EQ(rvArr51_100.second, std::end(arr));
+    }
+
+    // Test four elements
+    {
+        const double arr[] = { 1, 2, 3, 4 };
+        const auto rvArr = percentileRangeInSortedII(arr, 0, 100);
+        EXPECT_EQ(rvArr.first, std::begin(arr));
+        EXPECT_EQ(rvArr.second, std::end(arr));
+
+        const auto rvArr30_60 = percentileRangeInSortedII(arr, 30, 60);
+        EXPECT_EQ(rvArr30_60.first, std::begin(arr) + 1);
+        EXPECT_EQ(rvArr30_60.second, std::begin(arr) + 3);
+    }
+
+    // Test 10 elements.
+    {
+        const double arr[] = { 1,2,3,4,5,6,7,8,9,10 };
+        const std::array<double, 10> stdArr = { 1,2,3,4,5,6,7,8,9,10 };
+        const auto rvArr = percentileRangeInSortedII(arr, 0, 100);
+        const auto rvStdArr = percentileRangeInSortedII(stdArr, 0, 100);
+        EXPECT_EQ(rvArr.first, std::begin(arr));
+        EXPECT_EQ(rvArr.second, std::end(arr));
+        EXPECT_EQ(rvStdArr.first, std::begin(stdArr));
+        EXPECT_EQ(rvStdArr.second, std::end(stdArr));
+
+        const auto rv20_70 = percentileRangeInSortedII(arr, 20, 70);
+        EXPECT_EQ(rv20_70.first, std::begin(arr) + 1);
+        EXPECT_EQ(rv20_70.second, std::begin(arr) + 8);
+
+        const auto rv5_8 = percentileRangeInSortedII(arr, 5, 8);
+        EXPECT_EQ(rv5_8.first, std::begin(arr));
+        EXPECT_EQ(rv5_8.second, std::begin(arr) + 1);
+
+        const auto rv15_22 = percentileRangeInSortedII(arr, 15, 22);
+        EXPECT_EQ(rv15_22.first, std::begin(arr) + 1);
+        EXPECT_EQ(rv15_22.second, std::begin(arr) + 3);
+    }
+
+    // Test big element count
+    {
+        std::vector<double> vec(13000);
+        DFG_MODULE_NS(alg)::generateAdjacent(vec, 0, 1);
+        const auto rv54_63 = percentileRangeInSortedII(vec, 54.35, 63.17);
+        EXPECT_EQ(rv54_63.first, std::begin(vec) + 7065);
+        EXPECT_EQ(rv54_63.second, std::begin(vec) + 8213);
+    }
+
+    // Test that 50, 50 gives median.
+    {
+        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+        const size_t nSize = 1001;
+        std::vector<double> vals(nSize);
+        for (size_t i = 0; i < nSize; ++i)
+        {
+            vals[i] = DFG_MODULE_NS(rand)::rand(randEng, -200.0, 50.0);
+        }
+        std::sort(vals.begin(), vals.end());
+        const auto rvPairOdd = percentileRangeInSortedII(vals, 50, 50);
+        EXPECT_EQ(1, rvPairOdd.second - rvPairOdd.first);
+        EXPECT_EQ(medianInSorted(vals), *rvPairOdd.first);
+        vals.erase(vals.begin());
+        const auto rvPairEven = percentileRangeInSortedII(vals, 50, 50);
+        EXPECT_EQ(2, rvPairEven.second - rvPairEven.first);
+        EXPECT_EQ(medianInSorted(vals), 0.5 * (*(rvPairEven.second - 1) + *rvPairEven.first));
+    }
 }
