@@ -1192,7 +1192,7 @@ TEST(dfgNumeric, rescale)
     }
 }
 
-TEST(dfgNumeric, percentileRange)
+TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(numeric);
@@ -1206,6 +1206,13 @@ TEST(dfgNumeric, percentileRange)
 
         const auto rvArr40_60 = percentileRangeInSortedII(arr, 40, 60);
         EXPECT_EQ(rvArr0_100, rvArr40_60);
+
+        const auto percentileElem0 = percentileInSorted_enclosingElem(arr, 0);
+        EXPECT_EQ(1, percentileElem0);
+        const auto percentileElem50 = percentileInSorted_enclosingElem(arr, 50);
+        EXPECT_EQ(1, percentileElem50);
+        const auto percentileElem100 = percentileInSorted_enclosingElem(arr, 100);
+        EXPECT_EQ(1, percentileElem100);
     }
 
     // Test two elements
@@ -1230,6 +1237,13 @@ TEST(dfgNumeric, percentileRange)
         const auto rvArr51_100 = percentileRangeInSortedII(arr, 51, 100);
         EXPECT_EQ(rvArr51_100.first, std::begin(arr) + 1);
         EXPECT_EQ(rvArr51_100.second, std::end(arr));
+
+        const auto percentileElem0 = percentileInSorted_enclosingElem(arr, 0);
+        EXPECT_EQ(1, percentileElem0);
+        const auto percentileElem50 = percentileInSorted_enclosingElem(arr, 50);
+        EXPECT_EQ(2, percentileElem50);
+        const auto percentileElem100 = percentileInSorted_enclosingElem(arr, 100);
+        EXPECT_EQ(2, percentileElem100);
     }
 
     // Test four elements
@@ -1242,6 +1256,27 @@ TEST(dfgNumeric, percentileRange)
         const auto rvArr30_60 = percentileRangeInSortedII(arr, 30, 60);
         EXPECT_EQ(rvArr30_60.first, std::begin(arr) + 1);
         EXPECT_EQ(rvArr30_60.second, std::begin(arr) + 3);
+
+        const auto percentileElem0 = percentileInSorted_enclosingElem(arr, 0);
+        EXPECT_EQ(1, percentileElem0);
+        const auto percentileElem249 = percentileInSorted_enclosingElem(arr, 24.9);
+        EXPECT_EQ(1, percentileElem249);
+        const auto percentileElem25 = percentileInSorted_enclosingElem(arr, 25);
+        EXPECT_EQ(2, percentileElem25);
+        const auto percentileElem49 = percentileInSorted_enclosingElem(arr, 49);
+        EXPECT_EQ(2, percentileElem49);
+        const auto percentileElem50 = percentileInSorted_enclosingElem(arr, 50);
+        EXPECT_EQ(3, percentileElem50);
+        const auto percentileElem75 = percentileInSorted_enclosingElem(arr, 75);
+        EXPECT_EQ(4, percentileElem75);
+        const auto percentileElem100 = percentileInSorted_enclosingElem(arr, 110);
+        EXPECT_EQ(4, percentileElem100);
+
+        // Test percentileInSorted_enclosingElem with ArrayWrapper
+        {
+            using namespace DFG_MODULE_NS(cont);
+            EXPECT_EQ(percentileElem50, (percentileInSorted_enclosingElem(DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(arr), 50)));
+        }
     }
 
     // Test 10 elements.
@@ -1290,9 +1325,33 @@ TEST(dfgNumeric, percentileRange)
         const auto rvPairOdd = percentileRangeInSortedII(vals, 50, 50);
         EXPECT_EQ(1, rvPairOdd.second - rvPairOdd.first);
         EXPECT_EQ(medianInSorted(vals), *rvPairOdd.first);
+
+        const auto percentileElem50 = percentileInSorted_enclosingElem(vals, 50);
+        EXPECT_EQ(medianInSorted(vals), percentileElem50);
+
         vals.erase(vals.begin());
         const auto rvPairEven = percentileRangeInSortedII(vals, 50, 50);
         EXPECT_EQ(2, rvPairEven.second - rvPairEven.first);
         EXPECT_EQ(medianInSorted(vals), 0.5 * (*(rvPairEven.second - 1) + *rvPairEven.first));
     }
+}
+
+TEST(dfgNumeric, trimByPercentileRange)
+{
+    using namespace DFG_MODULE_NS(numeric);
+    auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+    const size_t nSize = 1001;
+    std::vector<double> vals(nSize);
+    for (size_t i = 0; i < nSize; ++i)
+    {
+        vals[i] = DFG_MODULE_NS(rand)::rand(randEng, -200.0, 50.0);
+    }
+    auto valsSorted = vals;
+    std::sort(valsSorted.begin(), valsSorted.end());
+    const auto pr = percentileRangeInSortedII(valsSorted, 30, 65);
+    const std::vector<double> expected(pr.first, pr.second);
+    trimToPercentileRangeII(vals, 30, 65);
+    trimToPercentileRangeIISorted(valsSorted, 30, 65);
+    EXPECT_EQ(expected, vals);
+    EXPECT_EQ(valsSorted, vals);
 }
