@@ -25,11 +25,17 @@ TEST(dfgIter, makeRange)
     using namespace DFG_MODULE_NS(alg);
     const double arr[] = { 1, 2, 3, 5, 6, 7 };
     std::vector<double> vec(cbegin(arr), cend(arr));
+    const auto vecConst = vec;
+    std::vector<double> vecEmpty;
     std::list<double> list(cbegin(arr), cend(arr));
     auto avgFunc = DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<double>();
     auto rangeArr = makeRange(arr);
     DFGTEST_STATIC((std::is_same<std::remove_reference<decltype(*rangeArr.begin())>::type, const double>::value));
     auto rangeVec = makeRange(vec);
+    auto rangeVecConst = makeRange(vecConst);
+    auto rangeVecEmpty = makeRange(vecEmpty);
+    DFGTEST_STATIC((std::is_same<decltype(rangeVec.data()), double*>::value));
+    DFGTEST_STATIC((std::is_same<decltype(rangeVecConst.data()), const double*>::value));
     auto rangeList = makeRange(list);
     avgFunc = DFG_MODULE_NS(alg)::forEachFwd(rangeArr, avgFunc);
     EXPECT_EQ(4.0, avgFunc.average());
@@ -113,7 +119,19 @@ TEST(dfgIter, szIterator)
     using namespace DFG_MODULE_NS(alg);
 
     char sz[] = "abc";
+    const char szConst[] = "def";
     auto range = makeSzRange(sz);
+    auto rangeConst = makeSzRange(szConst);
+
+    // TODO: only disable for MinGW versions that do not have std::identity.
+#ifndef __MINGW32__
+    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzIterator(sz))>::type::pointer, char*>::value));
+    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzIterator(szConst))>::type::pointer, const char*>::value));
+    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzRange(sz))>::type::pointer, char*>::value));
+    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzRange(szConst))>::type::pointer, const char*>::value));
+#endif
+
+    EXPECT_EQ(&sz[0], range.data()); // Note: pointer comparison is intended.
     for (auto iter = range.begin(), iterEnd = range.end(); !isAtEnd(iter, iterEnd); ++iter)
         *iter += 1;
     EXPECT_STREQ(sz, "bcd");

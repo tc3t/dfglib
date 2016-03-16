@@ -9,6 +9,7 @@
 #include <dfg/io/DelimitedTextWriter.hpp>
 #include <dfg/str/string.hpp>
 #include <dfg/baseConstructorDelegate.hpp>
+#include <dfg/iter/szIterator.hpp>
 
 namespace
 {
@@ -1118,6 +1119,15 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
         std::vector<std::string> vA;
         DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer<char>(sA, ',', '"', vA);
         EXPECT_TRUE(std::equal(vA.cbegin(), vA.cend(), expectedTokens));
+
+        // Test tokenizing with szRange
+        {
+            vA.clear();
+            auto psz = sA.c_str();
+            auto range = makeSzRange(psz);
+            DFG_CLASS_NAME(DelimitedTextReader)::tokenizeLineToContainer<char>(range, ',', '"', vA);
+            EXPECT_TRUE(std::equal(vA.cbegin(), vA.cend(), expectedTokens));
+        }
     }
         
     {

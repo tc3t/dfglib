@@ -35,11 +35,13 @@ DFG_ROOT_NS_BEGIN
         {
         public:
             typedef RangeIteratorDefaultBase<Iter_T> BaseClass;
+            typedef typename std::iterator_traits<Iter_T>::pointer pointer;
             RangeIteratorContiguousIterBase() {}
             RangeIteratorContiguousIterBase(Iter_T iBegin, Iter_T iEnd) : BaseClass(iBegin, iEnd) {}
 
             // Note: This is const given the const-semantics explained in comments for RangeIterator_T.
-            Iter_T data() const { return this->m_iterBegin; }
+            // Note: Return value may differ from standard containers data() when range is empty.
+            pointer data() const { return (!this->empty()) ? &*this->begin() : nullptr; }
         };
 
 
