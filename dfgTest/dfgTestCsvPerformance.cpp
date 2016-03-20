@@ -129,7 +129,30 @@ namespace
             const auto elapsedTime = timer.elapsedWallSeconds();
             runtimes.push_back(elapsedTime);
         }
-        output << sFilePath << ",Parse only," << StreamName<IStrm_T>() << ",";
+        output << sFilePath << ",Parse only,DelimitedTextReader," << StreamName<IStrm_T>() << ",";
+        std::for_each(runtimes.begin(), runtimes.end(), [&](const double val) {output << val << ','; });
+        output << DFG_MODULE_NS(numeric)::average(runtimes) << "," << DFG_MODULE_NS(numeric)::median(runtimes) << '\n';
+    }
+
+    void ExeceuteTestCaseFastCppCsvParser(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    {
+        std::vector<double> runtimes;
+        for (size_t i = 0; i < nCount; ++i)
+        {
+            ::io::CSVReader<7> fastCsvParser(sFilePath);
+            std::string c0, c1, c2, c3, c4, c5, c6;
+            dfg::time::TimerCpu timer1;
+            {
+                size_t i = 0;
+                while (fastCsvParser.read_row(c0, c1, c2, c3, c4, c5, c6))
+                {
+                }
+            }
+            const auto elapsed1 = timer1.elapsedWallSeconds();
+            runtimes.push_back(elapsed1);
+        }
+       
+        output << sFilePath << ",Parse only,fast-cpp-csv-parser," << "N/A" << ",";
         std::for_each(runtimes.begin(), runtimes.end(), [&](const double val) {output << val << ','; });
         output << DFG_MODULE_NS(numeric)::average(runtimes) << "," << DFG_MODULE_NS(numeric)::median(runtimes) << '\n';
     }
@@ -142,7 +165,7 @@ TEST(dfgCont, CsvReadPerformance)
     std::ofstream ostrmTestResults("testfiles/generated/csvPerformanceResults.csv");
 
     // TODO: add compiler name & version, build config (debug/release)
-    ostrmTestResults << "File,Processing type,Stream type";
+    ostrmTestResults << "File,Processing type,reader,Stream type";
     for (size_t i = 0; i < nRunCount; ++i)
     {
         ostrmTestResults << ",time#" << i + 1;
@@ -161,6 +184,7 @@ TEST(dfgCont, CsvReadPerformance)
     ExeceuteTestCase<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
     ExeceuteTestCase<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
     ExeceuteTestCase<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
+    ExeceuteTestCaseFastCppCsvParser(ostrmTestResults, sFilePath, nRunCount);
 
     ostrmTestResults.close();
     //std::system("testfiles\\generated\\csvPerformanceResults.csv");
