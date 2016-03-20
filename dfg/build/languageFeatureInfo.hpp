@@ -6,7 +6,11 @@
 
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
-#define DFG_LANGFEAT_MOVABLE_STREAMS	1
+#ifndef __MINGW32__ // TODO: make this less coarse.
+    #define DFG_LANGFEAT_MOVABLE_STREAMS	1
+#else
+    #define DFG_LANGFEAT_MOVABLE_STREAMS	0
+#endif
 
 #if defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2013)
     #define DFG_LANGFEAT_HAS_ISNAN	0

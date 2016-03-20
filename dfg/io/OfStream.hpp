@@ -7,6 +7,7 @@
 #include "openOfStream.hpp"
 #include "../utf/utfBom.hpp"
 #include <fstream>
+#include "../build/languageFeatureInfo.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -152,6 +153,38 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         std::streamsize writeUnicodeChar(uint32 c) { return m_streamBuffer.writeUnicodeChar(c); }
 
         DFG_CLASS_NAME(OfStreamBufferWithEncoding) m_streamBuffer;
+    };
+
+    // Output file stream guaranteed to
+    //     -be inherited from std::ostream
+    //     -by default open files in binary mode.
+    // Intended to be used in place of std::ofstream.
+    // Note: preliminary placeholder quality.
+    class DFG_CLASS_NAME(OfStream) : public std::ofstream
+    {
+    public:
+        typedef std::ofstream BaseClass;
+
+        DFG_CLASS_NAME(OfStream)()
+        {
+        }
+
+        DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
+        {
+            openOfStream(*this, sPath, std::ios::binary | std::ios::out);
+        }
+
+        DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath)
+        {
+            openOfStream(*this, sPath, std::ios::binary | std::ios::out);
+        }
+
+#if DFG_LANGFEAT_MOVABLE_STREAMS
+        DFG_CLASS_NAME(OfStream)(DFG_CLASS_NAME(OfStream)&& other) : 
+            BaseClass(std::move(other))
+        {
+        }
+#endif // DFG_LANGFEAT_MOVABLE_STREAMS
     };
 
 } } // module namespace

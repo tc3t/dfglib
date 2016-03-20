@@ -20,6 +20,8 @@
 #include "io/fileToByteContainer.hpp"
 #include "io/EndOfLineTypes.hpp"
 
+#include "io/OfStream.hpp"
+
 #include "typeTraits.hpp"
 
 
@@ -33,8 +35,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     typedef std::istringstream DFG_CLASS_NAME(IStringStream);
     typedef std::ostringstream DFG_CLASS_NAME(OStringStream);
     typedef std::ifstream DFG_CLASS_NAME(IfStream);
-    typedef std::ofstream DFG_CLASS_NAME(OfStream);
-
 
 // Returns EOL-char from EndOfLineType. In case of \r\n, returns \n.
 // TODO: test
@@ -63,13 +63,13 @@ inline std::string eolStrFromEndOfLineType(EndOfLineType eolType)
 
 // Returns binary stream to given output path.
 // Note: Return type is not guaranteed to be std::ofstream.
-#ifdef _MSC_VER
-inline std::ofstream createOutputStreamBinaryFile(DFG_CLASS_NAME(ReadOnlyParamStr)<char> sPath)
+#if DFG_LANGFEAT_MOVABLE_STREAMS
+inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) createOutputStreamBinaryFile(DFG_CLASS_NAME(ReadOnlyParamStr)<char> sPath)
 {
-    std::ofstream strm(sPath, std::ios::binary | std::ios::out);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) strm(sPath);
     return strm;
 }
-#endif
+#endif // DFG_LANGFEAT_MOVABLE_STREAMS
 
 // Returns input binary stream from given output path.
 // Note: Return type is not guaranteed to be std::ifstream.
