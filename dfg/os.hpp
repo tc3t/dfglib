@@ -3,8 +3,7 @@
 #include "dfgDefs.hpp"
 #include "readOnlyParamStr.hpp"
 #include <fstream>
-
-
+#include "os/fileSize.hpp"
 
 #ifdef _WIN32
 	#include <Shlwapi.h>
@@ -17,16 +16,6 @@
 #endif // _WIN32
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(os) {
-
-
-inline size_t fileSize(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sFile)
-{
-	std::ifstream istrm(sFile, std::ios_base::binary);
-	const auto pos = istrm.tellg();
-	istrm.seekg(0, std::ios_base::end);
-	const auto posEnd = istrm.tellg();
-	return static_cast<size_t>(posEnd - pos);
-}
 
 namespace DFG_DETAIL_NS
 {
