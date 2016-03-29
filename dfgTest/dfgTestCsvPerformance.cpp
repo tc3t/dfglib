@@ -11,6 +11,7 @@
 #include <dfg/io/fileToByteContainer.hpp>
 #include <dfg/io/OfStream.hpp>
 #include <dfg/time.hpp>
+#include <dfg/os/memoryMappedFile.hpp>
 #include <iostream>
 #include <strstream>
 #include <sstream>
@@ -94,26 +95,39 @@ namespace
 
 namespace
 {
-    std::unique_ptr<std::ifstream> InitIfstream(const std::string& sFilePath, std::vector<char>&)
+    //typedef std::vector<char> FileByteHolder;
+    typedef DFG_MODULE_NS(os)::DFG_CLASS_NAME(MemoryMappedFile) FileByteHolder;
+
+    void readBytes(const std::string& sFilePath, std::vector<char>& bytes)
+    {
+        bytes = DFG_MODULE_NS(io)::fileToVector(sFilePath);
+    }
+
+    void readBytes(const std::string& sFilePath, DFG_MODULE_NS(os)::DFG_CLASS_NAME(MemoryMappedFile)& bytes)
+    {
+        bytes.open(sFilePath);
+    }
+
+    std::unique_ptr<std::ifstream> InitIfstream(const std::string& sFilePath, FileByteHolder&)
     {
         return std::unique_ptr<std::ifstream>(new std::ifstream(sFilePath));
     }
 
-    std::unique_ptr<std::istrstream> InitIStrStream(const std::string& sFilePath, std::vector<char>& byteContainer)
+    std::unique_ptr<std::istrstream> InitIStrStream(const std::string& sFilePath, FileByteHolder& byteContainer)
     {
-        byteContainer = DFG_MODULE_NS(io)::fileToVector(sFilePath);
+        readBytes(sFilePath, byteContainer);
         return std::unique_ptr<std::istrstream>(new std::istrstream(byteContainer.data(), byteContainer.size()));
     }
 
-    std::unique_ptr<std::istringstream> InitIStringStream(const std::string& sFilePath, std::vector<char>& byteContainer)
+    std::unique_ptr<std::istringstream> InitIStringStream(const std::string& sFilePath, FileByteHolder& byteContainer)
     {
-        byteContainer = DFG_MODULE_NS(io)::fileToVector(sFilePath);
+        readBytes(sFilePath, byteContainer);
         return std::unique_ptr<std::istringstream>(new std::istringstream(std::string(byteContainer.data(), byteContainer.size())));
     }
 
-    std::unique_ptr<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)> InitIBasicImStream(const std::string& sFilePath, std::vector<char>& byteContainer)
+    std::unique_ptr<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)> InitIBasicImStream(const std::string& sFilePath, FileByteHolder& byteContainer)
     {
-        byteContainer = DFG_MODULE_NS(io)::fileToVector(sFilePath);
+        readBytes(sFilePath, byteContainer);
         return std::unique_ptr<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(new DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)(byteContainer.data(), byteContainer.size()));
     }
 
@@ -121,10 +135,15 @@ namespace
 
     template <class Strm_T> std::string StreamName() { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(Strm_T, "Template specialization is missing for given type."); }
 
+    std::string fileToMemoryType()
+    {
+        return (std::is_same<DFG_MODULE_NS(os)::DFG_CLASS_NAME(MemoryMappedFile), FileByteHolder>::value) ? " (memory mapped)" : " (fileToVector)";
+    }
+
     template <> std::string StreamName<std::ifstream>() { return "std::ifstream";}
-    template <> std::string StreamName<std::istrstream>() { return "std::istrstream"; }
-    template <> std::string StreamName<std::istringstream>() { return "std::istringstream"; }
-    template <> std::string StreamName<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>() { return "dfg::io::BasicImStream"; }
+    template <> std::string StreamName<std::istrstream>() { return "std::istrstream" + fileToMemoryType(); }
+    template <> std::string StreamName<std::istringstream>() { return "std::istringstream" + fileToMemoryType(); }
+    template <> std::string StreamName<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>() { return "dfg::io::BasicImStream" + fileToMemoryType(); }
     
 
     void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const char* const pszReader, const char* const pszProcessingType, const std::string& sStreamType)
@@ -147,7 +166,7 @@ namespace
         for (size_t i = 0; i < nCount; ++i)
         {
             TimerType timer;
-            std::vector<char> bytes;
+            FileByteHolder bytes;
             auto spStrm = streamInitFunc(sFilePath, bytes);
             EXPECT_TRUE(spStrm != nullptr);
             auto& istrm = *spStrm;
@@ -226,7 +245,7 @@ namespace
         for (size_t i = 0; i < nCount; ++i)
         {
             TimerType timer;
-            std::vector<char> bytes;
+            FileByteHolder bytes;
             auto spStrm = streamInitFunc(sFilePath, bytes);
             EXPECT_TRUE(spStrm != nullptr);
             auto& istrm = *spStrm;
@@ -275,23 +294,23 @@ TEST(dfgPerformance, CsvReadPerformance)
 
     // std::ifstream
     ExecuteTestCase_GetThrough<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
-    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
 
     // std::istrstream
     ExecuteTestCase_GetThrough<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
-    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
 
     // std::istringstream
     ExecuteTestCase_GetThrough<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
-    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
 
     // BasicImStream
     ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
-    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
 
     // fast-cpp-csv-parser
 #if DFG_MSVC_VER >= DFG_MSVC_VER_2015
