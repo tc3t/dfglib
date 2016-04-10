@@ -7,6 +7,7 @@
 #include <dfg/time/timerCpu.hpp>
 #include <dfg/numeric/average.hpp>
 #include <dfg/numeric/median.hpp>
+#include <dfg/numeric/accumulate.hpp>
 #include <dfg/build/utils.hpp>
 #include <dfg/io/fileToByteContainer.hpp>
 #include <dfg/io/OfStream.hpp>
@@ -50,11 +51,13 @@
 namespace
 {
     #ifndef _DEBUG
-        const size_t nRowCount = 4000000;
+        const size_t nRowCount = 2000000;
     #else
         const size_t nRowCount = 2000;
     #endif
     const size_t nColCount = 7;
+
+    const size_t nRunCount = 5;
 
     typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) TimerType;
 
@@ -158,7 +161,9 @@ namespace
         output  << DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C() << ",," << DFG_COMPILER_NAME_SIMPLE << ',' << sizeof(void*) << ','
                 << DFG_BUILD_DEBUG_RELEASE_TYPE << ',' << sFilePath << "," << pszReader << "," << pszProcessingType << "," << sStreamType << ",";
         std::for_each(runtimes.begin(), runtimes.end(), [&](const double val) {output << val << ','; });
-        output << DFG_MODULE_NS(numeric)::average(runtimes) << "," << DFG_MODULE_NS(numeric)::median(runtimes) << '\n';
+        output  << DFG_MODULE_NS(numeric)::average(runtimes) << ","
+                << DFG_MODULE_NS(numeric)::median(runtimes) << ","
+                << DFG_MODULE_NS(numeric)::accumulate(runtimes, double(0)) << '\n';
     }
 
     template <class IStrm_T, class CharAppender_T, class IStrmInit_T>
@@ -260,7 +265,7 @@ namespace
 
             runtimes.push_back(elapsedTime);
         }
-        PrintTestCaseRow(output, sFilePath, runtimes, "TableCsv<char,uint32>", "Read&Store", "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, "\"TableCsv<char,uint32>\"", "Read&Store", "N/A");
     }
 
     template <class IStrm_T, class IStrmInit_T>
@@ -301,8 +306,6 @@ namespace
 
 TEST(dfgPerformance, CsvReadPerformance)
 {
-    const size_t nRunCount = 3;
-
     std::ofstream ostrmTestResults("testfiles/generated/csvPerformanceResults.csv");
 
     // TODO: add compiler name & version, build config (debug/release)
@@ -312,7 +315,7 @@ TEST(dfgPerformance, CsvReadPerformance)
         ostrmTestResults << ",time#" << i + 1;
     }
     if (nRunCount > 0)
-        ostrmTestResults  << ",time_avg,time_median\n";
+        ostrmTestResults  << ",time_avg,time_median,time_sum\n";
 
     const auto sFilePath = GenerateTestFile(nRowCount, nColCount);
 
