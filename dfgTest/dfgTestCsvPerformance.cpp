@@ -51,7 +51,7 @@
 namespace
 {
     #ifndef _DEBUG
-        const size_t nRowCount = 2000000;
+        const size_t nRowCount = 4000000;
     #else
         const size_t nRowCount = 2000;
     #endif
