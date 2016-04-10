@@ -1,6 +1,6 @@
 #include <stdafx.h>
 
-#if 0
+#if 0 // On/off switch for the whole performance test.
 
 #include <dfg/cont/tableCsv.hpp>
 #include <dfg/preprocessor/compilerInfoMsvc.hpp>
@@ -49,6 +49,13 @@
 
 namespace
 {
+    #ifndef _DEBUG
+        const size_t nRowCount = 4000000;
+    #else
+        const size_t nRowCount = 2000;
+    #endif
+    const size_t nColCount = 7;
+
     typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) TimerType;
 
     std::string GenerateTestFile(const size_t nRowCount, const size_t nColCount)
@@ -234,6 +241,28 @@ namespace
     }
 #endif
 
+    void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    {
+        using namespace DFG_ROOT_NS;
+
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, uint32> Table;
+
+        std::vector<double> runtimes;
+
+        for (size_t i = 0; i < nCount; ++i)
+        {
+            TimerType timer;
+            Table table;
+            table.readFromFile(sFilePath);
+            EXPECT_EQ(nRowCount + 1, table.rowCountByMaxRowIndex());
+            EXPECT_EQ(nColCount, table.colCountByMaxColIndex());
+            const auto elapsedTime = timer.elapsedWallSeconds();
+
+            runtimes.push_back(elapsedTime);
+        }
+        PrintTestCaseRow(output, sFilePath, runtimes, "TableCsv<char,uint32>", "Read&Store", "N/A");
+    }
+
     template <class IStrm_T, class IStrmInit_T>
     void ExecuteTestCase_GetThrough(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
     {
@@ -285,12 +314,7 @@ TEST(dfgPerformance, CsvReadPerformance)
     if (nRunCount > 0)
         ostrmTestResults  << ",time_avg,time_median\n";
 
-#ifndef _DEBUG
-    const size_t nRowCount = 4000000;
-#else
-    const size_t nRowCount = 2000;
-#endif
-    const auto sFilePath = GenerateTestFile(nRowCount, 7);
+    const auto sFilePath = GenerateTestFile(nRowCount, nColCount);
 
     // std::ifstream
     ExecuteTestCase_GetThrough<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
@@ -317,9 +341,11 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_FastCppCsvParser(ostrmTestResults, sFilePath, nRunCount);
 #endif
 
+    // TableCsv
+    ExecuteTestCase_TableCsv(ostrmTestResults, sFilePath, nRunCount);
+
     ostrmTestResults.close();
     //std::system("testfiles\\generated\\csvPerformanceResults.csv");
 }
 
 #endif
-
