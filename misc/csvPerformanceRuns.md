@@ -24,3 +24,10 @@ Some observations:
 * fast-cpp-csv-parser was available only on VC2015 and there the fastest dfglib-parsing (test line 78, MSVC_2015_u1 64-bit) was over 4 times slower than fast-cpp-csv-parser.
 * Reading the 4e6 * 7 CSV-file to TableCsv took around 4-6 seconds depending on compiler. As a comparison, reading the same file on LibreOffice 5.1.2.2 ended after 25 seconds informing that the data couldn't be completely loaded because the maximum number of rows (=1048576) was exceeded. From this it can be noted that TableCsv not only can read big files, but it also potentially does it much faster than generic spreadsheet tool such as LibreOffice.
 
+## Miscellaneous
+
+* Details on test machines (listed in raw results file in column 'Test machine')
+    * 1: 
+        * OS: TODO
+        * CPU: TODO
+
