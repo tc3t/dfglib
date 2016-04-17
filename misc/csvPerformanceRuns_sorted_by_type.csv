@@ -1,4 +1,4 @@
-#,Date,Test machine,Compiler,Pointer size,Build type,File,Reader,Processing type,Stream type,time#1,time#2,time#3,time#4,time#5,time_avg,time_median,time_sum
+﻿#,Date,Test machine,Compiler,Pointer size,Build type,File,Reader,Processing type,Stream type,time#1,time#2,time#3,time#4,time#5,time_avg,time_median,time_sum
 12,2016-04-10,1,MinGW_4.8.0,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.967,1.963,1.957,1.957,1.938,1.9564,1.957,9.782
 78,2016-04-10,1,MSVC_2015_u1,8,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),2.486,2.471,2.471,2.481,2.488,2.4794,2.481,12.397
 64,2016-04-10,1,MSVC_2015_u1,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),3.066,3.053,3.061,3.069,3.12,3.0738,3.066,15.369
@@ -47,8 +47,8 @@
 31,2016-04-10,1,MSVC_2012,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,CharAppenderNone,std::istrstream (memory mapped),4.608,4.581,4.597,4.579,4.584,4.5898,4.584,22.949
 57,2016-04-10,1,MSVC_2015_u1,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,CharAppenderNone,std::istrstream (memory mapped),5.332,5.32,5.313,5.331,5.319,5.323,5.32,26.615
 18,2016-04-10,1,MSVC_2010,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,CharAppenderNone,std::istrstream (memory mapped),6.567,6.556,6.508,6.512,6.5,6.5286,6.512,32.643
-79,2016-04-10,1,MSVC_2015_u1,8,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,fast-cpp-csv-parse,Parse only,N/A,0.566,0.559,0.557,0.578,0.554,0.5628,0.559,2.814
-65,2016-04-10,1,MSVC_2015_u1,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,fast-cpp-csv-parse,Parse only,N/A,0.754,0.751,0.77,0.694,0.749,0.7436,0.751,3.718
+79,2016-04-10,1,MSVC_2015_u1,8,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,fast-cpp-csv-parser,Parse only,N/A,0.566,0.559,0.557,0.578,0.554,0.5628,0.559,2.814
+65,2016-04-10,1,MSVC_2015_u1,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,fast-cpp-csv-parser,Parse only,N/A,0.754,0.751,0.77,0.694,0.749,0.7436,0.751,3.718
 10,2016-04-10,1,MinGW_4.8.0,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,readOne(),Read through,dfg::io::BasicImStream (memory mapped),0,0,0,0,0,0,0,0
 23,2016-04-10,1,MSVC_2010,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,readOne(),Read through,dfg::io::BasicImStream (memory mapped),0.213,0.211,0.213,0.211,0.211,0.2118,0.211,1.059
 36,2016-04-10,1,MSVC_2012,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,readOne(),Read through,dfg::io::BasicImStream (memory mapped),0.212,0.211,0.211,0.211,0.214,0.2118,0.211,1.059
