@@ -17,10 +17,12 @@
 #include <strstream>
 #include <sstream>
 
-#define DFG_COMPILER_NAME_SIMPLE_VC2010    "MSVC_2010"
-#define DFG_COMPILER_NAME_SIMPLE_VC2012    "MSVC_2012"
-#define DFG_COMPILER_NAME_SIMPLE_VC2013    "MSVC_2013"
-#define DFG_COMPILER_NAME_SIMPLE_VC2015    "MSVC_2015"
+#define DFG_COMPILER_NAME_SIMPLE_VC2010          "MSVC_2010"
+#define DFG_COMPILER_NAME_SIMPLE_VC2012          "MSVC_2012"
+#define DFG_COMPILER_NAME_SIMPLE_VC2013          "MSVC_2013"
+#define DFG_COMPILER_NAME_SIMPLE_VC2015_RTM      "MSVC_2015_rtm"
+#define DFG_COMPILER_NAME_SIMPLE_VC2015_UPDATE1  "MSVC_2015_u1"
+#define DFG_COMPILER_NAME_SIMPLE_VC2015_UPDATE2  "MSVC_2015_u2"
 
 #if DFG_MSVC_VER == DFG_MSVC_VER_2010
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2010
@@ -28,12 +30,16 @@
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2012
 #elif DFG_MSVC_VER == DFG_MSVC_VER_2013
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2013
-#elif DFG_MSVC_VER == DFG_MSVC_VER_2015
-    #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2015
+#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER == 190023026  // Compiler versions are from http://stackoverflow.com/questions/30760889/unknown-compiler-version-while-compiling-boost-with-msvc-14-0-vs-2015
+    #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2015_RTM
+#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER == 190023506
+    #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2015_UPDATE1
+#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER == 190023918
+    #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2015_UPDATE2
 #elif defined(__MINGW32__)
     #define DFG_COMPILER_NAME_SIMPLE "MinGW_" DFG_STRINGIZE(__GNUC__) "." DFG_STRINGIZE(__GNUC_MINOR__) "." DFG_STRINGIZE(__GNUC_PATCHLEVEL__)
 #else
-    #define DFG_COMPILER_NAME_SIMPLE "Compiler not set"
+    #error "Compiler name is not defined."
 #endif
 
 #ifdef _DEBUG
@@ -242,7 +248,7 @@ namespace
             runtimes.push_back(elapsed1);
         }
        
-        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parse", "Parse only", "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser", "Parse only", "N/A");
     }
 #endif
 
