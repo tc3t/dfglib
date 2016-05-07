@@ -160,12 +160,16 @@ namespace
     template <> std::string StreamName<std::istrstream>() { return "std::istrstream" + fileToMemoryType(); }
     template <> std::string StreamName<std::istringstream>() { return "std::istringstream" + fileToMemoryType(); }
     template <> std::string StreamName<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>() { return "dfg::io::BasicImStream" + fileToMemoryType(); }
+
+    template <class T> std::string prettierTypeName();
+    template <> std::string prettierTypeName<const char*>() { return "const char*"; }
+    template <> std::string prettierTypeName<std::string>() { return "std::string"; }
     
 
-    void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const char* const pszReader, const char* const pszProcessingType, const std::string& sStreamType)
+    void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrC)& sReader, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrC)& sProcessingType, const std::string& sStreamType)
     {
         output  << DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C() << ",," << DFG_COMPILER_NAME_SIMPLE << ',' << sizeof(void*) << ','
-                << DFG_BUILD_DEBUG_RELEASE_TYPE << ',' << sFilePath << "," << pszReader << "," << pszProcessingType << "," << sStreamType << ",";
+                << DFG_BUILD_DEBUG_RELEASE_TYPE << ',' << sFilePath << "," << sReader << "," << sProcessingType << "," << sStreamType << ",";
         std::for_each(runtimes.begin(), runtimes.end(), [&](const double val) {output << val << ','; });
         output  << DFG_MODULE_NS(numeric)::average(runtimes) << ","
                 << DFG_MODULE_NS(numeric)::median(runtimes) << ","
@@ -226,19 +230,23 @@ namespace
     }
 
 #if DFG_MSVC_VER >= DFG_MSVC_VER_2015
+    template <class Read_T>
     void ExecuteTestCase_FastCppCsvParser(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
         std::vector<double> runtimes;
         size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
         for (size_t i = 0; i < nCount; ++i)
         {
+            DFG_STATIC_ASSERT(nColCount == 7, "Code below assumes 7 columns.");
             ::io::CSVReader<7> fastCsvParser(sFilePath);
-            std::string c0, c1, c2, c3, c4, c5, c6;
+            fastCsvParser.read_header(io::ignore_no_column, "Column 0", "Column 1", "Column 2", "Column 3", "Column 4", "Column 5", "Column 6");
+            Read_T c0, c1, c2, c3, c4, c5, c6;
             dfg::time::TimerCpu timer1;
             size_t nCounter = 0;
             while (fastCsvParser.read_row(c0, c1, c2, c3, c4, c5, c6))
             {
                 nCounter++;
+                //EXPECT_TRUE(std::strcmp(c0, "abc") == 0 && std::strcmp(c6, "abc") == 0);
             }
             const auto elapsed1 = timer1.elapsedWallSeconds();
             EXPECT_TRUE(nCounter > 0);
@@ -248,7 +256,7 @@ namespace
             runtimes.push_back(elapsed1);
         }
        
-        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser", "Parse only", "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser 2015-07-13", std::string("\"Parse only, read type = ") + prettierTypeName<Read_T>() + std::string("\""), "N/A");
     }
 #endif
 
@@ -347,7 +355,8 @@ TEST(dfgPerformance, CsvReadPerformance)
 
     // fast-cpp-csv-parser
 #if DFG_MSVC_VER >= DFG_MSVC_VER_2015
-    ExecuteTestCase_FastCppCsvParser(ostrmTestResults, sFilePath, nRunCount);
+    ExecuteTestCase_FastCppCsvParser<const char*>(ostrmTestResults, sFilePath, nRunCount);
+    ExecuteTestCase_FastCppCsvParser<std::string>(ostrmTestResults, sFilePath, nRunCount);
 #endif
 
     // TableCsv
