@@ -35,6 +35,8 @@ File [dfgTestCsvPerformance.cpp](https://github.com/tc3t/dfglib/blob/master/dfgT
 
 * Raw results: [csvPerformanceRuns_sorted_by_type.csv](https://github.com/tc3t/dfglib/blob/master/misc/csvPerformanceRuns_sorted_by_type.csv)
 
+* Test code version in this run: [dfgTestCsvPerformance.cpp](https://github.com/tc3t/dfglib/blob/223af92b942967bf55ff712d2f74e76bd77504bc/dfgTest/dfgTestCsvPerformance.cpp)
+
 ### General description
 Using a generated file of size (4000000 rows, 7 columns, 112 MB) and constant content "abc" on every cells, tests measure the run time using various stream implementations and processing types ranging from simple read through to creation of complete table structure in memory. In addition to using the parsing facility in dfglib, also one presumably fast external csv-parsing library, [fast-cpp-csv-parser](https://github.com/ben-strasser/fast-cpp-csv-parser/) (version 2015-07-13), is included to provide some indication of the speed of dfglib's implementation.
 
