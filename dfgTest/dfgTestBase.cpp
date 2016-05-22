@@ -324,3 +324,66 @@ TEST(dfg, isValWithinLimitsOfType)
     EXPECT_TRUE(isValWithinLimitsOfType<uint8>(uint64(255)));
 }
 
+namespace
+{
+    void funcAscii(DFG_ROOT_NS::SzPtrAsciiR psz)
+    {
+        EXPECT_STREQ("abcd", psz.c_str());
+    }
+
+    void funcLatin1(DFG_ROOT_NS::SzPtrLatin1R psz)
+    {
+        EXPECT_STREQ("abcd", psz.c_str());
+    }
+
+    void funcUtf8(DFG_ROOT_NS::SzPtrUtf8R psz)
+    {
+        EXPECT_STREQ("abcd", psz.c_str());
+    }
+} // unnamed namespace
+
+TEST(dfg, SzPtrTypes)
+{
+    using namespace DFG_ROOT_NS;
+
+    char szNonConst[] = "nonConst";
+    const char szConst[] = "const";
+    DFG_UNUSED(szNonConst);
+    DFG_UNUSED(szConst);
+
+    // Test existence of SzPtrAscii, SzPtrLatin1 and SzPtrUtf8 functions and their return types.
+    DFGTEST_STATIC((std::is_same<char*, decltype(SzPtrAscii(szNonConst).c_str())>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(SzPtrAscii(szConst).c_str())>::value));
+    DFGTEST_STATIC((std::is_same<char*, decltype(SzPtrLatin1(szNonConst).c_str())>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(SzPtrLatin1(szConst).c_str())>::value));
+    DFGTEST_STATIC((std::is_same<char*, decltype(SzPtrUtf8(szNonConst).c_str())>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(SzPtrUtf8(szConst).c_str())>::value));
+
+    // Test automatic conversion from SzPtrXW -> SzPtrXR
+    {
+        
+        SzPtrAsciiW pszAsciiW = SzPtrAscii(szNonConst);
+        SzPtrAsciiR pszAsciiR = pszAsciiW;
+        EXPECT_EQ(pszAsciiW.c_str(), pszAsciiR.c_str()); // Note: pointer comparison is intended
+
+        SzPtrLatin1W pszLatin1W = SzPtrLatin1(szNonConst);
+        SzPtrLatin1R pszLatin1R = pszLatin1W;
+        EXPECT_EQ(pszLatin1W.c_str(), pszLatin1R.c_str()); // Note: pointer comparison is intended
+
+        SzPtrUtf8W pszUtf8W = SzPtrUtf8(szNonConst);
+        SzPtrUtf8R pszUtf8R = pszUtf8W;
+        EXPECT_EQ(pszUtf8W.c_str(), pszUtf8R.c_str()); // Note: pointer comparison is intended
+    }
+
+    // Basic usage test
+    funcAscii(SzPtrAscii("abcd"));
+    //funcAscii(SzPtrUtf8("abcd")); // Should fail to compile
+    funcLatin1(SzPtrLatin1("abcd"));
+    //funcLatin1(SzPtrUtf8("abcd")); // Should fail to compile
+    funcUtf8(SzPtrUtf8("abcd"));
+    //funcUtf8(SzPtrLatin1("abcd")); // Should fail to compile
+
+    // Test automatic conversion from ASCII to ASCII superset
+    funcLatin1(SzPtrAscii("abcd"));
+    funcUtf8(SzPtrAscii("abcd"));
+}
