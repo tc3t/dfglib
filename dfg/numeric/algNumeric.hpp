@@ -86,6 +86,34 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 		forEachMultiply(ptrToContiguousMemory(cont), count(cont), mul);
 	}
 
+    template <class Arr_T, class T>
+    void forEachSubtract(Arr_T* const arr, const size_t nSize, const T val)
+    {
+        if (val == 0)
+            return;
+        DFG_ZIMPL_VECTORIZING_LOOP(arr, nSize, -= val);
+    }
+
+    template <class Cont_T, class T>
+    void forEachSubtract(Cont_T& cont, const T val)
+    {
+        forEachSubtract(ptrToContiguousMemory(cont), count(cont), val);
+    }
+
+    template <class Arr_T, class T>
+    void forEachDivide(Arr_T* const arr, const size_t nSize, const T val)
+    {
+        if (val == 1)
+            return;
+        DFG_ZIMPL_VECTORIZING_LOOP(arr, nSize, /= val);
+    }
+
+    template <class Cont_T, class T>
+    void forEachDivide(Cont_T& cont, const T val)
+    {
+        forEachDivide(ptrToContiguousMemory(cont), count(cont), val);
+    }
+
 	// Computes dest[i] = source0[i] + source1[i].
 	// If sources are not equal sized, maximum index will be min(nSize0, nSize1)
 	template <class Source0_T, class Source1_T, class Dest_T>

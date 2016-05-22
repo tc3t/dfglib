@@ -583,8 +583,10 @@ TEST(dfgNumeric, basicAlgs)
                     {
                         return std::abs(a - b) < 1e-12;
                     };
-    auto isDoubleEqAdd = [&](double a, double b, double diff) {return isDoubleEq(a + diff, b); };
+    auto isDoubleEqAdd = [&](double a, double b, double diff) {return isDoubleEq(a, b + diff); };
     auto isDoubleEqMul = [&](double a, double b, double mul) {return isDoubleEq(a, b * mul); };
+    auto isDoubleEqSub = [&](double a, double b, double sub) {return isDoubleEq(a, b - sub); };
+    auto isDoubleEqDiv = [&](double a, double b, double div) {return isDoubleEq(a, b / div); };
 
     const std::array<double, 12> arr = { -6, 7, 6.5, 8.4, 12, -44, 6, 8, 7, 3, 7.5, -9 };
     std::vector<double> vec(arr.begin(), arr.end());
@@ -594,9 +596,9 @@ TEST(dfgNumeric, basicAlgs)
         forEachAdd(vec, 0);
         EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), std::equal_to<double>()));
         forEachAdd(vec, 4);
-        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b){return isDoubleEqAdd(a, b, -4); }));
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b){return isDoubleEqAdd(a, b, 4); }));
         forEachAdd(vec.data(), vec.size(), 3);
-        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b){return isDoubleEqAdd(a, b, -7); }));
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b){return isDoubleEqAdd(a, b, 7); }));
     }
 
     vec.assign(arr.begin(), arr.end());
@@ -609,6 +611,30 @@ TEST(dfgNumeric, basicAlgs)
         EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b){return isDoubleEqMul(a, b, 4); }));
         forEachMultiply(vec.data(), vec.size(), -5.5);
         EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b){return isDoubleEqMul(a, b, 4 * -5.5); }));
+    }
+
+    vec.assign(arr.begin(), arr.end());
+
+    // forEachSubtract
+    {
+        forEachSubtract(vec, 0);
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), std::equal_to<double>()));
+        forEachSubtract(vec, 4.0);
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b) {return isDoubleEqSub(a, b, 4); }));
+        forEachSubtract(vec.data(), vec.size(), -5.5);
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b) {return isDoubleEqSub(a, b, 4 - 5.5); }));
+    }
+
+    vec.assign(arr.begin(), arr.end());
+
+    // forEachDivide
+    {
+        forEachDivide(vec, 1);
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), std::equal_to<double>()));
+        forEachDivide(vec, 4.0);
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b) {return isDoubleEqDiv(a, b, 4); }));
+        forEachDivide(vec.data(), vec.size(), 0.5);
+        EXPECT_TRUE(std::equal(vec.begin(), vec.end(), arr.begin(), [&](double a, double b) {return isDoubleEqDiv(a, b, 2); }));
     }
 
     vec.assign(arr.begin(), arr.end());
