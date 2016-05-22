@@ -165,6 +165,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Returns true if item was set, false otherwise.
         bool setItem(const int nRow, const int nCol, const QString str);
+        bool setItem(const int nRow, const int nCol, SzPtrUtf8R psz);
 
         // Sets data of given index without triggering undo.
         // Note: Given model index must be valid; this function does not check it.
