@@ -2,20 +2,27 @@
 
 #include "../dfgDefs.hpp"
 #include "../dfgBaseTypedefs.hpp"
+#include "../io/BasicIfStream.hpp"
+
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
 
-// TODO: Test
-// TODO: Better return value type.
-// TODO: Revise implementation (use of ifstream, type of 'posEnd - pos' and it's casting behaviour).
+// TODO: Revise return type.
 template <class Char_T>
-inline auto fileSize(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sFile) -> uint64
+inline auto fileSizeT(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sFile) -> uint64
 {
-    std::ifstream istrm(sFile, std::ios_base::binary);
-    const auto pos = istrm.tellg();
-    istrm.seekg(0, std::ios_base::end);
-    const auto posEnd = istrm.tellg();
-    return static_cast<uint64>(posEnd - pos);
+    using namespace DFG_MODULE_NS(io);
+    BasicIfStream istrm(sFile);
+    istrm.seekg(BasicIfStream::SeekOriginEnd, 0);
+    const auto endPos = istrm.tellg();
+    const uint64 nSize = endPos;
+    return nSize;
 }
+
+// TODO: Revise return value type.
+// If file does not exist in the given path, returns 0.
+// Note: Likely returns 0 if not having sufficient access rights to given path.
+inline auto fileSize(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sFile) -> uint64 { return fileSizeT<char>(sFile); }
+inline auto fileSize(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sFile) -> uint64 { return fileSizeT<wchar_t>(sFile); }
 
 } } // module namespace

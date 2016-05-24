@@ -4,6 +4,7 @@
 #include <dfg/io.hpp>
 #include <dfg/os/memoryMappedFile.hpp>
 #include <dfg/os/TemporaryFileStream.hpp>
+#include <dfg/os/fileSize.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/dfgBase.hpp>
 
@@ -105,4 +106,19 @@ TEST(dfgOs, TemporaryFile)
         EXPECT_TRUE(isPathFileAvailable(sPath.c_str(), FileModeExists));
     }
 #endif
+}
+
+TEST(dfgOs, fileSize)
+{
+    using namespace DFG_MODULE_NS(os);
+    const char szPath[] = "testfiles/matrix_10x10_1to100_eol_n.txt";
+    const wchar_t wszPath[] = L"testfiles/matrix_10x10_1to100_eol_n.txt";
+    const std::string sPath(szPath);
+    const std::wstring swPath(wszPath);
+    const auto nKnownFileSize = 310;
+    EXPECT_EQ(nKnownFileSize, fileSize(szPath));
+    EXPECT_EQ(nKnownFileSize, fileSize(wszPath));
+    EXPECT_EQ(nKnownFileSize, fileSize(sPath));
+    EXPECT_EQ(nKnownFileSize, fileSize(swPath));
+    EXPECT_EQ(0, fileSize("testFiles/aNonExistentFile.invalidExtension"));
 }
