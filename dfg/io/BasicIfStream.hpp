@@ -11,6 +11,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 class DFG_CLASS_NAME(BasicIfStream) : public DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicIfStream)>
 {
 public:
+    enum SeekOrigin { SeekOriginBegin, SeekOriginCurrent, SeekOriginEnd};
+
     DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlyParamStrC) sPath)
     {
         #pragma warning(disable : 4996) // This function or variable may be unsafe
@@ -46,6 +48,7 @@ public:
     inline PosType tellg() const;
 
     inline void seekg(const PosType& pos);
+    inline void seekg(SeekOrigin seekOrigin, long offset);
 
     inline bool good() const;
 
@@ -90,6 +93,13 @@ inline void DFG_CLASS_NAME(BasicIfStream)::seekg(const PosType& pos)
 {
     if (m_pFile)
         fsetpos(m_pFile, &pos);
+}
+
+inline void DFG_CLASS_NAME(BasicIfStream)::seekg(const SeekOrigin seekOrigin, const long offset)
+{
+    DFG_STATIC_ASSERT(SeekOriginBegin == SEEK_SET && SeekOriginCurrent == SEEK_CUR && SeekOriginEnd == SEEK_END, "Check SeekOriginiEnums; with current implementation should match with fseek() macros");
+    if (m_pFile)
+        std::fseek(m_pFile, offset, seekOrigin);
 }
 
 inline size_t readBytes(DFG_CLASS_NAME(BasicIfStream)& istrm, char* pDest, const size_t nMaxReadSize)
