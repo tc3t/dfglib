@@ -6,6 +6,7 @@
 #include "../utf.hpp"
 #include "textEncodingTypes.hpp"
 #include "BasicImStream.hpp"
+#include "checkBom.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 

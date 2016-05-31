@@ -4,6 +4,7 @@
 #include <vector>
 #include "../readOnlyParamStr.hpp"
 #include "BasicIfStream.hpp"
+#include "../ptrToContiguousMemory.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 

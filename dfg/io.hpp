@@ -16,11 +16,12 @@
 
 #include "io/BasicImStream.hpp"
 #include "dfgBase.hpp"
-#include "utf/utfBom.hpp"
 #include "io/fileToByteContainer.hpp"
 #include "io/EndOfLineTypes.hpp"
-
 #include "io/OfStream.hpp"
+#include "io/readBinary.hpp"
+#include "io/checkBom.hpp"
+#include "io/createInputStream.hpp"
 
 #include "typeTraits.hpp"
 
@@ -71,27 +72,6 @@ inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) createOutputStreamBinaryFile(
 }
 #endif // DFG_LANGFEAT_MOVABLE_STREAMS
 
-// Returns input binary stream from given output path.
-// Note: Return type is not guaranteed to be std::ifstream.
-//inline std::ifstream createInputStreamBinaryFile(NonNullCStr pszPath)
-template <class Char_T>
-inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) createInputStreamBinaryFile(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath)
-{
-    //std::ifstream strm(pszPath, std::ios::binary | std::ios::in);
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) strm(sPath);
-    return strm;
-}
-
-inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) createInputStreamBinaryFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
-{
-    return createInputStreamBinaryFile<char>(sPath);
-}
-
-inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) createInputStreamBinaryFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath)
-{
-    return createInputStreamBinaryFile<wchar_t>(sPath);
-}
-
 template <class Strm_T>
 inline Strm_T& writeBinary(Strm_T& ostrm, const void* pData, const size_t nSizeInBytes)
 {
@@ -106,27 +86,6 @@ Strm_T& writeBinary(Strm_T& ostrm, const T& obj)
 {
     DFG_STATIC_ASSERT(std::is_pointer<T>::value == false, "io::writeBinary: writing pointers as binary is disabled.");
     return writeBinary(ostrm, &obj, sizeof(obj));
-}
-
-// Reads bytes to buffer of given size from given binary stream.
-// To get the number of bytes read, with std::istream call istrm.gcount() after calling this function.
-// Note: Stream must be opened in binary mode.
-template <class StrmT> StrmT& readBinary(StrmT& istrm, void* pBuf, const size_t nBufSize)
-{
-    // TODO: Check read mode status.
-    // TODO: Check for size_t -> std::streamsize overflow.
-    return static_cast<StrmT&>(istrm.read(reinterpret_cast<char*>(pBuf), static_cast<std::streamsize>(nBufSize)));
-}
-
-// Provided for convenience: reads bytes to object of type T from binary stream.
-template <class Strm_T, class T>
-Strm_T& readBinary(Strm_T& istrm, T& obj)
-{
-    #ifdef _MSC_VER // TODO: Add proper check, this was added for GCC 4.8.1
-        // is_pod was added for VC2013, where, unlike with VC2010 and VC2012, array of pods returned false for has_trivial_assign<T>.
-        DFG_STATIC_ASSERT(DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyAssignable<T>::value == true || std::is_pod<T>::value == true, "readBinary(Strm_T, T&) only accepts trivially assignable or pod T's");
-    #endif
-    return readBinary(istrm, &obj, sizeof(obj));
 }
 
 // Writes items in container to stream so that separator is put only between
@@ -157,55 +116,6 @@ void writeDelimited(StreamT& strm, const ContT& cont, const SepT& sep)
     {
         strm << item;
     });
-}
-
-template <class Stream_T>
-inline TextEncoding checkBOM(Stream_T& istrm)
-{
-    const auto startPos = istrm.tellg();
-    unsigned char buf[5] = { 0, 0, 0xFD, 0xFD, 0 };
-
-    readBinary(istrm, buf, 4);
-    istrm.seekg(startPos);
-
-    auto encoding = encodingUnknown;
-
-#define IS_BOM(BOM) memcmp(buf, DFG_MODULE_NS(utf)::BOM, sizeof(DFG_MODULE_NS(utf)::BOM)) == 0
-
-    // Note: UTF32 must be checked before UTF16 because they begin with the same sequence.
-    if (IS_BOM(bomUTF8))
-        encoding = encodingUTF8;
-    else if (IS_BOM(bomUTF32Le))
-        encoding = encodingUTF32Le;
-    else if (IS_BOM(bomUTF32Be))
-        encoding = encodingUTF32Be;
-    else if (IS_BOM(bomUTF16Le))
-        encoding = encodingUTF16Le;
-    else if (IS_BOM(bomUTF16Be))
-        encoding = encodingUTF16Be;
-
-#undef IS_BOM
-
-    return encoding;
-}
-
-// Checks BOM marker from file in given path.
-// TODO: test, especially small files with less bytes than longest BOM-markers.
-template <class Char_T>
-inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath)
-{
-    auto istrm = createInputStreamBinaryFile(sPath);
-    return checkBOM(istrm);
-}
-
-inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
-{
-    return checkBOMFromFile<char>(sPath);
-}
-
-inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath)
-{
-    return checkBOMFromFile<wchar_t>(sPath);
 }
 
 // Ignores given number of items from stream.
