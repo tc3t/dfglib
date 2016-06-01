@@ -19,6 +19,19 @@ std::tuple<std::string, std::string, std::string> FunctionNameTest()
         DFG_CURRENT_FUNCTION_DECORATED_NAME);
 }
 
+TEST(dfg, DFG_COUNTOF)
+{
+    int intArr[3];
+    const bool boolArr[50] = { false };
+    int* pIa = intArr;
+    DFG_UNUSED(intArr);
+    DFG_UNUSED(boolArr);
+    DFG_UNUSED(pIa);
+    DFGTEST_STATIC(3 == DFG_COUNTOF(intArr));
+    DFGTEST_STATIC(50 == DFG_COUNTOF(boolArr));
+    //DFG_COUNTOF(pIa); // This should fail to compile.
+}
+
 TEST(dfg, Endian)
 {
 #ifdef _WIN32

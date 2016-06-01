@@ -108,12 +108,18 @@ namespace DFG_ROOT_NS { namespace DFG_DETAIL_NS
 	void operator=(const CLASS&); \
 	CLASS(const CLASS&);
 
-//  CountOf macro computes the number of elements in a statically-allocated array.
-#ifdef _MSC_VER
-	#define DFG_COUNTOF(x) _countof(x)
-#else
-	#define DFG_COUNTOF(x) (sizeof(x)/sizeof(x[0]))
-#endif
+// Implementation of DFG_COUNTOF()
+namespace DFG_ROOT_NS
+{
+    namespace DFG_DETAIL_NS
+    {
+        template <class T, unsigned int N> char(*StaticCountOfHelper(const T(&)[N]))[N]; // Return type is pointer to char array of size N.
+    }
+}
+
+//  DFG_COUNTOF-macro computes the number of elements in a statically-allocated array.
+// Related code: _countof (in MSVC)
+#define DFG_COUNTOF(x) sizeof(*::DFG_ROOT_NS::DFG_DETAIL_NS::StaticCountOfHelper(x))
 
 // Computes the number of elements excluding the trailing null in a string literal (CSL = C String Literal).
 // zero terminated string.
