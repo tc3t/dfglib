@@ -339,7 +339,7 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section
         return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const QString& str)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const SzPtrUtf8R pszU8)
 {
     if (!isValidRow(index.row()) || !isValidColumn(index.column()))
     {
@@ -349,17 +349,21 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModel
 
     // Check whether the new value is different from old to avoid setting modified even if nothing changes.
     const auto pExisting = m_table(index.row(), index.column());
-    if (pExisting && static_cast<size_t>(str.length()) <= std::strlen(pExisting)) // Note: assuming that p is utf8.
+    if (pExisting && std::strlen(pszU8.c_str()) <= std::strlen(pExisting)) // Note: assuming that pExisting is utf8.
     {
-        const auto& sUtf8 = str.toUtf8();
-        if (std::strcmp(pExisting, sUtf8) == 0) // Identical item? If yes, skip rest to avoid setting modified.
+        if (std::strcmp(pExisting, pszU8.c_str()) == 0) // Identical item? If yes, skip rest to avoid setting modified.
             return;
     }
 
-    setItem(index.row(), index.column(), str);
+    setItem(index.row(), index.column(), pszU8);
 
     Q_EMIT dataChanged(index, index);
     setModifiedStatus(true);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const QString& str)
+{
+    setDataNoUndo(index, SzPtrUtf8(str.toUtf8().data()));
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setData(const QModelIndex& index, const QVariant& value, int role /*= Qt::EditRole*/)

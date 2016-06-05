@@ -170,6 +170,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Sets data of given index without triggering undo.
         // Note: Given model index must be valid; this function does not check it.
         void setDataNoUndo(const QModelIndex& index, const QString& str);
+        void setDataNoUndo(const QModelIndex& index, SzPtrUtf8R pszU8);
 
         void setColumnName(const int nCol, const QString& sName);
 

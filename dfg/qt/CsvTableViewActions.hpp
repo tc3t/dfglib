@@ -195,9 +195,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             else
             {
                 auto view = m_pView;
-                for (auto iter = m_cellMemory.begin(); iter != m_cellMemory.end(); ++iter)
+                const auto pszEmpty = SzPtrUtf8("");
+                const auto iterEnd = m_cellMemory.end();
+                for (auto iter = m_cellMemory.begin(); iter != iterEnd; ++iter)
                 {
-                    m_pCsvModel->setDataNoUndo(iter->first, "");
+                    m_pCsvModel->setDataNoUndo(iter->first, pszEmpty);
                     if (m_pProxyModel)
                         view->selectionModel()->select(m_pProxyModel->mapFromSource(iter->first), QItemSelectionModel::SelectCurrent);
                 }
