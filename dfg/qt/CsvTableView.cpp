@@ -208,19 +208,32 @@ void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
     m_spUndoStack.reset(new DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>);
 }
 
+void DFG_CLASS_NAME(CsvTableView)::clearUndoStack()
+{
+    if (m_spUndoStack)
+        m_spUndoStack->item().clear();
+}
+
 void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
 {
     if (!m_spUndoStack)
         createUndoStack();
     if (m_spUndoStack)
     {
+        // Add undo-action
         auto pActionUndo = m_spUndoStack->item().createUndoAction(this, tr("&Undo"));
         pActionUndo->setShortcuts(QKeySequence::Undo);
         insertAction(pAddBefore, pActionUndo);
 
+        // Add redo-action
         auto pActionRedo = m_spUndoStack->item().createRedoAction(this, tr("&Redo"));
         pActionRedo->setShortcuts(QKeySequence::Redo);
         insertAction(pAddBefore, pActionRedo);
+
+        // Add Clear undo-buffer -action
+        auto pActionClearUndoBuffer = new QAction(tr("&Clear undo-buffer"), this);
+        connect(pActionClearUndoBuffer, &QAction::triggered, this, &ThisClass::clearUndoStack);
+        addAction(pActionClearUndoBuffer);
     }
 }
 
