@@ -312,6 +312,20 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 func(iter->first, iter->second);
         }
 
+        // Visits all cells that have non-null ptr in unspecified order.
+        template <class Func_T>
+        void forEachNonNullCell(Func_T&& func) const
+        {
+            forEachFwdColumnIndex([&](const Index_T nCol)
+            {
+                forEachFwdRowInColumn(nCol, [&](const Index_T nRow, const Char_T* psz)
+                {
+                    if (psz) // Not sure is this test needed.
+                        func(nRow, nCol, psz);
+                });
+            });
+        }
+
         // Returns row count defining it by maximum row index in all columns.
         // Note: there's no simple rowCount() function because it's not clearly definable: for example if the table has only one cell and it's located at row 4, 
         //       rowCount could be interpreted as 1 or as this function returns, 5.
