@@ -171,6 +171,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Note: Given model index must be valid; this function does not check it.
         void setDataNoUndo(const QModelIndex& index, const QString& str);
         void setDataNoUndo(const QModelIndex& index, SzPtrUtf8R pszU8);
+        void setDataNoUndo(const int nRow, const int nCol, const QString& str);
+        void setDataNoUndo(const int nRow, const int nCol, SzPtrUtf8R pszU8);
 
         void setColumnName(const int nCol, const QString& sName);
 

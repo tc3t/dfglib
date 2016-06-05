@@ -339,31 +339,42 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section
         return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const SzPtrUtf8R pszU8)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nRow, const int nCol, SzPtrUtf8R pszU8)
 {
-    if (!isValidRow(index.row()) || !isValidColumn(index.column()))
+    if (!isValidRow(nRow) || !isValidColumn(nCol))
     {
         DFG_ASSERT(false);
         return;
     }
 
     // Check whether the new value is different from old to avoid setting modified even if nothing changes.
-    const auto pExisting = m_table(index.row(), index.column());
+    const auto pExisting = m_table(nRow, nCol);
     if (pExisting && std::strlen(pszU8.c_str()) <= std::strlen(pExisting)) // Note: assuming that pExisting is utf8.
     {
         if (std::strcmp(pExisting, pszU8.c_str()) == 0) // Identical item? If yes, skip rest to avoid setting modified.
             return;
     }
 
-    setItem(index.row(), index.column(), pszU8);
+    setItem(nRow, nCol, pszU8);
 
-    Q_EMIT dataChanged(index, index);
+    auto indexItem = index(nRow, nCol);
+    Q_EMIT dataChanged(indexItem, indexItem);
     setModifiedStatus(true);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const SzPtrUtf8R pszU8)
+{
+    setDataNoUndo(index.row(), index.column(), pszU8);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const QString& str)
 {
-    setDataNoUndo(index, SzPtrUtf8(str.toUtf8().data()));
+    setDataNoUndo(index.row(), index.column(), str);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nRow, const int nCol, const QString& str)
+{
+    setDataNoUndo(nRow, nCol, SzPtrUtf8(str.toUtf8().data()));
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setData(const QModelIndex& index, const QVariant& value, int role /*= Qt::EditRole*/)
