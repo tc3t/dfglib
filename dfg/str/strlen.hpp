@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cstring>
+#include "../dfgBaseTypedefs.hpp"
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 
@@ -18,4 +19,4 @@ inline size_t strLen(NonNullCStrW psz)			{return wcslen(psz);}
 inline size_t strLen(const std::string& str)	{return str.length();}
 inline size_t strLen(const std::wstring& str)	{return str.length();}
 
-}}
+}} // module namespace
