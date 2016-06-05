@@ -17,6 +17,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../alg.hpp"
 #include "qtBasic.hpp"
 #include "tableViewUndoCommands.hpp"
+#include "../cont/table.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -63,35 +64,31 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     namespace DFG_DETAIL_NS
     {
-
-        struct ModelIndexHash : public std::unary_function < QModelIndex, size_t >
-        {
-            size_t operator()(const QModelIndex& modelIndex) const
-            {
-                return std::hash<int>()((modelIndex.row() << 16) + modelIndex.column());
-            }
-        };
-
-        typedef std::unordered_map<QModelIndex, QString, ModelIndexHash> CellMemory;
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int, DFG_MODULE_NS(io)::encodingUTF8> CellMemory;
 
         static void storeCells(CellMemory& cellMemory, DFG_CLASS_NAME(CsvTableView)& rView, QAbstractProxyModel* pProxyModel)
         {
+            // TODO: getting selected items as a list can be slow and take huge amount of memory -> improve.
             const QModelIndexList& selected = rView.getSelectedItemIndexes(pProxyModel);
+            auto pModel = rView.csvModel();
+            if (!pModel)
+                return;
             for (auto iter = selected.begin(); iter != selected.end(); ++iter)
             {
-                cellMemory[*iter] = iter->data().toString();
+                auto p = pModel->RawStringPtrAt(iter->row(), iter->column()).c_str();
+                cellMemory.setElement(iter->row(), iter->column(), (p) ? p : "");
             }
         }
 
         static void restoreCells(const CellMemory& cellMemory, DFG_CLASS_NAME(CsvItemModel)& rModel)
         {
-            for (auto iter = cellMemory.begin(); iter != cellMemory.end(); ++iter)
+            cellMemory.forEachNonNullCell([&](const int nRow, const int nCol, const char* const psz)
             {
-                rModel.setDataNoUndo(iter->first, iter->second);
-            }
+                rModel.setDataNoUndo(nRow, nCol, SzPtrUtf8(psz));
+            });
         }
 
-    }
+    } // namespace DFG_DETAIL_NS
 
     class DFG_CLASS_NAME(CsvTableViewActionDelete) : public QUndoCommand
     {
@@ -143,7 +140,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 if (m_pView)
                 {
-                    storeCells(m_cellMemory, *m_pView, m_pProxyModel);
+                    DFG_DETAIL_NS::storeCells(m_cellMemory, *m_pView, m_pProxyModel);
                     setText("Delete some cell contents");
                 }
             }
@@ -171,7 +168,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             else // cell mode
             {
                 if (m_pCsvModel)
-                    restoreCells(m_cellMemory, *m_pCsvModel);
+                    DFG_DETAIL_NS::restoreCells(m_cellMemory, *m_pCsvModel);
             }
 
         }
@@ -194,15 +191,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             }
             else
             {
+                if (!m_pCsvModel)
+                    return;
                 auto view = m_pView;
                 const auto pszEmpty = SzPtrUtf8("");
-                const auto iterEnd = m_cellMemory.end();
-                for (auto iter = m_cellMemory.begin(); iter != iterEnd; ++iter)
+                m_cellMemory.forEachNonNullCell([&](const int nRow, const int nCol, DFG_CLASS_NAME(Dummy))
                 {
-                    m_pCsvModel->setDataNoUndo(iter->first, pszEmpty);
-                    if (m_pProxyModel)
-                        view->selectionModel()->select(m_pProxyModel->mapFromSource(iter->first), QItemSelectionModel::SelectCurrent);
-                }
+                    m_pCsvModel->setDataNoUndo(nRow, nCol, pszEmpty);
+                    if (m_pProxyModel) // TODO: this shouldn't probably be done on every call.
+                        view->selectionModel()->select(m_pProxyModel->mapFromSource(m_pCsvModel->index(nRow, nCol)), QItemSelectionModel::SelectCurrent);
+                });
             }
         }
     private:
@@ -272,11 +270,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read(strm, L'\t', L'"', L'\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t nSize)
                 {
                     DFG_UNUSED(nSize);
-                    QModelIndex indexTarget = pModel->index(m_where.row() + static_cast<int>(nRow), m_where.column() + static_cast<int>(nCol));
+                    const auto nTargetRow = m_where.row() + static_cast<int>(nRow);
+                    const auto nTargetCol = m_where.column() + static_cast<int>(nCol);
+                    QModelIndex indexTarget = pModel->index(nTargetRow, nTargetCol);
                     if (!indexTarget.isValid())
                         return;
-                    m_cellMemoryUndo[indexTarget] = pModel->data(indexTarget).toString();
-                    m_cellMemoryRedo[indexTarget] = QString::fromWCharArray(psz);
+                    m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, pModel->data(indexTarget).toString().toUtf8().data()); // TODO: makes redundant QString round-trip.
+                    m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, QString::fromWCharArray(psz).toUtf8().data());
                 });
 
                 QString sDesc;
