@@ -5,6 +5,7 @@
 #include "../dfgBase.hpp"
 #include "../str.hpp"
 #include "../alg/sortMultiple.hpp"
+#include "../io/textencodingtypes.hpp"
 #include <algorithm>
 #include <vector>
 #include <numeric>
@@ -174,7 +175,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
     };
 
     // Class for efficiently storing big table of small strings with no embedded nulls.
-    template <class Char_T, class Index_T = uint32>
+    template <class Char_T, class Index_T = uint32, DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUnknown>
     class DFG_CLASS_NAME(TableSz)
     {
     public:

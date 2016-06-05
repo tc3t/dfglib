@@ -63,8 +63,8 @@ DFG_ROOT_NS_BEGIN{
     DFG_SUB_NS(cont)
     {
 
-        template <class Char_T, class Index_T>
-        class DFG_CLASS_NAME(TableCsv) : public DFG_CLASS_NAME(TableSz)<Char_T, Index_T>
+        template <class Char_T, class Index_T, DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUTF8>
+        class DFG_CLASS_NAME(TableCsv) : public DFG_CLASS_NAME(TableSz)<Char_T, Index_T, InternalEncoding_T>
         {
         public:
             typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
