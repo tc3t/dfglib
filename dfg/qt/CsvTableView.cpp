@@ -772,7 +772,8 @@ namespace
         GeneratorTypeUnknown,
         GeneratorTypeRandomIntegers,
         GeneratorTypeRandomDoubles,
-        GeneratorType_last = GeneratorTypeRandomDoubles
+        GeneratorTypeFill,
+        GeneratorType_last = GeneratorTypeFill
     };
 
     enum TargetType
@@ -809,14 +810,15 @@ namespace
         //                                   In syntax |x;y;z... items x,y,z define
         //                                   the indexes in this table that are 
         //                                   parameters for given item.
-        { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                       , "Selection"       },
-        { "Generator"           , ValueTypeKeyList  , "Random integers|2;3,Random doubles|4;5;6;7"  , "Random integers" },
-        { "Min value"           , ValueTypeInteger  , ""                                            , "0"               },
-        { "Max value"           , ValueTypeInteger  , ""                                            , "32767"           },
-        { "Min value"           , ValueTypeDouble   , ""                                            , "0.0"             },
-        { "Max value"           , ValueTypeDouble   , ""                                            , "1.0"             },
-        { "Format type"         , ValueTypeString   , ""                                            , "g"               }, 
-        { "Format precision"    , ValueTypeUInteger , ""                                            , "6"               }, // Note: empty value must be supported as well.
+        { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                               , "Selection"       },
+        { "Generator"           , ValueTypeKeyList  , "Random integers|2;3,Random doubles|4;5;6;7,Fill|8"   , "Random integers" },
+        { "Min value"           , ValueTypeInteger  , ""                                                    , "0"               },
+        { "Max value"           , ValueTypeInteger  , ""                                                    , "32767"           },
+        { "Min value"           , ValueTypeDouble   , ""                                                    , "0.0"             },
+        { "Max value"           , ValueTypeDouble   , ""                                                    , "1.0"             },
+        { "Format type"         , ValueTypeString   , ""                                                    , "g"               }, 
+        { "Format precision"    , ValueTypeUInteger , ""                                                    , "6"               }, // Note: empty value must be supported as well.
+        { "Fill string"         , ValueTypeString   , ""                                                    , ""                }
     };
 
     PropertyId rowToPropertyId(const int r)
@@ -994,8 +996,10 @@ namespace
                     return;
                 }
                 ++nBaseRow;
-                if (m_spSettingsModel->rowCount() < nBaseRow + nParamCount)
+                if (m_spSettingsModel->rowCount() < nBaseRow + nParamCount) // Need to add rows?
                     m_spSettingsModel->insertRows(nBaseRow, nBaseRow + nParamCount - m_spSettingsModel->rowCount());
+                if (m_spSettingsModel->rowCount() > nBaseRow + nParamCount) // Need to remove rows?
+                    m_spSettingsModel->removeRows(nBaseRow, m_spSettingsModel->rowCount() - (nBaseRow + nParamCount));
                 for (int i = 0; i < nParamCount; ++i)
                 {
                     m_spSettingsModel->setData(m_spSettingsModel->index(nBaseRow + i, 0), params[i].get().m_pszName);
@@ -1108,12 +1112,14 @@ namespace
     GeneratorType generatorType(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
     {
         // TODO: use more reliable detection (string comparison does not work with tr())
-        DFG_STATIC_ASSERT(GeneratorType_last == 2, "This implementation handles only two generator types");
+        DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
         const auto& sGenerator = csvModel.data(csvModel.index(1, 1)).toString();
         if (sGenerator == "Random integers")
             return GeneratorTypeRandomIntegers;
         else if (sGenerator == "Random doubles")
             return GeneratorTypeRandomDoubles;
+        else if (sGenerator == "Fill")
+            return GeneratorTypeFill;
         else
         {
             DFG_ASSERT_IMPLEMENTED(false);
@@ -1153,7 +1159,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
 template <class Generator_T>
 void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(CsvTableView)& view, DFG_CLASS_NAME(CsvItemModel)& rModel, Generator_T generator)
 {
-    DFG_STATIC_ASSERT(GeneratorType_last == 2, "This implementation handles only two generator types");
+    DFG_STATIC_ASSERT(TargetType_last == 2, "This implementation handles only two target types");
 
     if (targetType == TargetTypeWholeTable)
     {
@@ -1253,7 +1259,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         return false;
     auto& rModel = *pModel;
 
-    DFG_STATIC_ASSERT(GeneratorType_last == 2, "This implementation handles only two generator types");
+    DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
     if (generator == GeneratorTypeRandomIntegers)
     {
         if (settingsModel.rowCount() < 4) // Not enough parameters
@@ -1308,6 +1314,17 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
                                     DFG_MODULE_NS(str)::toStr(val, szBuffer, pszFormat);
                                     table.setElement(r, c, szBuffer); // Note: szBuffer is utf8 as it should
                                 };
+        generateForEachInTarget(target, *this, rModel, generator);
+        return true;
+    }
+    else if (generator == GeneratorTypeFill)
+    {
+        const auto sFill = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
+        const auto pszFillU8 = SzPtrUtf8(sFill.data());
+        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
+        {
+            table.setElement(r, c, pszFillU8.c_str());
+        };
         generateForEachInTarget(target, *this, rModel, generator);
         return true;
     }
