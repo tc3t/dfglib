@@ -31,6 +31,10 @@ template <> inline ConstWCharPtr readOnlyParamStrConverter<wchar_t, std::wstring
 Class to be used as a convenient replacement of any concrete string type
 in such function parameter that is essentially a c-string compatible, read only string parameter.
 
+/---------------------------------------------------------------------------------------------------\
+| Note: if null terminated string is not required, consider using StringView instead of this class. |
+\---------------------------------------------------------------------------------------------------/
+
 Definition: c-string = null terminated, contiguous array of integer types. Length of the string
 						is determined by the number of character types before null character.
 
@@ -123,6 +127,7 @@ public:
 // Like DFG_CLASS_NAME(ReadOnlyParamStr), but also stores the size. For string classes, uses the
 // size returned by related member function, not the null terminated length; these
 // may differ in case of embedded null chars.
+// Note: if null terminated string is not required, consider using StringView instead of this class.
 template <class Char_T>
 class DFG_CLASS_NAME(ReadOnlyParamStrWithSize) : public DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>
 {
@@ -138,10 +143,9 @@ public:
 
 	}
 
-	template <size_t N>
-	DFG_CLASS_NAME(ReadOnlyParamStrWithSize)(const Char_T(&arr)[N]) :
-		BaseClass(readOnlyParamStrConverter<Char_T, const Char_T*>(arr)),
-		m_nSize(readOnlyParamStrLength<Char_T>(arr))
+	DFG_CLASS_NAME(ReadOnlyParamStrWithSize)(const Char_T* psz) :
+		BaseClass(readOnlyParamStrConverter<Char_T, const Char_T*>(psz)),
+		m_nSize(readOnlyParamStrLength<Char_T>(psz))
 	{
 
 	}
@@ -161,10 +165,59 @@ protected:
 								// For string classes this may be the value returned by length()-method.
 };
 
+// Note: Unlike previous, the string view stored here can't guarantee access to null terminated string.
+// TODO: keep compatible with std::string_view or even typedef when available.
+template <class Char_T>
+class DFG_CLASS_NAME(StringView)
+{
+public:
+    typedef const Char_T* const_iterator;
+
+    DFG_CLASS_NAME(StringView)(const std::basic_string<Char_T>& s) :
+        m_pFirst(s.c_str()),
+        m_nSize(readOnlyParamStrLength<Char_T>(s))
+    {
+    }
+
+    DFG_CLASS_NAME(StringView)(const Char_T* psz) :
+        m_pFirst(psz),
+        m_nSize(readOnlyParamStrLength<Char_T>(psz))
+    {
+    }
+
+    DFG_CLASS_NAME(StringView)(const Char_T* psz, const size_t nCount) :
+        m_pFirst(psz),
+        m_nSize(nCount)
+    {
+    }
+
+    size_t length() const
+    {
+        return m_nSize;
+    }
+
+    const_iterator begin() const
+    {
+        return m_pFirst;
+    }
+
+    const_iterator end() const
+    {
+        return m_pFirst + m_nSize;
+    }
+
+protected:
+    const Char_T* m_pFirst;      // Pointer to first character.
+    const size_t m_nSize;		// Length of the string.
+};
+
 typedef DFG_CLASS_NAME(ReadOnlyParamStr)<char>				DFG_CLASS_NAME(ReadOnlyParamStrC);
 typedef DFG_CLASS_NAME(ReadOnlyParamStr)<wchar_t>			DFG_CLASS_NAME(ReadOnlyParamStrW);
 
 typedef DFG_CLASS_NAME(ReadOnlyParamStrWithSize)<char>		DFG_CLASS_NAME(ReadOnlyParamStrWithSizeC);
 typedef DFG_CLASS_NAME(ReadOnlyParamStrWithSize)<wchar_t>	DFG_CLASS_NAME(ReadOnlyParamStrWithSizeW);
+
+typedef DFG_CLASS_NAME(StringView)<char>		            DFG_CLASS_NAME(StringViewC);
+typedef DFG_CLASS_NAME(StringView)<wchar_t>	                DFG_CLASS_NAME(StringViewW);
 
 } // namespace
