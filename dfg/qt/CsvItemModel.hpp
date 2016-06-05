@@ -42,7 +42,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static const QString s_sEmpty;
         typedef QAbstractTableModel BaseClass;
         typedef std::ostream StreamT;
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int> DataTable;
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
         
         enum ColType
         {
@@ -153,6 +153,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Populates @p vecStrings with strings from given column. If nCol is not valid,
         // @p vecStrings will be empty.
         void columnToStrings(const int nCol, std::vector<QString>& vecStrings);
+
+        SzPtrUtf8R RawStringPtrAt(const int nRow, const int nCol) const;
 
         // Sets cell strings in column @p nCol to those given in @p vecStrings.
         void setColumnCells(const int nCol, const std::vector<QString>& vecStrings);

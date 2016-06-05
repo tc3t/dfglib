@@ -307,6 +307,11 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnCount(const QModelInd
     return (!parent.isValid()) ? getColumnCount() : 0;
 }
 
+auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::RawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
+{
+    return SzPtrUtf8R(m_table(nRow, nCol));
+}
+
 QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
 {
     if (!index.isValid())
