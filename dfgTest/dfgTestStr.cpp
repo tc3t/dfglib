@@ -3,6 +3,7 @@
 #include <dfg/rand.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/str/hex.hpp>
+#include <dfg/str/strCat.hpp>
 #include <dfg/dfgBaseTypedefs.hpp>
 #include <dfg/str/stringLiteralCharToValue.hpp>
 
@@ -56,6 +57,129 @@ TEST(dfgStr, strLen)
     EXPECT_EQ(4, strLen(std::wstring(L"abcd")));
     EXPECT_EQ(6, strLen(std::wstring(L"abcd\ne")));
     EXPECT_EQ(1, strLen(std::wstring(L"a\0b"))); // Note: The created std::wstring is "a"
+}
+
+TEST(dfgStr, strCat)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
+    std::string s;
+    std::wstring sw;
+
+    // Verify return types.
+    {
+        // When given a rvalue, return value should be a string.
+        DFGTEST_STATIC((std::is_same<decltype(strCat(std::string(), "a")), std::string>::value));
+        DFGTEST_STATIC((std::is_same<decltype(strCat(std::wstring(), L"a")), std::wstring>::value));
+
+        // When given a lvalue, return value should be a string reference.
+        DFGTEST_STATIC((std::is_same<decltype(strCat(s, "a")), std::string&>::value)); 
+        DFGTEST_STATIC((std::is_same<decltype(strCat(sw, L"a")), std::wstring&>::value));
+    }
+
+    // 1 param
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1");
+        strCat(sw, L"1");
+        const auto sFromCopy = strCat(std::string(), "1"); // Test copy version.
+        EXPECT_EQ(s, sFromCopy); 
+        EXPECT_EQ(sw, strCat(std::wstring(), L"1")); // Test copy version.
+        EXPECT_EQ("1", s);
+        EXPECT_EQ(L"1", sw);
+    }
+
+    // 2 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2");
+        strCat(sw, L"1", L"2");
+        EXPECT_EQ("12", s);
+        EXPECT_EQ(L"12", sw);
+    }
+
+    // 3 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2", "3");
+        strCat(sw, L"1", L"2", L"3");
+        EXPECT_EQ("123", s);
+        EXPECT_EQ(L"123", sw);
+    }
+
+    // 4 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2", "3", "4");
+        strCat(sw, L"1", L"2", L"3", L"4");
+        EXPECT_EQ("1234", s);
+        EXPECT_EQ(L"1234", sw);
+    }
+
+    // 5 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "        1", "+", toStrC(123), "+2=", toStrC(1 + 123 + 2));
+        strCat(sw, L"        1", L"+", toStrW(123), L"+2=", toStrW(1 + 123 + 2));
+        EXPECT_EQ("        1+123+2=126", s);
+        EXPECT_EQ(L"        1+123+2=126", sw);
+    }
+
+    // 6 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2", "3", "4", "5", "6");
+        strCat(sw, L"1", L"2", L"3", L"4", L"5", L"6");
+        EXPECT_EQ("123456", s);
+        EXPECT_EQ(L"123456", sw);
+    }
+
+    // 7 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2", "3", "4", "5", "6", "7");
+        strCat(sw, L"1", L"2", L"3", L"4", L"5", L"6", L"7");
+        EXPECT_EQ("1234567", s);
+        EXPECT_EQ(L"1234567", sw);
+    }
+
+    // 8 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2", "3", "4", "5", "6", "7", "8");
+        strCat(sw, L"1", L"2", L"3", L"4", L"5", L"6", L"7", L"8");
+        EXPECT_EQ("12345678", s);
+        EXPECT_EQ(L"12345678", sw);
+    }
+
+    // 9 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2", "3", "4", "5", "6", "7", "8", "9");
+        strCat(sw, L"1", L"2", L"3", L"4", L"5", L"6", L"7", L"8", L"9");
+        EXPECT_EQ("123456789", s);
+        EXPECT_EQ(L"123456789", sw);
+    }
+
+    // 10 params
+    {
+        s.clear();
+        sw.clear();
+        strCat(s, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+        strCat(sw, L"1", L"2", L"3", L"4", L"5", L"6", L"7", L"8", L"9", L"10");
+        EXPECT_EQ("12345678910", s);
+        EXPECT_EQ(L"12345678910", sw);
+    }
 }
 
 TEST(dfgStr, strToByLexCast)
