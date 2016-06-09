@@ -670,6 +670,10 @@ TEST(dfgCont, SortedSequence)
         DFG_CLASS_NAME(SortedSequence)<std::deque<int>> sseqDeque;
         DFG_CLASS_NAME(SortedSequence)<std::list<int>> sseqList;
 
+        EXPECT_TRUE(sseq.empty());
+        EXPECT_TRUE(sseqDeque.empty());
+        EXPECT_TRUE(sseqList.empty());
+
         sseq.reserve(nCount);
 
         for (size_t i = 0; i < nCount; ++i)

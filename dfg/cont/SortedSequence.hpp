@@ -47,6 +47,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 m_cont.erase(iter);
         }
 
+        bool empty() const { return m_cont.empty(); }
         size_type size() const { return m_cont.size(); }
 
         const_iterator begin()  const   { return m_cont.begin();  }
