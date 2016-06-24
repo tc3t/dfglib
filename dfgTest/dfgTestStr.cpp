@@ -503,6 +503,24 @@ TEST(dfgStr, stringLiteralCharToValue)
     auto rv5 = stringLiteralCharToValue<char>(L"\x7f");
     EXPECT_TRUE(rv5.first);
     EXPECT_EQ(0x7f, rv5.second);
-
 }
 
+TEST(dfgStr, beginsWith)
+{
+    using namespace DFG_MODULE_NS(str);
+
+    EXPECT_TRUE(beginsWith("abc", "a"));
+    EXPECT_TRUE(beginsWith(std::string("abc"), std::string("a")));
+    EXPECT_TRUE(beginsWith("abc", std::string("a")));
+    EXPECT_TRUE(beginsWith(std::string("abc"), "a"));
+    EXPECT_TRUE(beginsWith("abc", "ab"));
+    EXPECT_TRUE(beginsWith("abc", "abc"));
+    EXPECT_FALSE(beginsWith("abc", "b"));
+    EXPECT_TRUE(beginsWith("abc", "")); // Searching for empty is to return true.
+    EXPECT_TRUE(beginsWith("", "")); // Searching for empty is to return true.
+
+    EXPECT_TRUE(beginsWith(L"abc", L"a"));
+    EXPECT_TRUE(beginsWith(std::wstring(L"abc"), std::wstring(L"a")));
+    EXPECT_TRUE(beginsWith(L"abc", std::wstring(L"a")));
+    EXPECT_TRUE(beginsWith(std::wstring(L"abc"), L"a"));
+}

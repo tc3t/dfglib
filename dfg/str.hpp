@@ -5,6 +5,7 @@
 #include <cstring>
 #include <string>
 #include "str/strlen.hpp"
+#include "readOnlyParamStr.hpp"
 #include <boost/lexical_cast.hpp>
 #include <cstdio>
 
@@ -148,7 +149,7 @@ template <class StrT> void toEnclosedTextInplace(StrT& str, const char cEnclosin
 // Determines whether 'pszSearchFrom' starts with 'pszSearchFor'.
 // If 'pszSearchFor' is empty, returns true.
 // TODO: test
-template <class Char> bool beginsWith(const Char* pszSearchFrom, const Char* pszSearchFor)
+template <class Char_T> bool beginsWith(const Char_T* pszSearchFrom, const Char_T* pszSearchFor)
 {
     // Note: There's no need to check whether pszSearchFrom reaches the end:
     //       If pszSearchFrom is shorter, at some point comparison (*pszSearchFrom != *pszSearchFor)
@@ -161,6 +162,11 @@ template <class Char> bool beginsWith(const Char* pszSearchFrom, const Char* psz
             return false;
     }
     return true;
+}
+
+template <class Str0_T, class Str1_T> bool beginsWith(const Str0_T& sSearchFrom, const Str1_T& sSearchFor)
+{
+    return beginsWith(toCstr(sSearchFrom), toCstr(sSearchFor));
 }
 
 // Tests whether string is empty.
