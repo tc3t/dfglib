@@ -1,4 +1,10 @@
 /*
+
+NOTE: this is modified version of format.h from fmt-3.0.0. Done changes:
+        -Default precision with double-values is now 17 instead of default 6 (related changed tagged with comment DFG_EDIT_DDP)
+*/
+
+/*
  Formatting library for C++
 
  Copyright (c) 2012 - 2016, Victor Zverovich
@@ -2772,6 +2778,7 @@ template <typename T>
 void BasicWriter<Char>::write_double(T value, const FormatSpec &spec) {
   // Check type.
   char type = spec.type();
+  const auto nPrecision = (spec.precision() < 0) ? 17 : spec.precision(); // DFG_EDIT_DDP
   bool upper = false;
   switch (type) {
   case 0:
@@ -2858,7 +2865,7 @@ void BasicWriter<Char>::write_double(T value, const FormatSpec &spec) {
     if (width != 0)
       *format_ptr++ = '*';
   }
-  if (spec.precision() >= 0) {
+  if (nPrecision >= 0) { // DFG_EDIT_DDP
     *format_ptr++ = '.';
     *format_ptr++ = '*';
   }
@@ -2884,7 +2891,7 @@ void BasicWriter<Char>::write_double(T value, const FormatSpec &spec) {
 #endif
     start = &buffer_[offset];
     int result = internal::CharTraits<Char>::format_float(
-        start, buffer_size, format, width_for_sprintf, spec.precision(), value);
+        start, buffer_size, format, width_for_sprintf, nPrecision, value); // DFG_EDIT_DDP
     if (result >= 0) {
       n = internal::to_unsigned(result);
       if (offset + n < buffer_.capacity())
