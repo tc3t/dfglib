@@ -6,6 +6,7 @@
 #include <dfg/str/strCat.hpp>
 #include <dfg/dfgBaseTypedefs.hpp>
 #include <dfg/str/stringLiteralCharToValue.hpp>
+#include <dfg/str/format_fmt.hpp>
 
 TEST(dfgStr, strLen)
 {
@@ -523,4 +524,22 @@ TEST(dfgStr, beginsWith)
     EXPECT_TRUE(beginsWith(std::wstring(L"abc"), std::wstring(L"a")));
     EXPECT_TRUE(beginsWith(L"abc", std::wstring(L"a")));
     EXPECT_TRUE(beginsWith(std::wstring(L"abc"), L"a"));
+}
+
+TEST(dfgStr, format_fmt)
+{
+    using namespace DFG_ROOT_NS;
+
+    EXPECT_EQ("1", format_fmt("{0}", 1));
+    EXPECT_EQ("12", format_fmt("{0}{1}", 1, 2));
+    EXPECT_EQ("123", format_fmt("{0}{1}{2}", 1, 2, 3));
+    EXPECT_EQ("1234", format_fmt("{0}{1}{2}{3}", 1, 2, 3, 4));
+    EXPECT_EQ("12345", format_fmt("{0}{1}{2}{3}{4}", 1, 2, 3, 4, 5));
+    EXPECT_EQ("123456", format_fmt("{0}{1}{2}{3}{4}{5}", 1, 2, 3, 4, 5, 6));
+    EXPECT_EQ("1234567", format_fmt("{0}{1}{2}{3}{4}{5}{6}", 1, 2, 3, 4, 5, 6, 7));
+    EXPECT_EQ("12345678", format_fmt("{0}{1}{2}{3}{4}{5}{6}{7}", 1, 2, 3, 4, 5, 6, 7, 8));
+    EXPECT_EQ("123456789", format_fmt("{0}{1}{2}{3}{4}{5}{6}{7}{8}", 1, 2, 3, 4, 5, 6, 7, 8, 9));
+
+    // TODO: test floating point formatting, require round-trip-capable format.
+    //EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", 123456789.0), "123456789"));
 }

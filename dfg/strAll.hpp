@@ -2,6 +2,7 @@
 
 #include "str.hpp"
 #include "str/hex.hpp"
+#include "str/format_fmt.hpp"
 #include "str/string.hpp"
 #include "str/stringFixedCapacity.hpp"
 #include "str/stringLiteralCharToValue.hpp"

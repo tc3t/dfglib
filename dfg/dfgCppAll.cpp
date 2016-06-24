@@ -4,3 +4,4 @@
 
 #include "colour/specRendJw.cpp"
 #include "os/memoryMappedFile.cpp"
+#include "str/fmtlib/format.cc"
