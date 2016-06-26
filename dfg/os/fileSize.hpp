@@ -12,8 +12,8 @@ template <class Char_T>
 inline auto fileSizeT(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>& sFile) -> uint64
 {
     using namespace DFG_MODULE_NS(io);
-    BasicIfStream istrm(sFile);
-    istrm.seekg(BasicIfStream::SeekOriginEnd, 0);
+    DFG_CLASS_NAME(BasicIfStream) istrm(sFile);
+    istrm.seekg(DFG_CLASS_NAME(BasicIfStream)::SeekOriginEnd, 0);
     const auto endPos = istrm.tellg();
     const uint64 nSize = endPos;
     return nSize;
