@@ -3,7 +3,7 @@
 
 #include "../dfgBase.hpp"
 #include <boost/lexical_cast.hpp>
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 
@@ -25,7 +25,7 @@ T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
 }
 
 template <class T>
-T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlyParamStrC)& s, bool* pSuccess = nullptr)
+T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlySzParamC)& s, bool* pSuccess = nullptr)
 {
     T val;
     return strToByNoThrowLexCast(s, val, pSuccess);

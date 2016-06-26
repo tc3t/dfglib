@@ -3,7 +3,7 @@
 // Implements opening a std::ofstream from path including wchar_t-path.
 
 #include "../dfgDefs.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include "textEncodingTypes.hpp"
 #include "../utf/utfBom.hpp"
 #include "../utf.hpp"
@@ -16,7 +16,7 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
     // TODO: test
-    inline std::basic_filebuf<char>* openOfStream(std::basic_filebuf<char>* pFileBuf, const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, std::ios_base::openmode openmode)
+    inline std::basic_filebuf<char>* openOfStream(std::basic_filebuf<char>* pFileBuf, const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, std::ios_base::openmode openmode)
     {
         if (!pFileBuf)
             return nullptr;
@@ -24,7 +24,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     }
 
     // TODO: test
-    inline std::basic_filebuf<char>* openOfStream(std::basic_filebuf<char>* pFileBuf, const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, std::ios_base::openmode openmode)
+    inline std::basic_filebuf<char>* openOfStream(std::basic_filebuf<char>* pFileBuf, const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, std::ios_base::openmode openmode)
     {
         if (!pFileBuf)
             return nullptr;
@@ -59,8 +59,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     }
 
     // TODO: test
-    inline void openOfStream(std::ofstream& strm, const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, std::ios_base::openmode openmode) { openOfStream(strm.rdbuf(), sPath, openmode); }
-    inline void openOfStream(std::ofstream& strm, const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, std::ios_base::openmode openmode) { openOfStream(strm.rdbuf(), sPath, openmode); }
+    inline void openOfStream(std::ofstream& strm, const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, std::ios_base::openmode openmode) { openOfStream(strm.rdbuf(), sPath, openmode); }
+    inline void openOfStream(std::ofstream& strm, const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, std::ios_base::openmode openmode) { openOfStream(strm.rdbuf(), sPath, openmode); }
 
     
 

@@ -166,7 +166,7 @@ namespace
     template <> std::string prettierTypeName<std::string>() { return "std::string"; }
     
 
-    void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrC)& sReader, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrC)& sProcessingType, const std::string& sStreamType)
+    void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sReader, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sProcessingType, const std::string& sStreamType)
     {
         output  << DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C() << ",," << DFG_COMPILER_NAME_SIMPLE << ',' << sizeof(void*) << ','
                 << DFG_BUILD_DEBUG_RELEASE_TYPE << ',' << sFilePath << "," << sReader << "," << sProcessingType << "," << sStreamType << ",";

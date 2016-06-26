@@ -20,7 +20,7 @@
 #include "numericTypeTools.hpp"
 #include "ptrToContiguousMemory.hpp"
 #include "rangeIterator.hpp"
-#include "readOnlyParamStr.hpp"
+#include "ReadOnlySzParam.hpp"
 #include "scopedCaller.hpp"
 #include "staticMap.hpp"
 #include "textualLogic.hpp"

@@ -2,7 +2,7 @@
 
 #include "../dfgBase.hpp"
 #include "BasicIStreamCRTP.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include <cstdio>
 #include "../typeTraits.hpp"
 

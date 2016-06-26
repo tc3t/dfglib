@@ -223,7 +223,7 @@ public:
 
 } // module dfg Root
 
-#include "readOnlyParamStr.hpp"
+#include "ReadOnlySzParam.hpp"
 
 
 #endif // include guard

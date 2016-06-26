@@ -5,7 +5,7 @@
 #include <cstring>
 #include <string>
 #include "str/strlen.hpp"
-#include "readOnlyParamStr.hpp"
+#include "ReadOnlySzParam.hpp"
 #include <boost/lexical_cast.hpp>
 #include <cstdio>
 

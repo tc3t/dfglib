@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include "IfmmStream.hpp"
 #include "ImStreamWithEncoding.hpp"
 #include "StreamBufferMem.hpp"
@@ -24,7 +24,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         }
 
-        DFG_CLASS_NAME(IfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding)
+        DFG_CLASS_NAME(IfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding)
         {
             open(sPath, encoding);
         }
@@ -62,7 +62,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         template <class Char_T>
-        void openT(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T> & sPath, DFG_MODULE_NS(io)::TextEncoding encoding)
+        void openT(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> & sPath, DFG_MODULE_NS(io)::TextEncoding encoding)
         {
             close();
             // Hack: for now just read it all and use in-memory parsing classes.
@@ -84,7 +84,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             }
         }
 
-        void open(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding)
+        void open(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding)
         {
             openT(sPath, encoding);
         }
@@ -118,7 +118,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             BaseClass(&m_strmBuffer)
         {}
 
-        DFG_CLASS_NAME(IfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding = encodingUnknown) :
+        DFG_CLASS_NAME(IfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding = encodingUnknown) :
             BaseClass(&m_strmBuffer),
             m_strmBuffer(sPath, encoding)
         {
@@ -136,7 +136,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             m_strmBuffer.close();
         }
 
-        void open(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding = encodingUnknown)
+        void open(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding = encodingUnknown)
         {
             m_strmBuffer.open(sPath, encoding);
         }

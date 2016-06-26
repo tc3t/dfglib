@@ -2,7 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include <vector>
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include "BasicIfStream.hpp"
 #include "../ptrToContiguousMemory.hpp"
 
@@ -45,7 +45,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     // TODO: If no hint given, test file size and reserve based on that.
     // TODO: test
     template <class Cont_T, class Char_T>
-    Cont_T fileToByteContainerImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T> sFilePath,
+    Cont_T fileToByteContainerImpl(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> sFilePath,
         const size_t nReadStepSize = 512,
         const size_t nSizeHint = 0,
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
@@ -59,7 +59,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     }
 
     template <class Cont_T>
-    Cont_T fileToByteContainer(const DFG_CLASS_NAME(ReadOnlyParamStrC) sFilePath,
+    Cont_T fileToByteContainer(const DFG_CLASS_NAME(ReadOnlySzParamC) sFilePath,
         const size_t nReadStepSize = 512,
         const size_t nSizeHint = 0,
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
@@ -69,7 +69,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     }
 
     template <class Cont_T>
-    Cont_T fileToByteContainer(const DFG_CLASS_NAME(ReadOnlyParamStrW) sFilePath,
+    Cont_T fileToByteContainer(const DFG_CLASS_NAME(ReadOnlySzParamW) sFilePath,
         const size_t nReadStepSize = 512,
         const size_t nSizeHint = 0,
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
@@ -80,7 +80,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
 
     template <class Char_T>
-    std::vector<char> fileToVectorImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T> sFilePath,
+    std::vector<char> fileToVectorImpl(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> sFilePath,
         const size_t nSizeHint = 0,
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
         )
@@ -88,12 +88,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         return fileToByteContainer<std::vector<char>>(sFilePath, 512, nSizeHint, nMaxSize);
     }
 
-    inline std::vector<char> fileToVector(const DFG_CLASS_NAME(ReadOnlyParamStrC) sFilePath, const size_t nSizeHint = 0, const size_t nMaxSize = NumericTraits<size_t>::maxValue)
+    inline std::vector<char> fileToVector(const DFG_CLASS_NAME(ReadOnlySzParamC) sFilePath, const size_t nSizeHint = 0, const size_t nMaxSize = NumericTraits<size_t>::maxValue)
     {
         return fileToVectorImpl<char>(sFilePath, nSizeHint, nMaxSize);
     }
 
-    inline std::vector<char> fileToVector(const DFG_CLASS_NAME(ReadOnlyParamStrW) sFilePath, const size_t nSizeHint = 0, const size_t nMaxSize = NumericTraits<size_t>::maxValue)
+    inline std::vector<char> fileToVector(const DFG_CLASS_NAME(ReadOnlySzParamW) sFilePath, const size_t nSizeHint = 0, const size_t nMaxSize = NumericTraits<size_t>::maxValue)
     {
         return fileToVectorImpl<wchar_t>(sFilePath, nSizeHint, nMaxSize);
     }

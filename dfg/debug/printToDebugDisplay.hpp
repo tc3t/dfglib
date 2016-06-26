@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 
 #ifdef _MSC_VER
 	#include <Windows.h> // OutputDebugString
@@ -25,12 +25,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(debug) {
 		}
 	}
 
-	inline void printToDebugDisplay(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrC) s, const bool bAddNewLine = true)
+	inline void printToDebugDisplay(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC) s, const bool bAddNewLine = true)
 	{
 		DFG_DETAIL_NS::printToDebugDisplayImpl(OutputDebugStringA, s.c_str(), bAddNewLine);
 	}
 
-	inline void printToDebugDisplay(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrW) s, const bool bAddNewLine = true)
+	inline void printToDebugDisplay(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamW) s, const bool bAddNewLine = true)
 	{
 		DFG_DETAIL_NS::printToDebugDisplayImpl(OutputDebugStringW, s.c_str(), bAddNewLine);
 	}

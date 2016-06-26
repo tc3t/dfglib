@@ -2,7 +2,7 @@
 
 #include "../dfgBase.hpp"
 #include "BasicIStreamCRTP.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include <cstdio>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
@@ -13,14 +13,14 @@ class DFG_CLASS_NAME(BasicIfStream) : public DFG_CLASS_NAME(BasicIStreamCRTP)<DF
 public:
     enum SeekOrigin { SeekOriginBegin, SeekOriginCurrent, SeekOriginEnd};
 
-    DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlyParamStrC) sPath)
+    DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlySzParamC) sPath)
     {
         #pragma warning(disable : 4996) // This function or variable may be unsafe
         m_pFile = std::fopen(sPath.c_str(), "rb");
         #pragma warning(default : 4996)
     }
 
-    DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlyParamStrW) sPath)
+    DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlySzParamW) sPath)
     {
         #pragma warning(disable : 4996) // This function or variable may be unsafe
         m_pFile = _wfopen(sPath.c_str(), L"rb");

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include "OmcStreamWithEncoding.hpp"
 #include "textEncodingTypes.hpp"
 #include "openOfStream.hpp"
@@ -26,7 +26,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         template <class Char_T>
-        DFG_CLASS_NAME(OfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath, TextEncoding encoding) :
+        DFG_CLASS_NAME(OfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>& sPath, TextEncoding encoding) :
             m_encodingBuffer(nullptr, encoding)
         {
             open(sPath, std::ios_base::binary | std::ios_base::out);
@@ -38,7 +38,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         template <class Char_T>
-        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>& sPath, std::ios_base::openmode openMode)
+        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>& sPath, std::ios_base::openmode openMode)
         {
             auto rv = openOfStream(&m_strmBuf, sPath, openMode);
             writeBom(m_encodingBuffer.encoding());
@@ -109,13 +109,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         }
 
-        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, TextEncoding encoding) :
+        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding) :
             BaseClass(&m_streamBuffer),
             m_streamBuffer(sPath, encoding)
         {
         }
 
-        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, TextEncoding encoding) :
+        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding) :
             BaseClass(&m_streamBuffer),
             m_streamBuffer(sPath, encoding)
         {
@@ -126,14 +126,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             m_streamBuffer.close();
         }
 
-        void open(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, std::ios_base::openmode openMode = std::ios_base::out | std::ios_base::binary)
+        void open(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, std::ios_base::openmode openMode = std::ios_base::out | std::ios_base::binary)
         {
             auto p = m_streamBuffer.open(sPath, openMode);
             if (p == nullptr)
                 setstate(std::ios_base::failbit);
         }
 
-        void open(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, std::ios_base::openmode openMode = std::ios_base::out | std::ios_base::binary)
+        void open(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, std::ios_base::openmode openMode = std::ios_base::out | std::ios_base::binary)
         {
             auto p = m_streamBuffer.open(sPath, std::ios_base::out | openMode);
             if (p == nullptr)
@@ -169,12 +169,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         }
 
-        DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
+        DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath)
         {
             openOfStream(*this, sPath, std::ios::binary | std::ios::out);
         }
 
-        DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath)
+        DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath)
         {
             openOfStream(*this, sPath, std::ios::binary | std::ios::out);
         }

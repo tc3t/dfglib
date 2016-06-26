@@ -6,7 +6,7 @@
 #include "../io/DelimitedTextReader.hpp"
 #include "../io/DelimitedTextWriter.hpp"
 #include "../io/fileToByteContainer.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include "../io/IfStream.hpp"
 #include "../io.hpp"
 #include "../io/ImStreamWithEncoding.hpp"
@@ -97,13 +97,13 @@ DFG_ROOT_NS_BEGIN{
             }
                 
 
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
+            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
 
             template <class Char_T1>
-            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T1>& sPath, const CsvFormatDefinition& formatDef)
+            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T1>& sPath, const CsvFormatDefinition& formatDef)
             {
                 bool bRead = false;
                 try

@@ -10,22 +10,22 @@
 DFG_ROOT_NS_BEGIN {
 
 template <class Char_T, class String_T>
-const Char_T* readOnlyParamStrConverter(const String_T&)
+const Char_T* readOnlySzParamConverter(const String_T&)
 { 
-	DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(String_T, "No conversion to ReadOnlyParamStr exists for given type");
+	DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(String_T, "No conversion to ReadOnlySzParam exists for given type");
 }
 
 // Returns length in chars.
 template <class Char_T, class String_T>
-size_t readOnlyParamStrLength(const String_T& str)
+size_t readOnlySzParamLength(const String_T& str)
 {
 	return DFG_SUB_NS_NAME(str)::strLen(str);
 }
 
-template <> inline ConstCharPtr readOnlyParamStrConverter<char, ConstCharPtr>(const ConstCharPtr& psz) { return psz; }
-template <> inline ConstWCharPtr readOnlyParamStrConverter<wchar_t, ConstWCharPtr>(const ConstWCharPtr& psz) { return psz; }
-template <> inline ConstCharPtr readOnlyParamStrConverter<char, std::string>(const std::string& s) { return s.c_str(); }
-template <> inline ConstWCharPtr readOnlyParamStrConverter<wchar_t, std::wstring>(const std::wstring& s) { return s.c_str(); }
+template <> inline ConstCharPtr readOnlySzParamConverter<char, ConstCharPtr>(const ConstCharPtr& psz) { return psz; }
+template <> inline ConstWCharPtr readOnlySzParamConverter<wchar_t, ConstWCharPtr>(const ConstWCharPtr& psz) { return psz; }
+template <> inline ConstCharPtr readOnlySzParamConverter<char, std::string>(const std::string& s) { return s.c_str(); }
+template <> inline ConstWCharPtr readOnlySzParamConverter<wchar_t, std::wstring>(const std::wstring& s) { return s.c_str(); }
 
 /*
 Class to be used as a convenient replacement of any concrete string type
@@ -60,25 +60,25 @@ StringRef (http://llvm.org/docs/ProgrammersManual.html#passing-strings-the-strin
 string_ref (http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3442.html)
 */
 template <class Char_T>
-class DFG_CLASS_NAME(ReadOnlyParamStr)
+class DFG_CLASS_NAME(ReadOnlySzParam)
 {
 public:
 	typedef const Char_T* iterator;
 	typedef const Char_T* const_iterator;
 
 	template <size_t N>
-	DFG_CLASS_NAME(ReadOnlyParamStr)(const Char_T(&arr)[N]) :
+	DFG_CLASS_NAME(ReadOnlySzParam)(const Char_T(&arr)[N]) :
 		m_pSz(arr)
 	{
 	}
 
-	DFG_CLASS_NAME(ReadOnlyParamStr)(const Char_T* psz) :
+	DFG_CLASS_NAME(ReadOnlySzParam)(const Char_T* psz) :
 		m_pSz(psz)
 	{
 	}
 
-	DFG_CLASS_NAME(ReadOnlyParamStr)(const std::basic_string<Char_T>& s) :
-		m_pSz(readOnlyParamStrConverter<Char_T>(s))
+	DFG_CLASS_NAME(ReadOnlySzParam)(const std::basic_string<Char_T>& s) :
+		m_pSz(readOnlySzParamConverter<Char_T>(s))
 	{
 	}
 	
@@ -124,28 +124,28 @@ public:
 	const Char_T* const m_pSz; // Pointer to null terminated string.
 };
 
-// Like DFG_CLASS_NAME(ReadOnlyParamStr), but also stores the size. For string classes, uses the
+// Like DFG_CLASS_NAME(ReadOnlySzParam), but also stores the size. For string classes, uses the
 // size returned by related member function, not the null terminated length; these
 // may differ in case of embedded null chars.
 // Note: if null terminated string is not required, consider using StringView instead of this class.
 template <class Char_T>
-class DFG_CLASS_NAME(ReadOnlyParamStrWithSize) : public DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T>
+class DFG_CLASS_NAME(ReadOnlySzParamWithSize) : public DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>
 {
 public:
-	typedef DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T> BaseClass;
+	typedef DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> BaseClass;
 	using typename BaseClass::iterator;
 	using typename BaseClass::const_iterator;
 
-	DFG_CLASS_NAME(ReadOnlyParamStrWithSize)(const std::basic_string<Char_T>& s) :
-		BaseClass(readOnlyParamStrConverter<Char_T>(s)),
-		m_nSize(readOnlyParamStrLength<Char_T>(s))
+	DFG_CLASS_NAME(ReadOnlySzParamWithSize)(const std::basic_string<Char_T>& s) :
+		BaseClass(readOnlySzParamConverter<Char_T>(s)),
+		m_nSize(readOnlySzParamLength<Char_T>(s))
 	{
 
 	}
 
-	DFG_CLASS_NAME(ReadOnlyParamStrWithSize)(const Char_T* psz) :
-		BaseClass(readOnlyParamStrConverter<Char_T, const Char_T*>(psz)),
-		m_nSize(readOnlyParamStrLength<Char_T>(psz))
+	DFG_CLASS_NAME(ReadOnlySzParamWithSize)(const Char_T* psz) :
+		BaseClass(readOnlySzParamConverter<Char_T, const Char_T*>(psz)),
+		m_nSize(readOnlySzParamLength<Char_T>(psz))
 	{
 
 	}
@@ -175,13 +175,13 @@ public:
 
     DFG_CLASS_NAME(StringView)(const std::basic_string<Char_T>& s) :
         m_pFirst(s.c_str()),
-        m_nSize(readOnlyParamStrLength<Char_T>(s))
+        m_nSize(readOnlySzParamLength<Char_T>(s))
     {
     }
 
     DFG_CLASS_NAME(StringView)(const Char_T* psz) :
         m_pFirst(psz),
-        m_nSize(readOnlyParamStrLength<Char_T>(psz))
+        m_nSize(readOnlySzParamLength<Char_T>(psz))
     {
     }
 
@@ -211,11 +211,11 @@ protected:
     const size_t m_nSize;		// Length of the string.
 };
 
-typedef DFG_CLASS_NAME(ReadOnlyParamStr)<char>				DFG_CLASS_NAME(ReadOnlyParamStrC);
-typedef DFG_CLASS_NAME(ReadOnlyParamStr)<wchar_t>			DFG_CLASS_NAME(ReadOnlyParamStrW);
+typedef DFG_CLASS_NAME(ReadOnlySzParam)<char>				DFG_CLASS_NAME(ReadOnlySzParamC);
+typedef DFG_CLASS_NAME(ReadOnlySzParam)<wchar_t>			DFG_CLASS_NAME(ReadOnlySzParamW);
 
-typedef DFG_CLASS_NAME(ReadOnlyParamStrWithSize)<char>		DFG_CLASS_NAME(ReadOnlyParamStrWithSizeC);
-typedef DFG_CLASS_NAME(ReadOnlyParamStrWithSize)<wchar_t>	DFG_CLASS_NAME(ReadOnlyParamStrWithSizeW);
+typedef DFG_CLASS_NAME(ReadOnlySzParamWithSize)<char>		DFG_CLASS_NAME(ReadOnlySzParamWithSizeC);
+typedef DFG_CLASS_NAME(ReadOnlySzParamWithSize)<wchar_t>	DFG_CLASS_NAME(ReadOnlySzParamWithSizeW);
 
 typedef DFG_CLASS_NAME(StringView)<char>		            DFG_CLASS_NAME(StringViewC);
 typedef DFG_CLASS_NAME(StringView)<wchar_t>	                DFG_CLASS_NAME(StringViewW);

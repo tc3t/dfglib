@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../readOnlyParamStr.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include "../utf/utfBom.hpp"
 #include "textencodingtypes.hpp"
 #include "createInputStream.hpp"
@@ -42,18 +42,18 @@ inline TextEncoding checkBOM(Stream_T& istrm)
 // Checks BOM marker from file in given path.
 // TODO: test, especially small files with less bytes than longest BOM-markers.
 template <class Char_T>
-inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStr)<Char_T> & sPath)
+inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> & sPath)
 {
     auto istrm = createInputStreamBinaryFile(sPath);
     return checkBOM(istrm);
 }
 
-inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrC)& sPath)
+inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath)
 {
     return checkBOMFromFile<char>(sPath);
 }
 
-inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlyParamStrW)& sPath)
+inline TextEncoding checkBOMFromFile(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath)
 {
     return checkBOMFromFile<wchar_t>(sPath);
 }

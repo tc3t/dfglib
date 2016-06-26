@@ -65,7 +65,7 @@ inline std::string eolStrFromEndOfLineType(EndOfLineType eolType)
 // Returns binary stream to given output path.
 // Note: Return type is not guaranteed to be std::ofstream.
 #if DFG_LANGFEAT_MOVABLE_STREAMS
-inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) createOutputStreamBinaryFile(DFG_CLASS_NAME(ReadOnlyParamStr)<char> sPath)
+inline DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) createOutputStreamBinaryFile(DFG_CLASS_NAME(ReadOnlySzParam)<char> sPath)
 {
     DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) strm(sPath);
     return strm;

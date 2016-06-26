@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dfgDefs.hpp"
-#include "readOnlyParamStr.hpp"
+#include "ReadOnlySzParam.hpp"
 #include <fstream>
 #include "os/fileSize.hpp"
 

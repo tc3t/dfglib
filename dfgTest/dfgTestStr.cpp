@@ -318,41 +318,41 @@ TEST(dfgStr, toStr)
 
 namespace
 {
-    void ReadOnlyParamStrOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrC) sC)
+    void ReadOnlySzParamOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC) sC)
     {
         std::string s = sC.c_str();
     }
-    void ReadOnlyParamStrOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrW) sW)
+    void ReadOnlySzParamOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamW) sW)
     {
         std::wstring s = sW.c_str(); 
     }
 
-    void ReadOnlyParamStrWithSizeOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrWithSizeC) sC)
+    void ReadOnlySzParamWithSizeOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamWithSizeC) sC)
     {
         std::string s = sC.c_str();
     }
-    void ReadOnlyParamStrWithSizeOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlyParamStrWithSizeW) sW)
+    void ReadOnlySzParamWithSizeOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamWithSizeW) sW)
     {
         std::wstring s = sW.c_str();
     }
 }
 
-TEST(dfgStr, ReadOnlyParamStr)
+TEST(dfgStr, ReadOnlySzParam)
 {
     using namespace DFG_ROOT_NS;
-    const auto func0 = [](DFG_CLASS_NAME(ReadOnlyParamStrC) s)
+    const auto func0 = [](DFG_CLASS_NAME(ReadOnlySzParamC) s)
     {
         return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s);
     };
-    const auto func1 = [](DFG_CLASS_NAME(ReadOnlyParamStrW) s)
+    const auto func1 = [](DFG_CLASS_NAME(ReadOnlySzParamW) s)
     {
         return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s);
     };
-    const auto func2 = [](DFG_CLASS_NAME(ReadOnlyParamStrWithSizeC) s)
+    const auto func2 = [](DFG_CLASS_NAME(ReadOnlySzParamWithSizeC) s)
     {
         return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s) + s.length();
     };
-    const auto func3 = [](DFG_CLASS_NAME(ReadOnlyParamStrWithSizeW) s)
+    const auto func3 = [](DFG_CLASS_NAME(ReadOnlySzParamWithSizeW) s)
     {
         return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s) + s.length();
     };
@@ -369,15 +369,15 @@ TEST(dfgStr, ReadOnlyParamStr)
     EXPECT_EQ(990, func3(L"987"));
     EXPECT_EQ(990, func3(std::wstring(L"987")));
 
-    ReadOnlyParamStrOverloadTest("test");
-    ReadOnlyParamStrOverloadTest(L"test");
-    ReadOnlyParamStrOverloadTest(std::string("test"));
-    ReadOnlyParamStrOverloadTest(std::wstring(L"test"));
+    ReadOnlySzParamOverloadTest("test");
+    ReadOnlySzParamOverloadTest(L"test");
+    ReadOnlySzParamOverloadTest(std::string("test"));
+    ReadOnlySzParamOverloadTest(std::wstring(L"test"));
 
-    ReadOnlyParamStrWithSizeOverloadTest("test");
-    ReadOnlyParamStrWithSizeOverloadTest(L"test");
-    ReadOnlyParamStrWithSizeOverloadTest(std::string("test"));
-    ReadOnlyParamStrWithSizeOverloadTest(std::wstring(L"test"));
+    ReadOnlySzParamWithSizeOverloadTest("test");
+    ReadOnlySzParamWithSizeOverloadTest(L"test");
+    ReadOnlySzParamWithSizeOverloadTest(std::string("test"));
+    ReadOnlySzParamWithSizeOverloadTest(std::wstring(L"test"));
 }
 
 TEST(dfgStr, HexStr)
@@ -543,4 +543,7 @@ TEST(dfgStr, format_fmt)
     EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", float(123456789)), "1234567"));
     EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(123456789)), "123456789"));
     EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", (long double)(123456789)), "123456789"));
+
+    // TODO: this should work
+    //EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(1.23456789e-9)), "1.23456789e"));
 }
