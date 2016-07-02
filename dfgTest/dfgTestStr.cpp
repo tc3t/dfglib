@@ -58,6 +58,11 @@ TEST(dfgStr, strLen)
     EXPECT_EQ(4, strLen(std::wstring(L"abcd")));
     EXPECT_EQ(6, strLen(std::wstring(L"abcd\ne")));
     EXPECT_EQ(1, strLen(std::wstring(L"a\0b"))); // Note: The created std::wstring is "a"
+
+    // Test typed null terminated strings
+    EXPECT_EQ(3, strLen(SzPtrAscii("abc")));
+    EXPECT_EQ(3, strLen(SzPtrLatin1("abc")));
+    EXPECT_EQ(3, strLen(SzPtrUtf8("abc")));
 }
 
 TEST(dfgStr, strCat)
