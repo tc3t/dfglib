@@ -16,7 +16,7 @@ const Char_T* readOnlySzParamConverter(const String_T&)
 }
 
 // Returns length in chars.
-template <class Char_T, class String_T>
+template <class String_T>
 size_t readOnlySzParamLength(const String_T& str)
 {
 	return DFG_SUB_NS_NAME(str)::strLen(str);
@@ -138,14 +138,14 @@ public:
 
 	DFG_CLASS_NAME(ReadOnlySzParamWithSize)(const std::basic_string<Char_T>& s) :
 		BaseClass(readOnlySzParamConverter<Char_T>(s)),
-		m_nSize(readOnlySzParamLength<Char_T>(s))
+		m_nSize(readOnlySzParamLength(s))
 	{
 
 	}
 
 	DFG_CLASS_NAME(ReadOnlySzParamWithSize)(const Char_T* psz) :
 		BaseClass(readOnlySzParamConverter<Char_T, const Char_T*>(psz)),
-		m_nSize(readOnlySzParamLength<Char_T>(psz))
+		m_nSize(readOnlySzParamLength(psz))
 	{
 
 	}
@@ -175,13 +175,13 @@ public:
 
     DFG_CLASS_NAME(StringView)(const std::basic_string<Char_T>& s) :
         m_pFirst(s.c_str()),
-        m_nSize(readOnlySzParamLength<Char_T>(s))
+        m_nSize(readOnlySzParamLength(s))
     {
     }
 
     DFG_CLASS_NAME(StringView)(const Char_T* psz) :
         m_pFirst(psz),
-        m_nSize(readOnlySzParamLength<Char_T>(psz))
+        m_nSize(readOnlySzParamLength(psz))
     {
     }
 
