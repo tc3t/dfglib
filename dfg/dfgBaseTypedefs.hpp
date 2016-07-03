@@ -53,4 +53,4 @@ typedef ConstWCharPtr	NonNullCStrW;	// Pointer to non-null const wide char C str
 
 } // root namespace
 
-#include "SzPtr.hpp"
+#include "SzPtrTypes.hpp"

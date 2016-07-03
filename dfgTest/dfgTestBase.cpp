@@ -399,4 +399,48 @@ TEST(dfg, SzPtrTypes)
     // Test automatic conversion from ASCII to ASCII superset
     funcLatin1(SzPtrAscii("abcd"));
     funcUtf8(SzPtrAscii("abcd"));
+
+    EXPECT_TRUE(SzPtrAscii(szConst) == SzPtrAscii(szConst));
+    EXPECT_FALSE(SzPtrAscii(szConst) == SzPtrAscii(szNonConst));
+    EXPECT_TRUE(SzPtrLatin1(szConst) == SzPtrLatin1(szConst));
+    EXPECT_FALSE(SzPtrLatin1(szConst) == SzPtrLatin1(szNonConst));
+    EXPECT_TRUE(SzPtrUtf8(szConst) == SzPtrUtf8(szConst));
+    EXPECT_FALSE(SzPtrUtf8(szConst) == SzPtrUtf8(szNonConst));
+}
+
+TEST(dfg, toSzPtr)
+{
+    using namespace DFG_ROOT_NS;
+
+    const char sz[] = "abc";
+    const wchar_t wsz[] = L"abc";
+    const auto tszAscii = SzPtrAscii(sz);
+    const auto tszLatin1 = SzPtrLatin1(sz);
+    const auto tszUtf8 = SzPtrUtf8(sz);
+    std::string s(sz);
+    std::wstring ws(wsz);
+
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(sz))>::value));
+    DFGTEST_STATIC((std::is_same<const wchar_t*, decltype(toSzPtr_raw(wsz))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(s))>::value));
+    DFGTEST_STATIC((std::is_same<const wchar_t*, decltype(toSzPtr_raw(ws))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(tszAscii))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(tszLatin1))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(tszUtf8))>::value));
+
+    DFGTEST_STATIC((std::is_same<SzPtrAsciiR, decltype(toSzPtr_typed(tszAscii))>::value));
+    DFGTEST_STATIC((std::is_same<SzPtrLatin1R, decltype(toSzPtr_typed(tszLatin1))>::value));
+    DFGTEST_STATIC((std::is_same<SzPtrUtf8R, decltype(toSzPtr_typed(tszUtf8))>::value));
+
+    EXPECT_EQ(sz, toSzPtr_raw(sz));
+    EXPECT_EQ(wsz, toSzPtr_raw(wsz));
+    EXPECT_EQ(s.c_str(), toSzPtr_raw(s));
+    EXPECT_EQ(ws.c_str(), toSzPtr_raw(ws));
+    EXPECT_EQ(sz, toSzPtr_raw(tszAscii));
+    EXPECT_EQ(sz, toSzPtr_raw(tszLatin1));
+    EXPECT_EQ(sz, toSzPtr_raw(tszUtf8));
+
+    EXPECT_EQ(tszAscii, toSzPtr_typed(tszAscii));
+    EXPECT_EQ(tszLatin1, toSzPtr_typed(tszLatin1));
+    EXPECT_EQ(tszUtf8, toSzPtr_typed(tszUtf8));
 }

@@ -21,6 +21,7 @@
 
 #include "isValidIndex.hpp"
 #include "numericTypeTools.hpp"
+#include "SzPtr.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
