@@ -4,6 +4,7 @@
 #include <dfg/alg.hpp>
 #include <dfg/str/hex.hpp>
 #include <dfg/str/strCat.hpp>
+#include <dfg/str/string.hpp>
 #include <dfg/dfgBaseTypedefs.hpp>
 #include <dfg/str/stringLiteralCharToValue.hpp>
 #include <dfg/str/format_fmt.hpp>
@@ -383,6 +384,61 @@ TEST(dfgStr, ReadOnlySzParam)
     ReadOnlySzParamWithSizeOverloadTest(L"test");
     ReadOnlySzParamWithSizeOverloadTest(std::string("test"));
     ReadOnlySzParamWithSizeOverloadTest(std::wstring(L"test"));
+}
+
+namespace
+{
+    template <class Str_T>
+    void TestTypedString()
+    {
+        using namespace DFG_ROOT_NS;
+        typedef typename Str_T::SzPtrR SzPtrType;
+        Str_T s(SzPtrType("abc"));
+        DFGTEST_STATIC((std::is_same<typename Str_T::SzPtrR, decltype(s.c_str())>::value));
+        EXPECT_TRUE(s == SzPtrType("abc"));
+        EXPECT_FALSE(s != SzPtrType("abc"));
+        EXPECT_FALSE(s == SzPtrType("abc2"));
+        EXPECT_TRUE(s != SzPtrType("abc2"));
+    }
+}
+
+TEST(dfgStr, String)
+{
+    using namespace DFG_ROOT_NS;
+    TestTypedString<DFG_CLASS_NAME(StringAscii)>();
+    TestTypedString<DFG_CLASS_NAME(StringLatin1)>();
+    TestTypedString<DFG_CLASS_NAME(StringUtf8)>();
+}
+
+namespace
+{
+    template <class StringView_T, class Char_T, class Str_T, class RawToTypedConv>
+    void TestStringViewImpl(RawToTypedConv conv)
+    {
+        using namespace DFG_ROOT_NS;
+        const Char_T sz[] = { 'a', 'b', 'c', '\0' };
+        const Str_T s(conv(sz));
+
+        StringView_T view(conv(sz));
+        StringView_T view2Chars(conv(&sz[0] + 1), 2);
+        EXPECT_EQ(conv(&sz[1]), view2Chars.begin());
+        EXPECT_STREQ(&sz[1], toSzPtr_raw(view2Chars.begin()));
+        EXPECT_EQ(2, view2Chars.length());
+        StringView_T view2(s);
+        EXPECT_EQ(s.c_str(), view2.begin());
+    }
+}
+
+TEST(dfgStr, StringView)
+{
+    using namespace DFG_ROOT_NS;
+
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewC), char, std::string>([](const char* psz) {return psz; });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewW), wchar_t, std::wstring>([](const wchar_t* psz) {return psz; });
+
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii>([](const char* psz) {return DFG_ROOT_NS::SzPtrAscii(psz); });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1>([](const char* psz) {return DFG_ROOT_NS::SzPtrLatin1(psz); });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8>([](const char* psz) {return DFG_ROOT_NS::SzPtrUtf8(psz); });
 }
 
 TEST(dfgStr, HexStr)

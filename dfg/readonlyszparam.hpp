@@ -6,6 +6,7 @@
 #include "buildConfig.hpp"
 #include "build/utils.hpp"
 #include <string>
+#include "str/string.hpp"
 
 DFG_ROOT_NS_BEGIN {
 
@@ -167,25 +168,26 @@ protected:
 
 // Note: Unlike previous, the string view stored here can't guarantee access to null terminated string.
 // TODO: keep compatible with std::string_view or even typedef when available.
-template <class Char_T>
+template <class Char_T, class Str_T = std::basic_string<Char_T>>
 class DFG_CLASS_NAME(StringView)
 {
 public:
-    typedef const Char_T* const_iterator;
+    typedef decltype(Str_T().c_str()) PtrT;
+    typedef PtrT const_iterator;
 
-    DFG_CLASS_NAME(StringView)(const std::basic_string<Char_T>& s) :
+    DFG_CLASS_NAME(StringView)(const Str_T& s) :
         m_pFirst(s.c_str()),
         m_nSize(readOnlySzParamLength(s))
     {
     }
 
-    DFG_CLASS_NAME(StringView)(const Char_T* psz) :
+    DFG_CLASS_NAME(StringView)(PtrT psz) :
         m_pFirst(psz),
         m_nSize(readOnlySzParamLength(psz))
     {
     }
 
-    DFG_CLASS_NAME(StringView)(const Char_T* psz, const size_t nCount) :
+    DFG_CLASS_NAME(StringView)(PtrT psz, const size_t nCount) :
         m_pFirst(psz),
         m_nSize(nCount)
     {
@@ -207,8 +209,8 @@ public:
     }
 
 protected:
-    const Char_T* m_pFirst;      // Pointer to first character.
-    const size_t m_nSize;		// Length of the string.
+    PtrT m_pFirst;          // Pointer to first character.
+    const size_t m_nSize;	// Length of the string as returned by strLen().
 };
 
 typedef DFG_CLASS_NAME(ReadOnlySzParam)<char>				DFG_CLASS_NAME(ReadOnlySzParamC);
@@ -219,5 +221,8 @@ typedef DFG_CLASS_NAME(ReadOnlySzParamWithSize)<wchar_t>	DFG_CLASS_NAME(ReadOnly
 
 typedef DFG_CLASS_NAME(StringView)<char>		            DFG_CLASS_NAME(StringViewC);
 typedef DFG_CLASS_NAME(StringView)<wchar_t>	                DFG_CLASS_NAME(StringViewW);
+typedef DFG_CLASS_NAME(StringView)<char, StringAscii>	    DFG_CLASS_NAME(StringViewAscii);
+typedef DFG_CLASS_NAME(StringView)<char, StringLatin1>	    DFG_CLASS_NAME(StringViewLatin1);
+typedef DFG_CLASS_NAME(StringView)<char, StringUtf8>	    DFG_CLASS_NAME(StringViewUtf8);
 
 } // namespace
