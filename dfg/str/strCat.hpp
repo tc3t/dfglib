@@ -10,11 +10,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
 
     namespace DFG_DETAIL_NS
     {
-        template <class Char_T, class Str_T>
-        void strCatImpl(Str_T&& dest, const DFG_CLASS_NAME(StringView)<Char_T>* arr, const size_t nArrSize)
+        template <class StringView_T, class Str_T>
+        void strCatImpl(Str_T&& dest, const StringView_T* arr, const size_t nArrSize)
         {
-            DFG_STATIC_ASSERT(sizeof(dest[0]) == sizeof(Char_T), "Character size mismatch.");
-
             // Count the length of the resulting string.
             size_t nParamLengthSum = 0;
             for (size_t i = 0; i < nArrSize; ++i)
@@ -37,65 +35,61 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
 
     // Note: Before starting to think about using variadic templates, revise whether it is supported by compilers where strCat() should compile. 
 
-    // Defines parameter type.
-#define DFG_TEMP_PT(CHAR) DFG_CLASS_NAME(StringView)<CHAR>
-
     // Defines return type: Str_T for rvalues and Str_T& for lvalues.
 #define DFG_TEMP_RETURN_TYPE typename std::conditional<std::is_rvalue_reference<Str_T&&>::value, Str_T, Str_T&>::type
 
     // Defines the actual functions for given char type. These are just boilerplate interfaces passing the actual work to strCatImpl().
-#define DFG_TEMP_MACRO_DEFINE_STRCAT(CHAR, STR) \
+#define DFG_TEMP_MACRO_DEFINE_STRCAT(PARAMTYPE, STR) \
     template <class Str_T> \
-    auto strCat(Str_T&& dest, const DFG_TEMP_PT(CHAR)& s0) -> DFG_TEMP_RETURN_TYPE \
+    auto strCat(Str_T&& dest, const PARAMTYPE& s0) -> DFG_TEMP_RETURN_TYPE \
     { \
-        DFG_TEMP_PT(CHAR) arrParams[] = { s0 }; \
-        DFG_DETAIL_NS::strCatImpl<CHAR>(std::forward<Str_T>(dest), arrParams, DFG_COUNTOF(arrParams)); \
+        PARAMTYPE arrParams[] = { s0 }; \
+        DFG_DETAIL_NS::strCatImpl(std::forward<Str_T>(dest), arrParams, DFG_COUNTOF(arrParams)); \
         return std::forward<Str_T>(dest); \
     } \
     template <class Str_T> \
-    auto strCat(Str_T&& dest, const DFG_TEMP_PT(CHAR)& s0, const DFG_TEMP_PT(CHAR)& s1) -> DFG_TEMP_RETURN_TYPE \
+    auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1) -> DFG_TEMP_RETURN_TYPE \
     { \
-        DFG_TEMP_PT(CHAR) arrParams[] = { s0, s1 }; \
-        DFG_DETAIL_NS::strCatImpl<CHAR>(dest, arrParams, DFG_COUNTOF(arrParams)); \
+        PARAMTYPE arrParams[] = { s0, s1 }; \
+        DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
         return dest; \
     } \
     template <class Str_T> \
-    auto strCat(Str_T&& dest, const DFG_TEMP_PT(CHAR)& s0, const DFG_TEMP_PT(CHAR)& s1, const DFG_TEMP_PT(CHAR)& s2) -> DFG_TEMP_RETURN_TYPE \
+    auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2) -> DFG_TEMP_RETURN_TYPE \
     { \
-        DFG_TEMP_PT(CHAR) arrParams[] = { s0, s1, s2 }; \
-        DFG_DETAIL_NS::strCatImpl<CHAR>(dest, arrParams, DFG_COUNTOF(arrParams)); \
+        PARAMTYPE arrParams[] = { s0, s1, s2 }; \
+        DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
         return dest; \
     } \
     template <class Str_T> \
-    auto strCat(Str_T&& dest, const DFG_TEMP_PT(CHAR)& s0, const DFG_TEMP_PT(CHAR)& s1, const DFG_TEMP_PT(CHAR)& s2, const DFG_TEMP_PT(CHAR)& s3) -> DFG_TEMP_RETURN_TYPE \
+    auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2, const PARAMTYPE& s3) -> DFG_TEMP_RETURN_TYPE \
     { \
-        DFG_TEMP_PT(CHAR) arrParams[] = { s0, s1, s2, s3 }; \
-        DFG_DETAIL_NS::strCatImpl<CHAR>(dest, arrParams, DFG_COUNTOF(arrParams)); \
+        PARAMTYPE arrParams[] = { s0, s1, s2, s3 }; \
+        DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
         return dest; \
     } \
     template <class Str_T> \
-    auto strCat(Str_T&& dest, const DFG_TEMP_PT(CHAR)& s0, const DFG_TEMP_PT(CHAR)& s1, const DFG_TEMP_PT(CHAR)& s2, const DFG_TEMP_PT(CHAR)& s3, const DFG_TEMP_PT(CHAR)& s4) -> DFG_TEMP_RETURN_TYPE \
+    auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2, const PARAMTYPE& s3, const PARAMTYPE& s4) -> DFG_TEMP_RETURN_TYPE \
     { \
-        DFG_TEMP_PT(CHAR) arrParams[] = { s0, s1, s2, s3, s4 }; \
-        DFG_DETAIL_NS::strCatImpl<CHAR>(dest, arrParams, DFG_COUNTOF(arrParams)); \
+        PARAMTYPE arrParams[] = { s0, s1, s2, s3, s4 }; \
+        DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
         return dest; \
     } \
     template <class Str_T> \
-    auto strCat(Str_T&& dest, const DFG_TEMP_PT(CHAR)& s0, const DFG_TEMP_PT(CHAR)& s1, const DFG_TEMP_PT(CHAR)& s2, const DFG_TEMP_PT(CHAR)& s3, const DFG_TEMP_PT(CHAR)& s4, const DFG_TEMP_PT(CHAR)& s5, \
-                             const DFG_TEMP_PT(CHAR)& s6 = DFG_TEMP_PT(CHAR)(STR), const DFG_TEMP_PT(CHAR)& s7 = DFG_TEMP_PT(CHAR)(STR), const DFG_TEMP_PT(CHAR)& s8 = DFG_TEMP_PT(CHAR)(STR), const DFG_TEMP_PT(CHAR)& s9 = DFG_TEMP_PT(CHAR)(STR) \
+    auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2, const PARAMTYPE& s3, const PARAMTYPE& s4, const PARAMTYPE& s5, \
+                             const PARAMTYPE& s6 = PARAMTYPE(STR), const PARAMTYPE& s7 = PARAMTYPE(STR), const PARAMTYPE& s8 = PARAMTYPE(STR), const PARAMTYPE& s9 = PARAMTYPE(STR) \
             ) -> DFG_TEMP_RETURN_TYPE \
     { \
-        DFG_TEMP_PT(CHAR) arrParams[] = { s0, s1, s2, s3, s4, s5, s6, s7, s8, s9 }; \
-        DFG_DETAIL_NS::strCatImpl<CHAR>(dest, arrParams, DFG_COUNTOF(arrParams)); \
+        PARAMTYPE arrParams[] = { s0, s1, s2, s3, s4, s5, s6, s7, s8, s9 }; \
+        DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
         return dest; \
     } 
 
     // Define strCat for char wchar_t parameters.
-    DFG_TEMP_MACRO_DEFINE_STRCAT(char, "")
-    DFG_TEMP_MACRO_DEFINE_STRCAT(wchar_t, L"");
+    DFG_TEMP_MACRO_DEFINE_STRCAT(DFG_CLASS_NAME(StringViewC), "")
+    DFG_TEMP_MACRO_DEFINE_STRCAT(DFG_CLASS_NAME(StringViewW), L"");
 
 #undef DFG_TEMP_MACRO_DEFINE_STRCAT
-#undef DFG_TEMP_PT
 #undef DFG_TEMP_RETURN_TYPE
 
 } } // module namespace
