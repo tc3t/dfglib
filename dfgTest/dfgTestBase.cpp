@@ -388,6 +388,14 @@ TEST(dfg, SzPtrTypes)
         EXPECT_EQ(pszUtf8W.c_str(), pszUtf8R.c_str()); // Note: pointer comparison is intended
     }
 
+    // Test conversion SzPtr<char> -> TypedCharPtr<const char>
+    {
+        SzPtrAsciiW pszAsciiW = SzPtrAscii(szNonConst);
+        TypedCharPtrAsciiR pAsciiR = pszAsciiW;
+        TypedCharPtrLatin1R pLatin1R = pszAsciiW;
+        TypedCharPtrUtf8R pUtf8R = pszAsciiW;
+    }
+
     // Basic usage test
     funcAscii(SzPtrAscii("abcd"));
     //funcAscii(SzPtrUtf8("abcd")); // Should fail to compile

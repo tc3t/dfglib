@@ -19,7 +19,7 @@ typedef std::string		DFG_CLASS_NAME(StringA);
 typedef std::wstring	DFG_CLASS_NAME(StringW);
 
 // String whose content encoding is guaranteed in compile-time type.
-template <SzPtrType Type_T>
+template <CharPtrType Type_T>
 class DFG_CLASS_NAME(StringTyped)
 {
 public:
@@ -49,15 +49,15 @@ public:
     StorageType m_s; // Encoded by the method defined by SzPtrType.
 }; // class StringTyped
 
-template<class SzPtr_T, SzPtrType Type_T>
+template<class SzPtr_T, CharPtrType Type_T>
 inline bool operator==(const SzPtr_T& psz, const StringTyped<Type_T>& right)
 {
     return right == psz;
 }
 
-typedef DFG_CLASS_NAME(StringTyped)<SzPtrTypeAscii> DFG_CLASS_NAME(StringAscii);
-typedef DFG_CLASS_NAME(StringTyped)<SzPtrTypeLatin1> DFG_CLASS_NAME(StringLatin1);
-typedef DFG_CLASS_NAME(StringTyped)<SzPtrTypeUtf8> DFG_CLASS_NAME(StringUtf8);
+typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeAscii> DFG_CLASS_NAME(StringAscii);
+typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeLatin1> DFG_CLASS_NAME(StringLatin1);
+typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeUtf8> DFG_CLASS_NAME(StringUtf8);
 
 inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringAscii)& str) { return str.c_str().c_str(); }
 inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringLatin1)& str) { return str.c_str().c_str(); }

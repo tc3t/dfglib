@@ -7,44 +7,63 @@
 
 DFG_ROOT_NS_BEGIN
 {
-    enum SzPtrType
+    enum CharPtrType
     {
-        SzPtrTypeAscii, // Ascii is valid UTF8 and valid Latin-1.
+        CharPtrTypeAscii, // Ascii is valid UTF8 and valid Latin-1.
 
         // Supersets of ASCII
-        SzPtrTypeLatin1,
-        SzPtrTypeUtf8,
+        CharPtrTypeLatin1,
+        CharPtrTypeUtf8,
 
-    // Note: if adding items, see constructor of SzPtrT.
+    // Note: if adding items, see constructor of TypedCharPtrT.
 };
 
-template <class Char_T, SzPtrType Type_T>
-struct SzPtrT
+template <class Char_T, CharPtrType Type_T>
+struct TypedCharPtrT
 {
     DFG_STATIC_ASSERT(sizeof(Char_T) == 1, "Char_T must be either char or const char");
 
-    explicit SzPtrT(Char_T* psz) :
-        m_psz(psz)
+    explicit TypedCharPtrT(Char_T* p) :
+        m_p(p)
     {}
 
-    // With nothing but ASCII and it's supersets, everything can be constructed from SzPtrAscii.
+    // At moment with nothing but ASCII and it's supersets, everything can be constructed from CharPtrTypeAscii.
     template <class Char_T2>
-    SzPtrT(const SzPtrT<Char_T2, SzPtrTypeAscii>& other) :
-        m_psz(other.m_psz)
+    TypedCharPtrT(const TypedCharPtrT<Char_T2, CharPtrTypeAscii>& other) :
+        m_p(other.m_p)
     {
     }
 
     // Automatic conversion from char -> const char
-    operator SzPtrT<const Char_T, Type_T>() const { return SzPtrT<const Char_T, Type_T>(m_psz); }
+    operator TypedCharPtrT<const Char_T, Type_T>() const { return TypedCharPtrT<const Char_T, Type_T>(m_p); }
 
-    bool operator==(const SzPtrT& other) const
+    bool operator==(const TypedCharPtrT& other) const
     {
-        return m_psz == other.m_psz;
+        return m_p == other.m_p;
     }
 
-    Char_T* c_str() const { return m_psz; }
+    Char_T* m_p;
+};
 
-    Char_T* m_psz;
+template <class Char_T, CharPtrType Type_T>
+struct SzPtrT : public TypedCharPtrT<Char_T, Type_T>
+{
+    typedef TypedCharPtrT<Char_T, Type_T> BaseClass;
+    explicit SzPtrT(Char_T* psz) :
+        BaseClass(psz)
+    {}
+
+    // At moment with nothing but ASCII and it's supersets, everything can be constructed from CharPtrTypeAscii.
+    template <class Char_T2>
+    SzPtrT(const SzPtrT<Char_T2, CharPtrTypeAscii>& other) : 
+        BaseClass(other)
+    {
+    }
+
+    // Automatic conversion from char -> const char
+    operator SzPtrT<const Char_T, Type_T>() const { return SzPtrT<const Char_T, Type_T>(this->m_p); }
+
+    Char_T* c_str() const { return this->m_p; }
 };
 
 /*
@@ -56,10 +75,12 @@ function: SzPtrAsciiR SzPtrAscii(const char* psz) // Convenience function for cr
 */
 
 #define DFG_TEMP_MACRO_CREATE_SPECIALIZATION(TYPE) \
-    typedef SzPtrT<char, SzPtrType##TYPE> SzPtr##TYPE##W; \
-    typedef SzPtrT<const char, SzPtrType##TYPE> SzPtr##TYPE##R; \
-    inline SzPtrT<char, SzPtrType##TYPE> SzPtr##TYPE(char* psz) { return SzPtrT<char, SzPtrType##TYPE>(psz); } \
-    inline SzPtrT<const char, SzPtrType##TYPE> SzPtr##TYPE(const char* psz) { return SzPtrT<const char, SzPtrType##TYPE>(psz); }
+    typedef TypedCharPtrT<char, CharPtrType##TYPE> TypedCharPtr##TYPE##W; \
+    typedef TypedCharPtrT<const char, CharPtrType##TYPE> TypedCharPtr##TYPE##R; \
+    typedef SzPtrT<char, CharPtrType##TYPE> SzPtr##TYPE##W; \
+    typedef SzPtrT<const char, CharPtrType##TYPE> SzPtr##TYPE##R; \
+    inline SzPtrT<char, CharPtrType##TYPE> SzPtr##TYPE(char* psz) { return SzPtrT<char, CharPtrType##TYPE>(psz); } \
+    inline SzPtrT<const char, CharPtrType##TYPE> SzPtr##TYPE(const char* psz) { return SzPtrT<const char, CharPtrType##TYPE>(psz); }
 
 DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Ascii);
 DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Latin1);
