@@ -205,7 +205,7 @@ public:
 
     const_iterator end() const
     {
-        return m_pFirst + m_nSize;
+        return PtrT(toSzPtr_raw(m_pFirst) + m_nSize);
     }
 
 protected:
