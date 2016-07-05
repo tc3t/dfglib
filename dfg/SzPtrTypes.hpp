@@ -42,6 +42,8 @@ struct TypedCharPtrT
         return m_p == other.m_p;
     }
 
+    const Char_T* rawPtr() const { return m_p; }
+
     Char_T* m_p;
 };
 

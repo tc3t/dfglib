@@ -85,6 +85,13 @@ TEST(dfgStr, strCat)
         DFGTEST_STATIC((std::is_same<decltype(strCat(sw, L"a")), std::wstring&>::value));
     }
 
+    // Typed strCat()
+    {
+        EXPECT_EQ(SzPtrAscii("ascii_strCat_test"), (strCat(DFG_CLASS_NAME(StringAscii)(), SzPtrAscii("ascii_strCat"), DFG_CLASS_NAME(StringAscii)(SzPtrAscii("_")), SzPtrAscii("test"))));
+        EXPECT_EQ(SzPtrLatin1("latin1_strCat_test"), (strCat(DFG_CLASS_NAME(StringLatin1)(), SzPtrLatin1("latin1_strCat"), DFG_CLASS_NAME(StringLatin1)(SzPtrLatin1("_")), SzPtrLatin1("test"))));
+        EXPECT_EQ(SzPtrUtf8("utf8_strCat_test"), (strCat(DFG_CLASS_NAME(StringUtf8)(), SzPtrUtf8("utf8_strCat"), DFG_CLASS_NAME(StringUtf8)(SzPtrUtf8("_")), SzPtrUtf8("test"))));
+    }
+
     // 1 param
     {
         s.clear();

@@ -24,11 +24,17 @@ class DFG_CLASS_NAME(StringTyped)
 {
 public:
     typedef std::string StorageType;
+    typedef TypedCharPtrT<const char, Type_T> TypedPtrT;
     typedef SzPtrT<const char, Type_T> SzPtrR;
 
     StringTyped() {}
     explicit StringTyped(SzPtrR psz) : m_s(psz.c_str()) {}
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }
+
+    void append(const TypedPtrT& first, const TypedPtrT& end)
+    {
+        m_s.append(first.rawPtr(), end.rawPtr());
+    }
 
     size_t length() const { return m_s.length(); }
     size_t size() const { return m_s.size(); }
@@ -41,6 +47,16 @@ public:
     bool operator!=(const SzPtrR& psz) const
     {
         return !(*this == psz);
+    }
+
+    void reserve(const size_t nCount)
+    {
+        m_s.reserve(nCount);
+    }
+
+    void resize(const size_t nNewSize)
+    {
+        m_s.resize(nNewSize, '\0');
     }
 
     StorageType& rawStorage() { return m_s; }

@@ -20,13 +20,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
 
             // Store old size and resize to new size.
             auto nInsertAt = dest.size();
-            dest.resize(dest.size() + nParamLengthSum, '\0');
+            dest.reserve(dest.size() + nParamLengthSum);
 
             // Append each parameter to string.
             for (size_t i = 0; i < nArrSize; ++i)
             {
                 auto& s = arr[i];
-                std::copy(s.begin(), s.end(), dest.begin() + nInsertAt);
+                dest.append(s.begin(), s.end());
                 nInsertAt += s.length();
             }
             DFG_ASSERT_UB(nInsertAt == dest.size());
@@ -88,6 +88,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
     // Define strCat for char wchar_t parameters.
     DFG_TEMP_MACRO_DEFINE_STRCAT(DFG_CLASS_NAME(StringViewC), "")
     DFG_TEMP_MACRO_DEFINE_STRCAT(DFG_CLASS_NAME(StringViewW), L"");
+    DFG_TEMP_MACRO_DEFINE_STRCAT(DFG_CLASS_NAME(StringViewAscii), "");
+    DFG_TEMP_MACRO_DEFINE_STRCAT(DFG_CLASS_NAME(StringViewLatin1), "");
+    DFG_TEMP_MACRO_DEFINE_STRCAT(DFG_CLASS_NAME(StringViewUtf8), "");
 
 #undef DFG_TEMP_MACRO_DEFINE_STRCAT
 #undef DFG_TEMP_RETURN_TYPE
