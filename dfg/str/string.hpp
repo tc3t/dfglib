@@ -31,6 +31,7 @@ public:
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }
 
     size_t length() const { return m_s.length(); }
+    size_t size() const { return m_s.size(); }
 
     bool operator==(const SzPtrR& psz) const
     {
@@ -46,11 +47,21 @@ public:
     const StorageType& rawStorage() const { return m_s; }
 
     StorageType m_s; // Encoded by the method defined by SzPtrType.
-};
+}; // class StringTyped
+
+template<class SzPtr_T, SzPtrType Type_T>
+inline bool operator==(const SzPtr_T& psz, const StringTyped<Type_T>& right)
+{
+    return right == psz;
+}
 
 typedef DFG_CLASS_NAME(StringTyped)<SzPtrTypeAscii> DFG_CLASS_NAME(StringAscii);
 typedef DFG_CLASS_NAME(StringTyped)<SzPtrTypeLatin1> DFG_CLASS_NAME(StringLatin1);
 typedef DFG_CLASS_NAME(StringTyped)<SzPtrTypeUtf8> DFG_CLASS_NAME(StringUtf8);
+
+inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringAscii)& str) { return str.c_str().c_str(); }
+inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringLatin1)& str) { return str.c_str().c_str(); }
+inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringUtf8)& str) { return str.c_str().c_str(); }
 
 } // root namespace
 
