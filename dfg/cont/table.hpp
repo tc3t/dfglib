@@ -231,7 +231,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         template <class Str_T>
         bool setElement(size_t nRow, size_t nCol, const Str_T& sSrc)
         {
-            return addString(DFG_MODULE_NS(str)::toCstr(sSrc), DFG_MODULE_NS(str)::strLen(sSrc), static_cast<Index_T>(nRow), static_cast<Index_T>(nCol));
+            return addString(sSrc, static_cast<Index_T>(nRow), static_cast<Index_T>(nCol));
         }
 
         // Sets element to (nRow, nCol). This does not invalidate any previous pointers return by operator()(), but after this call all pointers returned for (nRow, nCol)
@@ -239,8 +239,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // If element at (nRow, nCol) already exists, it is overwritten.
         // Return: true if string was added, false otherwise.
         // Note: Even in case of overwrite, previous item is not cleared from string storage (this is implementation detail that is not part of the interface, i.e. it is not to be relied on).
-        bool addString(const Char_T* const psz, const size_t nLength, const Index_T nRow, const Index_T nCol)
+        bool addString(const DFG_CLASS_NAME(StringView)<Char_T>& sv, const Index_T nRow, const Index_T nCol)
         {
+            const auto nLength = sv.length();
             auto& bufferCont = m_charBuffers[nCol];
             if (bufferCont.empty() || bufferCont.back().capacity() - bufferCont.back().size() < nLength + 1)
             {
@@ -258,23 +259,18 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Note that reallocation is not allowed because it would invalidate existing data pointers.
             if (nLength >= nFreeSpace)
                 return false;
-            currentBuffer.insert(currentBuffer.end(), psz, psz + nLength + 1);
+            currentBuffer.insert(currentBuffer.end(), sv.begin(), sv.end());
+            currentBuffer.push_back('\0');
             const Char_T* const pData = &currentBuffer[nBeginIndex];
 
             if (!isValidIndex(m_colToRows, nCol))
                 m_colToRows.resize(nCol + 1);
-            
 
             privSetRowContent(m_colToRows[nCol], nRow, pData);
 
             return true;
         }
 
-        template <class Str_T>
-        bool addString(const Str_T& s, const Index_T nRow, const Index_T nCol)
-        {
-            return addString(DFG_MODULE_NS(str)::toCstr(s), DFG_MODULE_NS(str)::strLen(s), nRow, nCol);
-        }
 
         template <class Func_T>
         void forEachFwdColumnIndex(Func_T&& func)
