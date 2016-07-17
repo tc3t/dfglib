@@ -615,3 +615,28 @@ TEST(dfgStr, format_fmt)
     // TODO: this should work
     //EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(1.23456789e-9)), "1.23456789e"));
 }
+
+TEST(dfgStr, toCstr)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+    char szNonConst[] = "";
+    const char szConst[] = "";
+    std::string s;
+    std::wstring ws;
+    StringAscii sA;
+    StringLatin1 sL1;
+    StringUtf8 sU8;
+
+    EXPECT_EQ(szNonConst, toCstr(szNonConst));
+    EXPECT_EQ(szConst, toCstr(szConst));
+    EXPECT_EQ(s.c_str(), toCstr(s));
+    EXPECT_EQ(ws.c_str(), toCstr(ws));
+    EXPECT_EQ(sA.c_str(), toCstr(sA));
+    EXPECT_EQ(sL1.c_str(), toCstr(sL1));
+    EXPECT_EQ(sU8.c_str(), toCstr(sU8));
+
+    EXPECT_EQ(SzPtrAscii(szConst), toCstr(SzPtrAscii(szConst)));
+    EXPECT_EQ(SzPtrLatin1(szConst), toCstr(SzPtrLatin1(szConst)));
+    EXPECT_EQ(SzPtrUtf8(szConst), toCstr(SzPtrUtf8(szConst)));
+}

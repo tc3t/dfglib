@@ -32,14 +32,12 @@ template <> struct CharSize<std::wstring>	{DFG_STATIC_ASSERT(sizeof(std::wstring
 // Returns char size for given string type.
 template <class T> inline size_t charSize(const T&) {return CharSize<T>::value;}
 
-// Returns C string of given object with life time rules that of std::string::c_str().
+// Returns param.c_str() or the parameter unmodified in case of raw pointer type or typed SzPtr.
 // [in] : Pointer to null terminated string or string object.
 // return : Pointer to corresponding const C string.
-// TODO: test
-inline ConstCharPtr toCstr(const ConstCharPtr psz) {return psz;}
-inline ConstWCharPtr toCstr(const ConstWCharPtr psz) {return psz;}
-inline ConstCharPtr toCstr(const std::string& str) {return str.c_str();}
-inline ConstWCharPtr toCstr(const std::wstring& str) {return str.c_str();}
+template <class T> inline auto toCstr(const T& s) -> decltype(s.c_str()) { return s.c_str(); }
+template <class T> inline const T* toCstr(const T* psz) {return psz;}
+template <class Char_T, CharPtrType Type_T> SzPtrT<Char_T, Type_T> toCstr(const SzPtrT<Char_T, Type_T>& tpsz) { return tpsz; }
 
 template <class T, class Str_T>
 Str_T& toStr(const T& obj, Str_T& str)
