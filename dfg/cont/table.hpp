@@ -338,10 +338,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         {
             forEachFwdColumnIndex([&](const Index_T nCol)
             {
-                forEachFwdRowInColumn(nCol, [&](const Index_T nRow, const Char_T* psz)
+                forEachFwdRowInColumn(nCol, [&](const Index_T nRow, SzPtrR tpsz)
                 {
-                    if (psz) // Not sure is this test needed.
-                        func(nRow, nCol, psz);
+                    if (tpsz) // Not sure is this test needed.
+                        func(nRow, nCol, tpsz);
                 });
             });
         }

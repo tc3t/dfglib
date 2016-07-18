@@ -220,10 +220,10 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
         if (isValidIndex(vecCompletionSet, nCol))
             vecCompletionSet.resize(nCol + 1);
         auto& completionSetForCurrentCol = vecCompletionSet[nCol];
-        m_table.forEachFwdRowInColumn(nCol, [&](const int /*nRow*/, const char* pData)
+        m_table.forEachFwdRowInColumn(nCol, [&](const int /*nRow*/, const SzPtrUtf8R pData)
         {
             if (pData)
-                completionSetForCurrentCol.insert(QString::fromUtf8(pData));
+                completionSetForCurrentCol.insert(QString::fromUtf8(pData.c_str()));
         });
     });
     for (size_t i = 0; i<vecCompletionSet.size(); ++i)
@@ -502,9 +502,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnToStrings(const int 
     if (!isValidColumn(nCol))
         return;
     vecStrings.reserve(getColumnCount());
-    m_table.forEachFwdRowInColumn(nCol, [&](const int /*row*/, const char* psz)
+    m_table.forEachFwdRowInColumn(nCol, [&](const int /*row*/, const SzPtrUtf8R tpsz)
     {
-        vecStrings.push_back(QString::fromUtf8(psz));
+        vecStrings.push_back(QString::fromUtf8(tpsz.c_str()));
 
     });
 }

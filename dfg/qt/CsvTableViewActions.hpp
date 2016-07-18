@@ -82,9 +82,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         static void restoreCells(const CellMemory& cellMemory, DFG_CLASS_NAME(CsvItemModel)& rModel)
         {
-            cellMemory.forEachNonNullCell([&](const int nRow, const int nCol, const char* const psz)
+            cellMemory.forEachNonNullCell([&](const int nRow, const int nCol, SzPtrUtf8R tpsz)
             {
-                rModel.setDataNoUndo(nRow, nCol, SzPtrUtf8(psz));
+                rModel.setDataNoUndo(nRow, nCol, tpsz);
             });
         }
 
