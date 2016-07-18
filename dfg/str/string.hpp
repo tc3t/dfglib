@@ -36,6 +36,11 @@ public:
         m_s.append(first.rawPtr(), end.rawPtr());
     }
 
+    bool empty() const
+    {
+        return m_s.empty();
+    }
+
     size_t length() const { return m_s.length(); }
     size_t size() const { return m_s.size(); }
 

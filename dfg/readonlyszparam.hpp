@@ -195,6 +195,11 @@ public:
     {
     }
 
+    bool empty() const
+    {
+        return (m_nSize == 0);
+    }
+
     size_t length() const
     {
         return m_nSize;
