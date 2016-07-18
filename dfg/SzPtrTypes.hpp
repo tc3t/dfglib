@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dfgDefs.hpp"
+#include "build/languageFeatureInfo.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wrappers for [const] char* to aid in writing code and interfaces that actually know what the content of null terminated char* means.
@@ -42,6 +43,11 @@ struct TypedCharPtrT
         return m_p == other.m_p;
     }
 
+    DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED operator bool() const
+    {
+        return (m_p != nullptr);
+    }
+
     const Char_T* rawPtr() const { return m_p; }
 
     Char_T* m_p;
@@ -70,6 +76,8 @@ struct SzPtrT : public TypedCharPtrT<Char_T, Type_T>
 
 /*
 Define the following items for each (using Ascii as example):
+typedef: TypedCharPtrAsciiW; \
+typedef: TypedCharPtrAsciiR; \
 typedef: SzPtrAsciiW; // Non-const ptr
 typedef: SzPtrAsciiR; // Const ptr
 function: SzPtrAsciiW SzPtrAscii(char* psz) // Convenience function for creating SzPtrAsciiW from non-const pointer.
