@@ -414,6 +414,13 @@ TEST(dfg, SzPtrTypes)
     EXPECT_FALSE(SzPtrLatin1(szConst) == SzPtrLatin1(szNonConst));
     EXPECT_TRUE(SzPtrUtf8(szConst) == SzPtrUtf8(szConst));
     EXPECT_FALSE(SzPtrUtf8(szConst) == SzPtrUtf8(szNonConst));
+
+    // Test bool conversion and comparison with nullptr
+    {
+        EXPECT_TRUE(SzPtrAscii(""));
+        EXPECT_TRUE(SzPtrAscii("") != nullptr);
+        EXPECT_TRUE(SzPtrAscii(nullptr) == nullptr);
+    }
 }
 
 TEST(dfg, toSzPtr)
