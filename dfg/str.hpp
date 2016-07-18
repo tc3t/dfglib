@@ -172,8 +172,12 @@ template <class Str0_T, class Str1_T> bool beginsWith(const Str0_T& sSearchFrom,
 // return : True iff. string is empty(i.e. if it's length is zero).
 inline bool isEmptyStr(const NonNullCStr pszNonNull) {return pszNonNull[0] == 0;}
 inline bool isEmptyStr(const NonNullCStrW pszNonNull) {return pszNonNull[0] == 0;}
-inline bool isEmptyStr(const std::string& str) {return str.length() == 0;}
-inline bool isEmptyStr(const std::wstring& str) {return str.length() == 0;}
+
+template <class Str_T>
+inline bool isEmptyStr(const Str_T& str) { return str.empty(); }
+
+template <class Char_T, CharPtrType Type_T> inline bool isEmptyStr(const SzPtrT<Char_T, Type_T>& tpsz) { return isEmptyStr(tpsz.c_str()); }
+
 
 namespace detail
 {

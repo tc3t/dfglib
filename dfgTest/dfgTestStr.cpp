@@ -66,6 +66,34 @@ TEST(dfgStr, strLen)
     EXPECT_EQ(3, strLen(SzPtrUtf8("abc")));
 }
 
+TEST(dfgStr, isEmptyStr)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
+    EXPECT_TRUE(isEmptyStr(""));
+    EXPECT_FALSE(isEmptyStr("a"));
+    EXPECT_TRUE(isEmptyStr(L""));
+    EXPECT_FALSE(isEmptyStr(L"a"));
+    EXPECT_TRUE(isEmptyStr(std::string("")));
+    EXPECT_FALSE(isEmptyStr(std::string(1, '\0')));
+    EXPECT_TRUE(isEmptyStr(std::wstring(L"")));
+    EXPECT_FALSE(isEmptyStr(std::wstring(1, L'\0')));
+
+    // SzPtr
+    EXPECT_TRUE(isEmptyStr(SzPtrUtf8("")));
+    EXPECT_FALSE(isEmptyStr(SzPtrUtf8("a")));
+
+    // Typed string
+    EXPECT_TRUE(isEmptyStr(StringUtf8(SzPtrUtf8(""))));
+    EXPECT_FALSE(isEmptyStr(StringUtf8(SzPtrUtf8("a"))));
+
+    // StringView
+    EXPECT_TRUE(isEmptyStr(StringViewC("")));
+    EXPECT_FALSE(isEmptyStr(StringViewC(std::string(1, '\0'))));
+    EXPECT_FALSE(isEmptyStr(StringViewUtf8(SzPtrUtf8("a"))));
+}
+
 TEST(dfgStr, strCat)
 {
     using namespace DFG_ROOT_NS;
