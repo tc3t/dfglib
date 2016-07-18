@@ -30,7 +30,7 @@
     #define DFG_LANGFEAT_MUTEX_11  1
 #endif
 
-#if defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2013)
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2013)) || defined(__MINGW32__) // TODO: make MinGW32 test less coarse.
     #define DFG_LANGFEAT_EXPLICIT_OPERATOR_BOOL  0
     #define DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED
 #else

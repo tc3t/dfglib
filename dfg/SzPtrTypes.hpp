@@ -48,8 +48,8 @@ struct TypedCharPtrT
         return m_p == other.m_p;
     }
 
-    bool operator==(const nullptr_t&) const { return m_p == nullptr; }
-    bool operator!=(const nullptr_t&) const { return m_p != nullptr; }
+    bool operator==(const std::nullptr_t&) const { return m_p == nullptr; }
+    bool operator!=(const std::nullptr_t&) const { return m_p != nullptr; }
 
     DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED operator bool() const
     {
