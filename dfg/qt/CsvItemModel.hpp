@@ -246,10 +246,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 continue;
             if (!bNoneAdded)
                 str.push_back(cDelim);
-            auto p = m_table(nRow, nCol);
+            SzPtrUtf8R p = m_table(nRow, nCol);
             if (!p)
                 continue;
-            dataCellToString(QString(p), str, cDelim); // TODO: handle encoding in p -> QString conversion.
+            dataCellToString(QString::fromUtf8(p.c_str()), str, cDelim); // TODO: handle encoding in p -> QString conversion.
             bNoneAdded = false;
         }
     }

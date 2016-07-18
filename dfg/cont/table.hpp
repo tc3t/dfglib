@@ -174,8 +174,29 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         std::vector<Index_T> m_rowSizes;
     };
 
+    namespace DFG_DETAIL_NS
+    {
+        template <class Char_T, DFG_MODULE_NS(io)::TextEncoding> class TableInterfaceTypes
+        {
+        public:
+            typedef Char_T* SzPtrW;
+            typedef const Char_T* SzPtrR;
+            typedef std::basic_string<Char_T> StringT;
+        };
+
+        template <> struct TableInterfaceTypes<char, DFG_MODULE_NS(io)::encodingUTF8>
+        {
+            typedef SzPtrUtf8W SzPtrW;
+            typedef SzPtrUtf8R SzPtrR;
+            typedef DFG_CLASS_NAME(StringTyped) < CharPtrTypeUtf8 > StringT;
+        };
+    } // namespace DFG_DETAIL_NS
+
     // Class for efficiently storing big table of small strings with no embedded nulls.
-    template <class Char_T, class Index_T = uint32, DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUnknown>
+    template <class Char_T, 
+              class Index_T = uint32,
+              DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUnknown,
+              class InterfaceTypes_T = DFG_DETAIL_NS::TableInterfaceTypes<Char_T, InternalEncoding_T>>
     class DFG_CLASS_NAME(TableSz)
     {
     public:
@@ -183,6 +204,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef std::vector<IndexPtrPair> ColumnIndexPairContainer;
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
         typedef std::map<Index_T, std::deque<std::vector<Char_T>>> CharBufferContainer;
+        typedef typename InterfaceTypes_T::SzPtrW SzPtrW;
+        typedef typename InterfaceTypes_T::SzPtrR SzPtrR;
+        typedef typename InterfaceTypes_T::StringT StringT;
 
         DFG_CLASS_NAME(TableSz)() : 
             m_nBlockSize(2048),
@@ -239,7 +263,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // If element at (nRow, nCol) already exists, it is overwritten.
         // Return: true if string was added, false otherwise.
         // Note: Even in case of overwrite, previous item is not cleared from string storage (this is implementation detail that is not part of the interface, i.e. it is not to be relied on).
-        bool addString(const DFG_CLASS_NAME(StringView)<Char_T>& sv, const Index_T nRow, const Index_T nCol)
+        bool addString(const DFG_CLASS_NAME(StringView)<Char_T, StringT>& sv, const Index_T nRow, const Index_T nCol)
         {
             const auto nLength = sv.length();
             auto& bufferCont = m_charBuffers[nCol];
@@ -259,7 +283,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Note that reallocation is not allowed because it would invalidate existing data pointers.
             if (nLength >= nFreeSpace)
                 return false;
-            currentBuffer.insert(currentBuffer.end(), sv.begin(), sv.end());
+            currentBuffer.insert(currentBuffer.end(), toCharPtr_raw(sv.begin()), toCharPtr_raw(sv.end()));
             currentBuffer.push_back('\0');
             const Char_T* const pData = &currentBuffer[nBeginIndex];
 
@@ -294,7 +318,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return;
 
             for (auto iter = m_colToRows[nCol].begin(), iterEnd = m_colToRows[nCol].end(); iter != iterEnd; ++iter)
-                func(iter->first, iter->second);
+                func(iter->first, SzPtrR(iter->second));
         }
 
         // const-overload.
@@ -305,7 +329,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return;
 
             for (auto iter = m_colToRows[nCol].begin(), iterEnd = m_colToRows[nCol].end(); iter != iterEnd; ++iter)
-                func(iter->first, iter->second);
+                func(iter->first, SzPtrR(iter->second));
         }
 
         // Visits all cells that have non-null ptr in unspecified order.
@@ -433,10 +457,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // Returns either pointer to null terminated string or nullptr, if no element exists.
         // Note: Returned pointer remains valid even if adding new strings. For behaviour in case of 
         //       overwriting item at (row, col), see documentation for AddString.
-        const Char_T* operator()(Index_T row, Index_T col) const
+        SzPtrR operator()(Index_T row, Index_T col) const
         {
             auto iter = privIteratorToIndexPair(row, col);
-            return (iter.first && iter.second->first == row) ? iter.second->second : nullptr;
+            return (iter.first && iter.second->first == row) ? SzPtrR(iter.second->second) : SzPtrR(nullptr);
         }
 
         template <class Iter_T, class ColumnIndexPairContainer_T>
@@ -483,7 +507,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             Index_T nCount = 0;
             forEachFwdColumnIndex([&](Index_T col)
             {
-                forEachFwdRowInColumn(col, [&](const Index_T, const Char_T* const psz)
+                forEachFwdRowInColumn(col, [&](const Index_T, const SzPtrR psz)
                 {
                     if (!DFG_MODULE_NS(str)::isEmptyStr(psz))
                         nCount++;
@@ -548,7 +572,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         void sortByColumn(Index_T nCol)
         {
-            sortByColumn(nCol, [](const Char_T* psz0, const Char_T* psz1) -> bool
+            sortByColumn(nCol, [](const SzPtrR psz0, const SzPtrR psz1) -> bool
             {
                 if (psz0 == nullptr && psz1 != nullptr)
                     return true;

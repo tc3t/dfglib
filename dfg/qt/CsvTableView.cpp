@@ -1285,7 +1285,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
                                 {
                                     const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal);
                                     DFG_MODULE_NS(str)::toStr(val, szBuffer);
-                                    table.setElement(r, c, szBuffer); // Note: szBuffer is utf8 as it should
+                                    table.setElement(r, c, SzPtrUtf8R(szBuffer));
                                 };
         generateForEachInTarget(target, *this, rModel, generator);
         return true;
@@ -1325,7 +1325,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
                                 {
                                     const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal);
                                     DFG_MODULE_NS(str)::toStr(val, szBuffer, pszFormat);
-                                    table.setElement(r, c, szBuffer); // Note: szBuffer is utf8 as it should
+                                    table.setElement(r, c, SzPtrUtf8R(szBuffer));
                                 };
         generateForEachInTarget(target, *this, rModel, generator);
         return true;
@@ -1336,7 +1336,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         const auto pszFillU8 = SzPtrUtf8(sFill.data());
         const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
         {
-            table.setElement(r, c, pszFillU8.c_str());
+            table.setElement(r, c, pszFillU8);
         };
         generateForEachInTarget(target, *this, rModel, generator);
         return true;

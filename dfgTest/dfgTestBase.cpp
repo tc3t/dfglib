@@ -428,25 +428,29 @@ TEST(dfg, toSzPtr)
     std::string s(sz);
     std::wstring ws(wsz);
 
-    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(sz))>::value));
-    DFGTEST_STATIC((std::is_same<const wchar_t*, decltype(toSzPtr_raw(wsz))>::value));
-    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(s))>::value));
-    DFGTEST_STATIC((std::is_same<const wchar_t*, decltype(toSzPtr_raw(ws))>::value));
-    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(tszAscii))>::value));
-    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(tszLatin1))>::value));
-    DFGTEST_STATIC((std::is_same<const char*, decltype(toSzPtr_raw(tszUtf8))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toCharPtr_raw(sz))>::value));
+    DFGTEST_STATIC((std::is_same<const wchar_t*, decltype(toCharPtr_raw(wsz))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toCharPtr_raw(s))>::value));
+    DFGTEST_STATIC((std::is_same<const wchar_t*, decltype(toCharPtr_raw(ws))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toCharPtr_raw(tszAscii))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toCharPtr_raw(tszLatin1))>::value));
+    DFGTEST_STATIC((std::is_same<const char*, decltype(toCharPtr_raw(tszUtf8))>::value));
+
+    DFGTEST_STATIC((std::is_same<TypedCharPtrAsciiR, decltype(toCharPtr_typed(tszAscii))>::value));
+    DFGTEST_STATIC((std::is_same<TypedCharPtrLatin1R, decltype(toCharPtr_typed(tszLatin1))>::value));
+    DFGTEST_STATIC((std::is_same<TypedCharPtrUtf8R, decltype(toCharPtr_typed(tszUtf8))>::value));
 
     DFGTEST_STATIC((std::is_same<SzPtrAsciiR, decltype(toSzPtr_typed(tszAscii))>::value));
     DFGTEST_STATIC((std::is_same<SzPtrLatin1R, decltype(toSzPtr_typed(tszLatin1))>::value));
     DFGTEST_STATIC((std::is_same<SzPtrUtf8R, decltype(toSzPtr_typed(tszUtf8))>::value));
 
-    EXPECT_EQ(sz, toSzPtr_raw(sz));
-    EXPECT_EQ(wsz, toSzPtr_raw(wsz));
-    EXPECT_EQ(s.c_str(), toSzPtr_raw(s));
-    EXPECT_EQ(ws.c_str(), toSzPtr_raw(ws));
-    EXPECT_EQ(sz, toSzPtr_raw(tszAscii));
-    EXPECT_EQ(sz, toSzPtr_raw(tszLatin1));
-    EXPECT_EQ(sz, toSzPtr_raw(tszUtf8));
+    EXPECT_EQ(sz, toCharPtr_raw(sz));
+    EXPECT_EQ(wsz, toCharPtr_raw(wsz));
+    EXPECT_EQ(s.c_str(), toCharPtr_raw(s));
+    EXPECT_EQ(ws.c_str(), toCharPtr_raw(ws));
+    EXPECT_EQ(sz, toCharPtr_raw(tszAscii));
+    EXPECT_EQ(sz, toCharPtr_raw(tszLatin1));
+    EXPECT_EQ(sz, toCharPtr_raw(tszUtf8));
 
     EXPECT_EQ(tszAscii, toSzPtr_typed(tszAscii));
     EXPECT_EQ(tszLatin1, toSzPtr_typed(tszLatin1));

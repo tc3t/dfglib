@@ -41,7 +41,7 @@ public:
 
     bool operator==(const SzPtrR& psz) const
     {
-        return (std::strcmp(toSzPtr_raw(c_str()), toSzPtr_raw(psz)) == 0);
+        return (std::strcmp(toCharPtr_raw(c_str()), toCharPtr_raw(psz)) == 0);
     }
 
     bool operator!=(const SzPtrR& psz) const

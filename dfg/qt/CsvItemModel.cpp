@@ -120,7 +120,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, SzPtrUtf8R psz)
 {
-    const auto bRv = m_table.addString(psz.c_str(), nRow, nCol);
+    const auto bRv = m_table.addString(psz, nRow, nCol);
     DFG_ASSERT(bRv); // Triggering ASSERT means that string couldn't be added to table.
     return bRv;
 }
@@ -187,8 +187,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
     m_vecColInfo.reserve(nMaxColCount);
     for (int c = 0; c < nMaxColCount; ++c)
     {
-        auto p = m_table(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
-        m_vecColInfo.push_back(ColInfo((p) ? QString::fromUtf8(p) : QString()));
+        SzPtrUtf8R p = m_table(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
+        m_vecColInfo.push_back(ColInfo((p) ? QString::fromUtf8(p.c_str()) : QString()));
         if (m_bEnableCompleter)
         {
             m_vecColInfo.back().m_spCompleter.reset(new QCompleter(this));
@@ -321,8 +321,8 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
 
     if ((role == Qt::DisplayRole || role == Qt::EditRole || role == Qt::ToolTipRole) && this->hasIndex(nRow, nCol))
     {
-        const auto p = m_table(nRow, nCol);
-        return (p) ? QString::fromUtf8(p) : QVariant();
+        const SzPtrUtf8R p = m_table(nRow, nCol);
+        return (p) ? QString::fromUtf8(p.c_str()) : QVariant();
     }
     else
         return QVariant();
@@ -353,10 +353,10 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nR
     }
 
     // Check whether the new value is different from old to avoid setting modified even if nothing changes.
-    const auto pExisting = m_table(nRow, nCol);
-    if (pExisting && std::strlen(pszU8.c_str()) <= std::strlen(pExisting)) // Note: assuming that pExisting is utf8.
+    const SzPtrUtf8R pExisting = m_table(nRow, nCol);
+    if (pExisting && std::strlen(pszU8.c_str()) <= std::strlen(pExisting.c_str()))
     {
-        if (std::strcmp(pExisting, pszU8.c_str()) == 0) // Identical item? If yes, skip rest to avoid setting modified.
+        if (std::strcmp(pExisting.c_str(), pszU8.c_str()) == 0) // Identical item? If yes, skip rest to avoid setting modified.
             return;
     }
 
@@ -426,7 +426,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, i
 
     m_table.insertRowsAt(position, count);
     if (position == nOldRowCount) // If appending at end, must add an empty element as otherwise table size won't change.
-        m_table.setElement(nLastNewRowIndex, 0, "");
+        m_table.setElement(nLastNewRowIndex, 0, SzPtrUtf8(""));
     endInsertRows();
     setModifiedStatus(true);
     return true;

@@ -75,8 +75,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 return;
             for (auto iter = selected.begin(); iter != selected.end(); ++iter)
             {
-                auto p = pModel->RawStringPtrAt(iter->row(), iter->column()).c_str();
-                cellMemory.setElement(iter->row(), iter->column(), (p) ? p : "");
+                SzPtrUtf8R p = pModel->RawStringPtrAt(iter->row(), iter->column());
+                cellMemory.setElement(iter->row(), iter->column(), (p) ? p : SzPtrUtf8(""));
             }
         }
 
@@ -275,8 +275,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                     QModelIndex indexTarget = pModel->index(nTargetRow, nTargetCol);
                     if (!indexTarget.isValid())
                         return;
-                    m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, pModel->data(indexTarget).toString().toUtf8().data()); // TODO: makes redundant QString round-trip.
-                    m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, QString::fromWCharArray(psz).toUtf8().data());
+                    m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(pModel->data(indexTarget).toString().toUtf8().data())); // TODO: makes redundant QString round-trip.
+                    m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(QString::fromWCharArray(psz).toUtf8().data()));
                 });
 
                 QString sDesc;

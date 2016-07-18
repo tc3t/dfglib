@@ -120,7 +120,7 @@ TEST(dfgCont, table)
 
 }
 
-TEST(dfgCont, TableSz)
+TEST(dfgCont, TableSzUntypedInterface)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(cont);
@@ -189,6 +189,77 @@ TEST(dfgCont, TableSz)
     EXPECT_STREQ("r1c3", table(1, 3));
     EXPECT_STREQ(nullptr, table(3, 0));
     EXPECT_EQ(nullptr, table(0, 1));
+}
+
+TEST(dfgCont, TableSzTypedInterface)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+
+    DFG_CLASS_NAME(TableSz)<char, uint32, DFG_MODULE_NS(io)::encodingUTF8> table;
+    table.setBlockSize(100);
+
+    StringUtf8 sAlmostBlockSize;
+    sAlmostBlockSize.m_s.assign(99, ' ');
+
+    EXPECT_TRUE(table.addString(SzPtrUtf8("a"), 8, 0));
+    EXPECT_TRUE(table.addString(StringUtf8(SzPtrUtf8("b")), 0, 0));
+    EXPECT_TRUE(table.addString(sAlmostBlockSize, 7, 0));
+    EXPECT_TRUE(table.addString(SzPtrUtf8("r1c3_initial"), 1, 3));
+    EXPECT_TRUE(table.addString(SzPtrUtf8(""), 1, 0));
+    EXPECT_TRUE(table.addString(SzPtrUtf8("cde"), 4, 0));
+
+    EXPECT_STREQ("r1c3_initial", table(1, 3).c_str());
+    EXPECT_TRUE(table.setElement(1, 3, SzPtrUtf8("r1c3")));
+
+    const size_t nItemCount = 5;
+    const std::array<StringUtf8, nItemCount> arrExpectedStrsInCol0 = { StringUtf8(SzPtrUtf8R("b")), StringUtf8(SzPtrUtf8R("")), StringUtf8(SzPtrUtf8R("cde")), sAlmostBlockSize, StringUtf8(SzPtrUtf8R("a")) };
+    const std::array<uint32, nItemCount> arrExpectedRowsInCol0 = { 0, 1, 4, 7, 8 };
+    size_t nCounter = 0;
+    table.forEachFwdRowInColumn(0, [&](const uint32 row, SzPtrUtf8R tpsz)
+    {
+        EXPECT_TRUE(DFG_ROOT_NS::isValidIndex(arrExpectedStrsInCol0, nCounter));
+        EXPECT_EQ(arrExpectedStrsInCol0[nCounter], tpsz);
+        EXPECT_EQ(arrExpectedRowsInCol0[nCounter], row);
+        ++nCounter;
+    });
+    EXPECT_EQ(nItemCount, nCounter);
+    table.forEachFwdRowInColumn(1, [&](const uint32, SzPtrUtf8R)
+    {
+        EXPECT_FALSE(true); // Should not reach here since there are no items in column 1.
+    });
+
+    const std::array<StringUtf8, nItemCount> arrExpectedStrsInCol3 = { StringUtf8(SzPtrUtf8R("r1c3")) };
+    const std::array<uint32, nItemCount> arrExpectedRowsInCol3 = { 1 };
+    nCounter = 0;
+    table.forEachFwdRowInColumn(3, [&](const uint32 row, SzPtrUtf8R tpsz)
+    {
+        EXPECT_TRUE(DFG_ROOT_NS::isValidIndex(arrExpectedStrsInCol3, nCounter));
+        EXPECT_EQ(arrExpectedStrsInCol3[nCounter], tpsz);
+        EXPECT_EQ(arrExpectedRowsInCol3[nCounter], row);
+        ++nCounter;
+    });
+    EXPECT_EQ(1, nCounter);
+
+    std::vector<size_t> cols;
+    table.forEachFwdColumnIndex([&](size_t nCol)
+    {
+        cols.push_back(nCol);
+    });
+    EXPECT_EQ(2, cols.size());
+    EXPECT_EQ(0, cols[0]);
+    EXPECT_EQ(3, cols[1]);
+
+    StringUtf8 sLongerThanBlockSize;
+    sLongerThanBlockSize.m_s.assign(120, '0');
+    EXPECT_TRUE(table.addString(sLongerThanBlockSize, 10, 10));
+    table.setAllowBlockSizeExceptions(false);
+    EXPECT_FALSE(table.addString(sLongerThanBlockSize, 11, 11));
+
+    EXPECT_STREQ("cde", table(4, 0).c_str());
+    EXPECT_STREQ("r1c3", table(1, 3).c_str());
+    EXPECT_EQ(nullptr, table(3, 0).c_str());
+    EXPECT_EQ(nullptr, table(0, 1).c_str());
 }
 
 TEST(dfgCont, TableSzSorting)
@@ -641,7 +712,7 @@ TEST(dfgCont, TableCsv)
         DFG_CLASS_NAME(DelimitedTextReader)::read(istrm, wchar_t(','), wchar_t('"'), wchar_t('\n'), [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t)
         {
             std::wstring sUtfConverted;
-            auto inputRange = DFG_ROOT_NS::makeSzRange((*tables.front())(nRow, nCol));
+            auto inputRange = DFG_ROOT_NS::makeSzRange((*tables.front())(nRow, nCol).c_str());
             DFG_MODULE_NS(utf)::utf8To16Native(inputRange, std::back_inserter(sUtfConverted));
             EXPECT_EQ(psz, sUtfConverted);
         });

@@ -89,7 +89,7 @@ DFG_ROOT_NS_BEGIN{
                     {
                         auto p0 = (*this)(r, c);
                         auto p1 = other(r, c);
-                        if ((!p0 && p1) || (p0 && !p1) || (std::strcmp(p0, p1) != 0)) // TODO: Create comparison function instead of using strcmp().
+                        if ((!p0 && p1) || (p0 && !p1) || (std::strcmp(toCharPtr_raw(p0), toCharPtr_raw(p1)) != 0)) // TODO: Create comparison function instead of using strcmp().
                             return false;
                     }
                 }
@@ -180,7 +180,9 @@ DFG_ROOT_NS_BEGIN{
                 auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
                 auto cellHandler = [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& cdh)
                 {
-                    this->setElement(nRow, nCol, cdh.getBuffer());
+                    DFG_STATIC_ASSERT(InternalEncoding_T == DFG_MODULE_NS(io)::encodingUTF8, "Implimentation exists only for UTF8-encoding");
+                    const auto& buffer = cdh.getBuffer();
+                    this->setElement(nRow, nCol, StringViewUtf8(SzPtrUtf8(buffer.c_str()), buffer.length()));
                 };
                 DFG_CLASS_NAME(DelimitedTextReader)::read(reader, cellHandler);
                 const auto& readFormat = reader.getFormatDefInfo();

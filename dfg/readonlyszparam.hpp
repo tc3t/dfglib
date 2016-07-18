@@ -172,7 +172,9 @@ template <class Char_T, class Str_T = std::basic_string<Char_T>>
 class DFG_CLASS_NAME(StringView)
 {
 public:
-    typedef decltype(Str_T().c_str()) PtrT;
+    typedef decltype(Str_T().c_str()) SzPtrT;
+    typedef decltype(toCharPtr(Str_T().c_str())) PtrT;
+    
     typedef PtrT const_iterator;
 
     DFG_CLASS_NAME(StringView)(const Str_T& s) :
@@ -181,7 +183,7 @@ public:
     {
     }
 
-    DFG_CLASS_NAME(StringView)(PtrT psz) :
+    DFG_CLASS_NAME(StringView)(SzPtrT psz) :
         m_pFirst(psz),
         m_nSize(readOnlySzParamLength(psz))
     {
@@ -205,7 +207,7 @@ public:
 
     const_iterator end() const
     {
-        return PtrT(toSzPtr_raw(m_pFirst) + m_nSize);
+        return PtrT(toCharPtr_raw(m_pFirst) + m_nSize);
     }
 
 protected:

@@ -429,7 +429,7 @@ namespace
         StringView_T view(conv(sz));
         StringView_T view2Chars(conv(&sz[0] + 1), 2);
         EXPECT_EQ(conv(&sz[1]), view2Chars.begin());
-        EXPECT_STREQ(&sz[1], toSzPtr_raw(view2Chars.begin()));
+        EXPECT_STREQ(&sz[1], toCharPtr_raw(view2Chars.begin()));
         EXPECT_EQ(2, view2Chars.length());
         StringView_T view2(s);
         EXPECT_EQ(s.c_str(), view2.begin());
