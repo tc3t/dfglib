@@ -94,6 +94,24 @@ TEST(dfgStr, isEmptyStr)
     EXPECT_FALSE(isEmptyStr(StringViewUtf8(SzPtrUtf8("a"))));
 }
 
+TEST(dfgStr, strCmp)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
+    // String literal
+    EXPECT_EQ(std::strcmp("a", "a"), strCmp("a", "a"));
+    EXPECT_EQ(std::strcmp("b", "a"), strCmp("b", "a"));
+
+    // Wide string literal
+    EXPECT_EQ(std::wcscmp(L"a", L"a"), strCmp(L"a", L"a"));
+    EXPECT_EQ(std::wcscmp(L"b", L"a"), strCmp(L"b", L"a"));
+
+    // SzPtr
+    EXPECT_EQ(0, strCmp(SzPtrUtf8("a"), SzPtrUtf8("a")));
+    EXPECT_TRUE(strCmp(SzPtrUtf8("a"), SzPtrUtf8("b")) < 0);
+}
+
 TEST(dfgStr, strCat)
 {
     using namespace DFG_ROOT_NS;

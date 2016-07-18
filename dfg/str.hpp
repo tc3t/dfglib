@@ -93,6 +93,10 @@ template <size_t N> inline wchar_t* strCpy(wchar_t (&dest)[N], NonNullCStrW pszS
 //			  If psz1 > psz2 : positive value
 inline int strCmp(const NonNullCStr psz1, const NonNullCStr psz2)	{return strcmp(psz1, psz2);}
 inline int strCmp(const NonNullCStrW psz1, const NonNullCStrW psz2) {return wcscmp(psz1, psz2);}
+template <class Char_T, CharPtrType Type_T> inline int strCmp(const SzPtrT<Char_T, Type_T>& tpsz1, const SzPtrT<Char_T, Type_T>& tpsz2)
+{ 
+    return strCmp(tpsz1.c_str(), tpsz2.c_str());
+}
 
 // Replaces occurrences of 'sOldSub' with 'sNewSub' in given string.
 // Note: Behaviour is undefined if substrings overlap with 'str'.
