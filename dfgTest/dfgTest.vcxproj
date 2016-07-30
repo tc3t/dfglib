@@ -679,6 +679,7 @@
     <ClCompile Include="dfgTestPhysics.cpp" />
     <ClCompile Include="dfgTestRand.cpp" />
     <ClCompile Include="dfgTestStr.cpp" />
+    <ClCompile Include="dfgTestTime.cpp" />
     <ClCompile Include="dfgTestUtf.cpp" />
     <ClCompile Include="dlibSource.cpp" />
     <ClCompile Include="stdafx.cpp">

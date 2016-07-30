@@ -38,3 +38,9 @@
     #define DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED explicit
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2012)
+    #define DFG_LANGFEAT_CHRONO_11  0
+#else
+    #define DFG_LANGFEAT_CHRONO_11  1
+#endif
+

@@ -122,5 +122,8 @@
     <ClCompile Include="dfgTestCsvPerformance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dfgTestTime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
