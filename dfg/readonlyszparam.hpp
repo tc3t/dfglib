@@ -226,10 +226,10 @@ typedef DFG_CLASS_NAME(ReadOnlySzParam)<wchar_t>			DFG_CLASS_NAME(ReadOnlySzPara
 typedef DFG_CLASS_NAME(ReadOnlySzParamWithSize)<char>		DFG_CLASS_NAME(ReadOnlySzParamWithSizeC);
 typedef DFG_CLASS_NAME(ReadOnlySzParamWithSize)<wchar_t>	DFG_CLASS_NAME(ReadOnlySzParamWithSizeW);
 
-typedef DFG_CLASS_NAME(StringView)<char>		            DFG_CLASS_NAME(StringViewC);
-typedef DFG_CLASS_NAME(StringView)<wchar_t>	                DFG_CLASS_NAME(StringViewW);
-typedef DFG_CLASS_NAME(StringView)<char, StringAscii>	    DFG_CLASS_NAME(StringViewAscii);
-typedef DFG_CLASS_NAME(StringView)<char, StringLatin1>	    DFG_CLASS_NAME(StringViewLatin1);
-typedef DFG_CLASS_NAME(StringView)<char, StringUtf8>	    DFG_CLASS_NAME(StringViewUtf8);
+typedef DFG_CLASS_NAME(StringView)<char>    	                        DFG_CLASS_NAME(StringViewC);
+typedef DFG_CLASS_NAME(StringView)<wchar_t>                             DFG_CLASS_NAME(StringViewW);
+typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringAscii)>   DFG_CLASS_NAME(StringViewAscii);
+typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringLatin1)>  DFG_CLASS_NAME(StringViewLatin1);
+typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringUtf8)>    DFG_CLASS_NAME(StringViewUtf8);
 
 } // namespace

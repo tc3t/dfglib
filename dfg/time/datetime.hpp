@@ -1,3 +1,4 @@
+#pragma once
 #include "../dfgDefs.hpp"
 #include "../dfgBaseTypedefs.hpp"
 #include "../numericTypeTools.hpp"
@@ -45,7 +46,7 @@ public:
 class DFG_CLASS_NAME(DateTime)
 {
 public:
-    DFG_CLASS_NAME(DateTime)(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
+	DFG_CLASS_NAME(DateTime)(int year, int month, int day, int hour, int minute, int second, int milliseconds, DFG_CLASS_NAME(UtcOffsetInfo) utcOffsetInfo = DFG_CLASS_NAME(UtcOffsetInfo)());
 
 #ifdef _WIN32
     explicit DFG_CLASS_NAME(DateTime)(const _SYSTEMTIME& st);
@@ -58,7 +59,7 @@ public:
 #endif
 
     // Return value is positive if *this < other
-    std::chrono::duration<double> secondsTo(const DateTime& other) const;
+	std::chrono::duration<double> secondsTo(const DFG_CLASS_NAME(DateTime)& other) const;
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
     // This behaviour differs from that of e.g. std::localtime (see systemTime_local-test)
@@ -96,7 +97,7 @@ public:
         return static_cast<uint8>(((m_milliSecSinceMidnight / 1000) / 3600));
     }
 
-    const UtcOffsetInfo& utcOffsetInfo() const { return m_utcOffsetInfo; }
+	const DFG_CLASS_NAME(UtcOffsetInfo)& utcOffsetInfo() const { return m_utcOffsetInfo; }
 
     uint16 m_year;
     uint8 m_month; // In range 1-12
