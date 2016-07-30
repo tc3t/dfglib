@@ -417,7 +417,11 @@ TEST(dfg, SzPtrTypes)
 
     // Test bool conversion and comparison with nullptr
     {
-        EXPECT_TRUE(SzPtrAscii(""));
+        //EXPECT_TRUE(SzPtrAscii("")); // This does not compile on VC2015
+        if (SzPtrAscii(""))
+            EXPECT_TRUE(true);
+        else
+            EXPECT_TRUE(false);
         EXPECT_TRUE(SzPtrAscii("") != nullptr);
         EXPECT_TRUE(SzPtrAscii(nullptr) == nullptr);
     }
