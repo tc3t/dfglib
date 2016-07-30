@@ -15,22 +15,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time) {
 
 
 #if DFG_LANGFEAT_CHRONO_11
-class UtcOffsetInfo
+class DFG_CLASS_NAME(UtcOffsetInfo)
 {
 public:
     static const int32 s_nNotSetValueMimicing = NumericTraits<int32>::minValue; // With the 'mimicing not set'-value this UtcOffsetInfo mimics UtcOffsetInfo of another operand in certain operations.
-    UtcOffsetInfo() :
+    DFG_CLASS_NAME(UtcOffsetInfo)() :
         m_offsetValue(s_nNotSetValueMimicing)
     {
     }
 
-    UtcOffsetInfo(const std::chrono::seconds& offset) :
+    DFG_CLASS_NAME(UtcOffsetInfo)(const std::chrono::seconds& offset) :
         m_offsetValue(static_cast<int>(offset.count()))
     {
     }
 
     // If both return true from isSet(), return value is other.setOffsetInSeconds() - this->offsetDiffInSeconds()
-    int32 offsetDiffInSeconds(const UtcOffsetInfo& other) const;
+    int32 offsetDiffInSeconds(const DFG_CLASS_NAME(UtcOffsetInfo)& other) const;
 
     bool isSet() const { return m_offsetValue != s_nNotSetValueMimicing; }
 
@@ -42,13 +42,13 @@ public:
     int32 m_offsetValue; // Positive means ahead of UTC-time, e.g. value 3600 means 1 hour ahead of UTC.
 };
 
-class DateTime
+class DFG_CLASS_NAME(DateTime)
 {
 public:
-    DateTime(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
+    DFG_CLASS_NAME(DateTime)(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
 
 #ifdef _WIN32
-    explicit DateTime(const _SYSTEMTIME& st);
+    explicit DFG_CLASS_NAME(DateTime)(const _SYSTEMTIME& st);
 
     _SYSTEMTIME toSystemTime() const;
 
@@ -62,8 +62,8 @@ public:
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
     // This behaviour differs from that of e.g. std::localtime (see systemTime_local-test)
-    static DateTime systemTime_local();
-    static DateTime systemTime_utc();
+    static DFG_CLASS_NAME(DateTime) systemTime_local();
+    static DFG_CLASS_NAME(DateTime) systemTime_utc();
 
     static uint32 millisecondsSinceMidnight(int hour, int minutes, int seconds, int milliseconds);
     uint32 millisecondsSinceMidnight() const { return m_milliSecSinceMidnight; }
@@ -102,7 +102,7 @@ public:
     uint8 m_month; // In range 1-12
     uint8 m_day;   // In range 1-31
     uint32 m_milliSecSinceMidnight;
-    UtcOffsetInfo m_utcOffsetInfo;
+    DFG_CLASS_NAME(UtcOffsetInfo) m_utcOffsetInfo;
 }; // class DateTime
 
 #endif // DFG_LANGFEAT_CHRONO_11

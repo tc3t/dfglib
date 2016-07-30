@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dfgDefs.hpp"
+#include "dfgBaseTypedefs.hpp"
 #include "SzPtrTypes.hpp"
 #include <string>
 

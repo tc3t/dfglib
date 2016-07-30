@@ -182,7 +182,7 @@ DFG_ROOT_NS_BEGIN{
                 {
                     DFG_STATIC_ASSERT(InternalEncoding_T == DFG_MODULE_NS(io)::encodingUTF8, "Implimentation exists only for UTF8-encoding");
                     const auto& buffer = cdh.getBuffer();
-                    this->setElement(nRow, nCol, StringViewUtf8(SzPtrUtf8(buffer.c_str()), buffer.length()));
+                    this->setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(SzPtrUtf8(buffer.c_str()), buffer.length()));
                 };
                 DFG_CLASS_NAME(DelimitedTextReader)::read(reader, cellHandler);
                 const auto& readFormat = reader.getFormatDefInfo();

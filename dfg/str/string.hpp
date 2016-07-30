@@ -27,8 +27,8 @@ public:
     typedef TypedCharPtrT<const char, Type_T> TypedPtrT;
     typedef SzPtrT<const char, Type_T> SzPtrR;
 
-    StringTyped() {}
-    explicit StringTyped(SzPtrR psz) : m_s(psz.c_str()) {}
+    DFG_CLASS_NAME(StringTyped)() {}
+    explicit DFG_CLASS_NAME(StringTyped)(SzPtrR psz) : m_s(psz.c_str()) {}
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }
 
     void append(const TypedPtrT& first, const TypedPtrT& end)
@@ -71,7 +71,7 @@ public:
 }; // class StringTyped
 
 template<class SzPtr_T, CharPtrType Type_T>
-inline bool operator==(const SzPtr_T& psz, const StringTyped<Type_T>& right)
+inline bool operator==(const SzPtr_T& psz, const DFG_CLASS_NAME(StringTyped)<Type_T>& right)
 {
     return right == psz;
 }
