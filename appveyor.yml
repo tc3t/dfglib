@@ -4,7 +4,7 @@ configuration:
 #- Debug_VC2012
 platform: Win32
 before_build:
-- cmd: mklink /D externals\boost\ C:\Libraries\boost_1_60_0
+- cmd: mklink /D C:\projects\dfglib\externals\boost\ C:\Libraries\boost_1_60_0
 build:
   project: dfgTest/dfgTest.vcxproj
   verbosity: normal
