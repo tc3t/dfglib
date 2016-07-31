@@ -1,0 +1,7 @@
+version: 1.0.{build}
+configuration:
+- Debug_VC2010
+- Debug_VC2012
+platform: Win32
+build:
+  verbosity: detailed
