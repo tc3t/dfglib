@@ -1,7 +1,10 @@
 version: 1.0.{build}
 configuration:
 - Debug_VC2010
-- Debug_VC2012
+#- Debug_VC2012
 platform: Win32
+before_build:
+- cmd: mklink /D externals\boost\ C:\Libraries\boost_1_60_0
 build:
-  verbosity: detailed
+  project: dfgTest/dfgTest.vcxproj
+  verbosity: normal
