@@ -31,7 +31,7 @@ test_script:
 
 
 
-    ($env:CONFIGURATION)\dfgTest.exe --gtest_output=xml:($env:CONFIGURATION)\dfgTest.xml
+    c:\projects\dfglib\dfgTest\Debug_VC2010\dfgTest.exe --gtest_output=xml:c:\projects\dfglib\dfgTest\Debug_VC2010\dfgTest.xml
 
 
 
@@ -45,4 +45,4 @@ test_script:
 
 
 
-    $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ($env:CONFIGURATION)\dfgTest.xml))
+    $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (c:\projects\dfglib\dfgTest\Debug_VC2010\dfgTest.xml))
