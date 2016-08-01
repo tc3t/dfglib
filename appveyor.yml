@@ -6,11 +6,11 @@ platform: Win32
 before_build:
 - ps: >-
 
-    cmd /c mklink /D externals\boost\ C:\Libraries\boost\boost
+    cmd /c mklink /D externals\boost\ C:\Libraries\boost_1_60_0\boost
 
 
 
-    (New-Object Net.WebClient).DownloadFile('https://docs.google.com/uc?id=0B8fu7_MirpvpTWNVNzZZTDFFaXc&export=download', 'c:\projects\dfglib\externals\dlib.7z')
+    (New-Object Net.WebClient).DownloadFile('https://docs.google.com/uc?id=0B8fu7_MirpvpNTE3OHhQcVRTRkk&export=download', 'c:\projects\dfglib\externals\dlib.7z')
 
 
 
