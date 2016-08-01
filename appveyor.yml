@@ -5,11 +5,21 @@ configuration:
 platform: Win32
 before_build:
 - ps: >-
+
     cmd /c mklink /D externals\boost\ C:\Libraries\boost_1_60_0
-    (New-Object Net.WebClient).DownloadFile('https://docs.google.com/uc?id=0B8fu7_MirpvpTWNVNzZZTDFFaXc&export=download', 'C:\projects\dfglib\externals\dlib.7z')
+
+
+
+    (New-Object Net.WebClient).DownloadFile('https://docs.google.com/uc?id=0B8fu7_MirpvpTWNVNzZZTDFFaXc&export=download', 'c:\projects\dfglib\externals\dlib.7z')
+
+
+
     cd externals
+
      & 'C:\Program Files\7-Zip\7z.exe' x dlib.7z
+
     cd ..
+
 build:
   project: dfgTest/dfgTest.vcxproj
   verbosity: normal
