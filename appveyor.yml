@@ -1,6 +1,7 @@
 version: 1.0.{build}
 configuration:
 - Debug_VC2010
+- Release_VC2015
 #- Debug_VC2012
 platform: Win32
 before_build:
