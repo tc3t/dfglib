@@ -4,7 +4,11 @@ configuration:
 #- Debug_VC2012
 platform: Win32
 before_build:
-- cmd: mklink /D C:\projects\dfglib\externals\boost\ C:\Libraries\boost_1_60_0\boost
+- ps: >-
+    cmd /c mklink /D externals\boost\ C:\Libraries\boost_1_60_0
+    (New-Object Net.WebClient).DownloadFile('https://docs.google.com/uc?id=0B8fu7_MirpvpTWNVNzZZTDFFaXc&export=download', 'externals\dlib.7z')
+    cd externals
+     & 'C:\Program Files\7-Zip\7z.exe' x dlib.7z
 build:
   project: dfgTest/dfgTest.vcxproj
   verbosity: normal
