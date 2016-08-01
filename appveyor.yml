@@ -6,7 +6,7 @@ platform: Win32
 before_build:
 - ps: >-
 
-    cmd /c mklink /D externals\boost\ C:\Libraries\boost_1_60_0\boost
+    cmd /c mklink /D externals\boost\ C:\Libraries\boost\boost
 
 
 
