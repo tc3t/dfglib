@@ -6,7 +6,9 @@ configuration:
 - Release_VC2010
 - Release_VC2013
 - Release_VC2015
-platform: x64
+platform:
+- Win32
+- x64
 before_build:
 - ps: >-
     cmd /c mklink /D externals\boost\ C:\Libraries\boost_1_60_0\boost
