@@ -96,3 +96,6 @@
 /dfgTest/Win32/Debug_VC2015
 /dfgTest/dfgTest.VC.db
 /dfgTest/dfgTest.VC.VC.opendb
+/dfgTest/x64/Debug_VC2010
+/dfgTest/x64/Release_VC2010
+/dfgTest/x64/Release_VC2012

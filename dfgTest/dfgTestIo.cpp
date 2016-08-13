@@ -554,7 +554,7 @@ TEST(dfgIo, OByteStream)
 #if DFG_LANGFEAT_MOVABLE_STREAMS
     auto ostrmToDoubleArray = makeOmcByteStream(doubles);
 #else
-    DFG_CLASS_NAME(OmcByteStream)<std::vector<double>> ostrmToDoubleArray(doubles);
+    DFG_CLASS_NAME(OmcByteStream)<std::vector<double>> ostrmToDoubleArray(&doubles);
 #endif
 
     DFG_CLASS_NAME(ImcByteStream) istrm2(ostrmCompressed.data(), ostrmCompressed.size());
@@ -562,7 +562,6 @@ TEST(dfgIo, OByteStream)
 
     EXPECT_EQ(bytes.size(), sizeInBytes(doubles));
     EXPECT_FALSE(std::memcmp(bytes.data(), doubles.data(), bytes.size()));
-
 }
 
 TEST(dfgIo, ImcByteStream)
