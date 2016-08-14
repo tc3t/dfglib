@@ -621,7 +621,7 @@
     <ClCompile>
       <LanguageStandardMode>LanguageStandardC++11</LanguageStandardMode>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;__NO_INLINE__</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libstdc++;shlwapi</AdditionalDependencies>
