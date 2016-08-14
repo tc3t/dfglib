@@ -619,7 +619,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinGW|MinGW'">
     <ClCompile>
-      <LanguageStandardMode>LanguageStandardC++11</LanguageStandardMode>
+      <LanguageStandardMode>LanguageStandardGnu++11</LanguageStandardMode>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;__NO_INLINE__</PreprocessorDefinitions>
     </ClCompile>
