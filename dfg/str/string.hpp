@@ -36,6 +36,13 @@ public:
         m_s.append(first.rawPtr(), end.rawPtr());
     }
 
+	// TODO: test
+	DFG_CLASS_NAME(StringTyped) operator=(const SzPtrR& psz)
+	{
+		rawStorage() = psz.c_str();
+		return *this;
+	}
+
     bool empty() const
     {
         return m_s.empty();
@@ -63,6 +70,12 @@ public:
     {
         m_s.resize(nNewSize, '\0');
     }
+
+	// TODO: test
+	bool operator<(const DFG_CLASS_NAME(StringTyped)& other) const
+	{
+		return rawStorage() < other.rawStorage();
+	}
 
     StorageType& rawStorage() { return m_s; }
     const StorageType& rawStorage() const { return m_s; }
