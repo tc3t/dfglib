@@ -469,7 +469,8 @@ namespace
     void TestStringViewImpl(RawToTypedConv conv)
     {
         using namespace DFG_ROOT_NS;
-        const Char_T sz[] = { 'a', 'b', 'c', '\0' };
+        const Char_T sz[]  = { 'a', 'b', 'c', '\0' };
+        const Char_T sz2[] = { 'b', 'c', 'a', '\0' };
         const Str_T s(conv(sz));
 
         StringView_T view(conv(sz));
@@ -479,6 +480,17 @@ namespace
         EXPECT_EQ(2, view2Chars.length());
         StringView_T view2(s);
         EXPECT_EQ(s.c_str(), view2.begin());
+
+        // Test operator==
+        EXPECT_TRUE(view == view2);
+        EXPECT_TRUE(StringView_T(Str_T()) == StringView_T(Str_T()));
+        EXPECT_TRUE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 2));
+        EXPECT_FALSE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 3));
+        EXPECT_FALSE(StringView_T(conv(sz), 2) == StringView_T(conv(sz2), 2));
+        EXPECT_TRUE(view == s);
+        EXPECT_TRUE(s == view);
+        EXPECT_TRUE(view == s.c_str());
+        EXPECT_TRUE(s.c_str() == view);
     }
 }
 

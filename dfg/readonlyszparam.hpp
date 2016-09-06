@@ -215,10 +215,37 @@ public:
         return PtrT(toCharPtr_raw(m_pFirst) + m_nSize);
     }
 
+    bool operator==(const DFG_CLASS_NAME(StringView)& other) const
+    {
+        return (m_nSize == other.m_nSize) && std::equal(toCharPtr_raw(m_pFirst), toCharPtr_raw(m_pFirst) + m_nSize, toCharPtr_raw(other.m_pFirst));
+    }
+
+    bool operator==(const Str_T& str) const
+    {
+        return operator==(DFG_CLASS_NAME(StringView)(str));
+    }
+
+    bool operator==(const SzPtrT& tpsz) const
+    {
+        return operator==(DFG_CLASS_NAME(StringView)(tpsz));
+    }
+
 protected:
     PtrT m_pFirst;          // Pointer to first character.
     const size_t m_nSize;	// Length of the string as returned by strLen().
 };
+
+template<class SzPtr_T, class Char_T, class Str_T>
+inline bool operator==(const SzPtr_T& psz, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+{
+    return right == psz;
+}
+
+template<class Char_T, class Str_T>
+inline bool operator==(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+{
+    return right == s;
+}
 
 typedef DFG_CLASS_NAME(ReadOnlySzParam)<char>				DFG_CLASS_NAME(ReadOnlySzParamC);
 typedef DFG_CLASS_NAME(ReadOnlySzParam)<wchar_t>			DFG_CLASS_NAME(ReadOnlySzParamW);
