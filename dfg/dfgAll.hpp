@@ -40,5 +40,6 @@
 #include "physicsAll.hpp"
 #include "randAll.hpp"
 #include "strAll.hpp"
+#include "threadAll.hpp"
 #include "utfAll.hpp"
 

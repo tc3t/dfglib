@@ -1,6 +1,7 @@
 #include <stdafx.h>
 #include <dfg/debugAll.hpp>
 #include <dfg/dfgAssert.hpp>
+#include <dfg/thread/setThreadName.hpp>
 
 TEST(dfgDebug, AssertImplementation)
 {
@@ -71,6 +72,13 @@ TEST(dfgDebug, printToDebugDisplay)
 	printToDebugDisplay(std::string(szTextC));
 	printToDebugDisplay(szTextW);
 	printToDebugDisplay(std::wstring(szTextW));
+#endif
+}
+
+TEST(dfgDebug, setThreadName)
+{
+#ifdef _MSC_VER
+    DFG_MODULE_NS(thread)::setThreadName("NewThreadName");
 #endif
 }
 
