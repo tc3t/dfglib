@@ -90,6 +90,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static int internalRowIndexToVisible(const int nRow) { return nRow + 1; }
 
         DFG_CLASS_NAME(CsvItemModel)();
+        ~DFG_CLASS_NAME(CsvItemModel)();
 
         // Calls saveToFile(m_sFilePath) and if saving is succesfull,
         // sets m_sFilePath and resets modified flag.
@@ -188,6 +189,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return m_sFilePath; 
         }
 
+        void setFilePathWithSignalEmit(QString);
+
         void initCompletionFeature();
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
@@ -214,6 +217,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     signals:
         void sigModifiedStatusChanged(bool bNewStatus);
         void sigOnNewSourceOpened();
+        void sigSourcePathChanged();
 
     protected:
         // Clears internal data. Caller should make sure this call

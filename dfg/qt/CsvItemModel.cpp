@@ -32,6 +32,16 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
 {
 }
 
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::~DFG_CLASS_NAME(CsvItemModel)()
+{
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithSignalEmit(QString s)
+{
+    m_sFilePath = std::move(s);
+    Q_EMIT sigSourcePathChanged();
+}
+
 QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
 {
     const bool bSuccess = saveToFile(m_sFilePath);
@@ -56,7 +66,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
     if (!strm.is_open())
         return false;
 
-    return save(strm, options);
+    const bool bSuccess = save(strm, options);
+    if (bSuccess)
+        setFilePathWithSignalEmit(sPath);
+    return bSuccess;
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
@@ -151,7 +164,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
 {
     m_table.clear();
     m_vecColInfo.clear();
-    m_sFilePath.clear();
+    setFilePathWithSignalEmit(QString());
     m_bModified = false;
 }
 
@@ -279,9 +292,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
             m_table.readFromFile(sDbFilePath.toLocal8Bit().data(), loadOptions); // TODO: return value,
                                                                                  // TODO: non-lossy conversion from QString to string type that readFromFile() accepts, 
                                                                                  //       (essentially means that readFromFile should accept std::wstring)
+            setFilePathWithSignalEmit(sDbFilePath); // Note: readData() clear() file path so this line must be after it.
         });      
         //const auto elapsed0 = timer0.elapsedWallSeconds();
-        m_sFilePath = sDbFilePath; // Note: readData() calls clear() so this line must be after it.
+        
 
         //QString s = QString("Read lasted %1 s").arg(elapsed0);
         //QMessageBox::information(nullptr, "", s);
