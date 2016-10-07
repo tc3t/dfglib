@@ -21,6 +21,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../io/DelimitedTextReader.hpp"
 #include <boost/range/irange.hpp>
 #include "../io/OfStream.hpp"
+#include "../time/timerCpu.hpp"
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
@@ -28,7 +29,8 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
     m_bModified(false),
     //m_pUndoStack(nullptr),
     m_bResetting(false),
-    m_bEnableCompleter(false)
+    m_bEnableCompleter(false),
+    m_readTimeInSeconds(-1)
 {
 }
 
@@ -36,9 +38,14 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::~DFG_CLASS_NAME(CsvItemModel)()
 {
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithSignalEmit(QString s)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithoutSignalEmit(QString s)
 {
     m_sFilePath = std::move(s);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithSignalEmit(QString s)
+{
+    setFilePathWithoutSignalEmit(std::move(s));
     Q_EMIT sigSourcePathChanged();
 }
 
@@ -189,6 +196,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char*
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<void()> tableFiller)
 {
+    DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) readTimer;
+
     beginResetModel();
     m_bResetting = true;
     clear();
@@ -219,6 +228,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
     endResetModel();
     m_bResetting = false;
 
+    m_readTimeInSeconds = static_cast<decltype(m_readTimeInSeconds)>(readTimer.elapsedWallSeconds());
     Q_EMIT sigOnNewSourceOpened();
 
     return true;
@@ -273,33 +283,24 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
     return openFile(sDbFilePath, LoadOptions());
 }
 
-//#include "../time/timerCpu.hpp"
-
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, const LoadOptions& loadOptions)
 {
     if (sDbFilePath.isEmpty())
         return false;
 
-    sDbFilePath = QFileInfo(sDbFilePath).absoluteFilePath();
+    const QFileInfo fileInfo(sDbFilePath);
 
-    QFile fileData(sDbFilePath);
-
-    if (fileData.open(QFile::ReadOnly))
+    if (fileInfo.isReadable())
     {
-        //dfg::time::TimerCpu timer0;
+        sDbFilePath = fileInfo.absoluteFilePath();
         auto rv = readData([&]()
         {
             m_table.readFromFile(sDbFilePath.toLocal8Bit().data(), loadOptions); // TODO: return value,
                                                                                  // TODO: non-lossy conversion from QString to string type that readFromFile() accepts, 
                                                                                  //       (essentially means that readFromFile should accept std::wstring)
-            setFilePathWithSignalEmit(sDbFilePath); // Note: readData() clear() file path so this line must be after it.
+            setFilePathWithoutSignalEmit(std::move(sDbFilePath));
         });      
-        //const auto elapsed0 = timer0.elapsedWallSeconds();
         
-
-        //QString s = QString("Read lasted %1 s").arg(elapsed0);
-        //QMessageBox::information(nullptr, "", s);
-
         return rv;
     }
     else

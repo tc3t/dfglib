@@ -189,9 +189,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return m_sFilePath; 
         }
 
+        void setFilePathWithoutSignalEmit(QString);
         void setFilePathWithSignalEmit(QString);
 
         void initCompletionFeature();
+
+        float latestReadTimeInSeconds() const { return m_readTimeInSeconds; }
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
         // Note: Does not check whether the table has actually changed and always sets the model modified.
@@ -235,6 +238,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bModified;
         bool m_bResetting;
         bool m_bEnableCompleter;
+        float m_readTimeInSeconds;
     }; // class CsvItemModel
 
     template <class String>

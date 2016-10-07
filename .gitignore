@@ -99,3 +99,6 @@
 /dfgTest/x64/Debug_VC2010
 /dfgTest/x64/Release_VC2010
 /dfgTest/x64/Release_VC2012
+/dfgExamples/csvItemModelExample/x64/Release_VC2012
+/dfgTest/Win32/Release_VC2012
+/dfgTest/Win32/Release_VC2015
