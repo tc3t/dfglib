@@ -20,6 +20,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <set>
 #include <unordered_set>
 #include "../alg.hpp"
+#include "../cont/SortedSequence.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
 
 using namespace DFG_MODULE_NS(qt);
@@ -687,7 +688,7 @@ bool DFG_CLASS_NAME(CsvTableView)::copy()
 
         if (!bRowMode)
         {
-            std::unordered_set<int> setIgnoreCols;
+            CsvModel::IndexSet setIgnoreCols;
 
             for (int col = 0; col < pModel->columnCount(); ++col)
             {

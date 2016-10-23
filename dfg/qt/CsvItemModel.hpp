@@ -2,7 +2,6 @@
 
 #include "../dfgDefs.hpp"
 #include <dfg/buildConfig.hpp> // To get rid of C4996 "Function call with parameters that may be unsafe" in MSVC.
-#include <unordered_set>
 #include "qtIncludeHelpers.hpp"
 #include "../cont/tableCsv.hpp"
 #include "../io/textencodingtypes.hpp"
@@ -16,6 +15,13 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../io/DelimitedTextWriter.hpp"
 #include "../io/DelimitedTextReader.hpp"
 #include <memory>
+#include <vector>
+
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
+{
+    template <class Cont_T>
+    class DFG_CLASS_NAME(SortedSequence);
+} }
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io)
 {
@@ -43,6 +49,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef QAbstractTableModel BaseClass;
         typedef std::ostream StreamT;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
         
         enum ColType
         {
@@ -141,8 +148,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         ColInfo* getColInfo(const int nCol) { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
 
         // Appends data model row to string.
-        template <class String>
-        void rowToString(const int nRow, String& str, const QChar cDelim, std::unordered_set<int>* pSetIgnoreColumns = nullptr) const;
+        void rowToString(const int nRow, QString& str, const QChar cDelim, const IndexSet* pSetIgnoreColumns = nullptr) const;
 
         QString rowToString(const int nRow, const QChar cDelim = '\t') const
         {
@@ -181,8 +187,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void removeRows(const std::vector<int>& vecIndexesAscSorted);
 
-        template <class String>
-        String& dataCellToString(const QString& sSrc, String& sDst, const QChar cDelim) const;
+        QString& dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim) const;
 
         const QString& getFilePath() const
         { 
@@ -240,40 +245,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bEnableCompleter;
         float m_readTimeInSeconds;
     }; // class CsvItemModel
-
-    template <class String>
-    void DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow, String& str, const QChar cDelim, std::unordered_set<int>* pSetIgnoreColumns /*= nullptr*/) const
-    {
-        if (!isValidRow(nRow))
-            return;
-        const auto nColCount = getColumnCount();
-        bool bNoneAdded = true;
-        for (int nCol = 0; nCol < nColCount; ++nCol)
-        {
-            if (pSetIgnoreColumns != nullptr && pSetIgnoreColumns->find(nCol) != pSetIgnoreColumns->end())
-                continue;
-            if (!bNoneAdded)
-                str.push_back(cDelim);
-            SzPtrUtf8R p = m_table(nRow, nCol);
-            if (!p)
-                continue;
-            dataCellToString(QString::fromUtf8(p.c_str()), str, cDelim); // TODO: handle encoding in p -> QString conversion.
-            bNoneAdded = false;
-        }
-    }
-
-    template <class String>
-    String& DFG_CLASS_NAME(CsvItemModel)::dataCellToString(const QString& sSrc, String& sDst, const QChar cDelim) const
-    {
-        QTextStream strm(&sDst);
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrStrm(strm,
-            sSrc,
-            cDelim,
-            QChar('"'),
-            QChar('\n'),
-            DFG_MODULE_NS(io)::EbEncloseIfNeeded);
-        return sDst;
-    }
 
     template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)
     {

@@ -14,6 +14,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
+#include "../cont/SortedSequence.hpp"
 #include "../dfgBase.hpp"
 #include "../io.hpp"
 #include "../str/string.hpp"
@@ -218,7 +219,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
             m_vecColInfo.back().m_completerType = CompleterTypeTexts;
         }
     }
-    // Since the header is stored separately in this model, remove it row from table.
+    // Since the header is stored separately in this model, remove it from the table.
     m_table.removeRows(0, 1);
 
     if (m_bEnableCompleter)
@@ -553,6 +554,38 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnType(const int nC
     m_vecColInfo[nCol].m_type = colType;
     setModifiedStatus(true);
     Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
+}
+
+QString& DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim) const
+{
+    QTextStream strm(&sDst);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrStrm(strm,
+        sSrc,
+        cDelim,
+        QChar('"'),
+        QChar('\n'),
+        DFG_MODULE_NS(io)::EbEncloseIfNeeded);
+    return sDst;
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow, QString& str, const QChar cDelim, const IndexSet* pSetIgnoreColumns /*= nullptr*/) const
+{
+    if (!isValidRow(nRow))
+        return;
+    const auto nColCount = getColumnCount();
+    bool bNoneAdded = true;
+    for (int nCol = 0; nCol < nColCount; ++nCol)
+    {
+        if (pSetIgnoreColumns != nullptr && pSetIgnoreColumns->find(nCol) != pSetIgnoreColumns->end())
+            continue;
+        if (!bNoneAdded)
+            str.push_back(cDelim);
+        SzPtrUtf8R p = m_table(nRow, nCol);
+        if (!p)
+            continue;
+        dataCellToString(QString::fromUtf8(p.c_str()), str, cDelim);
+        bNoneAdded = false;
+    }
 }
 
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
