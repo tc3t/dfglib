@@ -32,7 +32,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         // TODO: test
         void replace(const value_type& old, const value_type& newVal)
         {
-            auto iter = find(old);
+            auto iter = findEditable(old);
             if (iter == m_cont.end())
                 return;
             *iter = newVal;
@@ -42,7 +42,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         // TODO: test
         void erase(const value_type& val)
         {
-            auto iter = find(val);
+            auto iter = findEditable(val);
             if (iter != m_cont.end())
                 m_cont.erase(iter);
         }
@@ -55,11 +55,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         const_iterator end()    const   { return m_cont.end();    }
         const_iterator cend()   const   { return m_cont.cend();   }
 
-    private:
-        contTIterator find(const value_type& val)
+        contTConstIterator find(const value_type& val) const
         {
-            auto iter = std::lower_bound(m_cont.begin(), m_cont.end(), val);
-            return (iter != m_cont.end() && *iter == val) ? iter : m_cont.end();
+            return findImpl<contTConstIterator>(*this, val);
+        }
+
+    private:
+        template <class IterT, class This_T>
+        static IterT findImpl(This_T&& rThis, const value_type& val)
+        {
+            auto& cont = rThis.m_cont;
+            auto iter = std::lower_bound(cont.begin(), cont.end(), val);
+            return (iter != cont.end() && *iter == val) ? iter : cont.end();
+        }
+
+        contTIterator findEditable(const value_type& val)
+        {
+            return findImpl<contTIterator>(*this, val);
         }
 
     public:

@@ -756,6 +756,15 @@ TEST(dfgCont, SortedSequence)
             EXPECT_TRUE(std::is_sorted(sseq.begin(), sseq.end()));
             EXPECT_TRUE(std::equal(sseq.begin(), sseq.end(), sseqDeque.begin()));
             EXPECT_TRUE(std::equal(sseq.begin(), sseq.end(), sseqList.begin()));
+
+            ASSERT_TRUE(sseq.find(val) != sseq.end());
+            EXPECT_EQ(val, *sseq.find(val));
+
+            ASSERT_TRUE(sseqDeque.find(val) != sseqDeque.end());
+            EXPECT_EQ(val, *sseqDeque.find(val));
+
+            ASSERT_TRUE(sseqList.find(val) != sseqList.end());
+            EXPECT_EQ(val, *sseqList.find(val));
         }
     }
 }
