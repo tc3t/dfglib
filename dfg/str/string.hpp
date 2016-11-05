@@ -61,6 +61,11 @@ public:
         return !(*this == psz);
     }
 
+    size_t capacity() const
+    {
+        return m_s.capacity();
+    }
+
     void reserve(const size_t nCount)
     {
         m_s.reserve(nCount);

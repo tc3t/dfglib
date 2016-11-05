@@ -240,6 +240,17 @@ TEST(dfgStr, strCat)
         EXPECT_EQ("12345678910", s);
         EXPECT_EQ(L"12345678910", sw);
     }
+
+    // Check that reserved space is not made smaller
+    {
+        std::string sCapacityTest;
+        sCapacityTest.reserve(50);
+        const auto nCapacityAfterReserve = sCapacityTest.capacity();
+        strCat(sCapacityTest, "a", "b");
+        EXPECT_EQ(nCapacityAfterReserve, sCapacityTest.capacity());
+        strCat(sCapacityTest, "");
+        EXPECT_EQ(nCapacityAfterReserve, sCapacityTest.capacity());
+    }
 }
 
 TEST(dfgStr, strToByLexCast)

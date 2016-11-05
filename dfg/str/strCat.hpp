@@ -18,9 +18,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
             for (size_t i = 0; i < nArrSize; ++i)
                 nParamLengthSum += arr[i].length();
 
-            // Store old size and resize to new size.
+            // Store old size and reserve capacity if needed.
             auto nInsertAt = dest.size();
-            dest.reserve(dest.size() + nParamLengthSum);
+            const auto nNewSize = dest.size() + nParamLengthSum;
+            if (nNewSize > dest.capacity())
+                dest.reserve(nNewSize);
 
             // Append each parameter to string.
             for (size_t i = 0; i < nArrSize; ++i)
