@@ -81,7 +81,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
         template <class Arr_T, class SwapImpl_T>
         void sortByIndexArray_tN_sN_WithSwapImpl(Arr_T& arr, std::vector<size_t> indexMap, SwapImpl_T swapImpl)
         {
-            sortByIndexArray_tN_sN_WithSwapImpl(indexMap, [&](const size_t a, const size_t b)
+            sortByIndexArray_tN_sN_WithSwapImpl(std::move(indexMap), [&](const size_t a, const size_t b)
             {
                 swapImpl(arr[a], arr[b]);
             });
@@ -99,7 +99,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
     template <class Arr_T>
     void sortByIndexArray_tN_sN(Arr_T& arr, std::vector<size_t> indexMap)
     {
-        DFG_DETAIL_NS::sortByIndexArray_tN_sN_WithSwapImpl(arr, indexMap, &DFG_DETAIL_NS::DefaultSwapImpl<decltype(arr[0])>);
+        DFG_DETAIL_NS::sortByIndexArray_tN_sN_WithSwapImpl(arr, std::move(indexMap), &DFG_DETAIL_NS::DefaultSwapImpl<decltype(arr[0])>);
     }
 
     // Sorts multiple ranges with respect to first.
@@ -161,59 +161,59 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
     template <class Iterable_T0, class Iterable_T1>
     void sortMultiple(Iterable_T0&& sortSequence, Iterable_T1&& i1)
     {
-        const auto indexMapNewToOld = computeSortIndexes(sortSequence);
+        auto indexMapNewToOld = computeSortIndexes(sortSequence);
         sortByIndexArray_tN_sN(sortSequence, indexMapNewToOld);
-        sortByIndexArray_tN_sN(i1, indexMapNewToOld);
+        sortByIndexArray_tN_sN(i1, std::move(indexMapNewToOld));
     }
 
     // Convenience overload for two sequences with predicate
     template <class Pred_T, class Iterable_T0, class Iterable_T1>
     void sortMultipleWithPred(Pred_T&& pred, Iterable_T0&& sortSequence, Iterable_T1&& i1)
     {
-        const auto indexMapNewToOld = computeSortIndexes(sortSequence, std::forward<Pred_T>(pred));
+        auto indexMapNewToOld = computeSortIndexes(sortSequence, std::forward<Pred_T>(pred));
         sortByIndexArray_tN_sN(sortSequence, indexMapNewToOld);
-        sortByIndexArray_tN_sN(i1, indexMapNewToOld);
+        sortByIndexArray_tN_sN(i1, std::move(indexMapNewToOld));
     }
 
     // Convenience overload for three sequences.
     template <class Iterable_T0, class Iterable_T1, class  Iterable_T2>
     void sortMultiple(Iterable_T0&& sortSequence, Iterable_T1&& i1, Iterable_T2&& i2)
     {
-        const auto indexMapNewToOld = computeSortIndexes(sortSequence);
+        auto indexMapNewToOld = computeSortIndexes(sortSequence);
         sortByIndexArray_tN_sN(sortSequence, indexMapNewToOld);
         sortByIndexArray_tN_sN(i1, indexMapNewToOld);
-        sortByIndexArray_tN_sN(i2, indexMapNewToOld);
+        sortByIndexArray_tN_sN(i2, std::move(indexMapNewToOld));
     }
 
     // Convenience overload for three sequences with predicate.
     template <class Pred_T, class Iterable_T0, class Iterable_T1, class  Iterable_T2>
     void sortMultipleWithPred(Pred_T&& pred, Iterable_T0&& sortSequence, Iterable_T1&& i1, Iterable_T2&& i2)
     {
-        const auto indexMapNewToOld = computeSortIndexes(sortSequence, std::forward<Pred_T>(pred));
+        auto indexMapNewToOld = computeSortIndexes(sortSequence, std::forward<Pred_T>(pred));
         sortByIndexArray_tN_sN(sortSequence, indexMapNewToOld);
         sortByIndexArray_tN_sN(i1, indexMapNewToOld);
-        sortByIndexArray_tN_sN(i2, indexMapNewToOld);
+        sortByIndexArray_tN_sN(i2, std::move(indexMapNewToOld));
     }
 
     // Convenience overload for four sequences.
     template <class Iterable_T0, class Iterable_T1, class  Iterable_T2, class Iterable_T3>
     void sortMultiple(Iterable_T0&& sortSequence, Iterable_T1&& i1, Iterable_T2&& i2, Iterable_T3&& i3)
     {
-        const auto indexMapNewToOld = computeSortIndexes(sortSequence);
+        auto indexMapNewToOld = computeSortIndexes(sortSequence);
         sortByIndexArray_tN_sN(sortSequence, indexMapNewToOld);
         sortByIndexArray_tN_sN(i1, indexMapNewToOld);
         sortByIndexArray_tN_sN(i2, indexMapNewToOld);
-        sortByIndexArray_tN_sN(i3, indexMapNewToOld);
+        sortByIndexArray_tN_sN(i3, std::move(indexMapNewToOld));
     }
 
     // Convenience overload for four sequences with predicate.
     template <class Pred_T, class Iterable_T0, class Iterable_T1, class  Iterable_T2, class Iterable_T3>
     void sortMultipleWithPred(Pred_T&& pred, Iterable_T0&& sortSequence, Iterable_T1&& i1, Iterable_T2&& i2, Iterable_T3&& i3)
     {
-        const auto indexMapNewToOld = computeSortIndexes(sortSequence, std::forward<Pred_T>(pred));
+        auto indexMapNewToOld = computeSortIndexes(sortSequence, std::forward<Pred_T>(pred));
         sortByIndexArray_tN_sN(sortSequence, indexMapNewToOld);
         sortByIndexArray_tN_sN(i1, indexMapNewToOld);
         sortByIndexArray_tN_sN(i2, indexMapNewToOld);
-        sortByIndexArray_tN_sN(i3, indexMapNewToOld);
+        sortByIndexArray_tN_sN(i3, std::move(indexMapNewToOld));
     }
 } }
