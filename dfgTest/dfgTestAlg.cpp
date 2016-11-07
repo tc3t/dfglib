@@ -626,14 +626,22 @@ TEST(dfgAlg, sortSingleItem)
     sortSingleItem(vec, vec.begin());
     sortSingleItem(vec, vec.end());
 
-    // Two item handling
+    // Handling of two elements.
     {
         std::array<int, 2> arr2 = { 2, 1 };
         std::array<int, 2> arr2Expected = { 1, 2 };
         auto arr2_0 = arr2;
         auto arr2_1 = arr2;
-        sortSingleItem(arr2_0, arr2_0.begin());
-        sortSingleItem(arr2_1, arr2_1.end());
+        auto rv0 = sortSingleItem(arr2_0, arr2_0.begin());
+        EXPECT_EQ(rv0, arr2_0.begin() + 1);
+        rv0 = sortSingleItem(arr2_0, arr2_0.begin()); // Should do nothing.
+        EXPECT_EQ(rv0, arr2_0.begin());
+
+        auto rv1 = sortSingleItem(arr2_1, arr2_1.end());
+        EXPECT_EQ(rv1, arr2_1.begin());
+        rv1 = sortSingleItem(arr2_1, arr2_1.end()); // Should do nothing.
+        EXPECT_EQ(rv1, arr2_1.begin() + 1);
+
         EXPECT_EQ(arr2Expected, arr2_0);
         EXPECT_EQ(arr2Expected, arr2_1);
     }
@@ -658,8 +666,10 @@ TEST(dfgAlg, sortSingleItem)
 
         // Push in middle.
         const auto nPos = DFG_MODULE_NS(rand)::rand(randEng, size_t(0), vecSsi.size() - 1);
-        vecSsi.insert(vecSsi.begin() + nPos, distrEng());
-        sortSingleItem(vecSsi, vecSsi.begin() + nPos);
+        const auto newVal = distrEng();
+        vecSsi.insert(vecSsi.begin() + nPos, newVal);
+        auto iterNewPos = sortSingleItem(vecSsi, vecSsi.begin() + nPos);
+        EXPECT_EQ(newVal, *iterNewPos);
         //EXPECT_TRUE(std::is_sorted(vecSsi.begin(), vecSsi.end()));
     }
 

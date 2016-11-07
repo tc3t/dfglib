@@ -13,6 +13,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
      * Time: O(n) (worst case).
      * Space: O(1)
      * Precondition: 'iterable' excluding the item at 'i' must be in sorted order with respect to predicate 'comp'.
+     * Return value: iterator to new position of 'i'.
      * Example usage: 
      *      std::vector<int> a;
      *      // add some elements to a
@@ -24,12 +25,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
      * TODO: revise and document comp.
     */
     template <class Iterable_T, class Iter_T, class PredicateT>
-    void sortSingleItem(Iterable_T&& iterable, Iter_T i, PredicateT comp)
+    typename std::remove_reference<Iter_T>::type sortSingleItem(Iterable_T&& iterable, Iter_T i, PredicateT comp)
     {
         const auto iBegin = std::begin(iterable);
         const auto iEnd = std::end(iterable);
         if (iBegin == iEnd) // Empty range?
-            return;
+            return iEnd;
 
         if (i == iEnd)
             --i;
@@ -53,15 +54,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
             {
                 std::swap(*iPrev, *i);
                 if (iPrev == iBegin)
+                {
+                    --i;
                     break;
+                }
             }
         }
+        return i;
     }
 
     template <class Iterable_T, class Iter_T>
-    void sortSingleItem(Iterable_T&& iterable, Iter_T&& i)
+    typename std::remove_reference<Iter_T>::type sortSingleItem(Iterable_T&& iterable, Iter_T&& i)
     {
-        sortSingleItem(std::forward<Iterable_T>(iterable), std::forward<Iter_T>(i), std::less<decltype(*i)>());
+        return sortSingleItem(std::forward<Iterable_T>(iterable), std::forward<Iter_T>(i), std::less<decltype(*i)>());
     }
 
 } } // module namespace
