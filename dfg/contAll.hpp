@@ -6,6 +6,7 @@
 #include "cont/elementType.hpp"
 #include "cont/interleavedXsortedTwoChannelWrapper.hpp"
 #include "cont/mapFlat.hpp"
+#include "cont/MapVector.hpp"
 #include "cont/setFlat.hpp"
 #include "cont/SortedSequence.hpp"
 #include "cont/table.hpp"

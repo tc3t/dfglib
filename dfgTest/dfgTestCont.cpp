@@ -9,6 +9,7 @@
 #include <dfg/dfgBase.hpp>
 #include <dfg/cont/interleavedXsortedTwoChannelWrapper.hpp>
 #include <dfg/cont/valueArray.hpp>
+#include <dfg/cont/MapVector.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
 #include <dfg/cont/SortedSequence.hpp>
 #include <dfg/cont/TorRef.hpp>
@@ -789,4 +790,194 @@ TEST(dfgCont, InterleavedXsortedTwoChannelWrapper)
     EXPECT_EQ(35, wrap(10));
     EXPECT_EQ(60, wrap(15));
     EXPECT_EQ(60, wrap(150));
+}
+
+namespace
+{
+    template <class Map_T>
+    void testMapInterface(Map_T& m, const unsigned long nRandEngSeed)
+    {
+        using namespace DFG_ROOT_NS;
+
+        const Map_T& mConst = m;
+        
+        EXPECT_EQ(0, m.size());
+        EXPECT_EQ(0, mConst.size());
+        EXPECT_EQ(true, m.empty());
+        EXPECT_EQ(true, mConst.empty());
+
+        // operator[]
+        m["a"] = 1;
+        EXPECT_EQ(1, m.size());
+        EXPECT_EQ(1, mConst.size());
+        m["b"] = 2;
+        EXPECT_EQ(2, m.size());
+        EXPECT_EQ(2, mConst.size());
+        m["a"] = 3; // Replacing.
+        EXPECT_EQ(2, m.size());
+        EXPECT_EQ(2, mConst.size());
+        m[std::string("c")] = 'c';
+        EXPECT_EQ(3, m.size());
+        EXPECT_EQ(3, mConst.size());
+
+        // find
+        m.find("a");
+        mConst.find("a");
+
+        // insert
+        {
+            auto i1 = m.insert(std::pair<std::string, int>("d", 'd'));
+            EXPECT_EQ(true, i1.second);
+            EXPECT_EQ("d", i1.first->first);
+            EXPECT_EQ('d', i1.first->second);
+
+            auto i2 = m.insert(std::pair<std::string, int>("d", 'e'));
+            EXPECT_EQ(false, i2.second);
+            EXPECT_EQ("d", i2.first->first);
+            EXPECT_EQ('d', i2.first->second);
+
+            auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+            randEng.seed(nRandEngSeed);
+            for (size_t i = 0; i < 50; ++i)
+            {
+                std::string s(1, DFG_MODULE_NS(rand)::rand<int8>(randEng, 0, 127));
+                m.insert(std::pair<std::string, int>(s, DFG_MODULE_NS(rand)::rand(randEng, 1000, 2000)));
+            }
+        }
+    }
+
+    template  <class Map_T>
+    std::map<std::string, int> createStdMap(const Map_T& m)
+    {
+        std::map<std::string, int> rv;
+        for (auto iter = m.begin(), iterEnd = m.end(); iter != iterEnd; ++iter)
+            rv[iter->first] = iter->second;
+        return rv;
+    }
+
+    template <class Map_T>
+    bool verifyEqual(const std::map<std::string, int>& mStd, const Map_T& m)
+    {
+        return mStd == createStdMap(m);
+    }
+
+    template <class Map_T>
+    void eraseTester(Map_T& m)
+    {
+        const auto rv0 = m.erase(m.begin());
+        EXPECT_EQ(m.begin(), rv0);
+        EXPECT_EQ(1, m.erase(m.frontKey()));
+        EXPECT_EQ(0, m.erase("invalid_key"));
+
+        // Test unsorted removal
+        if (!m.isSorted())
+        {
+            auto mEqualityTester = createStdMap(m);
+            mEqualityTester.erase(m.backKey());
+            m.erase(m.backIter());
+            EXPECT_TRUE(verifyEqual(mEqualityTester, m));
+            
+            mEqualityTester.erase(m.frontKey());
+            m.erase(m.begin());
+            EXPECT_TRUE(verifyEqual(mEqualityTester, m));
+
+            EXPECT_TRUE(m.size() > 30); // Just a arbitrary test to make sure that m has big enough size for these tests.
+            const auto nRemoveCount = 3 * m.size() / 4;
+            const auto iterFirst = m.begin() + 3;
+            const auto iterEnd = iterFirst + nRemoveCount;
+            for (auto i = iterFirst; i != iterEnd; ++i)
+                mEqualityTester.erase(i->first);
+            m.erase(iterFirst, iterEnd);
+            EXPECT_TRUE(verifyEqual(mEqualityTester, m));
+        }
+
+        // Erase all
+        const auto rv1 = m.erase(m.begin(), m.end());
+        EXPECT_EQ(0, m.size());
+        EXPECT_TRUE(m.empty());
+        EXPECT_EQ(m.end(), rv1);
+    }
+
+    template <class Map_T>
+    void verifyVectorMaps(Map_T& mSorted, Map_T& mUnsorted, const std::map<std::string, int>& mapExpected)
+    {
+        DFGTEST_STATIC((std::is_same<std::string, typename Map_T::key_type>::value));
+        DFGTEST_STATIC((std::is_same<int, typename Map_T::mapped_type>::value));
+
+        ASSERT_FALSE(mapExpected.empty());
+
+        EXPECT_TRUE(mSorted.hasKey(mapExpected.begin()->first));
+        EXPECT_TRUE(mUnsorted.hasKey(mapExpected.begin()->first));
+
+        EXPECT_FALSE(mSorted.hasKey("invalid_key"));
+        EXPECT_FALSE(mUnsorted.hasKey("invalid_key"));
+
+        EXPECT_EQ(mSorted.backIter()->first, mSorted.backKey());
+        EXPECT_EQ(mUnsorted.backIter()->first, mUnsorted.backKey());
+
+        EXPECT_EQ(mSorted.backIter()->second, mSorted.backValue());
+        EXPECT_EQ(mUnsorted.backIter()->second, mUnsorted.backValue());
+
+        EXPECT_EQ(mSorted.begin()->first, mSorted.frontKey());
+        EXPECT_EQ(mUnsorted.begin()->first, mUnsorted.frontKey());
+
+        EXPECT_EQ(mSorted.begin()->second, mSorted.frontValue());
+        EXPECT_EQ(mUnsorted.begin()->second, mUnsorted.frontValue());
+
+        {
+            const auto mapFromSorted = createStdMap(mSorted);
+            EXPECT_EQ(mapExpected, mapFromSorted);
+        }
+
+        {
+            const auto mapFromUnsorted = createStdMap(mUnsorted);
+            EXPECT_EQ(mapExpected, mapFromUnsorted);
+        }
+
+        // Test that setSorting(true) sorts.
+        {
+            auto mSortedFromUnsorted = mUnsorted;
+            mSortedFromUnsorted.setSorting(true);
+
+            //EXPECT_TRUE(std::equal(mSorted.begin(), mSorted.end(), mUnsorted.begin())); // Note: this does not work for SoA-iterator due to missing value_type typedef.
+            auto iter2 = mSortedFromUnsorted.begin();
+            for (auto iter = mSorted.begin(), iterEnd = mSorted.end(); iter != iterEnd; ++iter, ++iter2)
+            {
+                EXPECT_EQ(iter->first, iter2->first);
+                EXPECT_EQ(iter->second, iter2->second);
+            }
+        }
+
+        eraseTester(mSorted);
+        eraseTester(mUnsorted);
+    }
+} // unnamed namespace
+
+TEST(dfgCont, VectorMap)
+{
+    using namespace DFG_MODULE_NS(cont);
+
+    std::map<std::string, int> mStd;
+    DFG_CLASS_NAME(MapVectorSoA)<std::string, int> mapVectorSoaSorted;
+    DFG_CLASS_NAME(MapVectorSoA)<std::string, int> mapVectorSoaUnsorted;
+    mapVectorSoaUnsorted.setSorting(false);
+    DFG_CLASS_NAME(MapVectorAoS)<std::string, int> mapVectorAosSorted;
+    DFG_CLASS_NAME(MapVectorAoS)<std::string, int> mapVectorAosUnsorted;
+    mapVectorAosUnsorted.setSorting(false);
+
+    const int randEngSeed = 12345678;
+    testMapInterface(mStd, randEngSeed);
+    mapVectorSoaSorted.reserve(10);
+    testMapInterface(mapVectorSoaSorted, randEngSeed);
+    testMapInterface(mapVectorSoaUnsorted, randEngSeed);
+    EXPECT_EQ(mStd.size(), mapVectorSoaSorted.size());
+    EXPECT_EQ(mStd.size(), mapVectorSoaUnsorted.size());
+
+    testMapInterface(mapVectorAosSorted, randEngSeed);
+    testMapInterface(mapVectorAosUnsorted, randEngSeed);
+    EXPECT_EQ(mStd.size(), mapVectorAosSorted.size());
+    EXPECT_EQ(mStd.size(), mapVectorAosUnsorted.size());
+
+    verifyVectorMaps(mapVectorSoaSorted, mapVectorSoaUnsorted, mStd);
+    verifyVectorMaps(mapVectorAosSorted, mapVectorAosUnsorted, mStd);
 }
