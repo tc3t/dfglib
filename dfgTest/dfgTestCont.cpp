@@ -11,6 +11,7 @@
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
+#include <dfg/cont/SetVector.hpp>
 #include <dfg/cont/SortedSequence.hpp>
 #include <dfg/cont/TorRef.hpp>
 #include <dfg/cont/tableCsv.hpp>
@@ -856,9 +857,9 @@ namespace
     }
 
     template <class Map_T>
-    bool verifyEqual(const std::map<std::string, int>& mStd, const Map_T& m)
+    void verifyEqual(const std::map<std::string, int>& mStd, const Map_T& m)
     {
-        return mStd == createStdMap(m);
+        EXPECT_TRUE(mStd == createStdMap(m));
     }
 
     template <class Map_T>
@@ -875,11 +876,11 @@ namespace
             auto mEqualityTester = createStdMap(m);
             mEqualityTester.erase(m.backKey());
             m.erase(m.backIter());
-            EXPECT_TRUE(verifyEqual(mEqualityTester, m));
+            verifyEqual(mEqualityTester, m);
             
             mEqualityTester.erase(m.frontKey());
             m.erase(m.begin());
-            EXPECT_TRUE(verifyEqual(mEqualityTester, m));
+            verifyEqual(mEqualityTester, m);
 
             EXPECT_TRUE(m.size() > 30); // Just a arbitrary test to make sure that m has big enough size for these tests.
             const auto nRemoveCount = 3 * m.size() / 4;
@@ -888,7 +889,7 @@ namespace
             for (auto i = iterFirst; i != iterEnd; ++i)
                 mEqualityTester.erase(i->first);
             m.erase(iterFirst, iterEnd);
-            EXPECT_TRUE(verifyEqual(mEqualityTester, m));
+            verifyEqual(mEqualityTester, m);
         }
 
         // Erase all
@@ -899,7 +900,7 @@ namespace
     }
 
     template <class Map_T>
-    void verifyVectorMaps(Map_T& mSorted, Map_T& mUnsorted, const std::map<std::string, int>& mapExpected)
+    void verifyMapVectors(Map_T& mSorted, Map_T& mUnsorted, const std::map<std::string, int>& mapExpected)
     {
         DFGTEST_STATIC((std::is_same<std::string, typename Map_T::key_type>::value));
         DFGTEST_STATIC((std::is_same<int, typename Map_T::mapped_type>::value));
@@ -934,6 +935,10 @@ namespace
             EXPECT_EQ(mapExpected, mapFromUnsorted);
         }
 
+        // Test insert(key, value) -interface.
+        mSorted.insert(std::string("insert_two_param"), 123);
+        mUnsorted.insert(std::string("insert_two_param"), 123);
+
         // Test that setSorting(true) sorts.
         {
             auto mSortedFromUnsorted = mUnsorted;
@@ -951,9 +956,10 @@ namespace
         eraseTester(mSorted);
         eraseTester(mUnsorted);
     }
+
 } // unnamed namespace
 
-TEST(dfgCont, VectorMap)
+TEST(dfgCont, MapVector)
 {
     using namespace DFG_MODULE_NS(cont);
 
@@ -978,6 +984,162 @@ TEST(dfgCont, VectorMap)
     EXPECT_EQ(mStd.size(), mapVectorAosSorted.size());
     EXPECT_EQ(mStd.size(), mapVectorAosUnsorted.size());
 
-    verifyVectorMaps(mapVectorSoaSorted, mapVectorSoaUnsorted, mStd);
-    verifyVectorMaps(mapVectorAosSorted, mapVectorAosUnsorted, mStd);
+    verifyMapVectors(mapVectorSoaSorted, mapVectorSoaUnsorted, mStd);
+    verifyMapVectors(mapVectorAosSorted, mapVectorAosUnsorted, mStd);
+}
+
+namespace
+{
+    template <class Set_T>
+    void testSetInterface(Set_T& se, const unsigned long nRandEngSeed)
+    {
+        using namespace DFG_ROOT_NS;
+
+        const Set_T& seConst = se;
+
+        EXPECT_EQ(0, se.size());
+        EXPECT_EQ(0, seConst.size());
+        EXPECT_EQ(true, se.empty());
+        EXPECT_EQ(true, seConst.empty());
+
+        // insert
+        se.insert("a");
+        EXPECT_EQ(1, se.size());
+        EXPECT_EQ(1, seConst.size());
+        se.insert("b");
+        EXPECT_EQ(2, se.size());
+        EXPECT_EQ(2, seConst.size());
+        se.insert("a");
+        EXPECT_EQ(2, se.size());
+        EXPECT_EQ(2, seConst.size());
+        se.insert("c");
+        EXPECT_EQ(3, se.size());
+        EXPECT_EQ(3, seConst.size());
+
+        // find
+        se.find("a");
+        seConst.find("a");
+
+        auto i1 = se.insert("d");
+        EXPECT_EQ(true, i1.second);
+        EXPECT_EQ("d", *i1.first);
+
+        auto i2 = se.insert("d");
+        EXPECT_EQ(false, i2.second);
+        EXPECT_EQ("d", *i2.first);
+
+        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+        randEng.seed(nRandEngSeed);
+        for (size_t i = 0; i < 50; ++i)
+        {
+            std::string s(1, DFG_MODULE_NS(rand)::rand<int8>(randEng, 0, 127));
+            se.insert(s);
+        }
+    }
+
+    template  <class Set_T>
+    std::set<std::string> createStdSet(const Set_T& se)
+    {
+        std::set<std::string> rv;
+        for (auto iter = se.begin(), iterEnd = se.end(); iter != iterEnd; ++iter)
+            rv.insert(*iter);
+        return rv;
+    }
+
+    template <class Set_T>
+    void verifyEqual(const std::set<std::string>& seStd, const Set_T& se)
+    {
+        EXPECT_TRUE(seStd == createStdSet(se));
+    }
+
+    template <class Set_T>
+    void eraseTesterForSet(Set_T& se)
+    {
+        const auto rv0 = se.erase(se.begin());
+        EXPECT_EQ(se.begin(), rv0);
+        EXPECT_EQ(1, se.erase(se.front()));
+        EXPECT_EQ(0, se.erase("invalid_key"));
+
+        // Test unsorted removal
+        if (!se.isSorted())
+        {
+            auto seEqualityTester = createStdSet(se);
+            seEqualityTester.erase(se.back());
+            se.erase(se.backIter());
+            verifyEqual(seEqualityTester, se);
+
+            seEqualityTester.erase(se.front());
+            se.erase(se.begin());
+            verifyEqual(seEqualityTester, se);
+
+            EXPECT_TRUE(se.size() > 30); // Just a arbitrary test to make sure that m has big enough size for these tests.
+            const auto nRemoveCount = 3 * se.size() / 4;
+            const auto iterFirst = se.begin() + 3;
+            const auto iterEnd = iterFirst + nRemoveCount;
+            for (auto i = iterFirst; i != iterEnd; ++i)
+                seEqualityTester.erase(*i);
+            se.erase(iterFirst, iterEnd);
+            verifyEqual(seEqualityTester, se);
+        }
+
+        // Erase all
+        const auto rv1 = se.erase(se.begin(), se.end());
+        EXPECT_EQ(0, se.size());
+        EXPECT_TRUE(se.empty());
+        EXPECT_EQ(se.end(), rv1);
+    }
+
+    template <class Set_T>
+    void verifySetVectors(Set_T& seSorted, Set_T& seUnsorted, const std::set<std::string>& setExpected)
+    {
+        DFGTEST_STATIC((std::is_same<std::string, typename Set_T::key_type>::value));
+
+        ASSERT_FALSE(setExpected.empty());
+
+        EXPECT_TRUE(seSorted.hasKey(*setExpected.begin()));
+        EXPECT_TRUE(seUnsorted.hasKey(*setExpected.begin()));
+
+        EXPECT_FALSE(seSorted.hasKey("invalid_key"));
+        EXPECT_FALSE(seUnsorted.hasKey("invalid_key"));
+
+        EXPECT_EQ(*seSorted.backIter(), seSorted.back());
+        EXPECT_EQ(*seUnsorted.backIter(), seUnsorted.back());
+
+        EXPECT_EQ(*seSorted.begin(), seSorted.front());
+        EXPECT_EQ(*seUnsorted.begin(), seUnsorted.front());
+
+        verifyEqual(setExpected, seSorted);
+        verifyEqual(setExpected, seUnsorted);
+
+        // Test that setSorting(true) sorts.
+        {
+            auto seSortedFromUnsorted = seUnsorted;
+            seSortedFromUnsorted.setSorting(true);
+
+            EXPECT_TRUE(std::equal(seSorted.begin(), seSorted.end(), seSortedFromUnsorted.begin())); // Note: this does not work for SoA-iterator due to missing value_type typedef.
+        }
+
+        eraseTesterForSet(seSorted);
+        eraseTesterForSet(seUnsorted);
+    }
+
+} // unnamed namespace
+
+TEST(dfgCont, SetVector)
+{
+    using namespace DFG_MODULE_NS(cont);
+
+    std::set<std::string> mStd;
+    DFG_CLASS_NAME(SetVector)<std::string> setVectorSorted;
+    DFG_CLASS_NAME(SetVector)<std::string> setVectorUnsorted; setVectorUnsorted.setSorting(false);
+    
+    const int randEngSeed = 12345678;
+    testSetInterface(mStd, randEngSeed);
+    testSetInterface(setVectorSorted, randEngSeed);
+    testSetInterface(setVectorUnsorted, randEngSeed);
+
+    verifyEqual(mStd, setVectorSorted);
+    verifyEqual(mStd, setVectorUnsorted);
+
+    verifySetVectors(setVectorSorted, setVectorUnsorted, mStd);
 }

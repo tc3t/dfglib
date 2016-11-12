@@ -13,7 +13,7 @@ Implements contiguous storage maps with the following properties:
         -Single deletion from unsorted map invalidates only iterators of deleted item, last item and end(). TODO: revise this.
         -Deletion from sorted map invalidates only those items whose key is after deleted key. // TODO: verify behaviour of vector erase.
     -Provides reserve() for preallocation.
-    -Allows keys to be modified (trusting the programmer).
+    -Allows keys to be modified (programmer responsibility to use it correctly).
     -Keys can be searched without contructing key_type (for example std::string keys can be searched with const char* without constructing std::string)
 
 There are two concrete implementations (that use a common CRTP-base):
@@ -167,7 +167,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             iterator    erase(iterator iterDeleteFrom)  { return (iterDeleteFrom != end()) ? erase(iterDeleteFrom, iterDeleteFrom + 1) : end(); }
             template <class T>
-            size_type   erase(const T& key)             { auto rv = erase(find(key)); return (rv != end()) ? 1 : 0; } // Rreturn the number of elements removed.
+            size_type   erase(const T& key)             { auto rv = erase(find(key)); return (rv != end()) ? 1 : 0; } // Returns the number of elements removed.
             iterator    erase(iterator iterRangeFirst, const iterator iterRangeEnd)
             {
                 if (m_bSorted)
@@ -241,12 +241,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             std::pair<iterator, bool> insert(std::pair<key_type, mapped_type>&& newVal)
             {
-                auto iter = find(newVal.first);
+                return insert(std::move(newVal.first), std::move(newVal.second));
+            }
+
+            std::pair<iterator, bool> insert(key_type&& key, mapped_type&& val)
+            {
+                auto iter = find(key);
                 if (iter != end())
                     return std::pair<iterator, bool>(iter, false);
                 else
                 {
-                    iter = insertNonExisting(std::move(newVal.first), std::move(newVal.second));
+                    iter = insertNonExisting(std::move(key), std::move(val));
                     return std::pair<iterator, bool>(iter, true);
                 }
             }
