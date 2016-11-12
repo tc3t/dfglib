@@ -31,6 +31,7 @@ Related reading and implementations:
 */
 
 #include "../dfgDefs.hpp"
+#include "../alg/eraseByTailSwap.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../alg/sortSingleItem.hpp"
 #include <algorithm>
@@ -174,22 +175,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                     return static_cast<Impl_T&>(*this).eraseImpl(iterRangeFirst, iterRangeEnd);
                 else // With unsorted, swap to-be-removed items to end and erase items from end -> O(1) for single element removal.
                 {
-                    if (iterRangeFirst == iterRangeEnd)
-                        return iterRangeFirst;
-                    const auto nFirst = iterRangeFirst - begin();
-                    const auto nRemoveCount = iterRangeEnd - iterRangeFirst;
-                    const auto nSwapRoom = end() - iterRangeEnd;
-                    auto iterSwapTo = end();
-                    ptrdiff_t nSwappedCount = 0;
-                    for (; iterRangeFirst != iterRangeEnd && nSwappedCount < nSwapRoom; ++iterRangeFirst, ++nSwappedCount)
-                    {
-                        --iterSwapTo;
-                        static_cast<Impl_T&>(*this).swapElem(iterRangeFirst, iterSwapTo);
-                    }
-                    if (nSwappedCount < nRemoveCount)
-                        iterSwapTo = iterSwapTo + (nSwappedCount - nRemoveCount);
-                    static_cast<Impl_T&>(*this).eraseImpl(iterSwapTo, end());
-                    return makeIterator(nFirst);
+                    return DFG_MODULE_NS(alg)::eraseByTailSwap(*this, iterRangeFirst, iterRangeEnd,
+                                                                [&](const iterator& i0, const iterator& i1) { static_cast<Impl_T&>(*this).swapElem(i0, i1); },
+                                                                [&](const iterator& i0, const iterator& i1) { static_cast<Impl_T&>(*this).eraseImpl(i0, i1); });
                 }
             }
 

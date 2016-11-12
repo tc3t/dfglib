@@ -21,6 +21,7 @@ Related reading and implementations:
 */
 
 #include "../dfgDefs.hpp"
+#include "../alg/eraseByTailSwap.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../alg/sortSingleItem.hpp"
 #include <algorithm>
@@ -28,27 +29,6 @@ Related reading and implementations:
 #include <vector>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
-
-    template <class Cont_T, class Iter_T, class Swaper_T, class Eraser_T>
-    Iter_T endSwapErase(Cont_T& cont, Iter_T iterRangeFirst, const Iter_T& iterRangeEnd, Swaper_T swap, Eraser_T erase)
-    {
-        if (iterRangeFirst == iterRangeEnd)
-            return iterRangeFirst;
-        const auto nFirst = iterRangeFirst - cont.begin();
-        const auto nRemoveCount = iterRangeEnd - iterRangeFirst;
-        const auto nSwapRoom = cont.end() - iterRangeEnd;
-        auto iterSwapTo = cont.end();
-        ptrdiff_t nSwappedCount = 0;
-        for (; iterRangeFirst != iterRangeEnd && nSwappedCount < nSwapRoom; ++iterRangeFirst, ++nSwappedCount)
-        {
-            --iterSwapTo;
-            swap(iterRangeFirst, iterSwapTo);
-        }
-        if (nSwappedCount < nRemoveCount)
-            iterSwapTo = iterSwapTo + (nSwappedCount - nRemoveCount);
-        erase(iterSwapTo, cont.end());
-        return cont.begin() + nFirst;
-    }
 
     template <class Key_T>
     class DFG_CLASS_NAME(SetVector)
@@ -92,9 +72,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 return m_storage.erase(iterRangeFirst, iterRangeEnd);
             else // With unsorted, swap to-be-removed items to end and erase items from end -> O(1) for single element removal.
             {
-                return endSwapErase(*this, iterRangeFirst, iterRangeEnd,
-                                    [&](const iterator& i0, const iterator& i1) { std::iter_swap(i0, i1); },
-                                    [&](const iterator& i0, const iterator& i1) { m_storage.erase(i0, i1); });
+                return DFG_MODULE_NS(alg)::eraseByTailSwap(*this, iterRangeFirst, iterRangeEnd,
+                                                            [&](const iterator& i0, const iterator& i1) { std::iter_swap(i0, i1); },
+                                                            [&](const iterator& i0, const iterator& i1) { m_storage.erase(i0, i1); });
             }
         }
 
