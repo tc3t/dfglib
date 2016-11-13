@@ -23,17 +23,25 @@ template <CharPtrType Type_T>
 class DFG_CLASS_NAME(StringTyped)
 {
 public:
-    typedef std::string StorageType;
-    typedef TypedCharPtrT<const char, Type_T> TypedPtrT;
-    typedef SzPtrT<const char, Type_T> SzPtrR;
+    typedef std::string                         StorageType;
+    typedef TypedCharPtrT<const char, Type_T>   TypedPtrT;
+    typedef SzPtrT<const char, Type_T>          SzPtrR;
+    typedef StorageType::size_type              size_type;
 
     DFG_CLASS_NAME(StringTyped)() {}
     explicit DFG_CLASS_NAME(StringTyped)(SzPtrR psz) : m_s(psz.c_str()) {}
+    explicit DFG_CLASS_NAME(StringTyped)(TypedPtrT iterBegin, TypedPtrT iterEnd) : m_s(iterBegin.rawPtr(), iterEnd.rawPtr()) {}
+
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }
 
     void append(const TypedPtrT& first, const TypedPtrT& end)
     {
         m_s.append(first.rawPtr(), end.rawPtr());
+    }
+
+    int compare(const size_type nThisStart, const size_t nThisCount, const TypedPtrT& psz, const size_type& nCount) const
+    {
+        return m_s.compare(nThisStart, nThisCount, toCharPtr_raw(psz), nCount);
     }
 
 	// TODO: test
