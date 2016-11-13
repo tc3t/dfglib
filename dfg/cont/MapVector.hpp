@@ -15,6 +15,7 @@ Implements contiguous storage maps with the following properties:
     -Provides reserve() for preallocation.
     -Allows keys to be modified (programmer responsibility to use it correctly).
     -Keys can be searched without contructing key_type (for example std::string keys can be searched with const char* without constructing std::string)
+    -Currently requires key_type to have operator==.
 
 There are two concrete implementations (that use a common CRTP-base):
     -MapVectorAoS<key_type, mapped_type> [use by default]
@@ -209,12 +210,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                         return rThis.keyIterValueToKeyValue(keyItem) < searchKey;
                     });
                     return (iter != iterEnd && rThis.keyIterValueToKeyValue(*iter) == key) ? rThis.makeIterator(iter - iterBegin) : rThis.end();
+                    // return (iter != iterEnd && !(key < rThis.keyIterValueToKeyValue(*iter))) ? rThis.makeIterator(iter - iterBegin) : rThis.end(); // This version works if key does not have == operator.
                 }
                 else // case: not sorted.
                 {
                     auto iter = std::find_if(iterBegin, iterEnd, [&](const typename key_iterator::value_type& keyItem)
                     {
                         return rThis.keyIterValueToKeyValue(keyItem) == key;
+                        //return !(rThis.keyIterValueToKeyValue(keyItem) < key) && !(key < rThis.keyIterValueToKeyValue(keyItem)); // This version works if key does not have == operator.
                     });
                     return rThis.makeIterator(iter - iterBegin);
                 }
