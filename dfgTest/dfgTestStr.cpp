@@ -502,6 +502,19 @@ namespace
         EXPECT_TRUE(s == view);
         EXPECT_TRUE(view == s.c_str());
         EXPECT_TRUE(s.c_str() == view);
+
+        // Test operator<
+        {
+            // TODO: Better tests.
+            EXPECT_EQ(s < Str_T(view.begin(), view.end()), s < view);
+            EXPECT_EQ(s < Str_T(view2Chars.begin(), view2Chars.end()), s < view2Chars);
+        }
+
+        // Test data()
+        {
+            EXPECT_EQ(view.begin(), view.data());
+            EXPECT_EQ(view2.begin(), view2.data());
+        }
     }
 }
 

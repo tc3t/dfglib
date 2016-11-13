@@ -166,14 +166,14 @@ protected:
 								// For string classes this may be the value returned by length()-method.
 };
 
-// Note: Unlike previous, the string view stored here can't guarantee access to null terminated string.
+// Note: Unlike ReadOnlySzParam, the string view stored here can't guarantee access to null terminated string.
 // TODO: keep compatible with std::string_view or even typedef when available.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
 class DFG_CLASS_NAME(StringView)
 {
 public:
-    typedef decltype(Str_T().c_str()) SzPtrT;
-    typedef decltype(toCharPtr(Str_T().c_str())) PtrT;
+    typedef decltype(Str_T().c_str())               SzPtrT;
+    typedef decltype(toCharPtr(Str_T().c_str()))    PtrT;
     
     typedef PtrT const_iterator;
 
@@ -204,6 +204,13 @@ public:
     {
         return m_nSize;
     }
+
+    size_t size() const
+    {
+        return length();
+    }
+
+    PtrT data() const { return m_pFirst; }
 
     const_iterator begin() const
     {
@@ -245,6 +252,12 @@ template<class Char_T, class Str_T>
 inline bool operator==(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
 {
     return right == s;
+}
+
+template<class Char_T, class Str_T>
+inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+{
+    return s.compare(0, s.size(), right.begin(), right.length()) < 0;
 }
 
 typedef DFG_CLASS_NAME(ReadOnlySzParam)<char>				DFG_CLASS_NAME(ReadOnlySzParamC);
