@@ -41,7 +41,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spTableView;
         std::unique_ptr<DFG_CLASS_NAME(CsvItemModel)> m_spTableModel;
         std::unique_ptr<QLineEdit> m_spLineEditSourcePath;
-        std::unique_ptr<TableEditorStatusBar> m_spStatusBar;
+        std::unique_ptr<DFG_CLASS_NAME(TableEditorStatusBar)> m_spStatusBar;
     };
 
 } } // module namespace
