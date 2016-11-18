@@ -186,6 +186,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             key_type&       keyIterValueToKeyValue(typename key_iterator::value_type& val)              { return static_cast<Impl_T&>(*this).keyIterValueToKeyValue(val); }
             const key_type& keyIterValueToKeyValue(const typename key_iterator::value_type& val) const  { return static_cast<const Impl_T&>(*this).keyIterValueToKeyValue(val); }
 
+            key_type&&                  keyParamToInsertable(key_type&& key)        { return std::move(key); }
+            template <class T> key_type keyParamToInsertable(const T& keyParam)     { return key_type(keyParam); }
+
             template <class T>
             mapped_type& operator[](T&& key)
             {
@@ -194,7 +197,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                     return iter->second;
                 else
                 {
-                    iter = insertNonExisting(key_type(std::forward<T>(key)), mapped_type());
+                    iter = insertNonExisting(keyParamToInsertable(std::forward<T>(key)), mapped_type());
                     return iter->second;
                 }
             }
@@ -229,7 +232,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             template <class T> bool hasKey(const T& key) const              { return find(key) != end(); }
 
-            iterator insertNonExisting(key_type&& key, mapped_type&& value) { return static_cast<Impl_T&>(*this).insertNonExisting(std::move(key), std::move(value)); }
+            iterator insertNonExisting(const key_type& key, mapped_type&& value) { key_type k = key; return insertNonExisting(std::move(k), std::move(value)); }
+            iterator insertNonExisting(key_type&& key, mapped_type&& value)      { return static_cast<Impl_T&>(*this).insertNonExisting(std::move(key), std::move(value)); }
 
             std::pair<iterator, bool> insert(std::pair<key_type, mapped_type>&& newVal)
             {

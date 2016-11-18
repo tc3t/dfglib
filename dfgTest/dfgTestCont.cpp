@@ -821,6 +821,11 @@ namespace
         EXPECT_EQ(3, m.size());
         EXPECT_EQ(3, mConst.size());
 
+        const std::string sConstKey = "f";
+        m[sConstKey] = 'f';
+        EXPECT_EQ(4, m.size());
+        EXPECT_EQ(4, mConst.size());
+
         // find
         m.find("a");
         mConst.find("a");
@@ -987,6 +992,14 @@ TEST(dfgCont, MapVector)
     testMapInterface(mapVectorAosUnsorted, randEngSeed);
     EXPECT_EQ(mStd.size(), mapVectorAosSorted.size());
     EXPECT_EQ(mStd.size(), mapVectorAosUnsorted.size());
+
+    // Test some basic []-operations.
+    {
+        dfg::cont::MapVectorAoS<size_t, double> mm;
+        size_t i = 0;
+        mm[i] = 2;
+        mm[size_t(3)] = 4;
+    }
 
     verifyMapVectors(mapVectorSoaSorted, mapVectorSoaUnsorted, mStd);
     verifyMapVectors(mapVectorAosSorted, mapVectorAosUnsorted, mStd);
