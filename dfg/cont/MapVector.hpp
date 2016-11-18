@@ -133,6 +133,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             bool                empty() const       { return static_cast<const Impl_T&>(*this).empty(); }
             size_t              size() const        { return static_cast<const Impl_T&>(*this).size(); }
+            void                clear() const       { return static_cast<const Impl_T&>(*this).clear(); }
 
             iterator            makeIterator(const size_t i)        { return static_cast<Impl_T&>(*this).makeIterator(i); }
             const_iterator      makeIterator(const size_t i) const  { return static_cast<const Impl_T&>(*this).makeIterator(i); }
@@ -293,6 +294,7 @@ public:
 
     bool    empty() const   { return m_keyStorage.empty(); }
     size_t  size() const    { return m_keyStorage.size(); }
+    void    clear()         { m_keyStorage.clear(); m_valueStorage.clear(); }
 
     iterator insertNonExisting(key_type&& key, mapped_type&& value)
     {
@@ -375,6 +377,7 @@ public:
 
     bool    empty() const   { return m_storage.empty(); }
     size_t  size() const    { return m_storage.size(); }
+    void    clear()         { m_storage.clear(); }
 
     iterator insertNonExisting(key_type&& key, mapped_type&& value)
     {

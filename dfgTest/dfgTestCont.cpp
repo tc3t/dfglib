@@ -897,6 +897,10 @@ namespace
         EXPECT_EQ(0, m.size());
         EXPECT_TRUE(m.empty());
         EXPECT_EQ(m.end(), rv1);
+
+        m["a"] = 1;
+        m.clear();
+        EXPECT_TRUE(m.empty());
     }
 
     template <class Map_T>
@@ -1087,6 +1091,10 @@ namespace
         EXPECT_EQ(0, se.size());
         EXPECT_TRUE(se.empty());
         EXPECT_EQ(se.end(), rv1);
+
+        se.insert("a");
+        se.clear();
+        EXPECT_TRUE(se.empty());
     }
 
     template <class Set_T>

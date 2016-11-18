@@ -47,6 +47,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         bool                empty() const       { return m_storage.empty(); }
         size_t              size() const        { return m_storage.size(); }
+        void                clear()             { m_storage.clear(); }
 
         iterator            begin()             { return m_storage.begin(); }
         const_iterator      begin() const       { return m_storage.begin(); }
