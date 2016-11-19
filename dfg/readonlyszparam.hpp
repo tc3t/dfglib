@@ -283,16 +283,16 @@ public:
     }
 
     // Careful with this: this must be null terminated view (i.e. is not enough that psz is null terminated).
-    DFG_CLASS_NAME(StringViewSz)(PtrT psz, const size_t nCount) :
+    DFG_CLASS_NAME(StringViewSz)(SzPtrT psz, const size_t nCount) :
         m_psz(psz),
         m_nSize(nCount)
     {
-        DFG_ASSERT_CORRECTNESS(psz[nCount] == '\0');
+        DFG_ASSERT_CORRECTNESS(toCharPtr_raw(m_psz)[nCount] == '\0');
     }
 
     bool empty() const
     {
-        return *m_psz == '\0';
+        return *toCharPtr_raw(m_psz) == '\0';
     }
 
     bool isLengthCalculated() const
@@ -345,7 +345,7 @@ public:
     }
 
 //protected:
-    PtrT m_psz;         // Pointer to first character.
+    SzPtrT m_psz;       // Pointer to first character.
     size_t m_nSize;	    // Length of the string or DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated
 }; // StringViewSz
 

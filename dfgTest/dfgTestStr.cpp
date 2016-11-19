@@ -554,19 +554,19 @@ namespace
         const Char_T sz0[] = { 'a', 'b', 'c', '\0' };
         const Char_T sz1[] = { 'a', 'b', 'c', 'd', '\0' };
         const Char_T sz2[] = { 'a', 'b', 'd', '\0' };
-        StringView_T szView(sz0);
-        EXPECT_EQ(sz0, szView.c_str());             // Test existence of c_str()
-        EXPECT_TRUE(szView == sz0);
-        EXPECT_TRUE(sz0 == szView);
-        EXPECT_FALSE(szView == sz1);
-        EXPECT_FALSE(szView == sz2);
+        StringView_T szView(conv(sz0));
+        EXPECT_EQ(conv(sz0), szView.c_str());             // Test existence of c_str()
+        EXPECT_TRUE(szView == conv(sz0));
+        EXPECT_TRUE(conv(sz0) == szView);
+        EXPECT_FALSE(szView == conv(sz1));
+        EXPECT_FALSE(szView == conv(sz2));
         EXPECT_EQ(DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated, szView.m_nSize); // This tests implementation detail, not interface.
         EXPECT_EQ(3, szView.length());
         EXPECT_EQ(3, szView.m_nSize); // This tests implementation detail, not interface.
-        EXPECT_TRUE(szView == sz0);
-        EXPECT_TRUE(sz0 == szView);
-        EXPECT_FALSE(szView == sz1);
-        EXPECT_FALSE(szView == sz2);
+        EXPECT_TRUE(szView == conv(sz0));
+        EXPECT_TRUE(conv(sz0) == szView);
+        EXPECT_FALSE(szView == conv(sz1));
+        EXPECT_FALSE(szView == conv(sz2));
     }
 }
 
@@ -574,12 +574,12 @@ TEST(dfgStr, StringViewSz)
 {
     using namespace DFG_ROOT_NS;
 
-    TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzC), char, std::string>([](const char* psz)      { return psz; });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewW), wchar_t, std::wstring>([](const wchar_t* psz)   { return psz; });
+    TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzC), char, std::string>([](const char* psz)          { return psz; });
+    TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzW), wchar_t, std::wstring>([](const wchar_t* psz)   { return psz; });
 
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii>([](const char* psz)      { return DFG_ROOT_NS::SzPtrAscii(psz); });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1>([](const char* psz)    { return DFG_ROOT_NS::SzPtrLatin1(psz); });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8>([](const char* psz)        { return DFG_ROOT_NS::SzPtrUtf8(psz); });
+    TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzAscii), char, StringAscii>([](const char* psz)      { return DFG_ROOT_NS::SzPtrAscii(psz); });
+    TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzLatin1), char, StringLatin1>([](const char* psz)    { return DFG_ROOT_NS::SzPtrLatin1(psz); });
+    TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzUtf8), char, StringUtf8>([](const char* psz)        { return DFG_ROOT_NS::SzPtrUtf8(psz); });
 }
 
 TEST(dfgStr, HexStr)
