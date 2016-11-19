@@ -477,9 +477,10 @@ TEST(dfgStr, String)
 namespace
 {
     template <class StringView_T, class Char_T, class Str_T, class RawToTypedConv>
-    void TestStringViewImpl(RawToTypedConv conv)
+    void TestStringViewImpl(RawToTypedConv conv, const bool bTestNonSzViews = true)
     {
         using namespace DFG_ROOT_NS;
+        const Char_T szEmpty[] = { '\0' };
         const Char_T sz[]  = { 'a', 'b', 'c', '\0' };
         const Char_T sz2[] = { 'b', 'c', 'a', '\0' };
         const Str_T s(conv(sz));
@@ -492,16 +493,27 @@ namespace
         StringView_T view2(s);
         EXPECT_EQ(s.c_str(), view2.begin());
 
+        // Test empty()
+        EXPECT_TRUE(StringView_T(conv(szEmpty)).empty());
+
         // Test operator==
+        EXPECT_TRUE(StringView_T(conv(szEmpty)) == StringView_T(conv(szEmpty)));
         EXPECT_TRUE(view == view2);
+        
         EXPECT_TRUE(StringView_T(Str_T()) == StringView_T(Str_T()));
-        EXPECT_TRUE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 2));
-        EXPECT_FALSE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 3));
-        EXPECT_FALSE(StringView_T(conv(sz), 2) == StringView_T(conv(sz2), 2));
+        if (bTestNonSzViews)
+        { 
+            EXPECT_TRUE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 2));
+            EXPECT_FALSE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 3));
+            EXPECT_FALSE(StringView_T(conv(sz), 2) == StringView_T(conv(sz2), 2));
+        }
+        
         EXPECT_TRUE(view == s);
         EXPECT_TRUE(s == view);
         EXPECT_TRUE(view == s.c_str());
         EXPECT_TRUE(s.c_str() == view);
+        EXPECT_FALSE(StringView_T(conv(sz)) == StringView_T(conv(sz2)));
+        EXPECT_TRUE(StringView_T(conv(sz)) != StringView_T(conv(sz2)));
 
         // Test operator<
         {
@@ -528,6 +540,46 @@ TEST(dfgStr, StringView)
     TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii>([](const char* psz) {return DFG_ROOT_NS::SzPtrAscii(psz); });
     TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1>([](const char* psz) {return DFG_ROOT_NS::SzPtrLatin1(psz); });
     TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8>([](const char* psz) {return DFG_ROOT_NS::SzPtrUtf8(psz); });
+}
+
+namespace
+{
+    template <class StringView_T, class Char_T, class Str_T, class RawToTypedConv>
+    void TestStringViewSzImpl(RawToTypedConv conv)
+    {
+        using namespace DFG_ROOT_NS;
+
+        TestStringViewImpl<StringView_T, Char_T, Str_T>(conv, false);
+
+        const Char_T sz0[] = { 'a', 'b', 'c', '\0' };
+        const Char_T sz1[] = { 'a', 'b', 'c', 'd', '\0' };
+        const Char_T sz2[] = { 'a', 'b', 'd', '\0' };
+        StringView_T szView(sz0);
+        EXPECT_EQ(sz0, szView.c_str());             // Test existence of c_str()
+        EXPECT_TRUE(szView == sz0);
+        EXPECT_TRUE(sz0 == szView);
+        EXPECT_FALSE(szView == sz1);
+        EXPECT_FALSE(szView == sz2);
+        EXPECT_EQ(DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated, szView.m_nSize); // This tests implementation detail, not interface.
+        EXPECT_EQ(3, szView.length());
+        EXPECT_EQ(3, szView.m_nSize); // This tests implementation detail, not interface.
+        EXPECT_TRUE(szView == sz0);
+        EXPECT_TRUE(sz0 == szView);
+        EXPECT_FALSE(szView == sz1);
+        EXPECT_FALSE(szView == sz2);
+    }
+}
+
+TEST(dfgStr, StringViewSz)
+{
+    using namespace DFG_ROOT_NS;
+
+    TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzC), char, std::string>([](const char* psz)      { return psz; });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewW), wchar_t, std::wstring>([](const wchar_t* psz)   { return psz; });
+
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii>([](const char* psz)      { return DFG_ROOT_NS::SzPtrAscii(psz); });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1>([](const char* psz)    { return DFG_ROOT_NS::SzPtrLatin1(psz); });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8>([](const char* psz)        { return DFG_ROOT_NS::SzPtrUtf8(psz); });
 }
 
 TEST(dfgStr, HexStr)

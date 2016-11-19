@@ -2,6 +2,8 @@
 
 #include "dfgDefs.hpp"
 #include "dfgBaseTypedefs.hpp"
+#include "numericTypeTools.hpp"
+#include "str/strCmp.hpp"
 #include "str/strlen.hpp"
 #include "buildConfig.hpp"
 #include "build/utils.hpp"
@@ -177,6 +179,12 @@ public:
     
     typedef PtrT const_iterator;
 
+    DFG_CLASS_NAME(StringView)() :
+        m_pFirst(nullptr),
+        m_nSize(0)
+    {
+    }
+
     DFG_CLASS_NAME(StringView)(const Str_T& s) :
         m_pFirst(s.c_str()),
         m_nSize(readOnlySzParamLength(s))
@@ -239,8 +247,107 @@ public:
 
 protected:
     PtrT m_pFirst;          // Pointer to first character.
-    const size_t m_nSize;	// Length of the string as returned by strLen().
-};
+    size_t m_nSize;	        // Length of the string as returned by strLen().
+}; // class StringView
+
+namespace DFG_DETAIL_NS
+{
+    static const size_t gnStringViewSzSizeNotCalculated = NumericTraits<size_t>::maxValue;
+}
+
+// Like StringView, but guarantees that view is null terminated.
+// Also the string length is not computed on constructor but on demand removing some of the const's.
+template <class Char_T, class Str_T = std::basic_string<Char_T>>
+class DFG_CLASS_NAME(StringViewSz)
+{
+public:
+    typedef DFG_CLASS_NAME(StringView)<Char_T, Str_T> StringViewT;
+
+    typedef decltype(Str_T().c_str())               SzPtrT;
+    typedef decltype(toCharPtr(Str_T().c_str()))    PtrT;
+
+    typedef PtrT const_iterator;
+
+    DFG_CLASS_NAME(StringViewSz)(const Str_T& s) :
+        m_psz(s.c_str()),
+        m_nSize(readOnlySzParamLength(s))
+    {
+        DFG_ASSERT_CORRECTNESS(m_psz != nullptr);
+    }
+
+    DFG_CLASS_NAME(StringViewSz)(SzPtrT psz) :
+        m_psz(psz),
+        m_nSize(DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated)
+    {
+        DFG_ASSERT_CORRECTNESS(m_psz != nullptr);
+    }
+
+    // Careful with this: this must be null terminated view (i.e. is not enough that psz is null terminated).
+    DFG_CLASS_NAME(StringViewSz)(PtrT psz, const size_t nCount) :
+        m_psz(psz),
+        m_nSize(nCount)
+    {
+        DFG_ASSERT_CORRECTNESS(psz[nCount] == '\0');
+    }
+
+    bool empty() const
+    {
+        return *m_psz == '\0';
+    }
+
+    bool isLengthCalculated() const
+    {
+        return m_nSize != DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated;
+    }
+
+    size_t length()
+    {
+        if (!isLengthCalculated())
+            m_nSize = readOnlySzParamLength(m_psz);
+        return m_nSize;
+    }
+
+    size_t size()
+    {
+        return length();
+    }
+
+    PtrT data() const { return m_psz; }
+
+    SzPtrT c_str() const { return m_psz; }
+
+    const_iterator begin() const
+    {
+        return m_psz;
+    }
+
+    const_iterator end()
+    {
+        return PtrT(toCharPtr_raw(m_psz) + length());
+    }
+
+    bool operator==(DFG_CLASS_NAME(StringViewSz) other)
+    {
+        return toStringView() == other.toStringView();
+    }
+
+    StringViewT toStringView()                       { return StringViewT(m_psz, length()); }
+    StringViewT toStringViewFromCachedSize() const   { return StringViewT(m_psz, m_nSize); }
+
+    bool operator==(const Str_T& str)
+    {
+        return str == toStringView();
+    }
+
+    bool operator==(const SzPtrT& tpsz)
+    {
+        return (isLengthCalculated()) ? toStringViewFromCachedSize() == tpsz : DFG_MODULE_NS(str)::strCmp(m_psz, tpsz) == 0;
+    }
+
+//protected:
+    PtrT m_psz;         // Pointer to first character.
+    size_t m_nSize;	    // Length of the string or DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated
+}; // StringViewSz
 
 template<class SzPtr_T, class Char_T, class Str_T>
 inline bool operator==(const SzPtr_T& psz, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
@@ -260,6 +367,36 @@ inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, S
     return s.compare(0, s.size(), right.begin(), right.length()) < 0;
 }
 
+template<class Char_T, class Str_T>
+inline bool operator!=(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& left, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+{
+    return !(left == right);
+}
+
+template<class SzPtr_T, class Char_T, class Str_T>
+inline bool operator==(const SzPtr_T& psz, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+{
+    return right == psz;
+}
+
+template<class Char_T, class Str_T>
+inline bool operator==(const Str_T& s, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+{
+    return right == s;
+}
+
+template<class Char_T, class Str_T>
+inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& right)
+{
+    return DFG_MODULE_NS(str)::strCmp(s.c_str(), right.c_str()) < 0;
+}
+
+template<class Char_T, class Str_T>
+inline bool operator!=(DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> left, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+{
+    return !(left == right);
+}
+
 typedef DFG_CLASS_NAME(ReadOnlySzParam)<char>				DFG_CLASS_NAME(ReadOnlySzParamC);
 typedef DFG_CLASS_NAME(ReadOnlySzParam)<wchar_t>			DFG_CLASS_NAME(ReadOnlySzParamW);
 
@@ -271,5 +408,11 @@ typedef DFG_CLASS_NAME(StringView)<wchar_t>                             DFG_CLAS
 typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringAscii)>   DFG_CLASS_NAME(StringViewAscii);
 typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringLatin1)>  DFG_CLASS_NAME(StringViewLatin1);
 typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringUtf8)>    DFG_CLASS_NAME(StringViewUtf8);
+
+typedef DFG_CLASS_NAME(StringViewSz)<char>    	                          DFG_CLASS_NAME(StringViewSzC);
+typedef DFG_CLASS_NAME(StringViewSz)<wchar_t>                             DFG_CLASS_NAME(StringViewSzW);
+typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringAscii)>   DFG_CLASS_NAME(StringViewSzAscii);
+typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringLatin1)>  DFG_CLASS_NAME(StringViewSzLatin1);
+typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringUtf8)>    DFG_CLASS_NAME(StringViewSzUtf8);
 
 } // namespace
