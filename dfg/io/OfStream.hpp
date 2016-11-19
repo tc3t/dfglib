@@ -63,8 +63,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             {
                 m_strmBuf.sputn(m_encodingBuffer.data(), m_encodingBuffer.size());
             }
-            m_encodingBuffer.pubseekpos(0);
-            m_encodingBuffer.container().clear();
+            m_encodingBuffer.clearBufferWithoutDeallocAndSeekToBegin();
             return rv;
         }
 

@@ -13,6 +13,15 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
+    // Simple output buffer with following properties:
+    //	-Writes either to external buffer or if not given, to internal. Buffer type is template parameter.
+    //	-Guarantees contiguous storage and access to non-copying sequence of characters through data() method.
+    //		If Cont_T::data() returns null terminated string, then the sequence is also null terminated.
+    //		This is the case for example for std::basic_string<T> objects.
+    //  -Guarantees non-copying access to underlying data container object.
+    //	-Supports releasing the content through move operation.
+    // Requirements for Cont_T
+    //	-Must provider data() method that provides access to contiguous data.
     template <class Cont_T>
     class DFG_CLASS_NAME(OmcByteStreamBuffer) : public std::basic_streambuf<char>
     //===========================================================================
@@ -43,14 +52,28 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 #endif
 
-        char* data() { return reinterpret_cast<char*>(ptrToContiguousMemory(*m_pData)); }
-        const char* data() const { return reinterpret_cast<const char*>(ptrToContiguousMemory(*m_pData)); }
-
+        char* data()                { return reinterpret_cast<char*>(ptrToContiguousMemory(*m_pData)); }
+        const char* data() const    { return reinterpret_cast<const char*>(ptrToContiguousMemory(*m_pData)); }
+        
+        // Returns content of current buffer by moving and clears the buffer. Does not 
         Cont_T releaseData()
         {
             auto cont = std::move(*m_pData);
+            m_pData->clear();
+            return std::move(cont);
+        }
+
+        // Like releaseData() but also releases reference to external buffer (if such was in use) and will use the internal one after this.
+        Cont_T releaseDataAndBuffer()
+        {
+            auto cont = releaseData();
             m_pData = &m_internalData;
             return std::move(cont);
+        }
+
+        void clearBufferWithoutDeallocAndSeekToBegin()
+        {
+            m_pData->clear();
         }
 
         size_t size() const { return sizeInBytes(*m_pData); }
@@ -93,6 +116,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return num;
         }
 
+        std::streampos seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode om) override
+        {
+            DFG_ASSERT_IMPLEMENTED(false);
+            return BaseClass::seekoff(off, dir, om);
+        }
+
+        pos_type seekpos(pos_type pos, std::ios_base::openmode om) override
+        {
+            DFG_ASSERT_IMPLEMENTED(false);
+            return BaseClass::seekpos(pos, om);
+        }
+
     protected:
 
         size_t currentPosInBytes() const
@@ -111,6 +146,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     };
 
     // Output byte stream that writes to given container that has contiguous storage.
+    // Note: seeking is not implemented (i.e. seekp() won't work). 
     // Naming Omc: O=Output, mc = memory contiguous
     template <class Cont_T = std::vector<char>, class StreamBuffer_T = DFG_CLASS_NAME(OmcByteStreamBuffer)<Cont_T>>
     class DFG_CLASS_NAME(OmcByteStream) : public std::ostream
@@ -148,7 +184,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         char* data() { return m_streamBuf.data(); }
         const char* data() const { return m_streamBuf.data(); }
 
-        Cont_T releaseData() { return m_streamBuf.releaseData(); }
+        Cont_T releaseData()                            { return m_streamBuf.releaseData(); }
+        Cont_T releaseDataAndBuffer()                   { return m_streamBuf.releaseDataAndBuffer(); }
+
+        void clearBufferWithoutDeallocAndSeekToBegin()  { m_streamBuf.clearBufferWithoutDeallocAndSeekToBegin(); }
 
         const Cont_T& container() const { return m_streamBuf.container(); }
 

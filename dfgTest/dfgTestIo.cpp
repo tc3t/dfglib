@@ -439,6 +439,8 @@ TEST(dfgIo, OmcStreamWithEncoding)
         const auto s2 = ostrm.releaseData();
         EXPECT_EQ(true, s.empty());
         EXPECT_EQ(sExp0, s2);
+        EXPECT_EQ(&s, &ostrm.container()); // Verify that releaseData() did not release the buffer reference.
+
         ostrm.write(szAnsi, DFG_COUNTOF_CSL(szAnsi));
         if (s.size() == DFG_COUNTOF_CSL(szAnsi))
         {
@@ -448,6 +450,15 @@ TEST(dfgIo, OmcStreamWithEncoding)
                 EXPECT_EQ(szAnsi[i], s[i]);
             }
         }
+
+        ostrm.clearBufferWithoutDeallocAndSeekToBegin();
+        EXPECT_TRUE(s.empty());
+        ostrm << szTestLatin1;
+        EXPECT_EQ(sExp0, s);
+        const auto s3 = ostrm.releaseDataAndBuffer();
+        EXPECT_TRUE(s.empty());
+        EXPECT_EQ(sExp0, s3);
+        EXPECT_NE(&s, &ostrm.container()); // Verify that releaseDataAndBuffer() changed the buffer.
 
         // Test writeUnicodeChar()
         {

@@ -10,15 +10,6 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
-    // Simple output buffer with following properties:
-    //	-Writes either to external buffer or if not given, to internal. Buffer type is template parameter.
-    //	-Guarantees contiguous storage and access to non-copying sequence of characters through data() method.
-    //		If Cont_T::data() returns null terminated string, then the sequence is also null terminated.
-    //		This is the case for example for std::basic_string<T> objects.
-    //  -Guarantees non-copying access to underlying data container object.
-    //	-Supports releasing the content through move operation.
-    // Requirements for Cont_T
-    //	-Must provider data() method that provides access to contiguous data.
     template <class Cont_T>
     class DFG_CLASS_NAME(OmcStreamBufferWithEncoding) : public DFG_CLASS_NAME(OmcByteStreamBuffer)<Cont_T>
     {
