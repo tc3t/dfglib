@@ -80,7 +80,7 @@ namespace
         cont.setSorting(false);
         DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
         for (int i = 0; i < nCount; ++i)
-            cont.insertNonExisting(generateKey(randEng), generateValue(randEng));
+            cont.m_storage.push_back(std::make_pair(generateKey(randEng), generateValue(randEng)));
         cont.setSorting(true);
         cont.m_storage.erase(std::unique(cont.m_storage.begin(), cont.m_storage.end(), [](const std::pair<Key_T, Val_T>& left, const std::pair<Key_T, Val_T>& right) {return left.first == right.first; }), cont.m_storage.end());
         const auto elapsedTime = timer.elapsedWallSeconds();
@@ -221,7 +221,7 @@ namespace
         auto loopUpIndexRandomizer = makeDistributionEngineUniform(&randEng, 0, int(DFG_COUNTOF(arrLookupStrings) - 1));
 
 #ifdef _DEBUG
-        const size_t nCount = 1000000 / cont.size();
+        const size_t nCount = 100 / cont.size();
 #else
         const size_t nCount = static_cast<size_t>((cont.size() <= 20) ? 100000000LL / cont.size() : 10000000000LL / cont.size()); 
 #endif

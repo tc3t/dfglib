@@ -35,7 +35,6 @@ Related reading and implementations:
 #include "../alg/eraseByTailSwap.hpp"
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
-#include "../alg/sortSingleItem.hpp"
 #include <algorithm>
 #include <iterator>
 #include <utility>
@@ -193,27 +192,60 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             template <class T>
             mapped_type& operator[](T&& key)
             {
-                auto iter = find(key);
-                if (iter != end())
-                    return iter->second;
+                auto iterKey = findInsertPos(*this, key);
+                if (iterKey != endKey() && isKeyMatch(keyIterValueToKeyValue(*iterKey), key))
+                    return makeIterator(iterKey - beginKey())->second;
                 else
                 {
-                    iter = insertNonExisting(keyParamToInsertable(std::forward<T>(key)), mapped_type());
+                    auto iter = insertNonExistingTo(keyParamToInsertable(std::forward<T>(key)), mapped_type(), iterKey);
                     return iter->second;
                 }
+            }
+
+            iterator        makeIteratorFromKeyIterator(const key_iterator& iterKey)         { return makeIterator(iterKey - beginKey()); }
+            const_iterator  makeIteratorFromKeyIterator(const key_iterator& iterKey) const   { return makeIterator(iterKey - beginKey()); }
+
+            template <class T0, class T1>
+            static bool isKeyMatch(const T0& a, const T1& b)
+            {
+                return DFG_MODULE_NS(alg)::isKeyMatch(a, b);
+            }
+
+            template <class This_T>
+            class KeyIteratorValueToComparable
+            {
+            public:
+                KeyIteratorValueToComparable(This_T& rThis) :
+                    m_rThis(rThis)
+                {}
+
+                auto operator()(const typename key_iterator::value_type& keyItem) const -> const typename This_T::key_type&
+                {
+                    return m_rThis.keyIterValueToKeyValue(keyItem);
+                }
+
+                This_T& m_rThis;
+            };
+
+            template <class This_T, class T>
+            static auto findInsertPos(This_T& rThis, const T& key) -> decltype(rThis.beginKey())
+            { 
+                const auto iterKeyBegin = rThis.beginKey();
+                const auto iterKeyEnd = rThis.endKey();
+                auto iter = DFG_MODULE_NS(alg)::findInsertPosLinearOrBinary(rThis.isSorted(), iterKeyBegin, iterKeyEnd, key, KeyIteratorValueToComparable<This_T>(rThis));
+                return iter;
             }
 
             template <class This_T, class T>
             static auto findImpl(This_T& rThis, const T& key) -> decltype(rThis.makeIterator(0))
             {
-                const auto iterKeyBegin = rThis.beginKey();
-                const auto iterKeyEnd = rThis.endKey();
-                auto iter = DFG_MODULE_NS(alg)::findLinearOrBinary(rThis.isSorted(), iterKeyBegin, iterKeyEnd, key,
-                                                                    [&](const typename key_iterator::value_type& keyItem) -> decltype(rThis.keyIterValueToKeyValue(keyItem))&
-                                                                    {
-                                                                        return rThis.keyIterValueToKeyValue(keyItem);
-                                                                    });
-                return iter != iterKeyEnd ? rThis.makeIterator(iter - iterKeyBegin) : rThis.end();
+                if (rThis.isSorted())
+                {
+                    auto iter = findInsertPos(rThis, key);
+                    return (iter != rThis.endKey() && isKeyMatch(rThis.keyIterValueToKeyValue(*iter), key)) ? rThis.makeIterator(iter - rThis.beginKey()) : rThis.end();
+                }
+                else 
+                    return rThis.makeIterator(DFG_MODULE_NS(alg)::findLinear(rThis.beginKey(), rThis.endKey(), key, KeyIteratorValueToComparable<This_T>(rThis)) - rThis.beginKey());
             }
 
             template <class T> iterator         find(const T& key)          { return findImpl(*this, key); }
@@ -222,21 +254,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             template <class T> bool hasKey(const T& key) const              { return find(key) != end(); }
 
             iterator insertNonExisting(const key_type& key, mapped_type&& value) { key_type k = key; return insertNonExisting(std::move(k), std::move(value)); }
-            iterator insertNonExisting(key_type&& key, mapped_type&& value)      { return static_cast<Impl_T&>(*this).insertNonExisting(std::move(key), std::move(value)); }
+            iterator insertNonExisting(key_type&& key, mapped_type&& value)      { return static_cast<Impl_T&>(*this).insertNonExistingTo(std::move(key), std::move(value), findInsertPos(*this, key)); }
+
+            iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& insertPos) { return static_cast<Impl_T&>(*this).insertNonExistingTo(std::move(key), std::move(value), insertPos); }
 
             std::pair<iterator, bool> insert(std::pair<key_type, mapped_type>&& newVal)
             {
                 return insert(std::move(newVal.first), std::move(newVal.second));
             }
 
-            std::pair<iterator, bool> insert(key_type&& key, mapped_type&& val)
+            std::pair<iterator, bool> insert(key_type&& key, mapped_type&& val) // TODO: key-type to be a template parameter.
             {
-                auto iter = find(key);
-                if (iter != end())
-                    return std::pair<iterator, bool>(iter, false);
+                auto iterKey = findInsertPos(*this, key);
+                if (iterKey != endKey() && isKeyMatch(keyIterValueToKeyValue(*iterKey), key))
+                    return std::pair<iterator, bool>(makeIteratorFromKeyIterator(iterKey), false); // Already present
                 else
                 {
-                    iter = insertNonExisting(std::move(key), std::move(val));
+                    auto iter = insertNonExistingTo(std::move(key), std::move(val), iterKey);
                     return std::pair<iterator, bool>(iter, true);
                 }
             }
@@ -289,20 +323,12 @@ public:
     size_t  size() const    { return m_keyStorage.size(); }
     void    clear()         { m_keyStorage.clear(); m_valueStorage.clear(); }
 
-    iterator insertNonExisting(key_type&& key, mapped_type&& value)
+    iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& insertPos)
     {
-        m_keyStorage.push_back(std::move(key));
-        m_valueStorage.push_back(std::move(value));
-        if (this->m_bSorted)
-        {
-            auto iter = ::DFG_MODULE_NS(alg)::sortSingleItem(m_keyStorage, m_keyStorage.end());
-            const auto nNewPos = iter - m_keyStorage.begin();
-            // Key was moved from [size() - 1] to nNewPos. Move value from back() to nNewPos shifting existing elements forwards.
-            std::rotate(m_valueStorage.begin() + nNewPos, m_valueStorage.end() - 1, m_valueStorage.end());
-            return makeIterator(nNewPos);
-        }
-        else
-            return makeIterator(size() - 1);
+        const auto nIndex = insertPos - m_keyStorage.begin();
+        m_keyStorage.insert(insertPos, std::move(key));
+        m_valueStorage.insert(m_valueStorage.begin() + nIndex, std::move(value));
+        return makeIterator(nIndex);
     }
 
     void reserve(const size_t nReserve)
@@ -372,16 +398,9 @@ public:
     size_t  size() const    { return m_storage.size(); }
     void    clear()         { m_storage.clear(); }
 
-    iterator insertNonExisting(key_type&& key, mapped_type&& value)
+    iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& iter)
     {
-        m_storage.push_back(std::make_pair(std::move(key), std::move(value)));
-        if (this->m_bSorted)
-        {
-            auto iter = ::DFG_MODULE_NS(alg)::sortSingleItem(m_storage, m_storage.end());
-            return iter;
-        }
-        else
-            return makeIterator(size() - 1);
+        return m_storage.insert(iter, std::make_pair(std::move(key), std::move(value)));
     }
 
     void reserve(const size_t nReserve)

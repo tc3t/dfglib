@@ -24,7 +24,6 @@ Related reading and implementations:
 #include "../alg/eraseByTailSwap.hpp"
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
-#include "../alg/sortSingleItem.hpp"
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -80,10 +79,31 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             }
         }
 
+        template <class T0, class T1>
+        static bool isKeyMatch(const T0& a, const T1& b)
+        {
+            return DFG_MODULE_NS(alg)::isKeyMatch(a, b);
+        }
+
+        template <class This_T, class T>
+        static auto findInsertPos(This_T& rThis, const T& key) -> decltype(rThis.begin())
+        {
+            const auto iterBegin = rThis.begin();
+            const auto iterEnd = rThis.end();
+            auto iter = DFG_MODULE_NS(alg)::findInsertPosLinearOrBinary(rThis.isSorted(), iterBegin, iterEnd, key);
+            return iter;
+        }
+
         template <class This_T, class T>
         static auto findImpl(This_T& rThis, const T& key) -> decltype(rThis.begin())
         {
-            return DFG_MODULE_NS(alg)::findLinearOrBinary(rThis.isSorted(), rThis.begin(), rThis.end(), key);
+            if (rThis.isSorted())
+            {
+                auto iter = findInsertPos(rThis, key);
+                return (iter != rThis.end() && isKeyMatch(*iter, key)) ? iter : rThis.end();
+            }
+            else
+                return DFG_MODULE_NS(alg)::findLinear(rThis.begin(), rThis.end(), key);
         }
 
         template <class T> iterator         find(const T& key)          { return findImpl(*this, key); }
@@ -91,27 +111,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         template <class T> bool hasKey(const T& key) const              { return find(key) != end(); }
 
-        iterator insertNonExisting(key_type&& value)
+        iterator insertNonExistingTo(key_type&& value)
+        {
+            return insertNonExistingTo(value, findInsertPos(*this, value));
+        }
+
+        iterator insertNonExistingTo(key_type&& value, iterator insertPos)
         { 
-            m_storage.push_back(std::move(value));
-            if (m_bSorted)
-            {
-                auto iter = ::DFG_MODULE_NS(alg)::sortSingleItem(m_storage, backIter());
-                return iter;
-            }
-            else
-                return backIter();
+            return m_storage.insert(insertPos, value);
         }
 
         template <class T>
         std::pair<iterator, bool> insert(const T& newVal)
         {
-            auto iter = find(newVal);
-            if (iter != end())
+            auto iter = findInsertPos(*this, newVal);
+            if (iter != end() && isKeyMatch(*iter, newVal))
                 return std::pair<iterator, bool>(iter, false);
             else
             {
-                iter = insertNonExisting(key_type(newVal));
+                iter = insertNonExistingTo(key_type(newVal), iter);
                 return std::pair<iterator, bool>(iter, true);
             }
         }
@@ -119,12 +137,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         template <class T>
         std::pair<iterator, bool> insert(key_type&& newVal)
         {
-            auto iter = find(newVal);
-            if (iter != end())
+            auto iter = findInsertPos(*this, newVal);
+            if (iter != end() && isKeyMatch(*iter, newVal))
                 return std::pair<iterator, bool>(iter, false);
             else
             {
-                iter = insertNonExisting(std::move(newVal));
+                iter = insertNonExistingTo(std::move(newVal), iter);
                 return std::pair<iterator, bool>(iter, true);
             }
         }
