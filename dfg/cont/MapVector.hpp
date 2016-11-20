@@ -33,6 +33,7 @@ Related reading and implementations:
 
 #include "../dfgDefs.hpp"
 #include "../alg/eraseByTailSwap.hpp"
+#include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../alg/sortSingleItem.hpp"
 #include <algorithm>
@@ -205,26 +206,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             template <class This_T, class T>
             static auto findImpl(This_T& rThis, const T& key) -> decltype(rThis.makeIterator(0))
             {
-                const auto iterBegin = rThis.beginKey();
-                const auto iterEnd = rThis.endKey();
-                if (rThis.m_bSorted)
-                {
-                    auto iter = std::lower_bound(iterBegin, iterEnd, key, [&](const typename key_iterator::value_type& keyItem, const T& searchKey)
-                    {
-                        return rThis.keyIterValueToKeyValue(keyItem) < searchKey;
-                    });
-                    return (iter != iterEnd && rThis.keyIterValueToKeyValue(*iter) == key) ? rThis.makeIterator(iter - iterBegin) : rThis.end();
-                    // return (iter != iterEnd && !(key < rThis.keyIterValueToKeyValue(*iter))) ? rThis.makeIterator(iter - iterBegin) : rThis.end(); // This version works if key does not have == operator.
-                }
-                else // case: not sorted.
-                {
-                    auto iter = std::find_if(iterBegin, iterEnd, [&](const typename key_iterator::value_type& keyItem)
-                    {
-                        return rThis.keyIterValueToKeyValue(keyItem) == key;
-                        //return !(rThis.keyIterValueToKeyValue(keyItem) < key) && !(key < rThis.keyIterValueToKeyValue(keyItem)); // This version works if key does not have == operator.
-                    });
-                    return rThis.makeIterator(iter - iterBegin);
-                }
+                const auto iterKeyBegin = rThis.beginKey();
+                const auto iterKeyEnd = rThis.endKey();
+                auto iter = DFG_MODULE_NS(alg)::findLinearOrBinary(rThis.isSorted(), iterKeyBegin, iterKeyEnd, key,
+                                                                    [&](const typename key_iterator::value_type& keyItem) -> decltype(rThis.keyIterValueToKeyValue(keyItem))&
+                                                                    {
+                                                                        return rThis.keyIterValueToKeyValue(keyItem);
+                                                                    });
+                return iter != iterKeyEnd ? rThis.makeIterator(iter - iterKeyBegin) : rThis.end();
             }
 
             template <class T> iterator         find(const T& key)          { return findImpl(*this, key); }

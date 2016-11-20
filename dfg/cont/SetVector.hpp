@@ -22,6 +22,7 @@ Related reading and implementations:
 
 #include "../dfgDefs.hpp"
 #include "../alg/eraseByTailSwap.hpp"
+#include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../alg/sortSingleItem.hpp"
 #include <algorithm>
@@ -82,24 +83,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         template <class This_T, class T>
         static auto findImpl(This_T& rThis, const T& key) -> decltype(rThis.begin())
         {
-            const auto iterBegin = rThis.begin();
-            const auto iterEnd = rThis.end();
-            if (rThis.m_bSorted)
-            {
-                auto iter = std::lower_bound(iterBegin, iterEnd, key, [&](const value_type& keyItem, const T& searchKey)
-                {
-                    return keyItem < searchKey;
-                });
-                return (iter != iterEnd && *iter == key) ? iter : rThis.end();
-            }
-            else // case: not sorted.
-            {
-                auto iter = std::find_if(iterBegin, iterEnd, [&](const value_type& keyItem)
-                {
-                    return keyItem == key;
-                });
-                return iter;
-            }
+            return DFG_MODULE_NS(alg)::findLinearOrBinary(rThis.isSorted(), rThis.begin(), rThis.end(), key);
         }
 
         template <class T> iterator         find(const T& key)          { return findImpl(*this, key); }
