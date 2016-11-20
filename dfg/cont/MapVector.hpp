@@ -398,7 +398,7 @@ public:
     {
         std::sort(m_storage.begin(), m_storage.end(), [](const value_type& left, const value_type& right)
         {
-            return left < right;
+            return left.first < right.first;
         });
     }
 
