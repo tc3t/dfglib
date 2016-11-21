@@ -295,9 +295,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             bool m_bSorted;
         }; // class MapVectorCrtp
 
+        template <class T> struct DefaultContainerType { typedef std::vector<T> type; };
+
     } // namespace DFG_DETAIL_NS
 
-template <class Key_T, class Value_T>
+    
+
+template <class Key_T, class Value_T, class KeyStorage_T = typename DFG_DETAIL_NS::DefaultContainerType<Key_T>::type, class ValueStorage_T = typename DFG_DETAIL_NS::DefaultContainerType<Value_T>::type>
 class DFG_CLASS_NAME(MapVectorSoA) : public DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T>>
 {
 public:
@@ -365,17 +369,20 @@ public:
         swap(m_valueStorage[nIndexA], m_valueStorage[nIndexB]);
     }
 
-    std::vector<key_type> m_keyStorage;
-    std::vector<mapped_type> m_valueStorage;
+    KeyStorage_T    m_keyStorage;
+    ValueStorage_T  m_valueStorage;
 }; // class MapVectorSoA
 
 
-template <class Key_T, class Value_T>
+template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultContainerType<std::pair<Key_T, Value_T>>::type>
 class DFG_CLASS_NAME(MapVectorAoS) : public DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>
 {
 public:
-    typedef DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>  BaseClass;
-    typedef typename DFG_DETAIL_NS::MapVectorTraits<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>::value_type value_type;
+    typedef DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>      BaseClass;
+    typedef DFG_DETAIL_NS::MapVectorTraits<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>    TraitsType;
+    
+    typedef Storage_T                                           StorageType;
+    typedef typename StorageType::value_type                    value_type;
     typedef typename BaseClass::iterator                        iterator;
     typedef typename BaseClass::const_iterator                  const_iterator;
     typedef typename BaseClass::key_iterator                    key_iterator;
@@ -384,12 +391,13 @@ public:
     typedef typename BaseClass::mapped_type                     mapped_type;
     typedef typename BaseClass::size_type                       size_type;
     
+    
 
-    key_iterator        makeIterator(const size_t i)        { return m_storage.begin() + i; }
-    const_key_iterator  makeIterator(const size_t i) const  { return m_storage.begin() + i; }
+    key_iterator        makeIterator(const size_t i)            { return m_storage.begin() + i; }
+    const_key_iterator  makeIterator(const size_t i) const      { return m_storage.begin() + i; }
 
-    iterator        makeKeyIterator(const size_t i)         { return makeIterator(i); }
-    const_iterator  makeKeyIterator(const size_t i) const   { return makeIterator(i); }
+    iterator            makeKeyIterator(const size_t i)         { return makeIterator(i); }
+    const_iterator      makeKeyIterator(const size_t i) const   { return makeIterator(i); }
 
     key_type&       keyIterValueToKeyValue(std::pair<key_type, mapped_type>& val)               { return val.first; }
     const key_type& keyIterValueToKeyValue(const std::pair<key_type, mapped_type>& val) const   { return val.first; }
@@ -431,33 +439,33 @@ public:
         std::iter_swap(a, b);
     }
 
-    std::vector<std::pair<key_type, mapped_type>> m_storage;
+    StorageType m_storage;
 }; // class MapVectorAoS
 
 
 namespace DFG_DETAIL_NS
 {
-    template <class Key_T, class Value_T>
-    struct MapVectorTraits<DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T>>
+    template <class Key_T, class Value_T, class KeyStorage_T, class ValueStorage_T>
+    struct MapVectorTraits<DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T, KeyStorage_T, ValueStorage_T>>
     {
         typedef DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T>            ImplT;
         typedef Key_T                                                   key_type;
         typedef Value_T                                                 mapped_type;
         typedef IteratorMapVectorSoa<Key_T, Value_T, ImplT>             iterator;
         typedef IteratorMapVectorSoa<Key_T, const Value_T, const ImplT> const_iterator;
-        typedef typename std::vector<Key_T>::iterator                   key_iterator;
-        typedef typename std::vector<Key_T>::const_iterator             const_key_iterator;
+        typedef typename KeyStorage_T::iterator                         key_iterator;
+        typedef typename KeyStorage_T::const_iterator                   const_key_iterator;
     };
 
-    template <class Key_T, class Value_T>
-    struct MapVectorTraits<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>
+    template <class Key_T, class Value_T, class Storage_T>
+    struct MapVectorTraits<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T, Storage_T>>
     {
         typedef DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>            ImplT;
         typedef Key_T                                                   key_type;
         typedef Value_T                                                 mapped_type;
         typedef std::pair<key_type, mapped_type>                        value_type;
-        typedef typename std::vector<value_type>::iterator              iterator;
-        typedef typename std::vector<value_type>::const_iterator        const_iterator;
+        typedef typename Storage_T::iterator                            iterator;
+        typedef typename Storage_T::const_iterator                      const_iterator;
         typedef iterator                                                key_iterator;
         typedef const_iterator                                          const_key_iterator;
     };
