@@ -113,7 +113,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         iterator insertNonExistingTo(key_type&& value)
         {
-            return insertNonExistingTo(value, findInsertPos(*this, value));
+            return insertNonExistingTo(std::move(value), findInsertPos(*this, value));
         }
 
         iterator insertNonExistingTo(key_type&& value, iterator insertPos)
@@ -134,7 +134,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             }
         }
 
-        template <class T>
         std::pair<iterator, bool> insert(key_type&& newVal)
         {
             auto iter = findInsertPos(*this, newVal);
