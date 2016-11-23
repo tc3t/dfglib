@@ -13,9 +13,11 @@
 #include <dfg/cont/ViewableSharedPtr.hpp>
 #include <dfg/cont/SetVector.hpp>
 #include <dfg/cont/SortedSequence.hpp>
-#include <dfg/cont/TorRef.hpp>
 #include <dfg/cont/tableCsv.hpp>
+#include <dfg/cont/TorRef.hpp>
+#include <dfg/cont/TrivialPair.hpp>
 #include <dfg/rand.hpp>
+#include <dfg/typeTraits.hpp>
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/iter/szIterator.hpp>
 
@@ -1163,4 +1165,50 @@ TEST(dfgCont, SetVector)
     verifyEqual(mStd, setVectorUnsorted);
 
     verifySetVectors(setVectorSorted, setVectorUnsorted, mStd);
+}
+
+namespace
+{
+    template <class T0, class T1, bool IsTrivial>
+    void testTrivialPair()
+    {
+        using namespace DFG_MODULE_NS(cont);
+        DFG_CLASS_NAME(TrivialPair)<T0, T1> tp;
+
+        {
+            // Test that either IsTriviallyCopyableType is not available or that it returns expected result.
+            typedef DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyable<decltype(tp)> IsTriviallyCopyableType;
+            DFGTEST_STATIC((std::is_base_of<DFG_MODULE_NS(TypeTraits)::UnknownAnswerType, IsTriviallyCopyableType>::value ||
+                std::is_base_of<std::integral_constant<bool, IsTrivial>, IsTriviallyCopyableType>::value));
+        }
+
+        // Test existence of two parameter constructor.
+        {
+            auto t0 = T0();
+            auto t1 = T1();
+            DFG_CLASS_NAME(TrivialPair)<T0, T1> tp2(t0, t1);
+            DFG_CLASS_NAME(TrivialPair)<T0, T1> tp22(tp2.first, tp2.second);
+            EXPECT_EQ(tp2, tp22);
+        }
+
+        // Test move constructor
+        {
+            std::vector<T0> vec0(2, T0());
+            std::vector<T1> vec1(3, T1());
+            DFG_CLASS_NAME(TrivialPair)<std::vector<T0>, std::vector<T1>> tp3(std::move(vec0), std::move(vec1));
+            EXPECT_TRUE(vec0.empty());
+            EXPECT_TRUE(vec1.empty());
+            EXPECT_EQ(2, tp3.first.size());
+            EXPECT_EQ(3, tp3.second.size());
+        }
+    }
+}
+
+TEST(dfgCont, TrivialPair)
+{
+    using namespace DFG_MODULE_NS(cont);
+    testTrivialPair<int, int, true>();
+    testTrivialPair<char, double, true>();
+    testTrivialPair<DFG_CLASS_NAME(TrivialPair)<int, int>, bool, true>();
+    testTrivialPair<std::string, bool, false>();
 }
