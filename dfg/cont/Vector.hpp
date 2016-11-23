@@ -25,7 +25,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         iterator insertImpl(const_iterator pos, Value_T&& value, std::true_type)
         {
             const auto nAddTo = pos - this->begin();
-            const auto nMoveCount = size() - nAddTo;
+            const auto nMoveCount = this->size() - nAddTo;
             this->push_back(value_type());
             std::memmove(this->data() + nAddTo + 1, this->data() + nAddTo, sizeof(value_type) * nMoveCount);
             (*this)[nAddTo] = std::move(value);
