@@ -10,8 +10,9 @@
 #include "cont/SortedSequence.hpp"
 #include "cont/table.hpp"
 #include "cont/TorRef.hpp"
+#include "cont/TrivialPair.hpp"
 #include "cont/valueArray.hpp"
+#include "cont/Vector.hpp"
 #include "cont/vectorFixedCapacity.hpp"
 #include "cont/vectorSso.hpp"
 #include "cont/ViewableSharedPtr.hpp"
-
