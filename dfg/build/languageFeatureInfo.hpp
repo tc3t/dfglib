@@ -38,9 +38,17 @@
     #define DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED explicit
 #endif
 
+// DFG_LANGFEAT_CHRONO_11
 #if defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2012)
     #define DFG_LANGFEAT_CHRONO_11  0
 #else
     #define DFG_LANGFEAT_CHRONO_11  1
+#endif
+
+// DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2012)) || defined(__MINGW32__) // TODO: make this less coarse especially for mingw.
+    #define DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE	0
+#else
+    #define DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE	1
 #endif
 
