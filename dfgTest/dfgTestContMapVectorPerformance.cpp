@@ -1,19 +1,120 @@
 #include <stdafx.h>
 
-#if 0 // On/off switch for the whole performance test.
+#include <dfg/cont/MapVector.hpp>
+#include <dfg/cont/TrivialPair.hpp>
+#include <dfg/cont/Vector.hpp>
+#include <dfg/rand.hpp>
+#include <dfg/str/format_fmt.hpp>
+#include <dfg/time/timerCpu.hpp>
+#include <map>
+#include <type_traits>
+#include <unordered_map>
+#include <boost/container/flat_map.hpp>
+#include <boost/container/vector.hpp>
 
+namespace
+{
+
+template <class T>
+struct typeToName
+{
+    static std::string name() { return typeid(T).name(); }
+};
+
+template <> struct typeToName<std::string> { static std::string name() { return "std::string"; } };
+template <class T0, class T1> struct typeToName<std::pair<T0, T1>> { static std::string name() { return "std::pair<" + typeToName<T0>::name() + ", " + typeToName<T1>::name() + ">"; } };
+
+template <class Key_T, class Val_T>
+std::string containerDescription(const std::map<Key_T, Val_T>&) { return "std::map<" + typeToName<Key_T>::name() + "," + typeToName<Val_T>::name() + ">"; }
+
+template <class Key_T, class Val_T>
+std::string containerDescription(const std::unordered_map<Key_T, Val_T>&) { return "std::unordered_map<" + typeToName<Key_T>::name() + "," + typeToName<Val_T>::name() + ">"; }
+
+template <class Key_T, class Val_T>
+std::string containerDescription(const boost::container::flat_map<Key_T, Val_T>&) { return "boost::flat_map<" + typeToName<Key_T>::name() + "," + typeToName<Val_T>::name() + ">"; }
+template <class Key_T, class Val_T>
+std::string containerDescription(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorAoS)<Key_T, Val_T>& cont)
+{
+    return DFG_ROOT_NS::format_fmt("MapVectorAoS<{},{}>, sorted: {}", typeToName<Key_T>::name(), typeToName<Val_T>::name(), int(cont.isSorted()));
+}
+template <class Key_T, class Val_T>
+std::string containerDescription(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<Key_T, Val_T>& cont)
+{
+    return DFG_ROOT_NS::format_fmt("MapVectorSoA<{},{}>, sorted: {}", typeToName<Key_T>::name(), typeToName<Val_T>::name(), int(cont.isSorted()));
+}
+
+template <class Val_T>
+std::string containerDescription(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<Val_T>&)
+{
+    return DFG_ROOT_NS::format_fmt("Vector<{}>", typeToName<Val_T>::name());
+}
+
+template <class Val_T> std::string containerDescription(const std::vector<Val_T>&) { return "std::vector<" + typeToName<Val_T>::name() + ">"; }
+template <class Val_T> std::string containerDescription(const boost::container::vector<Val_T>&) { return "boost::vector<" + typeToName<Val_T>::name() + ">"; }
+
+
+template <class Cont_T, class Generator_T>
+Cont_T VectorInsertImpl(Generator_T generator, const int nCount)
+{
+    using namespace DFG_ROOT_NS;
+    const int nRandEngSeed = 12345678;
+
+    auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+    auto distr = DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, 0, NumericTraits<int>::maxValue);
+    randEng.seed(static_cast<unsigned long>(nRandEngSeed));
+    Cont_T cont;
+    DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+    cont.reserve(nCount);
+    cont.push_back(generator(randEng()));
+    for (int i = 1; i < nCount; ++i)
+    {
+        const auto nPos = distr() % cont.size();
+        cont.insert(cont.begin() + nPos, generator(randEng()));
+    }
+    const auto elapsedTime = timer.elapsedWallSeconds();
+    //const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}", int(capacity >= cont.size())) : "";
+    if (nCount > 100)
+        std::cout << "Insert time " << containerDescription(cont) /*<< sReservationInfo*/ << ": " << elapsedTime << '\n';
+    return cont;
+}
+
+template <class T> T generate(size_t randVal);
+
+template <> int generate<int>(size_t randVal) { return static_cast<int>(randVal); }
+template <> double generate<double>(size_t randVal) { return static_cast<double>(randVal); }
+template <> std::pair<int, int> generate<std::pair<int, int>>(size_t randVal)
+{
+    auto val = generate<int>(randVal);
+    return std::pair<int, int>(val, val);
+}
+template <> DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int> generate<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int>>(size_t randVal)
+{
+    auto val = generate<int>(randVal);
+    return DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int>(val, val);
+}
+
+template <class T>
+void VectorInsertImpl(const int nCount)
+{
+    const auto stdVec = VectorInsertImpl<std::vector<T>>(generate<T>, nCount);
+    const auto boostVec = VectorInsertImpl<boost::container::vector<T>>(generate<T>, nCount);
+    const auto dfgVec = VectorInsertImpl<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<T>>(generate<T>, nCount);
+    ASSERT_EQ(nCount, stdVec.size());
+    ASSERT_EQ(stdVec.size(), boostVec.size());
+    ASSERT_EQ(stdVec.size(), dfgVec.size());
+
+    EXPECT_TRUE(std::equal(stdVec.begin(), stdVec.end(), boostVec.begin()));
+    EXPECT_TRUE(std::equal(stdVec.begin(), stdVec.end(), dfgVec.begin()));
+}
+
+} // unnamed namespace
+
+#if 0 // On/off switch for the whole performance test.
 #if DFG_MSVC_VER >= DFG_MSVC_VER_2012
 
 #include <dfg/baseConstructorDelegate.hpp>
-#include <dfg/cont/MapVector.hpp>
-#include <dfg/rand.hpp>
 #include <dfg/ReadOnlySzParam.hpp>
-#include <dfg/str/format_fmt.hpp>
-#include <dfg/time/timerCpu.hpp>
 #include <chrono>
-#include <map>
-#include <unordered_map>
-#include <boost/container/flat_map.hpp>
 
 namespace
 {
@@ -30,31 +131,24 @@ namespace
     template <class Cont_T>
     void insertImpl(Cont_T& cont, decltype(DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded())& re)
     {
-        
-        cont.insert(std::pair<int, int>(generateKey(re), generateValue(re)));
+        auto key = generateKey(re);
+        cont.insert(std::pair<int, int>(key, generateValue(re)));
     }
 
-    template <class T>  std::string typeToName()                { return typeid(T).name(); }
-    template <>         std::string typeToName<std::string>()   { return "std::string"; }
-
-
-    template <class Key_T, class Val_T>
-    std::string containerDescription(const std::map<Key_T, Val_T>&) { return "std::map<" + typeToName<Key_T>() + "," + typeToName<Val_T>() + ">"; }
-
-    template <class Key_T, class Val_T>
-    std::string containerDescription(const std::unordered_map<Key_T, Val_T>&) { return "std::unordered_map<" + typeToName<Key_T>() + "," + typeToName<Val_T>() + ">"; }
-
-    template <class Key_T, class Val_T>
-    std::string containerDescription(const boost::container::flat_map<Key_T, Val_T>&) { return "boost::flat_map<" + typeToName<Key_T>() + "," + typeToName<Val_T>() + ">"; }
-    template <class Key_T, class Val_T>
-    std::string containerDescription(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorAoS)<Key_T, Val_T>& cont)
-    { 
-        return DFG_ROOT_NS::format_fmt("MapVectorAoS<{},{}>, sorted: {}", typeToName<Key_T>(), typeToName<Val_T>(), int(cont.isSorted()));
-    }
-    template <class Key_T, class Val_T>
-    std::string containerDescription(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<Key_T, Val_T>& cont)
-    { 
-        return DFG_ROOT_NS::format_fmt("MapVectorSoA<{},{}>, sorted: {}", typeToName<Key_T>(), typeToName<Val_T>(), int(cont.isSorted()));
+    template <class Cont_T>
+    void insertForVectorPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount, const size_t capacity = DFG_ROOT_NS::NumericTraits<size_t>::maxValue)
+    {
+        using namespace DFG_ROOT_NS;
+        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+        auto distr = DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, 0, NumericTraits<int>::maxValue);
+        randEng.seed(nRandEngSeed);
+        DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+        cont.push_back(0);
+        for (int i = 0; i < nCount; ++i)
+            cont.insert(cont.begin() + (distr() % cont.size()), typename Cont_T::value_type());
+        const auto elapsedTime = timer.elapsedWallSeconds();
+        const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}", int(capacity >= cont.size())) : "";
+        std::cout << "Insert time " << containerDescription(cont) << sReservationInfo << ": " << elapsedTime << '\n';
     }
 
     template <class Cont_T>
@@ -75,14 +169,18 @@ namespace
     void insertPerformanceTesterUnsortedPush_sort_and_unique(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorAoS)<Key_T, Val_T>& cont, const unsigned long nRandEngSeed, const int nCount, const size_t capacity = DFG_ROOT_NS::NumericTraits<size_t>::maxValue)
     {
         using namespace DFG_ROOT_NS;
+        typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorAoS)<Key_T, Val_T>::value_type value_type;
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
         randEng.seed(nRandEngSeed);
         cont.setSorting(false);
         DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
         for (int i = 0; i < nCount; ++i)
-            cont.m_storage.push_back(std::make_pair(generateKey(randEng), generateValue(randEng)));
+        {
+            auto key = generateKey(randEng);
+            cont.m_storage.push_back(value_type(key, generateValue(randEng)));
+        }
         cont.setSorting(true);
-        cont.m_storage.erase(std::unique(cont.m_storage.begin(), cont.m_storage.end(), [](const std::pair<Key_T, Val_T>& left, const std::pair<Key_T, Val_T>& right) {return left.first == right.first; }), cont.m_storage.end());
+        cont.m_storage.erase(std::unique(cont.m_storage.begin(), cont.m_storage.end(), [](const value_type& left, const value_type& right) {return left.first == right.first; }), cont.m_storage.end());
         const auto elapsedTime = timer.elapsedWallSeconds();
         const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}: ", int(capacity >= cont.size())) : ": ";
         std::cout << "Insert time with MapVectorAoS push-sort-unique" << sReservationInfo  << elapsedTime << '\n';
@@ -108,6 +206,28 @@ namespace
     }
 }
 
+namespace
+{
+    template <class Key_T, class Val_T>
+    struct ValueTypeCompareFunctor
+    {
+        bool operator()(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<Key_T, Val_T>& left, const std::pair<Key_T, Val_T>& right) const
+        {
+            return left.first == right.first && left.second == right.second;
+        }
+
+        bool operator()(const std::pair<Key_T, Val_T>& left, const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<Key_T, Val_T>& right) const
+        {
+            return right == left;
+        }
+
+        bool operator()(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<Key_T, Val_T>& left, const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<Key_T, Val_T>& right) const
+        {
+            return left == right;
+        }
+    };
+}
+
 TEST(dfgCont, MapVectorPerformance)
 {
     using namespace DFG_MODULE_NS(cont);
@@ -119,6 +239,16 @@ TEST(dfgCont, MapVectorPerformance)
     const auto nCount = 50000;
 #endif
     const auto nFindCount = 5 * nCount;
+
+    /*
+    const auto nVecCount = 100000;
+    std::vector<int> stdVec;
+    boost::container::vector<int> boostVec;
+    stdVec.reserve(nVecCount);
+    boostVec.reserve(nVecCount);
+    insertForVectorPerformanceTester(stdVec, randEngSeed, nVecCount, stdVec.capacity());
+    insertForVectorPerformanceTester(boostVec, randEngSeed, nVecCount, boostVec.capacity());
+    */
 
     {
         std::map<int, int> mStd;
@@ -164,6 +294,11 @@ TEST(dfgCont, MapVectorPerformance)
         EXPECT_EQ(mAoS_rs.size(), mBoostFlatMap.size());
         EXPECT_EQ(mAoS_rs.size(), mUniqueAoSInsert.size());
         EXPECT_EQ(mAoS_rs.size(), mUniqueAoSInsertNotReserved.size());
+
+        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mStd.begin(), ValueTypeCompareFunctor<int, int>()));
+        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mBoostFlatMap.begin(), ValueTypeCompareFunctor<int, int>()));
+        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mAoS_rs.begin(), ValueTypeCompareFunctor<int, int>()));
+        
 
 #undef CALL_PERFORMANCE_TEST_DFGLIB
 
@@ -264,4 +399,28 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
 
 #endif // DFG_MSVC_VER >= DFG_MSVC_VER_VC2012
 
-#endif // on/off switch
+TEST(dfgCont, VectorInsertPerformance)
+{
+#ifdef _DEBUG
+    const int nCount = 100;
+#else
+    const int nCount = 100000;
+#endif
+
+    VectorInsertImpl<int>(nCount);
+    VectorInsertImpl<double>(nCount);
+    VectorInsertImpl<std::pair<int,int>>(nCount);
+    VectorInsertImpl<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int,int>>(nCount);
+}
+
+#endif // on/off switch for performance tests.
+
+// This is not a performance test but places in this file to get the same infrastructure as the performance test.
+TEST(dfgCont, VectorInsert)
+{
+    const int nCount = 10;
+    VectorInsertImpl<int>(nCount);
+    VectorInsertImpl<double>(nCount);
+    VectorInsertImpl<std::pair<int, int>>(nCount);
+    VectorInsertImpl<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int>>(nCount);
+}
