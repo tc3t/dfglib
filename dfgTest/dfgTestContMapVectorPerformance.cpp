@@ -110,11 +110,6 @@ void VectorInsertImpl(const int nCount)
 } // unnamed namespace
 
 #if 0 // On/off switch for the whole performance test.
-#if DFG_MSVC_VER >= DFG_MSVC_VER_2012
-
-#include <dfg/baseConstructorDelegate.hpp>
-#include <dfg/ReadOnlySzParam.hpp>
-#include <chrono>
 
 namespace
 {
@@ -191,7 +186,7 @@ namespace
     }
 
     template <class Cont_T>
-    void findPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount)
+    size_t findPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount)
     {
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
         randEng.seed(nRandEngSeed);
@@ -206,6 +201,7 @@ namespace
         std::cout << "Find time with " << containerDescription(cont) << ": " << elapsed << '\n';
         std::cout << "Container size: " << cont.size() << '\n';
         std::cout << "Found item count: " << nFound << '\n';
+        return nFound;
     }
 }
 
@@ -307,18 +303,20 @@ TEST(dfgCont, MapVectorPerformance)
 
 #undef CALL_PERFORMANCE_TEST_DFGLIB
 
-        const auto randEngSeedFind = randEngSeed * 2;
-        findPerformanceTester(mAoS_rs, randEngSeedFind, nFindCount);
-        findPerformanceTester(mAoS_ns, randEngSeedFind, nFindCount);
-        findPerformanceTester(mAoS_ru, randEngSeedFind, nFindCount);
-        findPerformanceTester(mAoS_nu, randEngSeedFind, nFindCount);
-        findPerformanceTester(mSoA_rs, randEngSeedFind, nFindCount);
-        findPerformanceTester(mSoA_ns, randEngSeedFind, nFindCount);
-        findPerformanceTester(mSoA_ru, randEngSeedFind, nFindCount);
-        findPerformanceTester(mSoA_nu, randEngSeedFind, nFindCount);
-        findPerformanceTester(mStd, randEngSeedFind, nFindCount);
-        findPerformanceTester(mStdUnordered, randEngSeedFind, nFindCount);
-        findPerformanceTester(mBoostFlatMap, randEngSeedFind, nFindCount);
+        {
+            const auto randEngSeedFind = randEngSeed * 2;
+            const auto findings = findPerformanceTester(mAoS_rs, randEngSeedFind, nFindCount);
+            EXPECT_EQ(findings, findPerformanceTester(mAoS_ns, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mAoS_ru, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mAoS_nu, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_rs, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_ns, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_ru, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_nu, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mStd, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mStdUnordered, randEngSeedFind, nFindCount));
+            EXPECT_EQ(findings, findPerformanceTester(mBoostFlatMap, randEngSeedFind, nFindCount));
+        }
     }
 }
 
@@ -401,8 +399,6 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(stdUnorderedMap, "std::unordered_map   ");
     MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(boostFlatMap,    "boost::flat_map      ");
 }
-
-#endif // DFG_MSVC_VER >= DFG_MSVC_VER_VC2012
 
 TEST(dfgCont, VectorInsertPerformance)
 {
