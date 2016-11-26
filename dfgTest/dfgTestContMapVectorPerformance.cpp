@@ -132,23 +132,27 @@ namespace
     void insertImpl(Cont_T& cont, decltype(DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded())& re)
     {
         auto key = generateKey(re);
-        cont.insert(std::pair<int, int>(key, generateValue(re)));
+        cont.insert(std::pair<int, int>(key, key));
     }
 
     template <class Cont_T>
-    void insertForVectorPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount, const size_t capacity = DFG_ROOT_NS::NumericTraits<size_t>::maxValue)
+    void insertForVectorPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount)
     {
         using namespace DFG_ROOT_NS;
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
         auto distr = DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, 0, NumericTraits<int>::maxValue);
+        const auto nInitialCapacity = cont.capacity();
         randEng.seed(nRandEngSeed);
         DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
-        cont.push_back(0);
         for (int i = 0; i < nCount; ++i)
-            cont.insert(cont.begin() + (distr() % cont.size()), typename Cont_T::value_type());
+        {
+            const auto key = generateKey(randEng);
+            cont.push_back(key);
+            cont.push_back(key);
+        }
         const auto elapsedTime = timer.elapsedWallSeconds();
-        const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}", int(capacity >= cont.size())) : "";
-        std::cout << "Insert time " << containerDescription(cont) << sReservationInfo << ": " << elapsedTime << '\n';
+        const auto sReservationInfo = format_fmt("), reserved: {}", int(nInitialCapacity >= cont.size()));
+        std::cout << "Insert time with interleaved vector (" << containerDescription(cont) << sReservationInfo << ": " << elapsedTime << '\n';
     }
 
     template <class Cont_T>
@@ -177,7 +181,7 @@ namespace
         for (int i = 0; i < nCount; ++i)
         {
             auto key = generateKey(randEng);
-            cont.m_storage.push_back(value_type(key, generateValue(randEng)));
+            cont.m_storage.push_back(value_type(key, key));
         }
         cont.setSorting(true);
         cont.m_storage.erase(std::unique(cont.m_storage.begin(), cont.m_storage.end(), [](const value_type& left, const value_type& right) {return left.first == right.first; }), cont.m_storage.end());
@@ -197,7 +201,6 @@ namespace
         {
             auto key = DFG_MODULE_NS(rand)::rand<int>(randEng, -10000000, 10000000);
             nFound += (cont.find(key) != cont.end());
-
         }
         const auto elapsed = timer.elapsedWallSeconds();
         std::cout << "Find time with " << containerDescription(cont) << ": " << elapsed << '\n';
@@ -221,6 +224,11 @@ namespace
             return right == left;
         }
 
+        bool operator()(const std::pair<Key_T, Val_T>& left, const std::pair<Key_T, Val_T>& right) const
+        {
+            return left == right;
+        }
+
         bool operator()(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<Key_T, Val_T>& left, const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<Key_T, Val_T>& right) const
         {
             return left == right;
@@ -240,20 +248,12 @@ TEST(dfgCont, MapVectorPerformance)
 #endif
     const auto nFindCount = 5 * nCount;
 
-    /*
-    const auto nVecCount = 100000;
-    std::vector<int> stdVec;
-    boost::container::vector<int> boostVec;
-    stdVec.reserve(nVecCount);
-    boostVec.reserve(nVecCount);
-    insertForVectorPerformanceTester(stdVec, randEngSeed, nVecCount, stdVec.capacity());
-    insertForVectorPerformanceTester(boostVec, randEngSeed, nVecCount, boostVec.capacity());
-    */
-
     {
+        std::vector<int> stdVecInterleaved; stdVecInterleaved.reserve(2 * nCount);
+        boost::container::vector<int> boostVecInterleaved; boostVecInterleaved.reserve(2 * nCount);
         std::map<int, int> mStd;
         std::unordered_map<int, int> mStdUnordered;
-        boost::container::flat_map<int, int> mBoostFlatMap;
+        boost::container::flat_map<int, int> mBoostFlatMap; mBoostFlatMap.reserve(nCount);
         DFG_CLASS_NAME(MapVectorAoS)<int, int> mAoS_rs; mAoS_rs.reserve(nCount);
         DFG_CLASS_NAME(MapVectorAoS)<int, int> mAoS_ns;
         DFG_CLASS_NAME(MapVectorAoS)<int, int> mAoS_ru; mAoS_ru.reserve(nCount); mAoS_ru.setSorting(false);
@@ -281,6 +281,8 @@ TEST(dfgCont, MapVectorPerformance)
         insertPerformanceTester(mBoostFlatMap, randEngSeed, nCount);
         insertPerformanceTesterUnsortedPush_sort_and_unique(mUniqueAoSInsert, randEngSeed, nCount, mUniqueAoSInsert.capacity());
         insertPerformanceTesterUnsortedPush_sort_and_unique(mUniqueAoSInsertNotReserved, randEngSeed, nCount, mUniqueAoSInsertNotReserved.capacity());
+        insertForVectorPerformanceTester(stdVecInterleaved, randEngSeed, nCount);
+        insertForVectorPerformanceTester(boostVecInterleaved, randEngSeed, nCount);
 
         EXPECT_EQ(mAoS_rs.size(), mAoS_ns.size());
         EXPECT_EQ(mAoS_rs.size(), mAoS_ru.size());
@@ -298,6 +300,9 @@ TEST(dfgCont, MapVectorPerformance)
         EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mStd.begin(), ValueTypeCompareFunctor<int, int>()));
         EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mBoostFlatMap.begin(), ValueTypeCompareFunctor<int, int>()));
         EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mAoS_rs.begin(), ValueTypeCompareFunctor<int, int>()));
+        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mUniqueAoSInsert.begin(), ValueTypeCompareFunctor<int, int>())); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
+        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mUniqueAoSInsertNotReserved.begin(), ValueTypeCompareFunctor<int, int>())); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
+        EXPECT_TRUE(std::equal(stdVecInterleaved.begin(), stdVecInterleaved.end(), boostVecInterleaved.begin()));
         
 
 #undef CALL_PERFORMANCE_TEST_DFGLIB
@@ -415,7 +420,7 @@ TEST(dfgCont, VectorInsertPerformance)
 
 #endif // on/off switch for performance tests.
 
-// This is not a performance test but places in this file to get the same infrastructure as the performance test.
+// This is not a performance test but placed in this file for now to get the same infrastructure as the performance test.
 TEST(dfgCont, VectorInsert)
 {
     const int nCount = 10;
