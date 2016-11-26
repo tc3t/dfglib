@@ -35,6 +35,8 @@ Related reading and implementations:
 #include "../alg/eraseByTailSwap.hpp"
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
+#include "TrivialPair.hpp"
+#include "Vector.hpp"
 #include <algorithm>
 #include <iterator>
 #include <utility>
@@ -296,6 +298,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }; // class MapVectorCrtp
 
         template <class T> struct DefaultContainerType { typedef std::vector<T> type; };
+        //template <class T> struct DefaultContainerType { typedef DFG_CLASS_NAME(Vector)<T> type; };
 
     } // namespace DFG_DETAIL_NS
 
@@ -374,6 +377,7 @@ public:
 }; // class MapVectorSoA
 
 
+//template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultContainerType<DFG_CLASS_NAME(TrivialPair)<Key_T, Value_T>>::type>
 template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultContainerType<std::pair<Key_T, Value_T>>::type>
 class DFG_CLASS_NAME(MapVectorAoS) : public DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>
 {
@@ -399,8 +403,8 @@ public:
     iterator            makeKeyIterator(const size_t i)         { return makeIterator(i); }
     const_iterator      makeKeyIterator(const size_t i) const   { return makeIterator(i); }
 
-    key_type&       keyIterValueToKeyValue(std::pair<key_type, mapped_type>& val)               { return val.first; }
-    const key_type& keyIterValueToKeyValue(const std::pair<key_type, mapped_type>& val) const   { return val.first; }
+    key_type&       keyIterValueToKeyValue(value_type& val)               { return val.first; }
+    const key_type& keyIterValueToKeyValue(const value_type& val) const   { return val.first; }
 
     bool    empty() const   { return m_storage.empty(); }
     size_t  size() const    { return m_storage.size(); }
@@ -408,7 +412,7 @@ public:
 
     iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& iter)
     {
-        return m_storage.insert(iter, std::make_pair(std::move(key), std::move(value)));
+        return m_storage.insert(iter, value_type(std::move(key), std::move(value)));
     }
 
     void reserve(const size_t nReserve)
@@ -463,7 +467,6 @@ namespace DFG_DETAIL_NS
         typedef DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>            ImplT;
         typedef Key_T                                                   key_type;
         typedef Value_T                                                 mapped_type;
-        typedef std::pair<key_type, mapped_type>                        value_type;
         typedef typename Storage_T::iterator                            iterator;
         typedef typename Storage_T::const_iterator                      const_iterator;
         typedef iterator                                                key_iterator;
