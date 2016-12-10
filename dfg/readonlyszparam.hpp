@@ -197,6 +197,14 @@ public:
     {
     }
 
+    // Allows contruction from compatible typed SzPtr (e.g. construction of const StringViewUtf8& sv = SzPtrAscii("a"))
+    template <class Char2_T, CharPtrType Type_T>
+    DFG_CLASS_NAME(StringView)(::DFG_ROOT_NS::SzPtrT<Char2_T, Type_T> psz) :
+        m_pFirst(psz),
+        m_nSize(readOnlySzParamLength(psz))
+    {
+    }
+
     DFG_CLASS_NAME(StringView)(PtrT psz, const size_t nCount) :
         m_pFirst(psz),
         m_nSize(nCount)

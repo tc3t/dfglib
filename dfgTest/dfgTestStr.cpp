@@ -540,6 +540,12 @@ TEST(dfgStr, StringView)
     TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii>([](const char* psz) {return DFG_ROOT_NS::SzPtrAscii(psz); });
     TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1>([](const char* psz) {return DFG_ROOT_NS::SzPtrLatin1(psz); });
     TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8>([](const char* psz) {return DFG_ROOT_NS::SzPtrUtf8(psz); });
+
+    // Test that StringViewUtf8 accepts SzPtrAscii.
+    {
+        auto tpszAscii = SzPtrAscii("abc");
+        const DFG_CLASS_NAME(StringViewUtf8)& svUtf8 = tpszAscii;
+    }
 }
 
 namespace
