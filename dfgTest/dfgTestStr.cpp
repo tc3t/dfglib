@@ -545,6 +545,7 @@ TEST(dfgStr, StringView)
     {
         auto tpszAscii = SzPtrAscii("abc");
         const DFG_CLASS_NAME(StringViewUtf8)& svUtf8 = tpszAscii;
+        DFG_UNUSED(svUtf8);
     }
 }
 
