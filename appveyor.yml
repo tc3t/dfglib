@@ -3,7 +3,6 @@ configuration:
 - Debug_VC2010
 - Debug_VC2013
 - Debug_VC2015
-- Release_VC2010
 - Release_VC2013
 - Release_VC2015
 platform:
