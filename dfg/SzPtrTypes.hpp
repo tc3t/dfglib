@@ -113,4 +113,11 @@ DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Utf8);
 
 #undef DFG_TEMP_MACRO_CREATE_SPECIALIZATION
 
+// Literal creation macros.
+// Usage: DFG_ASCII("abc")
+// Note that DFG_ASCII("abc") and SzPtrAscii("abc") are different: the macro version is intended to guarantee that the string representation is really ASCII, while the 
+// latter requires that the compiler implementes "abc" as ASCII. So essentially DFG_UTF8("abc") should be equivalent to SzPtrUtf8(u8"abc")
+#define DFG_ASCII(x)    SzPtrAscii(x)   // Creates typed ascii-string literal from string literal. Usage: DFG_ASCII("abc")  (TODO: implement, currently a placeholder)
+#define DFG_UTF8(x)     SzPtrUtf8(x)    // Creates typed utf8-string literal from string literal. Usage: DFG_UTF8("abc")    (TODO: implement, currently a placeholder)
+
 } // root namespace
