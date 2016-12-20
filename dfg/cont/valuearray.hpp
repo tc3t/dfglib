@@ -4,6 +4,9 @@
 #include "../baseConstructorDelegate.hpp"
 #include <vector>
 #include <valarray>
+#include "../numeric/accumulate.hpp"
+#include "../numeric/average.hpp"
+#include "../numeric/median.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -19,10 +22,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 		DFG_BASE_CONSTRUCTOR_DELEGATE_2(DFG_CLASS_NAME(ValueArrayT), BaseClass) {}
 		DFG_BASE_CONSTRUCTOR_DELEGATE_3(DFG_CLASS_NAME(ValueArrayT), BaseClass) {}
 
-		template <class Cont_T> static bool emptyImpl(const Cont_T& cont) { return cont.empty(); }
-		template <class T> static bool emptyImpl(const std::valarray<T>& cont) { return cont.size() == 0; }
+    private:
+		template <class Cont_T> static  bool emptyImpl(const Cont_T& cont)              { return cont.empty(); }
+		template <class T>      static  bool emptyImpl(const std::valarray<T>& cont)    { return cont.size() == 0; }
 
-		bool empty() const { return emptyImpl(static_cast<const BaseClass&>(*this)); }
+    public:
+		bool empty() const  { return emptyImpl(static_cast<const BaseClass&>(*this)); }
 
 		template <class Cont_T> static auto dataImpl(Cont_T& cont) -> decltype(cont.data()) { return cont.data(); }
 		template <class T> static auto dataImpl(std::valarray<T>& cont) -> decltype(&cont[0]) { return (!emptyImpl(cont)) ? &cont[0] : nullptr; }
@@ -37,8 +42,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 			this->resize(newSize);
 			std::copy(std::begin(range), std::end(range), data());
 		}
+
+        // operations
+        value_type average() const; // TODO: revise return value type (especially for case value_type == integer).
+        value_type median() const;
+        value_type sum() const;
 	};
 
+    template <class BaseCont_T>
+    auto DFG_CLASS_NAME(ValueArrayT)<BaseCont_T>::average() const -> value_type
+    {
+        return DFG_MODULE_NS(numeric)::average(*this);
+    }
+
+    template <class BaseCont_T>
+    auto DFG_CLASS_NAME(ValueArrayT)<BaseCont_T>::median() const -> value_type
+    {
+        return DFG_MODULE_NS(numeric)::median(*this);
+    }
+
+    template <class BaseCont_T>
+    auto DFG_CLASS_NAME(ValueArrayT)<BaseCont_T>::sum() const -> value_type
+    {
+        return DFG_MODULE_NS(numeric)::accumulate(*this, value_type(0));
+    }
 	
 	template <class T>
 	class DFG_CLASS_NAME(ValueArray) : public DFG_CLASS_NAME(ValueArrayT)<std::valarray<T>>
