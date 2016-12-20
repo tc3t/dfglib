@@ -23,6 +23,10 @@ inline size_t strLen(const SzPtrAsciiR& tpsz)   { return strLen(tpsz.c_str()); }
 inline size_t strLen(const SzPtrLatin1R& tpsz)  { return strLen(tpsz.c_str()); }
 inline size_t strLen(const SzPtrUtf8R& tpsz)    { return strLen(tpsz.c_str()); }
 
+inline size_t strLen(const SzPtrAsciiW& tpsz)   { return strLen(tpsz.c_str()); }
+inline size_t strLen(const SzPtrLatin1W& tpsz)  { return strLen(tpsz.c_str()); }
+inline size_t strLen(const SzPtrUtf8W& tpsz)    { return strLen(tpsz.c_str()); }
+
 template <class Str_T>
 inline size_t strLen(const Str_T& str)          { return str.length(); }
 
