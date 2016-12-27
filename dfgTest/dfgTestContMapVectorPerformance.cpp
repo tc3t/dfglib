@@ -1,5 +1,17 @@
 #include <stdafx.h>
 
+#include <dfg/build/compilerDetails.hpp>
+#include <dfg/typeTraits.hpp>
+#include <dfg/cont/tableCsv.hpp>
+#include <dfg/cont/TrivialPair.hpp>
+#include <dfg/cont/valuearray.hpp>
+#include <dfg/str/strTo.hpp>
+
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
+{
+    template <> struct IsTriviallyCopyable<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int,int>> : public std::true_type { };
+} }
+
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/cont/TrivialPair.hpp>
 #include <dfg/cont/Vector.hpp>
@@ -52,11 +64,56 @@ std::string containerDescription(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vecto
 template <class Val_T> std::string containerDescription(const std::vector<Val_T>&) { return "std::vector<" + typeToName<Val_T>::name() + ">"; }
 template <class Val_T> std::string containerDescription(const boost::container::vector<Val_T>&) { return "boost::vector<" + typeToName<Val_T>::name() + ">"; }
 
+namespace
+{
+    class BenchmarkResultTable : public DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, DFG_ROOT_NS::uint32>
+    {
+        typedef DFG_ROOT_NS::uint32 uint32;
+
+    public:
+        void addReducedValues(const uint32 firstResultCol)
+        {
+            using namespace DFG_ROOT_NS;
+            using namespace DFG_MODULE_NS(str);
+
+            const auto nRowCount = this->rowCountByMaxRowIndex();
+            const auto nColCount = this->colCountByMaxColIndex();
+
+            this->addString(DFG_ASCII("avg"),       0, nColCount);
+            this->addString(DFG_ASCII("median"),    0, nColCount + 1);
+            this->addString(DFG_ASCII("sum"),       0, nColCount + 2);
+            
+            DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ValueVector)<double> vals;
+            for (uint32 r = 1; r < nRowCount; ++r)
+            {
+                vals.clear();
+                for (uint32 c = firstResultCol; c < nColCount; ++c)
+                {
+                    auto p = (*this)(r, c);
+                    if (!p)
+                        continue;
+                    vals.push_back(DFG_MODULE_NS(str)::strTo<double>(p.rawPtr()));
+                }
+
+                const auto avg = vals.average();
+                const auto median = vals.median();
+                const auto sum = vals.sum();
+
+                char sz[32];
+                this->addString(SzPtrUtf8(toStr(avg, sz, 6)), r, nColCount);
+                this->addString(SzPtrUtf8(toStr(median, sz, 6)), r, nColCount + 1);
+                this->addString(SzPtrUtf8(toStr(sum, sz, 6)), r, nColCount + 2);
+            }
+        }
+    };
+
+} // unnamed namespace
 
 template <class Cont_T, class Generator_T>
-Cont_T VectorInsertImpl(Generator_T generator, const int nCount)
+Cont_T VectorInsertImpl(Generator_T generator, const int nCount, BenchmarkResultTable* pTable, const int nRow)
 {
     using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
     const int nRandEngSeed = 12345678;
 
     auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
@@ -73,6 +130,9 @@ Cont_T VectorInsertImpl(Generator_T generator, const int nCount)
     }
     const auto elapsedTime = timer.elapsedWallSeconds();
     //const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}", int(capacity >= cont.size())) : "";
+    if (pTable)
+        pTable->addString(SzPtrUtf8(toStrC(elapsedTime).c_str()), nRow, pTable->colCountByMaxColIndex() - 1);
+
     if (nCount > 100)
         std::cout << "Insert time " << containerDescription(cont) /*<< sReservationInfo*/ << ": " << elapsedTime << '\n';
     return cont;
@@ -87,6 +147,7 @@ template <> std::pair<int, int> generate<std::pair<int, int>>(size_t randVal)
     auto val = generate<int>(randVal);
     return std::pair<int, int>(val, val);
 }
+
 template <> DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int> generate<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int>>(size_t randVal)
 {
     auto val = generate<int>(randVal);
@@ -94,11 +155,19 @@ template <> DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int> generate<
 }
 
 template <class T>
-void VectorInsertImpl(const int nCount)
+void VectorInsertImpl(const int nCount, BenchmarkResultTable* pTable = nullptr, const int nRow = 0, const int nTypeCol = 0)
 {
-    const auto stdVec = VectorInsertImpl<std::vector<T>>(generate<T>, nCount);
-    const auto boostVec = VectorInsertImpl<boost::container::vector<T>>(generate<T>, nCount);
-    const auto dfgVec = VectorInsertImpl<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<T>>(generate<T>, nCount);
+    using namespace DFG_ROOT_NS;
+    if (pTable)
+    {
+        pTable->addString(SzPtrUtf8(containerDescription(std::vector<T>()).c_str()), nRow, nTypeCol);
+        pTable->addString(SzPtrUtf8(containerDescription(boost::container::vector<T>()).c_str()), nRow + 1, nTypeCol);
+        pTable->addString(SzPtrUtf8(containerDescription(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<T>()).c_str()), nRow + 2, nTypeCol);
+    }
+
+    const auto stdVec = VectorInsertImpl<std::vector<T>>(generate<T>, nCount, pTable, nRow);
+    const auto boostVec = VectorInsertImpl<boost::container::vector<T>>(generate<T>, nCount, pTable, nRow + 1);
+    const auto dfgVec = VectorInsertImpl<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<T>>(generate<T>, nCount, pTable, nRow + 2);
     ASSERT_EQ(nCount, stdVec.size());
     ASSERT_EQ(stdVec.size(), boostVec.size());
     ASSERT_EQ(stdVec.size(), dfgVec.size());
@@ -400,18 +469,71 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(boostFlatMap,    "boost::flat_map      ");
 }
 
+#include <dfg/io/ofstream.hpp>
+#include <dfg/time.hpp>
+#include <dfg/time/DateTime.hpp>
+#include <dfg/str/string.hpp>
+#include <dfg/str.hpp>
+
 TEST(dfgCont, VectorInsertPerformance)
 {
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
 #ifdef _DEBUG
     const int nCount = 100;
 #else
     const int nCount = 100000;
 #endif
 
-    VectorInsertImpl<int>(nCount);
-    VectorInsertImpl<double>(nCount);
-    VectorInsertImpl<std::pair<int,int>>(nCount);
-    VectorInsertImpl<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int,int>>(nCount);
+    BenchmarkResultTable table;
+    table.addString(SzPtrUtf8("Date"), 0, 0);
+    table.addString(SzPtrUtf8("Test machine"), 0, 1);
+    table.addString(SzPtrUtf8("Test Compiler"), 0, 2);
+    table.addString(SzPtrUtf8("Pointer size"), 0, 3);
+    table.addString(SzPtrUtf8("Build type"), 0, 4);
+    table.addString(DFG_UTF8("Insert count"), 0, 5);
+    table.addString(SzPtrUtf8("Test type"), 0, 6);
+    const auto nLastStaticColumn = 6;
+
+    const auto nElementTypeCount = 4;
+    const auto nContainerCount = 3;
+
+    for (size_t i = 0; i < 3; ++i) // Iterations.
+    {
+        if (i == 0)
+        {
+            const StringUtf8 sTime(SzPtrUtf8(DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C().c_str()));
+            const auto sCompiler = SzPtrUtf8(DFG_COMPILER_NAME_SIMPLE);
+            const StringUtf8 sPointerSize(SzPtrUtf8(DFG_MODULE_NS(str)::toStrC(sizeof(void*)).c_str()));
+            const auto sBuildType = SzPtrUtf8(DFG_BUILD_DEBUG_RELEASE_TYPE);
+            const StringUtf8 sInsertCount(SzPtrUtf8(DFG_MODULE_NS(str)::toStrC(nCount).c_str()));
+            for (int et = 1; et <= nElementTypeCount; ++et)
+            {
+                for (int ct = 0; ct < nContainerCount; ++ct)
+                {
+                    const auto r = table.rowCountByMaxRowIndex();
+                    table.addString(sTime, r, 0);
+                    table.addString(sCompiler, r, 2);
+                    table.addString(sPointerSize, r, 3);
+                    table.addString(sBuildType, r, 4);
+                    table.addString(sInsertCount, r, 5);
+                }
+            }
+        }
+
+        table.addString(SzPtrUtf8(("Time#" + toStrC(i)).c_str()), 0, table.colCountByMaxColIndex());
+        VectorInsertImpl<int>(nCount, &table, 1, nLastStaticColumn);
+        VectorInsertImpl<double>(nCount, &table, 1 + 1 * nContainerCount, nLastStaticColumn);
+        VectorInsertImpl<std::pair<int, int>>(nCount, &table, 1 + 2 * nContainerCount, nLastStaticColumn);
+        VectorInsertImpl<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TrivialPair)<int, int>>(nCount, &table, 1 + 3 * nContainerCount, nLastStaticColumn);
+    }
+
+    // Calculate averages etc.
+    table.addReducedValues(nLastStaticColumn + 1);
+
+    DFG_MODULE_NS(io)::OfStream ostrm("testfiles/generated/benchmarkVectorInsert.csv");
+    table.writeToStream(ostrm);
 }
 
 #endif // on/off switch for performance tests.
