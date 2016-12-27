@@ -2,17 +2,24 @@
 
 // Note: this file does not use DFG_CLASS_NAME-macros on purpose.
 
-#include <dfg/build/compilerDetails.hpp>
 #include <dfg/typeTraits.hpp>
-#include <dfg/cont/tableCsv.hpp>
 #include <dfg/cont/TrivialPair.hpp>
-#include <dfg/cont/valuearray.hpp>
-#include <dfg/str/strTo.hpp>
 
+// This could be used to mark TrivialPair<int,int> as trivially copyable for compilers that do not support the type trait. 
+// For now not marked to avoid giving impression that this optimization was available by default on those compilers.
+#if 0 // !DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
 {
     template <> struct IsTriviallyCopyable<DFG_MODULE_NS(cont)::TrivialPair<int,int>> : public std::true_type { };
 } }
+#endif
+
+#include <dfg/build/compilerDetails.hpp>
+#include <dfg/build/languageFeatureInfo.hpp>
+#include <dfg/typeTraits.hpp>
+#include <dfg/cont/tableCsv.hpp>
+#include <dfg/cont/valuearray.hpp>
+#include <dfg/str/strTo.hpp>
 
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/cont/TrivialPair.hpp>
