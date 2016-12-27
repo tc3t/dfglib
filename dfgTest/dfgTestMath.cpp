@@ -229,6 +229,40 @@ TEST(dfgMath, isNan)
 #if DFG_LANGFEAT_HAS_ISNAN || !defined(_MSC_VER) // MSVC _isnan warns about long double -> double conversion so ignore the test.
     EXPECT_EQ(isNan(std::numeric_limits<long double>::quiet_NaN()), true);
 #endif
+    EXPECT_EQ(isNan(std::numeric_limits<double>::infinity()), false);
+    EXPECT_EQ(isNan(-1 * std::numeric_limits<double>::infinity()), false);
+}
+
+TEST(dfgMath, isFinite)
+{
+    using namespace DFG_MODULE_NS(math);
+
+    EXPECT_EQ(isFinite(1.0), true);
+    EXPECT_EQ(isFinite(-1.0), true);
+    EXPECT_EQ(isFinite(std::numeric_limits<float>::lowest()), true);
+    EXPECT_EQ(isFinite(std::numeric_limits<float>::max()), true);
+    EXPECT_EQ(isFinite(std::numeric_limits<double>::lowest()), true);
+    EXPECT_EQ(isFinite(std::numeric_limits<double>::max()), true);
+    EXPECT_EQ(isFinite(std::numeric_limits<float>::quiet_NaN()), false);
+    EXPECT_EQ(isFinite(std::numeric_limits<double>::quiet_NaN()), false);
+    EXPECT_EQ(isFinite(std::numeric_limits<double>::infinity()), false);
+    EXPECT_EQ(isFinite(-1 * std::numeric_limits<double>::infinity()), false);
+}
+
+TEST(dfgMath, isInf)
+{
+    using namespace DFG_MODULE_NS(math);
+
+    EXPECT_EQ(isInf(1.0), false);
+    EXPECT_EQ(isInf(-1.0), false);
+    EXPECT_EQ(isInf(std::numeric_limits<float>::lowest()), false);
+    EXPECT_EQ(isInf(std::numeric_limits<float>::max()), false);
+    EXPECT_EQ(isInf(std::numeric_limits<double>::lowest()), false);
+    EXPECT_EQ(isInf(std::numeric_limits<double>::max()), false);
+    EXPECT_EQ(isInf(std::numeric_limits<float>::quiet_NaN()), false);
+    EXPECT_EQ(isInf(std::numeric_limits<double>::quiet_NaN()), false);
+    EXPECT_EQ(isInf(std::numeric_limits<double>::infinity()), true);
+    EXPECT_EQ(isInf(-1 * std::numeric_limits<double>::infinity()), true);
 }
 
 TEST(dfgMath, interpolationLinear)

@@ -1,5 +1,4 @@
-#ifndef DFG_MATH_GJBDSSHN
-#define DFG_MATH_GJBDSSHN
+#pragma once
 
 #include "dfgBase.hpp"
 #include "math/interpolationLinear.hpp"
@@ -12,8 +11,6 @@
 	#include <float.h>
 #endif
 
-
-
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(math) {
 
 // From http://isocpp.org/wiki/faq/intrinsic-types#is-power-of-2
@@ -22,6 +19,28 @@ template <class T>
 inline bool isPowerOf2(T i)
 {
 	return i > 0 && (i & (i - 1)) == 0;
+}
+
+template <class T>
+inline bool isFinite(const T t)
+{
+#if DFG_LANGFEAT_HAS_ISNAN // Hack: approximate that presence of isnan() implies presence of isfinite()
+    return std::isfinite(t);
+#elif defined(_MSC_VER)
+    return (_finite(t) != 0);
+#else
+    return (isfinite(t) != 0);
+#endif
+}
+
+template <class T>
+inline bool isInf(const T t)
+{
+#if DFG_LANGFEAT_HAS_ISNAN // Hack: approximate that presence of isnan() implies presence of isinf()
+    return std::isinf(t);
+#else
+    return t == std::numeric_limits<T>::infinity() || t == -1 * std::numeric_limits<T>::infinity();
+#endif
 }
 
 template <class T>
@@ -56,5 +75,3 @@ template <uint64 N> struct DFG_CLASS_NAME(Factorial_T) { static const uint64 val
 template <> struct DFG_CLASS_NAME(Factorial_T)<0> {static const uint64 value = 1; };
 
 }} // module math
-
-#endif // include guard
