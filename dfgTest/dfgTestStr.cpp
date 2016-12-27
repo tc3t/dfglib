@@ -8,6 +8,7 @@
 #include <dfg/dfgBaseTypedefs.hpp>
 #include <dfg/str/stringLiteralCharToValue.hpp>
 #include <dfg/str/format_fmt.hpp>
+#include <dfg/preprocessor/compilerInfoMsvc.hpp>
 
 TEST(dfgStr, strLen)
 {
@@ -64,6 +65,31 @@ TEST(dfgStr, strLen)
     EXPECT_EQ(3, strLen(SzPtrAscii("abc")));
     EXPECT_EQ(3, strLen(SzPtrLatin1("abc")));
     EXPECT_EQ(3, strLen(SzPtrUtf8("abc")));
+}
+
+TEST(dfgStr, strCpyAllThatFit)
+{
+    using namespace DFG_MODULE_NS(str);
+    char szDest[4];
+
+#define STRCPYALLTHATFIT_TESTCASE(SRC, EXPECTED) \
+    std::fill(std::begin(szDest), std::end(szDest), 'U'); \
+    EXPECT_STREQ(EXPECTED, strCpyAllThatFit(szDest, SRC)); \
+    EXPECT_STREQ(EXPECTED, strCpyAllThatFit(szDest, DFG_COUNTOF(szDest), SRC));
+
+    char* pNull = nullptr;
+
+    EXPECT_EQ(nullptr, strCpyAllThatFit(pNull, 0, pNull));
+    EXPECT_EQ(nullptr, strCpyAllThatFit(pNull, 0, "a"));
+    EXPECT_STREQ("", strCpyAllThatFit(szDest, pNull));
+
+    STRCPYALLTHATFIT_TESTCASE("a", "a");
+    STRCPYALLTHATFIT_TESTCASE("ab", "ab");
+    STRCPYALLTHATFIT_TESTCASE("abc", "abc");
+    STRCPYALLTHATFIT_TESTCASE("abcd", "abc");
+    STRCPYALLTHATFIT_TESTCASE("abcdefg", "abc");
+
+#undef STRCPYALLTHATFIT_TESTCASE
 }
 
 TEST(dfgStr, isEmptyStr)
@@ -376,14 +402,57 @@ TEST(dfgStr, strTo)
 #pragma warning(pop)
 }
 
+namespace
+{
+    template <class T>
+    void toStrCommonFloatingPointTests(const char* pExpectedLowest, const char* pExpectedMax)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+
+        typedef std::numeric_limits<T> NumLim;
+        EXPECT_EQ("0.76", DFG_SUB_NS_NAME(str)::toStrC(T(0.76)));
+
+        if (pExpectedLowest)
+            EXPECT_EQ(pExpectedLowest, DFG_SUB_NS_NAME(str)::toStrC(NumLim::lowest()));
+        if (pExpectedMax)
+            EXPECT_EQ(pExpectedMax, DFG_SUB_NS_NAME(str)::toStrC(NumLim::max()));
+
+        // +-inf
+        EXPECT_EQ("inf", DFG_SUB_NS_NAME(str)::toStrC(NumLim::infinity()));
+        EXPECT_EQ("-inf", DFG_SUB_NS_NAME(str)::toStrC(-1 * NumLim::infinity()));
+
+        // NaN
+        EXPECT_TRUE(beginsWith(toStrC(NumLim::quiet_NaN()), "nan"));
+    }
+} // unnamed namespace
+
 TEST(dfgStr, toStr)
 {
     using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
     EXPECT_EQ("-1", DFG_SUB_NS_NAME(str)::toStrC(-1));
     EXPECT_EQ("123456789", DFG_SUB_NS_NAME(str)::toStrC(123456789.0));
     EXPECT_EQ("123456789.012345", DFG_SUB_NS_NAME(str)::toStrC(123456789.012345));
     EXPECT_EQ("-123456789.01234567", DFG_SUB_NS_NAME(str)::toStrC(-123456789.01234567));
     EXPECT_EQ("5896249", DFG_SUB_NS_NAME(str)::toStrC(5896249));
+
+    // Floating point tests
+    {
+#if (DFG_MSVC_VER != 0 && DFG_MSVC_VER < DFG_MSVC_VER_2015) || defined(__MINGW32__)
+        const char szFloatMin[] = "-3.40282347e+038";
+        const char szFloatMax[] = "3.40282347e+038";
+#else
+        const char szFloatMin[] = "-3.40282347e+38";
+        const char szFloatMax[] = "3.40282347e+38";
+#endif
+        toStrCommonFloatingPointTests<float>(szFloatMin, szFloatMax);
+        toStrCommonFloatingPointTests<double>("-1.7976931348623157e+308", "1.7976931348623157e+308");
+#ifndef __MINGW32__ // Tests for long double failed on MinGW 4.8.0 for unknown reason so disable for now on MinGW.
+        toStrCommonFloatingPointTests<long double>(nullptr, nullptr);
+#endif
+    }
 }
 
 namespace

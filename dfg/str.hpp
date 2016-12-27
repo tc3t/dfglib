@@ -3,12 +3,15 @@
 
 #include "dfgBase.hpp"
 #include <cstring>
+#include "math.hpp"
 #include <string>
+#include "math/roundedUpToMultiple.hpp"
 #include "str/strCmp.hpp"
 #include "str/strlen.hpp"
 #include "ReadOnlySzParam.hpp"
 #include <boost/lexical_cast.hpp>
 #include <cstdio>
+#include <limits>
 
 #define DFG_TEXT_ANSI(str)	str	// Intended as marker for string literals that are promised
                                 // (by the programmer) to be ANSI-encoded.
@@ -40,6 +43,90 @@ template <class T> inline auto toCstr(const T& s) -> decltype(s.c_str()) { retur
 template <class T> inline const T* toCstr(const T* psz) {return psz;}
 template <class Char_T, CharPtrType Type_T> SzPtrT<Char_T, Type_T> toCstr(const SzPtrT<Char_T, Type_T>& tpsz) { return tpsz; }
 
+// Copies pszSrc to pszDest. If pszSrc does not fit pszDest, copies as many characters as fit. In all cases expect when pszDest is nullptr or zero-sized, pszDest will be null terminated.
+template <class Char_T>
+Char_T* strCpyAllThatFit(Char_T* const pDstBegin, const size_t nSizeInChars, const Char_T* pszSrc)
+{
+    if (nSizeInChars < 1)
+        return pDstBegin;
+    if (pDstBegin == nullptr)
+        return nullptr;
+    if (pszSrc == nullptr)
+    {
+        *pDstBegin = '\0';
+        return pDstBegin;
+    }
+    size_t i = 0;
+    auto pDest = pDstBegin;
+    const auto pNullPosIfDoesntFit = pDstBegin + (nSizeInChars - 1);
+    for (; pDest != pNullPosIfDoesntFit && *pszSrc != '\0'; ++pDest, ++pszSrc)
+        *pDest = *pszSrc;
+    *pDest = '\0';
+    return pDstBegin;
+}
+
+template <class Char_T, size_t N>
+Char_T* strCpyAllThatFit(Char_T (&szDest)[N], const Char_T* pszSrc)
+{
+    return strCpyAllThatFit(szDest, N, pszSrc);
+}
+
+// Converts a double to string so that std::atof(toStr(val,...)) == val for all non-NaN, finite numbers.
+// The returned string representation is, roughly speaking, intended to be shortest possible fulfilling the above condition expect for integers, 
+// for which formats such as 1000000 may be preferred to scientific format 1e6.
+// For +- infinity, return value is inf/-inf.
+// For NaN's, return value begins with "nan"
+template <class T>
+inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, const int nPrecParam = -1)
+{
+    if (nDstSize < 1)
+        return psz;
+    if (DFG_MODULE_NS(math)::isInf(val))
+        return strCpyAllThatFit(psz, nDstSize, (val > 0) ? "inf" : "-inf");
+    else if (DFG_MODULE_NS(math)::isNan(val))
+        return strCpyAllThatFit(psz, nDstSize, "nan");
+    auto nPrec = nPrecParam;
+    if (nPrec < 0)
+        nPrec = static_cast<decltype(nPrec)>(DFG_MODULE_NS(math)::RoundedUpToMultipleT<std::numeric_limits<T>::digits * 30103, 100000>::value / 100000 + 1); // 30103 == round(log10(2) * 100000)
+        //nPrec = std::numeric_limits<T>::max_digits10; // This seems to be too-little-by-one in VC2010 so use the manual version above.
+    else if (nPrec >= 1000) // Limit precision to 3 digits.
+        nPrec = 999;
+    char szFormat[8] = "";
+    std::sprintf(szFormat, "%%.%ug", nPrec);
+    sprintf_s(psz, nDstSize, szFormat, val);
+
+    // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
+    //               std::atof(pszLonger) == std::atof(pszShorter).
+    if (nPrecParam == -1 && std::strlen(psz) > std::numeric_limits<T>::digits10)
+    {
+        char szShortFormat[8] = "";
+        std::sprintf(szShortFormat, "%%.%ug", std::numeric_limits<T>::digits10);
+        sprintf_s(psz, nDstSize, szShortFormat, val);
+        if (static_cast<T>(std::atof(psz)) == val)
+            return psz;
+        sprintf_s(psz, nDstSize, szFormat, val); // Shorter was too short, reconvert.
+    }
+    return psz;
+}
+
+#define DFG_INTERNAL_DEFINE_TOSTR(CHAR, TYPE, FUNC, PARAM) \
+    inline              CHAR* toStr(TYPE val, CHAR* buf, const size_t nBufCount,    const int param = PARAM)  { FUNC(val, buf, nBufCount, param); return buf; } \
+    template <size_t N> CHAR* toStr(TYPE val, CHAR (&buf)[N],                       const int param = PARAM)  { return toStr(val, buf, N, param); }
+
+DFG_INTERNAL_DEFINE_TOSTR(char,     int32,      _itoa_s,    10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int32,      _itow_s,    10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     uint32,     _ultoa_s,   10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint32,     _ultow_s,   10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     int64,      _i64toa_s,  10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int64,      _i64tow_s,  10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     uint64,     _ui64toa_s, 10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint64,     _ui64tow_s, 10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     float,          floatingPointToStr<float>,          -1);
+DFG_INTERNAL_DEFINE_TOSTR(char,     double,         floatingPointToStr<double>,         -1);
+DFG_INTERNAL_DEFINE_TOSTR(char,     long double,    floatingPointToStr<long double>,    -1);
+
+#undef DFG_INTERNAL_DEFINE_TOSTR
+
 template <class T, class Str_T>
 Str_T& toStr(const T& obj, Str_T& str)
 {
@@ -53,35 +140,25 @@ Str_T toStrT(const T& obj)
     return boost::lexical_cast<Str_T>(obj);
 }
 
-template <class T>
-std::string toStrC(const T& obj)
+template <class T> std::string toStrCImpl(const T& d, const std::true_type) // Type is floating_point type.
+{ 
+    char sz[32] = "";
+    toStr(d, sz);
+    return sz;
+}
+
+template <class T> std::string toStrCImpl(const T& obj, const std::false_type) // Type is not floating point.
 {
     return boost::lexical_cast<std::string>(obj);
 }
+
+template <class T> std::string toStrC(const T& obj) { return toStrCImpl(obj, std::is_floating_point<T>()); }
 
 template <class T>
 std::wstring toStrW(const T& obj)
 {
     return boost::lexical_cast<std::wstring>(obj);
 }
-
-#define DFG_INTERNAL_DEFINE_TOSTR(CHAR, TYPE, FUNC) \
-    template <size_t N> CHAR* toStr(TYPE val, CHAR (&buf)[N], const int radix = 10) { FUNC(val, buf, N, radix); return buf; }
-
-    DFG_INTERNAL_DEFINE_TOSTR(char,		int32,	_itoa_s);
-    DFG_INTERNAL_DEFINE_TOSTR(wchar_t,	int32,	_itow_s);
-    DFG_INTERNAL_DEFINE_TOSTR(char,		uint32, _ultoa_s);
-    DFG_INTERNAL_DEFINE_TOSTR(wchar_t,	uint32, _ultow_s);
-    DFG_INTERNAL_DEFINE_TOSTR(char,		int64,	_i64toa_s);
-    DFG_INTERNAL_DEFINE_TOSTR(wchar_t,	int64,	_i64tow_s);
-    DFG_INTERNAL_DEFINE_TOSTR(char,		uint64,	_ui64toa_s);
-    DFG_INTERNAL_DEFINE_TOSTR(wchar_t,	uint64,	_ui64tow_s);
-    template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszFormat = "%.17g") // TODO: test
-    {
-        sprintf_s(buf, N, pszFormat, val);
-        return buf;
-    }
-#undef DFG_INTERNAL_DEFINE_TOSTR
 
 template <size_t N> inline char* strCpy(char (&dest)[N], NonNullCStr pszSrc) {return strcpy(dest, pszSrc);}
 template <size_t N> inline wchar_t* strCpy(wchar_t (&dest)[N], NonNullCStrW pszSrc) {return wcscpy(dest, pszSrc);}
