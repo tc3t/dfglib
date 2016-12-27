@@ -25,6 +25,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
     #if DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE
         struct IsTriviallyCopyable : public std::is_trivially_copyable<T> { };
     #else
-        struct IsTriviallyCopyable : public UnknownAnswerType { };
+        struct IsTriviallyCopyable : public std::conditional<std::is_integral<T>::value, std::true_type, UnknownAnswerType>::type { };
     #endif
 }} // Module namespace
