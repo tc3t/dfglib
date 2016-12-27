@@ -56,7 +56,7 @@ Char_T* strCpyAllThatFit(Char_T* const pDstBegin, const size_t nSizeInChars, con
         *pDstBegin = '\0';
         return pDstBegin;
     }
-    size_t i = 0;
+
     auto pDest = pDstBegin;
     const auto pNullPosIfDoesntFit = pDstBegin + (nSizeInChars - 1);
     for (; pDest != pNullPosIfDoesntFit && *pszSrc != '\0'; ++pDest, ++pszSrc)
