@@ -42,8 +42,11 @@ struct typeToName
     static std::string name() { return typeid(T).name(); }
 };
 
+template <> struct typeToName<int> { static std::string name() { return "int"; } };
+template <> struct typeToName<double> { static std::string name() { return "double"; } };
 template <> struct typeToName<std::string> { static std::string name() { return "std::string"; } };
 template <class T0, class T1> struct typeToName<std::pair<T0, T1>> { static std::string name() { return "std::pair<" + typeToName<T0>::name() + ", " + typeToName<T1>::name() + ">"; } };
+template <class T0, class T1> struct typeToName<DFG_MODULE_NS(cont)::TrivialPair<T0, T1>> { static std::string name() { return "TrivialPair<" + typeToName<T0>::name() + ", " + typeToName<T1>::name() + ">"; } };
 
 template <class Key_T, class Val_T>
 std::string containerDescription(const std::map<Key_T, Val_T>&) { return "std::map<" + typeToName<Key_T>::name() + "," + typeToName<Val_T>::name() + ">"; }
