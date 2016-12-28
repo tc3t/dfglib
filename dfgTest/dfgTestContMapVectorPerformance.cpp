@@ -143,7 +143,7 @@ Cont_T VectorInsertImpl(Generator_T generator, const int nCount, BenchmarkResult
     const auto elapsedTime = timer.elapsedWallSeconds();
     //const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}", int(capacity >= cont.size())) : "";
     if (pTable)
-        pTable->addString(SzPtrUtf8(toStrC(elapsedTime).c_str()), nRow, pTable->colCountByMaxColIndex() - 1);
+        pTable->addString(floatingPointToStr<StringUtf8>(elapsedTime, 4 /*number of significant digits*/), nRow, pTable->colCountByMaxColIndex() - 1);
 
     if (nCount > 100)
         std::cout << "Insert time " << containerDescription(cont) /*<< sReservationInfo*/ << ": " << elapsedTime << '\n';
@@ -495,7 +495,7 @@ TEST(dfgCont, VectorInsertPerformance)
 #ifdef _DEBUG
     const int nCount = 100;
 #else
-    const int nCount = 100000;
+    const int nCount = 50000;
 #endif
 
     BenchmarkResultTable table;
@@ -511,7 +511,7 @@ TEST(dfgCont, VectorInsertPerformance)
     const auto nElementTypeCount = 4;
     const auto nContainerCount = 3;
 
-    for (size_t i = 0; i < 3; ++i) // Iterations.
+    for (size_t i = 0; i < 5; ++i) // Iterations.
     {
         if (i == 0)
         {

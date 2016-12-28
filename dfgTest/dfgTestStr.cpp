@@ -616,6 +616,15 @@ TEST(dfgStr, StringView)
         const DFG_CLASS_NAME(StringViewUtf8)& svUtf8 = tpszAscii;
         DFG_UNUSED(svUtf8);
     }
+
+    // TODO: Test that StringViewUtf8 accepts StringAscii.
+    /*
+    {
+        DFG_CLASS_NAME(StringAscii) sAscii(DFG_ASCII("a"));
+        const DFG_CLASS_NAME(StringViewUtf8)& svUtf8 = sAscii;
+        DFG_UNUSED(svUtf8);
+    }
+    */
 }
 
 namespace
