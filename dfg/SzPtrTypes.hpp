@@ -56,7 +56,9 @@ struct TypedCharPtrT
         return (m_p != nullptr);
     }
 
-    const Char_T* rawPtr() const { return m_p; }
+    // Note: Char_T may have be 'const char'. Allow const to return char* as constness 
+    //      for this class is determined by the address pointed to, not by it's content.
+    Char_T*         rawPtr() const     { return m_p; }
 
     Char_T* m_p;
 };
