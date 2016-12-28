@@ -25,7 +25,7 @@
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2015_UPDATE1
 #elif defined(_MSC_FULL_VER) && _MSC_FULL_VER == 190023918
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2015_UPDATE2
-#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER == 190024210
+#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER == 190024215 // Was 190024210 in the link above, changed to this based on version in AppVeyor build.
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2015_UPDATE3
 #elif defined(_MSC_FULL_VER)
     #pragma message("Unrecognized MSVC compiler, _MSC_FULL_VER = " DFG_STRINGIZE(_MSC_FULL_VER))

@@ -14,9 +14,9 @@ Experimental general purpose utility library.
 | VC2010        | x64           | Debug   | CI | Unit tests build and run |
 | VC2010        | x64           | Release | no CI | Skipped in CI since unit test build fails for unknown reasons since 2016-11-25 |
 | VC2012        | x86           | Debug   | CI | Unit tests build and run |
-| VC2012        | x86           | Release | CI | Unit tests build and run |
+| VC2012        | x86           | Release | no CI | Skipped in CI since unit test build fails, possibly the same problem as in VC2010 release. |
 | VC2012        | x64           | Debug   | CI | Unit tests build and run |
-| VC2012        | x64           | Release | CI | Unit tests build and run |
+| VC2012        | x64           | Release | no CI | Skipped in CI since unit test build fails, possibly the same problem as in VC2010 release. |
 | VC2013        | x86           | Debug   | CI | Unit tests build and run |
 | VC2013        | x86           | Release | CI | Unit tests build and run |
 | VC2013        | x64           | Debug   | CI | Unit tests build and run |
