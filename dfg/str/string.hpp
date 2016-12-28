@@ -26,6 +26,7 @@ public:
     typedef std::string                         StorageType;
     typedef TypedCharPtrT<const char, Type_T>   TypedPtrT;
     typedef SzPtrT<const char, Type_T>          SzPtrR;
+    typedef SzPtrT<char, Type_T>                SzPtrW;
     typedef StorageType::size_type              size_type;
 
     DFG_CLASS_NAME(StringTyped)() {}
@@ -45,7 +46,7 @@ public:
     }
 
 	// TODO: test
-	DFG_CLASS_NAME(StringTyped) operator=(const SzPtrR& psz)
+	DFG_CLASS_NAME(StringTyped)& operator=(const SzPtrR& psz)
 	{
 		rawStorage() = psz.c_str();
 		return *this;
