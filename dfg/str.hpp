@@ -109,6 +109,21 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     return psz;
 }
 
+template <class T, size_t N>
+inline char* floatingPointToStr(const T val, char (&sz)[N], const int nPrecParam = -1)
+{
+    return floatingPointToStr(val, sz, N, nPrecParam);
+}
+
+template <class Str_T>
+inline Str_T floatingPointToStr(const double val, const int nPrecParam = -1)
+{
+    char szBuf[32] = "";
+    floatingPointToStr(val, szBuf, nPrecParam);
+    Str_T s(SzPtrAscii(szBuf));
+    return s;
+}
+
 #define DFG_INTERNAL_DEFINE_TOSTR(CHAR, TYPE, FUNC, PARAM) \
     inline              CHAR* toStr(TYPE val, CHAR* buf, const size_t nBufCount,    const int param = PARAM)  { FUNC(val, buf, nBufCount, param); return buf; } \
     template <size_t N> CHAR* toStr(TYPE val, CHAR (&buf)[N],                       const int param = PARAM)  { return toStr(val, buf, N, param); }
