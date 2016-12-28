@@ -8,18 +8,26 @@
 DFG_ROOT_NS_BEGIN
 {
 
-inline ConstCharPtr toCharPtr_raw(const ConstCharPtr psz) { return psz; }
-inline ConstWCharPtr toCharPtr_raw(const ConstWCharPtr psz) { return psz; }
-inline ConstCharPtr toCharPtr_raw(const std::string& str) { return str.c_str(); }
-inline ConstWCharPtr toCharPtr_raw(const std::wstring& str) { return str.c_str(); }
+inline ConstCharPtr     toCharPtr_raw(const ConstCharPtr psz)       { return psz; }
+inline ConstWCharPtr    toCharPtr_raw(const ConstWCharPtr psz)      { return psz; }
+inline ConstCharPtr     toCharPtr_raw(const std::string& str)       { return str.c_str(); }
+inline ConstWCharPtr    toCharPtr_raw(const std::wstring& str)      { return str.c_str(); }
 
-inline ConstCharPtr toCharPtr_raw(const TypedCharPtrAsciiR& tpsz) { return tpsz.rawPtr(); }
-inline ConstCharPtr toCharPtr_raw(const TypedCharPtrLatin1R& tpsz) { return tpsz.rawPtr(); }
-inline ConstCharPtr toCharPtr_raw(const TypedCharPtrUtf8R& tpsz) { return tpsz.rawPtr(); }
+inline CharPtr toCharPtr_raw(const TypedCharPtrAsciiW& tpsz)        { return tpsz.rawPtr(); }
+inline CharPtr toCharPtr_raw(const TypedCharPtrLatin1W& tpsz)       { return tpsz.rawPtr(); }
+inline CharPtr toCharPtr_raw(const TypedCharPtrUtf8W& tpsz)         { return tpsz.rawPtr(); }
 
-inline TypedCharPtrAsciiR toCharPtr_typed(const TypedCharPtrAsciiR& tpsz) { return tpsz; }
-inline TypedCharPtrLatin1R toCharPtr_typed(const TypedCharPtrLatin1R& tpsz) { return tpsz; }
-inline TypedCharPtrUtf8R toCharPtr_typed(const TypedCharPtrUtf8R& tpsz) { return tpsz; }
+inline ConstCharPtr toCharPtr_raw(const TypedCharPtrAsciiR& tpsz)   { return tpsz.rawPtr(); }
+inline ConstCharPtr toCharPtr_raw(const TypedCharPtrLatin1R& tpsz)  { return tpsz.rawPtr(); }
+inline ConstCharPtr toCharPtr_raw(const TypedCharPtrUtf8R& tpsz)    { return tpsz.rawPtr(); }
+
+inline TypedCharPtrAsciiR   toCharPtr_typed(const TypedCharPtrAsciiR& tpsz)  { return tpsz; }
+inline TypedCharPtrLatin1R  toCharPtr_typed(const TypedCharPtrLatin1R& tpsz) { return tpsz; }
+inline TypedCharPtrUtf8R    toCharPtr_typed(const TypedCharPtrUtf8R& tpsz)   { return tpsz; }
+
+inline SzPtrAsciiW  toSzPtr_typed(const SzPtrAsciiW& tpsz)          { return tpsz; }
+inline SzPtrLatin1W toSzPtr_typed(const SzPtrLatin1W& tpsz)         { return tpsz; }
+inline SzPtrUtf8W   toSzPtr_typed(const SzPtrUtf8W& tpsz)           { return tpsz; }
 
 inline SzPtrAsciiR toSzPtr_typed(const SzPtrAsciiR& tpsz) { return tpsz; }
 inline SzPtrLatin1R toSzPtr_typed(const SzPtrLatin1R& tpsz) { return tpsz; }
