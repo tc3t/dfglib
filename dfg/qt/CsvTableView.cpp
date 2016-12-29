@@ -52,6 +52,12 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
     }
 
     {
+        auto pAction = new QAction(tr("Merge files to current..."), this);
+        connect(pAction, &QAction::triggered, this, &ThisClass::mergeFilesToCurrent);
+        addAction(pAction);
+    }
+
+    {
         auto pAction = new QAction(tr("Save to file..."), this);
         connect(pAction, &QAction::triggered, this, &ThisClass::saveToFile);
         addAction(pAction);
@@ -561,7 +567,30 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
     {
         const auto bSuccess = pModel->openFile(sPath);
         if (!bSuccess)
-            QMessageBox::information(nullptr, "", QString("Failed to open file '%1'").arg(sPath));
+            QMessageBox::information(nullptr, "", tr("Failed to open file '%1'").arg(sPath));
+        return bSuccess;
+    }
+    else
+        return false;
+}
+
+bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
+{
+    auto sPaths = QFileDialog::getOpenFileNames(this,
+        tr("Select files to merge"),
+        QString()/*dir*/,
+        tr("CSV files (*.csv *.tsv);;All files (*.*)"),
+        nullptr/*selected filter*/,
+        0/*options*/);
+    if (sPaths.isEmpty())
+        return false;
+
+    auto pModel = csvModel();
+    if (pModel)
+    {
+        const auto bSuccess = pModel->importFiles(sPaths);
+        if (!bSuccess)
+            QMessageBox::information(nullptr, "", tr("Failed to merge files"));
         return bSuccess;
     }
     else

@@ -261,7 +261,41 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
     }
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str)
+int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findColumnIndexByName(const QString& sHeaderName, const int returnValueIfNotFound) const
+{
+    for (auto i = 0, nCount = getColumnCount(); i < nCount; ++i)
+    {
+        if (getHeaderName(i) == sHeaderName)
+            return i;
+    }
+    return returnValueIfNotFound;
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other)
+{
+    const auto nOtherColumnCount = other.getColumnCount();
+    std::vector<int> mapOtherColumnIndexToMerged(nOtherColumnCount, getColumnCount());
+    for (auto i = 0; i < nOtherColumnCount; ++i)
+    {
+        const auto nCurrentColCount = getColumnCount();
+        const auto nCol = findColumnIndexByName(other.getHeaderName(i), nCurrentColCount);
+        if (nCol == nCurrentColCount)
+        {
+            insertColumn(nCurrentColCount);
+            setColumnName(nCol, other.getHeaderName(i));
+        }
+        mapOtherColumnIndexToMerged[i] = nCol;
+    }
+    const auto nOtherRowCount = other.getRowCount();
+    const auto nThisOriginalRowCount = getRowCount();
+    other.m_table.forEachNonNullCell([&](const uint32 r, const uint32 c, SzPtrUtf8R s)
+    {
+        m_table.setElement(nThisOriginalRowCount + r, mapOtherColumnIndexToMerged[c], s);
+    });
+    return true;
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& str)
 {
     return openString(str, LoadOptions());
 }
@@ -279,9 +313,23 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str, co
     }
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(const QString& sDbFilePath)
 {
     return openFile(sDbFilePath, LoadOptions());
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::importFiles(const QStringList& paths)
+{
+    if (paths.empty())
+        return true;
+
+    for (const auto& sPath : paths)
+    {
+        DFG_CLASS_NAME(CsvItemModel) temp;
+        temp.openFile(sPath);
+        mergeAnotherTableToThis(temp);
+    }
+    return true; // TODO: tarkempi paluuarvo (esim. että kuinka monta luettiin onnistuneesti).
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, const LoadOptions& loadOptions)

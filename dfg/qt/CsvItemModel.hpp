@@ -118,11 +118,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public:
 
-        bool openFile(QString sDbFilePath);
+        bool mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other);
+        bool openFile(const QString& sDbFilePath);
         bool openFile(QString sDbFilePath, const LoadOptions& loadOptions);
+        bool importFiles(const QStringList& paths);
         bool openStream(QTextStream& strm);
         bool openStream(QTextStream& strm, const LoadOptions& loadOptions);
-        bool openString(QString str);
+        bool openString(const QString& str);
         bool openString(QString str, const LoadOptions& loadOptions);
         bool openFromMemory(const char* data, const size_t nSize, const LoadOptions& loadOptions);
 
@@ -134,6 +136,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool isModified() const { return m_bModified; }
         void setModifiedStatus(const bool bMod = true);
+
+        // Returns index of column with name 'sHeaderName' or 'returnValueIfNotFound'.
+        int findColumnIndexByName(const QString& sHeaderName, const int returnValueIfNotFound) const;
 
         int getColumnCount() const { return int(m_vecColInfo.size()); }
         int getRowCount() const { return int(m_table.rowCountByMaxRowIndex()); }

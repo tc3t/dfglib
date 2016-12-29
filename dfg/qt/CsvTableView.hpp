@@ -100,6 +100,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public slots:
         bool openFromFile();
+        bool mergeFilesToCurrent();
         bool saveToFile();
         bool saveToFileWithOptions();
         bool clearSelected();
