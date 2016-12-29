@@ -142,6 +142,12 @@ DFG_INTERNAL_DEFINE_TOSTR(char,     long double,    floatingPointToStr<long doub
 
 #undef DFG_INTERNAL_DEFINE_TOSTR
 
+template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszFormat) // TODO: test
+{
+    sprintf_s(buf, N, pszFormat, val);
+    return buf;
+}
+
 template <class T, class Str_T>
 Str_T& toStr(const T& obj, Str_T& str)
 {
