@@ -119,26 +119,35 @@ namespace
         }
     };
 
+    template <class T>
+    std::string GenerateOutputFilePathForVectorInsert(const dfg::StringViewSzC& s)
+    {
+        std::string sTypeSuffix = typeToName<T>::name();
+        for (size_t j = 0; j < sTypeSuffix.size(); ++j)
+        {
+            auto ch = sTypeSuffix[j];
+            if (ch == '<' || ch == '>' || ch == ',' || ch == ':')
+                sTypeSuffix[j] = '_';
+        }
+        return dfg::format_fmt("testfiles/generated/{}{}_{}.txt", s.c_str(), sTypeSuffix, DFG_COMPILER_NAME_SIMPLE);
+    }
+
 } // unnamed namespace
 
-template <class Cont_T, class Generator_T>
-Cont_T VectorInsertImpl(Generator_T generator, const int nCount, BenchmarkResultTable* pTable, const int nRow)
+template <class Cont_T, class Generator_T, class InsertPosGenerator_T>
+Cont_T VectorInsertImpl(Generator_T generator, InsertPosGenerator_T indexGenerator, const int nCount, BenchmarkResultTable* pTable, const int nRow)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(str);
-    const int nRandEngSeed = 12345678;
 
-    auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
-    auto distr = DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, 0, NumericTraits<int>::maxValue);
-    randEng.seed(static_cast<unsigned long>(nRandEngSeed));
     Cont_T cont;
     DFG_MODULE_NS(time)::TimerCpu timer;
     cont.reserve(nCount);
-    cont.push_back(generator(randEng()));
+    cont.push_back(generator(1));
     for (int i = 1; i < nCount; ++i)
     {
-        const auto nPos = distr() % cont.size();
-        cont.insert(cont.begin() + nPos, generator(randEng()));
+        const auto nPos = indexGenerator(cont.size());
+        cont.insert(cont.begin() + nPos, generator(nPos));
     }
     const auto elapsedTime = timer.elapsedWallSeconds();
     //const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}", int(capacity >= cont.size())) : "";
@@ -166,6 +175,25 @@ template <> DFG_MODULE_NS(cont)::TrivialPair<int, int> generate<DFG_MODULE_NS(co
     return DFG_MODULE_NS(cont)::TrivialPair<int, int>(val, val);
 }
 
+template <class Pair_T>
+std::ostream& pairLikeItemStreaming(std::ostream& ostrm, const Pair_T& a)
+{
+    ostrm << a.first << "," << a.second;
+    return ostrm;
+}
+
+template <class T0, class T1>
+std::ostream& operator<<(std::ostream& ostrm, const std::pair<T0, T1>& a)
+{
+    return pairLikeItemStreaming(ostrm, a);
+}
+
+template <class T0, class T1>
+std::ostream& operator<<(std::ostream& ostrm, const dfg::cont::TrivialPair<T0, T1>& a)
+{
+    return pairLikeItemStreaming(ostrm, a);
+}
+
 template <class T>
 void VectorInsertImpl(const int nCount, BenchmarkResultTable* pTable = nullptr, const int nRow = 0, const int nTypeCol = 0)
 {
@@ -177,15 +205,50 @@ void VectorInsertImpl(const int nCount, BenchmarkResultTable* pTable = nullptr, 
         pTable->addString(SzPtrUtf8(containerDescription(DFG_MODULE_NS(cont)::Vector<T>()).c_str()), nRow + 2, nTypeCol);
     }
 
-    const auto stdVec = VectorInsertImpl<std::vector<T>>(generate<T>, nCount, pTable, nRow);
-    const auto boostVec = VectorInsertImpl<boost::container::vector<T>>(generate<T>, nCount, pTable, nRow + 1);
-    const auto dfgVec = VectorInsertImpl<DFG_MODULE_NS(cont)::Vector<T>>(generate<T>, nCount, pTable, nRow + 2);
+#if 0 // If true, using file-based insert positions.
+    std::vector<int> contInsertIndexes;
+    contInsertIndexes.reserve(50000);
+    std::ifstream istrm("testfiles/vectorInsertIndexes_50000.txt");
+    {
+        int i;
+        while (istrm >> i)
+        {
+            contInsertIndexes.push_back(i);
+        }
+    }
+
+    const auto indexGenerator = [&](const size_t nContSize)
+                                {
+                                    return contInsertIndexes[(nContSize - 1) % contInsertIndexes.size()];
+                                };
+#else // Case: using random generator based insert positions.
+    const unsigned long nRandEngSeed = 12345678;
+    auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
+    auto distr = DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, 0, NumericTraits<int>::maxValue);
+    const auto indexGenerator = [&](const size_t nContSize) -> ptrdiff_t
+                                {
+                                    if (nContSize == 1)
+                                        randEng.seed(nRandEngSeed);
+                                    return distr() % nContSize;
+                                };
+#endif
+
+    const auto stdVec = VectorInsertImpl<std::vector<T>>(generate<T>, indexGenerator, nCount, pTable, nRow);
+    const auto boostVec = VectorInsertImpl<boost::container::vector<T>>(generate<T>, indexGenerator, nCount, pTable, nRow + 1);
+    const auto dfgVec = VectorInsertImpl<DFG_MODULE_NS(cont)::Vector<T>>(generate<T>, indexGenerator, nCount, pTable, nRow + 2);
     ASSERT_EQ(nCount, stdVec.size());
     ASSERT_EQ(stdVec.size(), boostVec.size());
     ASSERT_EQ(stdVec.size(), dfgVec.size());
 
     EXPECT_TRUE(std::equal(stdVec.begin(), stdVec.end(), boostVec.begin()));
     EXPECT_TRUE(std::equal(stdVec.begin(), stdVec.end(), dfgVec.begin()));
+    
+    if (pTable)
+    {
+        dfg::io::OfStream ostrm(GenerateOutputFilePathForVectorInsert<T>("generatedVectorInsertValues"));
+        for (size_t i = 0; i < stdVec.size(); ++i)
+            ostrm << stdVec[i] << '\n';
+    }
 }
 
 } // unnamed namespace
@@ -544,7 +607,7 @@ TEST(dfgCont, VectorInsertPerformance)
     // Calculate averages etc.
     table.addReducedValues(nLastStaticColumn + 1);
 
-    DFG_MODULE_NS(io)::OfStream ostrm("testfiles/generated/benchmarkVectorInsert.csv");
+    DFG_MODULE_NS(io)::OfStream ostrm("testfiles/generated/benchmarkVectorInsert_" DFG_COMPILER_NAME_SIMPLE ".csv");
     table.writeToStream(ostrm);
 }
 
