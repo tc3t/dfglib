@@ -8,7 +8,7 @@ Experimental general purpose utility library.
 
 | Compiler      | Platform      | Config  | Status | Comment |
 | ------------- | ------------- | -----   | ------ | ------- |
-| MinGW 4.8     | x86           | O2      | no CI  | Building and running of unit tests manually maintained |
+| MinGW 4.8.0   | x86           | O2      | no CI  | Building and running of unit tests manually maintained |
 | VC2010        | x86           | Debug   | CI | Unit tests build and run |
 | VC2010        | x86           | Release | no CI | Skipped in CI since unit test build fails for unknown reasons since 2016-11-25 |
 | VC2010        | x64           | Debug   | CI | Unit tests build and run |
