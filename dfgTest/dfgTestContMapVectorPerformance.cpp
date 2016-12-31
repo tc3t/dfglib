@@ -119,6 +119,11 @@ namespace
         }
     };
 
+    std::string generateCompilerInfoForOutputFilename()
+    {
+        return dfg::format_fmt("{}_{}_{}", DFG_COMPILER_NAME_SIMPLE, 8 * sizeof(void*), DFG_BUILD_DEBUG_RELEASE_TYPE);
+    }
+
     template <class T>
     std::string GenerateOutputFilePathForVectorInsert(const dfg::StringViewSzC& s)
     {
@@ -129,7 +134,7 @@ namespace
             if (ch == '<' || ch == '>' || ch == ',' || ch == ':')
                 sTypeSuffix[j] = '_';
         }
-        return dfg::format_fmt("testfiles/generated/{}{}_{}.txt", s.c_str(), sTypeSuffix, DFG_COMPILER_NAME_SIMPLE);
+        return dfg::format_fmt("testfiles/generated/{}{}_{}.txt", s.c_str(), sTypeSuffix, generateCompilerInfoForOutputFilename());
     }
 
 } // unnamed namespace
@@ -607,7 +612,7 @@ TEST(dfgCont, VectorInsertPerformance)
     // Calculate averages etc.
     table.addReducedValues(nLastStaticColumn + 1);
 
-    DFG_MODULE_NS(io)::OfStream ostrm("testfiles/generated/benchmarkVectorInsert_" DFG_COMPILER_NAME_SIMPLE ".csv");
+    DFG_MODULE_NS(io)::OfStream ostrm(format_fmt("testfiles/generated/benchmarkVectorInsert_{}.csv", generateCompilerInfoForOutputFilename()));
     table.writeToStream(ostrm);
 }
 
