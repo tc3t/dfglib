@@ -273,6 +273,9 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findColumnIndexByName(const
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other)
 {
+    const auto nOtherRowCount = other.getRowCount();
+    if (nOtherRowCount < 1)
+        return false;
     const auto nOtherColumnCount = other.getColumnCount();
     std::vector<int> mapOtherColumnIndexToMerged(nOtherColumnCount, getColumnCount());
     for (auto i = 0; i < nOtherColumnCount; ++i)
@@ -286,12 +289,17 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(co
         }
         mapOtherColumnIndexToMerged[i] = nCol;
     }
-    const auto nOtherRowCount = other.getRowCount();
+    
+    // TODO: implement merging in m_table implementation. For example when merging big tables, this current implementation 
+    //       copies data one-by-one while m_table could probably do it more efficiently by directly copying the string storage. In case of modifiable 'other',
+    //       this.m_table could adopt the string storage.
     const auto nThisOriginalRowCount = getRowCount();
+    beginInsertRows(QModelIndex(), nThisOriginalRowCount, nThisOriginalRowCount + nOtherRowCount - 1);
     other.m_table.forEachNonNullCell([&](const uint32 r, const uint32 c, SzPtrUtf8R s)
     {
         m_table.setElement(nThisOriginalRowCount + r, mapOtherColumnIndexToMerged[c], s);
     });
+    endInsertRows();
     return true;
 }
 
