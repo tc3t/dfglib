@@ -191,7 +191,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2012|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -259,7 +259,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2012|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -415,7 +415,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2017|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath);..\externals;..\;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\externals;..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2012|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -465,7 +465,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2017|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath);..\externals;..\;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\externals;..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2012|x64'">
     <LinkIncremental>false</LinkIncremental>
