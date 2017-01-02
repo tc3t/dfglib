@@ -57,9 +57,28 @@ public:
         return m_s.empty();
     }
 
+    // Note: returns the number of char-elements, not the number of codepoints (for example if UTF8-string has a single non-ascii characters that needs two bytes, size() is 2 instead of 1).
+    // TODO: Revise how this should behave. These are inherently ambiguous with encodings like UTF8 so avoid using these and evaluate if they should be removed from the interface.
     size_t length() const { return m_s.length(); }
     size_t size() const { return m_s.size(); }
 
+    // Returns the size() of the raw storage string.
+    size_t sizeInRawUnits() const { return m_s.size(); }
+
+    //size_t sizeInCodePoints() const { TODO: implement, perhaps through a strLenCodepoints() or similar; }
+
+    // TODO: implement using StringView
+    bool operator==(const DFG_CLASS_NAME(StringTyped)& other) const
+    {
+        return (m_s.size() == other.m_s.size()) && m_s == other.m_s;
+    }
+
+    bool operator!=(const DFG_CLASS_NAME(StringTyped)& other) const
+    {
+        return !(*this == other);
+    }
+
+    // TODO: implement using StringView
     bool operator==(const SzPtrR& psz) const
     {
         return (std::strcmp(toCharPtr_raw(c_str()), toCharPtr_raw(psz)) == 0);
@@ -86,10 +105,18 @@ public:
     }
 
 	// TODO: test
+    // TODO: implement using StringView
 	bool operator<(const DFG_CLASS_NAME(StringTyped)& other) const
 	{
 		return rawStorage() < other.rawStorage();
 	}
+
+    // TODO: test
+    // TODO: implement using StringView
+    bool operator<(const SzPtrR& right) const
+    {
+        return std::strcmp(toCharPtr_raw(c_str()), toCharPtr_raw(right)) < 0;
+    }
 
     StorageType& rawStorage() { return m_s; }
     const StorageType& rawStorage() const { return m_s; }
@@ -97,10 +124,16 @@ public:
     StorageType m_s; // Encoded by the method defined by SzPtrType.
 }; // class StringTyped
 
-template<class SzPtr_T, CharPtrType Type_T>
-inline bool operator==(const SzPtr_T& psz, const DFG_CLASS_NAME(StringTyped)<Type_T>& right)
+template <CharPtrType Type_T>
+inline bool operator==(const SzPtrT<const char, Type_T>& psz, const DFG_CLASS_NAME(StringTyped)<Type_T>& right)
 {
     return right == psz;
+}
+
+template <CharPtrType Type_T>
+inline bool operator<(const SzPtrT<const char, Type_T>& tpsz, const DFG_CLASS_NAME(StringTyped)<Type_T>& right)
+{
+    return right < tpsz;
 }
 
 typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeAscii> DFG_CLASS_NAME(StringAscii);

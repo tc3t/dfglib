@@ -339,6 +339,11 @@ public:
         return toStringView() == other.toStringView();
     }
 
+    bool operator==(DFG_CLASS_NAME(StringViewSz) other) const
+    {
+        return DFG_CLASS_NAME(StringViewSz)(*this) == other;
+    }
+
     StringViewT toStringView()                       { return StringViewT(m_psz, length()); }
     StringViewT toStringViewFromCachedSize() const   { return StringViewT(m_psz, m_nSize); }
 
@@ -357,11 +362,14 @@ public:
     size_t m_nSize;	    // Length of the string or DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated
 }; // StringViewSz
 
-template<class SzPtr_T, class Char_T, class Str_T>
-inline bool operator==(const SzPtr_T& psz, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+template <CharPtrType Type_T, class Char_T, class Str_T>
+inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
 {
     return right == psz;
 }
+
+template <class Char_T>
+inline bool operator==(const Char_T* psz, const DFG_CLASS_NAME(StringView)<Char_T, std::basic_string<Char_T>>& right) { return right == psz; }
 
 template<class Char_T, class Str_T>
 inline bool operator==(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
@@ -381,11 +389,14 @@ inline bool operator!=(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& left, co
     return !(left == right);
 }
 
-template<class SzPtr_T, class Char_T, class Str_T>
-inline bool operator==(const SzPtr_T& psz, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+template <CharPtrType Type_T, class Char_T, class Str_T>
+inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
 {
     return right == psz;
 }
+
+template <class Char_T>
+inline bool operator==(const Char_T* psz, const DFG_CLASS_NAME(StringViewSz)<Char_T, std::basic_string<Char_T>>& right) { return right == psz; }
 
 template<class Char_T, class Str_T>
 inline bool operator==(const Str_T& s, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
@@ -401,6 +412,12 @@ inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringViewSz)<Char_T,
 
 template<class Char_T, class Str_T>
 inline bool operator!=(DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> left, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+{
+    return !(left == right);
+}
+
+template<class Char_T, class Str_T, class SzPtr_T>
+inline bool operator!=(DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> left, const SzPtr_T& right)
 {
     return !(left == right);
 }

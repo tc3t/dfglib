@@ -532,6 +532,11 @@ namespace
         EXPECT_FALSE(s != SzPtrType("abc"));
         EXPECT_FALSE(s == SzPtrType("abc2"));
         EXPECT_TRUE(s != SzPtrType("abc2"));
+        EXPECT_TRUE(s == s);
+        EXPECT_FALSE(s != s);
+        EXPECT_FALSE(s < s);
+        EXPECT_FALSE(s.c_str() < s);
+        EXPECT_FALSE(s < s.c_str());
     }
 }
 
@@ -541,6 +546,23 @@ TEST(dfgStr, String)
     TestTypedString<DFG_CLASS_NAME(StringAscii)>();
     TestTypedString<DFG_CLASS_NAME(StringLatin1)>();
     TestTypedString<DFG_CLASS_NAME(StringUtf8)>();
+
+    // Test that can compare e.g. StringUtf8 and SzPtrAsciiR
+    {
+        SzPtrAsciiR tpszAscii = DFG_ASCII("abc");
+        EXPECT_TRUE(DFG_CLASS_NAME(StringUtf8)(tpszAscii) == tpszAscii);
+        EXPECT_FALSE(DFG_CLASS_NAME(StringUtf8)(tpszAscii) != tpszAscii);
+    }
+
+    // Test that can compare TypedString and string views.
+    {
+        DFG_CLASS_NAME(StringUtf8) s(DFG_ASCII("abc"));
+        EXPECT_TRUE(s == s);
+        EXPECT_TRUE(s == StringViewUtf8(s));
+        EXPECT_TRUE(s == StringViewSzUtf8(s));
+        //EXPECT_TRUE(s == StringViewAscii(DFG_ASCII("abc")));    // TODO: make this work.
+        //EXPECT_TRUE(s == StringViewSzAscii(DFG_ASCII("abc")));  // TODO: make this work.
+    }
 }
 
 namespace
@@ -617,6 +639,15 @@ TEST(dfgStr, StringView)
         DFG_UNUSED(svUtf8);
     }
 
+    // Test that can compare views that have compare-compatible types.
+    // TODO: make this work.
+    /*
+    {
+        EXPECT_TRUE(StringViewAscii(DFG_ASCII("abc")) == StringViewUtf8(DFG_ASCII("abc")));
+        EXPECT_TRUE(StringViewUtf8(DFG_ASCII("abc")) == StringViewAscii(DFG_ASCII("abc")));
+    }
+    */
+
     // TODO: Test that StringViewUtf8 accepts StringAscii.
     /*
     {
@@ -652,6 +683,8 @@ namespace
         EXPECT_TRUE(conv(sz0) == szView);
         EXPECT_FALSE(szView == conv(sz1));
         EXPECT_FALSE(szView == conv(sz2));
+        EXPECT_TRUE(szView != conv(sz2));
+        EXPECT_FALSE(szView != conv(sz0));
     }
 }
 
@@ -665,6 +698,15 @@ TEST(dfgStr, StringViewSz)
     TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzAscii), char, StringAscii>([](const char* psz)      { return DFG_ROOT_NS::SzPtrAscii(psz); });
     TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzLatin1), char, StringLatin1>([](const char* psz)    { return DFG_ROOT_NS::SzPtrLatin1(psz); });
     TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzUtf8), char, StringUtf8>([](const char* psz)        { return DFG_ROOT_NS::SzPtrUtf8(psz); });
+
+    // Test that can compare views that have compare-compatible types.
+    // TODO: make this work.
+    /*
+    {
+        EXPECT_TRUE(StringViewSzAscii(DFG_ASCII("abc")) == StringViewSzUtf8(DFG_ASCII("abc")));
+        EXPECT_TRUE(StringViewSzUtf8(DFG_ASCII("abc")) == StringViewSzAscii(DFG_ASCII("abc")));
+    }
+    */
 }
 
 TEST(dfgStr, HexStr)
