@@ -107,3 +107,5 @@
 /dfgTest/Win32/Release_VC2013
 /dfgTest/x64
 /dfgTest/.vs
+/dfgTest/Win32/Release_VC2017
+/dfgTest/Win32/Debug_VC2017
