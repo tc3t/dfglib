@@ -39,8 +39,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
         std::advance(iNext, 1);
         if (iNext != iEnd && comp(*iNext, *i)) // Next is less than current -> move item forward
         {
-            auto iNext = i;
-            std::advance(iNext, 1);
             for (; iNext != iEnd && comp(*iNext, *i); ++i, ++iNext)
             {
                 std::swap(*iNext, *i);

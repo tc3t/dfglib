@@ -43,13 +43,22 @@ inline bool isInf(const T t)
 #endif
 }
 
+#ifdef _MSC_VER
+namespace DFG_DETAIL_NS
+{
+    inline bool IsNanMsvc(float t)             { return _isnan(t) != 0; }
+    inline bool IsNanMsvc(double t)            { return _isnan(t) != 0; }
+    inline bool IsNanMsvc(long double t)       { return IsNanMsvc(static_cast<double>(t)); } // _isnan() does not have long double overload causing 'conversion from 'const long double' to 'double', possible loss of data' warnings.
+}
+#endif // _MSC_VER
+
 template <class T>
 inline bool isNan(const T t)
 {
 #if DFG_LANGFEAT_HAS_ISNAN
 	return (std::isnan(t) != 0);
 #elif defined(_MSC_VER)
-	return (_isnan(t) != 0);
+	return DFG_DETAIL_NS::IsNanMsvc(t);
 #else
 	return (isnan(t) != 0);
 #endif
