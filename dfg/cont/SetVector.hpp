@@ -34,12 +34,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     class DFG_CLASS_NAME(SetVector)
     {
     public:
-        typedef std::vector<Key_T>                  ContainerT;
-        typedef typename ContainerT::iterator       iterator;
-        typedef typename ContainerT::const_iterator const_iterator;
-        typedef Key_T                               key_type;
-        typedef Key_T                               value_type;
-        typedef size_t                              size_type;
+        typedef std::vector<Key_T>                      ContainerT;
+        typedef typename ContainerT::iterator           iterator;
+        typedef typename ContainerT::const_iterator     const_iterator;
+        typedef typename ContainerT::const_reference    const_reference;
+        typedef Key_T                                   key_type;
+        typedef Key_T                                   value_type;
+        typedef size_t                                  size_type;
 
         DFG_CLASS_NAME(SetVector)() :
             m_bSorted(true)
@@ -170,6 +171,21 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             }
         }
 
+        iterator insert(const_iterator hint, key_type&& newVal)
+        {
+            DFG_UNUSED(hint);
+            // TODO: implement (i.e. use hint)
+            return insert(std::move(newVal)).first;
+        }
+
+        template <class T>
+        iterator insert(const_iterator hint, const T& newVal)
+        {
+            DFG_UNUSED(hint);
+            // TODO: implement (i.e. use hint)
+            return insert(newVal).first;
+        }
+
         void reserve(const size_t nReserve) { m_storage.reserve(nReserve); }
 
         size_t capacity() const             { return m_storage.capacity(); }
@@ -195,7 +211,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         bool operator==(const DFG_CLASS_NAME(SetVector)& other) const
         {
-            return (size() == other.size()) && std::equal(begin(), end(), other.begin());
+            if (size() != other.size())
+                return false;
+            if (isSorted() && other.isSorted())
+                return std::equal(begin(), end(), other.begin());
+            auto pPossiblySorted = (isSorted()) ? this : &other;
+            auto pNonSorted = (pPossiblySorted == this) ? &other : this;
+            const auto iterEnd = pNonSorted->m_storage.end();
+            for (auto iter = pNonSorted->m_storage.begin(); iter != iterEnd; ++iter)
+            {
+                if (!pPossiblySorted->hasKey(*iter))
+                    return false;
+            }
+            return true;
         }
 
         bool operator!=(const DFG_CLASS_NAME(SetVector)& other) const

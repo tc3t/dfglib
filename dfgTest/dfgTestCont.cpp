@@ -1181,6 +1181,43 @@ TEST(dfgCont, SetVector)
     verifyEqual(mStd, setVectorUnsorted);
 
     verifySetVectors(setVectorSorted, setVectorUnsorted, mStd);
+
+    // Test that SetVector works with std::inserter.
+    {
+        DFG_CLASS_NAME(SetVector)<std::string> setVectorSorted2;
+        DFG_CLASS_NAME(SetVector)<std::string> setVectorUnsorted2; setVectorUnsorted2.setSorting(false);
+        auto insertIter = std::inserter(setVectorSorted2, setVectorSorted2.end());
+        *insertIter = "bcd";
+        *insertIter = "abc";
+        *insertIter = "abc";
+        auto insertIter2 = std::inserter(setVectorUnsorted2, setVectorUnsorted2.end());
+        *insertIter2 = "bcd";
+        *insertIter2 = "abc";
+        *insertIter2 = "abc";
+        EXPECT_EQ(2, setVectorSorted2.size());
+        EXPECT_EQ(setVectorSorted2.size(), setVectorUnsorted2.size());
+        EXPECT_EQ(setVectorSorted2, setVectorUnsorted2);
+    }
+
+    // Test operator==
+    {
+        DFG_CLASS_NAME(SetVector)<std::string> setVectorSorted3;
+        DFG_CLASS_NAME(SetVector)<std::string> setVectorUnsorted3; setVectorUnsorted3.setSorting(false);
+        DFG_CLASS_NAME(SetVector)<std::string> setVectorUnsorted4; setVectorUnsorted4.setSorting(false);
+        setVectorSorted3.insert("b");
+        setVectorSorted3.insert("a");
+        setVectorUnsorted3.insert("b");
+        setVectorUnsorted3.insert("a");
+        setVectorUnsorted4.insert("a");
+        setVectorUnsorted4.insert("b");
+        EXPECT_EQ(setVectorSorted3, setVectorUnsorted3); // Since sets have different sorting, their internal data storage is different
+        EXPECT_EQ(setVectorUnsorted3, setVectorUnsorted4); // Both are unsorted but elements are stored in different order.
+        setVectorSorted3.insert("d");
+        setVectorUnsorted3.insert("e");
+        setVectorUnsorted4.insert("c");
+        EXPECT_NE(setVectorSorted3, setVectorUnsorted4);
+        EXPECT_NE(setVectorUnsorted3, setVectorUnsorted4);
+    }
 }
 
 namespace
