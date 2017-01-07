@@ -45,6 +45,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             m_bSorted(true)
         {}
 
+        DFG_CLASS_NAME(SetVector)(DFG_CLASS_NAME(SetVector)&& other)
+        {
+            operator=(std::move(other));
+        }
+
+        DFG_CLASS_NAME(SetVector)(const DFG_CLASS_NAME(SetVector)& other)
+        {
+            operator=(other);
+        }
+
+        DFG_CLASS_NAME(SetVector)& operator=(const DFG_CLASS_NAME(SetVector)& other)
+        {
+            m_bSorted = other.m_bSorted;
+            m_storage = other.m_storage;
+            return *this;
+        }
+
+        DFG_CLASS_NAME(SetVector)& operator=(DFG_CLASS_NAME(SetVector) && other)
+        {
+            m_bSorted = other.m_bSorted;
+            m_storage = std::move(other.m_storage);
+            return *this;
+        }
+
         bool                empty() const       { return m_storage.empty(); }
         size_t              size() const        { return m_storage.size(); }
         void                clear()             { m_storage.clear(); }
@@ -168,6 +192,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }
 
         bool isSorted() const { return m_bSorted; }
+
+        bool operator==(const DFG_CLASS_NAME(SetVector)& other) const
+        {
+            return (size() == other.size()) && std::equal(begin(), end(), other.begin());
+        }
+
+        bool operator!=(const DFG_CLASS_NAME(SetVector)& other) const
+        {
+            return !(*this == other);
+        }
 
         bool m_bSorted;
         ContainerT m_storage;

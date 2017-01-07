@@ -345,55 +345,55 @@ TEST(dfgCont, TableSzSorting)
 
     // Test empty cell handling
     {
-        DFG_CLASS_NAME(TableSz)<char> table;
-        table.setElement(0, 0, "c");
-        table.setElement(1, 0, "b");
-        table.setElement(2, 0, "a");
+        DFG_CLASS_NAME(TableSz)<char> table2;
+        table2.setElement(0, 0, "c");
+        table2.setElement(1, 0, "b");
+        table2.setElement(2, 0, "a");
 
-        table.setElement(0, 1, "r0c1");
-        table.setElement(2, 1, "r2c1");
+        table2.setElement(0, 1, "r0c1");
+        table2.setElement(2, 1, "r2c1");
 
-        table.setElement(3, 2, "r3c2");
+        table2.setElement(3, 2, "r3c2");
 
         // Sort by column 0
         {
-            table.sortByColumn(0);
-            EXPECT_EQ(table(0, 0), nullptr);
-            EXPECT_STREQ(table(1, 0), "a");
-            EXPECT_STREQ(table(2, 0), "b");
-            EXPECT_STREQ(table(3, 0), "c");
+            table2.sortByColumn(0);
+            EXPECT_EQ(table2(0, 0), nullptr);
+            EXPECT_STREQ(table2(1, 0), "a");
+            EXPECT_STREQ(table2(2, 0), "b");
+            EXPECT_STREQ(table2(3, 0), "c");
 
-            EXPECT_STREQ(table(1, 1), "r2c1");
-            EXPECT_STREQ(table(3, 1), "r0c1");
+            EXPECT_STREQ(table2(1, 1), "r2c1");
+            EXPECT_STREQ(table2(3, 1), "r0c1");
 
-            EXPECT_STREQ(table(0, 2), "r3c2");
-            EXPECT_EQ(table(3, 2), nullptr);
+            EXPECT_STREQ(table2(0, 2), "r3c2");
+            EXPECT_EQ(table2(3, 2), nullptr);
         }
 
         // Sort by column 1
         {
-            table.sortByColumn(1);
-            EXPECT_EQ(table(0, 0), nullptr);
+            table2.sortByColumn(1);
+            EXPECT_EQ(table2(0, 0), nullptr);
             // Sorting is not stable so position of item "b" is not known.
-            EXPECT_STREQ(table(2, 0), "c");
-            EXPECT_STREQ(table(3, 0), "a");
+            EXPECT_STREQ(table2(2, 0), "c");
+            EXPECT_STREQ(table2(3, 0), "a");
 
-            EXPECT_EQ(table(0, 1), nullptr);
-            EXPECT_EQ(table(1, 1), nullptr);
-            EXPECT_STREQ(table(2, 1), "r0c1");
-            EXPECT_STREQ(table(3, 1), "r2c1");
+            EXPECT_EQ(table2(0, 1), nullptr);
+            EXPECT_EQ(table2(1, 1), nullptr);
+            EXPECT_STREQ(table2(2, 1), "r0c1");
+            EXPECT_STREQ(table2(3, 1), "r2c1");
 
             // Sorting is not stable so position of item "r3c2" is not known.
-            EXPECT_EQ(table(2, 2), nullptr);
-            EXPECT_EQ(table(3, 2), nullptr);
+            EXPECT_EQ(table2(2, 2), nullptr);
+            EXPECT_EQ(table2(3, 2), nullptr);
         }
 
         // Sort by column 2
         {
-            table.sortByColumn(2);
-            EXPECT_EQ(table(3, 0), nullptr);
-            EXPECT_EQ(table(3, 1), nullptr);
-            EXPECT_STREQ(table(3, 2), "r3c2");
+            table2.sortByColumn(2);
+            EXPECT_EQ(table2(3, 0), nullptr);
+            EXPECT_EQ(table2(3, 1), nullptr);
+            EXPECT_STREQ(table2(3, 2), "r3c2");
         }
     }
 
@@ -1054,6 +1054,22 @@ namespace
             std::string s(1, DFG_MODULE_NS(rand)::rand<int8>(randEng, 0, 127));
             se.insert(s);
         }
+
+        Set_T seCopy = se;
+        Set_T seCopy2 = se;
+        Set_T seMoved = std::move(seCopy);
+        Set_T seAssign;
+        Set_T seAssign2;
+        seAssign = std::move(seCopy2);
+        seAssign2 = se;
+        EXPECT_TRUE(seCopy.empty());
+        EXPECT_TRUE(seCopy2.empty());
+        EXPECT_TRUE(se == se);
+        EXPECT_FALSE(se == seCopy);
+        EXPECT_TRUE(se != seCopy);
+        EXPECT_EQ(se, seMoved);
+        EXPECT_EQ(se, seAssign);
+        EXPECT_EQ(se, seAssign2);
     }
 
     template  <class Set_T>
