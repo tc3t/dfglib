@@ -797,6 +797,15 @@ TEST(dfgCont, InterleavedXsortedTwoChannelWrapper)
 
 namespace
 {
+    template  <class Map_T>
+    std::map<std::string, int> createStdMap(const Map_T& m)
+    {
+        std::map<std::string, int> rv;
+        for (auto iter = m.begin(), iterEnd = m.end(); iter != iterEnd; ++iter)
+            rv[iter->first] = iter->second;
+        return rv;
+    }
+
     template <class Map_T>
     void testMapInterface(Map_T& m, const unsigned long nRandEngSeed)
     {
@@ -852,15 +861,25 @@ namespace
                 m.insert(std::pair<std::string, int>(s, DFG_MODULE_NS(rand)::rand(randEng, 1000, 2000)));
             }
         }
-    }
 
-    template  <class Map_T>
-    std::map<std::string, int> createStdMap(const Map_T& m)
-    {
-        std::map<std::string, int> rv;
-        for (auto iter = m.begin(), iterEnd = m.end(); iter != iterEnd; ++iter)
-            rv[iter->first] = iter->second;
-        return rv;
+        // move constructor and move assignment
+        {
+            ASSERT_FALSE(m.empty());
+            Map_T mCopy = m;
+            Map_T mCopy2 = m;
+            Map_T mCopy3 = m;
+            Map_T mMoveCtor(std::move(mCopy));
+            Map_T mMoveAssign;
+            mMoveAssign = std::move(mCopy2);
+            EXPECT_TRUE(mCopy.empty());
+            EXPECT_TRUE(mCopy2.empty());
+            ASSERT_EQ(m.size(), mCopy3.size());
+            ASSERT_EQ(m.size(), mMoveCtor.size());
+            ASSERT_EQ(m.size(), mMoveAssign.size());
+            EXPECT_TRUE(createStdMap(m) == createStdMap(mCopy3));
+            EXPECT_TRUE(createStdMap(m) == createStdMap(mMoveCtor));
+            EXPECT_TRUE(createStdMap(m) == createStdMap(mMoveAssign));
+        }
     }
 
     template <class Map_T>

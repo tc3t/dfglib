@@ -24,6 +24,7 @@ Related reading and implementations:
 #include "../alg/eraseByTailSwap.hpp"
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
+#include "../build/languageFeatureInfo.hpp"
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -46,6 +47,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             m_bSorted(true)
         {}
 
+#if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
         DFG_CLASS_NAME(SetVector)(DFG_CLASS_NAME(SetVector)&& other)
         {
             operator=(std::move(other));
@@ -63,12 +65,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return *this;
         }
 
-        DFG_CLASS_NAME(SetVector)& operator=(DFG_CLASS_NAME(SetVector) && other)
+        DFG_CLASS_NAME(SetVector)& operator=(DFG_CLASS_NAME(SetVector)&& other)
         {
             m_bSorted = other.m_bSorted;
             m_storage = std::move(other.m_storage);
             return *this;
         }
+#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
         bool                empty() const       { return m_storage.empty(); }
         size_t              size() const        { return m_storage.size(); }

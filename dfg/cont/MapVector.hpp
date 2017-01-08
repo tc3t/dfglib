@@ -35,6 +35,7 @@ Related reading and implementations:
 #include "../alg/eraseByTailSwap.hpp"
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
+#include "../build/languageFeatureInfo.hpp"
 #include "TrivialPair.hpp"
 #include "Vector.hpp"
 #include <algorithm>
@@ -317,6 +318,37 @@ public:
     typedef typename BaseClass::mapped_type             mapped_type;
     typedef typename BaseClass::size_type               size_type;
 
+#if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
+    DFG_CLASS_NAME(MapVectorSoA)()
+    {}
+
+    DFG_CLASS_NAME(MapVectorSoA)(DFG_CLASS_NAME(MapVectorSoA) && other)
+    {
+        operator=(std::move(other));
+    }
+
+    DFG_CLASS_NAME(MapVectorSoA)(const DFG_CLASS_NAME(MapVectorSoA)& other)
+    {
+        operator=(other);
+    }
+
+    DFG_CLASS_NAME(MapVectorSoA)& operator=(const DFG_CLASS_NAME(MapVectorSoA)& other)
+    {
+        m_bSorted = other.m_bSorted;
+        m_keyStorage = other.m_keyStorage;
+        m_valueStorage = other.m_valueStorage;
+        return *this;
+    }
+
+    DFG_CLASS_NAME(MapVectorSoA)& operator=(DFG_CLASS_NAME(MapVectorSoA)&& other)
+    {
+        m_bSorted = other.m_bSorted;
+        m_keyStorage = std::move(other.m_keyStorage);
+        m_valueStorage = std::move(other.m_valueStorage);
+        return *this;
+    }
+#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
+
     iterator            makeIterator(const size_t i)                        { return iterator(*this, i); }
     const_iterator      makeIterator(const size_t i) const                  { return const_iterator(*this, i); }
 
@@ -395,7 +427,34 @@ public:
     typedef typename BaseClass::mapped_type                     mapped_type;
     typedef typename BaseClass::size_type                       size_type;
     
-    
+#if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
+    DFG_CLASS_NAME(MapVectorAoS)()
+    {}
+
+    DFG_CLASS_NAME(MapVectorAoS)(DFG_CLASS_NAME(MapVectorAoS)&& other)
+    {
+        operator=(std::move(other));
+    }
+
+    DFG_CLASS_NAME(MapVectorAoS)(const DFG_CLASS_NAME(MapVectorAoS)& other)
+    {
+        operator=(other);
+    }
+
+    DFG_CLASS_NAME(MapVectorAoS)& operator=(const DFG_CLASS_NAME(MapVectorAoS)& other)
+    {
+        m_bSorted = other.m_bSorted;
+        m_storage = other.m_storage;
+        return *this;
+    }
+
+    DFG_CLASS_NAME(MapVectorAoS)& operator=(DFG_CLASS_NAME(MapVectorAoS)&& other)
+    {
+        m_bSorted = other.m_bSorted;
+        m_storage = std::move(other.m_storage);
+        return *this;
+    }
+#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
     key_iterator        makeIterator(const size_t i)            { return m_storage.begin() + i; }
     const_key_iterator  makeIterator(const size_t i) const      { return m_storage.begin() + i; }
