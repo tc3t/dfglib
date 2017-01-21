@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
+#include "../build/languageFeatureInfo.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -23,6 +24,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         bool operator==(const DFG_CLASS_NAME(TrivialPair)&) const;
 
+#if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
+        DFG_CLASS_NAME(TrivialPair)& operator=(const DFG_CLASS_NAME(TrivialPair)& other);
+        DFG_CLASS_NAME(TrivialPair)& operator=(DFG_CLASS_NAME(TrivialPair)&& other);
+#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
+
         T0 first;
         T1 second;
     }; // Class TrivialPair
@@ -32,5 +38,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     {
         return first == other.first && second == other.second;
     }
+
+#if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
+    template <class T0, class T1>
+    auto DFG_CLASS_NAME(TrivialPair)<T0, T1>::operator=(const DFG_CLASS_NAME(TrivialPair)& other) -> DFG_CLASS_NAME(TrivialPair)&
+    {
+        first = other.first;
+        second = other.second;
+        return *this;
+    }
+
+    template <class T0, class T1>
+    auto DFG_CLASS_NAME(TrivialPair)<T0, T1>::operator=(DFG_CLASS_NAME(TrivialPair)&& other) -> DFG_CLASS_NAME(TrivialPair)&
+    {
+        first = std::move(other.first);
+        second = std::move(other.second);
+        return *this;
+    }
+#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
 } } // module namespace

@@ -1340,6 +1340,17 @@ TEST(dfgCont, TrivialPair)
     testTrivialPair<char, double, true>();
     testTrivialPair<DFG_CLASS_NAME(TrivialPair)<int, int>, bool, true>();
     testTrivialPair<std::string, bool, false>();
+
+    // Test move assignment of items
+    {
+        DFG_CLASS_NAME(TrivialPair)<std::string, std::string> tp;
+        DFG_CLASS_NAME(TrivialPair)<std::string, std::string> tp2("aa", "bb");
+        tp = std::move(tp2);
+        EXPECT_TRUE(tp2.first.empty());
+        EXPECT_TRUE(tp2.second.empty());
+        EXPECT_EQ("aa", tp.first);
+        EXPECT_EQ("bb", tp.second);
+    }
 }
 
 TEST(dfgCont, Vector)
