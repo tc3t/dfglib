@@ -1305,10 +1305,14 @@ namespace
         DFG_CLASS_NAME(TrivialPair)<T0, T1> tp;
 
         {
-            // Test that either IsTriviallyCopyableType is not available or that it returns expected result.
             typedef DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyable<decltype(tp)> IsTriviallyCopyableType;
+#if DFG_MSVC_VER != DFG_MSVC_VER_2012
+            // Test that either IsTriviallyCopyableType is not available or that it returns expected result.
             DFGTEST_STATIC((std::is_base_of<DFG_MODULE_NS(TypeTraits)::UnknownAnswerType, IsTriviallyCopyableType>::value ||
                 std::is_base_of<std::integral_constant<bool, IsTrivial>, IsTriviallyCopyableType>::value));
+#else // DFG_MSVC_VER == DFG_MSVC_VER_2012
+            DFGTEST_STATIC((std::is_base_of<std::is_trivially_copyable<decltype(tp)>, IsTriviallyCopyableType>::value));
+#endif
         }
 
         // Test existence of two parameter constructor.
