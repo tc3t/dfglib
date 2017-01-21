@@ -25,6 +25,7 @@ Related reading and implementations:
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../build/languageFeatureInfo.hpp"
+#include "detail/keyContainerUtils.hpp"
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -32,15 +33,16 @@ Related reading and implementations:
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
     template <class Key_T>
-    class DFG_CLASS_NAME(SetVector)
+    class DFG_CLASS_NAME(SetVector) : public DFG_DETAIL_NS::KeyContainerBase<Key_T>
     {
     public:
+        typedef DFG_DETAIL_NS::KeyContainerBase<Key_T>  BaseClass;
         typedef std::vector<Key_T>                      ContainerT;
         typedef typename ContainerT::iterator           iterator;
         typedef typename ContainerT::const_iterator     const_iterator;
         typedef typename ContainerT::const_reference    const_reference;
-        typedef Key_T                                   key_type;
-        typedef Key_T                                   value_type;
+        typedef typename BaseClass::key_type            key_type;
+        typedef key_type                                value_type;
         typedef size_t                                  size_type;
 
         DFG_CLASS_NAME(SetVector)() :
@@ -146,7 +148,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         iterator insertNonExistingTo(key_type&& value, iterator insertPos)
         { 
-            return m_storage.insert(insertPos, value);
+            return m_storage.insert(insertPos, std::move(value));
         }
 
         template <class T>
@@ -157,7 +159,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 return std::pair<iterator, bool>(iter, false);
             else
             {
-                iter = insertNonExistingTo(key_type(newVal), iter);
+                iter = insertNonExistingTo(this->keyParamToInsertable(newVal), iter);
                 return std::pair<iterator, bool>(iter, true);
             }
         }

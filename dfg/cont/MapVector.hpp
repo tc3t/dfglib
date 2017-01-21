@@ -36,6 +36,7 @@ Related reading and implementations:
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../build/languageFeatureInfo.hpp"
+#include "detail/keyContainerUtils.hpp"
 #include "TrivialPair.hpp"
 #include "Vector.hpp"
 #include <algorithm>
@@ -119,14 +120,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         template <class T> struct MapVectorTraits;
 
         template <class Impl_T>
-        class MapVectorCrtp
+        class MapVectorCrtp : public DFG_DETAIL_NS::KeyContainerBase<typename MapVectorTraits<Impl_T>::key_type>
         {
         public:
+            typedef DFG_DETAIL_NS::KeyContainerBase<typename MapVectorTraits<Impl_T>::key_type> BaseClass;
             typedef typename MapVectorTraits<Impl_T>::iterator              iterator;
             typedef typename MapVectorTraits<Impl_T>::const_iterator        const_iterator;
             typedef typename MapVectorTraits<Impl_T>::key_iterator          key_iterator;
             typedef typename MapVectorTraits<Impl_T>::const_key_iterator    const_key_iterator;
-            typedef typename MapVectorTraits<Impl_T>::key_type              key_type;
+            typedef typename BaseClass::key_type                            key_type;
             typedef typename MapVectorTraits<Impl_T>::mapped_type           mapped_type;
             typedef size_t                                                  size_type;
 
@@ -189,9 +191,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             key_type&       keyIterValueToKeyValue(typename key_iterator::value_type& val)              { return static_cast<Impl_T&>(*this).keyIterValueToKeyValue(val); }
             const key_type& keyIterValueToKeyValue(const typename key_iterator::value_type& val) const  { return static_cast<const Impl_T&>(*this).keyIterValueToKeyValue(val); }
 
-            key_type&&                  keyParamToInsertable(key_type&& key)        { return std::move(key); }
-            template <class T> key_type keyParamToInsertable(const T& keyParam)     { return key_type(keyParam); }
-
             template <class T>
             mapped_type& operator[](T&& key)
             {
@@ -200,7 +199,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                     return makeIterator(iterKey - beginKey())->second;
                 else
                 {
-                    auto iter = insertNonExistingTo(keyParamToInsertable(std::forward<T>(key)), mapped_type(), iterKey);
+                    auto iter = insertNonExistingTo(this->keyParamToInsertable(std::forward<T>(key)), mapped_type(), iterKey);
                     return iter->second;
                 }
             }

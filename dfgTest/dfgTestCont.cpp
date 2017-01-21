@@ -987,6 +987,25 @@ namespace
         eraseTester(mUnsorted);
     }
 
+    template <class Map_T>
+    void testMapKeyValueMoves()
+    {
+        DFG_STATIC_ASSERT((std::is_same<typename Map_T::key_type, std::string>::value), "key_type should be std::string");
+        DFG_STATIC_ASSERT((std::is_same<typename Map_T::mapped_type, std::string>::value), "key_type should be std::string");
+        Map_T mm;
+        std::string s(30, 'a');
+        std::string s2(30, 'b');
+        std::string s3(30, 'c');
+        std::string s4(30, 'd');
+        mm[std::move(s)] = std::move(s2);
+        mm.insert(std::move(s3), std::move(s4));
+        EXPECT_TRUE(s.empty());
+        EXPECT_TRUE(s2.empty());
+        EXPECT_TRUE(s3.empty());
+        EXPECT_TRUE(s4.empty());
+        EXPECT_EQ(2, mm.size());
+    }
+
 } // unnamed namespace
 
 TEST(dfgCont, MapVector)
@@ -1016,11 +1035,14 @@ TEST(dfgCont, MapVector)
 
     // Test some basic []-operations.
     {
-        dfg::cont::MapVectorAoS<size_t, double> mm;
+        DFG_CLASS_NAME(MapVectorAoS)<size_t, double> mm;
         size_t i = 0;
         mm[i] = 2;
         mm[size_t(3)] = 4;
     }
+
+    testMapKeyValueMoves<DFG_CLASS_NAME(MapVectorSoA)<std::string, std::string>>();
+    testMapKeyValueMoves<DFG_CLASS_NAME(MapVectorAoS)<std::string, std::string>>();
 
     verifyMapVectors(mapVectorSoaSorted, mapVectorSoaUnsorted, mStd);
     verifyMapVectors(mapVectorAosSorted, mapVectorAosUnsorted, mStd);
@@ -1236,6 +1258,26 @@ TEST(dfgCont, SetVector)
         setVectorUnsorted4.insert("c");
         EXPECT_NE(setVectorSorted3, setVectorUnsorted4);
         EXPECT_NE(setVectorUnsorted3, setVectorUnsorted4);
+    }
+
+    // Test some basic []-operations.
+    {
+        DFG_CLASS_NAME(SetVector)<int> si;
+        si.insert(1);
+        int i = 2;
+        si.insert(i);
+        const int ci = 3;
+        si.insert(ci);
+        EXPECT_EQ(3, si.size());
+    }
+
+    // Test moves
+    {
+        DFG_CLASS_NAME(SetVector)<std::string> se;
+        std::string s(30, 'a');
+        se.insert(std::move(s));
+        EXPECT_TRUE(s.empty());
+        EXPECT_EQ(1, se.size());
     }
 }
 
