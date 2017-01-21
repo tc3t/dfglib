@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "../baseConstructorDelegate.hpp"
+#include "../build/languageFeatureInfo.hpp"
 #include "../typeTraits.hpp"
 #include <cstring>
 #include <vector>
@@ -20,6 +21,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         DFG_CLASS_NAME(Vector)() {}
         DFG_BASE_CONSTRUCTOR_DELEGATE_1(DFG_CLASS_NAME(Vector), BaseClass) {}
         DFG_BASE_CONSTRUCTOR_DELEGATE_2(DFG_CLASS_NAME(Vector), BaseClass) {}
+
+    #if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
+        DFG_CLASS_NAME(Vector)& operator=(const DFG_CLASS_NAME(Vector)& other)
+        {
+            BaseClass::operator=(other);
+            return *this;
+        }
+
+        DFG_CLASS_NAME(Vector)& operator=(DFG_CLASS_NAME(Vector)&& other)
+        {
+            BaseClass::operator=(std::move(other));
+            return *this;
+        }
+    #endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
         template <class Cont_T, class Iter_T, class Val_T>
         static typename Cont_T::iterator insertWithMemMove(Cont_T& cont, Iter_T pos, Val_T&& value)

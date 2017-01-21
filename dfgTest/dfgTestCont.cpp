@@ -1341,3 +1341,18 @@ TEST(dfgCont, TrivialPair)
     testTrivialPair<DFG_CLASS_NAME(TrivialPair)<int, int>, bool, true>();
     testTrivialPair<std::string, bool, false>();
 }
+
+TEST(dfgCont, Vector)
+{
+    using namespace DFG_MODULE_NS(cont);
+
+    DFG_CLASS_NAME(Vector)<int> v;
+    v.push_back(1);
+    auto v2(v);
+    auto v3(std::move(v));
+    decltype(v) v4;
+    v4 = std::move(v2);
+    EXPECT_TRUE(v.empty());
+    EXPECT_TRUE(v2.empty());
+    EXPECT_EQ(v3, v4);
+}
