@@ -297,14 +297,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             bool m_bSorted;
         }; // class MapVectorCrtp
 
-        template <class T> struct DefaultContainerType { typedef std::vector<T> type; };
-        //template <class T> struct DefaultContainerType { typedef DFG_CLASS_NAME(Vector)<T> type; };
+        //template <class T> struct DefaultMapVectorContainerType { typedef std::vector<T> type; };
+        template <class T> struct DefaultMapVectorContainerType { typedef DFG_CLASS_NAME(Vector)<T> type; };
 
     } // namespace DFG_DETAIL_NS
 
     
 
-template <class Key_T, class Value_T, class KeyStorage_T = typename DFG_DETAIL_NS::DefaultContainerType<Key_T>::type, class ValueStorage_T = typename DFG_DETAIL_NS::DefaultContainerType<Value_T>::type>
+template <class Key_T, class Value_T, class KeyStorage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<Key_T>::type, class ValueStorage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<Value_T>::type>
 class DFG_CLASS_NAME(MapVectorSoA) : public DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T>>
 {
 public:
@@ -408,8 +408,8 @@ public:
 }; // class MapVectorSoA
 
 
-//template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultContainerType<DFG_CLASS_NAME(TrivialPair)<Key_T, Value_T>>::type>
-template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultContainerType<std::pair<Key_T, Value_T>>::type>
+//template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<std::pair<Key_T, Value_T>>::type>
+template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<DFG_CLASS_NAME(TrivialPair)<Key_T, Value_T>>::type>
 class DFG_CLASS_NAME(MapVectorAoS) : public DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>
 {
 public:
