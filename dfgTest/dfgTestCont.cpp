@@ -571,6 +571,14 @@ namespace
         else
             return DFG_CLASS_NAME(TorRef)<T>::makeInternallyOwning(item);
     }
+
+    template <class Cont_T>
+    void testArrowOperator()
+    {
+        Cont_T tor;
+        tor->append("a");
+        EXPECT_EQ("a", tor.item());
+    }
 }
 
 TEST(dfgCont, TorRef)
@@ -641,6 +649,13 @@ TEST(dfgCont, TorRef)
         EXPECT_FALSE(tor.hasRef());
         const int& ref = tor;
         EXPECT_EQ(0, ref);
+    }
+
+    // Test operator -> 
+    {
+        testArrowOperator<DFG_CLASS_NAME(TorRef)<std::string>>();
+        testArrowOperator<DFG_CLASS_NAME(TorRefShared)<std::string>>();
+        testArrowOperator<DFG_CLASS_NAME(TorRef)<std::string, DFG_DETAIL_NS::TorRefInternalStorageStack<std::string>>>();
     }
 }
 

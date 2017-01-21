@@ -31,10 +31,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             {
                 m_item[0] = T(); // Must initialize because hasItem() always returns true with current implementation.
             }
-            bool hasItem() const { return !m_item.empty(); }
-            void createDefaultItem() { m_item[0] = T(); }
-            void setItem(const T& src) { m_item[0] = src; }
-            const T* itemPtr() const { return &m_item[0]; }
+            bool hasItem() const        { return !m_item.empty(); }
+            void createDefaultItem()    { m_item[0] = T(); }
+            void setItem(const T& src)  { m_item[0] = src; }
+            T*        itemPtr()         { return &m_item[0]; }
+            const T*  itemPtr() const   { return &m_item[0]; }
+
             const StorageType& storage() const { return m_item; }
 
             StorageType m_item;
@@ -50,11 +52,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             TorRefInternalStorageHeap(TorRefInternalStorageHeap&& other) :
                 m_spItem(std::move(other.m_spItem))
             {}
-            bool hasItem() const { return m_spItem.get() != nullptr; }
-            void createDefaultItem() { m_spItem.reset(new T()); }
-            void setItem(const T& src) { if (!m_spItem) m_spItem.reset(new T(src)); else *m_spItem = src; }
-            T* itemPtr() const { return m_spItem.get(); }
-            const StorageType& storage() const { return m_spItem; }
+            bool hasItem() const                { return m_spItem.get() != nullptr; }
+            void createDefaultItem()            { m_spItem.reset(new T()); }
+            void setItem(const T& src)          { if (!m_spItem) m_spItem.reset(new T(src)); else *m_spItem = src; }
+            T* itemPtr() const                  { return m_spItem.get(); }
+            const StorageType& storage() const  { return m_spItem; }
 
             std::unique_ptr<T> m_spItem;
         };
@@ -86,14 +88,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         const Ref_T& referenceObject() const { return m_ref; }
 
-        InternalStorage_T& internalStorage() { return m_internal; }
-        const InternalStorage_T& internalStorage() const { return m_internal; }
+        InternalStorage_T&       internalStorage()          { return m_internal; }
+        const InternalStorage_T& internalStorage() const    { return m_internal; }
 
-        T* operator->() { return &item(); }
+        T*       operator->()       { return &item(); }
         const T* operator->() const { return &item(); }
 
-        operator T&() { return item(); }
-        operator const T&() const { return item(); }
+        operator       T&()         { return item(); }
+        operator const T&() const   { return item(); }
 
         void setRef(Ref_T ref)
         {
@@ -104,7 +106,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         template <class This_T>
         static auto itemImpl(This_T& rThis) -> decltype(*rThis.m_ref)
         {
-            if (rThis.m_ref)
+            if (rThis.hasRef())
                 return *rThis.m_ref;
             else
             {
@@ -116,8 +118,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             }
         }
 
-        T& item() { return itemImpl(*this); }
-        const T& item() const { return itemImpl(*this); }
+        T&       item()         { return itemImpl(*this); }
+        const T& item() const   { return itemImpl(*this); }
 
         bool hasRef() const
         {
@@ -126,7 +128,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         Ref_T m_ref;
         mutable InternalStorage_T m_internal; // Mutable because item() may need to create the internal object even for const-version.
-    };
+    }; // class TorRef
 
     // TorRef with shared_ptr reference.
     template <class T, class InternalStorage_T = DFG_DETAIL_NS::TorRefInternalStorageHeap<typename std::remove_const<T>::type>>
@@ -134,7 +136,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     {
     public:
         typedef DFG_CLASS_NAME(TorRef)<T, InternalStorage_T, std::shared_ptr<T>> BaseClass;
+        DFG_CLASS_NAME(TorRefShared)() {}
         DFG_BASE_CONSTRUCTOR_DELEGATE_1(DFG_CLASS_NAME(TorRefShared), BaseClass) {}
-    };
+    }; // class TorRefShared
 
 } }
