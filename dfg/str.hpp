@@ -87,7 +87,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
         return strCpyAllThatFit(psz, nDstSize, "nan");
     auto nPrec = nPrecParam;
     if (nPrec < 0)
-        nPrec = static_cast<decltype(nPrec)>(DFG_MODULE_NS(math)::RoundedUpToMultipleT<std::numeric_limits<T>::digits * 30103, 100000>::value / 100000 + 1); // 30103 == round(log10(2) * 100000)
+        nPrec = static_cast<decltype(nPrec)>(DFG_MODULE_NS(math)::DFG_CLASS_NAME(RoundedUpToMultipleT)<std::numeric_limits<T>::digits * 30103, 100000>::value / 100000 + 1); // 30103 == round(log10(2) * 100000)
         //nPrec = std::numeric_limits<T>::max_digits10; // This seems to be too-little-by-one in VC2010 so use the manual version above.
     else if (nPrec >= 1000) // Limit precision to 3 digits.
         nPrec = 999;
