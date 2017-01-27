@@ -479,19 +479,18 @@ namespace
     };
 
     template <class Cont_T>
-    void MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(Cont_T& cont, const char* pszTitle)
+    void MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(Cont_T& cont, const char* pszTitle, const size_t nMapSize, BenchmarkResultTable* pTable, const int nRow)
     {
+        using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(rand);
+        using namespace DFG_MODULE_NS(str);
         auto randEng = createDefaultRandEngineUnseeded();
         randEng.seed(125498);
 
-        const size_t nMapSize = 2;
-        //const size_t nMapSize = 1000;
-
         for (size_t i = 0; i < nMapSize; ++i)
         {
-            cont.insert(std::pair<std::string, int>("c:/an/example/path/file" + std::to_string(uint64_t(i)) + ".txt", rand(randEng, 0, 100000))); // String comparison is relatively expensive as keys begin with the same sequence.
-            //cont.insert(std::pair<std::string, int>(std::to_string(i) + "c:/an/example/path/file" + ".txt", rand(randEng, 0, 100000))); // String comparison is cheap since it can be resolved after a few chars.
+            cont.insert(std::pair<std::string, int>("c:/an/example/path/file" + std::to_string(uint64_t(i)) + ".txt", DFG_MODULE_NS(rand)::rand(randEng, 0, 100000))); // With this string comparison is relatively expensive as keys begin with the same sequence.
+            //cont.insert(std::pair<std::string, int>(std::to_string(i) + "c:/an/example/path/file" + ".txt", rand(randEng, 0, 100000))); // With this string comparison is cheap since it can be resolved after a few chars.
         }
         const char* arrLookupStrings[] = 
         //const std::string arrLookupStrings[] =
@@ -523,14 +522,25 @@ namespace
             if (iter != endIter)
                 nSum += iter->second;
         }
-        std::cout << "Find time with " << pszTitle << ": " << timer.elapsedWallSeconds() << '\n';
+
+        const auto elapsedTime = timer.elapsedWallSeconds();
+
+        if (pTable)
+            pTable->addString(floatingPointToStr<StringUtf8>(elapsedTime, 4 /*number of significant digits*/), nRow, pTable->colCountByMaxColIndex() - 1);
+
+        std::cout << "Find time with " << pszTitle << ": " << elapsedTime << '\n';
         std::cout << "Map size: " << cont.size() << ", Rounds: " << nCount << ", Sum: " << nSum << '\n';
     }
 }
 
+#include <dfg/time.hpp>
+#include <dfg/time/DateTime.hpp>
+
 TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
 {
+    using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(str);
 
     std::map<std::string, int> stdMap;
     std::map<std::string, int> stdUnorderedMap;
@@ -540,18 +550,66 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     MapVectorSoA<std::string, int> mSoA_sorted;
     MapVectorSoA<std::string, int> mSoA_unsorted; mSoA_unsorted.setSorting(false);
 
-    MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(mAoS_sorted,     "MapVectorAoS_sorted  ");
-    MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(mAoS_unsorted,   "MapVectorAoS_unsorted");
-    MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(mSoA_sorted,     "MapVectorSoA_sorted  ");
-    MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(mSoA_unsorted,   "MapVectorSoA_unsorted");
-    MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(stdMap,          "std::map             ");
-    MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(stdUnorderedMap, "std::unordered_map   ");
-    MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(boostFlatMap,    "boost::flat_map      ");
+    const size_t nMapSize = 2;
+    const auto nContainerCount = 7;
+
+    BenchmarkResultTable table;
+    table.addString(DFG_ASCII("Date"), 0, 0);
+    table.addString(DFG_ASCII("Test machine"), 0, 1);
+    table.addString(DFG_ASCII("Test Compiler"), 0, 2);
+    table.addString(DFG_ASCII("Pointer size"), 0, 3);
+    table.addString(DFG_ASCII("Build type"), 0, 4);
+    table.addString(DFG_ASCII("Map size"), 0, 5);
+    table.addString(DFG_ASCII("Test type"), 0, 6);
+    const auto nLastStaticColumn = 6;
+
+    for (size_t i = 0; i < 1; ++i) // Iterations.
+    {
+        if (i == 0)
+        {
+            const StringUtf8 sTime(SzPtrUtf8(DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C().c_str()));
+            const auto sCompiler = SzPtrUtf8(DFG_COMPILER_NAME_SIMPLE);
+            const StringUtf8 sPointerSize(SzPtrUtf8(toStrC(sizeof(void*)).c_str()));
+            const auto sBuildType = SzPtrUtf8(DFG_BUILD_DEBUG_RELEASE_TYPE);
+            const StringUtf8 sMapSize(SzPtrUtf8(toStrC(nMapSize).c_str()));
+
+            for (int ct = 0; ct < nContainerCount; ++ct)
+            {
+                const auto r = table.rowCountByMaxRowIndex();
+                table.addString(sTime, r, 0);
+                table.addString(sCompiler, r, 2);
+                table.addString(sPointerSize, r, 3);
+                table.addString(sBuildType, r, 4);
+                table.addString(sMapSize, r, 5);
+            }
+        }
+
+        table.addString(SzPtrUtf8(("Time#" + toStrC(i)).c_str()), 0, table.colCountByMaxColIndex());
+
+#define CALL_ELEMENTARY_TEST(CONT, TITLE, ROW) \
+        table.addString(DFG_ASCII(TITLE), ROW, 6 /*=column*/); \
+        MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(CONT, TITLE, nMapSize, &table, ROW);
+
+        CALL_ELEMENTARY_TEST(mAoS_sorted,       "MapVectorAoS_sorted",      1);
+        CALL_ELEMENTARY_TEST(mAoS_unsorted,     "MapVectorAoS_unsorted",    2);
+        CALL_ELEMENTARY_TEST(mSoA_sorted,       "MapVectorSoA_sorted",      3);
+        CALL_ELEMENTARY_TEST(mSoA_unsorted,     "MapVectorSoA_unsorted",    4);
+        CALL_ELEMENTARY_TEST(stdMap,            "std::map",                 5);
+        CALL_ELEMENTARY_TEST(stdUnorderedMap,   "std::unordered_map",       6);
+        CALL_ELEMENTARY_TEST(boostFlatMap,      "boost::flat_map",          7);
+#undef CALL_ELEMENTARY_TEST
+    }
+
+    
+
+    // Calculate averages etc.
+    table.addReducedValues(nLastStaticColumn + 1);
+
+    DFG_MODULE_NS(io)::OfStream ostrm(format_fmt("testfiles/generated/benchmarkStringMapWithCharPtrLookup_{}.csv", generateCompilerInfoForOutputFilename()));
+    table.writeToStream(ostrm);
 }
 
 #include <dfg/io/ofstream.hpp>
-#include <dfg/time.hpp>
-#include <dfg/time/DateTime.hpp>
 #include <dfg/str/string.hpp>
 #include <dfg/str.hpp>
 
