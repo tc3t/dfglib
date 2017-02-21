@@ -442,13 +442,16 @@ TEST(dfgCont, MapVectorPerformance)
         EXPECT_EQ(mAoS_rs.size(), mUniqueAoSInsert.size());
         EXPECT_EQ(mAoS_rs.size(), mUniqueAoSInsertNotReserved.size());
 
-        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mStd.begin(), ValueTypeCompareFunctor<int, int>()));
-        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mBoostFlatMap.begin(), ValueTypeCompareFunctor<int, int>()));
-        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mAoS_rs.begin(), ValueTypeCompareFunctor<int, int>()));
-        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mUniqueAoSInsert.begin(), ValueTypeCompareFunctor<int, int>())); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
-        EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), mUniqueAoSInsertNotReserved.begin(), ValueTypeCompareFunctor<int, int>())); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
+#define DFG_TEMP_CHECK_EQUALITY(CONT) EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), CONT.begin(), ValueTypeCompareFunctor<int, int>()));
+
+        DFG_TEMP_CHECK_EQUALITY(mStd);
+        DFG_TEMP_CHECK_EQUALITY(mBoostFlatMap);
+        DFG_TEMP_CHECK_EQUALITY(mAoS_rs);
+        DFG_TEMP_CHECK_EQUALITY(mUniqueAoSInsert); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
+        DFG_TEMP_CHECK_EQUALITY(mUniqueAoSInsertNotReserved); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
         EXPECT_TRUE(std::equal(stdVecInterleaved.begin(), stdVecInterleaved.end(), boostVecInterleaved.begin()));
-        
+
+#undef DFG_TEMP_CHECK_EQUALITY
 
 #undef CALL_PERFORMANCE_TEST_DFGLIB
 

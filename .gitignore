@@ -91,6 +91,7 @@
 /dfgTest/x64/Release_VC2015
 /dfgTestQt/Release_VC2015
 /dfgExamples/csvExample/Debug_VC2015
+/dfgExamples/csvExample/x64/Release_VC2017
 /dfgExamples/csvItemModelExample/Debug_VC2015
 /dfgExamples/spectrumColourExample/Debug_VC2015
 /dfgTest/Win32/Debug_VC2015
