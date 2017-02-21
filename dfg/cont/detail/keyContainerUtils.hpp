@@ -50,6 +50,8 @@ public:
     template <class This_T, class T>
     static auto findImpl(This_T& rThis, const T& key) -> decltype(rThis.makeIterator(0)) // iterator // std::conditional<std::is_const<This_T>::value, const_iterator, iterator>::type //, decltype(rThis.makeIterator(0))
     {
+        // TODO: implement conversion from T to search optimized type. For example finding with const char* from std::string keys can be slower than needed (especially in linear search) because equality comparison is between 
+        //       std::string and naked const char*. Instead should have a search key of type string view so that comparison can do a size-aware equality check.
         if (rThis.isSorted())
         {
             auto iter = rThis.findInsertPos(rThis, key);
