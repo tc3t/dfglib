@@ -120,17 +120,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         template <class T> struct MapVectorTraits;
 
         template <class Impl_T>
-        class MapVectorCrtp : public DFG_DETAIL_NS::KeyContainerBase<typename MapVectorTraits<Impl_T>::key_type>
+        class MapVectorCrtp : public DFG_DETAIL_NS::KeyContainerBase<MapVectorTraits<Impl_T>>
         {
         public:
-            typedef DFG_DETAIL_NS::KeyContainerBase<typename MapVectorTraits<Impl_T>::key_type> BaseClass;
-            typedef typename MapVectorTraits<Impl_T>::iterator              iterator;
-            typedef typename MapVectorTraits<Impl_T>::const_iterator        const_iterator;
-            typedef typename MapVectorTraits<Impl_T>::key_iterator          key_iterator;
-            typedef typename MapVectorTraits<Impl_T>::const_key_iterator    const_key_iterator;
-            typedef typename BaseClass::key_type                            key_type;
-            typedef typename MapVectorTraits<Impl_T>::mapped_type           mapped_type;
-            typedef size_t                                                  size_type;
+            typedef DFG_DETAIL_NS::KeyContainerBase<MapVectorTraits<Impl_T>> BaseClass;
+            typedef typename BaseClass::iterator                             iterator;
+            typedef typename BaseClass::const_iterator                       const_iterator;
+            typedef typename BaseClass::key_iterator                         key_iterator;
+            typedef typename MapVectorTraits<Impl_T>::const_key_iterator     const_key_iterator;
+            typedef typename BaseClass::key_type                             key_type;
+            typedef typename MapVectorTraits<Impl_T>::mapped_type            mapped_type;
+            typedef size_t                                                   size_type;
 
             MapVectorCrtp()
             {}
@@ -190,6 +190,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             key_type&       keyIterValueToKeyValue(typename key_iterator::value_type& val)              { return static_cast<Impl_T&>(*this).keyIterValueToKeyValue(val); }
             const key_type& keyIterValueToKeyValue(const typename key_iterator::value_type& val) const  { return static_cast<const Impl_T&>(*this).keyIterValueToKeyValue(val); }
 
+            template <class T> iterator         find(const T& key)          { return this->findImpl(*this, key); }
+            template <class T> const_iterator   find(const T& key) const    { return this->findImpl(*this, key); }
+
             template <class T>
             mapped_type& operator[](T&& key)
             {
@@ -209,48 +212,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             template <class T0, class T1>
             static bool isKeyMatch(const T0& a, const T1& b)
             {
-                return DFG_MODULE_NS(alg)::isKeyMatch(a, b);
+                return BaseClass::isKeyMatch(a, b);
             }
-
-            template <class This_T>
-            class KeyIteratorValueToComparable
-            {
-            public:
-                KeyIteratorValueToComparable(This_T& rThis) :
-                    m_rThis(rThis)
-                {}
-
-                auto operator()(const typename key_iterator::value_type& keyItem) const -> const typename This_T::key_type&
-                {
-                    return m_rThis.keyIterValueToKeyValue(keyItem);
-                }
-
-                This_T& m_rThis;
-            };
 
             template <class This_T, class T>
             static auto findInsertPos(This_T& rThis, const T& key) -> decltype(rThis.beginKey())
             { 
                 const auto iterKeyBegin = rThis.beginKey();
                 const auto iterKeyEnd = rThis.endKey();
-                auto iter = DFG_MODULE_NS(alg)::findInsertPosLinearOrBinary(rThis.isSorted(), iterKeyBegin, iterKeyEnd, key, KeyIteratorValueToComparable<This_T>(rThis));
+                typedef typename BaseClass::template KeyIteratorValueToComparable<This_T> KeyIteratorValueToComparableTd;
+                auto iter = DFG_MODULE_NS(alg)::findInsertPosLinearOrBinary(rThis.isSorted(), iterKeyBegin, iterKeyEnd, key, KeyIteratorValueToComparableTd(rThis));
                 return iter;
             }
-
-            template <class This_T, class T>
-            static auto findImpl(This_T& rThis, const T& key) -> decltype(rThis.makeIterator(0))
-            {
-                if (rThis.isSorted())
-                {
-                    auto iter = findInsertPos(rThis, key);
-                    return (iter != rThis.endKey() && isKeyMatch(rThis.keyIterValueToKeyValue(*iter), key)) ? rThis.makeIterator(iter - rThis.beginKey()) : rThis.end();
-                }
-                else 
-                    return rThis.makeIterator(DFG_MODULE_NS(alg)::findLinear(rThis.beginKey(), rThis.endKey(), key, KeyIteratorValueToComparable<This_T>(rThis)) - rThis.beginKey());
-            }
-
-            template <class T> iterator         find(const T& key)          { return findImpl(*this, key); }
-            template <class T> const_iterator   find(const T& key) const    { return findImpl(*this, key); }
 
             template <class T> bool hasKey(const T& key) const              { return find(key) != end(); }
 

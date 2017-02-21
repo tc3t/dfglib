@@ -22,7 +22,6 @@ Related reading and implementations:
 
 #include "../dfgDefs.hpp"
 #include "../alg/eraseByTailSwap.hpp"
-#include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include "detail/keyContainerUtils.hpp"
@@ -32,18 +31,33 @@ Related reading and implementations:
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
+    namespace DFG_DETAIL_NS
+    {
+        template <class T> struct SetVectorTraits
+        { 
+            typedef T                                   key_type;
+            typedef std::vector<key_type>               container; // TODO: use DFG_CLASS_NAME(Vector).
+            typedef typename container::iterator        iterator;
+            typedef typename container::const_iterator  const_iterator;
+            typedef iterator                            key_iterator;
+            typedef const_iterator                      const_key_iterator;
+        };
+    }
+
     template <class Key_T>
-    class DFG_CLASS_NAME(SetVector) : public DFG_DETAIL_NS::KeyContainerBase<Key_T>
+    class DFG_CLASS_NAME(SetVector) : public DFG_DETAIL_NS::KeyContainerBase<DFG_DETAIL_NS::SetVectorTraits<Key_T>>
     {
     public:
-        typedef DFG_DETAIL_NS::KeyContainerBase<Key_T>  BaseClass;
-        typedef std::vector<Key_T>                      ContainerT;
-        typedef typename ContainerT::iterator           iterator;
-        typedef typename ContainerT::const_iterator     const_iterator;
-        typedef typename ContainerT::const_reference    const_reference;
-        typedef typename BaseClass::key_type            key_type;
-        typedef key_type                                value_type;
-        typedef size_t                                  size_type;
+        typedef DFG_DETAIL_NS::KeyContainerBase<DFG_DETAIL_NS::SetVectorTraits<Key_T>> BaseClass;
+        typedef typename DFG_DETAIL_NS::SetVectorTraits<Key_T>::container   ContainerT;
+        typedef typename BaseClass::iterator                                iterator;
+        typedef typename BaseClass::const_iterator                          const_iterator;
+        typedef typename ContainerT::const_reference                        const_reference;
+        typedef typename BaseClass::key_type                                key_type;
+        typedef typename BaseClass::key_iterator                            key_iterator;
+        typedef typename BaseClass::const_key_iterator                      const_key_iterator;
+        typedef key_type                                                    value_type;
+        typedef size_t                                                      size_type;
 
         DFG_CLASS_NAME(SetVector)()
         {}
@@ -93,6 +107,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         value_type&         back()              { return *backIter(); }
         const value_type&   back() const        { return *backIter(); }
 
+        // For interface compatibility with MapVector.
+        iterator            makeIterator(const size_t i)        { return begin() + i; }
+        const_iterator      makeIterator(const size_t i) const  { return begin() + i; }
+
+        // For interface compatibility with MapVector.
+        key_type&           keyIterValueToKeyValue(key_type& keyVal)               { return keyVal; }
+        const key_type&     keyIterValueToKeyValue(const key_type& keyVal) const   { return keyVal; }
+
+        // For interface compatibility with MapVector.
+        key_iterator        beginKey()          { return begin(); }
+        const_key_iterator  beginKey() const    { return begin(); }
+        key_iterator        endKey()            { return end(); }
+        const_key_iterator  endKey() const      { return end(); }
+
         iterator    erase(iterator iterDeleteFrom) { return (iterDeleteFrom != end()) ? erase(iterDeleteFrom, iterDeleteFrom + 1) : end(); }
         template <class T>
         size_type   erase(const T& key) { auto rv = erase(find(key)); return (rv != end()) ? 1 : 0; } // Returns the number of elements removed.
@@ -123,20 +151,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return iter;
         }
 
-        template <class This_T, class T>
-        static auto findImpl(This_T& rThis, const T& key) -> decltype(rThis.begin())
-        {
-            if (rThis.isSorted())
-            {
-                auto iter = findInsertPos(rThis, key);
-                return (iter != rThis.end() && isKeyMatch(*iter, key)) ? iter : rThis.end();
-            }
-            else
-                return DFG_MODULE_NS(alg)::findLinear(rThis.begin(), rThis.end(), key);
-        }
-
-        template <class T> iterator         find(const T& key)          { return findImpl(*this, key); }
-        template <class T> const_iterator   find(const T& key) const    { return findImpl(*this, key); }
+        template <class T> iterator         find(const T& key)          { return this->findImpl(*this, key); }
+        template <class T> const_iterator   find(const T& key) const    { return this->findImpl(*this, key); }
 
         template <class T> bool hasKey(const T& key) const              { return find(key) != end(); }
 
