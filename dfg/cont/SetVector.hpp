@@ -45,8 +45,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef key_type                                value_type;
         typedef size_t                                  size_type;
 
-        DFG_CLASS_NAME(SetVector)() :
-            m_bSorted(true)
+        DFG_CLASS_NAME(SetVector)()
         {}
 
 #if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
@@ -62,14 +61,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         DFG_CLASS_NAME(SetVector)& operator=(const DFG_CLASS_NAME(SetVector)& other)
         {
-            m_bSorted = other.m_bSorted;
+            this->m_bSorted = other.m_bSorted;
             m_storage = other.m_storage;
             return *this;
         }
 
         DFG_CLASS_NAME(SetVector)& operator=(DFG_CLASS_NAME(SetVector)&& other)
         {
-            m_bSorted = other.m_bSorted;
+            this->m_bSorted = other.m_bSorted;
             m_storage = std::move(other.m_storage);
             return *this;
         }
@@ -99,7 +98,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         size_type   erase(const T& key) { auto rv = erase(find(key)); return (rv != end()) ? 1 : 0; } // Returns the number of elements removed.
         iterator    erase(iterator iterRangeFirst, const iterator iterRangeEnd)
         {
-            if (m_bSorted)
+            if (this->m_bSorted)
                 return m_storage.erase(iterRangeFirst, iterRangeEnd);
             else // With unsorted, swap to-be-removed items to end and erase items from end -> O(1) for single element removal.
             {
@@ -205,22 +204,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         void setSorting(const bool bSort)
         {
-            if (bSort == m_bSorted)
+            if (bSort == this->m_bSorted)
                 return;
             if (bSort)
                 sort();
-            m_bSorted = bSort;
+            this->m_bSorted = bSort;
         }
-
-        bool isSorted() const { return m_bSorted; }
 
         bool operator==(const DFG_CLASS_NAME(SetVector)& other) const
         {
             if (size() != other.size())
                 return false;
-            if (isSorted() && other.isSorted())
+            if (this->isSorted() && other.isSorted())
                 return std::equal(begin(), end(), other.begin());
-            auto pPossiblySorted = (isSorted()) ? this : &other;
+            auto pPossiblySorted = (this->isSorted()) ? this : &other;
             auto pNonSorted = (pPossiblySorted == this) ? &other : this;
             const auto iterEnd = pNonSorted->m_storage.end();
             for (auto iter = pNonSorted->m_storage.begin(); iter != iterEnd; ++iter)
@@ -236,7 +233,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return !(*this == other);
         }
 
-        bool m_bSorted;
         ContainerT m_storage;
     }; // class SetVector
 

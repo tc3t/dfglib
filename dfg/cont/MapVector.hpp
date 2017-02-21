@@ -132,16 +132,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             typedef typename MapVectorTraits<Impl_T>::mapped_type           mapped_type;
             typedef size_t                                                  size_type;
 
-            MapVectorCrtp() :
-                m_bSorted(true)
+            MapVectorCrtp()
             {}
 
             bool                empty() const       { return static_cast<const Impl_T&>(*this).empty(); }
             size_t              size() const        { return static_cast<const Impl_T&>(*this).size(); }
             void                clear() const       { return static_cast<const Impl_T&>(*this).clear(); }
 
-            iterator            makeIterator(const size_t i)        { return static_cast<Impl_T&>(*this).makeIterator(i); }
-            const_iterator      makeIterator(const size_t i) const  { return static_cast<const Impl_T&>(*this).makeIterator(i); }
+            iterator            makeIterator(const size_t i)          { return static_cast<Impl_T&>(*this).makeIterator(i); }
+            const_iterator      makeIterator(const size_t i) const    { return static_cast<const Impl_T&>(*this).makeIterator(i); }
 
             key_iterator        makeKeyIterator(const size_t i)       { return static_cast<Impl_T&>(*this).makeKeyIterator(i); }
             const_key_iterator  makeKeyIterator(const size_t i) const { return static_cast<const Impl_T&>(*this).makeKeyIterator(i); }
@@ -178,7 +177,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             size_type   erase(const T& key)             { auto rv = erase(find(key)); return (rv != end()) ? 1 : 0; } // Returns the number of elements removed.
             iterator    erase(iterator iterRangeFirst, const iterator iterRangeEnd)
             {
-                if (m_bSorted)
+                if (this->m_bSorted)
                     return static_cast<Impl_T&>(*this).eraseImpl(iterRangeFirst, iterRangeEnd);
                 else // With unsorted, swap to-be-removed items to end and erase items from end -> O(1) for single element removal.
                 {
@@ -285,16 +284,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             void setSorting(const bool bSort)
             {
-                if (bSort == m_bSorted)
+                if (bSort == this->m_bSorted)
                     return;
                 if (bSort)
                     sort();
-                m_bSorted = bSort;
+                this->m_bSorted = bSort;
             }
 
-            bool isSorted() const { return m_bSorted; }
-
-            bool m_bSorted;
         }; // class MapVectorCrtp
 
         //template <class T> struct DefaultMapVectorContainerType { typedef std::vector<T> type; };
@@ -333,7 +329,7 @@ public:
 
     DFG_CLASS_NAME(MapVectorSoA)& operator=(const DFG_CLASS_NAME(MapVectorSoA)& other)
     {
-        m_bSorted = other.m_bSorted;
+        this->m_bSorted = other.m_bSorted;
         m_keyStorage = other.m_keyStorage;
         m_valueStorage = other.m_valueStorage;
         return *this;
@@ -341,7 +337,7 @@ public:
 
     DFG_CLASS_NAME(MapVectorSoA)& operator=(DFG_CLASS_NAME(MapVectorSoA)&& other)
     {
-        m_bSorted = other.m_bSorted;
+        this->m_bSorted = other.m_bSorted;
         m_keyStorage = std::move(other.m_keyStorage);
         m_valueStorage = std::move(other.m_valueStorage);
         return *this;
@@ -442,14 +438,14 @@ public:
 
     DFG_CLASS_NAME(MapVectorAoS)& operator=(const DFG_CLASS_NAME(MapVectorAoS)& other)
     {
-        m_bSorted = other.m_bSorted;
+        this->m_bSorted = other.m_bSorted;
         m_storage = other.m_storage;
         return *this;
     }
 
     DFG_CLASS_NAME(MapVectorAoS)& operator=(DFG_CLASS_NAME(MapVectorAoS)&& other)
     {
-        m_bSorted = other.m_bSorted;
+        this->m_bSorted = other.m_bSorted;
         m_storage = std::move(other.m_storage);
         return *this;
     }
