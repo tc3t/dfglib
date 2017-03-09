@@ -618,6 +618,8 @@ namespace
             EXPECT_EQ(view.begin(), view.data());
             EXPECT_EQ(view2.begin(), view2.data());
         }
+
+        //DFG_CLASS_NAME(StringViewUtf8)() == DFG_ASCII("a"); // TODO: make this work
     }
 }
 
