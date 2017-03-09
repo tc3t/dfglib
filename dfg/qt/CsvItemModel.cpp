@@ -241,7 +241,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
     
     m_table.forEachFwdColumnIndex([&](const int nCol)
     {
-        if (isValidIndex(vecCompletionSet, nCol))
+        if (!isValidIndex(vecCompletionSet, nCol))
             vecCompletionSet.resize(nCol + 1);
         auto& completionSetForCurrentCol = vecCompletionSet[nCol];
         m_table.forEachFwdRowInColumn(nCol, [&](const int /*nRow*/, const SzPtrUtf8R pData)
