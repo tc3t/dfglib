@@ -25,9 +25,9 @@ Experimental general purpose utility library.
 | VC2015        | x86           | Release | CI | Unit tests build and run |
 | VC2015        | x64           | Debug   | CI | Unit tests build and run |
 | VC2015        | x64           | Release | CI | Unit tests build and run |
-| VC2017 RC     | x86           | Debug   | no CI | Manually maintained, unit tests build and run (2017-01-08) |
-| VC2017 RC     | x86           | Release | no CI | Manually maintained, unit tests build and run (2017-01-08) |
-| VC2017 RC     | x64           | Debug   | no CI | Manually maintained, unit tests build and run (2017-01-08) |
-| VC2017 RC     | x64           | Release | no CI | Manually maintained, unit tests build and run (2017-01-08) |
+| VC2017        | x86           | Debug   | no CI | Manually maintained, unit tests build and run (2017-03-09) |
+| VC2017        | x86           | Release | no CI | Manually maintained, unit tests build and run (2017-03-09) |
+| VC2017        | x64           | Debug   | no CI | Manually maintained, unit tests build and run (2017-03-09) |
+| VC2017        | x64           | Release | no CI | Manually maintained, unit tests build and run (2017-03-09) |
 | Others        |               |         | Not tested |  |
 ||||||
