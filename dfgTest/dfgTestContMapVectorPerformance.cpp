@@ -33,6 +33,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
 #include <boost/container/flat_map.hpp>
 #include <boost/container/vector.hpp>
 
+#include <dfg/time.hpp>
+#include <dfg/time/DateTime.hpp>
+
 namespace
 {
 
@@ -78,11 +81,25 @@ template <class Val_T> std::string containerDescription(const boost::container::
 
 namespace
 {
+    std::string generateCompilerInfoForOutputFilename()
+    {
+        return dfg::format_fmt("{}_{}_{}", DFG_COMPILER_NAME_SIMPLE, 8 * sizeof(void*), DFG_BUILD_DEBUG_RELEASE_TYPE);
+    }
+
     class BenchmarkResultTable : public DFG_MODULE_NS(cont)::TableCsv<char, DFG_ROOT_NS::uint32>
     {
         typedef DFG_ROOT_NS::uint32 uint32;
 
     public:
+        void addReducedValuesAndWriteToFile(const size_t nFirstResultColumn, const dfg::StringViewSzAscii& svBaseName)
+        {
+            // Calculate averages etc.
+            addReducedValues(nFirstResultColumn);
+
+            DFG_MODULE_NS(io)::OfStream ostrm(dfg::format_fmt("testfiles/generated/{}_{}.csv", svBaseName.c_str().c_str(), generateCompilerInfoForOutputFilename()));
+            writeToStream(ostrm);
+        }
+
         void addReducedValues(const uint32 firstResultCol)
         {
             using namespace DFG_ROOT_NS;
@@ -118,11 +135,6 @@ namespace
             }
         }
     };
-
-    std::string generateCompilerInfoForOutputFilename()
-    {
-        return dfg::format_fmt("{}_{}_{}", DFG_COMPILER_NAME_SIMPLE, 8 * sizeof(void*), DFG_BUILD_DEBUG_RELEASE_TYPE);
-    }
 
     template <class T>
     std::string GenerateOutputFilePathForVectorInsert(const dfg::StringViewSzC& s)
@@ -280,7 +292,17 @@ namespace
     }
 
     template <class Cont_T>
-    void insertForVectorPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount)
+    void AddInsertPerformanceTimeElement(BenchmarkResultTable& resultTable, const double elapsedTime, const Cont_T& cont, const std::string& sReservationInfo, const size_t nRow, const dfg::StringViewSzAscii& svDesc)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+        if (resultTable(nRow, 6) == nullptr)
+            resultTable.setElement(nRow, 6, SzPtrUtf8((svDesc.c_str().c_str() + containerDescription(cont) + sReservationInfo).c_str()));
+        resultTable.addString(floatingPointToStr<StringUtf8>(elapsedTime, 4 /*number of significant digits*/), nRow, resultTable.colCountByMaxColIndex() - 1);
+    }
+
+    template <class Cont_T>
+    void insertForVectorPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount, const size_t nRow, BenchmarkResultTable& resultTable)
     {
         using namespace DFG_ROOT_NS;
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
@@ -297,10 +319,11 @@ namespace
         const auto elapsedTime = timer.elapsedWallSeconds();
         const auto sReservationInfo = format_fmt("), reserved: {}", int(nInitialCapacity >= cont.size()));
         std::cout << "Insert time with interleaved vector (" << containerDescription(cont) << sReservationInfo << ": " << elapsedTime << '\n';
+        AddInsertPerformanceTimeElement(resultTable, elapsedTime, cont, sReservationInfo, nRow, DFG_ASCII("Interleaved "));
     }
 
     template <class Cont_T>
-    void insertPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount, const size_t capacity = DFG_ROOT_NS::NumericTraits<size_t>::maxValue)
+    void insertPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount, const size_t nRow, BenchmarkResultTable& resultTable, const size_t capacity = DFG_ROOT_NS::NumericTraits<size_t>::maxValue)
     {
         using namespace DFG_ROOT_NS;
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
@@ -311,10 +334,11 @@ namespace
         const auto elapsedTime = timer.elapsedWallSeconds();
         const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}", int(capacity >= cont.size())) : "";
         std::cout << "Insert time " << containerDescription(cont) << sReservationInfo << ": " << elapsedTime << '\n';
+        AddInsertPerformanceTimeElement(resultTable, elapsedTime, cont, sReservationInfo, nRow, DFG_ASCII(""));
     }
 
     template <class Key_T, class Val_T>
-    void insertPerformanceTesterUnsortedPush_sort_and_unique(DFG_MODULE_NS(cont)::MapVectorAoS<Key_T, Val_T>& cont, const unsigned long nRandEngSeed, const int nCount, const size_t capacity = DFG_ROOT_NS::NumericTraits<size_t>::maxValue)
+    void insertPerformanceTesterUnsortedPush_sort_and_unique(DFG_MODULE_NS(cont)::MapVectorAoS<Key_T, Val_T>& cont, const unsigned long nRandEngSeed, const int nCount, const size_t nRow, BenchmarkResultTable& resultTable, const size_t capacity = DFG_ROOT_NS::NumericTraits<size_t>::maxValue)
     {
         using namespace DFG_ROOT_NS;
         typedef typename DFG_MODULE_NS(cont)::MapVectorAoS<Key_T, Val_T>::value_type value_type;
@@ -332,6 +356,7 @@ namespace
         const auto elapsedTime = timer.elapsedWallSeconds();
         const auto sReservationInfo = (capacity != NumericTraits<size_t>::maxValue) ? format_fmt(", reserved: {}: ", int(capacity >= cont.size())) : ": ";
         std::cout << "Insert time with MapVectorAoS push-sort-unique" << sReservationInfo  << elapsedTime << '\n';
+        AddInsertPerformanceTimeElement(resultTable, elapsedTime, cont, sReservationInfo, nRow, DFG_ASCII("MapVectorAoS push-sort-unique"));
     }
 
     template <class Cont_T>
@@ -383,7 +408,9 @@ namespace
 
 TEST(dfgCont, MapVectorPerformance)
 {
+    using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(str);
     const int randEngSeed = 12345678;
 
 #ifdef _DEBUG
@@ -392,8 +419,40 @@ TEST(dfgCont, MapVectorPerformance)
     const auto nCount = 50000;
 #endif
     const auto nFindCount = 5 * nCount;
+    const auto nIterationCount = 1;
 
+    BenchmarkResultTable table;
+    table.addString(DFG_ASCII("Date"), 0, 0);
+    table.addString(DFG_ASCII("Test machine"), 0, 1);
+    table.addString(DFG_ASCII("Test Compiler"), 0, 2);
+    table.addString(DFG_ASCII("Pointer size"), 0, 3);
+    table.addString(DFG_ASCII("Build type"), 0, 4);
+    table.addString(DFG_ASCII("Insert count"), 0, 5);
+    table.addString(DFG_ASCII("Test type"), 0, 6);
+    const auto nLastStaticColumn = 6;
+
+    for(size_t i = 0; i<nIterationCount; ++i)
     {
+        if (i == 0)
+        {
+            const StringUtf8 sTime(SzPtrUtf8(DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C().c_str()));
+            const auto sCompiler = SzPtrUtf8(DFG_COMPILER_NAME_SIMPLE);
+            const StringUtf8 sPointerSize(SzPtrUtf8(DFG_MODULE_NS(str)::toStrC(sizeof(void*)).c_str()));
+            const auto sBuildType = SzPtrUtf8(DFG_BUILD_DEBUG_RELEASE_TYPE);
+            const StringUtf8 sInsertCount(SzPtrUtf8(DFG_MODULE_NS(str)::toStrC(nCount).c_str()));
+            for (int et = 1; et <= 15; ++et)
+            {
+                const auto r = table.rowCountByMaxRowIndex();
+                table.addString(sTime, r, 0);
+                table.addString(sCompiler, r, 2);
+                table.addString(sPointerSize, r, 3);
+                table.addString(sBuildType, r, 4);
+                table.addString(sInsertCount, r, 5);
+            }
+        }
+
+        table.addString(SzPtrUtf8(("Time#" + toStrC(i)).c_str()), 0, table.colCountByMaxColIndex());
+
         std::vector<int> stdVecInterleaved; stdVecInterleaved.reserve(2 * nCount);
         boost::container::vector<int> boostVecInterleaved; boostVecInterleaved.reserve(2 * nCount);
         std::map<int, int> mStd;
@@ -411,23 +470,23 @@ TEST(dfgCont, MapVectorPerformance)
         MapVectorAoS<int, int> mUniqueAoSInsert; mUniqueAoSInsert.reserve(nCount); mUniqueAoSInsert.setSorting(false);
         MapVectorAoS<int, int> mUniqueAoSInsertNotReserved; mUniqueAoSInsertNotReserved.setSorting(false);
 
-#define CALL_PERFORMANCE_TEST_DFGLIB(name) insertPerformanceTester(name, randEngSeed, nCount, name.capacity());
+#define CALL_PERFORMANCE_TEST_DFGLIB(name, ROW) insertPerformanceTester(name, randEngSeed, nCount, ROW, table, name.capacity());
 
-        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_rs);
-        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_ns);
-        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_ru);
-        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_nu);
-        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_rs);
-        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_ns);
-        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_ru);
-        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_nu);
-        insertPerformanceTester(mStd, randEngSeed, nCount);
-        insertPerformanceTester(mStdUnordered, randEngSeed, nCount);
-        insertPerformanceTester(mBoostFlatMap, randEngSeed, nCount);
-        insertPerformanceTesterUnsortedPush_sort_and_unique(mUniqueAoSInsert, randEngSeed, nCount, mUniqueAoSInsert.capacity());
-        insertPerformanceTesterUnsortedPush_sort_and_unique(mUniqueAoSInsertNotReserved, randEngSeed, nCount, mUniqueAoSInsertNotReserved.capacity());
-        insertForVectorPerformanceTester(stdVecInterleaved, randEngSeed, nCount);
-        insertForVectorPerformanceTester(boostVecInterleaved, randEngSeed, nCount);
+        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_rs, 1);
+        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_ns, 2);
+        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_ru, 3);
+        CALL_PERFORMANCE_TEST_DFGLIB(mAoS_nu, 4);
+        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_rs, 5);
+        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_ns, 6);
+        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_ru, 7);
+        CALL_PERFORMANCE_TEST_DFGLIB(mSoA_nu, 8);
+        insertPerformanceTester(mStd, randEngSeed, nCount, 9, table);
+        insertPerformanceTester(mStdUnordered, randEngSeed, nCount, 10, table);
+        insertPerformanceTester(mBoostFlatMap, randEngSeed, nCount, 11, table);
+        insertPerformanceTesterUnsortedPush_sort_and_unique(mUniqueAoSInsert, randEngSeed, nCount, 12, table, mUniqueAoSInsert.capacity());
+        insertPerformanceTesterUnsortedPush_sort_and_unique(mUniqueAoSInsertNotReserved, randEngSeed, nCount, 13, table, mUniqueAoSInsertNotReserved.capacity());
+        insertForVectorPerformanceTester(stdVecInterleaved, randEngSeed, nCount, 14, table);
+        insertForVectorPerformanceTester(boostVecInterleaved, randEngSeed, nCount, 15, table);
 
         EXPECT_EQ(mAoS_rs.size(), mAoS_ns.size());
         EXPECT_EQ(mAoS_rs.size(), mAoS_ru.size());
@@ -470,6 +529,8 @@ TEST(dfgCont, MapVectorPerformance)
             EXPECT_EQ(findings, findPerformanceTester(mBoostFlatMap, randEngSeedFind, nFindCount));
         }
     }
+
+    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, DFG_ASCII("benchmarkMapVectorPerformance_"));
 }
 
 namespace
@@ -536,9 +597,6 @@ namespace
     }
 }
 
-#include <dfg/time.hpp>
-#include <dfg/time/DateTime.hpp>
-
 TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
 {
     using namespace DFG_ROOT_NS;
@@ -603,13 +661,7 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
 #undef CALL_ELEMENTARY_TEST
     }
 
-    
-
-    // Calculate averages etc.
-    table.addReducedValues(nLastStaticColumn + 1);
-
-    DFG_MODULE_NS(io)::OfStream ostrm(format_fmt("testfiles/generated/benchmarkStringMapWithCharPtrLookup_{}.csv", generateCompilerInfoForOutputFilename()));
-    table.writeToStream(ostrm);
+    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, DFG_ASCII("benchmarkStringMapWithCharPtrLookup_"));
 }
 
 #include <dfg/io/ofstream.hpp>
