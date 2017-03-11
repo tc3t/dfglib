@@ -297,7 +297,11 @@ namespace
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(str);
         if (resultTable(nRow, 6) == nullptr)
-            resultTable.setElement(nRow, 6, SzPtrUtf8((svDesc.c_str().c_str() + containerDescription(cont) + sReservationInfo).c_str()));
+            resultTable.setElement(nRow, 6, SzPtrAscii(toStrT<std::string>(cont.size()).c_str()));
+        else
+            EXPECT_EQ(strTo<size_t>(resultTable(nRow, 6).c_str()), cont.size());
+        if (resultTable(nRow, 7) == nullptr)
+            resultTable.setElement(nRow, 7, SzPtrUtf8((svDesc.c_str().c_str() + containerDescription(cont) + sReservationInfo).c_str()));
         resultTable.addString(floatingPointToStr<StringUtf8>(elapsedTime, 4 /*number of significant digits*/), nRow, resultTable.colCountByMaxColIndex() - 1);
     }
 
@@ -360,8 +364,11 @@ namespace
     }
 
     template <class Cont_T>
-    size_t findPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount)
+    size_t findPerformanceTester(Cont_T& cont, const unsigned long nRandEngSeed, const int nCount, const size_t nRow, BenchmarkResultTable& resultTable)
     {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
         randEng.seed(nRandEngSeed);
         DFG_MODULE_NS(time)::TimerCpu timer;
@@ -375,6 +382,26 @@ namespace
         std::cout << "Find time with " << containerDescription(cont) << ": " << elapsed << '\n';
         std::cout << "Container size: " << cont.size() << '\n';
         std::cout << "Found item count: " << nFound << '\n';
+        
+        if (resultTable(nRow, 5) == nullptr)
+            resultTable.setElement(nRow, 5, SzPtrAscii(toStrT<std::string>(cont.size()).c_str()));
+        else
+            EXPECT_EQ(strTo<size_t>(resultTable(nRow, 5).c_str()), cont.size());
+        
+        if (resultTable(nRow, 6) == nullptr)
+            resultTable.setElement(nRow, 6, SzPtrAscii(toStrT<std::string>(nCount).c_str()));
+        else
+            EXPECT_EQ(strTo<size_t>(resultTable(nRow, 6).c_str()), nCount);
+
+        if (resultTable(nRow, 7) == nullptr)
+            resultTable.setElement(nRow, 7, SzPtrAscii(toStrT<std::string>(nFound).c_str()));
+        else
+            EXPECT_EQ(strTo<size_t>(resultTable(nRow, 7).c_str()), nFound);
+
+        if (resultTable(nRow, 8) == nullptr)
+            resultTable.setElement(nRow, 8, SzPtrUtf8((containerDescription(cont)).c_str()));
+        resultTable.addString(floatingPointToStr<StringUtf8>(elapsed, 4 /*number of significant digits*/), nRow, resultTable.colCountByMaxColIndex() - 1);
+
         return nFound;
     }
 }
@@ -419,7 +446,7 @@ TEST(dfgCont, MapVectorPerformance)
     const auto nCount = 50000;
 #endif
     const auto nFindCount = 5 * nCount;
-    const auto nIterationCount = 1;
+    const auto nIterationCount = 5;
 
     BenchmarkResultTable table;
     table.addString(DFG_ASCII("Date"), 0, 0);
@@ -428,8 +455,21 @@ TEST(dfgCont, MapVectorPerformance)
     table.addString(DFG_ASCII("Pointer size"), 0, 3);
     table.addString(DFG_ASCII("Build type"), 0, 4);
     table.addString(DFG_ASCII("Insert count"), 0, 5);
-    table.addString(DFG_ASCII("Test type"), 0, 6);
-    const auto nLastStaticColumn = 6;
+    table.addString(DFG_ASCII("Inserted count"), 0, 6);
+    table.addString(DFG_ASCII("Test type"), 0, 7);
+    const auto nLastStaticColumn = 7;
+
+    BenchmarkResultTable tableFindBench;
+    tableFindBench.addString(DFG_ASCII("Date"), 0, 0);
+    tableFindBench.addString(DFG_ASCII("Test machine"), 0, 1);
+    tableFindBench.addString(DFG_ASCII("Test Compiler"), 0, 2);
+    tableFindBench.addString(DFG_ASCII("Pointer size"), 0, 3);
+    tableFindBench.addString(DFG_ASCII("Build type"), 0, 4);
+    tableFindBench.addString(DFG_ASCII("Key count"), 0, 5);
+    tableFindBench.addString(DFG_ASCII("Find count"), 0, 6);
+    tableFindBench.addString(DFG_ASCII("Found count"), 0, 7);
+    tableFindBench.addString(DFG_ASCII("Test type"), 0, 8);
+    const auto nLastStaticColumnFindBench = 8;
 
     for(size_t i = 0; i<nIterationCount; ++i)
     {
@@ -449,9 +489,19 @@ TEST(dfgCont, MapVectorPerformance)
                 table.addString(sBuildType, r, 4);
                 table.addString(sInsertCount, r, 5);
             }
+
+            for (int et = 1; et <= 11; ++et)
+            {
+                const auto r = tableFindBench.rowCountByMaxRowIndex();
+                tableFindBench.addString(sTime, r, 0);
+                tableFindBench.addString(sCompiler, r, 2);
+                tableFindBench.addString(sPointerSize, r, 3);
+                tableFindBench.addString(sBuildType, r, 4);
+            }
         }
 
         table.addString(SzPtrUtf8(("Time#" + toStrC(i)).c_str()), 0, table.colCountByMaxColIndex());
+        tableFindBench.addString(SzPtrUtf8(("Time#" + toStrC(i)).c_str()), 0, tableFindBench.colCountByMaxColIndex());
 
         std::vector<int> stdVecInterleaved; stdVecInterleaved.reserve(2 * nCount);
         boost::container::vector<int> boostVecInterleaved; boostVecInterleaved.reserve(2 * nCount);
@@ -516,21 +566,22 @@ TEST(dfgCont, MapVectorPerformance)
 
         {
             const auto randEngSeedFind = randEngSeed * 2;
-            const auto findings = findPerformanceTester(mAoS_rs, randEngSeedFind, nFindCount);
-            EXPECT_EQ(findings, findPerformanceTester(mAoS_ns, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mAoS_ru, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mAoS_nu, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mSoA_rs, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mSoA_ns, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mSoA_ru, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mSoA_nu, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mStd, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mStdUnordered, randEngSeedFind, nFindCount));
-            EXPECT_EQ(findings, findPerformanceTester(mBoostFlatMap, randEngSeedFind, nFindCount));
+            const auto findings = findPerformanceTester(mAoS_rs, randEngSeedFind, nFindCount, 1, tableFindBench);
+            EXPECT_EQ(findings, findPerformanceTester(mAoS_ns, randEngSeedFind, nFindCount, 2, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mAoS_ru, randEngSeedFind, nFindCount, 3, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mAoS_nu, randEngSeedFind, nFindCount, 4, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_rs, randEngSeedFind, nFindCount, 5, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_ns, randEngSeedFind, nFindCount, 6, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_ru, randEngSeedFind, nFindCount, 7, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mSoA_nu, randEngSeedFind, nFindCount, 8, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mStd, randEngSeedFind, nFindCount, 9, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mStdUnordered, randEngSeedFind, nFindCount, 10, tableFindBench));
+            EXPECT_EQ(findings, findPerformanceTester(mBoostFlatMap, randEngSeedFind, nFindCount, 11, tableFindBench));
         }
     }
 
-    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, DFG_ASCII("benchmarkMapVectorPerformance_"));
+    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, DFG_ASCII("benchmarkMapVectorPerformance"));
+    tableFindBench.addReducedValuesAndWriteToFile(nLastStaticColumnFindBench + 1, DFG_ASCII("benchmarkMapVectorFindPerformance"));
 }
 
 namespace
