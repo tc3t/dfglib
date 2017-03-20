@@ -556,6 +556,50 @@ TEST(dfgCont, MapVectorPerformance)
         DFG_TEMP_CHECK_EQUALITY(mStd);
         DFG_TEMP_CHECK_EQUALITY(mBoostFlatMap);
         DFG_TEMP_CHECK_EQUALITY(mAoS_rs);
+        // Check that unsorted AoS-containers are expected. TODO: implement operator==
+        {
+            {
+                auto compareTemp = mAoS_ru;
+                compareTemp.setSorting(true);
+                DFG_TEMP_CHECK_EQUALITY(compareTemp);
+            }
+            {
+                auto compareTemp2 = mAoS_nu;
+                compareTemp2.setSorting(true);
+                DFG_TEMP_CHECK_EQUALITY(compareTemp2);
+            }
+        }
+
+        // Check that AoS and SoA are identical. TODO: implement operator==
+        {
+            auto iSoa = mSoA_ns.begin();
+            for (auto iAos = mAoS_ns.begin(), iEndAos = mAoS_ns.end(); iAos != iEndAos; ++iAos, ++iSoa)
+            {
+                EXPECT_TRUE(iAos->first == iSoa->first);
+                EXPECT_TRUE(iAos->second == iSoa->second);
+            }
+        }
+
+        // Check that SoA-maps are identical with each other. TODO: implement operator==
+        {
+            EXPECT_TRUE(std::equal(mSoA_ns.beginKey(), mSoA_ns.endKey(), mSoA_rs.beginKey()));
+
+            const auto compareUnordered = [&](const decltype(mSoA_ru)& mUnordered)
+                                        {
+                                            auto compareTemp = mUnordered;
+                                            compareTemp.setSorting(true);
+                                            auto iu = compareTemp.begin();
+                                            for (auto i = mSoA_ns.begin(), iEnd = mSoA_ns.end(); i != iEnd; ++i, ++iu)
+                                            {
+                                                EXPECT_TRUE(i->first == iu->first);
+                                                EXPECT_TRUE(i->second == iu->second);
+                                            }
+                                        };
+
+            compareUnordered(mSoA_ru);
+            compareUnordered(mSoA_nu);
+        }
+        
         DFG_TEMP_CHECK_EQUALITY(mUniqueAoSInsert); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
         DFG_TEMP_CHECK_EQUALITY(mUniqueAoSInsertNotReserved); // This requires sort() to be result-wise identical to stable_sort() for the generated data.
         EXPECT_TRUE(std::equal(stdVecInterleaved.begin(), stdVecInterleaved.end(), boostVecInterleaved.begin()));
@@ -580,7 +624,7 @@ TEST(dfgCont, MapVectorPerformance)
         }
     }
 
-    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, DFG_ASCII("benchmarkMapVectorPerformance"));
+    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, DFG_ASCII("benchmarkMapVectorInsertPerformance"));
     tableFindBench.addReducedValuesAndWriteToFile(nLastStaticColumnFindBench + 1, DFG_ASCII("benchmarkMapVectorFindPerformance"));
 }
 
