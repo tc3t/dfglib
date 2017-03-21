@@ -10,6 +10,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     class DFG_CLASS_NAME(TrivialPair)
     {
     public:
+        typedef T0 first_type;
+        typedef T1 second_type;
+
         DFG_CLASS_NAME(TrivialPair)() {}
 
         DFG_CLASS_NAME(TrivialPair)(const T0& t0, const T1& t1) :
