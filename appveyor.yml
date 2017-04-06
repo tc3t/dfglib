@@ -1,11 +1,6 @@
 version: 1.0.{build}
 configuration:
-- Debug_VC2010
-- Debug_VC2012
-- Debug_VC2013
-- Debug_VC2015
-- Release_VC2013
-- Release_VC2015
+- Debug_VC2017
 platform:
 - Win32
 - x64
