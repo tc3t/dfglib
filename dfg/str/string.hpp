@@ -33,6 +33,15 @@ public:
     explicit DFG_CLASS_NAME(StringTyped)(SzPtrR psz) : m_s(psz.c_str()) {}
     explicit DFG_CLASS_NAME(StringTyped)(TypedPtrT iterBegin, TypedPtrT iterEnd) : m_s(iterBegin.rawPtr(), iterEnd.rawPtr()) {}
 
+    // Precondition: sRaw must be correctly encoded.
+    // TODO: test
+    static DFG_CLASS_NAME(StringTyped) fromRawString(StorageType sRaw)
+    {
+        DFG_CLASS_NAME(StringTyped) s;
+        s.m_s = std::move(sRaw);
+        return s;
+    }
+
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }
 
     void append(const TypedPtrT& first, const TypedPtrT& end)
@@ -102,6 +111,12 @@ public:
     void resize(const size_t nNewSize)
     {
         m_s.resize(nNewSize, '\0');
+    }
+
+    // TODO: test
+    void clear()
+    {
+        m_s.clear();
     }
 
 	// TODO: test
