@@ -638,7 +638,7 @@ namespace
     };
 
     template <class Cont_T>
-    void MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(Cont_T& cont, const char* pszTitle, const size_t nMapSize, BenchmarkResultTable* pTable, const int nRow)
+    size_t MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(Cont_T& cont, const char* pszTitle, const size_t nMapSize, const size_t nCount, BenchmarkResultTable* pTable, const int nRow)
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(rand);
@@ -665,11 +665,8 @@ namespace
 
         auto loopUpIndexRandomizer = makeDistributionEngineUniform(&randEng, 0, int(DFG_COUNTOF(arrLookupStrings) - 1));
 
-#ifdef _DEBUG
-        const size_t nCount = 100 / cont.size();
-#else
-        const size_t nCount = static_cast<size_t>((cont.size() <= 20) ? 100000000LL / cont.size() : 10000000000LL / cont.size()); 
-#endif
+        if (pTable)
+            pTable->addString(SzPtrAscii(toStrC(nCount).c_str()), nRow, 6);
 
         const auto endIter = cont.end();
         size_t nSum = 0;
@@ -689,6 +686,7 @@ namespace
 
         std::cout << "Find time with " << pszTitle << ": " << elapsedTime << '\n';
         std::cout << "Map size: " << cont.size() << ", Rounds: " << nCount << ", Sum: " << nSum << '\n';
+        return nSum;
     }
 }
 
@@ -709,6 +707,12 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     const size_t nMapSize = 2;
     const auto nContainerCount = 7;
 
+#ifdef _DEBUG
+    const size_t nFindCount = 100 / nMapSize;
+#else
+    const size_t nFindCount = static_cast<size_t>((nMapSize <= 20) ? 100000000LL / nMapSize : 10000000000LL / nMapSize);
+#endif
+
     BenchmarkResultTable table;
     table.addString(DFG_ASCII("Date"), 0, 0);
     table.addString(DFG_ASCII("Test machine"), 0, 1);
@@ -716,14 +720,16 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     table.addString(DFG_ASCII("Pointer size"), 0, 3);
     table.addString(DFG_ASCII("Build type"), 0, 4);
     table.addString(DFG_ASCII("Map size"), 0, 5);
-    table.addString(DFG_ASCII("Test type"), 0, 6);
-    const auto nLastStaticColumn = 6;
+    table.addString(DFG_ASCII("Find count"), 0, 6);
+    table.addString(DFG_ASCII("Test type"), 0, 7);
+    const auto nLastStaticColumn = 7;
+
+    const auto sTime = StringUtf8::fromRawString(DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_hh_mm_ss_C());
 
     for (size_t i = 0; i < 1; ++i) // Iterations.
     {
         if (i == 0)
         {
-            const StringUtf8 sTime(SzPtrUtf8(DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C().c_str()));
             const auto sCompiler = SzPtrUtf8(DFG_COMPILER_NAME_SIMPLE);
             const StringUtf8 sPointerSize(SzPtrUtf8(toStrC(sizeof(void*)).c_str()));
             const auto sBuildType = SzPtrUtf8(DFG_BUILD_DEBUG_RELEASE_TYPE);
@@ -742,9 +748,10 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
 
         table.addString(SzPtrUtf8(("Time#" + toStrC(i)).c_str()), 0, table.colCountByMaxColIndex());
 
+        std::vector<size_t> results;
 #define CALL_ELEMENTARY_TEST(CONT, TITLE, ROW) \
-        table.addString(DFG_ASCII(TITLE), ROW, 6 /*=column*/); \
-        MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(CONT, TITLE, nMapSize, &table, ROW);
+        table.addString(DFG_ASCII(TITLE), ROW, 7 /*=column*/); \
+        results.push_back(MapPerformanceComparisonWithStdStringKeyAndConstCharLookUpImpl(CONT, TITLE, nMapSize, nFindCount, &table, ROW));
 
         CALL_ELEMENTARY_TEST(mAoS_sorted,       "MapVectorAoS_sorted",      1);
         CALL_ELEMENTARY_TEST(mAoS_unsorted,     "MapVectorAoS_unsorted",    2);
@@ -754,9 +761,14 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
         CALL_ELEMENTARY_TEST(stdUnorderedMap,   "std::unordered_map",       6);
         CALL_ELEMENTARY_TEST(boostFlatMap,      "boost::flat_map",          7);
 #undef CALL_ELEMENTARY_TEST
+
+        EXPECT_EQ(nContainerCount, results.size());
+        const auto nFirstResult = results.front();
+        EXPECT_TRUE(std::all_of(results.begin(), results.end(), [=](const size_t a) { return nFirstResult == a; }));
     }
 
-    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, DFG_ASCII("benchmarkStringMapWithCharPtrLookup_"));
+    const StringAscii sFilenameBase(SzPtrAscii(format_fmt("benchmarkStringMapWithCharPtrLookup_N{}_M{}", nMapSize, nFindCount).c_str()));
+    table.addReducedValuesAndWriteToFile(nLastStaticColumn + 1, sFilenameBase);
 }
 
 #include <dfg/io/ofstream.hpp>
