@@ -36,6 +36,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
 #include <dfg/time.hpp>
 #include <dfg/time/DateTime.hpp>
 
+#define DFG_TEST_COMPILE_MAP_BENCHMARKS 0
+
+#if DFG_TEST_COMPILE_MAP_BENCHMARKS
+    #include <flat_pubby/flat_map.hpp>
+    #include <flat_sm/flat_map.h>
+#endif
+
 namespace
 {
 
@@ -76,8 +83,22 @@ std::string containerDescription(const DFG_MODULE_NS(cont)::Vector<Val_T>&)
     return DFG_ROOT_NS::format_fmt("Vector<{}>", typeToName<Val_T>::name());
 }
 
-template <class Val_T> std::string containerDescription(const std::vector<Val_T>&) { return "std::vector<" + typeToName<Val_T>::name() + ">"; }
+template <class Val_T> std::string containerDescription(const std::vector<Val_T>&)              { return "std::vector<" + typeToName<Val_T>::name() + ">"; }
 template <class Val_T> std::string containerDescription(const boost::container::vector<Val_T>&) { return "boost::vector<" + typeToName<Val_T>::name() + ">"; }
+
+#if DFG_TEST_COMPILE_MAP_BENCHMARKS
+    template <class T0, class T1>
+    std::string containerDescription(const fc::vector_map<T0, T1>&)
+    {
+        return DFG_ROOT_NS::format_fmt("pubby_flat_map::vector_map<{}, {}>", typeToName<T0>::name(), typeToName<T1>::name());
+    }
+
+    template <class T0, class T1>
+    std::string containerDescription(const fc::flat_map<dfg::cont::Vector<dfg::cont::TrivialPair<T0, T1>>>&)
+    {
+        return DFG_ROOT_NS::format_fmt("pubby_flat_map<Vector<TrivialPair<{}, {}>", typeToName<T0>::name(), typeToName<T1>::name());
+    }
+#endif // DFG_TEST_COMPILE_MAP_BENCHMARKS
 
 namespace
 {
@@ -270,7 +291,7 @@ void VectorInsertImpl(const int nCount, BenchmarkResultTable* pTable = nullptr, 
 
 } // unnamed namespace
 
-#if 0 // On/off switch for the whole performance test.
+#if DFG_TEST_COMPILE_MAP_BENCHMARKS // On/off switch for the whole performance test.
 
 namespace
 {
@@ -289,6 +310,12 @@ namespace
     {
         auto key = generateKey(re);
         cont.insert(std::pair<int, int>(key, key));
+    }
+
+    void insertImpl(fc::flat_map<dfg::cont::Vector<dfg::cont::TrivialPair<int, int>>>& cont, decltype(DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded())& re)
+    {
+        auto key = generateKey(re);
+        cont.insert(dfg::cont::TrivialPair<int, int>(key, key));
     }
 
     template <class Cont_T>
@@ -433,6 +460,11 @@ namespace
     };
 }
 
+bool operator==(const std::pair<int, int>& a, const dfg::cont::TrivialPair<int, int>& b)
+{
+    return a.first == b.first && a.second == b.second;
+}
+
 TEST(dfgCont, MapVectorPerformance)
 {
     using namespace DFG_ROOT_NS;
@@ -516,6 +548,8 @@ TEST(dfgCont, MapVectorPerformance)
         MapVectorSoA<int, int> mSoA_ns;
         MapVectorSoA<int, int> mSoA_ru; mSoA_ru.reserve(nCount); mSoA_ru.setSorting(false);
         MapVectorSoA<int, int> mSoA_nu; mSoA_nu.setSorting(false);
+        fc::vector_map<int, int> mPubbyMap;
+        fc::flat_map<dfg::cont::Vector<dfg::cont::TrivialPair<int, int>>> mPubbyMapTrivialPair;
 
         MapVectorAoS<int, int> mUniqueAoSInsert; mUniqueAoSInsert.reserve(nCount); mUniqueAoSInsert.setSorting(false);
         MapVectorAoS<int, int> mUniqueAoSInsertNotReserved; mUniqueAoSInsertNotReserved.setSorting(false);
@@ -537,6 +571,8 @@ TEST(dfgCont, MapVectorPerformance)
         insertPerformanceTesterUnsortedPush_sort_and_unique(mUniqueAoSInsertNotReserved, randEngSeed, nCount, 13, table, mUniqueAoSInsertNotReserved.capacity());
         insertForVectorPerformanceTester(stdVecInterleaved, randEngSeed, nCount, 14, table);
         insertForVectorPerformanceTester(boostVecInterleaved, randEngSeed, nCount, 15, table);
+        insertPerformanceTester(mPubbyMap, randEngSeed, nCount, 16, table);
+        insertPerformanceTester(mPubbyMapTrivialPair, randEngSeed, nCount, 17, table);
 
         EXPECT_EQ(mAoS_rs.size(), mAoS_ns.size());
         EXPECT_EQ(mAoS_rs.size(), mAoS_ru.size());
@@ -550,6 +586,8 @@ TEST(dfgCont, MapVectorPerformance)
         EXPECT_EQ(mAoS_rs.size(), mBoostFlatMap.size());
         EXPECT_EQ(mAoS_rs.size(), mUniqueAoSInsert.size());
         EXPECT_EQ(mAoS_rs.size(), mUniqueAoSInsertNotReserved.size());
+        EXPECT_EQ(mAoS_rs.size(), mPubbyMap.size());
+        EXPECT_EQ(mAoS_rs.size(), mPubbyMapTrivialPair.size());
 
 #define DFG_TEMP_CHECK_EQUALITY(CONT) EXPECT_TRUE(std::equal(mAoS_ns.begin(), mAoS_ns.end(), CONT.begin(), ValueTypeCompareFunctor<int, int>()));
 
@@ -688,7 +726,7 @@ namespace
         std::cout << "Map size: " << cont.size() << ", Rounds: " << nCount << ", Sum: " << nSum << '\n';
         return nSum;
     }
-}
+} // unnamed namespace
 
 TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
 {
@@ -703,12 +741,14 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     MapVectorAoS<std::string, int> mAoS_unsorted; mAoS_unsorted.setSorting(false);
     MapVectorSoA<std::string, int> mSoA_sorted;
     MapVectorSoA<std::string, int> mSoA_unsorted; mSoA_unsorted.setSorting(false);
+    fc::vector_map<std::string, int> pubbyFlatMap;
+    std::flat_map<std::string, int> smFlatMap;
 
     const size_t nMapSize = 2;
-    const auto nContainerCount = 7;
+    const auto nContainerCount = 9;
 
 #ifdef _DEBUG
-    const size_t nFindCount = 100 / nMapSize;
+    const size_t nFindCount = Max<size_t>(10, 100 / nMapSize);
 #else
     const size_t nFindCount = static_cast<size_t>((nMapSize <= 20) ? 100000000LL / nMapSize : 10000000000LL / nMapSize);
 #endif
@@ -760,6 +800,8 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
         CALL_ELEMENTARY_TEST(stdMap,            "std::map",                 5);
         CALL_ELEMENTARY_TEST(stdUnorderedMap,   "std::unordered_map",       6);
         CALL_ELEMENTARY_TEST(boostFlatMap,      "boost::flat_map",          7);
+        CALL_ELEMENTARY_TEST(smFlatMap,         "smFlatMap",                8);
+        CALL_ELEMENTARY_TEST(pubbyFlatMap,      "pubbyFlatMap",             9);
 #undef CALL_ELEMENTARY_TEST
 
         EXPECT_EQ(nContainerCount, results.size());
