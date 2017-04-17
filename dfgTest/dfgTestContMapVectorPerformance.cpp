@@ -741,10 +741,11 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     MapVectorAoS<std::string, int> mAoS_unsorted; mAoS_unsorted.setSorting(false);
     MapVectorSoA<std::string, int> mSoA_sorted;
     MapVectorSoA<std::string, int> mSoA_unsorted; mSoA_unsorted.setSorting(false);
-    fc::vector_map<std::string, int> pubbyFlatMap;
+    fc::vector_map<std::string, int> pubbyVectorMap;
     std::flat_map<std::string, int> smFlatMap;
 
-    const size_t nMapSize = 2;
+    const size_t nMapSize = 3;
+    //const size_t nMapSize = 1000;
     const auto nContainerCount = 9;
 
 #ifdef _DEBUG
@@ -801,7 +802,7 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
         CALL_ELEMENTARY_TEST(stdUnorderedMap,   "std::unordered_map",       6);
         CALL_ELEMENTARY_TEST(boostFlatMap,      "boost::flat_map",          7);
         CALL_ELEMENTARY_TEST(smFlatMap,         "smFlatMap",                8);
-        CALL_ELEMENTARY_TEST(pubbyFlatMap,      "pubbyFlatMap",             9);
+        CALL_ELEMENTARY_TEST(pubbyVectorMap,    "pubbyVectorMap",           9);
 #undef CALL_ELEMENTARY_TEST
 
         EXPECT_EQ(nContainerCount, results.size());
