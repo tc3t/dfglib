@@ -174,8 +174,9 @@ template <class Char_T, class Str_T = std::basic_string<Char_T>>
 class DFG_CLASS_NAME(StringView)
 {
 public:
-    typedef decltype(Str_T().c_str())               SzPtrT;
-    typedef decltype(toCharPtr(Str_T().c_str()))    PtrT;
+    typedef decltype(Str_T().c_str())                   SzPtrT;
+    typedef decltype(toCharPtr(Str_T().c_str()))        PtrT;
+    typedef decltype(toCharPtr_raw(Str_T().c_str()))    PtrRawT;
     
     typedef PtrT const_iterator;
 
@@ -228,14 +229,29 @@ public:
 
     PtrT data() const { return m_pFirst; }
 
+    PtrRawT dataRaw() const
+    {
+        toCharPtr_raw(data());
+    }
+
     const_iterator begin() const
     {
         return m_pFirst;
     }
 
+    PtrRawT beginRaw() const
+    {
+        return toCharPtr_raw(begin());
+    }
+
     const_iterator end() const
     {
         return PtrT(toCharPtr_raw(m_pFirst) + m_nSize);
+    }
+
+    PtrRawT endRaw() const
+    {
+        return toCharPtr_raw(end());
     }
 
     bool operator==(const DFG_CLASS_NAME(StringView)& other) const

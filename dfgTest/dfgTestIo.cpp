@@ -818,10 +818,11 @@ TEST(dfgIo, OfStreamWithEncoding)
         ostrm.writeBytes(std::string(4, 'a'));
         ostrm.writeBytes(szBuf);
         ostrm.writeBytes(szBuf, DFG_COUNTOF_SZ(szBuf));
+        ostrm << DFG_UTF8("e");
         ostrm.close();
         const auto readBytes = fileToByteContainer<std::string>(szFileName);
         const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
-        EXPECT_EQ(std::string(bomBytes.begin(), bomBytes.end()) + std::string("aaaaasd\0asd", DFG_COUNTOF_SZ("aaaaasd\0asd")), readBytes);
+        EXPECT_EQ(std::string(bomBytes.begin(), bomBytes.end()) + std::string("aaaaasd\0asde", DFG_COUNTOF_SZ("aaaaasd\0asde")), readBytes);
     }
 }
 

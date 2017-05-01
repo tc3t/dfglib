@@ -62,7 +62,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             const auto rv = m_encodingBuffer.overflow(byte);
             if (rv != EOF)
             {
-                m_strmBuf.sputn(m_encodingBuffer.data(), m_encodingBuffer.size());
+                privWriteEncodingBufferToStream(false); // false == don't clear buffer (because it's done in line below)
             }
             m_encodingBuffer.clearBufferWithoutDeallocAndSeekToBegin();
             return rv;
@@ -95,10 +95,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         // Not tested
         std::streamsize writeUnicodeChar(uint32 c)
         {
-            return m_encodingBuffer.writeUnicodeChar(c);
+            const auto rv = m_encodingBuffer.writeUnicodeChar(c);
+            privWriteEncodingBufferToStream();
+            return rv;
         }
 
         TextEncoding encoding() const { return m_encodingBuffer.encoding(); }
+
+        void privWriteEncodingBufferToStream(const bool bClearEncodingBuffer = true)
+        {
+            m_strmBuf.sputn(m_encodingBuffer.data(), m_encodingBuffer.size());
+            if (bClearEncodingBuffer)
+                m_encodingBuffer.clearBufferWithoutDeallocAndSeekToBegin();
+        }
 
         std::basic_filebuf<char> m_strmBuf;
         DFG_CLASS_NAME(OmcStreamBufferWithEncoding)<std::string> m_encodingBuffer;
@@ -157,6 +166,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
         template <class Iterable_T>
         std::streamsize writeBytes(const Iterable_T& iterable) { return m_streamBuffer.writeBytes(iterable); }
+
+        std::ostream& operator<<(const DFG_CLASS_NAME(StringViewUtf8)& sv)
+        {
+            auto iter = sv.beginRaw();
+            const auto end = sv.endRaw();
+            while (iter != end)
+            {
+                const auto cp = DFG_MODULE_NS(utf)::readUtfCharAndAdvance(iter, end, []() {});
+                m_streamBuffer.writeUnicodeChar(cp);
+            }
+            return *this;
+        }
 
         // Not tested
         std::streamsize writeUnicodeChar(uint32 c) { return m_streamBuffer.writeUnicodeChar(c); }
