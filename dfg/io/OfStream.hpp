@@ -8,6 +8,7 @@
 #include "../utf/utfBom.hpp"
 #include <fstream>
 #include "../build/languageFeatureInfo.hpp"
+#include "../dfgBase.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -85,6 +86,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return m_strmBuf.sputn(p, nCount);
         }
 
+        template <class Iterable_T>
+        std::streamsize writeBytes(const Iterable_T& iterable)
+        {
+            return writeBytes(ptrToContiguousMemory(iterable), count(iterable));
+        }
+
         // Not tested
         std::streamsize writeUnicodeChar(uint32 c)
         {
@@ -147,6 +154,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         TextEncoding encoding() const { return m_streamBuffer.encoding(); }
 
         std::streamsize writeBytes(const char* psz, const size_t nCount) { return m_streamBuffer.writeBytes(psz, nCount); }
+
+        template <class Iterable_T>
+        std::streamsize writeBytes(const Iterable_T& iterable) { return m_streamBuffer.writeBytes(iterable); }
 
         // Not tested
         std::streamsize writeUnicodeChar(uint32 c) { return m_streamBuffer.writeUnicodeChar(c); }

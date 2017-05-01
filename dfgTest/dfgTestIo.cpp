@@ -809,6 +809,20 @@ TEST(dfgIo, OfStreamWithEncoding)
             sRead2.push_back(ch);
         EXPECT_EQ(s, sRead2);
     }
+
+    {
+        const char szFileName[] = "testfiles/generated/OfStreamWithEncodingMiscTests.txt";
+        const auto encoding = encodingUTF8;
+        DFG_CLASS_NAME(OfStreamWithEncoding) ostrm(szFileName, encoding);
+        const char szBuf[] = "asd";
+        ostrm.writeBytes(std::string(4, 'a'));
+        ostrm.writeBytes(szBuf);
+        ostrm.writeBytes(szBuf, DFG_COUNTOF_SZ(szBuf));
+        ostrm.close();
+        const auto readBytes = fileToByteContainer<std::string>(szFileName);
+        const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
+        EXPECT_EQ(std::string(bomBytes.begin(), bomBytes.end()) + std::string("aaaaasd\0asd", DFG_COUNTOF_SZ("aaaaasd\0asd")), readBytes);
+    }
 }
 
 namespace
