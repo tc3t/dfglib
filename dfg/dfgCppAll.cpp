@@ -3,6 +3,7 @@
 */
 
 #include "colour/specRendJw.cpp"
+#include "io/widePathStrToFstreamFriendlyNonWide.cpp"
 #include "os/memoryMappedFile.cpp"
 #include "str/fmtlib/format.cc"
 #include "thread/setThreadName.cpp"

@@ -7,6 +7,7 @@
 #include "StreamBufferMem.hpp"
 #include "BasicIfStream.hpp"
 #include "fileToByteContainer.hpp"
+#include "widePathStrToFstreamFriendlyNonWide.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -25,6 +26,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         DFG_CLASS_NAME(IfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding)
+        {
+            open(sPath, encoding);
+        }
+
+        DFG_CLASS_NAME(IfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding)
         {
             open(sPath, encoding);
         }
@@ -89,6 +95,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             openT(sPath, encoding);
         }
 
+        void open(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding)
+        {
+            // m_memoryMappedFile doesn't like wchar_t, so convert it to char-version.
+            openT<char>(widePathStrToFstreamFriendlyNonWide(sPath), encoding);
+        }
+
         TextEncoding encoding() const
         {
             return (m_spStreamBufferCont) ? m_spStreamBufferCont->encoding() : encodingUnknown;
@@ -119,6 +131,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {}
 
         DFG_CLASS_NAME(IfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding = encodingUnknown) :
+            BaseClass(&m_strmBuffer),
+            m_strmBuffer(sPath, encoding)
+        {
+            if (!m_strmBuffer.is_open())
+                setstate(std::ios::failbit);
+        }
+
+        DFG_CLASS_NAME(IfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding = encodingUnknown) :
             BaseClass(&m_strmBuffer),
             m_strmBuffer(sPath, encoding)
         {

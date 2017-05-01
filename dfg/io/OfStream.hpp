@@ -170,10 +170,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         std::ostream& operator<<(const DFG_CLASS_NAME(StringViewUtf8)& sv)
         {
             auto iter = sv.beginRaw();
-            const auto end = sv.endRaw();
-            while (iter != end)
+            const auto iterEnd = sv.endRaw();
+            while (iter != iterEnd)
             {
-                const auto cp = DFG_MODULE_NS(utf)::readUtfCharAndAdvance(iter, end, []() {});
+                const auto cp = DFG_MODULE_NS(utf)::readUtfCharAndAdvance(iter, iterEnd, []() {});
                 m_streamBuffer.writeUnicodeChar(cp);
             }
             return *this;
