@@ -32,6 +32,18 @@ TEST(dfg, DFG_COUNTOF)
     //DFG_COUNTOF(pIa); // This should fail to compile.
 }
 
+TEST(dfg, isEmpty)
+{
+    using namespace DFG_ROOT_NS;
+    int intArr[3];
+    std::vector<double> vecDouble(2, 1.0);
+    EXPECT_FALSE(isEmpty(intArr));
+    EXPECT_TRUE(isEmpty(std::vector<int>()));
+    EXPECT_FALSE(isEmpty(std::vector<int>(1,1)));
+    EXPECT_TRUE(isEmpty(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<double>(vecDouble.data(), 0)));
+    EXPECT_FALSE(isEmpty(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(vecDouble)));
+}
+
 TEST(dfg, Endian)
 {
 #ifdef _WIN32

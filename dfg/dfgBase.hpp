@@ -40,6 +40,9 @@ template <class T> inline const T& Max(const T& v1, const T& v2, const T& v3, co
 template<class ContT> size_t count(const ContT& cont) {return cont.size();}
 template<class T, size_t N> size_t count(const T (&)[N]) {return N;}
 
+template<class Iterable_T>  bool isEmpty(const Iterable_T& iterable) { return iterable.empty(); }
+template<class T, size_t N> bool isEmpty(const T(&)[N])              { return N == 0;           }
+
 //template <class ContT> typename ContT::const_iterator cbegin(const ContT& cont) {return cont.cbegin();}
 //template <class ContT> typename ContT::const_iterator cend(const ContT& cont) {return cont.cend();}
 template <class ContT> auto cbegin(const ContT& cont) -> decltype(cont.cbegin()) { return cont.cbegin(); }
