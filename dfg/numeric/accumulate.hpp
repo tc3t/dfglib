@@ -4,6 +4,7 @@
 #include "../ptrToContiguousMemory.hpp"
 #include "../dfgBase.hpp" // For count. TODO: move count to it's own header.
 #include <type_traits>
+#include <limits>
 #include <numeric>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
@@ -33,6 +34,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 		typedef typename DFG_ROOT_NS::RangeToBeginPtrOrIter<Iterable_T>::type IterType;
 		return DFG_DETAIL_NS::accumulateImpl(iterable, sum, std::integral_constant<bool, std::is_pointer<IterType>::value>());
 	}
+
+    template <class Acc_T, class Iterable_T>
+    Acc_T accumulateTyped(const Iterable_T& iterable)
+    {
+        DFG_STATIC_ASSERT(std::numeric_limits<Acc_T>::has_quiet_NaN, "accumulateTyped() is available only for types that have quiet NaN.");
+        return accumulate(iterable, (!isEmpty(iterable)) ? Acc_T() : std::numeric_limits<Acc_T>::quiet_NaN());
+    }
+
+    template <class Iterable_T>
+    auto accumulate(const Iterable_T& iterable) -> typename std::remove_reference<decltype(*std::begin(iterable))>::type
+    {
+        typedef typename std::remove_reference<decltype(*std::begin(iterable))>::type ReturnValueT;
+        return accumulateTyped<ReturnValueT>(iterable);
+    }
+
+
 
 } }
 

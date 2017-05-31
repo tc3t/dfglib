@@ -1047,6 +1047,37 @@ TEST(dfgNumeric, loopVectorizationSin)
 namespace
 {
     template <class Cont_T>
+    void accumulateSingleArgTests(const Cont_T& cont, const int nRep, const typename Cont_T::value_type expected, std::true_type)
+    {
+        typedef typename Cont_T::value_type T;
+        using namespace DFG_MODULE_NS(math);
+        using namespace DFG_MODULE_NS(numeric);
+        const auto rv = accumulate(std::vector<T>());
+        DFGTEST_STATIC((std::is_same<const T, decltype(rv)>::value));
+        EXPECT_TRUE(isNan(rv));
+
+        const auto rv2 = accumulate(std::vector<T>(1, T(2)));
+        EXPECT_EQ(2, rv2);
+
+        T acc = 0;
+        {
+            DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+            for (int i = 0; i < nRep; ++i)
+                acc += DFG_MODULE_NS(numeric)::accumulate(cont);
+#if ENABLE_RUNTIME_COMPARISONS
+            const auto dElapsed = timer.elapsedWallSeconds();
+            std::cout << "numeric::accumulate(cont) with " << typeid(cont.front()).name() << ": " << 1000 * dElapsed << " ms\n";
+#endif
+        }
+        EXPECT_EQ(expected, acc);
+    }
+
+    template <class Cont_T>
+    void accumulateSingleArgTests(const Cont_T&, const int, const typename Cont_T::value_type, std::false_type)
+    {
+    }
+
+    template <class Cont_T>
     void accumulateImpl(const Cont_T& cont)
     {
         using namespace DFG_ROOT_NS;
@@ -1068,7 +1099,7 @@ namespace
                 v0Sum += DFG_MODULE_NS(numeric)::accumulate(cont, ValueType(0));
             #if ENABLE_RUNTIME_COMPARISONS
                 const auto dElapsed = timer.elapsedWallSeconds();
-                std::cout << "numeric::accumulate with " << typeid(cont.front()).name() << ": " << 1000*dElapsed << " ms\n";
+                std::cout << "numeric::accumulate(cont, ValueType(0)) with " << typeid(cont.front()).name() << ": " << 1000*dElapsed << " ms\n";
             #endif
         }
         {
@@ -1080,6 +1111,9 @@ namespace
                 std::cout << "std::accumulate with " << typeid(cont.front()).name() << ": " << 1000 * dElapsed << " ms\n";
             #endif
         }
+
+        accumulateSingleArgTests(cont, nRep, v0Sum, std::integral_constant<bool, std::numeric_limits<ValueType>::has_quiet_NaN>());
+
         EXPECT_EQ(v0Sum, v1Sum);
     }
 }
@@ -1087,6 +1121,7 @@ namespace
 TEST(dfgNumeric, accumulate)
 {
     using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(numeric);
     std::vector<uint8> vec8(40000);
     DFG_MODULE_NS(alg)::generateAdjacent(vec8, uint16(0), uint16(1));
     std::vector<uint16> vec16(30000);
@@ -1102,6 +1137,12 @@ TEST(dfgNumeric, accumulate)
     accumulateImpl(vec64);
     accumulateImpl(vecF);
     accumulateImpl(vecD);
+
+    const auto accD = accumulate(vecD);
+    EXPECT_EQ(accD, accumulateTyped<double>(vec16));
+    EXPECT_EQ(accD, accumulateTyped<double>(vec32));
+    EXPECT_EQ(accD, accumulateTyped<double>(vec64));
+    EXPECT_EQ(accD, accumulateTyped<double>(vecF));
 }
 
 TEST(dfgNumeric, rescale)
