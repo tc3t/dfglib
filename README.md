@@ -18,7 +18,7 @@ The library consists of miscellaneous features such as algorithms, containers, m
     * [median](dfg/numeric/median.hpp) & [percentile](dfg/numeric/percentile.hpp)
     * [polynomial evaluation](dfg/math/evalPolynomial.hpp) (Horner's method)
     * [spearman correlation](dfg/dataAnalysis/correlation.hpp)
-    * [spreadsheet sorting](dfg/alg/sortmultiple.hpp)
+    * [spreadsheet sorting](dfg/alg/sortMultiple.hpp)
 
 * Containers such as [flat map](dfg/cont/MapVector.hpp) and [flat set](dfg/cont/SetVector.hpp)
 
