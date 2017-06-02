@@ -51,12 +51,13 @@ inline std::string bytesToHexStr(ConstVoidPtr pBytes, const size_t nBytes)
 	return str;
 }
 
-// Inverse of bytesToHexStr. Does not check the validity of input.
+// Inverse of bytesToHexStr. Does not check the validity of input and works only with upper case letters.
 // [in] psz : Pointer null terminated string containing the hex string.
 // [out] pBuffer : Number of bytes in array.
 // [in] nbSize : Number of bytes that pBuffer can hold at least.
 // Return: pBuffer (pointer to bytes).
 // TODO: test
+// TODO: make this work also on lower case letters.
 inline void* hexStrToBytes(const ConstCharPtr psz, const VoidPtr pBuffer, const size_t nbSize)
 {
 	auto pBuf = reinterpret_cast<unsigned char*>(pBuffer);

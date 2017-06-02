@@ -23,6 +23,8 @@
 //				std::cout << szNames[mapExample<Twenty>::index] << std::endl;
 //				std::cout << szNames[mapExample<FourtyFive>::index] << std::endl;
 //
+// Related code: Frozen-library (https://github.com/serge-sans-paille/frozen)
+//
 
 #define DFG_BEGIN_STATIC_MAP(className, array) \
 	template <size_t key> struct className; \
