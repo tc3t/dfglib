@@ -996,7 +996,7 @@ TEST(dfgNumeric, loopVectorizationSin)
         {
             if (method == 0)
             {
-                DFG_ZIMPL_VECTORIZING_LOOP(destPtr, N, += std::sin(sourcePtr[i]));
+                DFG_ZIMPL_VECTORIZING_LOOP_RHS(destPtr, N, += std::sin(sourcePtr[i]));
             }
             else if (method == 1)
             {
@@ -1054,7 +1054,7 @@ namespace
         using namespace DFG_MODULE_NS(numeric);
         const auto rv = accumulate(std::vector<T>());
         DFGTEST_STATIC((std::is_same<const T, decltype(rv)>::value));
-        EXPECT_TRUE(isNan(rv));
+        EXPECT_EQ(0, rv);
 
         const auto rv2 = accumulate(std::vector<T>(1, T(2)));
         EXPECT_EQ(2, rv2);

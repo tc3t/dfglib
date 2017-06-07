@@ -3,8 +3,8 @@
 #include "../dfgDefs.hpp"
 #include "../ptrToContiguousMemory.hpp"
 #include "../dfgBase.hpp" // For count. TODO: move count to it's own header.
+#include "vectorizingLoop.hpp"
 #include <type_traits>
-#include <limits>
 #include <numeric>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
@@ -16,8 +16,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 		{
 			auto p = ptrToContiguousMemory(iterable);
 			const auto nSize = count(iterable);
-			for (size_t i = 0; i < nSize; ++i)
-				sum += p[i];
+            DFG_ZIMPL_VECTORIZING_LOOP(p, nSize, sum += p[i]);
 			return sum;
 		}
 
@@ -38,18 +37,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
     template <class Acc_T, class Iterable_T>
     Acc_T accumulateTyped(const Iterable_T& iterable)
     {
-        DFG_STATIC_ASSERT(std::numeric_limits<Acc_T>::has_quiet_NaN, "accumulateTyped() is available only for types that have quiet NaN.");
-        return accumulate(iterable, (!isEmpty(iterable)) ? Acc_T() : std::numeric_limits<Acc_T>::quiet_NaN());
+        return accumulate(iterable, Acc_T());
     }
 
     template <class Iterable_T>
     auto accumulate(const Iterable_T& iterable) -> typename std::remove_reference<decltype(*std::begin(iterable))>::type
     {
         typedef typename std::remove_reference<decltype(*std::begin(iterable))>::type ReturnValueT;
+        DFG_STATIC_ASSERT(std::is_floating_point<ReturnValueT>::value, "Single argument accumulate() is available only for floating point types.");
+        // Rationale: with integers sum type overflow is more of a concern so in those cases force the programmer to do the sum type decision.
+
         return accumulateTyped<ReturnValueT>(iterable);
     }
-
-
 
 } }
 

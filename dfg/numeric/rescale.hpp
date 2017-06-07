@@ -24,7 +24,7 @@ namespace DFG_DETAIL_NS
     {
         auto p = ::DFG_ROOT_NS::ptrToContiguousMemory(iterable);
         const auto nSize = count(iterable);
-        DFG_ZIMPL_VECTORIZING_LOOP(p, nSize, = minEnd + (p[i] - oldMin) * scaleFactor);
+        DFG_ZIMPL_VECTORIZING_LOOP_RHS(p, nSize, = minEnd + (p[i] - oldMin) * scaleFactor);
     }
 }
 

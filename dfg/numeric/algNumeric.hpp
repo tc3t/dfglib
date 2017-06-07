@@ -63,7 +63,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 	{
 		if (addValue == 0)
 			return;
-		DFG_ZIMPL_VECTORIZING_LOOP(arr, nSize, += addValue);
+        DFG_ZIMPL_VECTORIZING_LOOP_RHS(arr, nSize, += addValue);
 	}
 
 	template <class Cont_T, class T>
@@ -77,7 +77,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 	{
 		if (mul == 1)
 			return;
-		DFG_ZIMPL_VECTORIZING_LOOP(arr, nSize, *= mul);
+        DFG_ZIMPL_VECTORIZING_LOOP_RHS(arr, nSize, *= mul);
 	}
 
 	template <class Cont_T, class T>
@@ -91,7 +91,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
     {
         if (val == 0)
             return;
-        DFG_ZIMPL_VECTORIZING_LOOP(arr, nSize, -= val);
+        DFG_ZIMPL_VECTORIZING_LOOP_RHS(arr, nSize, -= val);
     }
 
     template <class Cont_T, class T>
@@ -105,7 +105,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
     {
         if (val == 1)
             return;
-        DFG_ZIMPL_VECTORIZING_LOOP(arr, nSize, /= val);
+        DFG_ZIMPL_VECTORIZING_LOOP_RHS(arr, nSize, /= val);
     }
 
     template <class Cont_T, class T>
@@ -121,7 +121,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 	{
 		using namespace DFG_ROOT_NS;
 		const auto nSize = Min(nSize0, nSize1);
-		DFG_ZIMPL_VECTORIZING_LOOP(dest, nSize, = source0[i] + source1[i]);
+        DFG_ZIMPL_VECTORIZING_LOOP_RHS(dest, nSize, = source0[i] + source1[i]);
 	}
 
 	template <class Iterable0_T, class Iterable1_T, class Dest_T>
@@ -138,7 +138,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 	{
 		using namespace DFG_ROOT_NS;
 		const auto nSize = Min(nSize0, nSize1);
-		DFG_ZIMPL_VECTORIZING_LOOP(dest, nSize, = source0[i] * source1[i]);
+        DFG_ZIMPL_VECTORIZING_LOOP_RHS(dest, nSize, = source0[i] * source1[i]);
 	}
 
 	template <class Iterable0_T, class Iterable1_T, class Dest_T>
@@ -148,5 +148,4 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 		transformMultiply(ptrToContiguousMemory(source0), count(source0), ptrToContiguousMemory(source1), count(source1), dest);
 	}
 
-//#undef DFG_ZIMPL_VECTORIZING_LOOP
 } }
