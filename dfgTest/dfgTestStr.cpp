@@ -304,7 +304,7 @@ TEST(dfgStr, strToByLexCast)
     EXPECT_EQ(true, bSuccess);
 
     DFG_SUB_NS_NAME(str)::strToByNoThrowLexCast("1a0", a0, &bSuccess);
-    EXPECT_EQ(false, bSuccess);
+    EXPECT_FALSE(bSuccess);
 
 }
 
@@ -729,6 +729,7 @@ TEST(dfgStr, HexStr)
         EXPECT_EQ(memcmp(s.c_str(), &sComp[0], sComp.size()), 0);
         std::vector<char> v2(v.size(), 0);
         EXPECT_EQ(v.size(), v2.size());
+        EXPECT_TRUE(isValidHexStr(s));
         hexStrToBytes(s.c_str(), &v2[0], v2.size());
         EXPECT_EQ(memcmp(&v[0], &v2[0], v.size()), 0);
     }
@@ -738,8 +739,48 @@ TEST(dfgStr, HexStr)
     // +1 in int32_min is for VC2010 buggy uniform_int_distribution, for which the workaround does not available in all cases.
     forEachFwd(b, [&](int& v){v = DFG_MODULE_NS(rand)::rand(re, DFG_ROOT_NS::int32_min+1, DFG_ROOT_NS::int32_max); });
     auto str = bytesToHexStr(b, sizeof(b));
+    EXPECT_TRUE(isValidHexStr(str));
     hexStrToBytes(str.c_str(), b2, sizeof(b2));
     EXPECT_EQ(memcmp(b, b2, sizeof(b)), 0);
+
+    // Test that reading hex string that has letters works regardless of the case.
+    {
+        const char szHexUpper[] = { 55, 65, 48, 66, 54, 70,'\0'};       // 7A0B6F
+        const char szHexLower[] = { 55, 97, 48, 98, 54, 102, '\0' };    // 7a0b6f
+        const char szHexMixed[] = { 55, 65, 48, 98, 54, 102, '\0' };    // 7A0b6f
+        const char szHexExpected[] = { (7 << 4) + 0xa, 0xb, (6 << 4) + 0xf, '\0' };
+        std::string sUpper(3, '\0');
+        std::string sLower(3, '\0');
+        std::string sMixed(3, '\0');
+        
+        hexStrToBytes(szHexUpper, ptrToContiguousMemory(sUpper), sUpper.size());
+        hexStrToBytes(szHexLower, ptrToContiguousMemory(sLower), sLower.size());
+        hexStrToBytes(szHexMixed, ptrToContiguousMemory(sMixed), sMixed.size());
+        EXPECT_TRUE(isValidHexStr(szHexUpper));
+        EXPECT_TRUE(isValidHexStr(szHexLower));
+        EXPECT_TRUE(isValidHexStr(szHexMixed));
+        EXPECT_EQ(szHexExpected, sUpper);
+        EXPECT_EQ(szHexExpected, sLower);
+        EXPECT_EQ(szHexExpected, sMixed);
+    }
+
+    // Test that less-than-needed output buffer is not overwritten.
+    {
+        const char szHexUpper[] = "aaaa";
+        std::string s(1, '\0');
+        hexStrToBytes(szHexUpper, ptrToContiguousMemory(s), s.size());
+        EXPECT_EQ(0xAA, static_cast<unsigned char>(s[0]));
+        EXPECT_EQ('\0', *(s.data() + 1));
+    }
+
+    // isValidHexStr tests
+    {
+        EXPECT_FALSE(isValidHexStr("abc"));
+        EXPECT_FALSE(isValidHexStr("abcr"));
+        EXPECT_FALSE(isValidHexStr("ffbbccdd88\t"));
+        EXPECT_FALSE(isValidHexStr("ffbbccdd88F\t"));
+        EXPECT_FALSE(isValidHexStr("gf"));
+    }
 }
 
 TEST(dfgStr, skipWhitespacesSz)
