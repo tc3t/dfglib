@@ -3,6 +3,14 @@
 // languageFeatureInfo.hpp
 // Purpose: Define constants that can be used to do conditional compilation based on availability of different
 // language features.
+// For more robust solution, see
+//    -<boost/config.hpp>
+//    -http://www.boost.org/doc/libs/1_64_0/libs/config/doc/html/boost_config/boost_macro_reference.html
+// Some shortcuts:
+//    #include <boost/config.hpp>
+//    #include <boost/config/compiler/gcc.hpp>
+//    #include <boost/config/compiler/visualc.hpp>
+
 
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
@@ -59,3 +67,16 @@
     #define DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT 1
 #endif
 
+// DFG_LANGFEAT_U8_CHAR_LITERALS
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__MINGW32__) && __GNUC__ < 5) // TODO: revise. In Boost, threshold for BOOST_NO_CXX11_UNICODE_LITERALS was gcc 4.5, but didn't seem to compile with MinGW 4.8.0
+    #define DFG_LANGFEAT_U8_CHAR_LITERALS 0
+#else
+    #define DFG_LANGFEAT_U8_CHAR_LITERALS 1
+#endif
+
+// DFG_LANGFEAT_UNICODE_STRING_LITERALS
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__MINGW32__) && __GNUC__ < 5) // TODO: revise MinGW/GCC part.
+    #define DFG_LANGFEAT_UNICODE_STRING_LITERALS 0
+#else
+    #define DFG_LANGFEAT_UNICODE_STRING_LITERALS 1
+#endif
