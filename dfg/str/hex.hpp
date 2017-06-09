@@ -66,7 +66,7 @@ inline std::string bytesToHexStr(ConstVoidPtr pBytes, const size_t nBytes)
 // Returns true if char is valid hex char in the sense that hexStrToBytes() accepts it.
 inline bool isValidHexChar(const unsigned char c)
 {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    return (c >= DFG_U8_CHAR('0') && c <= DFG_U8_CHAR('9')) || (c >= DFG_U8_CHAR('a') && c <= DFG_U8_CHAR('f')) || (c >= DFG_U8_CHAR('A') && c <= DFG_U8_CHAR('F'));
 }
 
 // Returns true if sv is empty or valid hex sequence in the sense that hexStrToBytes() accepts it.

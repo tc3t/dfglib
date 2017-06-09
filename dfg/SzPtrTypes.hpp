@@ -56,7 +56,7 @@ struct TypedCharPtrT
         return (m_p != nullptr);
     }
 
-    // Note: Char_T may have be 'const char'. Allow const to return char* as constness 
+    // Note: Char_T may be 'const char'. Allow const to return char* as constness 
     //      for this class is determined by the address pointed to, not by it's content.
     Char_T*         rawPtr() const     { return m_p; }
 
@@ -118,8 +118,19 @@ DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Utf8);
 // Literal creation macros.
 // Usage: DFG_ASCII("abc")
 // Note that DFG_ASCII("abc") and SzPtrAscii("abc") are different: the macro version is intended to guarantee that the string representation is really ASCII, while the 
-// latter requires that the compiler implementes "abc" as ASCII. So essentially DFG_UTF8("abc") should be equivalent to SzPtrUtf8(u8"abc")
-#define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(x)   // Creates typed ascii-string literal from string literal. Usage: DFG_ASCII("abc")  (TODO: implement, currently a placeholder)
-#define DFG_UTF8(x)     ::DFG_ROOT_NS::SzPtrUtf8(x)    // Creates typed utf8-string literal from string literal. Usage: DFG_UTF8("abc")    (TODO: implement, currently a placeholder)
+// latter requires that the compiler implements "abc" as ASCII. So essentially DFG_UTF8("abc") should be equivalent to SzPtrUtf8(u8"abc")
+#if DFG_LANGFEAT_UNICODE_STRING_LITERALS
+    #define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(u8##x) // TODO: verify that x is ASCII-compatible.
+    #define DFG_UTF8(x)     ::DFG_ROOT_NS::SzPtrUtf8(u8##x)
+#else
+    #define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(x)   // Creates typed ascii-string literal from string literal. Usage: DFG_ASCII("abc")  (TODO: implement, currently a placeholder)
+    #define DFG_UTF8(x)     ::DFG_ROOT_NS::SzPtrUtf8(x)    // Creates typed utf8-string literal from string literal. Usage: DFG_UTF8("abc")    (TODO: implement, currently a placeholder)
+#endif
+
+#if DFG_LANGFEAT_U8_CHAR_LITERALS
+    #define DFG_U8_CHAR(x)    u8##x
+#else
+    #define DFG_U8_CHAR(x)    x
+#endif
 
 } // root namespace

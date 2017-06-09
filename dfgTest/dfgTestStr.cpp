@@ -944,3 +944,28 @@ TEST(dfgStr, toCstr)
     EXPECT_EQ(SzPtrLatin1(szConst), toCstr(SzPtrLatin1(szConst)));
     EXPECT_EQ(SzPtrUtf8(szConst), toCstr(SzPtrUtf8(szConst)));
 }
+
+TEST(dfgStr, StringLiteralMacros)
+{
+    using namespace DFG_MODULE_NS(str);
+
+    {
+        DFG_U8_CHAR('a') == 97;
+        auto sz = DFG_ASCII("abc");
+        EXPECT_EQ(97, sz.c_str()[0]);
+        EXPECT_EQ(98, sz.c_str()[1]);
+        EXPECT_EQ(99, sz.c_str()[2]);
+    }
+
+#if DFG_LANGFEAT_UNICODE_STRING_LITERALS
+    {
+        auto sz = DFG_UTF8("a\u00E4\u00F6");
+        ASSERT_EQ(5, strLen(sz.c_str()));
+        EXPECT_EQ(97,   sz.c_str()[0]);
+        EXPECT_EQ(0xC3, static_cast<unsigned char>(sz.c_str()[1]));
+        EXPECT_EQ(0xA4, static_cast<unsigned char>(sz.c_str()[2]));
+        EXPECT_EQ(0xC3, static_cast<unsigned char>(sz.c_str()[3]));
+        EXPECT_EQ(0xB6, static_cast<unsigned char>(sz.c_str()[4]));
+    }
+#endif
+}
