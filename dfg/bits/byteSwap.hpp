@@ -14,7 +14,7 @@ DFG_ROOT_NS_BEGIN
 		ByteOrderBigEndian,
 #ifdef BOOST_ENDIAN_LITTLE_BYTE
 		ByteOrderHost = ByteOrderLittleEndian
-#elif defined(BOOST_ENDIAN_BIG_BYTE) 
+#elif defined(BOOST_ENDIAN_BIG_BYTE)
 		ByteOrderHost = ByteOrderBigEndian
 #else
 		ByteOrderHost = ByteOrderUnknown
@@ -34,13 +34,11 @@ DFG_ROOT_NS_BEGIN
 	template <class T> T byteSwapImpl(T val, std::integral_constant<size_t, 2>) { return _byteswap_ushort(val); }
 	template <class T> T byteSwapImpl(T val, std::integral_constant<size_t, 4>) { return _byteswap_ulong(val); }
 	template <class T> T byteSwapImpl(T val, std::integral_constant<size_t, 8>) { return _byteswap_uint64(val); }
-#elif defined(__MINGW32__)
+#else // Implementation below works at least in GCC/MinGW.
     template <class T> T byteSwapImpl(T val, std::integral_constant<size_t, 1>) { return val; }
     template <class T> T byteSwapImpl(T val, std::integral_constant<size_t, 2>) { return __builtin_bswap16(val); }
     template <class T> T byteSwapImpl(T val, std::integral_constant<size_t, 4>) { return __builtin_bswap32(val); }
     template <class T> T byteSwapImpl(T val, std::integral_constant<size_t, 8>) { return __builtin_bswap64(val); }
-#else
-	// TODO:
 #endif
 
 	template <class T>

@@ -9,8 +9,11 @@
 
 #include "targetver.h"
 
-#include <stdio.h>
-#include <tchar.h>
+#include <cstdio>
+
+#ifdef _WIN32
+    #include <tchar.h>
+#endif
 
 #pragma warning(push, 1)
     #include "../externals/gtest/gtest.h"
