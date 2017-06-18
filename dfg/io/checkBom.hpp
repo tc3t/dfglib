@@ -3,7 +3,7 @@
 #include "../dfgDefs.hpp"
 #include "../ReadOnlySzParam.hpp"
 #include "../utf/utfBom.hpp"
-#include "textencodingtypes.hpp"
+#include "textEncodingTypes.hpp"
 #include "createInputStream.hpp"
 #include "readBinary.hpp"
 

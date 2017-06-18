@@ -1,7 +1,7 @@
 #pragma once
 
 #include "table.hpp"
-#include "../io/textencodingtypes.hpp"
+#include "../io/textEncodingTypes.hpp"
 #include "../io/EndOfLineTypes.hpp"
 #include "../io/DelimitedTextReader.hpp"
 #include "../io/DelimitedTextWriter.hpp"

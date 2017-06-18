@@ -2,7 +2,7 @@
 
 #include "../buildConfig.hpp"
 #include "../io.hpp"
-#include "../RangeIterator.hpp"
+#include "../rangeIterator.hpp"
 #include "../iter/OstreamIterator.hpp"
 #include <algorithm>
 #include <iterator>

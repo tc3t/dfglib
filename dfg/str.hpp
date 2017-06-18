@@ -7,7 +7,7 @@
 #include <string>
 #include "math/roundedUpToMultiple.hpp"
 #include "str/strCmp.hpp"
-#include "str/strlen.hpp"
+#include "str/strLen.hpp"
 #include "ReadOnlySzParam.hpp"
 #include <boost/lexical_cast.hpp>
 #include <cstdio>

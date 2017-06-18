@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "ElementType.hpp"
+#include "elementType.hpp"
 #include "../alg/sortSingleItem.hpp"
 #include <algorithm>
 

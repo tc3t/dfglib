@@ -18,7 +18,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
 #include <dfg/build/languageFeatureInfo.hpp>
 #include <dfg/typeTraits.hpp>
 #include <dfg/cont/tableCsv.hpp>
-#include <dfg/cont/valuearray.hpp>
+#include <dfg/cont/valueArray.hpp>
 #include <dfg/str/strTo.hpp>
 
 #include <dfg/cont/MapVector.hpp>

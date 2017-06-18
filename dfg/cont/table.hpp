@@ -5,7 +5,7 @@
 #include "../dfgBase.hpp"
 #include "../str.hpp"
 #include "../alg/sortMultiple.hpp"
-#include "../io/textencodingtypes.hpp"
+#include "../io/textEncodingTypes.hpp"
 #include <algorithm>
 #include <vector>
 #include <numeric>
