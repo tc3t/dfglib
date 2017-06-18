@@ -123,8 +123,7 @@ TEST(dfgIter, szIterator)
     auto range = makeSzRange(sz);
     auto rangeConst = makeSzRange(szConst);
 
-    // TODO: only disable for MinGW versions that do not have std::identity.
-#ifndef __MINGW32__
+#ifdef _MSC_VER // TODO: disable only when std::identity is not available.
     DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzIterator(sz))>::type::pointer, char*>::value));
     DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzIterator(szConst))>::type::pointer, const char*>::value));
     DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzRange(sz))>::type::pointer, char*>::value));
