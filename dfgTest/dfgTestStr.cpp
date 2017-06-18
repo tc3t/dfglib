@@ -405,7 +405,7 @@ TEST(dfgStr, strTo)
 namespace
 {
     template <class T>
-    void toStrCommonFloatingPointTests(const char* pExpectedLowest, const char* pExpectedMax)
+    void toStrCommonFloatingPointTests(const char* pExpectedLowest, const char* pExpectedMax, const char* pExpectedMinPositive)
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(str);
@@ -413,10 +413,17 @@ namespace
         typedef std::numeric_limits<T> NumLim;
         EXPECT_EQ("0.76", DFG_SUB_NS_NAME(str)::toStrC(T(0.76)));
 
+        {
+            const auto s = DFG_SUB_NS_NAME(str)::toStrC(T(1e-9));
+            EXPECT_TRUE(s == "1e-9" || s == "1e-09" || s == "1e-009");
+        }
+
         if (pExpectedLowest)
             EXPECT_EQ(pExpectedLowest, DFG_SUB_NS_NAME(str)::toStrC(NumLim::lowest()));
         if (pExpectedMax)
             EXPECT_EQ(pExpectedMax, DFG_SUB_NS_NAME(str)::toStrC(NumLim::max()));
+        if (pExpectedMinPositive)
+            EXPECT_EQ(pExpectedMinPositive, DFG_SUB_NS_NAME(str)::toStrC(NumLim::min()));
 
         // +-inf
         EXPECT_EQ("inf", DFG_SUB_NS_NAME(str)::toStrC(NumLim::infinity()));
@@ -436,21 +443,24 @@ TEST(dfgStr, toStr)
     EXPECT_EQ("123456789", DFG_SUB_NS_NAME(str)::toStrC(123456789.0));
     EXPECT_EQ("123456789.012345", DFG_SUB_NS_NAME(str)::toStrC(123456789.012345));
     EXPECT_EQ("-123456789.01234567", DFG_SUB_NS_NAME(str)::toStrC(-123456789.01234567));
+    EXPECT_EQ("0.3", DFG_SUB_NS_NAME(str)::toStrC(0.3));
     EXPECT_EQ("5896249", DFG_SUB_NS_NAME(str)::toStrC(5896249));
 
     // Floating point tests
     {
 #if (DFG_MSVC_VER != 0 && DFG_MSVC_VER < DFG_MSVC_VER_2015) || defined(__MINGW32__)
-        const char szFloatMin[] = "-3.40282347e+038";
-        const char szFloatMax[] = "3.40282347e+038";
+        const char szFloatMin[]         = "-3.40282347e+038";
+        const char szFloatMax[]         = "3.40282347e+038";
+        const char szFloatMinPositive[] = "1.17549435e-038";
 #else
-        const char szFloatMin[] = "-3.40282347e+38";
-        const char szFloatMax[] = "3.40282347e+38";
+        const char szFloatMin[]         = "-3.40282347e+38";
+        const char szFloatMax[]         = "3.40282347e+38";
+        const char szFloatMinPositive[] = "1.17549435e-38";
 #endif
-        toStrCommonFloatingPointTests<float>(szFloatMin, szFloatMax);
-        toStrCommonFloatingPointTests<double>("-1.7976931348623157e+308", "1.7976931348623157e+308");
+        toStrCommonFloatingPointTests<float>(szFloatMin, szFloatMax, szFloatMinPositive);
+        toStrCommonFloatingPointTests<double>("-1.7976931348623157e+308", "1.7976931348623157e+308", "2.2250738585072014e-308");
 #ifndef __MINGW32__ // Tests for long double failed on MinGW 4.8.0 for unknown reason so disable for now on MinGW.
-        toStrCommonFloatingPointTests<long double>(nullptr, nullptr);
+        toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
 #endif
     }
 }
