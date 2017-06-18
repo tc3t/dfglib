@@ -2,7 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "iteratorTemplate.hpp"
-#include "../Rangeiterator.hpp"
+#include "../rangeIterator.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(iter) {
 

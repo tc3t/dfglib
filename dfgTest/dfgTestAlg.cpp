@@ -13,7 +13,7 @@
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/iter/szIterator.hpp>
 #include <dfg/rangeIterator.hpp>
-#include <dfg/numeric/algnumeric.hpp>
+#include <dfg/numeric/algNumeric.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/math.hpp>
 #include <functional>

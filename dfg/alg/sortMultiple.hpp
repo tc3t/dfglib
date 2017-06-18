@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../cont/elementtype.hpp"
+#include "../cont/elementType.hpp"
 #include "generateAdjacent.hpp"
 #include "../func.hpp"
 #include <vector>

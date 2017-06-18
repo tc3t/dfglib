@@ -6,7 +6,7 @@
 #include "ptrToContiguousMemory.hpp"
 #include "alg/generateAdjacent.hpp"
 #include <iterator> // std::distance
-#include "cont/ElementType.hpp"
+#include "cont/elementType.hpp"
 
 // TODO: Check usage of std::begin/end. Should it use dfg-defined begin/end (e.g. in case that the used environment does not provide those?)
 

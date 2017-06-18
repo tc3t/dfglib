@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../build/LanguageFeatureInfo.hpp"
+#include "../build/languageFeatureInfo.hpp"
 #include "../preprocessor/compilerInfoMsvc.hpp"
 #include <type_traits>
 

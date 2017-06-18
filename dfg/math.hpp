@@ -5,7 +5,7 @@
 #include "math/constants.hpp"
 #include "math/pdf.hpp"
 #include <cmath>
-#include "build/languagefeatureinfo.hpp"
+#include "build/languageFeatureInfo.hpp"
 
 #if !DFG_LANGFEAT_HAS_ISNAN && _MSC_VER
 	#include <float.h>
