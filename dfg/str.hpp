@@ -12,6 +12,7 @@
 #include <boost/lexical_cast.hpp>
 #include <cstdio>
 #include <limits>
+#include <cstdarg>
 
 #define DFG_TEXT_ANSI(str)	str	// Intended as marker for string literals that are promised
                                 // (by the programmer) to be ANSI-encoded.
@@ -66,9 +67,45 @@ Char_T* strCpyAllThatFit(Char_T* const pDstBegin, const size_t nSizeInChars, con
 }
 
 template <class Char_T, size_t N>
-Char_T* strCpyAllThatFit(Char_T (&szDest)[N], const Char_T* pszSrc)
+Char_T* strCpyAllThatFit(Char_T(&szDest)[N], const Char_T* pszSrc)
 {
     return strCpyAllThatFit(szDest, N, pszSrc);
+}
+
+namespace DFG_DETAIL_NS
+{
+    // TODO: revise behaviour differences between _WIN32 and others.
+    inline int sprintf_s(char* buffer, size_t sizeInCharacters, const char* pszFormat, ...)
+    {
+        va_list args;
+        va_start(args, pszFormat);
+#ifdef _WIN32
+        auto rv = vsprintf_s(buffer, sizeInCharacters, pszFormat, args);
+#else
+        auto rv = vsnprintf(buffer, sizeInCharacters, pszFormat, args);
+#endif
+        va_end(args);
+        return rv;
+    }
+}
+
+template <class Str_T, class T>
+Str_T toStrT(const T& obj)
+{
+    return boost::lexical_cast<Str_T>(obj);
+}
+
+template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszFormat) // TODO: test
+{
+    DFG_DETAIL_NS::sprintf_s(buf, N, pszFormat, val);
+    return buf;
+}
+
+template <class T, class Str_T>
+Str_T& toStr(const T& obj, Str_T& str)
+{
+    str = toStrT<Str_T>(obj);
+    return str;
 }
 
 // Converts a double to string so that std::atof(toStr(val,...)) == val for all non-NaN, finite numbers.
@@ -93,7 +130,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
         nPrec = 999;
     char szFormat[8] = "";
     std::sprintf(szFormat, "%%.%ug", nPrec);
-    sprintf_s(psz, nDstSize, szFormat, val);
+    DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val);
 
     // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
     //               std::atof(pszLonger) == std::atof(pszShorter).
@@ -101,10 +138,10 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     {
         char szShortFormat[8] = "";
         std::sprintf(szShortFormat, "%%.%ug", std::numeric_limits<T>::digits10);
-        sprintf_s(psz, nDstSize, szShortFormat, val);
+        DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szShortFormat, val);
         if (static_cast<T>(std::atof(psz)) == val)
             return psz;
-        sprintf_s(psz, nDstSize, szFormat, val); // Shorter was too short, reconvert.
+        DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val); // Shorter was too short, reconvert.
     }
     return psz;
 }
@@ -124,42 +161,62 @@ inline Str_T floatingPointToStr(const double val, const int nPrecParam = -1)
     return s;
 }
 
+namespace DFG_DETAIL_NS
+{
+#ifdef _WIN32
+#define DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(INPUTTYPE, CHARTYPE, FUNCNAME, IMPLFUNC) \
+    inline errno_t FUNCNAME(INPUTTYPE value, CHARTYPE* buffer, size_t sizeInCharacters, int radix) \
+    { \
+        return IMPLFUNC(value, buffer, sizeInCharacters, radix); \
+    }
+#else // case: not _WIN32
+#define DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(INPUTTYPE, CHARTYPE, FUNCNAME, IMPLFUNC) \
+    inline int FUNCNAME(INPUTTYPE value, CHARTYPE* buffer, size_t sizeInCharacters, int radix) \
+    { \
+        auto s = toStrT<std::basic_string<CHARTYPE>>(value); \
+        strCpyAllThatFit(buffer, sizeInCharacters, s.c_str()); \
+        return (sizeInCharacters > s.size()) ? 0 : EINVAL; \
+    }
+#endif // _WIN32
+
+#define DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS(f1, f2, f3, f4, f5, f6, f7, f8) \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(int32,   char,         i32toa_s,   f1); \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(int32,   wchar_t,      i32tow_s,   f2); \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(uint32,  char,         ui32toa_s,  f3); \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(uint32,  wchar_t,      ui32tow_s,  f4); \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(int64,   char,         i64toa_s,   f5); \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(int64,   wchar_t,      i64tow_s,   f6); \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(uint64,  char,         ui64toa_s,  f7); \
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(uint64,  wchar_t,      ui64tow_s,  f8);
+
+#ifdef _WIN32
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS(_itoa_s, _itow_s, _ultoa_s, _ultow_s, _i64toa_s, _i64tow_s, _ui64toa_s, _ui64tow_s)
+#else
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS(1,2,3,4,5,6,7,8)
+#endif
+
+#undef DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS
+#undef DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION
+
+} // namespace DFG_DETAIL_NS 
+
 #define DFG_INTERNAL_DEFINE_TOSTR(CHAR, TYPE, FUNC, PARAM) \
     inline              CHAR* toStr(TYPE val, CHAR* buf, const size_t nBufCount,    const int param = PARAM)  { FUNC(val, buf, nBufCount, param); return buf; } \
     template <size_t N> CHAR* toStr(TYPE val, CHAR (&buf)[N],                       const int param = PARAM)  { return toStr(val, buf, N, param); }
 
-DFG_INTERNAL_DEFINE_TOSTR(char,     int32,      _itoa_s,    10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int32,      _itow_s,    10);
-DFG_INTERNAL_DEFINE_TOSTR(char,     uint32,     _ultoa_s,   10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint32,     _ultow_s,   10);
-DFG_INTERNAL_DEFINE_TOSTR(char,     int64,      _i64toa_s,  10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int64,      _i64tow_s,  10);
-DFG_INTERNAL_DEFINE_TOSTR(char,     uint64,     _ui64toa_s, 10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint64,     _ui64tow_s, 10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     int32,          DFG_DETAIL_NS::i32toa_s,            10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int32,          DFG_DETAIL_NS::i32tow_s,            10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     uint32,         DFG_DETAIL_NS::ui32toa_s,           10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint32,         DFG_DETAIL_NS::ui32tow_s,           10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     int64,          DFG_DETAIL_NS::i64toa_s,            10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int64,          DFG_DETAIL_NS::i64tow_s,            10);
+DFG_INTERNAL_DEFINE_TOSTR(char,     uint64,         DFG_DETAIL_NS::ui64toa_s,           10);
+DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint64,         DFG_DETAIL_NS::ui64tow_s,           10);
 DFG_INTERNAL_DEFINE_TOSTR(char,     float,          floatingPointToStr<float>,          -1);
 DFG_INTERNAL_DEFINE_TOSTR(char,     double,         floatingPointToStr<double>,         -1);
 DFG_INTERNAL_DEFINE_TOSTR(char,     long double,    floatingPointToStr<long double>,    -1);
 
 #undef DFG_INTERNAL_DEFINE_TOSTR
-
-template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszFormat) // TODO: test
-{
-    sprintf_s(buf, N, pszFormat, val);
-    return buf;
-}
-
-template <class T, class Str_T>
-Str_T& toStr(const T& obj, Str_T& str)
-{
-    str = boost::lexical_cast<Str_T>(obj);
-    return str;
-}
-
-template <class Str_T, class T>
-Str_T toStrT(const T& obj)
-{
-    return boost::lexical_cast<Str_T>(obj);
-}
 
 template <class T> std::string toStrCImpl(const T& d, const std::true_type) // Type is floating_point type.
 { 
@@ -181,8 +238,8 @@ std::wstring toStrW(const T& obj)
     return boost::lexical_cast<std::wstring>(obj);
 }
 
-template <size_t N> inline char* strCpy(char (&dest)[N], NonNullCStr pszSrc) {return strcpy(dest, pszSrc);}
-template <size_t N> inline wchar_t* strCpy(wchar_t (&dest)[N], NonNullCStrW pszSrc) {return wcscpy(dest, pszSrc);}
+template <size_t N> inline char*    strCpy(char     (&dest)[N], NonNullCStr pszSrc)     { return strcpy(dest, pszSrc); }
+template <size_t N> inline wchar_t* strCpy(wchar_t  (&dest)[N], NonNullCStrW pszSrc)    { return wcscpy(dest, pszSrc); }
 
 // Replaces occurrences of 'sOldSub' with 'sNewSub' in given string.
 // Note: Behaviour is undefined if substrings overlap with 'str'.

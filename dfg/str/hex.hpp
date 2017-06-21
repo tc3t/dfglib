@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgBase.hpp"
-#include "../dfgassert.hpp"
+#include "../dfgAssert.hpp"
 #include "../ReadOnlySzParam.hpp"
 #include <string>
 

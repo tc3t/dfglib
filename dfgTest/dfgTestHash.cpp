@@ -3,6 +3,7 @@
 #include <dfg/str.hpp>
 #include <vector>
 
+#ifdef _WIN32
 TEST(dfgHash, HashCreator)
 {
 	using namespace DFG_ROOT_NS;
@@ -21,4 +22,4 @@ TEST(dfgHash, HashCreator)
 	EXPECT_EQ(strCmp(szHashMd5, szTest1_Md5_expected), 0);
 	EXPECT_EQ(strCmp(szHashSha1, szTest1_Sha1_expected), 0);
 }
-
+#endif
