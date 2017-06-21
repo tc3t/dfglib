@@ -68,14 +68,14 @@
 #endif
 
 // DFG_LANGFEAT_U8_CHAR_LITERALS
-#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__MINGW32__) && __GNUC__ < 5) // TODO: revise. In Boost, threshold for BOOST_NO_CXX11_UNICODE_LITERALS was gcc 4.5, but didn't seem to compile with MinGW 4.8.0
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__GNUC__) && __GNUC__ < 6)
     #define DFG_LANGFEAT_U8_CHAR_LITERALS 0
 #else
     #define DFG_LANGFEAT_U8_CHAR_LITERALS 1
 #endif
 
 // DFG_LANGFEAT_UNICODE_STRING_LITERALS
-#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__MINGW32__) && __GNUC__ < 5) // TODO: revise MinGW/GCC part.
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 5)))
     #define DFG_LANGFEAT_UNICODE_STRING_LITERALS 0
 #else
     #define DFG_LANGFEAT_UNICODE_STRING_LITERALS 1
