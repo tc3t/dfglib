@@ -8,12 +8,15 @@
 #include <dfg/alg.hpp>
 #include <dfg/dfgBase.hpp>
 
+#ifdef _WIN32
 TEST(dfgOs, pathFindExtension)
 {
     using namespace DFG_MODULE_NS(os);
     using namespace DFG_MODULE_NS(str);
     EXPECT_EQ(strCmp(".txt", pathFindExtension("c:/testFolder/test.txt")), 0);
     EXPECT_EQ(strCmp(".txt", pathFindExtension("c:\\testFolder\\test.txt")), 0);
+    EXPECT_EQ(strCmp(".gz", pathFindExtension("test.tar.gz")), 0);
+    EXPECT_EQ(strCmp(".gz", pathFindExtension("c:\\testFolder\\test.tar.gz")), 0);
     EXPECT_EQ(strCmp(L".", pathFindExtension(L"c:/testFolder/test.")), 0);
     EXPECT_EQ(strCmp(L".", pathFindExtension(L"c:\\testFolder\\test.")), 0);
     EXPECT_EQ(strCmp(L"", pathFindExtension(L"c:/testFolder/test")), 0);
@@ -21,6 +24,7 @@ TEST(dfgOs, pathFindExtension)
     EXPECT_EQ(strCmp(L".extension", pathFindExtension(L"z:\\testFolder\\test\\dfg\\dfgvcbcv\\bcvbb\\.extension")), 0);
     EXPECT_NE(strCmp(L".extension", pathFindExtension(L"z:\\testFolder\\test\\dfg\\dfgvcbcv\\bcvbb\\.extensionA")), 0);
 }
+#endif
 
 TEST(dfgOs, MemoryMappedFile)
 {
@@ -35,6 +39,7 @@ TEST(dfgOs, MemoryMappedFile)
     EXPECT_EQ(bytes, vec2);
 }
 
+#ifdef _WIN32
 TEST(dfgOs, TemporaryFile)
 {
     using namespace DFG_MODULE_NS(os);
@@ -105,8 +110,9 @@ TEST(dfgOs, TemporaryFile)
         }
         EXPECT_TRUE(isPathFileAvailable(sPath.c_str(), FileModeExists));
     }
-#endif
+#endif // _MSC_VER
 }
+#endif // _WIN32
 
 TEST(dfgOs, fileSize)
 {

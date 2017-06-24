@@ -74,7 +74,7 @@ inline std::wstring getCurrentWorkingDirectoryW()
 	inline bool isPathFilePath(ConstCharPtr pszPath) {return (PathIsFileSpecA(pszPath) != 0);}
 	inline bool isPathFilePath(ConstWCharPtr pszPath) {return (PathIsFileSpecW(pszPath) != 0);}
 
-	// If extension is found, returns pointer to "." preceding the extension.
+	// If extension is found, returns pointer to the last "." found (e.g. "test.tar.gz" returns ".gz").
 	// If no extension is found, returns pointer to the trailing null character.
 	// [in] psz : Pointer to null terminated path.
 	// Win: Maximum length of string pointer to by psz is MAX_PATH.
