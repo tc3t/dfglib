@@ -5,10 +5,14 @@
 #include "../ReadOnlySzParam.hpp"
 #include <cstdio>
 
+#ifndef _WIN32
+	#include "widePathStrToFstreamFriendlyNonWide.hpp"
+#endif
+
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 
 // Basic input stream for reading data from file, currently only binary input is implemented.
-class DFG_CLASS_NAME(BasicIfStream) : public DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicIfStream)>
+class DFG_CLASS_NAME(BasicIfStream) : public DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicIfStream), fpos_t>
 {
 public:
     enum SeekOrigin { SeekOriginBegin, SeekOriginCurrent, SeekOriginEnd};
@@ -22,9 +26,13 @@ public:
 
     DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlySzParamW) sPath)
     {
+#ifdef _WIN32
         #pragma warning(disable : 4996) // This function or variable may be unsafe
         m_pFile = _wfopen(sPath.c_str(), L"rb");
         #pragma warning(default : 4996)
+#else
+        m_pFile = std::fopen(pathStrToFileApiFriendlyPath(sPath).c_str(), "rb");
+#endif
     }
 
     DFG_CLASS_NAME(BasicIfStream)(DFG_CLASS_NAME(BasicIfStream)&& other) :

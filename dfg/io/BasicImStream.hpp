@@ -97,10 +97,10 @@ public:
 
 // Basic input stream for reading characters from memory using stream-like interface.
 template <class Char_T>
-class DFG_CLASS_NAME(BasicImStream_T) : public DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicImStream_T<Char_T>), Char_T>
+class DFG_CLASS_NAME(BasicImStream_T) : public DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicImStream_T<Char_T>), size_t, Char_T>
 {
 public:
-    typedef DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicImStream_T<Char_T>), Char_T> BaseClass;
+    typedef DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicImStream_T<Char_T>), size_t, Char_T> BaseClass;
     
     typedef DFG_CLASS_NAME(BasicStreamBuffer_T)<DFG_DETAIL_NS::DefaultBasicStreamBufferBase<Char_T>> StreamBufferT;
     typedef typename BaseClass::int_type int_type;
