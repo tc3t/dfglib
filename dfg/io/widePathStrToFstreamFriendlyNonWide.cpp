@@ -3,6 +3,7 @@
 #include "../ReadOnlySzParam.hpp"
 #include "../utf.hpp"
 #include "../ptrToContiguousMemory.hpp"
+#include "../iter/szIterator.hpp"
 
 #if defined(_WIN32)
     #include <Windows.h> // For MultiByteToWideChar
@@ -33,9 +34,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     std::string widePathStrToFstreamFriendlyNonWide(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath)
     {
         // For non-Windows, for now convert to UTF8 assuming that source path is proper code points.
-        // TODO: use proper pragma, this version is one that works with MSVC.
-        #pragma message("Warning: Using untested implementation of opening file stream from wchar_t path.")
-        return DFG_MODULE_NS(utf)::codePointsToUtf8(sPath);
+        return DFG_MODULE_NS(utf)::codePointsToUtf8(DFG_ROOT_NS::makeSzRange(sPath.c_str()));
     }
 
 #endif // _WIN32

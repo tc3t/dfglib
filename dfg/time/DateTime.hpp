@@ -56,10 +56,10 @@ public:
     // Return value is positive if st0 < st1
     static std::chrono::duration<int64, std::ratio<1, 10000000>> privTimeDiff(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
     static std::chrono::seconds timeDiffInSecondsI(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
-#endif
 
     // Return value is positive if *this < other
 	std::chrono::duration<double> secondsTo(const DFG_CLASS_NAME(DateTime)& other) const;
+#endif
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
     // This behaviour differs from that of e.g. std::localtime (see systemTime_local-test)

@@ -35,6 +35,11 @@ const int16 int16_max   = INT16_MAX; // 32767
 const int32 int32_max   = INT32_MAX; // 2147483647
 const int64 int64_max   = INT64_MAX; // 9223372036854775807
 
+const uint8  uint8_min  = 0;
+const uint16 uint16_min = 0;
+const uint32 uint32_min = 0;
+const uint64 uint64_min = 0;
+
 const uint8  uint8_max  = UINT8_MAX;  // 255
 const uint16 uint16_max = UINT16_MAX; // 65535
 const uint32 uint32_max = UINT32_MAX; // 4294967295

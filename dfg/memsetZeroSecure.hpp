@@ -3,6 +3,8 @@
 
 #include "dfgBase.hpp"
 
+#ifdef _WIN32
+
 #if DFG_MSVC_VER > 0
 #pragma warning(push, 1)	// Saves warning state and sets warning level 1 to try to minimize the number of warnings from Windows.h
 #endif
@@ -34,5 +36,7 @@ inline void memsetZeroSecure(T& a)
 }
 
 } // module namespace
+
+#endif
 
 #endif

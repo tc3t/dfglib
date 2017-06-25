@@ -1,24 +1,43 @@
 #pragma once
 
 #include "dfgDefs.hpp"
+#include "dfgBaseTypedefs.hpp"
 #include <limits>
 #include <type_traits>
 
 DFG_ROOT_NS_BEGIN
 {
     template <class T> struct NumericTraits {};
-    template <> struct NumericTraits<int8> { static const int8 maxValue = int8_max; static const int8 minValue = int8_min; };
-    template <> struct NumericTraits<int16> { static const int16 maxValue = int16_max; static const int16 minValue = int16_min; };
-    template <> struct NumericTraits<int32> { static const int32 maxValue = int32_max; static const int32 minValue = int32_min; };
-    template <> struct NumericTraits<int64> { static const int64 maxValue = int64_max; static const int64 minValue = int64_min; };
 
-    template <> struct NumericTraits<uint8> { static const uint8 maxValue = uint8_max; static const uint8 minValue = 0; };
-    template <> struct NumericTraits<uint16> { static const uint16 maxValue = uint16_max; static const uint16 minValue = 0; };
-    template <> struct NumericTraits<uint32> { static const uint32 maxValue = uint32_max; static const uint32 minValue = 0; };
-    template <> struct NumericTraits<uint64> { static const uint64 maxValue = uint64_max; static const uint64 minValue = 0; };
+#ifdef _WIN32
+    #define DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(TYPE) \
+        template <> struct NumericTraits<TYPE> { static const TYPE maxValue = TYPE##_max; static const TYPE minValue = TYPE##_min; };
+#else
+    #define DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(TYPE) \
+        template <> struct NumericTraits<TYPE> { static const TYPE maxValue; static const TYPE minValue; }; \
+        const TYPE NumericTraits<TYPE>::maxValue = TYPE##_max; \
+        const TYPE NumericTraits<TYPE>::minValue = TYPE##_min;
+#endif
+
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(int8);
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(int16);
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(int32);
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(int64);
+
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(uint8);
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(uint16);
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(uint32);
+    DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(uint64);
+
+#undef DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION
 
 #if !(DFG_IS_QT_AVAILABLE) // TODO: Add robust check. This is used because at least some versions of Qt seems to have ushort == wchar_t
-    template <> struct NumericTraits<wchar_t> { static const wchar_t maxValue = WCHAR_MAX; static const wchar_t minValue = WCHAR_MIN; };
+    #ifdef _WIN32
+        template <> struct NumericTraits<wchar_t> { static const wchar_t maxValue = WCHAR_MAX; static const wchar_t minValue = WCHAR_MIN; };
+    #else
+        template <> struct NumericTraits<wchar_t> { static const wchar_t maxValue; static const wchar_t minValue; };
+        const wchar_t NumericTraits<wchar_t>::maxValue = WCHAR_MAX; const wchar_t NumericTraits<wchar_t>::minValue = WCHAR_MIN;
+    #endif
 #endif
 
     // Returns minimum value of given integer type.

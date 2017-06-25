@@ -7,6 +7,7 @@
 
 #include <chrono>
 
+#ifdef _WIN32
 TEST(dfgTime, DateTime)
 {
     using namespace DFG_MODULE_NS(time);
@@ -70,5 +71,6 @@ TEST(dfgTime, DataTime_systemTime_local)
     EXPECT_EQ(dt0.utcOffsetInfo().offsetInSeconds(), dt1.utcOffsetInfo().offsetInSeconds());
     EXPECT_EQ(dt0.utcOffsetInfo().offsetInSeconds(), dt2.utcOffsetInfo().offsetInSeconds());
 }
+#endif
 
 #endif // DFG_LANGFEAT_CHRONO_11

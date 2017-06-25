@@ -22,31 +22,31 @@ namespace DFG_DETAIL_NS
 	template <class Char_T, class Func_T>
 	inline std::basic_string<Char_T> getCurrentWorkingDirectoryImpl(Func_T func)
 	{
-		#ifdef _WIN32
-				auto p = func(NULL, 0);
-				std::basic_string<Char_T> s;
-				if (p)
-					s = p;
-				free(p);
-				return std::move(s);
-		#else
-				// Note: getcwd(NULL, 0) might not be defined as it is for _getcwd. See documentation.
-		#error Not implemented. See getcdw.
-		#endif
+		auto p = func(NULL, 0);
+		std::basic_string<Char_T> s;
+		if (p)
+			s = p;
+		free(p);
+		return std::move(s);
 	}
 } // DFG_DETAIL_NS
 
 // TODO: test
 inline std::string getCurrentWorkingDirectoryC()
 {
+#ifdef _WIN32
 	return DFG_DETAIL_NS::getCurrentWorkingDirectoryImpl<char>(&_getcwd);
+#else
+    return DFG_DETAIL_NS::getCurrentWorkingDirectoryImpl<char>(&getcwd);
+#endif
 }
 
-// TODO: test
+#ifdef _WIN32
 inline std::wstring getCurrentWorkingDirectoryW()
 {
 	return DFG_DETAIL_NS::getCurrentWorkingDirectoryImpl<wchar_t>(&_wgetcwd);
 }
+#endif
 
 #if defined(_WIN32)
 	// TODO: test
@@ -62,13 +62,17 @@ inline std::wstring getCurrentWorkingDirectoryW()
 	}
 #endif //defined(_WIN32)
 
+    enum FileMode { FileModeExists = 0, FileModeRead = 4, FileModeWrite = 2, FileModeReadWrite = 6 };
 #if defined(_WIN32)
 	// Checks whether file or folder exists and whether it has the given mode.
 	// TODO: test
-	enum FileMode {FileModeExists = 0, FileModeRead = 4, FileModeWrite = 2, FileModeReadWrite = 6};
 	inline bool isPathFileAvailable(ConstCharPtr pszFilePath, FileMode fm) {return (_access(pszFilePath, fm) == 0);}
 	inline bool isPathFileAvailable(ConstWCharPtr pszFilePath, FileMode fm) {return (_waccess(pszFilePath, fm) == 0);}
+#else
+    inline bool isPathFileAvailable(ConstCharPtr pszFilePath, FileMode fm) { return (access(pszFilePath, fm) == 0); }
+#endif
 
+#if _WIN32
 	// Returns true iff. pszPath is a filename(i.e. not an absolute or relative path), false otherwise.
 	// TODO: test
 	inline bool isPathFilePath(ConstCharPtr pszPath) {return (PathIsFileSpecA(pszPath) != 0);}

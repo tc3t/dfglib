@@ -68,43 +68,47 @@ TEST(dfg, IntTypedefs)
 
     // Note: Purpose of these tests is also to check that the typedefs are available
     // (should fail to compile if not).
-    EXPECT_EQ(sizeof(int8), 1);
-    EXPECT_EQ(sizeof(int16), 2);
-    EXPECT_EQ(sizeof(int32), 4);
-    EXPECT_EQ(sizeof(int64), 8);
+    DFGTEST_STATIC(sizeof(int8) == 1);
+    DFGTEST_STATIC(sizeof(int16) == 2);
+    DFGTEST_STATIC(sizeof(int32) == 4);
+    DFGTEST_STATIC(sizeof(int64) == 8);
 
-    EXPECT_EQ(sizeof(uint8),  sizeof(int8));
-    EXPECT_EQ(sizeof(uint16), sizeof(int16));
-    EXPECT_EQ(sizeof(uint32), sizeof(int32));
-    EXPECT_EQ(sizeof(uint64), sizeof(int64));
+    DFGTEST_STATIC(sizeof(uint8) == sizeof(int8));
+    DFGTEST_STATIC(sizeof(uint16) == sizeof(int16));
+    DFGTEST_STATIC(sizeof(uint32) == sizeof(int32));
+    DFGTEST_STATIC(sizeof(uint64) == sizeof(int64));
 
     EXPECT_EQ(int8_min, (std::numeric_limits<int8>::min)());
     EXPECT_EQ(int8_max, (std::numeric_limits<int8>::max)());
     EXPECT_EQ(uint8_max, (std::numeric_limits<uint8>::max)());
-    EXPECT_EQ(int8_min, int8(NumericTraits<int8>::minValue));
-    EXPECT_EQ(int8_max, int8(NumericTraits<int8>::maxValue));
-    EXPECT_EQ(uint8_max, uint8(NumericTraits<uint8>::maxValue));
+    DFGTEST_STATIC(int8_min == int8(NumericTraits<int8>::minValue));
+    DFGTEST_STATIC(int8_max == int8(NumericTraits<int8>::maxValue));
+    DFGTEST_STATIC(uint8_min == uint8(NumericTraits<uint8>::minValue));
+    DFGTEST_STATIC(uint8_max == uint8(NumericTraits<uint8>::maxValue));
 
     EXPECT_EQ(int16_min, (std::numeric_limits<int16>::min)());
     EXPECT_EQ(int16_max, (std::numeric_limits<int16>::max)());
     EXPECT_EQ(uint16_max, (std::numeric_limits<uint16>::max)());
-    EXPECT_EQ(int16_min, int16(NumericTraits<int16>::minValue));
-    EXPECT_EQ(int16_max, int16(NumericTraits<int16>::maxValue));
-    EXPECT_EQ(uint16_max, uint16(NumericTraits<uint16>::maxValue));
+    DFGTEST_STATIC(int16_min == int16(NumericTraits<int16>::minValue));
+    DFGTEST_STATIC(int16_max == int16(NumericTraits<int16>::maxValue));
+    DFGTEST_STATIC(uint16_min == uint16(NumericTraits<uint16>::minValue));
+    DFGTEST_STATIC(uint16_max == uint16(NumericTraits<uint16>::maxValue));
 
     EXPECT_EQ(int32_min, (std::numeric_limits<int32>::min)());
     EXPECT_EQ(int32_max, (std::numeric_limits<int32>::max)());
     EXPECT_EQ(uint32_max, (std::numeric_limits<uint32>::max)());
-    EXPECT_EQ(int32_min, int32(NumericTraits<int32>::minValue));
-    EXPECT_EQ(int32_max, int32(NumericTraits<int32>::maxValue));
-    EXPECT_EQ(uint32_max, uint32(NumericTraits<uint32>::maxValue));
+    DFGTEST_STATIC(int32_min == int32(NumericTraits<int32>::minValue));
+    DFGTEST_STATIC(int32_max == int32(NumericTraits<int32>::maxValue));
+    DFGTEST_STATIC(uint32_min == uint32(NumericTraits<uint32>::minValue));
+    DFGTEST_STATIC(uint32_max == uint32(NumericTraits<uint32>::maxValue));
 
     EXPECT_EQ(int64_min, (std::numeric_limits<int64>::min)());
     EXPECT_EQ(int64_max, (std::numeric_limits<int64>::max)());
     EXPECT_EQ(uint64_max, (std::numeric_limits<uint64>::max)());
-    EXPECT_EQ(int64_min, int64(NumericTraits<int64>::minValue));
-    EXPECT_EQ(int64_max, int64(NumericTraits<int64>::maxValue));
-    EXPECT_EQ(uint64_max, uint64(NumericTraits<uint64>::maxValue));
+    DFGTEST_STATIC(int64_min == int64(NumericTraits<int64>::minValue));
+    DFGTEST_STATIC(int64_max == int64(NumericTraits<int64>::maxValue));
+    DFGTEST_STATIC(uint64_min == uint64(NumericTraits<uint64>::minValue));
+    DFGTEST_STATIC(uint64_max == uint64(NumericTraits<uint64>::maxValue));
 
     int8 a;
     int16 b;
