@@ -61,7 +61,7 @@ public:
 // For integer cases the range is closed, [min, max] and
 // for floating point the inclusion of boundaries is unspecified.
 template <class T, class RandEngine>
-inline T rand(RandEngine& randEng, const T& min, const T& max)
+inline T rand(RandEngine& randEng, const T min, const T max)
 //------------------------------------------------------------
 {
     // Using int8/uint8 is not supported in VC2013. If T is either one of those, create the value with int
@@ -70,7 +70,7 @@ inline T rand(RandEngine& randEng, const T& min, const T& max)
     typedef typename std::conditional<bIntegral && sizeof(T) == sizeof(char), int, T>::type ImplT;
     typename DFG_CLASS_NAME(DistributionTypeUniform)<ImplT>::type distr(min, max);
     const auto val = distr(randEng);
-    DFG_ASSERT(val >= min && val <= max);
+    DFG_ASSERT_CORRECTNESS(val >= min && val <= max);
     return static_cast<T>(val);
 }
 
@@ -120,10 +120,10 @@ inline std::mt19937 createDefaultRandEngineRandomSeeded()
 // Note that this class takes reference to engine.
 template <class RandEngine, class Distr>
 struct DFG_CLASS_NAME(DistributionEngine)
-//=======================
+//=======================================
 {
     typedef typename Distr::result_type result_type;
-    DFG_CLASS_NAME(DistributionEngine)(const result_type& minRange, const result_type& maxRange, RandEngine* pNonNullRe) :
+    DFG_CLASS_NAME(DistributionEngine)(const result_type minRange, const result_type maxRange, RandEngine* pNonNullRe) :
         m_distr(minRange, maxRange),
         m_pRandEngine(pNonNullRe) {}
     result_type operator()() {return m_distr(*m_pRandEngine);}
@@ -134,8 +134,8 @@ struct DFG_CLASS_NAME(DistributionEngine)
 
 // Utility function for creating DistributionEngine with uniform distribution.
 template <class RandEngine, class Type>
-DFG_CLASS_NAME(DistributionEngine)<RandEngine, typename DFG_CLASS_NAME(DistributionTypeUniform)<Type>::type> makeDistributionEngineUniform(RandEngine* pRe, const Type& minRange, const Type& maxRange)
-//---------------------------------------------------------------------------------------------------------------------------------------------------------
+DFG_CLASS_NAME(DistributionEngine)<RandEngine, typename DFG_CLASS_NAME(DistributionTypeUniform)<Type>::type> makeDistributionEngineUniform(RandEngine* pRe, const Type minRange, const Type maxRange)
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
     return DFG_CLASS_NAME(DistributionEngine)<RandEngine, typename DFG_CLASS_NAME(DistributionTypeUniform)<Type>::type>(minRange, maxRange, pRe);
 }
