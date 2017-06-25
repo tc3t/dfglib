@@ -10,14 +10,13 @@ DFG_ROOT_NS_BEGIN
     template <class T> struct NumericTraits {};
 
 #ifdef _WIN32
-    #define DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(TYPE) \
-        template <> struct NumericTraits<TYPE> { static const TYPE maxValue = TYPE##_max; static const TYPE minValue = TYPE##_min; };
+    #define DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE  const
 #else
-    #define DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(TYPE) \
-        template <> struct NumericTraits<TYPE> { static const TYPE maxValue; static const TYPE minValue; }; \
-        const TYPE NumericTraits<TYPE>::maxValue = TYPE##_max; \
-        const TYPE NumericTraits<TYPE>::minValue = TYPE##_min;
+    #define DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE  constexpr
 #endif
+
+#define DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(TYPE) \
+        template <> struct NumericTraits<TYPE> { static DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE TYPE maxValue = TYPE##_max; static DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE TYPE minValue = TYPE##_min; };
 
     DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(int8);
     DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION(int16);
@@ -32,13 +31,10 @@ DFG_ROOT_NS_BEGIN
 #undef DFG_TEMP_DEFINE_NUMERICTRAITS_SPECIALIZATION
 
 #if !(DFG_IS_QT_AVAILABLE) // TODO: Add robust check. This is used because at least some versions of Qt seems to have ushort == wchar_t
-    #ifdef _WIN32
-        template <> struct NumericTraits<wchar_t> { static const wchar_t maxValue = WCHAR_MAX; static const wchar_t minValue = WCHAR_MIN; };
-    #else
-        template <> struct NumericTraits<wchar_t> { static const wchar_t maxValue; static const wchar_t minValue; };
-        const wchar_t NumericTraits<wchar_t>::maxValue = WCHAR_MAX; const wchar_t NumericTraits<wchar_t>::minValue = WCHAR_MIN;
-    #endif
+    template <> struct NumericTraits<wchar_t> { static DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE wchar_t maxValue = WCHAR_MAX; static DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE wchar_t minValue = WCHAR_MIN; };
 #endif
+
+#undef DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE
 
     // Returns minimum value of given integer type.
     template <class T> inline T minValueOfType()
