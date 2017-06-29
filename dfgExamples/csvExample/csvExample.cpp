@@ -57,13 +57,13 @@ int main(int argc, const char* argv[])
         for (size_t i = 0, nCount = vecStrs.size(); i < nCount; ++i)
         {
             DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellStrm(strmUtf8, vecStrs[i], cUtf8Enc, cUtf8Enc, cUtf8Eol, DFG_MODULE_NS(io)::EbNoEnclose);
-            strmUtf8 << cUtf8Sep;
+            strmUtf8.writeUnicodeChar(cUtf8Sep);
             DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellStrm(strmUtf8, DFG_MODULE_NS(str)::toStrC(vecDoubles[i]), cUtf8Enc, cUtf8Enc, cUtf8Eol, DFG_MODULE_NS(io)::EbNoEnclose);
-            strmUtf8 << cUtf8Sep;
+            strmUtf8.writeUnicodeChar(cUtf8Sep);
             DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellStrm(strmUtf8, DFG_MODULE_NS(str)::toStrC(vecInts[i]), cUtf8Enc, cUtf8Enc, cUtf8Eol, DFG_MODULE_NS(io)::EbNoEnclose);
-            strmUtf8 << cUtf8Sep;
+            strmUtf8.writeUnicodeChar(cUtf8Sep);
             strmUtf8 << vecUids[i];
-            strmUtf8 << cUtf8Eol;
+            strmUtf8.writeUnicodeChar(cUtf8Eol);
         }
     }
 
@@ -78,13 +78,13 @@ int main(int argc, const char* argv[])
         for (size_t i = 0, nCount = vecStrs.size(); i < nCount; ++i)
         {
             DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellStrm(strmUtf32Be, vecStrs[i], cUtf32Sep, cUtf32Sep, cUtf32Eol, DFG_MODULE_NS(io)::EbNoEnclose);
-            strmUtf32Be << cUtf32Sep;
+            strmUtf32Be.writeUnicodeChar(cUtf32Sep);
             DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellStrm(strmUtf32Be, DFG_MODULE_NS(str)::toStrC(vecDoubles[i]), cUtf32Sep, cUtf32Enc, cUtf32Eol, DFG_MODULE_NS(io)::EbNoEnclose);
-            strmUtf32Be << cUtf32Sep;
+            strmUtf32Be.writeUnicodeChar(cUtf32Sep);
             DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellStrm(strmUtf32Be, DFG_MODULE_NS(str)::toStrC(vecInts[i]), cUtf32Sep, cUtf32Enc, cUtf32Eol, DFG_MODULE_NS(io)::EbNoEnclose);
-            strmUtf32Be << cUtf32Sep;
+            strmUtf32Be.writeUnicodeChar(cUtf32Sep);
             strmUtf32Be << vecUids[i];
-            strmUtf32Be << cUtf32Eol;
+            strmUtf32Be.writeUnicodeChar(cUtf32Eol);
         }
     }
 
@@ -94,8 +94,8 @@ int main(int argc, const char* argv[])
     const auto utf32BeBom = DFG_MODULE_NS(io)::checkBOMFromFile(szUtf32BePath);
     DFG_ASSERT(utf8Bom == DFG_MODULE_NS(io)::encodingUTF8);
     DFG_ASSERT(utf32BeBom == DFG_MODULE_NS(io)::encodingUTF32Be);
-    std::cout << "Encoding in file '" << szUtf8Path << "': " << utf8Bom << std::endl;
-    std::cout << "Encoding in file '" << szUtf8Path << "': " << utf32BeBom << std::endl;
+    std::cout << "Encoding in file '" << szUtf8Path << "': " << encodingToStrId(utf8Bom) << std::endl;
+    std::cout << "Encoding in file '" << szUtf32BePath << "': " << encodingToStrId(utf32BeBom) << std::endl;
 
     ////////////////////////////////////////////////////////////////
     // Read files using auto dectection for separator char.

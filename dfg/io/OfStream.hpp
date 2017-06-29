@@ -9,6 +9,7 @@
 #include <fstream>
 #include "../build/languageFeatureInfo.hpp"
 #include "../dfgBase.hpp"
+#include "../str.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -166,7 +167,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
         template <class Iterable_T>
         std::streamsize writeBytes(const Iterable_T& iterable) { return m_streamBuffer.writeBytes(iterable); }
-
+        
+        // TODO: revise behaviour of operator<<. Currently is a mess accepting arbitrary collection of types.
         std::ostream& operator<<(const DFG_CLASS_NAME(StringViewUtf8)& sv)
         {
             auto iter = sv.beginRaw();
@@ -179,8 +181,70 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return *this;
         }
 
-        // Not tested
-        std::streamsize writeUnicodeChar(uint32 c) { return m_streamBuffer.writeUnicodeChar(c); }
+        // TODO: test
+        std::ostream& operator<<(const DFG_CLASS_NAME(StringViewLatin1)& sv)
+        {
+            const auto iterEnd = sv.endRaw();
+            for (auto iter = sv.beginRaw(); iter != iterEnd; ++iter)
+                writeUnicodeChar(uint8(*iter));
+            return *this;
+        }
+
+        // TODO: test
+        std::ostream& operator<<(const DFG_CLASS_NAME(StringViewAscii)& sv)
+        {
+            if (areAsciiBytesValidContentInEncoding(encoding())) // Optimization especially for UTF8-output: write ASCII-bytes with writeBytes() instead of per-char writeUnicodeChar().
+            {
+                writeBytes(sv.dataRaw(), sv.size());
+                return *this;
+            }
+            else
+                return operator<<(DFG_CLASS_NAME(StringViewLatin1)(sv.data(), sv.size()));
+        }
+
+        // TODO: test
+        template <class T>
+        std::ostream& privWriteNumericValue(const T val)
+        {
+            char buffer[32];
+            DFG_MODULE_NS(str)::toStr(val, buffer);
+            return operator<<(DFG_CLASS_NAME(StringViewAscii)(SzPtrAscii(buffer)));
+        }
+
+#define DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC(T) std::ostream& operator<<(const T val) { return privWriteNumericValue(val); }
+
+        DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC(int32);
+        DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC(uint32);
+        DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC(int64);
+        DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC(uint64);
+        DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC(float);
+        DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC(double);
+
+#undef DFG_TEMP_DEFINE_STREAM_OPERATOR_FOR_NUMERIC
+
+        std::ostream& operator<<(const char c)
+        {
+            writeUnicodeChar(c);
+            return *this;
+        }
+
+        std::ostream& operator<<(const SzPtrUtf8R tpsz)
+        {
+            return operator<<(DFG_CLASS_NAME(StringViewUtf8)(tpsz));
+        }
+
+        // TODO: test
+        template <class T>
+        std::streamsize writeUnicodeChar(T c)
+        { 
+            DFG_STATIC_ASSERT(std::is_unsigned<T>::value, "Expecting unsigned types"); // For now require unsigned types as previously passing negative char to uint32 yielded unexpected results.
+            return m_streamBuffer.writeUnicodeChar(c);
+        }
+
+        std::streamsize writeUnicodeChar(const char c)
+        {
+            return writeUnicodeChar(uint8(c));
+        }
 
         DFG_CLASS_NAME(OfStreamBufferWithEncoding) m_streamBuffer;
     };

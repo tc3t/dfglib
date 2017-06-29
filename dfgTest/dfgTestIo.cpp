@@ -14,7 +14,6 @@
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <dlib/vectorstream.h>
 #include <numeric> // std::accumulate
 #include <dfg/io/nullOutputStream.hpp>
 #include <dfg/time/timerCpu.hpp>
@@ -25,8 +24,10 @@
 #include <dfg/build/languageFeatureInfo.hpp>
 #include <dfg/io/OfStream.hpp>
 #include <dfg/io/seekFwdToLine.hpp>
+#include <dfg/str/strCat.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #include <dlib/vectorstream.h>
     #include <dlib/compress_stream.h>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
@@ -717,7 +718,7 @@ TEST(dfgIo, IfStreamWithEncodingReadOnlyFile)
 
     OfStreamWithEncoding ostrm(szPath, encodingUTF32Be);
     const char szText[] = "text";
-    ostrm << szText;
+    ostrm << SzPtrUtf8(szText);
     ostrm.flush(); // Note: this also tests OfStreamWithEncoding::flush().
 
     DFG_CLASS_NAME(IfStreamWithEncoding) strm(szPath);
@@ -765,7 +766,8 @@ TEST(dfgIo, OfStreamWithEncoding)
     {
         DFG_CLASS_NAME(OfStreamWithEncoding) ostrm(szFileUtf8, encodingUTF8);
         std::string s = "abc_\xe4 def";
-        ostrm << s;
+        ostrm << DFG_CLASS_NAME(StringViewLatin1)(SzPtrLatin1(s.c_str()), s.size());
+
         ostrm.close();
 
         const auto readBytes = fileToByteContainer<std::string>(szFileUtf8);
@@ -789,7 +791,7 @@ TEST(dfgIo, OfStreamWithEncoding)
     {
         DFG_CLASS_NAME(OfStreamWithEncoding) ostrm(szFileUtf16Le, encodingUTF16Le);
         std::string s = "abc_\xe4 def";
-        ostrm << s;
+        ostrm << DFG_CLASS_NAME(StringViewLatin1)(SzPtrLatin1(s.c_str()), s.size());
         ostrm.close();
 
         const auto readBytes = fileToByteContainer<std::string>(szFileUtf16Le);
@@ -823,6 +825,28 @@ TEST(dfgIo, OfStreamWithEncoding)
         const auto readBytes = fileToByteContainer<std::string>(szFileName);
         const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
         EXPECT_EQ(std::string(bomBytes.begin(), bomBytes.end()) + std::string("aaaaasd\0asde", DFG_COUNTOF_SZ("aaaaasd\0asde")), readBytes);
+    }
+
+    // Test writing numeric types.
+    {
+        const char szFileName[] = "testfiles/generated/OfStreamWithEncodingNumericTests.txt";
+        const auto encoding = encodingUTF8;
+        DFG_CLASS_NAME(OfStreamWithEncoding) ostrm(szFileName, encoding);
+        ostrm << int64_min;
+        ostrm << uint64_max;
+        ostrm << std::numeric_limits<float>::lowest();
+        ostrm << std::numeric_limits<double>::lowest();
+        ostrm << 0.3;
+        ostrm.close();
+        const auto readBytes = fileToByteContainer<std::string>(szFileName);
+        const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
+        EXPECT_EQ(std::string(bomBytes.begin(), bomBytes.end()) + 
+                    DFG_MODULE_NS(str)::toStrC(int64_min) + 
+                    DFG_MODULE_NS(str)::toStrC(uint64_max) +
+                    DFG_MODULE_NS(str)::toStrC(std::numeric_limits<float>::lowest()) +
+                    DFG_MODULE_NS(str)::toStrC(std::numeric_limits<double>::lowest()) +
+                    "0.3"
+                , readBytes);
     }
 }
 
