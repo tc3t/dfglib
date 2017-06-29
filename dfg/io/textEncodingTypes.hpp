@@ -23,14 +23,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         encodingUCS4Be
     };
 
-    inline bool isUtfEncoding(TextEncoding encoding)
+    inline bool isUtfEncoding(const TextEncoding encoding)
     {
         return (encoding >= encodingUTF8 && encoding <= encodingUTF32Be);
     }
 
-    inline bool isBigEndianEncoding(TextEncoding encoding)
+    inline bool isBigEndianEncoding(const TextEncoding encoding)
     {
         return (encoding == encodingUTF16Be || encoding == encodingUTF32Be);
+    }
+
+    // Returns true iff ASCII-bytes can be written unmodified to storage that uses given encoding.
+    inline bool areAsciiBytesValidContentInEncoding(const TextEncoding encoding)
+    {
+        return encoding == encodingUTF8 || encoding == encodingLatin1 || encoding == encodingNone;
     }
 
     namespace DFG_DETAIL_NS
