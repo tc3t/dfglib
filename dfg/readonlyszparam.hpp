@@ -231,7 +231,7 @@ public:
 
     PtrRawT dataRaw() const
     {
-        toCharPtr_raw(data());
+        return toCharPtr_raw(data());
     }
 
     const_iterator begin() const
