@@ -4,7 +4,7 @@
 #include <dfg/buildConfig.hpp> // To get rid of C4996 "Function call with parameters that may be unsafe" in MSVC.
 #include "qtIncludeHelpers.hpp"
 #include "../cont/tableCsv.hpp"
-#include "../io/textencodingtypes.hpp"
+#include "../io/textEncodingTypes.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMessageBox>
@@ -28,7 +28,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io)
     class DFG_CLASS_NAME(OfStreamWithEncoding);
 } }
 
-//class QUndoStack;
+class QUndoStack;
 class QCompleter;
 class QFile;
 class QTextStream;
@@ -115,6 +115,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // TODO: Make encoding to be user definable through options.
         bool save(StreamT& strm);
         bool save(StreamT& strm, const SaveOptions& options);
+
+        void setUndoStack(QUndoStack* pStack);
 
     public:
 
@@ -238,7 +240,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void clear();
 
     public:
-        //QUndoStack* m_pUndoStack;
+        QUndoStack* m_pUndoStack;
         DataTable m_table;
 
     //private:

@@ -18,7 +18,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
-#include <unordered_set>
 #include "../alg.hpp"
 #include "../cont/SortedSequence.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
@@ -320,6 +319,12 @@ void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
 void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
 {
     BaseClass::setModel(pModel);
+    if (m_spUndoStack)
+    {
+        auto pCsvModel = dynamic_cast<CsvModel*>(pModel);
+        if (pCsvModel)
+            pCsvModel->setUndoStack(&m_spUndoStack->item());
+    }
 }
 
 DFG_CLASS_NAME(CsvItemModel)* DFG_CLASS_NAME(CsvTableView)::csvModel()

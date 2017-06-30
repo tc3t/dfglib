@@ -3,7 +3,7 @@
 #include "qtIncludeHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-//#include <QUndoStack>
+#include <QUndoStack>
 //#include <QFileDialog>
 #include <QFile>
 #include <QFileInfo>
@@ -26,9 +26,46 @@ DFG_END_INCLUDE_QT_HEADERS
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
+{
+
+    class DFG_CLASS_NAME(CsvTableModelActionCellEdit) : public QUndoCommand
+    {
+        typedef DFG_CLASS_NAME(CsvItemModel) ModelT;
+    public:
+        DFG_CLASS_NAME(CsvTableModelActionCellEdit)(ModelT& rDataModel, const QModelIndex& index, const QString& sNew)
+            : m_pDataModel(&rDataModel), m_index(index), m_sNewData(sNew)
+        {
+            m_sOldData = m_pDataModel->data(m_index).toString();
+
+            QString sDesc;
+            sDesc = QString("Edit cell (%1, %2) from '%3' to '%4'").arg(m_pDataModel->internalRowIndexToVisible(index.row())).arg(index.column()).arg(m_sOldData).arg(m_sNewData);
+            setText(sDesc);
+        }
+
+        void undo()
+        {
+            m_pDataModel->setDataNoUndo(m_index, m_sOldData);
+        }
+
+        void redo()
+        {
+            if (m_index.isValid())
+                m_pDataModel->setDataNoUndo(m_index, m_sNewData);
+        }
+
+    private:
+        ModelT* m_pDataModel;
+        QString m_sOldData;
+        QString m_sNewData;
+        QModelIndex m_index;
+    }; // DFG_CLASS_NAME(CsvTableModelActionCellEdit)
+
+} } } // unnamed namespace
+
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
     m_bModified(false),
-    //m_pUndoStack(nullptr),
+    m_pUndoStack(nullptr),
     m_bResetting(false),
     m_bEnableCompleter(false),
     m_readTimeInSeconds(-1)
@@ -462,7 +499,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setData(const QModelIndex&
 
     if (index.isValid() && role == Qt::EditRole && isValidRow(index.row()) && isValidColumn(index.column()))
     {
-        setDataNoUndo(index, value.toString());
+        if (m_pUndoStack)
+            m_pUndoStack->push(new DFG_CLASS_NAME(CsvTableModelActionCellEdit)(*this, index, value.toString()));
+        else
+            setDataNoUndo(index, value.toString());
         return true;
      }
      return false;
@@ -642,6 +682,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow
         dataCellToString(QString::fromUtf8(p.c_str()), str, cDelim);
         bNoneAdded = false;
     }
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setUndoStack(QUndoStack* pStack)
+{
+    m_pUndoStack = pStack;
 }
 
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
