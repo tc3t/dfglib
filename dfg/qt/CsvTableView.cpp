@@ -220,6 +220,11 @@ void DFG_CLASS_NAME(CsvTableView)::clearUndoStack()
         m_spUndoStack->item().clear();
 }
 
+namespace
+{
+    const char gszMenuText_clearUndoBuffer[] = "&Clear undo-buffer";
+}
+
 void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
 {
     if (!m_spUndoStack)
@@ -237,7 +242,7 @@ void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
         insertAction(pAddBefore, pActionRedo);
 
         // Add Clear undo-buffer -action
-        auto pActionClearUndoBuffer = new QAction(tr("&Clear undo-buffer"), this);
+        auto pActionClearUndoBuffer = new QAction(tr(gszMenuText_clearUndoBuffer), this);
         connect(pActionClearUndoBuffer, &QAction::triggered, this, &ThisClass::clearUndoStack);
         addAction(pActionClearUndoBuffer);
     }
@@ -247,6 +252,7 @@ void DFG_CLASS_NAME(CsvTableView)::setExternalUndoStack(QUndoStack* pUndoStack)
 {
     if (!m_spUndoStack)
         createUndoStack();
+
     m_spUndoStack->setRef(pUndoStack);
 
     // Find and remove undo&redo actions from action list since they use the old undostack...
@@ -256,9 +262,13 @@ void DFG_CLASS_NAME(CsvTableView)::setExternalUndoStack(QUndoStack* pUndoStack)
     for (auto iter = acts.begin(); iter != acts.end(); ++iter)
     {
         auto pAction = *iter;
-        if (pAction && pAction->shortcut() == QKeySequence::Undo)
+        if (!pAction)
+            continue;
+        if (pAction->shortcut() == QKeySequence::Undo)
             removeList.push_back(pAction);
-        else if (pAction && pAction->shortcut() == QKeySequence::Redo)
+        else if (pAction->shortcut() == QKeySequence::Redo)
+            removeList.push_back(pAction);
+        else if (pAction->text() == tr(gszMenuText_clearUndoBuffer))
         {
             removeList.push_back(pAction);
             if (iter + 1 != acts.end())
