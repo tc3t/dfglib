@@ -740,7 +740,7 @@ TEST(DfgIo, IfStreamWithEncoding_rawByteReading)
     const char szFilePath[] = "testfiles/utf8_with_BOM.txt";
 
     auto bytes0 = fileToVector(szFilePath);
-    EXPECT_TRUE(bytes0.size() > 3);
+    ASSERT_TRUE(bytes0.size() > 3);
     bytes0.erase(bytes0.begin(), bytes0.begin() + 3); // Erase BOM.
 
     DFG_CLASS_NAME(IfStreamWithEncoding) istrm;
