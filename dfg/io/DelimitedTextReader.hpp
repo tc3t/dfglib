@@ -12,6 +12,7 @@
 #include "../dfgAssert.hpp"
 #include "../utf.hpp"
 #include "../cont/elementType.hpp"
+#include "../build/inlineTools.hpp"
 
 #ifndef _MSC_VER // TODO: Add proper check, workaround originally introduced for gcc 4.8.1
     #include <boost/format/detail/compat_workarounds.hpp>
@@ -436,15 +437,67 @@ public:
         CharAppender m_charAppender;
     };
 
-    template <class CellBuffer_T, class Stream_T = std::basic_istream<typename CellBuffer_T::InputChar, std::char_traits<typename CellBuffer_T::InputChar>>>
+    template <class Buffer_T>
+    class GenericParsingImplementations
+    {
+    public:
+        typedef Buffer_T CellBuffer;
+        typedef typename CellBuffer::FormatDef FormatDef;
+
+        // Returns true if caller should invoke 'continue', false otherwise.
+        static DFG_FORCEINLINE bool prePostTrimmer(const ReadState rs, const FormatDef& formatDef, CellBuffer& buffer)
+        {
+            // Check for skippable chars such as whitespace before any cell data or whitespace after enclosed cell.
+            if ((rs == rsLookingForNewData && formatDef.testFlag(rfSkipLeadingWhitespaces)) || rs == rsPastEnclosedCell)
+            {
+                if (buffer.isLastCharacterWhitespace())
+                {
+                    buffer.popLastChar();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Returns true if caller should invoke 'break', false otherwise.
+        static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
+        {
+            const auto iterToEndingSeparatorItem = buffer.iteratorToEndingSeparatorItem();
+            if (rs != rsInEnclosedCell && iterToEndingSeparatorItem != buffer.end())
+            {
+                buffer.setBufferEnd(iterToEndingSeparatorItem);
+                rs = rsSeparatorEncountered;
+                return true;
+            }
+            return false;
+        }
+
+        // Returns true if caller should invoke 'break', false otherwise.
+        static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
+        {
+            const auto iterToEndingEolItem = buffer.iteratorToEndingEolItem();
+            if (rs != rsInEnclosedCell && iterToEndingEolItem != buffer.end())
+            {
+                buffer.setBufferEnd(iterToEndingEolItem);
+                rs = rsEndOfLineEncountered;
+                return true;
+            }
+            return false;
+        }
+    };
+
+    template <class CellBuffer_T,
+              class Stream_T = std::basic_istream<typename CellBuffer_T::InputChar, std::char_traits<typename CellBuffer_T::InputChar>>,
+              class CellParsingImplementations_T = GenericParsingImplementations<CellBuffer_T>>
     class CellReader : public CellReaderBase
     {
     public:
         typedef CellReaderBase BaseClass;
-        typedef CellBuffer_T CellBuffer;
-        typedef typename CellBuffer::InputChar InputChar;
-        typedef Stream_T StreamT;
-        typedef typename CellBuffer::FormatDef FormatDef;
+        typedef CellBuffer_T                    CellBuffer;
+        typedef typename CellBuffer::InputChar  InputChar;
+        typedef Stream_T                        StreamT;
+        typedef typename CellBuffer::FormatDef  FormatDef;
+        typedef CellParsingImplementations_T    CellParsingImplementations;
 
         CellReader(StreamT& rStrm, CellBuffer& rCd) :
             m_rStrm(rStrm),
@@ -532,46 +585,28 @@ public:
         ReadState& rs = reader.m_readState;
         const auto nEncLength = reader.getFormatDefInfo().getEnclosingMarkerLengthInChars();
 
+        typedef typename Reader::CellParsingImplementations ParsingImplementations;
+
         rs = rsLookingForNewData;
         reader.getCellBuffer().clear();
 
         while(rs != rsSeparatorEncountered && rs != rsEndOfLineEncountered && rs != rsEndOfStream && reader.readChar())
         {
-            // Check for skippable chars such as whitespace before any cell data or whitespace after enclosed cell.
-            if ((rs == rsLookingForNewData && reader.getFormatDefInfo().testFlag(rfSkipLeadingWhitespaces)) || rs == rsPastEnclosedCell)
-            {
-                if (reader.getCellBuffer().isLastCharacterWhitespace())
-                {
-                    reader.getCellBuffer().popLastChar();
-                    continue;
-                }
-            }
+            // prePostTrimmer: Possible check for skippable chars such as whitespace before any cell data or whitespace after enclosed cell.
+            if (ParsingImplementations::prePostTrimmer(rs, reader.getFormatDefInfo(), reader.getCellBuffer()))
+                continue;
 
             // Set naked cell state if needed.
             if (rs == rsLookingForNewData && reader.getCellBuffer().sizeInChars() == 1)
                 rs = rsInNakedCell;
 
             // Check for separator
-            {
-                const auto iterToEndingSeparatorItem = reader.getCellBuffer().iteratorToEndingSeparatorItem();
-                if (rs != rsInEnclosedCell && iterToEndingSeparatorItem != reader.getCellBuffer().end())
-                {
-                    reader.getCellBuffer().setBufferEnd(iterToEndingSeparatorItem);
-                    rs = rsSeparatorEncountered;
-                    break;
-                }
-            }
+            if (ParsingImplementations::separatorChecker(rs, reader.getCellBuffer()))
+                break;
 
             // Check for end of line
-            {
-                const auto iterToEndingEolItem = reader.getCellBuffer().iteratorToEndingEolItem();
-                if (rs != rsInEnclosedCell && iterToEndingEolItem != reader.getCellBuffer().end())
-                {
-                    reader.getCellBuffer().setBufferEnd(iterToEndingEolItem);
-                    rs = rsEndOfLineEncountered;
-                    break;
-                }
-            }
+            if (ParsingImplementations::eolChecker(rs, reader.getCellBuffer()))
+                break;
 
             // Check for characters after enclosing item. Simply ignore them.
             if (rs == rsPastEnclosedCell)
