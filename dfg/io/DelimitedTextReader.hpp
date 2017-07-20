@@ -484,6 +484,85 @@ public:
             }
             return false;
         }
+
+        template <class TempBufferType_T, class CharReader_T, class IsStreamGood_T>
+        static DFG_FORCEINLINE void enclosedCellReader(ReadState& rs, CellBuffer& buffer, CharReader_T charReader, IsStreamGood_T isStreamGood)
+        {
+            // Check for characters after enclosing item. Simply ignore them.
+            if (rs == rsPastEnclosedCell)
+            {
+                buffer.popLastChar();
+                return;
+            }
+
+            const auto nEncLength = buffer.getFormatDefInfo().getEnclosingMarkerLengthInChars();
+            const bool bFirstEncCharChance = (rs != rsInEnclosedCell && buffer.sizeInChars() == nEncLength);
+
+            // Check for opening enclosing item.
+            if (bFirstEncCharChance && buffer.iteratorToEndingEnclosingItem() != buffer.end())
+            {
+                rs = rsInEnclosedCell;
+                buffer.clear();
+                return; // To prevent beginning enclosing item from being part of double enclosing test.
+            }
+
+            // If in enclosed cell, check for double enclosing items within cell text.
+            // Note: if reading naked cell that has enclosing items within the text,
+            // the enclosing items are treated as normal chars.
+            if (rs == rsInEnclosedCell)
+            {
+                const auto iterToEndingEnclosingItem = buffer.iteratorToEndingEnclosingItem();
+                if (iterToEndingEnclosingItem != buffer.end())
+                {
+                    // TODO: makes redundant memory allocation in practically all cases; could use
+                    //       static buffer.
+                    TempBufferType_T tempBuffer(buffer);
+                    tempBuffer.clear();
+
+                    const auto rsBefore = rs;
+                    for (size_t i = 0; i<nEncLength && isStreamGood(); ++i)
+                    {
+                        // Read char using explicitly set read state in order to avoid automatic separator detection being ignored due to rsInEnclosedCell-state.
+                        const auto bGoodRead = charReader(tempBuffer, rsLookingForNewData);
+
+                        if (!bGoodRead) // Not a good read => didn't find double enclosing item.
+                        {
+                            buffer.setBufferEnd(iterToEndingEnclosingItem);
+                            rs = rsEndOfStream;
+                            break;
+                        }
+                        else if (tempBuffer.isBufferSeparatorItem()) // Found separator after enclosing item.
+                        {
+                            buffer.setBufferEnd(iterToEndingEnclosingItem);
+                            buffer.getFormatDefInfo().m_cSep = tempBuffer.getFormatDefInfo().getSep(); // This is needed in case that seprator auto-detection is triggered for the temp buffer.
+                            rs = rsSeparatorEncountered;
+                            break;
+                        }
+                        else if (tempBuffer.doesBufferEndWithEndOfLineItem()) // Found EOL after enclosing item.
+                        {
+                            buffer.setBufferEnd(iterToEndingEnclosingItem);
+                            rs = rsEndOfLineEncountered;
+                            break;
+                        }
+                        else if (tempBuffer.isLastCharacterWhitespace()) // Note: Assumption made: enclosing item must not contain whitespace char.
+                        {
+                            buffer.setBufferEnd(iterToEndingEnclosingItem);
+                            rs = rsPastEnclosedCell;
+                            break;
+                        }
+                    }
+
+                    // Check whether the item after enclosing item is neither enclosing item nor separator.
+                    // This is not expected.
+                    if (rs == rsBefore && !tempBuffer.doesBufferEndWithEnclosingItem())
+                    {
+                        buffer.setBufferEnd(iterToEndingEnclosingItem);
+                        rs = rsPastEnclosedCell;
+                        //reader.onSyntaxError();
+                    }
+                }
+            }
+        }
     };
 
     template <class CellBuffer_T,
@@ -549,7 +628,7 @@ public:
 
         CellBuffer& getCellBuffer()				{return m_rCellBuffer;}
         const CellBuffer& getCellBuffer() const	{return m_rCellBuffer;}
-        CellBuffer getCellBufferCopy() const {return m_rCellBuffer;}
+        CellBuffer getCellBufferCopy() const    {return m_rCellBuffer;}
 
         FormatDef& getFormatDefInfo()
         {
@@ -583,7 +662,6 @@ public:
     static void readCell(Reader& reader)
     {
         ReadState& rs = reader.m_readState;
-        const auto nEncLength = reader.getFormatDefInfo().getEnclosingMarkerLengthInChars();
 
         typedef typename Reader::CellParsingImplementations ParsingImplementations;
 
@@ -608,81 +686,12 @@ public:
             if (ParsingImplementations::eolChecker(rs, reader.getCellBuffer()))
                 break;
 
-            // Check for characters after enclosing item. Simply ignore them.
-            if (rs == rsPastEnclosedCell)
-            {
-                reader.getCellBuffer().popLastChar();
-                continue;
-                //reader.onSyntaxError();
-                //break;
-            }
-
-            const bool bFirstEncCharChance = (rs != rsInEnclosedCell && reader.getCellBuffer().sizeInChars() == nEncLength);
-
-            // Check for opening enclosing item.
-            if (bFirstEncCharChance && reader.getCellBuffer().iteratorToEndingEnclosingItem() != reader.getCellBuffer().end())
-            {
-                rs = rsInEnclosedCell;
-                reader.getCellBuffer().clear();
-                continue; // To prevent beginning enclosing item from being part of double enclosing test.
-            }
-
-            // If in enclosed cell, check for double enclosing items within cell text.
-            // Note: if reading naked cell that has enclosing items within the text,
-            // the enclosing items are treated as normal chars.
-            if (rs == rsInEnclosedCell)
-            {
-                const auto iterToEndingEnclosingItem = reader.getCellBuffer().iteratorToEndingEnclosingItem();
-                if (iterToEndingEnclosingItem != reader.getCellBuffer().end())
-                {
-                    // TODO: makes redundant memory allocation in practically all cases; could use
-                    //       static buffer.
-                    decltype(reader.getCellBufferCopy()) buffer(reader.getCellBuffer());
-                    buffer.clear();
-
-                    const auto rsBefore = rs;
-                    for(size_t i = 0; i<nEncLength && reader.isStreamGood(); ++i)
-                    {
-                        // Read char using explicitly set read state in order to avoid automatic separator detection being ignored due to rsInEnclosedCell-state.
-                        const auto bGoodRead = reader.readChar(buffer, rsLookingForNewData);
-
-                        if (!bGoodRead) // Not a good read => didn't find double enclosing item.
-                        {
-                            reader.getCellBuffer().setBufferEnd(iterToEndingEnclosingItem);
-                            rs = rsEndOfStream;
-                            break;
-                        }
-                        else if (buffer.isBufferSeparatorItem()) // Found separator after enclosing item.
-                        {
-                            reader.getCellBuffer().setBufferEnd(iterToEndingEnclosingItem);
-                            reader.getCellBuffer().getFormatDefInfo().m_cSep = buffer.getFormatDefInfo().getSep(); // This is needed in case that seprator auto-detection is triggered for the temp buffer.
-                            rs = rsSeparatorEncountered;
-                            break;
-                        }
-                        else if (buffer.doesBufferEndWithEndOfLineItem()) // Found EOL after enclosing item.
-                        {
-                            reader.getCellBuffer().setBufferEnd(iterToEndingEnclosingItem);
-                            rs = rsEndOfLineEncountered;
-                            break;
-                        }
-                        else if (buffer.isLastCharacterWhitespace()) // Note: Assumption made: enclosing item must not contain whitespace char.
-                        {
-                            reader.getCellBuffer().setBufferEnd(iterToEndingEnclosingItem);
-                            rs = rsPastEnclosedCell;
-                            break;
-                        }
-                    }
-
-                    // Check whether the item after enclosing item is neither enclosing item nor separator.
-                    // This is not expected.
-                    if (rs == rsBefore && !buffer.doesBufferEndWithEnclosingItem())
-                    {
-                        reader.getCellBuffer().setBufferEnd(iterToEndingEnclosingItem);
-                        rs = rsPastEnclosedCell;
-                        //reader.onSyntaxError();
-                    }
-                }
-            }
+            // Enclosed cell parsing
+            typedef decltype(reader.getCellBufferCopy()) TempBufferT;
+            ParsingImplementations::template enclosedCellReader<TempBufferT>(rs,
+                                                                             reader.getCellBuffer(),
+                                                                             [&](TempBufferT& buffer, const ReadState rs) { return reader.readChar(buffer, rs); },
+                                                                             [&]() { return reader.isStreamGood(); } );
         }
 
         if (!reader.isStreamGood())
