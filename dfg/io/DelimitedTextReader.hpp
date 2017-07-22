@@ -459,6 +459,12 @@ public:
             return false;
         }
 
+        static DFG_FORCEINLINE void nakedCellStateHandler(ReadState& rs, CellBuffer& buffer)
+        {
+            if (rs == rsLookingForNewData && buffer.sizeInChars() == 1)
+                rs = rsInNakedCell;
+        }
+
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
@@ -675,8 +681,7 @@ public:
                 continue;
 
             // Set naked cell state if needed.
-            if (rs == rsLookingForNewData && reader.getCellBuffer().sizeInChars() == 1)
-                rs = rsInNakedCell;
+            ParsingImplementations::nakedCellStateHandler(rs, reader.getCellBuffer());
 
             // Check for separator
             if (ParsingImplementations::separatorChecker(rs, reader.getCellBuffer()))
