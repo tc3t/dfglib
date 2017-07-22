@@ -164,7 +164,7 @@ namespace
             auto& istrm = *spStrm;
             typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, std::basic_string<char>, CharAppender_T> Cdt;
 
-            Cdt cellDataHandler(',', -1, '\n');
+            Cdt cellDataHandler(',', DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n');
             auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(istrm, cellDataHandler);
 
             size_t nCounter = 0;

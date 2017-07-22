@@ -56,14 +56,14 @@ public:
         cellHrvSkipRestOfLineAndTerminate // When set, current line is skipped and reading is terminated.
     };
 
-    enum ReadState {rsLookingForNewData,
-                    rsInNakedCell,
-                    rsInEnclosedCell,
-                    rsPastEnclosedCell,
-                    rsSeparatorEncountered,
-                    rsEndOfLineEncountered,
-                    rsEndOfStream,
-                    rsTerminated
+    enum ReadState {rsLookingForNewData         = 0x1,
+                    rsInNakedCell               = 0x2,
+                    rsInEnclosedCell            = 0x4,
+                    rsPastEnclosedCell          = 0x8,
+                    rsSeparatorEncountered      = 0x10,
+                    rsEndOfLineEncountered      = 0x20,
+                    rsEndOfStream               = 0x40,
+                    rsTerminated                = 0x80
                    };
 
     class CellReaderBase
@@ -176,7 +176,7 @@ public:
                 buffer.push_back('?');
             }
         }
-    };
+    }; // Class CharAppenderDefault
 
     template <class Buffer_T>
     class CharAppenderUtf
@@ -338,9 +338,9 @@ public:
             m_charAppender(getBuffer(), ch);
         }
 
-        iterator end() {return m_buffer.end();}
-        const_iterator end() const {return m_buffer.end();}
-        const_iterator cend() const { return m_buffer.cend(); }
+        iterator        end()        { return m_buffer.end();  }
+        const_iterator  end()  const { return m_buffer.end();  }
+        const_iterator  cend() const { return m_buffer.cend(); }
 
         bool isCharAt(const_iterator iter, const int c) const
         {
@@ -563,7 +563,7 @@ public:
                 }
             }
         }
-    };
+    }; // class GenericParsingImplementations
 
     template <class CellBuffer_T,
               class Stream_T = std::basic_istream<typename CellBuffer_T::InputChar, std::char_traits<typename CellBuffer_T::InputChar>>,
