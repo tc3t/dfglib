@@ -95,17 +95,21 @@ public:
         // Note that this does not detect state of streams (e.g. fail state).
         bool isReadStateEolOrEof() const
         {
-            return (m_readState == rsEndOfLineEncountered || isReadStateEof());
+            return (m_readState & (rsEndOfLineEncountered | rsEndOfStream)) != 0;
         }
 
         bool isReadStateEolOrEofOrTerminated() const
         {
-            return (m_readState == rsTerminated || isReadStateEolOrEof());
+            return (m_readState & (rsEndOfLineEncountered | rsEndOfStream | rsTerminated)) != 0;
+        }
+
+        bool isReadStateEndOfCell() const
+        {
+            return (m_readState & (rsSeparatorEncountered | rsEndOfLineEncountered | rsEndOfStream)) != 0;
         }
 
         ReadState m_readState;
-
-    };
+    }; // Class CellReaderBase
 
     class FormatDefinition
     {
@@ -667,40 +671,38 @@ public:
     template <class Reader>
     static void readCell(Reader& reader)
     {
-        ReadState& rs = reader.m_readState;
-
         typedef typename Reader::CellParsingImplementations ParsingImplementations;
 
-        rs = rsLookingForNewData;
+        reader.m_readState = rsLookingForNewData;
         reader.getCellBuffer().clear();
 
-        while(rs != rsSeparatorEncountered && rs != rsEndOfLineEncountered && rs != rsEndOfStream && reader.readChar())
+        while(!reader.isReadStateEndOfCell() && reader.readChar())
         {
             // prePostTrimmer: Possible check for skippable chars such as whitespace before any cell data or whitespace after enclosed cell.
-            if (ParsingImplementations::prePostTrimmer(rs, reader.getFormatDefInfo(), reader.getCellBuffer()))
+            if (ParsingImplementations::prePostTrimmer(reader.m_readState, reader.getFormatDefInfo(), reader.getCellBuffer()))
                 continue;
 
             // Set naked cell state if needed.
-            ParsingImplementations::nakedCellStateHandler(rs, reader.getCellBuffer());
+            ParsingImplementations::nakedCellStateHandler(reader.m_readState, reader.getCellBuffer());
 
             // Check for separator
-            if (ParsingImplementations::separatorChecker(rs, reader.getCellBuffer()))
+            if (ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()))
                 break;
 
             // Check for end of line
-            if (ParsingImplementations::eolChecker(rs, reader.getCellBuffer()))
+            if (ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
                 break;
 
             // Enclosed cell parsing
             typedef decltype(reader.getCellBufferCopy()) TempBufferT;
-            ParsingImplementations::template enclosedCellReader<TempBufferT>(rs,
+            ParsingImplementations::template enclosedCellReader<TempBufferT>(reader.m_readState,
                                                                              reader.getCellBuffer(),
                                                                              [&](TempBufferT& buffer, const ReadState rs) { return reader.readChar(buffer, rs); },
                                                                              [&]() { return reader.isStreamGood(); } );
         }
 
         if (!reader.isStreamGood())
-            rs = rsEndOfStream;
+            reader.m_readState = rsEndOfStream;
     }
 
     // Reads until end of line or end of stream.
