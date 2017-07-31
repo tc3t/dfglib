@@ -20,6 +20,7 @@
 #include <dfg/typeTraits.hpp>
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/iter/szIterator.hpp>
+#include <dfg/cont/contAlg.hpp>
 
 TEST(dfgCont, makeVector)
 {
@@ -1370,4 +1371,29 @@ TEST(dfgCont, Vector)
     EXPECT_TRUE(v.empty());
     EXPECT_TRUE(v2.empty());
     EXPECT_EQ(v3, v4);
+}
+
+namespace
+{
+    template <class Cont_T>
+    void contAlgImpl()
+    {
+        Cont_T v;
+        v.push_back(1);
+        v.push_back(2);
+        DFG_MODULE_NS(cont)::popFront(v);
+        EXPECT_EQ(Cont_T(1, 2), v);
+    }
+}
+
+TEST(dfgCont, contAlg)
+{
+    DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<int>::value == false);
+    DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<std::deque<int>>::value == true);
+    DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<std::list<int>>::value == true);
+
+    contAlgImpl<std::deque<int>>();
+    contAlgImpl<std::list<int>>();
+    contAlgImpl<std::string>();
+    contAlgImpl<std::vector<int>>();
 }

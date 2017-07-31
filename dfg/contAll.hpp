@@ -2,6 +2,7 @@
 
 #include "cont.hpp"
 #include "cont/arrayWrapper.hpp"
+#include "cont/contAlg.hpp"
 #include "cont/tableCsv.hpp"
 #include "cont/elementType.hpp"
 #include "cont/interleavedXsortedTwoChannelWrapper.hpp"
