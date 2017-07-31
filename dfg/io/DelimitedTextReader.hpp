@@ -11,6 +11,7 @@
 #include "IfStream.hpp"
 #include "../dfgAssert.hpp"
 #include "../utf.hpp"
+#include "../cont/contAlg.hpp"
 #include "../cont/elementType.hpp"
 #include "../build/inlineTools.hpp"
 
@@ -265,7 +266,7 @@ public:
         void popFrontChar()
         {
             if (!m_buffer.empty())
-                m_buffer.erase(m_buffer.begin(), m_buffer.begin() + 1);
+                DFG_MODULE_NS(cont)::popFront(m_buffer);
         }
 
         size_t size() const
