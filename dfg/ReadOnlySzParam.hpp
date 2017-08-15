@@ -2,6 +2,7 @@
 
 #include "dfgDefs.hpp"
 #include "dfgBaseTypedefs.hpp"
+#include "dfgAssert.hpp"
 #include "numericTypeTools.hpp"
 #include "str/strCmp.hpp"
 #include "str/strLen.hpp"
@@ -166,60 +167,145 @@ public:
 protected:
 	const size_t m_nSize;		// Length of the string. In case of raw pointers, this will be strlen().
 								// For string classes this may be the value returned by length()-method.
-};
+}; // Class ReadOnlySzParamWithSize
+
+namespace DFG_DETAIL_NS
+{
+    template <class Ptr_T>
+    class StringViewDefaultBase
+    {
+    protected:
+        StringViewDefaultBase() :
+            m_pFirst(nullptr),
+            m_nSize(0)
+        {}
+
+        StringViewDefaultBase(Ptr_T psz, const size_t nCount) :
+            m_pFirst(psz),
+            m_nSize(nCount)
+        {}
+
+    public:
+        bool empty() const
+        {
+            return m_nSize == 0;
+        }
+
+        Ptr_T data() const { return m_pFirst; }
+
+    protected:
+        Ptr_T m_pFirst;          // Pointer to first character.
+        size_t m_nSize;	        // Length of the string as returned by strLen().
+    };
+
+    // Base class for string views that have raw characters or for which every character can be treated as a code point.
+    // -> functionality such as front(), back(), operator[] etc. are well defined.
+    template <class Ptr_T>
+    class StringViewIndexAccessBase : public StringViewDefaultBase<Ptr_T>
+    {
+        typedef decltype(*Ptr_T(nullptr)) CodePointT;
+        typedef StringViewDefaultBase<Ptr_T> BaseClass;
+    public:
+        StringViewIndexAccessBase()
+        {}
+
+        StringViewIndexAccessBase(Ptr_T psz, const size_t nCount) :
+            BaseClass(psz, nCount)
+        {}
+
+        CodePointT back() const
+        {
+            DFG_ASSERT_UB(!empty());
+            return CodePointT(*(toCharPtr_raw(this->m_pFirst) + this->m_nSize - 1));
+        }
+
+        void clear()
+        {
+            this->m_pFirst = Ptr_T(nullptr);
+            this->m_nSize = 0;
+        }
+
+        CodePointT operator[](const size_t n) const
+        {
+            DFG_ASSERT_UB(n < this->m_nSize);
+            return CodePointT(*(toCharPtr_raw(this->m_pFirst) + n));
+        }
+
+        CodePointT front() const
+        {
+            DFG_ASSERT_UB(!empty());
+            return *this->m_pFirst;
+        }
+
+        // Precondition: empty() == false
+        void pop_front()
+        {
+            DFG_ASSERT_UB(!empty());
+            ++this->m_pFirst;
+            this->m_nSize--;
+        }
+
+        // Precondition: empty() == false
+        void pop_back()
+        {
+            DFG_ASSERT_UB(!empty());
+            this->m_nSize--;
+        }
+    };
+
+    template <class Str_T> struct StringViewBase;
+    template <> struct StringViewBase<std::string>                     { typedef StringViewIndexAccessBase<decltype(toCharPtr(std::string().c_str()))> type; };
+    template <> struct StringViewBase<std::wstring>                    { typedef StringViewIndexAccessBase<decltype(toCharPtr(std::wstring().c_str()))> type; };
+    template <> struct StringViewBase<DFG_CLASS_NAME(StringAscii)>     { typedef StringViewIndexAccessBase<decltype(toCharPtr(DFG_CLASS_NAME(StringAscii)().c_str()))> type; };
+    template <> struct StringViewBase<DFG_CLASS_NAME(StringLatin1)>    { typedef StringViewIndexAccessBase<decltype(toCharPtr(DFG_CLASS_NAME(StringLatin1)().c_str()))> type; };
+    template <> struct StringViewBase<DFG_CLASS_NAME(StringUtf8)>      { typedef StringViewDefaultBase<decltype(toCharPtr(DFG_CLASS_NAME(StringUtf8)().c_str()))> type; };
+    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 3, "Is a typed string view missing?");
+
+} // namespace DFG_DETAIL_NS
 
 // Note: Unlike ReadOnlySzParam, the string view stored here can't guarantee access to null terminated string.
 // TODO: keep compatible with std::string_view or even typedef when available.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
-class DFG_CLASS_NAME(StringView)
+
+class DFG_CLASS_NAME(StringView) : public DFG_DETAIL_NS::StringViewBase<Str_T>::type
 {
 public:
     typedef decltype(Str_T().c_str())                   SzPtrT;
     typedef decltype(toCharPtr(Str_T().c_str()))        PtrT;
     typedef decltype(toCharPtr_raw(Str_T().c_str()))    PtrRawT;
+    typedef typename DFG_DETAIL_NS::StringViewBase<Str_T>::type BaseClass;
     
     typedef PtrT const_iterator;
 
-    DFG_CLASS_NAME(StringView)() :
-        m_pFirst(nullptr),
-        m_nSize(0)
+    DFG_CLASS_NAME(StringView)()
     {
     }
 
     DFG_CLASS_NAME(StringView)(const Str_T& s) :
-        m_pFirst(s.c_str()),
-        m_nSize(readOnlySzParamLength(s))
+        BaseClass(s.c_str(), readOnlySzParamLength(s))
     {
     }
 
     DFG_CLASS_NAME(StringView)(SzPtrT psz) :
-        m_pFirst(psz),
-        m_nSize(readOnlySzParamLength(psz))
+        BaseClass(psz, readOnlySzParamLength(psz))
     {
     }
 
     // Allows contruction from compatible typed SzPtr (e.g. construction of const StringViewUtf8& sv = SzPtrAscii("a"))
     template <class Char2_T, CharPtrType Type_T>
     DFG_CLASS_NAME(StringView)(::DFG_ROOT_NS::SzPtrT<Char2_T, Type_T> psz) :
-        m_pFirst(psz),
-        m_nSize(readOnlySzParamLength(psz))
+        BaseClass(psz, readOnlySzParamLength(psz))
     {
     }
 
     DFG_CLASS_NAME(StringView)(PtrT psz, const size_t nCount) :
-        m_pFirst(psz),
-        m_nSize(nCount)
+        BaseClass(psz, nCount)
     {
-    }
-
-    bool empty() const
-    {
-        return (m_nSize == 0);
     }
 
     size_t length() const
     {
-        return m_nSize;
+        return this->m_nSize;
     }
 
     size_t size() const
@@ -227,16 +313,19 @@ public:
         return length();
     }
 
-    PtrT data() const { return m_pFirst; }
-
     PtrRawT dataRaw() const
     {
-        return toCharPtr_raw(data());
+        return toCharPtr_raw(this->data());
     }
 
     const_iterator begin() const
     {
-        return m_pFirst;
+        return this->m_pFirst;
+    }
+
+    const_iterator cbegin() const
+    {
+        return begin();
     }
 
     PtrRawT beginRaw() const
@@ -246,7 +335,12 @@ public:
 
     const_iterator end() const
     {
-        return PtrT(toCharPtr_raw(m_pFirst) + m_nSize);
+        return PtrT(toCharPtr_raw(this->m_pFirst) + this->m_nSize);
+    }
+
+    const_iterator cend() const
+    {
+        return end();
     }
 
     PtrRawT endRaw() const
@@ -256,7 +350,7 @@ public:
 
     bool operator==(const DFG_CLASS_NAME(StringView)& other) const
     {
-        return (m_nSize == other.m_nSize) && std::equal(toCharPtr_raw(m_pFirst), toCharPtr_raw(m_pFirst) + m_nSize, toCharPtr_raw(other.m_pFirst));
+        return (this->m_nSize == other.m_nSize) && std::equal(toCharPtr_raw(this->m_pFirst), toCharPtr_raw(this->m_pFirst) + this->m_nSize, toCharPtr_raw(other.m_pFirst));
     }
 
     bool operator==(const Str_T& str) const
@@ -269,9 +363,6 @@ public:
         return operator==(DFG_CLASS_NAME(StringView)(tpsz));
     }
 
-protected:
-    PtrT m_pFirst;          // Pointer to first character.
-    size_t m_nSize;	        // Length of the string as returned by strLen().
 }; // class StringView
 
 namespace DFG_DETAIL_NS

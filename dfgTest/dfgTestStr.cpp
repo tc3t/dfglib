@@ -577,7 +577,35 @@ TEST(dfgStr, String)
 
 namespace
 {
-    template <class StringView_T, class Char_T, class Str_T, class RawToTypedConv>
+    template <class StringView_T>
+    void TestStringViewIndexAccess(StringView_T sv, std::true_type)
+    {
+        // Note: Code below expects sv == "abc".
+        typedef decltype(sv.front()) CodePointT;
+
+        ASSERT_EQ(3, sv.size());
+        EXPECT_EQ(CodePointT('a'), sv.front());
+        EXPECT_EQ(CodePointT('a'), sv[0]);
+        EXPECT_EQ(CodePointT('c'), sv.back());
+
+        sv.pop_front();
+        sv.pop_back();
+
+        EXPECT_EQ(CodePointT('b'), sv.front());
+        EXPECT_EQ(CodePointT('b'), sv[0]);
+        EXPECT_EQ(CodePointT('b'), sv.back());
+
+        sv.clear();
+        EXPECT_TRUE(sv.empty());
+    }
+
+    template <class StringView_T>
+    void TestStringViewIndexAccess(const StringView_T&, std::false_type)
+    {
+        // Nothing to do here.
+    }
+
+    template <class StringView_T, class Char_T, class Str_T, bool TestIndexAccess, class RawToTypedConv>
     void TestStringViewImpl(RawToTypedConv conv, const bool bTestNonSzViews = true)
     {
         using namespace DFG_ROOT_NS;
@@ -630,19 +658,22 @@ namespace
         }
 
         //DFG_CLASS_NAME(StringViewUtf8)() == DFG_ASCII("a"); // TODO: make this work
+
+        TestStringViewIndexAccess(view, std::integral_constant<bool, TestIndexAccess>());
     }
+
 }
 
 TEST(dfgStr, StringView)
 {
     using namespace DFG_ROOT_NS;
 
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewC), char, std::string>([](const char* psz) {return psz; });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewW), wchar_t, std::wstring>([](const wchar_t* psz) {return psz; });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewC), char, std::string, true>([](const char* psz) {return psz; });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewW), wchar_t, std::wstring, true>([](const wchar_t* psz) {return psz; });
 
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii>([](const char* psz) {return DFG_ROOT_NS::SzPtrAscii(psz); });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1>([](const char* psz) {return DFG_ROOT_NS::SzPtrLatin1(psz); });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8>([](const char* psz) {return DFG_ROOT_NS::SzPtrUtf8(psz); });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii, true>([](const char* psz) {return DFG_ROOT_NS::SzPtrAscii(psz); });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1, true>([](const char* psz) {return DFG_ROOT_NS::SzPtrLatin1(psz); });
+    TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8, false>([](const char* psz) {return DFG_ROOT_NS::SzPtrUtf8(psz); });
 
     // Test that StringViewUtf8 accepts SzPtrAscii.
     {
@@ -677,7 +708,7 @@ namespace
     {
         using namespace DFG_ROOT_NS;
 
-        TestStringViewImpl<StringView_T, Char_T, Str_T>(conv, false);
+        TestStringViewImpl<StringView_T, Char_T, Str_T, false>(conv, false);
 
         const Char_T sz0[] = { 'a', 'b', 'c', '\0' };
         const Char_T sz1[] = { 'a', 'b', 'c', 'd', '\0' };
@@ -978,4 +1009,14 @@ TEST(dfgStr, StringLiteralMacros)
         EXPECT_EQ(0xB6, static_cast<unsigned char>(sz.c_str()[4]));
     }
 #endif
+}
+
+TEST(dfgStr, TypedCharPtrT)
+{
+    using namespace DFG_ROOT_NS;
+    EXPECT_EQ('a', (*SzPtrAscii("abc")).toInt());
+    EXPECT_EQ('a', (*SzPtrLatin1("abc")).toInt());
+    //EXPECT_EQ('a', (*SzPtrUtf8("abc")).toInt()); // This should fail to compile.
+    TypedCharPtrT<const char, CharPtrTypeChar> typedRawCharPtr("abc");
+    EXPECT_EQ('a', (*typedRawCharPtr).toInt());
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dfgDefs.hpp"
+#include "dfgBaseTypedefs.hpp"
 #include "build/languageFeatureInfo.hpp"
 #include <cstddef> // For std::nullptr_t
 
@@ -9,16 +10,90 @@
 
 DFG_ROOT_NS_BEGIN
 {
-    enum CharPtrType
-    {
-        CharPtrTypeAscii, // Ascii is valid UTF8 and valid Latin-1.
 
-        // Supersets of ASCII
-        CharPtrTypeLatin1,
-        CharPtrTypeUtf8,
+enum CharPtrType
+{
+    // Char ptr types without encoding. (must have value < 0)
+    CharPtrTypeChar     = -1,
+    
+    // Char ptr's with encoding
+    CharPtrTypeAscii    = 0, // Ascii is valid UTF8 and valid Latin-1.
 
-    // Note: if adding items, see constructor of TypedCharPtrT.
+    // Supersets of ASCII
+    CharPtrTypeLatin1,
+    CharPtrTypeUtf8,
+
+    // Note: if adding items:
+    //  -See constructor of TypedCharPtrT.
+    //  -Adjust gnNumberOfCharPtrTypes and gnNumberOfCharPtrTypesWithEncoding.
 };
+
+namespace DFG_DETAIL_NS
+{
+    const auto gnNumberOfCharPtrTypes = 4;
+    const auto gnNumberOfCharPtrTypesWithEncoding = 3;
+
+    template <CharPtrType PtrType, class Int_T>
+    struct CodePointT
+    {
+        typedef Int_T IntegerType;
+
+        CodePointT()
+        {
+        }
+
+        explicit CodePointT(const IntegerType c) :
+            m_cp(c)
+        {
+        }
+
+        bool operator==(const CodePointT& other) const
+        {
+            return m_cp == other.m_cp;
+        }
+
+        IntegerType toInt() const { return m_cp; }
+
+        IntegerType m_cp;
+    };
+} // DFG_DETAIL_NS
+
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeChar, char>       CodePointChar;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeAscii, char>      CodePointAscii;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeLatin1, uint8>    CodePointLatin1;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeUtf8, uint32>     CodePointUtf8;
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 4, "");
+
+namespace DFG_DETAIL_NS
+{
+    template <CharPtrType PtrType> struct TypedCharPtrDeRefType;
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeChar>   { typedef CodePointChar   type; };
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeAscii>  { typedef CodePointAscii  type; };
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeLatin1> { typedef CodePointLatin1 type; };
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeUtf8>   { typedef CodePointUtf8   type; };
+    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 4, "");
+}
+
+namespace DFG_DETAIL_NS
+{
+    template <CharPtrType PtrType, bool HasTrivialIndexing_T>
+    struct CharPtrTypeTraitsImpl
+    {
+        typedef typename DFG_DETAIL_NS::TypedCharPtrDeRefType<PtrType>::type    CodePointType;
+        typedef typename CodePointType::IntegerType                             CodePointInteger;
+
+        // hasTrivialIndexing is true iff ptr type is such that operator[] can be implemented:
+        //  -either every base char is a code point (e.g. latin1) or there's no (compile time) encoding.
+        enum { hasTrivialIndexing = HasTrivialIndexing_T };
+    };
+} // namespace DFG_DETAIL_NS
+
+template <CharPtrType PtrType_T> struct CharPtrTypeTraits {};
+template <> struct CharPtrTypeTraits<CharPtrTypeChar>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeChar, true> {};
+template <> struct CharPtrTypeTraits<CharPtrTypeAscii>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeAscii,  true>  {};
+template <> struct CharPtrTypeTraits<CharPtrTypeLatin1> : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeLatin1, true>  {};
+template <> struct CharPtrTypeTraits<CharPtrTypeUtf8>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeUtf8,   false> {};
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 4, "");
 
 template <class Char_T, CharPtrType Type_T>
 struct TypedCharPtrT
@@ -33,7 +108,7 @@ struct TypedCharPtrT
         m_p(p)
     {}
 
-    // At moment with nothing but ASCII and it's supersets, everything can be constructed from CharPtrTypeAscii.
+    // At moment with nothing but ASCII and it's supersets (and raw char ptr), everything can be constructed from CharPtrTypeAscii.
     template <class Char_T2>
     TypedCharPtrT(const TypedCharPtrT<Char_T2, CharPtrTypeAscii>& other) :
         m_p(other.m_p)
@@ -54,6 +129,40 @@ struct TypedCharPtrT
     DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED operator bool() const
     {
         return (m_p != nullptr);
+    }
+
+    template <CharPtrType DeRef_T>
+    typename std::enable_if<CharPtrTypeTraits<DeRef_T>::hasTrivialIndexing, typename CharPtrTypeTraits<DeRef_T>::CodePointType>::type privDeRefImpl() const
+    {
+        typedef typename CharPtrTypeTraits<DeRef_T>::CodePointType CodePointType;
+        DFG_ASSERT_UB(m_p != nullptr);
+        return CodePointType(*m_p);
+    }
+
+    template <CharPtrType DeRef_T>
+    typename std::enable_if<CharPtrTypeTraits<DeRef_T>::hasTrivialIndexing, void>::type privPreIncrementImpl()
+    {
+        DFG_ASSERT(m_p != nullptr);
+        ++m_p;
+    }
+
+    // For types with trivial indexing, enable operator*.
+    // For now ignore other encodings such as UTF8 since meaning can be considered ambiguous: should it return base char or code point? If code point, operator* would need to have access to
+    // encoding's parsing details since it might need to read several base chars.
+    // Precondition: Underlying pointer must be dereferenceable.
+    const typename CharPtrTypeTraits<Type_T>::CodePointType operator*() const
+    {
+        // Use static assert for more understandable compiler error, compilation will fail without as well.
+        DFG_STATIC_ASSERT(CharPtrTypeTraits<Type_T>::hasTrivialIndexing, "TypedCharPtrT::operator* is implemented only for types that have trivial indexing.");
+        return privDeRefImpl<Type_T>();
+    }
+
+    // For types with trivial indexing, enable operator++.
+    void operator++()
+    {
+        // Use static assert for more understandable compiler error, compilation will fail without as well.
+        DFG_STATIC_ASSERT(CharPtrTypeTraits<Type_T>::hasTrivialIndexing, "TypedCharPtrT::operator++ is implemented only for types that have trivial indexing.");
+        privPreIncrementImpl<Type_T>();
     }
 
     // Note: Char_T may be 'const char'. Allow const to return char* as constness 
@@ -112,6 +221,7 @@ function: SzPtrAsciiR SzPtrAscii(std::nullptr_t psz) // Convenience function for
 DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Ascii);
 DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Latin1);
 DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Utf8);
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 3, "Missing a specialization for char ptr type?");
 
 #undef DFG_TEMP_MACRO_CREATE_SPECIALIZATION
 
