@@ -391,7 +391,7 @@ public:
             return iteratorToEndingEolItem(*this);
         }
 
-        iterator iteratorToEndingEnclosingItem()
+        const_iterator iteratorToEndingEnclosingItem() const
         {
             auto iter = iteratorToLastChar();
             if (iter == m_buffer.end() || !isCharAt(iter, m_formatDef.getEnc()))
@@ -474,7 +474,7 @@ public:
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
             const auto iterToEndingSeparatorItem = buffer.iteratorToEndingSeparatorItem();
-            if (rs != rsInEnclosedCell && iterToEndingSeparatorItem != buffer.end())
+            if (rs != rsInEnclosedCell && iterToEndingSeparatorItem != buffer.cend())
             {
                 buffer.setBufferEnd(iterToEndingSeparatorItem);
                 rs = rsSeparatorEncountered;
@@ -487,7 +487,7 @@ public:
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
             const auto iterToEndingEolItem = buffer.iteratorToEndingEolItem();
-            if (rs != rsInEnclosedCell && iterToEndingEolItem != buffer.end())
+            if (rs != rsInEnclosedCell && iterToEndingEolItem != buffer.cend())
             {
                 buffer.setBufferEnd(iterToEndingEolItem);
                 rs = rsEndOfLineEncountered;
@@ -510,7 +510,7 @@ public:
             const bool bFirstEncCharChance = (rs != rsInEnclosedCell && buffer.sizeInChars() == nEncLength);
 
             // Check for opening enclosing item.
-            if (bFirstEncCharChance && buffer.iteratorToEndingEnclosingItem() != buffer.end())
+            if (bFirstEncCharChance && buffer.iteratorToEndingEnclosingItem() != buffer.cend())
             {
                 rs = rsInEnclosedCell;
                 buffer.clear();
@@ -523,7 +523,7 @@ public:
             if (rs == rsInEnclosedCell)
             {
                 const auto iterToEndingEnclosingItem = buffer.iteratorToEndingEnclosingItem();
-                if (iterToEndingEnclosingItem != buffer.end())
+                if (iterToEndingEnclosingItem != buffer.cend())
                 {
                     // TODO: makes redundant memory allocation in practically all cases; could use
                     //       static buffer.
