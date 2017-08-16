@@ -181,7 +181,47 @@ public:
                 buffer.push_back('?');
             }
         }
+
+        // Reads *p.
+        template <class Char_T>
+        void operator()(Buffer_T& buffer, const Char_T* p)
+        {
+            DFG_ASSERT_UB(p != nullptr);
+            operator()(buffer, *p);
+        }
     }; // Class CharAppenderDefault
+
+    // Specialized string view buffer for case where input data is in memory and can be read untranslated -> use string view to underlying data instead of populating a separate buffer.
+    class StringViewCBuffer : public StringViewC
+    {
+    public:
+        typedef char* iterator;
+
+        void reset(const char* p, const size_t n)
+        {
+            m_pFirst = p;
+            m_nSize = n;
+        }
+
+        void incrementSize()
+        {
+            m_nSize++;
+        }
+    }; // StringViewCBuffer
+
+    // Char appender for StringViewCBuffer.
+    class CharAppenderStringViewCBuffer
+    {
+    public:
+        void operator()(StringViewCBuffer& sv, const char* p)
+        {
+            if (!sv.empty())
+                sv.incrementSize();
+            else
+                sv.reset(p, 1);
+                
+        }
+    }; // Class CharAppenderStringViewC
 
     template <class Buffer_T>
     class CharAppenderUtf
@@ -192,7 +232,15 @@ public:
         {
             DFG_MODULE_NS(utf)::cpToUtf(ch, std::back_inserter(buffer), sizeof(typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<decltype(buffer)>::type), DFG_ROOT_NS::ByteOrderHost);
         }
-    };
+
+        // Reads *p.
+        template <class Char_T>
+        void operator()(Buffer_T& buffer, const Char_T* p)
+        {
+            DFG_ASSERT_UB(p != nullptr);
+            operator()(buffer, *p);
+        }
+    }; // Class CharAppenderUtf
 
     class CharAppenderNone
     {
@@ -343,6 +391,11 @@ public:
             m_charAppender(getBuffer(), ch);
         }
 
+        void appendChar(const BufferChar* p)
+        {
+            m_charAppender(getBuffer(), p);
+        }
+
         iterator        end()        { return m_buffer.end();  }
         const_iterator  end()  const { return m_buffer.end();  }
         const_iterator  cend() const { return m_buffer.cend(); }
@@ -436,7 +489,7 @@ public:
 
         Buffer m_buffer;
 
-        Buffer m_whiteSpaces;
+        std::basic_string<BufferChar> m_whiteSpaces;
         FormatDef m_formatDef;
         cellHandlerRv m_status;
         CharAppender m_charAppender;
