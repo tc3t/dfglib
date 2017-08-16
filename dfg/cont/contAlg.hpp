@@ -11,6 +11,7 @@ namespace DFG_DETAIL_NS
     namespace cont_contAlg_hpp
     {
         DFG_REFLECTION_GENERATE_HAS_MEMBER_FUNCTION_TESTER(pop_front)
+        DFG_REFLECTION_GENERATE_HAS_MEMBER_FUNCTION_TESTER(cutTail)
     }
 
     template <class Cont_T>
@@ -26,6 +27,25 @@ namespace DFG_DETAIL_NS
         ++endIter;
         c.erase(c.begin(), endIter);
     }
+
+    template <class Cont_T>
+    void cutTail(Cont_T& c, const typename Cont_T::const_iterator iter,  std::true_type)
+    {
+        c.cutTail(iter);
+    }
+
+    template <class Cont_T>
+    void cutTail(Cont_T& c, typename Cont_T::const_iterator iter, std::false_type)
+    {
+#ifdef __MINGW32__ // Workaround for MinGW 4.8. not liking const_iterator's in erase().
+        auto iterFirst = c.end();
+        std::advance(iterFirst, -1 * std::distance(iter, c.cend()));
+        c.erase(iterFirst, c.end());
+#else
+        c.erase(iter, c.cend());
+#endif
+        
+    }
 }
 
 // Calls c.pop_front() or if c does not have pop_front(), uses c.erase().
@@ -34,6 +54,12 @@ template <class Cont_T>
 void popFront(Cont_T& c)
 {
     DFG_DETAIL_NS::popFront(c, std::integral_constant<bool, DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<Cont_T>::value>());
+}
+
+template <class Cont_T>
+void cutTail(Cont_T& c, const typename Cont_T::const_iterator iter)
+{
+    DFG_DETAIL_NS::cutTail(c, iter, std::integral_constant<bool, DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<Cont_T>::value>());
 }
 
 } } // module namespace

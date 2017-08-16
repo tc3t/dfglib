@@ -1383,6 +1383,13 @@ namespace
         v.push_back(2);
         DFG_MODULE_NS(cont)::popFront(v);
         EXPECT_EQ(Cont_T(1, 2), v);
+        v.push_back(3);
+        v.push_back(4);
+        auto iterTail = v.end();
+        std::advance(iterTail, -1);
+        DFG_MODULE_NS(cont)::cutTail(v, iterTail);
+        DFG_MODULE_NS(cont)::popFront(v);
+        EXPECT_EQ(Cont_T(1, 3), v);
     }
 }
 
