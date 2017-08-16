@@ -24,3 +24,6 @@
 
 #define DFG_MSVC_VER_VC15       1910
 #define DFG_MSVC_VER_2017       DFG_MSVC_VER_VC15
+
+#define DFG_MSVC_VER_VC15_3     1911
+#define DFG_MSVC_VER_2017_3     DFG_MSVC_VER_VC15_3
