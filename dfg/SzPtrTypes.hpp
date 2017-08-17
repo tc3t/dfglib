@@ -139,8 +139,8 @@ struct TypedCharPtrT
         return CodePointType(*m_p);
     }
 
-    template <CharPtrType DeRef_T>
-    typename std::enable_if<CharPtrTypeTraits<DeRef_T>::hasTrivialIndexing, void>::type privPreIncrementImpl()
+    template <CharPtrType U_T>
+    typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, void>::type privPreIncrementImpl()
     {
         DFG_ASSERT(m_p != nullptr);
         ++m_p;
@@ -163,6 +163,51 @@ struct TypedCharPtrT
         // Use static assert for more understandable compiler error, compilation will fail without as well.
         DFG_STATIC_ASSERT(CharPtrTypeTraits<Type_T>::hasTrivialIndexing, "TypedCharPtrT::operator++ is implemented only for types that have trivial indexing.");
         privPreIncrementImpl<Type_T>();
+    }
+
+    template <CharPtrType U_T>
+    typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, TypedCharPtrT>::type privOperatorPlus(const ptrdiff_t diff) const
+    {
+        DFG_ASSERT(m_p != nullptr);
+        return TypedCharPtrT(m_p + diff);
+    }
+
+    // For types with trivial indexing, enable operator-.
+    TypedCharPtrT operator+(const ptrdiff_t diff) const
+    {
+        // Use static assert for more understandable compiler error, compilation will fail without as well.
+        DFG_STATIC_ASSERT(CharPtrTypeTraits<Type_T>::hasTrivialIndexing, "TypedCharPtrT::operator+ is implemented only for types that have trivial indexing.");
+        return privOperatorPlus<Type_T>(diff);
+    }
+
+    template <CharPtrType U_T>
+    typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, TypedCharPtrT>::type privOperatorMinus(const ptrdiff_t diff) const
+    {
+        DFG_ASSERT(m_p != nullptr);
+        return TypedCharPtrT(m_p - diff);
+    }
+
+    // For types with trivial indexing, enable operator-.
+    TypedCharPtrT operator-(const ptrdiff_t diff) const
+    {
+        // Use static assert for more understandable compiler error, compilation will fail without as well.
+        DFG_STATIC_ASSERT(CharPtrTypeTraits<Type_T>::hasTrivialIndexing, "TypedCharPtrT::operator- is implemented only for types that have trivial indexing.");
+        return privOperatorMinus<Type_T>(diff);
+    }
+
+    template <CharPtrType U_T>
+    typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, ptrdiff_t>::type privOperatorMinusForPtrs(const TypedCharPtrT other) const
+    {
+        DFG_ASSERT(m_p != nullptr && other.m_p != nullptr);
+        return m_p - other.m_p;
+    }
+
+    // For types with trivial indexing, enable operator-.
+    ptrdiff_t operator-(const TypedCharPtrT other) const
+    {
+        // Use static assert for more understandable compiler error, compilation will fail without as well.
+        DFG_STATIC_ASSERT(CharPtrTypeTraits<Type_T>::hasTrivialIndexing, "TypedCharPtrT::operator- is implemented only for types that have trivial indexing.");
+        return privOperatorMinusForPtrs<Type_T>(other);
     }
 
     // Note: Char_T may be 'const char'. Allow const to return char* as constness 

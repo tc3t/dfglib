@@ -10,6 +10,7 @@
 #include "build/utils.hpp"
 #include <string>
 #include "str/string.hpp"
+#include "build/languageFeatureInfo.hpp"
 
 DFG_ROOT_NS_BEGIN {
 
@@ -251,6 +252,16 @@ namespace DFG_DETAIL_NS
             DFG_ASSERT_UB(!empty());
             this->m_nSize--;
         }
+
+        void cutTail(const Ptr_T iter)
+        {
+        #if DFG_LANGFEAT_EXPLICIT_OPERATOR_BOOL
+            const auto nCount = (this->m_pFirst + this->m_nSize) - iter;
+        #else
+            const auto nCount = (this->m_pFirst + ptrdiff_t(this->m_nSize)) - iter;
+        #endif
+            this->m_nSize -= nCount;
+        }
     };
 
     template <class Str_T> struct StringViewBase;
@@ -266,7 +277,6 @@ namespace DFG_DETAIL_NS
 // Note: Unlike ReadOnlySzParam, the string view stored here can't guarantee access to null terminated string.
 // TODO: keep compatible with std::string_view or even typedef when available.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
-
 class DFG_CLASS_NAME(StringView) : public DFG_DETAIL_NS::StringViewBase<Str_T>::type
 {
 public:

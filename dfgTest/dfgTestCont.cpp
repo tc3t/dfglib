@@ -7,6 +7,7 @@
 #include <list>
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/dfgBase.hpp>
+#include <dfg/ReadOnlySzParam.hpp>
 #include <dfg/cont/interleavedXsortedTwoChannelWrapper.hpp>
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/MapVector.hpp>
@@ -1391,6 +1392,17 @@ namespace
         DFG_MODULE_NS(cont)::popFront(v);
         EXPECT_EQ(Cont_T(1, 3), v);
     }
+
+    template <class StringView_T, class Ptr_T>
+    void StringViewCutTailTests(Ptr_T psz)
+    {
+        StringView_T sv(psz);
+        ASSERT_EQ(3, sv.length());
+        DFG_MODULE_NS(cont)::cutTail(sv, sv.end() - 2);
+        EXPECT_EQ(1, sv.length());
+        typedef decltype(sv[0]) CodePointType;
+        EXPECT_EQ(CodePointType('a'), sv[0]);
+    }
 }
 
 TEST(dfgCont, contAlg)
@@ -1399,8 +1411,18 @@ TEST(dfgCont, contAlg)
     DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<std::deque<int>>::value == true);
     DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<std::list<int>>::value == true);
 
+    DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<std::vector<int>>::value == false);
+    DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)>::value == true);
+
     contAlgImpl<std::deque<int>>();
     contAlgImpl<std::list<int>>();
     contAlgImpl<std::string>();
     contAlgImpl<std::vector<int>>();
+
+    // Test cutTail for StringViewC
+    {
+        StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)>("abc");
+        StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewAscii)>(DFG_ROOT_NS::SzPtrAscii("abc"));
+        StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewLatin1)>(DFG_ROOT_NS::SzPtrLatin1("abc"));
+    }
 }
