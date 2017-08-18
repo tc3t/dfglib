@@ -480,11 +480,7 @@ public:
         void setBufferEnd(const_iterator endIter)
         {
             auto& buffer = getBuffer();
-            #ifdef _MSC_VER
-                buffer.erase(endIter, buffer.end());
-            #else
-                buffer.erase(buffer.begin() + (endIter - buffer.cbegin()), buffer.end());
-            #endif
+            DFG_MODULE_NS(cont)::cutTail(buffer, endIter);
         }
 
         Buffer m_buffer;
