@@ -519,10 +519,12 @@ TEST(dfgIo, ImStreamWithEncoding)
     const char dataC[] = "abcd";
     const wchar_t dataW[] = L"abcd";
     
-    DFG_CLASS_NAME(ImStreamWithEncoding) istrmC(dataC, DFG_MODULE_NS(str)::strLen(dataC), encodingUnknown);
-    DFG_CLASS_NAME(ImStreamWithEncoding) istrmW(dataW, DFG_MODULE_NS(str)::strLen(dataW));
-    ImStreamWithEncodingImpl(istrmC, 1);
-    ImStreamWithEncodingImpl(istrmW, 2);
+    {
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrmC(dataC, DFG_MODULE_NS(str)::strLen(dataC), encodingUnknown);
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrmW(dataW, DFG_MODULE_NS(str)::strLen(dataW));
+        ImStreamWithEncodingImpl(istrmC, 1);
+        ImStreamWithEncodingImpl(istrmW, 2);
+    }
 
     // Test how read()-function works.
     {
@@ -602,12 +604,14 @@ TEST(dfgIo, FileMemoryMapped)
     const auto vec2 = fileToVector(L"testfiles/matrix_3x3.txt");
     EXPECT_EQ(bytes, vec2);
 
-    DFG_CLASS_NAME(IfmmStream) istrm3("testfiles/matrix_3x3.txt");
-    std::vector<char> vec3;
-    char ch;
-    while (istrm3.get(ch))
-        vec3.push_back(ch);
-    EXPECT_EQ(vec2, vec3);
+    {
+        DFG_CLASS_NAME(IfmmStream) istrm3("testfiles/matrix_3x3.txt");
+        std::vector<char> vec3;
+        char ch;
+        while (istrm3.get(ch))
+            vec3.push_back(ch);
+        EXPECT_EQ(vec2, vec3);
+    }
 
     // Test that open() will reset istream bits.
     {
@@ -630,16 +634,30 @@ TEST(dfgIo, StreamBufferMem)
     using namespace DFG_MODULE_NS(cont);
 
     wchar_t wbuffer[] = L"abc";
-    DFG_CLASS_NAME(StreamBufferMem)<wchar_t> strmBuf(wbuffer, 3);
 
-    std::basic_istream<wchar_t> strm(&strmBuf);
-    std::vector<wchar_t> vecRead;
-    const auto vecExpected = makeArray<wchar_t>('a', 'b', 'c');
-    wchar_t ch;
-    while (strm.get(ch))
-        vecRead.push_back(ch);
-    EXPECT_EQ(vecExpected.size(), vecRead.size());
-    EXPECT_TRUE(std::equal(vecExpected.begin(), vecExpected.end(), vecRead.begin()));
+    {
+        DFG_CLASS_NAME(StreamBufferMem)<wchar_t> strmBuf(wbuffer, 3);
+
+        std::basic_istream<wchar_t> strm(&strmBuf);
+        std::vector<wchar_t> vecRead;
+        const auto vecExpected = makeArray<wchar_t>('a', 'b', 'c');
+        wchar_t ch;
+        while (strm.get(ch))
+            vecRead.push_back(ch);
+        EXPECT_EQ(vecExpected.size(), vecRead.size());
+        EXPECT_TRUE(std::equal(vecExpected.begin(), vecExpected.end(), vecRead.begin()));
+    }
+
+    //
+    {
+        DFG_CLASS_NAME(StreamBufferMem)<char>    sbC(nullptr, 0);
+        DFG_CLASS_NAME(StreamBufferMem)<wchar_t> sbW(nullptr, 0);
+        EXPECT_EQ(std::char_traits<char>::eof(), sbC.uflow());
+        EXPECT_EQ(std::char_traits<char>::eof(), sbC.underflow());
+        EXPECT_EQ(std::char_traits<wchar_t>::eof(), sbW.uflow());
+        EXPECT_EQ(std::char_traits<wchar_t>::eof(), sbW.underflow());
+
+    }
 }
 
 TEST(dfgIo, StreamBufferMemSeeking)

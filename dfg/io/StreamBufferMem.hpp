@@ -5,7 +5,6 @@
 #include "../utf/utfBom.hpp"
 #include "../utf.hpp"
 #include "textEncodingTypes.hpp"
-#include "BasicImStream.hpp"
 #include "checkBom.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
@@ -32,14 +31,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         }
 
+        // Read current.
         int_type underflow() override
         {
-            return (this->m_pCurrent != this->m_pEnd) ? std::char_traits<Char_T>::to_int_type(*this->m_pCurrent) : std::char_traits<char>::eof();
+            return (this->m_pCurrent != this->m_pEnd) ? std::char_traits<Char_T>::to_int_type(*this->m_pCurrent) : BaseClass::underflow();
         }
 
+        // Read and advance.
         int_type uflow() override
         {
-            return (this->m_pCurrent != this->m_pEnd) ? std::char_traits<Char_T>::to_int_type(*this->m_pCurrent++) : std::char_traits<char>::eof();
+            return (this->m_pCurrent != this->m_pEnd) ? std::char_traits<Char_T>::to_int_type(*this->m_pCurrent++) : BaseClass::underflow();
         }
 
         off_type sizeInBytes() const
