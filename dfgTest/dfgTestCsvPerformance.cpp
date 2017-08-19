@@ -247,7 +247,7 @@ namespace
             runtimes.push_back(elapsed1);
         }
        
-        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser 2015-07-13", std::string("\"Parse only, read type = ") + prettierTypeName<Read_T>() + std::string("\""), "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser 2017-02-17", std::string("\"Parse only, read type = ") + prettierTypeName<Read_T>() + std::string("\""), "N/A");
     }
 #endif
 
