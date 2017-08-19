@@ -10,34 +10,88 @@
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
-template <class ContT> void pushBack(ContT& cont, typename DFG_CLASS_NAME(ElementType)<ContT>::type&& a0)
+template <class ContT, class T> void pushBack(ContT& cont, T&& a0)
 {
     cont.reserve(cont.size() + 1);
-    cont.push_back(std::forward<typename DFG_CLASS_NAME(ElementType)<ContT>::type>(a0));
+    cont.push_back(std::forward<T>(a0));
 }
 
-template <class ContT> void pushBack(ContT& cont, typename DFG_CLASS_NAME(ElementType)<ContT>::type&& a0,
-                                                typename DFG_CLASS_NAME(ElementType)<ContT>::type&& a1)
+template <class ContT, class T> void pushBack(ContT& cont, T&& a0, T&& a1)
 {
-    typedef typename DFG_CLASS_NAME(ElementType)<ContT>::type T;
     cont.reserve(cont.size() + 2);
     cont.push_back(std::forward<T>(a0));
     cont.push_back(std::forward<T>(a1));
 }
 
-template <class T> std::vector<T> makeVector(T a0)
-{
-    std::vector<T> vec;
-    pushBack(vec, std::move(a0));
-    return vec;
-}
+#if DFG_MSVC_VER == DFG_MSVC_VER_2010
 
-template <class T> std::vector<T> makeVector(T a0, T a1)
-{
-    std::vector<T> vec;
-    pushBack(vec, std::move(a0), std::move(a1));
-    return vec;
-}
+    template <class T> std::vector<T> makeVector(T a0)
+    {
+        std::vector<T> vec;
+        pushBack(vec, std::move(a0));
+        return vec;
+    }
+
+    template <class T> std::vector<T> makeVector(T a0, T a1)
+    {
+        std::vector<T> vec;
+        pushBack(vec, std::move(a0), std::move(a1));
+        return vec;
+    }
+
+    template <class T> std::vector<T> makeVector(T a0, T a1, T a2)
+    {
+        std::vector<T> vec;
+        pushBack(vec, std::move(a0), std::move(a1));
+        pushBack(vec, std::move(a2));
+        return vec;
+    }
+
+    template <class T> std::vector<T> makeVector(T a0, T a1, T a2, T a3)
+    {
+        std::vector<T> vec;
+        pushBack(vec, std::move(a0), std::move(a1));
+        pushBack(vec, std::move(a2), std::move(a3));
+        return vec;
+    }
+
+#else // Compiler other than VC2010. In VC2010 code such as makeVector<std::string>("1", "2") wouldn't compile.
+
+    template <class T> auto makeVector(T&& a0) -> std::vector<typename std::remove_reference<T>::type>
+    {
+        typedef typename std::remove_reference<T>::type ElemT;
+        std::vector<ElemT> vec;
+        pushBack(vec, std::forward<T>(a0));
+        return vec;
+    }
+
+    template <class T> auto makeVector(T&& a0, T&& a1) -> std::vector<typename std::remove_reference<T>::type>
+    {
+        typedef typename std::remove_reference<T>::type ElemT;
+        std::vector<ElemT> vec;
+        pushBack(vec, std::forward<T>(a0), std::forward<T>(a1));
+        return vec;
+    }
+
+    template <class T> auto makeVector(T&& a0, T&& a1, T&& a2) -> std::vector<typename std::remove_reference<T>::type>
+    {
+        typedef typename std::remove_reference<T>::type ElemT;
+        std::vector<ElemT> vec;
+        pushBack(vec, std::forward<T>(a0), std::forward<T>(a1));
+        pushBack(vec, std::forward<T>(a2));
+        return vec;
+    }
+
+    template <class T> auto makeVector(T&& a0, T&& a1, T&& a2, T&& a3) -> std::vector<typename std::remove_reference<T>::type>
+    {
+        typedef typename std::remove_reference<T>::type ElemT;
+        std::vector<ElemT> vec;
+        pushBack(vec, std::forward<T>(a0), std::forward<T>(a1));
+        pushBack(vec, std::forward<T>(a2), std::forward<T>(a3));
+        return vec;
+    }
+
+#endif
 
 // TODO: test
 template <class T> std::array<T, 1> makeArray(T&& a0) { std::array<T, 1> a = { std::move(a0) }; return a; }
