@@ -626,7 +626,7 @@ public:
     }; // class GenericParsingImplementations
 
     template <class CellBuffer_T,
-              class Stream_T = std::basic_istream<typename CellBuffer_T::InputChar, std::char_traits<typename CellBuffer_T::InputChar>>,
+              class Stream_T,
               class CellParsingImplementations_T = GenericParsingImplementations<CellBuffer_T>>
     class CellReader : public CellReaderBase
     {
