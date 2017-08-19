@@ -32,8 +32,8 @@ public:
     typedef int CharType;
     enum 
     {
-        s_nMetaCharNone = -1,
-        s_nMetaCharAutoDetect = -2
+        s_nMetaCharNone         = -1,
+        s_nMetaCharAutoDetect   = -2
     };
     //static const CharType s_nMetaCharNone = -1;
     //static const CharType s_nMetaCharAutoDetect = -2;
@@ -625,6 +625,59 @@ public:
         }
     }; // class GenericParsingImplementations
 
+    /* Basic parsing implementations that may yield better read performance with the following restrictions:
+     *      -No pre-cell or post-cell trimming (e.g. in case of ', a' pre-cell trimming could remove leading whitespaces and read cell as "a" instead of " a")
+     *      -No enclosed cell support (e.g. can't have separators or new lines within cells and enclosing characters will be read like any other non-control character)
+     */
+    template <class Buffer_T>
+    class BarebonesParsingImplementations
+    {
+    public:
+        typedef Buffer_T CellBuffer;
+        typedef typename CellBuffer::FormatDef FormatDef;
+
+        // Returns true if caller should invoke 'continue', false otherwise.
+        static DFG_FORCEINLINE bool prePostTrimmer(const ReadState, const FormatDef&, CellBuffer&)
+        {
+            return false;
+        }
+
+        static DFG_FORCEINLINE void nakedCellStateHandler(ReadState&, CellBuffer&)
+        {
+        }
+
+        // Returns true if caller should invoke 'break', false otherwise.
+        static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
+        {
+            if (buffer.empty() || buffer.getBuffer().back() != buffer.getFormatDefInfo().getSep())
+                return false;
+            else
+            {
+                buffer.popLastChar();
+                rs = rsSeparatorEncountered;
+                return true;
+            }
+        }
+
+        // Returns true if caller should invoke 'break', false otherwise.
+        static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
+        {
+            const auto iterToEndingEolItem = buffer.iteratorToEndingEolItem();
+            if (iterToEndingEolItem != buffer.cend())
+            {
+                buffer.setBufferEnd(iterToEndingEolItem);
+                rs = rsEndOfLineEncountered;
+                return true;
+            }
+            return false;
+        }
+
+        template <class TempBufferType_T, class CharReader_T, class IsStreamGood_T>
+        static DFG_FORCEINLINE void enclosedCellReader(ReadState&, CellBuffer&, CharReader_T, IsStreamGood_T)
+        {
+        }
+    }; // BarebonesParsingImplementations
+
     template <class CellBuffer_T,
               class Stream_T,
               class CellParsingImplementations_T = GenericParsingImplementations<CellBuffer_T>>
@@ -707,7 +760,7 @@ public:
 
         CellBuffer& m_rCellBuffer;
         StreamT& m_rStrm;
-    };
+    }; // class CellReader
 
     // Helper function for creating reader from stream and cell data.
     template <class Stream_T, class CellData_T>
@@ -715,6 +768,18 @@ public:
     {
         typedef typename std::remove_reference<CellData_T>::type CellDataT;
         return CellReader<CellDataT, Stream_T>(rStrm, cellData);
+    }
+
+    // Helper function for creating reader from stream and cell data using only basic parsing functionality.
+    template <class Stream_T, class CellData_T>
+    static auto createReader_basic(Stream_T& rStrm, CellData_T&& cellData) -> CellReader<typename std::remove_reference<CellData_T>::type, Stream_T, BarebonesParsingImplementations<typename std::remove_reference<CellData_T>::type>>
+    {
+        DFG_ASSERT_WITH_MSG(cellData.getFormatDefInfo().getEnc() == s_nMetaCharNone, "Basic parsing does not support enclosing character, but format definition has defined one.");
+        DFG_ASSERT_WITH_MSG(!isMetaChar(cellData.getFormatDefInfo().getSep()), "Basic parsing expects concrete character for separator.");
+        DFG_ASSERT_WITH_MSG(!isMetaChar(cellData.getFormatDefInfo().getEol()), "Basic parsing expects concrete character for end-of-line.");
+
+        typedef typename std::remove_reference<CellData_T>::type CellDataT;
+        return CellReader<CellDataT, Stream_T, BarebonesParsingImplementations<CellDataT>>(rStrm, cellData);
     }
 
     // Read csv-style cell using given reader.

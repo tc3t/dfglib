@@ -1178,3 +1178,40 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
 #endif
 
 }
+
+TEST(DfgIo, DelimitedTextReader_basicReader)
+{
+    // Note: this is a quick test and instead of adding much more stuff here, consider adding basic reader to existing default reader tests.
+
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
+    using namespace DFG_MODULE_NS(cont);
+
+    const char* inputDatas[] = { "1\n2", "1, 2", "1,2\n3, 4 ", "1,2\r\n3,4", "\"1\",\"2,3\",4" };
+
+    const std::vector<std::string> expectedCellContents[] =
+    {
+        makeVector<std::string>("1", "2"),
+        makeVector<std::string>("1", " 2"),
+        makeVector<std::string>("1", "2", "3", " 4 "),
+        makeVector<std::string>("1", "2", "3", "4"),
+        makeVector<std::string>("\"1\"", "\"2", "3\"", "4"),
+    };
+    DFG_STATIC_ASSERT(DFG_COUNTOF(inputDatas) == DFG_COUNTOF(expectedCellContents), "Array size mismatch");
+
+    for (size_t i = 0; i < DFG_COUNTOF(inputDatas); ++i)
+    {
+        DFG_CLASS_NAME(BasicImStream) strm(inputDatas[i], DFG_MODULE_NS(str)::strLen(inputDatas[i]));
+
+        std::vector<std::string> readCells;
+        DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cd(',', DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n');
+        auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
+
+        DFG_CLASS_NAME(DelimitedTextReader)::read(reader, [&](const size_t /*r*/, const size_t /*c*/, const decltype(cd)& cellData)
+        {
+            readCells.push_back(cellData.getBuffer());
+        });
+
+        EXPECT_EQ(expectedCellContents[i], readCells);
+    }
+}
