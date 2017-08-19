@@ -56,10 +56,11 @@ void popFront(Cont_T& c)
     DFG_DETAIL_NS::popFront(c, std::integral_constant<bool, DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<Cont_T>::value>());
 }
 
+// Removes tail from given container expecting an iterator to tail's first element (i.e. the first element to be removed).
 template <class Cont_T>
-void cutTail(Cont_T& c, const typename Cont_T::const_iterator iter)
+void cutTail(Cont_T& c, const typename Cont_T::const_iterator iterToFirstInTail)
 {
-    DFG_DETAIL_NS::cutTail(c, iter, std::integral_constant<bool, DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<Cont_T>::value>());
+    DFG_DETAIL_NS::cutTail(c, iterToFirstInTail, std::integral_constant<bool, DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<Cont_T>::value>());
 }
 
 } } // module namespace
