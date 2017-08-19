@@ -27,13 +27,13 @@
 namespace
 {
     #ifndef _DEBUG
-        const size_t nRowCount = 4000000;
+        const size_t gnRowCount = 4000000;
     #else
-        const size_t nRowCount = 2000;
+        const size_t gnRowCount = 2000;
     #endif
-    const size_t nColCount = 7;
+    const size_t gnColCount = 7;
 
-    const size_t nRunCount = 5;
+    const size_t gnRunCount = 5;
 
     typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) TimerType;
 
@@ -146,8 +146,23 @@ namespace
                 << DFG_MODULE_NS(numeric)::accumulate(runtimes, double(0)) << '\n';
     }
 
-    template <class IStrm_T, class CharAppender_T, class IStrmInit_T>
-    void ExecuteTestCaseDelimitedTextReader(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const char* const pszReaderType, const char* const pszProcessingType)
+    struct ReaderCreation_default {};
+    struct ReaderCreation_basic {};
+
+    template <class Strm_T, class CellData_T>
+    auto createReader(Strm_T& strm, CellData_T& cd, ReaderCreation_default) -> decltype(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cd))
+    {
+        return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cd);
+    }
+
+    template <class Strm_T, class CellData_T>
+    auto createReader(Strm_T& strm, CellData_T& cd, ReaderCreation_basic) -> decltype(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd))
+    {
+        return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
+    }
+    
+    template <class IStrm_T, class CharAppender_T, class IStrmInit_T, class ReaderImplementationOption_T>
+    void ExecuteTestCaseDelimitedTextReader(std::ostream& output, IStrmInit_T streamInitFunc, ReaderImplementationOption_T readerOption, const std::string& sFilePath, const size_t nCount, const char* const pszReaderType, const char* const pszProcessingType)
     {
         using namespace DFG_MODULE_NS(io);
 
@@ -165,7 +180,7 @@ namespace
             typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, std::basic_string<char>, CharAppender_T> Cdt;
 
             Cdt cellDataHandler(',', DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n');
-            auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(istrm, cellDataHandler);
+            auto reader = createReader(istrm, cellDataHandler, readerOption);
 
             size_t nCounter = 0;
 
@@ -190,13 +205,19 @@ namespace
     template <class IStrm_T, class IStrmInit_T>
     void ExecuteTestCase_DelimitedTextReader_NoCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
     {
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone>(output, streamInitFunc, sFilePath, nCount, "DelimitedTextReader", "CharAppenderNone");
+        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderNone");
     }
 
     template <class IStrm_T, class IStrmInit_T>
     void ExecuteTestCase_DelimitedTextReader_DefaultCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
     {
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<std::string, char>>(output, streamInitFunc, sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<std::string, char>>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+    }
+
+    template <class IStrm_T, class IStrmInit_T>
+    void ExecuteTestCase_DelimitedTextReader_basicReader(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
+    {
+        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<std::string, char>>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderDefault");
     }
 
 #if DFG_MSVC_VER >= DFG_MSVC_VER_2015
@@ -207,7 +228,7 @@ namespace
         size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
         for (size_t i = 0; i < nCount; ++i)
         {
-            DFG_STATIC_ASSERT(nColCount == 7, "Code below assumes 7 columns.");
+            DFG_STATIC_ASSERT(gnColCount == 7, "Code below assumes 7 columns.");
             ::io::CSVReader<7> fastCsvParser(sFilePath);
             fastCsvParser.read_header(io::ignore_no_column, "Column 0", "Column 1", "Column 2", "Column 3", "Column 4", "Column 5", "Column 6");
             Read_T c0, c1, c2, c3, c4, c5, c6;
@@ -243,8 +264,8 @@ namespace
             TimerType timer;
             Table table;
             table.readFromFile(sFilePath);
-            EXPECT_EQ(nRowCount + 1, table.rowCountByMaxRowIndex());
-            EXPECT_EQ(nColCount, table.colCountByMaxColIndex());
+            EXPECT_EQ(gnRowCount + 1, table.rowCountByMaxRowIndex());
+            EXPECT_EQ(gnColCount, table.colCountByMaxColIndex());
             const auto elapsedTime = timer.elapsedWallSeconds();
 
             runtimes.push_back(elapsedTime);
@@ -292,6 +313,8 @@ TEST(dfgPerformance, CsvReadPerformance)
 {
     std::ofstream ostrmTestResults("testfiles/generated/csvPerformanceResults.csv");
 
+    const auto nRunCount = gnRunCount;
+
     // TODO: add compiler name & version, build config (debug/release)
     ostrmTestResults << "Date,Test machine,Compiler,Pointer size,Build type,File,Reader,Processing type,Stream type";
     for (size_t i = 0; i < nRunCount; ++i)
@@ -301,7 +324,7 @@ TEST(dfgPerformance, CsvReadPerformance)
     if (nRunCount > 0)
         ostrmTestResults  << ",time_avg,time_median,time_sum\n";
 
-    const auto sFilePath = GenerateTestFile(nRowCount, nColCount);
+    const auto sFilePath = GenerateTestFile(gnRowCount, gnColCount);
 
     // std::ifstream
     ExecuteTestCase_GetThrough<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
@@ -322,6 +345,7 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
 
     // fast-cpp-csv-parser
 #if DFG_MSVC_VER >= DFG_MSVC_VER_2015
