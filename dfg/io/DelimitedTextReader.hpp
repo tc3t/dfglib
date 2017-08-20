@@ -252,8 +252,9 @@ public:
     };
 
     /*
-        -Defines reading from stream
-        -Read buffer handling.
+        -Cell content related functionality such as:
+            -Handling underlying character buffer
+            -Storing format specification
     */
     template <class BufferChar_T, class InputChar_T = BufferChar_T, class Buffer_T = std::basic_string<BufferChar_T>, class CharAppender_T = CharAppenderDefault<Buffer_T, BufferChar_T>>
     class CellData
@@ -371,7 +372,7 @@ public:
             if (rs != rsInEnclosedCell && (cLast == ',' || cLast == ';' || cLast == '\t'))
             {
                 getFormatDefInfo().m_cSep = cLast;
-                if (cLast == '\t')
+                if (cLast == '\t') // If separator is autodetected to be \t, remove it from the list of whitespace-characters.
                     m_whiteSpaces.erase(std::remove_if(m_whiteSpaces.begin(), m_whiteSpaces.end(), [](BufferChar c) {return c == '\t'; }));
             }
             
@@ -489,7 +490,7 @@ public:
         FormatDef m_formatDef;
         cellHandlerRv m_status;
         CharAppender m_charAppender;
-    };
+    }; // Class CellData
 
     template <class Buffer_T>
     class GenericParsingImplementations
