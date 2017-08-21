@@ -306,6 +306,15 @@ public:
             return false;
         }
 
+        // Returns true if character was removed, false otherwise.
+        bool removeWhitespaceCharacter(const BufferChar cRem)
+        {
+            const auto nSizeBefore = m_whiteSpaces.size();
+            m_whiteSpaces.erase(std::remove_if(m_whiteSpaces.begin(), m_whiteSpaces.end(), [&](const BufferChar c) {return c == cRem; }));
+            return (nSizeBefore != m_whiteSpaces.size());
+        }
+        
+
         void popLastChar()
         {
             if (!m_buffer.empty())
@@ -361,29 +370,6 @@ public:
         const Buffer& getBuffer() const
         {
             return m_buffer;
-        }
-
-        void detectAutoSeparatorImpl(ReadState rs)
-        {
-            // TODO: make possible to use user-defined handler.
-            if (m_buffer.empty())
-                return;
-            const auto cLast = m_buffer.back();
-            if (rs != rsInEnclosedCell && (cLast == ',' || cLast == ';' || cLast == '\t'))
-            {
-                getFormatDefInfo().m_cSep = cLast;
-                if (cLast == '\t') // If separator is autodetected to be \t, remove it from the list of whitespace-characters.
-                    m_whiteSpaces.erase(std::remove_if(m_whiteSpaces.begin(), m_whiteSpaces.end(), [](BufferChar c) {return c == '\t'; }));
-            }
-            
-        }
-
-        void handleSeparatorAutoDetection(ReadState rs)
-        {
-            if (getFormatDefInfo().getSep() == s_nMetaCharAutoDetect)
-            {
-                detectAutoSeparatorImpl(rs);
-            }
         }
 
         template <class Char_T>
@@ -498,6 +484,23 @@ public:
     public:
         typedef Buffer_T CellBuffer;
         typedef typename CellBuffer::FormatDef FormatDef;
+
+        // Handles separator auto detection.
+        static DFG_FORCEINLINE void separatorAutoDetection(const ReadState rs, FormatDef& formatDef, CellBuffer& buffer)
+        {
+            if (formatDef.getSep() == s_nMetaCharAutoDetect)
+            {
+                if (buffer.empty())
+                    return;
+                const auto cLast = buffer.getBuffer().back();
+                if (rs != rsInEnclosedCell && (cLast == ',' || cLast == ';' || cLast == '\t'))
+                {
+                    formatDef.m_cSep = cLast;
+                    if (cLast == '\t') // If separator is autodetected to be \t, remove it from the list of whitespace-characters.
+                        buffer.removeWhitespaceCharacter('\t');
+                }
+            }
+        }
 
         // Returns true if caller should invoke 'continue', false otherwise.
         static DFG_FORCEINLINE bool prePostTrimmer(const ReadState rs, const FormatDef& formatDef, CellBuffer& buffer)
@@ -637,6 +640,11 @@ public:
         typedef Buffer_T CellBuffer;
         typedef typename CellBuffer::FormatDef FormatDef;
 
+        static DFG_FORCEINLINE void separatorAutoDetection(const ReadState, const FormatDef&, CellBuffer&)
+        {
+            // Auto detection is not supported in bare-bones parsing.
+        }
+
         // Returns true if caller should invoke 'continue', false otherwise.
         static DFG_FORCEINLINE bool prePostTrimmer(const ReadState, const FormatDef&, CellBuffer&)
         {
@@ -721,7 +729,7 @@ public:
             if (bRead)
             {
                 buffer.appendChar(ch);
-                buffer.handleSeparatorAutoDetection(rs);
+                CellParsingImplementations::separatorAutoDetection(rs, getFormatDefInfo(), buffer);
             }
             return bRead;
         }
