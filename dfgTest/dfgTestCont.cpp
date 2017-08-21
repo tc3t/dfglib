@@ -1426,3 +1426,62 @@ TEST(dfgCont, contAlg)
         StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewLatin1)>(DFG_ROOT_NS::SzPtrLatin1("abc"));
     }
 }
+
+TEST(dfgCont, VectorSso)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+
+    const size_t nTotalSize = 10;
+
+    DFG_CLASS_NAME(VectorSso)<size_t, nTotalSize-2> v;
+
+    v.push_back(1);
+    v.push_back(2);
+    v.push_back(3);
+    v.push_back(4);
+    v.push_back(5);
+    v.cutTail(v.begin() + 3);
+    ASSERT_EQ(3, v.size());
+    EXPECT_EQ(v[0], 1);
+    EXPECT_EQ(v[1], 2);
+    EXPECT_EQ(v[2], 3);
+    EXPECT_TRUE(v.isSsoStorageInUse());
+    v.clear();
+    EXPECT_TRUE(v.isSsoStorageInUse());
+
+    std::vector<size_t> vVector;
+    EXPECT_TRUE(v.empty());
+    for (size_t i = 0; i < nTotalSize; ++i)
+    {
+        v.push_back(i);
+        vVector.push_back(i);
+    }
+    EXPECT_EQ(nTotalSize, v.size());
+    EXPECT_FALSE(v.empty());
+    for (size_t i = 0; i < v.size(); ++i)
+        EXPECT_EQ(i, v[i]);
+
+    EXPECT_EQ(0, v.front());
+    EXPECT_EQ(nTotalSize - 1 , v.back());
+
+    ASSERT_EQ(v.size(), vVector.size());
+
+    EXPECT_TRUE((std::equal(v.begin(), v.end(), vVector.begin())));
+
+    v.pop_front();
+    EXPECT_EQ(nTotalSize - 1, v.size());
+    EXPECT_EQ(1, v.front());
+
+    v.pop_back();
+    EXPECT_EQ(nTotalSize - 2, v.size());
+    EXPECT_EQ(nTotalSize - 2, v.back());
+
+    v.cutTail(v.begin() + 3);
+    EXPECT_EQ(3, v.size());
+    EXPECT_EQ(1, v.front());
+    EXPECT_EQ(3, v.back());
+
+    v.clear();
+    EXPECT_TRUE(v.empty());
+}
