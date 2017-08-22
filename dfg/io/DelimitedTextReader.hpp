@@ -350,8 +350,11 @@ public:
         // Implementation for default buffer type
         void onCellReadImpl(std::true_type)
         {
-            m_buffer.push_back('\0');
-            m_buffer.m_nSize--; // Hack: Decrement size so that null terminator gets leaved out from real size.
+            // Uncomment below if buffer should be null terminated.
+            #if 0
+                m_buffer.push_back('\0');
+                m_buffer.m_nSize--; // Hack: Decrement size so that null terminator gets leaved out from real size.
+            #endif
         }
 
         // Implementation for non-default buffer type
