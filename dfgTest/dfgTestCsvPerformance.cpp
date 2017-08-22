@@ -160,8 +160,10 @@ namespace
     {
         return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
     }
+
+    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DefaultBufferType;
     
-    template <class IStrm_T, class CharAppender_T, class IStrmInit_T, class ReaderImplementationOption_T>
+    template <class IStrm_T, class CharAppender_T, class Buffer_T, class IStrmInit_T, class ReaderImplementationOption_T>
     void ExecuteTestCaseDelimitedTextReader(std::ostream& output, IStrmInit_T streamInitFunc, ReaderImplementationOption_T readerOption, const std::string& sFilePath, const size_t nCount, const char* const pszReaderType, const char* const pszProcessingType)
     {
         using namespace DFG_MODULE_NS(io);
@@ -177,8 +179,7 @@ namespace
             auto spStrm = streamInitFunc(sFilePath, bytes);
             EXPECT_TRUE(spStrm != nullptr);
             auto& istrm = *spStrm;
-            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> BufferType;
-            typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, BufferType, CharAppender_T> Cdt;
+            typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, Buffer_T, CharAppender_T> Cdt;
 
             Cdt cellDataHandler(',', DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n');
             auto reader = createReader(istrm, cellDataHandler, readerOption);
@@ -204,23 +205,24 @@ namespace
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_NoCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
+    void ExecuteTestCase_DelimitedTextReader_NoCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool bBasicReader = false)
     {
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderNone");
+        if (bBasicReader)
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderNone");
+        else
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderNone");
     }
 
     template <class IStrm_T, class IStrmInit_T>
     void ExecuteTestCase_DelimitedTextReader_DefaultCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
     {
-        typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> AppenderBuffer;
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<AppenderBuffer, char>>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
     }
 
     template <class IStrm_T, class IStrmInit_T>
     void ExecuteTestCase_DelimitedTextReader_basicReader(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
     {
-        typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> AppenderBuffer;
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<AppenderBuffer, char>>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderDefault");
+        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderDefault");
     }
 
 #if DFG_MSVC_VER >= DFG_MSVC_VER_2015
@@ -347,6 +349,7 @@ TEST(dfgPerformance, CsvReadPerformance)
     // BasicImStream
     ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); //Basic reader
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
 
