@@ -936,9 +936,9 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
         DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::read(reader, [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& rCell)
         {
             if (nRow == nCol) // Diagonal
-                diag += boost::lexical_cast<size_t>(rCell.getBuffer().c_str(), rCell.getBuffer().size());
+                diag += boost::lexical_cast<size_t>(rCell.getBuffer().data(), rCell.getBuffer().size());
             if (nRow + nCol == matSize - 1) // Back diagonal
-                backDiag += boost::lexical_cast<size_t>(rCell.getBuffer().c_str(), rCell.getBuffer().size());
+                backDiag += boost::lexical_cast<size_t>(rCell.getBuffer().data(), rCell.getBuffer().size());
         });
 
         if (expectedDiagSums[i] != 0)

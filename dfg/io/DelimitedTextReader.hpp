@@ -13,6 +13,7 @@
 #include "../utf.hpp"
 #include "../cont/contAlg.hpp"
 #include "../cont/elementType.hpp"
+#include "../cont/vectorSso.hpp"
 #include "../build/inlineTools.hpp"
 
 #ifndef _MSC_VER // TODO: Add proper check, workaround originally introduced for gcc 4.8.1
@@ -192,7 +193,7 @@ public:
     }; // Class CharAppenderDefault
 
     // Specialized string view buffer for case where input data is in memory and can be read untranslated -> use string view to underlying data instead of populating a separate buffer.
-    class StringViewCBuffer : public StringViewC
+    class StringViewCBuffer : public DFG_CLASS_NAME(StringViewC)
     {
     public:
         typedef char* iterator;
@@ -251,12 +252,30 @@ public:
         }
     };
 
+    // Replacement for std::basic_string. Problem with populating std::string in this context is that it keeps the buffer null-terminated on every push_back.
+    // This is inefficient in this use pattern and with this custom buffer chars can be pushed back without handling the null terminator. Null terminator can be set when the
+    // the cell is read completely.
+    template <class Char_T, size_t SsoBufferSize_T = 32>
+    class CharBuffer : public DFG_MODULE_NS(cont)::DFG_CLASS_NAME(VectorSso)<Char_T, SsoBufferSize_T>
+    {
+    public:
+        operator std::basic_string<Char_T>() const
+        {
+            return std::basic_string<Char_T>(this->data(), this->size());
+        }
+
+        operator DFG_CLASS_NAME(StringViewC)() const
+        {
+            return DFG_CLASS_NAME(StringViewC)(this->data(), this->size());
+        }
+    }; // Class CharBuffer
+
     /*
         -Cell content related functionality such as:
             -Handling underlying character buffer
             -Storing format specification
     */
-    template <class BufferChar_T, class InputChar_T = BufferChar_T, class Buffer_T = std::basic_string<BufferChar_T>, class CharAppender_T = CharAppenderDefault<Buffer_T, BufferChar_T>>
+    template <class BufferChar_T, class InputChar_T = BufferChar_T, class Buffer_T = CharBuffer<BufferChar_T>, class CharAppender_T = CharAppenderDefault<Buffer_T, BufferChar_T>>
     class CellData
     {
     public:
@@ -325,6 +344,30 @@ public:
         {
             if (!m_buffer.empty())
                 DFG_MODULE_NS(cont)::popFront(m_buffer);
+        }
+
+        // Implementation for default buffer type
+        void onCellReadImpl(std::true_type)
+        {
+            m_buffer.push_back('\0');
+            m_buffer.m_nSize--; // Hack: Decrement size so that null terminator gets leaved out from real size.
+        }
+
+        // Implementation for non-default buffer type
+        void onCellReadImpl(std::false_type)
+        {
+            // Nothing to do here.
+        }
+
+        template <class T>
+        struct IsDefaultCharBuffer { static const bool value = false; };
+
+        template <class Char_T, size_t N>
+        struct IsDefaultCharBuffer<CharBuffer<Char_T, N>> { static const bool value = true; };
+
+        void onCellRead()
+        {
+            onCellReadImpl(std::integral_constant<bool, IsDefaultCharBuffer<Buffer>::value>());
         }
 
         size_t size() const
@@ -825,6 +868,8 @@ public:
                                                                              [&]() { return reader.isStreamGood(); } );
         }
 
+        reader.getCellBuffer().onCellRead();
+
         if (!reader.isStreamGood())
             reader.m_readState = rsEndOfStream;
     }
@@ -906,8 +951,8 @@ public:
 
     // Convenience readRow.
     // Item handler function is given three parameters:
-    // column index, Pointer to null terminated buffer, buffer size.
-    // For example: func(const size_t nCol, const char* const psz, const size_t nSize) 
+    // column index, Pointer to beginning of buffer, buffer size.
+    // For example: func(const size_t nCol, const char* const p, const size_t nSize) 
     // TODO: test
     template <class Char_T, class Stream_T, class ItemHandlerFunc>
     static void readRow(Stream_T& istrm,
@@ -921,7 +966,7 @@ public:
         readRow(reader, [&](const size_t nCol, const decltype(cd)& cellData)
         {
             const auto& buffer = cellData.getBuffer();
-            return ihFunc(nCol, buffer.c_str(), buffer.size());
+            return ihFunc(nCol, buffer.data(), buffer.size());
         });
     }
 
@@ -980,7 +1025,7 @@ public:
 
     // Convenience overload.
     // Item handler function is given four parameters:
-    // row index, column index, Pointer to null terminated buffer, buffer size.
+    // row index, column index, Pointer to beginning of buffer, buffer size.
     // For example: func(const size_t nRow, const size_t nCol, const char* const psz, const size_t nSize) 
     // TODO: test
     template <class Stream_T, class Char_T, class ItemHandlerFunc>
@@ -994,7 +1039,7 @@ public:
         auto reader = createReader(istrm, cellData);
         read(reader, [&](const size_t r, const size_t c, const decltype(cellData)& cd)
         {
-            ihFunc(r, c, cd.getBuffer().c_str(), cd.getBuffer().size());
+            ihFunc(r, c, cd.getBuffer().data(), cd.getBuffer().size());
         });
     }
 
@@ -1064,6 +1109,25 @@ public:
     }
 
 }; // DFG_CLASS_NAME(DelimitedTextReader)
+
+template <class Char_T>
+std::ostream& operator<<(std::ostream& strm, const DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T>& buffer)
+{
+    strm.write(buffer.data(), buffer.size());
+    return strm;
+}
+
+template <class Char_T>
+bool operator==(const DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T>& left, const std::basic_string<Char_T>& right)
+{
+    return right == DFG_CLASS_NAME(StringView)<Char_T>(left.data(), left.size());
+}
+
+template <class Char_T>
+bool operator==(const std::basic_string<Char_T>& left, const DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T>& right)
+{
+    return right == left;
+}
 
 }} // module namespace
 

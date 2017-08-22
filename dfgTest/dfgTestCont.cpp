@@ -730,12 +730,12 @@ TEST(dfgCont, TableCsv)
     {
         std::wstring sFromFile;
         DFG_CLASS_NAME(IfStreamWithEncoding) istrm(paths.front());
-        DFG_CLASS_NAME(DelimitedTextReader)::read(istrm, wchar_t(','), wchar_t('"'), wchar_t('\n'), [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t)
+        DFG_CLASS_NAME(DelimitedTextReader)::read(istrm, wchar_t(','), wchar_t('"'), wchar_t('\n'), [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
         {
             std::wstring sUtfConverted;
             auto inputRange = DFG_ROOT_NS::makeSzRange((*tables.front())(nRow, nCol).c_str());
             DFG_MODULE_NS(utf)::utf8To16Native(inputRange, std::back_inserter(sUtfConverted));
-            EXPECT_EQ(psz, sUtfConverted);
+            EXPECT_EQ(std::wstring(p, nSize), sUtfConverted);
         });
     }
 

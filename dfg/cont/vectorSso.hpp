@@ -19,6 +19,7 @@ class DFG_CLASS_NAME(VectorSso)
 public:
     typedef T*          iterator;
     typedef const T*    const_iterator;
+    typedef T           value_type;
     DFG_STATIC_ASSERT(std::is_pod<T>::value, "Currently VectorSso has very basic implementation and supports only POD's");
 
     enum { s_ssoBufferSize = StaticSize_T };

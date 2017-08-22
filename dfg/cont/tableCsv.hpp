@@ -69,6 +69,8 @@ DFG_ROOT_NS_BEGIN{
         public:
             typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
             typedef typename DFG_CLASS_NAME(TableSz)<Char_T, Index_T>::ColumnIndexPairContainer ColumnIndexPairContainer;
+            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DelimitedTextReaderBufferTypeC;
+            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T> DelimitedTextReaderBufferTypeT;
 
             DFG_CLASS_NAME(TableCsv)() :
                 m_readFormat(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
@@ -152,7 +154,7 @@ DFG_ROOT_NS_BEGIN{
                 {
                     const auto nBomSize = DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8);
                     DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData + nBomSize, nSize - nBomSize);
-                    read(strm, formatDef, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<std::string, char>());
+                    read(strm, formatDef, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DelimitedTextReaderBufferTypeC, char>());
                 }
                 else // Case: Known encoding, read using encoding istream.
                 {
@@ -166,7 +168,7 @@ DFG_ROOT_NS_BEGIN{
             void read(Strm_T& strm, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
             {
                 using namespace DFG_MODULE_NS(io);
-                read(strm, formatDef, DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderUtf<std::string>());
+                read(strm, formatDef, DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderUtf<DelimitedTextReaderBufferTypeC>());
             }
 
             template <class Strm_T, class CharAppender_T>
@@ -174,7 +176,7 @@ DFG_ROOT_NS_BEGIN{
             {
                 using namespace DFG_MODULE_NS(io);
                 this->clear();
-                typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<Char_T, Char_T, std::basic_string<Char_T>, CharAppender_T> Cdt;
+                typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<Char_T, Char_T, DelimitedTextReaderBufferTypeT, CharAppender_T> Cdt;
                 Cdt cellDataHandler(formatDef.separatorChar(), formatDef.enclosingChar(), eolCharFromEndOfLineType(formatDef.eolType()));
 
                 auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
@@ -182,7 +184,7 @@ DFG_ROOT_NS_BEGIN{
                 {
                     DFG_STATIC_ASSERT(InternalEncoding_T == DFG_MODULE_NS(io)::encodingUTF8, "Implimentation exists only for UTF8-encoding");
                     const auto& buffer = cdh.getBuffer();
-                    this->setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(SzPtrUtf8(buffer.c_str()), buffer.length()));
+                    this->setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(buffer.data()), buffer.size()));
                 };
                 DFG_CLASS_NAME(DelimitedTextReader)::read(reader, cellHandler);
                 const auto& readFormat = reader.getFormatDefInfo();
