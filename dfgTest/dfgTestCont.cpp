@@ -1436,6 +1436,8 @@ TEST(dfgCont, VectorSso)
 
     DFG_CLASS_NAME(VectorSso)<size_t, nTotalSize-2> v;
 
+    DFGTEST_STATIC(v.s_ssoBufferSize == nTotalSize - 2);
+
     v.push_back(1);
     v.push_back(2);
     v.push_back(3);
@@ -1457,6 +1459,7 @@ TEST(dfgCont, VectorSso)
         v.push_back(i);
         vVector.push_back(i);
     }
+    EXPECT_FALSE(v.isSsoStorageInUse());
     EXPECT_EQ(nTotalSize, v.size());
     EXPECT_FALSE(v.empty());
     for (size_t i = 0; i < v.size(); ++i)
@@ -1484,4 +1487,5 @@ TEST(dfgCont, VectorSso)
 
     v.clear();
     EXPECT_TRUE(v.empty());
+    EXPECT_TRUE(v.isSsoStorageInUse());
 }

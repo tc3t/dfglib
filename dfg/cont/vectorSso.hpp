@@ -21,6 +21,8 @@ public:
     typedef const T*    const_iterator;
     DFG_STATIC_ASSERT(std::is_pod<T>::value, "Currently VectorSso has very basic implementation and supports only POD's");
 
+    enum { s_ssoBufferSize = StaticSize_T };
+
     DFG_CLASS_NAME(VectorSso)() :
     m_pData(m_ssoStorage),
     m_nSize(0)
@@ -37,7 +39,7 @@ public:
         bool bUseLargeStorage = false;
         if (isSsoStorageInUse())
         {
-            if (m_nSize < StaticSize_T)
+            if (m_nSize < s_ssoBufferSize)
                 m_pData[m_nSize++] = c;
             else // Growing out of SSO-storage -> copy existing data to large storage.
             {
@@ -67,6 +69,7 @@ public:
         m_nSize = 0;
         if (!isSsoStorageInUse())
             m_largeStorage.clear();
+        m_pData = m_ssoStorage; // Start using sso-storage on clear().
     }
 
     size_t size() const { return m_nSize; }
@@ -137,7 +140,7 @@ public:
     }
 
     T* m_pData;
-    T m_ssoStorage[StaticSize_T];
+    T m_ssoStorage[s_ssoBufferSize];
     size_t m_nSize;
     std::vector<T> m_largeStorage;
 }; // VectorSso
