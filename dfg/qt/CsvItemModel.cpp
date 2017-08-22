@@ -196,9 +196,10 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QSt
     const wchar_t cSeparator = (bHasTabs) ? L'\t' : L',';
     const wchar_t cEnclosing = (cSeparator == ',') ? L'"' : L'\0';
     QTextStream strm(&sLine);
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const pszData, const size_t /*nDataLength*/)
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const p, const size_t nDataLength)
     {
-        setItem(nRow, static_cast<int>(nCol), QString::fromWCharArray(pszData));
+        const auto nSize = (nDataLength > NumericTraits<int>::maxValue) ? NumericTraits<int>::maxValue : static_cast<int>(nDataLength);
+        setItem(nRow, static_cast<int>(nCol), QString::fromWCharArray(p, nSize));
     });
 
     if (!m_bResetting)

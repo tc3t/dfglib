@@ -571,9 +571,9 @@ TEST(DfgIo, DelimitedTextReader_readRowConsecutiveSeparators)
                                 std::array<std::string, 7> arrExpected = { "", "", "a", "", "", "b", "" };
                                 std::vector<std::string> vecExpected(arrExpected.begin(), arrExpected.end());
                                 std::istrstream strm(psz);
-                                DFG_CLASS_NAME(DelimitedTextReader)::readRow<char>(strm, cDelim, '"', '\n', [&](const size_t /*nCol*/, const char* const psz, const size_t /*nSize*/)
+                                DFG_CLASS_NAME(DelimitedTextReader)::readRow<char>(strm, cDelim, '"', '\n', [&](const size_t /*nCol*/, const char* const p, const size_t nSize)
                                 {
-                                    vecRead.push_back(psz);
+                                    vecRead.push_back(std::string(p, nSize));
                                 });
 
                                 EXPECT_EQ(vecExpected, vecRead);
@@ -863,7 +863,7 @@ TEST(DfgIo, DelimitedTextReader_readMatrix10x10_1to100)
                                                     {
                                                         const auto idx = ::DFG_ROOT_NS::pairIndexToLinear(nRow, nCol, size_t(10));
                                                         const auto val = std::stoul(rCd.getBuffer());
-                                                        EXPECT_EQ(contExpected[idx], std::stoul(rCd.getBuffer()));
+                                                        EXPECT_EQ(contExpected[idx], val);
                                                         rowSums[nRow] += val;
                                                         colSums[nCol] += val;
                                                     }

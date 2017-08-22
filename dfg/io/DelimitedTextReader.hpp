@@ -15,6 +15,7 @@
 #include "../cont/elementType.hpp"
 #include "../cont/vectorSso.hpp"
 #include "../build/inlineTools.hpp"
+#include "../preprocessor/compilerInfoMsvc.hpp"
 
 #ifndef _MSC_VER // TODO: Add proper check, workaround originally introduced for gcc 4.8.1
     #include <boost/format/detail/compat_workarounds.hpp>
@@ -988,9 +989,14 @@ public:
         const int cEnclosing,
         Cont_T& cont)
     {
-        tokenizeLine<Char_T>(input, cSeparator, cEnclosing, [&](const size_t /*nCol*/, const Char_T* const psz, const size_t /*nSize*/)
+        tokenizeLine<Char_T>(input, cSeparator, cEnclosing, [&](const size_t /*nCol*/, const Char_T* const p, const size_t nSize)
         {
-            std::inserter(cont, cont.end()) = psz;
+#if defined(_MSC_VER) && (_MSC_VER <= DFG_MSVC_VER_2010)
+            typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type ElemType;
+#else
+            typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type ElemType;
+#endif
+            std::inserter(cont, cont.end()) = ElemType(p, p + nSize);
         });
     }
     
