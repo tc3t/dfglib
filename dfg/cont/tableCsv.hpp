@@ -154,7 +154,10 @@ DFG_ROOT_NS_BEGIN{
                 {
                     const auto nBomSize = DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8);
                     DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData + nBomSize, nSize - nBomSize);
-                    read(strm, formatDef, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DelimitedTextReaderBufferTypeC, char>());
+                    if (formatDef.enclosingChar() == DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone) // If there's no enclosing character, data can be read with StringViewBuffer.
+                        read(strm, formatDef, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderStringViewCBuffer());
+                    else // Case: Enclosing character is defined, use default reading since parsing enclosing items may introduce translation making StringViewBuffer unsuitable.
+                        read(strm, formatDef, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DelimitedTextReaderBufferTypeC, char>());
                 }
                 else // Case: Known encoding, read using encoding istream.
                 {
@@ -176,7 +179,7 @@ DFG_ROOT_NS_BEGIN{
             {
                 using namespace DFG_MODULE_NS(io);
                 this->clear();
-                typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<Char_T, Char_T, DelimitedTextReaderBufferTypeT, CharAppender_T> Cdt;
+                typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<Char_T, Char_T, typename CharAppender_T::BufferType, CharAppender_T> Cdt;
                 Cdt cellDataHandler(formatDef.separatorChar(), formatDef.enclosingChar(), eolCharFromEndOfLineType(formatDef.eolType()));
 
                 auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);

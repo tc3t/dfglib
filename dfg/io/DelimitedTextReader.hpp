@@ -28,6 +28,15 @@
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 
+namespace DFG_DETAIL_NS
+{
+    template <class Strm_T>
+    struct IsStreamStringViewCCompatible { enum { value = false }; };
+
+    template <>
+    struct IsStreamStringViewCCompatible<DFG_CLASS_NAME(BasicImStream)> { enum { value = true }; };
+}
+
 class DFG_CLASS_NAME(DelimitedTextReader)
 {
 public:
@@ -164,7 +173,8 @@ public:
     class CharAppenderDefault
     {
     public:
-        typedef BufferChar_T BufferChar;
+        typedef Buffer_T        BufferType;
+        typedef BufferChar_T    BufferChar;
         typedef typename std::make_unsigned<BufferChar>::type UnsignedBufferChar;
 
         template <class Char_T>
@@ -189,7 +199,9 @@ public:
         void operator()(Buffer_T& buffer, const Char_T* p)
         {
             DFG_ASSERT_UB(p != nullptr);
-            operator()(buffer, *p);
+            typedef typename std::remove_reference<decltype(*p)>::type PlainType;
+            typedef typename std::make_unsigned<PlainType>::type UnsignedCharT;
+            operator()(buffer, UnsignedCharT(*p)); // With std-streams, negative char-values gets passed as positive ints so to maintain the behaviour, translate to unsigned.
         }
     }; // Class CharAppenderDefault
 
@@ -215,6 +227,8 @@ public:
     class CharAppenderStringViewCBuffer
     {
     public:
+        typedef StringViewCBuffer BufferType;
+
         void operator()(StringViewCBuffer& sv, const char* p)
         {
             if (!sv.empty())
@@ -229,6 +243,8 @@ public:
     class CharAppenderUtf
     {
     public:
+        typedef Buffer_T BufferType;
+
         template <class Char_T>
         void operator()(Buffer_T& buffer, const Char_T& ch)
         {
@@ -240,7 +256,9 @@ public:
         void operator()(Buffer_T& buffer, const Char_T* p)
         {
             DFG_ASSERT_UB(p != nullptr);
-            operator()(buffer, *p);
+            typedef typename std::remove_reference<decltype(*p)>::type PlainType;
+            typedef typename std::make_unsigned<PlainType>::type UnsignedCharT;
+            operator()(buffer, UnsignedCharT(*p)); // With std-streams, negative char-values gets passed as positive ints so to maintain the behaviour, translate to unsigned.
         }
     }; // Class CharAppenderUtf
 
@@ -758,11 +776,25 @@ public:
             return m_rStrm;
         }
 
-        // Reads char from stream and returns true if successful, false otherwise.
-        // Note that return value does not say whether read char was successfully stored
-        // in buffer.
+        // readChar implementation for case when reading bytes from BasicImStream (contiguous memory).
+        template <class Buffer_T>
+        bool readCharImpl(Buffer_T& buffer, const ReadState rs, std::true_type)
+        {
+            auto& strm = static_cast<DFG_CLASS_NAME(BasicImStream)&>(getStream());
+            if (!strm.m_streamBuffer.isAtEnd())
+            {
+                buffer.appendChar(strm.m_streamBuffer.m_pCurrent);
+                ++strm.m_streamBuffer.m_pCurrent;
+                CellParsingImplementations::separatorAutoDetection(rs, getFormatDefInfo(), buffer);
+                return true;
+            }
+            else
+                return false;
+        }
+
+        // readChar implementation for default case.
         template <class BufferT>
-        bool readChar(BufferT& buffer, const ReadState rs)
+        bool readCharImpl(BufferT& buffer, const ReadState rs, std::false_type)
         {
             // Note: When stream has current codecvt-facet, get() will read one
             // character which may be less or more that sizeof(ch)-bytes. The result may also
@@ -782,8 +814,15 @@ public:
         }
 
         // Reads char from stream and returns true if successful, false otherwise.
-        // Note that return value does not say whether read char was successfully stored
+        // Note that return value does not tell whether read char was successfully stored
         // in buffer.
+        template <class Buffer_T>
+        bool readChar(Buffer_T& buffer, const ReadState rs)
+        {
+            return readCharImpl(buffer, rs, std::integral_constant<bool, DFG_DETAIL_NS::IsStreamStringViewCCompatible<StreamT>::value>());
+        }
+
+        // Reads char using given buffer and current read state.
         template <class BufferT>
         bool readChar(BufferT& buffer)
         {
