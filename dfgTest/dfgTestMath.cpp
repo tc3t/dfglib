@@ -37,8 +37,8 @@ TEST(dfgMath, factorial)
 
 #define FACTORIAL_TEST_SMALL(n, expected) \
     { \
-        const auto val = DFG_CLASS_NAME(Factorial_T)<n>::value; /*Without this temporary MinGW generated linker errors*/ \
-        EXPECT_EQ(factorialInt(n), val); \
+        const auto val2 = DFG_CLASS_NAME(Factorial_T)<n>::value; /*Without this temporary MinGW generated linker errors*/ \
+        EXPECT_EQ(factorialInt(n), val2); \
         FACTORIAL_TEST(n, expected); \
     }
 

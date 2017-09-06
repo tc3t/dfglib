@@ -142,23 +142,25 @@ TEST(dfgNumeric, median)
     using namespace DFG_MODULE_NS(math);
     using namespace DFG_MODULE_NS(numeric);
 
-    const std::vector<float> emptyVector;
-    const std::array<long double, 1> vals1 = { 100 };
-    const std::array<double, 2> vals2 = { 1, 9 };
-    const double vals[5] = { 8, 1, 9, 2, 5 };
-    double vals6[6] = { 8, 1, 9, 2, 5, 7 };
-    EXPECT_TRUE(isNan(median(emptyVector)));
-    EXPECT_EQ(100, median(vals1));
-    EXPECT_EQ(median(vals2), 5);
-    EXPECT_EQ(median(vals), 5);
-    EXPECT_EQ(median(vals6), 6);
-    EXPECT_EQ(medianModifying(vals6), 6);
-    EXPECT_EQ(7, vals6[3]); // This is implementation specific test case: should be true when using nth_element-implementation.
+    {
+        const std::vector<float> emptyVector;
+        const std::array<long double, 1> vals1 = { 100 };
+        const std::array<double, 2> vals2 = { 1, 9 };
+        const double vals[5] = { 8, 1, 9, 2, 5 };
+        double vals6[6] = { 8, 1, 9, 2, 5, 7 };
+        EXPECT_TRUE(isNan(median(emptyVector)));
+        EXPECT_EQ(100, median(vals1));
+        EXPECT_EQ(median(vals2), 5);
+        EXPECT_EQ(median(vals), 5);
+        EXPECT_EQ(median(vals6), 6);
+        EXPECT_EQ(medianModifying(vals6), 6);
+        EXPECT_EQ(7, vals6[3]); // This is implementation specific test case: should be true when using nth_element-implementation.
 
-    std::sort(std::begin(vals6), std::end(vals6));
-    const double vals7[7] = { 4, 2, 2, 5, 7, 6, 9 };
-    EXPECT_EQ(6, medianInSorted(vals6));
-    EXPECT_EQ(5, medianInNthSorted(vals7));
+        std::sort(std::begin(vals6), std::end(vals6));
+        const double vals7[7] = { 4, 2, 2, 5, 7, 6, 9 };
+        EXPECT_EQ(6, medianInSorted(vals6));
+        EXPECT_EQ(5, medianInNthSorted(vals7));
+    }
 
     {
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
@@ -914,9 +916,9 @@ TEST(dfgNumeric, transform)
             for (size_t i = 0; i < nRep; ++i)
             {
                 #pragma loop(no_vector)
-                for (size_t i = 0; i < nSize; ++i)
-                    v0ptr[i] = std::sin(v0ptr[i]);
-                    //v0ptr[i] += std::sin(v1ptr[i]);
+                for (size_t j = 0; j < nSize; ++j)
+                    v0ptr[j] = std::sin(v0ptr[j]);
+                    //v0ptr[j] += std::sin(v1ptr[j]);
             }
             #if ENABLE_RUNTIME_COMPARISONS
                 const auto dElapsed = timer.elapsedWallSeconds();
@@ -1105,7 +1107,7 @@ namespace
         {
             DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
             for (int i = 0; i < nRep; ++i)
-                v1Sum += std::accumulate(cont.cbegin(), cont.cend(), ValueType(0));
+                v1Sum += std::accumulate(cont.cbegin(), cont.cend(), ValueType(0), [](ValueType a, ValueType b) { return static_cast<ValueType>(a + b); });
             #if ENABLE_RUNTIME_COMPARISONS
                 const auto dElapsed = timer.elapsedWallSeconds();
                 std::cout << "std::accumulate with " << typeid(cont.front()).name() << ": " << 1000 * dElapsed << " ms\n";
@@ -1123,7 +1125,7 @@ TEST(dfgNumeric, accumulate)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(numeric);
     std::vector<uint8> vec8(40000);
-    DFG_MODULE_NS(alg)::generateAdjacent(vec8, uint16(0), uint16(1));
+    DFG_MODULE_NS(alg)::generateAdjacent(vec8, uint8(0), uint8(1));
     std::vector<uint16> vec16(30000);
     DFG_MODULE_NS(alg)::generateAdjacent(vec16, uint16(0), uint16(1));
     std::vector<uint32> vec32(vec16.begin(), vec16.end());

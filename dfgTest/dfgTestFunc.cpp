@@ -87,9 +87,8 @@ TEST(dfgFunc, MemFuncMedian)
     using namespace DFG_MODULE_NS(math);
     using namespace DFG_MODULE_NS(numeric);
 
-    DFG_CLASS_NAME(MemFuncMedian)<double> mfMedian;
-
     {
+        DFG_CLASS_NAME(MemFuncMedian)<double> mfMedian;
         const std::array<double, 5> arr = { 9, 6, 3, 5, 1 };
         const std::array<double, 5> expectedMedian = { 9, 7.5, 6, 5.5, 5 };
         EXPECT_TRUE(isNan(mfMedian.median()));

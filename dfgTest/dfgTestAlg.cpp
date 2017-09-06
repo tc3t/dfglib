@@ -117,7 +117,6 @@ TEST(dfgAlg, forEachFwd)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(alg);
     const double valsArray[] = {1,2,3,4};
-    std::vector<double> vals(std::begin(valsArray), std::end(valsArray));
 
     // Test that forEachFwd accepts valsArray.
     forEachFwd(valsArray, [](const double&) {});
@@ -342,15 +341,15 @@ TEST(dfgAlg, sortMultiple)
 
         // Testing sorting of non-copyable items and custom predicate.
         {
-            std::unique_ptr<double> x[] = { std::unique_ptr<double>(new double(5)), std::unique_ptr<double>(new double(3)), std::unique_ptr<double>(new double(4)) };
-            std::unique_ptr<double> y[] = { std::unique_ptr<double>(new double(10)), std::unique_ptr<double>(new double(20)), std::unique_ptr<double>(new double(30)) };
-            sortMultipleWithPred([](const std::unique_ptr<double>& a, const std::unique_ptr<double>& b) {return *a < *b; }, x, y);
-            EXPECT_EQ(3, *x[0]);
-            EXPECT_EQ(4, *x[1]);
-            EXPECT_EQ(5, *x[2]);
-            EXPECT_EQ(20, *y[0]);
-            EXPECT_EQ(30, *y[1]);
-            EXPECT_EQ(10, *y[2]);
+            std::unique_ptr<double> xPtrs[] = { std::unique_ptr<double>(new double(5)), std::unique_ptr<double>(new double(3)), std::unique_ptr<double>(new double(4)) };
+            std::unique_ptr<double> yPtrs[] = { std::unique_ptr<double>(new double(10)), std::unique_ptr<double>(new double(20)), std::unique_ptr<double>(new double(30)) };
+            sortMultipleWithPred([](const std::unique_ptr<double>& a, const std::unique_ptr<double>& b) {return *a < *b; }, xPtrs, yPtrs);
+            EXPECT_EQ(3, *xPtrs[0]);
+            EXPECT_EQ(4, *xPtrs[1]);
+            EXPECT_EQ(5, *xPtrs[2]);
+            EXPECT_EQ(20, *yPtrs[0]);
+            EXPECT_EQ(30, *yPtrs[1]);
+            EXPECT_EQ(10, *yPtrs[2]);
         }
 
         // Tests three vector ranges.
