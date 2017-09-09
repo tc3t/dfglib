@@ -110,6 +110,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
 // Specialization of assert to be used when execution reaches a "not implemented"-part.
 #define DFG_ASSERT_IMPLEMENTED(exp) DFG_IMPLEMENTATION_ASSERT(exp, "'Not implemented'-assert triggered")
 
+#define DFG_ASSERT_INVALID_ARGUMENT(exp, msg) DFG_IMPLEMENTATION_ASSERT(exp, "'Invalid argument'-assert triggered:" msg)
+
 // Like MFC VERIFY: In debug version evaluates the expression and causes error message if x is not true.
 //                  In release version evaluates the expression but does not check the value.
 #if defined(_DEBUG)

@@ -554,18 +554,19 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             auto& colItems = m_colToRows[nCol];
             auto indexes = DFG_MODULE_NS(alg)::computeSortIndexesBySizeAndPred(nCount, [&](const size_t a, const size_t b) -> bool
             {
-                auto iterA = privLowerBoundInColumnConst(colItems, a);
-                auto iterB = privLowerBoundInColumnConst(colItems, b);
+                auto iterA = privLowerBoundInColumnConst(colItems, static_cast<Index_T>(a));
+                auto iterB = privLowerBoundInColumnConst(colItems, static_cast<Index_T>(b));
                 auto pA = (iterA != colItems.end()) ? iterA->second : nullptr;
                 auto pB = (iterB != colItems.end()) ? iterB->second : nullptr;
                 return pred(pA, pB);
             });
             forEachFwdColumnIndex([&](const Index_T nCol)
             {
+                typedef Index_T IndexTypedefWorkAroundForVC2010;
                 auto& rowAtCol = m_colToRows[nCol];
                 DFG_MODULE_NS(alg)::DFG_DETAIL_NS::sortByIndexArray_tN_sN_WithSwapImpl(indexes, [&](size_t a, size_t b)
                 {
-                    swapCellContentInColumn(rowAtCol, a, b);
+                    swapCellContentInColumn(rowAtCol, static_cast<IndexTypedefWorkAroundForVC2010>(a), static_cast<IndexTypedefWorkAroundForVC2010>(b));
                 });
             });
         }

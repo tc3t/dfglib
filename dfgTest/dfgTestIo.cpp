@@ -294,7 +294,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     {
     boost::timer timer;
     size_t sum = 0;
-    std::istrstream istrm(buffer.data(), buffer.size());
+    std::istrstream istrm(static_cast<const char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
     int ch;
     while((ch = istrm.get()) != EOF)
         sum += ch;
@@ -307,7 +307,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     {
     boost::timer timer;
     size_t sum = 0;
-    std::istrstream istrm(buffer.data(), buffer.size());
+    std::istrstream istrm(static_cast<const char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
     char ch;
     while(istrm.read(&ch, 1))
         sum += ch;

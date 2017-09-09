@@ -295,15 +295,15 @@ TEST(dfgCont, TableSzSorting)
 
     // Test default text sorting.
     {
-        for (size_t nSortCol = 0; nSortCol < nColCount; ++nSortCol)
+        for (uint32 nSortCol = 0; nSortCol < nColCount; ++nSortCol)
         {
             DFG_STATIC_ASSERT(nColCount == 3, "Line below assumed value 3");
             DFG_MODULE_NS(alg)::sortMultiple(vecs[nSortCol], vecs[(nSortCol + 1) % 3], vecs[(nSortCol + 2) % 3]);
             table.sortByColumn(nSortCol);
-            for (size_t c = 0; c < vecs.size(); ++c)
+            for (uint32 c = 0; c < vecs.size(); ++c)
             {
                 const auto& curVec = vecs[c];
-                for (size_t r = 0; r < nRowCount; ++r)
+                for (uint32 r = 0; r < nRowCount; ++r)
                 {
                     EXPECT_EQ(curVec[r], table(r, c));
                 }
@@ -313,7 +313,7 @@ TEST(dfgCont, TableSzSorting)
 
     // Test custom sorting (numeric sorting by str->int conversion)
     {
-        for (size_t nSortCol = 0; nSortCol < nColCount; ++nSortCol)
+        for (uint32 nSortCol = 0; nSortCol < nColCount; ++nSortCol)
         {
             const auto pred = [](const char* p0, const char* p1) -> bool
                             {
@@ -331,10 +331,10 @@ TEST(dfgCont, TableSzSorting)
             DFG_STATIC_ASSERT(nColCount == 3, "Line below assumed value 3");
             DFG_MODULE_NS(alg)::sortMultipleWithPred(predStr, vecs[nSortCol], vecs[(nSortCol + 1) % 3], vecs[(nSortCol + 2) % 3]);
             table.sortByColumn(nSortCol, pred);
-            for (size_t c = 0; c < vecs.size(); ++c)
+            for (uint32 c = 0; c < vecs.size(); ++c)
             {
                 const auto& curVec = vecs[c];
-                for (size_t r = 0; r < nRowCount; ++r)
+                for (uint32 r = 0; r < nRowCount; ++r)
                 {
                     EXPECT_EQ(curVec[r], table(r, c));
                 }

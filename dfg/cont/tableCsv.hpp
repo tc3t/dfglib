@@ -212,9 +212,9 @@ DFG_ROOT_NS_BEGIN{
                     const auto cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(m_format.eolType());
                     const auto encoding = m_format.textEncoding();
                     DFG_MODULE_NS(utf)::cpToEncoded(cSep, std::back_inserter(m_bytes), encoding);
-                    m_nEncodedSepSizeInBytes = m_bytes.size();
+                    m_nEncodedSepSizeInBytes = static_cast<decltype(m_nEncodedSepSizeInBytes)>(m_bytes.size());
                     DFG_MODULE_NS(utf)::cpToEncoded(cEol, std::back_inserter(m_bytes), encoding);
-                    m_nEncodedEolSizeInBytes = m_bytes.size() - m_nEncodedSepSizeInBytes;
+                    m_nEncodedEolSizeInBytes = static_cast<decltype(m_nEncodedEolSizeInBytes)>(m_bytes.size()) - m_nEncodedSepSizeInBytes;
                     // Note: set the pointers after all no more bytes are written to m_bytes to make sure that 
                     //       there will be no pointer invalidating reallocation.
                     m_pEncodedSep = ptrToContiguousMemory(m_bytes);

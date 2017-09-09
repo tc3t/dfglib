@@ -17,7 +17,7 @@ TEST(dfgRand, dfgRand)
     DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<size_t> minMaxSizet;
     DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<int> minMax;
     DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<int> minMaxStd;
-    DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<int> minMaxStdSizet;
+    DFG_SUB_NS_NAME(func)::DFG_CLASS_NAME(MemFuncMinMax)<size_t> minMaxStdSizet;
     
 
     for(int i = 0; i<500; ++i)
@@ -30,7 +30,7 @@ TEST(dfgRand, dfgRand)
 
     // Expect that in 500 calls both min and max values will be generated.
     // (tests inclusion of boundaries of int uniform range)
-    // This test already has proven it's worth: it catched a bug in VC2010 implementation of std::uniform_int_distribution<int>
+    // This test has already proven it's worth: it catched a bug in VC2010 implementation of std::uniform_int_distribution<int>
     EXPECT_EQ(minMax.minValue(), -3);
     EXPECT_EQ(minMax.maxValue(), 3);
 #if (DFG_MSVC_VER != DFG_MSVC_VER_2010)

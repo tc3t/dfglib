@@ -8,7 +8,7 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 
-	template <class Iterable_T, class Sum_T, class Div_T>
+	template <class Sum_T, class Div_T, class Iterable_T>
 	auto averageTyped(const Iterable_T& iterable) -> decltype(Sum_T() / Div_T())
 	{
 		const auto itemCount = static_cast<Div_T>(::DFG_ROOT_NS::count(iterable));
@@ -20,8 +20,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 	auto average(const Iterable_T& iterable) -> typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Iterable_T>::type
 	{
 		typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Iterable_T>::type ValueT;
-		DFG_STATIC_ASSERT(std::is_integral<ValueT>::value == false, "Currently average for integers is not implemented; use AverageTyped instead.");
-		return averageTyped<Iterable_T, ValueT, ValueT>(iterable);
+		DFG_STATIC_ASSERT(std::is_integral<ValueT>::value == false, "Currently average() is not implemented for integers; use averageTyped instead.");
+		return averageTyped<ValueT, ValueT>(iterable);
 	}
 
 	inline double average(const double v0, const double v1) { return (v0 + v1) / 2.0; }

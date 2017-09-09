@@ -121,11 +121,11 @@ TEST(dfgNumeric, average)
     EXPECT_EQ(average(arrFloats), 2);
 
     std::complex<float> arrComplexF[3] = { std::complex<float>(1, 2), std::complex<float>(2, 3), std::complex<float>(3, 4) };
-    EXPECT_EQ((averageTyped<decltype(arrComplexF), std::complex<float>, float>(arrComplexF)), (std::complex<float>(2, 3)));
+    EXPECT_EQ((averageTyped<std::complex<float>, float>(arrComplexF)), (std::complex<float>(2, 3)));
 
     std::complex<double> arrComplexD[3] = { std::complex<double>(1, 2), std::complex<double>(2, 3), std::complex<double>(3, 4) };
-    EXPECT_EQ(average(arrComplexD), std::complex<double>(2, 3));
-
+    EXPECT_EQ(std::complex<double>(2, 3), (averageTyped<std::complex<double>, double>(arrComplexD)));
+    
     EXPECT_EQ(-1, average(-0.5, -1.5));
     EXPECT_EQ(3, average(2.0, 3.0, 4.0));
     EXPECT_EQ(2.5, average(1, 2, 3, 4));
