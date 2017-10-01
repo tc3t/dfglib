@@ -231,11 +231,8 @@ public:
 
         void operator()(StringViewCBuffer& sv, const char* p)
         {
-            if (!sv.empty())
-                sv.incrementSize();
-            else
-                sv.reset(p, 1);
-                
+            DFG_UNUSED(p);
+            sv.incrementSize();
         }
     }; // Class CharAppenderStringViewC
 
@@ -390,6 +387,25 @@ public:
         void onCellRead()
         {
             onCellReadImpl(std::integral_constant<bool, IsDefaultCharBuffer<Buffer>::value>());
+        }
+
+        template <class Reader_T>
+        void onCellReadBeginImpl(Reader_T& reader, std::true_type)
+        {
+            getBuffer().reset(reader.getStream().m_streamBuffer.m_pCurrent, 0);
+        }
+
+        template <class Reader_T>
+        void onCellReadBeginImpl(Reader_T&, std::false_type)
+        {
+        }
+
+        template <class Reader_T>
+        void onCellReadBegin(Reader_T& reader)
+        {
+            onCellReadBeginImpl(reader, std::integral_constant<bool, std::is_same<StringViewCBuffer, Buffer>::value &&
+                                                                     DFG_DETAIL_NS::IsStreamStringViewCCompatible<typename Reader_T::StreamT>::value>());
+            
         }
 
         size_t size() const
@@ -885,6 +901,8 @@ public:
 
         reader.m_readState = rsLookingForNewData;
         reader.getCellBuffer().clear();
+
+        reader.getCellBuffer().onCellReadBegin(reader);
 
         while(!reader.isReadStateEndOfCell() && reader.readChar())
         {
