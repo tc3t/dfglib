@@ -396,8 +396,9 @@ public:
         }
 
         template <class Reader_T>
-        void onCellReadBeginImpl(Reader_T&, std::false_type)
+        void onCellReadBeginImpl(Reader_T& reader, std::false_type)
         {
+            reader.getCellBuffer().clear();
         }
 
         template <class Reader_T>
@@ -900,7 +901,6 @@ public:
         typedef typename Reader::CellParsingImplementations ParsingImplementations;
 
         reader.m_readState = rsLookingForNewData;
-        reader.getCellBuffer().clear();
 
         reader.getCellBuffer().onCellReadBegin(reader);
 
