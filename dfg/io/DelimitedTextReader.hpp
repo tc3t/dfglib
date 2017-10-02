@@ -709,6 +709,22 @@ public:
                 }
             }
         }
+
+        template <class Reader_T>
+        static DFG_FORCEINLINE void returnValueHandler(Reader_T& reader)
+        {
+            const auto bufferReadStatus = reader.getCellBuffer().getReadStatus();
+            if (bufferReadStatus == cellHrvSkipRestOfLine || bufferReadStatus == cellHrvSkipRestOfLineAndTerminate)
+            {
+                if (!reader.isReadStateEol()) // Don't skip if already on eol, otherwise the next line will be skipped.
+                    readUntilEolOrEof(reader);
+                DFG_ASSERT_CORRECTNESS(reader.isReadStateEolOrEof());
+            }
+            if (bufferReadStatus == cellHrvTerminateRead || bufferReadStatus == cellHrvSkipRestOfLineAndTerminate)
+            {
+                reader.m_readState = rsTerminated;
+            }
+        }
     }; // class GenericParsingImplementations
 
     /* Basic parsing implementations that may yield better read performance with the following restrictions:
@@ -767,6 +783,13 @@ public:
         static DFG_FORCEINLINE void enclosedCellReader(ReadState&, CellBuffer&, CharReader_T, IsStreamGood_T)
         {
         }
+
+        template <class Reader_T>
+        static DFG_FORCEINLINE void returnValueHandler(const Reader_T&)
+        {
+            // Barebones parsing does not support return values.
+        }
+
     }; // BarebonesParsingImplementations
 
     template <class CellBuffer_T,
@@ -936,7 +959,7 @@ public:
     }
 
     // Reads until end of line or end of stream.
-    // Note that end-of-line is with respect to cells; eof within cells are not taken into account.
+    // Note that end-of-line is with respect to cells; eol within cells are not taken into account.
     template <class Reader>
     static void readUntilEolOrEof(Reader& reader)
     {
@@ -979,9 +1002,11 @@ public:
     // Reads row of delimited data. Note that since cells may contain eol-items, term 'row' is not the same
     // as row in text editor.
     // CellHandler is given two parameters: size_t nCol, and cellDataBuffer.
-    template <class CellReader, class CellHandler>
-    static void readRow(CellReader&& reader, CellHandler&& cellDataReceiver)
+    template <class CellReader_T, class CellHandler>
+    static void readRow(CellReader_T&& reader, CellHandler&& cellDataReceiver)
     {
+        typedef typename std::remove_reference<CellReader_T>::type::CellParsingImplementations ParsingImplementations;
+
         size_t nCol = 0;
         while (!reader.isReadStateEolOrEofOrTerminated() && reader.isStreamGood())
         {
@@ -992,19 +1017,11 @@ public:
             // Note: Call handler also for empty rows but not when line ends to EOF.
             if (!bEmptyLine || !reader.isReadStateEof())
                 cellDataReceiver(nCol, reader.getCellBuffer());
-            
+
             ++nCol;
-            const auto bufferReadStatus = reader.getCellBuffer().getReadStatus();
-            if (bufferReadStatus == cellHrvSkipRestOfLine || bufferReadStatus == cellHrvSkipRestOfLineAndTerminate)
-            {
-                if (!reader.isReadStateEol()) // Don't skip if already on eol, otherwise the next line will be skipped.
-                    readUntilEolOrEof(reader);
-                DFG_ASSERT_CORRECTNESS(reader.isReadStateEolOrEof());
-            }
-            if (bufferReadStatus == cellHrvTerminateRead || bufferReadStatus == cellHrvSkipRestOfLineAndTerminate)
-            {
-                reader.m_readState = rsTerminated;
-            }
+
+            ParsingImplementations::returnValueHandler(reader);
+
             if (bEmptyLine)
                 break;
         }
