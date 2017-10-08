@@ -483,3 +483,17 @@ TEST(dfg, toSzPtr)
     EXPECT_EQ(tszLatin1, toSzPtr_typed(tszLatin1));
     EXPECT_EQ(tszUtf8, toSzPtr_typed(tszUtf8));
 }
+
+namespace
+{
+    static DFG_CONSTEXPR int constexprMarkedFunc() { return 2; }
+}
+
+TEST(dfg, constExpr)
+{
+#if DFG_LANGFEAT_CONSTEXPR
+    DFGTEST_STATIC((std::integral_constant<int, constexprMarkedFunc()>::value == 2));
+#else
+    EXPECT_EQ(2, constexprMarkedFunc()); // Makes sure that unsupported DFG_CONSTEXPR doesn't break compiling.
+#endif
+}

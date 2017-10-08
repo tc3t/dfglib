@@ -80,3 +80,12 @@
 #else
     #define DFG_LANGFEAT_UNICODE_STRING_LITERALS 1
 #endif
+
+// DFG_LANGFEAT_CONSTEXPR
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)))
+    #define DFG_LANGFEAT_CONSTEXPR 0
+    #define DFG_CONSTEXPR
+#else
+    #define DFG_LANGFEAT_CONSTEXPR  1
+    #define DFG_CONSTEXPR           constexpr
+#endif
