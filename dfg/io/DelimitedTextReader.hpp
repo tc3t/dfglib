@@ -177,6 +177,9 @@ public:
         typedef BufferChar_T    BufferChar;
         typedef typename std::make_unsigned<BufferChar>::type UnsignedBufferChar;
 
+        // If true, calling operator() is guaranteed to append, i.e. size_before_operator() < size_after_operator().
+        static const bool s_isAppendOperatorGuaranteedToIncrementSize = true;
+
         template <class Char_T>
         void operator()(Buffer_T& buffer, const Char_T& ch)
         {
@@ -229,6 +232,8 @@ public:
     public:
         typedef StringViewCBuffer BufferType;
 
+        static const bool s_isAppendOperatorGuaranteedToIncrementSize = true;
+
         void operator()(StringViewCBuffer& sv, const char* p)
         {
             DFG_UNUSED(p);
@@ -241,6 +246,8 @@ public:
     {
     public:
         typedef Buffer_T BufferType;
+
+        static const bool s_isAppendOperatorGuaranteedToIncrementSize = false; // TODO: revise.
 
         template <class Char_T>
         void operator()(Buffer_T& buffer, const Char_T& ch)
@@ -262,6 +269,8 @@ public:
     class CharAppenderNone
     {
     public:
+        static const bool s_isAppendOperatorGuaranteedToIncrementSize = false;
+
         template <class Buffer_T, class Char_T>
         void operator()(Buffer_T&, const Char_T&)
         {
@@ -348,18 +357,19 @@ public:
             m_whiteSpaces.erase(std::remove_if(m_whiteSpaces.begin(), m_whiteSpaces.end(), [&](const BufferChar c) {return c == cRem; }));
             return (nSizeBefore != m_whiteSpaces.size());
         }
-        
 
+        // Precondition: !empty()
         void popLastChar()
         {
-            if (!m_buffer.empty())
-                m_buffer.pop_back();
+            DFG_ASSERT_UB(!m_buffer.empty());
+            m_buffer.pop_back();
         }
 
+        // Precondition: !empty()
         void popFrontChar()
         {
-            if (!m_buffer.empty())
-                DFG_MODULE_NS(cont)::popFront(m_buffer);
+            DFG_ASSERT_UB(!m_buffer.empty());
+            DFG_MODULE_NS(cont)::popFront(m_buffer);
         }
 
         // Implementation for default buffer type
@@ -637,7 +647,8 @@ public:
             // Check for characters after enclosing item. Simply ignore them.
             if (rs == rsPastEnclosedCell)
             {
-                buffer.popLastChar();
+                if (!buffer.empty()) // Revise: This check might be redundant.
+                    buffer.popLastChar();
                 return;
             }
 
@@ -738,6 +749,21 @@ public:
         typedef Buffer_T CellBuffer;
         typedef typename CellBuffer::FormatDef FormatDef;
 
+        static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer&, std::true_type)
+        {
+            return false;
+        }
+
+        static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer& buffer, std::false_type)
+        {
+            return buffer.empty();
+        }
+
+        static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer& buffer)
+        {
+            return isEmptyGivenSuccessfulReadCharCall(buffer, std::integral_constant<bool, CellBuffer::CharAppender::s_isAppendOperatorGuaranteedToIncrementSize>());
+        }
+
         static DFG_FORCEINLINE void separatorAutoDetection(const ReadState, const FormatDef&, CellBuffer&)
         {
             // Auto detection is not supported in bare-bones parsing.
@@ -756,7 +782,7 @@ public:
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
-            if (buffer.empty() || buffer.getBuffer().back() != buffer.getFormatDefInfo().getSep())
+            if (isEmptyGivenSuccessfulReadCharCall(buffer) || buffer.getBuffer().back() != buffer.getFormatDefInfo().getSep())
                 return false;
             else
             {
@@ -855,7 +881,7 @@ public:
 
         // Reads char from stream and returns true if successful, false otherwise.
         // Note that return value does not tell whether read char was successfully stored
-        // in buffer.
+        // in buffer, but returned 'true' guarantees that buffer.appendChar() was called.
         template <class Buffer_T>
         bool readChar(Buffer_T& buffer, const ReadState rs)
         {
@@ -936,11 +962,11 @@ public:
             // Set naked cell state if needed.
             ParsingImplementations::nakedCellStateHandler(reader.m_readState, reader.getCellBuffer());
 
-            // Check for separator
+            // Check for separator. Calling separatorChecker() is guaranteed to be done after successful reader.readChar() call. 
             if (ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()))
                 break;
 
-            // Check for end of line
+            // Check for end of line. Calling eolChecker() is guaranteed to be done after successful reader.readChar() call.
             if (ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
                 break;
 
