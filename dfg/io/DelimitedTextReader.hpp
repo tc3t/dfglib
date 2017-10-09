@@ -127,10 +127,67 @@ public:
     {
     };
 
+    template <int Enc_T, int Eol_T, int Sep_T>
+    class FormatDefinitionSingleCharsCompileTime
+    {
+    public:
+        typedef std::bitset<lastReadFlag + 1> FlagContainer;
+        static const int s_enc = Enc_T;
+        static const int s_eol = Eol_T;
+        static const int s_sep = Sep_T;
+
+        static const bool s_hasCompileTimeSeparatorChar = true;
+
+        DFG_STATIC_ASSERT(s_enc != s_nMetaCharAutoDetect, "Compile-time enclosing char can't be auto detectable.");
+        DFG_STATIC_ASSERT(s_eol != s_nMetaCharAutoDetect, "Compile-time end-of-line char can't be auto detectable.");
+        DFG_STATIC_ASSERT(s_sep != s_nMetaCharAutoDetect, "Compile-time separator char can't be auto detectable.");
+
+        FormatDefinitionSingleCharsCompileTime()
+        {}
+
+        FormatDefinitionSingleCharsCompileTime(int , int , int)
+        {
+            DFG_ASSERT_CORRECTNESS(false); // This overload should not be called.
+        }
+
+        DFG_CONSTEXPR uint32 getEnclosingMarkerLengthInChars() const
+        {
+            return (s_enc >= 0) ? 1 : 0;
+        }
+
+        DFG_CONSTEXPR uint32 getEolMarkerLengthInChars() const
+        {
+            return (s_eol >= 0) ? 1 : 0;
+        }
+
+        DFG_CONSTEXPR int getEnc() const { return s_enc; }
+        DFG_CONSTEXPR int getEol() const { return s_eol; }
+        DFG_CONSTEXPR int getSep() const { return s_sep; }
+
+        void copySepatorCharFrom(const FormatDefinitionSingleCharsCompileTime&) const
+        {
+            // Nothing to do here since chars are the same due to identical types.
+        }
+
+        bool testFlag(ReadFlag flag) const
+        {
+            return m_flags.test(flag);
+        }
+
+        void setFlag(ReadFlag flag, const bool bState = true)
+        {
+            m_flags.set(flag, bState);
+        }
+
+        FlagContainer m_flags;
+    };
+
     class FormatDefinitionSingleChars
     {
     public:
         typedef std::bitset<lastReadFlag + 1> FlagContainer;
+
+        static const bool s_hasCompileTimeSeparatorChar = false;
 
         FormatDefinitionSingleChars(int cEnc, int cEol, int cSep) :
             m_cEnc(cEnc),
@@ -152,6 +209,11 @@ public:
         int getEnc() const {return m_cEnc;}
         int getEol() const {return m_cEol;}
         int getSep() const {return m_cSep;}
+
+        void copySepatorCharFrom(const FormatDefinitionSingleChars& other)
+        {
+            m_cSep = other.m_cSep;
+        }
 
         bool testFlag(ReadFlag flag) const
         {
@@ -300,11 +362,11 @@ public:
             -Handling underlying character buffer
             -Storing format specification
     */
-    template <class BufferChar_T, class InputChar_T = BufferChar_T, class Buffer_T = CharBuffer<BufferChar_T>, class CharAppender_T = CharAppenderDefault<Buffer_T, BufferChar_T>>
+    template <class BufferChar_T, class InputChar_T = BufferChar_T, class Buffer_T = CharBuffer<BufferChar_T>, class CharAppender_T = CharAppenderDefault<Buffer_T, BufferChar_T>, class FormatDef_T = FormatDefinitionSingleChars>
     class CellData
     {
     public:
-        typedef FormatDefinitionSingleChars FormatDef;
+        typedef FormatDef_T FormatDef;
         typedef BufferChar_T BufferChar;
         typedef InputChar_T	InputChar;
         typedef Buffer_T	Buffer;
@@ -321,14 +383,26 @@ public:
         // Defines max char for codecvt-template.
         static const uint32 s_nMaxCodeCvtChar = NumericTraits<UnsignedInputChar>::maxValue;
 
+        CellData(const FormatDef& formatDef) :
+            m_formatDef(formatDef),
+            m_status(cellHrvContinue)
+        {
+            privCellDataInit();
+        }
+
         CellData(int cSep, int cEnc, int cEol) :
             m_formatDef(cEnc, cEol, cSep),
             m_status(cellHrvContinue)
         {
+            privCellDataInit();
+        }
+
+        void privCellDataInit()
+        {
             m_formatDef.setFlag(rfSkipLeadingWhitespaces, true);
-            if (cSep != ' ')
+            if (m_formatDef.getSep() != ' ')
                 m_whiteSpaces.push_back(' ');
-            if (cSep != '\t')
+            if (m_formatDef.getSep() != '\t')
                 m_whiteSpaces.push_back('\t');
         }
 
@@ -577,8 +651,12 @@ public:
         typedef Buffer_T CellBuffer;
         typedef typename CellBuffer::FormatDef FormatDef;
 
-        // Handles separator auto detection.
-        static DFG_FORCEINLINE void separatorAutoDetection(const ReadState rs, FormatDef& formatDef, CellBuffer& buffer)
+        static DFG_FORCEINLINE void separatorAutoDetection(const ReadState, FormatDef&, CellBuffer&, std::true_type)
+        {
+            // Nothing to do here since compile time separator info implies that it can't be runtime detected.
+        }
+
+        static DFG_FORCEINLINE void separatorAutoDetection(const ReadState rs, FormatDef& formatDef, CellBuffer& buffer, std::false_type)
         {
             if (formatDef.getSep() == s_nMetaCharAutoDetect)
             {
@@ -592,6 +670,12 @@ public:
                         buffer.removeWhitespaceCharacter('\t');
                 }
             }
+        }
+
+        // Handles separator auto detection.
+        static DFG_FORCEINLINE void separatorAutoDetection(const ReadState rs, FormatDef& formatDef, CellBuffer& buffer)
+        {
+            separatorAutoDetection(rs, formatDef, buffer, std::integral_constant<bool, FormatDef::s_hasCompileTimeSeparatorChar>());
         }
 
         // Returns true if caller should invoke 'continue', false otherwise.
@@ -691,7 +775,7 @@ public:
                         else if (tempBuffer.isBufferSeparatorItem()) // Found separator after enclosing item.
                         {
                             buffer.setBufferEnd(iterToEndingEnclosingItem);
-                            buffer.getFormatDefInfo().m_cSep = tempBuffer.getFormatDefInfo().getSep(); // This is needed in case that seprator auto-detection is triggered for the temp buffer.
+                            buffer.getFormatDefInfo().copySepatorCharFrom(tempBuffer.getFormatDefInfo()); // This is needed in case that separator auto-detection is triggered for the temp buffer.
                             rs = rsSeparatorEncountered;
                             break;
                         }
@@ -741,6 +825,7 @@ public:
     /* Basic parsing implementations that may yield better read performance with the following restrictions:
      *      -No pre-cell or post-cell trimming (e.g. in case of ', a' pre-cell trimming could remove leading whitespaces and read cell as "a" instead of " a")
      *      -No enclosed cell support (e.g. can't have separators or new lines within cells and enclosing characters will be read like any other non-control character)
+     *      -No cell handler return value handling (e.g. can't terminate in middle of reading)
      */
     template <class Buffer_T>
     class BarebonesParsingImplementations

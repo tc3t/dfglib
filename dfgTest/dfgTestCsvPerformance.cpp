@@ -179,9 +179,11 @@ namespace
             auto spStrm = streamInitFunc(sFilePath, bytes);
             EXPECT_TRUE(spStrm != nullptr);
             auto& istrm = *spStrm;
-            typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, Buffer_T, CharAppender_T> Cdt;
+            typedef DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ','> FormatDef;
+            typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, Buffer_T, CharAppender_T, FormatDef> Cdt;
 
-            Cdt cellDataHandler(',', DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n');
+            FormatDef formatDef;
+            Cdt cellDataHandler(formatDef);
             auto reader = createReader(istrm, cellDataHandler, readerOption);
 
             size_t nCounter = 0;
