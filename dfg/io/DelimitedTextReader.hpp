@@ -880,14 +880,19 @@ public:
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
-            const auto iterToEndingEolItem = buffer.iteratorToEndingEolItem();
-            if (iterToEndingEolItem != buffer.cend())
+            if (isEmptyGivenSuccessfulReadCharCall(buffer) || buffer.getBuffer().back() != buffer.getFormatDefInfo().getEol())
+                return false;
+            else
             {
-                buffer.setBufferEnd(iterToEndingEolItem);
+                buffer.popLastChar();
+
+                // \r\n handling.
+                if (buffer.getFormatDefInfo().getEol() == '\n' && !buffer.empty() && buffer.getBuffer().back() == '\r')
+                    buffer.popLastChar();
+
                 rs = rsEndOfLineEncountered;
                 return true;
             }
-            return false;
         }
 
         template <class TempBufferType_T, class CharReader_T, class IsStreamGood_T>
@@ -1187,7 +1192,6 @@ public:
             std::inserter(cont, cont.end()) = ElemType(p, p + nSize);
         });
     }
-    
 
     // Reads data row by row in order.
     // CellHandler is a function that will receive three parameters:
@@ -1220,7 +1224,7 @@ public:
     // Convenience overload.
     // Item handler function is given four parameters:
     // row index, column index, Pointer to beginning of buffer, buffer size.
-    // For example: func(const size_t nRow, const size_t nCol, const char* const psz, const size_t nSize) 
+    // For example: func(const size_t nRow, const size_t nCol, const char* const pData, const size_t nSize) 
     // TODO: test
     template <class Stream_T, class Char_T, class ItemHandlerFunc>
     static void read(Stream_T& istrm,
