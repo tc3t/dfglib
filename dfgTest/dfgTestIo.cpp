@@ -356,25 +356,59 @@ TEST(dfgIo, StdIStrStreamPerformance)
     }
 }
 
+namespace
+{
+    template <class Strm_T>
+    void getTest()
+    {
+        using namespace DFG_MODULE_NS(io);
+
+        const char input[] = "abcdef";
+        std::string output;
+        Strm_T istrm(input, DFG_COUNTOF_SZ(input));
+        char ch;
+        while (istrm.get(ch))
+            output.push_back(ch);
+
+        std::string output2;
+        Strm_T istrm2(input, DFG_COUNTOF_SZ(input));
+        decltype(istrm.get()) ch2;
+        while ((ch2 = istrm2.get()) != eofChar(istrm2))
+            output2.push_back(static_cast<char>(ch2));
+
+        EXPECT_EQ(DFG_COUNTOF_SZ(input), output.size());
+        EXPECT_EQ(input, output);
+        EXPECT_EQ(output, output2);
+    }
+}
+
 TEST(dfgIo, BasicImStream)
 {
     const char szData[] = "012345";
 
     using namespace DFG_MODULE_NS(io);
 
-    DFG_CLASS_NAME(BasicImStream) istrm(szData, DFG_COUNTOF_CSL(szData));
+    {
+        DFG_CLASS_NAME(BasicImStream) istrm(szData, DFG_COUNTOF_CSL(szData));
 
-    char c;
-    readBinary(istrm, c);
-    EXPECT_EQ('0', c);
-    char c2[6];
-    readBinary(istrm, c2);
-    EXPECT_EQ('1', c2[0]);
-    EXPECT_EQ('2', c2[1]);
-    EXPECT_EQ('3', c2[2]);
-    EXPECT_EQ('4', c2[3]);
-    EXPECT_EQ('5', c2[4]);
-    EXPECT_FALSE(istrm.good());
+        char c;
+        readBinary(istrm, c);
+        EXPECT_EQ('0', c);
+        char c2[6];
+        readBinary(istrm, c2);
+        EXPECT_EQ('1', c2[0]);
+        EXPECT_EQ('2', c2[1]);
+        EXPECT_EQ('3', c2[2]);
+        EXPECT_EQ('4', c2[3]);
+        EXPECT_EQ('5', c2[4]);
+        EXPECT_FALSE(istrm.good());
+    }
+
+    // get-testing
+    {
+        getTest<DFG_CLASS_NAME(BasicImStream)>();
+        getTest<std::istrstream>();
+    }
 }
 
 TEST(dfgIo, BasicImStream_T_wcharT)
@@ -959,4 +993,44 @@ TEST(dfgIo, seekFwdToLine)
     using namespace DFG_MODULE_NS(io);
     DFG_CLASS_NAME(IStringStream) istrm;
     seekFwdToLineBeginningWith(istrm, "a", dfg::CaseSensitivityYes, '\n'); // Just a dummy line to test building.
+}
+
+namespace
+{
+    template <class Strm_T>
+    static void getThroughImpl()
+    {
+        using namespace DFG_MODULE_NS(io);
+        
+        {
+            const char input[] = "abcdef";
+            std::string output;
+            Strm_T istrm(input, DFG_COUNTOF_SZ(input));
+
+            getThrough(istrm, [&](char ch) { output.push_back(ch); });
+
+            EXPECT_EQ(DFG_COUNTOF_SZ(input), output.size());
+            EXPECT_EQ(input, output);
+        }
+        
+        // Test reading empty sequence.
+        {
+            std::string output;
+            Strm_T istrm((const char*)nullptr, 0);
+            output.clear();
+            getThrough(istrm, [&](char ch) { output.push_back(ch); }); 
+            EXPECT_EQ(0, output.size());
+        }
+    }
+}
+
+TEST(dfgIo, getThrough)
+{
+    using namespace DFG_MODULE_NS(io);
+    DFGTEST_STATIC(DFG_DETAIL_NS::io_hpp::Has_getThrough<DFG_CLASS_NAME(BasicImStream)>::value == true);
+    DFGTEST_STATIC(DFG_DETAIL_NS::io_hpp::Has_getThrough<std::ifstream>::value == false);
+    DFGTEST_STATIC(DFG_DETAIL_NS::io_hpp::Has_getThrough<std::istrstream>::value == false);
+
+    getThroughImpl<DFG_CLASS_NAME(BasicImStream)>();
+    getThroughImpl<std::istrstream>();
 }

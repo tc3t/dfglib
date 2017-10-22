@@ -195,6 +195,58 @@ public:
     std::streamsize write(const Char_T*, std::streamsize n) {return n;}
 };
 
+namespace DFG_DETAIL_NS
+{
+    namespace io_hpp
+    {
+        template <class Strm_T>
+        struct Has_getThrough
+        {
+            typedef char FalseType;
+            typedef double TrueType;
+
+            typedef decltype(DFG_MODULE_NS(io)::readOne(*(static_cast<Strm_T*>(nullptr)))) CharT;
+            static void readOne(CharT);
+
+            template <class U1, class U2> static auto func(decltype(&U1::template getThrough<U2>) p)->TrueType;
+            template <class U1, class U2> static auto func(...)->FalseType;
+            typedef decltype(func<Strm_T, decltype(&Has_getThrough::readOne)>(nullptr)) type;
+            
+            enum
+            {
+                value = (sizeof(type) == sizeof(TrueType))
+            };
+        };
+
+        // Workaround for older MSVC-compilers: Has_getThrough above does not work in them so handle at least BasicImStream manually .
+#if defined(DFG_MSVC_VER) && DFG_MSVC_VER > 0 && (DFG_MSVC_VER < DFG_MSVC_VER_2015)
+        template <> struct Has_getThrough<DFG_CLASS_NAME(BasicImStream)> { enum { value = true }; };
+#endif
+    }
+
+    template <class Strm_T, class Func_T>
+    Func_T getThrough(Strm_T& strm, Func_T func, std::true_type)
+    {
+        return strm.getThrough(func);
+    }
+
+    template <class Strm_T, class Func_T>
+    Func_T getThrough(Strm_T& strm, Func_T func, std::false_type)
+    {
+        char ch;
+        while (strm.get(ch))
+            func(ch);
+        return func;
+    }
+}
+
+// For given stream, get()'s characters until the end or until the stream is no longer good() and passes every char to given function.
+template <class Strm_T, class Func_T>
+Func_T getThrough(Strm_T& strm, Func_T func)
+{
+    return DFG_DETAIL_NS::getThrough(strm, func, std::integral_constant<bool, DFG_DETAIL_NS::io_hpp::Has_getThrough<Strm_T>::value>());
+}
+
 }} // module io
 
 #endif

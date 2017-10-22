@@ -112,9 +112,27 @@ public:
 
     size_t sizeInCharacters() const { return m_streamBuffer.countInCharsTotal(); }
     size_t countOfRemainingElems() const { return m_streamBuffer.countInCharsRemaining(); }
-    int_type get() { return m_streamBuffer.get(this->eofVal()); }
-    void get(Char_T& dst) { dst = static_cast<Char_T>(get()); }
+
+    bool canReadOne() const { return !m_streamBuffer.isAtEnd(); }
+
+    // Reads and advances one character.
+    // Precondition: canReadOne() == true
+    Char_T readOne_unchecked() { return *m_streamBuffer.m_pCurrent++; }
+
+    int_type get()               { return m_streamBuffer.get(this->eofVal()); }
+    bool     get(Char_T& dst) // Returns true if read, false otherwise.
+    { 
+        if (canReadOne())
+        {
+            dst = readOne_unchecked();
+            return true;
+        }
+        else
+            return false;
+    }
+
     bool good() const { return !m_streamBuffer.isAtEnd(); }
+
     DFG_CLASS_NAME(BasicImStream_T)& read(Char_T* p, const size_t nCharCount)
     {
         m_streamBuffer.read(p, nCharCount);
@@ -130,10 +148,32 @@ public:
     {
         return m_streamBuffer.tellg();
     }
+
     inline void seekg(const PosType& pos)
     {
         m_streamBuffer.seekg(static_cast<size_t>(pos));
     }
+
+    void seekToEnd()
+    {
+        seekg(sizeInCharacters());
+    }
+
+    template <class Func_T>
+    Func_T getThrough(Func_T func)
+    {
+        for (; m_streamBuffer.m_pCurrent != m_streamBuffer.m_pEnd; m_streamBuffer.m_pCurrent++)
+        {
+            func(*m_streamBuffer.m_pCurrent);
+        }
+        return func;
+    }
+
+    DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED operator bool() const { return good(); }
+
+    const Char_T* beginPtr()   const { return m_streamBuffer.m_pBegin; }
+    const Char_T* endPtr()     const { return m_streamBuffer.m_pEnd; }
+    const Char_T* currentPtr() const { return m_streamBuffer.m_pCurrent; }
 
     StreamBufferT m_streamBuffer;
 };
