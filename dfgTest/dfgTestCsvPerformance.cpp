@@ -295,8 +295,40 @@ namespace
         PrintTestCaseRow(output, sFilePath, runtimes, "\"TableCsv<char,uint32>\"", "Read&Store", "N/A");
     }
 
-    template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_GetThrough(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
+    template <class IStrm_T>
+    size_t getThroughOriginal(IStrm_T& istrm)
+    {
+        using namespace DFG_MODULE_NS(io);
+        size_t nCounter = 0;
+        const auto cEofChar = eofChar(istrm);
+        while (readOne(istrm) != cEofChar)
+            nCounter++;
+        return nCounter;
+    }
+
+    template <class IStrm_T>
+    size_t getThroughIoGetThroughLambda(IStrm_T& istrm)
+    {
+        size_t nCounter = 0;
+        DFG_MODULE_NS(io)::getThrough(istrm, [&](char) { nCounter++; });
+        return nCounter;
+    }
+
+    struct GetThroughFunctor
+    {
+        GetThroughFunctor() : m_nCounter(0) {}
+        size_t m_nCounter;
+        void operator()(char) { m_nCounter++; }
+    };
+
+    template <class IStrm_T>
+    size_t getThroughIoGetThroughFunctor(IStrm_T& istrm)
+    {
+        return DFG_MODULE_NS(io)::getThrough(istrm, GetThroughFunctor()).m_nCounter;
+    }
+
+    template <class IStrm_T, class IStrmInit_T, class GetThrough_T>
+    void ExecuteTestCase_GetThrough(std::ostream& output, IStrmInit_T streamInitFunc, GetThrough_T getThroughFunc, const std::string& sFilePath, const size_t nCount, const std::string additionalDesc = std::string())
     {
         using namespace DFG_MODULE_NS(io);
 
@@ -311,11 +343,7 @@ namespace
             EXPECT_TRUE(spStrm != nullptr);
             auto& istrm = *spStrm;
 
-            size_t nCounter = 0;
-
-            const auto cEofChar = eofChar(istrm);
-            while (readOne(istrm) != cEofChar)
-                nCounter++;
+            const auto nCounter = getThroughFunc(istrm);
 
             const auto elapsedTime = timer.elapsedWallSeconds();
 
@@ -325,7 +353,7 @@ namespace
 
             runtimes.push_back(elapsedTime);
         }
-        PrintTestCaseRow(output, sFilePath, runtimes, "readOne()", "Read through", StreamName<IStrm_T>());
+        PrintTestCaseRow(output, sFilePath, runtimes, "readOne()", "Read through" + additionalDesc, StreamName<IStrm_T>());
     }
 
 } // unnamed namespace
@@ -349,22 +377,24 @@ TEST(dfgPerformance, CsvReadPerformance)
     const auto sFilePath = GenerateTestFile(gnRowCount, gnColCount);
 
     // std::ifstream
-    ExecuteTestCase_GetThrough<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
+    ExecuteTestCase_GetThrough<std::ifstream>(ostrmTestResults, InitIfstream, getThroughOriginal<std::ifstream>, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
 
     // std::istrstream
-    ExecuteTestCase_GetThrough<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
+    ExecuteTestCase_GetThrough<std::istrstream>(ostrmTestResults, InitIStrStream, getThroughOriginal<std::istrstream>, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istrstream>(ostrmTestResults, InitIStrStream, sFilePath, nRunCount);
 
     // std::istringstream
-    ExecuteTestCase_GetThrough<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
+    ExecuteTestCase_GetThrough<std::istringstream>(ostrmTestResults, InitIStringStream, getThroughOriginal<std::istringstream>, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
 
     // BasicImStream
-    ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
+    ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, getThroughOriginal<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>, sFilePath, nRunCount, " with get()");
+    ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, getThroughIoGetThroughLambda<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>, sFilePath, nRunCount, " with io::getThrough() and lambda");
+    ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, getThroughIoGetThroughFunctor<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>, sFilePath, nRunCount, " with io::getThrough() and functor");
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); //Basic reader
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
