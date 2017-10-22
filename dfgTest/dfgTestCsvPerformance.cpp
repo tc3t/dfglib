@@ -18,7 +18,14 @@
 #include <strstream>
 #include <sstream>
 
-#if DFG_MSVC_VER >= DFG_MSVC_VER_2015
+#if DFG_MSVC_VER == 0 || DFG_MSVC_VER >= DFG_MSVC_VER_2015
+    #define ENABLE_FAST_CPP_CSV_PARSER 1
+#else
+    #define ENABLE_FAST_CPP_CSV_PARSER 0
+#endif
+
+
+#if ENABLE_FAST_CPP_CSV_PARSER
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
         #include <dfg/io/fast-cpp-csv-parser/csv.h>
     DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
@@ -235,7 +242,7 @@ namespace
         ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
     }
 
-#if DFG_MSVC_VER >= DFG_MSVC_VER_2015
+#if ENABLE_FAST_CPP_CSV_PARSER
     template <class Read_T>
     void ExecuteTestCase_FastCppCsvParser(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
@@ -365,7 +372,7 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
 
     // fast-cpp-csv-parser
-#if DFG_MSVC_VER >= DFG_MSVC_VER_2015
+#if ENABLE_FAST_CPP_CSV_PARSER
     ExecuteTestCase_FastCppCsvParser<const char*>(ostrmTestResults, sFilePath, nRunCount);
     ExecuteTestCase_FastCppCsvParser<std::string>(ostrmTestResults, sFilePath, nRunCount);
 #endif
