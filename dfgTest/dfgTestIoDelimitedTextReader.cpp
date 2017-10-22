@@ -1187,7 +1187,7 @@ TEST(DfgIo, DelimitedTextReader_basicReader)
     using namespace DFG_MODULE_NS(io);
     using namespace DFG_MODULE_NS(cont);
 
-    const char* inputDatas[] = { "1\n2", "1, 2", "1,2\n3, 4 ", "1,2\r\n3,4", "\"1\",\"2,3\",4" };
+    const char* inputDatas[] = { "1\n2", "1, 2", "1,2\n3, 4 ", "1,2\r\n3,4", "\"1\",\"2,3\",4", ",,\"\",\n" };
 
     const std::vector<std::string> expectedCellContents[] =
     {
@@ -1196,6 +1196,7 @@ TEST(DfgIo, DelimitedTextReader_basicReader)
         makeVector<std::string>("1", "2", "3", " 4 "),
         makeVector<std::string>("1", "2", "3", "4"),
         makeVector<std::string>("\"1\"", "\"2", "3\"", "4"),
+        makeVector<std::string>("", "", "\"\"", "")
     };
     DFG_STATIC_ASSERT(DFG_COUNTOF(inputDatas) == DFG_COUNTOF(expectedCellContents), "Array size mismatch");
 

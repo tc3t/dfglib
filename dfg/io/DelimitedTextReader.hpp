@@ -820,6 +820,28 @@ public:
                 reader.m_readState = rsTerminated;
             }
         }
+
+        template <class Reader_T, class CellHandler_T>
+        static DFG_FORCEINLINE void read(Reader_T& reader, CellHandler_T&& cellHandler)
+        {
+            size_t nRow = 0;
+            auto cellHandlerWrapper = [&](size_t nCol, decltype(reader.getCellBuffer())& cellData)
+            {
+                cellHandler(nRow, nCol, cellData);
+            };
+
+            for (; ; ++nRow)
+            {
+                readRow(reader, cellHandlerWrapper);
+                if (reader.isReadStateEof() || reader.isReadStateTerminated() || !reader.isStreamGood())
+                    break;
+                else
+                {
+                    reader.m_readState = rsLookingForNewData;
+                    reader.getCellBuffer().setReadStatus(cellHrvContinue);
+                }
+            }
+        }
     }; // class GenericParsingImplementations
 
     /* Basic parsing implementations that may yield better read performance with the following restrictions:
@@ -904,6 +926,52 @@ public:
         static DFG_FORCEINLINE void returnValueHandler(const Reader_T&)
         {
             // Barebones parsing does not support return values.
+        }
+
+        // Specialization for whole stream reading when handling untranslated stream with StringViewCBuffer (i.e. can use StringView to source bytes).
+        // TODO: test
+        template <class Reader_T, class CellHandler_T>
+        static DFG_FORCEINLINE void read(Reader_T& reader, CellHandler_T&& cellHandler, std::true_type)
+        {
+            BasicImStream& strm = reader.getStream();
+            StringViewCBuffer& buffer = reader.getCellBuffer().getBuffer();
+            const auto formatDef = reader.getCellBuffer().getFormatDefInfo();
+            size_t nRow = 0;
+            size_t nCol = 0;
+            auto p = strm.currentPtr();
+            const auto pEnd = strm.endPtr();
+            auto pCellStart = p;
+            for (; p != pEnd; ++p)
+            {
+                if (*p != formatDef.getSep() && *p != formatDef.getEol())
+                    continue;
+
+                buffer.reset(pCellStart, p - pCellStart);
+                cellHandler(nRow, nCol, reader.getCellBuffer());
+                pCellStart = p + 1;
+                if (*p == formatDef.getEol())
+                {
+                    ++nRow;
+                    nCol = 0;
+                }
+                else
+                    nCol++;
+            }
+            strm.seekToEnd();
+        }
+
+        // Default implementation, see true_type-overload for documentation.
+        template <class Reader_T, class CellHandler_T>
+        static DFG_FORCEINLINE void read(Reader_T& reader, CellHandler_T&& cellHandler, std::false_type)
+        {
+            GenericParsingImplementations<Buffer_T>::read(reader, std::forward<CellHandler_T>(cellHandler));
+        }
+
+        template <class Reader_T, class CellHandler_T>
+        static DFG_FORCEINLINE void read(Reader_T& reader, CellHandler_T&& cellHandler)
+        {
+            typedef std::integral_constant<bool, DFG_DETAIL_NS::IsStreamStringViewCCompatible<typename Reader_T::StreamT>::value && std::is_same<StringViewCBuffer, typename Reader_T::CellBuffer::Buffer>::value> TagType;
+            read(reader, std::forward<CellHandler_T>(cellHandler), TagType());
         }
 
     }; // BarebonesParsingImplementations
@@ -1202,23 +1270,7 @@ public:
     template <class CellReader, class CellHandler>
     static void read(CellReader& reader, CellHandler&& cellHandler)
     {
-        size_t nRow = 0;
-        auto cellHandlerWrapper = [&](size_t nCol, decltype(reader.getCellBuffer())& cellData)
-                                    {
-                                        cellHandler(nRow, nCol, cellData);
-                                    };
-
-        for(; ; ++nRow)
-        {
-            readRow(reader, cellHandlerWrapper);
-            if (reader.isReadStateEof() || reader.isReadStateTerminated() || !reader.isStreamGood())
-                break;
-            else
-            {
-                reader.m_readState = rsLookingForNewData;
-                reader.getCellBuffer().setReadStatus(cellHrvContinue);
-            }
-        }
+        CellReader::CellParsingImplementations::read(reader, std::forward<CellHandler>(cellHandler));
     }
 
     // Convenience overload.
