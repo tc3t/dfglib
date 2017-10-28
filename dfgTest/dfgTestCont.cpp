@@ -1398,7 +1398,7 @@ namespace
     {
         StringView_T sv(psz);
         ASSERT_EQ(3, sv.length());
-        DFG_MODULE_NS(cont)::cutTail(sv, sv.end() - 2);
+        DFG_MODULE_NS(cont)::cutTail(sv, sv.end() - ptrdiff_t(2));
         EXPECT_EQ(1, sv.length());
         typedef decltype(sv[0]) CodePointType;
         EXPECT_EQ(CodePointType('a'), sv[0]);
