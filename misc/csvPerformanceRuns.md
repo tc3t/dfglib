@@ -33,6 +33,9 @@ File [dfgTestCsvPerformance.cpp](https://github.com/tc3t/dfglib/blob/master/dfgT
 
 *Note:*  This is a more focused test case; for better background, checking the first part might be reasonable.
 
+* dfglib-version used in runs: https://github.com/tc3t/dfglib/tree/2b7791bbfd5a4f534e13cb11d65064c357398873
+* Test code: [dfgTestCsvPerformance.cpp](https://github.com/tc3t/dfglib/blob/2b7791bbfd5a4f534e13cb11d65064c357398873/dfgTest/dfgTestCsvPerformance.cpp)
+
 After the first benchmarks that included several compilers, the following work focuced on exploring the performance on a single compiler only, VC2015 32-bit. The following table summaries the results from the first and from a more recent benchmark showing improvements in the implementation (for complete set of results, see [csvPerformanceRunsVC2015.csv](https://github.com/tc3t/dfglib/blob/master/misc/csvPerformanceRunsVC2015.csv)). Please note that figures are rough estimates: as visible in the raw results table, times for the same processing can vary tens of percents between runs, but given that differences between implementations are commonly hundreds of percents, those variations are not considered relevant for the rough overview.
 
 
