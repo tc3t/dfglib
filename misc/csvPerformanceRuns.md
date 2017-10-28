@@ -29,6 +29,37 @@ File [dfgTestCsvPerformance.cpp](https://github.com/tc3t/dfglib/blob/master/dfgT
 * time_median: Median of run times.
 * time_sum: Sum of run times.
 
+## 2. Interpretations of VC2015 runs 2017-10-28.
+
+*Note:*  This is a more focused test case; for better background, checking the first part might be reasonable.
+
+After the first benchmarks that included several compilers, the following work focuced on exploring the performance on a single compiler only, VC2015 32-bit. The following table summaries the results from the first and from a more recent benchmark showing improvements in the implementation (for complete set of results, see [csvPerformanceRunsVC2015.csv](https://github.com/tc3t/dfglib/blob/master/misc/csvPerformanceRunsVC2015.csv)). Please note that figures are rough estimates: as visible in the raw results table, times for the same processing can vary tens of percents between runs, but given that differences between implementations are commonly hundreds of percents, those variations are not considered relevant for the rough overview.
+
+
+| Reader | Processing type | Stream type |  Median time (2017-08-20) | Median time (2017-10-28) | Relative time (2017-10-28) |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| readOne() | Read through | std::istrstream | N/A | 4.35 | 34 |
+| readOne() | Read through | std::istringstream | N/A | 4.25 | 30 |
+| readOne() | Read through | std::ifstream | N/A | 5.82 | 42 |
+| readOne() | Read through | dfg::io::BasicImStream (memory mapped) | 0.21 | 0.21  | 1.5 |
+| readOne() | Read through with io::getThrough() and lambda | dfg::io::BasicImStream (memory mapped) | N/A | 0.032 [1] | 0.23 |
+| DelimitedTextReader | CharAppenderDefault | dfg::io::BasicImStream (memory mapped) | 2.09 | 1.28 | 9.1 |
+| DelimitedTextReader_basic | CharAppenderDefault | dfg::io::BasicImStream (memory mapped) | 1.21 | 0.76 | 5.4 |
+| DelimitedTextReader_basic | CharAppenderStringViewCBuffer | dfg::io::BasicImStream (memory mapped) | N/A | 0.14 | 1.0 |
+| fast-cpp-csv-parser 2017-02-17 | Parse only, read type = const char* | N/A | 0.32 | 0.32 [2] | 2.3 |
+| fast-cpp-csv-parser 2017-02-17 | Parse only, read type = std::string | N/A | 0.67 | 0.68 | 4.9 |
+
+[1] This may also be ~0.20 s depending on what code gets compiled around the test function. 'Read through' is also somewhat misleading in the sense that the test case only increments a counter on every char without actually accessing the value; if incrementing counter by char value, the time increases to ~0.08 s, which is still much faster than the first version of read through with BasicImStream that only increments a counter.
+
+[2] Test was run with default io::CSVReader so it had trim chars. Running without them reduced time ~0.32 s -> ~0.30 s
+
+### Observations
+* Basic reader is about 2x faster than fast-cpp-csv-parser in this particular test case. The difference seems to be rather big, but even if indeed a valid observation, it's worth stressing that this benchmark only measures parsing performance in this isolated example and in real use cases parsing is usually just one part of processing and the input might not be so friendly to *DelimitedTextReader_basic*.
+* Basic reader is much faster than default reader:
+    * Has less features and only works on certain input format.
+    * Also uses the fact that in this test case input bytes need no translation allowing the use of string view buffer. Note that the difference of over 5x between the basic reader results does not come solely from buffer difference: string view buffer reduced runtime from ~0.76 to ~0.40 s and the specialized reading, which is used when reading untranslated bytes with string view buffer, from ~0.40 to ~0.14 s.
+* First seemingly simple 'Read through' and more direct memory iteration have difference of about 6x.
+
 ## 1. Interpretations of runs done in 2016-04-10.
 
 * Tested compilers: VC2010 - VC2015 (update 1), MinGW 4.8.0.
