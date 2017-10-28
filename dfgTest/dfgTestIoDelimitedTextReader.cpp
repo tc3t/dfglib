@@ -1179,6 +1179,67 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
 
 }
 
+namespace
+{
+    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) BasicTestStreamType;
+
+    template <class ReaderCreator_T>
+    void DelimiteTextReaderBasicTests(ReaderCreator_T readerCreator)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(io);
+        using namespace DFG_MODULE_NS(cont);
+
+        typedef std::pair<std::string, std::vector<std::string>> InputExpected;
+
+        const InputExpected inputsAndExpected[] =
+            {   InputExpected("",                  std::vector<std::string>()),
+                InputExpected(" ",                 makeVector<std::string>(" ")),
+                InputExpected(",",                 makeVector<std::string>("", "")),
+                InputExpected("\n",                makeVector<std::string>("")),
+                InputExpected("\r,",               makeVector<std::string>("\r", "")),
+                InputExpected("\r\n",              makeVector<std::string>("")),
+                InputExpected("abc",               makeVector<std::string>("abc")),
+                InputExpected(",\n,",              makeVector<std::string>("", "", "", "")),
+                InputExpected("1\n2",              makeVector<std::string>("1", "2")),
+                InputExpected("1, 2",              makeVector<std::string>("1", " 2")),
+                InputExpected("1,2\n3, 4 ",        makeVector<std::string>("1", "2", "3", " 4 ")),
+                InputExpected("1,2\r\n3,4",        makeVector<std::string>("1", "2", "3", "4")),
+                InputExpected("\"1\",\"2,3\",4",   makeVector<std::string>("\"1\"", "\"2", "3\"", "4")),
+                InputExpected(",,\"\",\n",         makeVector<std::string>("", "", "\"\"", ""))
+            };
+
+        for (size_t i = 0; i < DFG_COUNTOF(inputsAndExpected); ++i)
+        {
+            BasicTestStreamType strm(inputsAndExpected[i].first.c_str(), DFG_MODULE_NS(str)::strLen(inputsAndExpected[i].first));
+
+            std::vector<std::string> readCells;
+
+            auto reader = readerCreator(strm);
+
+            typedef decltype(reader) ReaderType;
+            typedef typename ReaderType::CellBuffer BufferType;
+            DFG_CLASS_NAME(DelimitedTextReader)::read(reader, [&](const size_t /*r*/, const size_t /*c*/, const BufferType& cellData)
+            {
+                readCells.push_back(std::string(cellData.getBuffer().cbegin(), cellData.getBuffer().cend()));
+            });
+
+            EXPECT_EQ(inputsAndExpected[i].second, readCells);
+        }
+    }
+
+    template <class BufferType_T, class AppenderType_T, class FormatDef_T>
+    void DelimiteTextReaderBasicTests(const FormatDef_T ft)
+    {
+        using namespace DFG_MODULE_NS(io);
+        DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, BufferType_T, AppenderType_T, FormatDef_T> cd(ft);
+        DelimiteTextReaderBasicTests([&](BasicTestStreamType& strm)
+        {
+            return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
+        });
+    }
+}
+
 TEST(DfgIo, DelimitedTextReader_basicReader)
 {
     // Note: this is a quick test and instead of adding much more stuff here, consider adding basic reader to existing default reader tests.
@@ -1187,32 +1248,39 @@ TEST(DfgIo, DelimitedTextReader_basicReader)
     using namespace DFG_MODULE_NS(io);
     using namespace DFG_MODULE_NS(cont);
 
-    const char* inputDatas[] = { "1\n2", "1, 2", "1,2\n3, 4 ", "1,2\r\n3,4", "\"1\",\"2,3\",4", ",,\"\",\n" };
+    typedef DFG_CLASS_NAME(DelimitedTextReader) DelimReader;
 
-    const std::vector<std::string> expectedCellContents[] =
+    typedef DelimReader::FormatDefinitionSingleCharsCompileTime<DelimReader::s_nMetaCharNone, '\n', ','> CompileTimeFormatDef;
+
+    // Basic reader with default buffer.
     {
-        makeVector<std::string>("1", "2"),
-        makeVector<std::string>("1", " 2"),
-        makeVector<std::string>("1", "2", "3", " 4 "),
-        makeVector<std::string>("1", "2", "3", "4"),
-        makeVector<std::string>("\"1\"", "\"2", "3\"", "4"),
-        makeVector<std::string>("", "", "\"\"", "")
-    };
-    DFG_STATIC_ASSERT(DFG_COUNTOF(inputDatas) == DFG_COUNTOF(expectedCellContents), "Array size mismatch");
+        typedef DelimReader::CharBuffer<char> BufferType;
+        typedef DelimReader::CharAppenderDefault<BufferType, char> AppenderType;
+        DelimiteTextReaderBasicTests<BufferType, AppenderType>(DelimReader::FormatDefinitionSingleChars(DelimReader::s_nMetaCharNone, '\n', ','));
+    }
 
-    for (size_t i = 0; i < DFG_COUNTOF(inputDatas); ++i)
+    // Basic reader with string view buffer and compile time format def.
     {
-        DFG_CLASS_NAME(BasicImStream) strm(inputDatas[i], DFG_MODULE_NS(str)::strLen(inputDatas[i]));
+        typedef DelimReader::StringViewCBuffer BufferType;
+        typedef DelimReader::CharAppenderStringViewCBuffer AppenderType;
+        DelimiteTextReaderBasicTests<BufferType, AppenderType>(CompileTimeFormatDef());
+    }
 
-        std::vector<std::string> readCells;
-        DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cd(',', DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n');
-        auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
+    // Default reader
+    {
+        auto cellData = DelimReader::CellData<char>(',', DelimReader::s_nMetaCharNone, '\n');
+        cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
+        DelimiteTextReaderBasicTests([&](BasicTestStreamType& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
+    }
 
-        DFG_CLASS_NAME(DelimitedTextReader)::read(reader, [&](const size_t /*r*/, const size_t /*c*/, const decltype(cd)& cellData)
-        {
-            readCells.push_back(cellData.getBuffer());
-        });
-
-        EXPECT_EQ(expectedCellContents[i], readCells);
+    // Default reader with compile time format definition.
+    {
+        auto cellData = DelimReader::CellData<char,
+                                              char,
+                                              DelimReader::CharBuffer<char>,
+                                              DelimReader::CharAppenderDefault<DelimReader::CharBuffer<char>, char>,
+                                              CompileTimeFormatDef>(CompileTimeFormatDef());
+        cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
+        DelimiteTextReaderBasicTests([&](BasicTestStreamType& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
     }
 }

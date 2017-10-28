@@ -68,15 +68,16 @@ public:
         cellHrvSkipRestOfLineAndTerminate // When set, current line is skipped and reading is terminated.
     };
 
-    enum ReadState {rsLookingForNewData         = 0x1,
-                    rsInNakedCell               = 0x2,
-                    rsInEnclosedCell            = 0x4,
-                    rsPastEnclosedCell          = 0x8,
-                    rsSeparatorEncountered      = 0x10,
-                    rsEndOfLineEncountered      = 0x20,
-                    rsEndOfStream               = 0x40,
-                    rsTerminated                = 0x80
-                   };
+    enum {rsLookingForNewData         = 0x1,
+          rsInNakedCell               = 0x2,
+          rsInEnclosedCell            = 0x4,
+          rsPastEnclosedCell          = 0x8,
+          rsSeparatorEncountered      = 0x10,
+          rsEndOfLineEncountered      = 0x20,
+          rsEndOfStream               = 0x40,
+          rsTerminated                = 0x80
+          };
+    typedef int ReadState;
 
     class CellReaderBase
     {
@@ -90,17 +91,27 @@ public:
 
         bool isReadStateEof() const
         {
-            return m_readState == rsEndOfStream;
+            return (m_readState & rsEndOfStream) != 0;
         }
 
         bool isReadStateEol() const
         {
-            return m_readState == rsEndOfLineEncountered;
+            return (m_readState & rsEndOfLineEncountered) != 0;
         }
 
         bool isReadStateTerminated() const
         {
             return m_readState == rsTerminated;
+        }
+
+        bool isReadStateEolOrSeparatorEncountered() const
+        {
+            return ((m_readState & (rsSeparatorEncountered | rsEndOfLineEncountered)) != 0);
+        }
+
+        bool isReadStateSeparatorEncountered() const
+        {
+            return (m_readState & rsSeparatorEncountered) != 0;
         }
 
         // Check whether read state is end-of-line or end-of-stream.
@@ -938,7 +949,8 @@ public:
             const auto formatDef = reader.getCellBuffer().getFormatDefInfo();
             size_t nRow = 0;
             size_t nCol = 0;
-            auto p = strm.currentPtr();
+            const auto pFirst = strm.currentPtr();
+            auto p = pFirst;
             const auto pEnd = strm.endPtr();
             auto pCellStart = p;
             for (; p != pEnd; ++p)
@@ -947,6 +959,11 @@ public:
                     continue;
 
                 buffer.reset(pCellStart, p - pCellStart);
+
+                // \r\n handling. TODO: make optional, in a dfgTestCsvPerformance test case increased parsing time about 40 %.
+                if (formatDef.getEol() == '\n' && *p == formatDef.getEol() && p != pCellStart && *(p - 1) == '\r')
+                    buffer.pop_back(); // pop \r
+
                 cellHandler(nRow, nCol, reader.getCellBuffer());
                 pCellStart = p + 1;
                 if (*p == formatDef.getEol())
@@ -956,6 +973,14 @@ public:
                 }
                 else
                     nCol++;
+            }
+            // Call handler if any of the following conditions are true:
+            //    -buffer is not empty (cell ends to eof)
+            //    -last char is separator (interpret that "a," is two cells)
+            if (pCellStart != p || (pEnd != pFirst && (*(pEnd - 1) == formatDef.getSep())))
+            {
+                buffer.reset(pCellStart, p - pCellStart);
+                cellHandler(nRow, nCol, reader.getCellBuffer());
             }
             strm.seekToEnd();
         }
@@ -1139,7 +1164,7 @@ public:
         reader.getCellBuffer().onCellRead();
 
         if (!reader.isStreamGood())
-            reader.m_readState = rsEndOfStream;
+            reader.m_readState |= rsEndOfStream;
     }
 
     // Reads until end of line or end of stream.
@@ -1199,10 +1224,17 @@ public:
             // Check empty line.
             const bool bEmptyLine = (nCol == 0 && reader.isReadStateEolOrEof() && reader.getCellBuffer().empty());
             // Note: Call handler also for empty rows but not when line ends to EOF.
-            if (!bEmptyLine || !reader.isReadStateEof())
+            if (!bEmptyLine || !reader.isReadStateEof() || reader.isReadStateEolOrSeparatorEncountered()) // Last check is to check parsing for inputs such as "\n" and ",": without the check these would not trigger cellDataReceived-call.
                 cellDataReceiver(nCol, reader.getCellBuffer());
 
             ++nCol;
+
+            if (reader.isReadStateEof() && reader.isReadStateSeparatorEncountered()) // If stream ends with ",", call handler again. e.g. "," should trigger handle for both col 0 and col 1. 
+            {
+                reader.getCellBuffer().clear();
+                cellDataReceiver(nCol, reader.getCellBuffer());
+                ++nCol;
+            }
 
             ParsingImplementations::returnValueHandler(reader);
 
