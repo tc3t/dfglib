@@ -1181,10 +1181,8 @@ TEST(DfgIo, DelimitedTextReader_tokenizeLine)
 
 namespace
 {
-    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) BasicTestStreamType;
-
-    template <class ReaderCreator_T>
-    void DelimiteTextReaderBasicTests(ReaderCreator_T readerCreator)
+    template <class Strm_T, class ReaderCreator_T>
+    void DelimitedTextReaderBasicTests(ReaderCreator_T readerCreator)
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
@@ -1211,7 +1209,7 @@ namespace
 
         for (size_t i = 0; i < DFG_COUNTOF(inputsAndExpected); ++i)
         {
-            BasicTestStreamType strm(inputsAndExpected[i].first.c_str(), DFG_MODULE_NS(str)::strLen(inputsAndExpected[i].first));
+            Strm_T strm(inputsAndExpected[i].first.c_str(), DFG_MODULE_NS(str)::strLen(inputsAndExpected[i].first));
 
             std::vector<std::string> readCells;
 
@@ -1228,59 +1226,74 @@ namespace
         }
     }
 
-    template <class BufferType_T, class AppenderType_T, class FormatDef_T>
-    void DelimiteTextReaderBasicTests(const FormatDef_T ft)
+    template <class Strm_T, class BufferType_T, class AppenderType_T, class FormatDef_T>
+    void DelimitedTextReaderBasicTests(const FormatDef_T ft)
     {
         using namespace DFG_MODULE_NS(io);
         DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, BufferType_T, AppenderType_T, FormatDef_T> cd(ft);
-        DelimiteTextReaderBasicTests([&](BasicTestStreamType& strm)
+        DelimitedTextReaderBasicTests<Strm_T>([&](Strm_T& strm)
         {
             return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
         });
+    }
+
+    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader) DelimReader;
+    typedef DelimReader::FormatDefinitionSingleCharsCompileTime<DelimReader::s_nMetaCharNone, '\n', ','> CompileTimeFormatDef;
+
+    template <class Strm_T>
+    void StringViewBufferTest() {}
+
+    template <>
+    void StringViewBufferTest<DFG_MODULE_NS(io)::BasicImStream>() // This test requires BasicImStream.
+    {
+        typedef DelimReader::StringViewCBuffer BufferType;
+        typedef DelimReader::CharAppenderStringViewCBuffer AppenderType;
+        DelimitedTextReaderBasicTests<DFG_MODULE_NS(io)::BasicImStream, BufferType, AppenderType>(CompileTimeFormatDef());
+    }
+
+    template <class Strm_T>
+    void DelimitedTextReader_basicReaderImpl()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(io);
+        using namespace DFG_MODULE_NS(cont);
+
+        
+
+        // Basic reader with default buffer.
+        {
+            typedef DelimReader::CharBuffer<char> BufferType;
+            typedef DelimReader::CharAppenderDefault<BufferType, char> AppenderType;
+            DelimitedTextReaderBasicTests<Strm_T, BufferType, AppenderType>(DelimReader::FormatDefinitionSingleChars(DelimReader::s_nMetaCharNone, '\n', ','));
+        }
+
+        // Basic reader with string view buffer and compile time format def.
+        {
+            StringViewBufferTest<Strm_T>();
+        }
+
+        // Default reader
+        {
+            auto cellData = DelimReader::CellData<char>(',', DelimReader::s_nMetaCharNone, '\n');
+            cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
+            DelimitedTextReaderBasicTests<Strm_T>([&](Strm_T& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
+        }
+
+        // Default reader with compile time format definition.
+        {
+            auto cellData = DelimReader::CellData<char,
+                char,
+                DelimReader::CharBuffer<char>,
+                DelimReader::CharAppenderDefault<DelimReader::CharBuffer<char>, char>,
+                CompileTimeFormatDef>(CompileTimeFormatDef());
+            cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
+            DelimitedTextReaderBasicTests<Strm_T>([&](Strm_T& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
+        }
     }
 }
 
 TEST(DfgIo, DelimitedTextReader_basicReader)
 {
-    // Note: this is a quick test and instead of adding much more stuff here, consider adding basic reader to existing default reader tests.
-
-    using namespace DFG_ROOT_NS;
-    using namespace DFG_MODULE_NS(io);
-    using namespace DFG_MODULE_NS(cont);
-
-    typedef DFG_CLASS_NAME(DelimitedTextReader) DelimReader;
-
-    typedef DelimReader::FormatDefinitionSingleCharsCompileTime<DelimReader::s_nMetaCharNone, '\n', ','> CompileTimeFormatDef;
-
-    // Basic reader with default buffer.
-    {
-        typedef DelimReader::CharBuffer<char> BufferType;
-        typedef DelimReader::CharAppenderDefault<BufferType, char> AppenderType;
-        DelimiteTextReaderBasicTests<BufferType, AppenderType>(DelimReader::FormatDefinitionSingleChars(DelimReader::s_nMetaCharNone, '\n', ','));
-    }
-
-    // Basic reader with string view buffer and compile time format def.
-    {
-        typedef DelimReader::StringViewCBuffer BufferType;
-        typedef DelimReader::CharAppenderStringViewCBuffer AppenderType;
-        DelimiteTextReaderBasicTests<BufferType, AppenderType>(CompileTimeFormatDef());
-    }
-
-    // Default reader
-    {
-        auto cellData = DelimReader::CellData<char>(',', DelimReader::s_nMetaCharNone, '\n');
-        cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
-        DelimiteTextReaderBasicTests([&](BasicTestStreamType& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
-    }
-
-    // Default reader with compile time format definition.
-    {
-        auto cellData = DelimReader::CellData<char,
-                                              char,
-                                              DelimReader::CharBuffer<char>,
-                                              DelimReader::CharAppenderDefault<DelimReader::CharBuffer<char>, char>,
-                                              CompileTimeFormatDef>(CompileTimeFormatDef());
-        cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
-        DelimiteTextReaderBasicTests([&](BasicTestStreamType& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
-    }
+    DelimitedTextReader_basicReaderImpl<DFG_MODULE_NS(io)::BasicImStream>();
+    DelimitedTextReader_basicReaderImpl<std::istrstream>();
 }
