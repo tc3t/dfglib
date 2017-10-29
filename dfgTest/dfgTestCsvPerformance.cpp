@@ -143,10 +143,10 @@ namespace
     template <> std::string prettierTypeName<std::string>() { return "std::string"; }
     
 
-    void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sReader, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sProcessingType, const std::string& sStreamType)
+    void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sReader, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& formatDefinition, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sProcessingType, const std::string& sStreamType)
     {
         output  << DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C() << ",," << DFG_COMPILER_NAME_SIMPLE << ',' << sizeof(void*) << ','
-                << DFG_BUILD_DEBUG_RELEASE_TYPE << ',' << sFilePath << "," << sReader << "," << sProcessingType << "," << sStreamType << ",";
+                << DFG_BUILD_DEBUG_RELEASE_TYPE << ',' << sFilePath << "," << sReader << "," << formatDefinition << "," << sProcessingType << "," << sStreamType << ",";
         std::for_each(runtimes.begin(), runtimes.end(), [&](const double val) {output << val << ','; });
         output  << DFG_MODULE_NS(numeric)::average(runtimes) << ","
                 << DFG_MODULE_NS(numeric)::median(runtimes) << ","
@@ -168,10 +168,32 @@ namespace
         return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
     }
 
+    struct FormatDefTag_compileTime {};
+    struct FormatDefTag_runtime     {};
+
+    auto createFormatDef(FormatDefTag_compileTime) -> DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ','>
+    {
+        using namespace DFG_MODULE_NS(io);
+        return DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ','>();
+    }
+
+    auto createFormatDef(FormatDefTag_runtime) -> DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleChars
+    {
+        using namespace DFG_MODULE_NS(io);
+        return DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleChars(DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ',');
+    }
+
     typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DefaultBufferType;
     
-    template <class IStrm_T, class CharAppender_T, class Buffer_T, class IStrmInit_T, class ReaderImplementationOption_T>
-    void ExecuteTestCaseDelimitedTextReader(std::ostream& output, IStrmInit_T streamInitFunc, ReaderImplementationOption_T readerOption, const std::string& sFilePath, const size_t nCount, const char* const pszReaderType, const char* const pszProcessingType)
+    template <class IStrm_T, class CharAppender_T, class Buffer_T, class IStrmInit_T, class ReaderImplementationOption_T, class FormatDefTag_T>
+    void ExecuteTestCaseDelimitedTextReader(std::ostream& output,
+                                            IStrmInit_T streamInitFunc,
+                                            ReaderImplementationOption_T readerOption,
+                                            const FormatDefTag_T formatDefTag,
+                                            const std::string& sFilePath,
+                                            const size_t nCount,
+                                            const char* const pszReaderType,
+                                            const char* const pszProcessingType)
     {
         using namespace DFG_MODULE_NS(io);
 
@@ -186,10 +208,10 @@ namespace
             auto spStrm = streamInitFunc(sFilePath, bytes);
             EXPECT_TRUE(spStrm != nullptr);
             auto& istrm = *spStrm;
-            typedef DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ','> FormatDef;
-            typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, Buffer_T, CharAppender_T, FormatDef> Cdt;
 
-            FormatDef formatDef;
+            const auto formatDef = createFormatDef(formatDefTag);
+
+            typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, Buffer_T, CharAppender_T, typename std::remove_const<decltype(formatDef)>::type> Cdt;
             Cdt cellDataHandler(formatDef);
             auto reader = createReader(istrm, cellDataHandler, readerOption);
 
@@ -210,36 +232,47 @@ namespace
 
             runtimes.push_back(elapsedTime);
         }
-        PrintTestCaseRow(output, sFilePath, runtimes, pszReaderType, pszProcessingType, StreamName<IStrm_T>());
+        const std::string sFormatDefType = (std::is_same<FormatDefTag_T, FormatDefTag_compileTime>::value) ? "compile time" : "runtime";
+        
+        PrintTestCaseRow(output, sFilePath, runtimes, pszReaderType, sFormatDefType, pszProcessingType, StreamName<IStrm_T>());
     }
 
     template <class IStrm_T, class IStrmInit_T>
     void ExecuteTestCase_DelimitedTextReader_NoCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool bBasicReader = false)
     {
         if (bBasicReader)
-            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderNone");
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderNone");
         else
-            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderNone");
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderNone");
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_DefaultCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
+    void ExecuteTestCase_DelimitedTextReader_DefaultCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef = true)
     {
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+        if (compiletimeFormatDef)
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+        else
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_runtime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_basicReader(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
+    void ExecuteTestCase_DelimitedTextReader_basicReader(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef)
     {
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderDefault");
+        if (compiletimeFormatDef)
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderDefault");
+        else
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_runtime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderDefault");
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount)
+    void ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef)
     {
         typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::StringViewCBuffer BufferType;
         typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderStringViewCBuffer AppenderType;
-        ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
+        if (compiletimeFormatDef)
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
+        else
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_runtime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
     }
 
 #if ENABLE_FAST_CPP_CSV_PARSER
@@ -269,7 +302,7 @@ namespace
             runtimes.push_back(elapsed1);
         }
        
-        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser 2017-02-17", std::string("\"Parse only, read type = ") + prettierTypeName<Read_T>() + std::string("\""), "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser 2017-02-17", "compile time", std::string("\"Parse only, read type = ") + prettierTypeName<Read_T>() + std::string("\""), "N/A");
     }
 #endif
 
@@ -292,7 +325,7 @@ namespace
 
             runtimes.push_back(elapsedTime);
         }
-        PrintTestCaseRow(output, sFilePath, runtimes, "\"TableCsv<char,uint32>\"", "Read&Store", "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, "\"TableCsv<char,uint32>\"", "runtime", "Read&Store", "N/A");
     }
 
     template <class IStrm_T>
@@ -353,7 +386,7 @@ namespace
 
             runtimes.push_back(elapsedTime);
         }
-        PrintTestCaseRow(output, sFilePath, runtimes, "readOne()", "Read through" + additionalDesc, StreamName<IStrm_T>());
+        PrintTestCaseRow(output, sFilePath, runtimes, "readOne()", "", "Read through" + additionalDesc, StreamName<IStrm_T>());
     }
 
 } // unnamed namespace
@@ -366,7 +399,7 @@ TEST(dfgPerformance, CsvReadPerformance)
     const auto nRunCount = gnRunCount;
 
     // TODO: add compiler name & version, build config (debug/release)
-    ostrmTestResults << "Date,Test machine,Compiler,Pointer size,Build type,File,Reader,Processing type,Stream type";
+    ostrmTestResults << "Date,Test machine,Compiler,Pointer size,Build type,File,Reader,Format definition,Processing type,Stream type";
     for (size_t i = 0; i < nRunCount; ++i)
     {
         ostrmTestResults << ",time#" << i + 1;
@@ -397,9 +430,14 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, getThroughIoGetThroughFunctor<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>, sFilePath, nRunCount, " with io::getThrough() and functor");
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); //Basic reader
-    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
-    ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
-    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+
+    ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
 
     // fast-cpp-csv-parser
 #if ENABLE_FAST_CPP_CSV_PARSER
