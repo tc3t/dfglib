@@ -143,17 +143,19 @@ DFG_ROOT_NS_BEGIN{
             void readFromMemory(const char* const pData, const size_t nSize, const CsvFormatDefinition& formatDef)
             {
                 DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strmBom(pData, nSize);
-                const auto encoding = DFG_MODULE_NS(io)::checkBOM(strmBom);
+                const auto streamBom = DFG_MODULE_NS(io)::checkBOM(strmBom);
+                const auto encoding = (formatDef.textEncoding() == DFG_MODULE_NS(io)::encodingUnknown) ? streamBom : formatDef.textEncoding();
+                
                 if (encoding == DFG_MODULE_NS(io)::encodingUnknown)
                 {
-                    // TODO: read encoding/code page hint from options.
+                    // Encoding of source bytes is unknown -> read as Latin-1.
                     DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData, nSize);
                     read(strm, formatDef);
                 }
                 else if (encoding == DFG_MODULE_NS(io)::encodingUTF8) // With UTF8 the data can be directly read as bytes.
                 {
-                    const auto nBomSize = DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8);
-                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData + nBomSize, nSize - nBomSize);
+                    const auto bomSkip = (streamBom == DFG_MODULE_NS(io)::encodingUTF8) ? DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8) : 0;
+                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData + bomSkip, nSize - bomSkip);
                     if (formatDef.enclosingChar() == DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone) // If there's no enclosing character, data can be read with StringViewBuffer.
                         read(strm, formatDef, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderStringViewCBuffer());
                     else // Case: Enclosing character is defined, use default reading since parsing enclosing items may introduce translation making StringViewBuffer unsuitable.
@@ -161,7 +163,7 @@ DFG_ROOT_NS_BEGIN{
                 }
                 else // Case: Known encoding, read using encoding istream.
                 {
-                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(ImStreamWithEncoding) strm(pData, nSize, DFG_MODULE_NS(io)::encodingUnknown);
+                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(ImStreamWithEncoding) strm(pData, nSize, encoding);
                     read(strm, formatDef);
                 }
                 m_readFormat.textEncoding(encoding);

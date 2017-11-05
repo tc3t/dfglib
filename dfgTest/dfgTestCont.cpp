@@ -710,7 +710,7 @@ TEST(dfgCont, TableCsv)
         auto& table = *tables[i];
         // Read from file...
         table.readFromFile(s);
-        // ...check that read properties separator, separator char and encoding, matches
+        // ...check that read properties separator, separator char and encoding, matches...
         {
             EXPECT_EQ(encodings[i], table.m_readFormat.textEncoding()); // TODO: use access function for format info.
             EXPECT_EQ(separators[i], table.m_readFormat.separatorChar()); // TODO: use access function for format info.
@@ -739,11 +739,45 @@ TEST(dfgCont, TableCsv)
         });
     }
 
+    // Verify that all tables are identical.
     for (size_t i = 1; i < tables.size(); ++i)
     {
         EXPECT_TRUE(tables[0]->isContentAndSizesIdenticalWith(*tables[i]));
     }
-    
+
+    // Test BOM-handling. Makes sure that BOM gets handled correctly whether it is autodetected or told explicitly, and that BOM-less files are read correctly if correct encoding is given to reader.
+    {
+        std::string utf8Bomless;
+        utf8Bomless.push_back('a');
+        const uint32 nonAsciiChar = 0x20AC; // Euro-sign
+        DFG_MODULE_NS(utf)::cpToEncoded(nonAsciiChar, std::back_inserter(utf8Bomless), encodingUTF8);
+        utf8Bomless += ",b";
+        std::string utf8WithBom = utf8Bomless;
+        const auto bomBytes = encodingToBom(encodingUTF8);
+        utf8WithBom.insert(utf8WithBom.begin(), bomBytes.cbegin(), bomBytes.cend());
+
+        DFG_CLASS_NAME(TableCsv)<char, uint32> tableWithBomExplictEncoding;
+        DFG_CLASS_NAME(TableCsv)<char, uint32> tableWithBomAutoDetectedEncoding;
+        DFG_CLASS_NAME(TableCsv)<char, uint32> tableWithoutBom;
+
+        const DFG_CLASS_NAME(CsvFormatDefinition) formatDef(',', '"', EndOfLineTypeN, encodingUTF8);
+        tableWithBomExplictEncoding.readFromMemory(utf8WithBom.data(), utf8WithBom.size(), formatDef);
+        tableWithBomAutoDetectedEncoding.readFromMemory(utf8WithBom.data(), utf8WithBom.size());
+        tableWithoutBom.readFromMemory(utf8Bomless.data(), utf8Bomless.size(), formatDef);
+
+        EXPECT_TRUE(tableWithBomExplictEncoding.isContentAndSizesIdenticalWith(tableWithBomAutoDetectedEncoding));
+        EXPECT_TRUE(tableWithBomExplictEncoding.isContentAndSizesIdenticalWith(tableWithoutBom));
+        ASSERT_EQ(1, tableWithBomAutoDetectedEncoding.rowCountByMaxRowIndex());
+        ASSERT_EQ(2, tableWithBomAutoDetectedEncoding.colCountByMaxColIndex());
+
+        DFG_CLASS_NAME(StringUtf8) sItem00(tableWithBomExplictEncoding(0, 0));
+        DFG_CLASS_NAME(StringUtf8) sItem01(tableWithBomExplictEncoding(0, 1));
+        ASSERT_EQ(4, sItem00.sizeInRawUnits());
+        ASSERT_EQ(1, sItem01.sizeInRawUnits());
+        EXPECT_EQ('a', utf8ToFixedChSizeStr<wchar_t>(sItem00.rawStorage()).front());
+        EXPECT_EQ(nonAsciiChar, utf8ToFixedChSizeStr<wchar_t>(sItem00.rawStorage())[1]);
+        EXPECT_EQ('b', utf8ToFixedChSizeStr<wchar_t>(sItem01.rawStorage()).front());
+    }
 }
 
 TEST(dfgCont, SortedSequence)

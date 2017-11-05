@@ -92,18 +92,22 @@ public:
     typedef DFG_CLASS_NAME(StreamBufferMem)<char> BaseClass;
     //typedef BaseClass::IteratorType IteratorType; // TODO: check what requirements there are for this.
 
-    DFG_CLASS_NAME(StreamBufferMemWithEncoding)(IteratorType p, const size_t nSize, TextEncoding encoding) :
+    DFG_CLASS_NAME(StreamBufferMemWithEncoding)(IteratorType p, const size_t nSize, const TextEncoding encoding) :
         BaseClass(p, nSize),
         m_encoding(encoding),
         m_pReadImpl(&readAndAdvanceByte)
     {
         using namespace DFG_MODULE_NS(utf);
-        if (encoding == encodingUnknown)
+
+        DFG_CLASS_NAME(BasicImStream) istrm(this->m_pCurrent, nSize);
+        const auto streamEncoding = checkBOM(istrm);
+        if (m_encoding != encodingUnknown && streamEncoding != encodingUnknown && m_encoding != streamEncoding)
         {
-            DFG_CLASS_NAME(BasicImStream) istrm(this->m_pCurrent, nSize);
-            m_encoding = checkBOM(istrm);
-            this->m_pCurrent += bomSizeInBytes(m_encoding);
+            DFG_ASSERT_WITH_MSG(false, "Stream encoding and user given encoding are contradictory, using the one given by user.");
         }
+        if (m_encoding == encodingUnknown)
+            m_encoding = streamEncoding;
+        this->m_pCurrent += bomSizeInBytes(streamEncoding);
         setReaderByEncoding(m_encoding);
     }
 
