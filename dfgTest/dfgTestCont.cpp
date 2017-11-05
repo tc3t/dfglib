@@ -778,6 +778,25 @@ TEST(dfgCont, TableCsv)
         EXPECT_EQ(nonAsciiChar, utf8ToFixedChSizeStr<wchar_t>(sItem00.rawStorage())[1]);
         EXPECT_EQ('b', utf8ToFixedChSizeStr<wchar_t>(sItem01.rawStorage()).front());
     }
+
+    // Test unknown encoding handling, i.e. that bytes are read as specified as Latin-1.
+    {
+        DFG_CLASS_NAME(TableCsv)<char, uint32> table;
+        std::array<unsigned char, 255> data;
+        DFG_CLASS_NAME(StringUtf8) dataAsUtf8;
+        for (size_t i = 0; i < data.size(); ++i)
+        {
+            unsigned char val = (i + 1 != DFG_U8_CHAR('\n')) ? static_cast<unsigned char>(i + 1) : DFG_U8_CHAR('a'); // Don't write '\n' to get single cell table.
+            data[i] = val;
+            cpToEncoded(data[i], std::back_inserter(dataAsUtf8.rawStorage()), encodingUTF8);
+        }
+        EXPECT_EQ(127 + 2*128, dataAsUtf8.sizeInRawUnits());
+        const auto metaCharNone = DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
+        table.readFromMemory(reinterpret_cast<const char*>(data.data()), data.size(), DFG_CLASS_NAME(CsvFormatDefinition)(metaCharNone, metaCharNone, EndOfLineTypeN, encodingUnknown));
+        ASSERT_EQ(1, table.rowCountByMaxRowIndex());
+        ASSERT_EQ(1, table.colCountByMaxColIndex());
+        EXPECT_EQ(dataAsUtf8, table(0,0));
+    }
 }
 
 TEST(dfgCont, SortedSequence)
