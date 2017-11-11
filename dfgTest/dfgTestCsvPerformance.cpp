@@ -31,6 +31,10 @@
     DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #endif
 
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #include <dfg/io/cppcsv_ph/csvparser.hpp>
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+
 namespace
 {
     #ifndef _DEBUG
@@ -306,6 +310,57 @@ namespace
     }
 #endif
 
+    class CppCsvCellCounter : public cppcsv::per_cell_tag
+    {
+    public:
+        CppCsvCellCounter() :
+            m_nCellCounter(0)
+        {}
+
+        void begin_row()
+        {
+        }
+
+        void cell(const char* /*buf*/, size_t /*len*/)
+        {
+            m_nCellCounter++;
+        }
+
+        void end_row()
+        {
+        }
+
+        size_t m_nCellCounter;
+    };
+
+    void ExecuteTestCase_cppCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    {
+        std::vector<double> runtimes;
+        size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
+        for (size_t i = 0; i < nCount; ++i)
+        {
+            const auto bytes = dfg::io::fileToVector(sFilePath);
+                                    
+            CppCsvCellCounter cc;
+            cppcsv::csv_parser<decltype(cc), char, char, char> parser(cc, '\0', ',', false, false);
+            auto pData = bytes.data();
+
+            dfg::time::TimerCpu timer1;
+            parser(pData, bytes.size());
+            
+            const auto elapsed1 = timer1.elapsedWallSeconds();
+
+            std::cout << cc.m_nCellCounter << '\n';
+            EXPECT_TRUE(cc.m_nCellCounter > 0);
+            EXPECT_TRUE(i == 0 || cc.m_nCellCounter == nPreviousCounter);
+            nPreviousCounter = cc.m_nCellCounter;
+
+            runtimes.push_back(elapsed1);
+        }
+
+        PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2016-08-31", "runtime", "Parse only (cell counter)", "Contiguous memory");
+    }
+
     void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
         using namespace DFG_ROOT_NS;
@@ -444,6 +499,9 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_FastCppCsvParser<const char*>(ostrmTestResults, sFilePath, nRunCount);
     ExecuteTestCase_FastCppCsvParser<std::string>(ostrmTestResults, sFilePath, nRunCount);
 #endif
+
+    // cppcsv
+    ExecuteTestCase_cppCsv(ostrmTestResults, sFilePath, nRunCount);
 
     // TableCsv
     ExecuteTestCase_TableCsv(ostrmTestResults, sFilePath, nRunCount);
