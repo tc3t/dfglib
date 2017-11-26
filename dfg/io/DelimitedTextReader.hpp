@@ -138,6 +138,30 @@ public:
     {
     };
 
+    typedef int32 InternalCharType;
+
+    template <class T>
+    static DFG_CONSTEXPR InternalCharType bufferCharToInternalImpl(T c, std::true_type)
+    {
+        typedef typename std::make_unsigned<T>::type UnsignedType;
+        return static_cast<InternalCharType>(static_cast<UnsignedType>(c));
+    }
+
+    template <class T>
+    static DFG_CONSTEXPR InternalCharType bufferCharToInternalImpl(T c, std::false_type)
+    {
+        DFG_STATIC_ASSERT(sizeof(T) <= sizeof(InternalCharType), "Check what's going on, char type is not expected to have size > sizeof(InternalCharType)");
+        return static_cast<InternalCharType>(c);
+    }
+
+    // Implements conversion needed for correct characters comparison: if not using this function to convert buffer char before comparison, comparing read char(-1) with meta char s_nMetaCharNone(-1) would erroneously return true.
+    template <class T>
+    static DFG_CONSTEXPR InternalCharType bufferCharToInternal(T c)
+    {
+        return bufferCharToInternalImpl(c, std::integral_constant<bool, sizeof(T) < sizeof(InternalCharType)>());
+    }
+
+
     template <int Enc_T, int Eol_T, int Sep_T>
     class FormatDefinitionSingleCharsCompileTime
     {
@@ -526,17 +550,17 @@ public:
 
         bool isEqual(const int ch) const
         {
-            return (m_buffer.size() == 1 && m_buffer.front() == ch);
+            return (m_buffer.size() == 1 && bufferCharToInternal(m_buffer.front()) == ch);
         }
 
         bool isLastChar(const int ch) const
         {
-            return (!m_buffer.empty() && (m_buffer.back() == ch));
+            return (!m_buffer.empty() && (bufferCharToInternal(m_buffer.back()) == ch));
         }
 
         bool isOneBeforeLast(const int ch) const
         {
-            return m_buffer.size() >= 2 && m_buffer[m_buffer.size()-2] == ch;
+            return m_buffer.size() >= 2 && bufferCharToInternal(m_buffer[m_buffer.size()-2]) == ch;
         }
 
         Buffer& getBuffer()
@@ -566,7 +590,7 @@ public:
 
         bool isCharAt(const_iterator iter, const int c) const
         {
-            return (iter != end() && *iter == c);
+            return (iter != end() && bufferCharToInternal(*iter) == c);
         }
 
         iterator iteratorToLastChar()
@@ -900,7 +924,7 @@ public:
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
-            if (isEmptyGivenSuccessfulReadCharCall(buffer) || buffer.getBuffer().back() != buffer.getFormatDefInfo().getSep())
+            if (isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.getBuffer().back()) != buffer.getFormatDefInfo().getSep())
                 return false;
             else
             {
@@ -913,7 +937,7 @@ public:
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
-            if (isEmptyGivenSuccessfulReadCharCall(buffer) || buffer.getBuffer().back() != buffer.getFormatDefInfo().getEol())
+            if (isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.getBuffer().back()) != buffer.getFormatDefInfo().getEol())
                 return false;
             else
             {
@@ -955,18 +979,18 @@ public:
             auto pCellStart = p;
             for (; p != pEnd; ++p)
             {
-                if (*p != formatDef.getSep() && *p != formatDef.getEol())
+                if (bufferCharToInternal(*p) != formatDef.getSep() && bufferCharToInternal(*p) != formatDef.getEol())
                     continue;
 
                 buffer.reset(pCellStart, p - pCellStart);
 
                 // \r\n handling. TODO: make optional, in a dfgTestCsvPerformance test case increased parsing time about 40 %.
-                if (formatDef.getEol() == '\n' && *p == formatDef.getEol() && p != pCellStart && *(p - 1) == '\r')
+                if (formatDef.getEol() == '\n' && bufferCharToInternal(*p) == formatDef.getEol() && p != pCellStart && *(p - 1) == '\r')
                     buffer.pop_back(); // pop \r
 
                 cellHandler(nRow, nCol, reader.getCellBuffer());
                 pCellStart = p + 1;
-                if (*p == formatDef.getEol())
+                if (bufferCharToInternal(*p) == formatDef.getEol())
                 {
                     ++nRow;
                     nCol = 0;
@@ -977,7 +1001,7 @@ public:
             // Call handler if any of the following conditions are true:
             //    -buffer is not empty (cell ends to eof)
             //    -last char is separator (interpret that "a," is two cells)
-            if (pCellStart != p || (pEnd != pFirst && (*(pEnd - 1) == formatDef.getSep())))
+            if (pCellStart != p || (pEnd != pFirst && (bufferCharToInternal(*(pEnd - 1)) == formatDef.getSep())))
             {
                 buffer.reset(pCellStart, p - pCellStart);
                 cellHandler(nRow, nCol, reader.getCellBuffer());
@@ -1119,8 +1143,8 @@ public:
     static auto createReader_basic(Stream_T& rStrm, CellData_T&& cellData) -> CellReader<typename std::remove_reference<CellData_T>::type, Stream_T, BarebonesParsingImplementations<typename std::remove_reference<CellData_T>::type>>
     {
         DFG_ASSERT_WITH_MSG(cellData.getFormatDefInfo().getEnc() == s_nMetaCharNone, "Basic parsing does not support enclosing character, but format definition has defined one.");
-        DFG_ASSERT_WITH_MSG(!isMetaChar(cellData.getFormatDefInfo().getSep()), "Basic parsing expects concrete character for separator.");
-        DFG_ASSERT_WITH_MSG(!isMetaChar(cellData.getFormatDefInfo().getEol()), "Basic parsing expects concrete character for end-of-line.");
+        DFG_ASSERT_WITH_MSG(cellData.getFormatDefInfo().getSep() != s_nMetaCharAutoDetect, "Basic parsing does not support separator auto-detection.");
+        DFG_ASSERT_WITH_MSG(cellData.getFormatDefInfo().getEol() != s_nMetaCharAutoDetect, "Basic parsing does not support end-of-line auto-detection.");
 
         typedef typename std::remove_reference<CellData_T>::type CellDataT;
         return CellReader<CellDataT, Stream_T, BarebonesParsingImplementations<CellDataT>>(rStrm, cellData);
@@ -1299,10 +1323,10 @@ public:
     // 1: size_t: current column
     // 2: const CellData&: const reference to given CellData-object.
     // For example: auto cellHandler = [](const size_t r, const size_t c, const decltype(CellData)& cellData) {};
-    template <class CellReader, class CellHandler>
-    static void read(CellReader& reader, CellHandler&& cellHandler)
+    template <class CellReader_T, class CellHandler_T>
+    static void read(CellReader_T& reader, CellHandler_T&& cellHandler)
     {
-        CellReader::CellParsingImplementations::read(reader, std::forward<CellHandler>(cellHandler));
+        CellReader_T::CellParsingImplementations::read(reader, std::forward<CellHandler_T>(cellHandler));
     }
 
     // Convenience overload.

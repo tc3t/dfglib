@@ -564,7 +564,7 @@ TEST(DfgIo, DelimitedTextReader_readRowConsecutiveSeparators)
 {
     using namespace DFG_MODULE_NS(io);
 
-    const auto testImpl = [](const char* const psz, const char cDelim)
+    const auto testImpl = [](const char* const psz, const int cDelim)
                             {
                                 using namespace DFG_MODULE_NS(io);
                                 std::vector<std::string> vecRead;
@@ -1258,8 +1258,6 @@ namespace
         using namespace DFG_MODULE_NS(io);
         using namespace DFG_MODULE_NS(cont);
 
-        
-
         // Basic reader with default buffer.
         {
             typedef DelimReader::CharBuffer<char> BufferType;
@@ -1296,4 +1294,120 @@ TEST(DfgIo, DelimitedTextReader_basicReader)
 {
     DelimitedTextReader_basicReaderImpl<DFG_MODULE_NS(io)::BasicImStream>();
     DelimitedTextReader_basicReaderImpl<std::istrstream>();
+}
+
+namespace
+{
+    template <class ReadImpl_T>
+    static void metaCharHandlingImpl(ReadImpl_T readImpl)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(io);
+        using namespace DFG_MODULE_NS(cont);
+
+        const auto metaNone = DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
+        const auto metaAuto = DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect;
+
+        // Test negative chars
+        {
+            std::vector<char> bytes;
+            for (char i = std::numeric_limits<char>::min(); i <= 0; ++i)
+                bytes.push_back(i);
+
+            DFG_CLASS_NAME(BasicImStream) istrm(bytes.data(), bytes.size());
+            
+            DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Table)<std::vector<char>> readBytes;
+
+            readImpl(istrm, metaNone, metaNone, '\n', [&](size_t r, size_t c, const char* p, const size_t count)
+            {
+                readBytes.setElement(r, c, std::vector<char>(p, p + count));
+            });
+
+            ASSERT_EQ(1, readBytes.getCellCount());
+            EXPECT_EQ(bytes, readBytes(0, 0));
+        }
+
+        // Test having numerical value of meta chars as control chars
+        {
+            const auto charToInternal = [](const char c) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::bufferCharToInternal(c); };
+
+            DFGTEST_STATIC(metaNone == -1 && metaAuto == -2); // "This test is meaningful only if metachar is with in range of char.");
+            const char input[] = { 'a', metaNone, 'b', metaAuto, 'c' };
+            DFG_CLASS_NAME(BasicImStream) istrm(input, DFG_COUNTOF(input));
+
+            DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Table)<std::string> readBytes;
+
+            readImpl(istrm, charToInternal(metaNone), metaNone, charToInternal(metaAuto), [&](size_t r, size_t c, const char* p, const size_t count)
+            {
+                readBytes.setElement(r, c, std::string(p, p + count));
+            });
+
+            ASSERT_EQ(3, readBytes.getCellCount());
+            EXPECT_EQ("a", readBytes(0, 0));
+            EXPECT_EQ("b", readBytes(0, 1));
+            EXPECT_EQ("c", readBytes(1, 0));
+        }
+    }
+}
+
+TEST(DfgIo, DelimitedTextReader_metaCharHandling)
+{
+    // default_reader, runtime formatdef and default buffer
+    metaCharHandlingImpl([=](DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)& istrm, const int sep, const int enc, const int eol, std::function<void(size_t, size_t, const char*, size_t)> func)
+    {
+        using namespace DFG_MODULE_NS(io);
+        typedef DFG_CLASS_NAME(DelimitedTextReader) Dtr;
+        typedef Dtr::CellData<char, char> Cdt;
+        Cdt cdt(sep, enc, eol);
+        auto reader = Dtr::createReader(istrm, cdt);
+        Dtr::read(reader, [&](const size_t r, const size_t c, const Cdt& cellData)
+        {
+            func(r, c, cellData.getBuffer().data(), cellData.getBuffer().size());
+        });
+    });
+
+    // default_reader, runtime formatdef and StringViewBuffer
+    metaCharHandlingImpl([=](DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)& istrm, const int sep, const int enc, const int eol, std::function<void(size_t, size_t, const char*, size_t)> func)
+    {
+        using namespace DFG_MODULE_NS(io);
+        typedef DFG_CLASS_NAME(DelimitedTextReader) Dtr;
+        typedef Dtr::CellData<char, char, Dtr::StringViewCBuffer, Dtr::CharAppenderStringViewCBuffer> Cdt;
+        Cdt cdt(sep, enc, eol);
+        auto reader = Dtr::createReader(istrm, cdt);
+        Dtr::read(reader, [&](const size_t r, const size_t c, const Cdt& cellData)
+        {
+            func(r, c, cellData.getBuffer().data(), cellData.getBuffer().size());
+        });
+    });
+
+    // basic_reader, runtime formatdef and default buffer
+    metaCharHandlingImpl([=](DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)& istrm, const int sep, const int enc, const int eol, std::function<void(size_t, size_t, const char*, size_t)> func)
+    {
+        using namespace DFG_MODULE_NS(io);
+        typedef DFG_CLASS_NAME(DelimitedTextReader) Dtr;
+        typedef Dtr::CellData<char, char> Cdt;
+        Cdt cdt(sep, enc, eol);
+        auto reader = Dtr::createReader_basic(istrm, cdt);
+        Dtr::read(reader, [&](const size_t r, const size_t c, const Cdt& cellData)
+        {
+            func(r, c, cellData.getBuffer().data(), cellData.getBuffer().size());
+        });
+    });
+
+    // basic_reader runtime formatdef and StringViewBuffer
+    metaCharHandlingImpl([=](DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)& istrm, const int sep, const int enc, const int eol, std::function<void(size_t, size_t, const char*, size_t)> func)
+    {
+        using namespace DFG_MODULE_NS(io);
+        typedef DFG_CLASS_NAME(DelimitedTextReader) Dtr;
+        typedef Dtr::CellData<char, char, Dtr::StringViewCBuffer, Dtr::CharAppenderStringViewCBuffer> Cdt;
+        Cdt cdt(sep, enc, eol);
+        auto reader = Dtr::createReader_basic(istrm, cdt);
+        Dtr::read(reader, [&](const size_t r, const size_t c, const Cdt& cellData)
+        {
+            func(r, c, cellData.getBuffer().data(), cellData.getBuffer().size());
+        });
+    });
+
+    // TODO: basic_reader compiletime formatdef
+    // TODO: default reader compiletime formatdef
 }
