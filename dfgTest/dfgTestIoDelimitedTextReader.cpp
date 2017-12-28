@@ -1352,6 +1352,12 @@ namespace
 
 TEST(DfgIo, DelimitedTextReader_metaCharHandling)
 {
+    // Simple read()-overload.
+    metaCharHandlingImpl([=](DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)& istrm, const int sep, const int enc, const int eol, std::function<void(size_t, size_t, const char*, size_t)> func)
+    {
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read<char>(istrm, sep, enc, eol, func);
+    });
+
     // default_reader, runtime formatdef and default buffer
     metaCharHandlingImpl([=](DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)& istrm, const int sep, const int enc, const int eol, std::function<void(size_t, size_t, const char*, size_t)> func)
     {

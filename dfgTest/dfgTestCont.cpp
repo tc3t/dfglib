@@ -730,7 +730,7 @@ TEST(dfgCont, TableCsv)
     {
         std::wstring sFromFile;
         DFG_CLASS_NAME(IfStreamWithEncoding) istrm(paths.front());
-        DFG_CLASS_NAME(DelimitedTextReader)::read(istrm, wchar_t(','), wchar_t('"'), wchar_t('\n'), [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
+        DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(istrm, ',', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
         {
             std::wstring sUtfConverted;
             auto inputRange = DFG_ROOT_NS::makeSzRange((*tables.front())(nRow, nCol).c_str());
@@ -792,11 +792,16 @@ TEST(dfgCont, TableCsv)
         }
         EXPECT_EQ(127 + 2*128, dataAsUtf8.sizeInRawUnits());
         const auto metaCharNone = DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
-        table.readFromMemory(reinterpret_cast<const char*>(data.data()), data.size(), DFG_CLASS_NAME(CsvFormatDefinition)(metaCharNone, metaCharNone, EndOfLineTypeN, encodingUnknown));
+        table.readFromMemory(reinterpret_cast<const char*>(data.data()), data.size(), DFG_CLASS_NAME(CsvFormatDefinition)(metaCharNone,
+                                                                                                                          metaCharNone,
+                                                                                                                          EndOfLineTypeN,
+                                                                                                                          encodingUnknown));
         ASSERT_EQ(1, table.rowCountByMaxRowIndex());
         ASSERT_EQ(1, table.colCountByMaxColIndex());
         EXPECT_EQ(dataAsUtf8, table(0,0));
     }
+
+    // TODO: test auto detection
 }
 
 TEST(dfgCont, SortedSequence)

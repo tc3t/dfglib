@@ -19,7 +19,7 @@ DFG_ROOT_NS_BEGIN{
     {
     public:
         //DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeN) :
-        // Note: default values are questionable because deault read vals should have metachars, but default write vals should not.
+        // Note: default values are questionable because default read vals should have metachars, but default write vals should not.
         DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep/* = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect*/,
                                             const char cEnc/* = '"'*/,
                                             DFG_MODULE_NS(io)::EndOfLineType eol/* = DFG_MODULE_NS(io)::EndOfLineTypeN*/,
@@ -36,8 +36,7 @@ DFG_ROOT_NS_BEGIN{
         void separatorChar(int32 cSep) { m_cSep = cSep; }
         int32 enclosingChar() const { return m_cEnc; }
         void enclosingChar(int32 cEnc) { m_cEnc = cEnc; }
-        //int32 endOfLineChar() const { return m_cEol; }
-        //void endOfLineChar(int32 cEol) { m_cEol = cEol; }
+        int32 eolCharFromEndOfLineType() const { return ::DFG_MODULE_NS(io)::eolCharFromEndOfLineType(eolType()); }
 
         DFG_MODULE_NS(io)::EndOfLineType eolType() const { return m_eolType; }
         void eolType(DFG_MODULE_NS(io)::EndOfLineType eolType) { m_eolType = eolType; }
@@ -181,18 +180,15 @@ DFG_ROOT_NS_BEGIN{
             {
                 using namespace DFG_MODULE_NS(io);
                 this->clear();
-                typedef DFG_CLASS_NAME(DelimitedTextReader)::CellData<Char_T, Char_T, typename CharAppender_T::BufferType, CharAppender_T> Cdt;
-                Cdt cellDataHandler(formatDef.separatorChar(), formatDef.enclosingChar(), eolCharFromEndOfLineType(formatDef.eolType()));
 
-                auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
-                auto cellHandler = [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& cdh)
+                auto cellHandler = [=](const size_t nRow, const size_t nCol, const Char_T* pData, const size_t nCount)
                 {
                     DFG_STATIC_ASSERT(InternalEncoding_T == DFG_MODULE_NS(io)::encodingUTF8, "Implimentation exists only for UTF8-encoding");
-                    const auto& buffer = cdh.getBuffer();
-                    this->setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(buffer.data()), buffer.size()));
+                    // TODO: this effectively assumes that user given input is valid UTF8.
+                    this->setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
                 };
-                DFG_CLASS_NAME(DelimitedTextReader)::read(reader, cellHandler);
-                const auto& readFormat = reader.getFormatDefInfo();
+                typedef DFG_CLASS_NAME(DelimitedTextReader)::ParsingDefinition<char, CharAppender_T> ParseDef;
+                const auto& readFormat = DFG_CLASS_NAME(DelimitedTextReader)::readEx(ParseDef(), strm, formatDef.separatorChar(), formatDef.enclosingChar(), formatDef.eolCharFromEndOfLineType(), cellHandler);
 
                 m_readFormat.separatorChar(readFormat.getSep());
                 m_readFormat.enclosingChar(readFormat.getEnc());

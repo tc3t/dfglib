@@ -1329,24 +1329,86 @@ public:
         CellReader_T::CellParsingImplementations::read(reader, std::forward<CellHandler_T>(cellHandler));
     }
 
+    template <class BufferChar_T, class CharAppender_T>
+    struct ParsingDefinition
+    {
+        typedef BufferChar_T        BufferChar;
+        typedef CharAppender_T      CharAppender;
+        typedef std::true_type      IsBasicReaderPossibleType; // Ability to use basic reader does not depend on BufferChar nor on CharAppender.
+    };
+
+    static DFG_CONSTEXPR bool isFormatStringViewCCompatible(const InternalCharType /*cSeparator*/, const InternalCharType cEnclosing, const InternalCharType /*cEndOfLine*/)
+    {
+        // Note: this is in a way a bit too coarse: enclosing character itself is ok as long as cells do not have enclosing character in them, i.e.
+        //       "abc","def" could be read with StringViewCBuffer, but "a""bc","def" could not.
+        return cEnclosing == s_nMetaCharNone;
+    }
+
     // Convenience overload.
     // Item handler function is given four parameters:
     // row index, column index, Pointer to beginning of buffer, buffer size.
     // For example: func(const size_t nRow, const size_t nCol, const char* const pData, const size_t nSize) 
     // TODO: test
-    template <class Stream_T, class Char_T, class ItemHandlerFunc>
-    static void read(Stream_T& istrm,
-                        const Char_T cSeparator,
-                        const Char_T cEnclosing,
-                        const Char_T cEndOfLine,
-                        ItemHandlerFunc ihFunc)
+    template <class Char_T, class Stream_T, class ItemHandlerFunc>
+    static auto read(Stream_T& istrm,
+                        const InternalCharType cSeparator,
+                        const InternalCharType cEnclosing,
+                        const InternalCharType cEndOfLine,
+                        ItemHandlerFunc ihFunc) -> FormatDefinitionSingleChars
     {
-        auto cellData = CellData<Char_T>(cSeparator, cEnclosing, cEndOfLine);
-        auto reader = createReader(istrm, cellData);
-        read(reader, [&](const size_t r, const size_t c, const decltype(cellData)& cd)
+        const bool appenderTypeCondition = DFG_DETAIL_NS::IsStreamStringViewCCompatible<Stream_T>::value && std::is_same<Char_T, char>::value;
+        typedef typename std::conditional<appenderTypeCondition, CharAppenderStringViewCBuffer, CharAppenderDefault<CharBuffer<Char_T>, Char_T>>::type AppenderTypeForStringViewCCompatibleCase;
+        if (isFormatStringViewCCompatible(cSeparator, cEnclosing, cEndOfLine))
+            return readEx(ParsingDefinition<Char_T, AppenderTypeForStringViewCCompatibleCase>(), istrm, cSeparator, cEnclosing, cEndOfLine, ihFunc);
+        else
+            return readEx(ParsingDefinition<Char_T, CharAppenderDefault<CharBuffer<Char_T>, Char_T>>(), istrm, cSeparator, cEnclosing, cEndOfLine, ihFunc);
+    }
+
+    template <class Stream_T, class CellData_T, class ReaderCreator_T, class ItemHandlerFunc_T>
+    static auto readImpl(Stream_T& istrm, CellData_T& cellData, ReaderCreator_T readerCreator, ItemHandlerFunc_T ihFunc) -> FormatDefinitionSingleChars
+    {
+        auto reader = readerCreator(istrm, cellData);
+        read(reader, [&](const size_t r, const size_t c, const CellData_T& cd)
         {
             ihFunc(r, c, cd.getBuffer().data(), cd.getBuffer().size());
         });
+        return reader.getFormatDefInfo();
+    }
+
+    template <class Stream_T, class CellData_T, class ItemHandlerFunc_T>
+    static auto readImpl(std::true_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T ihFunc) -> FormatDefinitionSingleChars
+    {
+        return readImpl(istrm, cellData, &createReader_basic<Stream_T, CellData_T&>, ihFunc);
+    }
+
+    template <class Stream_T, class CellData_T, class ItemHandlerFunc_T>
+    static auto readImpl(std::false_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T ihFunc) -> FormatDefinitionSingleChars
+    {
+        return readImpl(istrm, cellData, &createReader<Stream_T, CellData_T&>, ihFunc);
+    }
+
+    // Item handler function is given four parameters:
+    // row index, column index, Pointer to beginning of buffer, buffer size.
+    // For example: func(const size_t nRow, const size_t nCol, const char* const pData, const size_t nSize) 
+    // TODO: test
+    template <class FormatDefinition_T, class Stream_T, class ItemHandlerFunc>
+    static auto readEx(FormatDefinition_T, 
+                     Stream_T& istrm,
+                     const InternalCharType cSeparator,
+                     const InternalCharType cEnclosing,
+                     const InternalCharType cEndOfLine,
+                     ItemHandlerFunc ihFunc) -> FormatDefinitionSingleChars
+    {
+        typedef typename FormatDefinition_T::BufferChar Char;
+        typedef typename FormatDefinition_T::CharAppender Appender;
+
+        // TODO: in case of autodetect-controls, peek input to determine actual chars.
+
+        auto cellData = CellData<Char, Char, typename Appender::BufferType, Appender>(cSeparator, cEnclosing, cEndOfLine);
+        if (cEnclosing == s_nMetaCharNone && cSeparator != s_nMetaCharAutoDetect && cEndOfLine != s_nMetaCharAutoDetect)
+            return readImpl(typename FormatDefinition_T::IsBasicReaderPossibleType(), istrm, cellData, ihFunc);
+        else
+            return readImpl(std::false_type(), istrm, cellData, ihFunc);
     }
 
     // Note: Data parameter is char* instead of void* to make it less likely to call this wrongly for example like
