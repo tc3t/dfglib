@@ -373,7 +373,7 @@ namespace
         {
             TimerType timer;
             Table table;
-            table.readFromFile(sFilePath);
+            table.readFromFile(sFilePath, DFG_CLASS_NAME(CsvFormatDefinition)(',', DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8));
             EXPECT_EQ(gnRowCount + 1, table.rowCountByMaxRowIndex());
             EXPECT_EQ(gnColCount, table.colCountByMaxColIndex());
             const auto elapsedTime = timer.elapsedWallSeconds();
