@@ -4,6 +4,7 @@
 #include "dfgBaseTypedefs.hpp"
 #include "build/languageFeatureInfo.hpp"
 #include <cstddef> // For std::nullptr_t
+#include <type_traits>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wrappers for [const] char* to aid in writing code and interfaces that actually know what the content of null terminated char* means.
