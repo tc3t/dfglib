@@ -267,7 +267,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 QString sText = QApplication::clipboard()->text();
 
                 QTextStream strm(&sText, QIODevice::ReadOnly);
-                DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read(strm, L'\t', L'"', L'\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t nSize)
+                DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(strm, '\t', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t nSize)
                 {
                     DFG_UNUSED(nSize);
                     const auto nTargetRow = m_where.row() + static_cast<int>(nRow);
