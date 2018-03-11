@@ -1,6 +1,6 @@
 # dfglib
 
-Experimental general purpose utility library.
+Experimental general purpose utility library for C++.
 
 ## Features
 
