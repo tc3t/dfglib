@@ -5,6 +5,7 @@
 #include "io/BasicImStream.hpp"
 #include "io/BasicIStream.hpp"
 #include "io/BasicIStreamCRTP.hpp"
+#include "io/cstdio.hpp"
 #include "io/DelimitedTextReader.hpp"
 #include "io/DelimitedTextWriter.hpp"
 #include "io/fileToByteContainer.hpp"
