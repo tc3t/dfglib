@@ -5,6 +5,7 @@
 #include <string>
 #include <deque>
 #include <list>
+#include <memory>
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/dfgBase.hpp>
 #include <dfg/ReadOnlySzParam.hpp>
@@ -17,11 +18,13 @@
 #include <dfg/cont/tableCsv.hpp>
 #include <dfg/cont/TorRef.hpp>
 #include <dfg/cont/TrivialPair.hpp>
+#include <dfg/cont/UniqueResourceHolder.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/typeTraits.hpp>
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/iter/szIterator.hpp>
 #include <dfg/cont/contAlg.hpp>
+#include <dfg/io/cstdio.hpp>
 
 TEST(dfgCont, makeVector)
 {
@@ -1546,4 +1549,115 @@ TEST(dfgCont, VectorSso)
     v.clear();
     EXPECT_TRUE(v.empty());
     EXPECT_TRUE(v.isSsoStorageInUse());
+}
+
+namespace
+{
+    static int gUniqueResourceHolderTestState = 1;
+    static int getGlobalState()            { return gUniqueResourceHolderTestState; }
+    static void setGlobalState(int newVal) { gUniqueResourceHolderTestState = newVal; }
+}
+
+TEST(dfgCont, UniqueResourceHolder)
+{
+    // malloc-holder
+    {
+        using namespace ::DFG_ROOT_NS::DFG_SUB_NS_NAME(cont);
+        bool freed = false;
+        {
+            auto resource = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_explicitlyConvertible(reinterpret_cast<int*>(std::malloc(sizeof(int)*100)), [&](void* p) { free(p); freed = true; });
+            *resource.data() = 1;
+            EXPECT_EQ(1, *resource.data());
+        }
+        EXPECT_TRUE(freed);
+    }
+
+    // Global flag-setter
+    {
+        EXPECT_EQ(1, getGlobalState());
+        auto resource = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_explicitlyConvertible([]() -> int {auto oldState = getGlobalState(); setGlobalState(2); return oldState; }(), [](int oldVal) { setGlobalState(oldVal); });
+        EXPECT_EQ(2, getGlobalState());
+    }
+    EXPECT_EQ(1, getGlobalState());
+
+    // fopen
+    {
+        auto retCode = EOF;
+        {
+            auto resource = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_explicitlyConvertible(DFG_MODULE_NS(cstdio)::fopen("testfiles/matrix_3x3.txt", "r"), [&](FILE* file) { retCode = fclose(file); });
+            char buf[1];
+            const auto readCount = fread(buf, 1, 1, resource.data()); // Test 'container-to-resource'-conversion.
+            // const auto readCount = fread(buf, 1, 1, resource); // This should fail to compile.
+            EXPECT_EQ(1, readCount);
+        }
+        EXPECT_EQ(0, retCode);
+    }
+
+    // fopen (implicitly convertible)
+    {
+        auto retCode = EOF;
+        {
+            auto resource = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(DFG_MODULE_NS(cstdio)::fopen("testfiles/matrix_3x3.txt", "r"), [&](FILE* file) { retCode = fclose(file); });
+            char buf[1];
+            const auto readCount = fread(buf, 1, 1, resource); // Uses implicit conversion to raw resource type.
+            EXPECT_EQ(1, readCount);
+        }
+        EXPECT_EQ(0, retCode);
+    }
+
+    // Implicit conversions
+    {
+        const auto modifier = [](int* val) { return (val) ? ++(*val) : 0; };
+        auto resourceVec = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(new std::vector<int>(1, 1), [](std::vector<int>* p) { delete p; });
+        auto resourceConstVec = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(new const std::vector<int>(1, 1), [](const std::vector<int>* p) { delete p; });
+        auto resourceInt = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(new int(2), [](int* p) { delete p; });
+        ASSERT_EQ(1, resourceConstVec->size()); // Tests availability of -> operator for const
+        resourceVec->pop_back(); // Tests availability of -> operator for non-const
+        EXPECT_TRUE(resourceVec->empty());
+        int* resPtr = resourceInt; // implicit conversion
+        ASSERT_TRUE(resPtr != nullptr);
+        EXPECT_EQ(2, *resPtr);
+        EXPECT_EQ(resPtr, resourceInt.data());
+        EXPECT_EQ(2, *resourceInt.data());
+        //EXPECT_EQ(2, *resourceInt); // Note: this fails to compile (ambiguous overload for 'operator*').
+        EXPECT_EQ(3, modifier(resourceInt)); // Tests ability to modify through implicit conversion
+        //resourceInt += 2; // This should fail to compile.
+    }
+
+    // Test movability.
+    {
+        int val = 0;
+        {
+            auto resource = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_explicitlyConvertible((char*)(malloc(1)), [&](char* p) { val++; free(p);  });
+            //decltype(resource) resource2 = resource; // This should fail to compile.
+           
+            const char* const p = resource.data();
+            decltype(resource) resource3 = std::move(resource);
+            EXPECT_EQ(p, resource3.data());
+            EXPECT_EQ(nullptr, resource.data()); // This is implementation detail; feel free to change, but if this fails without intented changed, check implementation for logic errors.
+        }
+        EXPECT_EQ(1, val); // Make sure that moving disables deleter call from 'moved from' -object.
+    }
+
+    // Test size of UniqueResourceHolder (implementation details)
+    {
+        auto resourceRuntimeFp = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_explicitlyConvertible(malloc(1), &std::free);
+        auto resourceRunTimeFp2 = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(malloc(1), &std::free);
+        DFGTEST_STATIC(sizeof(resourceRuntimeFp) == sizeof(resourceRunTimeFp2)); // This is hard requirement
+        DFGTEST_STATIC(sizeof(resourceRuntimeFp) == 3 * sizeof(int*)); // This is implementation detail; feel free to change, but if this fails without intented changes, check implementation for logic errors.
+
+        auto resourceLambda = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_explicitlyConvertible(malloc(1), [](void* p) { std::free(p); });
+        auto resourceLambda2 = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(malloc(1), [](void* p) { std::free(p); });
+        DFGTEST_STATIC(sizeof(resourceLambda) == sizeof(resourceLambda2)); // This is hard requirement
+        DFGTEST_STATIC(sizeof(resourceLambda2) == 2 * sizeof(int*)); // This is implementation detail; feel free to change (especially getting rid of 2 * would be desired),
+                                                                     // but if this fails without intented changes, check implementation for logic errors.
+    }
+
+    // Test 'const UniqueResourceHolder' semantics
+    {
+        const auto resource0 = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(new int(1), [](int* p) { delete p; });
+        const auto resource1 = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(new const int(1), [](const int* p) { delete p; });
+        //const auto resource2 = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(new const int(1), [](int* p) { delete p; }); // This should fail to compile (deleter takes non-const int*).
+        //*resource1.data() = 2; // This should fail to compile (resource is const int*). 
+    }
 }

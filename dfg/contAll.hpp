@@ -12,6 +12,7 @@
 #include "cont/table.hpp"
 #include "cont/TorRef.hpp"
 #include "cont/TrivialPair.hpp"
+#include "cont/UniqueResourceHolder.hpp"
 #include "cont/valueArray.hpp"
 #include "cont/Vector.hpp"
 #include "cont/vectorFixedCapacity.hpp"
