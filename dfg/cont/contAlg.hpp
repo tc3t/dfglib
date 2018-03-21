@@ -37,7 +37,7 @@ namespace DFG_DETAIL_NS
     template <class Cont_T>
     void cutTail(Cont_T& c, typename Cont_T::const_iterator iter, std::false_type)
     {
-#ifdef __MINGW32__ // Workaround for MinGW 4.8. not liking const_iterator's in erase().
+#if defined(__GNUG__) || defined(__MINGW32__) // Workaround for MinGW 4.8. not liking const_iterator's in erase(), due to libstdc++ not quite implementing C++11
         auto iterFirst = c.end();
         std::advance(iterFirst, -1 * std::distance(iter, c.cend()));
         c.erase(iterFirst, c.end());

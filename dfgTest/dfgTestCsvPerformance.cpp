@@ -1,6 +1,8 @@
-#include <stdafx.h>
+#ifdef _MSVC_VER
+#  include <stdafx.h>
+#endif
 
-#if 0 // On/off switch for the whole performance test.
+#if 1 // On/off switch for the whole performance test.
 
 #include <dfg/build/compilerDetails.hpp>
 #include <dfg/cont/tableCsv.hpp>
@@ -335,30 +337,118 @@ namespace
 
     void ExecuteTestCase_cppCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
-        std::vector<double> runtimes;
-        size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
-        for (size_t i = 0; i < nCount; ++i)
-        {
-            const auto bytes = dfg::io::fileToVector(sFilePath);
+        // NOTE:
+        // no need to reread the file every loop, cppcsv doesn't modify the original input.
+        const auto bytes = dfg::io::fileToVector(sFilePath);
                                     
-            CppCsvCellCounter cc;
-            cppcsv::csv_parser<decltype(cc), char, char, char> parser(cc, '\0', ',', false, false);
-            auto pData = bytes.data();
+        // scope for the most flexible (and slowest) parser configuration
+        {
+           std::vector<double> runtimes;
+           size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
+           for (size_t i = 0; i < nCount; ++i)
+           {
+               CppCsvCellCounter cc;
+               cppcsv::csv_parser<decltype(cc), char, char, char> parser(cc, '\0', ',', false, false);
 
-            dfg::time::TimerCpu timer1;
-            parser(pData, bytes.size());
-            
-            const auto elapsed1 = timer1.elapsedWallSeconds();
+               dfg::time::TimerCpu timer1;
 
-            std::cout << cc.m_nCellCounter << '\n';
-            EXPECT_TRUE(cc.m_nCellCounter > 0);
-            EXPECT_TRUE(i == 0 || cc.m_nCellCounter == nPreviousCounter);
-            nPreviousCounter = cc.m_nCellCounter;
+               // Note that cppcsv is a STREAMING parser, and can output either at the end of each line,
+               // or after each cell.  In this case, it will be calling cell() immediately after each cell.
+               //
+               // parser.operator() is the same as parser.process_chunk(),
+               // but you need to finish by calling parser.flush() to tell the parser the file has finished,
+               // just in case the last row did not have a final newline character at the end.
+               //
+               // Note also that process_chunk will ADJUST the pointer passed to it,
+               // as the pointer will be left at the point of any errors detected in the input.
+               //
+               // Typically you would call it something like this:
+               // -- while (!feof(file)) {
+               // --    size_t n = fread(buf, 1, bufsize, file);
+               // --    const char* cursor = buf;
+               // --    if (parser.process_chunk(cursor,n)) handle error;  *Note1
+               // -- }
+               // -- parser.flush();
+               //
+               // *Note1: or use the operator() in the loop:   if (parser(buf,n)) handle error;
+               //
+               // Alternatively, if you already have the entire CSV loaded into a memory block,
+               // you can call it like this
+               // parser.process(buffer, buffer_size);
+               // and it will call process_chunk() and flush() for you.
+               //
 
-            runtimes.push_back(elapsed1);
+               auto pData = bytes.data();
+               // parser(pData, bytes.size());
+               // parser.flush();
+               parser.process(pData, bytes.size());
+               
+               const auto elapsed1 = timer1.elapsedWallSeconds();
+
+               std::cout << cc.m_nCellCounter << '\n';
+               EXPECT_TRUE(cc.m_nCellCounter > 0);
+               EXPECT_TRUE(i == 0 || cc.m_nCellCounter == nPreviousCounter);
+               nPreviousCounter = cc.m_nCellCounter;
+
+               runtimes.push_back(elapsed1);
+           }
+
+           PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2018-03-21", "runtime", "Parse only (cell counter)", "Contiguous memory");
         }
 
-        PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2016-08-31", "runtime", "Parse only (cell counter)", "Contiguous memory");
+        // now to disable comments and quotes support, but still with a runtime-configured separator
+        {
+           std::vector<double> runtimes;
+           size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
+           for (size_t i = 0; i < nCount; ++i)
+           {
+               CppCsvCellCounter cc;
+               cppcsv::csv_parser<decltype(cc), cppcsv::Disable, char, cppcsv::Disable> parser(cc, cppcsv::Disable(), ',', false, false);
+
+               dfg::time::TimerCpu timer1;
+
+               auto pData = bytes.data();
+               parser.process(pData, bytes.size());
+               
+               const auto elapsed1 = timer1.elapsedWallSeconds();
+
+               std::cout << cc.m_nCellCounter << '\n';
+               EXPECT_TRUE(cc.m_nCellCounter > 0);
+               EXPECT_TRUE(i == 0 || cc.m_nCellCounter == nPreviousCounter);
+               nPreviousCounter = cc.m_nCellCounter;
+
+               runtimes.push_back(elapsed1);
+           }
+
+           PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2018-03-21", "compile time", "Parse only (cell counter) + no comments+quotes", "Contiguous memory");
+        }
+
+        // now to disable comments and quotes support, and use comma as the compile-time specified separator
+        {
+           std::vector<double> runtimes;
+           size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
+           for (size_t i = 0; i < nCount; ++i)
+           {
+               CppCsvCellCounter cc;
+               cppcsv::csv_parser<decltype(cc), cppcsv::Disable, cppcsv::Separator_Comma, cppcsv::Disable> parser(cc, cppcsv::Disable(), cppcsv::Separator_Comma(), false, false);
+
+               dfg::time::TimerCpu timer1;
+
+               auto pData = bytes.data();
+               parser.process(pData, bytes.size());
+               
+               const auto elapsed1 = timer1.elapsedWallSeconds();
+
+               std::cout << cc.m_nCellCounter << '\n';
+               EXPECT_TRUE(cc.m_nCellCounter > 0);
+               EXPECT_TRUE(i == 0 || cc.m_nCellCounter == nPreviousCounter);
+               nPreviousCounter = cc.m_nCellCounter;
+
+               runtimes.push_back(elapsed1);
+           }
+
+           PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2018-03-21", "compile time", "Parse only (cell counter) + no comments+quotes + comma only", "Contiguous memory");
+        }
     }
 
     void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
