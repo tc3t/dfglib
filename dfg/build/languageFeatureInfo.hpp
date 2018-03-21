@@ -14,10 +14,12 @@
 
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
-#ifndef __MINGW32__ // TODO: make this less coarse.
-    #define DFG_LANGFEAT_MOVABLE_STREAMS	1
-#else
+#ifdef __MINGW32__ // TODO: make this less coarse.
     #define DFG_LANGFEAT_MOVABLE_STREAMS	0
+#elif __GNUG__
+    #define DFG_LANGFEAT_MOVABLE_STREAMS	0
+#else
+    #define DFG_LANGFEAT_MOVABLE_STREAMS	1
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2013)
@@ -55,6 +57,8 @@
 
 // DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE
 #if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2012)) || defined(__MINGW32__) // TODO: make this less coarse especially for mingw.
+    #define DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE	0
+#elif __GNUG__
     #define DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE	0
 #else
     #define DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE	1

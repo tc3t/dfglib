@@ -2,7 +2,11 @@
 
 #include "dfgDefs.hpp"
 #include <iterator> // For std::distance
-#include "iter/IsContiguousMemoryIterator.hpp"
+
+// note: filename is in lowercase on the file system,
+// so it needs to be in lowercase here to compile on any case-sensitive FS,
+// ie ANY non-Microsoft FS, or NTFS with case-sensitivity enabled.
+#include "iter/iscontiguousmemoryiterator.hpp"
 
 DFG_ROOT_NS_BEGIN
 {

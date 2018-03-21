@@ -9,7 +9,9 @@
 #include "str/strCmp.hpp"
 #include "str/strLen.hpp"
 #include "ReadOnlySzParam.hpp"
-#include <boost/lexical_cast.hpp>
+#ifndef DFG_NO_BOOST
+#  include <boost/lexical_cast.hpp>
+#endif
 #include <cstdio>
 #include <limits>
 #include <cstdarg>

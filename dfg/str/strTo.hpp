@@ -2,7 +2,9 @@
 #define DFG_STR_STRTO_LJIBPTYR
 
 #include "../dfgBase.hpp"
-#include <boost/lexical_cast.hpp>
+#ifndef DFG_NO_BOOST
+#  include <boost/lexical_cast.hpp>
+#endif
 #include "../ReadOnlySzParam.hpp"
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
