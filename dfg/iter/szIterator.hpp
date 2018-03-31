@@ -44,7 +44,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(iter) {
 		DFG_CLASS_NAME(SzIterator) operator++(int)
 		{ 
 			DFG_CLASS_NAME(SzIterator) copyIter(*this);
-			++copyIter;
+			++*this;
 			return copyIter;
 		}
 

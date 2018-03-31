@@ -146,4 +146,14 @@ TEST(dfgIter, szIterator)
     EXPECT_STREQ(sz, s.c_str());
 
     EXPECT_EQ(3, range.size());
+
+    // Test post-increment operator
+    {
+        const char szText[] = "abc";
+        auto iter = makeSzIterator(szText);
+        const char* ptrIter = szText;
+        EXPECT_EQ(*ptrIter++, *iter++);
+        EXPECT_EQ(*ptrIter, *iter);
+        EXPECT_EQ(*++ptrIter, *++iter);
+    }
 }
