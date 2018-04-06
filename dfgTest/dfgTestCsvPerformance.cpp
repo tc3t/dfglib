@@ -333,21 +333,27 @@ namespace
         size_t m_nCellCounter;
     };
 
-    void ExecuteTestCase_cppCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    template <class CommentsChar_T, class Quote_T, class Separator_T>
+    void ExecuteTestCase_cppCsvImpl(std::ostream& output,
+                                    const std::string& sFilePath,
+                                    const size_t nCount,
+                                    const Quote_T quote,
+                                    const Separator_T sep,
+                                    const char* pszFormatDef,
+                                    const char* pszParseStyle)
     {
         std::vector<double> runtimes;
         size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
         for (size_t i = 0; i < nCount; ++i)
         {
             const auto bytes = dfg::io::fileToVector(sFilePath);
-                                    
             CppCsvCellCounter cc;
-            cppcsv::csv_parser<decltype(cc), char, char, char> parser(cc, '\0', ',', false, false);
-            auto pData = bytes.data();
+            cppcsv::csv_parser<decltype(cc), Quote_T, Separator_T, CommentsChar_T> parser(cc, quote, sep, false, false);
 
+            auto pData = bytes.data();
             dfg::time::TimerCpu timer1;
-            parser(pData, bytes.size());
-            
+            parser.process(pData, bytes.size());
+
             const auto elapsed1 = timer1.elapsedWallSeconds();
 
             std::cout << cc.m_nCellCounter << '\n';
@@ -357,8 +363,19 @@ namespace
 
             runtimes.push_back(elapsed1);
         }
+        PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2018-03-21", pszFormatDef, pszParseStyle, "Contiguous memory");
+    }
 
-        PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2016-08-31", "runtime", "Parse only (cell counter)", "Contiguous memory");
+    void ExecuteTestCase_cppCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    {
+        // Generic configuration
+        ExecuteTestCase_cppCsvImpl<char>(output, sFilePath, nCount, '\0', ',', "runtime", "Parse only (cell counter)");
+
+        // Disabled comments and quotes support, runtime separator
+        ExecuteTestCase_cppCsvImpl<cppcsv::Disable>(output, sFilePath, nCount, cppcsv::Disable(), ',', "mixed", "Parse only (cell counter) + no(comments quotes)");
+
+        // Disabled comments and quotes support, compile-time separator
+        ExecuteTestCase_cppCsvImpl<cppcsv::Disable>(output, sFilePath, nCount, cppcsv::Disable(), cppcsv::Separator_Comma(), "compile time", "Parse only (cell counter) + no(comments quotes) + comma only");
     }
 
     void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
