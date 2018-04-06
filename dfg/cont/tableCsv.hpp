@@ -258,7 +258,7 @@ DFG_ROOT_NS_BEGIN{
                     strm.write(bomBytes.data(), bomBytes.size());
                 }
 
-                CsvFormatDefinition m_format;
+                DFG_CLASS_NAME(CsvFormatDefinition) m_format;
                 std::string m_bytes;
                 std::string m_workBytes;
                 const char* m_pEncodedSep;
@@ -271,6 +271,12 @@ DFG_ROOT_NS_BEGIN{
             auto createWritePolicy() const -> WritePolicySimple<Stream_T>
             {
                 return WritePolicySimple<Stream_T>(m_readFormat);
+            }
+
+            template <class Stream_T>
+            static auto createWritePolicy(DFG_CLASS_NAME(CsvFormatDefinition) format) -> WritePolicySimple<Stream_T>
+            {
+                return WritePolicySimple<Stream_T>(format);
             }
             
             // Strm must have write()-method which writes bytes untranslated.
