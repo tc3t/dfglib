@@ -1,18 +1,17 @@
+#pragma once
+
 // Copyright (c) 2013 Tobias Hoffmann
 //               2013 Paul Harris <paulharris@computer.org>
 //
 // License: http://opensource.org/licenses/MIT
 
 #include <cassert>
+#include <cstring>
 #include "csvbase.hpp"
 
+#include <algorithm>
 #include <string>
 #include <vector>
-
-#include <boost/range/algorithm/find.hpp>
-#include <boost/range/end.hpp>
-#include <boost/utility.hpp>
-#include <boost/variant.hpp>
 
 #define CPPCSV_DEBUG 0
 
@@ -24,47 +23,39 @@
 namespace cppcsv {
 namespace csvFSM {
 
-// States - must all be emptry structs
-struct Start {};
-struct ReadSkipPre {};
-struct ReadQuoted {};
-struct ReadQuotedCheckEscape {};
-struct ReadQuotedSkipPost {};
-struct ReadDosCR {};
-struct ReadQuotedDosCR {};
-struct ReadUnquoted {};
-struct ReadUnquotedWhitespace {};
-struct ReadComment {};
-struct ReadError {};
+   // State Indexes (in the transition array)
+   enum StateIdx {
+      Start = 0,
+      ReadSkipPre,
+      ReadQuoted,
+      ReadQuotedCheckEscape,
+      ReadQuotedSkipPost,
+      ReadDosCR,
+      ReadQuotedDosCR,
+      ReadUnquoted,
+      ReadUnquotedWhitespace,
+      ReadComment,
+      ReadError,
+      NUM_SI
+   };
 
-typedef boost::variant<Start,
-                       ReadDosCR,
-                       ReadQuotedDosCR,
-                       ReadSkipPre,
-                       ReadQuoted,
-                       ReadQuotedCheckEscape,
-                       ReadQuotedSkipPost,
-                       ReadUnquoted,
-                       ReadUnquotedWhitespace,
-                       ReadComment,
-                       ReadError> States;
+   // State Transitions
+   template <class TTrans>
+   class ST_Base {
+   public:
+      virtual ~ST_Base() {} // to avoid the abstract class delete warning
 
-// Events
-struct Echar {};
-struct Ewhitespace {};
-struct Eqchar {};
-struct Esep {};
-struct Enewline {};
-struct Edos_cr {};   // DOS carriage return
-struct Ecomment {};
+      virtual StateIdx Echar( TTrans& t ) const = 0;
+      virtual StateIdx Ewhitespace( TTrans& t ) const = 0;
+      virtual StateIdx Eqchar( TTrans& t ) const = 0;
+      virtual StateIdx Esep( TTrans& t ) const = 0;
+      virtual StateIdx Enewline( TTrans& t ) const = 0;
+      virtual StateIdx Edos_cr( TTrans& t ) const = 0;   // DOS carriage return
+      virtual StateIdx Ecomment( TTrans& t ) const = 0;
+   };
 
 
-// compile-time interface switches
-/*
-template <class T> struct BuilderSupported;
-template <> struct BuilderSupported<per_cell_tag> { static const bool ok = true; };
-template <> struct BuilderSupported<per_row_tag>  { static const bool ok = true; };
-*/
+
 
 template <class Output>
 void call_out_begin_row( Output & out, per_cell_tag & )
@@ -143,7 +134,13 @@ void call_out_end_full_row(
 
 
 template <class CsvBuilder>
-struct Trans {
+class Trans
+{
+   // disable copy
+   Trans& operator=(Trans const&);
+   Trans(Trans const&);
+
+public:
   Trans(CsvBuilder &out, bool trim_whitespace, bool collapse_separators ) :
      value(0),
      row_file_start_row(0),
@@ -152,7 +149,20 @@ struct Trans {
      out(out),
      trim_whitespace(trim_whitespace),
      collapse_separators(collapse_separators)
-   {}
+   {
+      // Note that I'm using vector<> instead of string
+      // because we don't need the extra string abilities,
+      // and I found it slow on GCC 4.8
+      //
+      // some initial buffer size
+      cells_buffer.resize(128);
+      whitespace_state.resize(32);
+
+      cells_buffer[0] = 0;
+      whitespace_state[0] = 0;
+      cells_buffer_len = 0;
+      whitespace_state_len = 0;
+   }
 
   // this is set before the state change is called,
   // that way the Events do not need to carry their state with them.
@@ -164,40 +174,15 @@ struct Trans {
   // if =0 then there is no active_qchar
   char active_qchar;
 
-private:
-  template <class Event>
-  struct NextState : boost::static_visitor<States> {
-    NextState(Trans &t) : t(t) {}
-
-    // note: states are just empty structs, so pass by copy should be faster
-    template <class State>
-    States operator()(State s) const {
-#if CPPCSV_DEBUG
-  printf("%s %c (%d)\n",typeid(State).name(), t.value, (int)t.value);
-#endif
-      return t.on(s,Event());
-    }
-
-  private:
-    Trans &t;
-  };
-
-
 public:
-   // finds the next state, performs transition activity, sets the new state
-  template <class State, class Event>
-  States process_event( State state, Event event ) {
-    return boost::apply_visitor( NextState<Event>(*this), state);
-  }
-
-
   bool row_empty() const {
-     return cells_buffer.empty() && whitespace_state.empty();
+     // return cells_buffer.empty() && whitespace_state.empty();
+     return cells_buffer_len == 0 && whitespace_state_len == 0;
   }
 
   size_t last_cell_length() const {
      assert(is_row_open());
-     return cells_buffer.size() - cell_offsets.back();
+     return cells_buffer_len - cell_offsets.back();
   }
 
   bool is_row_open() const {
@@ -206,149 +191,70 @@ public:
 
   const char* error_message;
 
-    // note: states and events are just empty structs, so pass by copy should be faster
 
-  // for defining a state transition with code
-#define TTS(State, Event, TargetState, code) States on(State, Event) { code; return TargetState(); }
+// make public for virtual to call...
+// private:
 
-  // for defining a transition that redirects to another Event handler for this state
-#define REDIRECT(State, Event, OtherEvent) States on(State state, Event) { return on(state,OtherEvent()); }
-
-  //  State          Event        Next_State    Transition_Action
-  TTS(Start,         Eqchar,      ReadQuoted,   { active_qchar = value; begin_row(); });
-  TTS(Start,         Esep,        ReadSkipPre,  { begin_row(); next_cell(false); });
-  TTS(Start,         Enewline,    Start,        { begin_row(); end_row(); });
-  TTS(Start,         Edos_cr,     ReadDosCR,   {});
-  TTS(Start,         Ewhitespace, ReadSkipPre,  { if (!trim_whitespace) { remember_whitespace(); } begin_row(); });   // we MAY want to remember this whitespace
-  TTS(Start,         Echar,       ReadUnquoted, { begin_row(); add(); });
-  TTS(Start,         Ecomment,    ReadComment,  {});  // comment at the start of the line --> everything discarded, no blank row is generated
-
-  TTS(ReadDosCR,    Eqchar,    ReadError, { error_message = "quote after CR"; });
-  TTS(ReadDosCR,    Esep,      ReadError, { error_message = "sep after CR"; });
-  // If row is blank, begin and then end it.
-  TTS(ReadDosCR,    Enewline,  Start,     { if (!is_row_open()) { begin_row(); } end_row(); });
-  TTS(ReadDosCR,    Edos_cr,   ReadError, { error_message = "CR after CR"; });
-  TTS(ReadDosCR,    Ewhitespace, ReadError, { error_message = "whitespace after CR"; });
-  TTS(ReadDosCR,    Echar,     ReadError, { error_message = "char after CR"; });
-  TTS(ReadDosCR,    Ecomment,  ReadError, { error_message = "comment after CR"; });
-
-  TTS(ReadSkipPre,   Eqchar,      ReadQuoted,   { active_qchar = value; drop_whitespace(); });   // we always want to forget whitespace before the quotes
-  TTS(ReadSkipPre,   Esep,        ReadSkipPre,  { if (!collapse_separators) { next_cell(false); } });
-  TTS(ReadSkipPre,   Enewline,    Start,        { next_cell(false); end_row(); });
-  TTS(ReadSkipPre,   Edos_cr,     ReadDosCR,    { next_cell(false); });  // same as newline, except we expect to see newline next
-  TTS(ReadSkipPre,   Ewhitespace, ReadSkipPre,  { if (!trim_whitespace) { remember_whitespace(); } });  // we MAY want to remember this whitespace
-  TTS(ReadSkipPre,   Echar,       ReadUnquoted, { add_whitespace(); add(); });   // we add whitespace IF any was recorded
-  TTS(ReadSkipPre,   Ecomment,    ReadComment,  { add_whitespace(); if (last_cell_length() != 0) { next_cell(true); } end_row(); } );   // IF there was anything, then emit a cell else completely ignore the current cell (ie do not emit a null)
-
-  TTS(ReadQuoted,    Eqchar,      ReadQuotedCheckEscape, {});
-  TTS(ReadQuoted,    Edos_cr,     ReadQuotedDosCR,       {});  // do not add, we translate \r\n to \n, even within quotes
-  TTS(ReadQuoted,    Echar,       ReadQuoted,            { add(); });
-  REDIRECT(ReadQuoted,    Esep,        Echar )
-  REDIRECT(ReadQuoted,    Enewline,    Echar )
-  REDIRECT(ReadQuoted,    Ewhitespace, Echar )
-  REDIRECT(ReadQuoted,    Ecomment,    Echar )
-
-  TTS(ReadQuotedDosCR,    Eqchar,    ReadError,    { error_message = "quote after CR"; });
-  TTS(ReadQuotedDosCR,    Esep,      ReadError,    { error_message = "sep after CR"; });
-  TTS(ReadQuotedDosCR,    Enewline,  ReadQuoted,   { add(); });   // we see \r\n, so add(\n) and continue reading Quoted
-  TTS(ReadQuotedDosCR,    Edos_cr,   ReadError,    { error_message = "CR after CR"; });
-  TTS(ReadQuotedDosCR,    Ewhitespace, ReadError,  { error_message = "whitespace after CR"; });
-  TTS(ReadQuotedDosCR,    Echar,     ReadError,    { error_message = "char after CR"; });
-  TTS(ReadQuotedDosCR,    Ecomment,  ReadError,    { error_message = "comment after CR"; });
-
-  // we are reading quoted text, we see a "... here we are looking to see if its followed by another "
-  // if so, then output a quote, else its the end of the quoted section.
-  TTS(ReadQuotedCheckEscape, Eqchar,      ReadQuoted,          { add(); });
-  TTS(ReadQuotedCheckEscape, Esep,        ReadSkipPre,         { active_qchar = 0; next_cell(); });
-  TTS(ReadQuotedCheckEscape, Enewline,    Start,               { active_qchar = 0; next_cell(); end_row(); });
-  TTS(ReadQuotedCheckEscape, Edos_cr,     ReadDosCR,           { active_qchar = 0; next_cell(); });
-  TTS(ReadQuotedCheckEscape, Ewhitespace, ReadQuotedSkipPost,  { active_qchar = 0; });
-  TTS(ReadQuotedCheckEscape, Echar,       ReadError,           { error_message = "char after possible endquote"; });
-  TTS(ReadQuotedCheckEscape, Ecomment,    ReadComment,         { active_qchar = 0; next_cell(); end_row(); });
-
-  // we have finished a quoted cell, we are just looking for the next separator or end point so we can emit the cell
-  TTS(ReadQuotedSkipPost, Eqchar,      ReadError,           { error_message = "quote after endquote"; });
-  TTS(ReadQuotedSkipPost, Esep,        ReadSkipPre,         { next_cell(); });
-  TTS(ReadQuotedSkipPost, Enewline,    Start,               { next_cell(); end_row(); });
-  TTS(ReadQuotedSkipPost, Edos_cr,     ReadDosCR,           { next_cell(); });
-  TTS(ReadQuotedSkipPost, Ewhitespace, ReadQuotedSkipPost,  {});
-  TTS(ReadQuotedSkipPost, Echar,       ReadError,           { error_message = "char after endquote"; });
-  TTS(ReadQuotedSkipPost, Ecomment,    ReadComment,         { next_cell(); end_row(); });
-
-  // we have seen some text, and we are reading it in
-  // TTS(ReadUnquoted, Eqchar,      ReadError,              { error_message = "unexpected quote in unquoted string"; });
-  // Modified, if we see a quote in an unquoted cell, then just read as a plain quote
-  // The rule of always quoting cells with quotes is a "please do" but Excel does not practice it when writing to Clipboard, and is tolerant when reading.
-  // So Eqchar is hangled in the same way as Echar (below)
-
-  TTS(ReadUnquoted, Esep,        ReadSkipPre,            { next_cell(); });
-  TTS(ReadUnquoted, Enewline,    Start,                  { next_cell(); end_row(); });
-  TTS(ReadUnquoted, Edos_cr,     ReadDosCR,              { next_cell(); });
-  TTS(ReadUnquoted, Ewhitespace, ReadUnquotedWhitespace, { remember_whitespace(); });  // must remember whitespace in case its in the middle of the cell
-  TTS(ReadUnquoted, Echar,       ReadUnquoted,           { add_whitespace(); add(); });
-  TTS(ReadUnquoted, Eqchar,      ReadUnquoted,           { add_whitespace(); add(); });   // tolerant to quotes in the middle of unquoted cells
-  TTS(ReadUnquoted, Ecomment,    ReadComment,            { next_cell(); end_row(); });
-
-  // we have been reading some text, and we are working through some whitespace,
-  // which could be in the middle of the text or at the end of the cell.
-  TTS(ReadUnquotedWhitespace, Eqchar,      ReadError,                { error_message = "unexpected quote after unquoted string"; });
-  TTS(ReadUnquotedWhitespace, Esep,        ReadSkipPre,              { add_unquoted_post_whitespace(); next_cell(); });
-  TTS(ReadUnquotedWhitespace, Enewline,    Start,                    { add_unquoted_post_whitespace(); next_cell(); end_row(); });
-  TTS(ReadUnquotedWhitespace, Edos_cr,     ReadDosCR,                { add_unquoted_post_whitespace(); next_cell(); });
-  TTS(ReadUnquotedWhitespace, Ewhitespace, ReadUnquotedWhitespace,   { remember_whitespace(); });
-  TTS(ReadUnquotedWhitespace, Echar,       ReadUnquoted,             { add_whitespace(); add(); });
-  TTS(ReadUnquotedWhitespace, Ecomment,    ReadComment,              { add_unquoted_post_whitespace(); next_cell(); end_row(); });
-
-  TTS(ReadError, Echar,       ReadError,  { assert(error_message); });
-  REDIRECT(ReadError, Eqchar,      Echar)
-  REDIRECT(ReadError, Esep,        Echar)
-  REDIRECT(ReadError, Enewline,    Echar)
-  REDIRECT(ReadError, Edos_cr,     Echar)
-  REDIRECT(ReadError, Ewhitespace, Echar)
-  REDIRECT(ReadError, Ecomment,    Echar)
-
-  TTS(ReadComment, Enewline,     Start,         {});  // end of line --> end of comment
-  TTS(ReadComment, Echar,        ReadComment,   {});
-  REDIRECT(ReadComment, Eqchar,       Echar)
-  REDIRECT(ReadComment, Esep,         Echar)
-  REDIRECT(ReadComment, Edos_cr,      Echar)
-  REDIRECT(ReadComment, Ewhitespace,  Echar)
-  REDIRECT(ReadComment, Ecomment,     Echar)
-
-#undef REDIRECT
-#undef TTS
-
-private:
   // adds current character to cell buffer
   void add()
   {
-     cells_buffer.push_back(value);
+     // cells_buffer.push_back(value);
+     if (cells_buffer_len+1 >= cells_buffer.size())
+        cells_buffer.resize( cells_buffer.size()*2 );
+     cells_buffer[cells_buffer_len] = value;
+     ++cells_buffer_len;
+     // note: don't bother to null-terminate
+     // cells_buffer[cells_buffer_len] = 0;
   }
 
   // whitespace is remembered until we know if we need to add to the output or forget
   void remember_whitespace()
   {
-     whitespace_state.push_back(value);
+     // whitespace_state.push_back(value);
+     if (whitespace_state_len+1 >= whitespace_state.size())
+        whitespace_state.resize( whitespace_state.size()*2 );
+     whitespace_state[whitespace_state_len] = value;
+     ++whitespace_state_len;
+     // note: don't bother to null-terminate whitespace
   }
 
   // adds remembered whitespace to cell buffer
   void add_whitespace()
   {
-     cells_buffer.append(whitespace_state);
-     drop_whitespace();
+     if (whitespace_state_len > 0)
+     {
+        if (cells_buffer_len+whitespace_state_len >= cells_buffer.size())
+           cells_buffer.resize( (cells_buffer.size()+whitespace_state_len)*2 );
+        memcpy(&cells_buffer[cells_buffer_len], &whitespace_state[0], whitespace_state_len);
+        cells_buffer_len += whitespace_state_len;
+        // cells_buffer.append(whitespace_state);
+        drop_whitespace();
+     }
   }
 
   // only writes out whitespace IF we aren't trimming
   void add_unquoted_post_whitespace()
   {
-     if (!trim_whitespace)
-        cells_buffer.append(whitespace_state);
-     drop_whitespace();
+     if (whitespace_state_len > 0)
+     {
+        if (!trim_whitespace)
+        {
+           if (cells_buffer_len+whitespace_state_len >= cells_buffer.size())
+              cells_buffer.resize( (cells_buffer.size()+whitespace_state_len)*2 );
+           // cells_buffer.append(whitespace_state);
+           memcpy(&cells_buffer[cells_buffer_len], &whitespace_state[0], whitespace_state_len);
+           cells_buffer_len += whitespace_state_len;
+           // note: don't bother to null-terminate
+           // cells_buffer[cells_buffer_len] = 0;
+        }
+        drop_whitespace();
+     }
   }
 
   void drop_whitespace()
   {
-     whitespace_state.clear(); 
+     whitespace_state_len = 0;
+     // note: don't bother to null-terminate
   }
 
 
@@ -364,13 +270,17 @@ private:
   void next_cell(bool has_content = true)
   {
     assert(is_row_open());
+    if (!is_row_open()) throw int(2);
     const size_t start_off = cell_offsets.back();
-    const size_t end_off = cells_buffer.size();
+    // const size_t end_off = cells_buffer.size();
+    const size_t end_off = cells_buffer_len;
 
     cell_offsets.push_back(end_off);
 
     if (has_content) {
-      assert(!cells_buffer.empty());
+      // assert(!cells_buffer.empty());
+      assert(cells_buffer_len != 0);
+      // char* base = &cells_buffer[0];
       char* base = &cells_buffer[0];
       call_out_cell( out, out, base+start_off, end_off-start_off );
     } else {
@@ -386,7 +296,8 @@ private:
 
      // give client a NON-CONST buffer
      // so they can modify in-place for better efficiency
-     char * buffer = (cells_buffer.empty() ? NULL : &cells_buffer[0]);
+     // char * buffer = (cells_buffer.empty() ? NULL : &cells_buffer[0]);
+     char * buffer = &cells_buffer[0];
 
      call_out_end_full_row(
            out, out,
@@ -397,17 +308,202 @@ private:
            );
 
      cell_offsets.clear();
-     cells_buffer.clear();
+     // cells_buffer.clear();
+     cells_buffer_len = 0;
+     // note: don't bother to null-terminate
   }
 
   CsvBuilder &out;
-  std::string cells_buffer;
+
+  std::vector<char> cells_buffer;
+  std::vector<char> whitespace_state;
+  unsigned int cells_buffer_len;
+  unsigned int whitespace_state_len;
+
+  // std::string cells_buffer;
+  // std::string whitespace_state;
   std::vector<size_t> cell_offsets;
-  std::string whitespace_state;
+
   bool trim_whitespace;
   bool collapse_separators;
 };
 
+
+
+  // for defining a state transition with code
+#define TTS(State, Event, TargetState, code) virtual StateIdx Event(TTrans & t) const { code; return TargetState; }
+
+  // for defining a transition that redirects to another Event handler for this state
+#define REDIRECT(State, Event, OtherEvent) virtual StateIdx Event(TTrans & t) const { return this->OtherEvent(t); }
+
+template <class TTrans>
+class ST_Start : public ST_Base<TTrans> {
+public:
+  //  State          Event        Next_State    Transition_Action
+  TTS(Start,         Eqchar,      ReadQuoted,   { t.active_qchar = t.value; t.begin_row(); });
+  TTS(Start,         Esep,        ReadSkipPre,  { t.begin_row(); t.next_cell(false); });
+  TTS(Start,         Enewline,    Start,        { t.begin_row(); t.end_row(); });
+  TTS(Start,         Edos_cr,     ReadDosCR,   {});
+  TTS(Start,         Ewhitespace, ReadSkipPre,  { if (!t.trim_whitespace) { t.remember_whitespace(); } t.begin_row(); });   // we MAY want to remember this whitespace
+  TTS(Start,         Echar,       ReadUnquoted, { t.begin_row(); t.add(); });
+  TTS(Start,         Ecomment,    ReadComment,  {});  // comment at the start of the line --> everything discarded, no blank row is generated
+};
+
+
+
+template <class TTrans>
+class ST_ReadSkipPre : public ST_Base<TTrans> {
+public:
+  TTS(ReadSkipPre,   Eqchar,      ReadQuoted,   { t.active_qchar = t.value; t.drop_whitespace(); });   // we always want to forget whitespace before the quotes
+  TTS(ReadSkipPre,   Esep,        ReadSkipPre,  { if (!t.collapse_separators) { t.next_cell(false); } });
+  TTS(ReadSkipPre,   Enewline,    Start,        { t.next_cell(false); t.end_row(); });
+  TTS(ReadSkipPre,   Edos_cr,     ReadDosCR,    { t.next_cell(false); });  // same as newline, except we expect to see newline next
+  TTS(ReadSkipPre,   Ewhitespace, ReadSkipPre,  { if (!t.trim_whitespace) { t.remember_whitespace(); } });  // we MAY want to remember this whitespace
+  TTS(ReadSkipPre,   Echar,       ReadUnquoted, { t.add_whitespace(); t.add(); });   // we add whitespace IF any was recorded
+  TTS(ReadSkipPre,   Ecomment,    ReadComment,  { t.add_whitespace(); if (t.last_cell_length() != 0) { t.next_cell(true); } t.end_row(); } );   // IF there was anything, then emit a cell else completely ignore the current cell (ie do not emit a null)
+
+};
+
+
+
+template <class TTrans>
+class ST_ReadQuoted : public ST_Base<TTrans> {
+public:
+  TTS(ReadQuoted,    Eqchar,      ReadQuotedCheckEscape, {});
+  TTS(ReadQuoted,    Edos_cr,     ReadQuotedDosCR,       {});  // do not add, we translate \r\n to \n, even within quotes
+  TTS(ReadQuoted,    Echar,       ReadQuoted,            { t.add(); });
+  REDIRECT(ReadQuoted,    Esep,        Echar )
+  REDIRECT(ReadQuoted,    Enewline,    Echar )
+  REDIRECT(ReadQuoted,    Ewhitespace, Echar )
+  REDIRECT(ReadQuoted,    Ecomment,    Echar )
+};
+
+
+
+template <class TTrans>
+class ST_ReadQuotedCheckEscape : public ST_Base<TTrans> {
+public:
+  // we are reading quoted text, we see a "... here we are looking to see if its followed by another "
+  // if so, then output a quote, else its the end of the quoted section.
+  TTS(ReadQuotedCheckEscape, Eqchar,      ReadQuoted,          { t.add(); });
+  TTS(ReadQuotedCheckEscape, Esep,        ReadSkipPre,         { t.active_qchar = 0; t.next_cell(); });
+  TTS(ReadQuotedCheckEscape, Enewline,    Start,               { t.active_qchar = 0; t.next_cell(); t.end_row(); });
+  TTS(ReadQuotedCheckEscape, Edos_cr,     ReadDosCR,           { t.active_qchar = 0; t.next_cell(); });
+  TTS(ReadQuotedCheckEscape, Ewhitespace, ReadQuotedSkipPost,  { t.active_qchar = 0; });
+  TTS(ReadQuotedCheckEscape, Echar,       ReadError,           { t.error_message = "char after possible endquote"; });
+  TTS(ReadQuotedCheckEscape, Ecomment,    ReadComment,         { t.active_qchar = 0; t.next_cell(); t.end_row(); });
+};
+
+
+
+template <class TTrans>
+class ST_ReadQuotedSkipPost : public ST_Base<TTrans> {
+public:
+  // we have finished a quoted cell, we are just looking for the next separator or end point so we can emit the cell
+  TTS(ReadQuotedSkipPost, Eqchar,      ReadError,           { t.error_message = "quote after endquote"; });
+  TTS(ReadQuotedSkipPost, Esep,        ReadSkipPre,         { t.next_cell(); });
+  TTS(ReadQuotedSkipPost, Enewline,    Start,               { t.next_cell(); t.end_row(); });
+  TTS(ReadQuotedSkipPost, Edos_cr,     ReadDosCR,           { t.next_cell(); });
+  TTS(ReadQuotedSkipPost, Ewhitespace, ReadQuotedSkipPost,  {});
+  TTS(ReadQuotedSkipPost, Echar,       ReadError,           { t.error_message = "char after endquote"; });
+  TTS(ReadQuotedSkipPost, Ecomment,    ReadComment,         { t.next_cell(); t.end_row(); });
+};
+
+
+
+template <class TTrans>
+class ST_ReadDosCR : public ST_Base<TTrans> {
+public:
+  TTS(ReadDosCR,    Eqchar,    ReadError, { t.error_message = "quote after CR"; });
+  TTS(ReadDosCR,    Esep,      ReadError, { t.error_message = "sep after CR"; });
+  // If row is blank, begin and then end it.
+  TTS(ReadDosCR,    Enewline,  Start,     { if (!t.is_row_open()) { t.begin_row(); } t.end_row(); });
+  TTS(ReadDosCR,    Edos_cr,   ReadError, { t.error_message = "CR after CR"; });
+  TTS(ReadDosCR,    Ewhitespace, ReadError, { t.error_message = "whitespace after CR"; });
+  TTS(ReadDosCR,    Echar,     ReadError, { t.error_message = "char after CR"; });
+  TTS(ReadDosCR,    Ecomment,  ReadError, { t.error_message = "comment after CR"; });
+};
+
+
+
+template <class TTrans>
+class ST_ReadQuotedDosCR : public ST_Base<TTrans> {
+public:
+  TTS(ReadQuotedDosCR,    Eqchar,    ReadError,    { t.error_message = "quote after CR"; });
+  TTS(ReadQuotedDosCR,    Esep,      ReadError,    { t.error_message = "sep after CR"; });
+  TTS(ReadQuotedDosCR,    Enewline,  ReadQuoted,   { t.add(); });   // we see \r\n, so add(\n) and continue reading Quoted
+  TTS(ReadQuotedDosCR,    Edos_cr,   ReadError,    { t.error_message = "CR after CR"; });
+  TTS(ReadQuotedDosCR,    Ewhitespace, ReadError,  { t.error_message = "whitespace after CR"; });
+  TTS(ReadQuotedDosCR,    Echar,     ReadError,    { t.error_message = "char after CR"; });
+  TTS(ReadQuotedDosCR,    Ecomment,  ReadError,    { t.error_message = "comment after CR"; });
+};
+
+
+
+template <class TTrans>
+class ST_ReadUnquoted : public ST_Base<TTrans> {
+public:
+  // we have seen some text, and we are reading it in
+  // TTS(ReadUnquoted, Eqchar,      ReadError,              { error_message = "unexpected quote in unquoted string"; });
+  // Modified, if we see a quote in an unquoted cell, then just read as a plain quote
+  // The rule of always quoting cells with quotes is a "please do" but Excel does not practice it when writing to Clipboard, and is tolerant when reading.
+  // So Eqchar is handled in the same way as Echar (below)
+
+  TTS(ReadUnquoted, Esep,        ReadSkipPre,            { t.next_cell(); });
+  TTS(ReadUnquoted, Enewline,    Start,                  { t.next_cell(); t.end_row(); });
+  TTS(ReadUnquoted, Edos_cr,     ReadDosCR,              { t.next_cell(); });
+  TTS(ReadUnquoted, Ewhitespace, ReadUnquotedWhitespace, { t.remember_whitespace(); });  // must remember whitespace in case its in the middle of the cell
+  TTS(ReadUnquoted, Echar,       ReadUnquoted,           { t.add_whitespace(); t.add(); });
+  TTS(ReadUnquoted, Eqchar,      ReadUnquoted,           { t.add_whitespace(); t.add(); });   // tolerant to quotes in the middle of unquoted cells
+  TTS(ReadUnquoted, Ecomment,    ReadComment,            { t.next_cell(); t.end_row(); });
+};
+
+
+
+template <class TTrans>
+class ST_ReadUnquotedWhitespace : public ST_Base<TTrans> {
+public:
+  // we have been reading some text, and we are working through some whitespace,
+  // which could be in the middle of the text or at the end of the cell.
+  TTS(ReadUnquotedWhitespace, Eqchar,      ReadError,                { t.error_message = "unexpected quote after unquoted string"; });
+  TTS(ReadUnquotedWhitespace, Esep,        ReadSkipPre,              { t.add_unquoted_post_whitespace(); t.next_cell(); });
+  TTS(ReadUnquotedWhitespace, Enewline,    Start,                    { t.add_unquoted_post_whitespace(); t.next_cell(); t.end_row(); });
+  TTS(ReadUnquotedWhitespace, Edos_cr,     ReadDosCR,                { t.add_unquoted_post_whitespace(); t.next_cell(); });
+  TTS(ReadUnquotedWhitespace, Ewhitespace, ReadUnquotedWhitespace,   { t.remember_whitespace(); });
+  TTS(ReadUnquotedWhitespace, Echar,       ReadUnquoted,             { t.add_whitespace(); t.add(); });
+  TTS(ReadUnquotedWhitespace, Ecomment,    ReadComment,              { t.add_unquoted_post_whitespace(); t.next_cell(); t.end_row(); });
+};
+
+
+
+template <class TTrans>
+class ST_ReadComment : public ST_Base<TTrans> {
+public:
+  TTS(ReadComment, Enewline,     Start,         {});  // end of line --> end of comment
+  TTS(ReadComment, Echar,        ReadComment,   {});
+  REDIRECT(ReadComment, Eqchar,       Echar)
+  REDIRECT(ReadComment, Esep,         Echar)
+  REDIRECT(ReadComment, Edos_cr,      Echar)
+  REDIRECT(ReadComment, Ewhitespace,  Echar)
+  REDIRECT(ReadComment, Ecomment,     Echar)
+};
+
+
+
+template <class TTrans>
+class ST_ReadError : public ST_Base<TTrans> {
+public:
+  TTS(ReadError, Echar,       ReadError,  { assert(t.error_message); });
+  REDIRECT(ReadError, Eqchar,      Echar)
+  REDIRECT(ReadError, Esep,        Echar)
+  REDIRECT(ReadError, Enewline,    Echar)
+  REDIRECT(ReadError, Edos_cr,     Echar)
+  REDIRECT(ReadError, Ewhitespace, Echar)
+  REDIRECT(ReadError, Ecomment,    Echar)
+};
+
+#undef REDIRECT
+#undef TTS
 
 } // namespace csvFSM
 
@@ -424,8 +520,36 @@ private:
 // If you use unsigned char in the template parameters, its likely that it won't
 // compile as the templated functions are looking for a char, or assuming a 'container'.
 
+
+// declare csv_parser as csvparser<Builder,Disable,etc>
+// to disable quote support entirely - and to increase speed.
+struct Disable {};
+struct Separator_Comma {};
+
+
+// support pre-C++11
+template <class A, class B>
+struct my_is_same { static const bool value = false; };
+
+template <class A>
+struct my_is_same<A,A> { static const bool value = true; };
+
+
 template <class CsvBuilder, class QuoteChars = char, class Separators = char, class CommentChars = char>
-struct csv_parser : boost::noncopyable {
+class csv_parser
+{
+   // disable copy
+   csv_parser& operator=(csv_parser const&);
+   csv_parser(csv_parser const&);
+
+public:
+   static const bool FAST_commas_no_quotes_no_comments =
+      my_is_same<Separators, Separator_Comma>::value
+      &&
+      my_is_same<QuoteChars, Disable>::value
+      &&
+      my_is_same<CommentChars, Disable>::value
+      ;
 
    // static const bool builder_supported = csvFSM::BuilderSupported<CsvBuilder>::ok;
 
@@ -439,14 +563,32 @@ struct csv_parser : boost::noncopyable {
 
 // constructor that was used before
 csv_parser(CsvBuilder &out, QuoteChars qchar, Separators sep, bool trim_whitespace = false, bool collapse_separators = false)
- : qchar(qchar), sep(sep), comment(0),
+ : qchar(qchar), sep(sep),
+   comment(),  // inits comment char to zero if char
    comments_must_be_at_start_of_line(true),
    errmsg(NULL),
    collect_error_context(false),
    trans(out, trim_whitespace, collapse_separators)
 {
+   init_states();
    reset_cursor_location();
 }
+
+
+// construct for fast-path (no quotes, comments, fixed char separator
+csv_parser(CsvBuilder &out, bool trim_whitespace = false, bool collapse_separators = false)
+ : qchar(qchar), sep(sep),
+   comment(),  // inits comment char to zero if char
+   comments_must_be_at_start_of_line(true),
+   errmsg(NULL),
+   collect_error_context(false),
+   trans(out, trim_whitespace, collapse_separators)
+{
+   init_states();
+   reset_cursor_location();
+}
+
+
 
 
 // constructor with everything
@@ -458,9 +600,16 @@ csv_parser(CsvBuilder &out, QuoteChars qchar, Separators sep, bool trim_whitespa
    collect_error_context(collect_error_context),
    trans(out, trim_whitespace, collapse_separators)
 {
+   init_states();
    reset_cursor_location();
 }
 
+
+  ~csv_parser()
+  {
+     for (int i = 0; i < csvFSM::NUM_SI; ++i)
+        delete state_trans[i];
+  }
   
   // NOTE: returns true on error
 bool operator()(const std::string &line) // not required to be linewise
@@ -522,32 +671,70 @@ bool process_chunk(const char *&buf, const size_t len)
 
      using namespace csvFSM;
 
-         if (trans.value == '\0')   trans.error_message = "Unexpected NULL character"; // check for NULL character
+     switch (trans.value)
+     {
+        case '\0': {
+                trans.error_message = "Unexpected NULL character"; // check for NULL character
+                break;
+             }
 
-    else if (match_char('\r'))      process_event(Edos_cr());
+        case '\r': {
+                state_idx = (state_trans[state_idx]->Edos_cr(trans));
+                break;
+             }
 
-    else if (match_char('\n'))      {
-       trans.row_file_start_row = current_row;
-       process_event(Enewline());
-       if (collect_error_context)
-          current_row_content.clear();
-       ++current_row;
-       current_column = 0;
-    }
+        case '\n': {
+                trans.row_file_start_row = current_row;
+                state_idx = (state_trans[state_idx]->Enewline(trans));
+                if (collect_error_context)
+                   current_row_content.clear();
+                ++current_row;
+                current_column = 0;
+                break;
+             }
 
-    else if (is_quote_char(qchar))  process_event(Eqchar());
+        default: {
+                if (!FAST_commas_no_quotes_no_comments && is_quote_char(qchar)) {
+                   state_idx = (state_trans[state_idx]->Eqchar(trans));
+                }
 
-    else if (match_char(sep))       process_event(Esep());
+                else if (!FAST_commas_no_quotes_no_comments && match_char(sep)) {
+                   state_idx = (state_trans[state_idx]->Esep(trans));
+                }
 
-    else if ( (!comments_must_be_at_start_of_line || trans.row_empty()) && match_char(comment)) {
-       // this one is more complex gate... only emit a comment event if comments can be anywhere or
-       // the row is still empty
-       process_event(Ecomment());
-    }
+                else if (!FAST_commas_no_quotes_no_comments && (!comments_must_be_at_start_of_line || trans.row_empty()) && match_char(comment)) {
+                   // this one is more complex gate...
+                   // only emit a comment event if comments can be anywhere or
+                   // the row is still empty
+                   state_idx = (state_trans[state_idx]->Ecomment(trans));
+                }
 
-    else if (match_char(' '))       process_event(Ewhitespace()); // check space
-    else if (match_char('\t'))      process_event(Ewhitespace()); // check tab
-    else                            process_event(Echar());
+                else
+                {
+                   switch (trans.value)
+                   {
+                      case ' ':
+                      case '\t': {
+                           state_idx = (state_trans[state_idx]->Ewhitespace(trans)); // check space
+                           break;
+                        }
+  
+                      case ',':  {
+                           // fast-path will enable here, else, fall through to default
+                           if (FAST_commas_no_quotes_no_comments) {
+                              state_idx = (state_trans[state_idx]->Esep(trans));
+                              break;
+                           }
+                        }
+
+                      default: {
+                           state_idx = (state_trans[state_idx]->Echar(trans));
+                           break;
+                        }
+                   }
+               }
+           }
+     }
 
     if (trans.error_message) {
 #if CPPCSV_DEBUG
@@ -599,7 +786,7 @@ bool flush()
   if (trans.is_row_open()) {
     using namespace csvFSM;
     trans.row_file_start_row = current_row;
-    process_event( Enewline() );
+    state_idx = (state_trans[state_idx]-> Enewline(trans) );
   }
   return (trans.error_message != NULL);
 }
@@ -616,6 +803,23 @@ bool flush()
   }
 
 private:
+   void init_states()
+   {
+      state_trans[csvFSM::Start] = new csvFSM::ST_Start<MyTrans>();
+      state_trans[csvFSM::ReadSkipPre] = new csvFSM::ST_ReadSkipPre<MyTrans>();
+      state_trans[csvFSM::ReadQuoted] = new csvFSM::ST_ReadQuoted<MyTrans>();
+      state_trans[csvFSM::ReadQuotedCheckEscape] = new csvFSM::ST_ReadQuotedCheckEscape<MyTrans>();
+      state_trans[csvFSM::ReadQuotedSkipPost] = new csvFSM::ST_ReadQuotedSkipPost<MyTrans>();
+      state_trans[csvFSM::ReadDosCR] = new csvFSM::ST_ReadDosCR<MyTrans>();
+      state_trans[csvFSM::ReadQuotedDosCR] = new csvFSM::ST_ReadQuotedDosCR<MyTrans>();
+      state_trans[csvFSM::ReadUnquoted] = new csvFSM::ST_ReadUnquoted<MyTrans>();
+      state_trans[csvFSM::ReadUnquotedWhitespace] = new csvFSM::ST_ReadUnquotedWhitespace<MyTrans>();
+      state_trans[csvFSM::ReadComment] = new csvFSM::ST_ReadComment<MyTrans>();
+      state_trans[csvFSM::ReadError] = new csvFSM::ST_ReadError<MyTrans>();
+
+      state_idx = csvFSM::Start;
+   }
+
   QuoteChars qchar;  // could be char or string
   Separators sep;    // could be char or string
   CommentChars comment;   // could be char or string
@@ -625,13 +829,19 @@ private:
   bool collect_error_context;
   std::string current_row_content;  // remember what we read for error printouts
 
-  csvFSM::States state;
+  csvFSM::StateIdx state_idx;
+  csvFSM::ST_Base<MyTrans> * state_trans[csvFSM::NUM_SI];
   MyTrans trans;
 
   // support either single or multiple quote characters
   bool is_quote_char( char the_qchar ) const
   {
     return match_char(the_qchar);
+  }
+
+  bool is_quote_char( Disable ) const
+  {
+    return false;
   }
 
   template <class Container>
@@ -645,22 +855,26 @@ private:
   // support either a single char or a string of chars
 
   // note: ignores the null (0) character (ie if there is no comment char)
+  bool match_char( Disable ) const {
+     return false;
+  }
+
+  bool match_char( Separator_Comma ) const {
+     assert(0);   // should not actually be called, should be picked up by switch first
+     return trans.value == ',';
+  }
+
   bool match_char( char target ) const {
      return target != 0 && target == trans.value;
   }
 
   template <class Container>
   bool match_char( Container const& target ) const {
-    using boost::range::find;
-    return find(target, trans.value) != boost::end(target);
+     // boost not needed ...
+     // using boost::range::find;
+     // return find(target, trans.value) != boost::end(target);
+     return std::find(target.begin(), target.end(), trans.value) != target.end();
   }
-
-
-   // finds the next state, performs transition activity, sets the new state
-   template <class Event>
-   void process_event( Event event ) {
-     state = trans.process_event(state, event);
-   }
 };
 
 
