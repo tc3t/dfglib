@@ -3,6 +3,9 @@
 #include "../dfgDefs.hpp" // For DFG_STRINGIZE
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
+// For more robust implementation, see Boost.Predef
+// #include <boost/predef.h>
+
 #define DFG_COMPILER_NAME_SIMPLE_VC2010          "MSVC_2010"
 #define DFG_COMPILER_NAME_SIMPLE_VC2012          "MSVC_2012"
 #define DFG_COMPILER_NAME_SIMPLE_VC2013          "MSVC_2013"
@@ -34,10 +37,14 @@
 #elif DFG_MSVC_VER == DFG_MSVC_VER_2017_3
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2017_3
 #elif defined(_MSC_FULL_VER)
-    #pragma message("Unrecognized MSVC compiler, _MSC_FULL_VER = " DFG_STRINGIZE(_MSC_FULL_VER))
+    #pragma message("dfglib: Unrecognized MSVC compiler, _MSC_FULL_VER = " DFG_STRINGIZE(_MSC_FULL_VER))
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC_UNKNOWN
 #elif defined(__MINGW32__)
     #define DFG_COMPILER_NAME_SIMPLE "MinGW_" DFG_STRINGIZE(__GNUC__) "." DFG_STRINGIZE(__GNUC_MINOR__) "." DFG_STRINGIZE(__GNUC_PATCHLEVEL__)
+#elif defined(__clang__)
+    #defined DFG_COMPILER_NAME_SIMPLE "Clang_" DFG_STRINGIZE(__clang_major__) "." DFG_STRINGIZE(__clang_minor__) "." DFG_STRINGIZE(__clang_patchlevel__)
+#elif defined(__GNUG__)
+    #define DFG_COMPILER_NAME_SIMPLE "GCC_" DFG_STRINGIZE(__GNUC__) "." DFG_STRINGIZE(__GNUC_MINOR__) "." DFG_STRINGIZE(__GNUC_PATCHLEVEL__)
 #else
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_UNKNOWN
     #pragma message("Note: Unrecognized compiler")

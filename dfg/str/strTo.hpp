@@ -2,7 +2,11 @@
 #define DFG_STR_STRTO_LJIBPTYR
 
 #include "../dfgBase.hpp"
-#include <boost/lexical_cast.hpp>
+#if DFG_BUILD_OPT_USE_BOOST==1
+    #include <boost/lexical_cast.hpp>
+#else
+    #include "../build/utils.hpp"
+#endif
 #include "../ReadOnlySzParam.hpp"
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
@@ -10,6 +14,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 template <class Str_T, class T>
 T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
 {
+#if DFG_BUILD_OPT_USE_BOOST==1
     try
     {
         obj = boost::lexical_cast<T>(s);
@@ -22,6 +27,9 @@ T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
             *pSuccess = false;
     }
     return obj;
+#else
+    DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "strToByNoThrowLexCast: implementation is not available when building without Boost");
+#endif
 }
 
 template <class T>

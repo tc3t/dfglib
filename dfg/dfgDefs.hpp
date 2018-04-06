@@ -5,17 +5,31 @@
 dfgDefs.hpp
 
 Defines common macro definitions needed across the library. Since this is expected to be included practically everywhere,
-it must be lightweigth, dependecy free and avoid identifier ambiguities.
+it must be lightweigth, dependency free and avoid identifier ambiguities.
 
 Note: Due to the nature of the file, includes are to be avoided. 
 
 */
 
 /*
+Preprocessor options of user
+DFG_BUILD_OPT_USE_BOOST_OVERRIDE: Define to 1 / 0 / DFG_BUILD_OPT_USE_BOOST_DEFAULT to control whether dfglib can use (external) Boost includes.
+                                  Note: currently a placeholder, setting to false is not supported.
 
-Preprocessor options
-DFG_NO_BOOST: If defined no boost libraries will be included in common headers.
+Macros for controlling usage of external dependencies (internal implementation details):
+DFG_BUILD_OPT_USE_<NAME>           // Internal. Either 1 or 0 (i.e. must have value, not just definition).
+DFG_BUILD_OPT_USE_<NAME>_DEFAULT   // Internal. Default value for DFG_BUILD_OPT_USE_<NAME>
+DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG_BUILD_OPT_USE_<NAME>_DEFAULT to set value of DFG_BUILD_OPT_USE_<NAME>
+
 */
+
+// Set Boost-usage macros. Using (external) Boost is enabled by default.
+#define DFG_BUILD_OPT_USE_BOOST_DEFAULT 1
+#ifdef DFG_BUILD_OPT_USE_BOOST_OVERRIDE
+    #define DFG_BUILD_OPT_USE_BOOST DFG_BUILD_OPT_USE_BOOST_OVERRIDE
+#else
+    #define DFG_BUILD_OPT_USE_BOOST DFG_BUILD_OPT_USE_BOOST_DEFAULT
+#endif
 
 #define DFG_ROOT_NS			dfg
 #define DFG_DETAIL_NS		dfDetail
@@ -60,9 +74,9 @@ namespace DFG_ROOT_NS { namespace DFG_DETAIL_NS
 	#define DFG_CURRENT_FUNCTION_SIGNATURE		__FUNCSIG__
 	#define DFG_CURRENT_FUNCTION_DECORATED_NAME	__FUNCDNAME__
 #else // case: !_MSC_VER
-	#ifdef DFG_NO_BOOST
+	#if DFG_BUILD_OPT_USE_BOOST==0
 		#define DFG_CURRENT_FUNCTION_SIGNATURE	"<current function signature not implemented for current compiler>"
-	#else // case: !DFG_NO_BOOST
+	#else // case: use of Boost allowed
 		#include <boost/current_function.hpp>
 		#define DFG_CURRENT_FUNCTION_SIGNATURE	BOOST_CURRENT_FUNCTION
 	#endif

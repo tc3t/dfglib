@@ -1,5 +1,6 @@
 #include <stdafx.h>
 #include <dfg/alg.hpp>
+#include <dfg/alg/arrayCopy.hpp>
 #include <dfg/alg/sortMultiple.hpp>
 #include <dfg/alg/rank.hpp>
 #include <dfg/alg/sortSingleItem.hpp>
@@ -697,4 +698,49 @@ TEST(dfgAlg, sortSingleItem)
         std::system("pause");
     }
 #endif
+}
+
+struct SimpleStruct { int a; };
+
+TEST(dfgAlg, arrayCopy)
+{
+    using namespace DFG_MODULE_NS(alg);
+
+    DFGTEST_STATIC(DFG_DETAIL_NS::IsArrayCopyMemCpy<int>::value         == true);
+    DFGTEST_STATIC(DFG_DETAIL_NS::IsArrayCopyMemCpy<float>::value       == true);
+    DFGTEST_STATIC(DFG_DETAIL_NS::IsArrayCopyMemCpy<double>::value      == true);
+    DFGTEST_STATIC(DFG_DETAIL_NS::IsArrayCopyMemCpy<void*>::value       == true);
+    DFGTEST_STATIC(DFG_DETAIL_NS::IsArrayCopyMemCpy<int*>::value        == true);
+    DFGTEST_STATIC(DFG_DETAIL_NS::IsArrayCopyMemCpy<std::string>::value == false);
+
+#if DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE==1
+    DFGTEST_STATIC(DFG_DETAIL_NS::IsArrayCopyMemCpy<SimpleStruct>::value == true);
+#endif
+
+    {
+        int a[2] = { 0, 0 };
+        int b[2] = { 1, 2 };
+        arrayCopy(a, b);
+        EXPECT_EQ(1, a[0]);
+        EXPECT_EQ(2, a[1]);
+        EXPECT_EQ(1, b[0]);
+        EXPECT_EQ(2, b[1]);
+
+        int* pa[2];
+        int* pb[2] = { &b[0], &b[1] };
+        arrayCopy(pa, pb);
+        EXPECT_EQ(pb[0], pa[0]);
+        EXPECT_EQ(pb[1], pa[1]);
+    }
+
+    // Test array ofg non-trivial type
+    {
+        std::string a[2] = { "abc", ""};
+        std::string b[2] = { "def", "ghi" };
+        arrayCopy(a, b);
+        EXPECT_EQ("def", a[0]);
+        EXPECT_EQ("ghi", a[1]);
+        EXPECT_EQ("def", b[0]);
+        EXPECT_EQ("ghi", b[1]);
+    }
 }

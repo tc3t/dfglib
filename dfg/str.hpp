@@ -9,7 +9,10 @@
 #include "str/strCmp.hpp"
 #include "str/strLen.hpp"
 #include "ReadOnlySzParam.hpp"
-#include <boost/lexical_cast.hpp>
+
+#if DFG_BUILD_OPT_USE_BOOST==1
+    #include <boost/lexical_cast.hpp>
+#endif
 #include <cstdio>
 #include <limits>
 #include <cstdarg>
@@ -92,7 +95,11 @@ namespace DFG_DETAIL_NS
 template <class Str_T, class T>
 Str_T toStrT(const T& obj)
 {
+#if DFG_BUILD_OPT_USE_BOOST==1
     return boost::lexical_cast<Str_T>(obj);
+#else
+    DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrT: implementation is not available when building without Boost");
+#endif
 }
 
 template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszFormat) // TODO: test
@@ -227,7 +234,11 @@ template <class T> std::string toStrCImpl(const T& d, const std::true_type) // T
 
 template <class T> std::string toStrCImpl(const T& obj, const std::false_type) // Type is not floating point.
 {
+#if DFG_BUILD_OPT_USE_BOOST==1
     return boost::lexical_cast<std::string>(obj);
+#else
+    DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrCImpl: implementation is not available when building without Boost");
+#endif
 }
 
 template <class T> std::string toStrC(const T& obj) { return toStrCImpl(obj, std::is_floating_point<T>()); }
@@ -235,7 +246,11 @@ template <class T> std::string toStrC(const T& obj) { return toStrCImpl(obj, std
 template <class T>
 std::wstring toStrW(const T& obj)
 {
+#if DFG_BUILD_OPT_USE_BOOST==1
     return boost::lexical_cast<std::wstring>(obj);
+#else
+    DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrC: implementation is not available when building without Boost");
+#endif   
 }
 
 template <size_t N> inline char*    strCpy(char     (&dest)[N], NonNullCStr pszSrc)     { return strcpy(dest, pszSrc); }

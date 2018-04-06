@@ -7,6 +7,15 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
 {
+    // Helper for determining if given trait is true.
+    // Problem with simple value-constant is that it might be unknown and it would be misleading to say either true or false.
+    // For example if IsTriviallyCopyable<T> is not known, it should be neither true or false.
+    template <class T>
+    struct IsTrueTrait
+    {
+        enum { value = std::is_same<std::true_type, T>::value || std::is_base_of<std::true_type, T>::value };
+    };
+
     struct UnknownAnswerType {};
 
     struct ConstructibleFromAnyType { template <class T> ConstructibleFromAnyType(const T&) {} };
@@ -21,10 +30,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
 #endif
 #endif // defined(_MSC_VER)
 
-        template <class T>
-    #if DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE
-        struct IsTriviallyCopyable : public std::is_trivially_copyable<T> { };
-    #else
-        struct IsTriviallyCopyable : public std::conditional<std::is_integral<T>::value, std::true_type, UnknownAnswerType>::type { };
-    #endif
+    template <class T>
+#if DFG_LANGFEAT_HAS_IS_TRIVIALLY_COPYABLE
+    struct IsTriviallyCopyable : public std::is_trivially_copyable<T> { };
+#else
+    struct IsTriviallyCopyable : public std::conditional<std::is_scalar<T>::value, std::true_type, UnknownAnswerType>::type { };
+#endif
 }} // Module namespace
