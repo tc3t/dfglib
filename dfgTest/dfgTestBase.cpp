@@ -11,6 +11,7 @@
 #include <list>
 #include <dfg/cont/arrayWrapper.hpp>
 #include <dfg/baseConstructorDelegate.hpp>
+#include <dfg/typeTraits.hpp>
 
 std::tuple<std::string, std::string, std::string> FunctionNameTest()
 {
@@ -496,4 +497,12 @@ TEST(dfg, constExpr)
 #else
     EXPECT_EQ(2, constexprMarkedFunc()); // Makes sure that unsupported DFG_CONSTEXPR doesn't break compiling.
 #endif
+}
+
+TEST(dfgTypeTraits, IsTrueTrait)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(TypeTraits);
+    DFGTEST_STATIC(IsTrueTrait<UnknownAnswerType>::value == false);
+    DFGTEST_STATIC(IsTrueTrait<IsTriviallyCopyable<int*>>::value == true);
 }
