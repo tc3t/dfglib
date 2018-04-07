@@ -296,16 +296,6 @@ StrT replaceSubStrs(StrT str, const StrTOld& sOldSub, const StrTNew& sNewSub)
     return str;
 }
 
-// Converts given string enclosed in 'cEnclosing'-characters and if 'str' contains any
-// enclosing characters, they are escaped as double.
-// For example: if cEnclosing = ' and str "a'b", str will become "'a''b'"
-template <class StrT> void toEnclosedTextInplace(StrT& str, const char cEnclosing)
-{
-    typename CharType<StrT>::type sOld[2] = {cEnclosing, '\0'};
-    typename CharType<StrT>::type sNew[3] = {cEnclosing, cEnclosing, '\0'};
-    replaceSubStrsInplace(str, sOld, sNew);
-}
-
 // Determines whether 'pszSearchFrom' starts with 'pszSearchFor'.
 // If 'pszSearchFor' is empty, returns true.
 // TODO: test

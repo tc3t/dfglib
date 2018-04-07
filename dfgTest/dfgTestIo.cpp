@@ -31,6 +31,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <dlib/compress_stream.h>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
+#if 0
 void CreateTestFile(const size_t nDim)
 {
     using namespace DFG_ROOT_NS;
@@ -56,7 +57,8 @@ void CreateTestFile(const size_t nDim)
                                         {
                                             ch = static_cast<char>(cellCharGenerator());
                                         });
-                                        DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::toEnclosedTextInplace(str, '"');
+
+                                        replaceSubStrsInplace(str, "\"", "\"\"");
                                         ostrm << str;
                                         ostrmCells << str;
                                     };
@@ -73,6 +75,7 @@ void CreateTestFile(const size_t nDim)
         ostrm << '\n';
     }
 }
+#endif
 
 void CreateTestMatrixFile(const size_t nDim)
 {
