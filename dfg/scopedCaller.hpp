@@ -11,7 +11,7 @@ DFG_ROOT_NS_BEGIN
 	// To create instance of ScopedCaller conveniently, use makeScopedCaller.
 	// Example: auto scopedCaller = MakeScopedCaller([](){call1();}, [](){call2();});
 	// Related code: BOOST_SCOPE_EXIT
-	// TODO: test
+    // TODO: Considered implementing empty base class optimization (http://en.cppreference.com/w/cpp/language/ebo)
 	template <class ConstructorFunc_T, class DestructorFunc_T>
 	class DFG_CLASS_NAME(ScopedCaller)
 	{
@@ -19,8 +19,8 @@ DFG_ROOT_NS_BEGIN
 		DFG_CLASS_NAME(ScopedCaller)(	ConstructorFunc_T constructorFunc,
 						DestructorFunc_T destructorFunc,
 						bool bActive = true) :
-			m_constructorFunc(constructorFunc),
-			m_destructorFunc(destructorFunc),
+			m_constructorFunc(std::forward<ConstructorFunc_T>(constructorFunc)),
+			m_destructorFunc(std::forward<DestructorFunc_T>(destructorFunc)),
 			m_bActive(bActive)
 		{
 			if (m_bActive)
@@ -32,8 +32,10 @@ DFG_ROOT_NS_BEGIN
 			m_destructorFunc(std::move(other.m_destructorFunc)),
 			m_bActive(true)
 		{
+            const bool wasOtherActive = other.m_bActive;
 			other.m_bActive = false;
-			m_constructorFunc();
+            if (!wasOtherActive)
+			    m_constructorFunc();
 		}
 
 		~DFG_CLASS_NAME(ScopedCaller)()
@@ -54,6 +56,6 @@ DFG_ROOT_NS_BEGIN
 	template <class ConstructorFunc_T, class DestructorFunc_T>
 	inline DFG_CLASS_NAME(ScopedCaller)<ConstructorFunc_T, DestructorFunc_T> makeScopedCaller(ConstructorFunc_T constructorFunc, DestructorFunc_T destructorFunc)
 	{
-		return std::move(DFG_CLASS_NAME(ScopedCaller)<ConstructorFunc_T, DestructorFunc_T>(constructorFunc, destructorFunc, false));
+        return DFG_CLASS_NAME(ScopedCaller)<ConstructorFunc_T, DestructorFunc_T>(std::forward<ConstructorFunc_T>(constructorFunc), std::forward<DestructorFunc_T>(destructorFunc));
 	}
 }

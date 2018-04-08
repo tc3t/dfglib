@@ -499,6 +499,30 @@ TEST(dfg, constExpr)
 #endif
 }
 
+TEST(dfg, ScopedCaller)
+{
+    using namespace DFG_ROOT_NS;
+    {
+        int val = 0;
+        {
+            const auto scopedCaller = makeScopedCaller([&]() { val++; }, [&]() { val -= 2; });
+            EXPECT_EQ(1, val);
+        }
+        EXPECT_EQ(-1, val);
+    }
+
+    {
+        int val = 0;
+        {
+            auto scopedCaller = makeScopedCaller([&]() { val++; }, [&]() { val -= 2; });
+            EXPECT_EQ(1, val);
+            auto scopedCaller2 = std::move(scopedCaller);
+            EXPECT_EQ(1, val);
+        }
+        EXPECT_EQ(-1, val);
+    }
+}
+
 TEST(dfgTypeTraits, IsTrueTrait)
 {
     using namespace DFG_ROOT_NS;
