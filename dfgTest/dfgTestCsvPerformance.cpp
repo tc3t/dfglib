@@ -172,13 +172,24 @@ namespace
         return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
     }
 
-    struct FormatDefTag_compileTime {};
-    struct FormatDefTag_runtime     {};
+    struct FormatDefTag_compileTime         {};
+    struct FormatDefTag_compileTime_noRn    {}; // Compile time format without \r\n -> \n translation
+    struct FormatDefTag_runtime             {};
+
+    std::string formatDefTagToOutputDescription(FormatDefTag_compileTime)         { return "compile time"; }
+    std::string formatDefTagToOutputDescription(FormatDefTag_compileTime_noRn)    { return "compile time & no \\r\\n translation"; }
+    std::string formatDefTagToOutputDescription(FormatDefTag_runtime)             { return "runtime"; }
 
     auto createFormatDef(FormatDefTag_compileTime) -> DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ','>
     {
         using namespace DFG_MODULE_NS(io);
         return DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ','>();
+    }
+
+    auto createFormatDef(FormatDefTag_compileTime_noRn)->DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ',', DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CsvFormatFlagNoRnTranslation>
+    {
+        using namespace DFG_MODULE_NS(io);
+        return DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleCharsCompileTime<DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, '\n', ',', DFG_CLASS_NAME(DelimitedTextReader)::CsvFormatFlagNoRnTranslation>();
     }
 
     auto createFormatDef(FormatDefTag_runtime) -> DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::FormatDefinitionSingleChars
@@ -236,7 +247,7 @@ namespace
 
             runtimes.push_back(elapsedTime);
         }
-        const std::string sFormatDefType = (std::is_same<FormatDefTag_T, FormatDefTag_compileTime>::value) ? "compile time" : "runtime";
+        const std::string sFormatDefType = formatDefTagToOutputDescription(FormatDefTag_T());
         
         PrintTestCaseRow(output, sFilePath, runtimes, pszReaderType, sFormatDefType, pszProcessingType, StreamName<IStrm_T>());
     }
@@ -269,12 +280,22 @@ namespace
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef)
+    void ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer(std::ostream& output,
+                                                                          IStrmInit_T streamInitFunc,
+                                                                          const std::string& sFilePath,
+                                                                          const size_t nCount,
+                                                                          const bool compiletimeFormatDef,
+                                                                          const bool rnTranslation)
     {
         typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::StringViewCBuffer BufferType;
         typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderStringViewCBuffer AppenderType;
         if (compiletimeFormatDef)
-            ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
+        {
+            if (rnTranslation)
+                ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
+            else
+                ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime_noRn(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
+        }
         else
             ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_runtime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderStringViewCBuffer");
     }
@@ -508,8 +529,9 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
     ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
 
-    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
-    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false, true); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true, true); // Compile time format def
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true, false); // Compile time format def without \r\n translation
 
     // fast-cpp-csv-parser
 #if ENABLE_FAST_CPP_CSV_PARSER

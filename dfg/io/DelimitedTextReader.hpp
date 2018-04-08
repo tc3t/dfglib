@@ -161,15 +161,22 @@ public:
         return bufferCharToInternalImpl(c, std::integral_constant<bool, sizeof(T) < sizeof(InternalCharType)>());
     }
 
+    enum CsvFormatFlags
+    {
+        CsvFormatFlagNoRnTranslation = 0x1,
+        CsvFormatFlagsDefault = 0
+    };
 
-    template <int Enc_T, int Eol_T, int Sep_T>
+
+    template <int Enc_T, int Eol_T, int Sep_T, int Flags_T = CsvFormatFlagsDefault>
     class FormatDefinitionSingleCharsCompileTime
     {
     public:
         typedef std::bitset<lastReadFlag + 1> FlagContainer;
-        static const int s_enc = Enc_T;
-        static const int s_eol = Eol_T;
-        static const int s_sep = Sep_T;
+        static const int s_enc   = Enc_T;
+        static const int s_eol   = Eol_T;
+        static const int s_sep   = Sep_T;
+        static const int s_flags = Flags_T;
 
         static const bool s_hasCompileTimeSeparatorChar = true;
 
@@ -198,6 +205,9 @@ public:
         DFG_CONSTEXPR int getEnc() const { return s_enc; }
         DFG_CONSTEXPR int getEol() const { return s_eol; }
         DFG_CONSTEXPR int getSep() const { return s_sep; }
+
+        // Returns true if \r\n end-of-line is to be read as \n.
+        DFG_CONSTEXPR bool isRnTranslationEnabled() const { return !(s_flags & CsvFormatFlagNoRnTranslation); }
 
         void copySepatorCharFrom(const FormatDefinitionSingleCharsCompileTime&) const
         {
@@ -244,6 +254,8 @@ public:
         int getEnc() const {return m_cEnc;}
         int getEol() const {return m_cEol;}
         int getSep() const {return m_cSep;}
+
+        bool isRnTranslationEnabled() const { return true; }
 
         void copySepatorCharFrom(const FormatDefinitionSingleChars& other)
         {
@@ -619,7 +631,7 @@ public:
             const auto nBufSize = buffer.size();
             if (nBufSize > 0 && (buffer.isLastChar(m_formatDef.getEol())))
             {
-                if (m_formatDef.getEol() == '\n' && nBufSize >= 2 && buffer.isOneBeforeLast('\r')) // Case: \r\n
+                if (m_formatDef.getEol() == '\n' && m_formatDef.isRnTranslationEnabled() && nBufSize >= 2 && buffer.isOneBeforeLast('\r')) // Case: \r\n
                     return buffer.cend() - 2;
                 else
                     return buffer.cend() - 1;
@@ -944,7 +956,7 @@ public:
                 buffer.popLastChar();
 
                 // \r\n handling.
-                if (buffer.getFormatDefInfo().getEol() == '\n' && !buffer.empty() && buffer.getBuffer().back() == '\r')
+                if (buffer.getFormatDefInfo().getEol() == '\n' && buffer.getFormatDefInfo().isRnTranslationEnabled() && !buffer.empty() && buffer.getBuffer().back() == '\r')
                     buffer.popLastChar();
 
                 rs = rsEndOfLineEncountered;
@@ -984,8 +996,8 @@ public:
 
                 buffer.reset(pCellStart, p - pCellStart);
 
-                // \r\n handling. TODO: make optional, in a dfgTestCsvPerformance test case increased parsing time about 40 %.
-                if (formatDef.getEol() == '\n' && bufferCharToInternal(*p) == formatDef.getEol() && p != pCellStart && *(p - 1) == '\r')
+                // \r\n handling.
+                if (formatDef.isRnTranslationEnabled() && formatDef.getEol() == '\n' && bufferCharToInternal(*p) == '\n' && p != pCellStart && *(p - 1) == '\r')
                     buffer.pop_back(); // pop \r
 
                 cellHandler(nRow, nCol, reader.getCellBuffer());
