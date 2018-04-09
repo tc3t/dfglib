@@ -50,26 +50,31 @@ inline std::wstring getCurrentWorkingDirectoryW()
 
 #if defined(_WIN32)
 	// TODO: test
-	inline int setCurrentWorkingDirectory(ConstCharPtr pPath)
+	inline int setCurrentWorkingDirectory(DFG_CLASS_NAME(StringViewSzC) path)
 	{
-		return (pPath) ? _chdir(pPath) : -1;
+		return _chdir(path.c_str());
 	}
 
 	// TODO: test
-	inline int setCurrentWorkingDirectory(ConstWCharPtr pPath)
+	inline int setCurrentWorkingDirectory(DFG_CLASS_NAME(StringViewSzW) path)
 	{
-		return (pPath) ? _wchdir(pPath) : -1;
+		return _wchdir(path.c_str());
 	}
+#else // non-Windows
+    inline int setCurrentWorkingDirectory(DFG_CLASS_NAME(StringViewSzC) path)
+    {
+        return chdir(path.c_str());
+    }
 #endif //defined(_WIN32)
 
     enum FileMode { FileModeExists = 0, FileModeRead = 4, FileModeWrite = 2, FileModeReadWrite = 6 };
 #if defined(_WIN32)
 	// Checks whether file or folder exists and whether it has the given mode.
 	// TODO: test
-	inline bool isPathFileAvailable(ConstCharPtr pszFilePath, FileMode fm) {return (_access(pszFilePath, fm) == 0);}
-	inline bool isPathFileAvailable(ConstWCharPtr pszFilePath, FileMode fm) {return (_waccess(pszFilePath, fm) == 0);}
+	inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzC) filePath, FileMode fm) {return (_access(filePath.c_str(), fm) == 0);}
+	inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzW) filePath, FileMode fm) {return (_waccess(filePath.c_str(), fm) == 0);}
 #else
-    inline bool isPathFileAvailable(ConstCharPtr pszFilePath, FileMode fm) { return (access(pszFilePath, fm) == 0); }
+    inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzC) filePath, FileMode fm) { return (access(filePath.c_str(), fm) == 0); }
 #endif
 
 #if _WIN32
