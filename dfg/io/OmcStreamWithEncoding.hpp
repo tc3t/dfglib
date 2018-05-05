@@ -36,7 +36,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         int_type overflow(int_type cp) override
         {
             using namespace DFG_MODULE_NS(utf);
-            DFG_ASSERT_UB(m_pData != nullptr);
+            DFG_ASSERT_UB(this->m_pData != nullptr);
             if (cp != EOF)
             {
                 if (m_encoding == encodingUnknown)
