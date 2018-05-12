@@ -77,6 +77,14 @@ Char_T* strCpyAllThatFit(Char_T(&szDest)[N], const Char_T* pszSrc)
 
 namespace DFG_DETAIL_NS
 {
+    template <class FloatingPoint_T> inline const char* floatingPointTypeToSprintfType()
+    {
+        DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(FloatingPoint_T, "floatingPointTypeToSprintfType() not implement for given type");
+    }
+    template <> inline const char* floatingPointTypeToSprintfType<float>()       { return "g"; }
+    template <> inline const char* floatingPointTypeToSprintfType<double>()      { return "g"; }
+    template <> inline const char* floatingPointTypeToSprintfType<long double>() { return "Lg"; }
+
     // TODO: revise behaviour differences between _WIN32 and others.
     inline int sprintf_s(char* buffer, size_t sizeInCharacters, const char* pszFormat, ...)
     {
@@ -136,7 +144,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     else if (nPrec >= 1000) // Limit precision to 3 digits.
         nPrec = 999;
     char szFormat[8] = "";
-    std::sprintf(szFormat, "%%.%ug", nPrec);
+    std::sprintf(szFormat, "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
     DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val);
 
     // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
@@ -144,7 +152,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     if (nPrecParam == -1 && std::strlen(psz) > std::numeric_limits<T>::digits10)
     {
         char szShortFormat[8] = "";
-        std::sprintf(szShortFormat, "%%.%ug", std::numeric_limits<T>::digits10);
+        std::sprintf(szShortFormat, "%%.%u%s", std::numeric_limits<T>::digits10, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
         DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szShortFormat, val);
         if (static_cast<T>(std::atof(psz)) == val)
             return psz;

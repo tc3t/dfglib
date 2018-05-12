@@ -87,16 +87,16 @@ TEST(DfgUtf, utfGeneral)
 		sUtf8FromCodePointToUtf.clear();
 
 		std::vector<uint16> sUtf16FromCodePointToUtf;
-		codePointsToUtf<wchar_t>(sFixedSizeFromUtf32C, std::back_inserter(sUtf16FromCodePointToUtf));
+		codePointsToUtf<uint16>(sFixedSizeFromUtf32C, std::back_inserter(sUtf16FromCodePointToUtf));
 		EXPECT_EQ(sUtf16, sUtf16FromCodePointToUtf);
 		sUtf16FromCodePointToUtf.clear();
-		codePointsToUtf<wchar_t>(sFixedSizeFromUtf32W, std::back_inserter(sUtf16FromCodePointToUtf));
+		codePointsToUtf<uint16>(sFixedSizeFromUtf32W, std::back_inserter(sUtf16FromCodePointToUtf));
 		EXPECT_EQ(sUtf16, sUtf16FromCodePointToUtf);
 		sUtf16FromCodePointToUtf.clear();
-		codePointsToUtf<wchar_t>(sFixedSizeFromUtf32_ch16, std::back_inserter(sUtf16FromCodePointToUtf));
+		codePointsToUtf<uint16>(sFixedSizeFromUtf32_ch16, std::back_inserter(sUtf16FromCodePointToUtf));
 		EXPECT_EQ(sUtf16, sUtf16FromCodePointToUtf);
 		sUtf16FromCodePointToUtf.clear();
-		codePointsToUtf<wchar_t>(sFixedSizeFromUtf32_ch32, std::back_inserter(sUtf16FromCodePointToUtf));
+		codePointsToUtf<uint16>(sFixedSizeFromUtf32_ch32, std::back_inserter(sUtf16FromCodePointToUtf));
 		EXPECT_EQ(sUtf16, sUtf16FromCodePointToUtf);
 		sUtf16FromCodePointToUtf.clear();
 

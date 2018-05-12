@@ -319,12 +319,12 @@ TEST(dfgStr, strTo)
     char szBufferA[128];
     wchar_t szBufferW[128];
 #define CHECK_A_AND_W(type, val, radix, szExpected) \
-        EXPECT_FALSE(strCmp(toStr(val, szBufferA, radix), szExpected)); \
-        EXPECT_FALSE(strCmp(toStr(val, szBufferW, radix), L##szExpected)); \
+        EXPECT_STREQ(szExpected, toStr(val, szBufferA, radix)); \
+        EXPECT_STREQ(L##szExpected, toStr(val, szBufferW, radix)); \
         if (radix == 10) \
                         { \
-                    EXPECT_FALSE(strCmp(szBufferA, toCstr(toStrC(val)))); \
-                    EXPECT_FALSE(strCmp(szBufferW, toCstr(toStrW(val)))); \
+                    EXPECT_STREQ(szBufferA, toCstr(toStrC(val))); \
+                    EXPECT_STREQ(szBufferW, toCstr(toStrW(val))); \
                     EXPECT_EQ(strTo<type>(szBufferA), val); \
                     EXPECT_EQ(strTo<type>(szBufferW), val); \
                         }
@@ -459,9 +459,7 @@ TEST(dfgStr, toStr)
 #endif
         toStrCommonFloatingPointTests<float>(szFloatMin, szFloatMax, szFloatMinPositive);
         toStrCommonFloatingPointTests<double>("-1.7976931348623157e+308", "1.7976931348623157e+308", "2.2250738585072014e-308");
-#ifndef __MINGW32__ // Tests for long double failed on MinGW 4.8.0 for unknown reason so disable for now on MinGW.
         toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
-#endif
     }
 }
 

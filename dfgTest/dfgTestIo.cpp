@@ -560,7 +560,7 @@ TEST(dfgIo, ImStreamWithEncoding)
         DFG_CLASS_NAME(ImStreamWithEncoding) istrmC(dataC, DFG_MODULE_NS(str)::strLen(dataC), encodingUnknown);
         DFG_CLASS_NAME(ImStreamWithEncoding) istrmW(dataW, DFG_MODULE_NS(str)::strLen(dataW));
         ImStreamWithEncodingImpl(istrmC, 1);
-        ImStreamWithEncodingImpl(istrmW, 2);
+        ImStreamWithEncodingImpl(istrmW, sizeof(wchar_t));
     }
 
     // Test how read()-function works.

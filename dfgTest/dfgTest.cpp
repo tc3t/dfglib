@@ -71,12 +71,15 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIo.writeDelimited";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";
+    //::testing::GTEST_FLAG(filter) = "dfgNumeric.percentileRange_and_percentile_ceilElem";
     //::testing::GTEST_FLAG(filter) = "dfgPerformance.CsvReadPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewSz";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.strTo";
     //::testing::GTEST_FLAG(filter) = "dfgStr.toStr";
     //::testing::GTEST_FLAG(filter) = "dfgStr.TypedCharPtrT";
+    //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
     
     auto rv = RUN_ALL_TESTS();
     //std::system("pause");
