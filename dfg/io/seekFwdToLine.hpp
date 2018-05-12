@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgBase.hpp"
-#include "../str/strlen.hpp"
+#include "../str/strLen.hpp"
 #include <cctype>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {

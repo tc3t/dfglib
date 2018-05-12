@@ -2,7 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "../dfgBase.hpp"
-#include "../cont/elementtype.hpp"
+#include "../cont/elementType.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 
