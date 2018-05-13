@@ -273,3 +273,45 @@ TEST(dfgMath, interpolationLinear)
     EXPECT_EQ(2.0, interpolationLinear_X_X0Y0_X1Y1(1.0, 1.0, 2.0, 1.0, 2.0));
     EXPECT_EQ(3.0, interpolationLinear_X_X0Y0_X1Y1(1.0, 1.0, 2.0, 1.0, 4.0));
 }
+
+namespace
+{
+    template <class Int_T>
+    void signedUnsignedTests(std::true_type)
+    {
+        EXPECT_EQ(1, DFG_MODULE_NS(math)::absAsUnsigned(Int_T(-1)));
+    }
+
+    template <class Int_T>
+    void signedUnsignedTests(std::false_type)
+    {
+    }
+
+    template <class Int_T>
+    void absUnsignedImpl(const typename std::make_unsigned<Int_T>::type minAbs)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(math);
+        typedef typename std::make_unsigned<Int_T>::type UnsignedT;
+        const auto zeroVal = absAsUnsigned(Int_T(0));
+        DFGTEST_STATIC((std::is_same<const UnsignedT, decltype(zeroVal)>::value));
+        EXPECT_EQ(0, absAsUnsigned(Int_T(0)));
+        signedUnsignedTests<Int_T>(typename std::is_signed<Int_T>::type());
+        EXPECT_EQ(minAbs, absAsUnsigned(NumericTraits<Int_T>::minValue));
+        EXPECT_EQ(static_cast<UnsignedT>(NumericTraits<Int_T>::maxValue), absAsUnsigned(NumericTraits<Int_T>::maxValue));
+    }
+}
+
+TEST(dfgMath, absAsUnsigned)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+    absUnsignedImpl<int8>(pow2ToXCt<7>::value);
+    absUnsignedImpl<uint8>(0);
+    absUnsignedImpl<int16>(pow2ToXCt<15>::value);
+    absUnsignedImpl<uint16>(0);
+    absUnsignedImpl<int32>(pow2ToXCt<31>::value);
+    absUnsignedImpl<uint32>(0);
+    absUnsignedImpl<int64>(static_cast<uint64>(NumericTraits<int64>::maxValue) + 1);
+    absUnsignedImpl<uint64>(0);
+}
