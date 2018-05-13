@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../dfgDefs.hpp"
+
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(math) {
 
 inline size_t pow2ToX(const size_t& n) {return (size_t(1) << n);}
