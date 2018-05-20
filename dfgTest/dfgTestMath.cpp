@@ -315,3 +315,38 @@ TEST(dfgMath, absAsUnsigned)
     absUnsignedImpl<int64>(static_cast<uint64>(NumericTraits<int64>::maxValue) + 1);
     absUnsignedImpl<uint64>(0);
 }
+
+TEST(dfgMath, logOfBase)
+{
+    using namespace DFG_MODULE_NS(math);
+
+    // Test for expected return types.
+    DFGTEST_STATIC((std::is_same<decltype(logOfBase(10, float(10))), double>::value));
+    DFGTEST_STATIC((std::is_same<decltype(logOfBase(10, double(10))), double>::value));
+    DFGTEST_STATIC((std::is_same<decltype(logOfBase(float(10), 10)), float>::value));
+    DFGTEST_STATIC((std::is_same<decltype(logOfBase(float(10), double(10))), float>::value));
+    DFGTEST_STATIC((std::is_same<decltype(logOfBase(double(10), 10)), double>::value));
+    DFGTEST_STATIC((std::is_same<decltype(logOfBase(double(10), float(10))), double>::value));
+    DFGTEST_STATIC((std::is_same<decltype(logOfBase(static_cast<long double>(10), double(10))), long double>::value));
+
+    EXPECT_DOUBLE_EQ(1, logOfBase(10, 10));
+    EXPECT_DOUBLE_EQ(3, logOfBase(8, 2));
+    EXPECT_DOUBLE_EQ(-1, logOfBase(0.5, 2));
+    EXPECT_DOUBLE_EQ(0, logOfBase(1, 3));
+    EXPECT_DOUBLE_EQ(31, logOfBase(pow2ToXCt<31>::value, 2));
+    EXPECT_DOUBLE_EQ(2, logOfBase(9, 3));
+    EXPECT_DOUBLE_EQ(1, logOfBase(const_e, const_e));
+    EXPECT_DOUBLE_EQ(2, logOfBase(const_e * const_e, const_e));
+    EXPECT_DOUBLE_EQ(3, logOfBase(1000, 10));
+    EXPECT_DOUBLE_EQ(5, logOfBase(16807, 7));
+    EXPECT_DOUBLE_EQ(4, logOfBase(16777216, 64));
+    EXPECT_FLOAT_EQ(4, logOfBase(float(16777216), float(64)));
+    EXPECT_DOUBLE_EQ(4, static_cast<double>(logOfBase(static_cast<long double>(16777216), static_cast<long double>(64))));
+
+    EXPECT_DOUBLE_EQ(-3, logOfBase(8, 0.5));
+    EXPECT_DOUBLE_EQ(-6, logOfBase(1e6, 0.1));
+
+    EXPECT_TRUE(isNan(logOfBase(1, 0)));
+    EXPECT_TRUE(isNan(logOfBase(1, -1)));
+    EXPECT_TRUE(isNan(logOfBase(-2, 2)));
+}

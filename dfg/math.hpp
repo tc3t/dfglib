@@ -5,6 +5,7 @@
 #include "math/constants.hpp"
 #include "math/pdf.hpp"
 #include <cmath>
+#include <limits>
 #include "build/languageFeatureInfo.hpp"
 
 #if !DFG_LANGFEAT_HAS_ISNAN && _MSC_VER
@@ -114,6 +115,29 @@ template <class Int_T>
 auto absAsUnsigned(const Int_T val) -> typename std::make_unsigned<Int_T>::type
 {
     return DFG_DETAIL_NS::absAsUnsigned(val, typename std::is_unsigned<Int_T>::type());
+}
+
+namespace DFG_DETAIL_NS
+{
+    template <class T>
+    inline T logOfBaseImpl(const T x, const T base)
+    {
+        if (base <= 0)
+            return std::numeric_limits<T>::quiet_NaN();
+        return log(x) / log(base);
+    }
+
+} // namespace DFG_DETAIL_NS 
+
+// Returns log x in base 'base'.
+template <class Value_T, class Base_T>
+auto logOfBase(const Value_T x, const Base_T base) -> typename std::conditional<std::numeric_limits<Value_T>::is_integer, double, Value_T>::type
+{
+    typedef typename std::conditional<std::numeric_limits<Value_T>::is_integer, double, Value_T>::type ReturnValueType;
+    typedef typename std::conditional<std::numeric_limits<Value_T>::is_integer, double, Value_T>::type ValueType;
+    typedef typename std::conditional<std::numeric_limits<Base_T>::is_integer, double, Base_T>::type BaseType;
+    typedef typename std::common_type<ValueType, BaseType>::type CommonType; // If compiler error points here stating that type is not member of std::common_type, reason can be that Value_T and Base_T are not compatible, e.g. logOfBase(2, "");
+    return static_cast<ReturnValueType>(DFG_DETAIL_NS::logOfBaseImpl(static_cast<CommonType>(x), static_cast<CommonType>(base)));
 }
 
 }} // module math
