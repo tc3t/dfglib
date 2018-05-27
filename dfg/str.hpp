@@ -97,7 +97,7 @@ namespace DFG_DETAIL_NS
         // https://stackoverflow.com/questions/4089174/printf-and-long-double
         // As a workaround using special MinGW version.
         auto rv = __mingw_vsnprintf(buffer, sizeInCharacters, pszFormat, args);
-#elif _WIN32
+#elif defined(_WIN32)
         auto rv = vsprintf_s(buffer, sizeInCharacters, pszFormat, args);
 #else
         auto rv = vsnprintf(buffer, sizeInCharacters, pszFormat, args);
