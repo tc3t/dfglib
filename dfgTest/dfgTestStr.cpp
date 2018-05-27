@@ -1130,3 +1130,25 @@ TEST(dfgStr, TypedCharPtrT)
     TypedCharPtrT<const char, CharPtrTypeChar> typedRawCharPtr("abc");
     EXPECT_EQ('a', (*typedRawCharPtr).toInt());
 }
+
+namespace
+{
+    template <class T>
+    void testFloatingPointTypeToSprintfType()
+    {
+        char buffer[16];
+        const T val = 0.25;
+        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer,
+            DFG_COUNTOF(buffer),
+            (std::string("%") + DFG_MODULE_NS(str)::DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>()).c_str(),
+            val);
+        EXPECT_STREQ("0.25", buffer);
+    }
+}
+
+TEST(dfgStr, floatingPointTypeToSprintfType)
+{
+    testFloatingPointTypeToSprintfType<float>();
+    testFloatingPointTypeToSprintfType<double>();
+    testFloatingPointTypeToSprintfType<long double>();
+}

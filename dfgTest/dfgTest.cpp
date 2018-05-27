@@ -75,6 +75,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.percentileRange_and_percentile_ceilElem";
     //::testing::GTEST_FLAG(filter) = "dfgPerformance.CsvReadPerformance";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.floatingPointTypeToSprintfType";
     //::testing::GTEST_FLAG(filter) = "dfgStr.intToRadixRepresentation";
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView";

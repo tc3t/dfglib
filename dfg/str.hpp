@@ -91,7 +91,13 @@ namespace DFG_DETAIL_NS
     {
         va_list args;
         va_start(args, pszFormat);
-#ifdef _WIN32
+#if defined(__MINGW32__)
+        // Handling long double's is buggy in MinGW (at least in 4.8.1)
+        // https://stackoverflow.com/questions/30080618/long-double-is-printed-incorrectly-with-iostreams-on-mingw
+        // https://stackoverflow.com/questions/4089174/printf-and-long-double
+        // As a workaround using special MinGW version.
+        auto rv = __mingw_vsnprintf(buffer, sizeInCharacters, pszFormat, args);
+#elif _WIN32
         auto rv = vsprintf_s(buffer, sizeInCharacters, pszFormat, args);
 #else
         auto rv = vsnprintf(buffer, sizeInCharacters, pszFormat, args);
