@@ -70,9 +70,12 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIo.StreamBufferMem";
     //::testing::GTEST_FLAG(filter) = "dfgIo.writeDelimited";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";
+    //::testing::GTEST_FLAG(filter) = "dfgMath.absAsUnsigned";
+    //::testing::GTEST_FLAG(filter) = "dfgMath.logOfBase";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.percentileRange_and_percentile_ceilElem";
     //::testing::GTEST_FLAG(filter) = "dfgPerformance.CsvReadPerformance";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.intToRadixRepresentation";
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewSz";

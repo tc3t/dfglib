@@ -9,6 +9,7 @@
 #include "str/strCmp.hpp"
 #include "str/strLen.hpp"
 #include "ReadOnlySzParam.hpp"
+#include "numericTypeTools.hpp"
 
 #if DFG_BUILD_OPT_USE_BOOST==1
     #include <boost/lexical_cast.hpp>
@@ -176,23 +177,106 @@ inline Str_T floatingPointToStr(const double val, const int nPrecParam = -1)
     return s;
 }
 
+typedef int ItoaReturnValue;
+enum ItoaError
+{
+    ItoaError_badRadix = -1,
+    ItoaError_emptyOutputBuffer = -2,
+    ItoaError_bufferTooSmall = -3
+};
+
+// Converts given integer value to string-like representation using given digit characters.
+// @param value Value to convert.
+// @radix Radix (base)
+// @param digitIndexToRepresentation Function that returns digit-representation for values in range [0, radix - 1] (e.g. for base 10 could be [](const size_t i) { return static_cast<char>('0' + i); })
+// @param sign Sign (minus) character (in common cases normally '-')
+// @param outBegin Output iterator to beginning of write sequence.
+// @param outEnd End iterrator for output.
+// @return On success, number of digits written to outBuffer, otherwise ItoaError
+template <class OutIter_T, class Int_T, class Func_T, class Sign_T>
+inline ItoaReturnValue intToRadixRepresentation(const Int_T value, const size_t radix, const Func_T digitIndexToRepresentation, const Sign_T sign, const OutIter_T outBegin, const OutIter_T outEnd)
+{
+    if (radix < 2)
+        return ItoaError_badRadix;
+    if (isAtEnd(outBegin, outEnd))
+        return ItoaError_emptyOutputBuffer;
+    if (value == 0)
+    {
+        *outBegin = digitIndexToRepresentation(0);
+        return 1;
+    }
+
+    auto p = outBegin;
+    int rv = 0;
+    typedef typename std::make_unsigned<Int_T>::type UnsignedType;
+    UnsignedType uvalue = DFG_MODULE_NS(math)::absAsUnsigned(value);
+    while (uvalue != 0)
+    {
+        if (isAtEnd(p, outEnd))
+        {
+            rv = ItoaError_bufferTooSmall;
+            break;
+        }
+        const size_t rem = uvalue % radix;
+        *p++ = digitIndexToRepresentation(rem);
+        uvalue = static_cast<UnsignedType>(uvalue / radix);
+    }
+    if (value < 0)
+    {
+        if (!isAtEnd(p, outEnd))
+            *p++ = sign;
+        else
+            rv = ItoaError_bufferTooSmall;
+    }
+    std::reverse(outBegin, p); // buffer[0] has least significant digit so reverse to get correct representation.
+    return (rv >= 0) ? std::distance(outBegin, p) : rv;
+}
+
+// Convenience version returning conversion return value and automatically allocated string (instead of relying on caller given output).
+template <class Char_T, class Int_T, class Func_T, class Sign_T>
+inline std::pair<ItoaReturnValue, std::basic_string<Char_T>> intToRadixRepresentation(const Int_T value, const size_t radix, const Func_T digitIndexToRepresentation, const Sign_T sign)
+{
+    typedef std::basic_string<Char_T> StringType;
+    Char_T buffer[8 * sizeof(Int_T) + 1]; // Simply reserve maximum length that we can get, i.e. that of base2, +1 for sign.
+    auto rv = intToRadixRepresentation(value, radix, digitIndexToRepresentation, sign, std::begin(buffer), std::end(buffer));
+    return std::pair<ItoaReturnValue, StringType>(rv, (rv > 0) ? StringType(buffer, buffer + rv) : StringType());
+}
+
+// Convenience version for intToRadixRepresentation() limiting radix to 2-36 and writing result as null terminated string (always when given non-empty buffer).
+template <class Int_T, class Char_T>
+inline ItoaReturnValue itoaSz(const Int_T value, const int radix, Char_T* buffer, const size_t bufCharCount)
+{
+    if (radix < 2 || radix > 36)
+        return ItoaError_badRadix;
+    if (bufCharCount == 0)
+        return ItoaError_bufferTooSmall;
+    const auto rv = intToRadixRepresentation(value, static_cast<size_t>(radix), [](const size_t i) { return "0123456789abcdefghijklmnopqrstuvwxyz"[i]; }, '-', buffer, buffer + bufCharCount);
+    if (rv < 0)
+        return rv;
+    if (static_cast<size_t>(rv) == bufCharCount)
+    {
+        buffer[0] = '\0';
+        return ItoaError_bufferTooSmall;
+    }
+    buffer[rv] = '\0';
+    return rv;
+}
+
+// Mimics _itoa_s -family functions.
+template <class Int_T, class Char_T>
+int itoa(const Int_T value, Char_T* buffer, const size_t bufCharCount, const int radix)
+{
+    const auto rv = itoaSz(value, radix, buffer, bufCharCount);
+    return (rv >= 0) ? 0 : EINVAL;
+}
+
 namespace DFG_DETAIL_NS
 {
-#ifdef _WIN32
 #define DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(INPUTTYPE, CHARTYPE, FUNCNAME, IMPLFUNC) \
-    inline errno_t FUNCNAME(INPUTTYPE value, CHARTYPE* buffer, size_t sizeInCharacters, int radix) \
+    inline int FUNCNAME(const INPUTTYPE value, CHARTYPE* buffer, size_t sizeInCharacters, int radix) \
     { \
         return IMPLFUNC(value, buffer, sizeInCharacters, radix); \
     }
-#else // case: not _WIN32
-#define DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(INPUTTYPE, CHARTYPE, FUNCNAME, IMPLFUNC) \
-    inline int FUNCNAME(INPUTTYPE value, CHARTYPE* buffer, size_t sizeInCharacters, int radix) \
-    { \
-        auto s = toStrT<std::basic_string<CHARTYPE>>(value); \
-        strCpyAllThatFit(buffer, sizeInCharacters, s.c_str()); \
-        return (sizeInCharacters > s.size()) ? 0 : EINVAL; \
-    }
-#endif // _WIN32
 
 #define DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS(f1, f2, f3, f4, f5, f6, f7, f8) \
     DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(int32,   char,         i32toa_s,   f1); \
@@ -207,7 +291,7 @@ namespace DFG_DETAIL_NS
 #ifdef _WIN32
     DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS(_itoa_s, _itow_s, _ultoa_s, _ultow_s, _i64toa_s, _i64tow_s, _ui64toa_s, _ui64tow_s)
 #else
-    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS(1,2,3,4,5,6,7,8)
+    DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS((itoa<int32, char>), (itoa<int32, wchar_t>), (itoa<uint32, char>), (itoa<uint32, wchar_t>), (itoa<int64, char>), (itoa<int64, wchar_t>), (itoa<uint64, char>), (itoa<uint64, wchar_t>))
 #endif
 
 #undef DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS

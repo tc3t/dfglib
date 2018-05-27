@@ -9,6 +9,9 @@
 #include <dfg/str/stringLiteralCharToValue.hpp>
 #include <dfg/str/format_fmt.hpp>
 #include <dfg/preprocessor/compilerInfoMsvc.hpp>
+#include <dfg/cont.hpp>
+#include <dfg/utf.hpp>
+#include <dfg/iter/szIterator.hpp>
 
 TEST(dfgStr, strLen)
 {
@@ -460,6 +463,115 @@ TEST(dfgStr, toStr)
         toStrCommonFloatingPointTests<float>(szFloatMin, szFloatMax, szFloatMinPositive);
         toStrCommonFloatingPointTests<double>("-1.7976931348623157e+308", "1.7976931348623157e+308", "2.2250738585072014e-308");
         toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
+    }
+}
+
+namespace
+{
+    struct RadixAndExpectedResult
+    {
+        RadixAndExpectedResult(int r, const char* pszExpected) :
+            m_radix(r),
+            m_pszExpected(pszExpected)
+        {}
+
+        int m_radix;
+        const char* m_pszExpected;
+    };
+
+    const auto toDigitCharFunc = [&](const size_t i) { return "0123456789abcdefghijklmnopqrstuvwxyz"[i]; };
+
+    template <class T, size_t N>
+    void testIntToRadixRepresentationWithSingleValue(const T val, const std::array<RadixAndExpectedResult, N>& testItems)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+        
+        char buffer[128] = "";
+        wchar_t wbuffer[128] = L"";
+        for (auto iter = testItems.cbegin(); iter != testItems.cend(); ++iter)
+        {
+            const auto radix = iter->m_radix;
+            DFG_MODULE_NS(str)::itoaSz(val, radix, buffer, DFG_COUNTOF(buffer));
+            EXPECT_STREQ(iter->m_pszExpected, buffer);
+            EXPECT_EQ(iter->m_pszExpected, DFG_MODULE_NS(str)::intToRadixRepresentation<char>(val, radix, toDigitCharFunc, '-').second);
+
+            // The same but with wchar_t
+            DFG_MODULE_NS(str)::itoaSz(val, radix, wbuffer, DFG_COUNTOF(wbuffer));
+            EXPECT_EQ(iter->m_pszExpected, DFG_MODULE_NS(utf)::codePointsToUtf8(makeSzRange(wbuffer)));
+            EXPECT_EQ(iter->m_pszExpected, DFG_MODULE_NS(utf)::codePointsToUtf8(DFG_MODULE_NS(str)::intToRadixRepresentation<wchar_t>(val, radix, toDigitCharFunc, '-').second));
+        }
+    }
+
+    template <class Int_T>
+    void convertAndTest(const Int_T val, const std::vector<DFG_ROOT_NS::uint16>& expected)
+    {
+        using namespace DFG_ROOT_NS;
+        const auto base4096charFunc = [](const size_t i) { return static_cast<::DFG_ROOT_NS::uint16>(i); };
+        std::vector<uint16> buffer(32);
+        const auto negativeIndicator = NumericTraits<uint16>::maxValue;
+        const auto size = DFG_MODULE_NS(str)::intToRadixRepresentation(val, 4096, base4096charFunc, negativeIndicator, buffer.begin(), buffer.end());
+        if (size >= 0)
+            buffer.resize(static_cast<size_t>(size));
+        EXPECT_EQ(expected, buffer);
+    }
+}
+
+
+TEST(dfgStr, intToRadixRepresentation)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+    using namespace DFG_MODULE_NS(cont);
+    typedef RadixAndExpectedResult RE;
+
+    testIntToRadixRepresentationWithSingleValue(int(0), makeArray(RE(2, "0"), RE(3, "0"), RE(10, "0"), RE(16, "0"), RE(36, "0") ));
+    testIntToRadixRepresentationWithSingleValue(int(10), makeArray(RE(2, "1010"), RE(3, "101"), RE(10, "10"), RE(16, "a"), RE(36, "a")));
+    testIntToRadixRepresentationWithSingleValue(int(-10), makeArray(RE(2, "-1010"), RE(3, "-101"), RE(10, "-10"), RE(16, "-a"), RE(36, "-a")));
+
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int8>::maxValue, makeArray(RE(2, "1111111"), RE(3, "11201"), RE(10, "127"), RE(16, "7f"), RE(36, "3j")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int8>::minValue, makeArray(RE(2, "-10000000"), RE(3, "-11202"), RE(10, "-128"), RE(16, "-80"), RE(36, "-3k")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<uint8>::maxValue, makeArray(RE(2, "11111111"), RE(3, "100110"), RE(10, "255"), RE(16, "ff"), RE(36, "73")));
+
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int16>::maxValue, makeArray(RE(2, "111111111111111"), RE(3, "1122221121"), RE(10, "32767"), RE(16, "7fff"), RE(36, "pa7")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int16>::minValue, makeArray(RE(2, "-1000000000000000"), RE(3, "-1122221122"), RE(10, "-32768"), RE(16, "-8000"), RE(36, "-pa8")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<uint16>::maxValue, makeArray(RE(2, "1111111111111111"), RE(3, "10022220020"), RE(10, "65535"), RE(16, "ffff"), RE(36, "1ekf")));
+
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int32>::maxValue, makeArray(RE(2, "1111111111111111111111111111111"), RE(3, "12112122212110202101"), RE(10, "2147483647"), RE(16, "7fffffff"), RE(36, "zik0zj")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int32>::minValue, makeArray(RE(2, "-10000000000000000000000000000000"), RE(3, "-12112122212110202102"), RE(10, "-2147483648"), RE(16, "-80000000"), RE(36, "-zik0zk")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<uint32>::maxValue, makeArray(RE(2, "11111111111111111111111111111111"), RE(3, "102002022201221111210"), RE(10, "4294967295"), RE(16, "ffffffff"), RE(36, "1z141z3")));
+
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int64>::maxValue, makeArray(RE(2, "111111111111111111111111111111111111111111111111111111111111111"), RE(3, "2021110011022210012102010021220101220221"), RE(10, "9223372036854775807"), RE(16, "7fffffffffffffff"), RE(36, "1y2p0ij32e8e7")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<int64>::minValue, makeArray(RE(2, "-1000000000000000000000000000000000000000000000000000000000000000"), RE(3, "-2021110011022210012102010021220101220222"), RE(10, "-9223372036854775808"), RE(16, "-8000000000000000"), RE(36, "-1y2p0ij32e8e8")));
+    testIntToRadixRepresentationWithSingleValue(NumericTraits<uint64>::maxValue, makeArray(RE(2, "1111111111111111111111111111111111111111111111111111111111111111"), RE(3, "11112220022122120101211020120210210211220"), RE(10, "18446744073709551615"), RE(16, "ffffffffffffffff"), RE(36, "3w5e11264sgsf")));
+
+    {
+        char buffer[128];
+        EXPECT_EQ(ItoaError_badRadix, intToRadixRepresentation<char>(0, 0, toDigitCharFunc, '-').first);
+        EXPECT_EQ(ItoaError_badRadix, intToRadixRepresentation<char>(0, 1, toDigitCharFunc, '-').first);
+        EXPECT_EQ(1, intToRadixRepresentation(0, 2, toDigitCharFunc, '-', buffer, buffer + 1));
+        EXPECT_EQ('0', buffer[0]);
+        EXPECT_EQ(1, intToRadixRepresentation(1, 2, toDigitCharFunc, '-', buffer, buffer + 1));
+        EXPECT_EQ('1', buffer[0]);
+        EXPECT_EQ(ItoaError_bufferTooSmall, intToRadixRepresentation(-1, 2, toDigitCharFunc, '-', buffer, buffer + 1));
+        EXPECT_EQ(ItoaError_emptyOutputBuffer, intToRadixRepresentation(2, 2, toDigitCharFunc, '-', buffer, buffer));
+        EXPECT_EQ(ItoaError_bufferTooSmall, intToRadixRepresentation(2, 2, toDigitCharFunc, '-', buffer, buffer + 1));
+    }
+
+    // Test 4096-base 
+    {
+        using namespace DFG_MODULE_NS(math);
+
+        convertAndTest(0, makeVector<uint16>(0));
+        convertAndTest(4095, makeVector<uint16>(4095));
+        convertAndTest(4096, makeVector<uint16>(1, 0));
+        convertAndTest(pow2ToXCt<16>::value, makeVector<uint16>(16, 0));
+        convertAndTest(pow2ToXCt<24>::value - 1, makeVector<uint16>(4095, 4095));
+        convertAndTest(pow2ToXCt<24>::value, makeVector<uint16>(1, 0, 0));
+        convertAndTest((uint64(1) << 36) - 1, makeVector<uint16>(4095, 4095, 4095));
+        convertAndTest(-1 * (int64(1) << 36), makeVector<uint16>(uint16(NumericTraits<uint16>::maxValue), 1, 0, 0, 0));
+        convertAndTest(uint64(1) << 36, makeVector<uint16>(1, 0, 0, 0));
+        convertAndTest(NumericTraits<uint64>::maxValue, makeVector<uint16>(15, 4095, 4095, 4095, 4095, 4095));
     }
 }
 

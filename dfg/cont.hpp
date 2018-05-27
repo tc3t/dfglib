@@ -55,6 +55,24 @@ template <class ContT, class T> void pushBack(ContT& cont, T&& a0, T&& a1)
         return vec;
     }
 
+    template <class T> std::vector<T> makeVector(T a0, T a1, T a2, T a3, T a4)
+    {
+        std::vector<T> vec;
+        pushBack(vec, std::move(a0), std::move(a1));
+        pushBack(vec, std::move(a2), std::move(a3));
+        pushBack(vec, std::move(a4));
+        return vec;
+    }
+
+    template <class T> std::vector<T> makeVector(T a0, T a1, T a2, T a3, T a4, T a5)
+    {
+        std::vector<T> vec;
+        pushBack(vec, std::move(a0), std::move(a1));
+        pushBack(vec, std::move(a2), std::move(a3));
+        pushBack(vec, std::move(a4), std::move(a5));
+        return vec;
+    }
+
 #else // Compiler other than VC2010. In VC2010 code such as makeVector<std::string>("1", "2") wouldn't compile.
 
     template <class T> auto makeVector(T&& a0) -> std::vector<typename std::remove_reference<T>::type>
@@ -88,6 +106,26 @@ template <class ContT, class T> void pushBack(ContT& cont, T&& a0, T&& a1)
         std::vector<ElemT> vec;
         pushBack(vec, std::forward<T>(a0), std::forward<T>(a1));
         pushBack(vec, std::forward<T>(a2), std::forward<T>(a3));
+        return vec;
+    }
+
+    template <class T> auto makeVector(T&& a0, T&& a1, T&& a2, T&& a3, T&& a4) -> std::vector<typename std::remove_reference<T>::type>
+    {
+        typedef typename std::remove_reference<T>::type ElemT;
+        std::vector<ElemT> vec;
+        pushBack(vec, std::forward<T>(a0), std::forward<T>(a1));
+        pushBack(vec, std::forward<T>(a2), std::forward<T>(a3));
+        pushBack(vec, std::forward<T>(a4));
+        return vec;
+    }
+
+    template <class T> auto makeVector(T&& a0, T&& a1, T&& a2, T&& a3, T&& a4, T&& a5) -> std::vector<typename std::remove_reference<T>::type>
+    {
+        typedef typename std::remove_reference<T>::type ElemT;
+        std::vector<ElemT> vec;
+        pushBack(vec, std::forward<T>(a0), std::forward<T>(a1));
+        pushBack(vec, std::forward<T>(a2), std::forward<T>(a3));
+        pushBack(vec, std::forward<T>(a4), std::forward<T>(a5));
         return vec;
     }
 
