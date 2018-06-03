@@ -414,10 +414,10 @@ namespace
         using namespace DFG_MODULE_NS(str);
 
         typedef std::numeric_limits<T> NumLim;
-        EXPECT_EQ("0.76", DFG_SUB_NS_NAME(str)::toStrC(T(0.76)));
+        EXPECT_EQ("0.76", DFG_SUB_NS_NAME(str)::toStrC(static_cast<T>(0.76L))); // Note: T(0.76) can be != 0.76L if T=long double and sizeof(double) != sizeof(long double)
 
         {
-            const auto s = DFG_SUB_NS_NAME(str)::toStrC(T(1e-9));
+            const auto s = DFG_SUB_NS_NAME(str)::toStrC(static_cast<T>(1e-9L));
             EXPECT_TRUE(s == "1e-9" || s == "1e-09" || s == "1e-009");
         }
 

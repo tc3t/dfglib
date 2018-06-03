@@ -105,7 +105,36 @@ namespace DFG_DETAIL_NS
         va_end(args);
         return rv;
     }
-}
+
+    template <class T> inline T strToFloatingPoint(const char* psz)
+    { 
+        DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "strToFloatingPoint: implementation is not available for given type");
+    }
+
+    template <> inline float strToFloatingPoint<float>(const char* psz)
+    { 
+    #if defined(_MSC_VER) && (DFG_MSVC_VER < DFG_MSVC_VER_2013)
+        return static_cast<float>(std::strtod(psz, nullptr));
+    #else
+        return std::strtof(psz, nullptr);
+    #endif
+    }
+
+    template <> inline double strToFloatingPoint<double>(const char* psz)
+    { 
+        return std::strtod(psz, nullptr);
+    }
+
+    template <> inline long double strToFloatingPoint<long double>(const char* psz)
+    {
+    #if defined(_MSC_VER) && (DFG_MSVC_VER < DFG_MSVC_VER_2013)
+        DFG_STATIC_ASSERT(sizeof(double) == sizeof(long double), "In MSVC2010 and MSVC2012 long double is expected to be identical to double");
+        return std::strtod(psz, nullptr);
+    #else
+        return std::strtold(psz, nullptr);
+    #endif
+    }
+} // DFG_DETAIL_NS
 
 template <class Str_T, class T>
 Str_T toStrT(const T& obj)
@@ -161,7 +190,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
         char szShortFormat[8] = "";
         std::sprintf(szShortFormat, "%%.%u%s", std::numeric_limits<T>::digits10, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
         DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szShortFormat, val);
-        if (static_cast<T>(std::atof(psz)) == val)
+        if (DFG_DETAIL_NS::strToFloatingPoint<T>(psz) == val)
             return psz;
         DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val); // Shorter was too short, reconvert.
     }
