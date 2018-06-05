@@ -21,12 +21,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
         const auto nCount = count(cont);
 
         auto nFirstIndex = floorToInteger<size_t>(nCount * lowerBound);
-        if (nFirstIndex > 0 && double(nFirstIndex) / nCount == lowerBound) // Is lowerBound exactly on exc-inc upper boundary of previous element?
+        // Check if lowerBound exactly on exc-inc upper boundary of previous element? Revise: Not sure how reasonable this is given the
+        // nature of floating point values.
+        if (nFirstIndex > 0 && static_cast<double>(nFirstIndex) == lowerBound * static_cast<double>(nCount))
             nFirstIndex--; // In that case include the previous one.
 
         auto nEndIndex = ceilToInteger<size_t>(nCount * upperBound);
 
-        if (nEndIndex < nCount && nEndIndex == nCount * upperBound) // Is upperBoundary exactly on exc-inc lower boundary of next element?
+        if (nEndIndex < nCount && static_cast<double>(nEndIndex) == static_cast<double>(nCount) * upperBound) // Is upperBoundary exactly on exc-inc lower boundary of next element?
             ++nEndIndex; // In that case include the next one.
         auto rv = std::make_pair(std::begin(cont), std::begin(cont));
         std::advance(rv.first, nFirstIndex);

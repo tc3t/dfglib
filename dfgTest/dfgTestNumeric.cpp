@@ -1363,6 +1363,10 @@ TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
         EXPECT_EQ(rv20_70.first, std::begin(arr) + 1);
         EXPECT_EQ(rv20_70.second, std::begin(arr) + 8);
 
+        const auto rv2001_699 = percentileRangeInSortedII(arr, 20.00001, 69.99999);
+        EXPECT_EQ(rv2001_699.first, std::begin(arr) + 2);
+        EXPECT_EQ(rv2001_699.second, std::begin(arr) + 7);
+
         const auto rv5_8 = percentileRangeInSortedII(arr, 5, 8);
         EXPECT_EQ(rv5_8.first, std::begin(arr));
         EXPECT_EQ(rv5_8.second, std::begin(arr) + 1);
