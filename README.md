@@ -46,34 +46,34 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
+## Build status (as of 2018-06-10 commit [f40855a](https://github.com/tc3t/dfglib/commit/f40855a1a31ab7d1c0c41233aa931eee5a90a08a))
 
-## Build status
+<!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
-[![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master)
-
-| Compiler      | Platform      | Config  | Status | Comment |
-| ------------- | ------------- | -----   | ------ | ------- |
-| GCC 5.4       | x86           | O2      | no CI  | Unit tests build and run with reduced functionality and with some failing tests. (2017-07-11)) |
-| MinGW 4.8.0   | x86           | O2      | no CI  | Building and running of unit tests manually maintained |
-| VC2010        | x86           | Debug   | CI | Unit tests build and run |
-| VC2010        | x86           | Release | no CI | Skipped in CI since unit test build fails for unknown reasons since 2016-11-25 |
-| VC2010        | x64           | Debug   | CI | Unit tests build and run |
-| VC2010        | x64           | Release | no CI | Skipped in CI since unit test build fails for unknown reasons since 2016-11-25 |
-| VC2012        | x86           | Debug   | CI | Unit tests build and run |
-| VC2012        | x86           | Release | no CI | Skipped in CI since unit test build fails, possibly the same problem as in VC2010 release. |
-| VC2012        | x64           | Debug   | CI | Unit tests build and run |
-| VC2012        | x64           | Release | no CI | Skipped in CI since unit test build fails, possibly the same problem as in VC2010 release. |
-| VC2013        | x86           | Debug   | CI | Unit tests build and run |
-| VC2013        | x86           | Release | CI | Unit tests build and run |
-| VC2013        | x64           | Debug   | CI | Unit tests build and run |
-| VC2013        | x64           | Release | CI | Unit tests build and run |
-| VC2015        | x86           | Debug   | CI | Unit tests build and run |
-| VC2015        | x86           | Release | CI | Unit tests build and run |
-| VC2015        | x64           | Debug   | CI | Unit tests build and run |
-| VC2015        | x64           | Release | CI | Unit tests build and run |
-| VC2017        | x86           | Debug   | no CI | Manually maintained, unit tests build and run (2017-07-11) |
-| VC2017        | x86           | Release | no CI | Manually maintained, unit tests build and run (2017-07-11) |
-| VC2017        | x64           | Debug   | no CI | Manually maintained, unit tests build and run (2017-07-11) |
-| VC2017        | x64           | Release | no CI | Manually maintained, unit tests build and run (2017-07-11) |
+| Compiler      | Platform      | Config  | Tests (passed/all) | Comment |
+| ------------- | ------------- | -----   | ------  | ------- |
+| Clang 3.8.0   | x86           |         | 100 % (186/186) | |
+| GCC 5.4       | x86           |         | 100 % (186/186) | |
+| MinGW 4.8.0   | x86           | O2      | 100 % (189/189) | |
+| VC2010        | x86           | Debug   | 100 % (190/190) | |
+| VC2010        | x86           | Release | 100 % (190/190) | |
+| VC2010        | x64           | Debug   | 100 % (190/190) | |
+| VC2010        | x64           | Release | 100 % (190/190) | |
+| VC2012        | x86           | Debug   | 100 % (193/193) | |
+| VC2012        | x86           | Release | 100 % (193/193) | |
+| VC2012        | x64           | Debug   | 100 % (193/193) | |
+| VC2012        | x64           | Release | 100 % (193/193) | |
+| VC2013        | x86           | Debug   | 100 % (193/193) | |
+| VC2013        | x86           | Release | 100 % (193/193) | |
+| VC2013        | x64           | Debug   | 100 % (193/193) | |
+| VC2013        | x64           | Release | 100 % (193/193) | |
+| VC2015        | x86           | Debug   | 100 % (193/193) | |
+| VC2015        | x86           | Release | 99 % (192/193) | Numerical precision related failure in dfgNumeric.transform |
+| VC2015        | x64           | Debug   | 100 % (193/193) | |
+| VC2015        | x64           | Release | 99 % (192/193) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x86           | Debug   | 100 % (193/193) | |
+| VC2017        | x86           | Release | 99 % (192/193) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x64           | Debug   | 100 % (193/193) | |
+| VC2017        | x64           | Release | 99 % (192/193) | Numerical precision related failure in dfgNumeric.transform |
 | Others        |               |         | Not tested |  |
 ||||||
