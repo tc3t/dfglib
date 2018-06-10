@@ -479,7 +479,7 @@ namespace
         const char* m_pszExpected;
     };
 
-    const auto toDigitCharFunc = [&](const size_t i) { return "0123456789abcdefghijklmnopqrstuvwxyz"[i]; };
+    char toDigitCharFunc(const size_t i) { return "0123456789abcdefghijklmnopqrstuvwxyz"[i]; }
 
     template <class T, size_t N>
     void testIntToRadixRepresentationWithSingleValue(const T val, const std::array<RadixAndExpectedResult, N>& testItems)
@@ -1101,7 +1101,7 @@ TEST(dfgStr, StringLiteralMacros)
     using namespace DFG_MODULE_NS(str);
 
     {
-        DFG_U8_CHAR('a') == 97;
+        EXPECT_EQ(97, DFG_U8_CHAR('a'));
         auto sz = DFG_ASCII("abc");
         EXPECT_EQ(97, sz.c_str()[0]);
         EXPECT_EQ(98, sz.c_str()[1]);

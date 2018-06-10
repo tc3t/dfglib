@@ -150,8 +150,7 @@ template <class DataT, class SumT = DataT, class CountT = size_t> struct DFG_CLA
 
     static SumT averageValueForEmpty()
     {
-        const std::integral_constant<bool, std::numeric_limits<SumT>::has_quiet_NaN> hasQNan;
-        return privAverageValueForEmptyByHasNan(hasQNan);
+        return privAverageValueForEmptyByHasNan(std::integral_constant<bool, std::numeric_limits<SumT>::has_quiet_NaN>());
     }
 
     SumT sum() const {return m_mfSum.value();}
