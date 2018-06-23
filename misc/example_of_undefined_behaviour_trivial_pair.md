@@ -4,7 +4,7 @@ While making adjustments to make dfglib to work on Clang, one test failed and th
 
 ## Observation
 
-Using code of commit [3f86237](https://github.com/tc3t/dfglib/commit/3f86237e4e0b9bb21a9eed4d294660b859b37ace) that passed all unit tests in VC2010-2017, MinGW 4.8, GCC 5.4 and Clang debug build, in Clang optimized build one TrivialPair test failed. The test in question was:
+Using code of commit [3f86237](https://github.com/tc3t/dfglib/commit/3f86237e4e0b9bb21a9eed4d294660b859b37ace) where TrivialPair tests passed in VC2010-2017 (both debug and release), MinGW 4.8, GCC 5.4 and Clang debug build, in Clang optimized build one part of the test failed:
 
 ```
 auto t0 = T0();
@@ -58,7 +58,7 @@ TEST(Test, UbTest)
 }
 ```
 
-The EXPECT_EQ on last line failes with error message like:
+The EXPECT_EQ on last line fails with error message like:
 ```
 Value of: tp22
   Actual: 12-byte object <00-00 00-00 7C-00 00-00 00-62 CD-B7>
@@ -135,7 +135,7 @@ something triggers undefined behaviour.
 
 ## Fix
 
-In this case it's easy to see what the undefined behaviour might be: int values seem unintialized so undefined behaviour seems to be triggered through the use of uninitialized scalar (http://en.cppreference.com/w/cpp/language/ub).
+In this case it's easy to see what the undefined behaviour might be: int values seem uninitialized so undefined behaviour seems to be triggered through the use of uninitialized scalar (http://en.cppreference.com/w/cpp/language/ub).
 
 [Simple fix](https://github.com/tc3t/dfglib/commit/f40855a1a31ab7d1c0c41233aa931eee5a90a08a) to the problem is to value initialize members of PairClass, i.e. 
 ```
@@ -153,6 +153,6 @@ This example demonstrated a concrete effect that undefined behaviour can have:
 * Undefined behaviour made reasoning about runtime behaviour from source code impossible, i.e. basic assumptions about the relation of, say, order of source code lines and their runtime execution order may no longer hold (more examples in http://en.cppreference.com/w/cpp/language/ub).
 * Occurred only on one of tested 8 compilers and even there only in optimized build.
 
-While it would be oversimplification to say that every UB will break the code at runtime in way beyond comprehension, as this case demonstrates, a seemingly tiny and subtle error can make the runtime behaviour seemingly insane. While it in some sense could be considered as a mitigating factor that this only occured in one compiler and on certain optimization flags, that is the very reason why this is potentially so nasty a bug: may appear from nowhere in new compilers, in different compile flags or in newer versions of the compiler where the code works today.
+While it would be oversimplification to say that every UB will break the code at runtime in way beyond comprehension, as this case demonstrates, a seemingly tiny and subtle error can make the runtime behaviour seemingly insane. While it in some sense could be considered as a mitigating factor that this only occurred in one compiler and on certain optimization flags, that is the very reason why this is potentially so nasty a bug: may appear from nowhere in new compilers, in different compile flags or in newer versions of the compiler where the code works today.
 
 Thus to avoid this kind of joyful bugs from appearing, understanding and avoiding UB's might be worthwhile for the quality of the software and for the well-being of software developers.
