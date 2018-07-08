@@ -1,9 +1,10 @@
 cmake_minimum_required (VERSION 2.6)
 
+project (dfgTest)
+
 include_directories ("${PROJECT_SOURCE_DIR}/"
 	"${PROJECT_SOURCE_DIR}/../externals/"
-	"${PROJECT_SOURCE_DIR}/../dfg/")
-project (dfgTest)
+	"${PROJECT_SOURCE_DIR}/../")
 
 # TODO: Set VC warning level to W4
 
@@ -51,3 +52,7 @@ set(SOURCE
 )
 
 add_executable(dfgTest ${SOURCE} ${HEADERS})
+
+if(UNIX)
+    TARGET_LINK_LIBRARIES(dfgTest pthread)
+endif()
