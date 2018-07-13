@@ -1070,7 +1070,7 @@ public:
             {
                 buffer.appendChar(strm.m_streamBuffer.m_pCurrent);
                 ++strm.m_streamBuffer.m_pCurrent;
-                CellParsingImplementations::separatorAutoDetection(rs, getFormatDefInfo(), buffer);
+                CellParsingImplementations::separatorAutoDetection(rs, buffer.getFormatDefInfo(), buffer);
                 return true;
             }
             else
@@ -1093,7 +1093,7 @@ public:
             if (bRead)
             {
                 buffer.appendChar(ch);
-                CellParsingImplementations::separatorAutoDetection(rs, getFormatDefInfo(), buffer);
+                CellParsingImplementations::separatorAutoDetection(rs, buffer.getFormatDefInfo(), buffer);
             }
             return bRead;
         }

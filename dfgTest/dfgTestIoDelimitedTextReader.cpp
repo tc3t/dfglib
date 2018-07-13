@@ -502,6 +502,22 @@ TEST(DfgIo, DelimitedTextReader_autoDetectCsvSeparator)
     EXPECT_EQ(';'                                                   , sepEnclosedNoEnc);
     EXPECT_EQ('\t'                                                  , sepEnclosedWithEolSepDefault);
     EXPECT_EQ(DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone  , sepEnclosedWithEolSepNoEnc);
+
+    // Test basic usage with enclosed content (test case for issue#2).
+    {
+        using namespace DFG_MODULE_NS(io);
+        const char bytes[] = "\"a\",b";
+        DFG_CLASS_NAME(BasicImStream) istrm(bytes, DFG_COUNTOF_SZ(bytes));
+        std::vector<std::string> items;
+        const auto formatDef = DFG_CLASS_NAME(DelimitedTextReader)::read<char>(istrm, DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, '"', '\n', [&](const size_t, const size_t, const char* p, const size_t dataSize)
+        {
+            items.push_back(std::string(p, dataSize));
+        });
+        EXPECT_EQ(',', formatDef.getSep());
+        ASSERT_EQ(2, items.size());
+        EXPECT_EQ("a", items[0]);
+        EXPECT_EQ("b", items[1]);
+    }
 }
 
 TEST(DfgIo, DelimitedTextReader_readRowSkipWhiteSpaces)
