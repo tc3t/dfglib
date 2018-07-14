@@ -30,8 +30,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class DFG_CLASS_NAME(TableEditor) : public QWidget
     {
     public:
+        enum ColumnResizeStyle
+        {
+            ColumnResizeStyle_evenlyDistributed,                            // Distributes available width evenly to all columns regardless of their content width.
+            ColumnResizeStyle_auto = ColumnResizeStyle_evenlyDistributed    // Lets TableEditor choose style (note: implementation may change).
+        };
+
         DFG_CLASS_NAME(TableEditor)();
         ~DFG_CLASS_NAME(TableEditor)();
+
+        /** Returns true if opened, false otherwise. Opening will fail if TableEditor already has a file opened and it has been modified. */
+        bool tryOpenFileFromPath(QString path);
+
+        /** Resizes column widths. */
+        void resizeColumnsToView(ColumnResizeStyle style = ColumnResizeStyle_auto);
 
     public slots:
         void onSourcePathChanged();

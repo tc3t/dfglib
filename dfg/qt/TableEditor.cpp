@@ -9,7 +9,12 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QGridLayout>
 #include <QLineEdit>
 #include <QStatusBar>
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QHeaderView>
 DFG_END_INCLUDE_QT_HEADERS
+
+#define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)()
 {
@@ -41,10 +46,30 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)()
         delete layout();
         setLayout(spLayout.release());
     }
+
+    // Set default window size.
+    {
+        auto desktop = QApplication::desktop();
+        if (desktop)
+        {
+            const auto screenRect = desktop->screenGeometry(this); // Returns screen geometry of the screen that contains 'this' widget.
+            resize(screenRect.size() * 0.75); // Fill 0.75 of the whole screen in both directions (arbitrary default value)
+        }
+    }
+
+    resizeColumnsToView();
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::~DFG_CLASS_NAME(TableEditor)()
 {
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString path)
+{
+    if (!m_spTableModel || (m_spTableModel && m_spTableModel->isModified()))
+        return false;
+
+    return m_spTableModel->openFile(path);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSourcePathChanged()
@@ -63,4 +88,20 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
         m_spLineEditSourcePath->setText(model.getFilePath());
     if (m_spStatusBar)
         m_spStatusBar->showMessage(tr("Reading lasted %1 s").arg(model.latestReadTimeInSeconds(), 0, 'g', 4));
+    resizeColumnsToView();
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnResizeStyle style)
+{
+    auto viewport = (m_spTableView) ? m_spTableView->viewport() : nullptr;
+    if (!viewport || !m_spTableModel || m_spTableModel->getColumnCount() == 0)
+        return;
+    if (style == ColumnResizeStyle_evenlyDistributed)
+    {
+        const auto width = m_spTableView->viewport()->width();
+        const int sectionSize = width / m_spTableModel->getColumnCount();
+        m_spTableView->horizontalHeader()->setDefaultSectionSize(sectionSize);
+    }
+    else
+        DFG_TABLEEDITOR_LOG_WARNING(QString("Requested resizeColumnsToView with unknown style '%1'").arg(static_cast<int>(style)));
 }
