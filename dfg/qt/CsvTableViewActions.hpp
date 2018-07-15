@@ -267,16 +267,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 QString sText = QApplication::clipboard()->text();
 
                 QTextStream strm(&sText, QIODevice::ReadOnly);
-                DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(strm, '\t', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const psz, const size_t nSize)
+                DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(strm, '\t', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
                 {
-                    DFG_UNUSED(nSize);
                     const auto nTargetRow = m_where.row() + static_cast<int>(nRow);
                     const auto nTargetCol = m_where.column() + static_cast<int>(nCol);
                     QModelIndex indexTarget = pModel->index(nTargetRow, nTargetCol);
                     if (!indexTarget.isValid())
                         return;
                     m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(pModel->data(indexTarget).toString().toUtf8().data())); // TODO: makes redundant QString round-trip.
-                    m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(QString::fromWCharArray(psz).toUtf8().data()));
+                    const int intSize = (nSize < NumericTraits<int>::maxValue) ? static_cast<int>(nSize) : NumericTraits<int>::maxValue;
+                    m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(QString::fromWCharArray(p, intSize).toUtf8().data()));
                 });
 
                 QString sDesc;
