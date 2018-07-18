@@ -63,6 +63,13 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
     }
 
     {
+        auto pAction = new QAction(tr("Save"), this);
+        pAction->setShortcut(tr("Ctrl+S"));
+        connect(pAction, &QAction::triggered, this, &ThisClass::save);
+        addAction(pAction);
+    }
+
+    {
         auto pAction = new QAction(tr("Save to file..."), this);
         connect(pAction, &QAction::triggered, this, &ThisClass::saveToFile);
         addAction(pAction);
@@ -466,17 +473,35 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_N
 
     if (sPath.isEmpty())
         return false;
+    return saveToFileImpl(sPath, formatDef);
+}
 
+bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
+{
     auto pModel = csvModel();
 
     if (!pModel)
         return false;
 
-    const auto bSuccess = pModel->saveToFile(sPath, formatDef);
+    // TODO: Don't block caller thread.
+    // TODO: add signals 'savingFile()' and 'savingFinished(time)' or similar so that owner GUI can show the info to user.
+    // TODO: allow user to cancel saving (e.g. if it takes too long)
+    const auto bSuccess = pModel->saveToFile(path, formatDef);
     if (!bSuccess)
-        QMessageBox::information(nullptr, tr("Save failed"), tr("Failed to save to path %1").arg(sPath));
+        QMessageBox::information(nullptr, tr("Save failed"), tr("Failed to save to path %1").arg(path));
 
     return bSuccess;
+}
+
+
+bool DFG_CLASS_NAME(CsvTableView)::save()
+{
+    auto model = csvModel();
+    const auto& path = (model) ? model->getFilePath() : QString();
+    if (!path.isEmpty())
+        return saveToFileImpl(path, DFG_CLASS_NAME(CsvItemModel)::SaveOptions());
+    else
+        return saveToFile();
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFile()

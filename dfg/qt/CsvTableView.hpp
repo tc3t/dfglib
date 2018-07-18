@@ -73,6 +73,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QAbstractProxyModel* getProxyModelPtr();
         const QAbstractProxyModel* getProxyModelPtr() const;
 
+        bool saveToFileImpl(const QString& path, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
         bool saveToFileImpl(const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
 
         void privAddUndoRedoActions(QAction* pAddBefore = nullptr);
@@ -103,6 +104,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public slots:
         bool openFromFile();
         bool mergeFilesToCurrent();
+        bool save();
         bool saveToFile();
         bool saveToFileWithOptions();
         bool clearSelected();
