@@ -79,6 +79,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool generateContentImpl(const CsvModel& csvModel);
 
+        void setAllowApplicationSettingsUsage(bool b);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -122,6 +124,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool resizeTable();
 
         bool generateContent();
+
+        bool diffWithUnmodified();
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);
@@ -148,6 +152,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
+        QStringList m_tempFilePathToRemoveOnExit;
+        bool m_bAllowApplicationSettingsUsage;
 
     };
 

@@ -3,6 +3,9 @@
 #include "CsvTableView.hpp"
 #include "CsvItemModel.hpp"
 #include "CsvTableViewActions.hpp"
+#include "QtApplication.hpp"
+#include "../os.hpp"
+#include "../os/TemporaryFileStream.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -15,6 +18,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QCheckBox>
 #include <QInputDialog>
 #include <QLabel>
+#include <QProcess>
+#include <QSettings>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
@@ -24,7 +29,8 @@ DFG_END_INCLUDE_QT_HEADERS
 
 using namespace DFG_MODULE_NS(qt);
 
-DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : BaseClass(pParent)
+DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : BaseClass(pParent),
+    m_bAllowApplicationSettingsUsage(false)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -203,10 +209,25 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
         addAction(pAction);
     }
     privAddUndoRedoActions();
+
+    // -------------------------------------------------
+    {
+        // Add diff-action
+        {
+            auto pAction = new QAction(tr("Diff with unmodified"), this);
+            pAction->setShortcut(tr("Alt+D"));
+            connect(pAction, &QAction::triggered, this, &ThisClass::diffWithUnmodified);
+            addAction(pAction);
+        }
+    }
 }
 
 DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
 {
+    for(const auto& path : m_tempFilePathToRemoveOnExit)
+    {
+        QFile::remove(path);
+    }
 }
 
 void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
@@ -1411,4 +1432,74 @@ QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr()
 const QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr() const
 {
     return dynamic_cast<const QAbstractProxyModel*>(model());
+}
+
+bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
+{
+    const char szTempFileNameTemplate[] = "dfgqtCTV"; // static part for temporary filenames.
+    auto dataModelPtr = csvModel();
+    if (!dataModelPtr)
+        return false;
+    if (!DFG_MODULE_NS(os)::isPathFileAvailable(dataModelPtr->getFilePath().toStdWString(), DFG_MODULE_NS(os)::FileModeRead))
+        return false;
+
+    auto settings = (m_bAllowApplicationSettingsUsage) ? DFG_CLASS_NAME(QtApplication)::getApplicationSettings() : nullptr;
+
+    QString sDiffPath = (settings) ? settings->value("dfglib/diffProgPath").toString() : QString();
+
+    if (sDiffPath.isEmpty())
+    {
+        const auto rv = QMessageBox::question(this,
+                                              tr("Unable to locate diff viewer"),
+                                              tr("Diff viewer path was not found; locate it manually?")
+                                              );
+        if (rv != QMessageBox::Yes)
+            return false;
+        const auto manuallyLocatedDiffer = QFileDialog::getOpenFileName(this, tr("Locate diff viewer"));
+        if (manuallyLocatedDiffer.isEmpty())
+            return false;
+        // TODO: store this to in-memory property set so it doesn't need to be queried again for this run.
+        sDiffPath = manuallyLocatedDiffer;
+    }
+
+    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) StreamT;
+    DFG_MODULE_NS(os)::DFG_CLASS_NAME(TemporaryFileStreamT)<StreamT> strmTemp(nullptr, // nullptr = use default temp path
+                                                                              szTempFileNameTemplate,
+                                                                              nullptr, // nullptr = no suffix
+                                                                              ".csv" // extension
+                                                                              );
+    strmTemp.setAutoRemove(false); // To not remove the file while it's being used by diff viewer.
+    strmTemp.stream().m_streamBuffer.m_encodingBuffer.setEncoding(DFG_MODULE_NS(io)::encodingUnknown);
+
+    // TODO: saving can take time -> don't freeze GUI while it is being done.
+    if (!dataModelPtr->save(strmTemp.stream()))
+    { // Saving file unsuccessfull, can't diff.
+        QMessageBox::information(this,
+                                 tr("Unable to diff"),
+                                 tr("Saving current temporary document for diffing failed -> unable to diff"));
+        return false;
+    }
+
+    const QString sEditedFileTempPath = QString::fromUtf8(strmTemp.pathU8().c_str());
+
+    strmTemp.close();
+
+    const bool bStarted = QProcess::startDetached(sDiffPath,
+                                                  QStringList() << dataModelPtr->getFilePath() << sEditedFileTempPath);
+    if (!bStarted)
+    {
+        QMessageBox::information(this, tr("Unable to diff"), tr("Couldn't start diff application from path '%1'").arg(sDiffPath));
+        strmTemp.setAutoRemove(true);
+        return false;
+    }
+    else
+    {
+        m_tempFilePathToRemoveOnExit.push_back(QString::fromUtf8(toCharPtr_raw(strmTemp.pathU8())));
+        return true;
+    }
+}
+
+void DFG_CLASS_NAME(CsvTableView)::setAllowApplicationSettingsUsage(bool b)
+{
+    m_bAllowApplicationSettingsUsage = b;
 }

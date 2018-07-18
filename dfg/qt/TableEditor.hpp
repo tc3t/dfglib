@@ -45,6 +45,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         /** Resizes column widths. */
         void resizeColumnsToView(ColumnResizeStyle style = ColumnResizeStyle_auto);
 
+        void setAllowApplicationSettingsUsage(bool b);
+
     public slots:
         void onSourcePathChanged();
         void onNewSourceOpened();
