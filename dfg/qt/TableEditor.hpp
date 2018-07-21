@@ -31,6 +31,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
     public:
         typedef QWidget BaseClass;
+        typedef DFG_CLASS_NAME(TableEditor) ThisClass;
 
         enum ColumnResizeStyle
         {
@@ -57,6 +58,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public slots:
         void onSourcePathChanged();
         void onNewSourceOpened();
+        void onModifiedStatusChanged(bool);
 
     public:
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spTableView;

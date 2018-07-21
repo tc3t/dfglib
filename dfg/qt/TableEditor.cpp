@@ -22,8 +22,9 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)()
 {
     // Model
     m_spTableModel.reset(new DFG_CLASS_NAME(CsvItemModel));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigSourcePathChanged, this, &DFG_CLASS_NAME(TableEditor)::onSourcePathChanged));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnNewSourceOpened, this, &DFG_CLASS_NAME(TableEditor)::onNewSourceOpened));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigSourcePathChanged, this, &ThisClass::onSourcePathChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
 
     // View
     m_spTableView.reset(new DFG_CLASS_NAME(CsvTableView)(this));
@@ -77,8 +78,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()
 {
     const auto filePath = (m_spTableModel) ? m_spTableModel->getFilePath() : QString();
-    QString prename = (!filePath.isEmpty()) ? QFileInfo(filePath).fileName() + " - " : QString();
+    // Note: [*] is a placeholder for modified-indicator (see QWidget::windowModified)
+    QString prename = (!filePath.isEmpty()) ? QFileInfo(filePath).fileName() + "[*] - " : QString();
     QString title(prename + QCoreApplication::applicationName());
+    setWindowModified(m_spTableModel && m_spTableModel->isModified());
     setWindowTitle(title);
 }
 
@@ -102,6 +105,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
         m_spStatusBar->showMessage(tr("Reading lasted %1 s").arg(model.latestReadTimeInSeconds(), 0, 'g', 4));
     resizeColumnsToView();
     updateWindowTitle();
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onModifiedStatusChanged(const bool b)
+{
+    setWindowModified(b);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnResizeStyle style)
