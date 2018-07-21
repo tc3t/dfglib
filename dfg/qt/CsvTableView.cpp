@@ -1528,3 +1528,15 @@ void DFG_CLASS_NAME(CsvTableView)::setAllowApplicationSettingsUsage(bool b)
 {
     m_bAllowApplicationSettingsUsage = b;
 }
+
+void DFG_CLASS_NAME(CsvTableView)::finishEdits()
+{
+    const auto viewState = state();
+    if (viewState == EditingState)
+    {
+        // For now approximate that focus widget is our editor.
+        auto focusWidget = QApplication::focusWidget();
+        if (focusWidget)
+            focusWidget->clearFocus();
+    }
+}

@@ -132,6 +132,16 @@ namespace
         auto model = (view) ? view->csvModel() : nullptr;
         if (!model)
             return true;
+
+        // Finish edits before checking modified as otherwise ongoing edit whose editor
+        // has not been closed would not be detected.
+        // In practice: user opens file, edits a cell and presses X while cell content editor is active,
+        // without line below:
+        // -> this function would be called before model's setData()-handler
+        // -> Since no setData()-calls have been made, this function gets 'model->isModified() == false'
+        //    and editor closes without confirmation.
+        view->finishEdits();
+
         if (model->isModified())
         {
             const auto existingPath = model->getFilePath();
