@@ -99,13 +99,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_CLASS_NAME(CsvItemModel)();
         ~DFG_CLASS_NAME(CsvItemModel)();
 
-        // Calls saveToFile(m_sFilePath) and if saving is succesfull,
-        // sets m_sFilePath and resets modified flag.
-        // [return] : Path of saved file if successful, empty path otherwise.
-        QString saveToFile();
+        // Calls saveToFile(m_sFilePath)
+        bool saveToFile();
 
-        // Tries to save csv-data to given path. If given path is empty,
-        // the path will be asked from the user.
+        // Tries to save csv-data to given path. If successful, sets path and resets modified flag.
         // [return] : Returns true iff. save is successful.
         bool saveToFile(const QString& sPath);
         bool saveToFile(const QString& sPath, const SaveOptions& options);

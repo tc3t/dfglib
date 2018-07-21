@@ -87,12 +87,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithSignalEmit(
     Q_EMIT sigSourcePathChanged();
 }
 
-QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
 {
-    const bool bSuccess = saveToFile(m_sFilePath);
-    if (bSuccess)
-        m_bModified = false;
-    return (bSuccess) ? m_sFilePath : QString();
+    return saveToFile(m_sFilePath);
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath)
@@ -113,7 +110,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
 
     const bool bSuccess = save(strm, options);
     if (bSuccess)
+    {
         setFilePathWithSignalEmit(sPath);
+        setModifiedStatus(false);
+    }
     return bSuccess;
 }
 
