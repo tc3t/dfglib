@@ -10,6 +10,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QLineEdit>
 #include <QStatusBar>
 #include <QApplication>
+#include <QCloseEvent>
 #include <QDesktopWidget>
 #include <QHeaderView>
 DFG_END_INCLUDE_QT_HEADERS
@@ -110,4 +111,48 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setAllowApplicationSettings
 {
     if (m_spTableView)
         m_spTableView->setAllowApplicationSettingsUsage(b);
+}
+
+namespace
+{
+    static bool handleExitConfirmationAndReturnTrueIfCanExit(DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)* view)
+    {
+        auto model = (view) ? view->csvModel() : nullptr;
+        if (!model)
+            return true;
+        if (model->isModified())
+        {
+            const auto existingPath = model->getFilePath();
+            const QString uiPath = (!existingPath.isEmpty()) ?
+                                QCoreApplication::tr("(path: %1)").arg(existingPath)
+                                : QCoreApplication::tr("(no path exists, it will be asked if saving is chosen)");
+            const auto rv = QMessageBox::question(nullptr,
+                                                      QCoreApplication::tr("Save to file?"),
+                                                      QCoreApplication::tr("Content has been edited, save to file?\n%1").arg(uiPath),
+                                                      QMessageBox::Yes,
+                                                      QMessageBox::No,
+                                                      QMessageBox::Cancel);
+            if (rv == QMessageBox::Cancel)
+                return false;
+
+            if (rv == QMessageBox::Yes)
+                view->save();
+        }
+
+        return true;
+    }
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* event)
+{
+    if (!event)
+    {
+        BaseClass::closeEvent(event);
+        return;
+    }
+
+    if (handleExitConfirmationAndReturnTrueIfCanExit(m_spTableView.get()))
+        event->accept();
+    else
+        event->ignore();
 }

@@ -30,6 +30,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class DFG_CLASS_NAME(TableEditor) : public QWidget
     {
     public:
+        typedef QWidget BaseClass;
+
         enum ColumnResizeStyle
         {
             ColumnResizeStyle_evenlyDistributed,                            // Distributes available width evenly to all columns regardless of their content width.
@@ -46,6 +48,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void resizeColumnsToView(ColumnResizeStyle style = ColumnResizeStyle_auto);
 
         void setAllowApplicationSettingsUsage(bool b);
+
+    protected:
+        void closeEvent(QCloseEvent* event) override;
 
     public slots:
         void onSourcePathChanged();
