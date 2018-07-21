@@ -12,6 +12,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDesktopWidget>
+#include <QFileInfo>
 #include <QHeaderView>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -73,11 +74,21 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString
     return m_spTableModel->openFile(path);
 }
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()
+{
+    const auto filePath = (m_spTableModel) ? m_spTableModel->getFilePath() : QString();
+    QString prename = (!filePath.isEmpty()) ? QFileInfo(filePath).fileName() + " - " : QString();
+    QString title(prename + QCoreApplication::applicationName());
+    setWindowTitle(title);
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSourcePathChanged()
 {
     if (!m_spTableModel || !m_spLineEditSourcePath)
         return;
     m_spLineEditSourcePath->setText(m_spTableModel->getFilePath());
+
+    updateWindowTitle();
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
@@ -90,6 +101,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
     if (m_spStatusBar)
         m_spStatusBar->showMessage(tr("Reading lasted %1 s").arg(model.latestReadTimeInSeconds(), 0, 'g', 4));
     resizeColumnsToView();
+    updateWindowTitle();
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnResizeStyle style)

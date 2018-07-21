@@ -49,6 +49,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setAllowApplicationSettingsUsage(bool b);
 
+        void updateWindowTitle();
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 
