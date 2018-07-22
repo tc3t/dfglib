@@ -59,6 +59,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onSourcePathChanged();
         void onNewSourceOpened();
         void onModifiedStatusChanged(bool);
+        void onSaveCompleted(bool, double);
 
     public:
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spTableView;
