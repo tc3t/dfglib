@@ -203,7 +203,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void initCompletionFeature();
 
-        float latestReadTimeInSeconds() const { return m_readTimeInSeconds; }
+        float latestReadTimeInSeconds()  const { return m_readTimeInSeconds; }
+        float latestWriteTimeInSeconds() const { return m_writeTimeInSeconds; }
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
         // Note: Does not check whether the table has actually changed and always sets the model modified.
@@ -230,6 +231,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void sigModifiedStatusChanged(bool bNewStatus);
         void sigOnNewSourceOpened();
         void sigSourcePathChanged();
+        void sigOnSaveToFileCompleted(bool, double);
 
     protected:
         // Clears internal data. Caller should make sure this call
@@ -248,6 +250,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bResetting;
         bool m_bEnableCompleter;
         float m_readTimeInSeconds;
+        float m_writeTimeInSeconds;
     }; // class CsvItemModel
 
     template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)

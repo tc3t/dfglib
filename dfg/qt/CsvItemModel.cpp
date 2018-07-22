@@ -68,7 +68,8 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
     m_pUndoStack(nullptr),
     m_bResetting(false),
     m_bEnableCompleter(false),
-    m_readTimeInSeconds(-1)
+    m_readTimeInSeconds(-1),
+    m_writeTimeInSeconds(-1)
 {
 }
 
@@ -114,6 +115,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
         setFilePathWithSignalEmit(sPath);
         setModifiedStatus(false);
     }
+    Q_EMIT sigOnSaveToFileCompleted(bSuccess, m_writeTimeInSeconds);
     return bSuccess;
 }
 
@@ -124,6 +126,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const SaveOptions& options)
 {
+    DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) writeTimer;
+
     const QChar cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
     const QChar cEnc = options.enclosingChar();
     const QChar cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
@@ -173,7 +177,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
             strm << sEol;
     }
 
-    return (strm.good());
+    m_writeTimeInSeconds = static_cast<decltype(m_writeTimeInSeconds)>(writeTimer.elapsedWallSeconds());
+
+    return strm.good();
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, SzPtrUtf8R psz)
