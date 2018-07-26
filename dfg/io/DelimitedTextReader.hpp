@@ -742,7 +742,7 @@ public:
 
         static DFG_FORCEINLINE void nakedCellStateHandler(ReadState& rs, CellBuffer& buffer)
         {
-            if (rs == rsLookingForNewData && buffer.sizeInChars() == 1)
+            if (rs == rsLookingForNewData && buffer.sizeInChars() >= 1)
                 rs = rsInNakedCell;
         }
 

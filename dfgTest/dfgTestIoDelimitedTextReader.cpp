@@ -1474,3 +1474,24 @@ TEST(DfgIo, DelimitedTextReader_rnTranslation)
     DelimitedTextReader_rnTranslationImpl<std::false_type, DefaultAppenderT>();
     DelimitedTextReader_rnTranslationImpl<std::false_type, StringViewCAppenderT>();
 }
+
+TEST(DfgIo, DelimitedTextReader_CharAppenderUtf)
+{
+    using namespace DFG_ROOT_NS;
+    typedef DelimReader::CharAppenderUtf<DelimReader::CharBuffer<char>> CharAppenderUtfT;
+    
+    DelimReader::FormatDefinitionSingleChars formatDef('"', '\n', '"');
+    DelimReader::CellData<char, char, DelimReader::CharBuffer<char>, CharAppenderUtfT> cd(formatDef);
+    const char input[] = { static_cast<char>(uint8(199)), ' ', 'a', '\0' };
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(input, DFG_COUNTOF_SZ(input));
+    
+    auto reader = DelimReader::createReader(strm, cd);
+    DelimReader::read(reader, [](const size_t, const size_t, const decltype(cd)&) {});
+
+    const auto& buffer = cd.getBuffer();
+    ASSERT_EQ(4, buffer.size());
+    EXPECT_EQ(-61, buffer[0]);  // 195
+    EXPECT_EQ(-121, buffer[1]); // 135
+    EXPECT_EQ(' ', buffer[2]);
+    EXPECT_EQ('a', buffer[3]);
+}
