@@ -142,6 +142,9 @@
     <ClCompile Include="GeneratedFiles\Release_VC2015\moc_CsvTableView.cpp">
       <Filter>Generated Files\Release_VC2015</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\dfg\qt\QtApplication.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="CsvItemModelExample.qrc">

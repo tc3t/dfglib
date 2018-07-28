@@ -569,6 +569,7 @@
     <ClCompile Include="..\..\dfg\os\memoryMappedFile.cpp" />
     <ClCompile Include="..\..\dfg\qt\CsvItemModel.cpp" />
     <ClCompile Include="..\..\dfg\qt\CsvTableView.cpp" />
+    <ClCompile Include="..\..\dfg\qt\QtApplication.cpp" />
     <ClCompile Include="..\..\dfg\qt\TableEditor.cpp" />
     <ClCompile Include="GeneratedFiles\Debug_VC2010\moc_CsvItemModel.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_VC2013|Win32'">true</ExcludedFromBuild>
