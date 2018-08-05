@@ -29,6 +29,40 @@ DFG_END_INCLUDE_QT_HEADERS
 
 using namespace DFG_MODULE_NS(qt);
 
+namespace
+{
+    enum CsvTableViewPropertyId
+    {
+        CsvTableViewPropertyId_diffProgPath
+    };
+
+    template <CsvTableViewPropertyId ID_T> struct CsvTableViewPropertyDefinition {};
+
+    #define DFG_TEMP_DEFINE_CTV_PROPERTY(ID, RV_TYPE, DEFAULT_FUNC, STR_ID) \
+    template <> struct CsvTableViewPropertyDefinition<ID> \
+    { \
+        typedef RV_TYPE PropertyType; \
+        static PropertyType getDefault()    { return DEFAULT_FUNC(); } \
+        static const char* getStrId()       { return STR_ID; } \
+    }
+
+    template <CsvTableViewPropertyId ID>
+    auto getCsvTableViewProperty(DFG_CLASS_NAME(CsvTableView)* view) -> typename CsvTableViewPropertyDefinition<ID>::PropertyType
+    {
+        typedef CsvTableViewPropertyDefinition<ID> PropDef;
+        typedef typename CsvTableViewPropertyDefinition<ID>::PropertyType ReturnT;
+        if (!view || !view->m_bAllowApplicationSettingsUsage)
+            return PropDef::getDefault();
+        auto settings = DFG_CLASS_NAME(QtApplication)::getApplicationSettings();
+        return (settings) ? settings->value(QString("dfglib/%1").arg(PropDef::getStrId())).value<ReturnT>() : PropDef::getDefault();
+    }
+
+    // Properties
+    DFG_TEMP_DEFINE_CTV_PROPERTY(CsvTableViewPropertyId_diffProgPath, QString, PropertyType, "diffProgPath");
+
+    #undef DFG_TEMP_DEFINE_CTV_PROPERTY
+} // unnamed namespace
+
 DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : BaseClass(pParent),
     m_bAllowApplicationSettingsUsage(false)
 {
@@ -1468,9 +1502,7 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
     if (!DFG_MODULE_NS(os)::isPathFileAvailable(dataModelPtr->getFilePath().toStdWString(), DFG_MODULE_NS(os)::FileModeRead))
         return false;
 
-    auto settings = (m_bAllowApplicationSettingsUsage) ? DFG_CLASS_NAME(QtApplication)::getApplicationSettings() : nullptr;
-
-    QString sDiffPath = (settings) ? settings->value("dfglib/diffProgPath").toString() : QString();
+    auto sDiffPath = getCsvTableViewProperty<CsvTableViewPropertyId_diffProgPath>(this);
 
     if (sDiffPath.isEmpty())
     {
