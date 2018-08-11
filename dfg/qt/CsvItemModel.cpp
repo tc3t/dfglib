@@ -391,7 +391,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
 
     const QFileInfo fileInfo(sDbFilePath);
 
-    if (fileInfo.isReadable())
+    if (fileInfo.isFile() && fileInfo.isReadable())
     {
         sDbFilePath = fileInfo.absoluteFilePath();
         auto rv = readData([&]()
