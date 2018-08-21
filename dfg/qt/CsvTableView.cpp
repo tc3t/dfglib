@@ -6,6 +6,7 @@
 #include "QtApplication.hpp"
 #include "../os.hpp"
 #include "../os/TemporaryFileStream.hpp"
+#include "PropertyHelper.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -36,35 +37,20 @@ namespace
         CsvTableViewPropertyId_diffProgPath
     };
 
-    template <CsvTableViewPropertyId ID_T> struct CsvTableViewPropertyDefinition {};
-
-    #define DFG_TEMP_DEFINE_CTV_PROPERTY(ID, RV_TYPE, DEFAULT_FUNC, STR_ID) \
-    template <> struct CsvTableViewPropertyDefinition<ID> \
-    { \
-        typedef RV_TYPE PropertyType; \
-        static PropertyType getDefault()    { return DEFAULT_FUNC(); } \
-        static const char* getStrId()       { return STR_ID; } \
-    }
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
 
     template <CsvTableViewPropertyId ID>
     auto getCsvTableViewProperty(DFG_CLASS_NAME(CsvTableView)* view) -> typename CsvTableViewPropertyDefinition<ID>::PropertyType
     {
-        typedef CsvTableViewPropertyDefinition<ID> PropDef;
-        typedef typename CsvTableViewPropertyDefinition<ID>::PropertyType ReturnT;
-        if (!view || !view->m_bAllowApplicationSettingsUsage)
-            return PropDef::getDefault();
-        auto settings = DFG_CLASS_NAME(QtApplication)::getApplicationSettings();
-        return (settings) ? settings->value(QString("dfglib/%1").arg(PropDef::getStrId())).value<ReturnT>() : PropDef::getDefault();
+        return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>>(view);
     }
 
     // Properties
-    DFG_TEMP_DEFINE_CTV_PROPERTY(CsvTableViewPropertyId_diffProgPath, QString, PropertyType, "diffProgPath");
+    DFG_QT_DEFINE_OBJECT_PROPERTY("diffProgPath", CsvTableView, CsvTableViewPropertyId_diffProgPath, QString, PropertyType);
 
-    #undef DFG_TEMP_DEFINE_CTV_PROPERTY
 } // unnamed namespace
 
-DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : BaseClass(pParent),
-    m_bAllowApplicationSettingsUsage(false)
+DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : BaseClass(pParent)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -1558,7 +1544,7 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
 
 void DFG_CLASS_NAME(CsvTableView)::setAllowApplicationSettingsUsage(bool b)
 {
-    m_bAllowApplicationSettingsUsage = b;
+    setProperty("dfglib_allow_app_settings_usage", b);
 }
 
 void DFG_CLASS_NAME(CsvTableView)::finishEdits()

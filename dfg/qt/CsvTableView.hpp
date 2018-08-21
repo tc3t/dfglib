@@ -157,8 +157,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
         QStringList m_tempFilePathToRemoveOnExit;
-        bool m_bAllowApplicationSettingsUsage;
-
     };
 
 } } // module namespace
