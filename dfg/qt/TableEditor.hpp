@@ -9,8 +9,11 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
     #include <QStatusBar>
+    #include <QPlainTextEdit>
 DFG_END_INCLUDE_QT_HEADERS
 
+class QDockWidget;
+class QItemSelection;
 class QLineEdit;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
@@ -39,6 +42,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ColumnResizeStyle_auto = ColumnResizeStyle_evenlyDistributed    // Lets TableEditor choose style (note: implementation may change).
         };
 
+        class CellEditor : public QPlainTextEdit
+        {
+        public:
+           typedef QPlainTextEdit BaseClass;
+           CellEditor(QWidget* parent) :
+               BaseClass(parent)
+           {
+           }
+        };
+
         DFG_CLASS_NAME(TableEditor)();
         ~DFG_CLASS_NAME(TableEditor)();
 
@@ -60,12 +73,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onNewSourceOpened();
         void onModifiedStatusChanged(bool);
         void onSaveCompleted(bool, double);
+        void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+        void onCellEditorTextChanged();
+        void onModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles = QVector<int>());
 
     public:
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spTableView;
         std::unique_ptr<DFG_CLASS_NAME(CsvItemModel)> m_spTableModel;
         std::unique_ptr<QLineEdit> m_spLineEditSourcePath;
         std::unique_ptr<DFG_CLASS_NAME(TableEditorStatusBar)> m_spStatusBar;
+        std::unique_ptr<CellEditor> m_spCellEditor;
+        std::unique_ptr<QDockWidget> m_spCellEditorDockWidget;
+        bool m_bHandlingOnCellEditorTextChanged;
     };
 
 } } // module namespace
