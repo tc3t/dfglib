@@ -26,9 +26,20 @@ DFG_END_INCLUDE_QT_HEADERS
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
+QVariant DFG_MODULE_NS(qt)::DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
+{
+    DFG_ASSERT_CORRECTNESS(role != Qt::DisplayRole);
+    if (!index.isValid() || index.column() != m_column)
+        return QVariant();
+    auto displayData = model.data(index);
+    if (m_matcher.isMatchWith(displayData.toString()))
+        return m_highlightBrush;
+    else
+        return QVariant();
+}
+
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
 {
-
     class DFG_CLASS_NAME(CsvTableModelActionCellEdit) : public QUndoCommand
     {
         typedef DFG_CLASS_NAME(CsvItemModel) ModelT;
@@ -56,16 +67,16 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
 
     private:
         ModelT* m_pDataModel;
+        QModelIndex m_index;
         QString m_sOldData;
         QString m_sNewData;
-        QModelIndex m_index;
     }; // DFG_CLASS_NAME(CsvTableModelActionCellEdit)
 
 } } } // unnamed namespace
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
-    m_bModified(false),
     m_pUndoStack(nullptr),
+    m_bModified(false),
     m_bResetting(false),
     m_bEnableCompleter(false),
     m_readTimeInSeconds(-1),
@@ -435,13 +446,25 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
     const int nRow = index.row();
     const int nCol = index.column();
 
-    if ((role == Qt::DisplayRole || role == Qt::EditRole || role == Qt::ToolTipRole) && this->hasIndex(nRow, nCol))
+    if (!this->hasIndex(nRow, nCol))
+        return QVariant();
+
+    if ((role == Qt::DisplayRole || role == Qt::EditRole || role == Qt::ToolTipRole))
     {
         const SzPtrUtf8R p = m_table(nRow, nCol);
         return (p) ? QString::fromUtf8(p.c_str()) : QVariant();
     }
-    else
-        return QVariant();
+    else if (role == Qt::BackgroundRole && !m_highlighters.empty())
+    {
+        const auto hlCount = m_highlighters.size();
+        for(size_t i = 0; i < hlCount; ++i)
+        {
+            auto var = m_highlighters[i].data(*this, index, role);
+            if (var.isValid())
+                return var; // For now supporting only one highlighter per cell.
+        }
+    }
+    return QVariant();
 }
 
 QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
@@ -694,6 +717,17 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setUndoStack(QUndoStack* pStack)
 {
     m_pUndoStack = pStack;
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHighlighter(HighlightDefinition hld)
+{
+    beginResetModel();
+    auto existing = std::find_if(m_highlighters.begin(), m_highlighters.end(), [&](const HighlightDefinition& a) { return hld.m_id == a.m_id; });
+    if (existing != m_highlighters.end())
+        *existing = hld;
+    else
+        m_highlighters.push_back(hld);
+    endResetModel();
 }
 
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS

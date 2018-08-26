@@ -19,6 +19,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QCheckBox>
 #include <QInputDialog>
 #include <QLabel>
+#include <QMessageBox>
 #include <QProcess>
 #include <QSettings>
 DFG_END_INCLUDE_QT_HEADERS

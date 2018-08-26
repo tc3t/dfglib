@@ -7,8 +7,8 @@
 #include "../io/textEncodingTypes.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-#include <QMessageBox>
 #include <QAbstractTableModel>
+#include <QBrush>
 #include <QTextStream>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -40,6 +40,48 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     #define DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS  0
 #endif
 
+    namespace DFG_DETAIL_NS
+    {
+        class StringMatchDefinition
+        {
+        public:
+            StringMatchDefinition(QString matchString, Qt::CaseSensitivity caseSensitivity) :
+                m_matchString(std::move(matchString))
+              , m_caseSensitivity(caseSensitivity)
+            {}
+
+            bool isMatchWith(const QString& s) const
+            {
+                return !m_matchString.isEmpty() && s.contains(m_matchString, m_caseSensitivity);
+            }
+            QString m_matchString;
+            Qt::CaseSensitivity m_caseSensitivity;
+        }; // class StringMatchDefinition
+
+        class HighlightDefinition
+        {
+        public:
+            HighlightDefinition(const QString id,
+                                const int col,
+                                StringMatchDefinition matcher,
+                                QBrush highlightBrush = QBrush(Qt::green, Qt::SolidPattern)
+                                )
+                : m_id(id)
+                , m_column(col)
+                , m_matcher(matcher)
+                , m_highlightBrush(highlightBrush)
+            {}
+
+            QVariant data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const;
+
+            QString m_id;
+            int m_column;
+            StringMatchDefinition m_matcher;
+            QBrush m_highlightBrush;
+        }; // class HighlightDefinition
+
+    } // detail-namespace
+
     // TODO: test
     class DFG_CLASS_NAME(CsvItemModel) : public QAbstractTableModel
     {
@@ -50,6 +92,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef std::ostream StreamT;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
+        typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
+        typedef DFG_DETAIL_NS::StringMatchDefinition StringMatchDefinition;
         
         enum ColType
         {
@@ -210,6 +254,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Note: Does not check whether the table has actually changed and always sets the model modified.
         template <class Func_T> void batchEditNoUndo(Func_T func);
 
+        void setHighlighter(HighlightDefinition hld);
+
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const;
         int columnCount(const QModelIndex& parent = QModelIndex()) const;
@@ -251,6 +297,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bEnableCompleter;
         float m_readTimeInSeconds;
         float m_writeTimeInSeconds;
+        std::vector<HighlightDefinition> m_highlighters;
     }; // class CsvItemModel
 
     template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)
