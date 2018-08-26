@@ -20,7 +20,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QLabel>
 #include <QMessageBox>
 #include <QSpinBox>
-#include <QToolTip>
 DFG_END_INCLUDE_QT_HEADERS
 
 #define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
@@ -160,12 +159,13 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnSaveToFileCompleted, this, &ThisClass::onSaveCompleted));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::dataChanged, this, &ThisClass::onModelDataChanged));
 
     // View
     m_spTableView.reset(new DFG_CLASS_NAME(CsvTableView)(this));
     m_spTableView->setModel(m_spTableModel.get());
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::dataChanged, this, &ThisClass::onModelDataChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
 
     // Source path line edit
     m_spLineEditSourcePath.reset(new QLineEdit());
@@ -219,28 +219,6 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
 
     // Resize widgets
     setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this));
-
-    // Add actions (TODO: consider moving to CsvTableView-class)
-    {
-        {
-            auto pAction = new QAction(tr("Find"), this);
-            pAction->setShortcut(tr("Ctrl+F"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::onFindRequested);
-            addAction(pAction);
-        }
-        {
-            auto pAction = new QAction(tr("Find next"), this);
-            pAction->setShortcut(tr("F3"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::onFindNext);
-            addAction(pAction);
-        }
-        {
-            auto pAction = new QAction(tr("Find previous"), this);
-            pAction->setShortcut(tr("Shift+F3"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::onFindPrevious);
-            addAction(pAction);
-        }
-    }
 
     resizeColumnsToView();
 }
@@ -449,23 +427,13 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onModelDataChanged(const QM
             onSelectionChanged(QItemSelection(indexes[0], indexes[0]), QItemSelection());
 }
 
-int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::getFindColumnIndex() const
-{
-    return m_spFindPanel->m_pColumnSelector->value();
-}
-
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(const QString& text)
 {
-    if (!m_spTableModel || !m_spTableView || text.isEmpty())
+    if (!m_spTableView || !m_spFindPanel)
         return;
 
-    ModelClass::HighlightDefinition hld("te0", getFindColumnIndex(), ModelClass::StringMatchDefinition(text, Qt::CaseInsensitive));
-    m_spTableModel->setHighlighter(std::move(hld));
-
-    const auto currentIndex = m_spTableView->currentIndex();
-    m_currentFindIndex = m_spTableModel->index((currentIndex.isValid()) ? currentIndex.row() : 0,
-                                                getFindColumnIndex());
-    onFindNext();
+    m_spTableView->setFindText(text, m_spFindPanel->m_pColumnSelector->value());
+    m_spTableView->onFindNext();
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindColumnChanged(const int newCol)
@@ -479,32 +447,4 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindRequested()
 {
     if (m_spFindPanel)
         m_spFindPanel->m_pTextEdit->setFocus(Qt::OtherFocusReason);
-}
-
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindNext()
-{
-    if (!m_spTableModel || !m_spFindPanel)
-        return;
-
-    // Note: this does 'column only'-search
-    m_currentFindIndex = m_spTableModel->index(1 + m_currentFindIndex.row(), getFindColumnIndex());
-    const auto indexList = m_spTableModel->match(m_currentFindIndex,
-                                                 Qt::DisplayRole,
-                                                 m_spFindPanel->m_pTextEdit->text(),
-                                                 1, // Search for one match only.
-                                                 Qt::MatchContains | Qt::MatchWrap);
-
-    if (!indexList.isEmpty())
-    {
-        m_spTableView->scrollTo(indexList.front());
-        m_currentFindIndex = indexList.front();
-        m_spTableView->setCurrentIndex(m_currentFindIndex);
-    }
-    else
-        m_currentFindIndex = QModelIndex();
-}
-
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindPrevious()
-{
-    QToolTip::showText(QCursor::pos(), tr("Backward find is on TODO-list, sorry"));
 }

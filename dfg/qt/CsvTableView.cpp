@@ -20,8 +20,10 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QInputDialog>
 #include <QLabel>
 #include <QMessageBox>
+#include <QMetaMethod>
 #include <QProcess>
 #include <QSettings>
+#include <QToolTip>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
@@ -51,7 +53,9 @@ namespace
 
 } // unnamed namespace
 
-DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : BaseClass(pParent)
+DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
+    : BaseClass(pParent)
+    , m_nFindColumnIndex(0)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -183,6 +187,28 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent) : B
         pAction->setShortcut(tr("Ctrl+I"));
         connect(pAction, &QAction::triggered, this, &ThisClass::invertSelection);
         addAction(pAction);
+    }
+
+    // Find actions
+    {
+        {
+            auto pAction = new QAction(tr("Find"), this);
+            pAction->setShortcut(tr("Ctrl+F"));
+            connect(pAction, &QAction::triggered, this, &ThisClass::onFindRequested);
+            addAction(pAction);
+        }
+        {
+            auto pAction = new QAction(tr("Find next"), this);
+            pAction->setShortcut(tr("F3"));
+            connect(pAction, &QAction::triggered, this, &ThisClass::onFindNext);
+            addAction(pAction);
+        }
+        {
+            auto pAction = new QAction(tr("Find previous"), this);
+            pAction->setShortcut(tr("Shift+F3"));
+            connect(pAction, &QAction::triggered, this, &ThisClass::onFindPrevious);
+            addAction(pAction);
+        }
     }
 
     /* Not Implemented
@@ -1558,4 +1584,73 @@ void DFG_CLASS_NAME(CsvTableView)::finishEdits()
         if (focusWidget)
             focusWidget->clearFocus();
     }
+}
+
+int DFG_CLASS_NAME(CsvTableView)::getFindColumnIndex() const
+{
+    return m_nFindColumnIndex;
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
+{
+    static const QMetaMethod findActivatedSignal = QMetaMethod::fromSignal(&ThisClass::sigFindActivated);
+    if (isSignalConnected(findActivatedSignal))
+    {
+        Q_EMIT sigFindActivated();
+    }
+    else
+    {
+        // TODO: use find panel here.
+        bool bOk;
+        auto s = QInputDialog::getText(this, tr("Find"), tr("Set text to search for"), QLineEdit::Normal, QString(), &bOk);
+        if (bOk)
+            setFindText(s, m_nFindColumnIndex);
+    }
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onFindNext()
+{
+    if (m_findText.isEmpty())
+        return;
+    auto pBaseModel = csvModel();
+    if (!pBaseModel)
+        return;
+
+    // Note: this does 'column only'-search
+    m_currentFindIndex = pBaseModel->index(1 + m_currentFindIndex.row(), getFindColumnIndex());
+    const auto indexList = pBaseModel->match(m_currentFindIndex,
+                                                 Qt::DisplayRole,
+                                                 m_findText,
+                                                 1, // Search for one match only.
+                                                 Qt::MatchContains | Qt::MatchWrap);
+
+    if (!indexList.isEmpty())
+    {
+        scrollTo(indexList.front());
+        m_currentFindIndex = indexList.front();
+        setCurrentIndex(m_currentFindIndex);
+    }
+    else
+        m_currentFindIndex = QModelIndex();
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onFindPrevious()
+{
+    QToolTip::showText(QCursor::pos(), tr("Backward find is on TODO-list, sorry"));
+}
+
+void DFG_CLASS_NAME(CsvTableView)::setFindText(QString s, const int col)
+{
+    m_findText = std::move(s);
+    m_nFindColumnIndex = col;
+    auto pBaseModel = csvModel();
+    if (!pBaseModel)
+        return;
+
+    CsvModel::HighlightDefinition hld("te0", getFindColumnIndex(), CsvModel::StringMatchDefinition(m_findText, Qt::CaseInsensitive));
+    pBaseModel->setHighlighter(std::move(hld));
+
+    const auto currentIndex = this->currentIndex();
+    m_currentFindIndex = pBaseModel->index((currentIndex.isValid()) ? currentIndex.row() : 0,
+                                                getFindColumnIndex());
 }

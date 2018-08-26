@@ -84,6 +84,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void finishEdits();
 
+        int getFindColumnIndex() const;
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -130,6 +132,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool generateContent();
 
         bool diffWithUnmodified();
+
+        void onFindRequested();
+        void onFindNext();
+        void onFindPrevious();
+
+        void setFindText(QString s, const int col);
+
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);
@@ -150,6 +159,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void deleteSelected();
         */
 
+    signals:
+        void sigFindActivated();
+
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
 
@@ -157,6 +169,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
         QStringList m_tempFilePathToRemoveOnExit;
+        QModelIndex m_currentFindIndex;
+        QString m_findText;
+        int m_nFindColumnIndex;
     };
 
 } } // module namespace

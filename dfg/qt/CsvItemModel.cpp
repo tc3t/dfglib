@@ -29,7 +29,7 @@ const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 QVariant DFG_MODULE_NS(qt)::DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
 {
     DFG_ASSERT_CORRECTNESS(role != Qt::DisplayRole);
-    if (!index.isValid() || index.column() != m_column)
+    if (!index.isValid() || index.column() != m_column || role != Qt::BackgroundRole)
         return QVariant();
     auto displayData = model.data(index);
     if (m_matcher.isMatchWith(displayData.toString()))
@@ -72,7 +72,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
         QString m_sNewData;
     }; // DFG_CLASS_NAME(CsvTableModelActionCellEdit)
 
-} } } // unnamed namespace
+} } } // dfg::qt::unnamed_namespace
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
     m_pUndoStack(nullptr),
