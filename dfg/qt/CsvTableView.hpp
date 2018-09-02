@@ -86,6 +86,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         int getFindColumnIndex() const;
 
+        void onFind(const bool forward);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);

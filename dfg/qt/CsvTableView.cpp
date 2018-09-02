@@ -1608,7 +1608,7 @@ void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
     }
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onFindNext()
+void DFG_CLASS_NAME(CsvTableView)::onFind(const bool forward)
 {
     if (m_findText.isEmpty())
         return;
@@ -1640,7 +1640,7 @@ void DFG_CLASS_NAME(CsvTableView)::onFindNext()
                 return currentIndex();
         }();
 
-    const auto found = pBaseModel->findNextHighlighterMatch(findSeed, CsvModel::FindDirectionForward);
+    const auto found = pBaseModel->findNextHighlighterMatch(findSeed, (forward) ? CsvModel::FindDirectionForward : CsvModel::FindDirectionBackward);
 
     if (found.isValid())
     {
@@ -1652,9 +1652,14 @@ void DFG_CLASS_NAME(CsvTableView)::onFindNext()
         m_latestFoundIndex = QModelIndex();
 }
 
+void DFG_CLASS_NAME(CsvTableView)::onFindNext()
+{
+    onFind(true);
+}
+
 void DFG_CLASS_NAME(CsvTableView)::onFindPrevious()
 {
-    QToolTip::showText(QCursor::pos(), tr("Backward find is on TODO-list, sorry"));
+    onFind(false);
 }
 
 void DFG_CLASS_NAME(CsvTableView)::setFindText(QString s, const int col)
