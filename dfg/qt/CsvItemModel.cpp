@@ -29,7 +29,8 @@ const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 QVariant DFG_MODULE_NS(qt)::DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
 {
     DFG_ASSERT_CORRECTNESS(role != Qt::DisplayRole);
-    if (!index.isValid() || index.column() != m_column || role != Qt::BackgroundRole)
+    // Negative column setting is interpreted as 'match any'.
+    if (!index.isValid() || (m_nColumn >= 0 && index.column() != m_nColumn) || role != Qt::BackgroundRole)
         return QVariant();
     auto displayData = model.data(index);
     if (m_matcher.isMatchWith(displayData.toString()))
@@ -728,6 +729,127 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHighlighter(HighlightDe
     else
         m_highlighters.push_back(hld);
     endResetModel();
+}
+
+QModelIndexList DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::match(const QModelIndex& start, int role, const QVariant& value, const int hits, const Qt::MatchFlags flags) const
+{
+    // match() is not adequate for needed find functionality (e.g. misses backward find, https://bugreports.qt.io/browse/QTBUG-344)
+	// so find implementation is not using match().
+    return BaseClass::match(start, role, value, hits, flags);
+}
+
+QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::nextCellByFinderAdvance(const QModelIndex& seedIndex, const FindDirection direction, const FindAdvanceStyle advanceStyle) const
+{
+    int r = Max(0, seedIndex.row());
+    int c = Max(0, seedIndex.column());
+    nextCellByFinderAdvance(r, c, direction, advanceStyle);
+    return index(r, c);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::nextCellByFinderAdvance(int& r, int& c, const FindDirection direction, const FindAdvanceStyle advanceStyle) const
+{
+    if (advanceStyle == FindAdvanceStyleRowIncrement)
+    {
+        const int modifier = (direction == FindDirectionForward) ? 1 : -1;
+        r += modifier;
+    }
+    else if (advanceStyle == FindAdvanceStyleLinear)
+    {
+        if (direction == FindDirectionForward)
+        {
+            if (c + 1 < getColumnCount())
+                c++;
+            else
+            {
+                r = r+1;
+                c = 0;
+            }
+        }
+        else // case: backward direction
+        {
+            if (c == 0)
+            {
+                r = r-1;
+                c = getColumnCount() - 1;
+            }
+            else
+                c--;
+        }
+    }
+    else
+    {
+        DFG_ASSERT_IMPLEMENTED(false);
+    }
+
+    // Wrapping
+    if (r >= getRowCount())
+    {
+        r = 0;
+        c = 0;
+    }
+    else if (r < 0)
+    {
+        r = getRowCount() - 1;
+        c = getColumnCount() - 1;
+    }
+}
+
+auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::wrappedDistance(const QModelIndex& from, const QModelIndex& to, const FindDirection direction) const -> LinearIndex
+{
+    if (!from.isValid() || !to.isValid())
+        return 0;
+    const auto fromIndex = DFG_ROOT_NS::pairIndexToLinear<LinearIndex>(from.row(), from.column(), getColumnCount());
+    const auto toIndex = DFG_ROOT_NS::pairIndexToLinear<LinearIndex>(to.row(), to.column(), getColumnCount());
+    if (direction == FindDirectionForward)
+    {
+        if (toIndex >= fromIndex)
+            return toIndex - fromIndex;
+        else
+            return LinearIndex(getColumnCount()) * getRowCount() - (fromIndex - toIndex);
+    }
+    else // case: backward find
+    {
+        if (toIndex <= fromIndex)
+            return fromIndex - toIndex;
+        else
+            return LinearIndex(getColumnCount()) * getRowCount() - (toIndex - fromIndex);
+    }
+}
+
+QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findNextHighlighterMatch(QModelIndex seedIndex, // Seed which is advanced before doing first actual match.
+                                                                                      const FindDirection direction)
+{
+    if (m_highlighters.empty())
+        return QModelIndex();
+    if (!seedIndex.isValid())
+        seedIndex = index(0, 0);
+
+    const auto usedHighlighter = m_highlighters.front();
+    const auto advanceStyle = (usedHighlighter.m_nColumn >= 0) ? FindAdvanceStyleRowIncrement : FindAdvanceStyleLinear;
+    const auto matcher = usedHighlighter.matcher();
+
+    auto searchIndex = nextCellByFinderAdvance(seedIndex, direction, advanceStyle);
+
+    const auto& table = m_table;
+
+    const auto isMatchWith = [&](const QModelIndex& index)
+    {
+        return matcher.isMatchWith(table(index.row(), index.column()));
+    };
+
+   if (searchIndex == seedIndex)
+       return (isMatchWith(searchIndex)) ? searchIndex : QModelIndex();
+
+    auto nextWrappedDistance = wrappedDistance(seedIndex, searchIndex, direction);
+    decltype(nextWrappedDistance) previousWrappedDistance = -1;
+    while (previousWrappedDistance < nextWrappedDistance)
+    {
+        previousWrappedDistance = nextWrappedDistance;
+        if (isMatchWith(searchIndex))
+            return searchIndex;
+        searchIndex = nextCellByFinderAdvance(searchIndex, direction, advanceStyle);
+        nextWrappedDistance = wrappedDistance(seedIndex, searchIndex, direction);
+    }
 }
 
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS

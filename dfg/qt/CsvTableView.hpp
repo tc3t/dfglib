@@ -169,7 +169,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
         QStringList m_tempFilePathToRemoveOnExit;
-        QModelIndex m_currentFindIndex;
+        QModelIndex m_latestFoundIndex; // Invalid if doing first find.
         QString m_findText;
         int m_nFindColumnIndex;
     };

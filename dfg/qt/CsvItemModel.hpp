@@ -54,6 +54,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 return !m_matchString.isEmpty() && s.contains(m_matchString, m_caseSensitivity);
             }
+
+            bool isMatchWith(const StringViewSzUtf8 sv) const
+            {
+                return !m_matchString.isEmpty() && QString::fromUtf8(toCharPtr_raw(sv.data())).contains(m_matchString, m_caseSensitivity);
+            }
+
             QString m_matchString;
             Qt::CaseSensitivity m_caseSensitivity;
         }; // class StringMatchDefinition
@@ -67,15 +73,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                 QBrush highlightBrush = QBrush(Qt::green, Qt::SolidPattern)
                                 )
                 : m_id(id)
-                , m_column(col)
+                , m_nColumn(col)
                 , m_matcher(matcher)
                 , m_highlightBrush(highlightBrush)
             {}
 
             QVariant data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const;
 
+            const StringMatchDefinition& matcher() const { return m_matcher; }
+
             QString m_id;
-            int m_column;
+            int m_nColumn;
             StringMatchDefinition m_matcher;
             QBrush m_highlightBrush;
         }; // class HighlightDefinition
@@ -89,6 +97,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
         static const QString s_sEmpty;
         typedef QAbstractTableModel BaseClass;
+        typedef int64 LinearIndex; // LinearIndex guarantees that LinearIndex(rowCount()) * LinearIndex(columnCount()) does not overflow.
         typedef std::ostream StreamT;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
@@ -106,6 +115,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             CompleterTypeNone,
             CompleterTypeTexts,
             CompleterTypeTextsListItems
+        };
+
+        enum FindDirection
+        {
+            FindDirectionForward,
+            FindDirectionBackward
+        };
+
+        enum FindAdvanceStyle
+        {
+            FindAdvanceStyleLinear,
+            FindAdvanceStyleRowIncrement
         };
 
         struct ColInfo
@@ -256,6 +277,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setHighlighter(HighlightDefinition hld);
 
+        // Finds next match.
+        QModelIndex findNextHighlighterMatch(QModelIndex seedIndex, // Seed which is advanced before doing first actual match.
+                                             FindDirection direction = FindDirectionForward);
+
+        QModelIndex nextCellByFinderAdvance(const QModelIndex& seedIndex, const FindDirection direction, const FindAdvanceStyle advanceStyle) const;
+        void nextCellByFinderAdvance(int& r, int& c, const FindDirection direction, const FindAdvanceStyle advanceStyle) const;
+
+        LinearIndex wrappedDistance(const QModelIndex& from, const QModelIndex& to, const FindDirection direction) const;
+
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const;
         int columnCount(const QModelIndex& parent = QModelIndex()) const;
@@ -267,6 +297,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool removeRows(int position, int rows, const QModelIndex& parent = QModelIndex());
         bool insertColumns(int position, int columns, const QModelIndex& parent = QModelIndex());
         bool removeColumns(int position, int columns, const QModelIndex& parent = QModelIndex());
+        QModelIndexList match(const QModelIndex& start, int role, const QVariant& value, int hits, Qt::MatchFlags flags) const override;
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
         QStringList mimeTypes() const;
         QMimeData* mimeData(const QModelIndexList& indexes) const;

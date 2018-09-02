@@ -1593,7 +1593,7 @@ int DFG_CLASS_NAME(CsvTableView)::getFindColumnIndex() const
 
 void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
 {
-    static const QMetaMethod findActivatedSignal = QMetaMethod::fromSignal(&ThisClass::sigFindActivated);
+    const QMetaMethod findActivatedSignal = QMetaMethod::fromSignal(&ThisClass::sigFindActivated);
     if (isSignalConnected(findActivatedSignal))
     {
         Q_EMIT sigFindActivated();
@@ -1612,26 +1612,44 @@ void DFG_CLASS_NAME(CsvTableView)::onFindNext()
 {
     if (m_findText.isEmpty())
         return;
+
     auto pBaseModel = csvModel();
     if (!pBaseModel)
         return;
 
-    // Note: this does 'column only'-search
-    m_currentFindIndex = pBaseModel->index(1 + m_currentFindIndex.row(), getFindColumnIndex());
-    const auto indexList = pBaseModel->match(m_currentFindIndex,
-                                                 Qt::DisplayRole,
-                                                 m_findText,
-                                                 1, // Search for one match only.
-                                                 Qt::MatchContains | Qt::MatchWrap);
-
-    if (!indexList.isEmpty())
+    // This to prevent setting invalid find column from resetting view (e.g. scroll to top).
+    if (getFindColumnIndex() >= pBaseModel->getColumnCount())
     {
-        scrollTo(indexList.front());
-        m_currentFindIndex = indexList.front();
-        setCurrentIndex(m_currentFindIndex);
+        QToolTip::showText(QCursor::pos(), tr("Find column index is invalid"));
+        return;
+    }
+
+    const auto findSeed = [&]()
+        {
+            if (m_latestFoundIndex.isValid())
+                return m_latestFoundIndex;
+            else if (getFindColumnIndex() >= 0)
+            {
+                const auto current = currentIndex();
+                if (current.isValid())
+                    return pBaseModel->index(current.row(), getFindColumnIndex());
+                else
+                    return pBaseModel->index(0, getFindColumnIndex()); // Might need to improve this e.g. to return cell from top left corner of visible rect.
+            }
+            else
+                return currentIndex();
+        }();
+
+    const auto found = pBaseModel->findNextHighlighterMatch(findSeed, CsvModel::FindDirectionForward);
+
+    if (found.isValid())
+    {
+        m_latestFoundIndex = found;
+        scrollTo(m_latestFoundIndex);
+        setCurrentIndex(m_latestFoundIndex);
     }
     else
-        m_currentFindIndex = QModelIndex();
+        m_latestFoundIndex = QModelIndex();
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onFindPrevious()
@@ -1650,7 +1668,5 @@ void DFG_CLASS_NAME(CsvTableView)::setFindText(QString s, const int col)
     CsvModel::HighlightDefinition hld("te0", getFindColumnIndex(), CsvModel::StringMatchDefinition(m_findText, Qt::CaseInsensitive));
     pBaseModel->setHighlighter(std::move(hld));
 
-    const auto currentIndex = this->currentIndex();
-    m_currentFindIndex = pBaseModel->index((currentIndex.isValid()) ? currentIndex.row() : 0,
-                                                getFindColumnIndex());
+    m_latestFoundIndex = QModelIndex(); // Reset find pos.
 }

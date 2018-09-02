@@ -136,6 +136,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
             l->addWidget(new QLabel("Column", this), 0, 2);
             m_pColumnSelector = new QSpinBox(this);
+            m_pColumnSelector->setMinimum(-1);
+            m_pColumnSelector->setValue(-1);
             l->addWidget(m_pColumnSelector, 0, 3);
 
             // TODO: match type (wildcard, regexp...)
