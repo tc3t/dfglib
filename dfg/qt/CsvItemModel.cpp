@@ -852,6 +852,7 @@ QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findNextHighlighter
         searchIndex = nextCellByFinderAdvance(searchIndex, direction, advanceStyle);
         nextWrappedDistance = wrappedDistance(seedIndex, searchIndex, direction);
     }
+    return QModelIndex();
 }
 
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
