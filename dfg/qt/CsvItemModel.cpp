@@ -785,12 +785,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::nextCellByFinderAdvance(in
     if (r >= getRowCount())
     {
         r = 0;
-        c = 0;
+        if (advanceStyle == FindAdvanceStyleLinear)
+            c = 0;
     }
     else if (r < 0)
     {
         r = getRowCount() - 1;
-        c = getColumnCount() - 1;
+        if (advanceStyle == FindAdvanceStyleLinear)
+            c = getColumnCount() - 1;
     }
 }
 
