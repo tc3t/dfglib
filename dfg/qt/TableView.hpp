@@ -20,27 +20,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         }
 
-        static void invertSelection(QTableView* pTable)
+        static void invertSelectionStatic(QTableView* pTable)
         {
             const auto pModel = (pTable) ? pTable->model() : nullptr;
-            if (pModel == nullptr)
-                return;
-            const auto rowCount = pModel->rowCount();
-            const auto colCount = pModel->columnCount();
-            auto pSelectionModel = pTable->selectionModel();
-            for (int r = 0; r<rowCount; ++r)
-            {
-                for (int c = 0; c<colCount; ++c)
-                {
-                    QModelIndex index = pModel->index(r, c);
-                    pSelectionModel->select(index, QItemSelectionModel::Toggle);
-                }
-            }
+            const auto pSelectionModel = (pTable) ? pTable->selectionModel() : nullptr;
+            if (!pSelectionModel || !pModel || pModel->rowCount() == 0 || pModel->columnCount() == 0)
+                 return;
+            pSelectionModel->select(QItemSelection(pModel->index(0, 0), pModel->index(pModel->rowCount() - 1, pModel->columnCount() - 1)),
+                                    QItemSelectionModel::Toggle);
         }
 
         void invertSelection()
         {
-            invertSelection(this);
+            invertSelectionStatic(this);
         }
 
         int getSelectedItemCount() const { return getSelectedItemCount(this); }
