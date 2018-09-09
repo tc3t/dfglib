@@ -19,6 +19,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QHeaderView>
 #include <QLabel>
 #include <QMessageBox>
+#include <QItemSelection>
+#include <QItemSelectionModel>
 #include <QSpinBox>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -284,7 +286,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
 {
     DFG_UNUSED(selected);
     DFG_UNUSED(deselected);
-    if (m_spCellEditor && m_spTableView && m_spTableModel)
+    int selectedCount = -1;
+
+    if (m_spCellEditor && m_spTableView && m_spTableModel && (selectedCount = m_spTableView->getSelectedItemCount()) == 1)
     {
         const QModelIndexList& indexes = m_spTableView->getSelectedItemIndexes(m_spTableView->getProxyModelPtr());
         // Block signals from edit to prevent "text edited" signals from non-user edits.
@@ -311,6 +315,21 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
             m_spCellEditor->setEnabled(false);
             m_spCellEditorDockWidget->setWindowTitle(tr("Cell edit"));
         }
+    }
+
+    // Update status bar
+    if (m_spStatusBar)
+    {
+        if (selectedCount < 0)
+            selectedCount =  m_spTableView->getSelectedItemCount();
+        if (!m_spSelectionStatusInfo)
+        {
+            m_spSelectionStatusInfo.reset(new QLabel(this));
+            m_spStatusBar->addPermanentWidget(m_spSelectionStatusInfo.get());
+        }
+
+        // Trailing spaces are on purpose to put some margin
+        m_spSelectionStatusInfo->setText(tr("Selected count: %1  ").arg(selectedCount));
     }
 }
 

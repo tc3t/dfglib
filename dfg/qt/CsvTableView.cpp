@@ -491,17 +491,7 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::getFirstSelectedItem(QAbstractProxyMod
 
 void DFG_CLASS_NAME(CsvTableView)::invertSelection()
 {
-    const auto pModel = model();
-    if (pModel == nullptr)
-        return;
-    for (int r = 0; r<pModel->rowCount(); ++r)
-    {
-        for (int c = 0; c<pModel->columnCount(); ++c)
-        {
-            QModelIndex index = pModel->index(r, c);
-            selectionModel()->select(index, QItemSelectionModel::Toggle);
-        }
-    }
+    BaseClass::invertSelection();
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::isRowMode() const
