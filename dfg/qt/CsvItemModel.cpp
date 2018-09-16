@@ -344,6 +344,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
     m_bResetting = false;
 
     m_readTimeInSeconds = static_cast<decltype(m_readTimeInSeconds)>(readTimer.elapsedWallSeconds());
+    if (m_pUndoStack)
+        m_pUndoStack->clear();
     Q_EMIT sigOnNewSourceOpened();
 
     return true;
