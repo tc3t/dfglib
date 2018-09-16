@@ -164,10 +164,12 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnSaveToFileCompleted, this, &ThisClass::onSaveCompleted));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::dataChanged, this, &ThisClass::onModelDataChanged));
+    m_spTableModel->setProperty("dfglib_allow_app_settings_usage", true);
 
     // View
     m_spTableView.reset(new DFG_CLASS_NAME(CsvTableView)(this));
     m_spTableView->setModel(m_spTableModel.get());
+    m_spTableView->setProperty("dfglib_allow_app_settings_usage", true);
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
 

@@ -133,6 +133,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {
             ColInfo(QString sName = "", ColType type = ColTypeText, CompleterType complType = CompleterTypeNone) :
                 m_name(sName), m_type(type), m_completerType(complType) {}
+
+            bool hasCompleter() const { return m_spCompleter.get() != nullptr; }
+
             QString m_name;
             ColType m_type;
             CompleterType m_completerType;
@@ -325,7 +328,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString m_sFilePath;
         bool m_bModified;
         bool m_bResetting;
-        bool m_bEnableCompleter;
         float m_readTimeInSeconds;
         float m_writeTimeInSeconds;
         std::vector<HighlightDefinition> m_highlighters;

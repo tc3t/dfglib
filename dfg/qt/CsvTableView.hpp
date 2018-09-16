@@ -141,6 +141,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setFindText(QString s, const int col);
 
+        void onNewSourceOpened();
+
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);
@@ -166,6 +168,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
+
+    private:
+        template <class Func_T>
+        void forEachCompleterEnabledColumnIndex(Func_T func);
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;

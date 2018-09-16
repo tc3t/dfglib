@@ -7,6 +7,8 @@
 #include "../os.hpp"
 #include "../os/TemporaryFileStream.hpp"
 #include "PropertyHelper.hpp"
+#include "connectHelper.hpp"
+#include "CsvTableViewCompleterDelegate.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -17,6 +19,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QCheckBox>
+#include <QCompleter>
 #include <QInputDialog>
 #include <QLabel>
 #include <QMessageBox>
@@ -410,6 +413,7 @@ void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
         if (pCsvModel)
             pCsvModel->setUndoStack(&m_spUndoStack->item());
     }
+    DFG_QT_VERIFY_CONNECT(connect(csvModel(), &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
 }
 
 DFG_CLASS_NAME(CsvItemModel)* DFG_CLASS_NAME(CsvTableView)::csvModel()
@@ -890,8 +894,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QComboBox>
     #include <QStyledItemDelegate>
 DFG_END_INCLUDE_QT_HEADERS
-
-#include "connectHelper.hpp"
 
 namespace
 {
@@ -1664,4 +1666,43 @@ void DFG_CLASS_NAME(CsvTableView)::setFindText(QString s, const int col)
     pBaseModel->setHighlighter(std::move(hld));
 
     m_latestFoundIndex = QModelIndex(); // Reset find pos.
+}
+
+template <class Func_T>
+void DFG_CLASS_NAME(CsvTableView)::forEachCompleterEnabledColumnIndex(Func_T func)
+{
+    auto pModel = csvModel();
+    if (pModel)
+    {
+        const auto nColCount = pModel->getColumnCount();
+        for (int i = 0; i < nColCount; ++i)
+        {
+            auto pColInfo = pModel->getColInfo(i);
+            if (pColInfo->hasCompleter())
+                func(i, pColInfo);
+        }
+    }
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
+{
+    forEachCompleterEnabledColumnIndex([&](const int nCol, CsvModel::ColInfo* pColInfo)
+    {
+        typedef DFG_CLASS_NAME(CsvTableViewCompleterDelegate) DelegateClass;
+        if (pColInfo)
+        {
+            auto existingColumnDelegate = qobject_cast<DelegateClass*>(this->itemDelegateForColumn(nCol));
+            // Note: delegates live in 'this', but actual completers live in model. These custom delegates will be
+            // used on all columns for which completion has been enabled on any of the models opened, but actual completer
+            // objects will be available only from current model; in other columns the weak reference to completer object
+            // will be null and the delegate fallbacks to behaviour without completer.
+            if (!existingColumnDelegate)
+            {
+                auto* pDelegate = new DFG_CLASS_NAME(CsvTableViewCompleterDelegate)(this, pColInfo->m_spCompleter.get());
+                setItemDelegateForColumn(nCol, pDelegate); // Does not transfer ownership, delegate is parent owned by 'this'.
+            }
+            else // If there already is an delegate, update the completer.
+                existingColumnDelegate->m_spCompleter = pColInfo->m_spCompleter.get();
+        }
+    });
 }

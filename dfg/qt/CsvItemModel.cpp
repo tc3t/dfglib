@@ -1,6 +1,7 @@
 #include "../buildConfig.hpp" // To get rid of C4996 "Function call with parameters that may be unsafe" in MSVC.
 #include "CsvItemModel.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "PropertyHelper.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QUndoStack>
@@ -23,6 +24,45 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <boost/range/irange.hpp>
 #include "../io/OfStream.hpp"
 #include "../time/timerCpu.hpp"
+#include "../cont/SetVector.hpp"
+
+namespace
+{
+    enum CsvItemModelPropertyId
+    {
+        CsvItemModelPropertyId_completerEnabledColumnIndexes
+    };
+
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvItemModel);
+
+    // Properties
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvItemModel_completerEnabledColumnIndexes",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_completerEnabledColumnIndexes,
+                                  QStringList,
+                                  PropertyType);
+
+    template <CsvItemModelPropertyId ID>
+    auto getCsvItemModelProperty(DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
+    {
+        return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>>(pModel);
+    }
+
+    class Completer : public QCompleter
+    {
+    public:
+        typedef QCompleter BaseClass;
+
+        Completer(QObject* parent) :
+            BaseClass(parent)
+        {}
+
+        ~Completer()
+        {
+
+        }
+    };
+}
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
@@ -79,7 +119,6 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
     m_pUndoStack(nullptr),
     m_bModified(false),
     m_bResetting(false),
-    m_bEnableCompleter(false),
     m_readTimeInSeconds(-1),
     m_writeTimeInSeconds(-1)
 {
@@ -261,6 +300,26 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
 
     tableFiller();
 
+    const auto completerEnabledColumnsStrItems = getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledColumnIndexes>(this);
+    const auto completerEnabledInAll = (completerEnabledColumnsStrItems.size() == 1 && completerEnabledColumnsStrItems[0].trimmed() == "*");
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SetVector)<int> completerEnabledColumns;
+
+    if (!completerEnabledInAll)
+    {
+        for(auto iter = completerEnabledColumnsStrItems.cbegin(), iterEnd = completerEnabledColumnsStrItems.cend(); iter != iterEnd; ++iter)
+        {
+            bool ok = false;
+            const auto nCol = iter->toInt(&ok);
+            if (ok)
+                completerEnabledColumns.insert(nCol);
+        }
+    }
+
+    const auto isCompleterEnabledInColumn = [&](const int nCol)
+            {
+                return completerEnabledInAll || completerEnabledColumns.hasKey(nCol);
+            };
+
     // Set headers.
     const auto nMaxColCount = m_table.colCountByMaxColIndex();
     m_vecColInfo.reserve(nMaxColCount);
@@ -268,9 +327,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
     {
         SzPtrUtf8R p = m_table(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
         m_vecColInfo.push_back(ColInfo((p) ? QString::fromUtf8(p.c_str()) : QString()));
-        if (m_bEnableCompleter)
+        if (isCompleterEnabledInColumn(c))
         {
-            m_vecColInfo.back().m_spCompleter.reset(new QCompleter(this));
+            m_vecColInfo.back().m_spCompleter.reset(new Completer(this));
             m_vecColInfo.back().m_spCompleter->setCaseSensitivity(Qt::CaseInsensitive);
             m_vecColInfo.back().m_completerType = CompleterTypeTexts;
         }
@@ -278,8 +337,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
     // Since the header is stored separately in this model, remove it from the table.
     m_table.removeRows(0, 1);
 
-    if (m_bEnableCompleter)
-        initCompletionFeature();
+    initCompletionFeature();
 
     m_bModified = false;
     endResetModel();
@@ -297,6 +355,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
     
     m_table.forEachFwdColumnIndex([&](const int nCol)
     {
+        auto pColInfo = getColInfo(nCol);
+        if (!pColInfo || !pColInfo->hasCompleter())
+            return;
         if (!isValidIndex(vecCompletionSet, nCol))
             vecCompletionSet.resize(nCol + 1);
         auto& completionSetForCurrentCol = vecCompletionSet[nCol];

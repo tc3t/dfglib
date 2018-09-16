@@ -29,13 +29,15 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableView.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/QtApplication.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableEditor.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/os/memoryMappedFile.cpp
+        $$_PRO_FILE_PWD_/../../dfg/os/memoryMappedFile.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.cpp
 
 HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableView.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/QtApplication.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableEditor.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/PropertyHelper.hpp
+        $$_PRO_FILE_PWD_/../../dfg/qt/PropertyHelper.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.hpp
 
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../externals/
