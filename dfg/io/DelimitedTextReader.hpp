@@ -1309,7 +1309,7 @@ public:
     {
         const auto pData = DFG_ROOT_NS::ptrToContiguousMemory(input);
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream_T)<Char_T> strm(pData, input.size());
-        readRow<Char_T>(strm, cSeparator, cEnclosing, -1, ihFunc);
+        readRow<Char_T>(strm, cSeparator, cEnclosing, s_nMetaCharNone, ihFunc);
     }
 
     template <class Char_T, class InputRange_T, class Cont_T>
