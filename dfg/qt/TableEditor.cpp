@@ -261,6 +261,20 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSourcePathChanged()
     updateWindowTitle();
 }
 
+namespace
+{
+    void setCellEditorToNoSelectionState(QPlainTextEdit* pEditor, QDockWidget* pDockWidget)
+    {
+        if (pEditor)
+        {
+            pEditor->setPlainText("");
+            pEditor->setEnabled(false);
+        }
+        if (pDockWidget)
+            pDockWidget->setWindowTitle(pDockWidget->tr("Cell edit"));
+    }
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
 {
     if (!m_spTableModel)
@@ -270,6 +284,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
         m_spLineEditSourcePath->setText(model.getFilePath());
     if (m_spStatusBar)
         m_spStatusBar->showMessage(tr("Reading lasted %1 s").arg(model.latestReadTimeInSeconds(), 0, 'g', 4));
+    setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
     resizeColumnsToView();
     updateWindowTitle();
 }
@@ -313,9 +328,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
         }
         else
         {
-            m_spCellEditor->setPlainText("");
-            m_spCellEditor->setEnabled(false);
-            m_spCellEditorDockWidget->setWindowTitle(tr("Cell edit"));
+            setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
         }
     }
 
