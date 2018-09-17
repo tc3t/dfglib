@@ -40,7 +40,8 @@ namespace
 {
     enum CsvTableViewPropertyId
     {
-        CsvTableViewPropertyId_diffProgPath
+        CsvTableViewPropertyId_diffProgPath,
+        CsvTableViewPropertyId_initialScrollPosition
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
@@ -53,6 +54,7 @@ namespace
 
     // Properties
     DFG_QT_DEFINE_OBJECT_PROPERTY("diffProgPath", CsvTableView, CsvTableViewPropertyId_diffProgPath, QString, PropertyType);
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_initialScrollPosition", CsvTableView, CsvTableViewPropertyId_initialScrollPosition, QString, PropertyType);
 
 } // unnamed namespace
 
@@ -1705,4 +1707,8 @@ void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
                 existingColumnDelegate->m_spCompleter = pColInfo->m_spCompleter.get();
         }
     });
+
+    const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
+    if (scrollPos == "bottom")
+        scrollToBottom();
 }
