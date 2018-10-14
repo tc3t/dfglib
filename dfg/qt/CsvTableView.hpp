@@ -5,8 +5,18 @@
 #include "../cont/TorRef.hpp"
 #include <memory>
 
+#include "qtIncludeHelpers.hpp"
+
+DFG_BEGIN_INCLUDE_QT_HEADERS
+#include <QPointer>
+DFG_END_INCLUDE_QT_HEADERS
+
 class QUndoStack;
 class QAbstractProxyModel;
+class QItemSelection;
+class QProgressBar;
+class QPushButton;
+
 
 namespace DFG_ROOT_NS
 {
@@ -16,6 +26,74 @@ namespace DFG_ROOT_NS
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
     class DFG_CLASS_NAME(CsvItemModel);
+
+    class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel);
+
+    // Analyzes item selection
+    class DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)
+    {
+    public:
+        enum CompletionStatus
+        {
+            CompletionStatus_started,
+            CompletionStatus_completed,
+            CompletionStatus_terminatedByTimeLimit,
+            CompletionStatus_terminatedByUserRequest
+        };
+
+        virtual ~DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)() {}
+        void analyze(QAbstractItemView* pView, const QItemSelection& selection) { analyzeImpl(pView, selection); }
+    private:
+        virtual void analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection) = 0;
+    };
+
+    class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer) : public DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)
+    {
+    public:
+        typedef DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) PanelT;
+
+        DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel);
+        ~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)() override;
+
+        QPointer<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> m_spUiPanel;
+    private:
+        void analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection) override;
+
+    }; // Class CsvTableViewBasicSelectionAnalyzer
+
+    class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) : public QWidget
+    {
+        Q_OBJECT
+    public:
+        typedef DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) ThisClass;
+        typedef QWidget BaseClass;
+        CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent = nullptr);
+        virtual ~CsvTableViewBasicSelectionAnalyzerPanel();
+
+        void setValueDisplayString(const QString& s);
+
+        void onEvaluationStarting(bool bEnabled);
+        void onEvaluationEnded(const double timeInSeconds, DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus);
+
+        double getMaxTimeInSeconds() const;
+        bool isStopRequested() const;
+
+    signals:
+        void sigEvaluationStartingHandleRequest(bool bEnabled);
+        void sigEvaluationEndedHandleRequest(const double timeInSeconds, int completionStatus);
+        void sigSetValueDisplayString(const QString& s);
+
+    private slots:
+        void onEvaluationStarting_myThread(bool bEnabled);
+        void onEvaluationEnded_myThread(const double timeInSeconds, int completionStatus);
+        void setValueDisplayString_myThread(const QString& s);
+
+    private:
+        std::unique_ptr<QLineEdit>      m_spValueDisplay;
+        QPointer<QLineEdit>             m_spTimeLimitDisplay;
+        std::unique_ptr<QProgressBar>   m_spProgressBar;
+        std::unique_ptr<QPushButton>    m_spStopButton;
+    }; // class CsvTableViewBasicSelectionAnalyzerPanel
 
     // View for showing CsvItemModel.
     // TODO: test
@@ -30,7 +108,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
 
         DFG_CLASS_NAME(CsvTableView)(QWidget* pParent);
-        ~DFG_CLASS_NAME(CsvTableView)();
+        ~DFG_CLASS_NAME(CsvTableView)() override;
 
         // If already present, old undo stack will be destroyed.
         void createUndoStack();
@@ -88,6 +166,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onFind(const bool forward);
 
+        void addSelectionAnalyzer(std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)> spAnalyzer);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -143,6 +223,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onNewSourceOpened();
 
+        void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);
@@ -180,6 +262,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QModelIndex m_latestFoundIndex; // Invalid if doing first find.
         QString m_findText;
         int m_nFindColumnIndex;
+        std::vector<std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)>> m_selectionAnalyzers;
     };
 
 } } // module namespace

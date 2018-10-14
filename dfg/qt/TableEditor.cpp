@@ -170,6 +170,9 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     m_spTableView.reset(new DFG_CLASS_NAME(CsvTableView)(this));
     m_spTableView->setModel(m_spTableModel.get());
     m_spTableView->setProperty("dfglib_allow_app_settings_usage", true);
+    std::unique_ptr<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> spAnalyzerPanel(new DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(this));
+    m_spTableView->addSelectionAnalyzer(std::make_shared<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)>(spAnalyzerPanel.get()));
+    m_spSelectionAnalyzerPanel.reset(spAnalyzerPanel.release());
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
 
@@ -200,15 +203,18 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     // Layout
     {
         std::unique_ptr<QGridLayout> spLayout(new QGridLayout);
-        spLayout->addWidget(m_spLineEditSourcePath.get(), 0, 0);
-        spLayout->addWidget(m_spTableView.get(), 1, 0);
+        int row = 0;
+        spLayout->addWidget(m_spLineEditSourcePath.get(), row++, 0);
+        spLayout->addWidget(m_spTableView.get(), row++, 0);
         const auto cellEditorMaxHeight = m_spCellEditor->maximumHeight();
-        spLayout->addWidget(m_spCellEditorDockWidget.get(), 2, 0);
+        spLayout->addWidget(m_spCellEditorDockWidget.get(), row++, 0);
         m_spFindPanel.reset(new DFG_DETAIL_NS::FindPanelWidget);
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onHighlightTextChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFindColumnChanged));
-        spLayout->addWidget(m_spFindPanel.get(), 3, 0);
-        spLayout->addWidget(m_spStatusBar.get(), 4, 0);
+        spLayout->addWidget(m_spFindPanel.get(), row++, 0);
+        spLayout->addWidget(m_spSelectionAnalyzerPanel.get(), row++, 0);
+        spLayout->addWidget(m_spStatusBar.get(), row++, 0);
+        spLayout->setSpacing(0);
         delete layout();
         setLayout(spLayout.release());
     }

@@ -98,6 +98,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<CellEditor> m_spCellEditor;
         std::unique_ptr<QDockWidget> m_spCellEditorDockWidget;
         std::unique_ptr<DFG_DETAIL_NS::FindPanelWidget> m_spFindPanel;
+        std::unique_ptr<QWidget> m_spSelectionAnalyzerPanel;
         bool m_bHandlingOnCellEditorTextChanged;
     };
 

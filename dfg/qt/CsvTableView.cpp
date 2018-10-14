@@ -9,6 +9,7 @@
 #include "PropertyHelper.hpp"
 #include "connectHelper.hpp"
 #include "CsvTableViewCompleterDelegate.hpp"
+#include "../time/timerCpu.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -20,18 +21,23 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QDialogButtonBox>
 #include <QCheckBox>
 #include <QCompleter>
+#include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaMethod>
 #include <QProcess>
+#include <QProgressBar>
+#include <QPushButton>
 #include <QSettings>
+#include <QThread>
 #include <QToolTip>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
 #include "../alg.hpp"
 #include "../cont/SortedSequence.hpp"
+#include "../math.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
 
 using namespace DFG_MODULE_NS(qt);
@@ -55,6 +61,12 @@ namespace
     // Properties
     DFG_QT_DEFINE_OBJECT_PROPERTY("diffProgPath", CsvTableView, CsvTableViewPropertyId_diffProgPath, QString, PropertyType);
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_initialScrollPosition", CsvTableView, CsvTableViewPropertyId_initialScrollPosition, QString, PropertyType);
+
+    template <class T>
+    QString floatToQString(const T val)
+    {
+        return QString::fromLatin1(DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::DFG_CLASS_NAME(StringAscii)>(val).c_str().c_str());
+    }
 
 } // unnamed namespace
 
@@ -416,6 +428,7 @@ void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
             pCsvModel->setUndoStack(&m_spUndoStack->item());
     }
     DFG_QT_VERIFY_CONNECT(connect(csvModel(), &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
+    DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
 }
 
 DFG_CLASS_NAME(CsvItemModel)* DFG_CLASS_NAME(CsvTableView)::csvModel()
@@ -1711,4 +1724,349 @@ void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
     const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
     if (scrollPos == "bottom")
         scrollToBottom();
+}
+
+namespace
+{
+    template <class Func_T>
+    void forEachCsvModelIndexInSelectionRange(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)& rView, const QItemSelectionRange& sr, Func_T func)
+    {
+        auto pProxy = rView.getProxyModelPtr();
+        auto pModel = rView.model();
+        if (!pModel)
+            return;
+        // TODO: if not having proxy, iterate in the way that is optimal to underlying data structure
+        const auto right = sr.right();
+        const auto bottom = sr.bottom();
+        bool bContinue = true;
+        for (int c = sr.left(); c<=right && bContinue; ++c)
+        {
+            for (int r = sr.top(); r<=bottom && bContinue; ++r)
+            {
+                if (pProxy)
+                    func(pProxy->mapToSource(pProxy->index(r, c)), bContinue);
+                else
+                    func(pModel->index(r, c), bContinue);
+            }
+        }
+    }
+}
+
+namespace
+{
+class WidgetPair : public QWidget
+{
+public:
+    typedef QWidget BaseClass;
+
+protected:
+    WidgetPair(QWidget* pParent);
+
+public:
+    ~WidgetPair();
+
+    static std::unique_ptr<WidgetPair> createHorizontalPair(QWidget* pParent,
+                                                            QWidget* pFirst,
+                                                            QWidget* pSecond,
+                                                            const bool reparentWidgets = true);
+
+    static std::unique_ptr<WidgetPair>createHorizontalLabelLineEditPair(QWidget* pParent,
+                                                                         QString sLabel,
+                                                                         const QString& sLineEditPlaceholder = QString());
+
+    QHBoxLayout* m_pLayout;
+    QWidget* m_pFirst;
+    QWidget* m_pSecond;
+}; // class WidgetPair
+
+WidgetPair::WidgetPair(QWidget* pParent) :
+    BaseClass(pParent)
+{
+}
+
+WidgetPair::~WidgetPair()
+{
+
+}
+
+std::unique_ptr<WidgetPair> WidgetPair::createHorizontalPair(QWidget* pParent,
+                                                        QWidget* pFirst,
+                                                        QWidget* pSecond,
+                                                        const bool reparentWidgets)
+{
+    std::unique_ptr<WidgetPair> spWp(new WidgetPair(pParent));
+    spWp->m_pLayout = new QHBoxLayout(spWp.get());
+    if (reparentWidgets)
+    {
+        if (pFirst)
+            pFirst->setParent(spWp.get());
+        if (pSecond)
+            pSecond->setParent(spWp.get());
+
+    }
+    spWp->m_pFirst = pFirst;
+    spWp->m_pSecond = pSecond;
+
+    spWp->m_pLayout->addWidget(spWp->m_pFirst);
+    spWp->m_pLayout->addWidget(spWp->m_pSecond);
+    return spWp;
+}
+
+std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidget* pParent,
+                                                                     QString sLabel,
+                                                                     const QString& sLineEditPlaceholder)
+{
+    auto pLabel = new QLabel(sLabel);
+    auto pLineEdit = new QLineEdit(sLineEditPlaceholder);
+    return createHorizontalPair(pParent, pLabel, pLineEdit);
+}
+
+} // unnamed namespace
+
+DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(QWidget *pParent) :
+    BaseClass(pParent)
+{
+    auto layout = new QGridLayout(this);
+    layout->setMargin(0);
+
+    int column = 0;
+
+    // Title-Label
+    layout->addWidget(new QLabel(tr("Selection"), this), 0, column++);
+
+    // Value display
+    m_spValueDisplay.reset(new QLineEdit(this));
+    m_spValueDisplay->setReadOnly(true);
+    layout->addWidget(m_spValueDisplay.get(), 0, column++);
+
+    // Progress bar
+    m_spProgressBar.reset(new QProgressBar(this));
+    m_spProgressBar->setMaximumWidth(75);
+    layout->addWidget(m_spProgressBar.get(), 0, column++);
+
+    // Stop button
+    m_spStopButton.reset(new QPushButton(tr("Stop"), this));
+    m_spStopButton->setEnabled(false); // To be enabled when evaluation is ongoing.
+    m_spStopButton->setCheckable(true);
+    layout->addWidget(m_spStopButton.get(), 0, column++);
+
+    // 'Maximum time'-control
+    auto maxTimeControl = WidgetPair::createHorizontalLabelLineEditPair(this, tr("Limit (s)"));
+    maxTimeControl->setMaximumWidth(100);
+    if (maxTimeControl->m_pFirst)
+        maxTimeControl->m_pFirst->setMaximumWidth(50);
+    if (maxTimeControl->m_pSecond)
+    {
+        m_spTimeLimitDisplay = qobject_cast<QLineEdit*>(maxTimeControl->m_pSecond);
+        if (m_spTimeLimitDisplay)
+        {
+            m_spTimeLimitDisplay->setText("1");
+            m_spTimeLimitDisplay->setMaximumWidth(50);
+        }
+    }
+    layout->addWidget(maxTimeControl.release(), 0, column++);
+
+    DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigEvaluationStartingHandleRequest, this, &ThisClass::onEvaluationStarting_myThread));
+    DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigEvaluationEndedHandleRequest, this, &ThisClass::onEvaluationEnded_myThread));
+    DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigSetValueDisplayString, this, &ThisClass::setValueDisplayString_myThread));
+}
+
+DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)()
+{
+
+}
+
+void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::setValueDisplayString(const QString& s)
+{
+    Q_EMIT sigSetValueDisplayString(s);
+}
+
+void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::setValueDisplayString_myThread(const QString& s)
+{
+    if (m_spValueDisplay)
+        m_spValueDisplay->setText(s);
+}
+
+void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationStarting(const bool bEnabled)
+{
+    Q_EMIT sigEvaluationStartingHandleRequest(bEnabled);
+}
+
+void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationStarting_myThread(const bool bEnabled)
+{
+    if (bEnabled)
+    {
+        setValueDisplayString(tr("Working..."));
+        if (m_spProgressBar)
+        {
+            m_spProgressBar->setVisible(true);
+
+            // Sets text to be shown inside the progress bar, the actual text-align value seems to have no effect.
+            m_spProgressBar->setStyleSheet("QProgressBar::chunk { text-align: left; }");
+            m_spProgressBar->setRange(0, 0); // Activates generic 'something is happening' indicator.
+            m_spProgressBar->setValue(-1);
+        }
+        if (m_spStopButton)
+        {
+            m_spStopButton->setEnabled(true);
+            m_spStopButton->setChecked(false);
+        }
+    }
+    else
+    {
+        setValueDisplayString(tr("Disabled"));
+        if (m_spProgressBar)
+            m_spProgressBar->setVisible(false);
+    }
+}
+
+void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationEnded(const double timeInSeconds, const DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus)
+{
+    Q_EMIT sigEvaluationEndedHandleRequest(timeInSeconds, static_cast<int>(completionStatus));
+}
+
+void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationEnded_myThread(const double timeInSeconds, const int completionStatus)
+{
+    if (m_spProgressBar)
+    {
+        m_spProgressBar->setRange(0, 1); // Deactivates generic 'something is happening' indicator.
+        m_spProgressBar->setValue(m_spProgressBar->maximum());
+        m_spProgressBar->setFormat(QString("%1 s").arg(timeInSeconds));
+        if (completionStatus != static_cast<int>(DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_completed))
+        {
+            // When work gets interrupted, set color to red.
+            m_spProgressBar->setStyleSheet("QProgressBar::chunk { background-color: #FF0000; text-align: left; }");
+        }
+    }
+    if (m_spStopButton)
+        m_spStopButton->setEnabled(false);
+}
+
+double DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::getMaxTimeInSeconds() const
+{
+    bool bOk = false;
+    double val = 0;
+    if (m_spTimeLimitDisplay)
+        val = m_spTimeLimitDisplay->text().toDouble(&bOk);
+    return (bOk) ? val : -1.0;
+}
+
+bool DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::isStopRequested() const
+{
+    return (m_spStopButton && m_spStopButton->isChecked());
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    DFG_UNUSED(selected);
+    DFG_UNUSED(deselected);
+    const auto sm = selectionModel();
+    const auto selection = (sm) ? sm->selection() : QItemSelection();
+
+    QEventLoop eventLoop;
+    QThread workerThread;
+    workerThread.setObjectName("selectionAnalyzer"); // Sets thread name visible to debugger.
+    connect(&workerThread, &QThread::started, [&]()
+            {
+                // TODO: add canRunInParallel-flag to analyzers, split analyzers to groups based on that and run the other
+                //       group in parallel.
+                for (auto iter = m_selectionAnalyzers.cbegin(); iter != m_selectionAnalyzers.cend(); ++iter)
+                {
+                    if (!*iter)
+                        continue;
+                    (*iter)->analyze(this, selection);
+                }
+                workerThread.quit();
+            });
+    connect(&workerThread, &QThread::finished, &eventLoop, &QEventLoop::quit);
+    workerThread.start();
+    eventLoop.exec();
+}
+
+void DFG_CLASS_NAME(CsvTableView)::addSelectionAnalyzer(std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)> spAnalyzer)
+{
+    if (!spAnalyzer)
+        return;
+    m_selectionAnalyzers.push_back(std::move(spAnalyzer));
+}
+
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel)
+   : m_spUiPanel(uiPanel)
+{
+}
+
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)()
+{
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection)
+{
+    auto pCtvView = qobject_cast<DFG_CLASS_NAME(const CsvTableView)*>(pView);
+    auto pModel = (pCtvView) ? pCtvView->model() : nullptr;
+    if (!pModel)
+        return;
+    auto uiPanel = m_spUiPanel.data();
+    if (!uiPanel)
+        return;
+
+    const auto maxTime = uiPanel->getMaxTimeInSeconds();
+    const auto enabled = (!DFG_MODULE_NS(math)::isNan(maxTime) &&  maxTime > 0);
+    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<double> minMaxMf;
+    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<double> avgMf;
+    int nExcluded = 0;
+    CompletionStatus completionStatus = CompletionStatus_started;
+    DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) operationTimer;
+    uiPanel->onEvaluationStarting(enabled);
+    if (enabled)
+    {
+        for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+        {
+            forEachCsvModelIndexInSelectionRange(*pCtvView, *iter, [&](const QModelIndex& index, bool& rbContinue)
+            {
+                const auto bHasMaxTimePassed = operationTimer.elapsedWallSeconds() >= maxTime;
+                if (bHasMaxTimePassed || uiPanel->isStopRequested())
+                {
+                    if (bHasMaxTimePassed)
+                        completionStatus = CompletionStatus_terminatedByTimeLimit;
+                    else
+                        completionStatus = CompletionStatus_terminatedByUserRequest;
+                    rbContinue = false;
+                    return;
+                }
+                QString str = pModel->data(index).toString();
+                str.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
+                bool bOk;
+                const double val = str.toDouble(&bOk);
+                if (bOk)
+                {
+                    avgMf(val);
+                    minMaxMf(val);
+                }
+                else
+                    nExcluded++;
+            });
+        }
+        const auto elapsedTime = operationTimer.elapsedWallSeconds();
+        if (completionStatus == CompletionStatus_started)
+            completionStatus = CompletionStatus_completed;
+        uiPanel->onEvaluationEnded(elapsedTime, completionStatus);
+
+        QString sMessage;
+        if (completionStatus == CompletionStatus_completed)
+            sMessage = uiPanel->tr("Included: %1, Excluded: %2, Sum: %3, Avg: %4, Min: %5, Max: %6")
+                                                                         .arg(avgMf.callCount())
+                                                                         .arg(nExcluded)
+                                                                         .arg(floatToQString(avgMf.sum()))
+                                                                         .arg(floatToQString(avgMf.average()))
+                                                                         .arg(floatToQString(minMaxMf.minValue()))
+                                                                         .arg(floatToQString(minMaxMf.maxValue()));
+        else if (completionStatus == CompletionStatus_terminatedByTimeLimit)
+            sMessage = uiPanel->tr("Interrupted (time limit exceeded)");
+        else if (completionStatus == CompletionStatus_terminatedByUserRequest)
+            sMessage = uiPanel->tr("Stopped");
+        else
+            sMessage = uiPanel->tr("Interrupted (unknown reason)");
+
+        uiPanel->setValueDisplayString(sMessage);
+    }
 }
