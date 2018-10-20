@@ -55,9 +55,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 return !m_matchString.isEmpty() && s.contains(m_matchString, m_caseSensitivity);
             }
 
-            bool isMatchWith(const StringViewSzUtf8 sv) const
+            bool isMatchWith(const StringViewUtf8 sv) const
             {
-                return !m_matchString.isEmpty() && QString::fromUtf8(toCharPtr_raw(sv.data())).contains(m_matchString, m_caseSensitivity);
+                return !m_matchString.isEmpty() && QString::fromUtf8(toCharPtr_raw(sv.data()), static_cast<int>(sv.length())).contains(m_matchString, m_caseSensitivity);
             }
 
             QString m_matchString;
