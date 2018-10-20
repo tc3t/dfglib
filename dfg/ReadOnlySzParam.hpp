@@ -296,8 +296,8 @@ public:
     {
     }
 
-    DFG_CLASS_NAME(StringView)(SzPtrT psz) :
-        BaseClass(psz, readOnlySzParamLength(psz))
+    DFG_CLASS_NAME(StringView)(SzPtrT pszOrNullptr) :
+        BaseClass(pszOrNullptr, (pszOrNullptr) ? readOnlySzParamLength(pszOrNullptr) : 0)
     {
     }
 
