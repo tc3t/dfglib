@@ -334,8 +334,13 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
         }
         else
         {
+            DFG_ASSERT_CORRECTNESS(false); // This should never be reached.
             setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
         }
+    }
+    else
+    {
+        setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
     }
 
     // Update status bar
