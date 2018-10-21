@@ -536,14 +536,25 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterColumnChanged(const
         onFilterTextChanged(m_spFilterPanel->m_pTextEdit->text());
 }
 
+namespace
+{
+    static void activateFindTextEdit(QLineEdit* pEdit)
+    {
+        if (!pEdit)
+            return;
+        pEdit->setFocus(Qt::OtherFocusReason);
+        pEdit->selectAll();
+    }
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindRequested()
 {
     if (m_spFindPanel)
-        m_spFindPanel->m_pTextEdit->setFocus(Qt::OtherFocusReason);
+        activateFindTextEdit(m_spFindPanel->m_pTextEdit);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterRequested()
 {
     if (m_spFilterPanel)
-        m_spFilterPanel->m_pTextEdit->setFocus(Qt::OtherFocusReason);
+        activateFindTextEdit(m_spFilterPanel->m_pTextEdit);
 }
