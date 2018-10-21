@@ -206,7 +206,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         addAction(pAction);
     }
 
-    // Find actions
+    // Find and filter actions
     {
         {
             auto pAction = new QAction(tr("Find"), this);
@@ -224,6 +224,14 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
             auto pAction = new QAction(tr("Find previous"), this);
             pAction->setShortcut(tr("Shift+F3"));
             connect(pAction, &QAction::triggered, this, &ThisClass::onFindPrevious);
+            addAction(pAction);
+        }
+
+        // Filter
+        {
+            auto pAction = new QAction(tr("Filter"), this);
+            pAction->setShortcut(tr("Alt+F"));
+            connect(pAction, &QAction::triggered, this, &ThisClass::onFilterRequested);
             addAction(pAction);
         }
     }
@@ -431,14 +439,27 @@ void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
     DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
 }
 
-DFG_CLASS_NAME(CsvItemModel)* DFG_CLASS_NAME(CsvTableView)::csvModel()
+namespace
 {
-    auto pModel = model();
-    auto pCsvModel = dynamic_cast<CsvModel*>(pModel);
-    if (pCsvModel)
-        return pCsvModel;
-    auto pProxyModel = dynamic_cast<QAbstractProxyModel*>(pModel);
-    return (pProxyModel) ? dynamic_cast<CsvModel*>(pProxyModel->sourceModel()) : nullptr;
+    template <class CsvModel_T, class ProxyModel_T, class Model_T>
+    CsvModel_T* csvModelImpl(Model_T* pModel)
+    {
+        auto pCsvModel = qobject_cast<CsvModel_T*>(pModel);
+        if (pCsvModel)
+            return pCsvModel;
+        auto pProxyModel = qobject_cast<ProxyModel_T*>(pModel);
+        return (pProxyModel) ? qobject_cast<CsvModel_T*>(pProxyModel->sourceModel()) : nullptr;
+    }
+}
+
+auto DFG_CLASS_NAME(CsvTableView)::csvModel() -> CsvModel*
+{
+    return csvModelImpl<CsvModel, QAbstractProxyModel>(model());
+}
+
+auto DFG_CLASS_NAME(CsvTableView)::csvModel() const -> const CsvModel*
+{
+   return csvModelImpl<const CsvModel, const QAbstractProxyModel>(model());
 }
 
 int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow() const
@@ -462,9 +483,37 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, cons
     return vec;
 }
 
+QModelIndexList DFG_CLASS_NAME(CsvTableView)::selectedIndexes() const
+{
+    DFG_ASSERT_WITH_MSG(false, "Avoid using selectedIndexes() as it's behaviour is unclear when using proxies: selected indexes of proxy or underlying model?");
+    return BaseClass::selectedIndexes();
+}
+
+QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_dataModel() const
+{
+    auto pSelectionModel = selectionModel();
+    if (!pSelectionModel)
+        return QModelIndexList();
+    auto selected = pSelectionModel->selectedIndexes();
+    if (selected.isEmpty())
+        return QModelIndexList();
+    auto pProxy = getProxyModelPtr();
+    // Map indexes to underlying model. For unknown reason the indexes returned by selection model
+    // seem to be sometimes from proxy and sometimes from underlying.
+    if (pProxy && selected.front().model() == pProxy)
+        std::transform(selected.begin(), selected.end(), selected.begin(), [=](const QModelIndex& index) { return pProxy->mapToSource(index); });
+    return selected;
+}
+
+// Returns list of selected indexes as model indexes of underlying model.
+QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_viewModel() const
+{
+    return getSelectedItemIndexes(getProxyModelPtr());
+}
+
 QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes(const QAbstractProxyModel* pProxy) const
 {
-    QModelIndexList listSelected = selectedIndexes();
+    QModelIndexList listSelected = getSelectedItemIndexes_dataModel();
     if (pProxy)
     {
         for (int i = 0; i<listSelected.size(); ++i)
@@ -498,7 +547,7 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbs
 
 QModelIndex DFG_CLASS_NAME(CsvTableView)::getFirstSelectedItem(QAbstractProxyModel* pProxy) const
 {
-    QModelIndexList listSelected = selectedIndexes();
+    const QModelIndexList listSelected = getSelectedItemIndexes_dataModel();
     if (listSelected.empty())
         return QModelIndex();
     if (pProxy)
@@ -1339,20 +1388,15 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
     }
     else if (targetType == TargetTypeSelection)
     {
-        auto pSelectionModel = view.selectionModel();
-        auto pModel = view.model();
-        if (pSelectionModel && pModel)
+        const auto& selected = view.getSelectedItemIndexes_dataModel();
+        size_t nCounter = 0;
+        rModel.batchEditNoUndo([&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table)
         {
-            const auto& selected = pSelectionModel->selectedIndexes();
-            size_t nCounter = 0;
-            rModel.batchEditNoUndo([&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table)
+            for (auto iter = selected.begin(); iter != selected.end(); ++iter, ++nCounter)
             {
-                for (auto iter = selected.begin(); iter != selected.end(); ++iter, ++nCounter)
-                {
-                    generator(table, iter->row(), iter->column(), nCounter);
-                }
-            });
-        }
+                generator(table, iter->row(), iter->column(), nCounter);
+            }
+        });
     }
     else
     {
@@ -1598,6 +1642,15 @@ int DFG_CLASS_NAME(CsvTableView)::getFindColumnIndex() const
     return m_nFindColumnIndex;
 }
 
+void DFG_CLASS_NAME(CsvTableView)::onFilterRequested()
+{
+    const QMetaMethod findActivatedSignal = QMetaMethod::fromSignal(&ThisClass::sigFilterActivated);
+    if (isSignalConnected(findActivatedSignal))
+        Q_EMIT sigFilterActivated();
+    else
+        QToolTip::showText(QCursor::pos(), tr("Sorry, standalone filter is not implemented."));
+}
+
 void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
 {
     const QMetaMethod findActivatedSignal = QMetaMethod::fromSignal(&ThisClass::sigFindActivated);
@@ -1647,16 +1700,17 @@ void DFG_CLASS_NAME(CsvTableView)::onFind(const bool forward)
                 return currentIndex();
         }();
 
+    // TODO: this doesn't work correctly with proxy filtering: finds cells also from filter-hidden cells.
     const auto found = pBaseModel->findNextHighlighterMatch(findSeed, (forward) ? CsvModel::FindDirectionForward : CsvModel::FindDirectionBackward);
 
     if (found.isValid())
     {
         m_latestFoundIndex = found;
-        scrollTo(m_latestFoundIndex);
-        setCurrentIndex(m_latestFoundIndex);
+        scrollTo(mapToViewModel(m_latestFoundIndex));
+        setCurrentIndex(mapToViewModel(m_latestFoundIndex));
     }
     else
-        m_latestFoundIndex = QModelIndex();
+        forgetLatestFindPosition();
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onFindNext()
@@ -1680,7 +1734,7 @@ void DFG_CLASS_NAME(CsvTableView)::setFindText(QString s, const int col)
     CsvModel::HighlightDefinition hld("te0", getFindColumnIndex(), CsvModel::StringMatchDefinition(m_findText, Qt::CaseInsensitive));
     pBaseModel->setHighlighter(std::move(hld));
 
-    m_latestFoundIndex = QModelIndex(); // Reset find pos.
+    forgetLatestFindPosition();
 }
 
 template <class Func_T>
@@ -1990,6 +2044,22 @@ void DFG_CLASS_NAME(CsvTableView)::addSelectionAnalyzer(std::shared_ptr<DFG_CLAS
     m_selectionAnalyzers.push_back(std::move(spAnalyzer));
 }
 
+QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToViewModel(const QModelIndex& index) const
+{
+    const auto pIndexModel = index.model();
+    if (pIndexModel == model())
+        return index;
+    else if (pIndexModel == csvModel() && getProxyModelPtr())
+        return getProxyModelPtr()->mapFromSource(index);
+    else
+        return QModelIndex();
+}
+
+void DFG_CLASS_NAME(CsvTableView)::forgetLatestFindPosition()
+{
+    m_latestFoundIndex = QModelIndex();
+}
+
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel)
    : m_spUiPanel(uiPanel)
 {
@@ -2002,7 +2072,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::~DFG_CLAS
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection)
 {
     auto pCtvView = qobject_cast<DFG_CLASS_NAME(const CsvTableView)*>(pView);
-    auto pModel = (pCtvView) ? pCtvView->model() : nullptr;
+    auto pModel = (pCtvView) ? pCtvView->csvModel() : nullptr;
     if (!pModel)
         return;
     auto uiPanel = m_spUiPanel.data();

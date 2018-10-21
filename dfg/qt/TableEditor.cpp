@@ -21,6 +21,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMessageBox>
 #include <QItemSelection>
 #include <QItemSelectionModel>
+#include <QSortFilterProxyModel>
 #include <QSpinBox>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -126,17 +127,18 @@ Q_DECLARE_METATYPE(WindowExtentProperty); // Note: placing this in unnamed names
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
+    // TODO: move to CsvTableView.h?
     class FindPanelWidget : public QWidget
     {
     public:
-        FindPanelWidget()
+        FindPanelWidget(const QString& label)
         {
             auto l = new QGridLayout(this);
-            l->addWidget(new QLabel("Find", this), 0, 0);
+            l->addWidget(new QLabel(label, this), 0, 0);
             m_pTextEdit = new HighlightTextEdit(this);
             l->addWidget(m_pTextEdit, 0, 1);
 
-            l->addWidget(new QLabel("Column", this), 0, 2);
+            l->addWidget(new QLabel(tr("Column"), this), 0, 2);
             m_pColumnSelector = new QSpinBox(this);
             m_pColumnSelector->setMinimum(-1);
             m_pColumnSelector->setValue(-1);
@@ -149,6 +151,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
         HighlightTextEdit* m_pTextEdit;
         QSpinBox* m_pColumnSelector;
+    };
+
+    class FilterPanelWidget : public FindPanelWidget
+    {
+    public:
+        typedef FindPanelWidget BaseClass;
+        FilterPanelWidget()
+            : BaseClass(tr("Filter"))
+        {
+        }
     };
 }}} // dfg::qt::DFG_DETAILS_NS -namespace
 
@@ -166,15 +178,21 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::dataChanged, this, &ThisClass::onModelDataChanged));
     m_spTableModel->setProperty("dfglib_allow_app_settings_usage", true);
 
+    // Proxy model
+    m_spProxyModel.reset(new ProxyModelClass(this));
+    m_spProxyModel->setSourceModel(m_spTableModel.get());
+    m_spProxyModel->setDynamicSortFilter(true);
+
     // View
     m_spTableView.reset(new DFG_CLASS_NAME(CsvTableView)(this));
-    m_spTableView->setModel(m_spTableModel.get());
+    m_spTableView->setModel(m_spProxyModel.get());
     m_spTableView->setProperty("dfglib_allow_app_settings_usage", true);
     std::unique_ptr<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> spAnalyzerPanel(new DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(this));
     m_spTableView->addSelectionAnalyzer(std::make_shared<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)>(spAnalyzerPanel.get()));
     m_spSelectionAnalyzerPanel.reset(spAnalyzerPanel.release());
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterActivated, this, &ThisClass::onFilterRequested));
 
     // Source path line edit
     m_spLineEditSourcePath.reset(new QLineEdit());
@@ -208,10 +226,21 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         spLayout->addWidget(m_spTableView.get(), row++, 0);
         const auto cellEditorMaxHeight = m_spCellEditor->maximumHeight();
         spLayout->addWidget(m_spCellEditorDockWidget.get(), row++, 0);
-        m_spFindPanel.reset(new DFG_DETAIL_NS::FindPanelWidget);
+
+        // Find panel
+        m_spFindPanel.reset(new DFG_DETAIL_NS::FindPanelWidget(tr("Find")));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onHighlightTextChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFindColumnChanged));
         spLayout->addWidget(m_spFindPanel.get(), row++, 0);
+
+        // Filter panel
+        {
+            m_spFilterPanel.reset(new DFG_DETAIL_NS::FilterPanelWidget);
+            DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onFilterTextChanged));
+            DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFilterColumnChanged));
+            spLayout->addWidget(m_spFilterPanel.get(), row++, 0);
+        }
+
         spLayout->addWidget(m_spSelectionAnalyzerPanel.get(), row++, 0);
         spLayout->addWidget(m_spStatusBar.get(), row++, 0);
         spLayout->setSpacing(0);
@@ -313,7 +342,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
 
     if (m_spCellEditor && m_spTableView && m_spTableModel && (selectedCount = m_spTableView->getSelectedItemCount()) == 1)
     {
-        const QModelIndexList& indexes = m_spTableView->getSelectedItemIndexes(m_spTableView->getProxyModelPtr());
+        const QModelIndexList& indexes = m_spTableView->getSelectedItemIndexes_dataModel();
         // Block signals from edit to prevent "text edited" signals from non-user edits.
         auto sc = DFG_ROOT_NS::makeScopedCaller([this](){m_spCellEditor->blockSignals(true);}, [this](){m_spCellEditor->blockSignals(false);});
         if (indexes.size() == 1)
@@ -441,8 +470,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* eve
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onCellEditorTextChanged()
 {
-    auto selectionModel = (m_spTableView) ? m_spTableView->selectionModel() : nullptr;
-    const QModelIndexList& indexes = (selectionModel) ? selectionModel->selectedIndexes() : QModelIndexList();
+    if (!m_spTableView)
+        return;
+    const auto& indexes = (m_spTableView->getSelectedItemCount() == 1) ? m_spTableView->getSelectedItemIndexes_dataModel() : QModelIndexList();
     if (m_spTableModel && m_spCellEditor && indexes.size() == 1)
     {
         const auto oldFlag = m_bHandlingOnCellEditorTextChanged;
@@ -464,12 +494,11 @@ namespace
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles)
 {
     DFG_UNUSED(roles);
-    if (!m_spCellEditor)
+    if (!m_spCellEditor || !m_spTableView)
         return;
     if (m_bHandlingOnCellEditorTextChanged) // To prevent cell editor change signal triggering reloading cell editor data from model.
         return;
-    auto selectionModel = (m_spTableView) ? m_spTableView->selectionModel() : nullptr;
-    const QModelIndexList& indexes = (selectionModel) ? selectionModel->selectedIndexes() : QModelIndexList();
+    const auto& indexes = (m_spTableView->getSelectedItemCount() == 1) ? m_spTableView->getSelectedItemIndexes_dataModel() : QModelIndexList();
     if (indexes.size() == 1 && isModelIndexWithinSelectionRectangle(indexes[0], topLeft, bottomRight))
             onSelectionChanged(QItemSelection(indexes[0], indexes[0]), QItemSelection());
 }
@@ -483,6 +512,16 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(cons
     m_spTableView->onFindNext();
 }
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const QString& text)
+{
+    auto pProxy = (m_spTableView) ? qobject_cast<ProxyModelClass*>(m_spTableView->getProxyModelPtr()): nullptr;
+    if (!pProxy || !m_spFilterPanel)
+        return;
+
+    pProxy->setFilterRegExp(text);
+    pProxy->setFilterKeyColumn(m_spFilterPanel->m_pColumnSelector->value());
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindColumnChanged(const int newCol)
 {
     DFG_UNUSED(newCol);
@@ -490,8 +529,21 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindColumnChanged(const i
     	onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
 }
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterColumnChanged(const int nNewCol)
+{
+    DFG_UNUSED(nNewCol);
+    if (m_spFilterPanel)
+        onFilterTextChanged(m_spFilterPanel->m_pTextEdit->text());
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindRequested()
 {
     if (m_spFindPanel)
         m_spFindPanel->m_pTextEdit->setFocus(Qt::OtherFocusReason);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterRequested()
+{
+    if (m_spFilterPanel)
+        m_spFilterPanel->m_pTextEdit->setFocus(Qt::OtherFocusReason);
 }

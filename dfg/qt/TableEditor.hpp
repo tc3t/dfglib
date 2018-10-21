@@ -17,6 +17,7 @@ class QDockWidget;
 class QItemSelection;
 class QLabel;
 class QLineEdit;
+class QSortFilterProxyModel;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -26,6 +27,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     namespace DFG_DETAIL_NS
     {
         class FindPanelWidget;
+        class FilterPanelWidget;
     }
 
     class DFG_CLASS_NAME(TableEditorStatusBar) : public QStatusBar
@@ -43,6 +45,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef QWidget BaseClass;
         typedef DFG_CLASS_NAME(TableEditor) ThisClass;
         typedef DFG_CLASS_NAME(CsvItemModel) ModelClass;
+        typedef QSortFilterProxyModel ProxyModelClass;
         typedef DFG_CLASS_NAME(CsvTableView) ViewClass;
 
         enum ColumnResizeStyle
@@ -62,7 +65,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         };
 
         DFG_CLASS_NAME(TableEditor)();
-        ~DFG_CLASS_NAME(TableEditor)();
+        ~DFG_CLASS_NAME(TableEditor)() override;
 
         /** Returns true if opened, false otherwise. Opening will fail if TableEditor already has a file opened and it has been modified. */
         bool tryOpenFileFromPath(QString path);
@@ -86,18 +89,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onCellEditorTextChanged();
         void onModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles = QVector<int>());
         void onHighlightTextChanged(const QString& text);
+        void onFilterTextChanged(const QString& text);
         void onFindColumnChanged(int newCol);
+        void onFilterColumnChanged(int nNewCol);
         void onFindRequested();
+        void onFilterRequested();
 
     public:
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spTableView;
         std::unique_ptr<ModelClass> m_spTableModel;
+        std::unique_ptr<ProxyModelClass> m_spProxyModel;
         std::unique_ptr<QLineEdit> m_spLineEditSourcePath;
         std::unique_ptr<DFG_CLASS_NAME(TableEditorStatusBar)> m_spStatusBar;
         std::unique_ptr<QLabel> m_spSelectionStatusInfo;
         std::unique_ptr<CellEditor> m_spCellEditor;
         std::unique_ptr<QDockWidget> m_spCellEditorDockWidget;
         std::unique_ptr<DFG_DETAIL_NS::FindPanelWidget> m_spFindPanel;
+        std::unique_ptr<DFG_DETAIL_NS::FilterPanelWidget> m_spFilterPanel;
         std::unique_ptr<QWidget> m_spSelectionAnalyzerPanel;
         bool m_bHandlingOnCellEditorTextChanged;
     };

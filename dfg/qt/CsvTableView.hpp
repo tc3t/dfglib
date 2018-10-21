@@ -96,8 +96,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }; // class CsvTableViewBasicSelectionAnalyzerPanel
 
     // View for showing CsvItemModel.
-    // TODO: test
-    // TODO: Fix implementation to work with proxy models.
     class DFG_CLASS_NAME(CsvTableView) : public DFG_CLASS_NAME(TableView)
     {
         Q_OBJECT
@@ -118,6 +116,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setModel(QAbstractItemModel* pModel) override;
         CsvModel* csvModel();
+        const CsvModel* csvModel() const;
 
         // Returns the smallest row index in the current view selection,
         // row count if no selection exists.
@@ -138,6 +137,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Returned list of selected indexes. If @p pProxy != nullptr,
         // the selected indexes will be mapped by the proxy.
         QModelIndexList getSelectedItemIndexes(const QAbstractProxyModel* pProxy) const;
+
+        // Returns list of selected indexes as model indexes of underlying data model.
+        QModelIndexList getSelectedItemIndexes_dataModel() const;
+
+        // Returns list of selected indexes as model indexes from model(). If there is no proxy model,
+        // returns the same as getSelectedItemIndexes_dataModel().
+        QModelIndexList getSelectedItemIndexes_viewModel() const;
 
         std::vector<int> getDataModelRowsOfSelectedItems(const bool bSort = true) const
         {
@@ -167,6 +173,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onFind(const bool forward);
 
         void addSelectionAnalyzer(std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)> spAnalyzer);
+
+        // Maps index to view model (i.e. the one returned by model()) assuming that 'index' is either from csvModel() or model().
+        QModelIndex mapToViewModel(const QModelIndex& index) const;
+
+        // Forgets latest find position so that next begins from memoryless situation.
+        void forgetLatestFindPosition();
 
     private:
         template <class T, class Param0_T>
@@ -219,6 +231,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onFindNext();
         void onFindPrevious();
 
+        void onFilterRequested();
+
         void setFindText(QString s, const int col);
 
         void onNewSourceOpened();
@@ -247,9 +261,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     signals:
         void sigFindActivated();
+        void sigFilterActivated();
 
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
+        QModelIndexList selectedIndexes() const override;
 
     private:
         template <class Func_T>
@@ -259,7 +275,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
         QStringList m_tempFilePathToRemoveOnExit;
-        QModelIndex m_latestFoundIndex; // Invalid if doing first find.
+        QModelIndex m_latestFoundIndex; // Index from underlying model. Invalid if doing first find.
         QString m_findText;
         int m_nFindColumnIndex;
         std::vector<std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)>> m_selectionAnalyzers;
