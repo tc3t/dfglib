@@ -134,10 +134,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // the selected indexes will be mapped by the proxy.
         std::vector<int> getRowsOfSelectedItems(const QAbstractProxyModel* pProxy, const bool bSort = true) const;
 
-        // Returned list of selected indexes. If @p pProxy != nullptr,
-        // the selected indexes will be mapped by the proxy.
-        QModelIndexList getSelectedItemIndexes(const QAbstractProxyModel* pProxy) const;
-
         // Returns list of selected indexes as model indexes of underlying data model.
         QModelIndexList getSelectedItemIndexes_dataModel() const;
 
@@ -176,6 +172,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Maps index to view model (i.e. the one returned by model()) assuming that 'index' is either from csvModel() or model().
         QModelIndex mapToViewModel(const QModelIndex& index) const;
+
+        // Maps index to data model (i.e. the one returned by csvModel()) assuming that 'index' is either from csvModel() or model().
+        QModelIndex mapToDataModel(const QModelIndex& index) const;
 
         // Forgets latest find position so that next begins from memoryless situation.
         void forgetLatestFindPosition();

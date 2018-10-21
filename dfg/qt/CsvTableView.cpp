@@ -505,26 +505,18 @@ QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_dataModel()
     return selected;
 }
 
-// Returns list of selected indexes as model indexes of underlying model.
 QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_viewModel() const
 {
-    return getSelectedItemIndexes(getProxyModelPtr());
-}
-
-QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes(const QAbstractProxyModel* pProxy) const
-{
-    QModelIndexList listSelected = getSelectedItemIndexes_dataModel();
+    auto indexes = getSelectedItemIndexes_dataModel();
+    auto pProxy = getProxyModelPtr();
     if (pProxy)
-    {
-        for (int i = 0; i<listSelected.size(); ++i)
-            listSelected[i] = pProxy->mapToSource(listSelected[i]);
-    }
-    return listSelected;
+        std::transform(indexes.begin(), indexes.end(), indexes.begin(), [=](const QModelIndex& index) { return pProxy->mapFromSource(index); });
+    return indexes;
 }
 
 std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbstractProxyModel* pProxy, const bool bSort) const
 {
-    QModelIndexList listSelected = getSelectedItemIndexes(pProxy);
+    QModelIndexList listSelected = (!pProxy) ? getSelectedItemIndexes_viewModel() : getSelectedItemIndexes_dataModel();
 
     std::set<int> setRows;
     std::vector<int> vRows;
@@ -714,7 +706,6 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
     if (dlg.exec() != QDialog::Accepted)
         return false;
     return saveToFileImpl(dlg.m_formatDef);
-    
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
@@ -1015,7 +1006,7 @@ namespace
     {
         // Key name       Value type         Value items (if key type is list)           Default value
         //                                   In syntax |x;y;z... items x,y,z define
-        //                                   the indexes in this table that are 
+        //                                   the indexes in this table that are
         //                                   parameters for given item.
         { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                               , "Selection"       },
         { "Generator"           , ValueTypeKeyList  , "Random integers|2;3,Random doubles|4;5;6;7,Fill|8"   , "Random integers" },
@@ -1023,7 +1014,7 @@ namespace
         { "Max value"           , ValueTypeInteger  , ""                                                    , "32767"           },
         { "Min value"           , ValueTypeDouble   , ""                                                    , "0.0"             },
         { "Max value"           , ValueTypeDouble   , ""                                                    , "1.0"             },
-        { "Format type"         , ValueTypeString   , ""                                                    , "g"               }, 
+        { "Format type"         , ValueTypeString   , ""                                                    , "g"               },
         { "Format precision"    , ValueTypeUInteger , ""                                                    , "6"               }, // Note: empty value must be supported as well.
         { "Fill string"         , ValueTypeString   , ""                                                    , ""                }
     };
@@ -1076,7 +1067,7 @@ namespace
     {
     public:
         typedef QDialog BaseClass;
-        ContentGeneratorDialog(QWidget* pParent) : 
+        ContentGeneratorDialog(QWidget* pParent) :
             BaseClass(pParent),
             m_pLayout(nullptr),
             m_pGeneratorControlsLayout(nullptr),
@@ -1099,7 +1090,7 @@ namespace
                 if (pHeader)
                     pHeader->setStretchLastSection(true);
             }
-            // 
+            //
             {
                 auto pHeader = m_spSettingsTable->verticalHeader();
                 if (pHeader)
@@ -1436,7 +1427,7 @@ namespace
         if (s.isEmpty())
             return false;
         const auto cLast = s[s.size() - 1].toLatin1();
-        
+
         const bool bIsFloatType = (std::strchr(gszFloatTypes, cLast) != nullptr);
         const bool bIsIntergerType = (!bIsFloatType && std::strchr(gszIntegerTypes, cLast) != nullptr);
         if (!bIsFloatType && !bIsIntergerType)
@@ -2051,6 +2042,17 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToViewModel(const QModelIndex& inde
         return index;
     else if (pIndexModel == csvModel() && getProxyModelPtr())
         return getProxyModelPtr()->mapFromSource(index);
+    else
+        return QModelIndex();
+}
+
+QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToDataModel(const QModelIndex& index) const
+{
+    const auto pIndexModel = index.model();
+    if (pIndexModel == csvModel())
+        return index;
+    else if (pIndexModel == model() && getProxyModelPtr())
+        return getProxyModelPtr()->mapToSource(index);
     else
         return QModelIndex();
 }

@@ -66,10 +66,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int, DFG_MODULE_NS(io)::encodingUTF8> CellMemory;
 
-        static void storeCells(CellMemory& cellMemory, DFG_CLASS_NAME(CsvTableView)& rView, QAbstractProxyModel* pProxyModel)
+        static void storeCells(CellMemory& cellMemory, DFG_CLASS_NAME(CsvTableView)& rView)
         {
             // TODO: getting selected items as a list can be slow and take huge amount of memory -> improve.
-            const QModelIndexList& selected = rView.getSelectedItemIndexes(pProxyModel);
+            const QModelIndexList& selected = rView.getSelectedItemIndexes_dataModel();
             auto pModel = rView.csvModel();
             if (!pModel)
                 return;
@@ -140,7 +140,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 if (m_pView)
                 {
-                    DFG_DETAIL_NS::storeCells(m_cellMemory, *m_pView, m_pProxyModel);
+                    DFG_DETAIL_NS::storeCells(m_cellMemory, *m_pView);
                     setText("Delete some cell contents");
                 }
             }
@@ -226,7 +226,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             if (!m_pView)
                 return;
 
-            auto pModel = m_pView->model();
+            auto pModel = m_pView->csvModel();
 
             if (m_bRowMode)
             {
@@ -258,7 +258,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             }
             else // case: cell mode.
             {
-                const QModelIndexList& indexList = m_pView->getSelectedItemIndexes(m_pView->getProxyModelPtr());
+                const QModelIndexList& indexList = m_pView->getSelectedItemIndexes_dataModel();
                 if (!indexList.empty())
                     m_where = indexList[0];
                 else
@@ -266,14 +266,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
                 QString sText = QApplication::clipboard()->text();
 
+                auto viewModelIndex = m_pView->mapToViewModel(m_where);
+
                 QTextStream strm(&sText, QIODevice::ReadOnly);
                 DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(strm, '\t', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
                 {
-                    const auto nTargetRow = m_where.row() + static_cast<int>(nRow);
-                    const auto nTargetCol = m_where.column() + static_cast<int>(nCol);
-                    QModelIndex indexTarget = pModel->index(nTargetRow, nTargetCol);
+                    const auto indexTarget = m_pView->mapToDataModel(viewModelIndex.model()->index(viewModelIndex.row() + static_cast<int>(nRow),
+                                                                                                       viewModelIndex.column() + static_cast<int>(nCol)));
                     if (!indexTarget.isValid())
                         return;
+                    const auto nTargetRow = indexTarget.row();
+                    const auto nTargetCol = indexTarget.column();
                     m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(pModel->data(indexTarget).toString().toUtf8().data())); // TODO: makes redundant QString round-trip.
                     const int intSize = (nSize < NumericTraits<int>::maxValue) ? static_cast<int>(nSize) : NumericTraits<int>::maxValue;
                     m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(QString::fromWCharArray(p, intSize).toUtf8().data()));
@@ -334,7 +337,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     private:
         DFG_CLASS_NAME(CsvTableView)* m_pView;
         int m_nWhere;	// Stores the index of the new row.
-        QModelIndex m_where; /// Cell mode: Stores the top-left index where the paste should take place.
+        QModelIndex m_where; /// Cell mode: Stores the top-left dataModel index where the paste should take place.
         DFG_DETAIL_NS::CellMemory m_cellMemoryUndo;
         DFG_DETAIL_NS::CellMemory m_cellMemoryRedo;
         std::vector<QString> m_vecLines;
