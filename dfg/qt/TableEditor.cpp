@@ -514,6 +514,16 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(cons
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const QString& text)
 {
+    if (!m_spFilterPanel)
+        return;
+
+    // Setting edit readonly as setFilterRegExp() may change selection which, at the time of writing, launched
+    // event loop and if user edited the filter text while at it, this function would get called in re-entrant manner
+    // causing a crash in setFilterRegExp().
+    auto readOnlyGuard = makeScopedCaller( [&]() { m_spFilterPanel->m_pTextEdit->setReadOnly(true); },
+                                           [&]() { m_spFilterPanel->m_pTextEdit->setReadOnly(false); });
+
+
     auto pProxy = (m_spTableView) ? qobject_cast<ProxyModelClass*>(m_spTableView->getProxyModelPtr()): nullptr;
     if (!pProxy || !m_spFilterPanel)
         return;
