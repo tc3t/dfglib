@@ -73,7 +73,7 @@ namespace
 DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     : BaseClass(pParent)
     , m_nFindColumnIndex(0)
-    , m_matchDef(QString(), Qt::CaseInsensitive)
+    , m_matchDef(QString(), Qt::CaseInsensitive, QRegExp::Wildcard)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)

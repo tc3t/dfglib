@@ -9,6 +9,7 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAction>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDockWidget>
 #include <QGridLayout>
 #include <QLineEdit>
@@ -133,6 +134,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
     {
     public:
         FindPanelWidget(const QString& label)
+            : m_pTextEdit(nullptr)
+            , m_pColumnSelector(nullptr)
+            , m_pCaseSensitivityCheckBox(nullptr)
+            , m_pMatchSyntaxCombobox(nullptr)
         {
             int nColumn = 0;
 
@@ -148,6 +153,41 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
                 m_pCaseSensitivityCheckBox->setToolTip(tr("Check to enable case sensitivity"));
                 m_pCaseSensitivityCheckBox->setChecked(false);
                 l->addWidget(m_pCaseSensitivityCheckBox, 0, nColumn++);
+            }
+
+            // Match syntax control
+            {
+                m_pMatchSyntaxCombobox = new QComboBox(this);
+
+                m_pMatchSyntaxCombobox->insertItem(0, tr("Wildcard"),              QRegExp::Wildcard);
+                m_pMatchSyntaxCombobox->insertItem(1, tr("Wildcard (Unix Shell)"), QRegExp::WildcardUnix);
+                m_pMatchSyntaxCombobox->insertItem(2, tr("Simple string"),          QRegExp::FixedString);
+                m_pMatchSyntaxCombobox->insertItem(3, tr("Regular expression"),     QRegExp::RegExp);
+                m_pMatchSyntaxCombobox->insertItem(4, tr("Regular expression 2"),   QRegExp::RegExp2);
+                m_pMatchSyntaxCombobox->insertItem(5, tr("Regular expression"
+                                                         " (W3C XML Schema 1.1)"),  QRegExp::W3CXmlSchema11);
+                m_pMatchSyntaxCombobox->setCurrentIndex(0);
+
+                const char szRegularExpressionTooltip[] = "Regular expression\n\n"
+                                                          ". Matches any single character\n"
+                                                          ".* Matches zero or more characters\n"
+                                                          "[...] Set of characters\n"
+                                                          "| Match expression before or after\n"
+                                                          "^ Beginning of line\n"
+                                                          "$ End of line\n";
+
+                // Set tooltips.
+                m_pMatchSyntaxCombobox->setItemData(0, "? Matches single character, the same as . in regexp.\n"
+                                                       "* Matches zero or more characters, the same as .* in regexp.\n"
+                                                       "[...] Set of character similar to regexp.", Qt::ToolTipRole);
+                m_pMatchSyntaxCombobox->setItemData(1, "Like Wildcard, but wildcard characters can be escaped with \\", Qt::ToolTipRole);
+                m_pMatchSyntaxCombobox->setItemData(2, "Plain search string, no need to worry about special characters", Qt::ToolTipRole);
+                m_pMatchSyntaxCombobox->setItemData(3, szRegularExpressionTooltip, Qt::ToolTipRole);
+                m_pMatchSyntaxCombobox->setItemData(4, "Regular expression with greedy quantifiers", Qt::ToolTipRole);
+                m_pMatchSyntaxCombobox->setItemData(5, "Regular expression (W3C XML Schema 1.1)", Qt::ToolTipRole);
+
+
+                l->addWidget(m_pMatchSyntaxCombobox, 0, nColumn++);
             }
 
             // Column control
@@ -169,12 +209,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
             return (m_pCaseSensitivityCheckBox->isChecked()) ? Qt::CaseSensitive : Qt::CaseInsensitive;
         }
 
+        QRegExp::PatternSyntax getPatternSyntax() const
+        {
+            const auto currentData = m_pMatchSyntaxCombobox->currentData();
+            return static_cast<QRegExp::PatternSyntax>(currentData.toUInt());
+        }
+
         // Returned object is owned by 'this' and lives until the destruction of 'this'.
         QCheckBox* getCaseSensivitivyCheckBox() { return m_pCaseSensitivityCheckBox; }
 
         HighlightTextEdit* m_pTextEdit;
         QSpinBox* m_pColumnSelector;
         QCheckBox* m_pCaseSensitivityCheckBox;
+        QComboBox* m_pMatchSyntaxCombobox;
     };
 
     class FilterPanelWidget : public FindPanelWidget
@@ -534,7 +581,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(cons
     if (!m_spTableView || !m_spFindPanel)
         return;
 
-    DFG_CLASS_NAME(StringMatchDefinition) matchDef(text, m_spFindPanel->getCaseSensitivity());
+    DFG_CLASS_NAME(StringMatchDefinition) matchDef(text, m_spFindPanel->getCaseSensitivity(), m_spFindPanel->getPatternSyntax());
     m_spTableView->setFindText(matchDef, m_spFindPanel->m_pColumnSelector->value());
     m_spTableView->onFindNext();
 }
@@ -555,7 +602,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
     if (!pProxy || !m_spFilterPanel)
         return;
 
-    QRegExp regExp(text, m_spFilterPanel->getCaseSensitivity(), QRegExp::RegExp);
+    QRegExp regExp(text, m_spFilterPanel->getCaseSensitivity(), m_spFilterPanel->getPatternSyntax());
     pProxy->setFilterRegExp(regExp);
     pProxy->setFilterKeyColumn(m_spFilterPanel->m_pColumnSelector->value());
 }
