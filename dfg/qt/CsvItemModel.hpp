@@ -5,6 +5,7 @@
 #include "qtIncludeHelpers.hpp"
 #include "../cont/tableCsv.hpp"
 #include "../io/textEncodingTypes.hpp"
+#include "StringMatchDefinition.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -42,34 +43,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     namespace DFG_DETAIL_NS
     {
-        class StringMatchDefinition
-        {
-        public:
-            StringMatchDefinition(QString matchString, Qt::CaseSensitivity caseSensitivity) :
-                m_matchString(std::move(matchString))
-              , m_caseSensitivity(caseSensitivity)
-            {}
-
-            bool isMatchWith(const QString& s) const
-            {
-                return !m_matchString.isEmpty() && s.contains(m_matchString, m_caseSensitivity);
-            }
-
-            bool isMatchWith(const StringViewUtf8 sv) const
-            {
-                return !m_matchString.isEmpty() && QString::fromUtf8(toCharPtr_raw(sv.data()), static_cast<int>(sv.length())).contains(m_matchString, m_caseSensitivity);
-            }
-
-            QString m_matchString;
-            Qt::CaseSensitivity m_caseSensitivity;
-        }; // class StringMatchDefinition
-
         class HighlightDefinition
         {
         public:
             HighlightDefinition(const QString id,
                                 const int col,
-                                StringMatchDefinition matcher,
+                                DFG_CLASS_NAME(StringMatchDefinition) matcher,
                                 QBrush highlightBrush = QBrush(Qt::green, Qt::SolidPattern)
                                 )
                 : m_id(id)
@@ -80,11 +59,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             QVariant data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const;
 
-            const StringMatchDefinition& matcher() const { return m_matcher; }
+            const DFG_CLASS_NAME(StringMatchDefinition)& matcher() const { return m_matcher; }
 
             QString m_id;
             int m_nColumn;
-            StringMatchDefinition m_matcher;
+            DFG_CLASS_NAME(StringMatchDefinition) m_matcher;
             QBrush m_highlightBrush;
         }; // class HighlightDefinition
 
@@ -102,7 +81,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
-        typedef DFG_DETAIL_NS::StringMatchDefinition StringMatchDefinition;
+        typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDefinition;
         
         enum ColType
         {

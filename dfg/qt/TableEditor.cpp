@@ -8,6 +8,7 @@
 #include "qtIncludeHelpers.hpp"
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAction>
+#include <QCheckBox>
 #include <QDockWidget>
 #include <QGridLayout>
 #include <QLineEdit>
@@ -133,24 +134,47 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
     public:
         FindPanelWidget(const QString& label)
         {
-            auto l = new QGridLayout(this);
-            l->addWidget(new QLabel(label, this), 0, 0);
-            m_pTextEdit = new HighlightTextEdit(this);
-            l->addWidget(m_pTextEdit, 0, 1);
+            int nColumn = 0;
 
-            l->addWidget(new QLabel(tr("Column"), this), 0, 2);
-            m_pColumnSelector = new QSpinBox(this);
-            m_pColumnSelector->setMinimum(-1);
-            m_pColumnSelector->setValue(-1);
-            l->addWidget(m_pColumnSelector, 0, 3);
+            auto l = new QGridLayout(this);
+            l->addWidget(new QLabel(label, this), 0, nColumn++);
+
+            m_pTextEdit = new HighlightTextEdit(this);
+            l->addWidget(m_pTextEdit, 0, nColumn++);
+
+            // Case-sensitivity control
+            {
+                m_pCaseSensitivityCheckBox = new QCheckBox(tr("Case sensitive"), this);
+                m_pCaseSensitivityCheckBox->setToolTip(tr("Check to enable case sensitivity"));
+                m_pCaseSensitivityCheckBox->setChecked(false);
+                l->addWidget(m_pCaseSensitivityCheckBox, 0, nColumn++);
+            }
+
+            // Column control
+            {
+                l->addWidget(new QLabel(tr("Column"), this), 0, nColumn++);
+                m_pColumnSelector = new QSpinBox(this);
+                m_pColumnSelector->setMinimum(-1);
+                m_pColumnSelector->setValue(-1);
+                l->addWidget(m_pColumnSelector, 0, nColumn++);
+            }
 
             // TODO: match type (wildcard, regexp...)
             // TODO: highlighting details (color)
             // TODO: match count
         }
 
+        Qt::CaseSensitivity getCaseSensitivity() const
+        {
+            return (m_pCaseSensitivityCheckBox->isChecked()) ? Qt::CaseSensitive : Qt::CaseInsensitive;
+        }
+
+        // Returned object is owned by 'this' and lives until the destruction of 'this'.
+        QCheckBox* getCaseSensivitivyCheckBox() { return m_pCaseSensitivityCheckBox; }
+
         HighlightTextEdit* m_pTextEdit;
         QSpinBox* m_pColumnSelector;
+        QCheckBox* m_pCaseSensitivityCheckBox;
     };
 
     class FilterPanelWidget : public FindPanelWidget
@@ -231,6 +255,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         m_spFindPanel.reset(new DFG_DETAIL_NS::FindPanelWidget(tr("Find")));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onHighlightTextChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFindColumnChanged));
+        DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->getCaseSensivitivyCheckBox(), &QCheckBox::stateChanged, this, &ThisClass::onHighlightTextCaseSensitivityChanged));
         spLayout->addWidget(m_spFindPanel.get(), row++, 0);
 
         // Filter panel
@@ -238,6 +263,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
             m_spFilterPanel.reset(new DFG_DETAIL_NS::FilterPanelWidget);
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onFilterTextChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFilterColumnChanged));
+            DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->getCaseSensivitivyCheckBox(), &QCheckBox::stateChanged, this, &ThisClass::onFilterCaseSensitivityChanged));
             spLayout->addWidget(m_spFilterPanel.get(), row++, 0);
         }
 
@@ -508,7 +534,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(cons
     if (!m_spTableView || !m_spFindPanel)
         return;
 
-    m_spTableView->setFindText(text, m_spFindPanel->m_pColumnSelector->value());
+    DFG_CLASS_NAME(StringMatchDefinition) matchDef(text, m_spFindPanel->getCaseSensitivity());
+    m_spTableView->setFindText(matchDef, m_spFindPanel->m_pColumnSelector->value());
     m_spTableView->onFindNext();
 }
 
@@ -528,7 +555,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
     if (!pProxy || !m_spFilterPanel)
         return;
 
-    pProxy->setFilterRegExp(text);
+    QRegExp regExp(text, m_spFilterPanel->getCaseSensitivity(), QRegExp::RegExp);
+    pProxy->setFilterRegExp(regExp);
     pProxy->setFilterKeyColumn(m_spFilterPanel->m_pColumnSelector->value());
 }
 
@@ -567,4 +595,18 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterRequested()
 {
     if (m_spFilterPanel)
         activateFindTextEdit(m_spFilterPanel->m_pTextEdit);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextCaseSensitivityChanged(const bool bCaseSensitive)
+{
+    DFG_UNUSED(bCaseSensitive);
+    if (m_spFindPanel)
+        onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterCaseSensitivityChanged(const bool bCaseSensitive)
+{
+    DFG_UNUSED(bCaseSensitive);
+    if (m_spFilterPanel)
+        onFilterTextChanged(m_spFilterPanel->m_pTextEdit->text());
 }

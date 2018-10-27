@@ -73,6 +73,7 @@ namespace
 DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     : BaseClass(pParent)
     , m_nFindColumnIndex(0)
+    , m_matchDef(QString(), Qt::CaseInsensitive)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -1655,13 +1656,16 @@ void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
         bool bOk;
         auto s = QInputDialog::getText(this, tr("Find"), tr("Set text to search for"), QLineEdit::Normal, QString(), &bOk);
         if (bOk)
-            setFindText(s, m_nFindColumnIndex);
+        {
+            m_matchDef.m_matchString = std::move(s);
+            setFindText(m_matchDef, m_nFindColumnIndex);
+        }
     }
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onFind(const bool forward)
 {
-    if (m_findText.isEmpty())
+    if (m_matchDef.m_matchString.isEmpty())
         return;
 
     auto pBaseModel = csvModel();
@@ -1714,15 +1718,15 @@ void DFG_CLASS_NAME(CsvTableView)::onFindPrevious()
     onFind(false);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setFindText(QString s, const int col)
+void DFG_CLASS_NAME(CsvTableView)::setFindText(const StringMatchDef matchDef, const int nCol)
 {
-    m_findText = std::move(s);
-    m_nFindColumnIndex = col;
+    m_matchDef = matchDef;
+    m_nFindColumnIndex = nCol;
     auto pBaseModel = csvModel();
     if (!pBaseModel)
         return;
 
-    CsvModel::HighlightDefinition hld("te0", getFindColumnIndex(), CsvModel::StringMatchDefinition(m_findText, Qt::CaseInsensitive));
+    CsvModel::HighlightDefinition hld("te0", getFindColumnIndex(), m_matchDef);
     pBaseModel->setHighlighter(std::move(hld));
 
     forgetLatestFindPosition();

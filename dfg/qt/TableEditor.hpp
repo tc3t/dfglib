@@ -94,6 +94,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onFilterColumnChanged(int nNewCol);
         void onFindRequested();
         void onFilterRequested();
+        void onHighlightTextCaseSensitivityChanged(bool);
+        void onFilterCaseSensitivityChanged(bool);
 
     public:
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spTableView;

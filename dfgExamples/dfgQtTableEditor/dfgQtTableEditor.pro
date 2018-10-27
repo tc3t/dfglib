@@ -37,7 +37,8 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/QtApplication.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableEditor.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/PropertyHelper.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.hpp
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/StringMatchDefinition.hpp
 
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../externals/

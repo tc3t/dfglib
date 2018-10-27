@@ -3,6 +3,7 @@
 #include "../dfgDefs.hpp"
 #include "TableView.hpp"
 #include "../cont/TorRef.hpp"
+#include "StringMatchDefinition.hpp"
 #include <memory>
 
 #include "qtIncludeHelpers.hpp"
@@ -104,6 +105,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(TableView) BaseClass;
         typedef DFG_CLASS_NAME(CsvTableView) ThisClass;
         typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
+        typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDef;
 
         DFG_CLASS_NAME(CsvTableView)(QWidget* pParent);
         ~DFG_CLASS_NAME(CsvTableView)() override;
@@ -232,7 +234,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onFilterRequested();
 
-        void setFindText(QString s, const int col);
+        void setFindText(const StringMatchDef matchDef, const int nCol);
 
         void onNewSourceOpened();
 
@@ -275,7 +277,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
         QStringList m_tempFilePathToRemoveOnExit;
         QModelIndex m_latestFoundIndex; // Index from underlying model. Invalid if doing first find.
-        QString m_findText;
+        StringMatchDef m_matchDef;
         int m_nFindColumnIndex;
         std::vector<std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)>> m_selectionAnalyzers;
     };
