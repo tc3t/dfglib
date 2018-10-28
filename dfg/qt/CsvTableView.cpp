@@ -30,6 +30,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSettings>
+#include <QSortFilterProxyModel>
 #include <QThread>
 #include <QToolTip>
 DFG_END_INCLUDE_QT_HEADERS
@@ -79,131 +80,131 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     if (pVertHdr)
         pVertHdr->setDefaultSectionSize(20); // Default row height seems to be 30, which looks somewhat bloated. Make it smaller.
 
+    const auto addSeparator = [&]()
+        {
+            auto pAction = new QAction(this);
+            pAction->setSeparator(true);
+            addAction(pAction);
+        };
+
     {
         auto pAction = new QAction(tr("Move first row to header"), this);
         //pAction->setShortcut(tr(""));
-        connect(pAction, &QAction::triggered, this, &ThisClass::moveFirstRowToHeader);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveFirstRowToHeader));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Move header to first row"), this);
         //pAction->setShortcut(tr(""));
-        connect(pAction, &QAction::triggered, this, &ThisClass::moveHeaderToFirstRow);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveHeaderToFirstRow));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Open file..."), this);
-        connect(pAction, &QAction::triggered, this, &ThisClass::openFromFile);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openFromFile));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Merge files to current..."), this);
-        connect(pAction, &QAction::triggered, this, &ThisClass::mergeFilesToCurrent);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::mergeFilesToCurrent));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Save"), this);
         pAction->setShortcut(tr("Ctrl+S"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::save);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::save));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Save to file..."), this);
-        connect(pAction, &QAction::triggered, this, &ThisClass::saveToFile);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveToFile));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Save to file with options..."), this);
-        connect(pAction, &QAction::triggered, this, &ThisClass::saveToFileWithOptions);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveToFileWithOptions));
         addAction(pAction);
     }
 
     // -------------------------------------------------
-    {
-        auto pAction = new QAction(this);
-        pAction->setSeparator(true);
-        addAction(pAction);
-    }
+    addSeparator();
 
     {
         auto pAction = new QAction(tr("Clear selected cell(s)"), this);
         pAction->setShortcut(tr("Del"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::clearSelected);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::clearSelected));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Insert row here"), this);
         pAction->setShortcut(tr("Ins"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::insertRowHere);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowHere));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Insert row after current"), this);
         pAction->setShortcut(tr("Shift+Ins"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::insertRowAfterCurrent);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowAfterCurrent));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Insert column"), this);
         pAction->setShortcut(tr("Ctrl+Alt+Ins"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::insertColumn);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumn));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Insert column after current"), this);
         pAction->setShortcut(tr("Ctrl+Alt+Shift+Ins"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::insertColumnAfterCurrent);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumnAfterCurrent));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Delete selected row(s)"), this);
         pAction->setShortcut(tr("Shift+Del"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::deleteSelectedRow);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::deleteSelectedRow));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Delete current column"), this);
         pAction->setShortcut(tr("Ctrl+Del"));
-        connect(pAction, SIGNAL(triggered()), this, SLOT(deleteCurrentColumn()));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, SIGNAL(triggered()), this, SLOT(deleteCurrentColumn())));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Resize table"), this);
         //pAction->setShortcut(tr(""));
-        connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Generate content..."), this);
         //pAction->setShortcut(tr(""));
-        connect(pAction, &QAction::triggered, this, &ThisClass::generateContent);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::generateContent));
         addAction(pAction);
     }
 
-    {
-        auto pAction = new QAction(this);
-        pAction->setSeparator(true);
-        addAction(pAction);
-    }
+    // -------------------------------------------------
+    addSeparator();
 
     {
         auto pAction = new QAction(tr("Invert selection"), this);
         pAction->setShortcut(tr("Ctrl+I"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::invertSelection);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::invertSelection));
         addAction(pAction);
     }
 
@@ -212,19 +213,19 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         {
             auto pAction = new QAction(tr("Find"), this);
             pAction->setShortcut(tr("Ctrl+F"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::onFindRequested);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindRequested));
             addAction(pAction);
         }
         {
             auto pAction = new QAction(tr("Find next"), this);
             pAction->setShortcut(tr("F3"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::onFindNext);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindNext));
             addAction(pAction);
         }
         {
             auto pAction = new QAction(tr("Find previous"), this);
             pAction->setShortcut(tr("Shift+F3"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::onFindPrevious);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindPrevious));
             addAction(pAction);
         }
 
@@ -232,7 +233,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         {
             auto pAction = new QAction(tr("Filter"), this);
             pAction->setShortcut(tr("Alt+F"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::onFilterRequested);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFilterRequested));
             addAction(pAction);
         }
     }
@@ -241,62 +242,94 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     {
         auto pAction = new QAction(tr("Move row up"), this);
         pAction->setShortcut(tr("Alt+Up"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::moveRowUp);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowUp));
         addAction(pAction);
     }
 
     {
     auto pAction = new QAction(tr("Move row down"), this);
     pAction->setShortcut(tr("Alt+Down"));
-    connect(pAction, &QAction::triggered, this, &ThisClass::moveRowDown);
+    DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowDown));
     addAction(pAction);
     }
     */
 
     // -------------------------------------------------
-    {
-        auto pAction = new QAction(this);
-        pAction->setSeparator(true);
-        addAction(pAction);
-    }
+    addSeparator();
 
     {
         auto pAction = new QAction(tr("Cut"), this);
         pAction->setShortcut(tr("Ctrl+X"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::cut);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::cut));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Copy"), this);
         pAction->setShortcut(tr("Ctrl+C"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::copy);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::copy));
         addAction(pAction);
     }
 
     {
         auto pAction = new QAction(tr("Paste"), this);
         pAction->setShortcut(tr("Ctrl+V"));
-        connect(pAction, &QAction::triggered, this, &ThisClass::paste);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::paste));
         addAction(pAction);
     }
 
-
-    // -------------------------------------------------
-    {
-        auto pAction = new QAction(this);
-        pAction->setSeparator(true);
-        addAction(pAction);
-    }
     privAddUndoRedoActions();
 
     // -------------------------------------------------
+    addSeparator();
+
+    // Add 'sortable columns'-action
+    {
+        auto pAction = new QAction(tr("Sortable columns"), this);
+        pAction->setCheckable(true);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setSortingEnabled));
+        addAction(pAction);
+    }
+
+    // Add 'Case sensitive sorting'-action
+    {
+        auto pAction = new QAction(tr("Case sensitive sorting"), this);
+        pAction->setCheckable(true);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, [&](const bool bCaseSensitive)
+        {
+            auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
+            if (pProxy)
+                pProxy->setSortCaseSensitivity((bCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
+            else
+                QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case senstitivity: no suitable proxy model found"));
+        }));
+        addAction(pAction);
+    }
+
+    // Add 'reset sorting'-action
+    {
+        auto pAction = new QAction(tr("Reset sorting"), this);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, [&]()
+        {
+            auto pProxy = this->getProxyModelPtr();
+            if (pProxy)
+                pProxy->sort(-1);
+            else
+                QToolTip::showText(QCursor::pos(), tr("Unable to reset sorting: no proxy model found"));
+        }));
+        addAction(pAction);
+    }
+
+
+    // -------------------------------------------------
+    addSeparator();
+
     {
         // Add diff-action
         {
             auto pAction = new QAction(tr("Diff with unmodified"), this);
             pAction->setShortcut(tr("Alt+D"));
-            connect(pAction, &QAction::triggered, this, &ThisClass::diffWithUnmodified);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::diffWithUnmodified));
             addAction(pAction);
         }
     }
@@ -1541,12 +1574,12 @@ bool DFG_CLASS_NAME(CsvTableView)::moveHeaderToFirstRow()
 
 QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr()
 {
-    return dynamic_cast<QAbstractProxyModel*>(model());
+    return qobject_cast<QAbstractProxyModel*>(model());
 }
 
 const QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr() const
 {
-    return dynamic_cast<const QAbstractProxyModel*>(model());
+    return qobject_cast<const QAbstractProxyModel*>(model());
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
