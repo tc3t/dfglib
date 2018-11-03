@@ -15,6 +15,7 @@ DFG_END_INCLUDE_QT_HEADERS
 class QUndoStack;
 class QAbstractProxyModel;
 class QItemSelection;
+class QMenu;
 class QProgressBar;
 class QPushButton;
 
@@ -181,6 +182,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Forgets latest find position so that next begins from memoryless situation.
         void forgetLatestFindPosition();
 
+        std::unique_ptr<QMenu> createResizeColumnsMenu();
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -240,6 +243,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
+        void onColumnResizeAction_toScreenEvenly();
+        void onColumnResizeAction_toScreenContentAware();
+        void onColumnResizeAction_content();
+        void onColumnResizeAction_fixedSize();
+
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);
@@ -280,6 +288,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         StringMatchDef m_matchDef;
         int m_nFindColumnIndex;
         std::vector<std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)>> m_selectionAnalyzers;
+        std::unique_ptr<QMenu> m_spResizeColumnsMenu;
     };
 
 } } // module namespace

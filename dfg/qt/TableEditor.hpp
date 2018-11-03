@@ -17,6 +17,7 @@ class QDockWidget;
 class QItemSelection;
 class QLabel;
 class QLineEdit;
+class QMenu;
 class QSortFilterProxyModel;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
@@ -109,6 +110,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<DFG_DETAIL_NS::FindPanelWidget> m_spFindPanel;
         std::unique_ptr<DFG_DETAIL_NS::FilterPanelWidget> m_spFilterPanel;
         std::unique_ptr<QWidget> m_spSelectionAnalyzerPanel;
+        std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bHandlingOnCellEditorTextChanged;
     };
 

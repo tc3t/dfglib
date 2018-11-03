@@ -20,10 +20,13 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QLabel>
+#include <QMenu>
 #include <QMessageBox>
 #include <QItemSelection>
 #include <QItemSelectionModel>
+#include <QPushButton>
 #include <QSortFilterProxyModel>
+#include <QSpacerItem>
 #include <QSpinBox>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -297,6 +300,18 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         spLayout->addWidget(m_spTableView.get(), row++, 0);
         const auto cellEditorMaxHeight = m_spCellEditor->maximumHeight();
         spLayout->addWidget(m_spCellEditorDockWidget.get(), row++, 0);
+
+        // Miscellaneous controls
+        {
+            std::unique_ptr<QHBoxLayout> pHl(new QHBoxLayout(nullptr));
+            auto pButton = new QPushButton(tr("Resize columns"), this); // Deletion though parentship.
+            pButton->setMaximumWidth(100);
+            m_spResizeColumnsMenu = m_spTableView->createResizeColumnsMenu();
+            pButton->setMenu(m_spResizeColumnsMenu.get());
+            pHl->addWidget(pButton);
+            pHl->addSpacerItem(new QSpacerItem(0, 0, QSizePolicy::Expanding)); // pHl seems to take ownership.
+            spLayout->addLayout(pHl.release(), row++, 0); // pHl becomes child of spLayout.
+        }
 
         // Find panel
         m_spFindPanel.reset(new DFG_DETAIL_NS::FindPanelWidget(tr("Find")));

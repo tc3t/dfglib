@@ -10,6 +10,7 @@
 #include "connectHelper.hpp"
 #include "CsvTableViewCompleterDelegate.hpp"
 #include "../time/timerCpu.hpp"
+#include "../cont/valueArray.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -323,6 +324,15 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         addAction(pAction);
     }
 
+    // -------------------------------------------------
+    addSeparator();
+
+    {
+        auto pAction = new QAction(tr("Resize columns"), this);
+        m_spResizeColumnsMenu = createResizeColumnsMenu();
+        pAction->setMenu(m_spResizeColumnsMenu.get());
+        addAction(pAction);
+    }
 
     // -------------------------------------------------
     addSeparator();
@@ -344,6 +354,24 @@ DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
     {
         QFile::remove(path);
     }
+}
+
+std::unique_ptr<QMenu> DFG_CLASS_NAME(CsvTableView)::createResizeColumnsMenu()
+{
+    std::unique_ptr<QMenu> spMenu(new QMenu);
+    auto pActScreenEvenly = spMenu->addAction(tr("Resize to screen evenly"));
+    DFG_QT_VERIFY_CONNECT(connect(pActScreenEvenly, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toScreenEvenly));
+
+    auto pActScreenContent = spMenu->addAction(tr("Resize to screen content aware"));
+    DFG_QT_VERIFY_CONNECT(connect(pActScreenContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toScreenContentAware));
+
+    auto pActContent = spMenu->addAction(tr("Resize all to content"));
+    DFG_QT_VERIFY_CONNECT(connect(pActContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_content));
+
+    auto pActFixedSize = spMenu->addAction(tr("Set fixed size..."));
+    DFG_QT_VERIFY_CONNECT(connect(pActFixedSize, &QAction::triggered, this, &ThisClass::onColumnResizeAction_fixedSize));
+
+    return spMenu;
 }
 
 void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
@@ -2100,6 +2128,139 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToDataModel(const QModelIndex& inde
 void DFG_CLASS_NAME(CsvTableView)::forgetLatestFindPosition()
 {
     m_latestFoundIndex = QModelIndex();
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toScreenEvenly()
+{
+    auto pViewPort = viewport();
+    auto pHorizontalHeader = horizontalHeader();
+    const auto nColCount = pHorizontalHeader ? pHorizontalHeader->count() : 0;
+    if (!pViewPort || nColCount < 1)
+        return;
+    const auto w = pViewPort->width();
+    const int sectionSize = w / nColCount;
+    pHorizontalHeader->setDefaultSectionSize(sectionSize);
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toScreenContentAware()
+{
+    auto pHeader = horizontalHeader();
+    auto pViewPort = viewport();
+    const auto numHeader = (pHeader) ? pHeader->count() : 0;
+    if (!pHeader || !pViewPort || numHeader < 1)
+        return;
+
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ValueVector)<int> sizes;
+    sizes.reserve(static_cast<size_t>(numHeader));
+    for (int i = 0; i < numHeader; ++i)
+    {
+        // Note: using only content hints, to take column header width into account, use pHeader->sectionSizeHint(i);
+        sizes.push_back(sizeHintForColumn(i));
+        //sizes.push_back(pHeader->sectionSizeHint(i));
+    }
+    // Using int64 in accumulate to avoid possibility for integer overflow.
+    const int64 nHintTotalWidth = DFG_MODULE_NS(numeric)::accumulate(sizes, int64(0));
+    const auto nAvailableTotalWidth = pViewPort->width();
+
+    if (nHintTotalWidth < nAvailableTotalWidth)
+    {
+        // Case: content requirements are less than available window width.
+        // Action: increase width for every column.
+        auto nFreePixels = static_cast<int>(nAvailableTotalWidth - nHintTotalWidth);
+        const auto nIncrement = nFreePixels / numHeader;
+        for (int i = 0; i < numHeader; ++i)
+        {
+            pHeader->resizeSection(i, sizes[i] + nIncrement);
+            nFreePixels -= nIncrement;
+        }
+        if (nFreePixels > 0) // If division wasn't even, add remainder to last column
+            pHeader->resizeSection(numHeader - 1, pHeader->sectionSize(numHeader - 1) + nFreePixels);
+        return;
+    }
+    else // case: content width >= available space.
+    {
+        /* Rough description of logics: resize all 'less than average'-width columns to content, for others
+           distribute remaining space evenly.
+
+         1. Calculate truncation limit as average width available for remaining columns.
+         2. Go through columns and if there is one whose needed width is less than truncation limit,
+            resize it, mark it handled and goto 1. Note that this operation may free width for remaining columns
+            so on next round the truncation limit may be greater.
+         3. If all remaining columns have size greater than truncation limit, distribute available width evenly for those.
+         */
+
+        int numUnhandled = numHeader;
+        int nAvailableWidth = nAvailableTotalWidth;
+        while (numUnhandled > 0)
+        {
+            // 1.
+            const int truncationLimit = nAvailableWidth / numUnhandled;
+            bool bHandledOne = false;
+            // 2.
+            for (int i = 0; i < numHeader; ++i)
+            {
+                if (sizes[i] < 0)
+                    continue; // Column already handled.
+                if (sizes[i] <= truncationLimit)
+                {
+                    pHeader->resizeSection(i, sizes[i]);
+                    numUnhandled--;
+                    nAvailableWidth -= sizes[i];
+                    sizes[i] = -1; // Using -1 as "already handled"-indicator.
+                    bHandledOne = true;
+                    break;
+                }
+            }
+            if (bHandledOne)
+                continue;
+            // 3.
+            // All headers were wider than truncation limit -> distribute space evenly.
+            for (int i = 0; i < numHeader; ++i)
+            {
+                if (sizes[i] > truncationLimit)
+                {
+                    numUnhandled--;
+                    nAvailableWidth -= truncationLimit;
+                    if (nAvailableWidth >= truncationLimit)
+                        pHeader->resizeSection(i, truncationLimit);
+                    else // Final column, add the remainder width there.
+                    {
+                        pHeader->resizeSection(i, truncationLimit + nAvailableWidth);
+                        break;
+                    }
+                }
+            }
+            DFG_ASSERT_CORRECTNESS(numUnhandled == 0);
+            numUnhandled = 0; // Set to zero as if there's a bug it's better to have malfunctioning size behaviour than
+                              // infinite loop here.
+        }
+    } // 'Needs truncation'-case
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_content()
+{
+    auto pHeader = horizontalHeader();
+    if (!pHeader)
+        return;
+    const auto waitCursor = makeScopedCaller([]() { QApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
+                                             []() { QApplication::restoreOverrideCursor(); });
+    pHeader->resizeSections(QHeaderView::ResizeToContents);
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_fixedSize()
+{
+    bool bOk = false;
+    const auto nNewSize = QInputDialog::getInt(this, tr("Column size"), tr("New column size"), 100, 1, NumericTraits<int>::maxValue, 1, &bOk);
+    if (bOk && nNewSize > 0)
+    {
+        auto pHeader = horizontalHeader();
+        if (!pHeader)
+            return;
+        for (int i = 0, nCount = pHeader->count(); i < nCount; ++i)
+        {
+            pHeader->resizeSection(i, nNewSize);
+        }
+    }
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel)
