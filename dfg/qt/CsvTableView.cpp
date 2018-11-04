@@ -70,7 +70,7 @@ namespace
         return QString::fromLatin1(DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::DFG_CLASS_NAME(StringAscii)>(val).c_str().c_str());
     }
 
-    const int gnDefaultRowHeight = 20; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
+    const int gnDefaultRowHeight = 21; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
 
 } // unnamed namespace
 
