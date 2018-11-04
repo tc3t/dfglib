@@ -347,6 +347,15 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
             DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::diffWithUnmodified));
             addAction(pAction);
         }
+
+        // Add row mode -control
+        {
+            auto pAction = new QAction(tr("Row mode"), this);
+            pAction->setToolTip(tr("Selections by row instead of by cell (experimental)"));
+            pAction->setCheckable(true);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setRowMode));
+            addAction(pAction);
+        }
     }
 }
 
@@ -641,7 +650,12 @@ void DFG_CLASS_NAME(CsvTableView)::invertSelection()
 
 bool DFG_CLASS_NAME(CsvTableView)::isRowMode() const
 {
-    return false;
+    return (selectionBehavior() == QAbstractItemView::SelectRows);
+}
+
+void DFG_CLASS_NAME(CsvTableView)::setRowMode(const bool b)
+{
+    setSelectionBehavior((b) ? QAbstractItemView::SelectRows : QAbstractItemView::SelectItems);
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)

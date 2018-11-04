@@ -251,6 +251,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onRowResizeAction_content();
         void onRowResizeAction_fixedSize();
 
+        void setRowMode(bool);
+
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);
