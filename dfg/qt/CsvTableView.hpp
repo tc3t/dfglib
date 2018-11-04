@@ -243,8 +243,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
-        void onColumnResizeAction_toScreenEvenly();
-        void onColumnResizeAction_toScreenContentAware();
+        void onColumnResizeAction_toViewEvenly();
+        void onColumnResizeAction_toViewContentAware();
         void onColumnResizeAction_content();
         void onColumnResizeAction_fixedSize();
 

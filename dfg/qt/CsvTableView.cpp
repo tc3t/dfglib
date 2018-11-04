@@ -359,11 +359,11 @@ DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
 std::unique_ptr<QMenu> DFG_CLASS_NAME(CsvTableView)::createResizeColumnsMenu()
 {
     std::unique_ptr<QMenu> spMenu(new QMenu);
-    auto pActScreenEvenly = spMenu->addAction(tr("Resize to screen evenly"));
-    DFG_QT_VERIFY_CONNECT(connect(pActScreenEvenly, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toScreenEvenly));
+    auto pActViewEvenly = spMenu->addAction(tr("Resize to view evenly"));
+    DFG_QT_VERIFY_CONNECT(connect(pActViewEvenly, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewEvenly));
 
-    auto pActScreenContent = spMenu->addAction(tr("Resize to screen content aware"));
-    DFG_QT_VERIFY_CONNECT(connect(pActScreenContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toScreenContentAware));
+    auto pActViewContent = spMenu->addAction(tr("Resize to view content aware"));
+    DFG_QT_VERIFY_CONNECT(connect(pActViewContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewContentAware));
 
     auto pActContent = spMenu->addAction(tr("Resize all to content"));
     DFG_QT_VERIFY_CONNECT(connect(pActContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_content));
@@ -2130,7 +2130,7 @@ void DFG_CLASS_NAME(CsvTableView)::forgetLatestFindPosition()
     m_latestFoundIndex = QModelIndex();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toScreenEvenly()
+void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewEvenly()
 {
     auto pViewPort = viewport();
     auto pHorizontalHeader = horizontalHeader();
@@ -2142,7 +2142,7 @@ void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toScreenEvenly()
     pHorizontalHeader->setDefaultSectionSize(sectionSize);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toScreenContentAware()
+void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewContentAware()
 {
     auto pHeader = horizontalHeader();
     auto pViewPort = viewport();
