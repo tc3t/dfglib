@@ -304,7 +304,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         // Miscellaneous controls
         {
             std::unique_ptr<QHBoxLayout> pHl(new QHBoxLayout(nullptr));
-            auto pButton = new QPushButton(tr("Resize columns"), this); // Deletion though parentship.
+            auto pButton = new QPushButton(tr("Resize..."), this); // Deletion though parentship.
             pButton->setMaximumWidth(100);
             m_spResizeColumnsMenu = m_spTableView->createResizeColumnsMenu();
             pButton->setMenu(m_spResizeColumnsMenu.get());

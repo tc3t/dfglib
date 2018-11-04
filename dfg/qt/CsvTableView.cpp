@@ -70,6 +70,8 @@ namespace
         return QString::fromLatin1(DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::DFG_CLASS_NAME(StringAscii)>(val).c_str().c_str());
     }
 
+    const int gnDefaultRowHeight = 20; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
+
 } // unnamed namespace
 
 DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
@@ -79,7 +81,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
-        pVertHdr->setDefaultSectionSize(20); // Default row height seems to be 30, which looks somewhat bloated. Make it smaller.
+        pVertHdr->setDefaultSectionSize(gnDefaultRowHeight); // TODO: make customisable
 
     // TODO: make customisable.
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -328,7 +330,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     addSeparator();
 
     {
-        auto pAction = new QAction(tr("Resize columns"), this);
+        auto pAction = new QAction(tr("Resize"), this);
         m_spResizeColumnsMenu = createResizeColumnsMenu();
         pAction->setMenu(m_spResizeColumnsMenu.get());
         addAction(pAction);
@@ -359,17 +361,35 @@ DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
 std::unique_ptr<QMenu> DFG_CLASS_NAME(CsvTableView)::createResizeColumnsMenu()
 {
     std::unique_ptr<QMenu> spMenu(new QMenu);
-    auto pActViewEvenly = spMenu->addAction(tr("Resize to view evenly"));
-    DFG_QT_VERIFY_CONNECT(connect(pActViewEvenly, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewEvenly));
 
-    auto pActViewContent = spMenu->addAction(tr("Resize to view content aware"));
-    DFG_QT_VERIFY_CONNECT(connect(pActViewContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewContentAware));
+    // Note: not using addSection() (i.e. a separator with text) as they are not shown in Windows in default style;
+    // can be made visible e.g. by using "fusion" style (for more information see setStyle(), QStyleFactory::create)
 
-    auto pActContent = spMenu->addAction(tr("Resize all to content"));
-    DFG_QT_VERIFY_CONNECT(connect(pActContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_content));
+    // Column actions
+    {
+        auto pActViewEvenly = spMenu->addAction(tr("Col: Resize to view evenly"));
+        DFG_QT_VERIFY_CONNECT(connect(pActViewEvenly, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewEvenly));
 
-    auto pActFixedSize = spMenu->addAction(tr("Set fixed size..."));
-    DFG_QT_VERIFY_CONNECT(connect(pActFixedSize, &QAction::triggered, this, &ThisClass::onColumnResizeAction_fixedSize));
+        auto pActViewContent = spMenu->addAction(tr("Col: Resize to view content aware"));
+        DFG_QT_VERIFY_CONNECT(connect(pActViewContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewContentAware));
+
+        auto pActContent = spMenu->addAction(tr("Col: Resize all to content"));
+        DFG_QT_VERIFY_CONNECT(connect(pActContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_content));
+
+        auto pActFixedSize = spMenu->addAction(tr("Col: Set fixed size..."));
+        DFG_QT_VERIFY_CONNECT(connect(pActFixedSize, &QAction::triggered, this, &ThisClass::onColumnResizeAction_fixedSize));
+    }
+
+    spMenu->addSeparator();
+
+    // Row actions
+    {
+        auto pActContent = spMenu->addAction(tr("Row: Resize all to content"));
+        DFG_QT_VERIFY_CONNECT(connect(pActContent, &QAction::triggered, this, &ThisClass::onRowResizeAction_content));
+
+        auto pActFixedSize = spMenu->addAction(tr("Row: Set fixed size..."));
+        DFG_QT_VERIFY_CONNECT(connect(pActFixedSize, &QAction::triggered, this, &ThisClass::onRowResizeAction_fixedSize));
+    }
 
     return spMenu;
 }
@@ -2237,30 +2257,59 @@ void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewContentAware()
     } // 'Needs truncation'-case
 }
 
+DFG_ROOT_NS_BEGIN
+{
+    namespace
+    {
+        void onHeaderResizeAction_content(QHeaderView* pHeader)
+        {
+            if (!pHeader)
+                return;
+            const auto waitCursor = makeScopedCaller([]() { QApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
+                                                     []() { QApplication::restoreOverrideCursor(); });
+            pHeader->resizeSections(QHeaderView::ResizeToContents);
+        }
+
+        void onHeaderResizeAction_fixedSize(QWidget* pParent, QHeaderView* pHeader)
+        {
+            if (!pHeader)
+                return;
+            bool bOk = false;
+            const auto nCurrentSetting = pHeader->defaultSectionSize();
+            const auto nNewSize = QInputDialog::getInt(pParent,
+                                                       QApplication::tr("Header size"),
+                                                       QApplication::tr("New header size"),
+                                                       nCurrentSetting,
+                                                       1,
+                                                       1048575, // Maximum section size at least in Qt 5.2
+                                                       1,
+                                                       &bOk);
+            if (bOk && nNewSize > 0)
+            {
+                pHeader->setDefaultSectionSize(nNewSize);
+            }
+        }
+    }
+}
+
 void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_content()
 {
-    auto pHeader = horizontalHeader();
-    if (!pHeader)
-        return;
-    const auto waitCursor = makeScopedCaller([]() { QApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
-                                             []() { QApplication::restoreOverrideCursor(); });
-    pHeader->resizeSections(QHeaderView::ResizeToContents);
+    onHeaderResizeAction_content(horizontalHeader());
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onRowResizeAction_content()
+{
+    onHeaderResizeAction_content(verticalHeader());
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_fixedSize()
 {
-    bool bOk = false;
-    const auto nNewSize = QInputDialog::getInt(this, tr("Column size"), tr("New column size"), 100, 1, NumericTraits<int>::maxValue, 1, &bOk);
-    if (bOk && nNewSize > 0)
-    {
-        auto pHeader = horizontalHeader();
-        if (!pHeader)
-            return;
-        for (int i = 0, nCount = pHeader->count(); i < nCount; ++i)
-        {
-            pHeader->resizeSection(i, nNewSize);
-        }
-    }
+    onHeaderResizeAction_fixedSize(this, horizontalHeader());
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onRowResizeAction_fixedSize()
+{
+    onHeaderResizeAction_fixedSize(this, verticalHeader());
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel)
