@@ -34,6 +34,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QSortFilterProxyModel>
 #include <QThread>
 #include <QToolTip>
+#include <QUndoView>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
@@ -71,6 +72,27 @@ namespace
     }
 
     const int gnDefaultRowHeight = 21; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
+
+    class UndoViewWidget : public QDialog
+    {
+    public:
+        typedef QDialog BaseClass;
+        UndoViewWidget(DFG_CLASS_NAME(CsvTableView)* pParent)
+            : BaseClass(pParent)
+        {
+            setAttribute(Qt::WA_DeleteOnClose, true);
+            setWindowFlags(windowFlags() & (~Qt::WindowContextHelpButtonHint)); // Remove ? from menu bar (at least on Windows)
+            if (!pParent || !pParent->m_spUndoStack)
+                return;
+            auto pLayout = new QHBoxLayout(this);
+            pLayout->addWidget(new QUndoView(&pParent->m_spUndoStack.get()->item(), this));
+        }
+
+        ~UndoViewWidget()
+        {
+        }
+
+    }; // Class UndoViewWidget
 
 } // unnamed namespace
 
@@ -414,9 +436,18 @@ void DFG_CLASS_NAME(CsvTableView)::clearUndoStack()
         m_spUndoStack->item().clear();
 }
 
+void DFG_CLASS_NAME(CsvTableView)::showUndoWindow()
+{
+    if (!m_spUndoStack)
+        return;
+    auto pUndoWidget = new UndoViewWidget(this);
+    pUndoWidget->show();
+}
+
 namespace
 {
-    const char gszMenuText_clearUndoBuffer[] = "&Clear undo-buffer";
+    const char gszMenuText_clearUndoBuffer[] = "&Clear undo buffer";
+    const char gszMenuText_showUndoWindow[] = "Show undo buffer";
 }
 
 void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
@@ -439,6 +470,13 @@ void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
         auto pActionClearUndoBuffer = new QAction(tr(gszMenuText_clearUndoBuffer), this);
         connect(pActionClearUndoBuffer, &QAction::triggered, this, &ThisClass::clearUndoStack);
         addAction(pActionClearUndoBuffer);
+
+        // Add Show undo-window -action
+        {
+            auto pAction = new QAction(tr(gszMenuText_showUndoWindow), this);
+            connect(pAction, &QAction::triggered, this, &ThisClass::showUndoWindow);
+            addAction(pAction);
+        }
     }
 }
 

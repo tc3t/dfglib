@@ -114,6 +114,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // If already present, old undo stack will be destroyed.
         void createUndoStack();
         void clearUndoStack();
+        void showUndoWindow();
 
         void setExternalUndoStack(QUndoStack* pUndoStack);
 
