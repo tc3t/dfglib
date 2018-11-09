@@ -576,13 +576,11 @@ void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
 void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
 {
     BaseClass::setModel(pModel);
-    if (m_spUndoStack)
-    {
-        auto pCsvModel = dynamic_cast<CsvModel*>(pModel);
-        if (pCsvModel)
-            pCsvModel->setUndoStack(&m_spUndoStack->item());
-    }
-    DFG_QT_VERIFY_CONNECT(connect(csvModel(), &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
+    auto pCsvModel = csvModel();
+    if (m_spUndoStack && pCsvModel)
+        pCsvModel->setUndoStack(&m_spUndoStack->item());
+    if (pCsvModel)
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
     DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
 }
 
@@ -1403,7 +1401,7 @@ namespace
         auto pModel = index.model();
         if (!pModel)
             return;
-        auto pComboBoxDelegate = dynamic_cast<QComboBox*>(editor);
+        auto pComboBoxDelegate = qobject_cast<QComboBox*>(editor);
         if (pComboBoxDelegate == nullptr)
         {
             BaseClass::setEditorData(editor, index);
@@ -1422,7 +1420,7 @@ namespace
     {
         if (!model)
             return;
-        auto pComboBoxDelegate = dynamic_cast<QComboBox*>(editor);
+        auto pComboBoxDelegate = qobject_cast<QComboBox*>(editor);
         if (pComboBoxDelegate)
         {
             const auto& value = pComboBoxDelegate->currentText();
