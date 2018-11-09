@@ -400,6 +400,7 @@ std::unique_ptr<QMenu> DFG_CLASS_NAME(CsvTableView)::createResizeColumnsMenu()
     {
         auto pActViewEvenly = spMenu->addAction(tr("Col: Resize to view evenly"));
         DFG_QT_VERIFY_CONNECT(connect(pActViewEvenly, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewEvenly));
+        DFG_ASSERT_CORRECTNESS(pActViewEvenly->parent() == spMenu.get()); // Expecting action to have the menu as parent for automatic destruction.
 
         auto pActViewContent = spMenu->addAction(tr("Col: Resize to view content aware"));
         DFG_QT_VERIFY_CONNECT(connect(pActViewContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewContentAware));
@@ -466,15 +467,29 @@ void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
         pActionRedo->setShortcuts(QKeySequence::Redo);
         insertAction(pAddBefore, pActionRedo);
 
-        // Add Clear undo-buffer -action
-        auto pActionClearUndoBuffer = new QAction(tr(gszMenuText_clearUndoBuffer), this);
-        connect(pActionClearUndoBuffer, &QAction::triggered, this, &ThisClass::clearUndoStack);
-        addAction(pActionClearUndoBuffer);
-
-        // Add Show undo-window -action
+        // Undo menu
         {
-            auto pAction = new QAction(tr(gszMenuText_showUndoWindow), this);
-            connect(pAction, &QAction::triggered, this, &ThisClass::showUndoWindow);
+            auto pAction = new QAction(tr("Undo details"), this);
+
+            auto pMenu = new QMenu();
+            // Schedule destruction of menu with the parent action.
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+
+            // Add Clear undo buffer -action
+            {
+                auto pActionClearUndoBuffer = new QAction(tr(gszMenuText_clearUndoBuffer), this);
+                connect(pActionClearUndoBuffer, &QAction::triggered, this, &ThisClass::clearUndoStack);
+                pMenu->addAction(pActionClearUndoBuffer);
+            }
+
+            // Add show undo window -action
+            {
+                auto pActionUndoWindow = new QAction(tr(gszMenuText_showUndoWindow), this);
+                connect(pActionUndoWindow, &QAction::triggered, this, &ThisClass::showUndoWindow);
+                pMenu->addAction(pActionUndoWindow);
+            }
+
+            pAction->setMenu(pMenu); // Does not transfer ownership.
             addAction(pAction);
         }
     }
