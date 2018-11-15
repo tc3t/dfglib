@@ -195,14 +195,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 if (!m_pCsvModel)
                     return;
-                auto view = m_pView;
                 const auto pszEmpty = SzPtrUtf8("");
-                m_cellMemory.forEachNonNullCell([&](const int nRow, const int nCol, DFG_CLASS_NAME(Dummy))
+                m_cellMemory.forEachNonNullCell([=](const int nRow, const int nCol, DFG_CLASS_NAME(Dummy))
                 {
                     m_pCsvModel->setDataNoUndo(nRow, nCol, pszEmpty);
-                    if (m_pProxyModel) // TODO: this shouldn't probably be done on every call.
-                        view->selectionModel()->select(m_pProxyModel->mapFromSource(m_pCsvModel->index(nRow, nCol)), QItemSelectionModel::SelectCurrent);
                 });
+                if (m_pView)
+                    m_pView->onSelectionContentChanged();
             }
         }
 
