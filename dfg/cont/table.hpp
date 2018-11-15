@@ -6,6 +6,7 @@
 #include "../str.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../io/textEncodingTypes.hpp"
+#include "../numericTypeTools.hpp"
 #include <algorithm>
 #include <vector>
 #include <numeric>
@@ -209,6 +210,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef typename InterfaceTypes_T::StringT StringT;
 
         DFG_CLASS_NAME(TableSz)() : 
+            m_emptyString('\0'),
             m_nBlockSize(2048),
             m_bAllowStringsLongerThanBlockSize(true)
 
@@ -229,27 +231,17 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         void privSetRowContent(ColumnIndexPairContainer& rowsInCol, Index_T nRow, const Char_T* pData)
         {
-            rowsInCol.push_back(IndexPtrPair(nRow, pData));
-
-            // Sort the row vector. Since the pre-add vector should have been sorted already, only the
-            // last item needs to be moved to the right position.
-            if (rowsInCol.size() > 1)
+            // First check if the given row already exists.
+            auto iterGreaterOrEqualToRow = privLowerBoundInColumnNonConst(rowsInCol, nRow);
+            if (iterGreaterOrEqualToRow != rowsInCol.end() && iterGreaterOrEqualToRow->first == nRow)
             {
-                for (size_t i = rowsInCol.size() - 1; i >= 1; --i)
-                {
-                    if (rowsInCol[i].first < rowsInCol[i - 1].first)
-                        std::swap(rowsInCol[i], rowsInCol[i - 1]);
-                    else  // case: previous is less than or equal to newly added item.
-                    {
-                        if (rowsInCol[i].first == rowsInCol[i - 1].first) // If duplicate, erase previous.
-                        {
-                            // Note: the actual data is not cleared from char buffer.
-                            rowsInCol.erase(rowsInCol.begin() + (i - 1));
-                        }
-                        break;
-                    }
-                }
+                // Already have given row; overwrite the pointer.
+                iterGreaterOrEqualToRow->second = pData;
+                return;
             }
+
+            // Didn't have, insert it.
+            rowsInCol.insert(iterGreaterOrEqualToRow, IndexPtrPair(nRow, pData));
         }
 
         template <class Str_T>
@@ -265,7 +257,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // Note: Even in case of overwrite, previous item is not cleared from string storage (this is implementation detail that is not part of the interface, i.e. it is not to be relied on).
         bool addString(const DFG_CLASS_NAME(StringView)<Char_T, StringT>& sv, const Index_T nRow, const Index_T nCol)
         {
+            if (nCol >= NumericTraits<Index_T>::maxValue) // Guard for nCol + 1 overflow.
+                return false;
+
+            if (!isValidIndex(m_colToRows, nCol))
+                m_colToRows.resize(nCol + 1);
+
             const auto nLength = sv.length();
+
+            // Optimization: use shared null for empty items.
+            if (nLength == 0)
+            {
+                privSetRowContent(m_colToRows[nCol], nRow, &m_emptyString);
+                return true;
+            }
+
             auto& bufferCont = m_charBuffers[nCol];
             if (bufferCont.empty() || bufferCont.back().capacity() - bufferCont.back().size() < nLength + 1)
             {
@@ -286,9 +292,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             currentBuffer.insert(currentBuffer.end(), toCharPtr_raw(sv.begin()), toCharPtr_raw(sv.end()));
             currentBuffer.push_back('\0');
             const Char_T* const pData = &currentBuffer[nBeginIndex];
-
-            if (!isValidIndex(m_colToRows, nCol))
-                m_colToRows.resize(nCol + 1);
 
             privSetRowContent(m_colToRows[nCol], nRow, pData);
 
@@ -596,6 +599,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             If table has cell at (row,col), it can be accessed by finding row from m_colToRows[nCol].
             Since m_colToRows[nCol] is ordered by row, it can be searched with binary search.
         */
+        const Char_T m_emptyString; // Shared empty item.
         CharBufferContainer m_charBuffers;
         TableIndexPairContainer m_colToRows;
         size_t m_nBlockSize;
