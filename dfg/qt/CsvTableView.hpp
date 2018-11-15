@@ -15,6 +15,7 @@ DFG_END_INCLUDE_QT_HEADERS
 class QUndoStack;
 class QAbstractProxyModel;
 class QItemSelection;
+class QItemSelectionRange;
 class QMenu;
 class QProgressBar;
 class QPushButton;
@@ -185,6 +186,21 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         std::unique_ptr<QMenu> createResizeColumnsMenu();
 
+        template <class Func_T>
+        void forEachCsvModelIndexInSelection(Func_T func);
+
+        template <class Func_T>
+        void forEachCsvModelIndexInSelection(Func_T func) const;
+
+        template <class Func_T>
+        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func);
+
+        template <class Func_T>
+        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) const;
+
+        // Returns viewModel->index(r, c) mapped to source model, QModelIndex() if neither pModel or pProxy is available.
+        static QModelIndex mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, int r, int c);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -203,6 +219,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         template <class T, class Param0_T, class Param1_T, class Param2_T>
         void pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2);
+
+        template <class This_T, class Func_T>
+        static void forEachCsvModelIndexInSelection(This_T& thisItem, Func_T func);
+
+        template <class This_T, class Func_T>
+        static void forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func);
 
     public slots:
         bool openFromFile();
@@ -243,6 +265,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onNewSourceOpened();
 
         void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+        void onSelectionContentChanged();
 
         void onColumnResizeAction_toViewEvenly();
         void onColumnResizeAction_toViewContentAware();
@@ -298,5 +321,60 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bUndoEnabled;
     };
+
+    template <class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelection(Func_T func)
+    {
+        forEachCsvModelIndexInSelection(*this, std::forward<Func_T>(func));
+    }
+
+    template <class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelection(Func_T func) const
+    {
+       forEachCsvModelIndexInSelection(*this, std::forward<Func_T>(func));
+    }
+
+    template <class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func)
+    {
+        forEachCsvModelIndexInSelectionRange(*this, sr, std::forward<Func_T>(func));
+    }
+
+    template <class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) const
+    {
+        forEachCsvModelIndexInSelectionRange(*this, sr, std::forward<Func_T>(func));
+    }
+
+    template <class This_T, class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelection(This_T& thisItem, Func_T func)
+    {
+        const auto sm = thisItem.selectionModel();
+        const auto selection = (sm) ? sm->selection() : QItemSelection();
+        for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+        {
+            thisItem.forEachCsvModelIndexInSelectionRange(thisItem, *iter, std::forward<Func_T>(func));
+        }
+    }
+
+    template <class This_T, class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func)
+    {
+       auto pProxy = thisItem.getProxyModelPtr();
+       auto pModel = thisItem.model();
+       if (!pModel)
+           return;
+       // TODO: if not having proxy, iterate in the way that is optimal to underlying data structure
+       const auto right = sr.right();
+       const auto bottom = sr.bottom();
+       bool bContinue = true;
+       for (int c = sr.left(); c<=right && bContinue; ++c)
+       {
+           for (int r = sr.top(); r<=bottom && bContinue; ++r)
+           {
+               func(mapToSource(thisItem.model(), pProxy, r, c), bContinue);
+           }
+       }
+    }
 
 } } // module namespace

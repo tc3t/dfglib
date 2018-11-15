@@ -1955,32 +1955,6 @@ void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
 
 namespace
 {
-    template <class Func_T>
-    void forEachCsvModelIndexInSelectionRange(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)& rView, const QItemSelectionRange& sr, Func_T func)
-    {
-        auto pProxy = rView.getProxyModelPtr();
-        auto pModel = rView.model();
-        if (!pModel)
-            return;
-        // TODO: if not having proxy, iterate in the way that is optimal to underlying data structure
-        const auto right = sr.right();
-        const auto bottom = sr.bottom();
-        bool bContinue = true;
-        for (int c = sr.left(); c<=right && bContinue; ++c)
-        {
-            for (int r = sr.top(); r<=bottom && bContinue; ++r)
-            {
-                if (pProxy)
-                    func(pProxy->mapToSource(pProxy->index(r, c)), bContinue);
-                else
-                    func(pModel->index(r, c), bContinue);
-            }
-        }
-    }
-}
-
-namespace
-{
 class WidgetPair : public QWidget
 {
 public:
@@ -2181,6 +2155,11 @@ double DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::getMaxTimeInSeco
 bool DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::isStopRequested() const
 {
     return (m_spStopButton && m_spStopButton->isChecked());
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onSelectionContentChanged()
+{
+    onSelectionChanged(QItemSelection(), QItemSelection());
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
@@ -2406,6 +2385,16 @@ void DFG_CLASS_NAME(CsvTableView)::onRowResizeAction_fixedSize()
     onHeaderResizeAction_fixedSize(this, verticalHeader());
 }
 
+QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, const int r, const int c)
+{
+    if (pProxy)
+        return pProxy->mapToSource(pProxy->index(r, c));
+    else if (pModel)
+        return pModel->index(r, c);
+    else
+        return QModelIndex();
+}
+
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel)
    : m_spUiPanel(uiPanel)
 {
@@ -2437,7 +2426,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::anal
     {
         for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
-            forEachCsvModelIndexInSelectionRange(*pCtvView, *iter, [&](const QModelIndex& index, bool& rbContinue)
+            pCtvView->forEachCsvModelIndexInSelectionRange(*iter, [&](const QModelIndex& index, bool& rbContinue)
             {
                 const auto bHasMaxTimePassed = operationTimer.elapsedWallSeconds() >= maxTime;
                 if (bHasMaxTimePassed || uiPanel->isStopRequested())
