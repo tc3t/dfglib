@@ -92,6 +92,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class DFG_CLASS_NAME(CsvTableViewActionDelete) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
+        typedef DFG_CLASS_NAME(CsvTableViewActionDelete) ThisClass;
+        typedef DFG_CLASS_NAME(UndoCommand) BaseClass;
+
         // Note: Sorting can change indexes after undo point -> must use model indexes and make sure that
         // they won't be modified outside undo.
         DFG_CLASS_NAME(CsvTableViewActionDelete)(DFG_CLASS_NAME(CsvTableView)& rTableView, QAbstractProxyModel* pProxyModel, const bool bRowMode) :
@@ -202,6 +205,27 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 });
             }
         }
+
+        // Optimization for undoless deletion.
+        template <class Impl_T>
+        static void privDirectRedo(DFG_CLASS_NAME(CsvTableView)& rTableView, QAbstractProxyModel* pProxyModel, const bool bRowMode)
+        {
+            DFG_STATIC_ASSERT((std::is_same<Impl_T, ThisClass>::value), "");
+
+            auto pCsvModel = rTableView.csvModel();
+            if (bRowMode || !pCsvModel)
+            {
+                BaseClass::privDirectRedo<ThisClass>(rTableView, pProxyModel, bRowMode);
+                return;
+            }
+
+            rTableView.forEachCsvModelIndexInSelection([=](const QModelIndex& index, bool& /*bContinue*/)
+            {
+                pCsvModel->setDataNoUndo(index.row(), index.column(), DFG_UTF8(""));
+            });
+            rTableView.onSelectionContentChanged();
+        }
+
     private:
         DFG_CLASS_NAME(CsvTableView)* m_pView;
         DFG_CLASS_NAME(CsvItemModel)* m_pCsvModel;
