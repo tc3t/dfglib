@@ -14,6 +14,44 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
     class DFG_CLASS_NAME(UndoCommand) : public QUndoCommand
     {
     public:
+        // Direct redo without need to construct the object first, which may take massive amount of resources compared to direct action.
+        // For example deleting content from a N item row:
+        //      -doing it with T(params).redo() stores old content (N strings) for undo although it will never use it.
+        template <class Impl_T, class Param0_T>
+        static void directRedo(Param0_T&& p0)
+        {
+            typename Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0));
+        }
+
+       template <class Impl_T, class Param0_T, class Param1_T>
+       static void directRedo(Param0_T&& p0, Param1_T&& p1)
+       {
+            typename Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
+       }
+
+       template <class Impl_T, class Param0_T, class Param1_T, class Param2_T>
+       static void directRedo(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
+       {
+            typename Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
+       }
+
+        template <class Impl_T, class Param0_T>
+        static void privDirectRedo(Param0_T&& p0)
+        {
+            Impl_T(std::forward<Param0_T>(p0)).redo();
+        }
+
+       template <class Impl_T, class Param0_T, class Param1_T>
+       static void privDirectRedo(Param0_T&& p0, Param1_T&& p1)
+       {
+           Impl_T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1)).redo();
+       }
+
+       template <class Impl_T, class Param0_T, class Param1_T, class Param2_T>
+       static void privDirectRedo(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
+       {
+           Impl_T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2)).redo();
+       }
     };
 
     DFG_SUB_NS(undoCommands)

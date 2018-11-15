@@ -939,7 +939,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0));
     else
-        T(std::forward<Param0_T>(p0)).redo();
+        DFG_CLASS_NAME(UndoCommand)::directRedo<T>(std::forward<Param0_T>(p0));
 
     return true;
 }
@@ -950,7 +950,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
     else
-        T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1)).redo();
+        DFG_CLASS_NAME(UndoCommand)::directRedo<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
 
     return true;
 }
@@ -961,7 +961,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1, P
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
     else
-        T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2)).redo();
+        DFG_CLASS_NAME(UndoCommand)::directRedo<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
 
     return true;
 }
