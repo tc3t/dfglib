@@ -22,6 +22,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+win32 {
+    # On Windows enable pdb-creation for release builds.
+    QMAKE_CFLAGS_RELEASE += /Zi
+    QMAKE_LFLAGS_RELEASE += /DEBUG /opt:ref
+}
+
 
 SOURCES += \
         main.cpp \
