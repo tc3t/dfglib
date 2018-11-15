@@ -10,11 +10,17 @@ DFG_END_INCLUDE_QT_HEADERS
 
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
+
+    class DFG_CLASS_NAME(UndoCommand) : public QUndoCommand
+    {
+    public:
+    };
+
     DFG_SUB_NS(undoCommands)
     {
         enum InsertRowType { InsertRowTypeAfter, InsertRowTypeBefore };
 
-        class DFG_CLASS_NAME(TableViewUndoCommandInsertRow) : public QUndoCommand
+        class DFG_CLASS_NAME(TableViewUndoCommandInsertRow) : public DFG_CLASS_NAME(UndoCommand)
         {
         public:
             typedef DFG_CLASS_NAME(TableViewUndoCommandInsertRow) ThisClass;
@@ -62,7 +68,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
             int m_nWhere;	// Stores the index of the new row.
         };
 
-        class DFG_CLASS_NAME(CsvTableViewActionResizeTable) : public QUndoCommand
+        class DFG_CLASS_NAME(CsvTableViewActionResizeTable) : public DFG_CLASS_NAME(UndoCommand)
         {
         public:
             DFG_CLASS_NAME(CsvTableViewActionResizeTable)(QTableView* pView, const int nNewRowCount, const int nNewColCount)

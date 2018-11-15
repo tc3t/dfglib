@@ -5,7 +5,6 @@
 #include "qtIncludeHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-#include <QUndoCommand>
 #include <QAbstractProxyModel>
 #include <QApplication>
 #include <QClipboard>
@@ -37,7 +36,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     typedef DFG_SUB_NS_NAME(undoCommands)::DFG_CLASS_NAME(TableViewUndoCommandInsertRow) DFG_CLASS_NAME(CsvTableViewActionInsertRow);
     typedef DFG_SUB_NS_NAME(undoCommands)::DFG_CLASS_NAME(CsvTableViewActionResizeTable) DFG_CLASS_NAME(CsvTableViewActionResizeTable);
 
-    class DFG_CLASS_NAME(CsvTableViewActionInsertColumn) : public QUndoCommand
+    class DFG_CLASS_NAME(CsvTableViewActionInsertColumn) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
         DFG_CLASS_NAME(CsvTableViewActionInsertColumn)(DFG_CLASS_NAME(CsvItemModel)* pModel, const int nCol)
@@ -90,7 +89,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     } // namespace DFG_DETAIL_NS
 
-    class DFG_CLASS_NAME(CsvTableViewActionDelete) : public QUndoCommand
+    class DFG_CLASS_NAME(CsvTableViewActionDelete) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
         // Note: Sorting can change indexes after undo point -> must use model indexes and make sure that
@@ -214,7 +213,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bRowMode;
     };
 
-    class DFG_CLASS_NAME(CsvTableViewActionPaste) : public QUndoCommand
+    class DFG_CLASS_NAME(CsvTableViewActionPaste) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
         DFG_CLASS_NAME(CsvTableViewActionPaste)(DFG_CLASS_NAME(CsvTableView)* pView)
@@ -344,7 +343,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bRowMode;
     };
 
-    class DFG_CLASS_NAME(CsvTableViewActionDeleteColumn) : public QUndoCommand
+    class DFG_CLASS_NAME(CsvTableViewActionDeleteColumn) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
         DFG_CLASS_NAME(CsvTableViewActionDeleteColumn)(DFG_CLASS_NAME(CsvTableView)* pView, const int nCol)
@@ -385,7 +384,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString m_sColumnName;
     };
 
-    class DFG_CLASS_NAME(CsvTableViewHeaderActionPasteColumn) : public QUndoCommand
+    class DFG_CLASS_NAME(CsvTableViewHeaderActionPasteColumn) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
         DFG_CLASS_NAME(CsvTableViewHeaderActionPasteColumn)(DFG_CLASS_NAME(CsvTableView)* pView, const int nCol)
@@ -451,7 +450,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<QString> m_vecStringsNew;
     };
 
-    class DFG_CLASS_NAME(CsvTableViewHeaderActionRenameColumn) : public QUndoCommand
+    class DFG_CLASS_NAME(CsvTableViewHeaderActionRenameColumn) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
         DFG_CLASS_NAME(CsvTableViewHeaderActionRenameColumn)(DFG_CLASS_NAME(CsvTableView)* pView, const int nCol, const QString& sNew)
@@ -490,7 +489,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     };
 
-    class DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader) : public QUndoCommand
+    class DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader) : public DFG_CLASS_NAME(UndoCommand)
     {
     public:
         DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)(DFG_CLASS_NAME(CsvTableView)* pView, bool bInverted = false)

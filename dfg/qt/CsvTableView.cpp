@@ -100,6 +100,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     : BaseClass(pParent)
     , m_matchDef(QString(), Qt::CaseInsensitive, QRegExp::Wildcard)
     , m_nFindColumnIndex(0)
+    , m_bUndoEnabled(true)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -447,6 +448,7 @@ void DFG_CLASS_NAME(CsvTableView)::showUndoWindow()
 
 namespace
 {
+    const char gszMenuText_enableUndo[] = "Enable undo";
     const char gszMenuText_clearUndoBuffer[] = "&Clear undo buffer";
     const char gszMenuText_showUndoWindow[] = "Show undo buffer";
 }
@@ -474,6 +476,15 @@ void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
             auto pMenu = new QMenu();
             // Schedule destruction of menu with the parent action.
             DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+
+            // Add 'enable undo' -action
+            {
+                auto pActionUndoEnableDisable = new QAction(tr(gszMenuText_enableUndo), this);
+                pActionUndoEnableDisable->setCheckable(true);
+                pActionUndoEnableDisable->setChecked(m_bUndoEnabled);
+                DFG_QT_VERIFY_CONNECT(connect(pActionUndoEnableDisable, &QAction::toggled, this, &ThisClass::setUndoEnabled));
+                pMenu->addAction(pActionUndoEnableDisable);
+            }
 
             // Add Clear undo buffer -action
             {
@@ -709,6 +720,24 @@ void DFG_CLASS_NAME(CsvTableView)::setRowMode(const bool b)
     setSelectionBehavior((b) ? QAbstractItemView::SelectRows : QAbstractItemView::SelectItems);
 }
 
+void DFG_CLASS_NAME(CsvTableView)::setUndoEnabled(const bool bEnable)
+{
+    auto pCsvModel = csvModel();
+    clearUndoStack();
+    m_bUndoEnabled = bEnable;
+    if (!pCsvModel)
+        return;
+    if (bEnable)
+    {
+        if (m_spUndoStack)
+            pCsvModel->setUndoStack(&m_spUndoStack->item());
+    }
+    else
+    {
+        pCsvModel->setUndoStack(nullptr);
+    }
+}
+
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
 {
     auto sPath = QFileDialog::getSaveFileName(this,
@@ -907,7 +936,7 @@ bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
 template <class T, class Param0_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
 {
-    if (m_spUndoStack)
+    if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0));
     else
         T(std::forward<Param0_T>(p0)).redo();
@@ -918,7 +947,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
 template <class T, class Param0_T, class Param1_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
 {
-    if (m_spUndoStack)
+    if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
     else
         T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1)).redo();
@@ -929,7 +958,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
 template <class T, class Param0_T, class Param1_T, class Param2_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
 {
-    if (m_spUndoStack)
+    if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
     else
         T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2)).redo();

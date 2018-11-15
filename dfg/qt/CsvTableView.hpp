@@ -253,6 +253,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onRowResizeAction_fixedSize();
 
         void setRowMode(bool);
+        void setUndoEnabled(bool);
 
         /*
         void pasteColumn();
@@ -295,6 +296,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int m_nFindColumnIndex;
         std::vector<std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)>> m_selectionAnalyzers;
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
+        bool m_bUndoEnabled;
     };
 
 } } // module namespace
