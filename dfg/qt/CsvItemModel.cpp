@@ -719,7 +719,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnCells(const int n
 {
     if (!isValidColumn(nCol))
         return;
-    const auto nRowCount = getRowCount();
+    const auto nRowCount = Min(getRowCount(), static_cast<int>(vecStrings.size()));
     for (int r = 0; r<nRowCount; ++r)
     {
         setItem(r, nCol, vecStrings[r]);
