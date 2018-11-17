@@ -303,6 +303,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     signals:
         void sigFindActivated();
         void sigFilterActivated();
+        void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;

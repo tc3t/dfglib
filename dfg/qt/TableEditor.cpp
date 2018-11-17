@@ -270,7 +270,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     std::unique_ptr<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> spAnalyzerPanel(new DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(this));
     m_spTableView->addSelectionAnalyzer(std::make_shared<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)>(spAnalyzerPanel.get()));
     m_spSelectionAnalyzerPanel.reset(spAnalyzerPanel.release());
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigSelectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterActivated, this, &ThisClass::onFilterRequested));
 

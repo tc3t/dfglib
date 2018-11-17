@@ -67,7 +67,8 @@ namespace
     enum CsvTableViewPropertyId
     {
         CsvTableViewPropertyId_diffProgPath,
-        CsvTableViewPropertyId_initialScrollPosition
+        CsvTableViewPropertyId_initialScrollPosition,
+        CsvTableViewPropertyId_minimumVisibleColumnWidth
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
@@ -81,6 +82,7 @@ namespace
     // Properties
     DFG_QT_DEFINE_OBJECT_PROPERTY("diffProgPath", CsvTableView, CsvTableViewPropertyId_diffProgPath, QString, PropertyType);
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_initialScrollPosition", CsvTableView, CsvTableViewPropertyId_initialScrollPosition, QString, PropertyType);
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_minimumVisibleColumnWidth", CsvTableView, CsvTableViewPropertyId_minimumVisibleColumnWidth, int, []() { return 5; });
 
     template <class T>
     QString floatToQString(const T val)
@@ -957,6 +959,15 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
     if (pProxyModel)
         pProxyModel->setSourceModel(pModel);
     setModel(pViewModel);
+
+    const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
+    if (scrollPos == "bottom")
+        scrollToBottom();
+
+    onColumnResizeAction_toViewEvenly();
+
+    if (bSuccess)
+        onNewSourceOpened();
 
     return bSuccess;
 }
@@ -2011,10 +2022,6 @@ void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
         }
     });
 
-    const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
-    if (scrollPos == "bottom")
-        scrollToBottom();
-
     onSelectionContentChanged();
 }
 
@@ -2229,8 +2236,8 @@ void DFG_CLASS_NAME(CsvTableView)::onSelectionContentChanged()
 
 void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    DFG_UNUSED(selected);
-    DFG_UNUSED(deselected);
+    Q_EMIT sigSelectionChanged(selected, deselected);
+
     const auto sm = selectionModel();
     const auto selection = (sm) ? sm->selection() : QItemSelection();
 
@@ -2296,7 +2303,7 @@ void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewEvenly()
     if (!pViewPort || nColCount < 1)
         return;
     const auto w = pViewPort->width();
-    const int sectionSize = w / nColCount;
+    const int sectionSize = Max(w / nColCount, getCsvTableViewProperty<CsvTableViewPropertyId_minimumVisibleColumnWidth>(this));
     pHorizontalHeader->setDefaultSectionSize(sectionSize);
 }
 
