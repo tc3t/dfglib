@@ -31,7 +31,7 @@ auto getProperty(Object_T* obj) -> typename PropertyClass_T::PropertyType
     if (!obj || !obj->property("dfglib_allow_app_settings_usage").toBool())
         return PropDef::getDefault();
     auto settings = DFG_CLASS_NAME(QtApplication)::getApplicationSettings();
-    return (settings) ? PropDef::fromVariant(settings->value(QString("dfglib/%1").arg(PropDef::getStrId()))) :  PropDef::getDefault();
+    return (settings) ? PropDef::fromVariant(settings->value(QString("dfglib/%1").arg(PropDef::getStrId()), QVariant::fromValue(PropDef::getDefault()))) :  PropDef::getDefault();
 }
 
 }} // Module namespace

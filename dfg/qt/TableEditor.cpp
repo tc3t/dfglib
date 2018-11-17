@@ -51,6 +51,12 @@ namespace
         WindowExtentProperty(const QVariant& v) :
             m_val(0)
         {
+			// Check if v is already of type WindowExtentProperty
+			if (v.canConvert<WindowExtentProperty>())
+			{
+				*this = v.value<WindowExtentProperty>();
+				return;
+			}
             bool ok = false;
             auto intVal = v.toInt(&ok);
             if (ok) // Plain int? If yes, interpret as absolute value.
@@ -107,7 +113,7 @@ namespace
                                               TableEditor,
                                               TableEditorPropertyId_cellEditorHeight,
                                               WindowExtentProperty,
-                                              [] { return WindowExtentProperty(40); },
+                                              [] { return WindowExtentProperty(50); },
                                               WindowExtentProperty);
 
     template <TableEditorPropertyId ID>
@@ -258,7 +264,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     m_spProxyModel->setDynamicSortFilter(true);
 
     // View
-    m_spTableView.reset(new DFG_CLASS_NAME(CsvTableView)(this));
+    m_spTableView.reset(new ViewClass(this));
     m_spTableView->setModel(m_spProxyModel.get());
     m_spTableView->setProperty("dfglib_allow_app_settings_usage", true);
     std::unique_ptr<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> spAnalyzerPanel(new DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(this));
@@ -304,14 +310,20 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         // Miscellaneous controls
         {
             std::unique_ptr<QHBoxLayout> pHl(new QHBoxLayout(nullptr));
-            auto pButton = new QPushButton(tr("Resize..."), this); // Deletion though parentship.
-            pButton->setMaximumWidth(100);
-            m_spResizeColumnsMenu = m_spTableView->createResizeColumnsMenu();
-            pButton->setMenu(m_spResizeColumnsMenu.get());
-            pHl->addWidget(pButton);
+            pHl->setSpacing(20); // Space between items
+
+            // Resize button
+            {
+                auto pButton = new QPushButton(tr("Resize..."), this); // Deletion though parentship.
+                pButton->setMaximumWidth(100);
+                m_spResizeColumnsMenu = m_spTableView->createResizeColumnsMenu();
+                pButton->setMenu(m_spResizeColumnsMenu.get());
+                pHl->addWidget(pButton);
+            }
+
             pHl->addSpacerItem(new QSpacerItem(0, 0, QSizePolicy::Expanding)); // pHl seems to take ownership.
             spLayout->addLayout(pHl.release(), row++, 0); // pHl becomes child of spLayout.
-        }
+        } // 'Miscellenous control' -row
 
         // Find panel
         m_spFindPanel.reset(new DFG_DETAIL_NS::FindPanelWidget(tr("Find")));
