@@ -111,6 +111,32 @@ namespace
 
     }; // Class UndoViewWidget
 
+    static void doModalOperation(QWidget* pParent, const QString& sProgressDialogLabel, const QString& sThreadName, std::function<void ()> func)
+    {
+        QEventLoop eventLoop;
+
+        auto pProgressDialog = new ProgressWidget(sProgressDialogLabel, pParent);
+        auto pWorkerThread = new QThread();
+        pWorkerThread->setObjectName(sThreadName); // Sets thread name visible to debugger.
+        QObject::connect(pWorkerThread, &QThread::started, [&]()
+                {
+                    func();
+                    pWorkerThread->quit();
+                });
+        // Connect thread finish to trigger event loop quit and closing of progress bar.
+        QObject::connect(pWorkerThread, &QThread::finished, &eventLoop, &QEventLoop::quit);
+        QObject::connect(pWorkerThread, &QThread::finished, pWorkerThread, &QObject::deleteLater);
+        QObject::connect(pWorkerThread, &QObject::destroyed, pProgressDialog, &QObject::deleteLater);
+
+        pWorkerThread->start();
+
+        // Wait a while before showing the progress dialog; don't want to pop it up for tiny files.
+        QTimer::singleShot(750, pProgressDialog, SLOT(show()));
+
+        // Keep event loop running while operating.
+        eventLoop.exec();
+    }
+
 } // unnamed namespace
 
 DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
@@ -776,10 +802,13 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG
     if (!pModel)
         return false;
 
-    // TODO: Don't block caller thread.
-    // TODO: add signals 'savingFile()' and 'savingFinished(time)' or similar so that owner GUI can show the info to user.
-    // TODO: allow user to cancel saving (e.g. if it takes too long)
-    const auto bSuccess = pModel->saveToFile(path, formatDef);
+    bool bSuccess = false;
+    doModalOperation(this, tr("Saving to file\n%1").arg(path), "CsvTableViewFileWriter", [&]()
+        {
+            // TODO: allow user to cancel saving (e.g. if it takes too long)
+            bSuccess = pModel->saveToFile(path, formatDef);
+        });
+
     if (!bSuccess)
         QMessageBox::information(nullptr, tr("Save failed"), tr("Failed to save to path %1").arg(path));
 
@@ -919,29 +948,11 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
         pProxyModel->setSourceModel(nullptr);
     setModel(nullptr);
 
-    QEventLoop eventLoop;
-
-    auto pProgressDialog = new ProgressWidget(tr("Reading file\n%1").arg(sPath), this);
-    auto pWorkerThread = new QThread();
     bool bSuccess = false;
-    pWorkerThread->setObjectName("CsvTableViewFileLoader"); // Sets thread name visible to debugger.
-    connect(pWorkerThread, &QThread::started, [&]()
-            {
-                bSuccess = pModel->openFile(sPath);
-                pWorkerThread->quit();
-            });
-    // Connect thread finish to trigger event loop quit and closing of progress bar.
-    connect(pWorkerThread, &QThread::finished, &eventLoop, &QEventLoop::quit);
-    connect(pWorkerThread, &QThread::finished, pWorkerThread, &QObject::deleteLater);
-    connect(pWorkerThread, &QObject::destroyed, pProgressDialog, &QObject::deleteLater);
-
-    pWorkerThread->start();
-
-    // Wait a while before showing the progress dialog; don't want to pop it up for tiny files.
-    QTimer::singleShot(750, pProgressDialog, &QWidget::show);
-
-    // Keep event loop running while reading.
-    eventLoop.exec();
+    doModalOperation(this, tr("Reading file\n%1").arg(sPath), "CsvTableViewFileLoader", [&]()
+        {
+            bSuccess = pModel->openFile(sPath);
+        });
 
     if (pProxyModel)
         pProxyModel->setSourceModel(pModel);
