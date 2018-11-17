@@ -56,7 +56,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) PanelT;
 
         DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel);
-        ~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)() override;
+        ~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)() DFG_OVERRIDE_DESTRUCTOR;
 
         QPointer<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> m_spUiPanel;
     private:
@@ -110,7 +110,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDef;
 
         DFG_CLASS_NAME(CsvTableView)(QWidget* pParent);
-        ~DFG_CLASS_NAME(CsvTableView)() override;
+        ~DFG_CLASS_NAME(CsvTableView)() DFG_OVERRIDE_DESTRUCTOR;
 
         // If already present, old undo stack will be destroyed.
         void createUndoStack();
@@ -313,7 +313,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
         std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
-        QStringList m_tempFilePathToRemoveOnExit;
+        QStringList m_tempFilePathsToRemoveOnExit;
         QModelIndex m_latestFoundIndex; // Index from underlying model. Invalid if doing first find.
         StringMatchDef m_matchDef;
         int m_nFindColumnIndex;

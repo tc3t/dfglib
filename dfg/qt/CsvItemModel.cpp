@@ -450,13 +450,13 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::importFiles(const QStringL
     if (paths.empty())
         return true;
 
-    for (const auto& sPath : paths)
+    for (auto iter = paths.cbegin(), iterEnd = paths.cend(); iter != iterEnd; ++iter)
     {
         DFG_CLASS_NAME(CsvItemModel) temp;
-        temp.openFile(sPath);
+        temp.openFile(*iter);
         mergeAnotherTableToThis(temp);
     }
-    return true; // TODO: tarkempi paluuarvo (esim. että kuinka monta luettiin onnistuneesti).
+    return true; // TODO: more detailed return value (e.g. that how many were read successfully).
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, const LoadOptions& loadOptions)

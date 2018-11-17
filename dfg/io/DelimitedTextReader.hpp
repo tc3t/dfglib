@@ -428,7 +428,6 @@ public:
         static_assert(sizeof(BufferChar) == sizeof(UnsignedBufferChar), "Unexpected UnsignedChar-size");
 
         // Defines max char for codecvt-template.
-        static const uint32 s_nMaxCodeCvtChar = NumericTraits<UnsignedInputChar>::maxValue;
 
         CellData(const FormatDef& formatDef) :
             m_formatDef(formatDef),

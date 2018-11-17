@@ -40,6 +40,10 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
 
 #define DFG_CLASS_NAME(x)	x
 
+// Note: if considering to add :: in front of DFG_ROOT_NS for fully qualified name, it's worth noting that
+//       it may break definitions of static members such as DFG_MODULE_NS(module)::Class::m_member
+//       if member type is not build-in type such as int.
+//       https://stackoverflow.com/questions/8796936/fully-qualified-static-member-definition-wont-compile
 #define DFG_MODULE_NS(MODULE) DFG_ROOT_NS::DFG_SUB_NS_NAME(MODULE)
 
 #define DFG_STATIC_ASSERT(EXPR, MSG) static_assert(EXPR, MSG)

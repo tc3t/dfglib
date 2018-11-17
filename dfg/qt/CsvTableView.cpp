@@ -384,9 +384,9 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 
 DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
 {
-    for(const auto& path : m_tempFilePathToRemoveOnExit)
+    for (auto iter = m_tempFilePathsToRemoveOnExit.cbegin(), iterEnd = m_tempFilePathsToRemoveOnExit.cend(); iter != iterEnd; ++iter)
     {
-        QFile::remove(path);
+        QFile::remove(*iter);
     }
 }
 
@@ -1785,7 +1785,7 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
     }
     else
     {
-        m_tempFilePathToRemoveOnExit.push_back(QString::fromUtf8(toCharPtr_raw(strmTemp.pathU8())));
+        m_tempFilePathsToRemoveOnExit.push_back(QString::fromUtf8(toCharPtr_raw(strmTemp.pathU8())));
         return true;
     }
 }
@@ -1857,7 +1857,7 @@ void DFG_CLASS_NAME(CsvTableView)::onFind(const bool forward)
         return;
     }
 
-    const auto findSeed = [&]()
+    const auto findSeed = [&]() -> QModelIndex
         {
             if (m_latestFoundIndex.isValid())
                 return m_latestFoundIndex;
@@ -2432,9 +2432,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::anal
                 if (bHasMaxTimePassed || uiPanel->isStopRequested())
                 {
                     if (bHasMaxTimePassed)
-                        completionStatus = CompletionStatus_terminatedByTimeLimit;
+                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByTimeLimit;
                     else
-                        completionStatus = CompletionStatus_terminatedByUserRequest;
+                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByUserRequest;
                     rbContinue = false;
                     return;
                 }

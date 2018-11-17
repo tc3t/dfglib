@@ -20,6 +20,12 @@ int main(int argc, char *argv[])
     auto args = a.arguments();
 
     if (args.size() >= 2)
-        QTimer::singleShot(1, &tableEditor, [&]() { tableEditor.tryOpenFileFromPath(args[1]); });
+    {
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
+            QTimer::singleShot(1, &tableEditor, [&]() { tableEditor.tryOpenFileFromPath(args[1]); });
+        #else
+            tableEditor.tryOpenFileFromPath(args[1]);
+        #endif
+    }
     return a.exec();
 }

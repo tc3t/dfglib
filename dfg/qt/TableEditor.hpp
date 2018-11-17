@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "../baseConstructorDelegate.hpp"
+#include "../build/languageFeatureInfo.hpp"
 #include <memory>
 
 #include "qtIncludeHelpers.hpp"
@@ -66,7 +67,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         };
 
         DFG_CLASS_NAME(TableEditor)();
-        ~DFG_CLASS_NAME(TableEditor)() override;
+        ~DFG_CLASS_NAME(TableEditor)() DFG_OVERRIDE_DESTRUCTOR;
 
         /** Returns true if opened, false otherwise. Opening will fail if TableEditor already has a file opened and it has been modified. */
         bool tryOpenFileFromPath(QString path);

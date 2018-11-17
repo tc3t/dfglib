@@ -96,3 +96,11 @@ Notes:
     #define DFG_LANGFEAT_CONSTEXPR  1
     #define DFG_CONSTEXPR           constexpr
 #endif
+
+// DFG_OVERRIDE_DESTRUCTOR
+#if (defined(_MSC_VER) && (_MSC_VER <= DFG_MSVC_VER_2010))
+	// Using override on destructor generates a compiler error in MSVC2010
+	#define DFG_OVERRIDE_DESTRUCTOR
+#else
+	#define DFG_OVERRIDE_DESTRUCTOR override
+#endif
