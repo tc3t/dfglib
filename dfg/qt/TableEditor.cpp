@@ -371,10 +371,11 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::~DFG_CLASS_NAME(TableEditor)()
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString path)
 {
-    if (!m_spTableModel || (m_spTableModel && m_spTableModel->isModified()))
+    auto pModel = (m_spTableView) ? m_spTableView->csvModel() : nullptr;
+    if (!pModel || pModel->isModified())
         return false;
 
-    return m_spTableModel->openFile(path);
+    return m_spTableView->openFile(path);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()

@@ -53,7 +53,7 @@ namespace
     public:
         typedef QCompleter BaseClass;
 
-        Completer(QObject* parent) :
+        Completer(QObject* parent = nullptr) :
             BaseClass(parent)
         {}
 
@@ -329,7 +329,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
         m_vecColInfo.push_back(ColInfo((p) ? QString::fromUtf8(p.c_str()) : QString()));
         if (isCompleterEnabledInColumn(c))
         {
-            m_vecColInfo.back().m_spCompleter.reset(new Completer(this));
+            // Note: can't set 'this' as parent for completer as this function may get called from thread different
+            //       from this->thread(). Also setParent() after moveToThread() caused fatal error.
+            m_vecColInfo.back().m_spCompleter.reset(new Completer(nullptr));
+            m_vecColInfo.back().m_spCompleter->moveToThread(this->thread());
             m_vecColInfo.back().m_spCompleter->setCaseSensitivity(Qt::CaseInsensitive);
             m_vecColInfo.back().m_completerType = CompleterTypeTexts;
         }

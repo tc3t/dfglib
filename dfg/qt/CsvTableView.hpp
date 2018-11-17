@@ -201,6 +201,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Returns viewModel->index(r, c) mapped to source model, QModelIndex() if neither pModel or pProxy is available.
         static QModelIndex mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, int r, int c);
 
+        bool openFile(const QString& sPath);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -312,7 +314,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
-        std::unique_ptr<QAbstractProxyModel> m_spProxyModel;
         QStringList m_tempFilePathsToRemoveOnExit;
         QModelIndex m_latestFoundIndex; // Index from underlying model. Invalid if doing first find.
         StringMatchDef m_matchDef;

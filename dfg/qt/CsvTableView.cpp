@@ -4,6 +4,7 @@
 #include "CsvItemModel.hpp"
 #include "CsvTableViewActions.hpp"
 #include "QtApplication.hpp"
+#include "widgetHelpers.hpp"
 #include "../os.hpp"
 #include "../os/TemporaryFileStream.hpp"
 #include "PropertyHelper.hpp"
@@ -29,10 +30,12 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMetaMethod>
 #include <QProcess>
 #include <QProgressBar>
+#include <QProgressDialog>
 #include <QPushButton>
 #include <QSettings>
 #include <QSortFilterProxyModel>
 #include <QThread>
+#include <QTimer>
 #include <QToolTip>
 #include <QUndoView>
 DFG_END_INCLUDE_QT_HEADERS
@@ -47,6 +50,20 @@ using namespace DFG_MODULE_NS(qt);
 
 namespace
 {
+    class ProgressWidget : public QProgressDialog
+    {
+    public:
+        typedef QProgressDialog BaseClass;
+        ProgressWidget(const QString sLabelText, QWidget* pParent)
+            : BaseClass(sLabelText, QString(), 0, 0, pParent)
+        {
+            removeContextHelpButtonFromDialog(this);
+            removeCloseButtonFromDialog(this);
+            setWindowModality(Qt::WindowModal);
+            setCancelButton(nullptr); // Hide cancel button as there is no way to cancel the operation.
+        }
+    }; // Class ProgressWidget
+
     enum CsvTableViewPropertyId
     {
         CsvTableViewPropertyId_diffProgPath,
@@ -81,7 +98,7 @@ namespace
             : BaseClass(pParent)
         {
             setAttribute(Qt::WA_DeleteOnClose, true);
-            setWindowFlags(windowFlags() & (~Qt::WindowContextHelpButtonHint)); // Remove ? from menu bar (at least on Windows)
+            removeContextHelpButtonFromDialog(this);
             if (!pParent || !pParent->m_spUndoStack)
                 return;
             auto pLayout = new QHBoxLayout(this);
@@ -887,6 +904,52 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
     return saveToFileImpl(dlg.m_formatDef);
 }
 
+bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
+{
+    if (sPath.isEmpty())
+        return false;
+    auto pModel = csvModel();
+    if (!pModel)
+        return false;
+
+    // Reset models to prevent event loop from updating stuff while model is being read in another thread
+    auto pViewModel = model();
+    auto pProxyModel = getProxyModelPtr();
+    if (pProxyModel && pProxyModel->sourceModel() == pModel)
+        pProxyModel->setSourceModel(nullptr);
+    setModel(nullptr);
+
+    QEventLoop eventLoop;
+
+    auto pProgressDialog = new ProgressWidget(tr("Reading file\n%1").arg(sPath), this);
+    auto pWorkerThread = new QThread();
+    bool bSuccess = false;
+    pWorkerThread->setObjectName("CsvTableViewFileLoader"); // Sets thread name visible to debugger.
+    connect(pWorkerThread, &QThread::started, [&]()
+            {
+                bSuccess = pModel->openFile(sPath);
+                pWorkerThread->quit();
+            });
+    // Connect thread finish to trigger event loop quit and closing of progress bar.
+    connect(pWorkerThread, &QThread::finished, &eventLoop, &QEventLoop::quit);
+    connect(pWorkerThread, &QThread::finished, pWorkerThread, &QObject::deleteLater);
+    connect(pWorkerThread, &QObject::destroyed, pProgressDialog, &QObject::deleteLater);
+
+    pWorkerThread->start();
+
+    // Wait a while before showing the progress dialog; don't want to pop it up for tiny files.
+    QTimer::singleShot(750, pProgressDialog, &QWidget::show);
+
+    // Keep event loop running while reading.
+    eventLoop.exec();
+
+    if (pProxyModel)
+        pProxyModel->setSourceModel(pModel);
+    setModel(pViewModel);
+
+    return bSuccess;
+}
+
 bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
 {
     auto sPath = QFileDialog::getOpenFileName(this,
@@ -895,19 +958,8 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
         tr("CSV files (*.csv *.tsv);;All files (*.*)"),
                                                 nullptr/*selected filter*/,
                                                 0/*options*/);
-    if (sPath.isEmpty())
-        return false;
 
-    auto pModel = csvModel();
-    if (pModel)
-    {
-        const auto bSuccess = pModel->openFile(sPath);
-        if (!bSuccess)
-            QMessageBox::information(nullptr, "", tr("Failed to open file '%1'").arg(sPath));
-        return bSuccess;
-    }
-    else
-        return false;
+    return openFile(sPath);
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
@@ -1951,6 +2003,8 @@ void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
     const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
     if (scrollPos == "bottom")
         scrollToBottom();
+
+    onSelectionContentChanged();
 }
 
 namespace
@@ -2406,13 +2460,17 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::~DFG_CLAS
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection)
 {
-    auto pCtvView = qobject_cast<DFG_CLASS_NAME(const CsvTableView)*>(pView);
-    auto pModel = (pCtvView) ? pCtvView->csvModel() : nullptr;
-    if (!pModel)
-        return;
     auto uiPanel = m_spUiPanel.data();
     if (!uiPanel)
         return;
+
+    auto pCtvView = qobject_cast<DFG_CLASS_NAME(const CsvTableView)*>(pView);
+    auto pModel = (pCtvView) ? pCtvView->csvModel() : nullptr;
+    if (!pModel)
+    {
+        uiPanel->setValueDisplayString(QString());
+        return;
+    }
 
     const auto maxTime = uiPanel->getMaxTimeInSeconds();
     const auto enabled = (!DFG_MODULE_NS(math)::isNan(maxTime) &&  maxTime > 0);
