@@ -11,6 +11,7 @@
 #include "../io.hpp"
 #include "../io/ImStreamWithEncoding.hpp"
 #include "../utf.hpp"
+#include "MapVector.hpp"
 #include <unordered_map>
 
 DFG_ROOT_NS_BEGIN{ 
@@ -50,6 +51,22 @@ DFG_ROOT_NS_BEGIN{
         DFG_MODULE_NS(io)::TextEncoding textEncoding() const { return m_textEncoding; }
         void textEncoding(DFG_MODULE_NS(io)::TextEncoding encoding) { m_textEncoding = encoding; }
 
+        void setProperty(const DFG_CLASS_NAME(StringViewC)& svKey, const DFG_CLASS_NAME(StringViewC)& svValue)
+        {
+            m_genericProperties[svKey.toString()] = svValue.toString();
+        }
+
+        std::string getProperty(const DFG_CLASS_NAME(StringViewC)& svKey, const DFG_CLASS_NAME(StringViewC)& defaultValue) const
+        {
+            auto iter = m_genericProperties.find(svKey);
+            return (iter != m_genericProperties.cend()) ? iter->second : defaultValue.toString();
+        }
+
+        bool hasProperty(const DFG_CLASS_NAME(StringViewC)& svKey) const
+        {
+            return m_genericProperties.hasKey(svKey);
+        }
+
         int32 m_cSep;
         int32 m_cEnc;
         //int32 m_cEol;
@@ -57,6 +74,7 @@ DFG_ROOT_NS_BEGIN{
         DFG_MODULE_NS(io)::TextEncoding m_textEncoding;
         bool m_bWriteHeader;
         bool m_bWriteBom;
+        ::DFG_MODULE_NS(cont)::MapVectorAoS<std::string, std::string> m_genericProperties; // Generic properties (e.g. if implementation needs specific flags)
     };
     
     DFG_SUB_NS(cont)
