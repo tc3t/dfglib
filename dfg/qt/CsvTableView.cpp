@@ -2001,7 +2001,7 @@ void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
         auto s = QInputDialog::getText(this, tr("Find"), tr("Set text to search for"), QLineEdit::Normal, QString(), &bOk);
         if (bOk)
         {
-            m_matchDef.m_matchString = std::move(s);
+            m_matchDef.setMatchString(std::move(s));
             setFindText(m_matchDef, m_nFindColumnIndex);
         }
     }
@@ -2009,7 +2009,7 @@ void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
 
 void DFG_CLASS_NAME(CsvTableView)::onFind(const bool forward)
 {
-    if (m_matchDef.m_matchString.isEmpty())
+    if (!m_matchDef.hasMatchString())
         return;
 
     auto pBaseModel = csvModel();
