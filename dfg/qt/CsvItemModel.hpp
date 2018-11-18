@@ -113,6 +113,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ColInfo(QString sName = "", ColType type = ColTypeText, CompleterType complType = CompleterTypeNone) :
                 m_name(sName), m_type(type), m_completerType(complType) {}
 
+            ~ColInfo();
+
             bool hasCompleter() const { return m_spCompleter.get() != nullptr; }
 
             QString m_name;
@@ -178,7 +180,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // 1. Clears existing data and prepares model for table changes.
         // 2. Calls actual table filling implementation.
         // 3. Handles model-related finalization.
-        bool readData(std::function<void()> tableFiller);
+        bool readData(const LoadOptions& options, std::function<void()> tableFiller);
 
         bool isModified() const { return m_bModified; }
         void setModifiedStatus(const bool bMod = true);

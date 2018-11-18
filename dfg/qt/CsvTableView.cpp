@@ -139,6 +139,16 @@ namespace
         eventLoop.exec();
     }
 
+    QString getOpenFileName(QWidget* pParent)
+    {
+        return QFileDialog::getOpenFileName(pParent,
+                                            QApplication::tr("Open file"),
+                                            QString()/*dir*/,
+                                            QApplication::tr("CSV files (*.csv *.tsv);;All files (*.*)"),
+                                            nullptr/*selected filter*/,
+                                            0/*options*/);
+    }
+
 } // unnamed namespace
 
 DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
@@ -178,6 +188,12 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     {
         auto pAction = new QAction(tr("Open file..."), this);
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openFromFile));
+        addAction(pAction);
+    }
+
+    {
+        auto pAction = new QAction(tr("Open file with options..."), this);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openFromFileWithOptions));
         addAction(pAction);
     }
 
@@ -837,61 +853,103 @@ class CsvFormatDefinitionDialog : public QDialog
 {
 public:
     typedef QDialog BaseClass;
-    CsvFormatDefinitionDialog()
+    enum DialogType { DialogTypeSave, DialogTypeLoad };
+
+    typedef DFG_CLASS_NAME(CsvItemModel)::LoadOptions LoadOptions;
+    typedef DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptions;
+
+    CsvFormatDefinitionDialog(const DialogType dialogType)
+        : m_dialogType(dialogType)
     {
         using namespace DFG_MODULE_NS(io);
+        removeContextHelpButtonFromDialog(this);
         auto spLayout = std::unique_ptr<QFormLayout>(new QFormLayout);
-        m_pSeparatorEdit = new QComboBox(this);
-        m_pEnclosingEdit = new QComboBox(this);
-        m_pEolEdit = new QComboBox(this);
-        m_pEncodingEdit = new QComboBox(this);
-        m_pSaveHeader = new QCheckBox(this);
-        m_pWriteBOM = new QCheckBox(this);
+        m_spSeparatorEdit.reset(new QComboBox(this));
+        m_spEnclosingEdit.reset(new QComboBox(this));
+        m_spEolEdit.reset(new QComboBox(this));
+        if (isSaveDialog())
+        {
+            m_spEncodingEdit.reset(new QComboBox(this));
+            m_spSaveHeader.reset(new QCheckBox(this));
+            m_spWriteBOM.reset(new QCheckBox(this));
+        }
+        else
+        {
+            m_spCompleterColumns.reset(new QLineEdit(this));
+        }
 
-        m_pSeparatorEdit->addItems(QStringList() << "," << "\\t" << ";");
-        m_pSeparatorEdit->setEditable(true);
-        m_pEnclosingEdit->addItem("\"");
-        m_pEnclosingEdit->setEditable(true);
-        m_pEolEdit->addItems(QStringList() << "\\n" << "\\r" << "\\r\\n");
-        m_pEolEdit->setEditable(false);
-        m_pEncodingEdit->addItems(QStringList() << encodingToStrId(encodingUTF8) << encodingToStrId(encodingLatin1));
-        m_pEncodingEdit->setEditable(false);
-        m_pSaveHeader->setChecked(true);
-        m_pWriteBOM->setChecked(true);
+        m_spSeparatorEdit->addItems(QStringList() << "," << "\\t" << ";");
+        m_spSeparatorEdit->setEditable(true);
+        m_spEnclosingEdit->addItems(QStringList() << "\"" << "");
+        m_spEnclosingEdit->setEditable(true);
+        m_spEolEdit->addItems(QStringList() << "\\n" << "\\r" << "\\r\\n");
+        m_spEolEdit->setEditable(false);
+        if (isSaveDialog())
+        {
+            m_spEncodingEdit->addItems(QStringList() << encodingToStrId(encodingUTF8) << encodingToStrId(encodingLatin1));
+            m_spEncodingEdit->setEditable(false);
+            m_spSaveHeader->setChecked(true);
+            m_spWriteBOM->setChecked(true);
+        }
 
-        spLayout->addRow(tr("Separator char"), m_pSeparatorEdit);
-        spLayout->addRow(tr("Enclosing char"), m_pEnclosingEdit);
-        spLayout->addRow(tr("End-of-line"), m_pEolEdit);
-        spLayout->addRow(tr("Save header"), m_pSaveHeader);
-        spLayout->addRow(tr("Encoding"), m_pEncodingEdit);
-        spLayout->addRow(tr("Write BOM"), m_pWriteBOM);
+        spLayout->addRow(tr("Separator char"), m_spSeparatorEdit.get());
+        spLayout->addRow(tr("Enclosing char"), m_spEnclosingEdit.get());
+        spLayout->addRow(tr("End-of-line"), m_spEolEdit.get());
+        if (isSaveDialog())
+        {
+            spLayout->addRow(tr("Encoding"), m_spEncodingEdit.get());
+            spLayout->addRow(tr("Save header"), m_spSaveHeader.get());
+            spLayout->addRow(tr("Write BOM"), m_spWriteBOM.get());
+        }
+        else
+        {
+            spLayout->addRow(tr("Completer columns"), m_spCompleterColumns.get());
+            m_spCompleterColumns->setText("*"); // TODO: might want some logics here; not reasonable to have this enabled by default for huge files.
+            m_spCompleterColumns->setToolTip(tr("Column indexes (starting from 0) where completion is available, use * to enable on all."));
+        }
+        //spLayout->addRow(new QLabel(tr("Note: "), this));
 
         auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
 
         connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept()));
         connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
-
         spLayout->addRow(QString(), &rButtonBox);
         setLayout(spLayout.release());
     }
 
+    bool isSaveDialog() const
+    {
+        return m_dialogType == DialogTypeSave;
+    }
+
+    bool isLoadDialog() const
+    {
+        return !isSaveDialog();
+    }
+
     void accept() override
     {
+        using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
-        if (!m_pSeparatorEdit || !m_pEnclosingEdit || !m_pEolEdit || !m_pSaveHeader || !m_pWriteBOM || !m_pEncodingEdit)
+        if (isSaveDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEolEdit || !m_spSaveHeader || !m_spWriteBOM || !m_spEncodingEdit))
         {
             QMessageBox::information(this, tr("CSV saving"), tr("Internal error occurred; saving failed."));
             return;
         }
-        auto sSep = m_pSeparatorEdit->currentText().trimmed();
-        auto sEnc = m_pEnclosingEdit->currentText().trimmed();
-        auto sEol = m_pEolEdit->currentText().trimmed();
+        if (isLoadDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEolEdit || !m_spCompleterColumns))
+        {
+            QMessageBox::information(this, tr("CSV loading"), tr("Internal error occurred; loading failed."));
+            return;
+        }
+        auto sSep = m_spSeparatorEdit->currentText().trimmed();
+        auto sEnc = m_spEnclosingEdit->currentText().trimmed();
+        auto sEol = m_spEolEdit->currentText().trimmed();
 
         DFG_MODULE_NS(io)::EndOfLineType eolType = DFG_MODULE_NS(io)::EndOfLineTypeNative;
 
-        const auto sep = DFG_MODULE_NS(str)::stringLiteralCharToValue<wchar_t>(sSep.toStdWString());
-        const auto enc = DFG_MODULE_NS(str)::stringLiteralCharToValue<wchar_t>(sEnc.toStdWString());
+        const auto sep = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(sSep.toStdWString());
+        const auto enc = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(sEnc.toStdWString());
 
         if (sEol == "\\n")
             eolType = DFG_MODULE_NS(io)::EndOfLineTypeN;
@@ -901,41 +959,71 @@ public:
             eolType = DFG_MODULE_NS(io)::EndOfLineTypeRN;
 
         // TODO: check for identical values (e.g. require that sep != enc)
-        if (!sep.first || !enc.first || eolType == DFG_MODULE_NS(io)::EndOfLineTypeNative)
+        if (!sep.first || (!sEnc.isEmpty() && !enc.first) || eolType == DFG_MODULE_NS(io)::EndOfLineTypeNative)
         {
             // TODO: more informative message for the user.
             QMessageBox::information(this, tr("CSV saving"), tr("Chosen settings can't be used. Please revise the selections."));
             return;
         }
 
-        m_formatDef.m_cEnc = enc.second;
-        m_formatDef.m_cSep = sep.second;
-        m_formatDef.m_eolType = eolType;
-        m_formatDef.headerWriting(m_pSaveHeader->isChecked());
-        m_formatDef.bomWriting(m_pWriteBOM->isChecked());
-        m_formatDef.textEncoding(strIdToEncoding(m_pEncodingEdit->currentText().toLatin1().data()));
+        if (isLoadDialog())
+        {
+            m_loadOptions.m_cEnc = (!sEnc.isEmpty()) ? enc.second : ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
+            m_loadOptions.m_cSep = sep.second;
+            m_loadOptions.m_eolType = eolType;
+            m_loadOptions.setProperty("completerColumns", m_spCompleterColumns->text().toStdString());
+        }
+        else // case: save dialog
+        {
+            m_saveOptions.m_cEnc = enc.second;
+            m_saveOptions.m_cSep = sep.second;
+            m_saveOptions.m_eolType = eolType;
+            m_saveOptions.headerWriting(m_spSaveHeader->isChecked());
+            m_saveOptions.bomWriting(m_spWriteBOM->isChecked());
+            m_saveOptions.textEncoding(strIdToEncoding(m_spEncodingEdit->currentText().toLatin1().data()));
+        }
 
         BaseClass::accept();
     }
 
-    DFG_CLASS_NAME(CsvItemModel)::SaveOptions m_formatDef;
-    QComboBox* m_pSeparatorEdit;
-    QComboBox* m_pEnclosingEdit;
-    QComboBox* m_pEolEdit;
-    QComboBox* m_pEncodingEdit;
-    QCheckBox* m_pSaveHeader;
-    QCheckBox* m_pWriteBOM;
-};
+    LoadOptions getLoadOptions() const
+    {
+        return m_loadOptions;
+    }
+
+    SaveOptions getSaveOptions() const
+    {
+        return m_saveOptions;
+    }
+
+
+    DialogType m_dialogType;
+    LoadOptions m_loadOptions;
+    SaveOptions m_saveOptions;
+    std::unique_ptr<QComboBox> m_spSeparatorEdit;
+    std::unique_ptr<QComboBox> m_spEnclosingEdit;
+    std::unique_ptr<QComboBox> m_spEolEdit;
+    std::unique_ptr<QComboBox> m_spEncodingEdit;
+    std::unique_ptr<QCheckBox> m_spSaveHeader;
+    std::unique_ptr<QCheckBox> m_spWriteBOM;
+    // Load-only properties
+    std::unique_ptr<QLineEdit> m_spCompleterColumns;
+}; // Class CsvFormatDefinitionDialog
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
 {
-    CsvFormatDefinitionDialog dlg;
+    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeSave);
     if (dlg.exec() != QDialog::Accepted)
         return false;
-    return saveToFileImpl(dlg.m_formatDef);
+    return saveToFileImpl(dlg.getSaveOptions());
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
+{
+    return openFile(sPath, CsvItemModel::LoadOptions());
+}
+
+bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
 {
     if (sPath.isEmpty())
         return false;
@@ -953,7 +1041,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
     bool bSuccess = false;
     doModalOperation(this, tr("Reading file\n%1").arg(sPath), "CsvTableViewFileLoader", [&]()
         {
-            bSuccess = pModel->openFile(sPath);
+            bSuccess = pModel->openFile(sPath, formatDef);
         });
 
     if (pProxyModel)
@@ -974,14 +1062,18 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
 
 bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
 {
-    auto sPath = QFileDialog::getOpenFileName(this,
-        tr("Open file"),
-        QString()/*dir*/,
-        tr("CSV files (*.csv *.tsv);;All files (*.*)"),
-                                                nullptr/*selected filter*/,
-                                                0/*options*/);
+    return openFile(getOpenFileName(this));
+}
 
-    return openFile(sPath);
+bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
+{
+    const auto sPath = getOpenFileName(this);
+    if (sPath.isEmpty())
+        return false;
+    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeLoad);
+    if (dlg.exec() != QDialog::Accepted)
+        return false;
+    return openFile(sPath, dlg.getLoadOptions());
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()

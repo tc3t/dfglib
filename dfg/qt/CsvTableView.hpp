@@ -202,6 +202,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static QModelIndex mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, int r, int c);
 
         bool openFile(const QString& sPath);
+        bool openFile(const QString& sPath, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
 
     private:
         template <class T, class Param0_T>
@@ -230,6 +231,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public slots:
         bool openFromFile();
+        bool openFromFileWithOptions();
         bool mergeFilesToCurrent();
         bool save();
         bool saveToFile();

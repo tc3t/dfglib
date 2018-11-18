@@ -62,7 +62,7 @@ namespace
 
         }
     };
-}
+} // unnamed namesapce
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
@@ -114,6 +114,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
     }; // DFG_CLASS_NAME(CsvTableModelActionCellEdit)
 
 } } } // dfg::qt::unnamed_namespace
+
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::~ColInfo()
+{
+}
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
     m_pUndoStack(nullptr),
@@ -284,13 +288,13 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char* data, const size_t nSize, const LoadOptions& loadOptions)
 {
-    return readData([&]()
+    return readData(loadOptions, [&]()
     {
         m_table.readFromMemory(data, nSize, loadOptions);
     });
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<void()> tableFiller)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions& options, std::function<void()> tableFiller)
 {
     DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) readTimer;
 
@@ -300,7 +304,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(std::function<voi
 
     tableFiller();
 
-    const auto completerEnabledColumnsStrItems = getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledColumnIndexes>(this);
+    const QString optionsCompleterColumns(options.getProperty("completerColumns", "not_given").c_str());
+    const auto completerEnabledColumnsStrItems = optionsCompleterColumns != "not_given" ? optionsCompleterColumns.split(',') : getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledColumnIndexes>(this);
     const auto completerEnabledInAll = (completerEnabledColumnsStrItems.size() == 1 && completerEnabledColumnsStrItems[0].trimmed() == "*");
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SetVector)<int> completerEnabledColumns;
 
@@ -472,7 +477,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
     if (fileInfo.isFile() && fileInfo.isReadable())
     {
         sDbFilePath = fileInfo.absoluteFilePath();
-        auto rv = readData([&]()
+        auto rv = readData(loadOptions, [&]()
         {
             m_table.readFromFile(sDbFilePath.toLocal8Bit().data(), loadOptions); // TODO: return value,
                                                                                  // TODO: non-lossy conversion from QString to string type that readFromFile() accepts, 
