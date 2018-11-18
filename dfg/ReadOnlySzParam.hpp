@@ -358,6 +358,11 @@ public:
         return toCharPtr_raw(end());
     }
 
+    Str_T toString() const
+    {
+        return Str_T(data(), size());
+    }
+
     bool operator==(const DFG_CLASS_NAME(StringView)& other) const
     {
         return (this->m_nSize == other.m_nSize) && std::equal(toCharPtr_raw(this->m_pFirst), toCharPtr_raw(this->m_pFirst) + this->m_nSize, toCharPtr_raw(other.m_pFirst));
