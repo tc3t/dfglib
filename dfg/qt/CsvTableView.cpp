@@ -23,6 +23,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QDialogButtonBox>
 #include <QCheckBox>
 #include <QCompleter>
+#include <QDate>
+#include <QDateTime>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
@@ -35,6 +37,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QSettings>
 #include <QSortFilterProxyModel>
 #include <QThread>
+#include <QTime>
 #include <QTimer>
 #include <QToolTip>
 #include <QUndoView>
@@ -68,7 +71,10 @@ namespace
     {
         CsvTableViewPropertyId_diffProgPath,
         CsvTableViewPropertyId_initialScrollPosition,
-        CsvTableViewPropertyId_minimumVisibleColumnWidth
+        CsvTableViewPropertyId_minimumVisibleColumnWidth,
+        CsvTableViewPropertyId_timeFormat,
+        CsvTableViewPropertyId_dateFormat,
+        CsvTableViewPropertyId_dateTimeFormat
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
@@ -83,6 +89,9 @@ namespace
     DFG_QT_DEFINE_OBJECT_PROPERTY("diffProgPath", CsvTableView, CsvTableViewPropertyId_diffProgPath, QString, PropertyType);
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_initialScrollPosition", CsvTableView, CsvTableViewPropertyId_initialScrollPosition, QString, PropertyType);
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_minimumVisibleColumnWidth", CsvTableView, CsvTableViewPropertyId_minimumVisibleColumnWidth, int, []() { return 5; });
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_timeFormat", CsvTableView, CsvTableViewPropertyId_timeFormat, QString, []() { return QString("hh:mm:ss.zzz"); });
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_dateFormat", CsvTableView, CsvTableViewPropertyId_dateFormat, QString, []() { return QString("yyyy-MM-dd"); });
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_dateTimeFormat", CsvTableView, CsvTableViewPropertyId_dateTimeFormat, QString, []() { return QString("yyyy-MM-dd hh:mm:ss.zzz"); });
 
     template <class T>
     QString floatToQString(const T val)
@@ -285,6 +294,42 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         auto pAction = new QAction(tr("Generate content..."), this);
         //pAction->setShortcut(tr(""));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::generateContent));
+        addAction(pAction);
+    }
+
+    // Insert-menu
+    {
+        auto pAction = new QAction(tr("Insert"), this);
+
+        auto pMenu = new QMenu();
+        // Schedule destruction of menu with the parent action.
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+
+        // 'Insert Date'
+        {
+            auto pAct = new QAction(tr("Date"), this);
+            pAct->setShortcut(tr("Alt+Q"));
+            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDate));
+            pMenu->addAction(pAct);
+        }
+
+        // 'Insert Time'
+        {
+            auto pAct = new QAction(tr("Time"), this);
+            pAct->setShortcut(tr("Alt+W"));
+            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertTime));
+            pMenu->addAction(pAct);
+        }
+
+        // 'Insert Date time'
+        {
+            auto pAct = new QAction(tr("Date and time"), this);
+            pAct->setShortcut(tr("Shift+Alt+Q"));
+            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDateTime));
+            pMenu->addAction(pAct);
+        }
+
+        pAction->setMenu(pMenu); // Does not transfer ownership.
         addAction(pAction);
     }
 
@@ -797,6 +842,33 @@ void DFG_CLASS_NAME(CsvTableView)::setUndoEnabled(const bool bEnable)
     {
         pCsvModel->setUndoStack(nullptr);
     }
+}
+
+void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertGeneric(const QString& s)
+{
+    auto pModel = model();
+    if (!pModel)
+        return;
+    forEachIndexInSelection(*this, ModelIndexTypeView, [&](const QModelIndex& index, bool& bContinue)
+    {
+        DFG_UNUSED(bContinue);
+        pModel->setData(index, s);
+    });
+}
+
+void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertDate()
+{
+    insertGeneric(QDate::currentDate().toString(getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this)));
+}
+
+void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertTime()
+{
+    insertGeneric(QTime::currentTime().toString(getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this)));
+}
+
+void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertDateTime()
+{
+    insertGeneric(QDateTime::currentDateTime().toString(getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)));
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)

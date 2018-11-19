@@ -109,6 +109,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
         typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDef;
 
+        enum ModelIndexType
+        {
+            ModelIndexTypeSource, // Refers to indexes in underlying data model.
+            ModelIndexTypeView    // Refers to indexes in view model (which can be the same as source-model in case there is no proxy).
+        };
+
         DFG_CLASS_NAME(CsvTableView)(QWidget* pParent);
         ~DFG_CLASS_NAME(CsvTableView)() DFG_OVERRIDE_DESTRUCTOR;
 
@@ -224,10 +230,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2);
 
         template <class This_T, class Func_T>
+        static void forEachViewModelIndexInSelection(This_T& thisItem, Func_T func);
+
+        template <class This_T, class Func_T>
         static void forEachCsvModelIndexInSelection(This_T& thisItem, Func_T func);
 
         template <class This_T, class Func_T>
+        static void forEachIndexInSelection(This_T& thisItem, ModelIndexType indexType, Func_T func);
+
+        template <class This_T, class Func_T>
         static void forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func);
+
+        template <class This_T, class Func_T>
+        static void forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, ModelIndexType indexType, Func_T func);
 
     public slots:
         bool openFromFile();
@@ -281,6 +296,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setRowMode(bool);
         void setUndoEnabled(bool);
+
+        void insertGeneric(const QString& s);
+        void insertDate();
+        void insertTime();
+        void insertDateTime();
 
         /*
         void pasteColumn();
@@ -353,32 +373,44 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     template <class This_T, class Func_T>
     void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelection(This_T& thisItem, Func_T func)
     {
+        forEachIndexInSelection(thisItem, ModelIndexTypeSource, std::forward<Func_T>(func));
+    }
+
+    template <class This_T, class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelection(This_T& thisItem, const ModelIndexType indexType, Func_T func)
+    {
         const auto sm = thisItem.selectionModel();
         const auto selection = (sm) ? sm->selection() : QItemSelection();
         for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
-            thisItem.forEachCsvModelIndexInSelectionRange(thisItem, *iter, std::forward<Func_T>(func));
+            forEachIndexInSelectionRange(thisItem, *iter, indexType, std::forward<Func_T>(func));
         }
     }
 
     template <class This_T, class Func_T>
     void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func)
     {
-       auto pProxy = thisItem.getProxyModelPtr();
-       auto pModel = thisItem.model();
-       if (!pModel)
-           return;
-       // TODO: if not having proxy, iterate in the way that is optimal to underlying data structure
-       const auto right = sr.right();
-       const auto bottom = sr.bottom();
-       bool bContinue = true;
-       for (int c = sr.left(); c<=right && bContinue; ++c)
-       {
-           for (int r = sr.top(); r<=bottom && bContinue; ++r)
-           {
-               func(mapToSource(thisItem.model(), pProxy, r, c), bContinue);
-           }
-       }
+        forEachIndexInSelectionRange(thisItem, sr, ModelIndexTypeSource, std::forward<Func_T>(func));
+    }
+
+    template <class This_T, class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, const ModelIndexType indexType, Func_T func)
+    {
+        auto pProxy = (indexType == ModelIndexTypeSource) ? thisItem.getProxyModelPtr() : nullptr;
+        auto pModel = thisItem.model();
+        if (!pModel)
+            return;
+        // TODO: if not having proxy, iterate in the way that is optimal to underlying data structure
+        const auto right = sr.right();
+        const auto bottom = sr.bottom();
+        bool bContinue = true;
+        for (int c = sr.left(); c<=right && bContinue; ++c)
+        {
+            for (int r = sr.top(); r<=bottom && bContinue; ++r)
+            {
+                func(mapToSource(thisItem.model(), pProxy, r, c), bContinue);
+            }
+        }
     }
 
 } } // module namespace
