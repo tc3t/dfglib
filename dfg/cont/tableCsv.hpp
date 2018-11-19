@@ -231,7 +231,7 @@ DFG_ROOT_NS_BEGIN{
                     m_nEncodedSepSizeInBytes = static_cast<decltype(m_nEncodedSepSizeInBytes)>(m_bytes.size());
                     DFG_MODULE_NS(utf)::cpToEncoded(cEol, std::back_inserter(m_bytes), encoding);
                     m_nEncodedEolSizeInBytes = static_cast<decltype(m_nEncodedEolSizeInBytes)>(m_bytes.size()) - m_nEncodedSepSizeInBytes;
-                    // Note: set the pointers after all no more bytes are written to m_bytes to make sure that 
+                    // Note: set the pointers after all bytes have been written to m_bytes to make sure that 
                     //       there will be no pointer invalidating reallocation.
                     m_pEncodedSep = ptrToContiguousMemory(m_bytes);
                     m_pEncodedEol = m_pEncodedSep + m_nEncodedSepSizeInBytes;
@@ -272,8 +272,11 @@ DFG_ROOT_NS_BEGIN{
 
                 void writeBom(Stream_T& strm)
                 {
-                    const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(m_format.textEncoding());
-                    strm.write(bomBytes.data(), bomBytes.size());
+                    if (m_format.bomWriting())
+                    {
+                        const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(m_format.textEncoding());
+                        strm.write(bomBytes.data(), bomBytes.size());
+                    }
                 }
 
                 DFG_CLASS_NAME(CsvFormatDefinition) m_format;
@@ -283,7 +286,7 @@ DFG_ROOT_NS_BEGIN{
                 const char* m_pEncodedEol;
                 uint32 m_nEncodedSepSizeInBytes;
                 uint32 m_nEncodedEolSizeInBytes;
-            };
+            }; // class WritePolicySimple
 
             template <class Stream_T>
             auto createWritePolicy() const -> WritePolicySimple<Stream_T>
@@ -304,7 +307,6 @@ DFG_ROOT_NS_BEGIN{
             {
                 policy.writeBom(strm);
 
-                
                 if (this->m_colToRows.empty())
                     return;
                 // nextColItemRowIters[i] is the valid iterator to the next row entry in column i.

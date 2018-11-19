@@ -727,6 +727,20 @@ TEST(dfgCont, TableCsv)
         const auto fileBytes = fileToByteContainer<std::string>(s);
         // ...and check that bytes match.
         EXPECT_EQ(fileBytes, bytes);
+
+        // Check also that saving without BOM works.
+        {
+            std::string nonBomBytes;
+            DFG_CLASS_NAME(OmcByteStream)<std::string> ostrmNonBom(&nonBomBytes);
+            auto csvFormat = table.m_readFormat;
+            csvFormat.bomWriting(false);
+            auto writePolicy = table.createWritePolicy<decltype(ostrmNonBom)>(csvFormat);
+            table.writeToStream(ostrmNonBom, writePolicy);
+            // ...and check that bytes match.
+            const auto nBomSize = ::DFG_MODULE_NS(utf)::bomSizeInBytes(csvFormat.textEncoding());
+            ASSERT_EQ(bytes.size(), nonBomBytes.size() + nBomSize);
+            EXPECT_TRUE(std::equal(bytes.cbegin() + nBomSize, bytes.cend(), nonBomBytes.cbegin()));
+        }
     }
 
     // Test that results are the same as with DelimitedTextReader.
