@@ -91,7 +91,17 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
             m_sOldData = m_pDataModel->data(m_index).toString();
 
             QString sDesc;
-            sDesc = QString("Edit cell (%1, %2) from '%3' to '%4'").arg(m_pDataModel->internalRowIndexToVisible(index.row())).arg(index.column()).arg(m_sOldData).arg(m_sNewData);
+            const auto makeDescriptionContentString = [](const QString s)
+                {
+                    const auto nMaxLength = 6;
+                    return (s.size() > nMaxLength) ? s.left(nMaxLength-3) + "..." : s;
+
+                };
+            sDesc = QString("Edit cell (%1, %2) from '%3' to '%4'")
+                        .arg(m_pDataModel->internalRowIndexToVisible(index.row()))
+                        .arg(index.column())
+                        .arg(makeDescriptionContentString(m_sOldData))
+                        .arg(makeDescriptionContentString(m_sNewData));
             setText(sDesc);
         }
 
