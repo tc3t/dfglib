@@ -141,6 +141,9 @@
     <ClCompile Include="..\dfg\os\memoryMappedFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\dfg\qt\QtApplication.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\dfg\qt\CsvItemModel.hpp">

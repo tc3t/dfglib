@@ -41,6 +41,7 @@
   <ItemGroup>
     <ClCompile Include="..\dfg\os\memoryMappedFile.cpp" />
     <ClCompile Include="..\dfg\qt\CsvItemModel.cpp" />
+    <ClCompile Include="..\dfg\qt\QtApplication.cpp" />
     <ClCompile Include="..\dfg\qt\qxt\gui\qxtspanslider.cpp" />
     <ClCompile Include="..\externals\gtest\gtest-all.cc" />
     <ClCompile Include="dfgTestQt.cpp" />
