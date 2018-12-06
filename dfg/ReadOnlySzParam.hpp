@@ -360,7 +360,7 @@ public:
 
     Str_T toString() const
     {
-        return Str_T(data(), size());
+        return Str_T(this->data(), size());
     }
 
     bool operator==(const DFG_CLASS_NAME(StringView)& other) const
