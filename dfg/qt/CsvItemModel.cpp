@@ -119,6 +119,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::~ColInfo()
 {
+    //if (m_spCompleter)
+    //    m_spCompleter.release()->deleteLater(); // Can't delete directly due to thread affinity (i.e. might get deleted from wrong thread).
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
@@ -181,6 +183,20 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
     return save(strm, SaveOptions());
 }
 
+namespace
+{
+    template <class Strm_T>
+    class CsvWritePolicy : public ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DataTable::WritePolicySimple<Strm_T>
+    {
+    public:
+        typedef ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DataTable::WritePolicySimple<Strm_T> BaseClass;
+        DFG_BASE_CONSTRUCTOR_DELEGATE_1(CsvWritePolicy, BaseClass)
+        {
+        }
+    };
+
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const SaveOptions& options)
 {
     DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) writeTimer;
@@ -222,17 +238,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
         strm << sEol;
     }
 
-    QString sLine;
-    const int nRowCount = m_table.rowCountByMaxRowIndex();
-    for (int r = 0; r<nRowCount; ++r)
-    {
-        sLine.clear();
-        rowToString(r, sLine, cSep);
-        const auto& utf8 = qStringToEncodedBytes(sLine);
-        strm.write(utf8.data(), utf8.size());
-        if (r + 1 < nRowCount)
-            strm << sEol;
-    }
+    auto mainTableSaveOptions = options;
+    mainTableSaveOptions.bomWriting(false); // BOM has already been handled.
+    mainTableSaveOptions.textEncoding(encoding);
+    CsvWritePolicy<decltype(strm)> writePolicy(mainTableSaveOptions);
+    m_table.writeToStream(strm, writePolicy);
 
     m_writeTimeInSeconds = static_cast<decltype(m_writeTimeInSeconds)>(writeTimer.elapsedWallSeconds());
 
