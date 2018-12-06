@@ -108,6 +108,7 @@ DFG_ROOT_NS_BEGIN{
                     {
                         auto p0 = (*this)(r, c);
                         auto p1 = other(r, c);
+						// TODO: revise logics: implementation below treats null and empty cells as different.
                         if ((!p0 && p1) || (p0 && !p1) || (std::strcmp(toCharPtr_raw(p0), toCharPtr_raw(p1)) != 0)) // TODO: Create comparison function instead of using strcmp().
                             return false;
                     }
@@ -225,11 +226,12 @@ DFG_ROOT_NS_BEGIN{
                     m_format(csvFormat)
                 {
                     const auto cSep = m_format.separatorChar();
-                    const auto cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(m_format.eolType());
+                    const std::string sEol = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(m_format.eolType());
                     const auto encoding = m_format.textEncoding();
                     DFG_MODULE_NS(utf)::cpToEncoded(cSep, std::back_inserter(m_bytes), encoding);
                     m_nEncodedSepSizeInBytes = static_cast<decltype(m_nEncodedSepSizeInBytes)>(m_bytes.size());
-                    DFG_MODULE_NS(utf)::cpToEncoded(cEol, std::back_inserter(m_bytes), encoding);
+                    for (auto iter = sEol.cbegin(), iterEnd = sEol.cend(); iter != iterEnd; ++iter)
+                        DFG_MODULE_NS(utf)::cpToEncoded(*iter, std::back_inserter(m_bytes), encoding);
                     m_nEncodedEolSizeInBytes = static_cast<decltype(m_nEncodedEolSizeInBytes)>(m_bytes.size()) - m_nEncodedSepSizeInBytes;
                     // Note: set the pointers after all bytes have been written to m_bytes to make sure that 
                     //       there will be no pointer invalidating reallocation.

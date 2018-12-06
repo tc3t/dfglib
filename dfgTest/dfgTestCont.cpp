@@ -678,6 +678,7 @@ TEST(dfgCont, TableCsv)
     std::vector<std::string> paths;
     std::vector<TextEncoding> encodings;
     std::vector<char> separators;
+    std::vector<::DFG_MODULE_NS(io)::EndOfLineType> eolTypes;
     // TODO: Read these properties from file names once "for-each-file-in-folder"-function is available.
     const TextEncoding contEncodings[] = { encodingUTF8,
                                             encodingUTF16Be,
@@ -685,21 +686,30 @@ TEST(dfgCont, TableCsv)
                                             encodingUTF32Be,
                                             encodingUTF32Le };
     const std::string contSeparators[] = { "2C", "09", "3B" }; // ',' '\t', ';'
+    const std::string contEols[] = { "n", "rn" };
+    const std::array<::DFG_MODULE_NS(io)::EndOfLineType, 2> contEolIndexToType = { ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::EndOfLineTypeRN };
     
-    const std::string sPathTemplate = "testfiles/csv_testfiles/csvtest%1%_BOM_sep_%2%_eol_n.csv";
+    const std::string sPathTemplate = "testfiles/csv_testfiles/csvtest%1%_BOM_sep_%2%_eol_%3%.csv";
     for (size_t iE = 0; iE < count(contEncodings); ++iE)
     {
         for (size_t iS = 0; iS < count(contSeparators); ++iS)
         {
-            auto s = DFG_MODULE_NS(str)::replaceSubStrs(sPathTemplate, "%1%", encodingToStrId(contEncodings[iE]));
-            DFG_MODULE_NS(str)::replaceSubStrsInplace(s, "%2%", contSeparators[iS]);
-            EXPECT_TRUE(DFG_MODULE_NS(os)::isPathFileAvailable(s.c_str(), DFG_MODULE_NS(os)::FileModeRead));
-            paths.push_back(std::move(s));
-            encodings.push_back(contEncodings[iE]);
-            const auto charValOpt = DFG_MODULE_NS(str)::stringLiteralCharToValue<char>(std::string("\\x") + contSeparators[iS]);
-            EXPECT_TRUE(charValOpt.first);
-            separators.push_back(charValOpt.second);
-            
+            for (size_t iEol = 0; iEol < count(contEols); ++iEol)
+            {
+                auto s = DFG_MODULE_NS(str)::replaceSubStrs(sPathTemplate, "%1%", encodingToStrId(contEncodings[iE]));
+                DFG_MODULE_NS(str)::replaceSubStrsInplace(s, "%2%", contSeparators[iS]);
+                DFG_MODULE_NS(str)::replaceSubStrsInplace(s, "%3%", contEols[iEol]);
+                const bool bFileExists = DFG_MODULE_NS(os)::isPathFileAvailable(s.c_str(), DFG_MODULE_NS(os)::FileModeRead);
+                if (!bFileExists && iEol != 0)
+                    continue; // There are no rn-versions of all files so simply skip such.
+                EXPECT_TRUE(bFileExists);
+                paths.push_back(std::move(s));
+                encodings.push_back(contEncodings[iE]);
+                eolTypes.push_back(contEolIndexToType[iEol]);
+                const auto charValOpt = DFG_MODULE_NS(str)::stringLiteralCharToValue<char>(std::string("\\x") + contSeparators[iS]);
+                EXPECT_TRUE(charValOpt.first);
+                separators.push_back(charValOpt.second);
+            }
         }
     }
     typedef DFG_CLASS_NAME(TableCsv)<char, size_t> Table;
@@ -717,12 +727,16 @@ TEST(dfgCont, TableCsv)
         {
             EXPECT_EQ(encodings[i], table.m_readFormat.textEncoding()); // TODO: use access function for format info.
             EXPECT_EQ(separators[i], table.m_readFormat.separatorChar()); // TODO: use access function for format info.
+            //EXPECT_EQ(eolTypes[i], table.m_readFormat.eolType()); // Commented out for now as table does not store original eol info. TODO: use access function for format info.
         }
 
         // ...write to memory using the same encoding as in file...
         std::string bytes;
         DFG_CLASS_NAME(OmcByteStream)<std::string> ostrm(&bytes);
-        table.writeToStream(ostrm);
+        auto writeFormat = table.m_readFormat;
+        writeFormat.eolType(eolTypes[i]);
+        auto writePolicy = table.createWritePolicy<decltype(ostrm)>(writeFormat);
+        table.writeToStream(ostrm, writePolicy);
         // ...read file bytes...
         const auto fileBytes = fileToByteContainer<std::string>(s);
         // ...and check that bytes match.
@@ -734,6 +748,7 @@ TEST(dfgCont, TableCsv)
             DFG_CLASS_NAME(OmcByteStream)<std::string> ostrmNonBom(&nonBomBytes);
             auto csvFormat = table.m_readFormat;
             csvFormat.bomWriting(false);
+            csvFormat.eolType(eolTypes[i]);
             auto writePolicy = table.createWritePolicy<decltype(ostrmNonBom)>(csvFormat);
             table.writeToStream(ostrmNonBom, writePolicy);
             // ...and check that bytes match.
