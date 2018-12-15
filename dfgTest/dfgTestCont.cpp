@@ -833,6 +833,34 @@ TEST(dfgCont, TableCsv)
         EXPECT_EQ(dataAsUtf8, table(0,0));
     }
 
+    // Test enclosement behaviour
+    {
+        const size_t nExpectedCount = 2;
+        // Note: EbEnclose is missing because it would have need more work to implement writing something even for non-existent cells.
+        const std::array<EnclosementBehaviour, nExpectedCount> enclosementItems = { EbEncloseIfNeeded, EbEncloseIfNonEmpty };
+        const std::array<std::string, nExpectedCount> expected = {  DFG_ASCII("a,b,,\"c,d\",\"e\nf\",g\n,,r1c2,,,").c_str(),
+                                                                    DFG_ASCII("\"a\",\"b\",,\"c,d\",\"e\nf\",\"g\"\n,,\"r1c2\",,,").c_str() };
+        DFG_CLASS_NAME(TableCsv)<char, uint32> table;
+        table.setElement(0, 0, DFG_UTF8("a"));
+        table.setElement(0, 1, DFG_UTF8("b"));
+        //table.setElement(0, 2, DFG_UTF8(""));
+        table.setElement(0, 3, DFG_UTF8("c,d"));
+        table.setElement(0, 4, DFG_UTF8("e\nf"));
+        table.setElement(0, 5, DFG_UTF8("g"));
+        table.setElement(1, 2, DFG_UTF8("r1c2"));
+        for (size_t i = 0; i < nExpectedCount; ++i)
+        {
+            DFG_CLASS_NAME(OmcByteStream)<> ostrm;
+            auto writePolicy = table.createWritePolicy<decltype(ostrm)>();
+            writePolicy.m_format.enclosementBehaviour(enclosementItems[i]);
+            writePolicy.m_format.bomWriting(false);
+            table.writeToStream(ostrm, writePolicy);
+            ASSERT_EQ(expected[i].size(), ostrm.container().size());
+            EXPECT_TRUE(std::equal(expected[i].cbegin(), expected[i].cend(), ostrm.container().cbegin()));
+        }
+
+    }
+
     // TODO: test auto detection
 }
 

@@ -14,7 +14,8 @@ enum EnclosementBehaviour
 {
     EbEnclose,
     EbNoEnclose,
-    EbEncloseIfNeeded
+    EbEncloseIfNeeded,
+    EbEncloseIfNonEmpty
 };
 
 class DFG_CLASS_NAME(DelimitedTextCellWriter)
@@ -29,7 +30,7 @@ public:
                                     const EnclosementBehaviour eb,
                                     WriteOne_T&& writeItem)
     {
-        bool bEnclose = (eb == EbEnclose);
+        bool bEnclose = (eb == EbEnclose || eb == EbEncloseIfNonEmpty);
         if (!bEnclose && eb == EbEncloseIfNeeded)
         {
             // TODO: use any_of-like algorithm.
@@ -52,6 +53,8 @@ public:
         }
         else
         {
+            if (eb == EbEncloseIfNonEmpty && isAtEnd(input.begin(), input.end()))
+                return;
             writeItem(output, cEnc);
             for (auto iter = input.begin(), iterEnd = input.end(); !isAtEnd(iter, iterEnd); ++iter)
             {

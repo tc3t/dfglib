@@ -29,6 +29,7 @@ DFG_ROOT_NS_BEGIN{
             m_cEnc(cEnc),
             m_eolType(eol),
             m_textEncoding(encoding),
+            m_enclosementBehaviour(DFG_MODULE_NS(io)::EbEncloseIfNeeded),
             m_bWriteHeader(true),
             m_bWriteBom(true)
         {}
@@ -67,11 +68,15 @@ DFG_ROOT_NS_BEGIN{
             return m_genericProperties.hasKey(svKey);
         }
 
+        DFG_MODULE_NS(io)::EnclosementBehaviour enclosementBehaviour() const { return m_enclosementBehaviour; }
+        void enclosementBehaviour(const DFG_MODULE_NS(io)::EnclosementBehaviour eb) { m_enclosementBehaviour = eb; }
+
         int32 m_cSep;
         int32 m_cEnc;
         //int32 m_cEol;
         DFG_MODULE_NS(io)::EndOfLineType m_eolType;
         DFG_MODULE_NS(io)::TextEncoding m_textEncoding;
+        DFG_MODULE_NS(io)::EnclosementBehaviour m_enclosementBehaviour; // Affects only writing.
         bool m_bWriteHeader;
         bool m_bWriteBom;
         ::DFG_MODULE_NS(cont)::MapVectorAoS<std::string, std::string> m_genericProperties; // Generic properties (e.g. if implementation needs specific flags)
@@ -258,7 +263,7 @@ DFG_ROOT_NS_BEGIN{
                                                                                  uint32(m_format.separatorChar()),
                                                                                  uint32(m_format.enclosingChar()),
                                                                                  uint32(eolCharFromEndOfLineType(m_format.eolType())),
-                                                                                 DFG_MODULE_NS(io)::EbEncloseIfNeeded,
+                                                                                 m_format.enclosementBehaviour(),
                                                                                  [&](Stream_T& strm, int c) {this->writeItemFunc(strm, c); });
                 }
 
