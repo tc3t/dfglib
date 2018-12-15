@@ -48,6 +48,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/SortedSequence.hpp"
 #include "../math.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
+#include "../io/DelimitedTextWriter.hpp"
 
 using namespace DFG_MODULE_NS(qt);
 
@@ -942,6 +943,7 @@ public:
         if (isSaveDialog())
         {
             m_spEncodingEdit.reset(new QComboBox(this));
+            m_spEnclosingOptions.reset(new QComboBox(this));
             m_spSaveHeader.reset(new QCheckBox(this));
             m_spWriteBOM.reset(new QCheckBox(this));
         }
@@ -958,6 +960,9 @@ public:
         m_spEolEdit->setEditable(false);
         if (isSaveDialog())
         {
+            m_spEnclosingOptions->addItem(tr("Only when needed"), static_cast<int>(EbEncloseIfNeeded));
+            m_spEnclosingOptions->addItem(tr("Every non-empty cell"), static_cast<int>(EbEncloseIfNonEmpty));
+
             m_spEncodingEdit->addItems(QStringList() << encodingToStrId(encodingUTF8) << encodingToStrId(encodingLatin1));
             m_spEncodingEdit->setEditable(false);
             m_spSaveHeader->setChecked(true);
@@ -966,6 +971,10 @@ public:
 
         spLayout->addRow(tr("Separator char"), m_spSeparatorEdit.get());
         spLayout->addRow(tr("Enclosing char"), m_spEnclosingEdit.get());
+        if (isSaveDialog())
+        {
+            spLayout->addRow(tr("Enclosing behaviour"), m_spEnclosingOptions.get());
+        }
         spLayout->addRow(tr("End-of-line"), m_spEolEdit.get());
         if (isSaveDialog())
         {
@@ -1004,7 +1013,7 @@ public:
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
-        if (isSaveDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEolEdit || !m_spSaveHeader || !m_spWriteBOM || !m_spEncodingEdit))
+        if (isSaveDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEnclosingOptions || !m_spEolEdit || !m_spSaveHeader || !m_spWriteBOM || !m_spEncodingEdit))
         {
             QMessageBox::information(this, tr("CSV saving"), tr("Internal error occurred; saving failed."));
             return;
@@ -1050,6 +1059,7 @@ public:
             m_saveOptions.m_cEnc = enc.second;
             m_saveOptions.m_cSep = sep.second;
             m_saveOptions.m_eolType = eolType;
+            m_saveOptions.enclosementBehaviour(static_cast<EnclosementBehaviour>(m_spEnclosingOptions->currentData().toInt()));
             m_saveOptions.headerWriting(m_spSaveHeader->isChecked());
             m_saveOptions.bomWriting(m_spWriteBOM->isChecked());
             m_saveOptions.textEncoding(strIdToEncoding(m_spEncodingEdit->currentText().toLatin1().data()));
@@ -1074,6 +1084,7 @@ public:
     SaveOptions m_saveOptions;
     std::unique_ptr<QComboBox> m_spSeparatorEdit;
     std::unique_ptr<QComboBox> m_spEnclosingEdit;
+    std::unique_ptr<QComboBox> m_spEnclosingOptions;
     std::unique_ptr<QComboBox> m_spEolEdit;
     std::unique_ptr<QComboBox> m_spEncodingEdit;
     std::unique_ptr<QCheckBox> m_spSaveHeader;

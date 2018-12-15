@@ -231,7 +231,12 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
         DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), sSepEncoded, [&](StreamT& strm, int i)
         {
             sEncodedTemp.clear();
-            DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp), getHeaderName(i), cSep, cEnc, cEol, DFG_MODULE_NS(io)::EbEncloseIfNeeded);
+            DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp),
+                                                                                             getHeaderName(i),
+                                                                                             cSep,
+                                                                                             cEnc,
+                                                                                             cEol,
+                                                                                             options.enclosementBehaviour());
             auto utf8Bytes = qStringToEncodedBytes(sEncodedTemp);
             strm.write(utf8Bytes.data(), utf8Bytes.size());
         });
