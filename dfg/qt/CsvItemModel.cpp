@@ -125,6 +125,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::~ColInfo()
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
     m_pUndoStack(nullptr),
+    m_nRowCount(0),
     m_bModified(false),
     m_bResetting(false),
     m_readTimeInSeconds(-1),
@@ -290,6 +291,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
     m_vecColInfo.clear();
     setFilePathWithSignalEmit(QString());
     m_bModified = false;
+    m_nRowCount = 0;
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& strm)
@@ -320,6 +322,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     clear();
 
     tableFiller();
+    m_nRowCount = m_table.rowCountByMaxRowIndex();
 
     const QString optionsCompleterColumns(options.getProperty("completerColumns", "not_given").c_str());
     const auto completerEnabledColumnsStrItems = optionsCompleterColumns != "not_given" ? optionsCompleterColumns.split(',') : getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledColumnIndexes>(this);
@@ -361,6 +364,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     }
     // Since the header is stored separately in this model, remove it from the table.
     m_table.removeRows(0, 1);
+    m_nRowCount--;
 
     initCompletionFeature();
 
@@ -418,7 +422,7 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findColumnIndexByName(const
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other)
 {
     const auto nOtherRowCount = other.getRowCount();
-    if (nOtherRowCount < 1)
+    if (nOtherRowCount < 1 || getRowCount() >= getRowCountUpperBound())
         return false;
     const auto nOtherColumnCount = other.getColumnCount();
     std::vector<int> mapOtherColumnIndexToMerged(nOtherColumnCount, getColumnCount());
@@ -433,16 +437,22 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(co
         }
         mapOtherColumnIndexToMerged[i] = nCol;
     }
+
+    const auto nThisOriginalRowCount = getRowCount();
+
+    const auto nNewRowCount = (getRowCountUpperBound() - nOtherRowCount > nThisOriginalRowCount) ?
+                nThisOriginalRowCount + nOtherRowCount
+              : getRowCountUpperBound();
     
     // TODO: implement merging in m_table implementation. For example when merging big tables, this current implementation 
     //       copies data one-by-one while m_table could probably do it more efficiently by directly copying the string storage. In case of modifiable 'other',
     //       this.m_table could adopt the string storage.
-    const auto nThisOriginalRowCount = getRowCount();
-    beginInsertRows(QModelIndex(), nThisOriginalRowCount, nThisOriginalRowCount + nOtherRowCount - 1);
+    beginInsertRows(QModelIndex(), nThisOriginalRowCount, nNewRowCount - 1);
     other.m_table.forEachNonNullCell([&](const uint32 r, const uint32 c, SzPtrUtf8R s)
     {
         m_table.setElement(nThisOriginalRowCount + r, mapOtherColumnIndexToMerged[c], s);
     });
+    m_nRowCount = nNewRowCount;
     endInsertRows();
     return true;
 }
@@ -645,19 +655,24 @@ Qt::ItemFlags DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::flags(const QMode
 
 }
 
+int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getRowCountUpperBound() const
+{
+    // For now mostly a dedicated replacement for
+    // NumericTraits<int>::maxValue for integer addition overflow control.
+    return NumericTraits<int>::maxValue - 1;
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
-    const auto nOldRowCount = m_table.rowCountByMaxRowIndex();
+    const auto nOldRowCount = getRowCount();
     if (position < 0)
         position = nOldRowCount;
-    if (parent.isValid() || position < 0 || position > nOldRowCount)
+    if (parent.isValid() || position < 0 || position > nOldRowCount || getRowCountUpperBound() - nOldRowCount < count)
         return false;
     const auto nLastNewRowIndex = position + count - 1;
     beginInsertRows(QModelIndex(), position, nLastNewRowIndex);
-
     m_table.insertRowsAt(position, count);
-    if (position == nOldRowCount) // If appending at end, must add an empty element as otherwise table size won't change.
-        m_table.setElement(nLastNewRowIndex, 0, SzPtrUtf8(""));
+    m_nRowCount += count;
     endInsertRows();
     setModifiedStatus(true);
     return true;
@@ -665,13 +680,22 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, i
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
-    if (count < 0 || parent.isValid() || !isValidRow(position) || !isValidRow(position + count - 1))
+    if (count <= 0 || parent.isValid() || !isValidRow(position) || getRowCountUpperBound() - position < count  || !isValidRow(position + count - 1))
         return false;
+
+    const auto nOriginalCount = getRowCount();
+
     beginRemoveRows(QModelIndex(), position, position + count - 1);
 
     m_table.removeRows(position, count);
+    m_nRowCount -= count;
     
     endRemoveRows();
+
+    const auto nNewCount = getRowCount();
+
+    DFG_ASSERT_CORRECTNESS(nOriginalCount - nNewCount == count);
+
     setModifiedStatus(true);
     return true;
 }

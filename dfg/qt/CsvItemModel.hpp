@@ -189,9 +189,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int findColumnIndexByName(const QString& sHeaderName, const int returnValueIfNotFound) const;
 
         int getColumnCount() const { return int(m_vecColInfo.size()); }
-        int getRowCount() const { return int(m_table.rowCountByMaxRowIndex()); }
+        int getRowCount() const { return m_nRowCount; }
         bool isValidRow(int r) const { return r >= 0 && r < getRowCount(); }
         bool isValidColumn(int c) const { return c >= 0 && c < getColumnCount(); }
+
+        int getRowCountUpperBound() const; // Returns upper bound for row count (note that effective maximum can be much less)
 
         const QString& getHeaderName(const int nCol) const { return (isValidColumn(nCol)) ? m_vecColInfo[nCol].m_name : s_sEmpty; }
 
@@ -306,6 +308,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     //private:
 
         std::vector<ColInfo> m_vecColInfo;
+        int m_nRowCount;
         QString m_sFilePath;
         bool m_bModified;
         bool m_bResetting;
