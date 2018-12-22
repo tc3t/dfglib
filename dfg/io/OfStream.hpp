@@ -72,7 +72,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         std::streamsize xsputn(const char* s, std::streamsize num) override
         {
             for (auto i = num; i > 0; --i, ++s)
-                overflow(*s);
+                overflow(std::char_traits<char>::to_int_type(*s));
             return num;
         }
 

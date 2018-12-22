@@ -905,6 +905,34 @@ TEST(dfgIo, OfStreamWithEncoding)
     }
 }
 
+TEST(dfgIo, OfStreamWithEncoding_write)
+{
+    // Test that write() handles all bytes correctly.
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
+
+    const char szFilename[] = "testfiles/generated/OfStreamWithEncoding_writeTest.txt";
+
+    DFG_CLASS_NAME(OfStreamWithEncoding) ostrm(szFilename, encodingLatin1);
+    for (int i = 0; i < 256; ++i)
+    {
+        auto uc = static_cast<uint8>(i);
+        ostrm.write(reinterpret_cast<const char*>(&uc), 1);
+    }
+    EXPECT_TRUE(ostrm.good());
+    ostrm.close();
+
+    const auto bytes = fileToVector(szFilename);
+    EXPECT_EQ(256, bytes.size());
+    if (bytes.size() == 256)
+    {
+        for (int i = 0; i < 256; ++i)
+        {
+            EXPECT_EQ(i, static_cast<uint8>(bytes[i]));
+        }
+    }
+}
+
 namespace
 {
     template <class Stream_T, size_t N>
