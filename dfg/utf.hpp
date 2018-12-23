@@ -43,6 +43,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
 
     namespace DFG_DETAIL_NS
     {
+        const int8 gDefaultUnrepresentableCharReplacement = '?';
+
         template <class Iter_T, bool HasVoidValueType> struct EffectiveIteratorValueTypeHelper
         {
             typedef typename Iter_T::value_type type;
@@ -83,7 +85,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
     inline uint32 defaultUnconvertableCpHandler(UnconvertableCpHandlerParam param)
     {
         DFG_UNUSED(param);
-        return '?';
+        return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacement;
     }
 
 template <typename octet_iterator>
@@ -249,15 +251,30 @@ void cpToUtf(const uint32 cp, IterUtf_T result, size_t encodedChSize, ByteOrder 
 }
 
 template <typename IterUtf_T>
+void cpToLatin1(const uint32 cp, IterUtf_T result, const uint8 unrepresentableFiller = DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacement)
+{
+    if (cp < 256)
+        *result++ = static_cast<uint8>(cp);
+    else
+        *result++ = unrepresentableFiller;
+}
+
+template <typename IterUtf_T>
 void cpToEncoded(const uint32 cp, IterUtf_T result, DFG_MODULE_NS(io)::TextEncoding encoding)
 {
     using namespace DFG_MODULE_NS(io);
 
     //const size_t outputTypeSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
 
-    if (!isUtfEncoding(encoding)) // Currently only utf is implemented.
+    if (encoding == encodingLatin1)
     {
-        DFG_ASSERT(false);
+        cpToLatin1(cp, result);
+        return;
+    }
+
+    if (!isUtfEncoding(encoding))
+    {
+        DFG_ASSERT_IMPLEMENTED(false);
         return;
     }
 

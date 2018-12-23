@@ -210,6 +210,25 @@ TEST(DfgUtf, cpToUtfToCp)
 	EXPECT_EQ(cpExpected, cpFromUtf32Be);
 }
 
+TEST(DfgUtf, cpToEncoded)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(utf);
+    using namespace DFG_MODULE_NS(io);
+
+    std::vector<uint8> sLatin1;
+    const uint32 nCharCount = 300;
+    for (uint32 i = 0; i < nCharCount; ++i)
+    {
+        cpToEncoded(i, std::back_inserter(sLatin1), encodingLatin1);
+        ASSERT_EQ(i + 1, sLatin1.size());
+        if (i < 256)
+            EXPECT_EQ(i, sLatin1.back());
+        else
+            EXPECT_EQ(DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacement, sLatin1.back());
+    }
+}
+
 TEST(DfgUtf, bomSizeInBytes)
 {
 	using namespace DFG_ROOT_NS;

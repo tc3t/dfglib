@@ -16,7 +16,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         encodingUTF16Be,
         encodingUTF32Le,
         encodingUTF32Be,
-        encodingLatin1,
+        encodingLatin1, // ASCII + Latin1, https://en.wikipedia.org/wiki/Latin-1_Supplement_(Unicode_block)
         encodingUCS2Le,
         encodingUCS2Be,
         encodingUCS4Le,
