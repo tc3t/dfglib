@@ -31,6 +31,8 @@ TEST(dfgQt, CsvItemModel)
         DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::LoadOptions loadOptions;
         if (i == 3) // Example 3 needs non-native eol-settings.
             loadOptions.separatorChar('\t');
+        if (i == 4)
+            loadOptions.textEncoding(DFG_MODULE_NS(io)::encodingLatin1);
 
         const auto bOpenSuccess = model.openFile(sInputPath, loadOptions);
         EXPECT_EQ(true, bOpenSuccess);
@@ -38,8 +40,10 @@ TEST(dfgQt, CsvItemModel)
         DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions saveOptions;
         if (i == 3)
             saveOptions = loadOptions;
+        if (i == 4)
+            saveOptions.textEncoding(loadOptions.textEncoding());
 
-        saveOptions.eolType((i == 1) ? DFG_MODULE_NS(io)::EndOfLineTypeN : DFG_MODULE_NS(io)::EndOfLineTypeRN);
+        saveOptions.eolType((i == 1 || i == 4) ? DFG_MODULE_NS(io)::EndOfLineTypeN : DFG_MODULE_NS(io)::EndOfLineTypeRN);
 
         // Note: EOL-setting does not affect in-cell EOL-items, i.e. saving of eol-chars inside cell content
         // is not affected by eol-setting.
@@ -57,9 +61,7 @@ TEST(dfgQt, CsvItemModel)
             const auto& outputBytesMc = strm.container();
             EXPECT_EQ(inputBytes, outputBytesMc);
         }
-
     }
-    
 }
 
 TEST(dfgQt, SpanSlider)
