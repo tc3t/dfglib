@@ -148,6 +148,11 @@ public:
         return std::char_traits<char>::eof();
     }
 
+    static uint8 toIntType(const char c)
+    {
+        return static_cast<uint8>(std::char_traits<char>::to_int_type(c));
+    }
+
     template <class Elem_T, class BswapFunc_T>
     static int_type readAndAdvanceImpl(IteratorType& iter, const IteratorType& end, BswapFunc_T bswapFunc)
     {
@@ -164,13 +169,13 @@ public:
     static int_type readAndAdvanceByte(IteratorType& iter, const IteratorType& end)
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
-        return (iter != end) ? std::char_traits<char>::to_int_type(*iter++) : eofValue();
+        return (iter != end) ? toIntType(*iter++) : eofValue();
     }
 
     static int_type readAndAdvanceWindows1252(IteratorType& iter, const IteratorType& end)
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
-        return (iter != end) ? DFG_MODULE_NS(utf)::windows1252charToCp(std::char_traits<char>::to_int_type(*iter++)) : eofValue();
+        return (iter != end) ? DFG_MODULE_NS(utf)::windows1252charToCp(toIntType(*iter++)) : eofValue();
     }
 
     // TODO: revise and test
@@ -180,10 +185,10 @@ public:
         if (iter == end)
             return eofValue();
         uint16 val = 0;
-        val = *iter++;
+        val = toIntType(*iter++);
         if (iter == end)
             return eofValue();
-        val += ((*iter++) << 8);
+        val += (toIntType(*iter++) << 8);
         return val;
     }
 
@@ -194,10 +199,10 @@ public:
         if (iter == end)
             return eofValue();
         uint16 val = 0;
-        val = ((*iter++) << 8);
+        val = (toIntType(*iter++) << 8);
         if (iter == end)
             return eofValue();
-        val += (*iter++);
+        val += toIntType(*iter++);
         return val;
     }
 
@@ -208,16 +213,16 @@ public:
         if (iter == end)
             return eofValue();
         uint32 val = 0;
-        val = *iter++;
+        val = toIntType (*iter++);
         if (iter == end)
             return eofValue();
-        val += ((*iter++) << 8);
+        val += (toIntType(*iter++) << 8);
         if (iter == end)
             return eofValue();
-        val += ((*iter++) << 16);
+        val += (toIntType(*iter++) << 16);
         if (iter == end)
             return eofValue();
-        val += ((*iter++) << 24);
+        val += (toIntType(*iter++) << 24);
         return val;
     }
 
@@ -228,16 +233,16 @@ public:
         if (iter == end)
             return eofValue();
         uint32 val = 0;
-        val = ((*iter++) << 24);
+        val = (toIntType(*iter++) << 24);
         if (iter == end)
             return eofValue();
-        val += ((*iter++) << 16);
+        val += (toIntType(*iter++) << 16);
         if (iter == end)
             return eofValue();
-        val += ((*iter++) << 8);
+        val += (toIntType(*iter++) << 8);
         if (iter == end)
             return eofValue();
-        val += (*iter++);
+        val += toIntType(*iter++);
         return val;
     }
 

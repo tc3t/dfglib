@@ -580,6 +580,45 @@ TEST(dfgIo, ImStreamWithEncoding)
     }
 }
 
+TEST(dfgIo, ImStreamWithEncoding_UCS)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
+
+    const char dataCLe2[2] = { -84, 0x20 }; // Euro-sign in UTF16Le
+    const char dataCBe2[2] = { 0x20, -84 }; // Euro-sign in UTF16Be
+    const char dataCLe4[4] = { -84, 0x20, 0, 0 }; // Euro-sign in UTF32Le
+    const char dataCBe4[4] = { 0, 0, 0x20, -84 }; // Euro-sign in UTF32Be
+
+    // UCS2Le
+    {
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(dataCLe2, 2, encodingUCS2Le);
+        auto val = istrm.get();
+        EXPECT_EQ(0x20AC, val);
+    }
+
+    // UCS2Be
+    {
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(dataCBe2, 2, encodingUCS2Be);
+        auto val = istrm.get();
+        EXPECT_EQ(0x20AC, val);
+    }
+
+    // UCS4Le
+    {
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(dataCLe4, 4, encodingUCS4Le);
+        auto val = istrm.get();
+        EXPECT_EQ(0x20AC, val);
+    }
+
+    // UCS4Be
+    {
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(dataCBe4, 4, encodingUCS4Be);
+        auto val = istrm.get();
+        EXPECT_EQ(0x20AC, val);
+    }
+}
+
 namespace
 {
     template <class IStrm_T>
