@@ -578,7 +578,49 @@ TEST(dfgIo, ImStreamWithEncoding)
         EXPECT_EQ(0x20AC, val);
         //istrmC.read(bufferW, 2); // TODO: implement read for wchar_t argument.
     }
-    
+}
+
+namespace
+{
+    template <class IStrm_T>
+    void IStreamWithEncoding_Windows1252_impl(IStrm_T&& istrm)
+    {
+        using namespace DFG_MODULE_NS(io);
+        int val = istrm.get();
+        size_t nGetCount = 0;
+        do
+        {
+            EXPECT_EQ(DFG_MODULE_NS(utf)::windows1252charToCp(nGetCount), static_cast<size_t>(val));
+            nGetCount++;
+            val = istrm.get();
+        } while (istrm);
+        EXPECT_EQ(256, nGetCount);
+    }
+}
+
+TEST(dfgIo, IStreamWithEncoding_Windows1252)
+{
+    using namespace DFG_MODULE_NS(io);
+
+    std::vector<char> bytes(256);
+    DFG_MODULE_NS(alg)::generateAdjacent(bytes, char(0), char(1));
+    {
+        DFG_CLASS_NAME(OfStream) ostrm("testfiles/generated/all_bytes_from_0_to_255.bin");
+        ostrm.write(bytes.data(), bytes.size());
+    }
+
+    // ImStreamWithEncoding
+    {
+        
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(bytes.data(), bytes.size(), encodingWindows1252);
+        IStreamWithEncoding_Windows1252_impl(istrm);
+    }
+
+    // IfStreamWithEncoding
+    {
+        DFG_CLASS_NAME(IfStreamWithEncoding) istrm("testfiles/generated/all_bytes_from_0_to_255.bin", encodingWindows1252);
+        IStreamWithEncoding_Windows1252_impl(istrm);
+    }
 }
 
 TEST(dfgIo, OByteStream)

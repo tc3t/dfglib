@@ -41,6 +41,8 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
 
+    const uint32 INVALID_CODE_POINT = utf8::internal::CODE_POINT_MAX + 1;
+
     namespace DFG_DETAIL_NS
     {
         const int8 gDefaultUnrepresentableCharReplacement = '?';
@@ -70,9 +72,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
         {
             typedef T type;
         };
-    } // DFG_DETAIL_NS
 
-    const uint32 INVALID_CODE_POINT = utf8::internal::CODE_POINT_MAX + 1;
+        // Based on https://en.wikipedia.org/wiki/Windows-1252
+        const uint32_t windows1252charToCpConversionTable_0x80_to_0x9f[] =
+                             { 0x20AC, INVALID_CODE_POINT, 0x201A, 0x192, 0x201E, 0x2026, 0x2020, 0x2021,
+                               0x2C6, 0x2030, 0x160, 0x2039, 0x152, INVALID_CODE_POINT, 0x17D, INVALID_CODE_POINT,
+                               INVALID_CODE_POINT, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+                               0x2DC, 0x2122, 0x161, 0x203A, 0x153, INVALID_CODE_POINT, 0x17E, 0x178 };
+    } // DFG_DETAIL_NS
 
     struct UnconvertableCpHandlerParam
     {
@@ -338,7 +345,7 @@ uint32_t readUtfCharAndAdvance(CharIterator& start, const CharIterator end, Bswa
     return readUtfCharAndAdvanceImpl(start, end, bswap, std::integral_constant<int, sizeof(*start)>());
 }
 
-// Converts given iterable of latin1 values to utf8 representation. When code point is out of range [0, 255],
+// Converts given iterable of utf8 values to Latin-1 representation. When code point is out of range [0, 255],
 // UnconvertableHandler will be invoked.
 // TODO: test filling
 template <class Iterable_T, class OutIter_T, class UnconvertableHandler_T>
@@ -588,6 +595,21 @@ template <class Iterable_T>
 std::string latin1ToUtf8(const Iterable_T& iterable)
 {
     return codePointsToUtf8(iterable);
+}
+
+inline uint32_t windows1252charToCp(const size_t charValue)
+{
+    if (charValue < 0x80)
+        return static_cast<uint32_t>(charValue);
+    else if (charValue < 0xA0)
+    {
+        DFG_STATIC_ASSERT(DFG_COUNTOF(DFG_DETAIL_NS::windows1252charToCpConversionTable_0x80_to_0x9f) == 32, "Conversion table has wrong size");
+        return DFG_DETAIL_NS::windows1252charToCpConversionTable_0x80_to_0x9f[charValue - 0x80];
+    }
+    else if (charValue <= 0xFF)
+        return static_cast<uint32_t>(charValue);
+    else
+        return INVALID_CODE_POINT;
 }
 
 }} // module namespace

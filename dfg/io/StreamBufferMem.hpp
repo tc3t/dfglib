@@ -123,15 +123,17 @@ public:
     {
         switch (encoding)
         {
-            case encodingUTF8: m_pReadImpl = &readAndAdvanceUtf8; break;
-            case encodingUTF16Le: m_pReadImpl = &readAndAdvanceUtf16Le; break;
-            case encodingUTF16Be: m_pReadImpl = &readAndAdvanceUtf16Be; break;
-            case encodingUCS2Le: m_pReadImpl = &readAndAdvanceUcs2Le; break;
-            case encodingUCS2Be: m_pReadImpl = &readAndAdvanceUcs2Be; break;
-            case encodingUTF32Le: m_pReadImpl = &readAndAdvanceUtf32Le; break;
-            case encodingUTF32Be: m_pReadImpl = &readAndAdvanceUtf32Be; break;
-            case encodingUCS4Le: m_pReadImpl = &readAndAdvanceUcs4Le; break;
-            case encodingUCS4Be: m_pReadImpl = &readAndAdvanceUcs4Be; break;
+            case encodingUTF8:          m_pReadImpl = &readAndAdvanceUtf8; break;
+            case encodingUTF16Le:       m_pReadImpl = &readAndAdvanceUtf16Le; break;
+            case encodingUTF16Be:       m_pReadImpl = &readAndAdvanceUtf16Be; break;
+            case encodingUCS2Le:        m_pReadImpl = &readAndAdvanceUcs2Le; break;
+            case encodingUCS2Be:        m_pReadImpl = &readAndAdvanceUcs2Be; break;
+            case encodingUTF32Le:       m_pReadImpl = &readAndAdvanceUtf32Le; break;
+            case encodingUTF32Be:       m_pReadImpl = &readAndAdvanceUtf32Be; break;
+            case encodingUCS4Le:        m_pReadImpl = &readAndAdvanceUcs4Le; break;
+            case encodingUCS4Be:        m_pReadImpl = &readAndAdvanceUcs4Be; break;
+            case encodingLatin1:        m_pReadImpl = &readAndAdvanceByte; break;
+            case encodingWindows1252:   m_pReadImpl = &readAndAdvanceWindows1252; break;
             default: m_pReadImpl = &readAndAdvanceByte;
         }
     }
@@ -141,12 +143,17 @@ public:
         return m_encoding;
     }
 
+    static int_type eofValue()
+    {
+        return std::char_traits<char>::eof();
+    }
+
     template <class Elem_T, class BswapFunc_T>
     static int_type readAndAdvanceImpl(IteratorType& iter, const IteratorType& end, BswapFunc_T bswapFunc)
     {
         DFG_STATIC_ASSERT((std::is_same<IteratorType, const char*>::value), "This function needs to be modified if not dealing with pointer iterator.");
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         auto p2 = reinterpret_cast<const Elem_T*>(iter); // TODO: check alignment?
         auto p2End = reinterpret_cast<const Elem_T*>(end);
         auto rv = DFG_MODULE_NS(utf)::readUtfCharAndAdvance(p2, p2End, bswapFunc);
@@ -157,7 +164,13 @@ public:
     static int_type readAndAdvanceByte(IteratorType& iter, const IteratorType& end)
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
-        return (iter != end) ? std::char_traits<char>::to_int_type(*iter++) : std::char_traits<char>::eof();
+        return (iter != end) ? std::char_traits<char>::to_int_type(*iter++) : eofValue();
+    }
+
+    static int_type readAndAdvanceWindows1252(IteratorType& iter, const IteratorType& end)
+    {
+        DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
+        return (iter != end) ? DFG_MODULE_NS(utf)::windows1252charToCp(std::char_traits<char>::to_int_type(*iter++)) : eofValue();
     }
 
     // TODO: revise and test
@@ -165,11 +178,11 @@ public:
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         uint16 val = 0;
         val = *iter++;
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += ((*iter++) << 8);
         return val;
     }
@@ -179,11 +192,11 @@ public:
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         uint16 val = 0;
         val = ((*iter++) << 8);
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += (*iter++);
         return val;
     }
@@ -193,17 +206,17 @@ public:
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         uint32 val = 0;
         val = *iter++;
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += ((*iter++) << 8);
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += ((*iter++) << 16);
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += ((*iter++) << 24);
         return val;
     }
@@ -213,17 +226,17 @@ public:
     {
         DFG_STATIC_ASSERT(sizeof(*iter) == 1, "Implementation expects char-type");
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         uint32 val = 0;
         val = ((*iter++) << 24);
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += ((*iter++) << 16);
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += ((*iter++) << 8);
         if (iter == end)
-            return std::char_traits<char>::eof();
+            return eofValue();
         val += (*iter++);
         return val;
     }
@@ -256,12 +269,12 @@ public:
     int_type underflow() override
     {
         auto iter = this->m_pCurrent;
-        return (m_pReadImpl) ? m_pReadImpl(iter, m_pEnd) : std::char_traits<char>::eof();
+        return (m_pReadImpl) ? m_pReadImpl(iter, m_pEnd) : eofValue();
     }
 
     int_type uflow() override
     {
-        return (m_pReadImpl) ? m_pReadImpl(m_pCurrent, m_pEnd) : std::char_traits<char>::eof();
+        return (m_pReadImpl) ? m_pReadImpl(m_pCurrent, m_pEnd) : eofValue();
     }
 
     TextEncoding m_encoding;

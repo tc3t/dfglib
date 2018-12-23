@@ -20,7 +20,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         encodingUCS2Le,
         encodingUCS2Be,
         encodingUCS4Le,
-        encodingUCS4Be
+        encodingUCS4Be,
+        encodingWindows1252 // https://en.wikipedia.org/wiki/Windows-1252
     };
 
     inline bool isUtfEncoding(const TextEncoding encoding)
