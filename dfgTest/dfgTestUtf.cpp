@@ -225,7 +225,7 @@ TEST(DfgUtf, cpToEncoded)
         if (i < 256)
             EXPECT_EQ(i, sLatin1.back());
         else
-            EXPECT_EQ(DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacement, sLatin1.back());
+            EXPECT_EQ(DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii, sLatin1.back());
     }
 }
 
@@ -281,22 +281,24 @@ TEST(DfgUtf, encodingToBom)
 
 TEST(DfgUtf, windows1252charToCp)
 {
-    for (size_t i = 0; i < 0x80; ++i)
+    using namespace DFG_ROOT_NS;
+    for (uint8 i = 0; i < 0x80; ++i)
         EXPECT_EQ(i, DFG_MODULE_NS(utf)::windows1252charToCp(i));
     for (size_t i = 0xA0; i < 0x100; ++i)
-        EXPECT_EQ(i, DFG_MODULE_NS(utf)::windows1252charToCp(i));
+        EXPECT_EQ(i, DFG_MODULE_NS(utf)::windows1252charToCp(static_cast<uint8>(i)));
 
-    const auto iv = DFG_MODULE_NS(utf)::INVALID_CODE_POINT;
+    const auto iv = DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
 
     const uint32_t cp[] = { 0x20AC, iv, 0x201A, 0x192, 0x201E, 0x2026, 0x2020, 0x2021,
                                0x2C6, 0x2030, 0x160, 0x2039, 0x152, iv, 0x17D, iv,
                                iv, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
                                0x2DC, 0x2122, 0x161, 0x203A, 0x153, iv, 0x17E, 0x178 };
     DFG_STATIC_ASSERT(DFG_COUNTOF(cp) == 32, "Conversion table has wrong size");
-    for (size_t i = 0x80; i < 0xA0; ++i)
+    for (uint8 i = 0x80; i < 0xA0; ++i)
         EXPECT_EQ(cp[i - 0x80], DFG_MODULE_NS(utf)::windows1252charToCp(i));
-    EXPECT_EQ(iv, DFG_MODULE_NS(utf)::windows1252charToCp(256));
-    EXPECT_EQ(iv, DFG_MODULE_NS(utf)::windows1252charToCp(300));
-    EXPECT_EQ(iv, DFG_MODULE_NS(utf)::windows1252charToCp(1300));
+
+    // Make sure that char-interface works as expected.
+    for (char c = -128; c < 127; ++c)
+        EXPECT_EQ(DFG_MODULE_NS(utf)::windows1252charToCp(static_cast<uint8>(c)), DFG_MODULE_NS(utf)::windows1252charToCp(c));
 }
 

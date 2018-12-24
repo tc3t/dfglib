@@ -45,7 +45,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
 
     namespace DFG_DETAIL_NS
     {
-        const int8 gDefaultUnrepresentableCharReplacement = '?';
+        const int8 gDefaultUnrepresentableCharReplacementAscii = '?';
+        const uint16 gDefaultUnrepresentableCharReplacementUtf = 0xfffd;
 
         template <class Iter_T, bool HasVoidValueType> struct EffectiveIteratorValueTypeHelper
         {
@@ -75,10 +76,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
 
         // Based on https://en.wikipedia.org/wiki/Windows-1252
         const uint32_t windows1252charToCpConversionTable_0x80_to_0x9f[] =
-                             { 0x20AC, INVALID_CODE_POINT, 0x201A, 0x192, 0x201E, 0x2026, 0x2020, 0x2021,
-                               0x2C6, 0x2030, 0x160, 0x2039, 0x152, INVALID_CODE_POINT, 0x17D, INVALID_CODE_POINT,
-                               INVALID_CODE_POINT, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
-                               0x2DC, 0x2122, 0x161, 0x203A, 0x153, INVALID_CODE_POINT, 0x17E, 0x178 };
+                             { 0x20AC, gDefaultUnrepresentableCharReplacementUtf, 0x201A, 0x192, 0x201E, 0x2026, 0x2020, 0x2021,
+                               0x2C6, 0x2030, 0x160, 0x2039, 0x152, gDefaultUnrepresentableCharReplacementUtf, 0x17D, gDefaultUnrepresentableCharReplacementUtf,
+                               gDefaultUnrepresentableCharReplacementUtf, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+                               0x2DC, 0x2122, 0x161, 0x203A, 0x153, gDefaultUnrepresentableCharReplacementUtf, 0x17E, 0x178 };
     } // DFG_DETAIL_NS
 
     struct UnconvertableCpHandlerParam
@@ -92,7 +93,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
     inline uint32 defaultUnconvertableCpHandler(UnconvertableCpHandlerParam param)
     {
         DFG_UNUSED(param);
-        return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacement;
+        return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii;
     }
 
 template <typename octet_iterator>
@@ -258,7 +259,7 @@ void cpToUtf(const uint32 cp, IterUtf_T result, size_t encodedChSize, ByteOrder 
 }
 
 template <typename IterUtf_T>
-void cpToLatin1(const uint32 cp, IterUtf_T result, const uint8 unrepresentableFiller = DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacement)
+void cpToLatin1(const uint32 cp, IterUtf_T result, const uint8 unrepresentableFiller = DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii)
 {
     if (cp < 256)
         *result++ = static_cast<uint8>(cp);
@@ -597,19 +598,22 @@ std::string latin1ToUtf8(const Iterable_T& iterable)
     return codePointsToUtf8(iterable);
 }
 
-inline uint32_t windows1252charToCp(const size_t charValue)
+inline uint32_t windows1252charToCp(const uint8 charValue)
 {
     if (charValue < 0x80)
-        return static_cast<uint32_t>(charValue);
+        return charValue;
     else if (charValue < 0xA0)
     {
         DFG_STATIC_ASSERT(DFG_COUNTOF(DFG_DETAIL_NS::windows1252charToCpConversionTable_0x80_to_0x9f) == 32, "Conversion table has wrong size");
         return DFG_DETAIL_NS::windows1252charToCpConversionTable_0x80_to_0x9f[charValue - 0x80];
     }
-    else if (charValue <= 0xFF)
-        return static_cast<uint32_t>(charValue);
-    else
-        return INVALID_CODE_POINT;
+    else 
+        return charValue;
+}
+
+inline uint32_t windows1252charToCp(const char charValue)
+{
+    return windows1252charToCp(static_cast<uint8>(charValue));
 }
 
 }} // module namespace

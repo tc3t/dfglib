@@ -624,12 +624,13 @@ namespace
     template <class IStrm_T>
     void IStreamWithEncoding_Windows1252_impl(IStrm_T&& istrm)
     {
+        using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
         int val = istrm.get();
         size_t nGetCount = 0;
         do
         {
-            EXPECT_EQ(DFG_MODULE_NS(utf)::windows1252charToCp(nGetCount), static_cast<size_t>(val));
+            EXPECT_EQ(DFG_MODULE_NS(utf)::windows1252charToCp(static_cast<uint8>(nGetCount)), static_cast<size_t>(val));
             nGetCount++;
             val = istrm.get();
         } while (istrm);
