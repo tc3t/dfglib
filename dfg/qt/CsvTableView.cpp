@@ -940,9 +940,10 @@ public:
         m_spSeparatorEdit.reset(new QComboBox(this));
         m_spEnclosingEdit.reset(new QComboBox(this));
         m_spEolEdit.reset(new QComboBox(this));
+        m_spEncodingEdit.reset(new QComboBox(this));
         if (isSaveDialog())
         {
-            m_spEncodingEdit.reset(new QComboBox(this));
+
             m_spEnclosingOptions.reset(new QComboBox(this));
             m_spSaveHeader.reset(new QCheckBox(this));
             m_spWriteBOM.reset(new QCheckBox(this));
@@ -968,6 +969,13 @@ public:
             m_spSaveHeader->setChecked(true);
             m_spWriteBOM->setChecked(true);
         }
+        else
+        {
+            m_spEncodingEdit->addItems(QStringList() << tr("auto")
+                                                     << encodingToStrId(encodingUTF8)
+                                                     << encodingToStrId(encodingWindows1252)
+                                                     << encodingToStrId(encodingLatin1));
+        }
 
         spLayout->addRow(tr("Separator char"), m_spSeparatorEdit.get());
         spLayout->addRow(tr("Enclosing char"), m_spEnclosingEdit.get());
@@ -976,9 +984,9 @@ public:
             spLayout->addRow(tr("Enclosing behaviour"), m_spEnclosingOptions.get());
         }
         spLayout->addRow(tr("End-of-line"), m_spEolEdit.get());
+        spLayout->addRow(tr("Encoding"), m_spEncodingEdit.get());
         if (isSaveDialog())
         {
-            spLayout->addRow(tr("Encoding"), m_spEncodingEdit.get());
             spLayout->addRow(tr("Save header"), m_spSaveHeader.get());
             spLayout->addRow(tr("Write BOM"), m_spWriteBOM.get());
         }
@@ -1018,7 +1026,7 @@ public:
             QMessageBox::information(this, tr("CSV saving"), tr("Internal error occurred; saving failed."));
             return;
         }
-        if (isLoadDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEolEdit || !m_spCompleterColumns))
+        if (isLoadDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEolEdit || !m_spCompleterColumns || !m_spEncodingEdit))
         {
             QMessageBox::information(this, tr("CSV loading"), tr("Internal error occurred; loading failed."));
             return;
@@ -1053,6 +1061,7 @@ public:
             m_loadOptions.m_cSep = sep.second;
             m_loadOptions.m_eolType = eolType;
             m_loadOptions.setProperty("completerColumns", m_spCompleterColumns->text().toStdString());
+            m_loadOptions.textEncoding(strIdToEncoding(m_spEncodingEdit->currentText().toLatin1().data()));
         }
         else // case: save dialog
         {

@@ -50,6 +50,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             std::pair<TextEncoding, const char*>(encodingUTF16Le, "UTF16LE"),
             std::pair<TextEncoding, const char*>(encodingUTF32Be, "UTF32BE"),
             std::pair<TextEncoding, const char*>(encodingUTF32Le, "UTF32LE"),
+            std::pair<TextEncoding, const char*>(encodingWindows1252, "windows-1252"),
         };
     }
 
