@@ -195,6 +195,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool isValidColumn(int c) const { return c >= 0 && c < getColumnCount(); }
 
         int getRowCountUpperBound() const; // Returns upper bound for row count (note that effective maximum can be much less)
+        int getColumnCountUpperBound() const; // Returns upper bound for column count (note that effective maximum can be much less)
 
         const QString& getHeaderName(const int nCol) const { return (isValidColumn(nCol)) ? m_vecColInfo[nCol].m_name : s_sEmpty; }
 

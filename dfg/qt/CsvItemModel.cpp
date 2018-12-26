@@ -679,6 +679,13 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getRowCountUpperBound() con
     return NumericTraits<int>::maxValue - 1;
 }
 
+int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnCountUpperBound() const
+{
+    // For now mostly a dedicated replacement for
+    // NumericTraits<int>::maxValue for integer addition overflow control.
+    return NumericTraits<int>::maxValue - 1;
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     const auto nOldRowCount = getRowCount();
@@ -730,7 +737,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position
 {
     if (position < 0)
         position = getColumnCount();
-    if (parent.isValid() || position < 0 || position > getColumnCount())
+    if (parent.isValid() || position < 0 || position > getColumnCount() || getColumnCountUpperBound() - position < count)
         return false;
     beginInsertColumns(QModelIndex(), position, position + count - 1);
     insertColumnsImpl(position, count);
