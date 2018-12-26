@@ -292,6 +292,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
     setFilePathWithSignalEmit(QString());
     m_bModified = false;
     m_nRowCount = 0;
+    if (m_pUndoStack)
+        m_pUndoStack->clear();
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& strm)
