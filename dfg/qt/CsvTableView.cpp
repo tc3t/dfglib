@@ -1159,14 +1159,14 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     return bSuccess;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getProceedConfirmationFromUserIfInModifiedState()
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getProceedConfirmationFromUserIfInModifiedState(const QString& sTranslatedActionDescription)
 {
     auto pModel = csvModel();
     if (pModel && pModel->isModified())
     {
         const auto rv = QMessageBox::question(this,
                                               tr("Confirm closing edited file"),
-                                              tr("Content has been edited, discard changes and open new table?"),
+                                              tr("Content has been edited, discard changes and %1?").arg(sTranslatedActionDescription),
                                               QMessageBox::Yes | QMessageBox::No,
                                               QMessageBox::No);
         return (rv == QMessageBox::Yes);
@@ -1177,18 +1177,22 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getProceedConfirmationFrom
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTable()
 {
     auto pCsvModel = csvModel();
-    if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState())
+    if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState(tr("open a new table")))
         return;
     pCsvModel->openNewTable();
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
 {
+    if (!getProceedConfirmationFromUserIfInModifiedState(tr("open a new file")))
+        return false;
     return openFile(getOpenFileName(this));
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
 {
+    if (!getProceedConfirmationFromUserIfInModifiedState(tr("open a new file")))
+        return false;
     const auto sPath = getOpenFileName(this);
     if (sPath.isEmpty())
         return false;

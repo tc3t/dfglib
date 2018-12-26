@@ -336,7 +336,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class Func_T>
         void forEachCompleterEnabledColumnIndex(Func_T func);
 
-        bool getProceedConfirmationFromUserIfInModifiedState();
+        bool getProceedConfirmationFromUserIfInModifiedState(const QString& sTranslatedActionDescription);
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
