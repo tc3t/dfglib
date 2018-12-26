@@ -166,6 +166,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public:
 
+        bool openNewTable();
         bool mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other);
         bool openFile(const QString& sDbFilePath);
         bool openFile(QString sDbFilePath, const LoadOptions& loadOptions);
@@ -300,6 +301,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Clears internal data. Caller should make sure this call
         // is done within appropriate resetmodel-calls.
         void clear();
+
+        void insertColumnsImpl(int position, int count);
 
     public:
         QUndoStack* m_pUndoStack;

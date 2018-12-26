@@ -364,7 +364,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     }
     // Since the header is stored separately in this model, remove it from the table.
     m_table.removeRows(0, 1);
-    m_nRowCount--;
+    if (m_nRowCount >= 1)
+        m_nRowCount--;
 
     initCompletionFeature();
 
@@ -417,6 +418,22 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findColumnIndexByName(const
             return i;
     }
     return returnValueIfNotFound;
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openNewTable()
+{
+    auto rv = readData(LoadOptions(), [&]()
+    {
+        // Create 2x2 table by default, seems to be a better choice than completely empty.
+        // Note that row 0 is omitted as it is interpreted as header by readData()
+        m_table.setElement(1, 0, DFG_UTF8(""));
+        m_table.setElement(1, 1, DFG_UTF8(""));
+        m_table.setElement(2, 0, DFG_UTF8(""));
+        m_table.setElement(2, 1, DFG_UTF8(""));
+        m_sFilePath.clear();
+        setFilePathWithoutSignalEmit(QString());
+    });
+    return rv;
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other)
@@ -510,7 +527,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                                                                                  // TODO: non-lossy conversion from QString to string type that readFromFile() accepts, 
                                                                                  //       (essentially means that readFromFile should accept std::wstring)
             setFilePathWithoutSignalEmit(std::move(sDbFilePath));
-        });      
+        });
         
         return rv;
     }
@@ -700,6 +717,15 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
     return true;
 }
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumnsImpl(int position, int count)
+{
+    m_table.insertColumnsAt(position, count);
+    for(int i = position; i<position + count; ++i)
+    {
+        m_vecColInfo.insert(m_vecColInfo.begin() + i, ColInfo());
+    }
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     if (position < 0)
@@ -707,12 +733,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position
     if (parent.isValid() || position < 0 || position > getColumnCount())
         return false;
     beginInsertColumns(QModelIndex(), position, position + count - 1);
-    m_table.insertColumnsAt(position, count);
-    for(int i = position; i<position + count; ++i)
-    {
-        m_vecColInfo.insert(m_vecColInfo.begin() + i, ColInfo());
-    }
-
+    insertColumnsImpl(position, count);
     endInsertColumns();
     setModifiedStatus(true);
     return true;

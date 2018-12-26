@@ -245,6 +245,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static void forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, ModelIndexType indexType, Func_T func);
 
     public slots:
+        void createNewTable();
         bool openFromFile();
         bool openFromFileWithOptions();
         bool mergeFilesToCurrent();
@@ -334,6 +335,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     private:
         template <class Func_T>
         void forEachCompleterEnabledColumnIndex(Func_T func);
+
+        bool getProceedConfirmationFromUserIfInModifiedState();
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;

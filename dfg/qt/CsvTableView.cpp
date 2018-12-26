@@ -182,16 +182,9 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         };
 
     {
-        auto pAction = new QAction(tr("Move first row to header"), this);
-        //pAction->setShortcut(tr(""));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveFirstRowToHeader));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Move header to first row"), this);
-        //pAction->setShortcut(tr(""));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveHeaderToFirstRow));
+        auto pAction = new QAction(tr("New table"), this);
+        pAction->setShortcut(tr("Ctrl+N"));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::createNewTable));
         addAction(pAction);
     }
 
@@ -234,6 +227,20 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 
     // -------------------------------------------------
     addSeparator();
+
+    {
+        auto pAction = new QAction(tr("Move first row to header"), this);
+        //pAction->setShortcut(tr(""));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveFirstRowToHeader));
+        addAction(pAction);
+    }
+
+    {
+        auto pAction = new QAction(tr("Move header to first row"), this);
+        //pAction->setShortcut(tr(""));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveHeaderToFirstRow));
+        addAction(pAction);
+    }
 
     {
         auto pAction = new QAction(tr("Clear selected cell(s)"), this);
@@ -1150,6 +1157,29 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
         onNewSourceOpened();
 
     return bSuccess;
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getProceedConfirmationFromUserIfInModifiedState()
+{
+    auto pModel = csvModel();
+    if (pModel && pModel->isModified())
+    {
+        const auto rv = QMessageBox::question(this,
+                                              tr("Confirm closing edited file"),
+                                              tr("Content has been edited, discard changes and open new table?"),
+                                              QMessageBox::Yes | QMessageBox::No,
+                                              QMessageBox::No);
+        return (rv == QMessageBox::Yes);
+    }
+    return true;
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTable()
+{
+    auto pCsvModel = csvModel();
+    if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState())
+        return;
+    pCsvModel->openNewTable();
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
