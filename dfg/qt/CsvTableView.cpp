@@ -190,6 +190,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 
     {
         auto pAction = new QAction(tr("Open file..."), this);
+        pAction->setShortcut(tr("Ctrl+O"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openFromFile));
         addAction(pAction);
     }
