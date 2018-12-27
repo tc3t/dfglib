@@ -749,7 +749,7 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, cons
     else
     {
         for (int i = 0; i<int(vec.size()); ++i)
-            vec[i] = pProxy->mapToSource(pProxy->index(i, nCol)).row();
+            vec[static_cast<size_t>(i)] = pProxy->mapToSource(pProxy->index(i, nCol)).row();
     }
     return vec;
 }

@@ -182,7 +182,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
         setFilePathWithSignalEmit(sPath);
         setModifiedStatus(false);
     }
-    Q_EMIT sigOnSaveToFileCompleted(bSuccess, m_writeTimeInSeconds);
+    Q_EMIT sigOnSaveToFileCompleted(bSuccess, static_cast<double>(m_writeTimeInSeconds));
     return bSuccess;
 }
 
@@ -246,7 +246,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
                                                                                              cEol,
                                                                                              options.enclosementBehaviour());
             auto utf8Bytes = qStringToEncodedBytes(sEncodedTemp);
-            strm.write(utf8Bytes.data(), utf8Bytes.size());
+            strm.write(utf8Bytes.data(), static_cast<std::streamsize>(utf8Bytes.size()));
         });
         strm << sEol;
     }
@@ -493,12 +493,12 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str, co
 {
     const auto bytes = str.toUtf8();
     if (loadOptions.textEncoding() == DFG_MODULE_NS(io)::encodingUTF8)
-        return openFromMemory(bytes.data(), bytes.size(), loadOptions);
+        return openFromMemory(bytes.data(), static_cast<size_t>(bytes.size()), loadOptions);
     else
     {
         auto loadOptionsTemp = loadOptions;
         loadOptionsTemp.textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
-        return openFromMemory(bytes.data(), bytes.size(), loadOptionsTemp);
+        return openFromMemory(bytes.data(), static_cast<size_t>(bytes.size()), loadOptionsTemp);
     }
 }
 
