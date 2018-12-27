@@ -1068,7 +1068,7 @@ public:
             m_loadOptions.m_cEnc = (!sEnc.isEmpty()) ? enc.second : ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
             m_loadOptions.m_cSep = sep.second;
             m_loadOptions.m_eolType = eolType;
-            m_loadOptions.setProperty("completerColumns", m_spCompleterColumns->text().toStdString());
+            m_loadOptions.setProperty(CsvOptionProperty_completerColumns, m_spCompleterColumns->text().toStdString());
             m_loadOptions.textEncoding(strIdToEncoding(m_spEncodingEdit->currentText().toLatin1().data()));
         }
         else // case: save dialog
@@ -1200,7 +1200,11 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
     CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeLoad);
     if (dlg.exec() != QDialog::Accepted)
         return false;
-    return openFile(sPath, dlg.getLoadOptions());
+    auto loadOptions = dlg.getLoadOptions();
+    // Disable completer size limit as there is no control for the size limit so user would otherwise be unable to
+    // easily enable completer for big files.
+    loadOptions.setProperty(CsvOptionProperty_completerEnabledSizeLimit, DFG_MODULE_NS(str)::toStrC(NumericTraits<uint64>::maxValue));
+    return openFile(sPath, loadOptions);
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()

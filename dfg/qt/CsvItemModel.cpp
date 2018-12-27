@@ -25,12 +25,14 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../io/OfStream.hpp"
 #include "../time/timerCpu.hpp"
 #include "../cont/SetVector.hpp"
+#include "../str/strTo.hpp"
 
 namespace
 {
     enum CsvItemModelPropertyId
     {
-        CsvItemModelPropertyId_completerEnabledColumnIndexes
+        CsvItemModelPropertyId_completerEnabledColumnIndexes,
+        CsvItemModelPropertyId_completerEnabledSizeLimit // Defines maximum size (in bytes) for completer enabled tables, i.e. input bigger than this limit will have no completer enabled.
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvItemModel);
@@ -41,9 +43,14 @@ namespace
                                   CsvItemModelPropertyId_completerEnabledColumnIndexes,
                                   QStringList,
                                   PropertyType);
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvItemModel_completerEnabledSizeLimit",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_completerEnabledSizeLimit,
+                                  DFG_ROOT_NS::uint64,
+                                  []() { return 10000000; } );
 
     template <CsvItemModelPropertyId ID>
-    auto getCsvItemModelProperty(DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
+    auto getCsvItemModelProperty(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
     {
         return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>>(pModel);
     }
@@ -307,8 +314,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& st
     return openString(s, loadOptions);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char* data, const size_t nSize, const LoadOptions& loadOptions)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char* data, const size_t nSize, LoadOptions loadOptions)
 {
+    setCompleterHandlingFromInputSize(loadOptions, nSize);
     return readData(loadOptions, [&]()
     {
         m_table.readFromMemory(data, nSize, loadOptions);
@@ -326,7 +334,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     tableFiller();
     m_nRowCount = m_table.rowCountByMaxRowIndex();
 
-    const QString optionsCompleterColumns(options.getProperty("completerColumns", "not_given").c_str());
+    const QString optionsCompleterColumns(options.getProperty(CsvOptionProperty_completerColumns, "not_given").c_str());
     const auto completerEnabledColumnsStrItems = optionsCompleterColumns != "not_given" ? optionsCompleterColumns.split(',') : getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledColumnIndexes>(this);
     const auto completerEnabledInAll = (completerEnabledColumnsStrItems.size() == 1 && completerEnabledColumnsStrItems[0].trimmed() == "*");
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SetVector)<int> completerEnabledColumns;
@@ -513,7 +521,22 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::importFiles(const QStringL
     return true; // TODO: more detailed return value (e.g. that how many were read successfully).
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, const LoadOptions& loadOptions)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes) const
+{
+    const auto optionsHasCompleterLimit = loadOptions.hasProperty(CsvOptionProperty_completerEnabledSizeLimit);
+    const auto limit = (optionsHasCompleterLimit)
+                ?
+                DFG_MODULE_NS(str)::strTo<uint64>(loadOptions.getProperty(CsvOptionProperty_completerEnabledSizeLimit, "0").c_str())
+                :
+                getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledSizeLimit>(this);
+    if (nSizeInBytes > limit)
+    {
+        // If size is bigger than limit, disable completer by removing all columns from completer columns.
+        loadOptions.setProperty(CsvOptionProperty_completerColumns, "");
+    }
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, LoadOptions loadOptions)
 {
     if (sDbFilePath.isEmpty())
         return false;
@@ -523,6 +546,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
     if (fileInfo.isFile() && fileInfo.isReadable())
     {
         sDbFilePath = fileInfo.absoluteFilePath();
+        setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(fileInfo.size()));
         auto rv = readData(loadOptions, [&]()
         {
             m_table.readFromFile(sDbFilePath.toLocal8Bit().data(), loadOptions); // TODO: return value,

@@ -41,6 +41,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     #define DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS  0
 #endif
 
+    const char CsvOptionProperty_completerColumns[]             = "completerColumns";
+    const char CsvOptionProperty_completerEnabledSizeLimit[]    = "completerEnabledSizeLimit";
+
     namespace DFG_DETAIL_NS
     {
         class HighlightDefinition
@@ -169,13 +172,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openNewTable();
         bool mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other);
         bool openFile(const QString& sDbFilePath);
-        bool openFile(QString sDbFilePath, const LoadOptions& loadOptions);
+        bool openFile(QString sDbFilePath, LoadOptions loadOptions);
         bool importFiles(const QStringList& paths);
         bool openStream(QTextStream& strm);
         bool openStream(QTextStream& strm, const LoadOptions& loadOptions);
         bool openString(const QString& str);
         bool openString(QString str, const LoadOptions& loadOptions);
-        bool openFromMemory(const char* data, const size_t nSize, const LoadOptions& loadOptions);
+        bool openFromMemory(const char* data, const size_t nSize, LoadOptions loadOptions);
 
         // Implementation level function.
         // 1. Clears existing data and prepares model for table changes.
@@ -304,6 +307,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void clear();
 
         void insertColumnsImpl(int position, int count);
+        void setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes) const;
 
     public:
         QUndoStack* m_pUndoStack;
