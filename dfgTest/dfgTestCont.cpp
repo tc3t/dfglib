@@ -1727,7 +1727,7 @@ TEST(dfgCont, CsvConfig)
 
     EXPECT_EQ(DFG_UTF8("UTF8"), config.value(DFG_UTF8("encoding")));
     EXPECT_EQ(DFG_UTF8("1"), config.value(DFG_UTF8("bom_writing")));
-    EXPECT_EQ(DFG_UTF8("\\n"), config.value(DFG_UTF8("end_of_line_char")));
+    EXPECT_EQ(DFG_UTF8("\\n"), config.value(DFG_UTF8("end_of_line_type")));
     EXPECT_EQ(DFG_UTF8(","), config.value(DFG_UTF8("separator_char")));
     EXPECT_EQ(DFG_UTF8("\""), config.value(DFG_UTF8("enclosing_char")));
     EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("channels")));
@@ -1744,4 +1744,18 @@ TEST(dfgCont, CsvConfig)
     EXPECT_EQ(nullptr, config.valueStrOrNull(DFG_UTF8("a/non_existent_item")));
 
     EXPECT_EQ(12, config.entryCount());
+}
+
+TEST(dfgCont, CsvFormatDefinitionFromCsvConfig)
+{
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+    config.loadFromFile("testfiles/csvConfigTest_0.csv");
+    DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
+    format.bomWriting(false);
+    format.fromConfig(config);
+    EXPECT_EQ(DFG_MODULE_NS(io)::encodingUTF8, format.textEncoding());
+    EXPECT_EQ('"', format.enclosingChar());
+    EXPECT_EQ(',', format.separatorChar());
+    EXPECT_EQ(DFG_MODULE_NS(io)::EndOfLineTypeN, format.eolType());
+    EXPECT_EQ(true, format.bomWriting());
 }

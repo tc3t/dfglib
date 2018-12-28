@@ -13,6 +13,8 @@
 #include "../utf.hpp"
 #include "MapVector.hpp"
 #include <unordered_map>
+#include "CsvConfig.hpp"
+#include "../str/stringLiteralCharToValue.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
     
@@ -33,6 +35,9 @@ DFG_ROOT_NS_BEGIN{
             m_bWriteHeader(true),
             m_bWriteBom(true)
         {}
+
+        // Reads properties from given config, items not present in config are not modified.
+        void fromConfig(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config);
 
         int32 separatorChar() const { return m_cSep; }
         void separatorChar(int32 cSep) { m_cSep = cSep; }
@@ -81,6 +86,52 @@ DFG_ROOT_NS_BEGIN{
         bool m_bWriteBom;
         ::DFG_MODULE_NS(cont)::MapVectorAoS<std::string, std::string> m_genericProperties; // Generic properties (e.g. if implementation needs specific flags)
     };
+
+    inline void DFG_CLASS_NAME(CsvFormatDefinition)::fromConfig(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config)
+    {
+        // Encoding
+        {
+            auto p = config.valueStrOrNull(DFG_UTF8("encoding"));
+            if (p)
+                textEncoding(DFG_MODULE_NS(io)::strIdToEncoding(p->c_str().rawPtr()));
+        }
+
+        // Enclosing char
+        {
+            auto p = config.valueStrOrNull(DFG_UTF8("enclosing_char"));
+            if (p)
+            {
+                auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());
+                if (rv.first)
+                    enclosingChar(rv.second);
+            }
+        }
+
+        // Separator char
+        {
+            auto p = config.valueStrOrNull(DFG_UTF8("separator_char"));
+            if (p)
+            {
+                auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());
+                if (rv.first)
+                    separatorChar(rv.second);
+            }
+        }
+
+        // EOL-type
+        {
+            auto p = config.valueStrOrNull(DFG_UTF8("end_of_line_type"));
+            if (p)
+                eolType(DFG_MODULE_NS(io)::endOfLineTypeFromStr(p->rawStorage()));
+        }
+
+        // BOM writing
+        {
+            auto p = config.valueStrOrNull(DFG_UTF8("bom_writing"));
+            if (p)
+                bomWriting(DFG_MODULE_NS(str)::strToByNoThrowLexCast<bool>(p->rawStorage()));
+        }
+    }
     
     DFG_SUB_NS(cont)
     {
