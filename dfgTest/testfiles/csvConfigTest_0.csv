@@ -1,0 +1,12 @@
+﻿encoding,UTF8,,
+bom_writing,1,,
+end_of_line_char,\n,,
+separator_char,",",,
+enclosing_char,"""",,
+channels,,,
+,0,,
+,,type,integer
+,,width,50
+,1,,
+,,width,100
+a_non_ascii_value,€

@@ -11,6 +11,7 @@
 #include <dfg/ReadOnlySzParam.hpp>
 #include <dfg/cont/interleavedXsortedTwoChannelWrapper.hpp>
 #include <dfg/cont/valueArray.hpp>
+#include <dfg/cont/CsvConfig.hpp>
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
 #include <dfg/cont/SetVector.hpp>
@@ -1717,4 +1718,30 @@ TEST(dfgCont, UniqueResourceHolder)
         //const auto resource2 = DFG_MODULE_NS(cont)::makeUniqueResourceHolder_implicitlyConvertible(new const int(1), [](int* p) { delete p; }); // This should fail to compile (deleter takes non-const int*).
         //*resource1.data() = 2; // This should fail to compile (resource is const int*). 
     }
+}
+
+TEST(dfgCont, CsvConfig)
+{
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+    config.loadFromFile("testfiles/csvConfigTest_0.csv");
+
+    EXPECT_EQ(DFG_UTF8("UTF8"), config.value(DFG_UTF8("encoding")));
+    EXPECT_EQ(DFG_UTF8("1"), config.value(DFG_UTF8("bom_writing")));
+    EXPECT_EQ(DFG_UTF8("\\n"), config.value(DFG_UTF8("end_of_line_char")));
+    EXPECT_EQ(DFG_UTF8(","), config.value(DFG_UTF8("separator_char")));
+    EXPECT_EQ(DFG_UTF8("\""), config.value(DFG_UTF8("enclosing_char")));
+    EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("channels")));
+    EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("channels/0")));
+    EXPECT_EQ(DFG_UTF8("integer"), config.value(DFG_UTF8("channels/0/type")));
+    EXPECT_EQ(DFG_UTF8("50"), config.value(DFG_UTF8("channels/0/width")));
+    EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("channels/1")));
+    EXPECT_EQ(DFG_UTF8("100"), config.value(DFG_UTF8("channels/1/width")));
+
+    const int euroSign[] = { 0x20AC };
+    EXPECT_EQ(DFG_ROOT_NS::SzPtrUtf8(DFG_MODULE_NS(utf)::codePointsToUtf8(euroSign).c_str()), config.value(DFG_UTF8("a_non_ascii_value")));
+
+    EXPECT_EQ(DFG_UTF8("default_value"), config.value(DFG_UTF8("a/non_existent_item"), DFG_UTF8("default_value")));
+    EXPECT_EQ(nullptr, config.valueStrOrNull(DFG_UTF8("a/non_existent_item")));
+
+    EXPECT_EQ(12, config.entryCount());
 }
