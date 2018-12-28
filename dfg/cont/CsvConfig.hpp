@@ -83,15 +83,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             size_t nFirstNonEmptyCol = notFoundCol;
             DelimReader::readFromFile(ReadOnlySzParamC(svConfFilePath.c_str()), cd, [&](const size_t /*nRow*/, const size_t nCol, decltype(cd)& cellData)
             {
+                typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StorageStringT StorageStringT_vc2010_workaround;
                 if (nCol == 0)
                     nFirstNonEmptyCol = notFoundCol;
 
                 // When first non-empty has been encountered and this is the next column, read cell and skip rest of line.
                 if (nFirstNonEmptyCol != notFoundCol && nCol == nFirstNonEmptyCol + 1)
                 {
-                    cellData.setReadStatus(DelimReader::cellHrvSkipRestOfLine);
+                    cellData.setReadStatus(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::cellHrvSkipRestOfLine);
                     const auto& buffer = cellData.getBuffer();
-                    m_mapKeyToValue[baseUri.str()] = StorageStringT(SzPtrUtf8(buffer.data()), SzPtrUtf8(buffer.data() + buffer.size()));
+                    m_mapKeyToValue[baseUri.str()] = StorageStringT_vc2010_workaround(SzPtrUtf8(buffer.data()), SzPtrUtf8(buffer.data() + buffer.size()));
                     return;
                 }
 
@@ -100,7 +101,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 if (nFirstNonEmptyCol == notFoundCol)
                 {
                     nFirstNonEmptyCol = nCol;
-                    baseUri.setTop(StorageStringT::fromRawString(cellData.getBuffer()), nCol);
+                    baseUri.setTop(StorageStringT_vc2010_workaround::fromRawString(cellData.getBuffer()), nCol);
                 }
             });
         }
