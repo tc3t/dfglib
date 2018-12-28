@@ -1048,12 +1048,7 @@ public:
         const auto sep = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(sSep.toStdWString());
         const auto enc = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(sEnc.toStdWString());
 
-        if (sEol == "\\n")
-            eolType = DFG_MODULE_NS(io)::EndOfLineTypeN;
-        else if (sEol == "\\r")
-            eolType = DFG_MODULE_NS(io)::EndOfLineTypeR;
-        else if (sEol == "\\r\\n")
-            eolType = DFG_MODULE_NS(io)::EndOfLineTypeRN;
+        eolType = DFG_MODULE_NS(io)::endOfLineTypeFromStr(sEol.toStdString());
 
         // TODO: check for identical values (e.g. require that sep != enc)
         if (!sep.first || (!sEnc.isEmpty() && !enc.first) || eolType == DFG_MODULE_NS(io)::EndOfLineTypeNative)

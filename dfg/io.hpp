@@ -62,6 +62,22 @@ inline std::string eolStrFromEndOfLineType(EndOfLineType eolType)
     }
 }
 
+// Returns eol-type from eol-string (e.g. "\\n" -> EndOfLineTypeN).
+// For invalid input returns EndOfLineTypeN.
+inline EndOfLineType endOfLineTypeFromStr(const DFG_CLASS_NAME(StringViewC)& sv)
+{
+    if (sv.empty())
+        return EndOfLineTypeN;
+    if (sv == "\\n")
+        return EndOfLineTypeN;
+    else if (sv == "\\r")
+        return EndOfLineTypeR;
+    else if (sv == "\\r\\n")
+        return EndOfLineTypeRN;
+    else
+        return EndOfLineTypeN;
+}
+
 // Returns binary stream to given output path.
 // Note: Return type is not guaranteed to be std::ofstream.
 #if DFG_LANGFEAT_MOVABLE_STREAMS
