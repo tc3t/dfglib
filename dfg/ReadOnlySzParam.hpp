@@ -360,7 +360,7 @@ public:
 
     Str_T toString() const
     {
-        return Str_T(this->data(), size());
+        return Str_T(cbegin(), cend());
     }
 
     bool operator==(const DFG_CLASS_NAME(StringView)& other) const
@@ -454,6 +454,11 @@ public:
     const_iterator end()
     {
         return PtrT(toCharPtr_raw(m_psz) + length());
+    }
+
+    Str_T toString() const
+    {
+        return DFG_CLASS_NAME(StringViewSz)(*this).toStringView().toString();
     }
 
     bool operator==(DFG_CLASS_NAME(StringViewSz) other)

@@ -738,6 +738,12 @@ namespace
         // Test operator==
         EXPECT_TRUE(StringView_T(conv(szEmpty)) == StringView_T(conv(szEmpty)));
         EXPECT_TRUE(view == view2);
+
+        // Test toString
+        {
+            const auto sFromToString = view.toString();
+            EXPECT_TRUE(sFromToString == view);
+        }
         
         EXPECT_TRUE(StringView_T(Str_T()) == StringView_T(Str_T()));
         if (bTestNonSzViews)
