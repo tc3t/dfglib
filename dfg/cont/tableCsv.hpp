@@ -101,9 +101,14 @@ DFG_ROOT_NS_BEGIN{
             auto p = config.valueStrOrNull(DFG_UTF8("enclosing_char"));
             if (p)
             {
-                auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());
-                if (rv.first)
-                    enclosingChar(rv.second);
+                if (p->empty())
+                    enclosingChar(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone);
+                else
+                {
+                    auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());
+                    if (rv.first)
+                        enclosingChar(rv.second);
+                }
             }
         }
 
