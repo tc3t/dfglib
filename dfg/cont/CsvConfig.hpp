@@ -123,6 +123,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return m_mapKeyToValue.size();
         }
 
+        template <class Func_T>
+        void forEachStartingWith(const StringViewT& uriStart, Func_T&& func)
+        {
+            auto iter = std::lower_bound(m_mapKeyToValue.beginKey(), m_mapKeyToValue.endKey(), uriStart);
+            for (; iter != m_mapKeyToValue.endKey() && DFG_MODULE_NS(str)::beginsWith(StringViewT(*iter), uriStart) ; ++iter)
+            {
+                // Skip leading uri with raw pointer handling.
+                auto fullUri = StringViewT(*iter);
+                auto p = fullUri.beginRaw();
+                p += std::distance(uriStart.beginRaw(), uriStart.endRaw());
+                func(StringViewT(SzPtrUtf8(p), std::distance(p, fullUri.endRaw())), m_mapKeyToValue.keyIteratorToValue(iter));
+            }
+        }
+
         DFG_CLASS_NAME(MapVectorSoA)<StorageStringT, StorageStringT> m_mapKeyToValue;
 
     }; // CsvConfig

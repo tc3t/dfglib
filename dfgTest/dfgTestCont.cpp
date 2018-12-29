@@ -1736,6 +1736,9 @@ TEST(dfgCont, CsvConfig)
     EXPECT_EQ(DFG_UTF8("50"), config.value(DFG_UTF8("channels/0/width")));
     EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("channels/1")));
     EXPECT_EQ(DFG_UTF8("100"), config.value(DFG_UTF8("channels/1/width")));
+    EXPECT_EQ(DFG_UTF8("also section-entries can have a value"), config.value(DFG_UTF8("properties")));
+    EXPECT_EQ(DFG_UTF8("abc"), config.value(DFG_UTF8("properties/property_one")));
+    EXPECT_EQ(DFG_UTF8("def"), config.value(DFG_UTF8("properties/property_two")));
 
     const int euroSign[] = { 0x20AC };
     EXPECT_EQ(DFG_ROOT_NS::SzPtrUtf8(DFG_MODULE_NS(utf)::codePointsToUtf8(euroSign).c_str()), config.value(DFG_UTF8("a_non_ascii_value")));
@@ -1743,7 +1746,32 @@ TEST(dfgCont, CsvConfig)
     EXPECT_EQ(DFG_UTF8("default_value"), config.value(DFG_UTF8("a/non_existent_item"), DFG_UTF8("default_value")));
     EXPECT_EQ(nullptr, config.valueStrOrNull(DFG_UTF8("a/non_existent_item")));
 
-    EXPECT_EQ(12, config.entryCount());
+    EXPECT_EQ(15, config.entryCount());
+}
+
+TEST(dfgCont, CsvConfig_forEachStartingWith)
+{
+    typedef DFG_ROOT_NS::DFG_CLASS_NAME(StringUtf8) StringUTf8;
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) ConfigT;
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<StringUTf8> StorageT;
+    ConfigT config;
+    config.loadFromFile("testfiles/csvConfigTest_0.csv");
+    StorageT expectedKeys;
+    expectedKeys.push_back(StringUTf8(DFG_UTF8("property_one")));
+    expectedKeys.push_back(StringUTf8(DFG_UTF8("property_two")));
+    StorageT expectedValues;
+    expectedValues.push_back(StringUTf8(DFG_UTF8("abc")));
+    expectedValues.push_back(StringUTf8(DFG_UTF8("def")));
+    
+    StorageT actualKeys;
+    StorageT actualValues;
+    config.forEachStartingWith(DFG_UTF8("properties/"), [&](const ConfigT::StringViewT& key, const ConfigT::StringViewT& value)
+    {
+        actualKeys.push_back(key.toString());
+        actualValues.push_back(value.toString());
+    });
+    EXPECT_EQ(expectedKeys, actualKeys);
+    EXPECT_EQ(expectedValues, actualValues);
 }
 
 TEST(dfgCont, CsvFormatDefinitionFromCsvConfig)

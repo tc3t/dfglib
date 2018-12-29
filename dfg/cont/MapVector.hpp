@@ -172,6 +172,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             key_iterator        backKeyIter()       { return endKey() - 1; }
             const_key_iterator  backKeyIter() const { return endKey() - 1; }
 
+            // Precondition: iterator must be dereferenceable.
+            // TODO: test
+            mapped_type&        keyIteratorToValue(const key_iterator iter)             { return makeIteratorFromKeyIterator(iter)->second; }
+            const mapped_type&  keyIteratorToValue(const const_key_iterator iter) const { return makeIteratorFromKeyIterator(iter)->second; }
+
             iterator    erase(iterator iterDeleteFrom)  { return (iterDeleteFrom != end()) ? erase(iterDeleteFrom, iterDeleteFrom + 1) : end(); }
             template <class T>
             size_type   erase(const T& key)             { auto rv = erase(find(key)); return (rv != end()) ? 1 : 0; } // Returns the number of elements removed.
