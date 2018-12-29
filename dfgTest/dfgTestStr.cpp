@@ -1066,6 +1066,45 @@ TEST(dfgStr, beginsWith_TypedStrings)
     EXPECT_FALSE(beginsWith(b, a));
 }
 
+namespace
+{
+    template <class StringView_T, class FromRawStringToTyped_T>
+    void beginsWith_StringViews_impl()
+    {
+        using namespace DFG_MODULE_NS(str);
+        typedef StringView_T Sv;
+        typedef FromRawStringToTyped_T Conv;
+        EXPECT_TRUE(beginsWith(Sv(Conv("ab")), Sv(Conv("a"))));
+        EXPECT_TRUE(beginsWith(Sv(Conv("ab")), Sv(Conv(""))));
+        EXPECT_FALSE(beginsWith(Sv(Conv("")), Sv(Conv("a"))));
+        EXPECT_FALSE(beginsWith(Sv(Conv("a")), Sv(Conv("ab"))));
+    }
+}
+
+TEST(dfgStr, beginsWith_StringViews)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+    typedef DFG_CLASS_NAME(StringViewC) SvC;
+    typedef DFG_CLASS_NAME(StringViewSzC) SvSzC;
+    typedef DFG_CLASS_NAME(StringViewUtf8) SvUtf8;
+    typedef DFG_CLASS_NAME(StringViewSzUtf8) SvSzUtf8;
+
+    beginsWith_StringViews_impl<SvC, const char*>();
+    beginsWith_StringViews_impl<SvSzC, const char*>();
+    beginsWith_StringViews_impl<SvUtf8, SzPtrUtf8R>();
+    beginsWith_StringViews_impl<SvSzUtf8, SzPtrUtf8R>();
+
+    // Test StringViewSz and SzPtr mixes
+    EXPECT_TRUE(beginsWith(SvSzC("ab"), "a"));
+    EXPECT_TRUE(beginsWith("ab", SvSzC("a")));
+    EXPECT_TRUE(beginsWith(SvSzUtf8(DFG_UTF8("ab")), DFG_UTF8("a")));
+    EXPECT_TRUE(beginsWith(DFG_UTF8("ab"), SvSzUtf8(DFG_UTF8("a"))));
+
+    // TODO: (Sz, nonSz) mixes won't compile.
+    //EXPECT_TRUE(beginsWith(SvC("ab"), SvSzC("a")));   
+}
+
 TEST(dfgStr, format_fmt)
 {
     using namespace DFG_ROOT_NS;

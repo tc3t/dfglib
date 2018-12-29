@@ -446,6 +446,20 @@ template <class Str0_T, class Str1_T> bool beginsWith(const Str0_T& sSearchFrom,
     return beginsWith(toCharPtr_raw(toCstr(sSearchFrom)), toCharPtr_raw(toCstr(sSearchFor)));
 }
 
+template <class Char_T, class Str_T>
+bool beginsWith(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sSearchFrom, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sSearchFor)
+{
+    auto iterForRaw = sSearchFor.beginRaw();
+    auto iterEndForRaw = sSearchFor.endRaw();
+    const auto nForSize = std::distance(iterForRaw, iterEndForRaw);
+    if (nForSize == 0)
+        return true;
+    auto iterFromRaw = sSearchFrom.beginRaw();
+    auto iterEndFromRaw = sSearchFrom.endRaw();
+    const auto nFromSize = std::distance(iterFromRaw, iterEndFromRaw);
+    return nFromSize >= nForSize && std::equal(iterForRaw, iterEndForRaw, iterFromRaw);
+}
+
 // Tests whether string is empty.
 // [in] : Pointer to null terminated string or string object.
 // return : True iff. string is empty(i.e. if it's length is zero).
