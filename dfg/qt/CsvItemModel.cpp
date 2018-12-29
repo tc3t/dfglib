@@ -21,7 +21,6 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../str/string.hpp"
 #include "qtBasic.hpp"
 #include "../io/DelimitedTextReader.hpp"
-#include <boost/range/irange.hpp>
 #include "../io/OfStream.hpp"
 #include "../time/timerCpu.hpp"
 #include "../cont/SetVector.hpp"
@@ -235,12 +234,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
     if (options.headerWriting())
     {
         QString sEncodedTemp;
-        const auto headerRange = boost::irange<int>(0, static_cast<int>(m_vecColInfo.size()));
-        DFG_MODULE_NS(io)::writeDelimited(strm, DFG_ROOT_NS::makeRange(headerRange.begin(), headerRange.end()), sSepEncoded, [&](StreamT& strm, int i)
+        DFG_MODULE_NS(io)::writeDelimited(strm, m_vecColInfo, sSepEncoded, [&](StreamT& strm, const ColInfo& colInfo)
         {
             sEncodedTemp.clear();
             DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp),
-                                                                                             getHeaderName(i),
+                                                                                             colInfo.m_name,
                                                                                              cSep,
                                                                                              cEnc,
                                                                                              cEol,
@@ -394,7 +392,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
 {
     std::vector<std::set<QString>> vecCompletionSet;
-    
+
     m_table.forEachFwdColumnIndex([&](const int nCol)
     {
         auto pColInfo = getColInfo(nCol);
@@ -470,8 +468,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(co
     const auto nNewRowCount = (getRowCountUpperBound() - nOtherRowCount > nThisOriginalRowCount) ?
                 nThisOriginalRowCount + nOtherRowCount
               : getRowCountUpperBound();
-    
-    // TODO: implement merging in m_table implementation. For example when merging big tables, this current implementation 
+
+    // TODO: implement merging in m_table implementation. For example when merging big tables, this current implementation
     //       copies data one-by-one while m_table could probably do it more efficiently by directly copying the string storage. In case of modifiable 'other',
     //       this.m_table could adopt the string storage.
     beginInsertRows(QModelIndex(), nThisOriginalRowCount, nNewRowCount - 1);
@@ -550,11 +548,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
         auto rv = readData(loadOptions, [&]()
         {
             m_table.readFromFile(sDbFilePath.toLocal8Bit().data(), loadOptions); // TODO: return value,
-                                                                                 // TODO: non-lossy conversion from QString to string type that readFromFile() accepts, 
+                                                                                 // TODO: non-lossy conversion from QString to string type that readFromFile() accepts,
                                                                                  //       (essentially means that readFromFile should accept std::wstring)
             setFilePathWithoutSignalEmit(std::move(sDbFilePath));
         });
-        
+
         return rv;
     }
     else
@@ -739,7 +737,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
 
     m_table.removeRows(position, count);
     m_nRowCount -= count;
-    
+
     endRemoveRows();
 
     const auto nNewCount = getRowCount();
@@ -900,7 +898,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHighlighter(HighlightDe
 QModelIndexList DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::match(const QModelIndex& start, int role, const QVariant& value, const int hits, const Qt::MatchFlags flags) const
 {
     // match() is not adequate for needed find functionality (e.g. misses backward find, https://bugreports.qt.io/browse/QTBUG-344)
-	// so find implementation is not using match().
+    // so find implementation is not using match().
     return BaseClass::match(start, role, value, hits, flags);
 }
 
