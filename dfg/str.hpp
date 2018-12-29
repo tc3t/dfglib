@@ -226,7 +226,7 @@ enum ItoaError
 // @param digitIndexToRepresentation Function that returns digit-representation for values in range [0, radix - 1] (e.g. for base 10 could be [](const size_t i) { return static_cast<char>('0' + i); })
 // @param sign Sign (minus) character (in common cases normally '-')
 // @param outBegin Output iterator to beginning of write sequence.
-// @param outEnd End iterrator for output.
+// @param outEnd End iterator for output.
 // @return On success, number of digits written to outBuffer, otherwise ItoaError
 template <class OutIter_T, class Int_T, class Func_T, class Sign_T>
 inline ItoaReturnValue intToRadixRepresentation(const Int_T value, const size_t radix, const Func_T digitIndexToRepresentation, const Sign_T sign, const OutIter_T outBegin, const OutIter_T outEnd)
@@ -443,7 +443,7 @@ template <class Char_T> bool beginsWith(const Char_T* pszSearchFrom, const Char_
 
 template <class Str0_T, class Str1_T> bool beginsWith(const Str0_T& sSearchFrom, const Str1_T& sSearchFor)
 {
-    return beginsWith(toCstr(sSearchFrom), toCstr(sSearchFor));
+    return beginsWith(toCharPtr_raw(toCstr(sSearchFrom)), toCharPtr_raw(toCstr(sSearchFor)));
 }
 
 // Tests whether string is empty.

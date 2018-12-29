@@ -1055,6 +1055,17 @@ TEST(dfgStr, beginsWith)
     EXPECT_TRUE(beginsWith(std::wstring(L"abc"), L"a"));
 }
 
+TEST(dfgStr, beginsWith_TypedStrings)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+    typedef DFG_CLASS_NAME(StringUtf8) SUtf8;
+    SUtf8 a(DFG_UTF8("ab"));
+    SUtf8 b(DFG_UTF8("a"));
+    EXPECT_TRUE(beginsWith(a, b));
+    EXPECT_FALSE(beginsWith(b, a));
+}
+
 TEST(dfgStr, format_fmt)
 {
     using namespace DFG_ROOT_NS;
