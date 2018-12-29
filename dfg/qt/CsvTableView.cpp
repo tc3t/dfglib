@@ -1115,7 +1115,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
 
 bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
 {
-    return openFile(sPath, CsvItemModel::LoadOptions());
+    return openFile(sPath, CsvItemModel::getLoadOptionsForFile(sPath));
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)

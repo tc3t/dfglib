@@ -2,6 +2,7 @@
 
 #include "../dfgBase.hpp"
 #include "qtIncludeHelpers.hpp"
+#include <string>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QString>
@@ -68,3 +69,15 @@ inline void advance(QTextStream& strm, const std::streamsize nCount)
 }
 
 }} // module io
+
+
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
+{
+    // Placeholder implementation for converting QString into a 8-bit string that can given to 
+    // file API expecting char* string.
+    inline std::string qStringToFileApi8Bit(const QString& sPath)
+    {
+        return std::string(sPath.toLocal8Bit());
+    }
+
+} } // Module qt

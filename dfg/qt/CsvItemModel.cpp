@@ -23,6 +23,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../io/DelimitedTextReader.hpp"
 #include "../io/OfStream.hpp"
 #include "../time/timerCpu.hpp"
+#include "../cont/CsvConfig.hpp"
 #include "../cont/SetVector.hpp"
 #include "../str/strTo.hpp"
 
@@ -500,9 +501,21 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str, co
     }
 }
 
+auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
+{
+    auto sConfFilePath = sFilePath + ".conf";
+    if (!QFileInfo(sConfFilePath).exists())
+        return LoadOptions();
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+    config.loadFromFile(qStringToFileApi8Bit(sConfFilePath));
+    LoadOptions loadOptions;
+    loadOptions.fromConfig(config);
+    return loadOptions;
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(const QString& sDbFilePath)
 {
-    return openFile(sDbFilePath, LoadOptions());
+    return openFile(sDbFilePath, getLoadOptionsForFile(sDbFilePath));
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::importFiles(const QStringList& paths)
@@ -547,9 +560,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
         setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(fileInfo.size()));
         auto rv = readData(loadOptions, [&]()
         {
-            m_table.readFromFile(sDbFilePath.toLocal8Bit().data(), loadOptions); // TODO: return value,
-                                                                                 // TODO: non-lossy conversion from QString to string type that readFromFile() accepts,
-                                                                                 //       (essentially means that readFromFile should accept std::wstring)
+            m_table.readFromFile(qStringToFileApi8Bit(sDbFilePath), loadOptions); // TODO: return value
             setFilePathWithoutSignalEmit(std::move(sDbFilePath));
         });
 
