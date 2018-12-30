@@ -385,7 +385,31 @@ TEST(dfgStr, strTo)
 
     EXPECT_EQ(strTo<uint64>("18446744073709551615"), uint64_max);
     EXPECT_EQ(strTo<const uint64>("18446744073709551615"), uint64_max);
-    
+
+    // Test that strTo() accepts StringView's
+    {
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewC)("1")));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewW)(L"1")));
+    }
+
+    // Test that strTo() accepts StringViewSz's
+    {
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzC)("1")));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzW)(L"1")));
+    }
+
+    // Test typed strings
+    {
+        EXPECT_EQ(1, strTo<int>(DFG_ASCII("1")));
+        EXPECT_EQ(1, strTo<int>(DFG_UTF8("1")));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewAscii)(DFG_ASCII("1"))));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzAscii)(DFG_ASCII("1"))));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewLatin1)(SzPtrLatin1("1"))));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzLatin1)(SzPtrLatin1("1"))));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewUtf8)(DFG_UTF8("1"))));
+        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzUtf8)(DFG_UTF8("1"))));
+    }
+
     volatile uint32 volVal = 1;
     strTo("4294967295", volVal);
     EXPECT_EQ(volVal, uint32_max);

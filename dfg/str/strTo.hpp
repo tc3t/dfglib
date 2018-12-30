@@ -139,14 +139,39 @@ namespace DFG_DETAIL_NS
 
 template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStr psz)
     {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz);}
-template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStr psz)
-    {return convertStrTo<T>(psz);}
 template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStrW psz)
     {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz);}
+
+// Single parameter strTo()
+template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStr psz)
+    {return convertStrTo<T>(psz);}
+
 template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStrW psz)
     {return convertStrTo<T>(psz);}
 
-    // Overloads that take the destination object as parameter.
+// strTo(x) for StringView
+template <class T, class Char_T, class Str_T>
+inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sv)
+{
+    // TODO: convert directly from string view instead of creating redundant temporary.
+    return convertStrTo<T>(toCharPtr_raw(sv.toString().c_str()));
+}
+
+// strTo(x) for StringViewSz
+template <class T, class Char_T, class Str_T>
+inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& sv)
+{
+    return convertStrTo<T>(toCharPtr_raw(sv.c_str()));
+}
+
+// strTo(x) for SzPtrT
+template <class T, class Char_T, CharPtrType Type_T>
+inline typename std::remove_cv<T>::type strTo(const SzPtrT<Char_T, Type_T>& sv)
+{
+    return convertStrTo<T>(toCharPtr_raw(sv.c_str()));
+}
+
+// Overloads that take the destination object as parameter.
 template<class T> inline T& convertStrTo(const NonNullCStr psz, T& obj)  {return (obj = convertStrTo<T>(psz));}
 template<class T> inline T& convertStrTo(const NonNullCStrW psz, T& obj) {return (obj = convertStrTo<T>(psz));}
 
