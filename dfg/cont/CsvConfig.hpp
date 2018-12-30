@@ -71,8 +71,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             typedef DFG_CLASS_NAME(DelimitedTextReader) DelimReader;
             typedef DelimReader::CharAppenderUtf<DelimReader::CharBuffer<char>> CharAppenderUtfT;
 
+            const auto nFileSize = DFG_MODULE_NS(os)::fileSize(ReadOnlySzParamC(svConfFilePath.c_str()));
+
+            // Check for empty/non-existent file.
+            if (nFileSize <= 0)
+                return;
+
             // Check for ridiculously large file.
-            if (DFG_MODULE_NS(os)::fileSize(ReadOnlySzParamC(svConfFilePath.c_str())) > 100000000) // 100 MB
+            if (nFileSize > 100000000) // 100 MB
                 return;
 
             DelimReader::FormatDefinitionSingleChars formatDef('"', '\n', ',');

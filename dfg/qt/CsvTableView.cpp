@@ -54,6 +54,9 @@ using namespace DFG_MODULE_NS(qt);
 
 namespace
 {
+
+    static const char gszDefaultOpenFileFilter[] = QT_TR_NOOP("CSV files (*.csv *.tsv *.csv.conf);; All files(*.*)");
+
     class ProgressWidget : public QProgressDialog
     {
     public:
@@ -154,7 +157,7 @@ namespace
         return QFileDialog::getOpenFileName(pParent,
                                             QApplication::tr("Open file"),
                                             QString()/*dir*/,
-                                            QApplication::tr("CSV files (*.csv *.tsv);;All files (*.*)"),
+                                            QApplication::tr(gszDefaultOpenFileFilter),
                                             nullptr/*selected filter*/,
                                             0/*options*/);
     }
@@ -1146,8 +1149,33 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
     if (scrollPos == "bottom")
         scrollToBottom();
-
+    
     onColumnResizeAction_toViewEvenly();
+
+    // Apply column width hints from config file if present
+    {
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StringViewT SvT;
+        DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+        config.loadFromFile(qStringToFileApi8Bit(sPath + ".conf"));
+        if (config.entryCount() > 0 && config.valueStrOrNull(DFG_UTF8("columnsByIndex")) != nullptr)
+        {
+            config.forEachStartingWith(DFG_UTF8("columnsByIndex/"), [&](const SvT& relUri, const SvT& value) {
+                auto pColSep = std::find(relUri.beginRaw(), relUri.endRaw(), '/');
+                if (pColSep == relUri.endRaw() || pColSep == relUri.beginRaw())
+                    return;
+                dfg::DFG_CLASS_NAME(StringViewC) svIndex(relUri.beginRaw(), pColSep - relUri.beginRaw());
+                const auto nCol = DFG_MODULE_NS(str)::strTo<int>(svIndex);
+                if (pModel->isValidColumn(nCol))
+                {
+                    if (!(DFG_CLASS_NAME(StringViewC)(pColSep + 1, relUri.endRaw() - (pColSep + 1)) == "width_pixels"))
+                        return; // Remaining URI is unknown, skip.
+                    const auto confWidth = DFG_MODULE_NS(str)::strTo<int>(value);
+                    if (confWidth >= 0)
+                        setColumnWidth(nCol, confWidth);
+                }
+            });
+        }
+    }
 
     if (bSuccess)
         onNewSourceOpened();
@@ -1207,7 +1235,7 @@ bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
     auto sPaths = QFileDialog::getOpenFileNames(this,
         tr("Select files to merge"),
         QString()/*dir*/,
-        tr("CSV files (*.csv *.tsv);;All files (*.*)"),
+        tr(gszDefaultOpenFileFilter),
         nullptr/*selected filter*/,
         0/*options*/);
     if (sPaths.isEmpty())
