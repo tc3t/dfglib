@@ -1786,4 +1786,6 @@ TEST(dfgCont, CsvFormatDefinitionFromCsvConfig)
     EXPECT_EQ(',', format.separatorChar());
     EXPECT_EQ(DFG_MODULE_NS(io)::EndOfLineTypeN, format.eolType());
     EXPECT_EQ(true, format.bomWriting());
+    EXPECT_EQ("abc", format.getProperty("property_one", ""));
+    EXPECT_EQ("def", format.getProperty("property_two", ""));
 }

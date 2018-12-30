@@ -136,6 +136,14 @@ DFG_ROOT_NS_BEGIN{
             if (p)
                 bomWriting(DFG_MODULE_NS(str)::strToByNoThrowLexCast<bool>(p->rawStorage()));
         }
+
+        // Properties
+        {
+            config.forEachStartingWith(DFG_UTF8("properties/"), [&](const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StringViewT& relativeUri, const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StringViewT& value)
+            {
+                setProperty(relativeUri, value);
+            });
+        }
     }
     
     DFG_SUB_NS(cont)

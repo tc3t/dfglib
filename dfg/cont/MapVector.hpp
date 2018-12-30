@@ -211,8 +211,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 }
             }
 
-            iterator        makeIteratorFromKeyIterator(const key_iterator& iterKey)         { return makeIterator(iterKey - beginKey()); }
-            const_iterator  makeIteratorFromKeyIterator(const key_iterator& iterKey) const   { return makeIterator(iterKey - beginKey()); }
+            iterator        makeIteratorFromKeyIterator(const key_iterator& iterKey)                { return makeIterator(iterKey - beginKey()); }
+            const_iterator  makeIteratorFromKeyIterator(const const_key_iterator& iterKey) const    { return makeIterator(iterKey - beginKey()); }
 
             template <class T0, class T1>
             static bool isKeyMatch(const T0& a, const T1& b)

@@ -124,7 +124,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }
 
         template <class Func_T>
-        void forEachStartingWith(const StringViewT& uriStart, Func_T&& func)
+        void forEachStartingWith(const StringViewT& uriStart, Func_T&& func) const
         {
             auto iter = std::lower_bound(m_mapKeyToValue.beginKey(), m_mapKeyToValue.endKey(), uriStart);
             for (; iter != m_mapKeyToValue.endKey() && DFG_MODULE_NS(str)::beginsWith(StringViewT(*iter), uriStart) ; ++iter)
