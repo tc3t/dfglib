@@ -284,6 +284,7 @@ public:
     typedef decltype(toCharPtr(Str_T().c_str()))        PtrT;
     typedef decltype(toCharPtr_raw(Str_T().c_str()))    PtrRawT;
     typedef typename DFG_DETAIL_NS::StringViewBase<Str_T>::type BaseClass;
+    typedef Char_T                                      CharT;
     
     typedef PtrT const_iterator;
 
@@ -378,6 +379,12 @@ public:
         return operator==(DFG_CLASS_NAME(StringView)(tpsz));
     }
 
+    // Conversion to untyped StringView.
+    operator DFG_CLASS_NAME(StringView)<Char_T>() const
+    {
+        return DFG_CLASS_NAME(StringView)<Char_T>(beginRaw(), this->m_nSize);
+    }
+
 }; // class StringView
 
 namespace DFG_DETAIL_NS
@@ -395,6 +402,7 @@ public:
 
     typedef decltype(Str_T().c_str())               SzPtrT;
     typedef decltype(toCharPtr(Str_T().c_str()))    PtrT;
+    typedef Char_T                                  CharT;
 
     typedef PtrT const_iterator;
 
@@ -430,10 +438,23 @@ public:
         return m_nSize != DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated;
     }
 
+    size_t computeLength() const
+    {
+        return readOnlySzParamLength(m_psz);
+    }
+
+    size_t lengthNonCaching() const
+    {
+        if (!isLengthCalculated())
+            return computeLength();
+        else
+            return m_nSize;
+    }
+
     size_t length()
     {
         if (!isLengthCalculated())
-            m_nSize = readOnlySzParamLength(m_psz);
+            m_nSize = computeLength();
         return m_nSize;
     }
 
@@ -482,6 +503,18 @@ public:
     bool operator==(const SzPtrT& tpsz)
     {
         return (isLengthCalculated()) ? toStringViewFromCachedSize() == tpsz : DFG_MODULE_NS(str)::strCmp(m_psz, tpsz) == 0;
+    }
+
+    // Conversion to untyped StringViewSz.
+    operator DFG_CLASS_NAME(StringViewSz)<Char_T>() const
+    {
+        return DFG_CLASS_NAME(StringViewSz)<Char_T>(toCharPtr_raw(m_psz));
+    }
+
+    // Conversion to untyped StringView.
+    operator DFG_CLASS_NAME(StringView)<Char_T>() const
+    {
+        return DFG_CLASS_NAME(StringView)<Char_T>(toCharPtr_raw(m_psz));
     }
 
 //protected:
