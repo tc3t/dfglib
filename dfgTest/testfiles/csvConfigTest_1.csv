@@ -1,0 +1,15 @@
+﻿a_non_ascii_value,€
+bom_writing,1
+channels,
+,0,
+,,type,integer
+,,width,50
+,1,
+,,width,100
+enclosing_char,""""
+encoding,UTF8
+end_of_line_type,\n
+properties,also section-entries can have a value
+,property_one,abc
+,property_two,def
+separator_char,","

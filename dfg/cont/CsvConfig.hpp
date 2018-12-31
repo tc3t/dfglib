@@ -6,6 +6,9 @@
 #include "MapVector.hpp"
 #include "../os/fileSize.hpp"
 #include "../io/DelimitedTextReader.hpp"
+#include "../io/OfStream.hpp"
+#include "../io/DelimitedTextWriter.hpp"
+#include "Vector.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -141,6 +144,102 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 p += std::distance(uriStart.beginRaw(), uriStart.endRaw());
                 func(StringViewT(SzPtrUtf8(p), std::distance(p, fullUri.endRaw())), m_mapKeyToValue.keyIteratorToValue(iter));
             }
+        }
+
+        template <class Strm_T, class Item_T>
+        static void privWriteCellToStream(Strm_T& strm, const Item_T& item)
+        {
+            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter) Writer;
+            Writer::writeCellStrm(strm, item, ',', '"', '\n', DFG_MODULE_NS(io)::EbEncloseIfNeeded);
+        }
+
+        template <class Strm_T, class Item0_T, class Item1_T>
+        static void privWriteCellsToStream(Strm_T& strm, const Item0_T& item0, const Item1_T& item1)
+        {
+            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter) Writer;
+            privWriteCellToStream(strm, item0);
+            strm << ',';
+            privWriteCellToStream(strm, item1);
+            strm << '\n';
+        }
+
+        bool saveToFile(const dfg::StringViewSzC& sv) const
+        {
+            typedef DFG_CLASS_NAME(StringViewC) SvC;
+
+            DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) ostrm(sv.c_str());
+
+            if (!ostrm.is_open())
+                return false;
+
+            // Write BOM
+            {
+                const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(DFG_MODULE_NS(io)::encodingUTF8);
+                ostrm.write(bomBytes.data(), sizeInBytes(bomBytes));
+            }
+
+            DFG_CLASS_NAME(Vector)<SvC> uriStack; // Can use string views as the underlying strings in map won't get invalidated.
+            for (auto iter = m_mapKeyToValue.cbegin(), iterEnd = m_mapKeyToValue.cend(); iter != iterEnd; ++iter)
+            {
+                const auto& uriRawStorage = iter->first.rawStorage();
+                auto nLastSep = uriRawStorage.find_last_of('/');
+                if (nLastSep == std::string::npos) // No separators? (i.e. top-level entry?)
+                {
+                    uriStack.assign(1, uriRawStorage);
+                    privWriteCellsToStream(ostrm, uriRawStorage, iter->second.rawStorage());
+                }
+                else
+                {
+                    const auto nSepCount = std::count(uriRawStorage.cbegin(), uriRawStorage.cend(), '/');
+                    auto iterCurrentPos = uriRawStorage.cbegin();
+                    auto iterNextSep = iterCurrentPos;
+                    for (ptrdiff_t i = 0; i < nSepCount; ++i)
+                    {
+                        iterNextSep = std::find(iterCurrentPos, uriRawStorage.cend(), '/');
+                        DFG_ASSERT_CORRECTNESS(iterNextSep != uriRawStorage.cend());
+                        const SvC sv(&*iterCurrentPos, std::distance(iterCurrentPos, iterNextSep));
+                        if (!isValidIndex(uriStack, i) || !(uriStack[i] == sv))
+                        {
+                            // Don't have this level already in stack; create a new row for this level.
+                            uriStack.resize(i + 1);
+                            for (int j = 0; j < i; ++j)
+                                ostrm << ",";
+                            privWriteCellToStream(ostrm, sv);
+                            ostrm << '\n';
+                            uriStack[i] = sv;
+                        }
+                        iterCurrentPos = iterNextSep + 1;
+                    }
+                    for (int j = 0; j < nSepCount; ++j)
+                        ostrm << ",";
+                    const SvC svLastPart(&*iterCurrentPos, std::distance(iterCurrentPos, uriRawStorage.cend()));
+                    uriStack.resize(nSepCount + 1);
+                    uriStack.back() = svLastPart;
+                    privWriteCellsToStream(ostrm, svLastPart, iter->second.rawStorage());
+                }
+            }
+            return true;
+        }
+
+        // TODO: test
+        bool operator==(const DFG_CLASS_NAME(CsvConfig)& other) const
+        {
+            if (m_mapKeyToValue.size() != other.m_mapKeyToValue.size())
+                return false;
+            auto iter = m_mapKeyToValue.cbegin();
+            const auto iterEnd = m_mapKeyToValue.cend();
+            auto iterOther = other.m_mapKeyToValue.cbegin();
+            for (; iter != iterEnd; ++iter, ++iterOther)
+            {
+                if (iter->first != iterOther->first || iter->second != iterOther->second)
+                    return false;
+            }
+            return true;
+        }
+
+        bool operator!=(const DFG_CLASS_NAME(CsvConfig)& other) const
+        {
+            return !(*this == other);
         }
 
         DFG_CLASS_NAME(MapVectorSoA)<StorageStringT, StorageStringT> m_mapKeyToValue;

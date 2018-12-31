@@ -133,6 +133,7 @@ public:
         return std::strcmp(toCharPtr_raw(c_str()), toCharPtr_raw(right)) < 0;
     }
 
+    // Returns reference to raw storage container (guarantees that the call is cheap O(1) operation)
     StorageType& rawStorage() { return m_s; }
     const StorageType& rawStorage() const { return m_s; }
 

@@ -1774,6 +1774,26 @@ TEST(dfgCont, CsvConfig_forEachStartingWith)
     EXPECT_EQ(expectedValues, actualValues);
 }
 
+TEST(dfgCont, CsvConfig_saving)
+{
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) ConfigT;
+    ConfigT config;
+
+    config.loadFromFile("testfiles/csvConfigTest_1.csv");
+    config.saveToFile("testfiles/generated/csvConfigTest_1.csv");
+    ConfigT config2;
+    EXPECT_NE(config, config2);
+    config2.loadFromFile("testfiles/generated/csvConfigTest_1.csv");
+    EXPECT_EQ(config, config2);
+
+    // Test also that the output is exactly the same as input.
+    {
+        const auto inputBytes = DFG_MODULE_NS(io)::fileToVector("testfiles/csvConfigTest_1.csv");
+        const auto writtenBytes = DFG_MODULE_NS(io)::fileToVector("testfiles/generated/csvConfigTest_1.csv");
+        EXPECT_EQ(inputBytes, writtenBytes);
+    }
+}
+
 TEST(dfgCont, CsvFormatDefinitionFromCsvConfig)
 {
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
