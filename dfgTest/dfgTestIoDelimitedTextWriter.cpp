@@ -17,6 +17,22 @@ TEST(DfgIo, DelimitedTextCellWriterStr)
                                                                             '\n', \
                                                                             DFG_MODULE_NS(io)::EB); \
         EXPECT_EQ(EXPECTED, ostrm.str()); \
+        std::ostringstream ostrm2; \
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrm2, \
+                                                                            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)(STR), \
+                                                                            ',', \
+                                                                            '"', \
+                                                                            '\n', \
+                                                                            DFG_MODULE_NS(io)::EB); \
+        EXPECT_EQ(EXPECTED, ostrm2.str()); \
+        std::ostringstream ostrm3; \
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrm3, \
+                                                                            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewSzC)(STR), \
+                                                                            ',', \
+                                                                            '"', \
+                                                                            '\n', \
+                                                                            DFG_MODULE_NS(io)::EB); \
+        EXPECT_EQ(EXPECTED, ostrm3.str()); \
         std::string sOutput; \
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::string>(sOutput), \
                                                                             std::string(STR), \
@@ -33,6 +49,14 @@ TEST(DfgIo, DelimitedTextCellWriterStr)
                                                                             '\n', \
                                                                             DFG_MODULE_NS(io)::EB); \
         EXPECT_EQ(EXPECTED, sOutput2); \
+        std::string sOutput3; \
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::string>(sOutput3), \
+                                                                            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)(STR), \
+                                                                            ',', \
+                                                                            '"', \
+                                                                            '\n', \
+                                                                            DFG_MODULE_NS(io)::EB); \
+        EXPECT_EQ(EXPECTED, sOutput3); \
         \
         std::wostringstream owstrm; \
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(owstrm, \

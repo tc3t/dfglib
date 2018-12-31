@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iterator>
 #include "../iter/szIterator.hpp"
+#include "../ReadOnlySzParam.hpp"
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 
@@ -127,6 +128,28 @@ public:
         const EnclosementBehaviour eb)
     {
         writeCellFromStrIter(iterOut, makeSzRange(psz), cSep, cEnc, cEol, eb);
+    }
+
+    template <class OutputIter_T>
+    static void writeItemImpl(OutputIter_T iterOut,
+        const DFG_CLASS_NAME(StringViewC)& sv,
+        const char cSep,
+        const char cEnc,
+        const char cEol,
+        const EnclosementBehaviour eb)
+    {
+        writeCellFromStrIter(iterOut, sv, cSep, cEnc, cEol, eb);
+    }
+
+    template <class OutputIter_T>
+    static void writeItemImpl(OutputIter_T iterOut,
+        const DFG_CLASS_NAME(StringViewSzC)& sv,
+        const char cSep,
+        const char cEnc,
+        const char cEol,
+        const EnclosementBehaviour eb)
+    {
+        writeCellFromStrIter(iterOut, makeSzRange(sv.c_str()), cSep, cEnc, cEol, eb);
     }
 
     template <class OutputIter_T>
