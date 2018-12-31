@@ -472,9 +472,24 @@ public:
         return m_psz;
     }
 
+    const_iterator cbegin() const
+    {
+        return begin();
+    }
+
     const_iterator end()
     {
         return PtrT(toCharPtr_raw(m_psz) + length());
+    }
+
+    const_iterator end() const
+    {
+        return PtrT(toCharPtr_raw(m_psz) + lengthNonCaching());
+    }
+
+    const_iterator cend() const
+    {
+        return end();
     }
 
     Str_T toString() const
