@@ -174,6 +174,28 @@ public:
         writeCellFromStrIter(iterOut, makeSzRange(psz), cSep, cEnc, cEol, eb);
     }
 
+    template <class OutputIter_T>
+    static void writeItemImpl(OutputIter_T iterOut,
+        const DFG_CLASS_NAME(StringViewW)& sv,
+        const char cSep,
+        const char cEnc,
+        const char cEol,
+        const EnclosementBehaviour eb)
+    {
+        writeCellFromStrIter(iterOut, sv, cSep, cEnc, cEol, eb);
+    }
+
+    template <class OutputIter_T>
+    static void writeItemImpl(OutputIter_T iterOut,
+        const DFG_CLASS_NAME(StringViewSzW)& sv,
+        const char cSep,
+        const char cEnc,
+        const char cEol,
+        const EnclosementBehaviour eb)
+    {
+        writeCellFromStrIter(iterOut, makeSzRange(sv.c_str()), cSep, cEnc, cEol, eb);
+    }
+
     template <class OutputIter_T, class Elem_T>
     static void writeCellIter(OutputIter_T iterOut,
                                     const Elem_T& elem,

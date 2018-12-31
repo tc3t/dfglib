@@ -67,6 +67,24 @@ namespace
             eb);
         EXPECT_EQ(pwszExpected, owstrm.str());
 
+        std::wostringstream owstrm2;
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(owstrm2,
+            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewW)(pwsz),
+            ',',
+            '"',
+            '\n',
+            eb);
+        EXPECT_EQ(pwszExpected, owstrm2.str());
+
+        std::wostringstream owstrm3;
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(owstrm3,
+            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewSzW)(pwsz),
+            ',',
+            '"',
+            '\n',
+            eb);
+        EXPECT_EQ(pwszExpected, owstrm3.str());
+
         std::wstring swOutput;
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::wstring>(swOutput),
             std::wstring(pwsz),
@@ -83,6 +101,15 @@ namespace
             '\n',
             eb);
         EXPECT_EQ(pwszExpected, swOutput2);
+
+        std::wstring swOutput3;
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::wstring>(swOutput3),
+            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewW)(pwsz),
+            ',',
+            '"',
+            '\n',
+            eb);
+        EXPECT_EQ(pwszExpected, swOutput3);
     }
 } // unnamed namespace
 
