@@ -23,9 +23,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 win32 {
-    # On Windows enable pdb-creation for release builds.
-    QMAKE_CFLAGS_RELEASE += /Zi
-    QMAKE_LFLAGS_RELEASE += /DEBUG /opt:ref
+    # Adjustments on Windows:
+
+    #   -Warning level from W3 -> W4
+    QMAKE_CXXFLAGS_WARN_ON -= -W3
+    QMAKE_CXXFLAGS_WARN_ON += -W4
+
+    #   -Enable pdb-creation (/Zi /DEBUG)
+    #   -Set optimization settings to defaults in Visual Studio Release builds (/OPT:REF /OPT:ICF)
+    QMAKE_CXXFLAGS_RELEASE += /Zi
+    QMAKE_LFLAGS_RELEASE += /DEBUG /OPT:REF /OPT:ICF
 }
 
 
