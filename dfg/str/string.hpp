@@ -4,6 +4,7 @@
 #include "../SzPtr.hpp"
 #include <cstring>
 #include <string>
+#include "../build/languageFeatureInfo.hpp"
 
 
 DFG_ROOT_NS_BEGIN { // Note: String is included in main namespace on purpose.
@@ -32,6 +33,19 @@ public:
     DFG_CLASS_NAME(StringTyped)() {}
     explicit DFG_CLASS_NAME(StringTyped)(SzPtrR psz) : m_s(psz.c_str()) {}
     explicit DFG_CLASS_NAME(StringTyped)(TypedPtrT iterBegin, TypedPtrT iterEnd) : m_s(iterBegin.rawPtr(), iterEnd.rawPtr()) {}
+
+#if (DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0)
+    DFG_CLASS_NAME(StringTyped)(DFG_CLASS_NAME(StringTyped)&& other)
+    {
+        operator=(std::move(other));
+    }
+
+    DFG_CLASS_NAME(StringTyped)& operator=(DFG_CLASS_NAME(StringTyped)&& other)
+    {
+        this->m_s = std::move(other.m_s);
+        return *this;
+    }
+#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
     // Precondition: sRaw must be correctly encoded.
     // TODO: test

@@ -681,6 +681,26 @@ namespace
         EXPECT_FALSE(s < s);
         EXPECT_FALSE(s.c_str() < s);
         EXPECT_FALSE(s < s.c_str());
+
+        // Test moving
+        {
+            const char szData[] = "0123456789abcdefghijklmn0123456789abcdefghijklmn0123456789abcdefghijklmn0123456789abcdefghijklmn";
+            Str_T a = Str_T(SzPtrType(szData));
+            const auto pData = a.rawStorage().data();
+            Str_T b(std::move(a));
+            EXPECT_TRUE(a.empty());
+            Str_T c;
+            c = std::move(b);
+            EXPECT_TRUE(b.empty());
+            Str_T d = c;
+            Str_T e;
+            e = d;
+            EXPECT_EQ(SzPtrType(szData), c);
+            EXPECT_EQ(c, d);
+            EXPECT_EQ(c, e);
+            // Test that the actual data location hasn't changed; note that the input string must long enough to avoid SSO-effects.
+            EXPECT_TRUE(pData == c.rawStorage().data());
+        }
     }
 }
 
