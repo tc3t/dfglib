@@ -384,7 +384,7 @@ DFG_ROOT_NS_BEGIN{
                 std::unordered_map<Index_T, typename ColumnIndexPairContainer::const_iterator> nextColItemRowIters;
                 this->forEachFwdColumnIndex([&](const Index_T nCol)
                 {
-                    if (!this->m_colToRows.empty())
+                    if (isValidIndex(this->m_colToRows, nCol) && !this->m_colToRows[nCol].empty())
                         nextColItemRowIters[nCol] = this->m_colToRows[nCol].cbegin();
                 });
                 const auto nMaxColCount = this->colCountByMaxColIndex();
