@@ -1740,13 +1740,18 @@ TEST(dfgCont, CsvConfig)
     EXPECT_EQ(DFG_UTF8("abc"), config.value(DFG_UTF8("properties/property_one")));
     EXPECT_EQ(DFG_UTF8("def"), config.value(DFG_UTF8("properties/property_two")));
 
+    EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("no_ending_separator"), DFG_UTF8("a")));
+    EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("no_ending_separator/0"), DFG_UTF8("a")));
+    EXPECT_EQ(DFG_UTF8("a"), config.value(DFG_UTF8("no_ending_separator/1"), DFG_UTF8("")));
+    EXPECT_EQ(DFG_UTF8(""), config.value(DFG_UTF8("no_ending_separator/2"), DFG_UTF8("a")));
+
     const int euroSign[] = { 0x20AC };
     EXPECT_EQ(DFG_ROOT_NS::SzPtrUtf8(DFG_MODULE_NS(utf)::codePointsToUtf8(euroSign).c_str()), config.value(DFG_UTF8("a_non_ascii_value")));
 
     EXPECT_EQ(DFG_UTF8("default_value"), config.value(DFG_UTF8("a/non_existent_item"), DFG_UTF8("default_value")));
     EXPECT_EQ(nullptr, config.valueStrOrNull(DFG_UTF8("a/non_existent_item")));
 
-    EXPECT_EQ(15, config.entryCount());
+    EXPECT_EQ(19, config.entryCount());
 }
 
 TEST(dfgCont, CsvConfig_forEachStartingWith)

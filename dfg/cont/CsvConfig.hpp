@@ -90,15 +90,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             DFG_DETAIL_NS::UriHelper baseUri;
             const size_t notFoundCol = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
             size_t nFirstNonEmptyCol = notFoundCol;
+            bool bMostRecentRowHadKeyButNoValue = false;
             DelimReader::readFromFile(ReadOnlySzParamC(svConfFilePath.c_str()), cd, [&](const size_t /*nRow*/, const size_t nCol, decltype(cd)& cellData)
             {
                 typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StorageStringT StorageStringT_vc2010_workaround;
                 if (nCol == 0)
+                {
+                    if (bMostRecentRowHadKeyButNoValue)
+                        m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
                     nFirstNonEmptyCol = notFoundCol;
+                    bMostRecentRowHadKeyButNoValue = false;
+                }
 
                 // When first non-empty has been encountered and this is the next column, read cell and skip rest of line.
                 if (nFirstNonEmptyCol != notFoundCol && nCol == nFirstNonEmptyCol + 1)
                 {
+                    bMostRecentRowHadKeyButNoValue = false;
                     cellData.setReadStatus(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::cellHrvSkipRestOfLine);
                     const auto& buffer = cellData.getBuffer();
                     m_mapKeyToValue[baseUri.str()] = StorageStringT_vc2010_workaround(SzPtrUtf8(buffer.data()), SzPtrUtf8(buffer.data() + buffer.size()));
@@ -111,8 +118,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 {
                     nFirstNonEmptyCol = nCol;
                     baseUri.setTop(StorageStringT_vc2010_workaround::fromRawString(cellData.getBuffer()), nCol);
+                    bMostRecentRowHadKeyButNoValue = true;
                 }
             });
+            if (bMostRecentRowHadKeyButNoValue)
+                m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
         }
 
         StorageStringT value(const StringViewT& svUri, const StringViewT& svDefault = StringViewT()) const

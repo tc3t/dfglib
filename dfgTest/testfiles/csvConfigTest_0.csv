@@ -13,3 +13,7 @@ a_non_ascii_value,€
 properties,also section-entries can have a value
 ,property_one,abc
 ,property_two,def
+no_ending_separator
+,0
+,1,a
+,2
