@@ -39,7 +39,7 @@ DFG_ROOT_NS_BEGIN{
         // Reads properties from given config, items not present in config are not modified.
         void fromConfig(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config);
 
-        void appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config);
+        void appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const;
 
         int32 separatorChar() const { return m_cSep; }
         void separatorChar(int32 cSep) { m_cSep = cSep; }
@@ -148,7 +148,7 @@ DFG_ROOT_NS_BEGIN{
         }
     }
 
-    inline void DFG_CLASS_NAME(CsvFormatDefinition)::appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config)
+    inline void DFG_CLASS_NAME(CsvFormatDefinition)::appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const
     {
         // Encoding
         {
