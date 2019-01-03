@@ -252,6 +252,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool save();
         bool saveToFile();
         bool saveToFileWithOptions();
+        bool openConfigFile();
+        bool saveConfigFile();
         bool clearSelected();
         bool insertRowHere();
         bool insertRowAfterCurrent();

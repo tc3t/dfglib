@@ -501,9 +501,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str, co
     }
 }
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::populateConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const
+{
+    m_table.m_readFormat.appendToConfig(config);
+}
+
 auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
 {
-    auto sConfFilePath = sFilePath + ".conf";
+    auto sConfFilePath = DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sFilePath);
     if (!QFileInfo(sConfFilePath).exists())
         return LoadOptions();
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;

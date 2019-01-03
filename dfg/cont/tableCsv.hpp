@@ -41,6 +41,13 @@ DFG_ROOT_NS_BEGIN{
 
         void appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const;
 
+        template <class Str_T>
+        static Str_T csvFilePathToConfigFilePath(const Str_T& str)
+        {
+            // Note: changing this would likely require changes at least to file extension filters in qt-module.
+            return str + ".conf";
+        }
+
         int32 separatorChar() const { return m_cSep; }
         void separatorChar(int32 cSep) { m_cSep = cSep; }
         int32 enclosingChar() const { return m_cEnc; }

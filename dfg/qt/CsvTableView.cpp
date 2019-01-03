@@ -12,6 +12,7 @@
 #include "CsvTableViewCompleterDelegate.hpp"
 #include "../time/timerCpu.hpp"
 #include "../cont/valueArray.hpp"
+#include "TableEditor.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -228,6 +229,32 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveToFileWithOptions));
         addAction(pAction);
     }
+
+    // Config menu
+    {
+        auto pAction = new QAction(tr("Config"), this);
+        auto pMenu = new QMenu();
+        // Schedule destruction of menu with the parent action.
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+
+        // Open config file
+        {
+            // To improve: this entry could be disabled if there is no file open or it does not have associated config.
+            auto pAction = new QAction(tr("Open related config file..."), this);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openConfigFile));
+            pMenu->addAction(pAction);
+        }
+
+        // 'Save config'
+        {
+            auto pAction = new QAction(tr("Save config file..."), this);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveConfigFile));
+            pMenu->addAction(pAction);
+        }
+
+        pAction->setMenu(pMenu); // Does not transfer ownership.
+        addAction(pAction);
+    } // Config menu
 
     // -------------------------------------------------
     addSeparator();
@@ -886,7 +913,7 @@ void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertDateTime()
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
 {
     auto sPath = QFileDialog::getSaveFileName(this,
-        tr("Open file"),
+        tr("Save file"),
         QString()/*dir*/,
         tr("CSV files (*.csv);;All files (*.*)"),
         nullptr/*selected filter*/,
@@ -1116,6 +1143,85 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
     return saveToFileImpl(dlg.getSaveOptions());
 }
 
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::saveConfigFile()
+{
+    auto pModel = csvModel();
+    if (!pModel)
+        return false;
+
+    const auto sModelPath = pModel->getFilePath();
+    const auto sPathSuggestion = (sModelPath.isEmpty()) ? QString() : DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sModelPath);
+
+    auto sPath = QFileDialog::getSaveFileName(this,
+        tr("Save config file"),
+        sPathSuggestion,
+        tr("CSV Config file (*.csv.conf);;All files (*.*)"),
+        nullptr/*selected filter*/,
+        0/*options*/);
+
+    if (sPath.isEmpty())
+        return false;
+
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+
+    pModel->populateConfig(config);
+
+    // Add column widths
+    char szBuffer[64];
+    for (int c = 0, nCount = pModel->columnCount(); c < nCount; ++c)
+    {
+        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), "columnsByIndex/%d/width_pixels", c);
+        config.setKeyValue(DFG_CLASS_NAME(StringUtf8)(SzPtrUtf8(szBuffer)), DFG_CLASS_NAME(StringUtf8)::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(c))));
+    }
+    
+    const auto bSuccess = config.saveToFile(qStringToFileApi8Bit(sPath));
+    if (!bSuccess)
+        QMessageBox::information(this, tr("Saving failed"), tr("Saving config file to path '%1' failed").arg(sPath));
+
+    return bSuccess;
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openConfigFile()
+{
+    auto pModel = csvModel();
+    if (!pModel)
+        return false;
+    const auto sCsvPath = pModel->getFilePath();
+    if (sCsvPath.isEmpty())
+        return false;
+
+    const auto sConfigPath = DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sCsvPath);
+    QFileInfo fi(sConfigPath);
+    if (!fi.exists())
+    {
+        QMessageBox::information(this, tr("No config file"), tr("File '%1' has no config file.").arg(sCsvPath));
+        return false;
+    }
+
+    std::unique_ptr<DFG_CLASS_NAME(TableEditor)> spConfigWidget(new DFG_CLASS_NAME(TableEditor)());
+    auto bOpened = spConfigWidget->tryOpenFileFromPath(sConfigPath);
+    if (!bOpened)
+    {
+        QMessageBox::information(this, tr("Unable to open config file"), tr("Failed to open config file from path '%1'.").arg(sConfigPath));
+        return false;
+    }
+
+    auto pContainerWidget = new QDialog(this);
+    pContainerWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+    removeContextHelpButtonFromDialog(pContainerWidget);
+    delete pContainerWidget->layout();
+    auto pLayout = new QHBoxLayout(pContainerWidget);
+    pLayout->addWidget(spConfigWidget.get());
+    spConfigWidget->setParent(pContainerWidget);
+
+    pContainerWidget->resize(this->size());
+    pContainerWidget->show();
+    spConfigWidget->resizeColumnsToView();
+    spConfigWidget.release(); // Deleted through childhood of container widget.
+
+    return true;
+}
+
 bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
 {
     return openFile(sPath, CsvItemModel::getLoadOptionsForFile(sPath));
@@ -1156,7 +1262,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     {
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StringViewT SvT;
         DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
-        config.loadFromFile(qStringToFileApi8Bit(sPath + ".conf"));
+        config.loadFromFile(qStringToFileApi8Bit(DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sPath)));
         if (config.entryCount() > 0 && config.valueStrOrNull(DFG_UTF8("columnsByIndex")) != nullptr)
         {
             config.forEachStartingWith(DFG_UTF8("columnsByIndex/"), [&](const SvT& relUri, const SvT& value) {

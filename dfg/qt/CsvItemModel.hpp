@@ -22,6 +22,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
 {
     template <class Cont_T>
     class DFG_CLASS_NAME(SortedSequence);
+
+    class DFG_CLASS_NAME(CsvConfig);
 } }
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io)
@@ -263,6 +265,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         float latestWriteTimeInSeconds() const { return m_writeTimeInSeconds; }
 
         static LoadOptions getLoadOptionsForFile(const QString& sFilePath);
+
+        void populateConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const;
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
         // Note: Does not check whether the table has actually changed and always sets the model modified.
