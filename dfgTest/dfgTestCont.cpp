@@ -1799,7 +1799,7 @@ TEST(dfgCont, CsvConfig_saving)
     }
 }
 
-TEST(dfgCont, CsvFormatDefinitionFromCsvConfig)
+TEST(dfgCont, CsvFormatDefinition_FromCsvConfig)
 {
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
     config.loadFromFile("testfiles/csvConfigTest_0.csv");
@@ -1813,4 +1813,37 @@ TEST(dfgCont, CsvFormatDefinitionFromCsvConfig)
     EXPECT_EQ(true, format.bomWriting());
     EXPECT_EQ("abc", format.getProperty("property_one", ""));
     EXPECT_EQ("def", format.getProperty("property_two", ""));
+}
+
+TEST(dfgCont, CsvFormatDefinition_ToConfig)
+{
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) CsvConfig;
+    typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDef;
+    // Basic test
+    {
+        CsvConfig inConfig;
+        inConfig.loadFromFile("testfiles/csvConfigTest_2.csv");
+        CsvFormatDef format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
+        format.bomWriting(false);
+        format.fromConfig(inConfig);
+        EXPECT_EQ(DFG_MODULE_NS(io)::encodingUTF8, format.textEncoding());
+        EXPECT_EQ('"', format.enclosingChar());
+        EXPECT_EQ(',', format.separatorChar());
+        EXPECT_EQ(DFG_MODULE_NS(io)::EndOfLineTypeRN, format.eolType());
+        EXPECT_EQ(true, format.bomWriting());
+
+        CsvConfig outConfig;
+        format.appendToConfig(outConfig);
+
+        EXPECT_EQ(inConfig, outConfig);
+    }
+
+    // Test 'no enclosing char'-handling
+    {
+        CsvFormatDef format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
+        format.enclosingChar(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone);
+        CsvConfig config;
+        format.appendToConfig(config);
+        EXPECT_TRUE(DFG_MODULE_NS(str)::isEmptyStr(config.value(DFG_UTF8("enclosing_char"), DFG_UTF8("a"))));
+    }
 }

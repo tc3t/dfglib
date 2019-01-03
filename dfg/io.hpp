@@ -62,6 +62,21 @@ inline std::string eolStrFromEndOfLineType(EndOfLineType eolType)
     }
 }
 
+// Like eolStrFromEndOfLineType(), but returned string in "source-code" -format, i.e. "\\n" instead of "\n" etc.
+// TODO: test
+inline std::string eolLiteralStrFromEndOfLineType(EndOfLineType eolType)
+{
+    switch (eolType)
+    {
+    case EndOfLineTypeN: return "\\n";
+    case EndOfLineTypeRN: return "\\r\\n";
+    case EndOfLineTypeR: return "\\r";
+    case EndOfLineTypeNative: return DFG_NATIVE_ENDOFLINE_STR_LITERAL;
+    case EndOfLineTypeMixed: return "";
+    default: return "";
+    }
+}
+
 // Returns eol-type from eol-string (e.g. "\\n" -> EndOfLineTypeN).
 // For invalid input returns EndOfLineTypeN.
 inline EndOfLineType endOfLineTypeFromStr(const DFG_CLASS_NAME(StringViewC)& sv)

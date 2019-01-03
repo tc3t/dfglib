@@ -231,6 +231,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return true;
         }
 
+        void setKeyValue(StorageStringT sKey, StorageStringT sValue)
+        {
+            m_mapKeyToValue[std::move(sKey)] = std::move(sValue);
+        }
+
+        void setKeyValue(SzPtrUtf8R pszKey, SzPtrUtf8R pszValue)
+        {
+            setKeyValue(StorageStringT(pszKey), StorageStringT(pszValue));
+        }
+
         // TODO: test
         bool operator==(const DFG_CLASS_NAME(CsvConfig)& other) const
         {

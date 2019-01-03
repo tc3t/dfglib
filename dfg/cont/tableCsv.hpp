@@ -39,6 +39,8 @@ DFG_ROOT_NS_BEGIN{
         // Reads properties from given config, items not present in config are not modified.
         void fromConfig(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config);
 
+        void appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config);
+
         int32 separatorChar() const { return m_cSep; }
         void separatorChar(int32 cSep) { m_cSep = cSep; }
         int32 enclosingChar() const { return m_cEnc; }
@@ -143,6 +145,55 @@ DFG_ROOT_NS_BEGIN{
             {
                 setProperty(relativeUri, value);
             });
+        }
+    }
+
+    inline void DFG_CLASS_NAME(CsvFormatDefinition)::appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config)
+    {
+        // Encoding
+        {
+            auto psz = DFG_MODULE_NS(io)::encodingToStrId(m_textEncoding);
+            if (!DFG_MODULE_NS(str)::isEmptyStr(psz))
+                config.setKeyValue(DFG_UTF8("encoding"), SzPtrUtf8(DFG_MODULE_NS(io)::encodingToStrId(m_textEncoding)));
+        }
+
+        
+        // Enclosing char
+        {
+            if (m_cEnc == DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone)
+                config.setKeyValue(DFG_UTF8("enclosing_char"), DFG_UTF8(""));
+            else if (!DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(m_cEnc) && m_cEnc >= 0)
+            {
+                char buffer[32];
+                DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", m_cEnc);
+                config.setKeyValue(DFG_UTF8("enclosing_char"), SzPtrUtf8(buffer));
+            }
+        }
+
+        // Separator char
+        if (!DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(m_cSep) && m_cSep >= 0)
+        {
+            char buffer[32];
+            DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", m_cSep);
+            config.setKeyValue(DFG_UTF8("separator_char"), SzPtrUtf8(buffer));
+        }
+
+        // EOL-type
+        {
+            const auto psz = DFG_MODULE_NS(io)::eolLiteralStrFromEndOfLineType(m_eolType);
+            if (!DFG_MODULE_NS(str)::isEmptyStr(psz))
+                config.setKeyValue(DFG_UTF8("end_of_line_type"), SzPtrUtf8(psz.c_str()));
+        }
+
+        // BOM writing
+        {
+            config.setKeyValue(DFG_UTF8("bom_writing"), (m_bWriteBom) ? DFG_UTF8("1") : DFG_UTF8("0"));
+        }
+
+        // Properties
+        // TODO: Generic properties are std::string so must figure out raw bytes to UTF-8 conversion. In practice consider changing properties to UTF-8
+        {
+            //m_genericProperties
         }
     }
     
