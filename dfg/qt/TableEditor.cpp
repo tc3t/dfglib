@@ -36,7 +36,8 @@ namespace
 {
     enum TableEditorPropertyId
     {
-        TableEditorPropertyId_cellEditorHeight
+        TableEditorPropertyId_cellEditorHeight,
+        TableEditorPropertyId_last = TableEditorPropertyId_cellEditorHeight
     };
 
     // Class for window extent (=one dimension of window size) either as absolute value or as percentage of some widget size
@@ -248,7 +249,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     m_bHandlingOnCellEditorTextChanged(false)
 {
-    setProperty("dfglib_allow_app_settings_usage", true);
     // Model
     m_spTableModel.reset(new DFG_CLASS_NAME(CsvItemModel));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigSourcePathChanged, this, &ThisClass::onSourcePathChanged));
@@ -256,7 +256,6 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnSaveToFileCompleted, this, &ThisClass::onSaveCompleted));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::dataChanged, this, &ThisClass::onModelDataChanged));
-    m_spTableModel->setProperty("dfglib_allow_app_settings_usage", true);
 
     // Proxy model
     m_spProxyModel.reset(new ProxyModelClass(this));
@@ -266,7 +265,6 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     // View
     m_spTableView.reset(new ViewClass(this));
     m_spTableView->setModel(m_spProxyModel.get());
-    m_spTableView->setProperty("dfglib_allow_app_settings_usage", true);
     std::unique_ptr<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> spAnalyzerPanel(new DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(this));
     m_spTableView->addSelectionAnalyzer(std::make_shared<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)>(spAnalyzerPanel.get()));
     m_spSelectionAnalyzerPanel.reset(spAnalyzerPanel.release());
@@ -464,7 +462,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
         }
         else
         {
-            DFG_ASSERT_CORRECTNESS(false); // This should never be reached.
+            // Getting here shouldn't happen, but has happened if table view has been in a corrupted state
+            // where view row count and table row count has not been the same.
+            DFG_ASSERT_CORRECTNESS(false);
             setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
         }
     }
@@ -511,6 +511,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnR
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setAllowApplicationSettingsUsage(const bool b)
 {
+    setProperty("dfglib_allow_app_settings_usage", b);
+
+    // Re-apply properties that might have changed with change of this setting.
+    DFG_STATIC_ASSERT(TableEditorPropertyId_last == TableEditorPropertyId_cellEditorHeight, "Check whether new properties should be handled here.");
+    setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this));
+
+    if (m_spTableModel)
+        m_spTableModel->setProperty("dfglib_allow_app_settings_usage", b);
     if (m_spTableView)
         m_spTableView->setAllowApplicationSettingsUsage(b);
 }

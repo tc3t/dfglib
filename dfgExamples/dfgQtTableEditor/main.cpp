@@ -14,9 +14,9 @@ int main(int argc, char *argv[])
     dfg::qt::QtApplication::m_sSettingsPath = a.applicationFilePath() + ".ini";
 
     dfg::qt::TableEditor tableEditor;
-    tableEditor.setProperty("dfglib_allow_app_settings_usage", true);
-    tableEditor.show();
     tableEditor.setAllowApplicationSettingsUsage(true);
+    tableEditor.show();
+
     auto args = a.arguments();
 
     if (args.size() >= 2)
