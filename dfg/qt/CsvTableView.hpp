@@ -171,6 +171,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool generateContentImpl(const CsvModel& csvModel);
 
+        bool getAllowApplicationSettingsUsage() const;
         void setAllowApplicationSettingsUsage(bool b);
 
         void finishEdits();

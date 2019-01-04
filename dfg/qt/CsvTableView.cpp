@@ -1199,6 +1199,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openConfigFile()
     }
 
     std::unique_ptr<DFG_CLASS_NAME(TableEditor)> spConfigWidget(new DFG_CLASS_NAME(TableEditor)());
+    spConfigWidget->setAllowApplicationSettingsUsage(getAllowApplicationSettingsUsage());
     auto bOpened = spConfigWidget->tryOpenFileFromPath(sConfigPath);
     if (!bOpened)
     {
@@ -2214,6 +2215,11 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
         m_tempFilePathsToRemoveOnExit.push_back(QString::fromUtf8(toCharPtr_raw(strmTemp.pathU8())));
         return true;
     }
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getAllowApplicationSettingsUsage() const
+{
+    return property("dfglib_allow_app_settings_usage").toBool();
 }
 
 void DFG_CLASS_NAME(CsvTableView)::setAllowApplicationSettingsUsage(bool b)
