@@ -36,6 +36,8 @@ namespace
 {
     enum TableEditorPropertyId
     {
+        // Add properties here in the beginning (or remember to update TableEditorPropertyId_last)
+        TableEditorPropertyId_cellEditorFontPointSize,
         TableEditorPropertyId_cellEditorHeight,
         TableEditorPropertyId_last = TableEditorPropertyId_cellEditorHeight
     };
@@ -108,6 +110,13 @@ namespace
         pWidget->setMaximumHeight(extent.toAbsolute(refHeight));
     }
 
+    double defaultFontPointSizeForCellEditor()
+    {
+        auto pApp = qobject_cast<QApplication*>(QApplication::instance());
+        DFG_ASSERT(pApp != nullptr); // Remove this if there's a valid case of having TableEditor without QApplication.
+        return (pApp) ? pApp->font().pointSizeF() : 8.25;
+    }
+
     // Properties
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(TableEditor)
     DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE("TableEditor_cellEditorHeight",
@@ -116,6 +125,12 @@ namespace
                                               WindowExtentProperty,
                                               [] { return WindowExtentProperty(50); },
                                               WindowExtentProperty);
+    DFG_QT_DEFINE_OBJECT_PROPERTY("TableEditor_cellEditorFontPointSize",
+                                              TableEditor,
+                                              TableEditorPropertyId_cellEditorFontPointSize,
+                                              double,
+                                              defaultFontPointSizeForCellEditor);
+
 
     template <TableEditorPropertyId ID>
     auto getTableEditorProperty(DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)* editor) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>::PropertyType
@@ -245,6 +260,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
     };
 }}} // dfg::qt::DFG_DETAILS_NS -namespace
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::CellEditor::setFontPointSizeF(const qreal pointSize)
+{
+    if (pointSize <= 0)
+    {
+        DFG_ASSERT_INVALID_ARGUMENT(false, "Point size value should be > 0");
+        return;
+    }
+    auto font = this->font();
+    font.setPointSizeF(pointSize);
+    setFont(font);
+}
+
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     m_bHandlingOnCellEditorTextChanged(false)
@@ -285,6 +312,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
 
         m_spCellEditor.reset(new CellEditor(this));
         m_spCellEditor->setDisabled(true);
+        m_spCellEditor->setFontPointSizeF(getTableEditorProperty<TableEditorPropertyId_cellEditorFontPointSize>(this));
 
         m_spCellEditorDockWidget->setWidget(m_spCellEditor.get());
 
@@ -514,8 +542,16 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setAllowApplicationSettings
     setProperty("dfglib_allow_app_settings_usage", b);
 
     // Re-apply properties that might have changed with change of this setting.
-    DFG_STATIC_ASSERT(TableEditorPropertyId_last == TableEditorPropertyId_cellEditorHeight, "Check whether new properties should be handled here.");
-    setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this));
+    {
+        DFG_STATIC_ASSERT(TableEditorPropertyId_last == 1, "Check whether new properties should be handled here.");
+
+        // cellEditorHeight
+        setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this));
+
+        // cellEditorFontPointSize
+        if (m_spCellEditor)
+            m_spCellEditor->setFontPointSizeF(getTableEditorProperty<TableEditorPropertyId_cellEditorFontPointSize>(this));
+    }
 
     if (m_spTableModel)
         m_spTableModel->setProperty("dfglib_allow_app_settings_usage", b);

@@ -64,6 +64,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                BaseClass(parent)
            {
            }
+
+           void setFontPointSizeF(qreal pointSize);
         };
 
         DFG_CLASS_NAME(TableEditor)();
