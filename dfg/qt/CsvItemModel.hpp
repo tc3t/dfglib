@@ -6,6 +6,7 @@
 #include "../cont/tableCsv.hpp"
 #include "../io/textEncodingTypes.hpp"
 #include "StringMatchDefinition.hpp"
+#include "../build/languageFeatureInfo.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -115,17 +116,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         struct ColInfo
         {
+            struct CompleterDeleter
+            {
+                void operator()(QCompleter* ptr) const;
+            };
+
             ColInfo(QString sName = "", ColType type = ColTypeText, CompleterType complType = CompleterTypeNone) :
                 m_name(sName), m_type(type), m_completerType(complType) {}
 
-            ~ColInfo();
+#if (DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0)
+            ColInfo(ColInfo&& other);
+            ColInfo& operator=(ColInfo&& other);
+#endif
 
             bool hasCompleter() const { return m_spCompleter.get() != nullptr; }
 
             QString m_name;
             ColType m_type;
             CompleterType m_completerType;
-            std::shared_ptr<QCompleter> m_spCompleter;
+            std::unique_ptr<QCompleter, CompleterDeleter> m_spCompleter;
         };
 
         class SaveOptions : public DFG_CLASS_NAME(CsvFormatDefinition)

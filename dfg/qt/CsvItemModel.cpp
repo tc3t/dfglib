@@ -124,10 +124,26 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
 
 } } } // dfg::qt::unnamed_namespace
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::~ColInfo()
+#if (DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0)
+    DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::ColInfo(ColInfo&& other)
+    {
+        *this = std::move(other);
+    }
+
+    auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::operator=(ColInfo&& other) -> ColInfo&
+    {
+        m_name = std::move(other.m_name);
+        m_type = std::move(other.m_type);
+        m_completerType = std::move(other.m_completerType);
+        m_spCompleter = std::move(other.m_spCompleter);
+        return *this;
+    }
+#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::CompleterDeleter::operator()(QCompleter* p) const
 {
-    //if (m_spCompleter)
-    //    m_spCompleter.release()->deleteLater(); // Can't delete directly due to thread affinity (i.e. might get deleted from wrong thread).
+    if (p)
+        p->deleteLater(); // Can't delete directly due to thread affinity (i.e. might get deleted from wrong thread triggering Qt asserts).
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
