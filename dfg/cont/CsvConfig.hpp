@@ -173,11 +173,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             strm << '\n';
         }
 
-        bool saveToFile(const dfg::StringViewSzC& sv) const
+        bool saveToFile(const dfg::StringViewSzC& svPath) const
         {
             typedef DFG_CLASS_NAME(StringViewC) SvC;
 
-            DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) ostrm(sv.c_str());
+            DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) ostrm(svPath.c_str());
 
             if (!ostrm.is_open())
                 return false;

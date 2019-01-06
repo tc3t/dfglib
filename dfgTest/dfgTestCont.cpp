@@ -736,12 +736,14 @@ TEST(dfgCont, TableCsv)
         DFG_CLASS_NAME(OmcByteStream)<std::string> ostrm(&bytes);
         auto writeFormat = table.m_readFormat;
         writeFormat.eolType(eolTypes[i]);
-        auto writePolicy = table.createWritePolicy<decltype(ostrm)>(writeFormat);
-        table.writeToStream(ostrm, writePolicy);
-        // ...read file bytes...
-        const auto fileBytes = fileToByteContainer<std::string>(s);
-        // ...and check that bytes match.
-        EXPECT_EQ(fileBytes, bytes);
+        {
+            auto writePolicy = table.createWritePolicy<decltype(ostrm)>(writeFormat);
+            table.writeToStream(ostrm, writePolicy);
+            // ...read file bytes...
+            const auto fileBytes = fileToByteContainer<std::string>(s);
+            // ...and check that bytes match.
+            EXPECT_EQ(fileBytes, bytes);
+        }
 
         // Check also that saving without BOM works.
         {

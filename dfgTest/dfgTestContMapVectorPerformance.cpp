@@ -112,7 +112,7 @@ namespace
         typedef DFG_ROOT_NS::uint32 uint32;
 
     public:
-        void addReducedValuesAndWriteToFile(const size_t nFirstResultColumn, const dfg::StringViewSzAscii& svBaseName)
+        void addReducedValuesAndWriteToFile(const uint32 nFirstResultColumn, const dfg::StringViewSzAscii& svBaseName)
         {
             // Calculate averages etc.
             addReducedValues(nFirstResultColumn);

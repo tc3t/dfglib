@@ -180,7 +180,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     else if (nPrec >= 1000) // Limit precision to 3 digits.
         nPrec = 999;
     char szFormat[8] = "";
-    std::sprintf(szFormat, "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
+    DFG_DETAIL_NS::sprintf_s(szFormat, sizeof(szFormat), "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
     DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val);
 
     // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
@@ -188,7 +188,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     if (nPrecParam == -1 && std::strlen(psz) > std::numeric_limits<T>::digits10)
     {
         char szShortFormat[8] = "";
-        std::sprintf(szShortFormat, "%%.%u%s", std::numeric_limits<T>::digits10, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
+        DFG_DETAIL_NS::sprintf_s(szShortFormat, sizeof(szShortFormat), "%%.%u%s", std::numeric_limits<T>::digits10, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
         DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szShortFormat, val);
         if (DFG_DETAIL_NS::strToFloatingPoint<T>(psz) == val)
             return psz;
@@ -264,7 +264,7 @@ inline ItoaReturnValue intToRadixRepresentation(const Int_T value, const size_t 
             rv = ItoaError_bufferTooSmall;
     }
     std::reverse(outBegin, p); // buffer[0] has least significant digit so reverse to get correct representation.
-    return (rv >= 0) ? std::distance(outBegin, p) : rv;
+    return (rv >= 0) ? static_cast<int32>(std::distance(outBegin, p)) : rv;
 }
 
 // Convenience version returning conversion return value and automatically allocated string (instead of relying on caller given output).

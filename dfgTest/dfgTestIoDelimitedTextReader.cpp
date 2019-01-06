@@ -56,8 +56,8 @@ const std::basic_string<CsvCellChar>& getExpectedCellData(size_t nFileIndex, siz
 {
     if (!DFG_ROOT_NS::isValidIndex(csvTestSets, nFileIndex))
         throw std::out_of_range("Bad index");
-    const auto index = DFG_ROOT_NS::pairIndexToLinear(nRow, nCol, std::get<3>(csvTestSets[nFileIndex]));
-    if (index >= 0 && index < std::get<2>(csvTestSets[nFileIndex]))
+    const size_t index = DFG_ROOT_NS::pairIndexToLinear(nRow, nCol, std::get<3>(csvTestSets[nFileIndex]));
+    if (index < std::get<2>(csvTestSets[nFileIndex]))
         return std::get<1>(csvTestSets[nFileIndex])[index];
     else
         throw std::out_of_range("Bad index");

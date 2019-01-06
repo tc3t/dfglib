@@ -294,6 +294,7 @@ namespace
         using namespace DFG_MODULE_NS(math);
         typedef typename std::make_unsigned<Int_T>::type UnsignedT;
         const auto zeroVal = absAsUnsigned(Int_T(0));
+        DFG_UNUSED(zeroVal);
         DFGTEST_STATIC((std::is_same<const UnsignedT, decltype(zeroVal)>::value));
         EXPECT_EQ(0, absAsUnsigned(Int_T(0)));
         signedUnsignedTests<Int_T>(typename std::is_signed<Int_T>::type());

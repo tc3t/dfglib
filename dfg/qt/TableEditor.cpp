@@ -330,7 +330,6 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         int row = 0;
         spLayout->addWidget(m_spLineEditSourcePath.get(), row++, 0);
         spLayout->addWidget(m_spTableView.get(), row++, 0);
-        const auto cellEditorMaxHeight = m_spCellEditor->maximumHeight();
         spLayout->addWidget(m_spCellEditorDockWidget.get(), row++, 0);
 
         // Miscellaneous controls

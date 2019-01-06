@@ -229,9 +229,9 @@ DFG_ROOT_NS_BEGIN{
                     return false;
                 
                 // TODO: optimize, this is quickly done, inefficient implementation.
-                for (size_t r = 0; r < nRows; ++r)
+                for (Index_T r = 0; r < nRows; ++r)
                 {
-                    for (size_t c = 0; c < nCols; ++c)
+                    for (Index_T c = 0; c < nCols; ++c)
                     {
                         auto p0 = (*this)(r, c);
                         auto p1 = other(r, c);
