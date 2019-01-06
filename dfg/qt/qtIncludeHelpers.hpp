@@ -12,6 +12,7 @@
 		__pragma(warning(disable:4640)) /* "construction of local static object is not thread-safe" */ \
 		__pragma(warning(disable:4800)) /* "forcing value to bool 'true' or 'false' (performance warning)" */ \
 		__pragma(warning(disable:4826)) /* "Conversion from 'x' to 'y' is sign-extended. This may cause unexpected runtime behavior." */ \
+        __pragma(warning(disable:4946)) /* "reinterpret_cast used between related classes: '<class1, typically QObject>' and '<class2, typically some QObject-inherited class such as QLineEdit>'" */ \
 
 	#define DFG_END_INCLUDE_QT_HEADERS \
 		__pragma(warning(pop))
