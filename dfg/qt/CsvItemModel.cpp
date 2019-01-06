@@ -775,6 +775,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
     const auto nNewCount = getRowCount();
 
     DFG_ASSERT_CORRECTNESS(nOriginalCount - nNewCount == count);
+    DFG_UNUSED(nOriginalCount); // To avoid warning in release-build
+    DFG_UNUSED(nNewCount); // To avoid warning in release-build
 
     setModifiedStatus(true);
     return true;

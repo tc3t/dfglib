@@ -443,8 +443,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Remove unused char buffers.
             while(!m_charBuffers.empty() && m_charBuffers.rbegin()->first >= static_cast<Index_T>(m_colToRows.size()))
             {
-                auto iter = m_charBuffers.end();
-                m_charBuffers.erase(--iter);
+                auto iterLast = m_charBuffers.end();
+                m_charBuffers.erase(--iterLast);
             }
         }
 

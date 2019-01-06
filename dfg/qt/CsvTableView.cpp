@@ -232,10 +232,10 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 
     // Config menu
     {
-        auto pAction = new QAction(tr("Config"), this);
+        auto pMenuAction = new QAction(tr("Config"), this);
         auto pMenu = new QMenu();
         // Schedule destruction of menu with the parent action.
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+        DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
 
         // Open config file
         {
@@ -252,8 +252,8 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
             pMenu->addAction(pAction);
         }
 
-        pAction->setMenu(pMenu); // Does not transfer ownership.
-        addAction(pAction);
+        pMenuAction->setMenu(pMenu); // Does not transfer ownership.
+        addAction(pMenuAction);
     } // Config menu
 
     // -------------------------------------------------
@@ -2051,7 +2051,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         DFG_ASSERT(false);
         return false;
     }
-    const auto generator = generatorType(settingsModel);
+    const auto genType = generatorType(settingsModel);
     const auto target = targetType(settingsModel);
     auto pModel = csvModel();
     if (!pModel)
@@ -2059,7 +2059,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
     auto& rModel = *pModel;
 
     DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
-    if (generator == GeneratorTypeRandomIntegers)
+    if (genType == GeneratorTypeRandomIntegers)
     {
         if (settingsModel.rowCount() < 4) // Not enough parameters
             return false;
@@ -2076,7 +2076,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         generateForEachInTarget(target, *this, rModel, generator);
         return true;
     }
-    else if (generator == GeneratorTypeRandomDoubles)
+    else if (genType == GeneratorTypeRandomDoubles)
     {
         if (settingsModel.rowCount() < 6) // Not enough parameters
             return false;
@@ -2116,7 +2116,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         generateForEachInTarget(target, *this, rModel, generator);
         return true;
     }
-    else if (generator == GeneratorTypeFill)
+    else if (genType == GeneratorTypeFill)
     {
         const auto sFill = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
         const auto pszFillU8 = SzPtrUtf8(sFill.data());
