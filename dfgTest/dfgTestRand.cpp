@@ -11,6 +11,9 @@ TEST(dfgRand, dfgRand)
     auto distrEng = DFG_ROOT_NS::DFG_SUB_NS_NAME(rand)::makeDistributionEngineUniform(&randEng, int(-3), int(3));
     auto distrEngSizet = DFG_ROOT_NS::DFG_SUB_NS_NAME(rand)::makeDistributionEngineUniform(&randEng, size_t(0), size_t(3));
 
+    // Test that one can easily set value type parameter.
+    DFGTEST_STATIC((std::is_same<decltype(distrEngSizet), decltype(DFG_ROOT_NS::DFG_SUB_NS_NAME(rand)::makeDistributionEngineUniform<size_t>(&randEng, 0, 1))>::value == true));
+
     std::uniform_int_distribution<int> distrStd(-3, 3);
     std::uniform_int_distribution<size_t> distrStdSizet(0, 3);
 

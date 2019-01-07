@@ -133,7 +133,7 @@ struct DFG_CLASS_NAME(DistributionEngine)
 };
 
 // Utility function for creating DistributionEngine with uniform distribution.
-template <class RandEngine, class Type>
+template <class Type, class RandEngine>
 DFG_CLASS_NAME(DistributionEngine)<RandEngine, typename DFG_CLASS_NAME(DistributionTypeUniform)<Type>::type> makeDistributionEngineUniform(RandEngine* pRe, const Type minRange, const Type maxRange)
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
