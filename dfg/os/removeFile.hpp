@@ -5,6 +5,7 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
 {
+    // Returns 0 in success, otherwise non-zero (for details see documentation of std::remove())
     inline int removeFile(const char* psz) { return std::remove(psz); }
 #ifdef _WIN32
     inline int removeFile(const wchar_t* psz) { return _wremove(psz); }

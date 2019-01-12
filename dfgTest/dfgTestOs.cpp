@@ -3,6 +3,8 @@
 #include <dfg/str.hpp>
 #include <dfg/io.hpp>
 #include <dfg/os/memoryMappedFile.hpp>
+#include <dfg/os/removeFile.hpp>
+#include <dfg/os/renameFileOrDirectory.hpp>
 #include <dfg/os/TemporaryFileStream.hpp>
 #include <dfg/os/fileSize.hpp>
 #include <dfg/alg.hpp>
@@ -127,4 +129,48 @@ TEST(dfgOs, fileSize)
     EXPECT_EQ(nKnownFileSize, fileSize(sPath));
     EXPECT_EQ(nKnownFileSize, fileSize(swPath));
     EXPECT_EQ(0, fileSize("testFiles/aNonExistentFile.invalidExtension"));
+}
+
+TEST(dfgOs, renameFileOrDirectory_cstdio)
+{
+    using namespace DFG_MODULE_NS(os);
+    using namespace DFG_MODULE_NS(io);
+
+    const char szPath0[] =      "testfiles/generated/renameFileOrDirectory_cstdioTest0.file";
+    const wchar_t wszPath0[] = L"testfiles/generated/renameFileOrDirectory_cstdioTest0.file";
+    const char szPath1[] =      "testfiles/generated/renameFileOrDirectory_cstdioTest1.file";
+    const wchar_t wszPath1[] = L"testfiles/generated/renameFileOrDirectory_cstdioTest1.file";
+
+    removeFile(szPath0);
+    removeFile(szPath1);
+
+    EXPECT_FALSE(isPathFileAvailable(szPath0, FileModeExists));
+    EXPECT_FALSE(isPathFileAvailable(szPath1, FileModeExists));
+
+    // Create file
+    DFG_CLASS_NAME(OfStream) strm(szPath0);
+    strm.close();
+
+    EXPECT_TRUE(isPathFileAvailable(szPath0, FileModeExists));
+    EXPECT_FALSE(isPathFileAvailable(szPath1, FileModeExists));
+
+    EXPECT_EQ(0, renameFileOrDirectory_cstdio(szPath0, szPath1));
+
+    EXPECT_FALSE(isPathFileAvailable(szPath0, FileModeExists));
+    EXPECT_TRUE(isPathFileAvailable(szPath1, FileModeExists));
+
+#ifdef _WIN32
+    renameFileOrDirectory_cstdio(wszPath1, wszPath0);
+#else
+    renameFileOrDirectory_cstdio(szPath1, szPath0);
+#endif
+
+    EXPECT_TRUE(isPathFileAvailable(szPath0, FileModeExists));
+    EXPECT_FALSE(isPathFileAvailable(szPath1, FileModeExists));
+
+    removeFile(szPath0);
+
+    EXPECT_FALSE(isPathFileAvailable(szPath0, FileModeExists));
+
+    // TODO: test directory renaming
 }
