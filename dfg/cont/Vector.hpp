@@ -64,6 +64,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         template <class Iter_T, class Val_T>
         iterator insert(Iter_T iter, Val_T&& val) { return insertImpl(iter, std::forward<Val_T>(val), DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyable<value_type>()); }
+
+        template <class Input_T>
+#if (DFG_LANGFEAT_VECTOR_INSERT_ITERATOR_RETURN == 0)
+        void insert(iterator pos, Input_T iterBegin, Input_T iterEnd)
+#else
+        iterator insert(const_iterator pos, Input_T iterBegin, Input_T iterEnd)
+#endif      
+        {
+#if (DFG_LANGFEAT_VECTOR_INSERT_ITERATOR_RETURN == 0)
+            BaseClass::insert(pos, iterBegin, iterEnd);
+#else
+            return BaseClass::insert(pos, iterBegin, iterEnd);
+#endif
+        }
     };
 
 } } // module namespace

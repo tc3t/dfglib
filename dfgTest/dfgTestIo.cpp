@@ -25,6 +25,7 @@
 #include <dfg/io/OfStream.hpp>
 #include <dfg/io/seekFwdToLine.hpp>
 #include <dfg/str/strCat.hpp>
+#include <dfg/cont/tableCsv.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <dlib/vectorstream.h>
@@ -1159,4 +1160,61 @@ TEST(dfgIo, endOfLineTypeFromStr)
     EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr(""));
     EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr("\\r\\n\\r"));
     EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr("\\t"));
+}
+
+TEST(dfgIo, ostreamPerformance)
+{
+#if ENABLE_RUNTIME_COMPARISONS == 0
+    DFGTEST_MESSAGE("ostreamPerformance skipped due to build settings");
+#else
+    using namespace DFG_ROOT_NS;
+#ifdef _DEBUG
+    const auto nRowCount = 10000;
+#else
+    const auto nRowCount = 1000000;
+#endif
+    const auto nColCount = 5;
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, uint32> table;
+    for (int c = 0; c < nColCount; ++c)
+        for (int r = 0; r < nRowCount; ++r)
+            table.setElement(r, c, DFG_UTF8("a"));
+
+    typedef DFG_MODULE_NS(time)::TimerCpu TimerT;
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<char> VectorT;
+    VectorT bytesStd;
+    VectorT bytesOmc;
+    VectorT bytesBasicOmc;
+
+    // std::ostrstream
+    {
+        TimerT timer;
+        std::ostrstream ostrStream;
+        table.writeToStream(ostrStream);
+        DFGTEST_MESSAGE("std::ostrstream lasted " << timer.elapsedWallSeconds());
+        const auto psz = ostrStream.str();
+        bytesStd.assign(psz, psz + static_cast<std::streamoff>(ostrStream.tellp()));
+        ostrStream.freeze(false);
+    }
+
+    // OmcByteStream
+    {
+        TimerT timer;
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<> omcStrm;
+        table.writeToStream(omcStrm);
+        DFGTEST_MESSAGE("OmcByteStream lasted " << timer.elapsedWallSeconds());
+        bytesOmc = omcStrm.releaseData();
+    }
+
+    // BasicOmcByteStream
+    {
+        TimerT timer;
+        DFG_MODULE_NS(io)::BasicOmcByteStream<> ostrm;
+        table.writeToStream(ostrm);
+        DFGTEST_MESSAGE("BasicOmcByteStream lasted " << timer.elapsedWallSeconds());
+        bytesBasicOmc = ostrm.releaseData();
+    }
+
+    EXPECT_EQ(bytesStd, bytesOmc);
+    EXPECT_EQ(bytesStd, bytesBasicOmc);
+#endif // ENABLE_RUNTIME_COMPARISONS
 }

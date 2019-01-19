@@ -104,3 +104,10 @@ Notes:
 #else
 	#define DFG_OVERRIDE_DESTRUCTOR override
 #endif
+
+// DFG_LANGFEAT_VECTOR_INSERT_ITERATOR_RETURN (whether vector::insert(pos, iterBegin, iterEnd) returns void or iterator)
+#if (defined(_MSC_VER) && (_MSC_VER <= DFG_MSVC_VER_2010)) || (defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ <= 8)))
+    #define DFG_LANGFEAT_VECTOR_INSERT_ITERATOR_RETURN 0
+#else
+    #define DFG_LANGFEAT_VECTOR_INSERT_ITERATOR_RETURN 1
+#endif

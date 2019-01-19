@@ -22,6 +22,7 @@
 #include <dfg/cont/UniqueResourceHolder.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/typeTraits.hpp>
+#include <dfg/io/BasicOmcByteStream.hpp>
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/iter/szIterator.hpp>
 #include <dfg/cont/contAlg.hpp>
@@ -865,6 +866,51 @@ TEST(dfgCont, TableCsv)
     }
 
     // TODO: test auto detection
+}
+
+TEST(dfgCont, TableCsv_memStreamTypes)
+{
+    // Test that writing to different memory streams work (in particular that BasicOmcByteStream works).
+
+    using namespace DFG_ROOT_NS;
+    const auto nRowCount = 10;
+    const auto nColCount = 5;
+    dfg::cont::TableCsv<char, uint32> table;
+    for (int c = 0; c < nColCount; ++c)
+        for (int r = 0; r < nRowCount; ++r)
+            table.setElement(r, c, DFG_UTF8("a"));
+
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<char> VectorT;
+    VectorT bytesStd;
+    VectorT bytesOmc;
+    VectorT bytesBasicOmc;
+
+    // std::ostrstream
+    {
+        std::ostrstream ostrStream;
+        table.writeToStream(ostrStream);
+        const auto psz = ostrStream.str();
+        bytesStd.assign(psz, psz + static_cast<std::streamoff>(ostrStream.tellp()));
+        ostrStream.freeze(false);
+    }
+
+    // OmcByteStream
+    {
+        DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<> omcStrm;
+        table.writeToStream(omcStrm);
+        bytesOmc = omcStrm.releaseData();
+    }
+
+    // BasicOmcByteStream
+    {
+        DFG_MODULE_NS(io)::BasicOmcByteStream<> ostrm;
+        table.writeToStream(ostrm);
+        bytesBasicOmc = ostrm.releaseData();
+        EXPECT_TRUE(ostrm.m_internalData.empty()); // Make sure that releasing works.
+    }
+
+    EXPECT_EQ(bytesStd, bytesOmc);
+    EXPECT_EQ(bytesStd, bytesBasicOmc);
 }
 
 TEST(dfgCont, SortedSequence)
