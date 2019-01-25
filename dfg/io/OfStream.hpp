@@ -265,10 +265,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
         DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath)
         {
-            openOfStream(*this, sPath, std::ios::binary | std::ios::out);
+            open(sPath);
         }
 
         DFG_CLASS_NAME(OfStream)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath)
+        {
+            open(sPath);
+        }
+
+        void open(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath)
+        {
+            openOfStream(*this, sPath, std::ios::binary | std::ios::out);
+        }
+
+        void open(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath)
         {
             openOfStream(*this, sPath, std::ios::binary | std::ios::out);
         }
