@@ -1,8 +1,9 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
+#include "../dfgBase.hpp"
 #include "../cont/Vector.hpp"
-
+#include "../ReadOnlySzParam.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -23,6 +24,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
                 m_pEffectiveContainer = &m_internalData;
         }
 
+        size_t size() const { return sizeInBytes(*m_pEffectiveContainer); }
+
         Cont_T releaseData()          { return std::move(m_internalData); }
         Cont_T releaseDataAndBuffer()
         {
@@ -37,8 +40,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return *this;
         }
 
+        bool good() const
+        {
+            return true;
+        }
+
+        BasicOmcByteStream& operator<<(const DFG_CLASS_NAME(StringViewC)& sv)
+        { 
+            write(sv.data(), sv.size());
+            return *this;
+        }
+
+        void reserve(const size_t nCount)
+        {
+            m_pEffectiveContainer->reserve(nCount);
+        }
+
         Cont_T m_internalData;
         Cont_T* m_pEffectiveContainer; // Points to effective container, never null after construction.
-    }; // Class BasicOmcStream
+    }; // Class BasicOmcByteStream
 
 } } // module namespace
