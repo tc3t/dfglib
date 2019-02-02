@@ -78,6 +78,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
         size_t size() const { return sizeInBytes(*m_pData); }
 
+        void reserve(const size_t nCount)
+        {
+            m_pData->reserve(nCount);
+        }
+
         Cont_T& container() { return *m_pData; }
         const Cont_T& container() const { return *m_pData; }
 
@@ -196,6 +201,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         std::streamsize writeBytes(const char* p, const size_t nCount)
         {
             return m_streamBuf.writeBytes(p, nCount);
+        }
+
+        void reserve(const size_t nCount)
+        {
+            m_streamBuf.reserve(nCount);
         }
 
         StreamBuffer_T m_streamBuf;
