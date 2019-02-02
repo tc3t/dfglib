@@ -259,6 +259,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     public:
         typedef std::ofstream BaseClass;
 
+        // Dumps bytes to file overwriting existing content.
+        static bool dumpBytesToFile_overwriting(const DFG_CLASS_NAME(StringViewSzC)& sPath, const char* p, size_t nCount)
+        {
+            DFG_CLASS_NAME(OfStream) ostrm(sPath.c_str());
+            if (!ostrm.is_open())
+                return false;
+            while (nCount > 0)
+            {
+                const auto nWriteCount = (nCount > NumericTraits<std::streamsize>::maxValue) ? NumericTraits<std::streamsize>::maxValue : static_cast<std::streamsize>(nCount);
+                ostrm.write(p, nWriteCount);
+                p += nWriteCount;
+                nCount -= static_cast<size_t>(nWriteCount);
+
+            }
+            return ostrm.good();
+        }
+
         DFG_CLASS_NAME(OfStream)()
         {
         }

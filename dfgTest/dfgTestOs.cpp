@@ -2,13 +2,10 @@
 #include <dfg/os.hpp>
 #include <dfg/str.hpp>
 #include <dfg/io.hpp>
-#include <dfg/os/memoryMappedFile.hpp>
-#include <dfg/os/removeFile.hpp>
-#include <dfg/os/renameFileOrDirectory.hpp>
-#include <dfg/os/TemporaryFileStream.hpp>
-#include <dfg/os/fileSize.hpp>
+#include <dfg/osAll.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/dfgBase.hpp>
+#include <dfg/io/OfStream.hpp>
 
 #ifdef _WIN32
 TEST(dfgOs, pathFindExtension)
@@ -173,4 +170,125 @@ TEST(dfgOs, renameFileOrDirectory_cstdio)
     EXPECT_FALSE(isPathFileAvailable(szPath0, FileModeExists));
 
     // TODO: test directory renaming
+}
+
+namespace
+{
+    template <class OutputFile_T>
+    static void testOutputFileMemStream(OutputFile_T& outputFile, const DFG_ROOT_NS::DFG_CLASS_NAME(StringViewSzC)& svPath)
+    {
+        using namespace DFG_MODULE_NS(os);
+        auto& strm = outputFile.intermediateMemoryStream();
+        EXPECT_TRUE(strm.good());
+        EXPECT_TRUE(outputFile.m_pathIntermediate.empty());
+        strm.write("abc", 3);
+        // Verify that destination file hasn't been changed.
+        EXPECT_EQ(1, fileSize(svPath.c_str()));
+        EXPECT_EQ(0, outputFile.writeIntermediateToFinalLocation());
+        EXPECT_EQ(3, fileSize(svPath.c_str()));
+        EXPECT_EQ("abc", DFG_MODULE_NS(io)::fileToByteContainer<std::string>(svPath.c_str()));
+    }
+}
+
+TEST(dfgOs, OutputFile_completeOrNone)
+{
+    using namespace DFG_MODULE_NS(os);
+    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) OfStream;
+
+    // Basic file intermediate test
+    {
+        const char szFilePath[] = "testfiles/generated/OutputFileTest_0.txt";
+        OfStream::dumpBytesToFile_overwriting(szFilePath, "a", 1);
+        OutputFile_completeOrNone<> outputFile(szFilePath);
+        auto& strm = outputFile.intermediateFileStream();
+        EXPECT_TRUE(strm.good());
+        // Check that intermediate file got created.
+        EXPECT_TRUE(isPathFileAvailable(outputFile.m_pathIntermediate, FileModeExists));
+        strm.write("abc", 3);
+        // Verify that destination file hasn't been changed.
+        EXPECT_EQ(1, fileSize(szFilePath));
+        EXPECT_EQ(0, outputFile.writeIntermediateToFinalLocation());
+        // Intermediate file should have been removed now.
+        EXPECT_FALSE(isPathFileAvailable(outputFile.m_pathIntermediate, FileModeExists));
+        EXPECT_EQ(3, fileSize(szFilePath));
+    }
+
+    // Basic memory intermediate test
+    {
+        const char szFilePath[] = "testfiles/generated/OutputFileTest_1.txt";
+        OfStream::dumpBytesToFile_overwriting(szFilePath, "a", 1);
+        OutputFile_completeOrNone<> outputFile(szFilePath);
+        testOutputFileMemStream(outputFile, szFilePath);
+    }
+
+    // Memory intermediate test with user-given stream type.
+    {
+        const char szFilePath[] = "testfiles/generated/OutputFileTest_2.txt";
+        OfStream::dumpBytesToFile_overwriting(szFilePath, "a", 1);
+        OutputFile_completeOrNone<OfStream, DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<>> outputFile(szFilePath);
+        testOutputFileMemStream(outputFile, szFilePath);
+    }
+
+    // Test that intermediate file name generation works if default file happens to exists.
+    {
+        const char szFilePath[] = "testfiles/generated/OutputFileTest_3.txt";
+        OfStream::dumpBytesToFile_overwriting(szFilePath, "a", 1);
+        OutputFile_completeOrNone<> outputFile0(szFilePath);
+        auto& strm0 = outputFile0.intermediateFileStream();
+        EXPECT_TRUE(strm0.good());
+        EXPECT_TRUE(isPathFileAvailable(outputFile0.m_pathIntermediate, FileModeExists));
+
+        OutputFile_completeOrNone<> outputFile1(szFilePath);
+        auto& strm1 = outputFile1.intermediateFileStream();
+        EXPECT_TRUE(strm1.good());
+        EXPECT_TRUE(isPathFileAvailable(outputFile1.m_pathIntermediate, FileModeExists));
+
+        EXPECT_NE(outputFile0.m_pathIntermediate, outputFile1.m_pathIntermediate);
+
+        strm0.write("abc", 3);
+        strm1.write("abcd", 4);
+
+        // Verify that destination file hasn't been changed.
+        EXPECT_EQ(1, fileSize(szFilePath));
+        EXPECT_EQ(0, outputFile0.writeIntermediateToFinalLocation());
+
+        // Intermediate file should have been removed now.
+        EXPECT_FALSE(isPathFileAvailable(outputFile0.m_pathIntermediate, FileModeExists));
+        EXPECT_EQ(3, fileSize(szFilePath));
+        EXPECT_EQ("abc", DFG_MODULE_NS(io)::fileToByteContainer<std::string>(szFilePath));
+
+        // Finalize second stream.
+        EXPECT_EQ(0, outputFile1.writeIntermediateToFinalLocation());
+        EXPECT_FALSE(isPathFileAvailable(outputFile1.m_pathIntermediate, FileModeExists));
+        EXPECT_EQ(4, fileSize(szFilePath));
+        EXPECT_EQ("abcd", DFG_MODULE_NS(io)::fileToByteContainer<std::string>(szFilePath));
+    }
+
+    // Test that empty output overwrites existing file with file intermediate stream.
+    {
+        const char szFilePath[] = "testfiles/generated/OutputFileTest_4.txt";
+        OfStream::dumpBytesToFile_overwriting(szFilePath, "a", 1);
+        {
+            OutputFile_completeOrNone<> outputFile(szFilePath);
+            auto& strm = outputFile.intermediateFileStream();
+            DFG_UNUSED(strm);
+            EXPECT_EQ(1, fileSize(szFilePath));
+        }
+        EXPECT_TRUE(isPathFileAvailable(szFilePath, FileModeExists));
+        EXPECT_EQ(0, fileSize(szFilePath));
+    }
+
+    // Test that empty output overwrites existing file with memory intermediate stream.
+    {
+        const char szFilePath[] = "testfiles/generated/OutputFileTest_5.txt";
+        OfStream::dumpBytesToFile_overwriting(szFilePath, "a", 1);
+        {
+            OutputFile_completeOrNone<> outputFile(szFilePath);
+            auto& strm = outputFile.intermediateMemoryStream();
+            DFG_UNUSED(strm);
+            EXPECT_EQ(1, fileSize(szFilePath));
+        }
+        EXPECT_TRUE(isPathFileAvailable(szFilePath, FileModeExists));
+        EXPECT_EQ(0, fileSize(szFilePath));
+    }
 }
