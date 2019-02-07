@@ -5,6 +5,7 @@
 #include "../ReadOnlySzParam.hpp"
 #include "MapVector.hpp"
 #include "../os/fileSize.hpp"
+#include "../os/OutputFile.hpp"
 #include "../io/DelimitedTextReader.hpp"
 #include "../io/OfStream.hpp"
 #include "../io/DelimitedTextWriter.hpp"
@@ -177,7 +178,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         {
             typedef DFG_CLASS_NAME(StringViewC) SvC;
 
-            DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) ostrm(svPath.c_str());
+            DFG_MODULE_NS(os)::OutputFile_completeOrNone<> outputFile(svPath.c_str());
+
+            auto& ostrm = outputFile.intermediateFileStream();
 
             if (!ostrm.is_open())
                 return false;
@@ -228,7 +231,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                     privWriteCellsToStream(ostrm, svLastPart, iter->second.rawStorage());
                 }
             }
-            return true;
+            return (outputFile.writeIntermediateToFinalLocation() == 0);
         }
 
         void setKeyValue(StorageStringT sKey, StorageStringT sValue)
