@@ -519,6 +519,20 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return nCount;
         }
 
+        // Returns content storage size in bytes. Note that returned value includes nulls and possibly content from removed cells.
+        size_t contentStorageSizeInBytes() const
+        {
+            size_t nByteCount = 0;
+            for (auto iter = m_charBuffers.cbegin(), iterEnd = m_charBuffers.cend(); iter != iterEnd; ++iter)
+            {
+                for (auto iter2 = iter->second.cbegin(), iter2End = iter->second.cend(); iter2 != iter2End; ++iter2)
+                {
+                    nByteCount += iter2->size();
+                }
+            }
+            return nByteCount;
+        }
+
         void clear()
         {
             m_charBuffers.clear();

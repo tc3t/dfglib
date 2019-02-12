@@ -407,6 +407,21 @@ TEST(dfgCont, TableSzSorting)
     // TODO: stable sorting (once implemented)
 }
 
+TEST(dfgCont, TableSz_contentStorageSizeInBytes)
+{
+    using namespace DFG_MODULE_NS(cont);
+    DFG_CLASS_NAME(TableSz)<char> table;
+    EXPECT_EQ(0, table.contentStorageSizeInBytes());
+    table.setElement(0, 0, "a");
+    EXPECT_EQ(2, table.contentStorageSizeInBytes());
+    table.setElement(0, 1, "ab");
+    EXPECT_EQ(5, table.contentStorageSizeInBytes());
+    table.setElement(0, 0, "abc");
+    EXPECT_EQ(9, table.contentStorageSizeInBytes());
+    table.setElement(10, 0, "abcd");
+    EXPECT_EQ(14, table.contentStorageSizeInBytes());
+}
+
 TEST(dfgCont, ArrayWrapper)
 {
     using namespace DFG_ROOT_NS;
