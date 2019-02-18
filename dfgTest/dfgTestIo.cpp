@@ -1162,6 +1162,19 @@ TEST(dfgIo, endOfLineTypeFromStr)
     EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr("\\t"));
 }
 
+TEST(dfgIo, BasicOmcByteStream)
+{
+    using namespace DFG_ROOT_NS;
+    {
+        DFG_MODULE_NS(io)::BasicOmcByteStream<> ostrm;
+        EXPECT_TRUE(ostrm.tryReserve(1000));
+    }
+    {
+        DFG_MODULE_NS(io)::BasicOmcByteStream<> ostrm;
+        EXPECT_FALSE(ostrm.tryReserve(NumericTraits<size_t>::maxValue));
+    }
+}
+
 TEST(dfgIo, ostreamPerformance)
 {
 #if ENABLE_RUNTIME_COMPARISONS == 0

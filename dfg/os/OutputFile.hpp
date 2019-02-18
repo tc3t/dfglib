@@ -16,6 +16,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
     //  -If file exists, it won't be overwritten and left in corrupted state if application terminates while writing.
     //      -In such case the original file won't be modified.
     // TODO: default intermediate memory stream should have partly contiguous storage instead of completely contiguous.
+    // Related implementations:
+    //      -QSaveFile
     template <class IntermediateFileStream_T = DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream), class IntermediateMemoryStream_T = DFG_MODULE_NS(io)::BasicOmcByteStream<>>
     class OutputFile_completeOrNone
     {
@@ -65,7 +67,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
         {
             m_bFinalDestinationWritten = false;
             if (nReserveHint > 0)
-                m_intermediateMemoryStream.reserve(nReserveHint);
+                m_intermediateMemoryStream.tryReserve(nReserveHint);
             return m_intermediateMemoryStream;
         }
 

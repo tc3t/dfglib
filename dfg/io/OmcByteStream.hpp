@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 #include "../build/languageFeatureInfo.hpp"
+#include "../cont/contAlg.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -81,6 +82,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         void reserve(const size_t nCount)
         {
             m_pData->reserve(nCount);
+        }
+        
+        bool tryReserve(const size_t nCount)
+        {
+            return DFG_MODULE_NS(cont)::tryReserve(*m_pData, nCount);
         }
 
         Cont_T& container() { return *m_pData; }
@@ -206,6 +212,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         void reserve(const size_t nCount)
         {
             m_streamBuf.reserve(nCount);
+        }
+
+        bool tryReserve(const size_t nCount)
+        {
+            return m_streamBuf.tryReserve(nCount);
         }
 
         StreamBuffer_T m_streamBuf;

@@ -3,6 +3,7 @@
 #include "../dfgDefs.hpp"
 #include "../dfgBase.hpp"
 #include "../cont/Vector.hpp"
+#include "../cont/contAlg.hpp"
 #include "../ReadOnlySzParam.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
@@ -54,6 +55,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         void reserve(const size_t nCount)
         {
             m_pEffectiveContainer->reserve(nCount);
+        }
+
+        bool tryReserve(const size_t nCount) 
+        {
+            return DFG_MODULE_NS(cont)::tryReserve(*m_pEffectiveContainer, nCount);
+        }
+
+        size_t capacity() const
+        {
+            return m_pEffectiveContainer->capacity();
         }
 
         Cont_T m_internalData;

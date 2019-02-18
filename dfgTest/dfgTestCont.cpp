@@ -1587,6 +1587,28 @@ namespace
     }
 }
 
+namespace
+{
+    template <class Cont_T>
+    static void tryReserveTests()
+    {
+        using namespace DFG_ROOT_NS;
+        {
+            Cont_T cont;
+            EXPECT_TRUE(DFG_MODULE_NS(cont)::tryReserve(cont, 1000));
+        }
+        {
+            // Commented out as this triggers a (non-fatal) "Debug Error!" at least in MSVC debug builds.
+            //Cont_T cont;
+            //EXPECT_FALSE(DFG_MODULE_NS(cont)::tryReserve(cont, cont.max_size()));
+        }
+        {
+            Cont_T cont;
+            EXPECT_FALSE(DFG_MODULE_NS(cont)::tryReserve(cont, NumericTraits<size_t>::maxValue));
+        }
+    }
+}
+
 TEST(dfgCont, contAlg)
 {
     DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<int>::value == false);
@@ -1606,6 +1628,12 @@ TEST(dfgCont, contAlg)
         StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)>("abc");
         StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewAscii)>(DFG_ROOT_NS::SzPtrAscii("abc"));
         StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewLatin1)>(DFG_ROOT_NS::SzPtrLatin1("abc"));
+    }
+
+    // tryReserve()
+    {
+        tryReserveTests<std::vector<int>>();
+        tryReserveTests<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<int>>();
     }
 }
 

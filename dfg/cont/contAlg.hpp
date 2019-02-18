@@ -63,4 +63,19 @@ void cutTail(Cont_T& c, const typename Cont_T::const_iterator iterToFirstInTail)
     DFG_DETAIL_NS::cutTail(c, iterToFirstInTail, std::integral_constant<bool, DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<Cont_T>::value>());
 }
 
+// Tries to reserve() memory for container returning true if successful, false otherwise.
+template <class Cont_T>
+bool tryReserve(Cont_T& cont, const size_t nCount)
+{
+    try
+    {
+        cont.reserve(nCount);
+        return (cont.capacity() >= nCount);
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
 } } // module namespace
