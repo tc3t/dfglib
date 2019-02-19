@@ -292,6 +292,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         LinearIndex wrappedDistance(const QModelIndex& from, const QModelIndex& to, const FindDirection direction) const;
 
+        // Returns estimate for resulting file size if content is written to file.
+        uint64 getOutputFileSizeEstimate() const;
+
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const;
         int columnCount(const QModelIndex& parent = QModelIndex()) const;
@@ -323,6 +326,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void insertColumnsImpl(int position, int count);
         void setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes) const;
+
+    private:
+        template <class Stream_T>
+        bool saveImpl(Stream_T& strm, const SaveOptions& options);
+
+        template <class OutFile_T, class Stream_T>
+        bool saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options);
 
     public:
         QUndoStack* m_pUndoStack;

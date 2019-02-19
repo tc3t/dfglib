@@ -26,13 +26,15 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/CsvConfig.hpp"
 #include "../cont/SetVector.hpp"
 #include "../str/strTo.hpp"
+#include "../os/OutputFile.hpp"
 
 namespace
 {
     enum CsvItemModelPropertyId
     {
         CsvItemModelPropertyId_completerEnabledColumnIndexes,
-        CsvItemModelPropertyId_completerEnabledSizeLimit // Defines maximum size (in bytes) for completer enabled tables, i.e. input bigger than this limit will have no completer enabled.
+        CsvItemModelPropertyId_completerEnabledSizeLimit, // Defines maximum size (in bytes) for completer enabled tables, i.e. input bigger than this limit will have no completer enabled.
+        CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite // If output file size estimate is less than this value, writing is tried with memory stream.
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvItemModel);
@@ -48,6 +50,11 @@ namespace
                                   CsvItemModelPropertyId_completerEnabledSizeLimit,
                                   DFG_ROOT_NS::uint64,
                                   []() { return 10000000; } );
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvItemModel_maxFileSizeForMemoryStreamWrite",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite,
+                                  DFG_ROOT_NS::int64,
+                                  []() { return -1; }); // -1 means 'auto' (i.e. let implementation decide when to use)
 
     template <CsvItemModelPropertyId ID>
     auto getCsvItemModelProperty(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
@@ -181,25 +188,67 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
     return saveToFile(sPath, SaveOptions());
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath, const SaveOptions& options)
+template <class OutFile_T, class Stream_T>
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options)
 {
-    QDir().mkpath(QFileInfo(sPath).absolutePath()); // Make sure that the target folder exists, otherwise opening the file will fail.
-
-    // Note: This should be non-encoding stream. Encoding stream without encoding property is used here probably because it had the wchar_t-path version working
-    //       at the time of writing. TODO: use plain ofstream.
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) strm(sPath.toStdWString(), DFG_MODULE_NS(io)::encodingUnknown);
-
-    if (!strm.is_open())
-        return false;
-
-    const bool bSuccess = save(strm, options);
+    const bool bSuccess = saveImpl(strm, options);
     if (bSuccess)
     {
+        outFile.writeIntermediateToFinalLocation();
         setFilePathWithSignalEmit(sPath);
         setModifiedStatus(false);
     }
+    else
+        outFile.discardIntermediate();
     Q_EMIT sigOnSaveToFileCompleted(bSuccess, static_cast<double>(m_writeTimeInSeconds));
     return bSuccess;
+}
+
+auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getOutputFileSizeEstimate() const -> uint64
+{
+    const uint64 nRows = m_table.rowCountByMaxRowIndex();
+    const int nColCount = getColumnCount();
+    uint64 nBytes = 0;
+    for (int i = 0; i < nColCount; ++i)
+        nBytes += static_cast<uint32>(getHeaderName(i).size()); // Underestimates if header name has non-ascii.
+    nBytes += nRows * static_cast<uint64>(nColCount); // Separators and eol (assuming single-char eol)
+    return 5 * (nBytes + m_table.contentStorageSizeInBytes()) / 4; // Put a little extra for enclosing chars etc.
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath, const SaveOptions& options)
+{
+    if (!QDir().mkpath(QFileInfo(sPath).absolutePath())) // Make sure that the target folder exists, otherwise opening the file will fail.
+        return false;
+
+    DFG_MODULE_NS(os)::OutputFile_completeOrNone<> outFile(qStringToFileApi8Bit(sPath));
+
+    const auto nSizeHint = getOutputFileSizeEstimate();
+
+    const int64 nMemStreamSizeHint = getCsvItemModelProperty<CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite>(this);
+
+    size_t nEffectiveMemStreamLimit = 0;
+    if (nMemStreamSizeHint == -1) // If default setting
+        nEffectiveMemStreamLimit = 50000000; // TODO: improve, use OS memory statistics.
+    else if (nMemStreamSizeHint > 0)
+        nEffectiveMemStreamLimit = (static_cast<uint64>(nMemStreamSizeHint) > NumericTraits<size_t>::maxValue) ? NumericTraits<size_t>::maxValue : static_cast<size_t>(nMemStreamSizeHint);
+
+    // Try to use memory stream if
+    //  -expected size is less than memory stream usage limit setting
+    //   and
+    //  -intermediate memory stream has expected capacity.
+    // Otherwise write with file stream.
+    // Reason to try memory stream is performance: memory stream provided by outFile is a non-virtual ostream replacement
+    // that in many example cases have increased write performance by 100% in MSVC release builds.
+    if (nSizeHint < nEffectiveMemStreamLimit)
+    {
+        auto& memStrm = outFile.intermediateMemoryStream(nEffectiveMemStreamLimit);
+        if (memStrm.capacity() >= nSizeHint)
+        {
+            // Reserve was successful, write with memory stream.
+            return saveToFileImpl(sPath, outFile, memStrm, options);
+        }
+    }
+    return saveToFileImpl(sPath, outFile, outFile.intermediateFileStream(), options);
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
@@ -223,13 +272,18 @@ namespace
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const SaveOptions& options)
 {
+    return saveImpl(strm, options);
+}
+
+template <class Stream_T>
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, const SaveOptions& options)
+{
     DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) writeTimer;
 
     const QChar cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
     const QChar cEnc = options.enclosingChar();
     const QChar cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
-    const auto sEolDummy = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
-    const auto sEol = sEolDummy.c_str();
+    const auto sEol = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
 
     const auto encoding = (options.textEncoding() != DFG_MODULE_NS(io)::encodingUnknown) ? options.textEncoding() : DFG_MODULE_NS(io)::encodingUTF8;
     if (encoding != DFG_MODULE_NS(io)::encodingLatin1 && encoding != DFG_MODULE_NS(io)::encodingUTF8) // Unsupported encoding type.
@@ -251,7 +305,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
     if (options.headerWriting())
     {
         QString sEncodedTemp;
-        DFG_MODULE_NS(io)::writeDelimited(strm, m_vecColInfo, sSepEncoded, [&](StreamT& strm, const ColInfo& colInfo)
+        DFG_MODULE_NS(io)::writeDelimited(strm, m_vecColInfo, sSepEncoded, [&](Stream_T& strm, const ColInfo& colInfo)
         {
             sEncodedTemp.clear();
             DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp),
@@ -263,7 +317,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
             auto utf8Bytes = qStringToEncodedBytes(sEncodedTemp);
             strm.write(utf8Bytes.data(), static_cast<std::streamsize>(utf8Bytes.size()));
         });
-        strm << sEol;
+        strm.write(sEol.data(), sEol.size());
     }
 
     auto mainTableSaveOptions = options;
