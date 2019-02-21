@@ -1055,6 +1055,13 @@ public:
         return !isSaveDialog();
     }
 
+    static bool isAcceptableSeparatorOrEnclosingChar(const DFG_ROOT_NS::int32 val, const DFG_MODULE_NS(io)::TextEncoding encoding)
+    {
+        // csv parsing doesn't support at least separators that are wider than one base character: parser reads non-ascii code point to a UTF8-array and
+        // separator detection compares last base char, not last code point, with given separator code point. So for now only support ASCII.
+        return (val >= 0 && val < 128);
+    }
+
     void accept() override
     {
         using namespace DFG_ROOT_NS;
@@ -1088,13 +1095,28 @@ public:
             return;
         }
 
+        const auto encoding = strIdToEncoding(m_spEncodingEdit->currentText().toLatin1().data());
+
+        {
+            if (!isAcceptableSeparatorOrEnclosingChar(sep.second, encoding))
+            {
+                QMessageBox::information(this, tr("Unsupported separator"), tr("Unsupported separator character value %1.\nOnly ASCII characters are supported.").arg(sep.second));
+                return;
+            }
+            if (!isAcceptableSeparatorOrEnclosingChar(enc.second, encoding))
+            {
+                QMessageBox::information(this, tr("Unsupported enclosing char"), tr("Unsupported enclosing character value %1.\nOnly ASCII characters are supported.").arg(enc.second));
+                return;
+            }
+        }
+
         if (isLoadDialog())
         {
             m_loadOptions.m_cEnc = (!sEnc.isEmpty()) ? enc.second : ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
             m_loadOptions.m_cSep = sep.second;
             m_loadOptions.m_eolType = eolType;
             m_loadOptions.setProperty(CsvOptionProperty_completerColumns, m_spCompleterColumns->text().toStdString());
-            m_loadOptions.textEncoding(strIdToEncoding(m_spEncodingEdit->currentText().toLatin1().data()));
+            m_loadOptions.textEncoding(encoding);
         }
         else // case: save dialog
         {
@@ -1104,7 +1126,7 @@ public:
             m_saveOptions.enclosementBehaviour(static_cast<EnclosementBehaviour>(m_spEnclosingOptions->currentData().toInt()));
             m_saveOptions.headerWriting(m_spSaveHeader->isChecked());
             m_saveOptions.bomWriting(m_spWriteBOM->isChecked());
-            m_saveOptions.textEncoding(strIdToEncoding(m_spEncodingEdit->currentText().toLatin1().data()));
+            m_saveOptions.textEncoding(encoding);
         }
 
         BaseClass::accept();
