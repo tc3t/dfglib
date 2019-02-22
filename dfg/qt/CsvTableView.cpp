@@ -1057,6 +1057,7 @@ public:
 
     static bool isAcceptableSeparatorOrEnclosingChar(const DFG_ROOT_NS::int32 val, const DFG_MODULE_NS(io)::TextEncoding encoding)
     {
+        DFG_UNUSED(encoding);
         // csv parsing doesn't support at least separators that are wider than one base character: parser reads non-ascii code point to a UTF8-array and
         // separator detection compares last base char, not last code point, with given separator code point. So for now only support ASCII.
         return (val >= 0 && val < 128);
@@ -1123,7 +1124,7 @@ public:
             m_saveOptions.m_cEnc = enc.second;
             m_saveOptions.m_cSep = sep.second;
             m_saveOptions.m_eolType = eolType;
-            m_saveOptions.enclosementBehaviour(static_cast<EnclosementBehaviour>(m_spEnclosingOptions->currentData().toInt()));
+            m_saveOptions.enclosementBehaviour((sEnc.isEmpty()) ? EbNoEnclose : static_cast<EnclosementBehaviour>(m_spEnclosingOptions->currentData().toInt()));
             m_saveOptions.headerWriting(m_spSaveHeader->isChecked());
             m_saveOptions.bomWriting(m_spWriteBOM->isChecked());
             m_saveOptions.textEncoding(encoding);
