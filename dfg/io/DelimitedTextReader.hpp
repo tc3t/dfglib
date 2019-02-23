@@ -709,7 +709,7 @@ public:
                 if (buffer.empty())
                     return;
                 const auto cLast = buffer.getBuffer().back();
-                if (rs != rsInEnclosedCell && (cLast == ',' || cLast == ';' || cLast == '\t'))
+                if (rs != rsInEnclosedCell && (cLast == ',' || cLast == ';' || cLast == '\t' || cLast == '\x1f')) // \x1f is unit separator (https://en.wikipedia.org/wiki/Unit_Separator)
                 {
                     formatDef.m_cSep = cLast;
                     if (cLast == '\t') // If separator is autodetected to be \t, remove it from the list of whitespace-characters.

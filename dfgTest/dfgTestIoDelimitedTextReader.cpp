@@ -483,6 +483,7 @@ TEST(DfgIo, DelimitedTextReader_autoDetectCsvSeparator)
     const char szSemicolonSep[] = "a;b";
     const char szEnclosedSep[] = "\"a;b\",c";
     const char szEnclosedWithEolSep[] = "\"a\nb\"\tc";
+    const char szUnitSeparatorSep[] = "a\x1f" "b";
 
     using namespace DFG_MODULE_NS(io);
     const auto noSep = DFG_CLASS_NAME(DelimitedTextReader)::autoDetectCsvSeparatorFromString(szNoSep, '"', '\n');
@@ -493,6 +494,7 @@ TEST(DfgIo, DelimitedTextReader_autoDetectCsvSeparator)
     const auto sepEnclosedNoEnc = DFG_CLASS_NAME(DelimitedTextReader)::autoDetectCsvSeparatorFromString(szEnclosedSep, 'Q', '\n');
     const auto sepEnclosedWithEolSepDefault = DFG_CLASS_NAME(DelimitedTextReader)::autoDetectCsvSeparatorFromString(szEnclosedWithEolSep);
     const auto sepEnclosedWithEolSepNoEnc = DFG_CLASS_NAME(DelimitedTextReader)::autoDetectCsvSeparatorFromString(szEnclosedWithEolSep, 'Q', '\n');
+    const auto sepUnitSeparator = DFG_CLASS_NAME(DelimitedTextReader)::autoDetectCsvSeparatorFromString(szUnitSeparatorSep, 'Q', '\n');
 
     EXPECT_EQ(DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone  , noSep);
     EXPECT_EQ(','                                                   , sepComma);
@@ -502,6 +504,7 @@ TEST(DfgIo, DelimitedTextReader_autoDetectCsvSeparator)
     EXPECT_EQ(';'                                                   , sepEnclosedNoEnc);
     EXPECT_EQ('\t'                                                  , sepEnclosedWithEolSepDefault);
     EXPECT_EQ(DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone  , sepEnclosedWithEolSepNoEnc);
+    EXPECT_EQ('\x1f'                                                , sepUnitSeparator);
 
     // Test basic usage with enclosed content (test case for issue#2).
     {
