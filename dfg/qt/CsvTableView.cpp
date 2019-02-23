@@ -991,7 +991,7 @@ public:
             m_spCompleterColumns.reset(new QLineEdit(this));
         }
 
-        m_spSeparatorEdit->addItems(QStringList() << "," << "\\t" << ";");
+        m_spSeparatorEdit->addItems(QStringList() << "\\x1f" << "," << "\\t" << ";");
         m_spSeparatorEdit->setEditable(true);
         m_spEnclosingEdit->addItems(QStringList() << "\"" << "");
         m_spEnclosingEdit->setEditable(true);
