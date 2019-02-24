@@ -279,6 +279,15 @@ DFG_ROOT_NS_BEGIN{
                                                             DFG_MODULE_NS(io)::encodingUnknown);
             }
 
+            CsvFormatDefinition readFormat() const
+            {
+                return m_readFormat;
+            }
+
+            CsvFormatDefinition saveFormat() const
+            {
+                return m_readFormat;
+            }
 
             void readFromMemory(const char* const pData, const size_t nSize)
             {
@@ -338,7 +347,12 @@ DFG_ROOT_NS_BEGIN{
 
                 m_readFormat.separatorChar(readFormat.getSep());
                 m_readFormat.enclosingChar(readFormat.getEnc());
-                m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeN); // TODO: use the one from used in the read stream.
+                if (formatDef.eolType() == DFG_MODULE_NS(io)::EndOfLineTypeRN)
+                    m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeRN);
+                else if (formatDef.eolType() == DFG_MODULE_NS(io)::EndOfLineTypeR)
+                    m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeR);
+                else
+                    m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeN);
                 //m_readFormat.endOfLineChar(readFormat.getEol());
                 //m_readFormat.textEncoding(strm.encoding()); // This is set 
                 //m_readFormat.headerWriting(); //
