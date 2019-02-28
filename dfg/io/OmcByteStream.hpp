@@ -200,6 +200,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
         void clearBufferWithoutDeallocAndSeekToBegin()  { m_streamBuf.clearBufferWithoutDeallocAndSeekToBegin(); }
 
+        // Guarantees non-copying access to underlying container data.
         const Cont_T& container() const { return m_streamBuf.container(); }
 
         size_t size() const { return m_streamBuf.size(); }

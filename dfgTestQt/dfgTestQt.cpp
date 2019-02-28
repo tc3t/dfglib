@@ -37,7 +37,7 @@ TEST(dfgQt, CsvItemModel)
         const auto bOpenSuccess = model.openFile(sInputPath, loadOptions);
         EXPECT_EQ(true, bOpenSuccess);
 
-        DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions saveOptions;
+        DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions saveOptions(&model);
         if (i == 3)
             saveOptions = loadOptions;
         if (i == 4)
@@ -62,6 +62,51 @@ TEST(dfgQt, CsvItemModel)
             EXPECT_EQ(inputBytes, outputBytesMc);
         }
     }
+}
+
+namespace
+{
+    struct CsvItemModelReadFormatTestCase
+    {
+        const char* m_pszInput;
+        DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::LoadOptions m_loadOptions;
+    };
+}
+
+// Test that saving uses the same settings as loading
+TEST(dfgQt, CsvItemModel_readFormatUsageOnWrite)
+{
+    typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) ModelT;
+    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<std::string> StrmT;
+    typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::LoadOptions LoadOptionsT;
+    typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDef;
+#define DFG_TEMP_BOM DFG_UTF_BOM_STR_UTF8
+    CsvItemModelReadFormatTestCase testCases[] =
+    {
+        // Auto-detected separators with default enclosing char.
+        { DFG_TEMP_BOM "a,b,\",c\"\n",                          LoadOptionsT() },
+        { DFG_TEMP_BOM "a;b;\";c\"\n",                          LoadOptionsT() },
+        { DFG_TEMP_BOM "a\tb\t\"\tc\"\n",                       LoadOptionsT() },
+        { DFG_TEMP_BOM "a\x1f" "b\x1f" "\"\x1f" "c\"\n",        LoadOptionsT() },
+        // Custom formats
+        { DFG_TEMP_BOM "a2b2\"2c\"\n",                          CsvFormatDef('2', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)  },      // Separator '2', enc '"', eol n
+        { DFG_TEMP_BOM "a|b|^|c^\n",                            CsvFormatDef('|', '^', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8) },       // Separator '|', enc '^', eol n
+        { DFG_TEMP_BOM "a|b|^|c^\r\n",                          CsvFormatDef('|', '^', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUTF8) },      // Separator '|', enc '^', eol rn
+        { "\xE4" "|\xF6" "|^|c^\n",                             CsvFormatDef('|', '^', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingLatin1) },     // Separator '|', enc '^', eol n, encoding Latin1
+        // Note: EOL-handling is not tested thoroughly as parsing does not detect EOL (e.g. reading with \n will read \r\n fine, but does not automatically set read EOL as \r\n).
+    };
+    
+    for (auto iter = std::begin(testCases); iter != std::end(testCases); ++iter)
+    {
+        ModelT model;
+        model.openFromMemory(iter->m_pszInput, DFG_MODULE_NS(str)::strLen(iter->m_pszInput), iter->m_loadOptions);
+        EXPECT_EQ(3, model.columnCount());
+        StrmT ostrm;
+        model.save(ostrm);
+        
+        EXPECT_EQ(iter->m_pszInput, ostrm.container());
+    }
+#undef DFG_TEMP_BOM
 }
 
 TEST(dfgQt, SpanSlider)

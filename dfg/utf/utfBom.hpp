@@ -5,6 +5,8 @@
 #include "../dfgBaseTypedefs.hpp"
 #include "../cont/arrayWrapper.hpp"
 
+#define DFG_UTF_BOM_STR_UTF8    "\xEF" "\xBB" "\xBF"
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
 
 	// http://unicode.org/faq/utf_bom.html#BOM

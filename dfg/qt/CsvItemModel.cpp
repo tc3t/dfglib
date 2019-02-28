@@ -80,6 +80,35 @@ namespace
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
+#define DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT DFG_CLASS_NAME(CsvFormatDefinition)(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
+
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::SaveOptions(DFG_CLASS_NAME(CsvItemModel)* pItemModel)
+    : DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT
+{
+    initFromItemModelPtr(pItemModel);
+}
+
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::SaveOptions(const DFG_CLASS_NAME(CsvItemModel)* pItemModel)
+    : DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT
+{
+    initFromItemModelPtr(pItemModel);
+}
+
+#undef DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::initFromItemModelPtr(const DFG_CLASS_NAME(CsvItemModel)* pItemModel)
+{
+    if (pItemModel)
+    {
+        *this = pItemModel->m_table.saveFormat();
+        if (!pItemModel->isSupportedEncodingForSaving(textEncoding()))
+        {
+            // Encoding is not supported, fallback to UTF-8.
+            textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
+        }
+    }
+}
+
 QVariant DFG_MODULE_NS(qt)::DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
 {
     DFG_ASSERT_CORRECTNESS(role != Qt::DisplayRole);
@@ -178,6 +207,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithSignalEmit(
     Q_EMIT sigSourcePathChanged();
 }
 
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::isSupportedEncodingForSaving(const DFG_MODULE_NS(io)::TextEncoding encoding) const
+{
+    return (encoding == DFG_MODULE_NS(io)::encodingUTF8) || (encoding == DFG_MODULE_NS(io)::encodingLatin1);
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
 {
     return saveToFile(m_sFilePath);
@@ -185,7 +219,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath)
 {
-    return saveToFile(sPath, SaveOptions());
+    return saveToFile(sPath, SaveOptions(this));
 }
 
 template <class OutFile_T, class Stream_T>
@@ -251,9 +285,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
     return saveToFileImpl(sPath, outFile, outFile.intermediateFileStream(), options);
 }
 
+auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getSaveOptions() const -> SaveOptions
+{
+    return SaveOptions(this);
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
 {
-    return save(strm, SaveOptions());
+    return save(strm, SaveOptions(this));
 }
 
 namespace
@@ -286,7 +325,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, c
     const auto sEol = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
 
     const auto encoding = (options.textEncoding() != DFG_MODULE_NS(io)::encodingUnknown) ? options.textEncoding() : DFG_MODULE_NS(io)::encodingUTF8;
-    if (encoding != DFG_MODULE_NS(io)::encodingLatin1 && encoding != DFG_MODULE_NS(io)::encodingUTF8) // Unsupported encoding type.
+    if (!isSupportedEncodingForSaving(encoding)) // Unsupported encoding type?
         return false;
 
     const auto qStringToEncodedBytes = [&](const QString& s) -> std::string
@@ -558,7 +597,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& 
     return openString(str, LoadOptions());
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(QString str, const LoadOptions& loadOptions)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& str, const LoadOptions& loadOptions)
 {
     const auto bytes = str.toUtf8();
     if (loadOptions.textEncoding() == DFG_MODULE_NS(io)::encodingUTF8)

@@ -141,9 +141,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {
         public:
             DFG_BASE_CONSTRUCTOR_DELEGATE_1(SaveOptions, DFG_CLASS_NAME(CsvFormatDefinition)) {}
-            SaveOptions() : DFG_CLASS_NAME(CsvFormatDefinition)(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
-            {}
-        };
+            SaveOptions(DFG_CLASS_NAME(CsvItemModel)* itemModel);
+            SaveOptions(const DFG_CLASS_NAME(CsvItemModel)* itemModel);
+
+        private:
+            void initFromItemModelPtr(const DFG_CLASS_NAME(CsvItemModel)* pItemModel);
+        }; // class SaveOptions
 
         class LoadOptions : public DFG_CLASS_NAME(CsvFormatDefinition)
         {
@@ -154,7 +157,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                 DFG_MODULE_NS(io)::EndOfLineTypeN, 
                                                                 DFG_MODULE_NS(io)::encodingUnknown)
             {}
-        };
+        }; // class LoadOptions
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.
         static int internalRowIndexToVisible(const int nRow) { return nRow + 1; }
@@ -170,7 +173,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool saveToFile(const QString& sPath);
         bool saveToFile(const QString& sPath, const SaveOptions& options);
 
-        // Saves data to stream in UTF8-format including BOM.
+        // Saves data to stream using default SaveOptions (in typical case means UTF-8 encoding with BOM and the same control chars as what was used in read except for EOL-char).
         // Note: Stream's write()-member must write bytes untranslated (i.e. no encoding nor eol translation)
         // TODO: Make encoding to be user definable through options.
         bool save(StreamT& strm);
@@ -188,7 +191,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openStream(QTextStream& strm);
         bool openStream(QTextStream& strm, const LoadOptions& loadOptions);
         bool openString(const QString& str);
-        bool openString(QString str, const LoadOptions& loadOptions);
+        bool openString(const QString& str, const LoadOptions& loadOptions);
         bool openFromMemory(const char* data, const size_t nSize, LoadOptions loadOptions);
 
         // Implementation level function.
@@ -217,6 +220,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         CompleterType getColCompleterType(const int nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_completerType : CompleterTypeNone); }
 
         ColInfo* getColInfo(const int nCol) { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
+
+        SaveOptions getSaveOptions() const;
 
         // Appends data model row to string.
         void rowToString(const int nRow, QString& str, const QChar cDelim, const IndexSet* pSetIgnoreColumns = nullptr) const;
@@ -294,6 +299,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Returns estimate for resulting file size if content is written to file.
         uint64 getOutputFileSizeEstimate() const;
+
+        bool isSupportedEncodingForSaving(DFG_MODULE_NS(io)::TextEncoding encoding) const;
 
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const;
