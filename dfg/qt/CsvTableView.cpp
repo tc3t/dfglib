@@ -992,12 +992,35 @@ public:
             m_spCompleterColumns.reset(new QLineEdit(this));
         }
 
-        m_spSeparatorEdit->addItems(QStringList() << "\\x1f" << "," << "\\t" << ";");
-        m_spSeparatorEdit->setEditable(true);
+        // Separator
+        {
+            m_spSeparatorEdit->addItems(QStringList() << "\\x1f" << "," << "\\t" << ";");
+            if (isSaveDialog())
+            {
+                // When populating save dialog, default-select separator that is defined in model options.
+                addCurrentOptionToCombobox(*m_spSeparatorEdit, m_saveOptions.separatorChar());
+            }
+            m_spSeparatorEdit->setEditable(true);
+        }
+
+        // Enclosing char
         m_spEnclosingEdit->addItems(QStringList() << "\"" << "");
+        if (isSaveDialog())
+        {
+            // When populating save dialog, default-select encloser that is defined in model options.
+            addCurrentOptionToCombobox(*m_spEnclosingEdit, m_saveOptions.enclosingChar());
+        }
         m_spEnclosingEdit->setEditable(true);
+
+        // EOL
         m_spEolEdit->addItems(QStringList() << "\\n" << "\\r" << "\\r\\n");
+        if (isSaveDialog())
+        {
+            // When populating save dialog, default-select eol that is defined in model options.
+            addCurrentOptionToCombobox(*m_spEolEdit, DFG_MODULE_NS(io)::eolStrFromEndOfLineType(m_saveOptions.eolType()).c_str());
+        }
         m_spEolEdit->setEditable(false);
+
         if (isSaveDialog())
         {
             m_spEnclosingOptions->addItem(tr("Only when needed"), static_cast<int>(EbEncloseIfNeeded));
@@ -1044,6 +1067,40 @@ public:
 
         spLayout->addRow(QString(), &rButtonBox);
         setLayout(spLayout.release());
+    }
+
+    static void addCurrentOptionToCombobox(QComboBox& cb, QString sSelection)
+    {
+        if (sSelection == "\\x9")
+            sSelection = "\\t";
+        else if (sSelection == "\n")
+            sSelection = "\\n";
+        else if (sSelection == "\r")
+            sSelection = "\\r";
+        else if (sSelection == "\r\n")
+            sSelection = "\\r\\n";
+
+        const auto nIndex = cb.findText(sSelection);
+        if (nIndex != -1)
+            cb.setCurrentIndex(nIndex);
+        else
+        {
+            // Selection wasn't present in predefined list -> add and select it.
+            cb.addItem(sSelection);
+            cb.setCurrentIndex(cb.count() - 1);
+        }
+    }
+
+    static void addCurrentOptionToCombobox(QComboBox& cb, const int nSelection)
+    {
+        const bool bPrintable = QChar::isPrint(nSelection);
+        QString sSelection;
+        if (bPrintable)
+            sSelection = QString(QChar(nSelection));
+        else if (nSelection >= 0)
+            sSelection = QString("\\x%1").arg(nSelection, 0, 16);
+        // Note: if nSelection is < 0 (e.g. metaCharNone), sSelection will be empty -> adds empty line to combobox.
+        addCurrentOptionToCombobox(cb, std::move(sSelection));
     }
 
     bool isSaveDialog() const
