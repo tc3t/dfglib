@@ -950,14 +950,15 @@ bool DFG_CLASS_NAME(CsvTableView)::save()
     auto model = csvModel();
     const auto& path = (model) ? model->getFilePath() : QString();
     if (!path.isEmpty())
-        return saveToFileImpl(path, DFG_CLASS_NAME(CsvItemModel)::SaveOptions());
+        return saveToFileImpl(path, model->getSaveOptions());
     else
         return saveToFile();
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
 {
-    return saveToFileImpl(DFG_CLASS_NAME(CsvItemModel)::SaveOptions());
+    auto pModel = csvModel();
+    return (pModel) ? saveToFileImpl(pModel->getSaveOptions()) : false;
 }
 
 class CsvFormatDefinitionDialog : public QDialog
@@ -969,8 +970,9 @@ public:
     typedef DFG_CLASS_NAME(CsvItemModel)::LoadOptions LoadOptions;
     typedef DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptions;
 
-    CsvFormatDefinitionDialog(const DialogType dialogType)
+    CsvFormatDefinitionDialog(const DialogType dialogType, const DFG_CLASS_NAME(CsvTableView)::CsvModel* pModel)
         : m_dialogType(dialogType)
+        ,  m_saveOptions(pModel)
     {
         using namespace DFG_MODULE_NS(io);
         removeContextHelpButtonFromDialog(this);
@@ -981,7 +983,6 @@ public:
         m_spEncodingEdit.reset(new QComboBox(this));
         if (isSaveDialog())
         {
-
             m_spEnclosingOptions.reset(new QComboBox(this));
             m_spSaveHeader.reset(new QCheckBox(this));
             m_spWriteBOM.reset(new QCheckBox(this));
@@ -1007,7 +1008,7 @@ public:
             m_spSaveHeader->setChecked(true);
             m_spWriteBOM->setChecked(true);
         }
-        else
+        else // Case: load dialog
         {
             m_spEncodingEdit->addItems(QStringList() << tr("auto")
                                                      << encodingToStrId(encodingUTF8)
@@ -1160,7 +1161,7 @@ public:
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
 {
-    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeSave);
+    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeSave, csvModel());
     if (dlg.exec() != QDialog::Accepted)
         return false;
     return saveToFileImpl(dlg.getSaveOptions());
@@ -1350,7 +1351,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
     const auto sPath = getOpenFileName(this);
     if (sPath.isEmpty())
         return false;
-    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeLoad);
+    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeLoad, csvModel());
     if (dlg.exec() != QDialog::Accepted)
         return false;
     auto loadOptions = dlg.getLoadOptions();
