@@ -216,8 +216,9 @@ DFG_ROOT_NS_BEGIN{
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DelimitedTextReaderBufferTypeC;
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T> DelimitedTextReaderBufferTypeT;
 
-            DFG_CLASS_NAME(TableCsv)() :
-                m_readFormat(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
+            DFG_CLASS_NAME(TableCsv)()
+                : m_readFormat(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
+                , m_saveFormat(m_readFormat)
             {}
 
             // TODO: test
@@ -268,6 +269,7 @@ DFG_ROOT_NS_BEGIN{
                     istrm.open(sPath);
                     read(istrm, formatDef);
                     m_readFormat.textEncoding(istrm.encoding());
+                    m_saveFormat = m_readFormat;
                 }
             }
 
@@ -286,7 +288,12 @@ DFG_ROOT_NS_BEGIN{
 
             CsvFormatDefinition saveFormat() const
             {
-                return m_readFormat;
+                return m_saveFormat;
+            }
+
+            void saveFormat(const CsvFormatDefinition& newFormat)
+            {
+                m_saveFormat = newFormat;
             }
 
             void readFromMemory(const char* const pData, const size_t nSize)
@@ -321,6 +328,7 @@ DFG_ROOT_NS_BEGIN{
                     read(strm, formatDef);
                 }
                 m_readFormat.textEncoding(encoding);
+                m_saveFormat = m_readFormat;
             }
 
             template <class Strm_T>
@@ -357,6 +365,7 @@ DFG_ROOT_NS_BEGIN{
                 //m_readFormat.textEncoding(strm.encoding()); // This is set 
                 //m_readFormat.headerWriting(); //
                 //m_readFormat.bomWriting(); // TODO: This is should be enquiried from the stream whether the stream had BOM.
+                m_saveFormat = m_readFormat;
             }
 
             template <class Stream_T>
@@ -434,7 +443,7 @@ DFG_ROOT_NS_BEGIN{
             template <class Stream_T>
             auto createWritePolicy() const -> WritePolicySimple<Stream_T>
             {
-                return WritePolicySimple<Stream_T>(m_readFormat);
+                return WritePolicySimple<Stream_T>(m_saveFormat);
             }
 
             template <class Stream_T>
@@ -492,6 +501,7 @@ DFG_ROOT_NS_BEGIN{
 
             DFG_CLASS_NAME(CsvFormatDefinition) m_readFormat; // Stores the format of previously read input. If no read is done, stores to default output format.
                                                               // TODO: specify content in case of interrupted read.
+            DFG_CLASS_NAME(CsvFormatDefinition) m_saveFormat; // Format to be used when saving
         }; // class CsvTable
 
 } } // module namespace

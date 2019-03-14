@@ -364,6 +364,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, c
     mainTableSaveOptions.textEncoding(encoding);
     CsvWritePolicy<decltype(strm)> writePolicy(mainTableSaveOptions);
     m_table.writeToStream(strm, writePolicy);
+    m_table.saveFormat(options);
 
     m_writeTimeInSeconds = static_cast<decltype(m_writeTimeInSeconds)>(writeTimer.elapsedWallSeconds());
 
