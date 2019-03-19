@@ -1046,8 +1046,11 @@ public:
             m_spEnclosingOptions->addItem(tr("Every non-empty cell"), static_cast<int>(EbEncloseIfNonEmpty));
 
             m_spEncodingEdit->addItems(QStringList() << encodingToStrId(encodingUTF8) << encodingToStrId(encodingLatin1));
+            addCurrentOptionToCombobox(*m_spEncodingEdit, encodingToStrId(m_saveOptions.textEncoding()));
             m_spEncodingEdit->setEditable(false);
+
             m_spSaveHeader->setChecked(true);
+
             m_spWriteBOM->setChecked(true);
         }
         else // Case: load dialog
