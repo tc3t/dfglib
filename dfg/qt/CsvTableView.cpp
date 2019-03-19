@@ -21,6 +21,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QHeaderView>
 #include <QFormLayout>
 #include <QComboBox>
+#include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QCheckBox>
 #include <QCompleter>
@@ -178,11 +179,18 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     // TODO: make customisable.
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 
-    const auto addSeparator = [&]()
+    const auto addSeparatorTo = [&](QWidget* pTarget)
         {
+            if (!pTarget)
+                return;
             auto pAction = new QAction(this);
             pAction->setSeparator(true);
-            addAction(pAction);
+            pTarget->addAction(pAction);
+        };
+
+    const auto addSeparator = [&]()
+        {
+            addSeparatorTo(this);
         };
 
     {
@@ -249,6 +257,17 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
         {
             auto pAction = new QAction(tr("Save config file..."), this);
             DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveConfigFile));
+            pMenu->addAction(pAction);
+        }
+
+        // Open app-config file
+        if (QFileInfo(DFG_CLASS_NAME(QtApplication)::getApplicationSettingsPath()).exists())
+        {
+            addSeparatorTo(pMenu);
+            auto pAction = new QAction(tr("Open app config file"), this);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openAppConfigFile));
+            DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigOnAllowApplicationSettingsUsageChanged, pAction, &QAction::setVisible));
+            pAction->setVisible(getAllowApplicationSettingsUsage());
             pMenu->addAction(pAction);
         }
 
@@ -1260,6 +1279,17 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::saveConfigFile()
         QMessageBox::information(this, tr("Saving failed"), tr("Saving config file to path '%1' failed").arg(sPath));
 
     return bSuccess;
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openAppConfigFile()
+{
+    const auto sPath = DFG_CLASS_NAME(QtApplication)::getApplicationSettingsPath();
+    if (sPath.isEmpty())
+        return false;
+    QFileInfo fi(sPath);
+    if (fi.isExecutable() || !fi.isReadable())
+        return false;
+    return QDesktopServices::openUrl(QUrl(QString("file:///%1").arg(sPath)));
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openConfigFile()
@@ -2303,9 +2333,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getAllowApplicationSetting
     return property("dfglib_allow_app_settings_usage").toBool();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setAllowApplicationSettingsUsage(bool b)
+void DFG_CLASS_NAME(CsvTableView)::setAllowApplicationSettingsUsage(const bool b)
 {
     setProperty("dfglib_allow_app_settings_usage", b);
+    Q_EMIT sigOnAllowApplicationSettingsUsageChanged(b);
 }
 
 void DFG_CLASS_NAME(CsvTableView)::finishEdits()

@@ -253,6 +253,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool save();
         bool saveToFile();
         bool saveToFileWithOptions();
+        bool openAppConfigFile();
         bool openConfigFile();
         bool saveConfigFile();
         bool clearSelected();
@@ -330,6 +331,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void sigFindActivated();
         void sigFilterActivated();
         void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+        void sigOnAllowApplicationSettingsUsageChanged(bool);
 
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;

@@ -13,3 +13,8 @@ std::unique_ptr<QSettings> DFG_MODULE_NS(qt)::DFG_CLASS_NAME(QtApplication)::get
     else
         return std::unique_ptr<QSettings>(new QSettings); // Uses QCoreApplication-properties organizationName, organizationDomain, applicationName.
 }
+
+QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(QtApplication)::getApplicationSettingsPath()
+{
+    return m_sSettingsPath;
+}

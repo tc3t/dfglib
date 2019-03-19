@@ -16,6 +16,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
     public:
         static std::unique_ptr<QSettings> getApplicationSettings();
+        static QString getApplicationSettingsPath();
 
         static QString m_sSettingsPath;
     };
