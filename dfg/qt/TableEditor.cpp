@@ -772,3 +772,15 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterCaseSensitivityChan
     if (m_spFilterPanel)
         onFilterTextChanged(m_spFilterPanel->m_pTextEdit->text());
 }
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::addToolBarSeparator()
+{
+    if (m_spToolBar)
+        m_spToolBar->addSeparator();
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::addToolBarWidget(QWidget* pWidget)
+{
+    if (m_spToolBar)
+        m_spToolBar->addWidget(pWidget);
+}

@@ -82,6 +82,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void updateWindowTitle();
 
+        void addToolBarSeparator();
+        void addToolBarWidget(QWidget* pWidget);
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 
