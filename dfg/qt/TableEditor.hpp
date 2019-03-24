@@ -20,6 +20,7 @@ class QLabel;
 class QLineEdit;
 class QMenu;
 class QSortFilterProxyModel;
+class QToolBar;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -114,6 +115,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<DFG_DETAIL_NS::FilterPanelWidget> m_spFilterPanel;
         std::unique_ptr<QWidget> m_spSelectionAnalyzerPanel;
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
+        std::unique_ptr<QToolBar> m_spToolBar;
         bool m_bHandlingOnCellEditorTextChanged;
     };
 

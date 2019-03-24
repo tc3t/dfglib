@@ -28,6 +28,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QSortFilterProxyModel>
 #include <QSpacerItem>
 #include <QSpinBox>
+#include <QToolBar>
+#include <QToolButton>
 DFG_END_INCLUDE_QT_HEADERS
 
 #define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
@@ -328,7 +330,18 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     {
         std::unique_ptr<QGridLayout> spLayout(new QGridLayout);
         int row = 0;
-        spLayout->addWidget(m_spLineEditSourcePath.get(), row++, 0);
+
+        // First row
+        {
+            auto firstRowLayout = new QHBoxLayout; // Deletion through layout parentship (see addLayout).
+            firstRowLayout->addWidget(m_spLineEditSourcePath.get());
+
+            m_spToolBar.reset(new QToolBar(this));
+            firstRowLayout->addWidget(m_spToolBar.get());
+
+            spLayout->addLayout(firstRowLayout, row++, 0); // From docs: "layout becomes a child of the grid layout"
+        } // First row
+
         spLayout->addWidget(m_spTableView.get(), row++, 0);
         spLayout->addWidget(m_spCellEditorDockWidget.get(), row++, 0);
 
@@ -337,13 +350,44 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
             std::unique_ptr<QHBoxLayout> pHl(new QHBoxLayout(nullptr));
             pHl->setSpacing(20); // Space between items
 
-            // Resize button
+            // Resize controls
             {
-                auto pButton = new QPushButton(tr("Resize..."), this); // Deletion though parentship.
-                pButton->setMaximumWidth(100);
+                //auto pResizeButton = new QPushButton(tr("Resize..."), this); // Deletion through parentship.
+                //pResizeButton->setMaximumWidth(100);
                 m_spResizeColumnsMenu = m_spTableView->createResizeColumnsMenu();
-                pButton->setMenu(m_spResizeColumnsMenu.get());
-                pHl->addWidget(pButton);
+
+                // Create resize buttons to toolbar.
+                if (m_spResizeColumnsMenu && m_spToolBar)
+                {
+                    m_spToolBar->addSeparator();
+                    m_spToolBar->addWidget(new QLabel(tr("Header resize: "), this)); // Deletion through parentship.
+                    auto actions = m_spResizeColumnsMenu->actions();
+                    for (int i = 0; i < actions.size(); ++i)
+                    {
+                        if (!actions[i])
+                            continue;
+                        auto pButton = new QToolButton(m_spToolBar.get()); // Deletion through parentship.
+                        auto actionText = actions[i]->text();
+                        int nDest = 1;
+
+                        // Contructs string label from beginning characters of words
+                        // TODO: Use icons instead of incomprehensible abbreviations.
+                        {
+                            for (int j = 1; j < actionText.size(); ++j)
+                            {
+                                if (actionText[j-1] == ' ' || actionText[j] == ':')
+                                    actionText[nDest++] = actionText[j];
+                            }
+                            actionText.resize(nDest);
+                        }
+
+                        pButton->setDefaultAction(actions[i]);
+                        pButton->setText(actionText);
+                        m_spToolBar->addWidget(pButton);
+                    }
+                }
+                //pResizeButton->setMenu(m_spResizeColumnsMenu.get());
+                //pHl->addWidget(pResizeButton);
             }
 
             pHl->addSpacerItem(new QSpacerItem(0, 0, QSizePolicy::Expanding)); // pHl seems to take ownership.
