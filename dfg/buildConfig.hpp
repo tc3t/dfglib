@@ -20,12 +20,6 @@
 
 #endif // _MSC_VER
 
-#if defined(_MSC_VER)
-	#define DFG_MSVC_VER	_MSC_VER
-#else
-	#define DFG_MSVC_VER	0
-#endif
-
 #if DFG_MSVC_VER > 0 && DFG_MSVC_VER < DFG_MSVC_VER_2010
 	#define nullptr		0
 #endif
