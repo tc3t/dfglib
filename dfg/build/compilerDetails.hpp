@@ -6,6 +6,14 @@
 // For more robust implementation, see Boost.Predef
 // #include <boost/predef.h>
 
+/*
+ This file defines the following items:
+    -DFG_COMPILER_FULL_VERSION   : Full compiler version number, see definitions for meaning of the value. Value is 0 for unknown compilers.
+    -DFG_COMPILER_NAME_SIMPLE    : Simple compiler name string
+    -DFG_BUILD_DEBUG_RELEASE_TYPE: Build type in debug-release axis.
+*/
+
+
 #define DFG_COMPILER_NAME_SIMPLE_VC2010          "MSVC_2010"
 #define DFG_COMPILER_NAME_SIMPLE_VC2012          "MSVC_2012"
 #define DFG_COMPILER_NAME_SIMPLE_VC2013          "MSVC_2013"
@@ -22,6 +30,10 @@
 #define DFG_COMPILER_NAME_SIMPLE_VC2017_9        "MSVC_2017.9"
 #define DFG_COMPILER_NAME_SIMPLE_VC_UNKNOWN      "MSVC_" DFG_STRINGIZE(_MSC_VER)
 #define DFG_COMPILER_NAME_SIMPLE_UNKNOWN         "UNKNOWN_COMPILER"
+
+#ifdef _MSC_VER
+    #define DFG_COMPILER_FULL_VERSION   _MSC_FULL_VER
+#endif
 
 #if DFG_MSVC_VER == DFG_MSVC_VER_2010
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC2010
@@ -56,12 +68,16 @@
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_VC_UNKNOWN
 #elif defined(__MINGW32__)
     #define DFG_COMPILER_NAME_SIMPLE "MinGW_" DFG_STRINGIZE(__GNUC__) "." DFG_STRINGIZE(__GNUC_MINOR__) "." DFG_STRINGIZE(__GNUC_PATCHLEVEL__)
+    #define DFG_COMPILER_FULL_VERSION ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + (__GNUC_PATCHLEVEL__))
 #elif defined(__clang__)
     #define DFG_COMPILER_NAME_SIMPLE "Clang_" DFG_STRINGIZE(__clang_major__) "." DFG_STRINGIZE(__clang_minor__) "." DFG_STRINGIZE(__clang_patchlevel__)
+    #define DFG_COMPILER_FULL_VERSION ((__clang_major__ * 10000) + (__clang_minor__ * 100) + (__clang_patchlevel__))
 #elif defined(__GNUG__)
     #define DFG_COMPILER_NAME_SIMPLE "GCC_" DFG_STRINGIZE(__GNUC__) "." DFG_STRINGIZE(__GNUC_MINOR__) "." DFG_STRINGIZE(__GNUC_PATCHLEVEL__)
+    #define DFG_COMPILER_FULL_VERSION ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + (__GNUC_PATCHLEVEL__))
 #else
     #define DFG_COMPILER_NAME_SIMPLE DFG_COMPILER_NAME_SIMPLE_UNKNOWN
+    #define DFG_COMPILER_FULL_VERSION   0
     #pragma message("Note: Unrecognized compiler")
 #endif
 
