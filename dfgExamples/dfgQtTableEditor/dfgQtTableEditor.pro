@@ -58,3 +58,6 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
 
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../externals/
+
+RESOURCES += \
+    dfgqttableeditor.qrc

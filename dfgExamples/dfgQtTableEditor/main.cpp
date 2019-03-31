@@ -1,16 +1,24 @@
 #include <dfg/qt/qtIncludeHelpers.hpp>
 #include <dfg/qt/connectHelper.hpp>
 
+//DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+//DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QApplication>
 #include <QMessageBox>
 #include <QTimer>
+#include <QIcon>
+#include <QMainWindow>
 #include <QStyle>
 #include <QToolButton>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <dfg/qt/TableEditor.hpp>
 #include <dfg/qt/QtApplication.hpp>
+
+static QWidget* gpMainWindow = nullptr;
+
 
 static void onShowAboutBox()
 {
@@ -24,9 +32,28 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     dfg::qt::QtApplication::m_sSettingsPath = a.applicationFilePath() + ".ini";
 
+    QMainWindow mainWindow;
+    gpMainWindow = &mainWindow;
+
+    // Stubs for creating menu
+#if 0
+    {
+        auto pMenuAbout = mainWindow.menuBar()->addMenu("&About");
+        auto pAction = pMenuAbout->addAction("Test entry");
+        auto pStyle = QApplication::style();
+        if (pStyle)
+            pAction->setIcon(pStyle->standardIcon(QStyle::SP_MessageBoxInformation));
+    }
+#endif
+
     dfg::qt::TableEditor tableEditor;
     tableEditor.setAllowApplicationSettingsUsage(true);
-    tableEditor.show();
+    mainWindow.setWindowIcon(QIcon(":/mainWindowIcon.png"));
+
+    mainWindow.setCentralWidget(&tableEditor);
+    mainWindow.resize(tableEditor.size());
+    DFG_QT_VERIFY_CONNECT(QObject::connect(&tableEditor, &QWidget::windowTitleChanged, &mainWindow, &QWidget::setWindowTitle));
+    mainWindow.show();
 
     auto args = a.arguments();
 
