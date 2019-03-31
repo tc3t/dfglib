@@ -12,6 +12,8 @@
 #include <dfg/cont/arrayWrapper.hpp>
 #include <dfg/baseConstructorDelegate.hpp>
 #include <dfg/typeTraits.hpp>
+#include <dfg/build/buildTimeDetails.hpp>
+#include <dfg/cont/MapVector.hpp>
 
 std::tuple<std::string, std::string, std::string> FunctionNameTest()
 {
@@ -529,4 +531,23 @@ TEST(dfgTypeTraits, IsTrueTrait)
     using namespace DFG_MODULE_NS(TypeTraits);
     DFGTEST_STATIC(IsTrueTrait<UnknownAnswerType>::value == false);
     DFGTEST_STATIC(IsTrueTrait<IsTriviallyCopyable<int*>>::value == true);
+}
+
+TEST(dfgBuild, buildTimeDetails)
+{
+    using namespace DFG_ROOT_NS;
+    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorAoS)<BuildTimeDetail, NonNullCStr> vals;
+    getBuildTimeDetailStrs([&](BuildTimeDetail btd, const NonNullCStr psz)
+    {
+        vals[btd] = psz;
+    });
+
+    EXPECT_EQ(DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs), vals.size()); // If this fails, check whether getBuildTimeDetailStrs() includes all id's.
+    EXPECT_STRNE("", vals[BuildTimeDetail_dateTime]);
+    EXPECT_STREQ(DFG_COMPILER_NAME_SIMPLE, vals[BuildTimeDetail_compilerAndShortVersion]);
+    EXPECT_STREQ(DFG_STRINGIZE(DFG_COMPILER_FULL_VERSION), vals[BuildTimeDetail_compilerFullVersion]);
+    EXPECT_STREQ("", vals[BuildTimeDetail_qtVersion]); // Qt should not be in the build so make sure the detail is empty.
+#ifdef BOOST_LIB_VERSION
+    EXPECT_STREQ(BOOST_LIB_VERSION, vals[BuildTimeDetail_boostVersion]);
+#endif
 }
