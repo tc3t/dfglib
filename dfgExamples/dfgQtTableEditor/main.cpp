@@ -6,6 +6,7 @@
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QApplication>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QTimer>
 #include <QIcon>
@@ -16,21 +17,61 @@ DFG_END_INCLUDE_QT_HEADERS
 
 #include <dfg/qt/TableEditor.hpp>
 #include <dfg/qt/QtApplication.hpp>
+#include <dfg/build/buildTimeDetails.hpp>
 
 static QWidget* gpMainWindow = nullptr;
 
 
 static void onShowAboutBox()
 {
-    QMessageBox::information(nullptr,
+    using namespace DFG_ROOT_NS;
+
+    QString s = QString("%1 version %2<br><br>"
+                        "Example application demonstrating csv handling features in dfglib.<br><br>")
+                        .arg(QApplication::applicationName())
+                        .arg(DFG_QT_TABLE_EDITOR_VERSION_STRING);
+
+    const auto sSettingsPath = dfg::qt::QtApplication::getApplicationSettingsPath();
+    const bool bSettingFileExists = QFileInfo(sSettingsPath).exists();
+
+    s += QString("<b>Application path</b>: <a href=%1>%2</a><br>"
+         "<b>Settings file path</b>: %3<br>"
+         "<b>Application PID</b>: %4<br>"
+         "<b>Qt runtime version</b>: %5<br>")
+            .arg(QApplication::applicationDirPath())
+            .arg(QApplication::applicationFilePath())
+            .arg((bSettingFileExists) ? QString("<a href=%1>%1</a>").arg(sSettingsPath) : QString("(file doesn't exist)"))
+            .arg(QCoreApplication::applicationPid())
+            .arg(qVersion());
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
+    s += QString("<b>OS</b>: %1<br><br>").arg(QSysInfo::prettyProductName());
+#else
+    s += "<br>";
+#endif
+
+    s += "Build details:<br><br>";
+
+    getBuildTimeDetailStrs([&](const BuildTimeDetail detailId, const char* psz)
+    {
+        if (psz && psz[0] != '\0')
+            s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId)).arg(psz);
+    });
+
+    s += QString("<br>Source code: <a href=%1>%1</a>").arg("https://github.com/tc3t/dfglib");
+
+
+    QMessageBox::about(gpMainWindow,
                              QApplication::tr("About dfgQtTableEditor"),
-                             QApplication::tr("TODO"));
+                             s);
+    QMessageBox::aboutQt(gpMainWindow);
 }
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     dfg::qt::QtApplication::m_sSettingsPath = a.applicationFilePath() + ".ini";
+    a.setApplicationVersion(DFG_QT_TABLE_EDITOR_VERSION_STRING);
 
     QMainWindow mainWindow;
     gpMainWindow = &mainWindow;
