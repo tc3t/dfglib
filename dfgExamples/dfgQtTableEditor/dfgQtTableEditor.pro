@@ -22,6 +22,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+# Application version. On Windows triggers auto-generation of rc-file
+# https://doc.qt.io/qt-5/qmake-variable-reference.html#version
+VERSION = 0.9.9.0
+DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
+
 win32 {
     # Adjustments on Windows:
 
