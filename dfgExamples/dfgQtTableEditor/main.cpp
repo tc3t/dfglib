@@ -59,7 +59,7 @@ static void onShowAboutBox()
     });
 
     s += QString("<br>Source code: <a href=%1>%1</a>").arg("https://github.com/tc3t/dfglib");
-
+    s += QString("<br>3rd party libraries used in this application: <a href=www.boost.org>Boost</a>, Qt, <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>");
 
     QMessageBox::about(gpMainWindow,
                              QApplication::tr("About dfgQtTableEditor"),
