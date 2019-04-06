@@ -34,8 +34,14 @@ namespace
     {
         CsvItemModelPropertyId_completerEnabledColumnIndexes,
         CsvItemModelPropertyId_completerEnabledSizeLimit, // Defines maximum size (in bytes) for completer enabled tables, i.e. input bigger than this limit will have no completer enabled.
-        CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite // If output file size estimate is less than this value, writing is tried with memory stream.
+        CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite, // If output file size estimate is less than this value, writing is tried with memory stream.
+        CsvItemModelPropertyId_defaultFormatSeparator,
+        CsvItemModelPropertyId_defaultFormatEnclosingChar,
+        CsvItemModelPropertyId_defaultFormatEndOfLine
     };
+
+    template <CsvItemModelPropertyId Id_T>
+    DFG_ROOT_NS::uint8 variantToFormatValue(const QVariant& v);
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvItemModel);
 
@@ -55,11 +61,38 @@ namespace
                                   CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite,
                                   DFG_ROOT_NS::int64,
                                   []() { return -1; }); // -1 means 'auto' (i.e. let implementation decide when to use)
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE("CsvItemModel_defaultFormatSeparator",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_defaultFormatSeparator,
+                                  DFG_ROOT_NS::uint8,
+                                  []() { return DFG_ROOT_NS::uint8('\x1f'); },
+                                  variantToFormatValue<CsvItemModelPropertyId_defaultFormatSeparator>
+                                );
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE("CsvItemModel_defaultFormatEnclosingChar",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_defaultFormatEnclosingChar,
+                                  DFG_ROOT_NS::uint8,
+                                  []() { return DFG_ROOT_NS::uint8('"'); },
+                                  variantToFormatValue<CsvItemModelPropertyId_defaultFormatEnclosingChar>
+                                );
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvItemModel_defaultFormatEndOfLine",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_defaultFormatEndOfLine,
+                                  QString,
+                                  []() { return "\n"; });
 
     template <CsvItemModelPropertyId ID>
     auto getCsvItemModelProperty(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
     {
         return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>>(pModel);
+    }
+
+    template <CsvItemModelPropertyId Id_T>
+    DFG_ROOT_NS::uint8 variantToFormatValue(const QVariant& v)
+    {
+        auto s = v.toString();
+        auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<DFG_ROOT_NS::uint8>(s.toStdString());
+        return (rv.first) ? rv.second : getCsvItemModelProperty<Id_T>(nullptr);
     }
 
     class Completer : public QCompleter
@@ -96,11 +129,28 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::SaveOptions(const 
 
 #undef DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT
 
+
+namespace
+{
+	static DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions defaultSaveOptions(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pItemModel)
+	{
+	    typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptionsT;
+	    if (!pItemModel)
+	        return SaveOptionsT(pItemModel);
+	    SaveOptionsT rv = pItemModel->m_table.saveFormat();
+	    rv.separatorChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatSeparator>(pItemModel));
+	    rv.enclosingChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEnclosingChar>(pItemModel));
+	    rv.eolType(DFG_MODULE_NS(io)::endOfLineTypeFromStr(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEndOfLine>(pItemModel).toStdString()));
+	    return rv;
+	}
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::initFromItemModelPtr(const DFG_CLASS_NAME(CsvItemModel)* pItemModel)
 {
     if (pItemModel)
     {
-        *this = pItemModel->m_table.saveFormat();
+        // If model has path, use format of m_table, otherwise use save format from settings.
+        *this = (!pItemModel->getFilePath().isEmpty()) ? pItemModel->m_table.saveFormat() : defaultSaveOptions(pItemModel);
         if (!pItemModel->isSupportedEncodingForSaving(textEncoding()))
         {
             // Encoding is not supported, fallback to UTF-8.
