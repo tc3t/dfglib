@@ -78,16 +78,20 @@ inline std::string eolLiteralStrFromEndOfLineType(EndOfLineType eolType)
 }
 
 // Returns eol-type from eol-string (e.g. "\\n" -> EndOfLineTypeN).
+// Accepting three formats:
+//      -Ascii-value (e.g. "\n", i.e. size 1)
+//      -Literal format (e.g. "\\n", i.e. size 2)
+//      -Quoted literal (e.g. "\"\\n\"", i.e. size 4)
 // For invalid input returns EndOfLineTypeN.
 inline EndOfLineType endOfLineTypeFromStr(const DFG_CLASS_NAME(StringViewC)& sv)
 {
     if (sv.empty())
         return EndOfLineTypeN;
-    if (sv == "\\n")
+    if (sv == "\n" || sv == "\\n" || sv == "\"\\n\"")
         return EndOfLineTypeN;
-    else if (sv == "\\r")
+    else if (sv == "\r" || sv == "\\r" || sv == "\"\\r\"")
         return EndOfLineTypeR;
-    else if (sv == "\\r\\n")
+    else if (sv == "\r\n" || sv == "\\r\\n" || sv == "\"\\r\\n\"")
         return EndOfLineTypeRN;
     else
         return EndOfLineTypeN;

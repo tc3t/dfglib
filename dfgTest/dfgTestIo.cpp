@@ -1153,8 +1153,16 @@ TEST(dfgIo, endOfLineTypeFromStr)
 {
     using namespace DFG_MODULE_NS(io);
     EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr("\\n"));
+    EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr("\n"));
+    EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr("\"\n\""));
+
     EXPECT_EQ(EndOfLineTypeRN, endOfLineTypeFromStr("\\r\\n"));
+    EXPECT_EQ(EndOfLineTypeRN, endOfLineTypeFromStr("\r\n"));
+    EXPECT_EQ(EndOfLineTypeRN, endOfLineTypeFromStr("\"\\r\\n\""));
+
     EXPECT_EQ(EndOfLineTypeR, endOfLineTypeFromStr("\\r"));
+    EXPECT_EQ(EndOfLineTypeR, endOfLineTypeFromStr("\r"));
+    EXPECT_EQ(EndOfLineTypeR, endOfLineTypeFromStr("\"\\r\""));
 
     // Invalid cases below, expected to return \n for these.
     EXPECT_EQ(EndOfLineTypeN, endOfLineTypeFromStr(""));
