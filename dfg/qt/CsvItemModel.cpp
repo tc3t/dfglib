@@ -132,25 +132,25 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::SaveOptions(const 
 
 namespace
 {
-	static DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions defaultSaveOptions(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pItemModel)
-	{
-	    typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptionsT;
-	    if (!pItemModel)
-	        return SaveOptionsT(pItemModel);
-	    SaveOptionsT rv = pItemModel->m_table.saveFormat();
-	    rv.separatorChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatSeparator>(pItemModel));
-	    rv.enclosingChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEnclosingChar>(pItemModel));
-	    rv.eolType(DFG_MODULE_NS(io)::endOfLineTypeFromStr(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEndOfLine>(pItemModel).toStdString()));
-	    return rv;
-	}
+    static DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions defaultSaveOptions(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pItemModel)
+    {
+        typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptionsT;
+        if (!pItemModel)
+            return SaveOptionsT(pItemModel);
+        SaveOptionsT rv = pItemModel->m_table.saveFormat();
+        rv.separatorChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatSeparator>(pItemModel));
+        rv.enclosingChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEnclosingChar>(pItemModel));
+        rv.eolType(DFG_MODULE_NS(io)::endOfLineTypeFromStr(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEndOfLine>(pItemModel).toStdString()));
+        return rv;
+    }
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::initFromItemModelPtr(const DFG_CLASS_NAME(CsvItemModel)* pItemModel)
 {
     if (pItemModel)
     {
-        // If model has path, use format of m_table, otherwise use save format from settings.
-        *this = (!pItemModel->getFilePath().isEmpty()) ? pItemModel->m_table.saveFormat() : defaultSaveOptions(pItemModel);
+        // If model seems to have been opened from existing input (file/memory), use format of m_table, otherwise use save format from settings.
+        *this = (pItemModel->latestReadTimeInSeconds() >= 0) ? pItemModel->m_table.saveFormat() : defaultSaveOptions(pItemModel);
         if (!pItemModel->isSupportedEncodingForSaving(textEncoding()))
         {
             // Encoding is not supported, fallback to UTF-8.
@@ -602,6 +602,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openNewTable()
         m_sFilePath.clear();
         setFilePathWithoutSignalEmit(QString());
     });
+    m_readTimeInSeconds = -1;
     return rv;
 }
 
