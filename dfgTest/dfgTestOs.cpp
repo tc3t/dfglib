@@ -292,3 +292,17 @@ TEST(dfgOs, OutputFile_completeOrNone)
         EXPECT_EQ(0, fileSize(szFilePath));
     }
 }
+
+#ifdef _WIN32 // TODO: remove #ifdef once available on other platforms
+    TEST(dfgOs, pathFilename)
+    {
+        EXPECT_STREQ("", DFG_MODULE_NS(os)::pathFilename(static_cast<char*>(nullptr)));
+        EXPECT_STREQ(L"", DFG_MODULE_NS(os)::pathFilename(static_cast<wchar_t*>(nullptr)));
+        EXPECT_STREQ("b.txt", DFG_MODULE_NS(os)::pathFilename("c:\\a\\b.txt"));
+        EXPECT_STREQ("b.txt", DFG_MODULE_NS(os)::pathFilename("c:/a/b.txt"));
+        EXPECT_STREQ(L"a b c.txt.txt2", DFG_MODULE_NS(os)::pathFilename(L"c:/a/a b c.txt.txt2"));
+        EXPECT_STREQ("a b c.txt.txt2", DFG_MODULE_NS(os)::pathFilename("a b c.txt.txt2"));
+        EXPECT_STREQ("", DFG_MODULE_NS(os)::pathFilename("c:/a/"));
+    }
+
+#endif // _WIN32

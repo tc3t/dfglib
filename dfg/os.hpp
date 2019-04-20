@@ -4,6 +4,7 @@
 #include "ReadOnlySzParam.hpp"
 #include <fstream>
 #include "os/fileSize.hpp"
+#include "dfgBase.hpp"
 
 #ifdef _WIN32
 	#include <Shlwapi.h>
@@ -94,19 +95,23 @@ inline std::wstring getCurrentWorkingDirectoryW()
 	inline ConstCharPtr pathFindExtension(const ConstCharPtr psz)	{return PathFindExtensionA(psz);}
 	inline ConstWCharPtr pathFindExtension(const ConstWCharPtr psz)	{return PathFindExtensionW(psz);}
 
-	// Returns pointer to the beginning of filename in given path string using the assumption that
-	// the file name begins from the first character after the last directory separator / or \.
-	// If no directory separator is found, the given path is assumed to be filename as whole.
-	template <class Char_T>
-	inline ConstCharPtr pathFilename(const Char_T* const pszPath)
-	{
-		std::basic_string<Char_T> str(pszPath); // Redundant copy
-		const auto nPos = str.find_last_of("\\/");
-		if (nPos != str.npos)
-			return pszPath + nPos + 1;
-		else
-			return pszPath; // No / nor \ found, assume that the whole string is the filename.
-	}
+    // Returns pointer to the beginning of filename in given path string using the assumption that
+    // the file name begins from the first character after the last directory separator / or \.
+    // If no directory separator is found, the given path is assumed to be filename as whole.
+    // If given parameter is null, returns empty string.
+    template <class Char_T>
+    inline const Char_T* pathFilename(const Char_T* const pszPath)
+    {
+        if (!pszPath)
+            return DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "");
+        const Char_T* pszFilenamePart = pszPath;
+        for (auto p = pszPath; *p != '\0'; ++p)
+        {
+            if (*p == '\\' || *p == '/')
+                pszFilenamePart = p + 1;
+        }
+        return pszFilenamePart;
+    }
 
 	namespace DFG_DETAIL_NS
 	{
