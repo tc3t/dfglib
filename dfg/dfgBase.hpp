@@ -225,6 +225,30 @@ public:
     DFG_CLASS_NAME(Dummy)(const T&) {}
 };
 
+// stringLiteralByCharType(): helper for DFG_STRING_LITERAL_BY_CHARTYPE
+template <class T> inline const T* stringLiteralByCharType(const char*, const wchar_t*, const char16_t*, const char32_t*)                 { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "stringLiteralByCharType is not implemented for given type") }
+template <> inline const char*     stringLiteralByCharType<char>(const char* psz, const wchar_t*, const char16_t*, const char32_t*)       { return psz; }
+template <> inline const wchar_t*  stringLiteralByCharType<wchar_t>(const char*, const wchar_t* pwsz, const char16_t*, const char32_t*)   { return pwsz; }
+template <> inline const char16_t* stringLiteralByCharType<char16_t>(const char*, const wchar_t*, const char16_t* psz16, const char32_t*) { return psz16; }
+template <> inline const char32_t* stringLiteralByCharType<char32_t>(const char*, const wchar_t*, const char16_t*, const char32_t* psz32) { return psz32; }
+
+namespace DFG_DETAIL_NS
+{
+    template <class T> inline const T* stringLiteralByCharTypeNoChar16OrChar32(const char*, const wchar_t*)                 { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "stringLiteralByCharTypeNoChar16OrChar32 is not implemented for given type") }
+    template <> inline const char*     stringLiteralByCharTypeNoChar16OrChar32<char>(const char* psz, const wchar_t*)       { return psz; }
+    template <> inline const wchar_t*  stringLiteralByCharTypeNoChar16OrChar32<wchar_t>(const char*, const wchar_t* pwsz)   { return pwsz; }
+}
+
+/* Returns typed string literal by char type. To be used e.g. in template functions where one needs string literal by template parameter char type.
+    Example:
+        template <class Char_T> std::basic_string<Char_T> getStr() { return DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "abc"); }
+*/
+#if !defined(_MSC_VER) || (DFG_MSVC_VER >= DFG_MSVC_VER_2015) // u and U prefixes are supported in MSVC only since MSVC2015
+    #define DFG_STRING_LITERAL_BY_CHARTYPE(CHAR_T, STR) ::DFG_ROOT_NS::stringLiteralByCharType<CHAR_T>(STR, DFG_STRING_LITERAL_TO_WSTRING_LITERAL(STR), DFG_STRING_LITERAL_TO_CHAR16_LITERAL(STR), DFG_STRING_LITERAL_TO_CHAR32_LITERAL(STR))
+#else
+    #define DFG_STRING_LITERAL_BY_CHARTYPE(CHAR_T, STR) ::DFG_ROOT_NS::DFG_DETAIL_NS::stringLiteralByCharTypeNoChar16OrChar32<CHAR_T>(STR, DFG_STRING_LITERAL_TO_WSTRING_LITERAL(STR))
+#endif
+
 } // module dfg Root
 
 #include "ReadOnlySzParam.hpp"

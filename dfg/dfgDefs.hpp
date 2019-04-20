@@ -58,6 +58,16 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
 #define DFG_HELPER_STRINGIZE(x)			#x
 #define DFG_STRINGIZE(x)				DFG_HELPER_STRINGIZE(x)
 
+// DFG_STRING_LITERAL_TO_WSTRING_LITERAL("abc") -> L"abc". More useful in context where one needs to wstringify a macroed char literal.
+#define DFG_STRING_LITERAL_TO_WSTRING_LITERAL_HELPER(x) L##x
+#define DFG_STRING_LITERAL_TO_WSTRING_LITERAL(STR) DFG_STRING_LITERAL_TO_WSTRING_LITERAL_HELPER(STR)
+
+#define DFG_STRING_LITERAL_TO_CHAR16_LITERAL_HELPER(x) u##x
+#define DFG_STRING_LITERAL_TO_CHAR16_LITERAL(STR) DFG_STRING_LITERAL_TO_CHAR16_LITERAL_HELPER(STR)
+
+#define DFG_STRING_LITERAL_TO_CHAR32_LITERAL_HELPER(x) U##x
+#define DFG_STRING_LITERAL_TO_CHAR32_LITERAL(STR) DFG_STRING_LITERAL_TO_CHAR32_LITERAL_HELPER(STR)
+
 // To suppress "unused variable"-warning for example with unused function parameters.
 // Usage: DFG_UNUSED(variableName);
 // Related matter:

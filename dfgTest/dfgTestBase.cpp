@@ -551,3 +551,48 @@ TEST(dfgBuild, buildTimeDetails)
     EXPECT_STREQ(BOOST_LIB_VERSION, vals[BuildTimeDetail_boostVersion]);
 #endif
 }
+
+TEST(dfgBuild, DFG_STRING_LITERAL_TO_TYPED_LITERAL)
+{
+#define DFGTEST_TEMP_TEST0 "abc"
+
+    EXPECT_STREQ(L"abc", DFG_STRING_LITERAL_TO_WSTRING_LITERAL("abc"));
+    EXPECT_STREQ(L"abc", DFG_STRING_LITERAL_TO_WSTRING_LITERAL(DFGTEST_TEMP_TEST0));
+
+#if !defined(_MSC_VER) || (DFG_MSVC_VER >= DFG_MSVC_VER_2015) // u and U prefixes are supported in MSVC only since MSVC2015
+    // char16_t
+    EXPECT_EQ(std::basic_string<char16_t>(u"abc"), DFG_STRING_LITERAL_TO_CHAR16_LITERAL("abc"));
+    EXPECT_EQ(std::basic_string<char16_t>(u"abc"), DFG_STRING_LITERAL_TO_CHAR16_LITERAL(DFGTEST_TEMP_TEST0));
+
+    // char32_t
+    EXPECT_EQ(std::basic_string<char32_t>(U"abc"), DFG_STRING_LITERAL_TO_CHAR32_LITERAL("abc"));
+    EXPECT_EQ(std::basic_string<char32_t>(U"abc"), DFG_STRING_LITERAL_TO_CHAR32_LITERAL(DFGTEST_TEMP_TEST0));
+#endif // !defined(_MSC_VER) || (DFG_MSVC_VER >= DFG_MSVC_VER_2015)
+
+#undef DFGTEST_TEMP_TEST0
+}
+
+TEST(dfgBuild, DFG_STRING_LITERAL_BY_CHARTYPE)
+{
+#define DFGTEST_TEMP_TEST0 "abc"
+
+    // Char
+    EXPECT_STREQ("abc", DFG_STRING_LITERAL_BY_CHARTYPE(char, DFGTEST_TEMP_TEST0));
+    EXPECT_STREQ("abc", DFG_STRING_LITERAL_BY_CHARTYPE(char, "abc"));
+
+    // wchar_t
+    EXPECT_STREQ(L"abc", DFG_STRING_LITERAL_BY_CHARTYPE(wchar_t, DFGTEST_TEMP_TEST0));
+    EXPECT_STREQ(L"abc", DFG_STRING_LITERAL_BY_CHARTYPE(wchar_t, "abc"));
+
+#if !defined(_MSC_VER) || (DFG_MSVC_VER >= DFG_MSVC_VER_2015) // u and U prefixes are supported in MSVC only since MSVC2015
+    // char16_t
+    EXPECT_EQ(std::basic_string<char16_t>(u"abc"), DFG_STRING_LITERAL_BY_CHARTYPE(char16_t, DFGTEST_TEMP_TEST0));
+    EXPECT_EQ(std::basic_string<char16_t>(u"abc"), DFG_STRING_LITERAL_BY_CHARTYPE(char16_t, "abc"));
+
+    // char32_t
+    EXPECT_EQ(std::basic_string<char32_t>(U"abc"), DFG_STRING_LITERAL_BY_CHARTYPE(char32_t, DFGTEST_TEMP_TEST0));
+    EXPECT_EQ(std::basic_string<char32_t>(U"abc"), DFG_STRING_LITERAL_BY_CHARTYPE(char32_t, "abc"));
+
+#endif // !defined(_MSC_VER) || (DFG_MSVC_VER >= DFG_MSVC_VER_2015)
+#undef DFGTEST_TEMP_TEST0
+}
