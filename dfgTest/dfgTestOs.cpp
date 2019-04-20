@@ -305,4 +305,11 @@ TEST(dfgOs, OutputFile_completeOrNone)
         EXPECT_STREQ("", DFG_MODULE_NS(os)::pathFilename("c:/a/"));
     }
 
+    TEST(dfgOs, getExecutableFilePath)
+    {
+        const auto sPathC = DFG_MODULE_NS(os)::getExecutableFilePath<char>();
+        const auto sPathW = DFG_MODULE_NS(os)::getExecutableFilePath<wchar_t>();
+        EXPECT_STREQ("dfgTest.exe", DFG_MODULE_NS(os)::pathFilename(sPathC.c_str()));
+        EXPECT_STREQ(L"dfgTest.exe", DFG_MODULE_NS(os)::pathFilename(sPathW.c_str()));
+    }
 #endif // _WIN32

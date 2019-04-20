@@ -115,27 +115,27 @@ inline std::wstring getCurrentWorkingDirectoryW()
 
 	namespace DFG_DETAIL_NS
 	{
-		inline DWORD getModuleFileName(HMODULE hModule, char* pOut, DWORD nBufferSizeInChars) {return ::GetModuleFileNameA(hModule, pOut, nBufferSizeInChars);}
-		inline DWORD getModuleFileName(HMODULE hModule, wchar_t* pOut, DWORD nBufferSizeInChars) {return ::GetModuleFileNameW(hModule, pOut, nBufferSizeInChars);}
+        inline DWORD getModuleFileName(HMODULE hModule, char* pOut, DWORD nBufferSizeInChars)    { return ::GetModuleFileNameA(hModule, pOut, nBufferSizeInChars); }
+        inline DWORD getModuleFileName(HMODULE hModule, wchar_t* pOut, DWORD nBufferSizeInChars) { return ::GetModuleFileNameW(hModule, pOut, nBufferSizeInChars); }
 	};
 
-	template <class Char_T>
-	inline std::basic_string<Char_T> getExecutableFilePath()
-	{
-		typedef std::basic_string<Char_T> StringT;
-		Char_T buffer[MAX_PATH];
-		const DWORD nLength = DFG_DETAIL_NS::getModuleFileName(NULL, buffer, CountOf(buffer));
-		if (nLength == DFG_COUNTOF(buffer))
-		{
-			std::vector<Char_T> buf(10*DFG_COUNTOF(buffer));
-			const DWORD nLength = DFG_DETAIL_NS::getModuleFileName(NULL, &buf[0], buf.size());
-			if (nLength == buf.size())
-				buf[0] = '\0';
-			return StringT(&buf[0]);
-		}
-		else
-			return StringT(buffer);
-	}
+    template <class Char_T>
+    inline std::basic_string<Char_T> getExecutableFilePath()
+    {
+        typedef std::basic_string<Char_T> StringT;
+        Char_T buffer[MAX_PATH];
+        const DWORD nLength = DFG_DETAIL_NS::getModuleFileName(NULL, buffer, DFG_COUNTOF(buffer));
+        if (nLength == DFG_COUNTOF(buffer))
+        {
+            std::vector<Char_T> buf(10*DFG_COUNTOF(buffer));
+            const DWORD nLength2 = DFG_DETAIL_NS::getModuleFileName(NULL, &buf[0], buf.size());
+            if (nLength2 == buf.size())
+                buf[0] = '\0';
+            return StringT(&buf[0]);
+        }
+        else
+            return StringT(buffer);
+    }
 
 #endif // _WIN32
 
