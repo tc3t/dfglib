@@ -24,7 +24,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 # Application version. On Windows triggers auto-generation of rc-file
 # https://doc.qt.io/qt-5/qmake-variable-reference.html#version
-VERSION = 0.9.9.0
+VERSION = 0.9.9.1
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
 
 win32 {
