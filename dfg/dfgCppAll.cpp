@@ -2,6 +2,7 @@
  Purpose: Includes all .cpp files in dfg.
 */
 
+#include "debug/structuredExceptionHandling.cpp"
 #include "colour/specRendJw.cpp"
 #include "io/widePathStrToFstreamFriendlyNonWide.cpp"
 #include "os/memoryMappedFile.cpp"
