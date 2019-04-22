@@ -9,6 +9,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTimer>
 #include <QIcon>
 #include <QMainWindow>
+#include <QSettings>
 #include <QStyle>
 #include <QToolButton>
 DFG_END_INCLUDE_QT_HEADERS
@@ -85,6 +86,7 @@ int main(int argc, char *argv[])
     a.setApplicationVersion(DFG_QT_TABLE_EDITOR_VERSION_STRING);
 
 #ifdef _WIN32
+    if (dfg::qt::QtApplication::getApplicationSettings()->value("dfglib/enableAutoDumps", false).toBool())
     {
         // Note: crash dump time stamp is for now taken here, around app start time, rather than from crash time.
         const QString sCrashDumpPath = a.applicationDirPath() + QString("/crashdump_%1.dmp").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmsszzz"));
