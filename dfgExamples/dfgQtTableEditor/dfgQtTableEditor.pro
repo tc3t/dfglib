@@ -61,6 +61,20 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/tableViewUndoCommands.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/widgetHelpers.hpp
 
+win32 {
+    SOURCES += \
+            $$_PRO_FILE_PWD_/../../dfg/debug/structuredExceptionHandling.cpp
+
+# For unknown reason this wouldn't get compiled even after running qmake and rebuilding (Qt Creator 4.9.0). Renaming the file to format.cpp
+# would make it work; possibly a qmake bug given:
+# https://lists.qt-project.org/pipermail/qt-creator/2017-July/006661.html ("qmake will not build c++ file named something like format.cc and ostream.cc")
+# https://bugreports.qt.io/browse/QTBUG-61842
+# As a workaround the file has been included in main.cpp
+#            $$_PRO_FILE_PWD_/../../dfg/str/fmtlib/format.cc
+
+    HEADERS += $$_PRO_FILE_PWD_/../../dfg/debug/structuredExceptionHandling.h
+}
+
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../externals/
 

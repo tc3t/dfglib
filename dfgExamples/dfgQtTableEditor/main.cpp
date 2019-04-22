@@ -1,11 +1,9 @@
 #include <dfg/qt/qtIncludeHelpers.hpp>
 #include <dfg/qt/connectHelper.hpp>
 
-//DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
-//DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
-
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QApplication>
+#include <QDateTime>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QTimer>
@@ -17,7 +15,15 @@ DFG_END_INCLUDE_QT_HEADERS
 
 #include <dfg/qt/TableEditor.hpp>
 #include <dfg/qt/QtApplication.hpp>
+#include <dfg/qt/qtBasic.hpp>
 #include <dfg/build/buildTimeDetails.hpp>
+#include <dfg/debug/structuredExceptionHandling.h>
+
+#ifdef _WIN32
+    DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+        #include <dfg/str/fmtlib/format.cc>
+    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+#endif // _WIN32
 
 static QWidget* gpMainWindow = nullptr;
 
@@ -72,6 +78,14 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     dfg::qt::QtApplication::m_sSettingsPath = a.applicationFilePath() + ".ini";
     a.setApplicationVersion(DFG_QT_TABLE_EDITOR_VERSION_STRING);
+
+#ifdef _WIN32
+    {
+        // Note: crash dump time stamp is for now taken here, around app start time, rather than from crash time.
+        const QString sCrashDumpPath = a.applicationDirPath() + QString("/crashdump_%1.dmp").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmsszzz"));
+        dfg::debug::structuredExceptionHandling::enableAutoDumps(dfg::qt::qStringToFileApi8Bit(sCrashDumpPath).c_str());
+    }
+#endif // _WIN32, structuredExceptionHandling
 
     QMainWindow mainWindow;
     gpMainWindow = &mainWindow;
