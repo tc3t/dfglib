@@ -422,6 +422,46 @@ TEST(dfgCont, TableSz_contentStorageSizeInBytes)
     EXPECT_EQ(14, table.contentStorageSizeInBytes());
 }
 
+TEST(dfgCont, TableSz_forEachFwdColumnIndex)
+{
+    using namespace DFG_MODULE_NS(cont);
+    {
+        DFG_CLASS_NAME(TableSz)<char> table;
+        table.setElement(0, 0, "");
+        int nCount = 0;
+        table.forEachFwdColumnIndex([&](size_t) { nCount++; });
+        EXPECT_EQ(1, nCount);
+    }
+
+    {
+        DFG_CLASS_NAME(TableSz)<char> table;
+        table.setElement(1, 10, "");
+        int nCount = 0;
+        table.forEachFwdColumnIndex([&](size_t) { nCount++; });
+        //EXPECT_EQ(11, nCount);
+        EXPECT_EQ(1, nCount);
+    }
+}
+
+TEST(dfgCont, TableSz_forEachNonNullCell)
+{
+    using namespace DFG_MODULE_NS(cont);
+    DFG_CLASS_NAME(TableSz)<char> table;
+
+    {
+        typedef DFG_CLASS_NAME(TrivialPair)<size_t, size_t> PairT;
+        DFG_CLASS_NAME(Vector)<PairT> expected;
+        expected.push_back(PairT(1, 5));
+        expected.push_back(PairT(2, 10));
+        decltype(expected) cellIndexes;
+        DFG_CLASS_NAME(TableSz)<char> table;
+        table.setElement(1, 5, "");
+        table.setElement(2, 10, "");
+        table.forEachNonNullCell([&](size_t r, size_t c, const char*) { cellIndexes.push_back(PairT(r, c)); });
+        EXPECT_EQ(expected, cellIndexes);
+    }
+}
+
 TEST(dfgCont, ArrayWrapper)
 {
     using namespace DFG_ROOT_NS;

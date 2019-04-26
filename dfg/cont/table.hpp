@@ -298,19 +298,28 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return true;
         }
 
+        // Shared implementation for const/non-const cases.
+        template <class This_T, class Func_T>
+        static void privForEachFwdColumnIndexImpl(This_T& rThis, Func_T&& func)
+        {
+            Index_T i = 0;
+            for (auto iter = rThis.m_colToRows.begin(), iterEnd = rThis.m_colToRows.end(); iter != iterEnd; ++iter, ++i)
+            {
+                if (!iter->empty())
+                    func(i);
+            }
+        }
 
         template <class Func_T>
         void forEachFwdColumnIndex(Func_T&& func)
         {
-            for (auto iter = m_charBuffers.cbegin(), iterEnd = m_charBuffers.cend(); iter != iterEnd; ++iter)
-                func(iter->first);
+            privForEachFwdColumnIndexImpl(*this, std::forward<Func_T>(func));
         }
 
         template <class Func_T>
         void forEachFwdColumnIndex(Func_T&& func) const
         {
-            for (auto iter = m_charBuffers.cbegin(), iterEnd = m_charBuffers.cend(); iter != iterEnd; ++iter)
-                func(iter->first);
+            privForEachFwdColumnIndexImpl(*this, std::forward<Func_T>(func));
         }
 
         // Functor is given two parameters: row index and null terminated string for cell in (row, nCol).
