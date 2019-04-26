@@ -305,8 +305,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             Index_T i = 0;
             for (auto iter = rThis.m_colToRows.begin(), iterEnd = rThis.m_colToRows.end(); iter != iterEnd; ++iter, ++i)
             {
-                if (!iter->empty())
-                    func(i);
+                func(i);
             }
         }
 

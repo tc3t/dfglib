@@ -186,9 +186,11 @@ TEST(dfgCont, TableSzUntypedInterface)
     {
         cols.push_back(nCol);
     });
-    EXPECT_EQ(2, cols.size());
+    EXPECT_EQ(4, cols.size());
     EXPECT_EQ(0, cols[0]);
-    EXPECT_EQ(3, cols[1]);
+    EXPECT_EQ(1, cols[1]);
+    EXPECT_EQ(2, cols[2]);
+    EXPECT_EQ(3, cols[3]);
 
     std::string sLongerThanBlockSize(120, '0');
     EXPECT_TRUE(table.addString(sLongerThanBlockSize, 10, 10));
@@ -257,9 +259,11 @@ TEST(dfgCont, TableSzTypedInterface)
     {
         cols.push_back(nCol);
     });
-    EXPECT_EQ(2, cols.size());
+    EXPECT_EQ(4, cols.size());
     EXPECT_EQ(0, cols[0]);
-    EXPECT_EQ(3, cols[1]);
+    EXPECT_EQ(1, cols[1]);
+    EXPECT_EQ(2, cols[2]);
+    EXPECT_EQ(3, cols[3]);
 
     StringUtf8 sLongerThanBlockSize;
     sLongerThanBlockSize.m_s.assign(120, '0');
@@ -438,8 +442,7 @@ TEST(dfgCont, TableSz_forEachFwdColumnIndex)
         table.setElement(1, 10, "");
         int nCount = 0;
         table.forEachFwdColumnIndex([&](size_t) { nCount++; });
-        //EXPECT_EQ(11, nCount);
-        EXPECT_EQ(1, nCount);
+        EXPECT_EQ(11, nCount);
     }
 }
 
