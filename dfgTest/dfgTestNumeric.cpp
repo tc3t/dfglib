@@ -702,7 +702,7 @@ TEST(dfgNumeric, basicAlgs)
     }
 #endif
 
-#if ENABLE_RUNTIME_COMPARISONS
+#if DFGTEST_ENABLE_BENCHMARKS
     { // Performance comparison for forEachMultiply and std::transform
         using namespace DFG_MODULE_NS(numeric);
         const size_t nVecSize = 256;
@@ -731,7 +731,7 @@ TEST(dfgNumeric, basicAlgs)
                 forEachMultiply(v1Temp, 1.2);
             const double dAlg = timer.elapsedWallSeconds();
             v1FromAlg = std::move(v1Temp);
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 std::cout << "Time forEachMultiply: " << 1000 * dAlg << " ms\n";
             #endif
         }
@@ -744,7 +744,7 @@ TEST(dfgNumeric, basicAlgs)
                 std::transform(v1Temp.begin(), v1Temp.end(), v1Temp.begin(), [](double d) {return d * 1.2; });
             const double dAlg = timer.elapsedWallSeconds();
             v1FromTransform = std::move(v1Temp);
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 std::cout << "Time std::transform: " << 1000 * dAlg << " ms\n";
             #endif
         }
@@ -753,7 +753,7 @@ TEST(dfgNumeric, basicAlgs)
     }
 #endif
 
-#if ENABLE_RUNTIME_COMPARISONS
+#if DFGTEST_ENABLE_BENCHMARKS
     { // Performance comparison for transformMultiply and std::transform
         using namespace DFG_MODULE_NS(numeric);
         const size_t nVecSize = 1024;
@@ -780,7 +780,7 @@ TEST(dfgNumeric, basicAlgs)
                 transformMultiply(v1Temp, v2, v1Temp.data());
             const double dAlg = timer.elapsedWallSeconds();
             v1FromAlg = std::move(v1Temp);
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 std::cout << "Time transformMultiply: " << 1000 * dAlg << " ms\n";
             #endif
         }
@@ -792,7 +792,7 @@ TEST(dfgNumeric, basicAlgs)
                 transformInPlace(v1Temp, v2, [](double a, double b) {return a*b; });
             const double dAlg = timer.elapsedWallSeconds();
             v1FromAlg = std::move(v1Temp);
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 std::cout << "Time transformInPlace: " << 1000 * dAlg << " ms\n";
             #endif
         }
@@ -804,7 +804,7 @@ TEST(dfgNumeric, basicAlgs)
                 std::transform(v1Temp.begin(), v1Temp.end(), v2.begin(), v1Temp.begin(), std::multiplies<double>());
             const double dAlg = timer.elapsedWallSeconds();
             v1FromTransform = std::move(v1Temp);
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 std::cout << "Time std::transform: " << 1000 * dAlg << " ms\n";
             #endif
         }
@@ -822,7 +822,7 @@ namespace
     {
         typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type ValueType;
         using namespace DFG_ROOT_NS;
-        #if ENABLE_RUNTIME_COMPARISONS
+        #if DFGTEST_ENABLE_BENCHMARKS
             const auto nRep = 5000;
         #else
             const auto nRep = 50;
@@ -836,7 +836,7 @@ namespace
             DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
             for (int i = 0; i < nRep; ++i)
                 DFG_MODULE_NS(numeric)::forEachAdd(cont, ValueType(addVal));
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 const auto dElapsed = timer.elapsedWallSeconds();
                 std::cout << "forEachAdd T=" << typeid(ValueType).name() << ": " << dElapsed*1000 << " ms\n";
             #endif
@@ -854,7 +854,7 @@ namespace
                 for (int n = 0; n < nSize; ++n)
                     arr[n] += v;
             }
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 const auto dElapsed = timer.elapsedWallSeconds();
                 std::cout << "non-vectorized loop with T=" << typeid(ValueType).name() << ": " << dElapsed*1000 << " ms\n";
             #endif
@@ -892,7 +892,7 @@ TEST(dfgNumeric, transform)
 
         double valVec = 0;
         double valNonVec = 0;
-        #if ENABLE_RUNTIME_COMPARISONS
+        #if DFGTEST_ENABLE_BENCHMARKS
             const size_t nRep = 5000;
         #else
             const size_t nRep = 50;
@@ -902,7 +902,7 @@ TEST(dfgNumeric, transform)
             for (size_t i = 0; i < nRep; ++i)
                 DFG_MODULE_NS(numeric)::transform1(v0, v0.data(), [](double a) {return std::sin(a); });
                 //DFG_MODULE_NS(numeric)::transform2(v0, v1, v0.data(), [](double a, double b) {return a + std::sin(b); });
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 const auto dElapsed = timer.elapsedWallSeconds();
                 std::cout << "transform1 time: " << dElapsed * 1000 << " ms\n";
             #endif
@@ -920,7 +920,7 @@ TEST(dfgNumeric, transform)
                     v0ptr[j] = std::sin(v0ptr[j]);
                     //v0ptr[j] += std::sin(v1ptr[j]);
             }
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 const auto dElapsed = timer.elapsedWallSeconds();
                 std::cout << "nonvectorised time: " << dElapsed * 1000 << " ms\n";
             #endif
@@ -974,7 +974,7 @@ TEST(dfgNumeric, loopVectorizationSin)
 #ifdef _DEBUG
         const auto N = 20;
 #else
-        #if ENABLE_RUNTIME_COMPARISONS
+        #if DFGTEST_ENABLE_BENCHMARKS
             //const auto N = 20000;
             const size_t N = 20000 + static_cast<size_t>(2 * DFG_MODULE_NS(rand)::rand(randEng));
         #else
@@ -1026,7 +1026,7 @@ TEST(dfgNumeric, loopVectorizationSin)
         const auto dTime = timer.elapsedWallSeconds();
         DFG_UNUSED(psz);
         DFG_UNUSED(dTime);
-        #if ENABLE_RUNTIME_COMPARISONS
+        #if DFGTEST_ENABLE_BENCHMARKS
             //std::cout << "First source " << sourcePtr[0] <<  "\n";
             std::cout << "Sin sum " << psz << ": " << dTime * 1000 << " ms\n";
             //std::cout << "sum: " << sum << "\n";
@@ -1066,7 +1066,7 @@ namespace
             DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
             for (int i = 0; i < nRep; ++i)
                 acc += DFG_MODULE_NS(numeric)::accumulate(cont);
-#if ENABLE_RUNTIME_COMPARISONS
+#if DFGTEST_ENABLE_BENCHMARKS
             const auto dElapsed = timer.elapsedWallSeconds();
             std::cout << "numeric::accumulate(cont) with " << typeid(cont.front()).name() << ": " << 1000 * dElapsed << " ms\n";
 #endif
@@ -1083,7 +1083,7 @@ namespace
     void accumulateImpl(const Cont_T& cont)
     {
         using namespace DFG_ROOT_NS;
-#if ENABLE_RUNTIME_COMPARISONS
+#if DFGTEST_ENABLE_BENCHMARKS
         const int nRep = 10000;
 #else
         const int nRep = 10;
@@ -1099,7 +1099,7 @@ namespace
             DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
             for (int i = 0; i < nRep; ++i)
                 v0Sum += DFG_MODULE_NS(numeric)::accumulate(cont, ValueType(0));
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 const auto dElapsed = timer.elapsedWallSeconds();
                 std::cout << "numeric::accumulate(cont, ValueType(0)) with " << typeid(cont.front()).name() << ": " << 1000*dElapsed << " ms\n";
             #endif
@@ -1108,7 +1108,7 @@ namespace
             DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
             for (int i = 0; i < nRep; ++i)
                 v1Sum += std::accumulate(cont.cbegin(), cont.cend(), ValueType(0), [](ValueType a, ValueType b) { return static_cast<ValueType>(a + b); });
-            #if ENABLE_RUNTIME_COMPARISONS
+            #if DFGTEST_ENABLE_BENCHMARKS
                 const auto dElapsed = timer.elapsedWallSeconds();
                 std::cout << "std::accumulate with " << typeid(cont.front()).name() << ": " << 1000 * dElapsed << " ms\n";
             #endif
@@ -1252,7 +1252,7 @@ TEST(dfgNumeric, rescale)
             EXPECT_NEAR(diff, vals[i] - vals[i-1], 1e-6);
         }
     }
-#endif // ENABLE_RUNTIME_COMPARISONS
+#endif // DFGTEST_ENABLE_BENCHMARKS
 
     // Test integer range (should fail to compile)
     {

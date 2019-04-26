@@ -1185,7 +1185,7 @@ TEST(dfgIo, BasicOmcByteStream)
 
 TEST(dfgIo, ostreamPerformance)
 {
-#if ENABLE_RUNTIME_COMPARISONS == 0
+#if DFGTEST_ENABLE_BENCHMARKS == 0
     DFGTEST_MESSAGE("ostreamPerformance skipped due to build settings");
 #else
     using namespace DFG_ROOT_NS;
@@ -1237,5 +1237,5 @@ TEST(dfgIo, ostreamPerformance)
 
     EXPECT_EQ(bytesStd, bytesOmc);
     EXPECT_EQ(bytesStd, bytesBasicOmc);
-#endif // ENABLE_RUNTIME_COMPARISONS
+#endif // DFGTEST_ENABLE_BENCHMARKS
 }

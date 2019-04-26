@@ -25,7 +25,7 @@
 #define DFGTEST_MESSAGE(expr)       std::cout << "    MESSAGE: " << expr << '\n';
 
 #if !defined(_DEBUG) && !defined(__MINGW32__)
-    #define ENABLE_RUNTIME_COMPARISONS	0
+    #define DFGTEST_ENABLE_BENCHMARKS	0
 #else
-    #define ENABLE_RUNTIME_COMPARISONS	0
+    #define DFGTEST_ENABLE_BENCHMARKS	0
 #endif
