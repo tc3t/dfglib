@@ -17,11 +17,6 @@
 #include "../build/inlineTools.hpp"
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
-#ifndef _MSC_VER // TODO: Add proper check, workaround originally introduced for gcc 4.8.1
-    #include <boost/format/detail/compat_workarounds.hpp>
-    #include <locale>
-#endif // !_MSC_VER
-
 #include <iterator>
 
 
@@ -1084,11 +1079,7 @@ public:
             // character which may be less or more that sizeof(ch)-bytes. The result may also
             // be truncated.
             const auto ch = readOne(getStream());
-            #ifdef _MSC_VER // TODO: add proper check, originally introduced as workaround for gcc 4.8.1 
-                const bool bRead = (ch != eofChar(getStream()));
-            #else
-                const bool bRead = (ch != boost::io::CompatTraits<typename StreamT::traits_type>::compatible_type::eof());
-            #endif
+            const bool bRead = (ch != eofChar(getStream()));
             if (bRead)
             {
                 buffer.appendChar(ch);
