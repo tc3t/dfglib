@@ -19,17 +19,29 @@ public:
 
     DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlySzParamC) sPath)
     {
+#ifdef _MSC_VER
         #pragma warning(disable : 4996) // This function or variable may be unsafe
+#endif // _MSC_VER
+
         m_pFile = std::fopen(sPath.c_str(), "rb");
+
+#ifdef _MSC_VER
         #pragma warning(default : 4996)
+#endif // _MSC_VER
     }
 
     DFG_CLASS_NAME(BasicIfStream)(const DFG_CLASS_NAME(ReadOnlySzParamW) sPath)
     {
 #ifdef _WIN32
+    #ifdef _MSC_VER
         #pragma warning(disable : 4996) // This function or variable may be unsafe
+    #endif // _MSC_VER
+
         m_pFile = _wfopen(sPath.c_str(), L"rb");
+
+    #ifdef _MSC_VER
         #pragma warning(default : 4996)
+    #endif // _MSC_VER
 #else
         m_pFile = std::fopen(pathStrToFileApiFriendlyPath(sPath).c_str(), "rb");
 #endif

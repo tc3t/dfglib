@@ -380,13 +380,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         void privShiftRowIndexesInRowGreaterOrEqual(Index_T nRow, const Index_T nShift, const bool bPositiveShift)
         {
-            bool bSomeShifted = false;
             for(Index_T i = 0, nCount = static_cast<Index_T>(m_colToRows.size()); i < nCount; ++i)
             {
                 auto& colToRows = m_colToRows[i];
                 auto iter = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(colToRows, nRow);
-                if (iter != colToRows.end())
-                    bSomeShifted = true;
                 for(; iter != colToRows.end(); ++iter)
                     iter->first = (bPositiveShift) ? iter->first + nShift : iter->first - nShift;
             }
@@ -441,7 +438,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_colToRows.erase(m_colToRows.begin() + nCol, m_colToRows.begin() + nCol + nRemoveCount);
             // Move char arrays whose index is more than nCol + nRemoveCount to match with new index, i.e. nCol -> nCol - nRemoveCount.
             auto iter = m_charBuffers.lower_bound(nCol + nRemoveCount);
-            for(iter; iter != m_charBuffers.end(); ++iter)
+            for(; iter != m_charBuffers.end(); ++iter)
             {
                 const auto nThisIndex = iter->first;
                 const auto nTargetIndex = nThisIndex - nRemoveCount;

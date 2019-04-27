@@ -80,7 +80,7 @@ public:
                                     const Char_T& cEol,
                                     const EnclosementBehaviour eb)
     {
-        typedef decltype(input.cbegin()) InputIterT;
+        //typedef decltype(input.cbegin()) InputIterT;
         typedef decltype(*input.cbegin()) InputT;
         auto writeItem = [](OutputIter_T& out, const InputT& c) { *out++ = c; };
         writeCellFromStrIter(iterOut, input, cSep, cEnc, cEol, eb, writeItem);

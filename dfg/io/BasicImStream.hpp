@@ -90,8 +90,8 @@ public:
         m_pEnd = m_pBegin + nSize;
     }
     
-    ConstCharTPtr m_pCurrent;
     ConstCharTPtr m_pBegin;
+    ConstCharTPtr m_pCurrent;
     ConstCharTPtr m_pEnd;
 };
 

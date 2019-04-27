@@ -24,8 +24,8 @@ public:
 		return (m_fwhm / (2.0*const_pi)) / ( pow2(x - m_x0) + pow2(m_fwhm/2.0) );
 	}
 
-	ValueType m_fwhm;
-	ValueType m_x0;
+    ValueType m_x0;
+    ValueType m_fwhm;
 };
 
 class DFG_CLASS_NAME(GaussianDistributionPdf) : public DFG_CLASS_NAME(ProbabilityDensityFunction)
@@ -40,8 +40,8 @@ public:
 		return exp(-0.5*pow2((x-m_x0)/m_sigma)) / (m_sigma * const_sqrt2Pi);
 	}
 
-	ValueType m_sigma;
-	ValueType m_x0;
+    ValueType m_x0;
+    ValueType m_sigma;
 };
 
 }} // module math

@@ -81,6 +81,7 @@ namespace DFG_DETAIL_NS
     template <class FloatingPoint_T> inline const char* floatingPointTypeToSprintfType()
     {
         DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(FloatingPoint_T, "floatingPointTypeToSprintfType() not implement for given type");
+        return nullptr; // To avoid warnings in some compilers.
     }
     template <> inline const char* floatingPointTypeToSprintfType<float>()       { return "g"; }
     template <> inline const char* floatingPointTypeToSprintfType<double>()      { return "g"; }

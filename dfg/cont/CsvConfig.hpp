@@ -167,7 +167,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         template <class Strm_T, class Item0_T, class Item1_T>
         static void privWriteCellsToStream(Strm_T& strm, const Item0_T& item0, const Item1_T& item1)
         {
-            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter) Writer;
             privWriteCellToStream(strm, item0);
             strm << ',';
             privWriteCellToStream(strm, item1);

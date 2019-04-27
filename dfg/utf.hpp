@@ -185,7 +185,9 @@ void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 1
             *result++ = byteSwap(static_cast<uint16_t>(cp), ByteOrderHost, boDest);
     }
     else
+    {
         DFG_ASSERT_WITH_MSG(false, "Iterator value type should be two bytes wide.");
+    }
 #ifdef _MSC_VER
     #pragma warning(pop)
 #endif
@@ -207,7 +209,9 @@ void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 3
     if (outputCharSize == 4)
         *result++ = byteSwap(cp, ByteOrderHost, boDest);
     else
+    {
         DFG_ASSERT_WITH_MSG(false, "Iterator value type should be four bytes wide.");
+    }
 #ifdef _MSC_VER
     #pragma warning(pop)
 #endif
@@ -255,7 +259,9 @@ void cpToUtf(const uint32 cp, IterUtf_T result, size_t encodedChSize, ByteOrder 
         }
     }
     else
+    {
         DFG_ASSERT(false); // Should not reach here.
+    }
 }
 
 template <typename IterUtf_T>

@@ -128,7 +128,7 @@ inline std::wstring getCurrentWorkingDirectoryW()
         if (nLength == DFG_COUNTOF(buffer))
         {
             std::vector<Char_T> buf(10*DFG_COUNTOF(buffer));
-            const DWORD nLength2 = DFG_DETAIL_NS::getModuleFileName(NULL, &buf[0], buf.size());
+            const DWORD nLength2 = DFG_DETAIL_NS::getModuleFileName(NULL, &buf[0], static_cast<DWORD>(buf.size()));
             if (nLength2 == buf.size())
                 buf[0] = '\0';
             return StringT(&buf[0]);

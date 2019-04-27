@@ -1128,8 +1128,8 @@ public:
             return isStreamInGoodState(m_rStrm);
         }
 
-        CellBuffer& m_rCellBuffer;
         StreamT& m_rStrm;
+        CellBuffer& m_rCellBuffer;
     }; // class CellReader
 
     // Helper function for creating reader from stream and cell data.
