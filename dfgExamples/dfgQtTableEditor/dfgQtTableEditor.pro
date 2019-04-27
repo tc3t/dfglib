@@ -27,6 +27,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 VERSION = 0.9.9.1
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
 
+CONFIG += c++11
+
 win32 {
     # Adjustments on Windows:
 
