@@ -55,7 +55,7 @@ namespace
                                   CsvItemModel,
                                   CsvItemModelPropertyId_completerEnabledSizeLimit,
                                   DFG_ROOT_NS::uint64,
-                                  []() { return 10000000; } );
+                                  []() { return DFG_ROOT_NS::uint64(10000000); } );
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvItemModel_maxFileSizeForMemoryStreamWrite",
                                   CsvItemModel,
                                   CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite,
@@ -128,7 +128,6 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::SaveOptions(const 
 }
 
 #undef DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT
-
 
 namespace
 {
@@ -290,7 +289,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFileImpl(const QStri
 
 auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getOutputFileSizeEstimate() const -> uint64
 {
-    const uint64 nRows = m_table.rowCountByMaxRowIndex();
+    const uint64 nRows = static_cast<uint64>(m_table.rowCountByMaxRowIndex());
     const int nColCount = getColumnCount();
     uint64 nBytes = 0;
     for (int i = 0; i < nColCount; ++i)
@@ -388,7 +387,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, c
     if (options.bomWriting())
     {
         const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(encoding);
-        strm.write(bomBytes.data(), bomBytes.size());
+        strm.write(bomBytes.data(), std::streamsize(bomBytes.size()));
     }
 
     if (options.headerWriting())
@@ -406,7 +405,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, c
             auto utf8Bytes = qStringToEncodedBytes(sEncodedTemp);
             strm.write(utf8Bytes.data(), static_cast<std::streamsize>(utf8Bytes.size()));
         });
-        strm.write(sEol.data(), sEol.size());
+        strm.write(sEol.data(), std::streamsize(sEol.size()));
     }
 
     auto mainTableSaveOptions = options;
@@ -516,7 +515,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
 
     // Set headers.
     const auto nMaxColCount = m_table.colCountByMaxColIndex();
-    m_vecColInfo.reserve(nMaxColCount);
+    m_vecColInfo.reserve(static_cast<size_t>(nMaxColCount));
     for (int c = 0; c < nMaxColCount; ++c)
     {
         SzPtrUtf8R p = m_table(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
@@ -560,7 +559,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
         if (!pColInfo || !pColInfo->hasCompleter())
             return;
         if (!isValidIndex(vecCompletionSet, nCol))
-            vecCompletionSet.resize(nCol + 1);
+            vecCompletionSet.resize(static_cast<size_t>(nCol) + 1);
         auto& completionSetForCurrentCol = vecCompletionSet[nCol];
         m_table.forEachFwdRowInColumn(nCol, [&](const int /*nRow*/, const SzPtrUtf8R pData)
         {
@@ -612,7 +611,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(co
     if (nOtherRowCount < 1 || getRowCount() >= getRowCountUpperBound())
         return false;
     const auto nOtherColumnCount = other.getColumnCount();
-    std::vector<int> mapOtherColumnIndexToMerged(nOtherColumnCount, getColumnCount());
+    QVector<int> mapOtherColumnIndexToMerged(nOtherColumnCount, getColumnCount());
     for (auto i = 0; i < nOtherColumnCount; ++i)
     {
         const auto nCurrentColCount = getColumnCount();
@@ -635,7 +634,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(co
     //       copies data one-by-one while m_table could probably do it more efficiently by directly copying the string storage. In case of modifiable 'other',
     //       this.m_table could adopt the string storage.
     beginInsertRows(QModelIndex(), nThisOriginalRowCount, nNewRowCount - 1);
-    other.m_table.forEachNonNullCell([&](const uint32 r, const uint32 c, SzPtrUtf8R s)
+    other.m_table.forEachNonNullCell([&](const int r, const int c, SzPtrUtf8R s)
     {
         m_table.setElement(nThisOriginalRowCount + r, mapOtherColumnIndexToMerged[c], s);
     });
@@ -966,9 +965,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeColumns(int position
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnName(const int nCol, const QString& sName)
 {
-    if (isValidColumn(nCol))
+    auto pColInfo = getColInfo(nCol);
+    if (pColInfo)
     {
-        m_vecColInfo[nCol].m_name = sName;
+        pColInfo->m_name = sName;
         setModifiedStatus(true);
         Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
     }
@@ -987,7 +987,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnToStrings(const int 
     vecStrings.clear();
     if (!isValidColumn(nCol))
         return;
-    vecStrings.reserve(getColumnCount());
+    vecStrings.reserve(static_cast<size_t>(getColumnCount()));
     m_table.forEachFwdRowInColumn(nCol, [&](const int /*row*/, const SzPtrUtf8R tpsz)
     {
         vecStrings.push_back(QString::fromUtf8(tpsz.c_str()));
@@ -1002,7 +1002,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnCells(const int n
     const auto nRowCount = Min(getRowCount(), static_cast<int>(vecStrings.size()));
     for (int r = 0; r<nRowCount; ++r)
     {
-        setItem(r, nCol, vecStrings[r]);
+        setItem(r, nCol, vecStrings[static_cast<size_t>(r)]);
     }
     if (!m_bResetting)
         Q_EMIT dataChanged(this->index(0, nCol), this->index(getRowCount()-1, nCol));
@@ -1019,9 +1019,10 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setModifiedStatus(const bo
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnType(const int nCol, const ColType colType)
 {
-    if (!isValidColumn(nCol))
+    auto pColInfo = getColInfo(nCol);
+    if (!pColInfo)
         return;
-    m_vecColInfo[nCol].m_type = colType;
+    pColInfo->m_type = colType;
     setModifiedStatus(true);
     Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
 }
