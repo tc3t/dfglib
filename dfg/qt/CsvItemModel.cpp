@@ -379,7 +379,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, c
 
     const auto qStringToEncodedBytes = [&](const QString& s) -> std::string
                                         {
-                                            return (encoding == DFG_MODULE_NS(io)::encodingUTF8) ? s.toUtf8().data() : s.toLatin1();
+                                            return (encoding == DFG_MODULE_NS(io)::encodingUTF8) ? std::string(s.toUtf8().data()) : std::string(s.toLatin1());
                                         };
 
     const std::string sSepEncoded = qStringToEncodedBytes(cSep);
@@ -572,8 +572,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
         if (!m_vecColInfo[i].m_spCompleter)
             continue;
         QStringList stringlist;
-        for each (const QString& str in vecCompletionSet[i])
-            stringlist << str;
+        stringlist.reserve(static_cast<int>(vecCompletionSet[i].size()));
+        std::copy(vecCompletionSet[i].begin(), vecCompletionSet[i].end(), std::back_inserter(stringlist));
         m_vecColInfo[i].m_spCompleter->setModel(new QStringListModel(stringlist));
     }
 }
