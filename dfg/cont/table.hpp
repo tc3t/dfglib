@@ -384,7 +384,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             for(Index_T i = 0, nCount = static_cast<Index_T>(m_colToRows.size()); i < nCount; ++i)
             {
                 auto& colToRows = m_colToRows[i];
-                auto iter = privLowerBoundInColumn<ColumnIndexPairContainer::iterator>(colToRows, nRow);
+                auto iter = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(colToRows, nRow);
                 if (iter != colToRows.end())
                     bSomeShifted = true;
                 for(; iter != colToRows.end(); ++iter)
@@ -399,13 +399,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             privShiftRowIndexesInRowGreaterOrEqual(nRow, nInsertCount, true);
         }
 
-        // TODO: test
         void removeRows(Index_T nRow, Index_T nRemoveCount)
         {
             for(auto iterRowCont = m_colToRows.begin(); iterRowCont != m_colToRows.end(); ++iterRowCont)
             {
-                auto iterFirst = privLowerBoundInColumn<ColumnIndexPairContainer::iterator>(*iterRowCont, nRow);
-                auto iterEnd = privLowerBoundInColumn<ColumnIndexPairContainer::iterator>(*iterRowCont, nRow + nRemoveCount);
+                auto iterFirst = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(*iterRowCont, nRow);
+                auto iterEnd = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(*iterRowCont, nRow + nRemoveCount);
                 iterRowCont->erase(iterFirst, iterEnd);
             }
             privShiftRowIndexesInRowGreaterOrEqual(nRow + nRemoveCount, nRemoveCount, false);

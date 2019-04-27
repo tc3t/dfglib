@@ -449,7 +449,6 @@ TEST(dfgCont, TableSz_forEachFwdColumnIndex)
 TEST(dfgCont, TableSz_forEachNonNullCell)
 {
     using namespace DFG_MODULE_NS(cont);
-    DFG_CLASS_NAME(TableSz)<char> table;
 
     {
         typedef DFG_CLASS_NAME(TrivialPair)<size_t, size_t> PairT;
@@ -462,6 +461,53 @@ TEST(dfgCont, TableSz_forEachNonNullCell)
         table.setElement(2, 10, "");
         table.forEachNonNullCell([&](size_t r, size_t c, const char*) { cellIndexes.push_back(PairT(r, c)); });
         EXPECT_EQ(expected, cellIndexes);
+    }
+}
+
+TEST(dfgCont, TableSz_removeRows)
+{
+    using namespace DFG_MODULE_NS(cont);
+    DFG_CLASS_NAME(TableSz)<char> table;
+
+    table.setElement(0, 0, "a");
+    table.setElement(1, 0, "b");
+    ASSERT_EQ(2, table.rowCountByMaxRowIndex());
+    table.removeRows(0, 1);
+    ASSERT_EQ(1, table.rowCountByMaxRowIndex());
+    EXPECT_STREQ("b", table(0, 0));
+
+    // Test removing rows that have no content.
+    {
+        table.setElement(10, 0, "c");
+        ASSERT_EQ(11, table.rowCountByMaxRowIndex());
+        table.removeRows(1, 9);
+        ASSERT_EQ(2, table.rowCountByMaxRowIndex());
+        EXPECT_STREQ("b", table(0, 0));
+        EXPECT_STREQ("c", table(1, 0));
+    }
+
+    // Test removing last row
+    {
+        table.removeRows(1, 1);
+        ASSERT_EQ(1, table.rowCountByMaxRowIndex());
+        EXPECT_STREQ("b", table(0, 0));
+    }
+
+    // Test handling of zero-length removal
+    {
+        table.removeRows(1, 0);
+        ASSERT_EQ(1, table.rowCountByMaxRowIndex());
+    }
+
+    // Test generic remove from middle.
+    {
+        table.insertRowsAt(0, 5);
+        EXPECT_STREQ("b", table(5, 0));
+        table.setElement(1, 0, "d");
+        table.setElement(3, 0, "e");
+        table.removeRows(0, 4);
+        ASSERT_EQ(2, table.rowCountByMaxRowIndex());
+        EXPECT_STREQ("b", table(1, 0));
     }
 }
 
