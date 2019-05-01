@@ -184,7 +184,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
             template <class Char_T>
             static std::basic_string<Char_T> tempFolderPathT()
             {
+#ifdef _WIN32
                 return DFG_SUB_NS_NAME(win)::GetTempPathT<Char_T>();
+#else
+                std::basic_string<Char_T> s;
+                const auto range = makeSzRange(P_tmpdir);
+                std::copy(range.cbegin(), range.cend(), std::back_inserter(s)); // Hack: assume compatible encodings, effectively more or less that P_tmpdir is ASCII.
+                if (!s.empty() && s.back() != '/')
+                    s.push_back('/');
+                return s;
+#endif
             }
 
             static std::string tempFolderPathC()
