@@ -88,7 +88,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
-        typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDefinition;
+        typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(StringMatchDefinition) StringMatchDefinition;
         
         enum ColType
         {
