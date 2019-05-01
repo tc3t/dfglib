@@ -24,7 +24,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 # Application version. On Windows triggers auto-generation of rc-file
 # https://doc.qt.io/qt-5/qmake-variable-reference.html#version
-VERSION = 0.9.9.1
+VERSION = 0.9.9.2
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
 
 CONFIG += c++11
@@ -75,6 +75,11 @@ win32 {
 #            $$_PRO_FILE_PWD_/../../dfg/str/fmtlib/format.cc
 
     HEADERS += $$_PRO_FILE_PWD_/../../dfg/debug/structuredExceptionHandling.h
+}
+
+!win32 {
+    SOURCES += \
+            $$_PRO_FILE_PWD_/../../dfg/io/widePathStrToFstreamFriendlyNonWide.cpp
 }
 
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../
