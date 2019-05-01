@@ -542,7 +542,13 @@ TEST(dfgBuild, buildTimeDetails)
         vals[btd] = psz;
     });
 
-    EXPECT_EQ(DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs), vals.size()); // If this fails, check whether getBuildTimeDetailStrs() includes all id's.
+#ifdef _MSC_VER
+    const size_t nExpectedCount = DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs);
+#else
+    const size_t nExpectedCount = DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs) - 1;
+#endif
+
+    EXPECT_EQ(nExpectedCount, vals.size()); // If this fails, check whether getBuildTimeDetailStrs() includes all id's.
     EXPECT_STRNE("", vals[BuildTimeDetail_dateTime]);
     EXPECT_STREQ(DFG_COMPILER_NAME_SIMPLE, vals[BuildTimeDetail_compilerAndShortVersion]);
     EXPECT_STREQ(DFG_COMPILER_FULL_VERSION, vals[BuildTimeDetail_compilerFullVersion]);

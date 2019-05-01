@@ -129,7 +129,9 @@ void getBuildTimeDetailStrs(Func&& func)
     DFG_TEMP_DO_FOR_BUILD_DETAIL(dateTime);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(compilerAndShortVersion);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(compilerFullVersion);
+#ifdef _MSC_VER
     DFG_TEMP_DO_FOR_BUILD_DETAIL(buildDebugReleaseType);
+#endif
     DFG_TEMP_DO_FOR_BUILD_DETAIL(architecture);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(endianness);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(boostVersion);
