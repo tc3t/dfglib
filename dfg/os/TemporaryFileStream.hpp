@@ -14,8 +14,6 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
 {
-
-#ifdef _WIN32
         namespace DFG_DETAIL_NS
         {
             // Implement opening stream through open()-method for object of type other than std::ofstream.
@@ -220,5 +218,5 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
         }; // Class 
 
         typedef DFG_CLASS_NAME(TemporaryFileStreamT)<std::ofstream> DFG_CLASS_NAME(TemporaryFileStream);
-#endif // _WIN32
+
 }} // module namespace
