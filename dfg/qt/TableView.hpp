@@ -15,7 +15,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(TableView) ThisClass;
         typedef QTableView BaseClass;
 
-        ThisClass(QWidget* pParent) : BaseClass(pParent)
+        DFG_CLASS_NAME(TableView)(QWidget* pParent) : BaseClass(pParent)
         {
 
         }

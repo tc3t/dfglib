@@ -2274,7 +2274,9 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
     auto dataModelPtr = csvModel();
     if (!dataModelPtr)
         return false;
-    if (!DFG_MODULE_NS(os)::isPathFileAvailable(dataModelPtr->getFilePath().toStdWString(), DFG_MODULE_NS(os)::FileModeRead))
+    const QString sFilePath = dataModelPtr->getFilePath();
+
+    if (!QFileInfo(sFilePath).isReadable())
         return false;
 
     auto sDiffPath = getCsvTableViewProperty<CsvTableViewPropertyId_diffProgPath>(this);
@@ -2317,7 +2319,7 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
     strmTemp.close();
 
     const bool bStarted = QProcess::startDetached(sDiffPath,
-                                                  QStringList() << dataModelPtr->getFilePath() << sEditedFileTempPath);
+                                                  QStringList() << sFilePath << sEditedFileTempPath);
     if (!bStarted)
     {
         QMessageBox::information(this, tr("Unable to diff"), tr("Couldn't start diff application from path '%1'").arg(sDiffPath));

@@ -20,19 +20,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         template <class Impl_T, class Param0_T>
         static void directRedo(Param0_T&& p0)
         {
-            typename Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0));
+            Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0));
         }
 
        template <class Impl_T, class Param0_T, class Param1_T>
        static void directRedo(Param0_T&& p0, Param1_T&& p1)
        {
-            typename Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
+            Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
        }
 
        template <class Impl_T, class Param0_T, class Param1_T, class Param2_T>
        static void directRedo(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
        {
-            typename Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
+            Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
        }
 
         template <class Impl_T, class Param0_T>
@@ -63,7 +63,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         public:
             typedef DFG_CLASS_NAME(TableViewUndoCommandInsertRow) ThisClass;
             // If nRow is given, InsertRowType is ignored.
-            ThisClass(QTableView* pTableView, InsertRowType type, int nRow = -1)
+            DFG_CLASS_NAME(TableViewUndoCommandInsertRow)(QTableView* pTableView, InsertRowType type, int nRow = -1)
                 :
                 m_pView(pTableView),
                 m_pModel((pTableView) ? pTableView->model() : nullptr),
