@@ -66,7 +66,7 @@ template <BuildTimeDetail detail> NonNullCStr getBuildTimeDetailStr();
 
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(dateTime)                { return __DATE__ " " __TIME__; }
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(compilerAndShortVersion) { return DFG_COMPILER_NAME_SIMPLE; }
-DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(compilerFullVersion)     { return DFG_STRINGIZE(DFG_COMPILER_FULL_VERSION); }
+DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(compilerFullVersion)     { return DFG_COMPILER_FULL_VERSION; }
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(buildDebugReleaseType)   { return DFG_BUILD_DEBUG_RELEASE_TYPE; }
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(boostVersion)
 {
