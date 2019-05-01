@@ -1447,7 +1447,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
     auto loadOptions = dlg.getLoadOptions();
     // Disable completer size limit as there is no control for the size limit so user would otherwise be unable to
     // easily enable completer for big files.
-    loadOptions.setProperty(CsvOptionProperty_completerEnabledSizeLimit, DFG_MODULE_NS(str)::toStrC(NumericTraits<uint64>::maxValue));
+    loadOptions.setProperty(CsvOptionProperty_completerEnabledSizeLimit, DFG_MODULE_NS(str)::toStrC(uint64(NumericTraits<uint64>::maxValue)));
     return openFile(sPath, loadOptions);
 }
 
