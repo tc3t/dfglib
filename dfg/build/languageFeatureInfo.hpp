@@ -75,7 +75,7 @@ Notes:
 #endif
 
 // DFG_LANGFEAT_U8_CHAR_LITERALS
-#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__GNUC__) && (__GNUC__ < 6))
+#if (defined(_MSC_VER) && (_MSC_VER < DFG_MSVC_VER_2015)) || (defined(__GNUC__) && (__GNUC__ < 6)) || (defined(__GNUC__) && (!defined(__cpp_unicode_characters) || __cpp_unicode_characters < 201411))
     #define DFG_LANGFEAT_U8_CHAR_LITERALS 0
 #else
     #define DFG_LANGFEAT_U8_CHAR_LITERALS 1
