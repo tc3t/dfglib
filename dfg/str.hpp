@@ -333,24 +333,53 @@ namespace DFG_DETAIL_NS
 #undef DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS
 #undef DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION
 
+template <size_t IntSize_T, bool IsSigned_T> inline char*    intToStr(const typename IntegerTypeBySizeAndSign<IntSize_T, IsSigned_T>::type val, char*    buf, const size_t nBufCount, const int param);
+template <size_t IntSize_T, bool IsSigned_T> inline wchar_t* intToStr(const typename IntegerTypeBySizeAndSign<IntSize_T, IsSigned_T>::type val, wchar_t* buf, const size_t nBufCount, const int param);
+
+#define DFG_TEMP_CREATE_INTTOSTR_IMPL(INTSIZE, ISSIGNED, FUNC_C, FUNC_W) \
+    template <> \
+    inline char* intToStr<INTSIZE, ISSIGNED>(const typename IntegerTypeBySizeAndSign<INTSIZE, ISSIGNED>::type val, char* buf, const size_t nBufCount, const int param) \
+    { \
+        FUNC_C(val, buf, nBufCount, param); return buf; \
+    } \
+    template <> \
+    inline wchar_t* intToStr<INTSIZE, ISSIGNED>(const typename IntegerTypeBySizeAndSign<INTSIZE, ISSIGNED>::type val, wchar_t* buf, const size_t nBufCount, const int param) \
+    { \
+        FUNC_W(val, buf, nBufCount, param); return buf; \
+    }
+
+DFG_TEMP_CREATE_INTTOSTR_IMPL(2, true,  DFG_DETAIL_NS::i32toa_s,  DFG_DETAIL_NS::i32tow_s)
+DFG_TEMP_CREATE_INTTOSTR_IMPL(2, false, DFG_DETAIL_NS::ui32toa_s, DFG_DETAIL_NS::ui32tow_s)
+DFG_TEMP_CREATE_INTTOSTR_IMPL(4, true,  DFG_DETAIL_NS::i32toa_s,  DFG_DETAIL_NS::i32tow_s)
+DFG_TEMP_CREATE_INTTOSTR_IMPL(4, false, DFG_DETAIL_NS::ui32toa_s, DFG_DETAIL_NS::ui32tow_s)
+DFG_TEMP_CREATE_INTTOSTR_IMPL(8, true,  DFG_DETAIL_NS::i64toa_s,  DFG_DETAIL_NS::i64tow_s)
+DFG_TEMP_CREATE_INTTOSTR_IMPL(8, false, DFG_DETAIL_NS::ui64toa_s, DFG_DETAIL_NS::ui64tow_s)
+
+#undef DFG_TEMP_CREATE_INTTOSTR_IMPL
+
 } // namespace DFG_DETAIL_NS 
 
 #define DFG_INTERNAL_DEFINE_TOSTR(CHAR, TYPE, FUNC, PARAM) \
     inline              CHAR* toStr(TYPE val, CHAR* buf, const size_t nBufCount,    const int param = PARAM)  { FUNC(val, buf, nBufCount, param); return buf; } \
     template <size_t N> CHAR* toStr(TYPE val, CHAR (&buf)[N],                       const int param = PARAM)  { return toStr(val, buf, N, param); }
 
-DFG_INTERNAL_DEFINE_TOSTR(char,     int32,          DFG_DETAIL_NS::i32toa_s,            10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int32,          DFG_DETAIL_NS::i32tow_s,            10);
-DFG_INTERNAL_DEFINE_TOSTR(char,     uint32,         DFG_DETAIL_NS::ui32toa_s,           10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint32,         DFG_DETAIL_NS::ui32tow_s,           10);
-DFG_INTERNAL_DEFINE_TOSTR(char,     int64,          DFG_DETAIL_NS::i64toa_s,            10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  int64,          DFG_DETAIL_NS::i64tow_s,            10);
-DFG_INTERNAL_DEFINE_TOSTR(char,     uint64,         DFG_DETAIL_NS::ui64toa_s,           10);
-DFG_INTERNAL_DEFINE_TOSTR(wchar_t,  uint64,         DFG_DETAIL_NS::ui64tow_s,           10);
-DFG_INTERNAL_DEFINE_TOSTR(char,     float,          floatingPointToStr<float>,          -1);
-DFG_INTERNAL_DEFINE_TOSTR(char,     double,         floatingPointToStr<double>,         -1);
-DFG_INTERNAL_DEFINE_TOSTR(char,     long double,    floatingPointToStr<long double>,    -1);
+#define DFG_INTERNAL_DEFINE_TOSTR_INT(TYPE) \
+    DFG_INTERNAL_DEFINE_TOSTR(char,    TYPE, (DFG_DETAIL_NS::intToStr<sizeof(TYPE), std::is_signed<TYPE>::value>), 10) \
+    DFG_INTERNAL_DEFINE_TOSTR(wchar_t, TYPE, (DFG_DETAIL_NS::intToStr<sizeof(TYPE), std::is_signed<TYPE>::value>), 10)
 
+DFG_INTERNAL_DEFINE_TOSTR_INT(short);
+DFG_INTERNAL_DEFINE_TOSTR_INT(unsigned short);
+DFG_INTERNAL_DEFINE_TOSTR_INT(int);
+DFG_INTERNAL_DEFINE_TOSTR_INT(unsigned int);
+DFG_INTERNAL_DEFINE_TOSTR_INT(long);
+DFG_INTERNAL_DEFINE_TOSTR_INT(unsigned long);
+DFG_INTERNAL_DEFINE_TOSTR_INT(long long);
+DFG_INTERNAL_DEFINE_TOSTR_INT(unsigned long long);
+DFG_INTERNAL_DEFINE_TOSTR(char,     float,              floatingPointToStr<float>,          -1);
+DFG_INTERNAL_DEFINE_TOSTR(char,     double,             floatingPointToStr<double>,         -1);
+DFG_INTERNAL_DEFINE_TOSTR(char,     long double,        floatingPointToStr<long double>,    -1);
+
+#undef DFG_INTERNAL_DEFINE_TOSTR_INT
 #undef DFG_INTERNAL_DEFINE_TOSTR
 
 template <class T> std::string toStrCImpl(const T& d, const std::true_type) // Type is floating_point type.

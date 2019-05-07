@@ -459,6 +459,17 @@ namespace
         // NaN
         EXPECT_TRUE(beginsWith(toStrC(NumLim::quiet_NaN()), "nan"));
     }
+
+    template <class Int_T>
+    void testIntegerToStr()
+    {
+        using namespace DFG_ROOT_NS;
+        char buffer[32];
+        DFG_MODULE_NS(str)::toStr((std::numeric_limits<Int_T>::max)(),  buffer);
+        EXPECT_EQ((std::numeric_limits<Int_T>::max)(), DFG_MODULE_NS(str)::strTo<Int_T>(buffer));
+        DFG_MODULE_NS(str)::toStr((std::numeric_limits<Int_T>::min)(), buffer);
+        EXPECT_EQ((std::numeric_limits<Int_T>::min)(), DFG_MODULE_NS(str)::strTo<Int_T>(buffer));
+    }
 } // unnamed namespace
 
 TEST(dfgStr, toStr)
@@ -487,6 +498,25 @@ TEST(dfgStr, toStr)
         toStrCommonFloatingPointTests<float>(szFloatMin, szFloatMax, szFloatMinPositive);
         toStrCommonFloatingPointTests<double>("-1.7976931348623157e+308", "1.7976931348623157e+308", "2.2250738585072014e-308");
         toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
+    }
+
+    // Test that integer overloads work correctly
+    {
+        testIntegerToStr<short>();
+        testIntegerToStr<unsigned short>();
+        testIntegerToStr<int>();
+        testIntegerToStr<unsigned int>();
+        testIntegerToStr<long>();
+        testIntegerToStr<unsigned long>();
+        testIntegerToStr<long long>();
+        testIntegerToStr<unsigned long long>();
+
+        testIntegerToStr<int16>();
+        testIntegerToStr<uint16>();
+        testIntegerToStr<int32>();
+        testIntegerToStr<uint32>();
+        testIntegerToStr<int64>();
+        testIntegerToStr<uint64>();
     }
 }
 
