@@ -131,6 +131,18 @@ TEST(dfg, IntTypedefs)
     EXPECT_EQ(maxValueOfType(ud), uint64_max);
 }
 
+TEST(dfg, IntegerTypeBySizeAndSign)
+{
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::int8,   DFG_ROOT_NS::IntegerTypeBySizeAndSign<1, true >::type>::value));
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::uint8,  DFG_ROOT_NS::IntegerTypeBySizeAndSign<1, false>::type>::value));
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::int16,  DFG_ROOT_NS::IntegerTypeBySizeAndSign<2, true >::type>::value));
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::uint16, DFG_ROOT_NS::IntegerTypeBySizeAndSign<2, false>::type>::value));
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::int32,  DFG_ROOT_NS::IntegerTypeBySizeAndSign<4, true >::type>::value));
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::uint32, DFG_ROOT_NS::IntegerTypeBySizeAndSign<4, false>::type>::value));
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::int64,  DFG_ROOT_NS::IntegerTypeBySizeAndSign<8, true >::type>::value));
+    DFGTEST_STATIC_TEST((std::is_same<DFG_ROOT_NS::uint64, DFG_ROOT_NS::IntegerTypeBySizeAndSign<8, false>::type>::value));
+}
+
 TEST(dfg, round)
 {
     using namespace DFG_ROOT_NS;

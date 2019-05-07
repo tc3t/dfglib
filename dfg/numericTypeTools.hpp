@@ -36,6 +36,16 @@ DFG_ROOT_NS_BEGIN
 
 #undef DFG_TEMP_NUMERIC_TRAITS_CONST_TYPE
 
+    template <size_t IntSize_T, bool IsSigned_T> struct IntegerTypeBySizeAndSign;
+    template <> struct IntegerTypeBySizeAndSign<1, true>    { typedef int8   type; };
+    template <> struct IntegerTypeBySizeAndSign<1, false>   { typedef uint8  type; };
+    template <> struct IntegerTypeBySizeAndSign<2, true>    { typedef int16  type; };
+    template <> struct IntegerTypeBySizeAndSign<2, false>   { typedef uint16 type; };
+    template <> struct IntegerTypeBySizeAndSign<4, true>    { typedef int32  type; };
+    template <> struct IntegerTypeBySizeAndSign<4, false>   { typedef uint32 type; };
+    template <> struct IntegerTypeBySizeAndSign<8, true>    { typedef int64  type; };
+    template <> struct IntegerTypeBySizeAndSign<8, false>   { typedef uint64 type; };
+
     // Returns minimum value of given integer type.
     template <class T> inline T minValueOfType()
     {
