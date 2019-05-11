@@ -24,14 +24,45 @@ template <> struct CLASS##PropertyDefinition<ID> \
 #define DFG_QT_DEFINE_OBJECT_PROPERTY(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC) \
     DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC, defaultFromVariant)
 
+// Returns object property. First tries object's internal property map, then from application settings.
+// Note: The way how internal properties are stored (current in properties of 'obj') is an implementation detail that may change.
 template <class PropertyClass_T, class Object_T>
 auto getProperty(Object_T* obj) -> typename PropertyClass_T::PropertyType
 {
     typedef PropertyClass_T PropDef;
-    if (!obj || !obj->property("dfglib_allow_app_settings_usage").toBool())
+    if (!obj)
         return PropDef::getDefault();
+
+    const char* id = PropDef::getStrId();
+    auto internalVal = obj->property(id);
+    if (internalVal.isValid())
+        return PropDef::fromVariant(internalVal);
+
+    if (!obj->property("dfglib_allow_app_settings_usage").toBool())
+        return PropDef::getDefault();
+
     auto settings = DFG_CLASS_NAME(QtApplication)::getApplicationSettings();
-    return (settings) ? PropDef::fromVariant(settings->value(QString("dfglib/%1").arg(PropDef::getStrId()), QVariant::fromValue(PropDef::getDefault()))) :  PropDef::getDefault();
+    return (settings) ?
+        PropDef::fromVariant(settings->value(QString("dfglib/%1").arg(PropDef::getStrId()), QVariant::fromValue(PropDef::getDefault()))) :
+        PropDef::getDefault();
+}
+
+template <class PropertyClass_T, class Object_T>
+void setProperty(Object_T* obj, QVariant newVal)
+{
+    typedef PropertyClass_T PropDef;
+    if (!obj)
+        return;
+    if (obj->property("dfglib_allow_app_settings_usage").toBool())
+    {
+        auto settings = DFG_CLASS_NAME(QtApplication)::getApplicationSettings();
+        if (settings)
+        {
+            settings->setValue(QString("dfglib/%1").arg(PropDef::getStrId()), newVal);
+            return;
+        }
+    }
+    obj->setProperty(PropDef::getStrId(), newVal);
 }
 
 }} // Module namespace
