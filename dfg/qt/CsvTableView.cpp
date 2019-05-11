@@ -91,6 +91,12 @@ namespace
         return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>>(view);
     }
 
+    template <CsvTableViewPropertyId ID>
+    void setCsvTableViewProperty(DFG_CLASS_NAME(CsvTableView)* view, const typename CsvTableViewPropertyDefinition<ID>::PropertyType& val)
+    {
+        DFG_MODULE_NS(qt)::setProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>>(view, QVariant(val));
+    }
+
     // Properties
     DFG_QT_DEFINE_OBJECT_PROPERTY("diffProgPath", CsvTableView, CsvTableViewPropertyId_diffProgPath, QString, PropertyType);
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_initialScrollPosition", CsvTableView, CsvTableViewPropertyId_initialScrollPosition, QString, PropertyType);
@@ -2279,9 +2285,10 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
     if (!QFileInfo(sFilePath).isReadable())
         return false;
 
-    auto sDiffPath = getCsvTableViewProperty<CsvTableViewPropertyId_diffProgPath>(this);
+    auto sDifferPath = getCsvTableViewProperty<CsvTableViewPropertyId_diffProgPath>(this);
+    bool bDifferPathWasAsked = false;
 
-    if (sDiffPath.isEmpty())
+    if (sDifferPath.isEmpty())
     {
         const auto rv = QMessageBox::question(this,
                                               tr("Unable to locate diff viewer"),
@@ -2293,7 +2300,8 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
         if (manuallyLocatedDiffer.isEmpty())
             return false;
         // TODO: store this to in-memory property set so it doesn't need to be queried again for this run.
-        sDiffPath = manuallyLocatedDiffer;
+        sDifferPath = manuallyLocatedDiffer;
+        bDifferPathWasAsked = true;
     }
 
     typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) StreamT;
@@ -2318,17 +2326,38 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
 
     strmTemp.close();
 
-    const bool bStarted = QProcess::startDetached(sDiffPath,
+    const bool bStarted = QProcess::startDetached(sDifferPath,
                                                   QStringList() << sFilePath << sEditedFileTempPath);
     if (!bStarted)
     {
-        QMessageBox::information(this, tr("Unable to diff"), tr("Couldn't start diff application from path '%1'").arg(sDiffPath));
+        QMessageBox::information(this, tr("Unable to diff"), tr("Couldn't start diff application from path '%1'").arg(sDifferPath));
         strmTemp.setAutoRemove(true);
         return false;
     }
     else
     {
         m_tempFilePathsToRemoveOnExit.push_back(QString::fromUtf8(toCharPtr_raw(strmTemp.pathU8())));
+
+        if (bDifferPathWasAsked)
+        {
+            // Ask whether to store the path to settings
+            const bool bIsAppSettingsEnabled = getAllowApplicationSettingsUsage();
+            QMessageBox mb(QMessageBox::Question,
+                tr("Merge viewer path handling"),
+                tr("Use the following diff viewer on subsequent operations?\n'%1'").arg(sDifferPath)
+            );
+            QPushButton* pStore = nullptr;
+            if (bIsAppSettingsEnabled)
+                pStore = mb.addButton(tr("Yes (will be stored to app settings)"), QMessageBox::YesRole);
+            else
+                pStore = mb.addButton(tr("Yes (in effect for this run)"), QMessageBox::YesRole);
+            mb.addButton(tr("No"), QMessageBox::NoRole);
+            mb.exec();
+            const auto pClickedButton = mb.clickedButton();
+            if (pClickedButton == pStore)
+                setCsvTableViewProperty<CsvTableViewPropertyId_diffProgPath>(this, sDifferPath);
+        }
+        
         return true;
     }
 }
