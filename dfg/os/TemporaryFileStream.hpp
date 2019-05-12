@@ -14,7 +14,7 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
 {
-    DFG_CONSTEXPR char nativeSeparatorChar()
+    inline DFG_CONSTEXPR char nativeSeparatorChar()
     {
 #ifdef _WIN32
         return '\\';
