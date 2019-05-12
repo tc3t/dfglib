@@ -38,7 +38,6 @@ TEST(dfgOs, MemoryMappedFile)
     EXPECT_EQ(bytes, vec2);
 }
 
-#ifdef _WIN32
 TEST(dfgOs, TemporaryFile)
 {
     using namespace DFG_MODULE_NS(os);
@@ -111,7 +110,6 @@ TEST(dfgOs, TemporaryFile)
         EXPECT_FALSE(isPathFileAvailable(sPath.c_str(), FileModeExists));
     }
 }
-#endif // _WIN32
 
 TEST(dfgOs, fileSize)
 {
