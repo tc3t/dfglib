@@ -87,7 +87,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                 const wchar_t* pPszNamePrefix,
                 const wchar_t* pPszNameSuffix,
                 const wchar_t* pPszExtensionWithOrWithoutDot,
-                const size_t nRandomNameChars = 8)
+                const size_t nRandomNameChars = 8) :
+                    m_bRemoveFileOnClose(true)
             {
                 init(pPszFolderPath, pPszNamePrefix, pPszNameSuffix, pPszExtensionWithOrWithoutDot, nRandomNameChars);
             }
