@@ -76,6 +76,10 @@ inline std::wstring getCurrentWorkingDirectoryW()
 	inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzW) filePath, FileMode fm) {return (_waccess(filePath.c_str(), fm) == 0);}
 #else
     inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzC) filePath, FileMode fm) { return (access(filePath.c_str(), fm) == 0); }
+    inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzW) filePath, FileMode fm)
+    {
+        return isPathFileAvailable(DFG_MODULE_NS(io)::pathStrToFileApiFriendlyPath(filePath.c_str()), fm);
+    }
 #endif
 
 #if _WIN32
