@@ -14,6 +14,14 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
 {
+    DFG_CONSTEXPR char nativeSeparatorChar()
+    {
+#ifdef _WIN32
+        return '\\';
+#else
+        return '/';
+#endif
+    }
         namespace DFG_DETAIL_NS
         {
             // Implement opening stream through open()-method for object of type other than std::ofstream.
@@ -106,8 +114,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os)
                         sFilename += pPszExtensionWithOrWithoutDot;
                     }
                     StringT sPath = (pPszFolderPath) ? pPszFolderPath : tempFolderPath();
-                    if (!sPath.empty() && sPath.back() != '\\')
-                        sPath += '\\';
+                    if (!sPath.empty() && sPath.back() != nativeSeparatorChar())
+                        sPath.push_back(nativeSeparatorChar());
                     sPath += sFilename;
 
                     DFG_DETAIL_NS::openStream(m_ostrm, sPath);
