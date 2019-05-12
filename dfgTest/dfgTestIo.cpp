@@ -7,13 +7,7 @@
 #include <dfg/str.hpp>
 #include <utility>
 #include <strstream>
-#include <boost/lexical_cast.hpp>
-#include <boost/timer.hpp>
-#include <strstream>
 #include <dfg/io/BasicImStream.hpp>
-#include <boost/iostreams/device/array.hpp>
-#include <boost/iostreams/device/file.hpp>
-#include <boost/iostreams/stream.hpp>
 #include <numeric> // std::accumulate
 #include <dfg/io/nullOutputStream.hpp>
 #include <dfg/time/timerCpu.hpp>
@@ -28,6 +22,11 @@
 #include <dfg/cont/tableCsv.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #include <boost/lexical_cast.hpp>
+    #include <boost/timer.hpp>
+    #include <boost/iostreams/device/array.hpp>
+    #include <boost/iostreams/device/file.hpp>
+    #include <boost/iostreams/stream.hpp>
     #include <dlib/vectorstream.h>
     #include <dlib/compress_stream.h>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS

@@ -108,15 +108,27 @@ namespace DFG_ROOT_NS { namespace DFG_DETAIL_NS
 	#define DFG_TAG_DEPRECATED	__declspec(deprecated)
 	#define DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS \
 		__pragma(warning(push, 1)) /* TODO: disable warnings instead of using level 1. */ \
-		__pragma(warning(disable:4251 4265 4505 4701 4946)) // Note: 4505 can't be silenced with this (by design), see http://support.microsoft.com/kb/947783
+		__pragma(warning(disable:4251 4265 4505 4701 4091 4946 4996)) // Note: 4505 can't be silenced with this (by design), see http://support.microsoft.com/kb/947783
 		/*
 		4251: "class 'x' needs to have dll-interface to be used by clients of class 'y'"
 		4265: "class has virtual functions, but destructor is not virtual"
 		4505: "unreferenced local function has been removed"
 		4701: "potentially uninitialized local variable 'x' used"
+        4091: "'typedef ': ignored on left of '<>' when no variable is declared"
 		4946: "reinterpret_cast used between related classes: 'class1' and 'class2'"
+        4996: "The member <> is non-Standard, and is preserved only for compatibility..."
 		*/
 	#define DFG_END_INCLUDE_WITH_DISABLED_WARNINGS __pragma(warning(pop))
+#elif defined(__GNUG__)
+	#define DFG_TAG_DEPRECATED	
+
+    // This is by no means complete and doesn't seem to work in MinGW 4.8.0
+	#define DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS \
+        _Pragma("GCC diagnostic push") \
+        _Pragma("GCC diagnostic ignored \"-Wcpp\"")
+        
+	#define DFG_END_INCLUDE_WITH_DISABLED_WARNINGS \
+        _Pragma("GCC diagnostic pop")
 #else
 	// TODO: Implemented for other compilers
 	#define DFG_TAG_DEPRECATED	

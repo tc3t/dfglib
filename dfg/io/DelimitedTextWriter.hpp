@@ -98,12 +98,12 @@ public:
     }
 
     template <class OutputIter_T, class Elem_T>
-    static void writeItemImpl(OutputIter_T iterOut,
-        const Elem_T& item,
-        const char cSep,
-        const char cEnc,
-        const char cEol,
-        const EnclosementBehaviour eb)
+    static void writeItemImpl(OutputIter_T /*iterOut*/,
+        const Elem_T& /*item*/,
+        const char /*cSep*/,
+        const char /*cEnc*/,
+        const char /*cEol*/,
+        const EnclosementBehaviour /*eb*/)
     {
         DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(Elem_T, "No implementation exists for writeItemImpl with given type");
     }

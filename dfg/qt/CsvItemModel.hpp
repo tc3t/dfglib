@@ -304,16 +304,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool isSupportedEncodingForSaving(DFG_MODULE_NS(io)::TextEncoding encoding) const;
 
         // Model Overloads
-        int rowCount(const QModelIndex & parent = QModelIndex()) const;
-        int columnCount(const QModelIndex& parent = QModelIndex()) const;
-        QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
-        QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-        bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole);
-        Qt::ItemFlags flags(const QModelIndex& index) const;
-        bool insertRows(int position, int rows, const QModelIndex& parent = QModelIndex());
-        bool removeRows(int position, int rows, const QModelIndex& parent = QModelIndex());
-        bool insertColumns(int position, int columns, const QModelIndex& parent = QModelIndex());
-        bool removeColumns(int position, int columns, const QModelIndex& parent = QModelIndex());
+        int rowCount(const QModelIndex & parent = QModelIndex()) const override;
+        int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+        QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+        QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+        bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+        Qt::ItemFlags flags(const QModelIndex& index) const override;
+        bool insertRows(int position, int rows, const QModelIndex& parent = QModelIndex()) override;
+        bool removeRows(int position, int rows, const QModelIndex& parent = QModelIndex()) override;
+        bool insertColumns(int position, int columns, const QModelIndex& parent = QModelIndex()) override;
+        bool removeColumns(int position, int columns, const QModelIndex& parent = QModelIndex()) override;
         QModelIndexList match(const QModelIndex& start, int role, const QVariant& value, int hits, Qt::MatchFlags flags) const override;
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
         QStringList mimeTypes() const;

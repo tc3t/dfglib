@@ -22,7 +22,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 // TODO: test
 inline void ignore(QTextStream& strm, const int nCount)
 {
-	QChar c;
 	for(int i = 0; i<nCount; ++i)
 		strm.read(1);
 }

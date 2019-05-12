@@ -1,5 +1,3 @@
-#pragma once
-
 #include "CsvTableViewCompleterDelegate.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS

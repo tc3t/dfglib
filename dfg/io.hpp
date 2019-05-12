@@ -12,7 +12,10 @@
 #include <fstream>
 #include <vector>
 #include <type_traits>
-#include <strstream>
+
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #include <strstream>
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 #include "io/BasicImStream.hpp"
 #include "dfgBase.hpp"

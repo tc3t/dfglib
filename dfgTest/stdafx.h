@@ -16,9 +16,9 @@
     #include <tchar.h>
 #endif
 
-#pragma warning(push, 1)
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include "../externals/gtest/gtest.h"
-#pragma warning(pop)
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 #define DFGTEST_STATIC_TEST(expr)	DFG_STATIC_ASSERT(expr, "Static test case failed")
 #define DFGTEST_STATIC(expr)        DFGTEST_STATIC_TEST(expr)  //DFG_STATIC is deprecated, use DFGTEST_STATIC_TEST

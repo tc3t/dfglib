@@ -12,7 +12,9 @@
 #include "numericTypeTools.hpp"
 
 #if DFG_BUILD_OPT_USE_BOOST==1
-    #include <boost/lexical_cast.hpp>
+    DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+        #include <boost/lexical_cast.hpp>
+    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #endif
 #include <cstdio>
 #include <limits>
@@ -107,7 +109,7 @@ namespace DFG_DETAIL_NS
         return rv;
     }
 
-    template <class T> inline T strToFloatingPoint(const char* psz)
+    template <class T> inline T strToFloatingPoint(const char* /*psz*/)
     { 
         DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "strToFloatingPoint: implementation is not available for given type");
     }
