@@ -22,10 +22,33 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-# Application version. On Windows triggers auto-generation of rc-file
-# https://doc.qt.io/qt-5/qmake-variable-reference.html#version
-VERSION = 0.9.9.2
+version_time_epoch_start=1556658000 # 2019-05-01 00:00:00
+version_time_step=86400 # For now using days (60*60*24) to avoid overflow in VERSION-option (see below)
+
+win32 {
+    # With MSVC, old Qt-versions (before 5.5) do some weird stuff with VERSION (https://bugreports.qt.io/browse/QTBUG-44823):
+    # From VERSION a.b.c.d, it passes a.bcd to /VERSION link option.
+    # As /VERSION expects values from range [0, 65535], version such as 1.6.6.123 causes link error as 66123 > 65535.
+    # https://docs.microsoft.com/en-us/cpp/build/reference/version-version-information?view=vs-2015
+
+    # Using PowerShell to determine the time, syntax with the help of https://stackoverflow.com/a/41878110
+    version_time = $$system(powershell [math]::floor(((((Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat %s) - $$version_time_epoch_start))) / $$version_time_step))
+
+
+} else {
+    version_time = $$system(current_time=$(date +%s); echo $((($current_time-$$version_time_epoch_start)/$$version_time_step)))
+}
+
+# Application version. Meaning of fields:
+# First (left-hand): unspecified
+# Second: unspecified
+# Third: unspecified
+# Last: Time since version_time_epoch_start. Currently whole days since, but may change in the future.
+# On Windows VERSION triggers auto-generation of rc-file, https://doc.qt.io/qt-5/qmake-variable-reference.html#version
+VERSION = 0.9.9.$$version_time
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
+message("Version time epoch start is " $$version_time_epoch_start)
+message("Version is " $$VERSION)
 
 CONFIG += c++11
 
