@@ -20,6 +20,7 @@
 #include <dfg/io/seekFwdToLine.hpp>
 #include <dfg/str/strCat.hpp>
 #include <dfg/cont/tableCsv.hpp>
+#include <dfg/os/memoryMappedFile.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <boost/lexical_cast.hpp>
@@ -1180,6 +1181,18 @@ TEST(dfgIo, BasicOmcByteStream)
         DFG_MODULE_NS(io)::BasicOmcByteStream<> ostrm;
         EXPECT_FALSE(ostrm.tryReserve(NumericTraits<size_t>::maxValue));
     }
+}
+
+TEST(dfgIo, fileToByteContainer)
+{
+    using namespace DFG_MODULE_NS(io);
+
+    const char szPath[] = "testfiles/matrix_200x200.txt";
+    const auto bytes = fileToVector(szPath);
+    DFG_MODULE_NS(os)::DFG_CLASS_NAME(MemoryMappedFile) mmf;
+    mmf.open(szPath);
+    ASSERT_EQ(mmf.size(), bytes.size());
+    EXPECT_TRUE(std::equal(mmf.begin(), mmf.end(), bytes.cbegin()));
 }
 
 TEST(dfgIo, ostreamPerformance)

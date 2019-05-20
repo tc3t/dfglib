@@ -5,9 +5,17 @@
 #include "../ReadOnlySzParam.hpp"
 #include "BasicIfStream.hpp"
 #include "../ptrToContiguousMemory.hpp"
+#include "../os/fileSize.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
+    namespace DFG_DETAIL_NS
+    {
+        // Value is not really based on anything -> likely not optimal. BUFSIZ might be an option.
+        // On MSVC 2017 BUFSIZ seems to be 512, on Clang 6.0.0 and GCC 7.4 8192.
+        const size_t gnDefaultFileToMemReadStep = 512;
+    }
+    
     // Reads bytes from stream and returns the number of bytes read.
     // If nMaxReadSize is not multiple of sizeof(char_type), used read count is biggest multiple of sizeof(char_type) that is less than nMaxReadSize.
     template <class Stream_T> size_t readBytes(Stream_T& istrm, char* pDest, const size_t nMaxReadSize)
@@ -21,13 +29,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
     template <class Cont_T, class Stream_T>
     Cont_T readAllFromStream(Stream_T& istrm,
-                            const size_t nReadStepSize = 512,
+                            size_t nReadStepSize = DFG_DETAIL_NS::gnDefaultFileToMemReadStep,
                             const size_t nSizeHint = 0,
                             const size_t nMaxSize = NumericTraits<size_t>::maxValue)
     {
         Cont_T cont;
         if (nSizeHint > 0)
             cont.reserve(nSizeHint);
+        if (nReadStepSize == 0)
+            nReadStepSize = DFG_DETAIL_NS::gnDefaultFileToMemReadStep;
         while (istrm.good() && cont.size() < nMaxSize)
         {
             const auto nOldSize = cont.size();
@@ -42,25 +52,29 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
 
     // Reads file to contiguous container of bytes (e.g. std::vector<char>).
-    // TODO: If no hint given, test file size and reserve based on that.
-    // TODO: test
     template <class Cont_T, class Char_T>
     Cont_T fileToByteContainerImpl(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> sFilePath,
-        const size_t nReadStepSize = 512,
-        const size_t nSizeHint = 0,
+        size_t nReadStepSize = DFG_DETAIL_NS::gnDefaultFileToMemReadStep,
+        size_t nSizeHint = 0,
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
         )
     {
-        Cont_T cont;
-        if (nSizeHint)
-            cont.reserve(nSizeHint);
+        if (nSizeHint == 0)
+        {
+            nSizeHint = static_cast<size_t>(Min<uint64>((std::numeric_limits<size_t>::max)(), DFG_MODULE_NS(os)::fileSize(sFilePath)));
+            if (nSizeHint > 0)
+            {
+                nSizeHint++; // Add one byte so that readAllFromStream() completes the read in one step rather than reading all, allocating more and then reading zero bytes.
+                nReadStepSize = nSizeHint; // To read the file in one step as we know the size beforehand.
+            }
+        }
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) istrm(sFilePath);
         return readAllFromStream<Cont_T>(istrm, nReadStepSize, nSizeHint, nMaxSize);
     }
 
     template <class Cont_T>
     Cont_T fileToByteContainer(const DFG_CLASS_NAME(ReadOnlySzParamC) sFilePath,
-        const size_t nReadStepSize = 512,
+        const size_t nReadStepSize = DFG_DETAIL_NS::gnDefaultFileToMemReadStep,
         const size_t nSizeHint = 0,
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
         )
@@ -70,7 +84,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
     template <class Cont_T>
     Cont_T fileToByteContainer(const DFG_CLASS_NAME(ReadOnlySzParamW) sFilePath,
-        const size_t nReadStepSize = 512,
+        const size_t nReadStepSize = DFG_DETAIL_NS::gnDefaultFileToMemReadStep,
         const size_t nSizeHint = 0,
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
         )
@@ -85,7 +99,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         const size_t nMaxSize = NumericTraits<size_t>::maxValue
         )
     {
-        return fileToByteContainer<std::vector<char>>(sFilePath, 512, nSizeHint, nMaxSize);
+        return fileToByteContainer<std::vector<char>>(sFilePath, DFG_DETAIL_NS::gnDefaultFileToMemReadStep, nSizeHint, nMaxSize);
     }
 
     inline std::vector<char> fileToVector(const DFG_CLASS_NAME(ReadOnlySzParamC) sFilePath, const size_t nSizeHint = 0, const size_t nMaxSize = NumericTraits<size_t>::maxValue)
