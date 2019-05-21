@@ -12,6 +12,10 @@
 DFG_ROOT_NS_BEGIN
 {
 
+// Typed string enum. Note that typing does not imply validity: e.g. having a variable of type SzPtrUtf8R does not guarantee that the content is valid UTF-8.
+//      Rationale: having validity guarantee would be useful in many places, but in practice this might bring notable overhead (e.g. in case of TableCsv)
+//                 and would need specification how code like    auto a = SzPtrUtf8("some invalid UTF-8 here")    would behave.
+// TODO: investigate this further; e.g. should there be an additional type/enum that explicitly promises content to be valid?
 enum CharPtrType
 {
     // Char ptr types without encoding. (must have value < 0)
