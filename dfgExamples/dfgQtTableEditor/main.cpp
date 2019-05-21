@@ -119,6 +119,12 @@ int main(int argc, char *argv[])
 
     auto args = a.arguments();
 
+    // Example how a stylesheet could be set
+#if 0
+    const auto bytes = dfg::io::fileToVector(TODO_path_to_stylesheet_file);
+    a.setStyleSheet(QByteArray(bytes.data(), static_cast<int>(bytes.size())));
+#endif
+
     if (args.size() >= 2)
     {
         #if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))

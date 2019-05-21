@@ -45,7 +45,7 @@ win32 {
 # Third: unspecified
 # Last: Time since version_time_epoch_start. Currently whole days since, but may change in the future.
 # On Windows VERSION triggers auto-generation of rc-file, https://doc.qt.io/qt-5/qmake-variable-reference.html#version
-VERSION = 0.9.9.$$version_time
+VERSION = 0.9.9.$$version_time # Note: when changing version, remember to update version_time_epoch_start
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
 message("Version time epoch start is " $$version_time_epoch_start)
 message("Version is " $$VERSION)
