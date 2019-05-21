@@ -43,17 +43,32 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // Code below can be used to run only specific test.
+    // Code below can be used to run only specific test by uncommenting the one test that should be run (if for some reason this seems more convenient than other options).
+    // Tests can also be run and controlled from command line and possibly from test features in IDE (e.g. in Visual Studio).
+    // Examples of some command line options:
+    //      -Run one test:                dfgTest --gtest_filter=dfgCont.CsvConfig
+    //      -List tests:                  dfgTest --gtest_list_tests
+    //      -Output test results to json: dfgTest --gtest_output=json
+    //      -Output test results to xml:  dfgTest --gtest_output=xml
+    // For more details, see              dfgTest --help
+
     //::testing::GTEST_FLAG(filter) = "dfg.isEmpty";
     //::testing::GTEST_FLAG(filter) = "dfg.ScopedCaller";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.arrayCopy";
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_saving";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_forEachStartingWith";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_FromCsvConfig";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_ToConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.makeVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVectorPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SetVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_memStreamTypes";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_contentStorageSizeInBytes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TrivialPair";
     //::testing::GTEST_FLAG(filter) = "dfgCont.UniqueResourceHolder";
     //::testing::GTEST_FLAG(filter) = "dfgCont.ValueArray"
@@ -61,12 +76,20 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.VectorSso";
     //::testing::GTEST_FLAG(filter) = "dfgDebug.SehExceptionHandler";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicImStream";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.BasicOmcByteStream";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_basicReader";
+    //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_CharAppenderUtf";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_metaCharHandling";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_autoDetectCsvSeparator";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_rnTranslation";
+    //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextCellWriterStr";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.endOfLineTypeFromStr";
     //::testing::GTEST_FLAG(filter) = "dfgIo.getThrough";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.ImStreamWithEncoding_UCS";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.IStreamWithEncoding_Windows1252";
     //::testing::GTEST_FLAG(filter) = "dfgIo.OfStreamWithEncoding";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.OfStreamWithEncoding_write";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.ostreamPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgIo.StreamBufferMem";
     //::testing::GTEST_FLAG(filter) = "dfgIo.writeDelimited";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";
@@ -74,18 +97,31 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgMath.logOfBase";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.percentileRange_and_percentile_ceilElem";
+    //::testing::GTEST_FLAG(filter) = "dfgOs.OutputFile_completeOrNone";
+    //::testing::GTEST_FLAG(filter) = "dfgOs.TemporaryFile";
+    //::testing::GTEST_FLAG(filter) = "dfgOs.renameFileOrDirectory_cstdio";
     //::testing::GTEST_FLAG(filter) = "dfgPerformance.CsvReadPerformance";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_TypedStrings";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_StringViews";
     //::testing::GTEST_FLAG(filter) = "dfgStr.floatingPointTypeToSprintfType";
     //::testing::GTEST_FLAG(filter) = "dfgStr.intToRadixRepresentation";
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.StringView_autoConvToUntyped";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewSz";
     //::testing::GTEST_FLAG(filter) = "dfgStr.strTo";
     //::testing::GTEST_FLAG(filter) = "dfgStr.toStr";
     //::testing::GTEST_FLAG(filter) = "dfgStr.TypedCharPtrT";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
+    //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToEncoded";
+    //::testing::GTEST_FLAG(filter) = "DfgUtf.windows1252charToCp";
     
     auto rv = RUN_ALL_TESTS();
-    //std::system("pause");
+#ifdef __MINGW32__
+    // Pause with MinGW because when run from Visual Studio, without pause the console closes immediately after running tests.
+    // TODO: add check to pause only if tests seems to be run from Visual Studio (=parent process is devenv.exe)
+    std::system("pause");
+#endif
     return rv;
 }

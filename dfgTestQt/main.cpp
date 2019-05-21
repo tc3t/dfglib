@@ -9,5 +9,9 @@ int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
 	::testing::InitGoogleTest(&argc, argv);
+
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
+
 	return RUN_ALL_TESTS();
 }
