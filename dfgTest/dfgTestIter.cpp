@@ -157,3 +157,58 @@ TEST(dfgIter, szIterator)
         EXPECT_EQ(*++ptrIter, *++iter);
     }
 }
+
+namespace
+{
+    template <class T>
+    static void rawStorageIteratorTestImpl()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(iter);
+        char storage[5*sizeof(T)];
+
+        char* pAlignedStorageStart = storage;
+
+        while (reinterpret_cast<uintptr_t>(pAlignedStorageStart) % std::alignment_of<T>::value != 0)
+            pAlignedStorageStart++;
+
+        char* pAlignedStorageEnd = pAlignedStorageStart + 2*sizeof(T);
+
+        char* const pUnalignedStorageStart = pAlignedStorageEnd + 1;
+        char* const pUnalignedStorageEnd = pUnalignedStorageStart + 2*sizeof(T);
+
+        T val = 1;
+        memcpy(pAlignedStorageStart, &val, sizeof(val));
+        val++;
+        memcpy(pAlignedStorageStart + sizeof(val), &val, sizeof(val));
+        val++;
+
+        memcpy(pUnalignedStorageStart, &val, sizeof(val));
+        val++;
+
+        memcpy(pUnalignedStorageStart + sizeof(val), &val, sizeof(val));
+        val++;
+
+        RawStorageIterator<T> rsIter0(pAlignedStorageStart);
+        RawStorageIterator<T> rsIter0Copy(rsIter0);
+        DFGTEST_STATIC_TEST(sizeof(*rsIter0) == sizeof(T));
+        EXPECT_TRUE(rsIter0 == rsIter0Copy);
+        EXPECT_EQ(pAlignedStorageStart, rsIter0.ptrChar());
+        EXPECT_EQ(1, *rsIter0);
+        rsIter0++;
+        EXPECT_EQ(2, *rsIter0);
+
+        int16 i = 3;
+        for (RawStorageIterator<T> rsIter1(pUnalignedStorageStart), iterEnd(pUnalignedStorageEnd); rsIter1 != iterEnd; ++rsIter1)
+        {
+            EXPECT_EQ(i, *rsIter1);
+            i++;
+        }
+    }
+}
+
+TEST(dfgIter, RawStorageIterator)
+{
+    rawStorageIteratorTestImpl<int>();
+    rawStorageIteratorTestImpl<double>();
+}
