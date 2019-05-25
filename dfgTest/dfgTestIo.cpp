@@ -622,6 +622,74 @@ TEST(dfgIo, ImStreamWithEncoding_UCS)
 
 namespace
 {
+    template <class Int_T>
+    void ImStreamWithEncoding_unalignedSourceImpl()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(io);
+
+        char buffer[3 * sizeof(Int_T)] = "";
+        char* p = &buffer[0];
+        while (reinterpret_cast<uintptr_t>(p) % sizeof(Int_T) != 1)
+            p++;
+        const auto pStart = p;
+        Int_T c0 = 'a';
+        Int_T c1 = 'b';
+        memcpy(p, &c0, sizeof(c0));
+        p += sizeof(c0);
+        memcpy(p, &c1, sizeof(c1));
+        p += sizeof(c1);
+
+        {
+            DFG_CLASS_NAME(ImStreamWithEncoding) istrm(pStart, p - pStart, hostNativeUtfEncodingFromCharType(sizeof(Int_T)));
+            EXPECT_EQ('a', istrm.get());
+            EXPECT_EQ('b', istrm.get());
+        }
+
+        // Check that reading uneven item count behaves.
+        {
+            // No full Int_T's
+            DFG_CLASS_NAME(ImStreamWithEncoding) istrm(pStart, sizeof(Int_T) / 2, hostNativeUtfEncodingFromCharType(sizeof(Int_T)));
+            EXPECT_EQ(std::char_traits<char>::eof(), istrm.get());
+            EXPECT_TRUE(istrm.eof());
+
+            // One full codepoint and one non-full Int_T
+            DFG_CLASS_NAME(ImStreamWithEncoding) istrm2(pStart, sizeof(Int_T) + sizeof(Int_T) / 2, hostNativeUtfEncodingFromCharType(sizeof(Int_T)));
+            EXPECT_EQ('a', istrm2.get());
+            EXPECT_EQ(std::char_traits<char>::eof(), istrm2.get());
+            EXPECT_TRUE(istrm2.eof());
+        }
+    }
+}
+
+TEST(dfgIo, ImStreamWithEncoding_unalignedSource)
+{
+    using namespace DFG_ROOT_NS;
+    ImStreamWithEncoding_unalignedSourceImpl<uint16>();
+    ImStreamWithEncoding_unalignedSourceImpl<uint32>();
+
+    // Test code point that is cut in the middle
+    {
+        using namespace DFG_MODULE_NS(io);
+
+        std::basic_string<char16_t> s;
+        DFG_MODULE_NS(utf)::cpToUtf(70000, std::back_inserter(s), sizeof(char16_t), ByteOrderHost);
+        DFG_MODULE_NS(utf)::cpToUtf(80000, std::back_inserter(s), sizeof(char16_t), ByteOrderHost);
+        ASSERT_TRUE(s.size() == 4);
+        char buffer[7];
+        memcpy(buffer, s.data(), 7);
+        const char* pStart = reinterpret_cast<const char*>(buffer);
+        const char* const pEnd = pStart + 7;
+        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(pStart, pEnd - pStart, hostNativeUtfEncodingFromCharType(sizeof(char16_t)));
+        EXPECT_EQ(70000, istrm.get()); // First item should read ok
+        EXPECT_EQ(DFG_MODULE_NS(utf)::INVALID_CODE_POINT, istrm.get()); // Code point consists of 4 bytes, but only three is in input -> expecting INVALID_CODE_POINT.
+        EXPECT_EQ(std::char_traits<char>::eof(), istrm.get());
+        EXPECT_TRUE(istrm.eof());
+    }
+}
+
+namespace
+{
     template <class IStrm_T>
     void IStreamWithEncoding_Windows1252_impl(IStrm_T&& istrm)
     {

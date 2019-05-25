@@ -85,6 +85,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         return encodingUnknown;
     }
 
+    inline TextEncoding hostNativeUtfEncodingFromCharType(const size_t charSizeInBytes)
+    {
+        if (charSizeInBytes == 1)
+            return encodingUTF8;
+        if (charSizeInBytes == 2)
+            return (byteOrderHost() == ByteOrderLittleEndian) ? encodingUTF16Le : encodingUTF16Be;
+        else if (charSizeInBytes == 4)
+            return (byteOrderHost() == ByteOrderLittleEndian) ? encodingUTF32Le : encodingUTF32Be;
+        return encodingUnknown;
+    }
+
     inline size_t baseCharacterSize(TextEncoding encoding)
     {
         switch (encoding)

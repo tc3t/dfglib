@@ -6,6 +6,7 @@
 #include "../utf.hpp"
 #include "textEncodingTypes.hpp"
 #include "checkBom.hpp"
+#include "../iter/RawStorageIterator.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -153,17 +154,52 @@ public:
         return static_cast<uint8>(std::char_traits<char>::to_int_type(c));
     }
 
+    // Implementation for case sizeof(Elem_T) == 1
     template <class Elem_T, class BswapFunc_T>
-    static int_type readAndAdvanceImpl(IteratorType& iter, const IteratorType& end, BswapFunc_T bswapFunc)
+    static int_type readAndAdvanceImpl(IteratorType& iter, const IteratorType& end, BswapFunc_T bswapFunc, std::true_type)
     {
         DFG_STATIC_ASSERT((std::is_same<IteratorType, const char*>::value), "This function needs to be modified if not dealing with pointer iterator.");
         if (iter == end)
             return eofValue();
-        auto p2 = reinterpret_cast<const Elem_T*>(iter); // TODO: check alignment?
+        auto p2 = reinterpret_cast<const Elem_T*>(iter);
         auto p2End = reinterpret_cast<const Elem_T*>(end);
         auto rv = DFG_MODULE_NS(utf)::readUtfCharAndAdvance(p2, p2End, bswapFunc);
         iter = reinterpret_cast<IteratorType>(p2);
         return rv;
+    }
+
+    // Implementation for case sizeof(Elem_T) != 1
+    template <class Elem_T, class BswapFunc_T>
+    static int_type readAndAdvanceImpl(IteratorType& iter, const IteratorType paramEnd, BswapFunc_T bswapFunc, std::false_type)
+    {
+        DFG_STATIC_ASSERT((std::is_same<IteratorType, const char*>::value), "This function needs to be modified if not dealing with pointer iterator.");
+        auto end = paramEnd;
+        if (iter == end)
+            return eofValue();
+        // Check that (end - iter) can be divided by sizeof(Elem_T) (i.e. that there are no incomplete elements)
+        const auto remainder = ((end - iter) % sizeof(Elem_T));
+        if (remainder != 0)
+        {
+            // Uneven input, modify end to point to last whole element
+            end -= remainder;
+        }
+        if (end - iter < sizeof(Elem_T)) // Don't have a whole element?
+        {
+            iter = paramEnd;
+            return eofValue();
+        }
+
+        DFG_MODULE_NS(iter)::RawStorageIterator<const Elem_T> p2(iter);
+        DFG_MODULE_NS(iter)::RawStorageIterator<const Elem_T> p2End(end);
+        auto rv = DFG_MODULE_NS(utf)::readUtfCharAndAdvance(p2, p2End, bswapFunc);
+        iter = p2.ptrChar();
+        return rv;
+    }
+
+    template <class Elem_T, class BswapFunc_T>
+    static int_type readAndAdvanceImpl(IteratorType& iter, const IteratorType& end, BswapFunc_T bswapFunc)
+    {
+        return readAndAdvanceImpl<Elem_T>(iter, end, bswapFunc, std::integral_constant<bool, sizeof(Elem_T) == 1>());
     }
 
     static int_type readAndAdvanceByte(IteratorType& iter, const IteratorType& end)
