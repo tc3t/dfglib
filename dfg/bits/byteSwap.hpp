@@ -2,7 +2,7 @@
 
 #include "../dfgDefs.hpp"
 
-#include <boost/detail/endian.hpp>
+#include <boost/predef/other/endian.h>
 
 DFG_ROOT_NS_BEGIN
 {
@@ -12,9 +12,9 @@ DFG_ROOT_NS_BEGIN
 		ByteOrderUnknown,
 		ByteOrderLittleEndian,
 		ByteOrderBigEndian,
-#ifdef BOOST_ENDIAN_LITTLE_BYTE
+#if BOOST_ENDIAN_LITTLE_BYTE
 		ByteOrderHost = ByteOrderLittleEndian
-#elif defined(BOOST_ENDIAN_BIG_BYTE)
+#elif BOOST_ENDIAN_BIG_BYTE
 		ByteOrderHost = ByteOrderBigEndian
 #else
 		ByteOrderHost = ByteOrderUnknown
