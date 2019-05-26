@@ -24,7 +24,6 @@
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <boost/lexical_cast.hpp>
-    #include <boost/timer.hpp>
     #include <boost/iostreams/device/array.hpp>
     #include <boost/iostreams/device/file.hpp>
     #include <boost/iostreams/stream.hpp>
@@ -274,87 +273,89 @@ TEST(dfgIo, StdIStrStreamPerformance)
     DFG_CLASS_NAME(NullOutputStream) nullStream;
     auto& strmSumPrint = nullStream; // std::cout;
 
+    typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) Timer;
+
     // Direct memory read
     {
-    boost::timer timer;
+    Timer timer;
     size_t sum = 0;
     DFG_ROOT_NS::DFG_SUB_NS_NAME(alg)::forEachFwd(buffer, [&](char c) {sum += c;});
-    std::cout << "Direct memory read elapsed: " << timer.elapsed() << '\n';
+    std::cout << "Direct memory read elapsed: " << timer.elapsedWallSeconds() << '\n';
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
 
     // Direct memory read with std::accumulate
     {
-    boost::timer timer;
+    Timer timer;
     size_t sum = 0;
     sum = std::accumulate(buffer.cbegin(), buffer.cend(), sum);
-    std::cout << "Direct memory read with std::accumulate elapsed: " << timer.elapsed() << '\n';
+    std::cout << "Direct memory read with std::accumulate elapsed: " << timer.elapsedWallSeconds() << '\n';
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
 
     // std::istrstream with get()
     {
-    boost::timer timer;
+    Timer timer;
     size_t sum = 0;
     std::istrstream istrm(static_cast<const char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
     int ch;
     while((ch = istrm.get()) != EOF)
         sum += ch;
-    std::cout << "std::istrstream with get elapsed: " << timer.elapsed() << '\n';
+    std::cout << "std::istrstream with get elapsed: " << timer.elapsedWallSeconds() << '\n';
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
 
     // std::istrstream with read()
     {
-    boost::timer timer;
+    Timer timer;
     size_t sum = 0;
     std::istrstream istrm(static_cast<const char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
     char ch;
     while(istrm.read(&ch, 1))
         sum += ch;
-    std::cout << "std::istrstream with read elapsed: " << timer.elapsed() << '\n';
+    std::cout << "std::istrstream with read elapsed: " << timer.elapsedWallSeconds() << '\n';
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
 
     // BasicImStream
     {
-    boost::timer timer;
+    Timer timer;
     size_t sum = 0;
     DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(BasicImStream) istrm(buffer.data(), buffer.size());
     int ch;
     while((ch = istrm.get()) != istrm.eofVal())
         sum += ch;
-    std::cout << "BasicImStream with get elapsed: " << timer.elapsed() << '\n';
+    std::cout << "BasicImStream with get elapsed: " << timer.elapsedWallSeconds() << '\n';
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
 
     // boost::iostreams
     {
-    boost::timer timer;
+    Timer timer;
     size_t sum = 0;
     boost::iostreams::stream<boost::iostreams::array_source> istrm(buffer.data(), buffer.size());
     int ch;
     while((ch = istrm.get()) != EOF)
         sum += ch;
-    std::cout << "boost::iostreams::stream<boost::iostreams::array_source> with get elapsed: " << timer.elapsed() << '\n';
+    std::cout << "boost::iostreams::stream<boost::iostreams::array_source> with get elapsed: " << timer.elapsedWallSeconds() << '\n';
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
 
     // dlib vectorstream
     {
-    boost::timer timer;
+    Timer timer;
     size_t sum = 0;
     dlib::vectorstream istrm(buffer);
     int ch;
     while((ch = istrm.get()) != EOF)
         sum += ch;
-    std::cout << "dlib::vectorstream with get elapsed: " << timer.elapsed() << '\n';
+    std::cout << "dlib::vectorstream with get elapsed: " << timer.elapsedWallSeconds() << '\n';
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }

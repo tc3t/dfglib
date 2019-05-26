@@ -10,6 +10,7 @@
 #include <dfg/str/string.hpp>
 #include <dfg/baseConstructorDelegate.hpp>
 #include <dfg/iter/szIterator.hpp>
+#include <dfg/time/timerCpu.hpp>
 
 namespace
 {
@@ -899,8 +900,6 @@ TEST(DfgIo, DelimitedTextReader_readMatrix10x10_1to100)
 
 }
 
-#include <boost/timer.hpp>
-
 TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
 {
 #if 1
@@ -917,6 +916,8 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
     const size_t expectedDiagSums[] = {85427, 5109601, 25037701};
     const size_t expectedBackDiagSums[] = {90465, 5023154, 25140301};
 
+    typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) Timer;
+
     for(int i = 0; i<DFG_COUNTOF(matSizes); ++i)
     {
         if (!matActive[i])
@@ -928,10 +929,10 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
 
         // Note: With release-version reading to memory dropped runtime ~6.5 s -> ~1.8 s.
 #if 1
-        boost::timer tmer;
+        Timer timer;
         auto vec = DFG_SUB_NS_NAME(io)::fileToByteContainer<std::vector<char>>(	fnStrm.str().c_str(),
                                                                         512);
-        std::cout << "Matrix size " << matSize << " fileToByteContainer time: " << tmer.elapsed() << '\n';
+        std::cout << "Matrix size " << matSize << " fileToByteContainer time: " << timer.elapsedWallSeconds() << '\n';
         EXPECT_EQ(false, vec.empty());
         // Runtime difference between std::istrstream ja BasicImStream was about 2.3 s vs. 0.75 s
         //std::istrstream istrm(vec.data(), vec.size());
