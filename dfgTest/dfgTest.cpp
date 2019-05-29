@@ -94,6 +94,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIo.writeDelimited";
     //::testing::GTEST_FLAG(filter) = "dfgIter.RawStorageIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";
+    //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator_operatorLt";
     //::testing::GTEST_FLAG(filter) = "dfgMath.absAsUnsigned";
     //::testing::GTEST_FLAG(filter) = "dfgMath.logOfBase";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";

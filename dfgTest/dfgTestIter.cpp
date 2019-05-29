@@ -158,6 +158,31 @@ TEST(dfgIter, szIterator)
     }
 }
 
+TEST(dfgIter, szIterator_operatorLt)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(iter);
+    const char szText[] = "abc";
+    const char szEmpty[] = "";
+    auto iter = makeSzIterator(szText);
+    auto iterRange = makeSzRange(szText);
+    auto iterRangeEmpty = makeSzRange(szEmpty);
+    EXPECT_TRUE(iterRange.begin() < iterRange.end());
+    EXPECT_TRUE(iterRange.cbegin() < iterRange.cend());
+    EXPECT_FALSE(iterRange.cend() < iterRange.cbegin());
+    EXPECT_FALSE(iterRangeEmpty.begin() < iterRangeEmpty.end());
+    EXPECT_FALSE(iterRangeEmpty.cbegin() < iterRangeEmpty.cend());
+    EXPECT_FALSE(iterRangeEmpty.cend() < iterRangeEmpty.cbegin());
+    EXPECT_FALSE(iter < iter);
+    EXPECT_FALSE(iterRange.cend() < iterRange.cend());
+    EXPECT_TRUE(iter < makeSzIterator(szText + 1));
+    EXPECT_TRUE(iter < makeSzIterator(szText + 2));
+    EXPECT_TRUE(iter < makeSzIterator(szText + 3));
+    EXPECT_FALSE(makeSzIterator(szText + 1) < iter);
+    EXPECT_FALSE(makeSzIterator(szText + 2) < iter);
+    EXPECT_FALSE(makeSzIterator(szText + 3) < iter);
+}
+
 namespace
 {
     template <class T>

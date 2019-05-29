@@ -37,7 +37,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(iter) {
 
 		bool operator<(const DFG_CLASS_NAME(SzIterator)& other) const
 		{
-			return (m_psz != nullptr && other.m_psz == nullptr);
+            if (m_psz != nullptr)
+            {
+                if (other.m_psz == nullptr)
+                    return *m_psz != '\0';
+                else
+                    return m_psz < other.m_psz;
+            }
+            else
+                return false;
 		}
 
 		DFG_CLASS_NAME(SzIterator)& operator++() { ++m_psz; return *this; }
