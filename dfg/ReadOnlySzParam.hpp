@@ -216,7 +216,7 @@ namespace DFG_DETAIL_NS
 
         CodePointT back() const
         {
-            DFG_ASSERT_UB(!empty());
+            DFG_ASSERT_UB(!this->empty());
             return CodePointT(*(toCharPtr_raw(this->m_pFirst) + this->m_nSize - 1));
         }
 
@@ -234,14 +234,14 @@ namespace DFG_DETAIL_NS
 
         CodePointT front() const
         {
-            DFG_ASSERT_UB(!empty());
+            DFG_ASSERT_UB(!this->empty());
             return *this->m_pFirst;
         }
 
         // Precondition: empty() == false
         void pop_front()
         {
-            DFG_ASSERT_UB(!empty());
+            DFG_ASSERT_UB(!this->empty());
             ++this->m_pFirst;
             this->m_nSize--;
         }
@@ -249,7 +249,7 @@ namespace DFG_DETAIL_NS
         // Precondition: empty() == false
         void pop_back()
         {
-            DFG_ASSERT_UB(!empty());
+            DFG_ASSERT_UB(!this->empty());
             this->m_nSize--;
         }
 
