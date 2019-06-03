@@ -231,7 +231,14 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         void privSetRowContent(ColumnIndexPairContainer& rowsInCol, Index_T nRow, const Char_T* pData)
         {
-            // First check if the given row already exists.
+            // If row is non-existing because it is > than any existing row, simply push_back() and return.
+            if (rowsInCol.empty() || nRow > rowsInCol.back().first)
+            {
+                rowsInCol.push_back(IndexPtrPair(nRow, pData));
+                return;
+            }
+
+            // Check if the given row already exists.
             auto iterGreaterOrEqualToRow = privLowerBoundInColumnNonConst(rowsInCol, nRow);
             if (iterGreaterOrEqualToRow != rowsInCol.end() && iterGreaterOrEqualToRow->first == nRow)
             {
