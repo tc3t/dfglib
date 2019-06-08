@@ -114,7 +114,7 @@ void forEachInTuple(Tuple_T& tuple, Func_T&& func)
 // Rationale: For example copying wchar_t array to char array with std::copy
 //			  can cause compiler warning as wchar_t is converted to char.
 //			  An alternative is to use std::transform and giving it castfunction as parameter.
-template <class Src_T, class Dest_T> struct CastStatic : public std::unary_function<Src_T, Dest_T>
+template <class Src_T, class Dest_T> struct CastStatic
 {
     Dest_T operator()(const Src_T& src) const {return static_cast<Dest_T>(src);}
 };
