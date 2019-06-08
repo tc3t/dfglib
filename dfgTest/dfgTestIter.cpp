@@ -9,6 +9,7 @@
 #include <array>
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/iterAll.hpp>
+#include <dfg/typeTraits.hpp>
 
 TEST(dfgIter, RangeIterator)
 {
@@ -117,18 +118,17 @@ TEST(dfgIter, szIterator)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(iter);
     using namespace DFG_MODULE_NS(alg);
+    using namespace DFG_MODULE_NS(TypeTraits);
 
     char sz[] = "abc";
     const char szConst[] = "def";
     auto range = makeSzRange(sz);
     auto rangeConst = makeSzRange(szConst);
 
-#ifdef _MSC_VER // TODO: disable only when std::identity is not available.
-    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzIterator(sz))>::type::pointer, char*>::value));
-    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzIterator(szConst))>::type::pointer, const char*>::value));
-    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzRange(sz))>::type::pointer, char*>::value));
-    DFGTEST_STATIC((std::is_same<std::identity<decltype(makeSzRange(szConst))>::type::pointer, const char*>::value));
-#endif
+    DFGTEST_STATIC((std::is_same<TypeIdentity<decltype(makeSzIterator(sz))>::type::pointer, char*>::value));
+    DFGTEST_STATIC((std::is_same<TypeIdentity<decltype(makeSzIterator(szConst))>::type::pointer, const char*>::value));
+    DFGTEST_STATIC((std::is_same<TypeIdentity<decltype(makeSzRange(sz))>::type::pointer, char*>::value));
+    DFGTEST_STATIC((std::is_same<TypeIdentity<decltype(makeSzRange(szConst))>::type::pointer, const char*>::value));
 
     EXPECT_EQ(&sz[0], range.data()); // Note: pointer comparison is intended.
     for (auto iter = range.begin(), iterEnd = range.end(); !isAtEnd(iter, iterEnd); ++iter)

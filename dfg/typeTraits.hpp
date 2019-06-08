@@ -36,4 +36,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(TypeTraits)
 #else
     struct IsTriviallyCopyable : public std::conditional<std::is_scalar<T>::value, std::true_type, UnknownAnswerType>::type { };
 #endif
+
+    // Like C++20 std::type_identity (https://en.cppreference.com/w/cpp/types/type_identity)
+    template <class T>
+    struct TypeIdentity
+    {
+        typedef T type;
+    };
+
 }} // Module namespace
