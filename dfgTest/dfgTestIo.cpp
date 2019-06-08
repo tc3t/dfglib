@@ -27,8 +27,10 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <boost/iostreams/device/array.hpp>
     #include <boost/iostreams/device/file.hpp>
     #include <boost/iostreams/stream.hpp>
-    #include <dlib/vectorstream.h>
-    #include <dlib/compress_stream.h>
+    #if DFGTEST_BUILD_OPT_USE_DLIB==1
+        #include <dlib/vectorstream.h>
+        #include <dlib/compress_stream.h>
+    #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 #if 0
@@ -348,6 +350,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     }
 
     // dlib vectorstream
+    #if DFGTEST_BUILD_OPT_USE_DLIB==1
     {
     Timer timer;
     size_t sum = 0;
@@ -359,6 +362,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
+    #endif
 }
 
 namespace
@@ -733,6 +737,7 @@ TEST(dfgIo, IStreamWithEncoding_Windows1252)
     }
 }
 
+#if DFGTEST_BUILD_OPT_USE_DLIB==1
 TEST(dfgIo, OByteStream)
 {
     using namespace DFG_ROOT_NS;
@@ -766,6 +771,7 @@ TEST(dfgIo, OByteStream)
     EXPECT_EQ(bytes.size(), sizeInBytes(doubles));
     EXPECT_FALSE(std::memcmp(bytes.data(), doubles.data(), bytes.size()));
 }
+#endif
 
 TEST(dfgIo, ImcByteStream)
 {

@@ -8,6 +8,7 @@
 #define DLIB_ISO_CPP_ONLY
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
-#include <dlib/all/source.cpp>
-
+    #if (DFGTEST_BUILD_OPT_USE_DLIB==1)
+        #include <dlib/all/source.cpp>
+    #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
