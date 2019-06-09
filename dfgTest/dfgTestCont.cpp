@@ -663,7 +663,7 @@ TEST(dfgCont, ViewableSharedPtr)
     auto pData = sp.get();
     sp.reset();
     EXPECT_EQ(4, resetNotifier1);
-    EXPECT_TRUE(spCopy.unique());
+    EXPECT_TRUE(spCopy.use_count() == 1);
     EXPECT_EQ(nullptr, spViewer1->view().get());
     EXPECT_EQ(4, *spCopy);
     EXPECT_EQ(pData, spCopy.get());
@@ -1126,8 +1126,8 @@ namespace
         EXPECT_EQ(4, mConst.size());
 
         // find
-        m.find("a");
-        mConst.find("a");
+        EXPECT_TRUE(m.find("a") != m.end());
+        EXPECT_TRUE(mConst.find("a") != mConst.end());
 
         // insert
         {
@@ -1365,8 +1365,8 @@ namespace
         EXPECT_EQ(3, seConst.size());
 
         // find
-        se.find("a");
-        seConst.find("a");
+        EXPECT_TRUE(se.find("a") != se.end());
+        EXPECT_TRUE(seConst.find("a") != seConst.end());
 
         auto i1 = se.insert("d");
         EXPECT_EQ(true, i1.second);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include <iterator>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(iter) {
 
@@ -13,9 +12,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(iter) {
 	// TODO: Define clearer specifications.
 	// TODO: Make behaviour of operator= user definable.
 	template <class Stream_T>
-	class DFG_CLASS_NAME(OstreamIterator) : public std::iterator<std::output_iterator_tag, void, void, void, void>
+	class DFG_CLASS_NAME(OstreamIterator)
 	{
 	public:
+        typedef std::output_iterator_tag    iterator_category;
+        typedef void                        value_type;
+        typedef void                        difference_type;
+        typedef void                        pointer;
+        typedef void                        reference;
+
 		DFG_CLASS_NAME(OstreamIterator)(Stream_T& rStrm)
 			: m_pStream(&rStrm)
 		{
