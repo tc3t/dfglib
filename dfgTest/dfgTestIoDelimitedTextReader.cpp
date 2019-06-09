@@ -64,9 +64,25 @@ const std::basic_string<CsvCellChar>& getExpectedCellData(size_t nFileIndex, siz
         throw std::out_of_range("Bad index");
 }
 
-template <class Facet>
-void createTestFile(const std::string& sFile, const std::basic_string<CsvCellChar>* pArr, const size_t nCount, const size_t nColCount, const bool bUseFacet)
+void createTestFile(const std::string& sFile, const DFG_MODULE_NS(io)::TextEncoding encoding, const bool bWriteBom, const std::basic_string<CsvCellChar>* pArr, const size_t nCount, const size_t nColCount)
 {
+    using namespace DFG_MODULE_NS(io);
+
+    DFG_CLASS_NAME(OfStreamWithEncoding) ostrm(sFile, encoding, bWriteBom);
+
+    for (size_t i = 0; i < nCount; ++i)
+    {
+        DFG_MODULE_NS(alg)::forEachFwd(pArr[i], [&](CsvCellChar ch)
+        {
+            ostrm.writeUnicodeChar(ch);
+        });
+        if ((i + 1) % nColCount != 0)
+            ostrm << ", ";
+        else if (i + 1 < nCount)
+            ostrm << '\n';
+    }
+    
+#if 0
     std::basic_ofstream<CsvCellChar> ostrm(sFile, std::ios::out | std::ios::binary);
     if (bUseFacet)
         ostrm.imbue(std::locale(ostrm.getloc(), new Facet()));
@@ -94,6 +110,7 @@ void createTestFile(const std::string& sFile, const std::basic_string<CsvCellCha
         else if (i + 1 < nCount)
             ostrm << '\n';
     }
+#endif
 }
 
 void createTestFileCsvRandomData(const std::string& sFile)
@@ -160,20 +177,9 @@ std::string createCsvTestFileName(const char* const pszId, const size_t nIndex)
 
 } // unnamed namespace
 
-#ifdef _MSC_VER
-    #define TEST_UTF_READ	1
-#else
-    #define TEST_UTF_READ	0
-#endif
-
-#if TEST_UTF_READ
-
-#include <codecvt>
-
-#define CREATE_TESTFILE(PATH, FACET, CODECVT, ARRAYINDEX, COLCOUNT, USEFACET) \
+#define CREATE_TESTFILE(PATH, ENCODING, WRITE_BOM, ARRAYINDEX, COLCOUNT) \
     { \
-    typedef std::FACET<CsvCellChar, 0xFFFF, static_cast<std::codecvt_mode>(CODECVT)> FACET; \
-    createTestFile<FACET>(createCsvTestFileName(PATH, 0), getCsvTestWriteArray(ARRAYINDEX), getCsvTestCellCount(ARRAYINDEX), COLCOUNT, USEFACET); \
+    createTestFile(createCsvTestFileName(PATH, 0), ENCODING, WRITE_BOM, getCsvTestWriteArray(ARRAYINDEX), getCsvTestCellCount(ARRAYINDEX), COLCOUNT); \
     } \
 
 
@@ -183,14 +189,12 @@ TEST(DfgIo, DelimitedTextReader_createTestFiles)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(io);
 
-    CREATE_TESTFILE("UTF16BE_BOM",	codecvt_utf16,	std::generate_header,						0, g_nTestCsv0ColumnCount, true);
-    CREATE_TESTFILE("UTF16BE",		codecvt_utf16,	0,											0, g_nTestCsv0ColumnCount, true);
-    CREATE_TESTFILE("UTF16LE_BOM",	codecvt_utf16,	std::generate_header | std::little_endian,	0, g_nTestCsv0ColumnCount, true);
-    CREATE_TESTFILE("UTF16LE",		codecvt_utf16,	std::little_endian,							0, g_nTestCsv0ColumnCount, true);
-    CREATE_TESTFILE("UTF8_BOM",		codecvt_utf8,	std::generate_header,						0, g_nTestCsv0ColumnCount, true);
-    CREATE_TESTFILE("UTF8",			codecvt_utf8,	0,											0, g_nTestCsv0ColumnCount, true);
-
-    CREATE_TESTFILE("noFacet",		codecvt_utf8,	0,											0, g_nTestCsv0ColumnCount, false);
+    CREATE_TESTFILE("UTF16BE_BOM",	encodingUTF16Be, true,  0, g_nTestCsv0ColumnCount);
+    CREATE_TESTFILE("UTF16BE",      encodingUTF16Be, false, 0, g_nTestCsv0ColumnCount);
+    CREATE_TESTFILE("UTF16LE_BOM",  encodingUTF16Le, true,  0, g_nTestCsv0ColumnCount);
+    CREATE_TESTFILE("UTF16LE",      encodingUTF16Le, false, 0, g_nTestCsv0ColumnCount);
+    CREATE_TESTFILE("UTF8_BOM",		encodingUTF8,    true,  0, g_nTestCsv0ColumnCount);
+    CREATE_TESTFILE("UTF8",			encodingUTF8,    false, 0, g_nTestCsv0ColumnCount);
 
     // Create UTF32-files by hand.
     const auto utf8LeFile = DFG_MODULE_NS(io)::fileToVector(createCsvTestFileName("UTF8", 0));
@@ -200,10 +204,10 @@ TEST(DfgIo, DelimitedTextReader_createTestFiles)
     const auto sPathUtf32BeNoBom = createCsvTestFileName("UTF32BE", 0);
     std::vector<uint32> le32Data;
     utf8::utf8to32(utf8LeFile.cbegin(), utf8LeFile.cend(), std::back_inserter(le32Data));
-    auto strmLe32 = DFG_MODULE_NS(io)::createOutputStreamBinaryFile(sPathUtf32Le);
-    auto strmBe32 = DFG_MODULE_NS(io)::createOutputStreamBinaryFile(sPathUtf32Be);
-    auto strmLe32NoBom = DFG_MODULE_NS(io)::createOutputStreamBinaryFile(sPathUtf32LeNoBom);
-    auto strmBe32NoBom = DFG_MODULE_NS(io)::createOutputStreamBinaryFile(sPathUtf32BeNoBom);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) strmLe32(sPathUtf32Le);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) strmBe32(sPathUtf32Be);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) strmLe32NoBom(sPathUtf32LeNoBom);
+    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) strmBe32NoBom(sPathUtf32BeNoBom);
     writeBinary(strmLe32, DFG_MODULE_NS(utf)::bomUTF32Le);
     writeBinary(strmBe32, DFG_MODULE_NS(utf)::bomUTF32Be);
     DFG_MODULE_NS(alg)::forEachFwd(le32Data, [&](const uint32 val)
@@ -216,8 +220,6 @@ TEST(DfgIo, DelimitedTextReader_createTestFiles)
         writeBinary(strmBe32NoBom, byteSwapHostToBigEndian(val));
     });
 }
-
-#endif // TEST_UTF_READ
 
 static void DelimitedTextReader_CsvReadCommon(const char* const pszFileId, DFG_MODULE_NS(io)::TextEncoding encoding = DFG_MODULE_NS(io)::encodingUnknown)
 {
@@ -248,72 +250,52 @@ static void DelimitedTextReader_CsvReadCommon(const char* const pszFileId, DFG_M
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF8_withBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF8_BOM");
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF8_noBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF8", DFG_MODULE_NS(io)::encodingUTF8);
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF16LE_withBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF16LE_BOM");
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF16LE_noBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF16LE", DFG_MODULE_NS(io)::encodingUTF16Le);
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF16BE_withBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF16BE_BOM");
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF16BE_noBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF16BE", DFG_MODULE_NS(io)::encodingUTF16Be);
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF32LE_withBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF32LE_BOM");
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF32LE_noBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF32LE", DFG_MODULE_NS(io)::encodingUTF32Le);
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF32BE_withBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF32BE_BOM");
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvReadUTF32BE_noBOM)
 {
-#if TEST_UTF_READ
     DelimitedTextReader_CsvReadCommon("UTF32BE", DFG_MODULE_NS(io)::encodingUTF32Be);
-#endif
 }
 
 TEST(DfgIo, DelimitedTextReader_CsvRead_plainBytes)
