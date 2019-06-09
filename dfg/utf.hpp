@@ -30,7 +30,9 @@
 #pragma once
 
 #include "dfgDefs.hpp"
-#include "utf/utf8_cpp/utf8.h"
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #include "utf/utf8_cpp/utf8.h"
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #include "utf/utfBom.hpp"
 #include "dfgBase.hpp" // For byteorder
 #include "io/textEncodingTypes.hpp"

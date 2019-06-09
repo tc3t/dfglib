@@ -595,8 +595,6 @@ TEST(dfgAlg, findNearest)
         std::array<double, 1> searchElem = {3};
         const auto diffLb = [](const std::complex<double>& c, const std::array<double, 1>& val) {return std::abs(c.real() - val[0]); };
         const auto diffUb = [](const std::array<double, 1>& val, const std::complex<double>& c) {return std::abs(c.real() - val[0]); };
-        std::lower_bound(vecVals.begin(), vecVals.end(), searchElem, diffLb);
-        std::upper_bound(vecVals.begin(), vecVals.end(), searchElem, diffUb);
         const auto nearest = findNearest(vecVals, searchElem, diffLb);
         EXPECT_EQ(3, nearest->real());
         EXPECT_EQ(1, nearest - vecVals.begin());
