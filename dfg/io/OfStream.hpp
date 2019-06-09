@@ -28,10 +28,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         template <class Char_T>
-        DFG_CLASS_NAME(OfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>& sPath, TextEncoding encoding) :
+        DFG_CLASS_NAME(OfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>& sPath, TextEncoding encoding, const bool bWriteBom = true) :
             m_encodingBuffer(nullptr, encoding)
         {
-            open(sPath, std::ios_base::binary | std::ios_base::out);
+            open(sPath, std::ios_base::binary | std::ios_base::out, bWriteBom);
         }
 
         void close()
@@ -40,10 +40,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         template <class Char_T>
-        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>& sPath, std::ios_base::openmode openMode)
+        std::basic_filebuf<char>* open(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>& sPath, std::ios_base::openmode openMode, const bool bWriteBom = true)
         {
             auto rv = openOfStream(&m_strmBuf, sPath, openMode);
-            writeBom(m_encodingBuffer.encoding());
+            if (bWriteBom)
+                writeBom(m_encodingBuffer.encoding());
             return rv;
         }
 
@@ -125,15 +126,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         }
 
-        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding) :
+        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding, const bool bWriteBom = true) :
             BaseClass(&m_streamBuffer),
-            m_streamBuffer(sPath, encoding)
+            m_streamBuffer(sPath, encoding, bWriteBom)
         {
         }
 
-        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding) :
+        DFG_CLASS_NAME(OfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding, const bool bWriteBom = true) :
             BaseClass(&m_streamBuffer),
-            m_streamBuffer(sPath, encoding)
+            m_streamBuffer(sPath, encoding, bWriteBom)
         {
         }
 
