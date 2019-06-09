@@ -74,43 +74,13 @@ void createTestFile(const std::string& sFile, const DFG_MODULE_NS(io)::TextEncod
     {
         DFG_MODULE_NS(alg)::forEachFwd(pArr[i], [&](CsvCellChar ch)
         {
-            ostrm.writeUnicodeChar(ch);
+            ostrm.writeUnicodeChar(static_cast<DFG_ROOT_NS::uint32>(ch));
         });
         if ((i + 1) % nColCount != 0)
             ostrm << ", ";
         else if (i + 1 < nCount)
             ostrm << '\n';
     }
-    
-#if 0
-    std::basic_ofstream<CsvCellChar> ostrm(sFile, std::ios::out | std::ios::binary);
-    if (bUseFacet)
-        ostrm.imbue(std::locale(ostrm.getloc(), new Facet()));
-    for(size_t i = 0; i<nCount; ++i)
-    {
-        if (bUseFacet)
-            ostrm << pArr[i];
-        else // Note: With above stream operation the stream may go to fail-state if writing special chars
-             //       without proper facet defined.
-        {
-            // To avoid stream going to fail-state and since there's no known way to write
-            // data as binary in this case, write binary by hand.
-            DFG_MODULE_NS(alg)::forEachFwd(pArr[i], [&](CsvCellChar ch)
-            {
-                CsvCellChar ch0 = ch & 0xFF;
-                CsvCellChar ch1 = (ch & 0xFF00) >> 8;
-                ostrm.write(&ch0, 1);
-                if (ch1 != 0)
-                    ostrm.write(&ch1, 1);
-            });
-
-        }
-        if ((i + 1) % nColCount != 0)
-            ostrm << ", ";
-        else if (i + 1 < nCount)
-            ostrm << '\n';
-    }
-#endif
 }
 
 void createTestFileCsvRandomData(const std::string& sFile)
