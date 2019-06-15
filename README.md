@@ -12,6 +12,8 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 * CSV-file [reading/writing](dfg/io/) with [somewhat reasonable performance](misc/csvPerformanceRuns.md) (e.g. compared to some spreadsheet applications) and [Qt-widgets](dfg/qt/) for editing CSV-files.
 
+* Simple CSV-editor as an example, for details see it's [readme](dfgExamples/dfgQtTableEditor/README.md/)
+
 * Typed strings (i.e. strings that store encoded text instead of raw bytes)
 
 * Algorithms such as
