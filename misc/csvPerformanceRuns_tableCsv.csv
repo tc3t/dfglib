@@ -1,0 +1,11 @@
+﻿Date,Compiler,Pointer size,Build type,File,Reader,time#1,time#2,time#3,time#4,time#5,time_median
+2019-06-16,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.1894,1.17224,1.17025,1.18422,1.20346,1.18422
+2019-06-16,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.75567,1.72292,1.7362,1.75424,1.77375,1.75424
+2019-06-16,MSVC_2017.9,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.78179,1.77678,1.78008,1.93903,1.79597,1.78179
+2019-06-16,MSVC_2019.1,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.76204,1.80846,1.78222,1.78611,1.81012,1.78611
+2019-06-16,MSVC_2017.9,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.89483,1.8187,1.80104,1.79888,1.80405,1.80405
+2019-06-16,MSVC_2015_u3,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",2.03326,2.1269,2.05431,2.04401,2.11428,2.05431
+2019-06-16,MSVC_2010,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",2.083,2.06,2.05,2.049,2.061,2.06
+2019-06-16,MSVC_2015_u3,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",2.37728,2.41861,2.35724,2.36193,2.36514,2.36514
+2019-06-16,MSVC_2013,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",2.448,2.425,2.436,2.409,2.417,2.425
+2019-06-16,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",2.539,2.547,2.527,2.506,2.519,2.527
