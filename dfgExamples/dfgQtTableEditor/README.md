@@ -51,6 +51,144 @@ Note that in Qt versions 5.10-5.12, keyboard shortcuts won't show as intended in
     * Input should be in UTF-8 encoding and application should know this e.g. through file having BOM or through UI.
     * File should have no enclosing characters (i.e. quoting) and read options should have enclosing character as none and completer columns should be empty.
 
+## Configuration options
+
+### Application configuration
+
+Stored in ini-file with path \<executable path\>.ini
+Example file with comments describing the setting.
+<pre>
+[dfglib]
+
+; -----------------------------------------------------------
+; General settings
+
+; Windows-specific: if set, application tries to create crash dump in case of crash.
+; Default: false
+enableAutoDumps=1
+
+; Path of executable to use when diffing.
+; Default: empty
+diffProgPath=C:/Program Files/TortoiseSVN/bin/TortoiseMerge.exe
+
+; -----------------------------------------------------------
+; TableEditor
+
+; Defines height of single cell editor widget.
+; If value is plain integer, defines absolute height.
+; If starts with %, defines height in percents of parent windows height.
+; Default: 50
+TableEditor_cellEditorHeight=%20
+
+; Defines font size in cell editor widget
+TableEditor_cellEditorFontPointSize=13
+
+; -----------------------------------------------------------
+; CsvItemModel
+
+; Column for which to use auto-completion feature.
+; To enable for all columns, use *
+; To enable for selected columns, provide comma-separator list of column indexes
+; To disable, leave value empty
+; Note: In many cases it probably makes more sense to define this as file-specific property.
+; Default: empty (=completer is disabled)
+CsvItemModel_completerEnabledColumnIndexes=*
+
+; Size limit for enabling completer: files larger than this value will be loaded with disabled completer even if completer is enabled by CsvItemModel_completerEnabledColumnIndexes
+; Default value: 10000000 (10 MB)
+CsvItemModel_completerEnabledSizeLimit=10000000
+
+; Advanced write performance tuning: defines the maximum file below which files are written to memory before writing to file.
+; Omit setting or use value -1 to let application decide.
+CsvItemModel_maxFileSizeForMemoryStreamWrite=100000000
+
+; Separator char to use when saving new files.
+; Default: x\1f  (unit separator)
+; Note: needs quotes for comma in order to be parsed correctly.
+CsvItemModel_defaultFormatSeparator=","
+
+; Enclosing char to use when saving new files.
+; Default: "
+; Note: needs escaping for " in order to be parsed correctly.
+CsvItemModel_defaultFormatEnclosingChar=\"
+
+; End-of-line type to use when saving new files.
+; Default: \n
+; Available types: \n, \r, \r\n
+CsvItemModel_defaultFormatEndOfLine=\n
+
+; -----------------------------------------------------------
+; CsvTableView
+             
+; Defines the initial scroll position after loading a file.
+; Currently 'bottom' is the only recognized option
+; Default behaviour: scroll position is top.
+CsvTableView_initialScrollPosition=bottom
+
+; Defines the minimum width for columns.
+; Default: 5
+; Note: affects only some resize schemes.
+CsvTableView_minimumVisibleColumnWidth=15
+
+; Defines time format for time stamps available through insert-actions.
+; Value is passed to QTime::toString() so check it's documentation for details.
+; Default value: hh:mm:ss.zzz
+CsvTableView_timeFormat=hh:mm:ss
+
+; Defines date format for date stamps available through insert-actions.
+; Value is passed to QDate::toString() so check it's documentation for details.
+; Default value: yyyy-MM-dd
+CsvTableView_dateFormat=yyyy-MM-dd
+
+; Defines datetime format for datetime stamps available through insert-actions.
+; Value is passed to QDateTime::toString() so check it's documentation for details.
+; Default value: yyyy-MM-dd hh:mm:ss.zzz
+CsvTableView_dateTimeFormat=yyyy-MM-dd hh:mm:ss.zzz
+</pre>
+
+### csv-file -specific configuration
+
+File-specific configuration can be used for example to
+* Read the file correctly (e.g. in case of less common format)
+* Optimize the read speed by disabling unneeded parsing features
+* Set UI column widths so that content shows in preferred way.
+
+Configuration is defined through a .conf file in path \<csv-file path\>.conf. File can be generated from table view context menu from "Config" -> "Save config file...". The .conf file is a key-value map encoded into a csv-file:
+
+* Supports URI-like lookup, where depth is implemented by increasing column index for key-item.
+* Key is the combination of first item in a row and if not on the first column, prepended by most recent key in preceding column.
+
+Available keys:
+| Key (URI)      | Purpose  | Possible values | Notes |
+| -------------  | -----    | ------          | ----- |
+| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column | integer |
+| encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |
+| enclosing_char | File is read interpreting the given character as enclosing character | ASCII-character as such or escaped format, e.g. \t or \x1f | |
+| separator_char | File is read interpreting the given character as separator character | Like for enclosing_char | |
+| end_of_line_type | File is read using end-of-line type | \n, \r\n, \r | |
+| bom_writing | Whether to write BOM on save | 0, 1 | |
+| properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
+| properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
+
+#### Example .conf-file (might look better when opened in a csv-editor)
+<pre>
+bom_writing,1,,
+columnsByIndex,,,
+,0,,
+,,width_pixels,400
+,1,,
+,,width_pixels,100
+,2,,
+,,width_pixels,200
+enclosing_char,,,
+encoding,UTF8,,
+end_of_line_type,\n,,
+separator_char,",",,
+properties,,,
+,completerColumns,"0,2",
+,completerEnabledSizeLimit,10000000,
+</pre>
+
 ## Third party code
 
 Summary of 3rd party code in dfgQtTableEditor (last revised 2019-06-13).
