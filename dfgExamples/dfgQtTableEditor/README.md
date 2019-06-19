@@ -20,13 +20,14 @@ Has been build with the following setups:
 * MSVC 2015 update 3, Qt 5.8, Boost 1.70, 64-bit (Windows 8.1)
 * MSVC 2017.9, Qt 5.9.8, Boost 1.70, 64-bit (Windows 8.1)
 * MSVC 2017.9, Qt 5.11.2, Boost 1.70, 64-bit (Windows 8.1)
-* MSVC 2017.9, Qt 5.12.3, Boost 1.70, 64-bit (Windows 8.1)
+* MSVC 2017.9, Qt 5.12, Boost 1.70, 64-bit (Windows 8.1)
+* MSVC 2017.9, Qt 5.13, Boost 1.70, 64-bit (Windows 8.1)
 * GCC 5.4.0, Qt 5.5.1, Boost 1.61, 32-bit (Ubuntu 16.04.6, 32-bit)
 * GCC 7.4.0, Qt 5.9.5, Boost 1.65.1, 64-bit (Ubuntu 18.04.2, 64-bit)
 * Clang 3.8.0, Qt 5.5.1, Boost 1.61, 32-bit (Ubuntu 16.04.6, 32-bit)
 * Clang 6.0.0, Qt 5.9.5, Boost 1.65.1, 64-bit (Ubuntu 18.04.2, 64-bit)
 
-Note that in Qt versions 5.10-5.12, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
+Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
 ## Features
 

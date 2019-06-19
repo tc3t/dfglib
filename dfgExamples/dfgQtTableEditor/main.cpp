@@ -11,6 +11,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMainWindow>
 #include <QSettings>
 #include <QStyle>
+#include <QStyleHints>
 #include <QToolButton>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -145,6 +146,22 @@ int main(int argc, char *argv[])
         tableEditor.addToolBarSeparator();
         tableEditor.addToolBarWidget(button);
     }
+
+    // Set shortcuts visible in context menus in >= 5.13. This is bit of a mess (these notes might be Windows-specific):
+    //      -In versions < 5.10 they were shown, no way to control the behaviour.
+    //      -In versions 5.10 - 5.12.3 they were not shown and there was no way to use the old behaviour.
+    //      -In 5.12.4 they were shown like in versions prior to 5.10 (but still no way to control the behaviour).
+    //      -In 5.13.0 they were not shown by default, but a way to enable them was provided.
+    // Related issues:
+    //      -https://bugreports.qt.io/browse/QTBUG-61181
+    //      -https://bugreports.qt.io/browse/QTBUG-71471
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 13, 0))
+    auto pStyleHints = QGuiApplication::styleHints();
+    if (pStyleHints)
+    {
+        pStyleHints->setShowShortcutsInContextMenus(true);
+    }
+#endif
 
     return a.exec();
 }
