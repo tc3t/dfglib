@@ -110,3 +110,4 @@
 /dfgTest/.vs
 /dfgTest/Win32/Release_VC2017
 /dfgTest/Win32/Debug_VC2017
+/dfgExamples/dfgQtTableEditor/set_deploy_env.bat
