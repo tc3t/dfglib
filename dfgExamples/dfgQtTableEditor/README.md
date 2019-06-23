@@ -37,7 +37,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 * Diffing using 3rd party diff tool (manual configuration).
 * Support for per-file configurations that can be used for example to define format characters and column widths in UI.
 * When saving to file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
-* Somewhat reasonable performance: opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 4 seconds with dfgQtTableEditor default read options, in LibreOffice 6.1.6.3 on the same Windows desktop machine read took around 33 seconds (not counting the time needed to wait for the format confirm dialog).
+* Somewhat reasonable performance: opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 4 seconds with dfgQtTableEditor default read options (and less than 2 seconds with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same Windows desktop machine read took over 30 seconds.
 * No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files. Underlying data structure is optimized for in-order walk through column content.
 * Supported encodings:
     * Read: UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252
@@ -162,7 +162,7 @@ Configuration is defined through a .conf file in path \<csv-file path\>.conf. Fi
 Available keys:
 | Key (URI)      | Purpose  | Possible values | Notes |
 | -------------  | -----    | ------          | ----- |
-| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column | integer |
+| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column | integer | |
 | encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |
 | enclosing_char | File is read interpreting the given character as enclosing character | ASCII-character as such or escaped format, e.g. \t or \x1f | |
 | separator_char | File is read interpreting the given character as separator character | Like for enclosing_char | |
