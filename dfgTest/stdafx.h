@@ -24,7 +24,7 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #if defined(_MSC_VER) && DFG_MSVC_VER >= DFG_MSVC_VER_2019_0
     #define DFGTEST_BUILD_OPT_USE_DLIB  0
 #else
-    #define DFGTEST_BUILD_OPT_USE_DLIB  1
+    #define DFGTEST_BUILD_OPT_USE_DLIB  0
 #endif // dlib
 
 #define DFGTEST_STATIC_TEST(expr)	DFG_STATIC_ASSERT(expr, "Static test case failed")
