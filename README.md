@@ -2,6 +2,27 @@
 
 Experimental general purpose utility library for C++.
 
+Note: this is *not* a mature library and is not intended or recommended for general use. Libraries such as [Abseil](https://abseil.io/) or [Boost](https://www.boost.org/) may provide many of the features in dfglib implemented in a more clear and professional manner. For a comprehensive list of alternatives, see [A list of open source C++ libraries at cppreference.com](https://en.cppreference.com/w/cpp/links/libs) 
+
+## Usage
+
+Large proportion of features are 'header only' and can be used simply by including header without anything to link. When .cpp -files are needed, the intended usage is to include them in the build of the target project; there are no cmake-files etc. for building dfglib as a library.
+
+### Building and running unit tests (dfgTest)
+
+* Make sure that Boost is available in include path
+
+1. With command line CMake
+    * cd dfgTest
+    * cmake CMakeLists.txt
+    * make
+    * ./dfgTest
+2. Visual studio project:
+    * Open dfgTest/dfgTest.sln
+    * Build and run dfgTest-project with an available MSVC-compiler.
+
+For a list of supported compilers, see "Build status"-section in this document.
+
 ## Features
 
 The library consists of miscellaneous features such as algorithms, containers, math/numerics, streams, typed string and UTF-handling. Below are some notable features:
@@ -30,7 +51,7 @@ Summary of 3rd party code in dfglib (last revised 2019-06-12).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
-| [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.55, 1.61 and 1.70.0 |
+| [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.55, 1.61, 1.65.1 and 1.70.0 |
 | [Colour Rendering of Spectra](dfg/colour/specRendJw.cpp) | m (used in colour handling tools) | [Public domain](dfg/colour/specRendJw.cpp) | 
 | [cppcsv](https://github.com/paulharris/cppcsv) | c,t | [MIT](https://github.com/paulharris/cppcsv) | 
 | [dlib](http://dlib.net/)    | m,ti (unit-aware integration and various tests)           | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  | Can be excluded from unit tests with option DFGTEST_BUILD_OPT_USE_DLIB
