@@ -11,7 +11,6 @@
 #include <vector>
 #include <numeric>
 #include <map>
-#include <deque>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
@@ -204,7 +203,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef std::pair<Index_T, const Char_T*> IndexPtrPair;
         typedef std::vector<IndexPtrPair> ColumnIndexPairContainer;
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
-        typedef std::map<Index_T, std::deque<std::vector<Char_T>>> CharBufferContainer;
+        typedef std::map<Index_T, std::vector<std::vector<Char_T>>> CharBufferContainer;
         typedef typename InterfaceTypes_T::SzPtrW SzPtrW;
         typedef typename InterfaceTypes_T::SzPtrR SzPtrR;
         typedef typename InterfaceTypes_T::StringT StringT;
@@ -257,7 +256,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return addString(sSrc, static_cast<Index_T>(nRow), static_cast<Index_T>(nCol));
         }
 
-        // Sets element to (nRow, nCol). This does not invalidate any previous pointers return by operator()(), but after this call all pointers returned for (nRow, nCol)
+        // Sets element to (nRow, nCol). This does not invalidate any previous pointers returned by operator()(), but after this call all pointers returned for (nRow, nCol)
         // will point to the previous element, not current.
         // If element at (nRow, nCol) already exists, it is overwritten.
         // Return: true if string was added, false otherwise.
