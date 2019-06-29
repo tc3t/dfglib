@@ -9,6 +9,7 @@
 #include "../numericTypeTools.hpp"
 #include <algorithm>
 #include <vector>
+#include <memory>
 #include <numeric>
 #include <map>
 
@@ -200,10 +201,81 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
     class DFG_CLASS_NAME(TableSz)
     {
     public:
+        // Stores char content. A simple structure that allocates storage on construction and appends new items to storage.
+        // Does not modify already written bytes and does not reallocate -> references to content are valid as long as the objects is alive.
+        // Reason for using this instead of std::vector<Char_T> is performance (see benchmarks for details).
+        class CharStorageItem
+        {
+        public:
+            CharStorageItem(const size_t nCapacity) :
+                m_nSize(0),
+                m_nCapacity(nCapacity)
+            {
+                m_spStorage.reset(new Char_T[m_nCapacity]);
+            }
+
+            CharStorageItem(CharStorageItem&& other)
+            {
+                m_nSize = other.m_nSize;
+                m_nCapacity = other.m_nCapacity;
+                m_spStorage.swap(other.m_spStorage);
+                other.m_nSize = 0;
+                other.m_nCapacity = 0;
+            }
+
+            CharStorageItem& operator=(CharStorageItem&& other)
+            {
+                m_nSize = other.m_nSize;
+                m_nCapacity = other.m_nCapacity;
+                m_spStorage.swap(other.m_spStorage);
+                other.m_nSize = 0;
+                other.m_nCapacity = 0;
+                return *this;
+            }
+
+            size_t capacity() const
+            {
+                return m_nCapacity;
+            }
+
+            size_t size() const
+            {
+                return m_nSize;
+            }
+
+            const Char_T& operator[](const size_t n) const
+            {
+                return m_spStorage[n];
+            }
+
+            // Appends characters to storage
+            // Precondition: pEnd - pBegin <= m_nCapacity - m_nSize (i.e. there must be enough capacity.)
+            void append_unchecked(const Char_T* pBegin, const Char_T* pEnd)
+            {
+                const size_t nCount = pEnd - pBegin;
+                DFG_ASSERT_UB(nCount <= m_nCapacity - m_nSize);
+                memcpy(&m_spStorage[m_nSize], pBegin, nCount * sizeof(Char_T));
+                m_nSize += nCount;
+            }
+
+            // Precondition: m_nSize < m_nCapacity (i.e. there must be enough capacity.)
+            void append_unchecked(const Char_T c)
+            {
+                DFG_ASSERT_UB(m_nSize < m_nCapacity);
+                m_spStorage[m_nSize++] = c;
+            }
+
+        private:
+            size_t m_nSize;
+            size_t m_nCapacity;
+            std::unique_ptr<Char_T[]> m_spStorage;
+        }; // Class CharStorageItem
+
         typedef std::pair<Index_T, const Char_T*> IndexPtrPair;
         typedef std::vector<IndexPtrPair> ColumnIndexPairContainer;
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
-        typedef std::map<Index_T, std::vector<std::vector<Char_T>>> CharBufferContainer;
+        typedef std::vector<CharStorageItem> CharStorage;
+        typedef std::map<Index_T, CharStorage> CharStorageContainer;
         typedef typename InterfaceTypes_T::SzPtrW SzPtrW;
         typedef typename InterfaceTypes_T::SzPtrR SzPtrR;
         typedef typename InterfaceTypes_T::StringT StringT;
@@ -286,9 +358,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             auto& bufferCont = m_charBuffers[nCol];
             if (bufferCont.empty() || bufferCont.back().capacity() - bufferCont.back().size() < nLength + 1)
             {
-                bufferCont.push_back(std::vector<Char_T>());
                 const size_t nNewBlockSize = (m_bAllowStringsLongerThanBlockSize) ? Max(m_nBlockSize, nLength + 1) : m_nBlockSize;
-                bufferCont.back().reserve(nNewBlockSize);
+                bufferCont.push_back(CharStorageItem(nNewBlockSize));
             }
 
             auto& currentBuffer = bufferCont.back();
@@ -300,8 +371,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Note that reallocation is not allowed because it would invalidate existing data pointers.
             if (nLength >= nFreeSpace)
                 return false;
-            currentBuffer.insert(currentBuffer.end(), toCharPtr_raw(sv.begin()), toCharPtr_raw(sv.end()));
-            currentBuffer.push_back('\0');
+            currentBuffer.append_unchecked(toCharPtr_raw(sv.begin()), toCharPtr_raw(sv.end()));
+            currentBuffer.append_unchecked('\0');
+
             const Char_T* const pData = &currentBuffer[nBeginIndex];
 
             privSetRowContent(m_colToRows[nCol], nRow, pData);
@@ -427,7 +499,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, ColumnIndexPairContainer());
 
             // Increment indexes of existing char buffer columns whose index is out-of-date after insertion. Implementation uses temporary map.
-            CharBufferContainer tempBuffers;
+            CharStorageContainer tempBuffers;
             for(auto iter = m_charBuffers.begin(); iter != m_charBuffers.end(); ++iter)
             {
                 const auto n = iter->first;
@@ -623,13 +695,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         public:
         /*
         Storage implementation:
-            -m_charBuffers stores null terminated strings in blocks of contiguous memory for each column.
+            -m_charBuffers is a map column -> CharStorage,  where CharStorage's store null terminated strings in blocks of contiguous memory for each column.
             -m_colToRows[nCol] gives list of (row,psz) pairs ordered by row in column nCol.
             If table has cell at (row,col), it can be accessed by finding row from m_colToRows[nCol].
             Since m_colToRows[nCol] is ordered by row, it can be searched with binary search.
         */
         const Char_T m_emptyString; // Shared empty item.
-        CharBufferContainer m_charBuffers;
+        CharStorageContainer m_charBuffers;
         TableIndexPairContainer m_colToRows;
         size_t m_nBlockSize;
         bool m_bAllowStringsLongerThanBlockSize; // If false, strings longer than m_nBlockSize can't be added to table.

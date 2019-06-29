@@ -6,6 +6,7 @@
 2019-06-27,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.81509,1.77051,1.79305,1.7786,1.78608,1.78608
 2019-06-27,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.19412,1.18825,1.21211,1.18599,1.18676,1.18825
 2019-06-27,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.19756,1.22293,1.19953,1.19802,1.18683,1.19802
+,,,,,,,,,,,,
 2019-06-27,std::deque -> std::vector in CharBufferContainer,Commit 3ae78bae7784097574ceeb608cc497077bf91b33,,,,,,,,,,
 2019-06-27,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.783,1.807,1.799,1.807,1.803,1.803
 2019-06-27,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.797,1.794,1.778,1.785,1.792,1.792
@@ -13,10 +14,19 @@
 2019-06-27,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.47807,1.45119,1.45558,1.45855,1.47485,1.45855
 2019-06-27,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.1983,1.18458,1.18172,1.18719,1.18874,1.18719
 2019-06-27,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.19856,1.15257,1.1716,1.22223,1.17434,1.17434
-2019-06-29,Increased growth factor of row containers to 2 on MSVC,,,,,,,,,,,
+,,,,,,,,,,,,
+2019-06-29,Increased growth factor of row container to 2 on MSVC,Commit d458743fa5059e4378c739919269f25024bf06e6,,,,,,,,,,
 2019-06-29,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.667,1.623,1.646,1.633,1.631,1.633
 2019-06-29,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.696,1.662,1.652,1.663,1.659,1.662
 2019-06-29,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.31774,1.28658,1.28648,1.29535,1.3248,1.29535
 2019-06-29,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.31751,1.29247,1.28773,1.29719,1.30538,1.29719
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.19928,1.18594,1.18545,1.20265,1.18807,1.18807
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.18444,1.16881,1.16953,1.18129,1.18715,1.18129
+,,,,,,,,,,,,
+2019-06-29,Changed char storage from std::vector to custom implementation,,,,,,,,,,,
+2019-06-29,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.505,1.508,1.505,1.502,1.513,1.505
+2019-06-29,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.516,1.491,1.508,1.509,1.509,1.509
+2019-06-29,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.06812,1.0346,1.02811,1.03368,1.03234,1.03368
+2019-06-29,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.02399,1.02819,1.02434,1.03679,1.02872,1.02819
+2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.914466,0.915219,0.905802,0.915807,0.913912,0.914466
+2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.925292,0.911812,0.906074,0.900497,0.898603,0.906074
