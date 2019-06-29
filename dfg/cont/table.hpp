@@ -233,6 +233,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // If row is non-existing because it is > than any existing row, simply push_back() and return.
             if (rowsInCol.empty() || nRow > rowsInCol.back().first)
             {
+#ifdef _MSC_VER // Manually implement growth factor of 2 on MSVC to get more consistent performance characteristics between compilers.
+                // TODO: use a more suitable data structure to begin with.
+                if (rowsInCol.size() == rowsInCol.capacity())
+                    rowsInCol.reserve(2 * rowsInCol.capacity());
+#endif
                 rowsInCol.push_back(IndexPtrPair(nRow, pData));
                 return;
             }
@@ -469,7 +474,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         // Returns either pointer to null terminated string or nullptr, if no element exists.
         // Note: Returned pointer remains valid even if adding new strings. For behaviour in case of 
-        //       overwriting item at (row, col), see documentation for AddString.
+        //       overwriting item at (row, col), see documentation for addString.
         SzPtrR operator()(Index_T row, Index_T col) const
         {
             auto iter = privIteratorToIndexPair(row, col);
