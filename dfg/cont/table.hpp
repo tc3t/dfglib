@@ -11,7 +11,6 @@
 #include <vector>
 #include <memory>
 #include <numeric>
-#include <map>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
@@ -275,7 +274,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef std::vector<IndexPtrPair> ColumnIndexPairContainer;
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
         typedef std::vector<CharStorageItem> CharStorage;
-        typedef std::map<Index_T, CharStorage> CharStorageContainer;
+        typedef std::vector<CharStorage> CharStorageContainer;
         typedef typename InterfaceTypes_T::SzPtrW SzPtrW;
         typedef typename InterfaceTypes_T::SzPtrR SzPtrR;
         typedef typename InterfaceTypes_T::StringT StringT;
@@ -344,7 +343,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return false;
 
             if (!isValidIndex(m_colToRows, nCol))
+            {
+                DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
                 m_colToRows.resize(nCol + 1);
+                m_charBuffers.resize(nCol + 1);
+            }
 
             const auto nLength = sv.length();
 
@@ -493,46 +496,24 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // TODO: test
         void insertColumnsAt(Index_T nCol, Index_T nInsertCount)
         {
+            DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
             const Index_T nColCount = static_cast<Index_T>(m_colToRows.size());
             if (nCol < 0 || nCol > nColCount)
                 nCol = nColCount;
             m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, ColumnIndexPairContainer());
-
-            // Increment indexes of existing char buffer columns whose index is out-of-date after insertion. Implementation uses temporary map.
-            CharStorageContainer tempBuffers;
-            for(auto iter = m_charBuffers.begin(); iter != m_charBuffers.end(); ++iter)
-            {
-                const auto n = iter->first;
-                if (n < nCol)
-                    tempBuffers[n].swap(m_charBuffers[n]);
-                else
-                    tempBuffers[n + nInsertCount].swap(m_charBuffers[n]);
-            }
-            m_charBuffers.swap(tempBuffers);
+            m_charBuffers.insert(m_charBuffers.begin() + nCol, nInsertCount, CharStorage());
         }
 
         // TODO: test
         void eraseColumnsByPosAndCount(Index_T nCol, Index_T nRemoveCount)
         {
+            DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
             const Index_T nColCount = static_cast<Index_T>(m_colToRows.size());
             if (nCol < 0 || nCol > nColCount)
                 nCol = nColCount;
             nRemoveCount = Min(nRemoveCount, nColCount - nCol);
             m_colToRows.erase(m_colToRows.begin() + nCol, m_colToRows.begin() + nCol + nRemoveCount);
-            // Move char arrays whose index is more than nCol + nRemoveCount to match with new index, i.e. nCol -> nCol - nRemoveCount.
-            auto iter = m_charBuffers.lower_bound(nCol + nRemoveCount);
-            for(; iter != m_charBuffers.end(); ++iter)
-            {
-                const auto nThisIndex = iter->first;
-                const auto nTargetIndex = nThisIndex - nRemoveCount;
-                m_charBuffers[nTargetIndex].swap(m_charBuffers[nThisIndex]);
-            }
-            // Remove unused char buffers.
-            while(!m_charBuffers.empty() && m_charBuffers.rbegin()->first >= static_cast<Index_T>(m_colToRows.size()))
-            {
-                auto iterLast = m_charBuffers.end();
-                m_charBuffers.erase(--iterLast);
-            }
+            m_charBuffers.erase(m_charBuffers.begin() + nCol, m_charBuffers.begin() + nCol + nRemoveCount);
         }
 
         // Erases cell at (row, col) so that after this operator()(row, col) returns nullptr.
@@ -612,7 +593,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             size_t nByteCount = 0;
             for (auto iter = m_charBuffers.cbegin(), iterEnd = m_charBuffers.cend(); iter != iterEnd; ++iter)
             {
-                for (auto iter2 = iter->second.cbegin(), iter2End = iter->second.cend(); iter2 != iter2End; ++iter2)
+                for (auto iter2 = iter->cbegin(), iter2End = iter->cend(); iter2 != iter2End; ++iter2)
                 {
                     nByteCount += iter2->size();
                 }

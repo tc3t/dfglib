@@ -30,3 +30,11 @@
 2019-06-29,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.02399,1.02819,1.02434,1.03679,1.02872,1.02819
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.914466,0.915219,0.905802,0.915807,0.913912,0.914466
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.925292,0.911812,0.906074,0.900497,0.898603,0.906074
+,,,,,,,,,,,,
+2019-07-02,Char storages are now stored in std::vector instead of std::map,,,,,,,,,,,
+2019-07-02,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.312,1.29,1.301,1.305,1.296,1.301
+2019-07-02,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.315,1.298,1.295,1.325,1.303,1.303
+2019-07-02,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.948547,0.933922,0.941994,0.947584,0.956046,0.947584
+2019-07-02,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.947517,0.940045,0.94317,0.955793,0.954063,0.947517
+2019-07-02,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.861455,0.847042,0.839093,0.875517,0.859995,0.859995
+2019-07-02,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.859,0.844443,0.857783,0.857542,0.865253,0.857783
