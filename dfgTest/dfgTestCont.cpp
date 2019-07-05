@@ -511,6 +511,103 @@ TEST(dfgCont, TableSz_removeRows)
     }
 }
 
+TEST(dfgCont, TableSz_addRemoveColumns)
+{
+    using namespace DFG_MODULE_NS(cont);
+    DFG_CLASS_NAME(TableSz)<char> table;
+
+    const auto isNullOrEmpty = [](const char* p) { return !p || p[0] == '\0'; };
+
+    table.setElement(0, 0, "a");
+    table.setElement(0, 1, "b");
+    table.setElement(0, 2, "c");
+
+    // Test that inserting 0 count behaves
+    table.insertColumnsAt(0, 0);
+    table.insertColumnsAt(5, 0);
+    EXPECT_EQ(3, table.colCountByMaxColIndex());
+
+    // Insert to front
+    table.insertColumnsAt(0, 1);
+    EXPECT_EQ(4, table.colCountByMaxColIndex());
+    EXPECT_TRUE(isNullOrEmpty(table(0, 0)));
+    EXPECT_STREQ("a", table(0, 1));
+    EXPECT_STREQ("b", table(0, 2));
+    EXPECT_STREQ("c", table(0, 3));
+
+    // Insert one to middle
+    table.insertColumnsAt(2, 1);
+    EXPECT_EQ(5, table.colCountByMaxColIndex());
+    EXPECT_TRUE(isNullOrEmpty(table(0, 0)));
+    EXPECT_STREQ("a", table(0, 1));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 2)));
+    EXPECT_STREQ("b", table(0, 3));
+    EXPECT_STREQ("c", table(0, 4));
+
+    // Insert multiple to middle
+    table.insertColumnsAt(4, 2);
+    EXPECT_EQ(7, table.colCountByMaxColIndex());
+    EXPECT_TRUE(isNullOrEmpty(table(0, 0)));
+    EXPECT_STREQ("a", table(0, 1));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 2)));
+    EXPECT_STREQ("b", table(0, 3));
+    table.setElement(0, 4, "d");
+    EXPECT_STREQ("d", table(0, 4));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 5)));
+    EXPECT_STREQ("c", table(0, 6));
+
+    // Insert to end
+    table.insertColumnsAt(10, 2);
+    EXPECT_EQ(9, table.colCountByMaxColIndex());
+    EXPECT_TRUE(isNullOrEmpty(table(0, 0)));
+    EXPECT_STREQ("a", table(0, 1));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 2)));
+    EXPECT_STREQ("b", table(0, 3));
+    EXPECT_STREQ("d", table(0, 4));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 5)));
+    EXPECT_STREQ("c", table(0, 6));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 7)));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 8)));
+
+    // Test that deleting 0 count behaves
+    table.eraseColumnsByPosAndCount(0, 0);
+    table.eraseColumnsByPosAndCount(5, 0);
+    table.eraseColumnsByPosAndCount(15, 0);
+    EXPECT_EQ(9, table.colCountByMaxColIndex());
+
+    // Test that deleting past end behaves
+    table.eraseColumnsByPosAndCount(15, 10);
+    EXPECT_EQ(9, table.colCountByMaxColIndex());
+
+    // Erase one from front
+    table.eraseColumnsByPosAndCount(0, 1);
+    EXPECT_STREQ("a", table(0, 0));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 1)));
+    EXPECT_STREQ("b", table(0, 2));
+    EXPECT_STREQ("d", table(0, 3));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 4)));
+    EXPECT_STREQ("c", table(0, 5));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 6)));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 7)));
+    EXPECT_EQ(8, table.colCountByMaxColIndex());
+
+    // Erase two from middle
+    table.eraseColumnsByPosAndCount(1, 2);
+    EXPECT_STREQ("a", table(0, 0));
+    EXPECT_STREQ("d", table(0, 1));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 2)));
+    EXPECT_STREQ("c", table(0, 3));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 4)));
+    EXPECT_TRUE(isNullOrEmpty(table(0, 5)));
+    EXPECT_EQ(6, table.colCountByMaxColIndex());
+
+    // Erase multiple from end
+    table.eraseColumnsByPosAndCount(2, 4);
+    EXPECT_STREQ("a", table(0, 0));
+    EXPECT_STREQ("d", table(0, 1));
+    EXPECT_EQ(2, table.colCountByMaxColIndex());
+}
+
 TEST(dfgCont, ArrayWrapper)
 {
     using namespace DFG_ROOT_NS;

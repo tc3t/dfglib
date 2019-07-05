@@ -69,6 +69,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_memStreamTypes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_contentStorageSizeInBytes";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_addRemoveColumns";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TrivialPair";
     //::testing::GTEST_FLAG(filter) = "dfgCont.UniqueResourceHolder";
     //::testing::GTEST_FLAG(filter) = "dfgCont.ValueArray"
@@ -81,6 +82,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_CharAppenderUtf";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_metaCharHandling";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_autoDetectCsvSeparator";
+    //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readTableToContainer";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_rnTranslation";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextCellWriterStr";
     //::testing::GTEST_FLAG(filter) = "dfgIo.endOfLineTypeFromStr";

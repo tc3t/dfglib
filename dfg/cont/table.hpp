@@ -461,6 +461,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         Index_T colCountByMaxColIndex() const
         {
+            DFG_ASSERT_CORRECTNESS(m_colToRows.size() == m_charBuffers.size());
             return (!m_colToRows.empty()) ? static_cast<Index_T>(m_colToRows.size()) : 0;
         }
 
@@ -493,7 +494,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             privShiftRowIndexesInRowGreaterOrEqual(nRow + nRemoveCount, nRemoveCount, false);
         }
 
-        // TODO: test
         void insertColumnsAt(Index_T nCol, Index_T nInsertCount)
         {
             DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
@@ -501,10 +501,15 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (nCol < 0 || nCol > nColCount)
                 nCol = nColCount;
             m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, ColumnIndexPairContainer());
-            m_charBuffers.insert(m_charBuffers.begin() + nCol, nInsertCount, CharStorage());
+
+            // Insert new columns. Note that can't use insert(iterStart, iterEnd, val) because CharStorage() is not copy-assignable.
+            m_charBuffers.reserve(m_charBuffers.size() + nInsertCount);
+            for (Index_T n = 0; n < nInsertCount; ++n)
+                m_charBuffers.insert(m_charBuffers.begin() + nCol, CharStorage());
+
+            DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
         }
 
-        // TODO: test
         void eraseColumnsByPosAndCount(Index_T nCol, Index_T nRemoveCount)
         {
             DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
