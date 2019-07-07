@@ -614,3 +614,18 @@ TEST(dfgBuild, DFG_STRING_LITERAL_BY_CHARTYPE)
 #endif // !defined(_MSC_VER) || (DFG_MSVC_VER >= DFG_MSVC_VER_2015)
 #undef DFGTEST_TEMP_TEST0
 }
+
+namespace
+{
+    void noExceptFunc() DFG_NOEXCEPT_TRUE {}
+#if DFG_LANGFEAT_NOEXCEPT == 1
+    void noExceptFuncComparison() noexcept;
+#else
+    void noExceptFuncComparison() throw();
+#endif
+}
+
+TEST(dfgBuild, NOEXCEPT)
+{
+    DFGTEST_STATIC_TEST((std::is_same<decltype(&noExceptFunc), decltype(&noExceptFuncComparison)>::value));
+}

@@ -111,3 +111,14 @@ Notes:
 #else
     #define DFG_LANGFEAT_VECTOR_INSERT_ITERATOR_RETURN 1
 #endif
+
+// DFG_NOEXCEPT
+#if (!defined(_MSC_VER) || (_MSC_VER >= DFG_MSVC_VER_2015))
+    #define DFG_LANGFEAT_NOEXCEPT   1
+    #define DFG_NOEXCEPT(expr) noexcept(expr)
+    #define DFG_NOEXCEPT_TRUE noexcept
+#else
+    #define DFG_LANGFEAT_NOEXCEPT   0
+    #define DFG_NOEXCEPT(expr)
+    #define DFG_NOEXCEPT_TRUE throw()
+#endif
