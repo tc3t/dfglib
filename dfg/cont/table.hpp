@@ -251,10 +251,16 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Precondition: pEnd - pBegin <= m_nCapacity - m_nSize (i.e. there must be enough capacity.)
             void append_unchecked(const Char_T* pBegin, const Char_T* pEnd)
             {
-                const size_t nCount = pEnd - pBegin;
+                size_t nCount = static_cast<size_t>(pEnd - pBegin);
                 DFG_ASSERT_UB(nCount <= m_nCapacity - m_nSize);
-                memcpy(&m_spStorage[m_nSize], pBegin, nCount * sizeof(Char_T));
+#if defined(_MSC_VER)
+                auto pDest = &m_spStorage[m_nSize];
                 m_nSize += nCount;
+                while (nCount--)
+                    *pDest++ = *pBegin++;
+#else
+                memcpy(&m_spStorage[m_nSize], pBegin, nCount * sizeof(Char_T));
+#endif
             }
 
             // Precondition: m_nSize < m_nCapacity (i.e. there must be enough capacity.)

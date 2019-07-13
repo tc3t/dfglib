@@ -23,7 +23,7 @@
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.19928,1.18594,1.18545,1.20265,1.18807,1.18807
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.18444,1.16881,1.16953,1.18129,1.18715,1.18129
 ,,,,,,,,,,,,
-2019-06-29,Changed char storage from std::vector to custom implementation,,,,,,,,,,,
+2019-06-29,Changed char storage from std::vector to custom implementation,Commit e77cc1ad65a038915332fdff86d8b514de92ab6a,,,,,,,,,,
 2019-06-29,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.505,1.508,1.505,1.502,1.513,1.505
 2019-06-29,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.516,1.491,1.508,1.509,1.509,1.509
 2019-06-29,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.06812,1.0346,1.02811,1.03368,1.03234,1.03368
@@ -31,10 +31,18 @@
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.914466,0.915219,0.905802,0.915807,0.913912,0.914466
 2019-06-29,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.925292,0.911812,0.906074,0.900497,0.898603,0.906074
 ,,,,,,,,,,,,
-2019-07-02,Char storages are now stored in std::vector instead of std::map,,,,,,,,,,,
+2019-07-02,Char storages are now stored in std::vector instead of std::map,Commit 563903e34ede0f96936f7c8e3aeb4d41536684da,,,,,,,,,,
 2019-07-02,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.312,1.29,1.301,1.305,1.296,1.301
 2019-07-02,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.315,1.298,1.295,1.325,1.303,1.303
 2019-07-02,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.948547,0.933922,0.941994,0.947584,0.956046,0.947584
 2019-07-02,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.947517,0.940045,0.94317,0.955793,0.954063,0.947517
 2019-07-02,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.861455,0.847042,0.839093,0.875517,0.859995,0.859995
 2019-07-02,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.859,0.844443,0.857783,0.857542,0.865253,0.857783
+,,,,,,,,,,,,
+2019-07-13,Replaced memcpy() with simple element-wise copy on MSVC,,,,,,,,,,,
+2019-07-13,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.008,0.982,0.994,0.987,0.999,0.994
+2019-07-13,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.013,0.975,0.981,0.984,1,0.984
+2019-07-13,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.860914,0.893494,0.865042,0.870673,0.864055,0.865042
+2019-07-13,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.880389,0.885514,0.867255,0.857926,0.91176,0.880389
+2019-07-13,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.793507,0.836294,0.806592,0.815401,0.819672,0.815401
+2019-07-13,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.813557,0.826091,0.795932,0.806962,0.814888,0.813557
