@@ -260,6 +260,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                     *pDest++ = *pBegin++;
 #else
                 memcpy(&m_spStorage[m_nSize], pBegin, nCount * sizeof(Char_T));
+                m_nSize += nCount;
 #endif
             }
 
