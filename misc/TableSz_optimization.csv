@@ -39,10 +39,10 @@
 2019-07-02,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.861455,0.847042,0.839093,0.875517,0.859995,0.859995
 2019-07-02,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.859,0.844443,0.857783,0.857542,0.865253,0.857783
 ,,,,,,,,,,,,
-2019-07-13,Replaced memcpy() with simple element-wise copy on MSVC,,,,,,,,,,,
-2019-07-13,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.008,0.982,0.994,0.987,0.999,0.994
-2019-07-13,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.013,0.975,0.981,0.984,1,0.984
-2019-07-13,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.860914,0.893494,0.865042,0.870673,0.864055,0.865042
-2019-07-13,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.880389,0.885514,0.867255,0.857926,0.91176,0.880389
-2019-07-13,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.793507,0.836294,0.806592,0.815401,0.819672,0.815401
-2019-07-13,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.813557,0.826091,0.795932,0.806962,0.814888,0.813557
+2019-07-13,Replaced memcpy() with simple element-wise copy on MSVC,Commit 69f2ef39f815ccd24f5226455ca43033d954d11f,,,,,,,,,,
+2019-07-18,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.007,0.996,1.003,1.002,1.029,1.003
+2019-07-18,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.089,1.005,1.011,1.038,1.033,1.033
+2019-07-18,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.899995,0.884297,0.892074,0.890354,0.940885,0.892074
+2019-07-18,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.885074,0.92868,0.881023,0.901637,0.898169,0.898169
+2019-07-18,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.846529,0.929391,0.848834,0.868426,0.856301,0.856301
+2019-07-18,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.848429,0.835532,0.871362,0.845313,0.866589,0.848429
