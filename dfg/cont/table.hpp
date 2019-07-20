@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <numeric>
+#include "../build/languageFeatureInfo.hpp"
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
@@ -213,22 +214,15 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 m_spStorage.reset(new Char_T[m_nCapacity]);
             }
 
-            CharStorageItem(CharStorageItem&& other)
+            CharStorageItem(CharStorageItem&& other) DFG_NOEXCEPT_TRUE
             {
-                m_nSize = other.m_nSize;
-                m_nCapacity = other.m_nCapacity;
-                m_spStorage.swap(other.m_spStorage);
-                other.m_nSize = 0;
-                other.m_nCapacity = 0;
+                assignImpl(std::move(other));
             }
 
-            CharStorageItem& operator=(CharStorageItem&& other)
+            CharStorageItem& operator=(CharStorageItem&& other) DFG_NOEXCEPT_TRUE
             {
-                m_nSize = other.m_nSize;
-                m_nCapacity = other.m_nCapacity;
-                m_spStorage.swap(other.m_spStorage);
-                other.m_nSize = 0;
-                other.m_nCapacity = 0;
+                if (this != &other)
+                    assignImpl(std::move(other));
                 return *this;
             }
 
@@ -244,14 +238,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
             const Char_T& operator[](const size_t n) const
             {
+                DFG_ASSERT_UB(n < m_nSize);
                 return m_spStorage[n];
             }
 
             // Appends characters to storage
-            // Precondition: pEnd - pBegin <= m_nCapacity - m_nSize (i.e. there must be enough capacity.)
+            // Precondition: pEnd - pBegin <= m_nCapacity - m_nSize (i.e. there must be enough capacity)
             void append_unchecked(const Char_T* pBegin, const Char_T* pEnd)
             {
-                size_t nCount = static_cast<size_t>(pEnd - pBegin);
+                append_unchecked(pBegin, static_cast<size_t>(pEnd - pBegin));
+            }
+
+            // Appends characters to storage
+            // Precondition: nCount <= m_nCapacity - m_nSize (i.e. there must be enough capacity)
+            void append_unchecked(const Char_T* pBegin, size_t nCount)
+            {
                 DFG_ASSERT_UB(nCount <= m_nCapacity - m_nSize);
 #if defined(_MSC_VER)
                 auto pDest = &m_spStorage[m_nSize];
@@ -269,6 +270,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             {
                 DFG_ASSERT_UB(m_nSize < m_nCapacity);
                 m_spStorage[m_nSize++] = c;
+            }
+
+            bool hasCapacityFor(const size_t nCount) const
+            {
+                return nCount <= m_nCapacity - m_nSize;
+            }
+
+        private:
+            void assignImpl(CharStorageItem&& other) DFG_NOEXCEPT_TRUE
+            {
+                m_nSize = other.m_nSize;
+                m_nCapacity = other.m_nCapacity;
+                m_spStorage.swap(other.m_spStorage);
+                other.m_nSize = 0;
+                other.m_nCapacity = 0;
             }
 
         private:
@@ -290,7 +306,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_emptyString('\0'),
             m_nBlockSize(2048),
             m_bAllowStringsLongerThanBlockSize(true)
-
         {
         }
 
@@ -344,14 +359,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // If element at (nRow, nCol) already exists, it is overwritten.
         // Return: true if string was added, false otherwise.
         // Note: Even in case of overwrite, previous item is not cleared from string storage (this is implementation detail that is not part of the interface, i.e. it is not to be relied on).
-        bool addString(const DFG_CLASS_NAME(StringView)<Char_T, StringT>& sv, const Index_T nRow, const Index_T nCol)
+        bool addString(const DFG_CLASS_NAME(StringView)<Char_T, StringT> sv, const Index_T nRow, const Index_T nCol)
         {
-            if (nCol >= NumericTraits<Index_T>::maxValue) // Guard for nCol + 1 overflow.
-                return false;
-
             if (!isValidIndex(m_colToRows, nCol))
             {
                 DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
+                if (nCol >= NumericTraits<Index_T>::maxValue) // Guard for nCol + 1 overflow.
+                    return false;
                 m_colToRows.resize(nCol + 1);
                 m_charBuffers.resize(nCol + 1);
             }
@@ -366,22 +380,24 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             }
 
             auto& bufferCont = m_charBuffers[nCol];
-            if (bufferCont.empty() || bufferCont.back().capacity() - bufferCont.back().size() < nLength + 1)
+
+            // Check whether there's enough space in buffer and allocate new block if not.
+            // Note that reallocation is not allowed because it would invalidate existing data pointers.
+            if (bufferCont.empty() || !bufferCont.back().hasCapacityFor(nLength + 1))
             {
                 const size_t nNewBlockSize = (m_bAllowStringsLongerThanBlockSize) ? Max(m_nBlockSize, nLength + 1) : m_nBlockSize;
+                // If content has length greater than block size and block size is not allowed to be exceeded, return false as item can't be added.
+                if (nLength >= nNewBlockSize)
+                    return false;
                 bufferCont.push_back(CharStorageItem(nNewBlockSize));
             }
 
             auto& currentBuffer = bufferCont.back();
+            DFG_ASSERT_UB(currentBuffer.capacity() - currentBuffer.size() > nLength);
+
             const auto nBeginIndex = currentBuffer.size();
 
-            const auto nFreeSpace = currentBuffer.capacity() - currentBuffer.size();
-            // Make sure that there's enough space in the buffer.
-            // This should trigger only if nLength >= m_nBlockSize and strings longer than block length is not allowed.
-            // Note that reallocation is not allowed because it would invalidate existing data pointers.
-            if (nLength >= nFreeSpace)
-                return false;
-            currentBuffer.append_unchecked(toCharPtr_raw(sv.begin()), toCharPtr_raw(sv.end()));
+            currentBuffer.append_unchecked(toCharPtr_raw(sv.begin()), nLength);
             currentBuffer.append_unchecked('\0');
 
             const Char_T* const pData = &currentBuffer[nBeginIndex];
