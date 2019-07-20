@@ -55,10 +55,18 @@
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.875902,0.890605,0.871257,0.864709,0.867328,0.871257
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.874027,0.889381,0.875712,0.882603,0.87274,0.875712
 ,,,,,,,,,,,,
-2019-07-20,TableCsv now uses FileMemoryMapped for reading ,,,,,,,,,,,
+2019-07-20,TableCsv now uses FileMemoryMapped for reading ,Commit 69a52d8e781461976ca5c498c0684c6d1d04a8d9,,,,,,,,,,
 2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.93,0.917,0.946,0.933,0.934,0.933
 2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.931,0.929,0.956,0.936,0.954,0.936
 2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.817706,0.795413,0.829115,0.804107,0.824394,0.817706
 2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.791556,0.796236,0.839916,0.814615,0.829819,0.814615
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.823405,0.806876,0.85906,0.82251,0.819095,0.82251
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.816595,0.814158,0.839655,0.829625,0.813585,0.816595
+,,,,,,,,,,,,
+2019-07-20,Added forced inlines to TableSz on MSVC,,,,,,,,,,,
+2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.839,0.845,0.836,0.85,0.859,0.845
+2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.855,0.849,0.836,0.835,0.851,0.849
+2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.760411,0.761208,0.755565,0.76706,0.778141,0.761208
+2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.757551,0.766369,0.78394,0.783984,0.78576,0.78394
+2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.803325,0.833571,0.826268,0.818934,0.832294,0.826268
+2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.809705,0.834691,0.824789,0.831121,0.804088,0.824789

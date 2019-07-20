@@ -12,6 +12,13 @@
 #include <memory>
 #include <numeric>
 #include "../build/languageFeatureInfo.hpp"
+#include "../build/inlineTools.hpp"
+
+#ifdef _MSC_VER
+    #define DFG_TABLESZ_INLINING    DFG_FORCEINLINE
+#else
+    #define DFG_TABLESZ_INLINING
+#endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
@@ -321,7 +328,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }
         bool isBlockSizeFixed() const { return m_bAllowStringsLongerThanBlockSize; }
 
-        void privSetRowContent(ColumnIndexPairContainer& rowsInCol, Index_T nRow, const Char_T* pData)
+        DFG_TABLESZ_INLINING void privSetRowContent(ColumnIndexPairContainer& rowsInCol, Index_T nRow, const Char_T* pData)
         {
             // If row is non-existing because it is > than any existing row, simply push_back() and return.
             if (rowsInCol.empty() || nRow > rowsInCol.back().first)
@@ -349,7 +356,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }
 
         template <class Str_T>
-        bool setElement(size_t nRow, size_t nCol, const Str_T& sSrc)
+        DFG_TABLESZ_INLINING bool setElement(size_t nRow, size_t nCol, const Str_T& sSrc)
         {
             return addString(sSrc, static_cast<Index_T>(nRow), static_cast<Index_T>(nCol));
         }
