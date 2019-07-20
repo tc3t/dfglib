@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include "CsvConfig.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
+#include "../io/IfmmStream.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
     
@@ -256,8 +257,8 @@ DFG_ROOT_NS_BEGIN{
                 bool bRead = false;
                 try
                 {
-                    auto bytes = DFG_MODULE_NS(io)::fileToVector(sPath);
-                    readFromMemory(bytes.data(), bytes.size(), formatDef);
+                    auto memMappedFile = DFG_MODULE_NS(io)::DFG_CLASS_NAME(FileMemoryMapped)(sPath);
+                    readFromMemory(memMappedFile.data(), memMappedFile.size(), formatDef);
                     bRead = true;
                 }
                 catch (...)

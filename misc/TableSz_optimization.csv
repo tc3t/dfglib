@@ -47,10 +47,18 @@
 2019-07-18,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.846529,0.929391,0.848834,0.868426,0.856301,0.856301
 2019-07-18,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.848429,0.835532,0.871362,0.845313,0.866589,0.848429
 ,,,,,,,,,,,,
-2019-07-20,Micro-optimization to TableSz,,,,,,,,,,,
+2019-07-20,Micro-optimization to TableSz,Commit 70785785383de84d17a7f46afcc80910af569c7b,,,,,,,,,,
 2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.046,0.969,0.992,0.98,0.978,0.98
 2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.966,0.997,0.968,0.97,0.985,0.97
 2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.853031,0.87068,0.858848,0.866253,0.877593,0.866253
 2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.846456,0.881544,0.860382,0.865819,0.864666,0.864666
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.875902,0.890605,0.871257,0.864709,0.867328,0.871257
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.874027,0.889381,0.875712,0.882603,0.87274,0.875712
+,,,,,,,,,,,,
+2019-07-20,TableCsv now uses FileMemoryMapped for reading ,,,,,,,,,,,
+2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.93,0.917,0.946,0.933,0.934,0.933
+2019-07-20,,MSVC_2012,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.931,0.929,0.956,0.936,0.954,0.936
+2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.817706,0.795413,0.829115,0.804107,0.824394,0.817706
+2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.791556,0.796236,0.839916,0.814615,0.829819,0.814615
+2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.823405,0.806876,0.85906,0.82251,0.819095,0.82251
+2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.816595,0.814158,0.839655,0.829625,0.813585,0.816595
