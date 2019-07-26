@@ -4,7 +4,7 @@
 This document describes steps taken to improve the results of TableCsv benchmark. Summary of the effects:
 
 | Compiler      | Time (2019-06-23)  | Time (2019-07-20) | Time improvement | Speed Improvement | Source of biggest  improvement(s) |
-| -------------  | -----    | -----    | ------          | ----- | ----- | ---- |
+| -------------  | -----    | -----    | ------          | ----- | ----- |
 | MSVC2012 | 2.52 s | 0.85 s | 1.67 s | 200 % | std::deque -> std::vector (0.7 s) |
 | MSVC2019.1 | 1.78  s | 0.77 s | 1.01 s | 130 % | std::deque -> std::vector (0.3 s) and std::vector -> custom vector (0.3 s) |
 | MinGW 4.8.0 | 1.19 s | 0.83 s | 0.36 s | 40 % | std::vector -> custom vector (0.3 s) |
@@ -28,7 +28,7 @@ What causes this? To a rather good approximation, the answer seems to be simple:
 The optimizations were done in steps and after each change, the benchmark was re-run to see the effect. Summary of the figures gathered from [TableCsv_optimization.csv](https://github.com/tc3t/dfglib/blob/master/misc/TableCsv_optimization.csv):
 
 | # | Change      | Time (MSVC2012) | Time (MSVC2019.1) | Time (MinGW4.8.0) | Details |
-| -------------  | -----    | -----    | ------          | ----- | ----- | ---- | ----- |
+| -------------  | -----    | -----    | ------          | ----- | ----- |
 | 1 | Baseline | 2.52 s | 1.78 s | 1.19 s | Commit [41a6cc4](https://github.com/tc3t/dfglib/tree/41a6cc4740114ec5917ec77c3421553527a12760) |
 | 2 | deque -> vector | 1.80 s (-0.72) | 1.47 s (-0.31) | 1.18 s (~0) | deque -> vector in CharBufferContainer, commit [3ae78ba](https://github.com/tc3t/dfglib/commit/3ae78bae7784097574ceeb608cc497077bf91b33) |
 | 3 | Growth factor for row container | 1.65 s (-0.15) | 1.30 s (-0.17) | 1.18 s (~0) | In MinGW vector growth factor was 2, in MSVC 1.5. Implemented growth factor 2 for MSVC manually, commit [d458743](https://github.com/tc3t/dfglib/commit/d458743fa5059e4378c739919269f25024bf06e6) |
