@@ -49,6 +49,9 @@
 #define DFG_MSVC_VER_VC16_1     1921
 #define DFG_MSVC_VER_2019_1     DFG_MSVC_VER_VC16_1
 
+#define DFG_MSVC_VER_VC16_2     1922
+#define DFG_MSVC_VER_2019_2     DFG_MSVC_VER_VC16_2
+
 #if defined(_MSC_VER)
     #define DFG_MSVC_VER	_MSC_VER
 #else
