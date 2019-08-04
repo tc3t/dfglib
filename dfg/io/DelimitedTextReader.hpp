@@ -385,9 +385,20 @@ public:
     // This is inefficient in this use pattern and with this custom buffer chars can be pushed back without handling the null terminator. Null terminator can be set when the
     // the cell is read completely.
     template <class Char_T, size_t SsoBufferSize_T = 32>
+#ifdef _MSC_VER // Using std::vector only in MSVC because in CsvReadPerformance basicReader-test slowed down 0.4 -> 0.6 in MinGW
+    class CharBuffer : public std::vector<Char_T>
+#else
     class CharBuffer : public DFG_MODULE_NS(cont)::DFG_CLASS_NAME(VectorSso)<Char_T, SsoBufferSize_T>
+#endif
     {
     public:
+#ifdef _MSC_VER
+        CharBuffer()
+        {
+            this->reserve(SsoBufferSize_T);
+        }
+#endif
+
         operator std::basic_string<Char_T>() const
         {
             return std::basic_string<Char_T>(this->data(), this->size());
