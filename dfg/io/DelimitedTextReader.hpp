@@ -20,6 +20,11 @@
 #include <iterator>
 
 
+#ifdef _MSC_VER
+    #define DFG_DELIMITED_TEXT_READER_INLINING  DFG_FORCEINLINE
+#else
+    #define DFG_DELIMITED_TEXT_READER_INLINING
+#endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 
@@ -1165,7 +1170,7 @@ public:
 
     // Read csv-style cell using given reader.
     template <class Reader>
-    static void readCell(Reader& reader)
+    static DFG_DELIMITED_TEXT_READER_INLINING void readCell(Reader& reader)
     {
         typedef typename Reader::CellParsingImplementations ParsingImplementations;
 
@@ -1249,7 +1254,7 @@ public:
     // as row in text editor.
     // CellHandler is given two parameters: size_t nCol, and cellDataBuffer.
     template <class CellReader_T, class CellHandler>
-    static void readRow(CellReader_T&& reader, CellHandler&& cellDataReceiver)
+    static DFG_DELIMITED_TEXT_READER_INLINING void readRow(CellReader_T&& reader, CellHandler&& cellDataReceiver)
     {
         typedef typename std::remove_reference<CellReader_T>::type::CellParsingImplementations ParsingImplementations;
 
@@ -1337,7 +1342,7 @@ public:
     // 2: const CellData&: const reference to given CellData-object.
     // For example: auto cellHandler = [](const size_t r, const size_t c, const decltype(CellData)& cellData) {};
     template <class CellReader_T, class CellHandler_T>
-    static void read(CellReader_T& reader, CellHandler_T&& cellHandler)
+    static DFG_DELIMITED_TEXT_READER_INLINING void read(CellReader_T& reader, CellHandler_T&& cellHandler)
     {
         CellReader_T::CellParsingImplementations::read(reader, std::forward<CellHandler_T>(cellHandler));
     }
