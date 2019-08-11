@@ -80,6 +80,23 @@ static void onShowAboutBox()
     QMessageBox::aboutQt(gpMainWindow);
 }
 
+class MainWindow : public QMainWindow
+{
+    // QWidget interface
+protected:
+    void closeEvent(QCloseEvent* event) override;
+};
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    auto pTableEditor = findChild<dfg::qt::TableEditor*>();
+    DFG_ASSERT_CORRECTNESS(pTableEditor != nullptr);
+    if (!pTableEditor || pTableEditor->handleExitConfirmationAndReturnTrueIfCanExit())
+        event->accept();
+    else
+        event->ignore();
+}
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -95,7 +112,7 @@ int main(int argc, char *argv[])
     }
 #endif // _WIN32, structuredExceptionHandling
 
-    QMainWindow mainWindow;
+    MainWindow mainWindow;
     gpMainWindow = &mainWindow;
 
     // Stubs for creating menu
@@ -116,6 +133,7 @@ int main(int argc, char *argv[])
     mainWindow.setCentralWidget(&tableEditor);
     mainWindow.resize(tableEditor.size());
     DFG_QT_VERIFY_CONNECT(QObject::connect(&tableEditor, &QWidget::windowTitleChanged, &mainWindow, &QWidget::setWindowTitle));
+    DFG_QT_VERIFY_CONNECT(QObject::connect(&tableEditor, &dfg::qt::TableEditor::sigModifiedStatusChanged, &mainWindow, &QWidget::setWindowModified));
     mainWindow.show();
 
     auto args = a.arguments();
