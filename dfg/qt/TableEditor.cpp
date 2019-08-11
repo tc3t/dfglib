@@ -447,6 +447,16 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString
     return m_spTableView->openFile(path);
 }
 
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setWindowModified(bool bNewModifiedStatus)
+{
+    const auto bCurrentStatus = isWindowModified();
+    if (bCurrentStatus != bNewModifiedStatus)
+    {
+        BaseClass::setWindowModified(bNewModifiedStatus);
+        Q_EMIT sigModifiedStatusChanged(isWindowModified());
+    }
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()
 {
     const auto filePath = (m_spTableModel) ? m_spTableModel->getFilePath() : QString();
@@ -602,44 +612,42 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setAllowApplicationSettings
         m_spTableView->setAllowApplicationSettingsUsage(b);
 }
 
-namespace
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::handleExitConfirmationAndReturnTrueIfCanExit()
 {
-    static bool handleExitConfirmationAndReturnTrueIfCanExit(DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)* view)
-    {
-        auto model = (view) ? view->csvModel() : nullptr;
-        if (!model)
-            return true;
-
-        // Finish edits before checking modified as otherwise ongoing edit whose editor
-        // has not been closed would not be detected.
-        // In practice: user opens file, edits a cell and presses X while cell content editor is active,
-        // without line below:
-        // -> this function would be called before model's setData()-handler
-        // -> Since no setData()-calls have been made, this function gets 'model->isModified() == false'
-        //    and editor closes without confirmation.
-        view->finishEdits();
-
-        if (model->isModified())
-        {
-            const auto existingPath = model->getFilePath();
-            const QString uiPath = (!existingPath.isEmpty()) ?
-                                QCoreApplication::tr("(path: %1)").arg(existingPath)
-                                : QCoreApplication::tr("(no path exists, it will be asked if saving is chosen)");
-            const auto rv = QMessageBox::question(nullptr,
-                                                      QCoreApplication::tr("Save to file?"),
-                                                      QCoreApplication::tr("Content has been edited, save to file?\n%1").arg(uiPath),
-                                                      QMessageBox::Yes,
-                                                      QMessageBox::No,
-                                                      QMessageBox::Cancel);
-            if (rv == QMessageBox::Cancel)
-                return false;
-
-            if (rv == QMessageBox::Yes)
-                view->save();
-        }
-
+    auto pView = m_spTableView.get();
+    auto model = (pView) ? pView->csvModel() : nullptr;
+    if (!model)
         return true;
+
+    // Finish edits before checking modified as otherwise ongoing edit whose editor
+    // has not been closed would not be detected.
+    // In practice: user opens file, edits a cell and presses X while cell content editor is active,
+    // without line below:
+    // -> this function would be called before model's setData()-handler
+    // -> Since no setData()-calls have been made, this function gets 'model->isModified() == false'
+    //    and editor closes without confirmation.
+    pView->finishEdits();
+
+    if (model->isModified())
+    {
+        const auto existingPath = model->getFilePath();
+        const QString uiPath = (!existingPath.isEmpty()) ?
+                            QCoreApplication::tr("(path: %1)").arg(existingPath)
+                            : QCoreApplication::tr("(no path exists, it will be asked if saving is chosen)");
+        const auto rv = QMessageBox::question(nullptr,
+                                                  QCoreApplication::tr("Save to file?"),
+                                                  QCoreApplication::tr("Content has been edited, save to file?\n%1").arg(uiPath),
+                                                  QMessageBox::Yes,
+                                                  QMessageBox::No,
+                                                  QMessageBox::Cancel);
+        if (rv == QMessageBox::Cancel)
+            return false;
+
+        if (rv == QMessageBox::Yes)
+            pView->save();
     }
+
+    return true;
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* event)
@@ -650,7 +658,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* eve
         return;
     }
 
-    if (handleExitConfirmationAndReturnTrueIfCanExit(m_spTableView.get()))
+    if (handleExitConfirmationAndReturnTrueIfCanExit())
         event->accept();
     else
         event->ignore();

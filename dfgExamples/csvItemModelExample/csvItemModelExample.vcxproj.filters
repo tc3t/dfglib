@@ -175,6 +175,39 @@
     <ClCompile Include="GeneratedFiles\Release_VC2015\moc_CsvTableViewCompleterDelegate.cpp">
       <Filter>Generated Files\Release_VC2015</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2012\moc_TableEditor.cpp">
+      <Filter>Generated Files\Debug_VC2012</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2013\moc_TableEditor.cpp">
+      <Filter>Generated Files\Debug_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2010\moc_TableEditor.cpp">
+      <Filter>Generated Files\Debug_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2015\moc_TableEditor.cpp">
+      <Filter>Generated Files\Debug_VC2015</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug_VC2019\moc_TableEditor.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\MinGW\moc_TableEditor.cpp">
+      <Filter>Generated Files\MinGW</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2010\moc_TableEditor.cpp">
+      <Filter>Generated Files\Release_VC2010</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2013\moc_TableEditor.cpp">
+      <Filter>Generated Files\Release_VC2013</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2012\moc_TableEditor.cpp">
+      <Filter>Generated Files\Release_VC2012</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2015\moc_TableEditor.cpp">
+      <Filter>Generated Files\Release_VC2015</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release_VC2019\moc_TableEditor.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="CsvItemModelExample.qrc">
@@ -187,6 +220,9 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\dfg\qt\CsvTableViewCompleterDelegate.hpp">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\dfg\qt\TableEditor.hpp">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>

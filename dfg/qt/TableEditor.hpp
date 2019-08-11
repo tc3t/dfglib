@@ -44,6 +44,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     class DFG_CLASS_NAME(TableEditor) : public QWidget
     {
+        Q_OBJECT
     public:
         typedef QWidget BaseClass;
         typedef DFG_CLASS_NAME(TableEditor) ThisClass;
@@ -85,8 +86,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void addToolBarSeparator();
         void addToolBarWidget(QWidget* pWidget);
 
+        bool handleExitConfirmationAndReturnTrueIfCanExit();
+
+        void setWindowModified(bool bNewModifiedStatus);
+
     protected:
         void closeEvent(QCloseEvent* event) override;
+
+    signals:
+        void sigModifiedStatusChanged(bool);
 
     public slots:
         void onSourcePathChanged();
