@@ -27,7 +27,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         const auto nRequiredSize = ::WideCharToMultiByte(codePage, 0 /* flags */, sPath, nPathLength, nullptr, 0, "?", &bDefaultUsed);
 
         if (nRequiredSize <= 0 || bDefaultUsed)
-            return nullptr;
+            return std::string();
+
         std::string s;
         s.resize(nRequiredSize);
         ::WideCharToMultiByte(codePage, 0 /* flags */, sPath, nPathLength, ptrToContiguousMemory(s), static_cast<int>(s.length()), "?", &bDefaultUsed);

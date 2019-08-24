@@ -1326,3 +1326,11 @@ TEST(dfgIo, ostreamPerformance)
     EXPECT_EQ(bytesStd, bytesBasicOmc);
 #endif // DFGTEST_ENABLE_BENCHMARKS
 }
+
+#ifdef _WIN32
+TEST(dfgIo, widePathStrToFstreamFriendlyNonWide)
+{
+    const wchar_t szNonConvertable[] = L"\x20AD";
+    EXPECT_TRUE(DFG_MODULE_NS(io)::widePathStrToFstreamFriendlyNonWide(szNonConvertable).empty());
+}
+#endif
