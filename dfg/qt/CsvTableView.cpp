@@ -2834,12 +2834,14 @@ void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewContentAware()
     if (!pHeader || !pViewPort || numHeader < 1)
         return;
 
+    const auto minSectionSize = pHeader->minimumSectionSize();
+
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ValueVector)<int> sizes;
     sizes.reserve(static_cast<size_t>(numHeader));
     for (int i = 0; i < numHeader; ++i)
     {
         // Note: using only content hints, to take column header width into account, use pHeader->sectionSizeHint(i);
-        sizes.push_back(sizeHintForColumn(i));
+        sizes.push_back(Max(minSectionSize, sizeHintForColumn(i)));
         //sizes.push_back(pHeader->sectionSizeHint(i));
     }
     // Using int64 in accumulate to avoid possibility for integer overflow.
