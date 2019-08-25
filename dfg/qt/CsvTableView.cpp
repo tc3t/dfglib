@@ -1376,8 +1376,23 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
     if (scrollPos == "bottom")
         scrollToBottom();
-    
-    onColumnResizeAction_toViewEvenly();
+
+    // Resize columns to view evenly.
+    {
+        // Note about scroll bar handling (hack): it seems that scroll bar size is not properly taken into account at this point
+        // so that there might actually be a horizontal scroll bar even after resizing to view evenly. As a workaround,
+        // forcing scroll bars temporarily visible seems to be enough to avoid scroll bars from showing up on newly opened file.
+        const auto hScrollPolicy = this->horizontalScrollBarPolicy();
+        const auto vScrollPolicy = this->verticalScrollBarPolicy();
+        // Set scroll bars on
+        this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+        this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+        // Do resizing.
+        this->onColumnResizeAction_toViewEvenly();
+        // Restore original scroll bars policies.
+        this->setHorizontalScrollBarPolicy(hScrollPolicy);
+        this->setVerticalScrollBarPolicy(vScrollPolicy);
+    }
 
     // Apply column width hints from config file if present
     {
