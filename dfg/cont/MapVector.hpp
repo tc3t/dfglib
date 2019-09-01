@@ -36,6 +36,7 @@ Related reading and implementations:
 #include "../alg/find.hpp"
 #include "../alg/sortMultiple.hpp"
 #include "../build/languageFeatureInfo.hpp"
+#include "../dfgAssert.hpp"
 #include "detail/keyContainerUtils.hpp"
 #include "TrivialPair.hpp"
 #include "Vector.hpp"
@@ -53,6 +54,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         {
         public:
             typedef std::random_access_iterator_tag iterator_category;
+            typedef ptrdiff_t difference_type;
+            typedef void value_type;
+            typedef void pointer;
+            typedef void reference;
 
             typedef Value_T& ValueRefType;
             class PairHelper : public std::pair<const Key_T&, ValueRefType>
@@ -85,7 +90,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             PairHelper operator->()
             {
+                DFG_ASSERT_UB(this->m_pMap != nullptr);
                 return PairHelper(m_pMap->m_keyStorage[m_i], m_pMap->m_valueStorage[m_i]);
+            }
+
+            const PairHelper operator*()
+            {
+                return operator->();
+            }
+
+            bool operator<(const IteratorMapVectorSoa& other) const
+            {
+                DFG_ASSERT_CORRECTNESS(this->m_pMap == other.m_pMap);
+                return this->m_i < other.m_i;
             }
 
             IteratorMapVectorSoa operator+(const ptrdiff_t diff) const
@@ -115,7 +132,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             SoA_T* m_pMap;
             size_t m_i;
-        };
+        }; // Class IteratorMapVectorSoa
 
         template <class T> struct MapVectorTraits;
 

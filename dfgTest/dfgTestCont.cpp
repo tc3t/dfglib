@@ -1321,6 +1321,10 @@ namespace
         DFGTEST_STATIC((std::is_same<int, typename Map_T::mapped_type>::value));
 
         ASSERT_FALSE(mapExpected.empty());
+        ASSERT_FALSE(mSorted.empty());
+        ASSERT_FALSE(mUnsorted.empty());
+
+        EXPECT_EQ((*mapExpected.begin()).first, (*mSorted.begin()).first);
 
         EXPECT_TRUE(mSorted.hasKey(mapExpected.begin()->first));
         EXPECT_TRUE(mUnsorted.hasKey(mapExpected.begin()->first));
@@ -1354,18 +1358,16 @@ namespace
         mSorted.insert(std::string("insert_two_param"), 123);
         mUnsorted.insert(std::string("insert_two_param"), 123);
 
+        // Check that algorithms compile (may fail if iterator is missing typedefs etc.).
+        EXPECT_EQ(mSorted.size(), std::distance(mSorted.cbegin(), mSorted.cend()));
+        std::for_each(mSorted.cbegin(), mSorted.cend(), [](DFG_ROOT_NS::DFG_CLASS_NAME(Dummy)) {});
+
         // Test that setSorting(true) sorts.
         {
             auto mSortedFromUnsorted = mUnsorted;
             mSortedFromUnsorted.setSorting(true);
 
-            //EXPECT_TRUE(std::equal(mSorted.begin(), mSorted.end(), mUnsorted.begin())); // Note: this does not work for SoA-iterator due to missing value_type typedef.
-            auto iter2 = mSortedFromUnsorted.begin();
-            for (auto iter = mSorted.begin(), iterEnd = mSorted.end(); iter != iterEnd; ++iter, ++iter2)
-            {
-                EXPECT_EQ(iter->first, iter2->first);
-                EXPECT_EQ(iter->second, iter2->second);
-            }
+            EXPECT_TRUE(std::equal(mSorted.begin(), mSorted.end(), mSortedFromUnsorted.begin()));
         }
 
         eraseTester(mSorted);
