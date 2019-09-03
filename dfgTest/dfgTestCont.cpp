@@ -1674,17 +1674,47 @@ namespace
     void testTrivialPair()
     {
         using namespace DFG_MODULE_NS(cont);
-        DFG_CLASS_NAME(TrivialPair)<T0, T1> tp;
+        typedef DFG_CLASS_NAME(TrivialPair)<T0, T1> PairT;
 
+        // Test that TrivialPair has expected properties.
         {
-            typedef DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyable<decltype(tp)> IsTriviallyCopyableType;
+            typedef DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyable<PairT> IsTriviallyCopyableType;
 #if DFG_MSVC_VER != DFG_MSVC_VER_2012
             // Test that either IsTriviallyCopyableType is not available or that it returns expected result.
             DFGTEST_STATIC((std::is_base_of<DFG_MODULE_NS(TypeTraits)::UnknownAnswerType, IsTriviallyCopyableType>::value ||
                 std::is_base_of<std::integral_constant<bool, IsTrivial>, IsTriviallyCopyableType>::value));
 #else // DFG_MSVC_VER == DFG_MSVC_VER_2012
-            DFGTEST_STATIC((std::is_base_of<std::is_trivially_copyable<decltype(tp)>, IsTriviallyCopyableType>::value));
+            DFGTEST_STATIC((std::is_base_of<std::is_trivially_copyable<PairT>, IsTriviallyCopyableType>::value));
 #endif
+            
+#if (defined(_MSC_VER) && (_MSC_VER >= DFG_MSVC_VER_2015)) || (defined(__GNUG__) && (__GNUC__ >= 5)) || (!defined(_MSC_VER) && !defined(__GNUG__))
+            DFGTEST_STATIC(std::is_trivial<PairT>::value == IsTrivial);
+            DFGTEST_STATIC(std::is_trivially_constructible<PairT>::value == IsTrivial);
+            DFGTEST_STATIC((std::is_trivially_assignable<PairT, PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_constructible<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_copyable<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_copy_assignable<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_copy_constructible<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_default_constructible<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_destructible<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_move_assignable<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_trivially_move_constructible<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_move_constructible<PairT>::value == (std::is_move_constructible<T0>::value && std::is_move_constructible<T1>::value)));
+            DFGTEST_STATIC((std::is_nothrow_move_constructible<PairT>::value == (std::is_nothrow_move_constructible<T0>::value && std::is_nothrow_move_constructible<T1>::value)));
+            DFGTEST_STATIC((std::is_nothrow_constructible<PairT>::value == (std::is_nothrow_constructible<T0>::value && std::is_nothrow_constructible<T1>::value)));
+            DFGTEST_STATIC((std::is_nothrow_copy_constructible<PairT>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_nothrow_constructible<PairT, T0, T1>::value == (std::is_nothrow_constructible<T0>::value && std::is_nothrow_constructible<T1>::value)));
+            DFGTEST_STATIC((std::is_nothrow_constructible<PairT, T0&, T1&>::value == IsTrivial));
+            DFGTEST_STATIC((std::is_nothrow_constructible<PairT, T0&&, T1&&>::value == (std::is_nothrow_constructible<T0, T0&&>::value && std::is_nothrow_constructible<T1, T1&&>::value)));
+#endif
+        }
+
+        // Test value initialization
+        {
+            auto tp = DFG_CLASS_NAME(TrivialPair)<T0, T1>();
+            //DFG_CLASS_NAME(TrivialPair)<T0, T1> tp2; // This should have default initialized values when compiled with C++11 compiler (e.g. for int's value shown in debugger should be arbitrary)
+            EXPECT_EQ(T0(), tp.first);
+            EXPECT_EQ(T1(), tp.second);
         }
 
         // Test existence of two parameter constructor.

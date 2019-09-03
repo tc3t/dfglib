@@ -122,3 +122,10 @@ Notes:
     #define DFG_NOEXCEPT(expr)
     #define DFG_NOEXCEPT_TRUE throw()
 #endif
+
+// DFG_LANGFEAT_HAS_MEMBER_FUNCTION_DEFAULTING (i.e. availability of '= default')
+#if (!defined(_MSC_VER) || (_MSC_VER >= DFG_MSVC_VER_2013))
+    #define DFG_LANGFEAT_HAS_MEMBER_FUNCTION_DEFAULTING 1
+#else
+    #define DFG_LANGFEAT_HAS_MEMBER_FUNCTION_DEFAULTING 0
+#endif
