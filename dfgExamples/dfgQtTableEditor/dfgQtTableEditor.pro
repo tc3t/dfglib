@@ -108,5 +108,11 @@ win32 {
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../externals/
 
+win32 {
+    # This sets file icon for the .exe file.
+    # For details, see "Setting the Application Icon" from Qt documentation.
+    RC_ICONS = executable_file_icon.ico
+}
+
 RESOURCES += \
     dfgqttableeditor.qrc
