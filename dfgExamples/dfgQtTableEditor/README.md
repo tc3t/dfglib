@@ -160,6 +160,7 @@ Configuration is defined through a .conf file in path \<csv-file path\>.conf. Fi
 * Key is the combination of first item in a row and if not on the first column, prepended by most recent key in preceding column.
 
 Available keys:
+
 | Key (URI)      | Purpose  | Possible values | Notes |
 | -------------  | -----    | ------          | ----- |
 | columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column | integer | |
