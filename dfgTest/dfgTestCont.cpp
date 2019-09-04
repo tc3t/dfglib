@@ -617,6 +617,9 @@ TEST(dfgCont, TableSz_addRemoveColumns)
         -2019-09-04: MSVC 2013  , std::vector<TrivialPair> as TableSz::ColumnIndexPairContainer: ~2.07 s
         -2019-09-04: MSVC 2019.2, std::vector<TrivialPair> as TableSz::ColumnIndexPairContainer: ~0.30 s
         -2019-09-04: MinGW 4.8.0, std::vector<TrivialPair> as TableSz::ColumnIndexPairContainer: ~0.63 s
+        -2019-09-04: MSVC 2013  , Vector<TrivialPair> as TableSz::ColumnIndexPairContainer     : ~0.64 s
+        -2019-09-04: MSVC 2019.2, Vector<TrivialPair> as TableSz::ColumnIndexPairContainer     : ~0.30 s
+        -2019-09-04: MinGW 4.8.0, Vector<TrivialPair> as TableSz::ColumnIndexPairContainer     : ~0.63 s
 */
 TEST(dfgCont, TableSz_insertToFrontPerformance)
 {

@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <numeric>
+#include "Vector.hpp"
 #include "TrivialPair.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include "../build/inlineTools.hpp"
@@ -302,7 +303,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }; // Class CharStorageItem
 
         typedef DFG_CLASS_NAME(TrivialPair)<Index_T, const Char_T*> IndexPtrPair;
-        typedef std::vector<IndexPtrPair> ColumnIndexPairContainer;
+        typedef DFG_CLASS_NAME(Vector)<IndexPtrPair> ColumnIndexPairContainer;
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
         typedef std::vector<CharStorageItem> CharStorage;
         typedef std::vector<CharStorage> CharStorageContainer;
