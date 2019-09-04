@@ -27,6 +27,7 @@
 #include <dfg/iter/szIterator.hpp>
 #include <dfg/cont/contAlg.hpp>
 #include <dfg/io/cstdio.hpp>
+#include <dfg/time/timerCpu.hpp>
 
 TEST(dfgCont, makeVector)
 {
@@ -607,6 +608,47 @@ TEST(dfgCont, TableSz_addRemoveColumns)
     EXPECT_STREQ("d", table(0, 1));
     EXPECT_EQ(2, table.colCountByMaxColIndex());
 }
+
+/*
+    Some figures (all 32-bit builds):
+        -2019-09-04: MSVC 2013  , std::vector<std::pair> as TableSz::ColumnIndexPairContainer  : ~1.73 s
+        -2019-09-04: MSVC 2019.2, std::vector<std::pair> as TableSz::ColumnIndexPairContainer  : ~0.66 s
+        -2019-09-04: MinGW 4.8.0, std::vector<std::pair> as TableSz::ColumnIndexPairContainer  : ~0.66 s
+        -2019-09-04: MSVC 2013  , std::vector<TrivialPair> as TableSz::ColumnIndexPairContainer: ~2.07 s
+        -2019-09-04: MSVC 2019.2, std::vector<TrivialPair> as TableSz::ColumnIndexPairContainer: ~0.30 s
+        -2019-09-04: MinGW 4.8.0, std::vector<TrivialPair> as TableSz::ColumnIndexPairContainer: ~0.63 s
+*/
+TEST(dfgCont, TableSz_insertToFrontPerformance)
+{
+#if DFGTEST_ENABLE_BENCHMARKS == 0
+    DFGTEST_MESSAGE("TableSz_insertToFrontPerformance skipped due to build settings");
+#else
+    using namespace DFG_ROOT_NS;
+
+    typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) TimerType;
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, uint32> Table;
+
+#ifdef _DEBUG
+    const uint32 nInitialBeginIndex = 100;
+    const uint32 nEndIndex = 200;
+#else
+    const uint32 nInitialBeginIndex = 25000;
+    const uint32 nEndIndex = 50000;
+#endif // _DEBUG
+    Table table;
+    // Adding some content.
+    for (uint32 r = nInitialBeginIndex; r < nEndIndex; ++r)
+        table.setElement(r, 0, DFG_UTF8("a"));
+
+    // Doing the actual benchmark by adding items to front.
+    TimerType timer;
+    for (uint32 r = 1; r <= nInitialBeginIndex; ++r)
+        table.setElement(nInitialBeginIndex - r, 0, DFG_UTF8("a"));
+    const auto elapsedTime = timer.elapsedWallSeconds();
+    DFGTEST_MESSAGE("TableSz_insertToFrontPerformance: front inserts lasted " + DFG_MODULE_NS(str)::floatingPointToStr<DFG_CLASS_NAME(StringAscii)>(elapsedTime, 4).rawStorage());
+#endif //DFGTEST_ENABLE_BENCHMARKS
+}
+
 
 TEST(dfgCont, ArrayWrapper)
 {

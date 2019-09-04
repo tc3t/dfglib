@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <numeric>
+#include "TrivialPair.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include "../build/inlineTools.hpp"
 
@@ -300,7 +301,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             std::unique_ptr<Char_T[]> m_spStorage;
         }; // Class CharStorageItem
 
-        typedef std::pair<Index_T, const Char_T*> IndexPtrPair;
+        typedef DFG_CLASS_NAME(TrivialPair)<Index_T, const Char_T*> IndexPtrPair;
         typedef std::vector<IndexPtrPair> ColumnIndexPairContainer;
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
         typedef std::vector<CharStorageItem> CharStorage;
