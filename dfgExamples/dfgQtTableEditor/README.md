@@ -29,6 +29,10 @@ Has been build with the following setups:
 
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
+## Version history
+
+2019-09-05, 1.0.0.0
+
 ## Features
 
 * Separator auto-detection: instead of e.g. relying on list separator defined in OS settings (like done by some spreadsheet applications), uses heuristics to determine separator character. Auto-detection supports comma (,), semicolon (;), tab (\t) and unit separator (\x1F).
@@ -37,7 +41,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 * Diffing using 3rd party diff tool (manual configuration).
 * Support for per-file configurations that can be used for example to define format characters and column widths in UI.
 * When saving to file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
-* Somewhat reasonable performance: opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 4 seconds with dfgQtTableEditor default read options (and less than 2 seconds with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same Windows desktop machine read took over 30 seconds.
+* Somewhat reasonable performance: opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same Windows desktop machine read took over 30 seconds.
 * No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files. Underlying data structure is optimized for in-order walk through column content.
 * Supported encodings:
     * Read: UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252

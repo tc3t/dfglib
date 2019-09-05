@@ -71,7 +71,7 @@ Discovery: profiler/manual code analysis
 
 Discovery: guess/profiler
 
-This was almost the only but still rather significant real optimization that wasn't workarounding standard library implementation differences. This change effectively replaced char content storage from std::vector to a custom dynamic array. With std::vector content was appended with ```insert(end(), content_begin, content_end)``` and with custom implementation it was effectively a ```memcpy()``` and size increment. Why would vector insert by slower than custom memcpy() to end?
+This was almost the only but still rather significant real optimization that wasn't workarounding standard library implementation differences. This change effectively replaced char content storage from std::vector to a custom dynamic array. With std::vector content was appended with ```insert(end(), content_begin, content_end)``` and with custom implementation it was effectively a ```memcpy()``` and size increment. Why would vector insert be slower than custom memcpy() to end?
 
 Let's compare the insert codes; the call sites were:
 
