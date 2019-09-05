@@ -22,7 +22,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-version_time_epoch_start=1556658000 # 2019-05-01 00:00:00
+version_time_epoch_start=1567684800 # 2019-09-05 12:00:00Z
 version_time_step=86400 # For now using days (60*60*24) to avoid overflow in VERSION-option (see below)
 
 win32 {
@@ -45,7 +45,7 @@ win32 {
 # Third: unspecified
 # Last: Time since version_time_epoch_start. Currently whole days since, but may change in the future.
 # On Windows VERSION triggers auto-generation of rc-file, https://doc.qt.io/qt-5/qmake-variable-reference.html#version
-VERSION = 0.9.9.$$version_time # Note: when changing version, remember to update version_time_epoch_start
+VERSION = 1.0.0.$$version_time # Note: when changing version, remember to update version_time_epoch_start
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
 message("Version time epoch start is " $$version_time_epoch_start)
 message("Version is " $$VERSION)
