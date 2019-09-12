@@ -4,6 +4,10 @@ Experimental general purpose utility library for C++.
 
 Note: this is *not* a mature library and is not intended or recommended for general use. Libraries such as [Abseil](https://abseil.io/) or [Boost](https://www.boost.org/) may provide many of the features in dfglib implemented in a more clear and professional manner. For a comprehensive list of alternatives, see [A list of open source C++ libraries at cppreference.com](https://en.cppreference.com/w/cpp/links/libs) 
 
+## News
+
+* 2019-09-10: dfgQtTableEditor [version 1.0.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
+
 ## Usage
 
 Large proportion of features are 'header only' and can be used simply by including header without anything to link. When .cpp -files are needed, the intended usage is to include them in the build of the target project; there are no cmake-files etc. for building dfglib as a library.

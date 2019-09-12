@@ -4,8 +4,8 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 ## Building
 
-### Version 0.9.9.x:
-Requires basic C++11 support (as available since VC2010), Qt 5 and Boost (in include path).
+### Version 1.0.0 or earlier (and possibly current master):
+Requires basic C++11 support (as available since VC2010), Qt 5 and Boost (in include path). Some source packages may be available in [dfglib releases](https://github.com/tc3t/dfglib/releases).
 
 To build (assuming having compatible Qt version, Qt Creator and compiler available):
 * Open dfgQtTableEditor.pro in Qt Creator
