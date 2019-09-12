@@ -22,7 +22,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-version_time_epoch_start=1567684800 # 2019-09-05 12:00:00Z
+version_time_epoch_start=1568289600 # 2019-09-12 12:00:00Z
 version_time_step=86400 # For now using days (60*60*24) to avoid overflow in VERSION-option (see below)
 
 win32 {
@@ -33,10 +33,12 @@ win32 {
 
     # Using PowerShell to determine the time, syntax with the help of https://stackoverflow.com/a/41878110
     version_time = $$system(powershell [math]::floor(((((Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat %s) - $$version_time_epoch_start))) / $$version_time_step))
+    version_time_epoch_start_readable = $$system(powershell [System.DateTimeOffset]::FromUnixTimeSeconds($$version_time_epoch_start).UtcDateTime.ToString(\\\"s\\\"))
 
 
 } else {
     version_time = $$system(current_time=$(date +%s); echo $((($current_time-$$version_time_epoch_start)/$$version_time_step)))
+    version_time_epoch_start_readable = $$system(date -u --date='@$$version_time_epoch_start' +%Y-%m-%dT%H:%m:%S)
 }
 
 # Application version. Meaning of fields:
@@ -45,9 +47,9 @@ win32 {
 # Third: unspecified
 # Last: Time since version_time_epoch_start. Currently whole days since, but may change in the future.
 # On Windows VERSION triggers auto-generation of rc-file, https://doc.qt.io/qt-5/qmake-variable-reference.html#version
-VERSION = 1.0.0.$$version_time # Note: when changing version, remember to update version_time_epoch_start
+VERSION = 1.0.1.$$version_time # Note: when changing version, remember to update version_time_epoch_start
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
-message("Version time epoch start is " $$version_time_epoch_start)
+message("Version time epoch start is " $$version_time_epoch_start_readable " (" $$version_time_epoch_start ")")
 message("Version is " $$VERSION)
 
 CONFIG += c++11
