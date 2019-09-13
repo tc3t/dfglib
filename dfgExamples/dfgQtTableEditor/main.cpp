@@ -75,7 +75,7 @@ static void onShowAboutBox()
     s += QString("<br>3rd party libraries used in this application: <a href=www.boost.org>Boost</a>" FMT_ABOUT_ENTRY ", Qt, <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>");
 
     QMessageBox::about(gpMainWindow,
-                             QApplication::tr("About dfgQtTableEditor"),
+                             QApplication::tr("About"),
                              s);
     QMessageBox::aboutQt(gpMainWindow);
 }
@@ -134,6 +134,13 @@ int main(int argc, char *argv[])
     mainWindow.resize(tableEditor.size());
     DFG_QT_VERIFY_CONNECT(QObject::connect(&tableEditor, &QWidget::windowTitleChanged, &mainWindow, &QWidget::setWindowTitle));
     DFG_QT_VERIFY_CONNECT(QObject::connect(&tableEditor, &dfg::qt::TableEditor::sigModifiedStatusChanged, &mainWindow, &QWidget::setWindowModified));
+
+    // Setting application name that gets shown in window titles (for details, see documentation of windowTitle)
+    {
+        const auto displayName = QString("%1 %2").arg(a.applicationName(), a.applicationVersion());
+        a.setApplicationDisplayName(displayName);
+    }
+
     mainWindow.show();
 
     auto args = a.arguments();

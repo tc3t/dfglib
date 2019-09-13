@@ -461,8 +461,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()
 {
     const auto filePath = (m_spTableModel) ? m_spTableModel->getFilePath() : QString();
     // Note: [*] is a placeholder for modified-indicator (see QWidget::windowModified)
-    QString prename = (!filePath.isEmpty()) ? QFileInfo(filePath).fileName() + "[*] - " : QString();
-    QString title(prename + QCoreApplication::applicationName());
+    QString title = (!filePath.isEmpty()) ? QFileInfo(filePath).fileName() + "[*]" : QString();
     setWindowModified(m_spTableModel && m_spTableModel->isModified());
     setWindowTitle(title);
 }
