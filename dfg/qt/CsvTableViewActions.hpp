@@ -289,11 +289,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 QString sText = QApplication::clipboard()->text();
 
                 auto viewModelIndex = m_pView->mapToViewModel(m_where);
+                auto pViewModel = viewModelIndex.model();
+                if (!pViewModel)
+                {
+                    setText(QString("Invalid paste to (%1, %2)").arg(m_where.row()).arg(m_where.column()));
+                    return;
+                }
 
                 QTextStream strm(&sText, QIODevice::ReadOnly);
                 DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(strm, '\t', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
                 {
-                    const auto indexTarget = m_pView->mapToDataModel(viewModelIndex.model()->index(viewModelIndex.row() + static_cast<int>(nRow),
+                    const auto indexTarget = m_pView->mapToDataModel(pViewModel->index(viewModelIndex.row() + static_cast<int>(nRow),
                                                                                                        viewModelIndex.column() + static_cast<int>(nCol)));
                     if (!indexTarget.isValid())
                         return;
