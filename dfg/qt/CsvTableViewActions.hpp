@@ -305,9 +305,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                         return;
                     const auto nTargetRow = indexTarget.row();
                     const auto nTargetCol = indexTarget.column();
-                    m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(pModel->data(indexTarget).toString().toUtf8().data())); // TODO: makes redundant QString round-trip.
+                    m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, pModel->RawStringPtrAt(nTargetRow, nTargetCol));
                     const int intSize = (nSize < NumericTraits<int>::maxValue) ? static_cast<int>(nSize) : NumericTraits<int>::maxValue;
-                    m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(QString::fromWCharArray(p, intSize).toUtf8().data()));
+                    m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(QString::fromWCharArray(p, intSize).toUtf8().data())); // TODO: Should not need to create a temporary QString for wchar_t -> UTF8 transform.
                 });
 
                 QString sDesc;
