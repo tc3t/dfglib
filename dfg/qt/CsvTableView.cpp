@@ -207,6 +207,12 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     }
 
     {
+        auto pAction = new QAction(tr("New table from clipboard"), this);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::createNewTableFromClipboard));
+        addAction(pAction);
+    }
+
+    {
         auto pAction = new QAction(tr("Open file..."), this);
         pAction->setShortcut(tr("Ctrl+O"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openFromFile));
@@ -1446,6 +1452,32 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTable()
     if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState(tr("open a new table")))
         return;
     pCsvModel->openNewTable();
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTableFromClipboard()
+{
+    auto pCsvModel = csvModel();
+    if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState(tr("open a new table")))
+        return false;
+    pCsvModel->openNewTable();
+    pCsvModel->removeColumns(0, pCsvModel->getColumnCount());
+    pCsvModel->removeRows(0, pCsvModel->getRowCount());
+
+    auto pClipboard = QApplication::clipboard();
+    const QByteArray sClipboardText = (pClipboard) ? pClipboard->text().toUtf8() : QByteArray();
+    auto loadOptions = CsvItemModel::LoadOptions();
+    loadOptions.textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
+    bool bSuccess = false;
+
+    doModalOperation(this, tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), "CsvTableViewClipboardLoader", [&]()
+    {
+        bSuccess = pCsvModel->openFromMemory(sClipboardText.data(), sClipboardText.size(), loadOptions);
+    });
+
+    if (bSuccess)
+        onNewSourceOpened();
+
+    return bSuccess;
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::openFromFile()

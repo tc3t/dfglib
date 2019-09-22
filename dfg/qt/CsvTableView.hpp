@@ -247,6 +247,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public slots:
         void createNewTable();
+        bool createNewTableFromClipboard();
         bool openFromFile();
         bool openFromFileWithOptions();
         bool mergeFilesToCurrent();
