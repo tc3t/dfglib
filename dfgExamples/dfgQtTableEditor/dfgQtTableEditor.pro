@@ -54,8 +54,8 @@ message("Version is " $$VERSION)
 
 CONFIG += c++11
 
-win32 {
-    # Adjustments on Windows:
+msvc {
+    # Adjustments on MSVC:
 
     #   -Warning level from W3 -> W4
     QMAKE_CXXFLAGS_WARN_ON -= -W3
@@ -102,7 +102,7 @@ win32 {
     HEADERS += $$_PRO_FILE_PWD_/../../dfg/debug/structuredExceptionHandling.h
 }
 
-!win32 {
+!msvc {
     SOURCES += \
             $$_PRO_FILE_PWD_/../../dfg/io/widePathStrToFstreamFriendlyNonWide.cpp
 }
