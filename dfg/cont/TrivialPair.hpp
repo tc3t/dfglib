@@ -17,7 +17,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef T0 first_type;
         typedef T1 second_type;
 
-#if DFG_LANGFEAT_HAS_MEMBER_FUNCTION_DEFAULTING && (!defined(_MSC_VER) || _MSC_VER >= DFG_MSVC_VER_2015)
+#if DFG_LANGFEAT_HAS_DEFAULTED_AND_DELETED_FUNCTIONS && (!defined(_MSC_VER) || _MSC_VER >= DFG_MSVC_VER_2015)
         DFG_CLASS_NAME(TrivialPair)() = default;
 #else // Case: compiler has no defaulting, just always value initialize.
         DFG_CLASS_NAME(TrivialPair)() DFG_NOEXCEPT(std::is_nothrow_default_constructible<first_type>::value && std::is_nothrow_default_constructible<second_type>::value) :

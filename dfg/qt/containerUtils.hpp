@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../build/languageFeatureInfo.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QObject>
@@ -36,8 +37,13 @@ public:
         m_spData = newItem;
     }
 
+#if DFG_LANGFEAT_HAS_DEFAULTED_AND_DELETED_FUNCTIONS == 1
     QObjectStorage(const QObjectStorage&) = delete;
     QObjectStorage& operator=(const QObjectStorage&) = delete;
+#else // case: compiler has no '= delete'
+    DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(QObjectStorage);
+public:
+#endif
 
     ~QObjectStorage()
     {
