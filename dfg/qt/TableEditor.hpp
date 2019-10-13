@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "qtIncludeHelpers.hpp"
+#include "containerUtils.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QModelIndex>
@@ -114,19 +115,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onFilterCaseSensitivityChanged(bool);
 
     public:
-        std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spTableView;
-        std::unique_ptr<ModelClass> m_spTableModel;
-        std::unique_ptr<ProxyModelClass> m_spProxyModel;
-        std::unique_ptr<QLineEdit> m_spLineEditSourcePath;
-        std::unique_ptr<DFG_CLASS_NAME(TableEditorStatusBar)> m_spStatusBar;
-        std::unique_ptr<QLabel> m_spSelectionStatusInfo;
-        std::unique_ptr<CellEditor> m_spCellEditor;
-        std::unique_ptr<QDockWidget> m_spCellEditorDockWidget;
-        std::unique_ptr<DFG_DETAIL_NS::FindPanelWidget> m_spFindPanel;
-        std::unique_ptr<DFG_DETAIL_NS::FilterPanelWidget> m_spFilterPanel;
-        std::unique_ptr<QWidget> m_spSelectionAnalyzerPanel;
-        std::unique_ptr<QMenu> m_spResizeColumnsMenu;
-        std::unique_ptr<QToolBar> m_spToolBar;
+        QObjectStorage<ViewClass> m_spTableView;
+        QObjectStorage<ModelClass> m_spTableModel;
+        QObjectStorage<ProxyModelClass> m_spProxyModel;
+        QObjectStorage<QLineEdit> m_spLineEditSourcePath;
+        QObjectStorage<DFG_CLASS_NAME(TableEditorStatusBar)> m_spStatusBar;
+        QObjectStorage<QLabel> m_spSelectionStatusInfo;
+        QObjectStorage<CellEditor> m_spCellEditor;
+        QObjectStorage<QDockWidget> m_spCellEditorDockWidget;
+        QObjectStorage<DFG_DETAIL_NS::FindPanelWidget> m_spFindPanel;
+        QObjectStorage<DFG_DETAIL_NS::FilterPanelWidget> m_spFilterPanel;
+        QObjectStorage<QWidget> m_spSelectionAnalyzerPanel;
+        QObjectStorage<QMenu> m_spResizeColumnsMenu;
+        QObjectStorage<QToolBar> m_spToolBar;
         bool m_bHandlingOnCellEditorTextChanged;
     };
 
