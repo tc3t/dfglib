@@ -4,9 +4,47 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+message("----------------------------------------------------------------------------------------------------")
+message("Starting handling of dfgQtTableEditor.pro")
+message("QT_VERSION is " $$QT_VERSION)
+message("QMAKESPEC is " $$QMAKESPEC)
+
+# Items below worked, but commented out to reduce verbosity.
+#message("QMAKE_HOST.arch is " $$QMAKE_HOST.arch)
+#message("QMAKE_HOST.os is " $$QMAKE_HOST.os)
+#message("QMAKE_HOST.cpu_count is " $$QMAKE_HOST.cpu_count)
+#message("QMAKE_HOST.name is " $$QMAKE_HOST.name)
+#message("QMAKE_HOST.version is " $$QMAKE_HOST.version)
+#message("QMAKE_HOST.version_string is " $$QMAKE_HOST.version_string)
+
+DFG_ALLOW_QT_CHARTS = 0
+
+qtHaveModule(charts) {
+    message("Qt Charts module found")
+    QT_CHARTS_AVAILABLE = 1
+
+} else {
+    message("Qt Charts module NOT found")
+    QT_CHARTS_AVAILABLE = 0
+}
+
+# -------------------------------------------------------
+# Setting modules
+
+QT       = core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+equals(QT_CHARTS_AVAILABLE, "1") {
+    equals(DFG_ALLOW_QT_CHARTS, "1") {
+        message("Using Qt Charts. WARNING: using Qt Charts causes GPL infection")
+        QT       += charts
+    } else {
+        #message("Qt Charts was found, but not used due to config flag")
+    }
+}
+
+# -------------------------------------------------------
 
 TARGET = dfgQtTableEditor
 TEMPLATE = app
@@ -56,6 +94,8 @@ CONFIG += c++11
 
 msvc {
     # Adjustments on MSVC:
+
+    message("Making msvc-specific adjustments")
 
     #   -Warning level from W3 -> W4
     QMAKE_CXXFLAGS_WARN_ON -= -W3
@@ -119,3 +159,17 @@ win32 {
 
 RESOURCES += \
     dfgqttableeditor.qrc
+
+message("Using modules: " $$QT)
+message("TARGET is " $$TARGET)
+message("CONFIG is " $$CONFIG)
+message("DEFINES is " $$DEFINES)
+message("QMAKE_CXXFLAGS is " $$QMAKE_CXXFLAGS)
+message("QMAKE_CXXFLAGS_DEBUG is " $$QMAKE_CXXFLAGS_DEBUG)
+message("QMAKE_CXXFLAGS_RELEASE is " $$QMAKE_CXXFLAGS_RELEASE)
+message("QMAKE_LFLAGS is " $$QMAKE_LFLAGS)
+message("QMAKE_LFLAGS_DEBUG is " $$QMAKE_LFLAGS_DEBUG)
+message("QMAKE_LFLAGS_RELEASE is " $$QMAKE_LFLAGS_RELEASE)
+message("QMAKE_CXXFLAGS_WARN_ON is " $$QMAKE_CXXFLAGS_WARN_ON)
+message("QMAKE_CXXFLAGS_WARN_OFF is " $$QMAKE_CXXFLAGS_WARN_OFF)
+message("^^^^^Done with dfgQtTableEditor.pro handling^^^^^^")
