@@ -78,6 +78,11 @@ public:
         return m_spData.data();
     }
 
+    T* data()
+    {
+        return get();
+    }
+
     T* release()
     {
         auto old = m_spData.data();
