@@ -30,6 +30,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QSpinBox>
 #include <QToolBar>
 #include <QToolButton>
+#include <QSplitter>
 DFG_END_INCLUDE_QT_HEADERS
 
 #define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
@@ -326,6 +327,8 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         m_spStatusBar.reset(new DFG_CLASS_NAME(TableEditorStatusBar));
     }
 
+    m_spMainSplitter.reset(new QSplitter(Qt::Horizontal, this));
+
     // Layout
     {
         std::unique_ptr<QGridLayout> spLayout(new QGridLayout);
@@ -412,9 +415,17 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
 
         spLayout->addWidget(m_spSelectionAnalyzerPanel.get(), row++, 0);
         spLayout->addWidget(m_spStatusBar.get(), row++, 0);
+
         spLayout->setSpacing(0);
+        auto pEditorWidget = new QWidget(this);
+        delete pEditorWidget->layout();
+        pEditorWidget->setLayout(spLayout.release());
+        m_spMainSplitter->addWidget(pEditorWidget);
+
         delete layout();
-        setLayout(spLayout.release());
+        auto mainLayout = new QGridLayout(this);
+        mainLayout->addWidget(m_spMainSplitter.get());
+        setLayout(mainLayout);
     }
 
     // Set default window size.
@@ -790,4 +801,13 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::addToolBarWidget(QWidget* p
 {
     if (m_spToolBar)
         m_spToolBar->addWidget(pWidget);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setGraphDisplay(QWidget* pGraphDisplay)
+{
+    DFG_ASSERT_CORRECTNESS(m_spMainSplitter != nullptr);
+    if (!pGraphDisplay || !m_spMainSplitter)
+        return;
+
+    m_spMainSplitter->addWidget(pGraphDisplay);
 }

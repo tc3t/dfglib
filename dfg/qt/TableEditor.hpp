@@ -22,6 +22,7 @@ class QLineEdit;
 class QMenu;
 class QSortFilterProxyModel;
 class QToolBar;
+class QSplitter;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -91,6 +92,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setWindowModified(bool bNewModifiedStatus);
 
+        void setGraphDisplay(QWidget* pGraphDisplay);
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 
@@ -128,6 +131,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QObjectStorage<QWidget> m_spSelectionAnalyzerPanel;
         QObjectStorage<QMenu> m_spResizeColumnsMenu;
         QObjectStorage<QToolBar> m_spToolBar;
+        QObjectStorage<QSplitter> m_spMainSplitter;
         bool m_bHandlingOnCellEditorTextChanged;
     };
 
