@@ -18,8 +18,10 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/qt/TableEditor.hpp>
 #include <dfg/qt/QtApplication.hpp>
 #include <dfg/qt/qtBasic.hpp>
+#include <dfg/qt/graphTools.hpp>
 #include <dfg/build/buildTimeDetails.hpp>
 #include <dfg/debug/structuredExceptionHandling.h>
+#include <dfg/qt/CsvTableView.hpp>
 
 #ifdef _WIN32
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -97,6 +99,45 @@ void MainWindow::closeEvent(QCloseEvent* event)
         event->ignore();
 }
 
+class CsvTableViewDataSource : public dfg::qt::GraphDataSource
+{
+public:
+    CsvTableViewDataSource(dfg::qt::CsvTableView* view)
+        : m_spView(view)
+    {
+        if (!m_spView)
+            return;
+        DFG_QT_VERIFY_CONNECT(connect(view, &dfg::qt::CsvTableView::sigSelectionChanged, this, &dfg::qt::GraphDataSource::sigChanged));
+    }
+
+    QObject* underlyingSource() override
+    {
+        return m_spView;
+    }
+
+    void forEachElement_fromTableSelection(std::function<void (DataSourceIndex, DataSourceIndex, QVariant)> handler) override
+    {
+        if (!handler || !m_spView)
+            return;
+
+        m_spView->forEachCsvModelIndexInSelection([&](const QModelIndex& mi, bool& /*bContinue*/)
+        {
+            if (!mi.isValid())
+                return;
+            // Note: this is source model row, not index in the visible selection (e.g. in case of filtering)
+            // TODO: make customisable.
+            const DataSourceIndex nRow = static_cast<DataSourceIndex>(mi.row());
+
+            const DataSourceIndex nCol = static_cast<DataSourceIndex>(mi.column());
+            auto sVal = mi.data().toString();
+            sVal.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
+            handler(nRow, nCol, sVal);
+        });
+    }
+
+    QPointer<dfg::qt::CsvTableView> m_spView;
+};
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -129,6 +170,13 @@ int main(int argc, char *argv[])
     dfg::qt::TableEditor tableEditor;
     tableEditor.setAllowApplicationSettingsUsage(true);
     mainWindow.setWindowIcon(QIcon(":/mainWindowIcon.png"));
+
+#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
+    dfg::qt::GraphControlAndDisplayWidget graphDisplay;
+    std::unique_ptr<CsvTableViewDataSource> selectionSource(new CsvTableViewDataSource(tableEditor.m_spTableView.get()));
+    graphDisplay.addDataSource(std::move(selectionSource));
+    tableEditor.setGraphDisplay(&graphDisplay);
+#endif
 
     mainWindow.setCentralWidget(&tableEditor);
     mainWindow.resize(tableEditor.size());

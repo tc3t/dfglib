@@ -39,8 +39,9 @@ equals(QT_CHARTS_AVAILABLE, "1") {
     equals(DFG_ALLOW_QT_CHARTS, "1") {
         message("Using Qt Charts. WARNING: using Qt Charts causes GPL infection")
         QT       += charts
+        DEFINES += DFG_ALLOW_QT_CHARTS=1
     } else {
-        #message("Qt Charts was found, but not used due to config flag")
+        message("Qt Charts was found, but not used due to config flag")
     }
 }
 
@@ -115,7 +116,8 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/QtApplication.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableEditor.cpp \
         $$_PRO_FILE_PWD_/../../dfg/os/memoryMappedFile.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.cpp
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp
 
 HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableView.hpp \
@@ -127,6 +129,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/StringMatchDefinition.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/tableViewUndoCommands.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/widgetHelpers.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/containerUtils.hpp
 
 win32 {

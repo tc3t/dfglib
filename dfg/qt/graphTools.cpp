@@ -73,6 +73,8 @@ public:
     GraphDefinitionWidget(QWidget *pParent) :
         BaseClass(pParent)
     {
+        // TODO: this should be a "auto"-entry.
+        this->addItem(GraphDefinitionEntry::xyGraph(QString(), QString()).toJson());
     }
 
     template <class Func_T>
