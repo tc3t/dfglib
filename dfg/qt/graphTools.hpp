@@ -20,7 +20,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
 typedef QString GraphDataSourceId;
 typedef std::size_t DataSourceIndex;
-class ChartImpl;
+class ChartCanvas;
 
 enum GraphDataSourceType
 {
@@ -67,8 +67,11 @@ public:
     typedef QWidget BaseClass;
 
     GraphDisplay(QWidget* pParent);
+    ~GraphDisplay();
 
-    ChartImpl* chart();
+    ChartCanvas* chart();
+
+    std::unique_ptr<ChartCanvas> m_spChartCanvas;
 }; // Class GraphDisplay
 
 

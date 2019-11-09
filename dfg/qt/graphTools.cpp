@@ -5,6 +5,7 @@
 #include "../cont/MapVector.hpp"
 
 #include "../func/memFunc.hpp"
+#include "../str/format_fmt.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
@@ -87,102 +88,170 @@ public:
     }
 }; // Class GraphDefinitionWidget
 
+
+class XySeries
+{
+protected:
+    XySeries() {}
+public:
+    virtual ~XySeries() {}
+    virtual void setOrAppend(const DataSourceIndex, const double, const double) = 0;
+    virtual void resize(const DataSourceIndex) = 0;
+}; // Class XySeries
+
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-    typedef QXYSeries XySeries;
-
-    class LineSeries : public QLineSeries
+class XySeriesQtChart : public XySeries
+{
+public:
+    XySeriesQtChart(QAbstractSeries* xySeries)
+        : m_spXySeries(xySeries)
     {
-    public:
-        LineSeries(QObject* pParent)
-            : QLineSeries(pParent)
-        {}
-    };
 
-    class ChartImpl : public QChart
+    }
+
+    void setOrAppend(const DataSourceIndex index, const double x, const double y) override
     {
-    public:
-        void setAxisForSeries(XySeries* pSeries, const double minX, const double maxX, const double minY, const double maxY)
+        auto pXySeries = getXySeries();
+        if (!pXySeries)
+            return;
+        if (index < static_cast<DataSourceIndex>(pXySeries->count()))
+            pXySeries->replace(static_cast<int>(index), x, y);
+        else
+            pXySeries->append(x, y);
+    }
+
+    void resize(const DataSourceIndex nNewSize) override
+    {
+        auto pXySeries = getXySeries();
+        if (!pXySeries || nNewSize == static_cast<DataSourceIndex>(pXySeries->count()))
+            return;
+        if (nNewSize < static_cast<DataSourceIndex>(pXySeries->count()))
+            pXySeries->removePoints(static_cast<int>(nNewSize), pXySeries->count() - static_cast<int>(nNewSize));
+        else // Case: new size is bigger than current.
         {
-            if (!pSeries)
-                return;
-
-            if (this->axes().isEmpty())
-                createDefaultAxes();
-
-            auto xAxes = this->axes(Qt::Horizontal);
-            auto yAxes = this->axes(Qt::Vertical);
-            if (!xAxes.isEmpty())
-                pSeries->attachAxis(xAxes.front());
-            if (!yAxes.isEmpty())
-                pSeries->attachAxis(yAxes.front());
-
-            // Setting axis ranges
-            {
-                if (!xAxes.isEmpty() && xAxes.front())
-                    xAxes.front()->setRange(minX, maxX);
-                if (!yAxes.isEmpty() && yAxes.front())
-                    yAxes.front()->setRange(minY, maxY);
-            }
+            const auto nAddCount = nNewSize - static_cast<DataSourceIndex>(pXySeries->count());
+            for (DataSourceIndex i = 0; i < nAddCount; ++i)
+                pXySeries->append(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
         }
-    };
+    }
 
-
-
-#else
-    class GraphSeries
+    QXYSeries* getXySeries()
     {
-    public:
-        virtual ~GraphSeries() {}
-    };
+        return qobject_cast<QXYSeries*>(m_spXySeries.data());
+    }
 
-    class XySeries : public GraphSeries
+    QPointer<QAbstractSeries> m_spXySeries;
+}; // Class XySeriesQtChart
+#endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
+
+class ChartCanvas
+{
+protected:
+    ChartCanvas() {}
+public:
+    virtual ~ChartCanvas() {}
+
+    virtual bool hasChartObjects() const = 0;
+
+    virtual void addXySeries() = 0;
+
+    virtual void setTitle(StringViewUtf8) {}
+
+    virtual std::shared_ptr<XySeries> getFirstXySeries() { return nullptr; }
+
+    virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
+
+}; // class ChartCanvas
+
+
+#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
+class ChartCanvasQtChart : public ChartCanvas, QObject
+{
+public:
+
+    ChartCanvasQtChart(QWidget* pParent = nullptr)
     {
-    public:
-        DataSourceIndex count() const { return 0; }
-        void replace(const DataSourceIndex, const double, const double) const { }
-        void append(const double, const double) const {  }
-        void removePoints(DataSourceIndex nPos, DataSourceIndex nRemoveCount)
-        {
-            DFG_UNUSED(nPos);
-            DFG_UNUSED(nRemoveCount);
-        }
-    };
+        m_spChartView.reset(new QChartView(pParent));
+        m_spChartView->setRenderHint(QPainter::Antialiasing);
+        m_spChartView->setChart(new QChart); // ChartView takes ownership.
+    }
 
-    class LineSeries : public XySeries
+    QWidget* getWidget()
     {
-    public:
-        LineSeries(QObject* pParent)
-        {
-            DFG_UNUSED(pParent);
-        }
-    };
+        return m_spChartView.get();
+    }
 
-    class ChartImpl
+    void setTitle(StringViewUtf8 svTitle) override
     {
-    public:
-        void setTitle(QString s)
+        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
+        if (pChart)
+            pChart->setTitle(QString::fromUtf8(svTitle.beginRaw(), static_cast<int>(svTitle.size())));
+    }
+
+    bool hasChartObjects() const override
+    {
+        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
+        return (pChart) ? !pChart->series().isEmpty() : false;
+    }
+
+    void addXySeries() override
+    {
+        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
+        pChart->addSeries(new QLineSeries(m_spChartView.get())); // chart takes ownership
+        //pChart->addSeries(new QScatterSeries(m_spGraphDisplay.get())); // Chart takes ownership of series
+    }
+
+    std::shared_ptr<XySeries> getFirstXySeries() override
+    {
+        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
+        if (!pChart)
+            return nullptr;
+        auto seriesList = pChart->series();
+        return (!seriesList.isEmpty()) ? std::shared_ptr<XySeries>(new XySeriesQtChart(seriesList.front())) : nullptr;
+    }
+
+    void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
+    {
+        if (!pSeries || !m_spChartView)
+            return;
+
+        auto pChart = m_spChartView->chart();
+
+        if (!pChart)
+            return;
+
+        auto qtXySeries = dynamic_cast<XySeriesQtChart*>(pSeries);
+
+        if (!qtXySeries)
+            return;
+
+        auto pSeriesImpl = qtXySeries->getXySeries();
+
+        if (!pSeriesImpl)
+            return;
+
+        if (pChart->axes().isEmpty())
+            pChart->createDefaultAxes();
+
+        auto xAxes = pChart->axes(Qt::Horizontal);
+        auto yAxes = pChart->axes(Qt::Vertical);
+        if (!xAxes.isEmpty())
+            pSeriesImpl->attachAxis(xAxes.front());
+        if (!yAxes.isEmpty())
+            pSeriesImpl->attachAxis(yAxes.front());
+
+        // Setting axis ranges
         {
-            m_sTitle = std::move(s);
+            if (!xAxes.isEmpty() && xAxes.front())
+                xAxes.front()->setRange(xMin, xMax);
+            if (!yAxes.isEmpty() && yAxes.front())
+                yAxes.front()->setRange(yMin, yMax);
         }
-        QList<GraphSeries*> series() { return QList<GraphSeries*>(); }
-        void addSeries(GraphSeries*) {}
+    }
 
-        void setAxisForSeries(XySeries* pSeries, const double minX, const double maxX, const double minY, const double maxY)
-        {
-            DFG_UNUSED(pSeries);
-            DFG_UNUSED(minX);
-            DFG_UNUSED(maxX);
-            DFG_UNUSED(minY);
-            DFG_UNUSED(maxY);
-        }
-
-        QString m_sTitle;
-    };
-
-
-
-
-#endif
+    QObjectStorage<QChartView> m_spChartView;
+}; // ChartCanvasQtChart
+#endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 
 }} // module namespace
 
@@ -199,12 +268,9 @@ DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pPar
 {
     auto pLayout = new QGridLayout(this);
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-    auto pChartView = new QChartView(this);
-    pChartView->setRenderHint(QPainter::Antialiasing);
-    pLayout->addWidget(pChartView);
-
-    std::unique_ptr<ChartImpl> spChart(new ChartImpl);
-    pChartView->setChart(spChart.release()); // ChartView takes ownership.
+    auto pChartCanvas = new ChartCanvasQtChart(this);
+    pLayout->addWidget(pChartCanvas->getWidget());
+    m_spChartCanvas.reset(pChartCanvas);
 #else
     auto pTextEdit = new QPlainTextEdit(this);
     pTextEdit->appendPlainText(tr("Placeholder"));
@@ -212,20 +278,14 @@ DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pPar
 #endif
 }
 
-auto DFG_MODULE_NS(qt)::GraphDisplay::chart() -> ChartImpl*
+DFG_MODULE_NS(qt)::GraphDisplay::~GraphDisplay()
 {
-#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-    auto pChartView = this->findChild<QChartView*>();
-    if (!pChartView)
-    {
-        DFG_ASSERT_WITH_MSG(false, "Internal error, no chart view object available");
-        return nullptr;
-    }
-    return dynamic_cast<ChartImpl*>(pChartView->chart());
-#else
-    DFG_ASSERT_IMPLEMENTED(false);
-    return nullptr;
-#endif
+
+}
+
+auto DFG_MODULE_NS(qt)::GraphDisplay::chart() -> ChartCanvas*
+{
+    return m_spChartCanvas.get();
 }
 
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
@@ -260,7 +320,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
                 const auto dataType = source.dataType();
                 if (dataType != GraphDataSourceType_tableSelection) // Currently only one type is supported.
                 {
-                    // TODO: generate log entry and/ or note to user
+                    // TODO: generate log entry and/or note to user
                     DFG_ASSERT_IMPLEMENTED(false);
                     return;
                 }
@@ -278,19 +338,16 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
                 }
 
                 const auto sourceId = source.uniqueId();
-                const QString sTitle = (sourceId.isEmpty()) ? QString() : tr("Data source %1").arg(sourceId);
-                pChart->setTitle(sTitle);
+                auto sTitle = (!sourceId.isEmpty()) ? format_fmt("Data source {}", sourceId.toUtf8().data()) : std::string();
+                pChart->setTitle(SzPtrUtf8(sTitle.c_str()));
 
-                auto listOfSeries = pChart->series();
-
-                if (listOfSeries.isEmpty())
+                if (!pChart->hasChartObjects())
                 {
-                    pChart->addSeries(new LineSeries(m_spGraphDisplay.get())); // Chart takes ownership of series
-                    //pChart->addSeries(new QScatterSeries(m_spGraphDisplay.get())); // Chart takes ownership of series
+                    pChart->addXySeries();
                 }
-                auto* pSeries = dynamic_cast<XySeries*>(pChart->series().front());
+                auto spSeries = pChart->getFirstXySeries();
 
-                if (!pSeries)
+                if (!spSeries)
                 {
                     DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
                     return;
@@ -298,6 +355,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
 
                 typedef DFG_MODULE_NS(cont)::MapVectorSoA<int, dfg::cont::MapVectorSoA<int, double>> ColumnValues;
                 ColumnValues values;
+                values.setSorting(false);
 
                 source.forEachElement_fromTableSelection([&](const DataSourceIndex r, const DataSourceIndex c, const QVariant& val)
                 {
@@ -309,47 +367,40 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
                 DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
                 DataSourceIndex nGraphSize = 0;
 
-                const auto setOrAppend = [](XySeries& series, const int i, const double x, const double y)
-                    {
-                        if (i < series.count())
-                            series.replace(i, x, y);
-                        else
-                            series.append(x, y);
-                    };
-
                 if (values.size() == 1)
                 {
                     const auto& valueCont = values.begin()->second;
-                    nGraphSize = static_cast<int>(valueCont.size());
-                    int i = 0;
+                    nGraphSize = valueCont.size();
+                    DataSourceIndex i = 0;
                     for (const auto valPair : valueCont)
                     {
                         const auto x = valPair.first;
                         const auto y = valPair.second;
                         minMaxX(x);
                         minMaxY(y);
-                        setOrAppend(*pSeries, i++, x, y);
+                        spSeries->setOrAppend(i++, x, y);
                     }
                 }
                 else if (values.size() == 2)
                 {
                     const auto& xValueMap = values.frontValue();
                     const auto& yValueMap = values.backValue();
-                    nGraphSize = static_cast<int>(Min(xValueMap.size(), yValueMap.size()));
-                    for (int i = 0; i < nGraphSize; ++i)
+                    nGraphSize = Min(xValueMap.size(), yValueMap.size());
+                    auto xIter = xValueMap.cbegin();
+                    auto yIter = yValueMap.cbegin();
+                    for (DataSourceIndex i = 0; i < nGraphSize; ++i, ++xIter, ++yIter)
                     {
-                        const auto x = (xValueMap.begin() + i)->second;
-                        const auto y = (yValueMap.begin() + i)->second;
+                        const auto x = xIter->second;
+                        const auto y = yIter->second;
                         minMaxX(x);
                         minMaxY(y);
-                        setOrAppend(*pSeries, i, x, y);
+                        spSeries->setOrAppend(i, x, y);
                     }
 
                 }
-                // Removing excess points (if any)
-                pSeries->removePoints(nGraphSize, pSeries->count() - nGraphSize);
+                spSeries->resize(nGraphSize); // Removing excess points (if any)
 
-                pChart->setAxisForSeries(pSeries, minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
+                pChart->setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
             });
         });
     }
