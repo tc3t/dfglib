@@ -9,6 +9,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QPointer>
 DFG_END_INCLUDE_QT_HEADERS
 
+#include <memory>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
