@@ -39,25 +39,25 @@ public:
 		return *this;
 	}
 
-	DFG_CLASS_NAME(InterleavedSemiIterator) operator++(int) const
-	{
-		auto iter = *this;
-		++*this;
-		return iter;
-	}
+    DFG_CLASS_NAME(InterleavedSemiIterator) operator++(int)
+    {
+        auto iter = *this;
+        ++*this;
+        return iter;
+    }
 
-	DFG_CLASS_NAME(InterleavedSemiIterator)& operator--()
-	{
-      m_pData -= m_nChannelCount;
-      return *this;
-	}
+    DFG_CLASS_NAME(InterleavedSemiIterator)& operator--()
+    {
+        m_pData -= m_nChannelCount;
+        return *this;
+    }
 
-	DFG_CLASS_NAME(InterleavedSemiIterator) operator--(int) const
-	{
-      auto iter = *this;
-      --*this;
-      return iter;
-	}
+    DFG_CLASS_NAME(InterleavedSemiIterator) operator--(int)
+    {
+        auto iter = *this;
+        --*this;
+        return iter;
+    }
 
 	const Data_T& operator*() const
 	{

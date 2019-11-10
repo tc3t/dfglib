@@ -237,3 +237,21 @@ TEST(dfgIter, RawStorageIterator)
     rawStorageIteratorTestImpl<int>();
     rawStorageIteratorTestImpl<double>();
 }
+
+TEST(dfgIter, InterleavedSemiIterator)
+{
+    double arr[] = { 1, 2, 3, 4, 5, 6 };
+    DFG_MODULE_NS(iter)::DFG_CLASS_NAME(InterleavedSemiIterator)<double> iter(arr, 2);
+    EXPECT_EQ(1, *iter);
+    EXPECT_EQ(2, iter.getChannel(1));
+    EXPECT_EQ(1, *iter++);
+    EXPECT_EQ(3, *iter);
+    ++iter;
+    EXPECT_EQ(5, *iter);
+    EXPECT_EQ(6, iter.getChannel(1));
+    --iter;
+    EXPECT_EQ(3, *iter);
+    EXPECT_EQ(3, *iter--);
+    EXPECT_EQ(1, *iter);
+    EXPECT_EQ(2, iter.getChannel(1));
+}
