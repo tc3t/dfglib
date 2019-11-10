@@ -23,11 +23,9 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/debug/structuredExceptionHandling.h>
 #include <dfg/qt/CsvTableView.hpp>
 
-#ifdef _WIN32
-    DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
-        #include <dfg/str/fmtlib/format.cc>
-    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
-#endif // _WIN32
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #include <dfg/str/fmtlib/format.cc>
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 static QWidget* gpMainWindow = nullptr;
 
