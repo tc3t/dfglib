@@ -10,6 +10,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <memory>
+#include <cstddef>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -91,7 +92,7 @@ public:
         return old;
     }
 
-    bool operator!=(const nullptr_t) const
+    bool operator!=(const std::nullptr_t) const
     {
         return m_spData.data() != nullptr;
     }
