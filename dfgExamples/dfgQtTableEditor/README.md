@@ -203,7 +203,7 @@ Summary of 3rd party code in dfgQtTableEditor (last revised 2019-06-13).
 | Library      | License  |
 | ------------- | ----- |
 | [Boost](http://www.boost.org/) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
-| [fmtlib](https://github.com/fmtlib/fmt) (only in Windows build) | [BSD-2](../../dfg/str/fmtlib/format.h) |
+| [fmtlib](https://github.com/fmtlib/fmt) | [BSD-2](../../dfg/str/fmtlib/format.h) |
 | [Qt](https://www.qt.io/) | [Various](http://doc.qt.io/qt-5/licensing.html) |
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) | [Boost software license](../../dfg/utf/utf8_cpp/utf8.h) |
 

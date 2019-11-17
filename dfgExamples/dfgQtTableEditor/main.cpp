@@ -66,13 +66,10 @@ static void onShowAboutBox()
             s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId)).arg(psz);
     });
 
-#ifdef _WIN32
     #define FMT_ABOUT_ENTRY ", <a href=https://github.com/fmtlib/fmt>fmt</a>"
-#else
-    #define FMT_ABOUT_ENTRY ""
-#endif
     s += QString("<br>Source code: <a href=%1>%1</a>").arg("https://github.com/tc3t/dfglib");
     s += QString("<br>3rd party libraries used in this application: <a href=www.boost.org>Boost</a>" FMT_ABOUT_ENTRY ", Qt, <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>");
+    #undef FMT_ABOUT_ENTRY
 
     QMessageBox::about(gpMainWindow,
                              QApplication::tr("About"),
