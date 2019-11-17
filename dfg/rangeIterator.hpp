@@ -64,6 +64,12 @@ DFG_ROOT_NS_BEGIN
         typedef typename std::conditional<IsContiguousMemoryIterator<Iter_T>::value, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorContiguousIterBase<Iter_T>, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorDefaultBase<Iter_T>>::type BaseClass;
         DFG_CLASS_NAME(RangeIterator_T)() {}
         DFG_CLASS_NAME(RangeIterator_T)(Iter_T iBegin, Iter_T iEnd) : BaseClass(iBegin, iEnd) {}
+
+        template <class OtherIter_T>
+        DFG_CLASS_NAME(RangeIterator_T)(const DFG_CLASS_NAME(RangeIterator_T)<OtherIter_T>& other)
+            : BaseClass(other.m_iterBegin, other.m_iterEnd)
+        {
+        }
     };
 
     template <class Iter_T>

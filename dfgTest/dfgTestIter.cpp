@@ -18,6 +18,20 @@ TEST(dfgIter, RangeIterator)
     std::for_each(range.begin(), range.end(), [](double){});
     DFG_MODULE_NS(alg)::forEachFwd(range, [](double){});
     EXPECT_TRUE(range.empty()); // Test empty() -member function.
+
+    // Test construction of const T* range from T* range.
+    {
+        int values[] = { 1, 2, 3 };
+        auto range0 = DFG_ROOT_NS::makeRange(values);
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<const int*> range0CopyConstructor(range0);
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<const int*> range0Assignment;
+        range0Assignment = range0;
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<const int*> range0Const(range0);
+        EXPECT_EQ(range0.begin(), range0Const.begin());
+        EXPECT_EQ(range0.begin(), range0Assignment.begin());
+        EXPECT_EQ(range0.end(), range0Const.end());
+        EXPECT_EQ(range0.end(), range0Assignment.end());
+    }
 }
 
 TEST(dfgIter, makeRange)
