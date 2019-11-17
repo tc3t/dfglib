@@ -1478,6 +1478,30 @@ TEST(dfgCont, MapVector)
 
     verifyMapVectors(mapVectorSoaSorted, mapVectorSoaUnsorted, mStd);
     verifyMapVectors(mapVectorAosSorted, mapVectorAosUnsorted, mStd);
+
+    // Test access to underlying key/value container for SoA-case.
+    {
+        DFG_CLASS_NAME(MapVectorSoA)<float, double> xyVals;
+        xyVals.insert(1, 5);
+        xyVals.insert(2, 6);
+        xyVals.insert(3, 7);
+        xyVals.insert(4, 8);
+        const auto& xyValsConst = xyVals;
+        EXPECT_EQ(10, DFG_MODULE_NS(numeric)::accumulate(xyVals.keyRange()));
+        EXPECT_EQ(26, DFG_MODULE_NS(numeric)::accumulate(xyVals.valueRange()));
+        EXPECT_EQ(26, DFG_MODULE_NS(numeric)::accumulate(xyVals.valueRange_const()));
+        EXPECT_EQ(10, DFG_MODULE_NS(numeric)::accumulate(xyValsConst.keyRange()));
+        EXPECT_EQ(26, DFG_MODULE_NS(numeric)::accumulate(xyValsConst.valueRange()));
+
+        // Test editing keys and values
+        auto keyRange = xyVals.keyRange_modifiable();
+        auto valueRange = xyVals.valueRange();
+        std::transform(keyRange.begin(), keyRange.end(), keyRange.begin(), [](const float d) { return d+1; });
+        std::transform(valueRange.begin(), valueRange.end(), valueRange.begin(), [](const double d) { return d + 1; });
+
+        EXPECT_EQ(14, DFG_MODULE_NS(numeric)::accumulate(xyVals.keyRange()));
+        EXPECT_EQ(30, DFG_MODULE_NS(numeric)::accumulate(xyVals.valueRange()));
+    }
 }
 
 namespace

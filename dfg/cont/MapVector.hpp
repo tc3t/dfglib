@@ -44,6 +44,7 @@ Related reading and implementations:
 #include <iterator>
 #include <utility>
 #include <vector>
+#include "../rangeIterator.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -393,6 +394,15 @@ public:
         swap(m_keyStorage[nIndexA], m_keyStorage[nIndexB]);
         swap(m_valueStorage[nIndexA], m_valueStorage[nIndexB]);
     }
+
+    // Note: one must be careful when editing keys (e.g. maintaining order when isSorted() is enabled). To make accidental edits less likely,
+    //       keyRange() is always const. keyRange_modifiable() provides editable keys if needed.
+    DFG_CLASS_NAME(RangeIterator_T)<typename KeyStorage_T::iterator>       keyRange_modifiable()  { return makeRange(m_keyStorage); }
+    DFG_CLASS_NAME(RangeIterator_T)<typename KeyStorage_T::const_iterator> keyRange() const       { return makeRange(m_keyStorage); }
+
+    DFG_CLASS_NAME(RangeIterator_T)<typename ValueStorage_T::iterator>       valueRange()             { return makeRange(m_valueStorage); }
+    DFG_CLASS_NAME(RangeIterator_T)<typename ValueStorage_T::const_iterator> valueRange() const       { return valueRange_const(); }
+    DFG_CLASS_NAME(RangeIterator_T)<typename ValueStorage_T::const_iterator> valueRange_const() const { return makeRange(m_valueStorage); } // For convenience.
 
     KeyStorage_T    m_keyStorage;
     ValueStorage_T  m_valueStorage;
