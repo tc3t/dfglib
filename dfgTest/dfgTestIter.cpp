@@ -13,11 +13,13 @@
 
 TEST(dfgIter, RangeIterator)
 {
-    std::vector<double> vec;
-    DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<std::vector<double>::const_iterator> range(vec.begin(), vec.end());
-    std::for_each(range.begin(), range.end(), [](double){});
-    DFG_MODULE_NS(alg)::forEachFwd(range, [](double){});
-    EXPECT_TRUE(range.empty()); // Test empty() -member function.
+    {
+        std::vector<double> vec;
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T) < std::vector<double>::const_iterator > range(vec.begin(), vec.end());
+        std::for_each(range.begin(), range.end(), [](double) {});
+        DFG_MODULE_NS(alg)::forEachFwd(range, [](double) {});
+        EXPECT_TRUE(range.empty()); // Test empty() -member function.
+    }
 
     // Test construction of const T* range from T* range.
     {
@@ -31,6 +33,59 @@ TEST(dfgIter, RangeIterator)
         EXPECT_EQ(range0.begin(), range0Assignment.begin());
         EXPECT_EQ(range0.end(), range0Const.end());
         EXPECT_EQ(range0.end(), range0Assignment.end());
+    }
+
+    // Test construction of T* range from contiguous memory iterator.
+    {
+        std::vector<int> vec;
+        vec.push_back(1);
+        vec.push_back(2);
+        const auto& vecConst = vec;
+        auto vecRange = DFG_ROOT_NS::makeRange(vec);
+        auto vecConstRange = DFG_ROOT_NS::makeRange(vecConst);
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptrRange(vecRange);
+        //DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptr2Range(vecConstRange); // This should fail to compile
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<const int*> cptrRange(vecRange);
+
+        EXPECT_EQ(vecRange.size(), vecConstRange.size());
+        EXPECT_EQ(vecRange.size(), ptrRange.size());
+        EXPECT_EQ(vecRange.size(), cptrRange.size());
+
+        EXPECT_EQ(vec[0], *vecRange.begin());
+        EXPECT_EQ(vec[0], *vecConstRange.begin());
+        EXPECT_EQ(vec[0], *ptrRange.begin());
+        EXPECT_EQ(vec[0], *cptrRange.begin());
+
+        EXPECT_EQ(vec[1], *(vecRange.begin() + 1));
+        EXPECT_EQ(vec[1], *(vecConstRange.begin() + 1));
+        EXPECT_EQ(vec[1], *(ptrRange.begin() + 1));
+        EXPECT_EQ(vec[1], *(cptrRange.begin() + 1));
+
+        std::vector<int> vecEmpty;
+        auto vecEmptyRange = DFG_ROOT_NS::makeRange(vecEmpty);
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptrEmptyRange(vecEmptyRange);
+        EXPECT_TRUE(ptrEmptyRange.empty());
+    }
+
+#if 0 // If enabled, should fail to compile - can't create T* range from non-contiguous range.
+    {
+        std::list<int> list;
+        auto listRange = DFG_ROOT_NS::makeRange(list);
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptrRange(listRange);
+    }
+#endif
+
+    // Test that range copy constructor works when dealing with non-pointer ranges.
+    {
+        std::list<int> list;
+        list.push_back(1);
+        auto range = DFG_ROOT_NS::makeRange(list);
+        DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<std::list<int>::const_iterator> range2(range);
+        ASSERT_EQ(range.size(), range2.size());
+        EXPECT_EQ(1, *range.begin());
+        EXPECT_EQ(1, *range2.begin());
+        EXPECT_EQ(range.begin(), range2.begin());
+        
     }
 }
 

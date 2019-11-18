@@ -27,7 +27,7 @@ DFG_ROOT_NS_BEGIN
 
             iterator m_iterBegin;
             iterator m_iterEnd;
-        };
+        }; // Class RangeIteratorDefaultBase
 
         // Specialized base that defines data()-method for access to contiguous memory.
         template <class Iter_T>
@@ -39,23 +39,59 @@ DFG_ROOT_NS_BEGIN
             RangeIteratorContiguousIterBase() {}
             RangeIteratorContiguousIterBase(Iter_T iBegin, Iter_T iEnd) : BaseClass(iBegin, iEnd) {}
 
+            pointer beginAsPointer() const { return (!this->empty()) ? &*this->begin() : nullptr; }
+
             // Note: This is const given the const-semantics explained in comments for RangeIterator_T.
             // Note: Return value may differ from standard containers data() when range is empty.
-            pointer data() const { return (!this->empty()) ? &*this->begin() : nullptr; }
-        };
+            pointer data() const { return beginAsPointer(); }
+        }; // Class RangeIteratorContiguousIterBase
 
+        template <class Destination_T, class Source_T>
+        Destination_T makeBeginIterator(const Source_T& iterBegin, const Source_T& iterEnd, std::true_type)
+        {
+            DFG_STATIC_ASSERT((std::is_pointer<Destination_T>::value && IsContiguousMemoryIterator<Source_T>::value), "Can't create T* from non-contiguous memory iterator");
+            return (iterBegin != iterEnd) ? &*iterBegin : nullptr;
+        }
 
-    }
+        template <class Destination_T, class Source_T>
+        Destination_T makeBeginIterator(const Source_T& iterBegin, const Source_T& /*iterEnd*/, std::false_type)
+        {
+            return iterBegin;
+        }
+
+        template <class Destination_T, class Source_T>
+        Destination_T makeBeginIterator(const Source_T& iterBegin, const Source_T& iterEnd)
+        {
+            return makeBeginIterator<Destination_T>(iterBegin, iterEnd, typename std::is_pointer<Destination_T>());
+        }
+
+        template <class Destination_T, class Source_T>
+        Destination_T makeEndIterator(const Source_T& iterBegin, const Source_T& iterEnd, std::true_type)
+        {
+            auto rv = makeBeginIterator<Destination_T>(iterBegin, iterEnd);
+            rv += std::distance(iterBegin, iterEnd);
+            return rv;
+        }
+
+        template <class Destination_T, class Source_T>
+        Destination_T makeEndIterator(const Source_T&, const Source_T& iterEnd, std::false_type)
+        {
+            return iterEnd;
+        }
+
+        template <class Destination_T, class Source_T>
+        Destination_T makeEndIterator(const Source_T& iterBegin, const Source_T& iterEnd)
+        {
+            return makeEndIterator<Destination_T>(iterBegin, iterEnd, typename std::is_pointer<Destination_T>());
+        }
+
+    } // namespace DFG_DETAIL_NS
 
     // Defines range through iterator pair.
-    // This is iterator-like structure which does not own the data it refers to.
     // To create instances conveniently, use makeRange.
     // Note: Range uses 'pointer const' semantics: range's constness is defined by the range it
     //       defines, not by the contents. Thus is it possible to modify underlying data through
     //       e.g. begin() iterator even through const range.
-    // TODO: test
-    // TODO: Currently data()-method is defined only for pointer type. Should be defined for all iterators that point
-    //       to contiguous memory (e.g. std::vector, std::string, std::array).
     // Remarks: For more robust implementation, see Boost.Range
     template <class Iter_T>
     class DFG_CLASS_NAME(RangeIterator_T) : public std::conditional<IsContiguousMemoryIterator<Iter_T>::value, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorContiguousIterBase<Iter_T>, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorDefaultBase<Iter_T>>::type
@@ -67,7 +103,7 @@ DFG_ROOT_NS_BEGIN
 
         template <class OtherIter_T>
         DFG_CLASS_NAME(RangeIterator_T)(const DFG_CLASS_NAME(RangeIterator_T)<OtherIter_T>& other)
-            : BaseClass(other.m_iterBegin, other.m_iterEnd)
+            : BaseClass(::DFG_ROOT_NS::DFG_DETAIL_NS::makeBeginIterator<Iter_T>(other.begin(), other.end()), ::DFG_ROOT_NS::DFG_DETAIL_NS::makeEndIterator<Iter_T>(other.begin(), other.end()))
         {
         }
     };
