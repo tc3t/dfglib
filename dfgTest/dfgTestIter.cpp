@@ -85,7 +85,6 @@ TEST(dfgIter, RangeIterator)
         EXPECT_EQ(1, *range.begin());
         EXPECT_EQ(1, *range2.begin());
         EXPECT_EQ(range.begin(), range2.begin());
-        
     }
 }
 
@@ -121,6 +120,32 @@ TEST(dfgIter, makeRange)
     EXPECT_EQ(11, vals[0]);
     EXPECT_EQ(21, vals[1]);
     EXPECT_EQ(31, vals[2]);
+}
+
+TEST(dfgIter, headRange)
+{
+    using namespace DFG_ROOT_NS;
+    int vals[] = { 10, 20, 30, 40, 50 };
+    auto rangeVals = makeRange(vals);
+    EXPECT_TRUE(headRange(rangeVals, 0).empty());
+    EXPECT_EQ(1, headRange(rangeVals, 1).size());
+    EXPECT_EQ(10, *headRange(rangeVals, 1).begin());
+
+    DFGTEST_STATIC((std::is_same<decltype(rangeVals), decltype(headRange(rangeVals, 0))>::value));
+    DFGTEST_STATIC((std::is_same<decltype(rangeVals), decltype(headRange(vals, 0))>::value));
+
+    EXPECT_EQ(2, headRange(rangeVals, 2).size());
+    EXPECT_EQ(10, *headRange(rangeVals, 2).begin());
+    EXPECT_EQ(20, *(headRange(rangeVals, 2).begin() + 1));
+
+    EXPECT_EQ(3, headRange(vals, 3).size());
+    EXPECT_EQ(10, *headRange(vals, 3).begin());
+    EXPECT_EQ(20, *(headRange(vals, 3).begin() + 1));
+    EXPECT_EQ(30, *(headRange(vals, 3).begin() + 2));
+
+    std::list<int> listCont(rangeVals.begin(), rangeVals.end());
+    EXPECT_EQ(2, headRange(listCont, 2).size());
+    EXPECT_EQ(10, *(headRange(listCont, 2).begin()));
 }
 
 TEST(dfgIter, dataMethod)
