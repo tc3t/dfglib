@@ -17,16 +17,10 @@ message("QMAKESPEC is " $$QMAKESPEC)
 #message("QMAKE_HOST.version is " $$QMAKE_HOST.version)
 #message("QMAKE_HOST.version_string is " $$QMAKE_HOST.version_string)
 
+# Main switches for QtCharts and QCustomPlot. Value can be 1 even if not available; there's a separate availability check later.
 DFG_ALLOW_QT_CHARTS = 0
+DFG_ALLOW_QCUSTOMPLOT = 0
 
-qtHaveModule(charts) {
-    message("Qt Charts module found")
-    QT_CHARTS_AVAILABLE = 1
-
-} else {
-    message("Qt Charts module NOT found")
-    QT_CHARTS_AVAILABLE = 0
-}
 
 # -------------------------------------------------------
 # Setting modules
@@ -35,15 +29,49 @@ QT       = core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-equals(QT_CHARTS_AVAILABLE, "1") {
-    equals(DFG_ALLOW_QT_CHARTS, "1") {
-        message("Using Qt Charts. WARNING: using Qt Charts causes GPL infection")
-        QT       += charts
-        DEFINES += DFG_ALLOW_QT_CHARTS=1
+# Checking whether to use QCustomPlot
+exists( $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp ) {
+    QCUSTOMPLOT_AVAILABLE = 1
+} else {
+    QCUSTOMPLOT_AVAILABLE = 0
+}
+
+DFGQTE_USING_QCUSTOMPLOT = 0
+equals(DFG_ALLOW_QCUSTOMPLOT, "1") {
+    equals(QCUSTOMPLOT_AVAILABLE, "1") {
+        message("Using QCustomPlot. WARNING: using QCustomPlot causes GPL infection")
+        DEFINES += DFG_ALLOW_QCUSTOMPLOT=1
+        DFGQTE_USING_QCUSTOMPLOT = 1
+        QT += printsupport
     } else {
-        message("Qt Charts was found, but not used due to config flag")
+        message("QCustomPlot NOT found.")
     }
 }
+
+equals(DFG_ALLOW_QT_CHARTS, "1") {
+    qtHaveModule(charts) {
+        message("Qt Charts module found")
+        QT_CHARTS_AVAILABLE=1
+
+    } else {
+        message("Qt Charts module NOT found")
+        QT_CHARTS_AVAILABLE = 0
+    }
+}
+
+# Checking whether to use QtCharts
+equals(DFGQTE_USING_QCUSTOMPLOT, "0") {
+    equals(QT_CHARTS_AVAILABLE, "1") {
+        equals(DFG_ALLOW_QT_CHARTS, "1") {
+            message("Using Qt Charts. WARNING: using Qt Charts causes GPL infection")
+            QT       += charts
+            DEFINES += DFG_ALLOW_QT_CHARTS=1
+        } else {
+            message("Qt Charts was found, but not used due to config flag")
+        }
+    }
+}
+
 
 # -------------------------------------------------------
 
@@ -119,6 +147,10 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp
 
+equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
+        SOURCES += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp
+}
+
 HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableView.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewActions.hpp \
@@ -131,6 +163,10 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/widgetHelpers.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/containerUtils.hpp
+
+equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
+        HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.h
+}
 
 win32 {
     SOURCES += \

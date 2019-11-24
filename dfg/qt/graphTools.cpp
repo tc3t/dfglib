@@ -33,6 +33,11 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 
 DFG_END_INCLUDE_QT_HEADERS
 
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+    DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+        #include "qcustomplot/qcustomplot.h"
+    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+#endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
@@ -171,6 +176,96 @@ public:
 }; // Class XySeriesQtChart
 #endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+class XySeriesQCustomPlot : public XySeries
+{
+public:
+    XySeriesQCustomPlot(QCPGraph* xySeries)
+        : m_spXySeries(xySeries)
+    {
+    }
+
+    void setOrAppend(const DataSourceIndex nIndex, const double x, const double y) override
+    {
+        DFG_UNUSED(nIndex);
+        DFG_UNUSED(x);
+        DFG_UNUSED(y);
+        DFG_ASSERT_IMPLEMENTED(false);
+
+#if 0 // Commented out for now: QCustomPlot seems to expect sorted data, would need to figure out where to do sorting, can't do while populating.
+        auto spData = getXySeriesData();
+        if (!spData)
+            return;
+        const auto nOldSize = static_cast<DataSourceIndex>(spData->size());
+        if (nIndex < nOldSize)
+        {
+            *(spData->begin() + nIndex) = QCPGraphData(x, y);
+        }
+        else
+        {
+            spData->add(QCPGraphData(x, y));
+        }
+#endif
+    }
+
+    void resize(const DataSourceIndex nNewSize) override
+    {
+        auto spData = getXySeriesData();
+        if (!spData)
+            return;
+        const auto nOldSize = static_cast<DataSourceIndex>(spData->size());
+        if (nOldSize == nNewSize)
+            return;
+        if (nNewSize < nOldSize)
+        {
+            if (nNewSize <= 0)
+                spData->clear();
+            else
+                spData->removeAfter((spData->at(static_cast<int>(nNewSize - 1)))->sortKey());
+        }
+        else
+        {
+            const auto nAddCount = nNewSize - nOldSize;
+            for (DataSourceIndex i = 0; i < nAddCount; ++i)
+                spData->add(QCPGraphData(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+
+        }
+    }
+
+    QSharedPointer<QCPGraphDataContainer> getXySeriesData()
+    {
+        auto pXySeries = getXySeriesImpl();
+        return (pXySeries) ? pXySeries->data() : nullptr;
+    }
+
+    QCPGraph* getXySeriesImpl()
+    {
+        return qobject_cast<QCPGraph*>(m_spXySeries.data());
+    }
+
+    void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals) override
+    {
+        auto xySeries = getXySeriesImpl();
+        if (!xySeries || xVals.size() != yVals.size())
+            return;
+
+        auto iterY = yVals.cbegin();
+        QVector<double> xTemp;
+        QVector<double> yTemp;
+        xTemp.reserve(static_cast<int>(xVals.size()));
+        yTemp.reserve(static_cast<int>(xVals.size()));
+        for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY)
+        {
+            xTemp.push_back(*iterX);
+            yTemp.push_back(*iterY);
+        }
+        xySeries->setData(xTemp, yTemp);
+    }
+
+    QPointer<QCPGraph> m_spXySeries;
+}; // Class XySeriesQCustomPlot
+#endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+
 class ChartCanvas
 {
 protected:
@@ -280,6 +375,64 @@ public:
 }; // ChartCanvasQtChart
 #endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+class ChartCanvasQCustomPlot : public ChartCanvas, QObject
+{
+public:
+
+    ChartCanvasQCustomPlot(QWidget* pParent = nullptr)
+    {
+        m_spChartView.reset(new QCustomPlot(pParent));
+    }
+
+    QWidget* getWidget()
+    {
+        return m_spChartView.get();
+    }
+
+    void setTitle(StringViewUtf8 svTitle) override
+    {
+        // Not implemented.
+        DFG_UNUSED(svTitle);
+    }
+
+    bool hasChartObjects() const override
+    {
+        return m_spChartView && (m_spChartView->graph() != nullptr);
+    }
+
+    void addXySeries() override
+    {
+        if (!m_spChartView)
+            return;
+        m_spChartView->addGraph();
+    }
+
+    std::shared_ptr<XySeries> getFirstXySeries() override
+    {
+        return (m_spChartView && m_spChartView->graphCount() > 0)
+                  ? std::shared_ptr<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(0)))
+                  : std::shared_ptr<XySeries>();
+    }
+
+    void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
+    {
+        DFG_UNUSED(pSeries);
+        DFG_UNUSED(xMin);
+        DFG_UNUSED(xMax);
+        DFG_UNUSED(yMin);
+        DFG_UNUSED(yMax);
+        if (m_spChartView)
+        {
+            m_spChartView->rescaleAxes();
+            m_spChartView->replot();
+        }
+    }
+
+    QObjectStorage<QCustomPlot> m_spChartView;
+}; // ChartCanvasQCustomPlot
+#endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+
 }} // module namespace
 
 DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : BaseClass(pParent)
@@ -296,6 +449,12 @@ DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pPar
     auto pLayout = new QGridLayout(this);
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
     auto pChartCanvas = new ChartCanvasQtChart(this);
+    auto pWidget = pChartCanvas->getWidget();
+    if (pWidget)
+        pLayout->addWidget(pWidget);
+    m_spChartCanvas.reset(pChartCanvas);
+#elif defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+    auto pChartCanvas = new ChartCanvasQCustomPlot(this);
     auto pWidget = pChartCanvas->getWidget();
     if (pWidget)
         pLayout->addWidget(pWidget);
@@ -419,7 +578,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
                 }
                 else if (colToValuesMap.size() == 2)
                 {
-                    const auto& xValueMap = colToValuesMap.frontValue();
+                    // xValueMap is also used as final (x,y) table passed to series.
+                    auto& xValueMap = colToValuesMap.frontValue();
+                    xValueMap.setSorting(false);
                     const auto& yValueMap = colToValuesMap.backValue();
                     auto xIter = xValueMap.cbegin();
                     auto yIter = yValueMap.cbegin();
@@ -438,15 +599,21 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
                             ++yIter;
                             continue;
                         }
+                        // Current xIter and yIter point to the same row ->
+                        // store (x,y) values to start of xValueMap.
                         const auto x = xIter->second;
                         const auto y = yIter->second;
+
+                        xValueMap.m_keyStorage[nActualSize] = x;
+                        xValueMap.m_valueStorage[nActualSize] = y;
                         minMaxX(x);
                         minMaxY(y);
-                        spSeries->setOrAppend(nActualSize, x, y);
                         nActualSize++;
                         ++xIter;
                         ++yIter;
                     }
+                    const ptrdiff_t nSizeAsPtrdiff = static_cast<ptrdiff_t>(nActualSize);
+                    spSeries->setValues(headRange(xValueMap.keyRange(), nSizeAsPtrdiff), headRange(xValueMap.valueRange(), nSizeAsPtrdiff));
                     nGraphSize = nActualSize;
                 }
                 spSeries->resize(nGraphSize); // Removing excess points (if any)
