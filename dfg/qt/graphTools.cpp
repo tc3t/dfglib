@@ -3,9 +3,12 @@
 #include "connectHelper.hpp"
 
 #include "../cont/MapVector.hpp"
+#include "../rangeIterator.hpp"
 
 #include "../func/memFunc.hpp"
 #include "../str/format_fmt.hpp"
+
+#include "../alg.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
@@ -23,11 +26,13 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QtCharts/QDateTimeAxis>
     #include <QtCharts/QValueAxis>
 #endif
-DFG_END_INCLUDE_QT_HEADERS
 
 #include <QListWidget>
 #include <QJsonDocument>
 #include <QVariantMap>
+
+DFG_END_INCLUDE_QT_HEADERS
+
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
@@ -97,6 +102,9 @@ public:
     virtual ~XySeries() {}
     virtual void setOrAppend(const DataSourceIndex, const double, const double) = 0;
     virtual void resize(const DataSourceIndex) = 0;
+
+    // Sets x values and y values. If given x and y ranges have different size, request is ignored.
+    virtual void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*>, DFG_CLASS_NAME(RangeIterator_T)<const double*>) = 0;
 }; // Class XySeries
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
@@ -111,7 +119,7 @@ public:
 
     void setOrAppend(const DataSourceIndex index, const double x, const double y) override
     {
-        auto pXySeries = getXySeries();
+        auto pXySeries = getXySeriesImpl();
         if (!pXySeries)
             return;
         if (index < static_cast<DataSourceIndex>(pXySeries->count()))
@@ -122,7 +130,7 @@ public:
 
     void resize(const DataSourceIndex nNewSize) override
     {
-        auto pXySeries = getXySeries();
+        auto pXySeries = getXySeriesImpl();
         if (!pXySeries || nNewSize == static_cast<DataSourceIndex>(pXySeries->count()))
             return;
         if (nNewSize < static_cast<DataSourceIndex>(pXySeries->count()))
@@ -135,9 +143,28 @@ public:
         }
     }
 
-    QXYSeries* getXySeries()
+    QXYSeries* getXySeriesImpl()
     {
         return qobject_cast<QXYSeries*>(m_spXySeries.data());
+    }
+
+    void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals) override
+    {
+        auto pXySeries = getXySeriesImpl();
+        if (!pXySeries || xVals.size() != yVals.size())
+            return;
+        pXySeries->clear();
+        QVector<QPointF> points;
+        const auto nNewCount = xVals.size();
+        points.resize(static_cast<int>(nNewCount));
+        std::transform(xVals.cbegin(), xVals.cbegin() + nNewCount,
+                       yVals.cbegin(),
+                       points.begin(),
+                       [](const double x, const double y)
+        {
+            return QPointF(x, y);
+        });
+        pXySeries->replace(points);
     }
 
     QPointer<QAbstractSeries> m_spXySeries;
@@ -198,7 +225,7 @@ public:
     {
         auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
         pChart->addSeries(new QLineSeries(m_spChartView.get())); // chart takes ownership
-        //pChart->addSeries(new QScatterSeries(m_spGraphDisplay.get())); // Chart takes ownership of series
+        //pChart->addSeries(new QScatterSeries(m_spChartView.get())); // chart takes ownership
     }
 
     std::shared_ptr<XySeries> getFirstXySeries() override
@@ -225,7 +252,7 @@ public:
         if (!qtXySeries)
             return;
 
-        auto pSeriesImpl = qtXySeries->getXySeries();
+        auto pSeriesImpl = qtXySeries->getXySeriesImpl();
 
         if (!pSeriesImpl)
             return;
@@ -269,7 +296,9 @@ DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pPar
     auto pLayout = new QGridLayout(this);
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
     auto pChartCanvas = new ChartCanvasQtChart(this);
-    pLayout->addWidget(pChartCanvas->getWidget());
+    auto pWidget = pChartCanvas->getWidget();
+    if (pWidget)
+        pLayout->addWidget(pWidget);
     m_spChartCanvas.reset(pChartCanvas);
 #else
     auto pTextEdit = new QPlainTextEdit(this);
@@ -353,38 +382,45 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
                     return;
                 }
 
-                typedef DFG_MODULE_NS(cont)::MapVectorSoA<int, dfg::cont::MapVectorSoA<int, double>> ColumnValues;
-                ColumnValues values;
-                values.setSorting(false);
+                typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<double, double> RowToValueMap;
+                typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<DataSourceIndex, RowToValueMap> ColumnToValuesMap;
 
-                source.forEachElement_fromTableSelection([&](const DataSourceIndex r, const DataSourceIndex c, const QVariant& val)
+                ColumnToValuesMap colToValuesMap; // Maps column to "(row, column value)" table.
+
+                // Fetching data from source.
+                source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
                 {
-                    int rowAsInt = static_cast<int>(r);
-                    values[c].insert(std::move(rowAsInt), val.toDouble());
+                    auto insertRv = colToValuesMap.insert(std::move(c), RowToValueMap());
+                    if (insertRv.second) // If new RowToValueMap was added, temporarily disabling sorting.
+                        insertRv.first->second.setSorting(false);
+                    insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
+                    insertRv.first->second.m_valueStorage.push_back(val.toDouble());
                 });
+                // Sorting values by row now that all data has been added.
+                for (auto iter = colToValuesMap.begin(), iterEnd = colToValuesMap.end(); iter != iterEnd; ++iter)
+                {
+                    iter->second.setSorting(true);
+                }
 
                 DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
                 DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
                 DataSourceIndex nGraphSize = 0;
 
-                if (values.size() == 1)
+                if (colToValuesMap.size() == 1)
                 {
-                    const auto& valueCont = values.begin()->second;
+                    const auto& valueCont = colToValuesMap.begin()->second;
                     nGraphSize = valueCont.size();
-                    DataSourceIndex i = 0;
-                    for (const auto valPair : valueCont)
-                    {
-                        const auto x = valPair.first;
-                        const auto y = valPair.second;
-                        minMaxX(x);
-                        minMaxY(y);
-                        spSeries->setOrAppend(i++, x, y);
-                    }
+                    minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.keyRange(), minMaxX);
+                    minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.valueRange(), minMaxY);
+                    // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
+                    //       to store new content to those directly or at least allow moving these storages to series
+                    //       so it wouldn't need to duplicate them.
+                    spSeries->setValues(valueCont.keyRange(), valueCont.valueRange());
                 }
-                else if (values.size() == 2)
+                else if (colToValuesMap.size() == 2)
                 {
-                    const auto& xValueMap = values.frontValue();
-                    const auto& yValueMap = values.backValue();
+                    const auto& xValueMap = colToValuesMap.frontValue();
+                    const auto& yValueMap = colToValuesMap.backValue();
                     auto xIter = xValueMap.cbegin();
                     auto yIter = yValueMap.cbegin();
                     DataSourceIndex nActualSize = 0;
