@@ -385,18 +385,33 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
                 {
                     const auto& xValueMap = values.frontValue();
                     const auto& yValueMap = values.backValue();
-                    nGraphSize = Min(xValueMap.size(), yValueMap.size());
                     auto xIter = xValueMap.cbegin();
                     auto yIter = yValueMap.cbegin();
-                    for (DataSourceIndex i = 0; i < nGraphSize; ++i, ++xIter, ++yIter)
+                    DataSourceIndex nActualSize = 0;
+                    for (; xIter != xValueMap.cend() && yIter != yValueMap.cend();)
                     {
+                        const auto xRow = xIter->first;
+                        const auto yRow = yIter->first;
+                        if (xRow < yRow)
+                        {
+                            ++xIter;
+                            continue;
+                        }
+                        else if (yRow < xRow)
+                        {
+                            ++yIter;
+                            continue;
+                        }
                         const auto x = xIter->second;
                         const auto y = yIter->second;
                         minMaxX(x);
                         minMaxY(y);
-                        spSeries->setOrAppend(i, x, y);
+                        spSeries->setOrAppend(nActualSize, x, y);
+                        nActualSize++;
+                        ++xIter;
+                        ++yIter;
                     }
-
+                    nGraphSize = nActualSize;
                 }
                 spSeries->resize(nGraphSize); // Removing excess points (if any)
 
