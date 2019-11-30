@@ -526,7 +526,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             m_bInverted(bInverted)
         {
             auto pModel = (m_pView) ? m_pView->model() : nullptr;
-            if (!pModel)
+            if (!pModel || (!m_bInverted && pModel->rowCount() < 1))
                 return;
 
             const auto nColCount = pModel->columnCount();
@@ -545,9 +545,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             if (!pModel)
                 return;
 
-            pModel->insertRow(0);
-
             const auto& rFirstRowStrings = (m_bInverted) ? m_vecHdrStrings : m_vecFirstRowStrings;
+
+            if (rFirstRowStrings.empty())
+                return;
+
+            pModel->insertRow(0);
 
             DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(rFirstRowStrings, [&](const QString& s, const int i)
             {
@@ -568,8 +571,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             if (!pModel)
                 return;
             //DFG_CLASS_NAME(CsvTableViewActionDelete)(*m_pView, m_pView->getProxyModelPtr(), true, ).redo();
-            pModel->removeRow(0);
+
             const auto& headerNameStrings = (m_bInverted) ? m_vecHdrStrings : m_vecFirstRowStrings;
+            if (headerNameStrings.empty())
+                return;
+
+            pModel->removeRow(0);
+            
             DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(headerNameStrings, [&](const QString& s, const int i)
             {
                 pModel->setColumnName(i, s);

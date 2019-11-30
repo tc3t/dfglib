@@ -2303,12 +2303,14 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
 
 bool DFG_CLASS_NAME(CsvTableView)::moveFirstRowToHeader()
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)>(this);
+    auto pModel = model();
+    return (pModel && pModel->rowCount() > 0 && pModel->columnCount() > 0) ? executeAction<DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)>(this) : false;
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::moveHeaderToFirstRow()
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)>(this, true);
+    auto pModel = model();
+    return (pModel && pModel->columnCount() > 0) ? executeAction<DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)>(this, true) : false;
 }
 
 QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr()
