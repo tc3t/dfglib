@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "CsvTableView.hpp"
+#include "CsvItemModel.hpp"
 #include "qtIncludeHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
@@ -554,7 +555,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(rFirstRowStrings, [&](const QString& s, const int i)
             {
-                pModel->setData(pModel->index(0, i), s);
+                pModel->setDataNoUndo(pModel->index(0, i), s);
             });
             DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(m_vecHdrStrings, [&](const QString& s, const int i)
             {
