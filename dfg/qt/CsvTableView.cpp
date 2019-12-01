@@ -208,6 +208,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 
     {
         auto pAction = new QAction(tr("New table from clipboard"), this);
+        pAction->setShortcut(tr("Ctrl+Shift+N"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::createNewTableFromClipboard));
         addAction(pAction);
     }
