@@ -162,7 +162,8 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/tableViewUndoCommands.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/widgetHelpers.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/containerUtils.hpp
+        $$_PRO_FILE_PWD_/../../dfg/qt/containerUtils.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/TableView.hpp
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
         HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.h
