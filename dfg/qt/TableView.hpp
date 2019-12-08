@@ -76,8 +76,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 const auto isEmptyCell = [&](const QModelIndex& index)
                             {
-                                // TODO: this is suboptimal: may allocate for QString on every call.
-                                return pModel->data(index).toString().isEmpty();
+                                return !pModel->data(index).isValid();
                             };
                 const auto nFixed = (startIndex.*mfpFixDimAccess)();
                 const auto nTraverseLimit = (bPositiveStep) ? (pModel->*mfpTraverseDimCount)(QModelIndex()) : -1;
@@ -93,6 +92,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                     bStartEmpty = true;
                     nStartIndex += nStep;
                 }
+                // TODO: traversing could be implemented much more efficiently for CsvTableView: every call to isEmptyCell() check involves virtual function call that does binary search.
+                //       For example when traversing a column (i.e. up/down arrow) on a table with N rows with no empty cells, ctrl+down on first row is O(N*log(N)), but if searched directly
+                //       from TableCsv data structure, it would be O(N).
                 for (auto nTraverse = nStartIndex; nTraverse != nTraverseLimit; nTraverse += nStep)
                 {
                     if (bStartEmpty != isEmptyCell(toModelIndex(*pModel, nTraverse, nFixed)))

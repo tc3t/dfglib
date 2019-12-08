@@ -769,6 +769,8 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
     {
         const SzPtrUtf8R p = m_table(nRow, nCol);
         // Note: also checking for empty string as fromUtf8() does allocation if given an empty string (at least 5.13.1 and earlier).
+        // Note: At least ctrl+arrow behaviour in TableView is dependent on the distinction between returning QString("") and QVariant().
+        //       As of 2019-12-08, implementation requires empty cells to be QVariant() instead of QVariant(QString(""))
         return (p && !::DFG_MODULE_NS(str)::isEmptyStr(p)) ? QString::fromUtf8(p.c_str()) : QVariant();
     }
     else if (role == Qt::BackgroundRole && !m_highlighters.empty())
