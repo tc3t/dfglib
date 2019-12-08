@@ -768,7 +768,8 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
     if ((role == Qt::DisplayRole || role == Qt::EditRole || role == Qt::ToolTipRole))
     {
         const SzPtrUtf8R p = m_table(nRow, nCol);
-        return (p) ? QString::fromUtf8(p.c_str()) : QVariant();
+        // Note: also checking for empty string as fromUtf8() does allocation if given an empty string (at least 5.13.1 and earlier).
+        return (p && !::DFG_MODULE_NS(str)::isEmptyStr(p)) ? QString::fromUtf8(p.c_str()) : QVariant();
     }
     else if (role == Qt::BackgroundRole && !m_highlighters.empty())
     {
