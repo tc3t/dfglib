@@ -177,6 +177,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     , m_matchDef(QString(), Qt::CaseInsensitive, QRegExp::Wildcard)
     , m_nFindColumnIndex(0)
     , m_bUndoEnabled(true)
+    , m_nOnSelectionChangedInProgress(0)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -2792,22 +2793,42 @@ void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& sele
 {
     Q_EMIT sigSelectionChanged(selected, deselected);
 
+    if (m_nOnSelectionChangedInProgress <= 1)
+        m_nOnSelectionChangedInProgress++;
+
+    if (m_nOnSelectionChangedInProgress > 1)
+        return; // Previous onSelectionChanged() still in progress so exiting to prevent filling stack with onSelectionChanged() calls.
+
+    auto endOfScopeHandler = makeScopedCaller([] {}, [&]()
+        {
+            if (m_nOnSelectionChangedInProgress > 1)
+            {
+                // This branch means that at least one call to onSelectionChanged() was exited early because previous handling was still ongoing.
+                // In order to get updated selection analyzers, scheduling an update for it. Note that onSelectionChanged() is not called directly 
+                // as selected/deselected params are unknown.
+                m_nOnSelectionChangedInProgress = 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
+                QTimer::singleShot(0, this, &DFG_CLASS_NAME(CsvTableView)::privRunSelectionAnalyzersSlot);
+#else
+                QTimer::singleShot(0, this, SLOT(privRunSelectionAnalyzersSlot()));
+#endif
+            }
+            else
+                m_nOnSelectionChangedInProgress = 0;
+        });
+
     const auto sm = selectionModel();
     const auto selection = (sm) ? sm->selection() : QItemSelection();
 
+    // Starting a worker thread for selection analyzers to prevent GUI from freezing while selection gets analyzed.
+    // Note: this is likely error prone: user could probably do modifications during processing that would make analyzers malfunctions.
+    // TODO: create and reuse one thread instead of creating a new one every time.
     QEventLoop eventLoop;
     QThread workerThread;
     workerThread.setObjectName("selectionAnalyzer"); // Sets thread name visible to debugger.
     connect(&workerThread, &QThread::started, [&]()
             {
-                // TODO: add canRunInParallel-flag to analyzers, split analyzers to groups based on that and run the other
-                //       group in parallel.
-                for (auto iter = m_selectionAnalyzers.cbegin(); iter != m_selectionAnalyzers.cend(); ++iter)
-                {
-                    if (!*iter)
-                        continue;
-                    (*iter)->analyze(this, selection);
-                }
+                this->privRunSelectionAnalyzers(selection);
                 workerThread.quit();
             });
     connect(&workerThread, &QThread::finished, &eventLoop, &QEventLoop::quit);
@@ -3021,6 +3042,25 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToSource(const QAbstractItemModel* 
         return pModel->index(r, c);
     else
         return QModelIndex();
+}
+
+void DFG_CLASS_NAME(CsvTableView)::privRunSelectionAnalyzersSlot()
+{
+    const auto sm = selectionModel();
+    const auto selection = (sm) ? sm->selection() : QItemSelection();
+    privRunSelectionAnalyzers(selection);
+}
+
+void DFG_CLASS_NAME(CsvTableView)::privRunSelectionAnalyzers(const QItemSelection& selection)
+{
+    // TODO: add canRunInParallel-flag to analyzers, split analyzers to groups based on that and run the other
+    //       group in parallel.
+    for (auto iter = m_selectionAnalyzers.cbegin(); iter != m_selectionAnalyzers.cend(); ++iter)
+    {
+        if (!*iter)
+            continue;
+        (*iter)->analyze(this, selection);
+    }
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel)

@@ -211,6 +211,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openFile(const QString& sPath);
         bool openFile(const QString& sPath, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
 
+        void privRunSelectionAnalyzers(const QItemSelection& selection);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -328,6 +330,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void deleteSelected();
         */
 
+        void privRunSelectionAnalyzersSlot();
+
     signals:
         void sigFindActivated();
         void sigFilterActivated();
@@ -353,6 +357,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)>> m_selectionAnalyzers;
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bUndoEnabled;
+        uint8 m_nOnSelectionChangedInProgress; // 0 = not in progress, 1 = in progress and no calls while in progess, 2 = in progress and calls were ignored.
     };
 
     template <class Func_T>
