@@ -2,6 +2,7 @@
 #include <dfg/qt/CsvItemModel.hpp>
 #include <dfg/io.hpp>
 #include <dfg/io/OmcByteStream.hpp>
+#include <dfg/qt/containerUtils.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -9,6 +10,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <QDialog>
 #include <QSpinBox>
 #include <QGridLayout>
+#include <QThread>
 #include <dfg/qt/qxt/gui/qxtspanslider.h>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
@@ -128,4 +130,37 @@ TEST(dfgQt, SpanSlider)
     w.setLayout(pLayOut); // Takes ownership
     w.exec();
 #endif
+}
+
+namespace
+{
+    class QObjectStorageTestWidget : public QWidget
+    {
+    public:
+        QObjectStorageTestWidget()
+        {
+            m_threads.push_back(new QThread(this));
+            m_threads.push_back(new QThread);
+        }
+    public:
+        std::vector<DFG_MODULE_NS(qt)::QObjectStorage<QThread>> m_threads;
+    };
+}
+
+TEST(dfgQt, QObjectStorage)
+{
+    // Testing moving of QObject storages
+    {
+        DFG_MODULE_NS(qt)::QObjectStorage<QDialog> storage0(new QDialog);
+        auto pDialog = storage0.get();
+        EXPECT_EQ(pDialog, storage0.get());
+        DFG_MODULE_NS(qt)::QObjectStorage<QDialog> storage1 = std::move(storage0);
+        EXPECT_FALSE(storage0);
+        EXPECT_EQ(pDialog, storage1.get());
+    }
+
+    // Testing actual class that has std::vector<QObjectStorage<T>> as member.
+    {
+        QObjectStorageTestWidget widgetTest;
+    }
 }

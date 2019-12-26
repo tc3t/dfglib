@@ -46,6 +46,10 @@ public:
     DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(QObjectStorage);
 public:
 #endif
+    QObjectStorage(QObjectStorage&& other)
+    {
+        reset(other.release());
+    }
 
     ~QObjectStorage()
     {
