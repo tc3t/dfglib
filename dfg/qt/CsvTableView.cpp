@@ -32,6 +32,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaMethod>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QProcess>
 #include <QProgressBar>
 #include <QProgressDialog>
@@ -177,7 +179,6 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     , m_matchDef(QString(), Qt::CaseInsensitive, QRegExp::Wildcard)
     , m_nFindColumnIndex(0)
     , m_bUndoEnabled(true)
-    , m_nOnSelectionChangedInProgress(0)
 {
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -562,9 +563,41 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 
 DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
 {
+    // Removing temporary files.
     for (auto iter = m_tempFilePathsToRemoveOnExit.cbegin(), iterEnd = m_tempFilePathsToRemoveOnExit.cend(); iter != iterEnd; ++iter)
     {
         QFile::remove(*iter);
+    }
+    stopAnalyzerThreads();
+}
+
+void DFG_CLASS_NAME(CsvTableView)::stopAnalyzerThreads()
+{
+    // Sending interrupt signals to analyzers.
+    forEachSelectionAnalyzer([](SelectionAnalyzer& analyzer) { analyzer.disable(); });
+
+    // Sending event loop stop request to analyzer threads.
+    forEachSelectionAnalyzerThread([](QThread& thread) { thread.quit(); });
+    // Waiting for analyzer threads to stop.
+    forEachSelectionAnalyzerThread([](QThread& thread) { thread.wait(); });
+}
+
+template <class Func_T>
+void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzer(Func_T func)
+{
+    for (auto iter = m_selectionAnalyzers.cbegin(), iterEnd = m_selectionAnalyzers.cend(); iter != iterEnd; ++iter)
+    {
+        func(**iter);
+    }
+}
+
+template <class Func_T>
+void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzerThread(Func_T func)
+{
+    for (auto iter = m_analyzerThreads.cbegin(), iterEnd = m_analyzerThreads.cend(); iter != iterEnd; ++iter)
+    {
+        if (*iter)
+            func(**iter);
     }
 }
 
@@ -2793,53 +2826,47 @@ void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& sele
 {
     Q_EMIT sigSelectionChanged(selected, deselected);
 
-    if (m_nOnSelectionChangedInProgress <= 1)
-        m_nOnSelectionChangedInProgress++;
-
-    if (m_nOnSelectionChangedInProgress > 1)
-        return; // Previous onSelectionChanged() still in progress so exiting to prevent filling stack with onSelectionChanged() calls.
-
-    auto endOfScopeHandler = makeScopedCaller([] {}, [&]()
-        {
-            if (m_nOnSelectionChangedInProgress > 1)
-            {
-                // This branch means that at least one call to onSelectionChanged() was exited early because previous handling was still ongoing.
-                // In order to get updated selection analyzers, scheduling an update for it. Note that onSelectionChanged() is not called directly 
-                // as selected/deselected params are unknown.
-                m_nOnSelectionChangedInProgress = 0;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
-                QTimer::singleShot(0, this, &DFG_CLASS_NAME(CsvTableView)::privRunSelectionAnalyzersSlot);
-#else
-                QTimer::singleShot(0, this, SLOT(privRunSelectionAnalyzersSlot()));
-#endif
-            }
-            else
-                m_nOnSelectionChangedInProgress = 0;
-        });
+    if (m_selectionAnalyzers.empty())
+        return;
 
     const auto sm = selectionModel();
     const auto selection = (sm) ? sm->selection() : QItemSelection();
 
-    // Starting a worker thread for selection analyzers to prevent GUI from freezing while selection gets analyzed.
-    // Note: this is likely error prone: user could probably do modifications during processing that would make analyzers malfunctions.
-    // TODO: create and reuse one thread instead of creating a new one every time.
-    QEventLoop eventLoop;
-    QThread workerThread;
-    workerThread.setObjectName("selectionAnalyzer"); // Sets thread name visible to debugger.
-    connect(&workerThread, &QThread::started, [&]()
-            {
-                this->privRunSelectionAnalyzers(selection);
-                workerThread.quit();
-            });
-    connect(&workerThread, &QThread::finished, &eventLoop, &QEventLoop::quit);
-    workerThread.start();
-    eventLoop.exec();
+    // If analyzer threads has not been created yet, create them now.
+    // TODO: using threads is likely error prone: user could probably do modifications during processing that would make analyzers malfunctions.
+    if (m_analyzerThreads.empty())
+    {
+        // TODO: make max thread count customisable.
+        // If ideal thread count is T, there will be at max [T - 1] threads for analyzers. In total 1 thread for UI + analyzers threads.
+        // Concrete examples with 4 logical processors and N analyzers:
+        //      -N = 1 or 2 or 3: 1 thread for UI, N thread(s) for analyzers
+        //      -N >= 4, 1 thread for UI, 3 thread for analyzers
+        const auto nIdealThreadCount = Max(1, QThread::idealThreadCount() - 1);
+        const auto nThreadCount = Min(nIdealThreadCount, static_cast<int>(m_selectionAnalyzers.size()));
+        for (int i = 0; i < nThreadCount; ++i)
+        {
+            auto pThread = new QThread(this); // Ownership through parentship.
+            pThread->setObjectName("selectionAnalyzer" + QString::number(i));
+            m_analyzerThreads.push_back(pThread);
+        }
+
+        // Distributing analyzers to threads evenly. If there are more analyzers than threads, first threads may get one analyzer more than latter ones.
+        int nThread = 0;
+        forEachSelectionAnalyzer([&](SelectionAnalyzer& analyzer) { analyzer.moveToThread(m_analyzerThreads[nThread++ % m_analyzerThreads.size()]); });
+
+        // Starting analyzer threads.
+        forEachSelectionAnalyzerThread([](QThread& thread) { thread.start(); });
+    }
+
+    // Add selection to every analyzer's queue.
+    forEachSelectionAnalyzer([&](SelectionAnalyzer& analyzer) { analyzer.addSelectionToQueue(selection); });
 }
 
 void DFG_CLASS_NAME(CsvTableView)::addSelectionAnalyzer(std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)> spAnalyzer)
 {
     if (!spAnalyzer)
         return;
+    spAnalyzer->m_spView = this;
     m_selectionAnalyzers.push_back(std::move(spAnalyzer));
 }
 
@@ -3044,22 +3071,46 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToSource(const QAbstractItemModel* 
         return QModelIndex();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::privRunSelectionAnalyzersSlot()
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()
+    : m_abIsEnabled(true)
+    , m_bPendingCheckQueue(false)
+    , m_abNewSelectionPending(false)
 {
-    const auto sm = selectionModel();
-    const auto selection = (sm) ? sm->selection() : QItemSelection();
-    privRunSelectionAnalyzers(selection);
+    m_spMutexAnalyzeQueue.reset(new QMutex);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::privRunSelectionAnalyzers(const QItemSelection& selection)
+DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::~DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()
 {
-    // TODO: add canRunInParallel-flag to analyzers, split analyzers to groups based on that and run the other
-    //       group in parallel.
-    for (auto iter = m_selectionAnalyzers.cbegin(); iter != m_selectionAnalyzers.cend(); ++iter)
+
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::addSelectionToQueueImpl(QItemSelection selection)
+{
+    QMutexLocker locker(m_spMutexAnalyzeQueue.get());
+    // If there's nothing in analyze queue, add selection...
+    if (m_analyzeQueue.empty())
+        m_analyzeQueue.push_back(selection);
+    else // ...and when there already is one, override existing with newer one.
+        m_analyzeQueue.front() = selection;
+    m_abNewSelectionPending = true;
+    if (!m_bPendingCheckQueue) // Schedule a new analyze queue checking only if one is not already pending.
     {
-        if (!*iter)
-            continue;
-        (*iter)->analyze(this, selection);
+        m_bPendingCheckQueue = true;
+        QTimer::singleShot(0, this, SLOT(onCheckAnalyzeQueue()));
+    }
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAnalyzeQueue()
+{
+    QMutexLocker locker(m_spMutexAnalyzeQueue.get());
+    if (!m_analyzeQueue.empty())
+    {
+        auto selection = m_analyzeQueue.back();
+        m_abNewSelectionPending = false;
+        m_analyzeQueue.pop_back();
+        m_bPendingCheckQueue = false;
+        locker.unlock(); // We're done with retrieving new selection -> release mutex.
+        analyzeImpl(selection);
     }
 }
 
@@ -3072,13 +3123,13 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::~DFG_CLAS
 {
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::analyzeImpl(const QItemSelection selection)
 {
     auto uiPanel = m_spUiPanel.data();
     if (!uiPanel)
         return;
 
-    auto pCtvView = qobject_cast<DFG_CLASS_NAME(const CsvTableView)*>(pView);
+    auto pCtvView = qobject_cast<DFG_CLASS_NAME(const CsvTableView)*>(m_spView.data());
     auto pModel = (pCtvView) ? pCtvView->csvModel() : nullptr;
     if (!pModel)
     {
@@ -3101,10 +3152,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::anal
             pCtvView->forEachCsvModelIndexInSelectionRange(*iter, [&](const QModelIndex& index, bool& rbContinue)
             {
                 const auto bHasMaxTimePassed = operationTimer.elapsedWallSeconds() >= maxTime;
-                if (bHasMaxTimePassed || uiPanel->isStopRequested())
+                if (bHasMaxTimePassed || uiPanel->isStopRequested() || m_abNewSelectionPending || !m_abIsEnabled.load(std::memory_order_relaxed))
                 {
                     if (bHasMaxTimePassed)
                         completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByTimeLimit;
+                    else if (m_abNewSelectionPending)
+                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByNewSelection;
+                    else if (!m_abIsEnabled)
+                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByDisabling;
                     else
                         completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByUserRequest;
                     rbContinue = false;
@@ -3141,9 +3196,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::anal
             sMessage = uiPanel->tr("Interrupted (time limit exceeded)");
         else if (completionStatus == CompletionStatus_terminatedByUserRequest)
             sMessage = uiPanel->tr("Stopped");
+        else if (completionStatus == CompletionStatus_terminatedByNewSelection)
+            sMessage = uiPanel->tr("Interrupted (new selection chosen)");
+        else if (completionStatus == CompletionStatus_terminatedByDisabling)
+            sMessage = uiPanel->tr("Interrupted (disabled)");
         else
             sMessage = uiPanel->tr("Interrupted (unknown reason)");
 
         uiPanel->setValueDisplayString(sMessage);
     }
+    Q_EMIT sigAnalyzeCompleted();
 }

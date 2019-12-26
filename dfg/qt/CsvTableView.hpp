@@ -5,6 +5,7 @@
 #include "../cont/TorRef.hpp"
 #include "StringMatchDefinition.hpp"
 #include <memory>
+#include <atomic>
 
 #include "qtIncludeHelpers.hpp"
 
@@ -19,6 +20,8 @@ class QItemSelectionRange;
 class QMenu;
 class QProgressBar;
 class QPushButton;
+class QThread;
+class QMutex;
 
 
 namespace DFG_ROOT_NS
@@ -33,25 +36,55 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel);
 
     // Analyzes item selection
-    class DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)
+    class DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer) : public QObject
     {
+        Q_OBJECT
     public:
         enum CompletionStatus
         {
             CompletionStatus_started,
             CompletionStatus_completed,
             CompletionStatus_terminatedByTimeLimit,
-            CompletionStatus_terminatedByUserRequest
+            CompletionStatus_terminatedByUserRequest,
+            CompletionStatus_terminatedByNewSelection,
+            CompletionStatus_terminatedByDisabling
         };
 
-        virtual ~DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)() {}
-        void analyze(QAbstractItemView* pView, const QItemSelection& selection) { analyzeImpl(pView, selection); }
+        DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)();
+
+        virtual ~DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)();
+
+        // Adds given selection to analyzation queue. Analyzer may decide how to handle queue: it can e.g. terminate current analysis and schelude a new one with given selection.
+        // Note: this interface is thread safe.
+        void addSelectionToQueue(QItemSelection selection) { if (m_abIsEnabled) addSelectionToQueueImpl(selection); }
+
+        // Disables this analyzer (=i.e. it won't accept any new selections and disables any further work). Note though that existing work may still get completed.
+        // Note: this interface is thread safe.
+        void disable() { m_abIsEnabled = false; }
+
+    signals:
+        void sigAnalyzeCompleted();
+
+    public slots:
+        void onCheckAnalyzeQueue();
+
+    public:       
+        std::atomic<bool> m_abIsEnabled;
+        std::unique_ptr<QMutex> m_spMutexAnalyzeQueue; // For protecting queue handling
+        std::vector<QItemSelection> m_analyzeQueue;
+        bool m_bPendingCheckQueue; // True when there is pending signal for onCheckAnalyzeQueue(). Used to prevent signal queue from forming.
+        std::atomic<bool> m_abNewSelectionPending; // True when there's a new selection pending.
+        QPointer<QAbstractItemView> m_spView;
     private:
-        virtual void analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection) = 0;
-    };
+        // Implementation must be thread safe and must not block calling thread e.g. by starting new analysis on the calling thread.
+        virtual void addSelectionToQueueImpl(QItemSelection selection);
+
+        virtual void analyzeImpl(QItemSelection selection) = 0;
+    }; // CsvTableViewSelectionAnalyzer
 
     class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer) : public DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)
     {
+        Q_OBJECT
     public:
         typedef DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) PanelT;
 
@@ -60,8 +93,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         QPointer<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> m_spUiPanel;
     private:
-        void analyzeImpl(QAbstractItemView* pView, const QItemSelection& selection) override;
-
+        void analyzeImpl(QItemSelection selection) override;
     }; // Class CsvTableViewBasicSelectionAnalyzer
 
     class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) : public QWidget
@@ -108,6 +140,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(CsvTableView) ThisClass;
         typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
         typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDef;
+        typedef DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer) SelectionAnalyzer;
 
         enum ModelIndexType
         {
@@ -180,7 +213,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onFind(const bool forward);
 
-        void addSelectionAnalyzer(std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)> spAnalyzer);
+        void addSelectionAnalyzer(std::shared_ptr<SelectionAnalyzer> spAnalyzer);
 
         // Maps index to view model (i.e. the one returned by model()) assuming that 'index' is either from csvModel() or model().
         QModelIndex mapToViewModel(const QModelIndex& index) const;
@@ -210,8 +243,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool openFile(const QString& sPath);
         bool openFile(const QString& sPath, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
-
-        void privRunSelectionAnalyzers(const QItemSelection& selection);
 
     private:
         template <class T, class Param0_T>
@@ -330,8 +361,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void deleteSelected();
         */
 
-        void privRunSelectionAnalyzersSlot();
-
     signals:
         void sigFindActivated();
         void sigFilterActivated();
@@ -346,7 +375,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class Func_T>
         void forEachCompleterEnabledColumnIndex(Func_T func);
 
+        template <class Func_T> void forEachSelectionAnalyzer(Func_T func);
+        template <class Func_T> void forEachSelectionAnalyzerThread(Func_T func);
+
         bool getProceedConfirmationFromUserIfInModifiedState(const QString& sTranslatedActionDescription);
+
+        void stopAnalyzerThreads();
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
@@ -354,10 +388,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QModelIndex m_latestFoundIndex; // Index from underlying model. Invalid if doing first find.
         StringMatchDef m_matchDef;
         int m_nFindColumnIndex;
-        std::vector<std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)>> m_selectionAnalyzers;
+        std::vector<std::shared_ptr<SelectionAnalyzer>> m_selectionAnalyzers; // All items are guaranteed to be non-null.
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bUndoEnabled;
-        uint8 m_nOnSelectionChangedInProgress; // 0 = not in progress, 1 = in progress and no calls while in progess, 2 = in progress and calls were ignored.
+        std::vector<QThread*> m_analyzerThreads; // Ownership through parentship
     };
 
     template <class Func_T>
