@@ -594,7 +594,7 @@ void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzer(Func_T func)
 template <class Func_T>
 void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzerThread(Func_T func)
 {
-    for (auto iter = m_analyzerThreads.cbegin(), iterEnd = m_analyzerThreads.cend(); iter != iterEnd; ++iter)
+    for (auto iter = m_analyzerThreads.begin(), iterEnd = m_analyzerThreads.end(); iter != iterEnd; ++iter)
     {
         if (*iter)
             func(**iter);
@@ -2852,7 +2852,7 @@ void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& sele
 
         // Distributing analyzers to threads evenly. If there are more analyzers than threads, first threads may get one analyzer more than latter ones.
         int nThread = 0;
-        forEachSelectionAnalyzer([&](SelectionAnalyzer& analyzer) { analyzer.moveToThread(m_analyzerThreads[nThread++ % m_analyzerThreads.size()]); });
+        forEachSelectionAnalyzer([&](SelectionAnalyzer& analyzer) { analyzer.moveToThread(m_analyzerThreads[nThread++ % m_analyzerThreads.size()].get()); });
 
         // Starting analyzer threads.
         forEachSelectionAnalyzerThread([](QThread& thread) { thread.start(); });

@@ -9,6 +9,8 @@
 
 #include "qtIncludeHelpers.hpp"
 
+#include "containerUtils.hpp"
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QPointer>
 DFG_END_INCLUDE_QT_HEADERS
@@ -391,7 +393,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<std::shared_ptr<SelectionAnalyzer>> m_selectionAnalyzers; // All items are guaranteed to be non-null.
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bUndoEnabled;
-        std::vector<QThread*> m_analyzerThreads; // Ownership through parentship
+        std::vector<QObjectStorage<QThread>> m_analyzerThreads;
     };
 
     template <class Func_T>
