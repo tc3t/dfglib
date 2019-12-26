@@ -766,6 +766,7 @@ TEST(dfgCont, ViewableSharedPtr)
     int resetNotifier2 = 0;
 
     DFG_CLASS_NAME(ViewableSharedPtr)<const int> sp(std::make_shared<int>(1));
+    EXPECT_TRUE(sp);
     auto spViewer0 = sp.createViewer();
     auto spViewer1 = sp.createViewer();
     sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer0.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier0; });

@@ -170,7 +170,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED operator bool() const
         {
-            return m_spObj;
+            return m_spObj != nullptr;
         }
 
         std::shared_ptr<T> m_spObj;
