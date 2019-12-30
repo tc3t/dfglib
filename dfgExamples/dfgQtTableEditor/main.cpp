@@ -23,6 +23,14 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/debug/structuredExceptionHandling.h>
 #include <dfg/qt/CsvTableView.hpp>
 
+#include <dfg/cont/ViewableSharedPtr.hpp>
+#include <dfg/alg.hpp>
+#include <dfg/cont/MapVector.hpp>
+#include <dfg/cont/SetVector.hpp>
+
+#include <QItemSelection>
+#include <QItemSelectionRange>
+
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <dfg/str/fmtlib/format.cc>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
@@ -94,6 +102,82 @@ void MainWindow::closeEvent(QCloseEvent* event)
         event->ignore();
 }
 
+// Selection analyzer that gathers data from selection for graphs.
+class SelectionAnalyzerForGraphing : public dfg::qt::CsvTableViewSelectionAnalyzer
+{
+public:
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<double, double> RowToValueMap;
+    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<int, RowToValueMap> ColumnToValuesMap;
+    typedef ColumnToValuesMap Table;
+
+    void analyzeImpl(const QItemSelection selection) override
+    {
+        auto pView = qobject_cast<dfg::qt::CsvTableView*>(this->m_spView.data());
+        if (!pView || !m_spTable)
+            return;
+
+        m_spTable.edit([&](Table& rTable, const Table* pOld)
+        {
+            // TODO: this may be storing way too much data: e.g. if all items are selected, graphing may not use any or perhaps only two columns.
+            //       -> filter according to actual needs. Note that in order to be able to do so, would need to know something about graph definitions here.
+            // TODO: which indexes to use e.g. in case of filtered table: source row indexes or view rows?
+            //      -e.g. if table of 1000 rows is filtered so that only rows 100, 600 and 700 are shown, should single column graph use
+            //       values 1, 2, 3 or 100, 600, 700 as x-coordinate value? This might be something to define in graph definition -> another reason why
+            //       graph definitions should be somehow known at this point.
+
+            DFG_UNUSED(pOld);
+
+            dfg::cont::SetVector<int> presentColumnIndexes;
+            presentColumnIndexes.setSorting(true); // Sorting is needed for std::set_difference
+
+            // Clearing all values from every column so that those would actually contain current values, not remnants from previous update.
+            // Note that removing unused columns is done after going through the selection.
+            dfg::alg::forEachFwd(rTable.valueRange(), [](RowToValueMap& columnValues) { columnValues.clear(); });
+
+            // Sorting is needed for std::set_difference
+            rTable.setSorting(true);
+
+            CompletionStatus completionStatus = CompletionStatus_started;
+
+            dfg::qt::CsvTableView::forEachIndexInSelection(*pView, selection, dfg::qt::CsvTableView::ModelIndexTypeView, [&](const QModelIndex& mi, bool& rbContinue)
+            {
+                if (m_abNewSelectionPending)
+                {
+                    completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByNewSelection;
+                    rbContinue = false;
+                    return;
+                }
+                else if (!m_abIsEnabled.load(std::memory_order_relaxed))
+                {
+                    completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByDisabling;
+                    rbContinue = false;
+                    return;
+                }
+
+                if (!mi.isValid())
+                    return;
+                auto sVal = mi.data().toString();
+                presentColumnIndexes.insert(mi.column());
+                sVal.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
+                rTable[mi.column()][mi.row()] = sVal.toDouble(); // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
+            });
+
+            // Removing unused columns from rTable.
+            std::vector<int> colsToRemove;
+            const auto colsInTable = rTable.keyRange();
+            std::set_difference(colsInTable.cbegin(), colsInTable.cend(), presentColumnIndexes.cbegin(), presentColumnIndexes.cend(), std::back_inserter(colsToRemove));
+            for (auto iter = colsToRemove.cbegin(), iterEnd = colsToRemove.cend(); iter != iterEnd; ++iter)
+            {
+                rTable.erase(*iter);
+            }
+        });
+
+        Q_EMIT sigAnalyzeCompleted();
+    }
+
+    dfg::cont::ViewableSharedPtr<Table> m_spTable;
+};
+
 class CsvTableViewDataSource : public dfg::qt::GraphDataSource
 {
 public:
@@ -102,7 +186,11 @@ public:
     {
         if (!m_spView)
             return;
-        DFG_QT_VERIFY_CONNECT(connect(view, &dfg::qt::CsvTableView::sigSelectionChanged, this, &dfg::qt::GraphDataSource::sigChanged));
+        auto selectionAnalyzer = std::make_shared<SelectionAnalyzerForGraphing>();
+        selectionAnalyzer->m_spTable.reset(std::make_shared<SelectionAnalyzerForGraphing::Table>());
+        m_spDataViewer = selectionAnalyzer->m_spTable.createViewer();
+        DFG_QT_VERIFY_CONNECT(connect(selectionAnalyzer.get(), &dfg::qt::CsvTableViewSelectionAnalyzer::sigAnalyzeCompleted, this, &dfg::qt::GraphDataSource::sigChanged));
+        m_spView->addSelectionAnalyzer(std::move(selectionAnalyzer));
     }
 
     QObject* underlyingSource() override
@@ -115,22 +203,22 @@ public:
         if (!handler || !m_spView)
             return;
 
-        m_spView->forEachCsvModelIndexInSelection([&](const QModelIndex& mi, bool& /*bContinue*/)
-        {
-            if (!mi.isValid())
-                return;
-            // Note: this is source model row, not index in the visible selection (e.g. in case of filtering)
-            // TODO: make customisable.
-            const DataSourceIndex nRow = static_cast<DataSourceIndex>(mi.row());
+        auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+        if (!spTableView) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
+            return;
+        const auto& rTable = *spTableView;
 
-            const DataSourceIndex nCol = static_cast<DataSourceIndex>(mi.column());
-            auto sVal = mi.data().toString();
-            sVal.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
-            handler(nRow, nCol, sVal);
-        });
+        for(auto iterCol = rTable.begin(); iterCol != rTable.end(); ++iterCol)
+        {
+            for (auto iterRow = iterCol->second.begin(); iterRow != iterCol->second.end(); ++iterRow)
+            {
+                handler(static_cast<DataSourceIndex>(iterRow->first), static_cast<DataSourceIndex>(iterCol->first), iterRow->second);
+            }
+        }
     }
 
     QPointer<dfg::qt::CsvTableView> m_spView;
+    std::shared_ptr<dfg::cont::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::Table>> m_spDataViewer;
 };
 
 int main(int argc, char *argv[])
@@ -166,7 +254,7 @@ int main(int argc, char *argv[])
     tableEditor.setAllowApplicationSettingsUsage(true);
     mainWindow.setWindowIcon(QIcon(":/mainWindowIcon.png"));
 
-#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
+#if (defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)) || (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
     dfg::qt::GraphControlAndDisplayWidget graphDisplay;
     std::unique_ptr<CsvTableViewDataSource> selectionSource(new CsvTableViewDataSource(tableEditor.m_spTableView.get()));
     graphDisplay.addDataSource(std::move(selectionSource));
