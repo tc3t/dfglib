@@ -265,6 +265,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class T, class Param0_T, class Param1_T, class Param2_T>
         void pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2);
 
+    public:
         template <class This_T, class Func_T>
         static void forEachViewModelIndexInSelection(This_T& thisItem, Func_T func);
 
@@ -272,7 +273,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static void forEachCsvModelIndexInSelection(This_T& thisItem, Func_T func);
 
         template <class This_T, class Func_T>
-        static void forEachIndexInSelection(This_T& thisItem, ModelIndexType indexType, Func_T func);
+        static void forEachIndexInSelection(This_T& thisItem, ModelIndexType indexType, Func_T&& func);
+
+        template <class This_T, class Func_T>
+        static void forEachIndexInSelection(This_T& thisItem, const QItemSelection &selection, ModelIndexType indexType, Func_T&& func);
 
         template <class This_T, class Func_T>
         static void forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func);
@@ -427,14 +431,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }
 
     template <class This_T, class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelection(This_T& thisItem, const ModelIndexType indexType, Func_T func)
+    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelection(This_T& thisItem, const QItemSelection& selection, const ModelIndexType indexType, Func_T&& func)
     {
-        const auto sm = thisItem.selectionModel();
-        const auto selection = (sm) ? sm->selection() : QItemSelection();
-        for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+        for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
             forEachIndexInSelectionRange(thisItem, *iter, indexType, std::forward<Func_T>(func));
         }
+    }
+
+    template <class This_T, class Func_T>
+    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelection(This_T& thisItem, const ModelIndexType indexType, Func_T&& func)
+    {
+        const auto sm = thisItem.selectionModel();
+        const auto selection = (sm) ? sm->selection() : QItemSelection();
+        forEachIndexInSelection(thisItem, selection, indexType, std::forward<Func_T>(func));
     }
 
     template <class This_T, class Func_T>
