@@ -22,14 +22,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     {
         // Maps viewer to object. All viewers refer to the same proxy object so when source get's reset, updating the single router object updates view for all viewers.
         template <class T>
-        class DFG_CLASS_NAME(ViewableSharedPtrRouterProxy)
+        class ViewableSharedPtrRouterProxy
         {
         public:
             typedef std::map<DFG_CLASS_NAME(SourceResetNotifierId), DFG_CLASS_NAME(SourceResetNotifier)> SourceResetNotifierMap;
             typedef std::mutex MutexT;
             typedef std::lock_guard<MutexT> LockGuardT;
 
-            void reset(std::shared_ptr<const T> newItem)
+            void reset(const std::shared_ptr<const T>& newItem)
             {
                 LockGuardT lock(m_mutex);
                 m_spObj = newItem;
@@ -42,7 +42,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             std::shared_ptr<const T> view() const
             {
                 LockGuardT lock(m_mutex);
-                return m_spObj;
+                return m_spObj.lock();
             }
 
             void addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId) id, DFG_CLASS_NAME(SourceResetNotifier) srn)
@@ -57,13 +57,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 m_notifiers.erase(id);
             }
 
-            size_t resetNotifierCount() const
+            size_t countOfResetNotifiers() const
             {
                 LockGuardT lock(m_mutex);
                 return m_notifiers.size();
             }
 
-            std::shared_ptr<const T> m_spObj;
+            std::weak_ptr<const T> m_spObj;
             SourceResetNotifierMap m_notifiers;
             mutable MutexT m_mutex;
         };
@@ -73,7 +73,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     class DFG_CLASS_NAME(ViewableSharedPtrViewer)
     {
     public:
-        DFG_CLASS_NAME(ViewableSharedPtrViewer)(std::shared_ptr<DFG_DETAIL_NS::DFG_CLASS_NAME(ViewableSharedPtrRouterProxy)<T>> spRouter) :
+        typedef DFG_DETAIL_NS::ViewableSharedPtrRouterProxy<T> RouterT;
+
+        DFG_CLASS_NAME(ViewableSharedPtrViewer)(std::shared_ptr<RouterT> spRouter) :
             m_spRouter(std::move(spRouter))
         {
         }
@@ -90,7 +92,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return (m_spRouter) ? m_spRouter->view() : std::shared_ptr<const T>();
         }
 
-        std::shared_ptr<DFG_DETAIL_NS::DFG_CLASS_NAME(ViewableSharedPtrRouterProxy)<T>> m_spRouter;
+        std::shared_ptr<RouterT> m_spRouter;
     };
 
 
@@ -103,7 +105,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     class DFG_CLASS_NAME(ViewableSharedPtr)
     {
     public:
-        typedef DFG_DETAIL_NS::DFG_CLASS_NAME(ViewableSharedPtrRouterProxy)<T> RouterT;
+        typedef DFG_DETAIL_NS::ViewableSharedPtrRouterProxy<T> RouterT;
         typedef std::mutex MutexT;
         typedef std::lock_guard<MutexT> LockGuardT;
 
