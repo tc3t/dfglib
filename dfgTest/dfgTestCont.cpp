@@ -29,6 +29,12 @@
 #include <dfg/io/cstdio.hpp>
 #include <dfg/time/timerCpu.hpp>
 
+#if (DFG_LANGFEAT_MUTEX_11 == 1)
+    DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+        #include <thread> // Causes compiler warning at least in VC2012
+    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+#endif // (DFG_LANGFEAT_MUTEX_11 == 1)
+
 TEST(dfgCont, makeVector)
 {
     auto v1 = DFG_ROOT_NS::DFG_SUB_NS_NAME(cont)::makeVector(1);
@@ -767,30 +773,37 @@ TEST(dfgCont, ViewableSharedPtr)
 
     DFG_CLASS_NAME(ViewableSharedPtr)<const int> sp(std::make_shared<int>(1));
     EXPECT_TRUE(sp);
+    EXPECT_EQ(0, sp.getViewerCount());
     auto spViewer0 = sp.createViewer();
     auto spViewer1 = sp.createViewer();
+    EXPECT_EQ(2, sp.getViewerCount());
     sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer0.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier0; });
     sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer1.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier1; });
 
     EXPECT_EQ(1, *spViewer0->view());
     EXPECT_EQ(1, *spViewer1->view());
+    EXPECT_EQ(2, sp.getViewerCount());
     EXPECT_EQ(0, resetNotifier0);
     EXPECT_EQ(0, resetNotifier1);
 
     sp.reset(std::make_shared<int>(2));
+    EXPECT_EQ(2, sp.getViewerCount());
 
     EXPECT_EQ(2, *spViewer0->view());
     EXPECT_EQ(2, *spViewer0->view());
     EXPECT_EQ(1, resetNotifier0);
     EXPECT_EQ(1, resetNotifier1);
+    EXPECT_EQ(2, sp.getViewerCount());
 
     // Test automatic handling of short-lived viewer (e.g. automatic removal of reset notifier).
     {
         auto spViewer2 = sp.createViewer();
+        EXPECT_EQ(3, sp.getViewerCount());
         EXPECT_EQ(2, *spViewer2->view());
         sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer2.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier2; });
     }
     sp.reset(std::make_shared<int>(3));
+    EXPECT_EQ(2, sp.getViewerCount());
     EXPECT_EQ(3, *spViewer0->view());
     EXPECT_EQ(3, *spViewer1->view());
     EXPECT_EQ(2, resetNotifier0);
@@ -798,18 +811,114 @@ TEST(dfgCont, ViewableSharedPtr)
     EXPECT_EQ(0, resetNotifier2);
 
     spViewer0.reset();
+    EXPECT_EQ(1, sp.getViewerCount());
     sp.reset(std::make_shared<int>(4));
+    EXPECT_EQ(1, sp.getViewerCount());
     EXPECT_EQ(2, resetNotifier0);
     EXPECT_EQ(3, resetNotifier1);
     EXPECT_EQ(4, *spViewer1->view());
     auto spCopy = sp.sharedPtrCopy();
+    EXPECT_EQ(1, sp.getViewerCount());
     auto pData = sp.get();
     sp.reset();
+    EXPECT_EQ(1, sp.getViewerCount());
     EXPECT_EQ(4, resetNotifier1);
     EXPECT_TRUE(spCopy.use_count() == 1);
     EXPECT_EQ(nullptr, spViewer1->view().get());
     EXPECT_EQ(4, *spCopy);
     EXPECT_EQ(pData, spCopy.get());
+
+    // Testing viewer behaviour when ViewableSharedPtr object is destroyed before viewer.
+    {
+        std::unique_ptr<DFG_CLASS_NAME(ViewableSharedPtr)<int>> sp2(new DFG_CLASS_NAME(ViewableSharedPtr)<int>(std::make_shared<int>(1)));
+        auto viewer = sp2->createViewer();
+        sp2.reset();
+        EXPECT_EQ(nullptr, viewer->view()); // After ViewableSharedPtr() has been destroyed, expecting viewer to return null views.
+    }
+}
+
+TEST(dfgCont, ViewableSharedPtr_editing)
+{
+    using namespace DFG_MODULE_NS(cont);
+
+    DFG_CLASS_NAME(ViewableSharedPtr)<int> sp(std::make_shared<int>(1));
+    sp.edit([](int& rEdit, const int* pOld)
+    {
+        EXPECT_EQ(1, rEdit);
+        EXPECT_EQ(nullptr, pOld);
+        rEdit++;
+    });
+    EXPECT_EQ(2, *sp.get());
+    auto viewer = sp.createViewer(); // Creating viewer forces edit() to create a new object.
+    sp.edit([](int& rEdit, const int* pOld)
+    {
+        ASSERT_NE(nullptr, pOld);
+        EXPECT_EQ(2, *pOld);
+        rEdit = *pOld + 1;
+    });
+    EXPECT_EQ(3, *sp.get());
+    auto viewOn3 = viewer->view();
+    EXPECT_EQ(3, *viewOn3);
+    sp.edit([](int& rEdit, const int* pOld)
+    {
+        ASSERT_NE(nullptr, pOld);
+        EXPECT_EQ(3, *pOld);
+        EXPECT_NE(&rEdit, pOld);
+        rEdit = 4;
+    });
+    EXPECT_EQ(4, *sp.get());
+
+    EXPECT_EQ(3, *viewOn3);         // Concrete view shouldn't be updated as it's a fixed reference to old object...
+    EXPECT_EQ(4, *viewer->view());  // ...but new view created through viewer should have up-to-date value.
+
+    // Destroying a viewer should make it possible for new edit() to be able to edit object in-place. 
+    viewer.reset();
+    sp.edit([](int& rEdit, const int* pOld) { EXPECT_EQ(4, rEdit); EXPECT_EQ(nullptr, pOld); });
+
+    // If taking a copy of the shared_ptr, edit() should again be forced to create a new object even when there are no viewers.
+    auto spCopy = sp.sharedPtrCopy();
+    sp.edit([](int& rEdit, const int* pOld) { ASSERT_NE(nullptr, pOld); EXPECT_EQ(4, *pOld); rEdit = *pOld + 1; });
+    EXPECT_EQ(5, *sp.get());
+    EXPECT_EQ(4, *spCopy); // spCopy should point to old data as edit() should have created a new object.
+}
+
+TEST(dfgCont, ViewableSharedPtr_editingWithThreads)
+{
+    using namespace DFG_MODULE_NS(cont);
+
+    DFG_CLASS_NAME(ViewableSharedPtr)<int> sp(std::make_shared<int>(1));
+
+    sp.edit([&](int& rEdit, const int* pOld)
+    {
+        EXPECT_EQ(1, rEdit);
+        EXPECT_EQ(nullptr, pOld);
+        std::thread t1([&]()
+        {
+            // Creating viewer should fail as main thread is in middle of editing.
+            EXPECT_EQ(nullptr, sp.tryCreateViewer());
+        });
+        t1.join();
+    });
+    EXPECT_EQ(1, *sp.get());
+
+    auto viewer = sp.createViewer();
+
+    sp.edit([&](int& rEdit, const int* pOld)
+    {
+        EXPECT_NE(nullptr, pOld);
+        rEdit = *pOld + 1;
+        std::thread t1([&]()
+        {
+            // Now that there's a viewer, edit() is expected to create a new object and creating viewer to old data should work.
+            auto viewer = sp.tryCreateViewer();
+            ASSERT_NE(nullptr, viewer);
+            auto concreteView = viewer->view();
+            ASSERT_NE(nullptr, concreteView);
+            EXPECT_EQ(1, *viewer->view());
+        });
+        t1.join();
+    });
+    EXPECT_EQ(2, *sp.get());
 }
 
 #endif // DFG_LANGFEAT_MUTEX_11
