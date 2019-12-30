@@ -773,37 +773,44 @@ TEST(dfgCont, ViewableSharedPtr)
 
     DFG_CLASS_NAME(ViewableSharedPtr)<const int> sp(std::make_shared<int>(1));
     EXPECT_TRUE(sp);
-    EXPECT_EQ(0, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
     auto spViewer0 = sp.createViewer();
     auto spViewer1 = sp.createViewer();
-    EXPECT_EQ(2, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
     sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer0.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier0; });
     sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer1.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier1; });
 
+    {
+        auto spActiveView = spViewer0->view();
+        EXPECT_EQ(1, *spActiveView);
+        EXPECT_EQ(1, sp.getReferrerCount());
+    }
+
     EXPECT_EQ(1, *spViewer0->view());
     EXPECT_EQ(1, *spViewer1->view());
-    EXPECT_EQ(2, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
     EXPECT_EQ(0, resetNotifier0);
     EXPECT_EQ(0, resetNotifier1);
 
     sp.reset(std::make_shared<int>(2));
-    EXPECT_EQ(2, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
 
     EXPECT_EQ(2, *spViewer0->view());
     EXPECT_EQ(2, *spViewer0->view());
     EXPECT_EQ(1, resetNotifier0);
     EXPECT_EQ(1, resetNotifier1);
-    EXPECT_EQ(2, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
 
     // Test automatic handling of short-lived viewer (e.g. automatic removal of reset notifier).
     {
         auto spViewer2 = sp.createViewer();
-        EXPECT_EQ(3, sp.getViewerCount());
+        EXPECT_EQ(0, sp.getReferrerCount());
         EXPECT_EQ(2, *spViewer2->view());
+        EXPECT_EQ(0, sp.getReferrerCount());
         sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(spViewer2.get()), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier2; });
     }
     sp.reset(std::make_shared<int>(3));
-    EXPECT_EQ(2, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
     EXPECT_EQ(3, *spViewer0->view());
     EXPECT_EQ(3, *spViewer1->view());
     EXPECT_EQ(2, resetNotifier0);
@@ -811,17 +818,17 @@ TEST(dfgCont, ViewableSharedPtr)
     EXPECT_EQ(0, resetNotifier2);
 
     spViewer0.reset();
-    EXPECT_EQ(1, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
     sp.reset(std::make_shared<int>(4));
-    EXPECT_EQ(1, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
     EXPECT_EQ(2, resetNotifier0);
     EXPECT_EQ(3, resetNotifier1);
     EXPECT_EQ(4, *spViewer1->view());
     auto spCopy = sp.sharedPtrCopy();
-    EXPECT_EQ(1, sp.getViewerCount());
+    EXPECT_EQ(1, sp.getReferrerCount());
     auto pData = sp.get();
     sp.reset();
-    EXPECT_EQ(1, sp.getViewerCount());
+    EXPECT_EQ(0, sp.getReferrerCount());
     EXPECT_EQ(4, resetNotifier1);
     EXPECT_TRUE(spCopy.use_count() == 1);
     EXPECT_EQ(nullptr, spViewer1->view().get());
@@ -849,17 +856,17 @@ TEST(dfgCont, ViewableSharedPtr_editing)
         rEdit++;
     });
     EXPECT_EQ(2, *sp.get());
-    auto viewer = sp.createViewer(); // Creating viewer forces edit() to create a new object.
+    auto viewer = sp.createViewer(); // Just creating a viewer should not force edit() to create a new object.
     sp.edit([](int& rEdit, const int* pOld)
     {
-        ASSERT_NE(nullptr, pOld);
-        EXPECT_EQ(2, *pOld);
-        rEdit = *pOld + 1;
+        EXPECT_EQ(2, rEdit);
+        EXPECT_EQ(nullptr, pOld);
+        rEdit++;
     });
     EXPECT_EQ(3, *sp.get());
     auto viewOn3 = viewer->view();
     EXPECT_EQ(3, *viewOn3);
-    sp.edit([](int& rEdit, const int* pOld)
+    sp.edit([](int& rEdit, const int* pOld) // Now there's an actual view, edit() should create a new object.
     {
         ASSERT_NE(nullptr, pOld);
         EXPECT_EQ(3, *pOld);
@@ -867,11 +874,12 @@ TEST(dfgCont, ViewableSharedPtr_editing)
         rEdit = 4;
     });
     EXPECT_EQ(4, *sp.get());
+    EXPECT_EQ(0, sp.getReferrerCount()); // Zero since edit() should have created a new object.
 
     EXPECT_EQ(3, *viewOn3);         // Concrete view shouldn't be updated as it's a fixed reference to old object...
     EXPECT_EQ(4, *viewer->view());  // ...but new view created through viewer should have up-to-date value.
 
-    // Destroying a viewer should make it possible for new edit() to be able to edit object in-place. 
+    // Destroying a viewer shouldn't affect anything.
     viewer.reset();
     sp.edit([](int& rEdit, const int* pOld) { EXPECT_EQ(4, rEdit); EXPECT_EQ(nullptr, pOld); });
 
@@ -894,14 +902,33 @@ TEST(dfgCont, ViewableSharedPtr_editingWithThreads)
         EXPECT_EQ(nullptr, pOld);
         std::thread t1([&]()
         {
-            // Creating viewer should fail as main thread is in middle of editing.
-            EXPECT_EQ(nullptr, sp.tryCreateViewer());
+            // Creating viewer should work, but...
+            auto spViewer = sp.createViewer();
+            ASSERT_NE(nullptr, spViewer);
+            // ...creating actual view should fail as main thread is in middle of editing.
+            EXPECT_EQ(nullptr, spViewer->view());
         });
         t1.join();
     });
     EXPECT_EQ(1, *sp.get());
 
     auto viewer = sp.createViewer();
+    ASSERT_NE(nullptr, viewer);
+
+    sp.edit([&](int& rEdit, const int* pOld)
+    {
+        EXPECT_EQ(1, rEdit);
+        EXPECT_EQ(nullptr, pOld);
+        std::thread t1([&]()
+        {
+            // Simulating the case where another thread tries to create a view with existing viewer while edit() is ongoing.
+            EXPECT_EQ(nullptr, viewer->view());
+        });
+        t1.join();
+    });
+    EXPECT_EQ(1, *sp.get());
+
+    auto view1 = viewer->view();
 
     sp.edit([&](int& rEdit, const int* pOld)
     {
@@ -909,12 +936,12 @@ TEST(dfgCont, ViewableSharedPtr_editingWithThreads)
         rEdit = *pOld + 1;
         std::thread t1([&]()
         {
-            // Now that there's a viewer, edit() is expected to create a new object and creating viewer to old data should work.
-            auto viewer = sp.tryCreateViewer();
+            // Now that there's an active view, edit() should create a new object and creating view to old data should work.
+            auto viewer = sp.createViewer();
             ASSERT_NE(nullptr, viewer);
             auto concreteView = viewer->view();
             ASSERT_NE(nullptr, concreteView);
-            EXPECT_EQ(1, *viewer->view());
+            EXPECT_EQ(1, *concreteView);
         });
         t1.join();
     });
