@@ -24,6 +24,7 @@ class QProgressBar;
 class QPushButton;
 class QThread;
 class QMutex;
+class QReadWriteLock;
 
 
 namespace DFG_ROOT_NS
@@ -246,6 +247,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openFile(const QString& sPath);
         bool openFile(const QString& sPath, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
 
+        void privShowExecutionBlockedNotification(const QString& actionname);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -398,6 +401,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bUndoEnabled;
         std::vector<QObjectStorage<QThread>> m_analyzerThreads;
+        std::unique_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited. Guaranteed to be non-null after construction.
     };
 
     template <class Func_T>

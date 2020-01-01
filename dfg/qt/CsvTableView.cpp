@@ -45,6 +45,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTimer>
 #include <QToolTip>
 #include <QUndoView>
+#include <QReadWriteLock> 
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
@@ -180,6 +181,8 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     , m_nFindColumnIndex(0)
     , m_bUndoEnabled(true)
 {
+    m_spEditLock.reset(new QReadWriteLock(QReadWriteLock::Recursive));
+
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
         pVertHdr->setDefaultSectionSize(gnDefaultRowHeight); // TODO: make customisable
@@ -1562,9 +1565,21 @@ bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
         return false;
 }
 
+
+// TODO: better description for what was blocked, perhaps T to provide a static function that returns short description.
+// TODO: not all actions go through executeAction() so this protection does not cover all cases -> take those into account as well
+//      -notably cell edits (done in CsvItemModel::setData) and CsvItemModel::batchEditNoUndo() (used e.g. by "Generate content")
+#define DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING \
+    if (!m_spEditLock->tryLockForWrite()) \
+        { privShowExecutionBlockedNotification(typeid(T).name()); return false; } \
+    auto cleanUp = makeScopedCaller([] {}, [&]() { m_spEditLock->unlock(); })
+
+
 template <class T, class Param0_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
 {
+    DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING;
+    
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0));
     else
@@ -1576,6 +1591,8 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
 template <class T, class Param0_T, class Param1_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
 {
+    DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING;
+
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
     else
@@ -1587,6 +1604,8 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
 template <class T, class Param0_T, class Param1_T, class Param2_T>
 bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
 {
+    DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING;
+
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
     else
@@ -1594,6 +1613,8 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1, P
 
     return true;
 }
+
+#undef DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING
 
 template <class T, class Param0_T>
 void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0)
@@ -3071,6 +3092,12 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToSource(const QAbstractItemModel* 
         return QModelIndex();
 }
 
+void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QString& actionname)
+{
+    const auto sMsg = tr("Executing action '%1' was blocked: table is being accessed by some other operation. Please try again later.").arg(actionname);
+    QToolTip::showText(QCursor::pos(), sMsg);
+}
+
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()
     : m_abIsEnabled(true)
     , m_bPendingCheckQueue(false)
@@ -3105,6 +3132,17 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAn
     QMutexLocker locker(m_spMutexAnalyzeQueue.get());
     if (!m_analyzeQueue.empty())
     {
+        
+        // Try to lock readwrite lock, if fails, it means that someone might be editing the model so analyzers should not read the model at the same time.
+        auto pView = qobject_cast<CsvTableView*>(m_spView.data());
+        if (pView && !pView->m_spEditLock->tryLockForRead())
+        {
+            // Ending up here means that couldn't acquire read lock, e.g. because table is being edited. Scheduling a new try in 100 ms.
+            QTimer::singleShot(100, this, SLOT(onCheckAnalyzeQueue()));
+            return;
+        }
+        auto cleanUp = makeScopedCaller([] {}, [&]() { pView->m_spEditLock->unlock(); });
+
         auto selection = m_analyzeQueue.back();
         m_abNewSelectionPending = false;
         m_analyzeQueue.pop_back();
