@@ -3,6 +3,7 @@
 #include <dfg/io.hpp>
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/qt/containerUtils.hpp>
+#include <dfg/qt/CsvTableView.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -11,6 +12,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <QSpinBox>
 #include <QGridLayout>
 #include <QThread>
+#include <QUndoStack>
 #include <dfg/qt/qxt/gui/qxtspanslider.h>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
@@ -107,6 +109,45 @@ TEST(dfgQt, CsvItemModel_removeRows)
     const int removeRows3[] = { -5, -2, -1, 0, 1, 2, 3, 50 };
     model.removeRows(removeRows3);
     EXPECT_EQ(0, model.rowCount());
+}
+
+TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
+{
+    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) model;
+    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView) view(nullptr);
+    view.setModel(&model);
+
+    view.insertRowHere();
+    view.insertRowHere();
+    view.insertColumn();
+    view.insertColumn();
+
+    model.setDataNoUndo(0, 1, DFG_UTF8("a"));
+    model.setDataNoUndo(1, 1, DFG_UTF8("b"));
+
+    view.setCurrentIndex(model.index(1, 1));
+    view.insertRowAfterCurrent();
+    view.insertRowAfterCurrent();
+
+    model.setDataNoUndo(2, 1, DFG_UTF8("c"));
+    model.setDataNoUndo(3, 1, DFG_UTF8("d"));
+
+    EXPECT_EQ(4, model.getRowCount());
+    view.selectColumn(1);
+    view.deleteSelectedRow(); // Deletes all rows given the selectColumn() above.
+
+    EXPECT_EQ(0, model.getRowCount());
+    view.m_spUndoStack->item().undo();
+    EXPECT_EQ(4, model.getRowCount());
+    EXPECT_EQ(QString(), model.data(model.index(0, 0)).toString());
+    EXPECT_EQ(QString(), model.data(model.index(1, 0)).toString());
+    EXPECT_EQ(QString(), model.data(model.index(2, 0)).toString());
+    EXPECT_EQ(QString(), model.data(model.index(3, 0)).toString());
+
+    EXPECT_EQ(QString("a"), model.data(model.index(0, 1)).toString());
+    EXPECT_EQ(QString("b"), model.data(model.index(1, 1)).toString());
+    EXPECT_EQ(QString("c"), model.data(model.index(2, 1)).toString());
+    EXPECT_EQ(QString("d"), model.data(model.index(3, 1)).toString());
 }
 
 namespace

@@ -1085,18 +1085,18 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow
     if (!isValidRow(nRow))
         return;
     const auto nColCount = getColumnCount();
-    bool bNoneAdded = true;
+    bool bFirstItem = true;
     for (int nCol = 0; nCol < nColCount; ++nCol)
     {
         if (pSetIgnoreColumns != nullptr && pSetIgnoreColumns->find(nCol) != pSetIgnoreColumns->end())
             continue;
-        if (!bNoneAdded)
+        if (!bFirstItem) // To make sure that there won't be a delim in front of first item.
             str.push_back(cDelim);
+        bFirstItem = false;
         SzPtrUtf8R p = m_table(nRow, nCol);
         if (!p)
             continue;
         dataCellToString(QString::fromUtf8(p.c_str()), str, cDelim);
-        bNoneAdded = false;
     }
 }
 
