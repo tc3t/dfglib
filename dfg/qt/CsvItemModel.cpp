@@ -977,11 +977,49 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnName(const int nC
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(const std::vector<int>& vecIndexesAscSorted)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(const ::DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<const int>& indexesAscSorted)
 {
-    for(std::vector<int>::const_reverse_iterator iter = vecIndexesAscSorted.rbegin(); iter != vecIndexesAscSorted.rend(); ++iter)
+    if (indexesAscSorted.empty())
+        return;
+
+    auto iterEffectiveBegin = indexesAscSorted.begin();
+    // Skipping negative indexes from beginning.
+    while (iterEffectiveBegin != indexesAscSorted.end() && *iterEffectiveBegin < 0)
+        ++iterEffectiveBegin;
+
+    if (iterEffectiveBegin == indexesAscSorted.end())
+        return; // In this case there were only negative indexes.
+
+    auto iter = indexesAscSorted.end() - 1;
+
+    // Skipping past-end items
+    while (*iter >= getRowCount())
     {
-        this->removeRows(*iter, 1);
+        if (iter == iterEffectiveBegin) // In this case there were no valid indexes.
+            return;
+        --iter;
+    }
+
+    // Removing from end in order to not invalidate later indexes (e.g. removing first when having indexes 0 and 2 would make later removal of row 2 behave wrong).
+    for(;;)
+    {
+        // Removing in blocks for performance reasons, i.e. if indexes are 0,1,2 and 7,8,9, removing with two calls removeRows(7, 3) and removeRows(0, 3)
+        auto iterBlockLast = iter; // Note: this is inclusive, not one past end.
+        auto iterBlockFirst = iterBlockLast;
+        while (iterBlockFirst != iterEffectiveBegin)
+        {
+            const auto currentRow = *iterBlockFirst;
+            const auto previousRow = *(iterBlockFirst - 1);
+            if (currentRow == previousRow + 1)
+                --iterBlockFirst;
+            else
+                break;
+        }
+        this->removeRows(*iterBlockFirst, static_cast<int>(std::distance(iterBlockFirst, iterBlockLast) + 1));
+        if (iterBlockFirst == iterEffectiveBegin)
+            break;
+        else
+            iter = iterBlockFirst - 1;
     }
 }
 

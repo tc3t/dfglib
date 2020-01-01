@@ -66,6 +66,49 @@ TEST(dfgQt, CsvItemModel)
     }
 }
 
+TEST(dfgQt, CsvItemModel_removeRows)
+{
+    DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) model;
+
+    model.insertColumns(0, 1);
+    model.insertRows(0, 10);
+    EXPECT_EQ(10, model.rowCount());
+    EXPECT_EQ(1, model.columnCount());
+    for (int r = 0, nRowCount = model.rowCount(); r < nRowCount; ++r)
+    {
+        char c[2] = { 'a' + r, '\0' };
+        model.setDataNoUndo(r, 0, DFG_ROOT_NS::SzPtrAscii(c));
+    }
+    model.removeRows(0, 2);
+    EXPECT_EQ(8, model.rowCount());
+    EXPECT_EQ(QString("c"), model.data(model.index(0, 0)).toString());
+
+    model.removeRows(0, 1);
+    EXPECT_EQ(7, model.rowCount());
+    EXPECT_EQ(QString("d"), model.data(model.index(0, 0)).toString());
+
+    const int removeRows0[] = { -1 };
+    model.removeRows(removeRows0);
+    EXPECT_EQ(7, model.rowCount()); // Passing bogus row index shouldn't do anything.
+
+    const int removeRows1[] = { 1, 5, 6 };
+    model.removeRows(removeRows1);
+    EXPECT_EQ(4, model.rowCount());
+    EXPECT_EQ(QString("d"), model.data(model.index(0, 0)).toString());
+    EXPECT_EQ(QString("f"), model.data(model.index(1, 0)).toString());
+
+    const int removeRows2[] = { 1, 2 };
+    model.removeRows(removeRows2);
+    EXPECT_EQ(2, model.rowCount());
+    EXPECT_EQ(QString("d"), model.data(model.index(0, 0)).toString());
+    EXPECT_EQ(QString("h"), model.data(model.index(1, 0)).toString());
+
+    // Removing remaining rows and testing that bogus entries in the input list gets handled correctly also in this case.
+    const int removeRows3[] = { -5, -2, -1, 0, 1, 2, 3, 50 };
+    model.removeRows(removeRows3);
+    EXPECT_EQ(0, model.rowCount());
+}
+
 namespace
 {
     struct CsvItemModelReadFormatTestCase

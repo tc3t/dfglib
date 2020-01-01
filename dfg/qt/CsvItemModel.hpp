@@ -8,6 +8,7 @@
 #include "../io/textEncodingTypes.hpp"
 #include "StringMatchDefinition.hpp"
 #include "../build/languageFeatureInfo.hpp"
+#include "../cont/arrayWrapper.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -262,7 +263,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setColumnName(const int nCol, const QString& sName);
 
-        void removeRows(const std::vector<int>& vecIndexesAscSorted);
+        template <class Cont_T>
+        void removeRows(const Cont_T& indexesAscSorted) { removeRows(::DFG_MODULE_NS(cont)::ArrayWrapper::createArrayWrapper(indexesAscSorted)); }
+
+        void removeRows(const ::DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<const int>& indexesAscSorted);
 
         QString& dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim) const;
 
