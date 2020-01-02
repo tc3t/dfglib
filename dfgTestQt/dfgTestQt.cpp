@@ -11,6 +11,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <QDialog>
 #include <QSpinBox>
 #include <QGridLayout>
+#include <QSortFilterProxyModel>
 #include <QThread>
 #include <QUndoStack>
 #include <dfg/qt/qxt/gui/qxtspanslider.h>
@@ -148,6 +149,151 @@ TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
     EXPECT_EQ(QString("b"), model.data(model.index(1, 1)).toString());
     EXPECT_EQ(QString("c"), model.data(model.index(2, 1)).toString());
     EXPECT_EQ(QString("d"), model.data(model.index(3, 1)).toString());
+}
+
+TEST(dfgQt, CsvTableView_copyToClipboard)
+{
+    // Note: this tests only that the created strings, which would be copied clipboard, are well formed, clipboard is not changed.
+
+    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) csvModel;
+    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView) view(nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    viewModel.setDynamicSortFilter(true);
+
+    view.setModel(&viewModel);
+
+    csvModel.insertRows(0, 4);
+    csvModel.insertColumns(0, 4);
+
+    for (int r = 0; r < 4; ++r)
+    {
+        for (int c = 0; c < 4; ++c)
+        {
+            csvModel.setDataNoUndo(r, c, QString::number(r) + QString::number(c));
+        }
+    }
+    csvModel.insertRow(4);
+    csvModel.setDataNoUndo(4, 2, "42"); // For testing leading null cells.
+
+    // Testing contiguous selections starting from first element.
+    {
+        view.selectionModel()->select(viewModel.index(0, 0), QItemSelectionModel::SelectCurrent);
+        EXPECT_EQ(QString("00\n"), view.makeClipboardStringForCopy());
+        view.selectionModel()->select(viewModel.index(0, 1), QItemSelectionModel::Select);
+        EXPECT_EQ(QString("00\t01\n"), view.makeClipboardStringForCopy());
+        view.selectionModel()->select(viewModel.index(0, 2), QItemSelectionModel::Select);
+        EXPECT_EQ(QString("00\t01\t02\n"), view.makeClipboardStringForCopy());
+        view.selectionModel()->select(viewModel.index(0, 3), QItemSelectionModel::Select);
+        EXPECT_EQ(QString("00\t01\t02\t03\n"), view.makeClipboardStringForCopy());
+    }
+    
+    // Testing miscellaneous selections on first row
+    {
+        view.clearSelection();
+        view.selectionModel()->select(viewModel.index(0, 1), QItemSelectionModel::SelectCurrent);
+        EXPECT_EQ(QString("01\n"), view.makeClipboardStringForCopy());
+        view.selectionModel()->select(viewModel.index(0, 3), QItemSelectionModel::Select);
+        EXPECT_EQ(QString("01\t03\n"), view.makeClipboardStringForCopy());
+
+        view.clearSelection();
+        view.selectionModel()->select(viewModel.index(0, 3), QItemSelectionModel::SelectCurrent);
+        EXPECT_EQ(QString("03\n"), view.makeClipboardStringForCopy());
+    }
+
+    // Testing miscellaneous selections of single items
+    {
+        view.clearSelection();
+        view.selectionModel()->select(viewModel.index(1, 0), QItemSelectionModel::SelectCurrent);
+        view.selectionModel()->select(viewModel.index(3, 2), QItemSelectionModel::Select);
+        EXPECT_EQ(QString("10\n32\n"), view.makeClipboardStringForCopy());
+
+        view.clearSelection();
+        view.selectionModel()->select(viewModel.index(0, 3), QItemSelectionModel::SelectCurrent);
+        view.selectionModel()->select(viewModel.index(1, 0), QItemSelectionModel::Select);
+        view.selectionModel()->select(viewModel.index(2, 2), QItemSelectionModel::Select);
+        EXPECT_EQ(QString("03\n10\n22\n"), view.makeClipboardStringForCopy());
+    }
+
+    // Testing null cell handling
+    {
+        view.clearSelection();
+        view.selectionModel()->select(viewModel.index(4, 0), QItemSelectionModel::SelectCurrent);
+        view.selectionModel()->select(viewModel.index(4, 1), QItemSelectionModel::Select);
+        view.selectionModel()->select(viewModel.index(4, 2), QItemSelectionModel::Select);
+        view.selectionModel()->select(viewModel.index(4, 3), QItemSelectionModel::Select);
+        EXPECT_EQ(QString("\t\t42\t\n"), view.makeClipboardStringForCopy());
+        
+    }
+
+    // Testing column selections
+    {
+        view.selectColumn(0);
+        EXPECT_EQ(QString("00\n10\n20\n30\n\n"), view.makeClipboardStringForCopy());
+
+        view.selectColumn(2);
+        EXPECT_EQ(QString("02\n12\n22\n32\n42\n"), view.makeClipboardStringForCopy());
+
+        {
+            view.clearSelection();
+            QItemSelection selection;
+            selection.push_back(QItemSelectionRange(viewModel.index(0, 0), viewModel.index(4, 0)));
+            selection.push_back(QItemSelectionRange(viewModel.index(0, 2), viewModel.index(4, 2)));
+            view.selectionModel()->select(selection, QItemSelectionModel::Select);
+            EXPECT_EQ(QString("00\t02\n10\t12\n20\t22\n30\t32\n\t42\n"), view.makeClipboardStringForCopy());
+        }
+
+        {
+            view.clearSelection();
+            QItemSelection selection;
+            selection.push_back(QItemSelectionRange(viewModel.index(0, 2), viewModel.index(4, 2)));
+            selection.push_back(QItemSelectionRange(viewModel.index(0, 3), viewModel.index(4, 3)));
+            view.selectionModel()->select(selection, QItemSelectionModel::Select);
+            EXPECT_EQ(QString("02\t03\n12\t13\n22\t23\n32\t33\n42\t\n"), view.makeClipboardStringForCopy());
+        }
+    }
+
+    // Testing whole table selection
+    {
+        view.selectAll();
+        EXPECT_EQ(QString("00\t01\t02\t03\n"
+                          "10\t11\t12\t13\n"
+                          "20\t21\t22\t23\n"
+                          "30\t31\t32\t33\n"
+                          "\t\t42\t\n"), 
+                view.makeClipboardStringForCopy());
+    }
+
+    // Testing whole table selection after filter has been activated.
+    {
+        viewModel.setFilterKeyColumn(-1);
+        viewModel.setFilterFixedString("12");
+        view.selectAll();
+        EXPECT_EQ(QString("10\t11\t12\t13\n"), view.makeClipboardStringForCopy());
+        viewModel.setFilterFixedString(QString());
+    }
+
+    // Testing selection in sorted table
+    {
+        viewModel.setDynamicSortFilter(true);
+        viewModel.sort(2, Qt::DescendingOrder);
+        view.clearSelection();
+        view.selectionModel()->select(viewModel.index(0, 2), QItemSelectionModel::SelectCurrent);
+        view.selectRow(0);
+        EXPECT_EQ(QString("\t\t42\t\n"), view.makeClipboardStringForCopy());
+    }
+
+    // Testing selection in filtered and sorted table.
+    {
+        viewModel.setFilterKeyColumn(-1);
+        viewModel.setFilterFixedString("33");
+        view.clearSelection();
+        QItemSelection selection;
+        selection.push_back(QItemSelectionRange(viewModel.index(0, 0), viewModel.index(0, 0)));
+        selection.push_back(QItemSelectionRange(viewModel.index(0, 3), viewModel.index(0, 3)));
+        view.selectionModel()->select(selection, QItemSelectionModel::Select);
+        EXPECT_EQ(QString("30\t33\n"), view.makeClipboardStringForCopy());
+    }
 }
 
 namespace

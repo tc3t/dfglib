@@ -268,7 +268,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void removeRows(const ::DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<const int>& indexesAscSorted);
 
-        QString& dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim) const;
+        static QString& dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim);
 
         const QString& getFilePath() const
         { 

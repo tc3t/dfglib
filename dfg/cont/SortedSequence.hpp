@@ -29,6 +29,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             m_cont.reserve(n);
         }
 
+        void clear()
+        {
+            m_cont.clear();
+        }
+
         // TODO: test
         void replace(const value_type& old, const value_type& newVal)
         {

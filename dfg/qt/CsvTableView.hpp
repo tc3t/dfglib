@@ -249,6 +249,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void privShowExecutionBlockedNotification(const QString& actionname);
 
+        QString makeClipboardStringForCopy(QChar cDelim = '\t');
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);

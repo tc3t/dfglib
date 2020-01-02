@@ -1680,55 +1680,82 @@ bool DFG_CLASS_NAME(CsvTableView)::cut()
     return true;
 }
 
+QString DFG_MODULE_NS(qt)::CsvTableView::makeClipboardStringForCopy(QChar cDelim)
+{
+    auto pViewModel = model();
+    if (!pViewModel)
+        return QString();
+
+    const auto sm = selectionModel();
+    auto selection = (sm) ? sm->selection() : QItemSelection();
+
+    /*
+     Selection consists of QItemSelectionRange's each of which is a rectangular selection.
+     Examples:
+          -when selecting all, there will be one QItemSelectionRange where topLeft() and bottomRight() will point to first and last cell in table.
+          -When selecting N disconnected cells individually, there will be N QItemSelectionRange's in QItemSelection.
+          -When selecting two columns, there will be two QItemSelectionRange's, both spanning all rows but only one column.
+
+     When creating a string for clipboard, content must be gathered beginning from top row and each row may contain entries from more than one QItemSelectionRange.
+    */
+
+    const auto computeTopRow = [&]()
+        {
+            ::DFG_MODULE_NS(func)::MemFuncMin<int> minFunc;
+            std::for_each(selection.cbegin(), selection.cend(), [&](const QItemSelectionRange& sr) { minFunc(sr.top()); });
+            return minFunc.value();
+        };
+
+    QString sOutput;
+    auto nTopRow = computeTopRow();
+    std::vector<decltype(selection.cbegin())> rangesWithSelectionsOnRow;
+    CsvModel::IndexSet presentColumnsOnRow;
+    while (!selection.isEmpty())
+    {
+        rangesWithSelectionsOnRow.clear();
+        presentColumnsOnRow.clear();
+        // Selecting only those ranges that have something in this row.
+        for (auto iter = selection.cbegin(), iterEnd = selection.cend(); iter != iterEnd; ++iter)
+        {
+            if (iter->top() <= nTopRow)
+            {
+                rangesWithSelectionsOnRow.push_back(iter);
+                for (int c = iter->left(); c <= iter->right(); ++c)
+                    presentColumnsOnRow.insert(c); // Not quite optimal if there are lots of columns, but shall do for now.
+            }
+        }
+        DFG_ASSERT_CORRECTNESS(!rangesWithSelectionsOnRow.empty());
+        bool bFirstSelectedOnRow = true;
+        for (auto iterCol = presentColumnsOnRow.cbegin(), iterColEnd = presentColumnsOnRow.cend(); iterCol != iterColEnd; ++iterCol)
+        {
+            const auto c = *iterCol;
+            for (auto iter = rangesWithSelectionsOnRow.cbegin(), iterEnd = rangesWithSelectionsOnRow.cend(); iter != iterEnd; ++iter)
+            {
+                if ((*iter)->contains(nTopRow, c, QModelIndex()))
+                {
+                    if (!bFirstSelectedOnRow)
+                        sOutput += cDelim;
+                    else
+                        bFirstSelectedOnRow = false;
+                    CsvModel::dataCellToString(pViewModel->data(pViewModel->index(nTopRow, c)).toString(), sOutput, cDelim);
+                }
+            }
+        }
+        sOutput.push_back('\n');
+        ++nTopRow;
+        // Removing selections which have been completely processed (i.e. those whose bottom() < nTopRow)
+        selection.erase(::DFG_MODULE_NS(alg)::removeIf(selection.begin(), selection.end(), [=](const QItemSelectionRange& sr) { return nTopRow > sr.bottom(); }), selection.end());
+        nTopRow = Max(nTopRow, computeTopRow());
+    }
+
+    return sOutput;
+}
+
 bool DFG_CLASS_NAME(CsvTableView)::copy()
 {
-    auto vViewRows = getRowsOfSelectedItems(nullptr, false);
-    auto vRows = getRowsOfSelectedItems(getProxyModelPtr(), false);
-    auto pModel = csvModel();
-    if (vRows.empty() || !pModel)
-        return false;
-    QString str;
-    // Not sorting because it's probably more intuitive to get
-    // items in that order in which they were shown.
-    //std::sort(vRows.begin(), vRows.end());
-    //std::sort(vViewRows.begin(), vViewRows.end());
-    DFG_ASSERT(vViewRows.size() == vRows.size());
-    QItemSelection selection;
-    const bool bRowMode = isRowMode();
-    for (size_t i = 0; i<vRows.size(); ++i)
-    {
-        QAbstractItemModel* pEffectiveModel = getProxyModelPtr();
-        if (pEffectiveModel == nullptr)
-            pEffectiveModel = pModel;
-
-        if (!bRowMode)
-        {
-            CsvModel::IndexSet setIgnoreCols;
-
-            for (int col = 0; col < pModel->columnCount(); ++col)
-            {
-                if (!selectionModel()->isSelected(pEffectiveModel->index(vViewRows[i], col)))
-                    setIgnoreCols.insert(col);
-                else
-                    selection.select(pEffectiveModel->index(vViewRows[i], col), pEffectiveModel->index(vViewRows[i], col));
-            }
-            pModel->rowToString(vRows[i], str, '\t', &setIgnoreCols);
-        }
-        else
-        {
-            pModel->rowToString(vRows[i], str, '\t');
-            selection.select(pEffectiveModel->index(vViewRows[i], 0), pEffectiveModel->index(vViewRows[i], 0));
-        }
-        str.push_back('\n');
-
-    }
-    if (bRowMode)
-        selectionModel()->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    else
-        selectionModel()->select(selection, QItemSelectionModel::Select);
+    QString str = makeClipboardStringForCopy();
 
     QApplication::clipboard()->setText(str);
-
     return true;
 }
 
