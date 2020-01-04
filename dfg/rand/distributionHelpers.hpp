@@ -157,8 +157,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
             { \
                 return canConstruct_##CLASS_NAME<T>(args.second); \
             } \
-            static bool isAcceptableParamCount(const ptrdiff_t val) { return val < 32 && ((DFG_DETAIL_NS::ACCEPTED_ARG_COUNT & (1 << val)) != 0); } \
-            static const int MaxArgCount = DFG_DETAIL_NS::MaxArgCount<DFG_DETAIL_NS::ACCEPTED_ARG_COUNT>::value; \
+            static bool isAcceptableParamCount(const ptrdiff_t val) { return val < 32 && ((DFG_DETAIL_NS::ACCEPTED_ARG_COUNT & (ptrdiff_t(1) << val)) != 0); } \
+            static const ptrdiff_t MaxArgCount = DFG_DETAIL_NS::MaxArgCount<DFG_DETAIL_NS::ACCEPTED_ARG_COUNT>::value; \
             static std::pair<bool, std::tuple<__VA_ARGS__>> makeUninitializedParams() { return std::make_pair(false, std::tuple<__VA_ARGS__>()); } \
         }
 

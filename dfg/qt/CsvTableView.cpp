@@ -13,6 +13,8 @@
 #include "../time/timerCpu.hpp"
 #include "../cont/valueArray.hpp"
 #include "TableEditor.hpp"
+#include "../rand.hpp"
+#include "../rand/distributionHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -1814,11 +1816,7 @@ namespace
         PropertyIdInvalid = -1,
         PropertyIdTarget,
         PropertyIdGenerator,
-        LastNonParamPropertyId = PropertyIdGenerator,
-        PropertyIdMinValueInt,
-        PropertyIdMaxValueInt,
-        PropertyIdMinValueDouble,
-        PropertyIdMaxValueDouble,
+        LastNonParamPropertyId = PropertyIdGenerator
     };
 
     enum GeneratorType
@@ -1845,6 +1843,7 @@ namespace
         ValueTypeUInteger = ValueTypeInteger,
         ValueTypeDouble,
         ValueTypeString,
+        ValueTypeCsvList,
     };
 
     struct PropertyDefinition
@@ -1864,15 +1863,17 @@ namespace
         //                                   In syntax |x;y;z... items x,y,z define
         //                                   the indexes in this table that are
         //                                   parameters for given item.
-        { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                               , "Selection"       },
-        { "Generator"           , ValueTypeKeyList  , "Random integers|2;3,Random doubles|4;5;6;7,Fill|8"   , "Random integers" },
-        { "Min value"           , ValueTypeInteger  , ""                                                    , "0"               },
-        { "Max value"           , ValueTypeInteger  , ""                                                    , "32767"           },
-        { "Min value"           , ValueTypeDouble   , ""                                                    , "0.0"             },
-        { "Max value"           , ValueTypeDouble   , ""                                                    , "1.0"             },
-        { "Format type"         , ValueTypeString   , ""                                                    , "g"               },
-        { "Format precision"    , ValueTypeUInteger , ""                                                    , "6"               }, // Note: empty value must be supported as well.
-        { "Fill string"         , ValueTypeString   , ""                                                    , ""                }
+        { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                               , "Selection"       }, // 0
+        { "Generator"           , ValueTypeKeyList  , "Random integers|9,Random doubles|10;6;7,Fill|8"      , "Random integers" }, // 1
+        { "Unused"              , ValueTypeInteger  , ""                                                    , ""                }, // 2
+        { "Unused"              , ValueTypeInteger  , ""                                                    , ""                }, // 3
+        { "Unused"              , ValueTypeDouble   , ""                                                    , ""                }, // 4
+        { "Unused"              , ValueTypeDouble   , ""                                                    , ""                }, // 5
+        { "Format type"         , ValueTypeString   , ""                                                    , "g"               }, // 6
+        { "Format precision"    , ValueTypeUInteger , ""                                                    , "6"               }, // 7. Note: empty value must be supported as well.
+        { "Fill string"         , ValueTypeString   , ""                                                    , ""                }, // 8
+        { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform,0,32767" }, // 9
+        { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform,0,1"     }  // 10
     };
 
     PropertyId rowToPropertyId(const int r)
@@ -2208,8 +2209,6 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
     return false;
 }
 
-#include "../rand.hpp"
-
 template <class Generator_T>
 void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(CsvTableView)& view, DFG_CLASS_NAME(CsvItemModel)& rModel, Generator_T generator)
 {
@@ -2294,13 +2293,99 @@ namespace
     }
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvItemModel)& settingsModel)
+namespace
 {
-    if (settingsModel.rowCount() < 2)
+    typedef decltype(QString().split(' ')) RandQStringArgs;
+
+    template <class Distr_T, size_t ArgCount>
+    bool generateRandom(const TargetType target, DFG_CLASS_NAME(CsvTableView)& view, const RandQStringArgs& qstrArgs, const char* pFormat = nullptr)
     {
-        DFG_ASSERT(false);
+        auto pModel = view.csvModel();
+        if (!pModel)
+            return false;
+        auto& rModel = *pModel;
+
+        std::vector<std::string> strArgs(qstrArgs.size());
+        std::transform(qstrArgs.cbegin(), qstrArgs.cend(), strArgs.begin(), [](const QString& s) { return s.toStdString(); });
+        if (strArgs.size() != ArgCount)
+            return false;
+
+        auto args = ::DFG_MODULE_NS(rand)::makeDistributionConstructArgs<Distr_T>(strArgs);
+        if (!args.first) // Are arguments valid?
+            return false;
+
+        auto distr = ::DFG_MODULE_NS(rand)::makeDistribution<Distr_T>(args);
+
+        auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
+        char szBuffer[32];
+        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
+            {
+                // If result type is bool, using int, otherwise the same type. This is because toStr() wouldn't compile with bool result type.
+                typedef typename std::conditional<std::is_same<decltype(distr(randEng)), bool>::value, int, decltype(distr(randEng))>::type ResultType;
+                const ResultType val = distr(randEng);
+                if (pFormat)
+                    ::DFG_MODULE_NS(str)::toStr(val, szBuffer, pFormat);
+                else
+                    ::DFG_MODULE_NS(str)::toStr(val, szBuffer);
+                table.setElement(r, c, DFG_ROOT_NS::SzPtrUtf8R(szBuffer));
+            };
+        generateForEachInTarget(target, view, rModel, generator);
+        return true;
+    }
+
+    bool generateRandomInt(const TargetType target, DFG_CLASS_NAME(CsvTableView)& view, RandQStringArgs& params)
+    {
+        if (params.isEmpty())
+            return false;
+        const QString sDistribution = params.takeFirst();
+        if (sDistribution == QLatin1String("uniform"))
+            return generateRandom<std::uniform_int_distribution<int>, 2>(target, view, params); // Params: min, max.
+        else if (sDistribution == QLatin1String("binomial"))
+            return generateRandom<std::binomial_distribution<int>, 2>(target, view, params); // Params: count, propability.
+        else if (sDistribution == QLatin1String("bernoulli"))
+            return generateRandom<std::bernoulli_distribution, 1>(target, view, params); // Params: probability
+        else if (sDistribution == QLatin1String("negative_binomial"))
+            return generateRandom<std::negative_binomial_distribution<int>, 2>(target, view, params); // Params: count, propability.
+        else if (sDistribution == QLatin1String("geometric"))
+            return generateRandom<std::geometric_distribution<int>, 1>(target, view, params); // Params: probability
+        else if (sDistribution == QLatin1String("poisson"))
+            return generateRandom<std::poisson_distribution<int>, 1>(target, view, params); // Params: mean
         return false;
     }
+
+    bool generateRandomReal(const TargetType target, DFG_CLASS_NAME(CsvTableView)& view, RandQStringArgs& params, const char* pszFormat)
+    {
+        if (params.isEmpty())
+            return false;
+        const QString sDistribution = params.takeFirst();
+        if (sDistribution == QLatin1String("uniform"))
+            return generateRandom<std::uniform_real_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("normal"))
+            return generateRandom<std::normal_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("cauchy"))
+            return generateRandom<std::cauchy_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("exponential"))
+            return generateRandom<std::exponential_distribution<double>, 1>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("gamma"))
+            return generateRandom<std::gamma_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("weibull"))
+            return generateRandom<std::weibull_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("extreme_value"))
+            return generateRandom<std::extreme_value_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("lognormal"))
+            return generateRandom<std::lognormal_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("chi_squared"))
+            return generateRandom<std::chi_squared_distribution<double>, 1>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("fisher_f"))
+            return generateRandom<std::fisher_f_distribution<double>, 2>(target, view, params, pszFormat);
+        else if (sDistribution == QLatin1String("student_t"))
+            return generateRandom<std::student_t_distribution<double>, 1>(target, view, params, pszFormat);
+        return false;
+    }
+}
+
+bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvItemModel)& settingsModel)
+{
     const auto genType = generatorType(settingsModel);
     const auto target = targetType(settingsModel);
     auto pModel = csvModel();
@@ -2311,34 +2396,24 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
     DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
     if (genType == GeneratorTypeRandomIntegers)
     {
-        if (settingsModel.rowCount() < 4) // Not enough parameters
+        if (settingsModel.rowCount() < LastNonParamPropertyId + 2) // Not enough parameters in model?
+        {
+            DFG_ASSERT(false);
             return false;
-        const auto minVal = settingsModel.data(settingsModel.index(2, 1)).toString().toLongLong();
-        const auto maxVal = settingsModel.data(settingsModel.index(3, 1)).toString().toLongLong();
-        auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
-        char szBuffer[32];
-        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
-                                {
-                                    const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal);
-                                    DFG_MODULE_NS(str)::toStr(val, szBuffer);
-                                    table.setElement(r, c, SzPtrUtf8R(szBuffer));
-                                };
-        generateForEachInTarget(target, *this, rModel, generator);
-        return true;
+        }
+        auto params = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().split(',');
+        return generateRandomInt(target, *this, params);
     }
     else if (genType == GeneratorTypeRandomDoubles)
     {
-        if (settingsModel.rowCount() < 6) // Not enough parameters
-            return false;
-        const auto minVal      = settingsModel.data(settingsModel.index(2, 1)).toString().toDouble();
-        const auto maxVal      = settingsModel.data(settingsModel.index(3, 1)).toString().toDouble();
-        if (minVal > maxVal)
+        if (settingsModel.rowCount() < LastNonParamPropertyId + 4) // Not enough parameters in model?
         {
-            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Minimum value is greater than maximum value, no content generation is done"));
+            DFG_ASSERT(false);
             return false;
         }
-        const auto sFormatType = settingsModel.data(settingsModel.index(4, 1)).toString().trimmed();
-        auto sPrecision   = settingsModel.data(settingsModel.index(5, 1)).toString();
+        auto params = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().split(',');
+        const auto sFormatType = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 2, 1)).toString().trimmed();
+        auto sPrecision = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 3, 1)).toString();
         bool bPrecisionIsUint;
         if (!sPrecision.isEmpty() && (sPrecision.toUInt(&bPrecisionIsUint) > 1000 || !bPrecisionIsUint)) // Not sure does this need to be limited; just cut it somewhere.
         {
@@ -2355,19 +2430,15 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         std::string sFormat(("%" + sPrecision + sFormatType).toLatin1());
         const auto pszFormat = sFormat.c_str();
 
-        auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
-        char szBuffer[64];
-        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
-                                {
-                                    const auto val = ::DFG_MODULE_NS(rand)::rand(randEng, minVal, maxVal);
-                                    DFG_MODULE_NS(str)::toStr(val, szBuffer, pszFormat);
-                                    table.setElement(r, c, SzPtrUtf8R(szBuffer));
-                                };
-        generateForEachInTarget(target, *this, rModel, generator);
-        return true;
+        return generateRandomReal(target, *this, params, pszFormat);
     }
     else if (genType == GeneratorTypeFill)
     {
+        if (settingsModel.rowCount() < LastNonParamPropertyId + 2) // Not enough parameters in model?
+        {
+            DFG_ASSERT(false);
+            return false;
+        }
         const auto sFill = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
         const auto pszFillU8 = SzPtrUtf8(sFill.data());
         const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
