@@ -149,6 +149,17 @@ template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCS
 template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStrW psz)
     {return convertStrTo<T>(psz);}
 
+// Single parameter strTo()
+template <class T> inline typename std::remove_cv<T>::type strTo(const std::string& s)
+{
+    return convertStrTo<T>(s.c_str());
+}
+
+template <class T> inline typename std::remove_cv<T>::type strTo(const std::wstring& s)
+{
+    return convertStrTo<T>(s.c_str());
+}
+
 // strTo(x) for StringView
 template <class T, class Char_T, class Str_T>
 inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sv)

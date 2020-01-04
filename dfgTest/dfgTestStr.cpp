@@ -386,6 +386,12 @@ TEST(dfgStr, strTo)
     EXPECT_EQ(strTo<uint64>("18446744073709551615"), uint64_max);
     EXPECT_EQ(strTo<const uint64>("18446744073709551615"), uint64_max);
 
+    // Testing that strTo() accepts std::string and std::wstring
+    {
+        EXPECT_EQ(1, strTo<int>(std::string("1")));
+        EXPECT_EQ(1, strTo<int>(std::wstring(L"1")));
+    }
+
     // Test that strTo() accepts StringView's
     {
         EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewC)("1")));
