@@ -651,6 +651,9 @@
     <ClInclude Include="..\dfg\os\renameFileOrDirectory.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\rand\distributionHelpers.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

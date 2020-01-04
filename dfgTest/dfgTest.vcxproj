@@ -1102,6 +1102,7 @@
     <ClInclude Include="..\dfg\qt\widgetHelpers.hpp" />
     <ClInclude Include="..\dfg\rand.hpp" />
     <ClInclude Include="..\dfg\randAll.hpp" />
+    <ClInclude Include="..\dfg\rand\distributionHelpers.hpp" />
     <ClInclude Include="..\dfg\rangeIterator.hpp" />
     <ClInclude Include="..\dfg\ReadOnlySzParam.hpp" />
     <ClInclude Include="..\dfg\reflection\hasMemberFunction.hpp" />
