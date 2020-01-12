@@ -289,6 +289,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
         // Note: Does not check whether the table has actually changed and always sets the model modified.
+        // Note: This resets model (for details, see QAbstractItemModel::beginResetModel()). This means that e.g. view selection is lost when calling this function.
+        //       If caller wishes to have the same selection before and after this call, it must be handled manually.
         template <class Func_T> void batchEditNoUndo(Func_T func);
 
         void setHighlighter(HighlightDefinition hld);

@@ -251,6 +251,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         QString makeClipboardStringForCopy(QChar cDelim = '\t');
 
+        // Convenience function, effectively returns selectionModel()->selection();
+        QItemSelection getSelection() const;
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
