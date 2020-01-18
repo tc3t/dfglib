@@ -209,15 +209,11 @@ TEST(dfgRand, distributionCreation)
         testDistr<DistrT>(false,    "-1", nullptr, nullptr, returnFalse); // Invalid probibility (-1)
     }
 
-    // Testing negative_binomial_distribution
+    // Testing NegativeBinomialDistribution
     {
-        typedef std::negative_binomial_distribution<int> DistrT;
+        typedef DFG_MODULE_NS(rand)::NegativeBinomialDistribution<int> DistrT; // Note: using a wrapper because std::negative_binomial_distribution doesn't handle p == 1 correctly in any of the checked implementations (as of 2020-01)
         testDistr<DistrT>(true,      "5",   "0.5", nullptr, [](const int v) { return v >= 0; });
-#ifdef _MSC_VER // MSVC seems to mishandle parameter 1; should be accepted according to specs and works on MinGW, but triggers assert on MSVC when generating values (tested on 2012 and 2019.4)
-        testDistr<DistrT>(false,    "20",     "1", nullptr, returnFalse);
-#else
         testDistr<DistrT>(true,     "20",     "1", nullptr, [](const int v) { return v == 0; });
-#endif
         testDistr<DistrT>(true,     "20",  "0.99", nullptr, [](const int v) { return v >= 0; });
         testDistr<DistrT>(false,     "0",   "0.5", nullptr, returnFalse); // Invalid count (0)
         testDistr<DistrT>(false,     "1",     "0", nullptr, returnFalse); // Invalid probibility (0)

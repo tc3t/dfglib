@@ -10,6 +10,31 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
 
+    // Wrapper for std::negative_binomial_distribution to avoid buggy implementations regarding handling of p == 1.
+    template<class Int_T = int>
+    class NegativeBinomialDistribution : public std::negative_binomial_distribution<Int_T>
+    {
+    public:
+        typedef std::negative_binomial_distribution<Int_T> BaseClass;
+
+        explicit NegativeBinomialDistribution()
+        {}
+
+        explicit NegativeBinomialDistribution(Int_T k, double p = 0.5)
+            : BaseClass(k, p)
+        {}
+
+        template<class RandEng_T>
+        typename BaseClass::result_type operator()(RandEng_T& g)
+        {
+            if (this->p() == 1)
+                return 0;
+            else
+                return BaseClass::operator()(g);
+        }
+
+    };
+
     // This namespace defines functions that can be used to validate args used to construct std:: distributions.
     // Args need to be validated because passing invalid args to constructors result in many/all cases either UB
     // or crash due to ASSERT in constructor or operator().
@@ -71,7 +96,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         }
 
         template <class T, class Args_T>
-        bool canConstruct_negative_binomial_distribution(const Args_T& args)
+        bool canConstruct_NegativeBinomialDistribution(const Args_T& args)
         {
             // 0: count (integer)
             // 1: probability (real)
@@ -79,11 +104,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
                 &&
                 std::get<1>(args) > 0
                 &&
-            #ifdef _MSC_VER // MSVC doesn't seem to handle value 1 correctly (triggers assert when generating values) so filtering it out.
-                std::get<1>(args) < 1;
-            #else
                 std::get<1>(args) <= 1;
-            #endif
         }
 
         template <class T, class Args_T>
@@ -149,8 +170,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
 
         template <class Distr_T> struct DistributionDetails;
 
-    #define DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(CLASS_NAME, ACCEPTED_ARG_COUNT, ...) \
-        template <class T> struct DistributionDetails<std::CLASS_NAME<T>> \
+    #define DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(NAMESPACE, CLASS_NAME, ACCEPTED_ARG_COUNT, ...) \
+        template <class T> struct DistributionDetails<NAMESPACE::CLASS_NAME<T>> \
         { \
             template <class Args_T> \
             static bool canConstruct(const Args_T& args) \
@@ -165,11 +186,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         // ---------------------------------------------------------------
 
         // Defining specialization for integer distributions
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(uniform_int_distribution,       args_0_or_1_or_2,      T, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(binomial_distribution,          args_0_or_1_or_2,      T, double);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(negative_binomial_distribution, args_0_or_1_or_2,      T, double);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(geometric_distribution,              args_0_or_1, double);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(poisson_distribution,                args_0_or_1, double);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, uniform_int_distribution,       args_0_or_1_or_2,      T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, binomial_distribution,          args_0_or_1_or_2,      T, double);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(::DFG_MODULE_NS(rand), NegativeBinomialDistribution,        args_0_or_1_or_2,      T, double);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, geometric_distribution,              args_0_or_1, double);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, poisson_distribution,                args_0_or_1, double);
         
         // bernoulli_distribution does not have template parameters so not using the macro helper.
         template <> struct DistributionDetails<std::bernoulli_distribution>
@@ -183,17 +204,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         // ---------------------------------------------------------------
         
         // Defining specialization for real-valued distributions
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(exponential_distribution,        args_0_or_1, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(chi_squared_distribution,        args_0_or_1, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(student_t_distribution,          args_0_or_1, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(uniform_real_distribution,  args_0_or_1_or_2, T, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(normal_distribution,        args_0_or_1_or_2, T, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(cauchy_distribution,        args_0_or_1_or_2, T, T);      
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(gamma_distribution,         args_0_or_1_or_2, T, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(weibull_distribution,       args_0_or_1_or_2, T, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(extreme_value_distribution, args_0_or_1_or_2, T, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(lognormal_distribution,     args_0_or_1_or_2, T, T);
-        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(fisher_f_distribution,      args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, exponential_distribution,        args_0_or_1, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, chi_squared_distribution,        args_0_or_1, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, student_t_distribution,          args_0_or_1, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, uniform_real_distribution,  args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, normal_distribution,        args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, cauchy_distribution,        args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, gamma_distribution,         args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, weibull_distribution,       args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, extreme_value_distribution, args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, lognormal_distribution,     args_0_or_1_or_2, T, T);
+        DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, fisher_f_distribution,      args_0_or_1_or_2, T, T);
         
 
     #undef DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS

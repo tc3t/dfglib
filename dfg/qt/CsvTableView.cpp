@@ -2376,7 +2376,7 @@ namespace
         else if (sDistribution == QLatin1String("bernoulli"))
             return generateRandom<std::bernoulli_distribution, 1>(target, view, params); // Params: probability
         else if (sDistribution == QLatin1String("negative_binomial"))
-            return generateRandom<std::negative_binomial_distribution<int>, 2>(target, view, params); // Params: count, propability.
+            return generateRandom<::DFG_MODULE_NS(rand)::NegativeBinomialDistribution<int>, 2>(target, view, params); // Params: count, propability.
         else if (sDistribution == QLatin1String("geometric"))
             return generateRandom<std::geometric_distribution<int>, 1>(target, view, params); // Params: probability
         else if (sDistribution == QLatin1String("poisson"))
