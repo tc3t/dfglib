@@ -308,8 +308,23 @@ TEST(dfgStr, strToByLexCast)
 
     DFG_SUB_NS_NAME(str)::strToByNoThrowLexCast("1a0", a0, &bSuccess);
     EXPECT_FALSE(bSuccess);
-
 }
+
+namespace
+{
+    template <class Char_T>
+    void strTo_leadingTrailingWhitespaces()
+    {
+        // Note: currently only ' ' is considered as whitespace; might want to revise this at some point.
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+        EXPECT_EQ(1, strTo<int>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " 1")));
+        EXPECT_EQ(1, strTo<int>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "1 ")));
+        EXPECT_EQ(1, strTo<int>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " 1 ")));
+        EXPECT_EQ(1.25, strTo<double>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " 1.25 ")));
+    }
+} // unnamed namespace
+
 
 TEST(dfgStr, strTo)
 {
@@ -414,6 +429,22 @@ TEST(dfgStr, strTo)
         EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzLatin1)(SzPtrLatin1("1"))));
         EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewUtf8)(DFG_UTF8("1"))));
         EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzUtf8)(DFG_UTF8("1"))));
+    }
+
+    // Testing that leading or trailing spaces won't break parsing
+    {
+        strTo_leadingTrailingWhitespaces<char>();
+        strTo_leadingTrailingWhitespaces<wchar_t>();
+    }
+
+    // Testing that invalid input won't crash etc. and returns zero initialized value.
+    {
+        const char* p = nullptr;
+        EXPECT_EQ(0, strTo<int>(p));
+        EXPECT_EQ(0.0, strTo<double>(p));
+        EXPECT_EQ(0, strTo<int>("abc"));
+        EXPECT_EQ(0, strTo<int>(""));
+        EXPECT_EQ(0.0, strTo<double>("  "));
     }
 
     volatile uint32 volVal = 1;

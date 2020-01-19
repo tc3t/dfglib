@@ -32,6 +32,29 @@ T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
 #endif
 }
 
+template <class T, class Char_T>
+T& strToByNoThrowLexCastImpl(const DFG_CLASS_NAME(StringView)<Char_T>& sv, T& val, bool* pSuccess = nullptr)
+{
+    bool bSuccess = true;
+    try
+    {
+        val = boost::lexical_cast<T>(sv.dataRaw(), sv.length());
+    }
+    catch (const boost::bad_lexical_cast&)
+    {
+        bSuccess = false;
+    }
+    if (pSuccess)
+        *pSuccess = bSuccess;
+    return val;
+}
+
+template <class T>
+T& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewC)& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
+
+template <class T>
+T& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewW)& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
+
 template <class T>
 T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlySzParamC)& s, bool* pSuccess = nullptr)
 {
@@ -96,8 +119,24 @@ namespace DFG_DETAIL_NS
     template <class T, class Char_T>
     T genericImpl(const Char_T* psz)
     {
-        T t;
-        strToByNoThrowLexCast(psz, t);
+        auto t = T();
+        if (!psz)
+            return t;
+
+        // Trimming front.
+        while (*psz == ' ')
+            ++psz;
+
+        if (*psz == '\0')
+            return t;
+
+        // Trimming end
+        auto pEnd = psz + strLen(psz);
+        while (*(pEnd - 1) == ' ')
+            --pEnd;
+
+        DFG_CLASS_NAME(StringView)<Char_T> sv(psz, pEnd - psz);
+        strToByNoThrowLexCast(sv, t);
         return t;
     }
 
