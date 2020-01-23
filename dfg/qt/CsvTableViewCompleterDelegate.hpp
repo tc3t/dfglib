@@ -21,6 +21,7 @@ class DFG_CLASS_NAME(CsvTableViewCompleterDelegate) : public QItemDelegate
     typedef QItemDelegate BaseClass;
 
 public:
+    // Does not take ownership of pCompleter.
     DFG_CLASS_NAME(CsvTableViewCompleterDelegate)(QObject* parent = nullptr, QCompleter* pCompleter = nullptr);
     ~DFG_CLASS_NAME(CsvTableViewCompleterDelegate)();
 

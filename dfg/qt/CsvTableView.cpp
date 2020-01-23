@@ -47,10 +47,12 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTimer>
 #include <QToolTip>
 #include <QUndoView>
-#include <QReadWriteLock> 
+#include <QReadWriteLock>
+#include <QStringListModel>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
+#include <map>
 #include "../alg.hpp"
 #include "../cont/SortedSequence.hpp"
 #include "../math.hpp"
@@ -1852,6 +1854,36 @@ namespace
         int m_nType;
         const char* m_keyList;
         const char* m_pszDefault;
+        const char** m_pCompleterItems; // Array of strings defining the list of completer items, must end with nullptr item.
+    };
+    
+    // Defines completer items for integer distribution parameters
+    const char* integerDistributionCompleters[] =
+    {
+        "uniform, 0, 100",
+        "binomial, 10, 0.5",
+        "bernoulli, 0.5",
+        "negative_binomial, 10, 0.5",
+        "geometric, 0.5",
+        "poisson, 10",
+        nullptr // End-of-list marker
+    };
+
+    // Defines completer items for real distribution parameters
+    const char* realDistributionCompleters[] =
+    {
+        "uniform, 0, 1",
+        "normal, 0, 1",
+        "cauchy, 0, 1",
+        "exponential, 1",
+        "gamma, 1, 1",
+        "weibull, 1, 1",
+        "extreme_value, 0, 1",
+        "lognormal, 0, 1",
+        "chi_squared, 1",
+        "fisher_f, 1, 1",
+        "student_t, 1",
+        nullptr // End-of-list marker
     };
 
     // Note: this is a POD-table (for notes about initialization of PODs, see
@@ -1863,17 +1895,17 @@ namespace
         //                                   In syntax |x;y;z... items x,y,z define
         //                                   the indexes in this table that are
         //                                   parameters for given item.
-        { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                               , "Selection"       }, // 0
-        { "Generator"           , ValueTypeKeyList  , "Random integers|9,Random doubles|10;6;7,Fill|8"      , "Random integers" }, // 1
-        { "Unused"              , ValueTypeInteger  , ""                                                    , ""                }, // 2
-        { "Unused"              , ValueTypeInteger  , ""                                                    , ""                }, // 3
-        { "Unused"              , ValueTypeDouble   , ""                                                    , ""                }, // 4
-        { "Unused"              , ValueTypeDouble   , ""                                                    , ""                }, // 5
-        { "Format type"         , ValueTypeString   , ""                                                    , "g"               }, // 6
-        { "Format precision"    , ValueTypeUInteger , ""                                                    , "6"               }, // 7. Note: empty value must be supported as well.
-        { "Fill string"         , ValueTypeString   , ""                                                    , ""                }, // 8
-        { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform,0,32767" }, // 9
-        { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform,0,1"     }  // 10
+        { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                               , "Selection"      , nullptr }, // 0
+        { "Generator"           , ValueTypeKeyList  , "Random integers|9,Random doubles|10;6;7,Fill|8"      , "Random integers", nullptr }, // 1
+        { "Unused"              , ValueTypeInteger  , ""                                                    , ""               , nullptr }, // 2
+        { "Unused"              , ValueTypeInteger  , ""                                                    , ""               , nullptr }, // 3
+        { "Unused"              , ValueTypeDouble   , ""                                                    , ""               , nullptr }, // 4
+        { "Unused"              , ValueTypeDouble   , ""                                                    , ""               , nullptr }, // 5
+        { "Format type"         , ValueTypeString   , ""                                                    , "g"              , nullptr }, // 6
+        { "Format precision"    , ValueTypeUInteger , ""                                                    , "6"              , nullptr }, // 7. Note: empty value must be supported as well.
+        { "Fill string"         , ValueTypeString   , ""                                                    , ""               , nullptr }, // 8
+        { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform, 0, 100", integerDistributionCompleters }, // 9
+        { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform, 0, 1"  , realDistributionCompleters }  // 10
     };
 
     PropertyId rowToPropertyId(const int r)
@@ -1920,6 +1952,24 @@ namespace
         ContentGeneratorDialog* m_pParentDialog;
     };
 
+    GeneratorType generatorType(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
+    {
+        // TODO: use more reliable detection (string comparison does not work with tr())
+        DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
+        const auto& sGenerator = csvModel.data(csvModel.index(1, 1)).toString();
+        if (sGenerator == "Random integers")
+            return GeneratorTypeRandomIntegers;
+        else if (sGenerator == "Random doubles")
+            return GeneratorTypeRandomDoubles;
+        else if (sGenerator == "Fill")
+            return GeneratorTypeFill;
+        else
+        {
+            DFG_ASSERT_IMPLEMENTED(false);
+            return GeneratorTypeUnknown;
+        }
+    }
+
     class ContentGeneratorDialog : public QDialog
     {
     public:
@@ -1932,6 +1982,8 @@ namespace
         {
             m_spSettingsTable.reset(new DFG_CLASS_NAME(CsvTableView(this)));
             m_spSettingsModel.reset(new DFG_CLASS_NAME(CsvItemModel));
+            m_spDynamicHelpWidget.reset(new QLabel(this));
+            m_spDynamicHelpWidget->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
             m_spSettingsTable->setModel(m_spSettingsModel.get());
             m_spSettingsTable->setItemDelegate(new ComboBoxDelegate(this));
 
@@ -1955,7 +2007,6 @@ namespace
             }
             m_pLayout = new QVBoxLayout(this);
 
-
             m_pLayout->addWidget(m_spSettingsTable.get());
 
             for (size_t i = 0; i <= LastNonParamPropertyId; ++i)
@@ -1967,6 +2018,7 @@ namespace
             }
 
             m_pLayout->addWidget(new QLabel(tr("Note: undo is not yet available for content generation"), this));
+            m_pLayout->addWidget(m_spDynamicHelpWidget.get());
 
             auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
 
@@ -1978,6 +2030,8 @@ namespace
             createPropertyParams(PropertyIdGenerator, 0);
 
             DFG_QT_VERIFY_CONNECT(connect(m_spSettingsModel.get(), &QAbstractItemModel::dataChanged, this, &ContentGeneratorDialog::onDataChanged));
+
+            updateDynamicHelp();
         }
 
         PropertyId rowToPropertyId(const int i) const
@@ -2030,7 +2084,80 @@ namespace
                                                 return (r >= tl.row() && r <= br.row() && c >= tl.column() && c <= br.column());
                                             };
             if (isCellInIndexRect(1, 1, topLeft, bottomRight))
+            {
                 createPropertyParams(rowToPropertyId(1), m_nLatestComboBoxItemIndex);
+                updateDynamicHelp();
+            }
+        }
+
+        GeneratorType generatorType() const
+        {
+            if (m_spSettingsModel)
+                return ::generatorType(*m_spSettingsModel);
+            else
+                return GeneratorTypeUnknown;
+        }
+
+        void setCompleter(const int nTargetRow, const char** pCompleterItems)
+        {
+            if (pCompleterItems)
+            {
+                auto& spCompleter = m_completers[pCompleterItems];
+                if (!spCompleter) // If completer object does not exist, creating one.
+                {
+                    spCompleter.reset(new QCompleter(this));
+                    QStringList completerItems;
+                    for (auto p = pCompleterItems; *p != nullptr; ++p) // Expecting array to end with nullptr-entry.
+                    {
+                        completerItems.push_back(*p);
+                    }
+                    spCompleter->setModel(new QStringListModel(completerItems, spCompleter.data())); // Model is owned by completer object.
+                }
+                if (!m_spCompleterDelegateForDistributionParams)
+                    m_spCompleterDelegateForDistributionParams.reset(new DFG_CLASS_NAME(CsvTableViewCompleterDelegate)(this, spCompleter.get()));
+                m_spCompleterDelegateForDistributionParams->m_spCompleter = spCompleter.get();
+                // Settings delegate for the row in order to enable completer. Note that delegate should not be set for first column, but done here since there seems to be no easy way to set it only
+                // for the second cell in row.
+                m_spSettingsTable->setItemDelegateForRow(nTargetRow, m_spCompleterDelegateForDistributionParams.data()); // Does not transfer ownership, delegate is parent owned by 'this'.
+            }
+            else
+            {
+                m_spSettingsTable->setItemDelegateForRow(nTargetRow, nullptr);
+            }
+        }
+
+        void updateDynamicHelp()
+        {
+            const auto genType = generatorType();
+            if (genType == GeneratorTypeRandomIntegers)
+            {
+                m_spDynamicHelpWidget->setText(tr("Available integer distributions (hint: there's a completer in parameter input, trigger with ctrl+space):<br>"
+                    "<li><b>uniform, min, max</b>: Uniformly distributed values in range [min, max]. Requires min &lt;= max.</li>"
+                    "<li><b>binomial, count, probability</b>: Binomial distribution. Requires count &gt;= 0, probability within [0, 1]</li>"
+                    "<li><b>bernoulli, probability</b>: Bernoulli distribution. Requires probability within [0, 1]</li>"
+                    "<li><b>negative_binomial, count, probability</b>: Negative binomial distribution. Requires count &gt; 0, probability within ]0, 1]</li>"
+                    "<li><b>geometric, probability</b>: Geometric distribution. Requires probability within ]0, 1[</li>"
+                    "<li><b>poisson, mean</b>: Poisson distribution. Requires mean &gt; 0</li>"));
+            }
+            else if (genType == GeneratorTypeRandomDoubles)
+            {
+                m_spDynamicHelpWidget->setText(tr("Available real distributions (hint: there's a completer in input line, trigger with ctrl+space):<br>"
+                    "<li><b>uniform, min, max</b>: Uniformly distributed values in range [min, max[. Requires min &lt; max.</li>"
+                    "<li><b>normal, mean, stddev</b>: Normal distribution. Requires stddev &gt; 0</li>"
+                    "<li><b>cauchy, a, b</b>: Cauchy (Lorentz) distribution. Requires b &gt; 0</li>"
+                    "<li><b>exponential, lambda</b>: Exponential distribution. Requires lambda &gt; 0</li>"
+                    "<li><b>gamma, alpha, beta</b>: Gamma distribution. Requires alpha &gt; 0, beta &gt; 0</li>"
+                    "<li><b>weibull, a, b</b>: Geometric distribution. Requires a &gt; 0, b &gt; 0</li>"
+                    "<li><b>extreme_value, a, b</b>: Extreme value distribution. Requires b &gt; 0</li>"
+                    "<li><b>lognormal, m, s</b>: Lognormal distribution. Requires s &gt; 0</li>"
+                    "<li><b>chi_squared, n</b>: Chi squared distribution. Requires n &gt; 0</li>"
+                    "<li><b>fisher_f, a, b</b>: Fisher f distribution. Requires a &gt; 0, b &gt; 0</li>"
+                    "<li><b>student_t, n</b>: Student's t distribution. Requires n &gt; 0</li>"));
+            }
+            else
+            {
+                m_spDynamicHelpWidget->setText(QString()); // There are no instructions for this generator type so clear help.
+            }
         }
 
         void createPropertyParams(const PropertyId prop, const int itemIndex)
@@ -2057,8 +2184,11 @@ namespace
                     m_spSettingsModel->removeRows(nBaseRow, m_spSettingsModel->rowCount() - (nBaseRow + nParamCount));
                 for (int i = 0; i < nParamCount; ++i)
                 {
-                    m_spSettingsModel->setData(m_spSettingsModel->index(nBaseRow + i, 0), params[i].get().m_pszName);
-                    m_spSettingsModel->setData(m_spSettingsModel->index(nBaseRow + i, 1), params[i].get().m_pszDefault);
+                    const auto nTargetRow = nBaseRow + i;
+                    m_spSettingsModel->setData(m_spSettingsModel->index(nTargetRow, 0), params[i].get().m_pszName);
+                    m_spSettingsModel->setData(m_spSettingsModel->index(nTargetRow, 1), params[i].get().m_pszDefault);
+
+                    setCompleter(nTargetRow, params[i].get().m_pCompleterItems);
                 }
             }
             else
@@ -2076,7 +2206,10 @@ namespace
         QGridLayout* m_pGeneratorControlsLayout;
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spSettingsTable;
         std::unique_ptr<DFG_CLASS_NAME(CsvItemModel)> m_spSettingsModel;
+        QObjectStorage<QLabel> m_spDynamicHelpWidget;
         int m_nLatestComboBoxItemIndex;
+        QObjectStorage<DFG_CLASS_NAME(CsvTableViewCompleterDelegate)> m_spCompleterDelegateForDistributionParams;
+        std::map<const void*, QObjectStorage<QCompleter>> m_completers; // Maps completer definition (e.g. integerDistributionCompleters) to completer item.
     }; // Class ContentGeneratorDialog
 
     ComboBoxDelegate::ComboBoxDelegate(ContentGeneratorDialog* parent) :
@@ -2164,24 +2297,6 @@ namespace
         }
     }
 
-    GeneratorType generatorType(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
-    {
-        // TODO: use more reliable detection (string comparison does not work with tr())
-        DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
-        const auto& sGenerator = csvModel.data(csvModel.index(1, 1)).toString();
-        if (sGenerator == "Random integers")
-            return GeneratorTypeRandomIntegers;
-        else if (sGenerator == "Random doubles")
-            return GeneratorTypeRandomDoubles;
-        else if (sGenerator == "Fill")
-            return GeneratorTypeFill;
-        else
-        {
-            DFG_ASSERT_IMPLEMENTED(false);
-            return GeneratorTypeUnknown;
-        }
-    }
-
 } // unnamed namespace
 
 bool DFG_CLASS_NAME(CsvTableView)::generateContent()
@@ -2192,7 +2307,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
 
     // TODO: store settings and use them on next dialog open.
     ContentGeneratorDialog dlg(this);
-    dlg.resize(350, 300);
+    dlg.resize(350, 450);
     bool bStop = false;
     while (!bStop) // Show dialog until values are accepted or cancel is selected.
     {
@@ -2372,11 +2487,11 @@ namespace
         if (sDistribution == QLatin1String("uniform"))
             return generateRandom<std::uniform_int_distribution<int>, 2>(target, view, params); // Params: min, max.
         else if (sDistribution == QLatin1String("binomial"))
-            return generateRandom<std::binomial_distribution<int>, 2>(target, view, params); // Params: count, propability.
+            return generateRandom<std::binomial_distribution<int>, 2>(target, view, params); // Params: count, probability.
         else if (sDistribution == QLatin1String("bernoulli"))
             return generateRandom<std::bernoulli_distribution, 1>(target, view, params); // Params: probability
         else if (sDistribution == QLatin1String("negative_binomial"))
-            return generateRandom<::DFG_MODULE_NS(rand)::NegativeBinomialDistribution<int>, 2>(target, view, params); // Params: count, propability.
+            return generateRandom<::DFG_MODULE_NS(rand)::NegativeBinomialDistribution<int>, 2>(target, view, params); // Params: count, probability.
         else if (sDistribution == QLatin1String("geometric"))
             return generateRandom<std::geometric_distribution<int>, 1>(target, view, params); // Params: probability
         else if (sDistribution == QLatin1String("poisson"))
