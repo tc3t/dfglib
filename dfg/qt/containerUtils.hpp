@@ -48,7 +48,7 @@ public:
 #endif
     QObjectStorage(QObjectStorage&& other)
     {
-        reset(other.release());
+        *this = std::move(other);
     }
 
     ~QObjectStorage()
@@ -99,6 +99,12 @@ public:
     bool operator!=(const std::nullptr_t) const
     {
         return m_spData.data() != nullptr;
+    }
+
+    QObjectStorage& operator=(QObjectStorage&& other)
+    {
+        reset(other.release());
+        return *this;
     }
 
     QObjectStorage<T>& operator=(std::unique_ptr<T> other)

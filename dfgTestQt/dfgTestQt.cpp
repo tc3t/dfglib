@@ -387,6 +387,12 @@ TEST(dfgQt, QObjectStorage)
         DFG_MODULE_NS(qt)::QObjectStorage<QDialog> storage1 = std::move(storage0);
         EXPECT_FALSE(storage0);
         EXPECT_EQ(pDialog, storage1.get());
+
+        // Testing move assignment
+        DFG_MODULE_NS(qt)::QObjectStorage<QDialog> storage2;
+        storage2 = std::move(storage1);
+        EXPECT_FALSE(storage1);
+        EXPECT_EQ(pDialog, storage2.get());
     }
 
     // Testing actual class that has std::vector<QObjectStorage<T>> as member.
