@@ -68,16 +68,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         static void storeCells(CellMemory& cellMemory, DFG_CLASS_NAME(CsvTableView)& rView)
         {
-            // TODO: getting selected items as a list can be slow and take huge amount of memory -> improve.
-            const QModelIndexList& selected = rView.getSelectedItemIndexes_dataModel();
             auto pModel = rView.csvModel();
             if (!pModel)
                 return;
-            for (auto iter = selected.begin(); iter != selected.end(); ++iter)
+            rView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& bContinue)
             {
-                SzPtrUtf8R p = pModel->RawStringPtrAt(iter->row(), iter->column());
-                cellMemory.setElement(iter->row(), iter->column(), (p) ? p : SzPtrUtf8(""));
-            }
+                DFG_UNUSED(bContinue);
+                SzPtrUtf8R p = pModel->RawStringPtrAt(index.row(), index.column());
+                cellMemory.setElement(index.row(), index.column(), (p) ? p : SzPtrUtf8(""));
+            });
         }
 
         static void restoreCells(const CellMemory& cellMemory, DFG_CLASS_NAME(CsvItemModel)& rModel)

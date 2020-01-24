@@ -169,8 +169,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // row count if no selection exists.
         int getFirstSelectedViewRow() const;
 
-        QModelIndex getFirstSelectedItem(QAbstractProxyModel* pProxy) const;
-
         // Returns list of row indexes of column @p nCol.
         // If proxy model is given, the returned indexes will correspond
         // to the indexes of the underlying model, otherwise they will be

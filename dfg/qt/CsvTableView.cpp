@@ -838,8 +838,16 @@ auto DFG_CLASS_NAME(CsvTableView)::csvModel() const -> const CsvModel*
 
 int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow() const
 {
-    const auto& contItems = getRowsOfSelectedItems(nullptr);
-    return (!contItems.empty()) ? *contItems.begin() : model()->rowCount();
+    auto selection = getSelection();
+    auto pModel = model();
+    const auto nRowCount = (pModel) ? pModel->rowCount() : 0;
+    ::DFG_MODULE_NS(func)::MemFuncMin<int> minRow(nRowCount);
+    for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+    {
+        minRow(iter->top());
+    }
+
+    return minRow.value();
 }
 
 std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, const QAbstractProxyModel* pProxy) const
@@ -909,18 +917,6 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbs
     if (bSort)
         std::copy(setRows.begin(), setRows.end(), vRows.begin());
     return vRows;
-}
-
-QModelIndex DFG_CLASS_NAME(CsvTableView)::getFirstSelectedItem(QAbstractProxyModel* pProxy) const
-{
-    const QModelIndexList listSelected = getSelectedItemIndexes_dataModel();
-    if (listSelected.empty())
-        return QModelIndex();
-    if (pProxy)
-        return pProxy->mapToSource(listSelected[0]);
-    else
-        return listSelected[0];
-
 }
 
 void DFG_CLASS_NAME(CsvTableView)::invertSelection()
@@ -2364,14 +2360,14 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
     }
     else if (targetType == TargetTypeSelection)
     {
-        const auto& selected = view.getSelectedItemIndexes_dataModel();
         size_t nCounter = 0;
         rModel.batchEditNoUndo([&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table)
         {
-            for (auto iter = selected.begin(); iter != selected.end(); ++iter, ++nCounter)
+            view.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& bContinue)
             {
-                generator(table, iter->row(), iter->column(), nCounter);
-            }
+                DFG_UNUSED(bContinue);
+                generator(table, index.row(), index.column(), nCounter++);
+            });
         });
     }
     else
