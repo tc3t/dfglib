@@ -2030,6 +2030,8 @@ namespace
             updateDynamicHelp();
         }
 
+        void setGenerateFailed(bool bFailed);
+
         PropertyId rowToPropertyId(const int i) const
         {
             if (i == PropertyIdGenerator)
@@ -2203,10 +2205,28 @@ namespace
         std::unique_ptr<DFG_CLASS_NAME(CsvTableView)> m_spSettingsTable;
         std::unique_ptr<DFG_CLASS_NAME(CsvItemModel)> m_spSettingsModel;
         QObjectStorage<QLabel> m_spDynamicHelpWidget;
+        QObjectStorage<QLabel> m_spGenerateFailedNoteWidget;
         int m_nLatestComboBoxItemIndex;
         QObjectStorage<DFG_CLASS_NAME(CsvTableViewCompleterDelegate)> m_spCompleterDelegateForDistributionParams;
         std::map<const void*, QObjectStorage<QCompleter>> m_completers; // Maps completer definition (e.g. integerDistributionCompleters) to completer item.
     }; // Class ContentGeneratorDialog
+
+    void ContentGeneratorDialog::setGenerateFailed(const bool bFailed)
+    {
+        if (m_pLayout)
+        {
+            if (bFailed)
+            {
+                if (!m_spGenerateFailedNoteWidget)
+                {
+                    m_spGenerateFailedNoteWidget.reset(new QLabel(tr("<font color=\"#ff0000\">Note: Generating content failed; this may be caused by bad parameters</font>"), this));
+                    m_pLayout->insertWidget(m_pLayout->count() - 1, m_spGenerateFailedNoteWidget.get());
+                }
+            }
+            if (m_spGenerateFailedNoteWidget)
+                m_spGenerateFailedNoteWidget->setVisible(bFailed);
+        }
+    }
 
     ComboBoxDelegate::ComboBoxDelegate(ContentGeneratorDialog* parent) :
         m_pParentDialog(parent)
@@ -2301,21 +2321,23 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
     if (!pModel)
         return false;
 
-    // TODO: store settings and use them on next dialog open.
-    ContentGeneratorDialog dlg(this);
-    dlg.resize(350, 450);
-    bool bStop = false;
-    while (!bStop) // Show dialog until values are accepted or cancel is selected.
+    auto pGeneratorDialog = findChild<ContentGeneratorDialog*>();
+    if (!pGeneratorDialog)
+        pGeneratorDialog = new ContentGeneratorDialog(this);
+
+    pGeneratorDialog->resize(350, 450);
+    while (true) // Show dialog until values are accepted or cancel is selected.
     {
-        const auto rv = dlg.exec();
-        if (rv == QDialog::Accepted && dlg.m_spSettingsModel)
+        const auto rv = pGeneratorDialog->exec();
+        if (rv == QDialog::Accepted && pGeneratorDialog->m_spSettingsModel)
         {
-            bStop = generateContentImpl(*dlg.m_spSettingsModel);
-            if (bStop)
+            if (generateContentImpl(*pGeneratorDialog->m_spSettingsModel))
             {
+                pGeneratorDialog->setGenerateFailed(false);
                 onSelectionContentChanged();
                 return true;
             }
+            pGeneratorDialog->setGenerateFailed(true);
         }
         else
             return false;
