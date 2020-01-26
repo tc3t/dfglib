@@ -14,6 +14,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QVariant>
 DFG_END_INCLUDE_QT_HEADERS
 
+class QSplitter;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -43,6 +44,9 @@ public:
     virtual QObject* underlyingSource() = 0;
 
     virtual void forEachElement_fromTableSelection(std::function<void (DataSourceIndex, DataSourceIndex, QVariant)>) { DFG_ASSERT_IMPLEMENTED(false);  }
+
+    // Enables or disables data source. When disabled, data source should be completely inactive, e.g. may not emit sigChanged() signals or update it's internal data structures.
+    virtual void enable(bool) = 0; 
 
 signals:
     void sigChanged(); // Emitted when data has changed. TODO: Add parameter?
@@ -83,6 +87,16 @@ public:
     typedef QWidget BaseClass;
 
     GraphControlPanel(QWidget* pParent);
+
+signals:
+    void sigPreferredSizeChanged(QSize);
+    void sigGraphEnableCheckboxToggled(bool b);
+
+public slots:
+    void onShowControlsCheckboxToggled(bool b);
+
+private:
+    QObjectStorage<QWidget> m_spGraphDefinitionWidget;
 }; // Class GraphControlPanel
 
 
@@ -95,6 +109,7 @@ public:
     typedef QFrame BaseClass;
 
     GraphControlAndDisplayWidget();
+    ~GraphControlAndDisplayWidget();
 
     void refresh();
 
@@ -102,11 +117,16 @@ public:
 
     void forDataSource(const GraphDataSourceId& id, std::function<void (GraphDataSource&)>);
 
+    void privForEachDataSource(std::function<void(GraphDataSource&)> func);
+
 public slots:
     void onDataSourceChanged();
     void onDataSourceDestroyed();
+    void onControllerPreferredSizeChanged(QSize sizeHint);
+    void onGraphEnableCheckboxToggled(bool b);
 
 public:
+    QObjectStorage<QSplitter> m_spSplitter;
     QObjectStorage<GraphControlPanel> m_spControlPanel;
     QObjectStorage<GraphDisplay> m_spGraphDisplay;
     DataSourceContainer m_dataSources;

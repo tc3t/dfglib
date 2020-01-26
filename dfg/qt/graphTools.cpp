@@ -438,10 +438,47 @@ public:
 DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : BaseClass(pParent)
 {
     auto pLayout = new QGridLayout(this);
-    auto pGraphDefinitionWidget = new GraphDefinitionWidget(this);
-    pLayout->addWidget(pGraphDefinitionWidget);
+    m_spGraphDefinitionWidget.reset(new GraphDefinitionWidget(this));
+
+    // Adding some controls
+    {
+        std::unique_ptr<QHBoxLayout> pFirstRowLayout(new QHBoxLayout);
+
+        // enable / disabled control
+        {
+            auto pEnableCheckBox = new QCheckBox(tr("Enable"), this); // Parent owned.
+            DFG_QT_VERIFY_CONNECT(connect(pEnableCheckBox, &QCheckBox::toggled, this, &GraphControlPanel::sigGraphEnableCheckboxToggled));
+            pFirstRowLayout->addWidget(pEnableCheckBox);
+            pEnableCheckBox->setChecked(true);
+        }
+        {
+            auto pShowControlsCheckBox = new QCheckBox(tr("Show controls"), this); // Parent owned
+            DFG_QT_VERIFY_CONNECT(connect(pShowControlsCheckBox, &QCheckBox::toggled, this, &GraphControlPanel::onShowControlsCheckboxToggled));
+            pFirstRowLayout->addWidget(pShowControlsCheckBox);
+
+            // Controls are not yet functional so hiding the widget by default.
+            if (pShowControlsCheckBox->isChecked())
+                pShowControlsCheckBox->setChecked(false);
+            else
+                pShowControlsCheckBox->toggled(false); // To trigger slot call; setChecked() won't trigger toggled() signal if state doesn't change.
+        }
+
+        pLayout->addLayout(pFirstRowLayout.release(), 0, 0); // pFirstRowLayout becomes child of pLayout so releasing for parent deletion.
+    }
+
+    pLayout->setContentsMargins(0, 0, 0, 0);
+    pLayout->addWidget(m_spGraphDefinitionWidget.get());
 
     // TODO: definitions as whole must be copy-pasteable text so that it can be (re)stored easily.
+}
+
+void DFG_MODULE_NS(qt)::GraphControlPanel::onShowControlsCheckboxToggled(bool b)
+{
+    if (m_spGraphDefinitionWidget)
+    {
+        m_spGraphDefinitionWidget->setVisible(b);
+        Q_EMIT sigPreferredSizeChanged(sizeHint());
+    }
 }
 
 DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pParent)
@@ -479,16 +516,52 @@ auto DFG_MODULE_NS(qt)::GraphDisplay::chart() -> ChartCanvas*
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
 {
     auto pLayout = new QGridLayout(this);
-    auto pSplitter = new QSplitter(Qt::Vertical, this);
+    m_spSplitter.reset(new QSplitter(Qt::Vertical, this));
     m_spControlPanel.reset(new GraphControlPanel(this));
+
     m_spGraphDisplay.reset(new GraphDisplay(this));
-    pSplitter->addWidget(m_spControlPanel.data());
-    m_spControlPanel->hide(); // Hiding as it's currently non-functional
-    pSplitter->addWidget(m_spGraphDisplay.data());
+    m_spSplitter->addWidget(m_spControlPanel.data());
+    m_spSplitter->addWidget(m_spGraphDisplay.data());
     //pLayout->addWidget(new QLabel(tr("Graph display"), this));
-    pLayout->addWidget(pSplitter);
+    pLayout->addWidget(m_spSplitter.get());
+
+    DFG_QT_VERIFY_CONNECT(connect(m_spControlPanel.get(), &GraphControlPanel::sigPreferredSizeChanged, this, &GraphControlAndDisplayWidget::onControllerPreferredSizeChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spControlPanel.get(), &GraphControlPanel::sigGraphEnableCheckboxToggled, this, &GraphControlAndDisplayWidget::onGraphEnableCheckboxToggled));
+
+
+    onControllerPreferredSizeChanged(m_spControlPanel->sizeHint());
 
     this->setFrameShape(QFrame::Panel);
+}
+
+DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::~GraphControlAndDisplayWidget()
+{
+
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onControllerPreferredSizeChanged(const QSize sizeHint)
+{
+    if (m_spSplitter)
+    {
+        const auto nHeight = this->size().height();
+        auto sizes = m_spSplitter->sizes();
+        DFG_ASSERT_CORRECTNESS(sizes.size() >= 2);
+        if (sizes.size() >= 2)
+        {
+            sizes[0] = sizeHint.height();
+            if (sizes[1] == 0) // Can be true on first call.
+                sizes[1] = Max(0, nHeight - sizes[0]);
+            m_spSplitter->setSizes(sizes);
+        }
+    }
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggled(const bool b)
+{
+    privForEachDataSource([=](GraphDataSource& ds)
+    {
+        ds.enable(b);
+    });
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
@@ -653,4 +726,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::forDataSource(const GraphD
     });
     if (iter != m_dataSources.m_sources.end())
         func(**iter);
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::privForEachDataSource(std::function<void(GraphDataSource&)> func)
+{
+    DFG_MODULE_NS(alg)::forEachFwd(m_dataSources.m_sources, [&](const std::shared_ptr<GraphDataSource>& sp)
+    {
+        if (sp)
+            func(*sp);
+    });
 }

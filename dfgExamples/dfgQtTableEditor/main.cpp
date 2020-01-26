@@ -186,11 +186,11 @@ public:
     {
         if (!m_spView)
             return;
-        auto selectionAnalyzer = std::make_shared<SelectionAnalyzerForGraphing>();
-        selectionAnalyzer->m_spTable.reset(std::make_shared<SelectionAnalyzerForGraphing::Table>());
-        m_spDataViewer = selectionAnalyzer->m_spTable.createViewer();
-        DFG_QT_VERIFY_CONNECT(connect(selectionAnalyzer.get(), &dfg::qt::CsvTableViewSelectionAnalyzer::sigAnalyzeCompleted, this, &dfg::qt::GraphDataSource::sigChanged));
-        m_spView->addSelectionAnalyzer(std::move(selectionAnalyzer));
+        m_spSelectionAnalyzer = std::make_shared<SelectionAnalyzerForGraphing>();
+        m_spSelectionAnalyzer->m_spTable.reset(std::make_shared<SelectionAnalyzerForGraphing::Table>());
+        m_spDataViewer = m_spSelectionAnalyzer->m_spTable.createViewer();
+        DFG_QT_VERIFY_CONNECT(connect(m_spSelectionAnalyzer.get(), &dfg::qt::CsvTableViewSelectionAnalyzer::sigAnalyzeCompleted, this, &dfg::qt::GraphDataSource::sigChanged));
+        m_spView->addSelectionAnalyzer(m_spSelectionAnalyzer);
     }
 
     QObject* underlyingSource() override
@@ -217,8 +217,22 @@ public:
         }
     }
 
+    void enable(const bool b) override
+    {
+        if (!m_spView)
+            return;
+        if (b)
+        {
+            m_spView->addSelectionAnalyzer(m_spSelectionAnalyzer);
+            m_spSelectionAnalyzer->addSelectionToQueue(m_spView->getSelection());
+        }
+        else
+            m_spView->removeSelectionAnalyzer(m_spSelectionAnalyzer.get());
+    }
+
     QPointer<dfg::qt::CsvTableView> m_spView;
     std::shared_ptr<dfg::cont::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::Table>> m_spDataViewer;
+    std::shared_ptr<SelectionAnalyzerForGraphing> m_spSelectionAnalyzer;
 };
 
 int main(int argc, char *argv[])
