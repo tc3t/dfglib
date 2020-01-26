@@ -3145,12 +3145,23 @@ void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& sele
     forEachSelectionAnalyzer([&](SelectionAnalyzer& analyzer) { analyzer.addSelectionToQueue(selection); });
 }
 
-void DFG_CLASS_NAME(CsvTableView)::addSelectionAnalyzer(std::shared_ptr<DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)> spAnalyzer)
+void DFG_CLASS_NAME(CsvTableView)::addSelectionAnalyzer(std::shared_ptr<SelectionAnalyzer> spAnalyzer)
 {
     if (!spAnalyzer)
         return;
     spAnalyzer->m_spView = this;
-    m_selectionAnalyzers.push_back(std::move(spAnalyzer));
+    if (m_selectionAnalyzers.end() == std::find(m_selectionAnalyzers.begin(), m_selectionAnalyzers.end(), spAnalyzer)) // If not already present?
+        m_selectionAnalyzers.push_back(std::move(spAnalyzer));
+}
+
+void DFG_CLASS_NAME(CsvTableView)::removeSelectionAnalyzer(const SelectionAnalyzer* pAnalyzer)
+{
+    auto iter = std::find_if(m_selectionAnalyzers.begin(), m_selectionAnalyzers.end(), [=](const std::shared_ptr<SelectionAnalyzer>& sp)
+    {
+        return (sp.get() == pAnalyzer);
+    });
+    if (iter != m_selectionAnalyzers.end())
+        m_selectionAnalyzers.erase(iter);
 }
 
 QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToViewModel(const QModelIndex& index) const

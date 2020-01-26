@@ -216,6 +216,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void addSelectionAnalyzer(std::shared_ptr<SelectionAnalyzer> spAnalyzer);
 
+        void removeSelectionAnalyzer(const SelectionAnalyzer* pAnalyzer);
+
         // Maps index to view model (i.e. the one returned by model()) assuming that 'index' is either from csvModel() or model().
         QModelIndex mapToViewModel(const QModelIndex& index) const;
 
