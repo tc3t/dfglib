@@ -16,7 +16,9 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QGridLayout>
     #include <QComboBox>
     #include <QLabel>
+    #include <QMenu>
     #include <QSplitter>
+    #include <QCheckBox>
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
     #include <QtCharts>
@@ -37,6 +39,8 @@ DFG_END_INCLUDE_QT_HEADERS
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
         #include "qcustomplot/qcustomplot.h"
     DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+
+    #include "widgetHelpers.hpp"
 #endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
@@ -283,6 +287,8 @@ public:
 
     virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
 
+    virtual void addContextMenuEntriesForChartObjects(QMenu&) {};
+
 }; // class ChartCanvas
 
 
@@ -385,7 +391,7 @@ public:
         m_spChartView.reset(new QCustomPlot(pParent));
     }
 
-    QWidget* getWidget()
+    QCustomPlot* getWidget()
     {
         return m_spChartView.get();
     }
@@ -429,8 +435,100 @@ public:
         }
     }
 
+    void addContextMenuEntriesForChartObjects(QMenu& menu) override;
+
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
+
+namespace
+{
+    template <class Func_T>
+    void forEachQCustomPlotLineStyle(Func_T&& func)
+    {
+        func(QCPGraph::lsNone,       QT_TR_NOOP("None"));
+        func(QCPGraph::lsLine,       QT_TR_NOOP("Line"));
+        func(QCPGraph::lsStepLeft,   QT_TR_NOOP("Step, left-valued"));
+        func(QCPGraph::lsStepRight,  QT_TR_NOOP("Step, right-valued"));
+        func(QCPGraph::lsStepCenter, QT_TR_NOOP("Step middle"));
+        func(QCPGraph::lsImpulse,    QT_TR_NOOP("Impulse"));
+    }
+
+    template <class Func_T>
+    void forEachQCustomPlotScatterStyle(Func_T&& func)
+    {
+        func(QCPScatterStyle::ssNone,              QT_TR_NOOP("None"));
+        func(QCPScatterStyle::ssDot,               QT_TR_NOOP("Single pixel"));
+        func(QCPScatterStyle::ssCross,             QT_TR_NOOP("Cross"));
+        func(QCPScatterStyle::ssPlus,              QT_TR_NOOP("Plus"));
+        func(QCPScatterStyle::ssCircle,            QT_TR_NOOP("Circle"));
+        func(QCPScatterStyle::ssDisc,              QT_TR_NOOP("Disc"));
+        func(QCPScatterStyle::ssSquare,            QT_TR_NOOP("Square"));
+        func(QCPScatterStyle::ssDiamond,           QT_TR_NOOP("Diamond"));
+        func(QCPScatterStyle::ssStar,              QT_TR_NOOP("Star"));
+        func(QCPScatterStyle::ssTriangle,          QT_TR_NOOP("Triangle"));
+        func(QCPScatterStyle::ssTriangleInverted,  QT_TR_NOOP("Inverted triangle"));
+        func(QCPScatterStyle::ssCrossSquare,       QT_TR_NOOP("CrossSquare"));
+        func(QCPScatterStyle::ssPlusSquare,        QT_TR_NOOP("PlusSquare"));
+        func(QCPScatterStyle::ssCrossCircle,       QT_TR_NOOP("CrossCircle"));
+        func(QCPScatterStyle::ssPlusCircle,        QT_TR_NOOP("PlusCircle"));
+        func(QCPScatterStyle::ssPeace,             QT_TR_NOOP("Peace"));
+    }
+}
+
+namespace
+{
+    template <class Style_T, class StyleSetter_T>
+    static void addGraphStyleAction(QMenu& rMenu, QCPGraph& rGraph, QCustomPlot& rCustomPlot, const Style_T currentStyle, const Style_T style, const QString& sStyleName, StyleSetter_T styleSetter)
+    {
+        auto pAction = rMenu.addAction(sStyleName, [=, &rGraph, &rCustomPlot]() { (rGraph.*styleSetter)(style); rCustomPlot.replot(); });
+        if (pAction)
+        {
+            pAction->setCheckable(true);
+            if (currentStyle == style)
+                pAction->setChecked(true);
+        }
+    }
+}
+
+void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(QMenu& menu)
+{
+    if (!m_spChartView)
+        return;
+    const auto nCount = m_spChartView->graphCount();
+    for (int i = 0; i < nCount; ++i)
+    {
+        auto pGraph = m_spChartView->graph(i);
+        if (!pGraph)
+            continue;
+        auto pSubMenu = menu.addMenu(pGraph->name());
+        if (!pSubMenu)
+            continue;
+
+        // Adding menu title
+        addTitleEntryToMenu(pSubMenu, pGraph->name());
+
+        // Adding line style entries
+        {
+            addSectionEntryToMenu(pSubMenu, tr("Line Style"));
+            const auto currentLineStyle = pGraph->lineStyle();
+            forEachQCustomPlotLineStyle([=](const QCPGraph::LineStyle style, const char* pszStyleName)
+            {
+                addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentLineStyle, style, tr(pszStyleName), &QCPGraph::setLineStyle);
+            });
+        }
+
+        // Adding point style entries
+        {
+            addSectionEntryToMenu(pSubMenu, tr("Point Style"));
+            const auto currentPointStyle = pGraph->scatterStyle().shape();
+            forEachQCustomPlotScatterStyle([=](const QCPScatterStyle::ScatterShape style, const char* pszStyleName)
+            {
+                addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentPointStyle, style, tr(pszStyleName), &QCPGraph::setScatterStyle);
+            });
+        }
+    }
+}
+
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
 }} // module namespace
@@ -494,9 +592,14 @@ DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pPar
     auto pChartCanvas = new ChartCanvasQCustomPlot(this);
     auto pWidget = pChartCanvas->getWidget();
     if (pWidget)
+    {
         pLayout->addWidget(pWidget);
+        // Setting context menu handling. Note that pWidget->setContextMenuPolicy(Qt::NoContextMenu) doesn't work because QCustomPlot overrides mousePressEvent().
+        // Using pWidget->setAttribute(Qt::WA_TransparentForMouseEvents) would make context menu work, but also disables e.g. QCustomPlot's zoom controls.
+        DFG_QT_VERIFY_CONNECT(connect(pWidget, &QCustomPlot::mousePress, [=](QMouseEvent* pEvent) { if (pEvent && pEvent->button() == Qt::RightButton) contextMenuEvent(nullptr); }));
+    }
     m_spChartCanvas.reset(pChartCanvas);
-#else
+#else // Case: no graph display implementation available, creating a placeholder widget.
     auto pTextEdit = new QPlainTextEdit(this);
     pTextEdit->appendPlainText(tr("Placeholder"));
     pLayout->addWidget(pTextEdit);
@@ -511,6 +614,31 @@ DFG_MODULE_NS(qt)::GraphDisplay::~GraphDisplay()
 auto DFG_MODULE_NS(qt)::GraphDisplay::chart() -> ChartCanvas*
 {
     return m_spChartCanvas.get();
+}
+
+void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent)
+{
+    DFG_UNUSED(pEvent);
+    if (!m_spChartCanvas)
+        return;
+
+    // Hack: accessing GraphControlAndDisplayWidget in a questionable manner.
+    GraphControlAndDisplayWidget* pParentGraphWidget = [=]() { auto pParent = parent(); return (pParent) ? qobject_cast<GraphControlAndDisplayWidget*>(pParent->parent()) : nullptr; }();
+    if (!pParentGraphWidget)
+    {
+        DFG_ASSERT(false);
+        return;
+    }
+
+    QMenu menu;
+
+    // Refresh action
+    menu.addAction(tr("Refresh"), pParentGraphWidget, &GraphControlAndDisplayWidget::refresh);
+
+    addSectionEntryToMenu(&menu, tr("Chart objects"));
+    m_spChartCanvas->addContextMenuEntriesForChartObjects(menu);
+
+    menu.exec(QCursor::pos());
 }
 
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()

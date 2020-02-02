@@ -75,6 +75,10 @@ public:
 
     ChartCanvas* chart();
 
+protected:
+    void contextMenuEvent(QContextMenuEvent* pEvent) override;
+
+public:
     std::unique_ptr<ChartCanvas> m_spChartCanvas;
 }; // Class GraphDisplay
 
