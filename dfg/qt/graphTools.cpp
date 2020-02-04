@@ -389,6 +389,13 @@ public:
     ChartCanvasQCustomPlot(QWidget* pParent = nullptr)
     {
         m_spChartView.reset(new QCustomPlot(pParent));
+
+        const auto interactions = m_spChartView->interactions();
+        // iRangeZoom: "Axis ranges are zoomable with the mouse wheel"
+        // iRangeDrag: Allows moving view point by dragging.
+        // iSelectPlottables: "Plottables are selectable"
+        // iSelectLegend: "Legends are selectable"
+        m_spChartView->setInteractions(interactions | QCP::iRangeZoom | QCP::iRangeDrag | QCP::iSelectPlottables | QCP::iSelectLegend);
     }
 
     QCustomPlot* getWidget()
