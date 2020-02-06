@@ -1,0 +1,15 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: CMaking dfgTest
+      run: cmake dfgTest/CMakeLists.txt
+    - name: Building
+      run: cd dfgTest && make
