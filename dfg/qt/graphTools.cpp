@@ -1,6 +1,7 @@
 #include "graphTools.hpp"
 
 #include "connectHelper.hpp"
+#include "widgetHelpers.hpp"
 
 #include "../cont/MapVector.hpp"
 #include "../rangeIterator.hpp"
@@ -39,8 +40,6 @@ DFG_END_INCLUDE_QT_HEADERS
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
         #include "qcustomplot/qcustomplot.h"
     DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
-
-    #include "widgetHelpers.hpp"
 #endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
