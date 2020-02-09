@@ -129,7 +129,7 @@ DFG_ROOT_NS_BEGIN
     // Returns head range, i.e. range [begin(), begin() + nCount] from given iterable.
     // Precondition: nCount must be within size of iterable.
     template <class Iterable>
-    auto headRange(Iterable&& iterable, const ptrdiff_t nCount) -> decltype(makeRange(iterable))
+    auto headRange(Iterable&& iterable, const ::std::ptrdiff_t nCount) -> decltype(makeRange(iterable))
     {
         typedef decltype(makeRange(iterable)) Return_T;
         auto iterBegin = ::std::begin(iterable);
