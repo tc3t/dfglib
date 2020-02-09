@@ -115,8 +115,6 @@ public:
     GraphControlAndDisplayWidget();
     ~GraphControlAndDisplayWidget();
 
-    void refresh();
-
     void addDataSource(std::unique_ptr<GraphDataSource> spSource);
 
     void forDataSource(const GraphDataSourceId& id, std::function<void (GraphDataSource&)>);
@@ -124,6 +122,7 @@ public:
     void privForEachDataSource(std::function<void(GraphDataSource&)> func);
 
 public slots:
+    void refresh();
     void onDataSourceChanged();
     void onDataSourceDestroyed();
     void onControllerPreferredSizeChanged(QSize sizeHint);

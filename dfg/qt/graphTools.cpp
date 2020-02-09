@@ -639,7 +639,11 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
     QMenu menu;
 
     // Refresh action
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 6, 0))
     menu.addAction(tr("Refresh"), pParentGraphWidget, &GraphControlAndDisplayWidget::refresh);
+#else
+    menu.addAction(tr("Refresh"), pParentGraphWidget, SLOT(refresh()));
+#endif
 
     addSectionEntryToMenu(&menu, tr("Chart objects"));
     m_spChartCanvas->addContextMenuEntriesForChartObjects(menu);
