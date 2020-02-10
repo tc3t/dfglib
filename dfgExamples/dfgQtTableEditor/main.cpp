@@ -74,10 +74,23 @@ static void onShowAboutBox()
             s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId)).arg(psz);
     });
 
-    #define FMT_ABOUT_ENTRY ", <a href=https://github.com/fmtlib/fmt>fmt</a>"
-    s += QString("<br>Source code: <a href=%1>%1</a>").arg("https://github.com/tc3t/dfglib");
-    s += QString("<br>3rd party libraries used in this application: <a href=www.boost.org>Boost</a>" FMT_ABOUT_ENTRY ", Qt, <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>");
-    #undef FMT_ABOUT_ENTRY
+    s += QApplication::tr("<br>Source code: <a href=%1>%1</a>").arg("https://github.com/tc3t/dfglib");
+    s += QApplication::tr("<br>3rd party libraries used in this application: ") +
+                 "<a href=www.boost.org>Boost</a>"
+                 ", <a href=https://github.com/fmtlib/fmt>fmt</a>"
+                 ", Qt"
+                 ", <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>"
+             #if (defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1))
+                 ", Qt Charts"
+             #endif
+             #if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
+                 ", <a href=https://www.qcustomplot.com>QCustomPlot</a>"
+             #endif
+            ;
+
+#if defined(DFGQTE_GPL_INFECTED) && DFGQTE_GPL_INFECTED == 1
+    s += QApplication::tr("<br><br>Note: This build is infected by GPL due to license requirements in optional 3rd party code.");
+#endif
 
     QMessageBox::about(gpMainWindow,
                              QApplication::tr("About"),

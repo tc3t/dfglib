@@ -42,7 +42,7 @@ DFGQTE_USING_QCUSTOMPLOT = 0
 equals(DFG_ALLOW_QCUSTOMPLOT, "1") {
     equals(QCUSTOMPLOT_AVAILABLE, "1") {
         message("Using QCustomPlot. WARNING: using QCustomPlot causes GPL infection")
-        DEFINES += DFG_ALLOW_QCUSTOMPLOT=1
+        DEFINES += DFG_ALLOW_QCUSTOMPLOT=1 DFGQTE_GPL_INFECTED=1
         DFGQTE_USING_QCUSTOMPLOT = 1
         QT += printsupport
     } else {
@@ -67,7 +67,7 @@ equals(DFGQTE_USING_QCUSTOMPLOT, "0") {
         equals(DFG_ALLOW_QT_CHARTS, "1") {
             message("Using Qt Charts. WARNING: using Qt Charts causes GPL infection")
             QT       += charts
-            DEFINES += DFG_ALLOW_QT_CHARTS=1
+            DEFINES += DFG_ALLOW_QT_CHARTS=1 DFGQTE_GPL_INFECTED=1
         } else {
             message("Qt Charts was found, but not used due to config flag")
         }
