@@ -51,7 +51,7 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2019-06-12).
+Summary of 3rd party code in dfglib (last revised 2020-02-10).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
@@ -63,13 +63,16 @@ Summary of 3rd party code in dfglib (last revised 2019-06-12).
 | [fmtlib](https://github.com/fmtlib/fmt) | m (string formatting)| [BSD-2](dfg/str/fmtlib/format.h) |
 | [Google Test](https://github.com/google/googletest) (version 1.8.1) | t | [BSD-3](externals/gtest/gtest.h) |
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) |
+| [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) |
 | [Qt 5](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) |
+| [Qt Charts](https://doc.qt.io/qt-5/qtcharts-index.html) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://doc.qt.io/qt-5/qtcharts-index.html) |
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:
 * c: All or some code from the library comes with dfglib (possibly modified), but is not directly used (i.e. related code can be removed without breaking any features in dfglib).
 * i: Include dependency (i.e. some parts of dfglib may fail to compile if the 3rd party library is not available in include-path)
 * m: Some code is integrated in dfglib itself possibly modified.
+* oi: Like i, but optional component that is off by default.
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
