@@ -4,7 +4,16 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 ## Building
 
-### Version 1.0.0 or earlier (and possibly current master):
+### Version > 1.1.0:
+
+Like earlier versions with following changes:
+* Building with MSVC 2012 and 2013 is no longer supported.
+
+### Version 1.1.0:
+
+Like with version 1.0.0, but won't anymore build with MSVC 2010.
+
+### Version 1.0.0 or earlier:
 Requires basic C++11 support (as available since VC2010), Qt 5 and Boost (in include path). Some source packages may be available in [dfglib releases](https://github.com/tc3t/dfglib/releases).
 
 To build (assuming having compatible Qt version, Qt Creator and compiler available):
@@ -32,7 +41,23 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
-2019-09-05, 1.0.0.0
+* 2020-02-11, 1.1.0
+    * Notable changes
+        * [new] UI-additions
+            * 'Generate content' now has lots of new distributions from which content can be generated from. Dialog now also remembers settings from previous use (not over process restart, though) ([a6170f79](https://github.com/tc3t/dfglib/commit/a6170f79f833b038e9e4d60987b4bb2f9f0d9896))
+            * New context menu option: "New table from clipboard" ([5a28820d](https://github.com/tc3t/dfglib/commit/5a28820d1802373d4eecd269dce359bc7ec34897))
+            * ctrl+arror key now behaves similar to spreadsheet applications. ([fb8c5bf1](https://github.com/tc3t/dfglib/commit/fb8c5bf170845e8236c4338c23073ba7fd941382))
+        * [imp] Various optimizations
+            * Massively improved performance for removing rows. ([7c018779](https://github.com/tc3t/dfglib/commit/7c01877925884fcf666fc156f76bd8178cd7ba34))
+            * Copying big selection to clipboard could freeze the application. ([07ccc1ba](https://github.com/tc3t/dfglib/commit/07ccc1bab7336b05fc37cb1943d4cc2abfacde23))
+        * [fix] Pasting to empty table (row or column count == 0) caused a crash. ([491ac18f](https://github.com/tc3t/dfglib/commit/491ac18fd0ba392b87d0b0566f65686e2dfa8279))
+        * [fix] 'header-first row' actions could create redundant undo-actions and possibly cause a crash ([b7c8a179](https://github.com/tc3t/dfglib/commit/b7c8a17945b13a1f74ae49b416594f6f92e5d002), [62d0f795](https://github.com/tc3t/dfglib/commit/62d0f7959c8881fabaa392e34da1e2460047436a))
+        * [fix] Holding Shift+Page Down in a large table could cause a crash ([5933ecf0](https://github.com/tc3t/dfglib/commit/5933ecf092a3fd532e7bce9772e172b514f58354))
+        * [fix] Fixes to copy (clipboard) and undo after deleting rows. ([9843c98d](https://github.com/tc3t/dfglib/commit/9843c98d93c58a38780bbe73549c588419d94a64))
+        * [fix] Application could crash if editing table while selection analyzer was working ([19e0e40c](https://github.com/tc3t/dfglib/commit/19e0e40c3d9936e4ce8f11b776293c404669d5cd))
+        
+
+* 2019-09-05, 1.0.0
 
 ## Features
 
@@ -50,6 +75,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
     * Write: UTF-8, Latin-1
 * Undo & redo and detailed undo control.
 * Auto-completion (column-specific)
+* Content generation: most of C++11 defined random number distribution available (since 1.1.0)
 
 ## Tips
 
@@ -198,7 +224,7 @@ properties,,,
 
 ## Third party code
 
-Summary of 3rd party code in dfgQtTableEditor (last revised 2019-06-13).
+Summary of 3rd party code in dfgQtTableEditor (last revised 2020-02-11).
 
 | Library      | License  |
 | ------------- | ----- |
