@@ -6,6 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2020-02-11: dfgQtTableEditor [version 1.1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.1.0.0)
 * 2019-09-10: dfgQtTableEditor [version 1.0.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
 
 ## Usage
@@ -86,20 +87,7 @@ Usage types:
 | Clang 6.0.0   | x64           | Release | 100 % (227/227) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
 | GCC 5.4.0     | x86           |         | 100 % (227/227) | Boost 1.61, Ubuntu 32-bit 16.04 |
 | GCC 7.4.0     | x64           | Release | 100 % (227/227) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| MinGW 4.8.0   | x86           | O2      | 100 % (232/232) | |
 | MinGW 7.3.0   | x64           | O2      | 100 % (232/232) | |
-| VC2010        | x86           | Debug   | 100 % (230/230) | |
-| VC2010        | x86           | Release | 100 % (230/230) | |
-| VC2010        | x64           | Debug   | 100 % (230/230) | |
-| VC2010        | x64           | Release | 100 % (230/230) | |
-| VC2012        | x86           | Debug   | 100 % (235/235) | |
-| VC2012        | x86           | Release | 100 % (235/235) | |
-| VC2012        | x64           | Debug   | 100 % (235/235) | Build with /bigobj for dfgTestCont.cpp |
-| VC2012        | x64           | Release | 100 % (235/235) | |
-| VC2013        | x86           | Debug   | 100 % (235/235) | |
-| VC2013        | x86           | Release | 100 % (235/235) | |
-| VC2013        | x64           | Debug   | 100 % (235/235) | |
-| VC2013        | x64           | Release | 100 % (235/235) | |
 | VC2015        | x86           | Debug   | 100 % (235/235) | |
 | VC2015        | x86           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
 | VC2015        | x64           | Debug   | 100 % (235/235) | Build with /bigobj for dfgTestCont.cpp |
@@ -112,5 +100,13 @@ Usage types:
 | VC2019        | x86           | Release | 100 % (234/234) | std:c++17 with Conformance mode |
 | VC2019        | x64           | Debug   | 100 % (234/234) | std:c++17 with Conformance mode |
 | VC2019        | x64           | Release | 100 % (234/234) | std:c++17 with Conformance mode |
-| Others        |               |         | Not tested |  |
 ||||||
+
+### dfglib is no longer tested with the following compilers:
+
+| Compiler | Untested since | Support branch |
+| -------- | --------------- | --------------------- |
+| MSVC2013 | 2020-02-11 | [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013) |
+| MSVC2012 | 2020-02-11 | [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013) |
+| MSVC2010 | 2020-02-11 | [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013) |
+| MinGW 4.8.0 | 2020-02-11 | [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013) |
