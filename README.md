@@ -76,40 +76,41 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status (as of 2019-06-10 commit [bdd9ffc](https://github.com/tc3t/dfglib/commit/bdd9ffc26cfb24509e420c56c82f3e21a4aa4937), with Boost 1.70.0 unless stated otherwise)
+## Build status (as of 2020-02-10 commit [3d7e58c2](https://github.com/tc3t/dfglib/commit/3d7e58c27407a41692bf96999ffb92597c34ec94), with Boost 1.70.0 unless stated otherwise)
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
 | Compiler      | Platform      | Config  | Tests (passed/all) | Comment |
 | ------------- | ------------- | -----   | ------  | ------- |
-| Clang 3.8.0   | x86           |         | 100 % (220/220) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| Clang 6.0.0   | x64           | Release | 100 % (220/220) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| GCC 5.4.0     | x86           |         | 100 % (220/220) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| GCC 7.4.0     | x64           | Release | 100 % (220/220) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| MinGW 4.8.0   | x86           | O2      | 100 % (223/223) | |
-| VC2010        | x86           | Debug   | 100 % (223/223) | |
-| VC2010        | x86           | Release | 100 % (223/223) | |
-| VC2010        | x64           | Debug   | 100 % (223/223) | |
-| VC2010        | x64           | Release | 100 % (223/223) | |
-| VC2012        | x86           | Debug   | 100 % (226/226) | |
-| VC2012        | x86           | Release | 100 % (226/226) | |
-| VC2012        | x64           | Debug   | 100 % (226/226) | |
-| VC2012        | x64           | Release | 100 % (226/226) | |
-| VC2013        | x86           | Debug   | 100 % (226/226) | |
-| VC2013        | x86           | Release | 100 % (226/226) | |
-| VC2013        | x64           | Debug   | 100 % (226/226) | |
-| VC2013        | x64           | Release | 100 % (226/226) | |
-| VC2015        | x86           | Debug   | 100 % (226/226) | |
-| VC2015        | x86           | Release | 99 % (225/226) | Numerical precision related failure in dfgNumeric.transform |
-| VC2015        | x64           | Debug   | 100 % (226/226) | |
-| VC2015        | x64           | Release | 99 % (225/226) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x86           | Debug   | 100 % (226/226) | |
-| VC2017        | x86           | Release | 99 % (225/226) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x64           | Debug   | 100 % (226/226) | |
-| VC2017        | x64           | Release | 99 % (225/226) | Numerical precision related failure in dfgNumeric.transform |
-| VC2019        | x86           | Debug   | 100 % (225/225) | std:c++17 with Conformance mode |
-| VC2019        | x86           | Release | 100 % (225/225) | std:c++17 with Conformance mode |
-| VC2019        | x64           | Debug   | 100 % (225/225) | std:c++17 with Conformance mode |
-| VC2019        | x64           | Release | 100 % (225/225) | std:c++17 with Conformance mode |
+| Clang 3.8.0   | x86           |         | 100 % (227/227) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| Clang 6.0.0   | x64           | Release | 100 % (227/227) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| GCC 5.4.0     | x86           |         | 100 % (227/227) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| GCC 7.4.0     | x64           | Release | 100 % (227/227) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| MinGW 4.8.0   | x86           | O2      | 100 % (232/232) | |
+| MinGW 7.3.0   | x64           | O2      | 100 % (232/232) | |
+| VC2010        | x86           | Debug   | 100 % (230/230) | |
+| VC2010        | x86           | Release | 100 % (230/230) | |
+| VC2010        | x64           | Debug   | 100 % (230/230) | |
+| VC2010        | x64           | Release | 100 % (230/230) | |
+| VC2012        | x86           | Debug   | 100 % (235/235) | |
+| VC2012        | x86           | Release | 100 % (235/235) | |
+| VC2012        | x64           | Debug   | 100 % (235/235) | Build with /bigobj for dfgTestCont.cpp |
+| VC2012        | x64           | Release | 100 % (235/235) | |
+| VC2013        | x86           | Debug   | 100 % (235/235) | |
+| VC2013        | x86           | Release | 100 % (235/235) | |
+| VC2013        | x64           | Debug   | 100 % (235/235) | |
+| VC2013        | x64           | Release | 100 % (235/235) | |
+| VC2015        | x86           | Debug   | 100 % (235/235) | |
+| VC2015        | x86           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
+| VC2015        | x64           | Debug   | 100 % (235/235) | Build with /bigobj for dfgTestCont.cpp |
+| VC2015        | x64           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x86           | Debug   | 100 % (235/235) | |
+| VC2017        | x86           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x64           | Debug   | 100 % (235/235) | Build with /bigobj for dfgTestCont.cpp |
+| VC2017        | x64           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
+| VC2019        | x86           | Debug   | 100 % (234/234) | std:c++17 with Conformance mode |
+| VC2019        | x86           | Release | 100 % (234/234) | std:c++17 with Conformance mode |
+| VC2019        | x64           | Debug   | 100 % (234/234) | std:c++17 with Conformance mode |
+| VC2019        | x64           | Release | 100 % (234/234) | std:c++17 with Conformance mode |
 | Others        |               |         | Not tested |  |
 ||||||
