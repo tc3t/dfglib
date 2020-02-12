@@ -326,6 +326,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool diffWithUnmodified();
 
+        void onGoToLineTriggered();
         void onFindRequested();
         void onFindNext();
         void onFindPrevious();

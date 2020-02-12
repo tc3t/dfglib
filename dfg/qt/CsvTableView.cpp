@@ -426,6 +426,12 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
     // Find and filter actions
     {
         {
+            auto pAction = new QAction(tr("Go to line"), this);
+            pAction->setShortcut(tr("Ctrl+G"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onGoToLineTriggered));
+            addAction(pAction);
+        }
+        {
             auto pAction = new QAction(tr("Find"), this);
             pAction->setShortcut(tr("Ctrl+F"));
             DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindRequested));
@@ -2764,6 +2770,29 @@ void DFG_CLASS_NAME(CsvTableView)::onFilterRequested()
         Q_EMIT sigFilterActivated();
     else
         QToolTip::showText(QCursor::pos(), tr("Sorry, standalone filter is not implemented."));
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onGoToLineTriggered()
+{
+    auto pModel = model();
+    if (!pModel || pModel->rowCount() <= 0)
+        return;
+    const auto nMinVal = CsvModel::internalRowIndexToVisible(0);
+    const auto nMaxVal = CsvModel::internalRowIndexToVisible(pModel->rowCount() - 1);
+    bool bOk = false;
+    const auto nUserRow = QInputDialog::getInt(this,
+                                          tr("Go To Line"),
+                                          tr("Line number (%1 - %2) (n'th line from start)\nIn case of filtered or sorted table, this may be different from shown line ID").arg(nMinVal).arg(nMaxVal),
+                                          nMinVal, // Initial value
+                                          nMinVal, // Minimum value
+                                          nMaxVal, // Maximum value
+                                          1,       // Step
+                                          &bOk);
+    if (bOk)
+    {
+        const auto nRow = CsvModel::visibleRowIndexToInternal(nUserRow);
+        selectRow(nRow); // This also scrolls to selected row.
+    }
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onFindRequested()

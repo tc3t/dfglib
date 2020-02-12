@@ -163,6 +163,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.
         static int internalRowIndexToVisible(const int nRow) { return nRow + 1; }
+        static int visibleRowIndexToInternal(const int nRow) { return nRow - 1; }
 
         DFG_CLASS_NAME(CsvItemModel)();
         ~DFG_CLASS_NAME(CsvItemModel)();
