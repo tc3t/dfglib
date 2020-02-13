@@ -376,6 +376,8 @@ public:
 
     virtual void addContextMenuEntriesForChartObjects(QMenu&) {}
 
+    virtual void removeAllChartObjects() {}
+
 }; // class ChartCanvas
 
 
@@ -531,6 +533,8 @@ public:
 
     void addContextMenuEntriesForChartObjects(QMenu& menu) override;
 
+    void removeAllChartObjects() override;
+
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
 
@@ -621,6 +625,16 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(QMenu& menu)
             });
         }
     }
+}
+
+void ChartCanvasQCustomPlot::removeAllChartObjects()
+{
+    auto p = getWidget();
+    if (!p)
+        return;
+    while(p->graphCount() > 0)
+        p->removeGraph(0);
+    p->replot();
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -750,12 +764,13 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
 
     QMenu menu;
 
-    // Refresh action
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 6, 0))
+    // Global options
     menu.addAction(tr("Refresh"), pParentGraphWidget, &GraphControlAndDisplayWidget::refresh);
-#else
-    menu.addAction(tr("Refresh"), pParentGraphWidget, SLOT(refresh()));
-#endif
+    {
+        auto pRemoveAllAction = menu.addAction(tr("Remove all chart objects"), pParentGraphWidget, [&]() { this->m_spChartCanvas->removeAllChartObjects(); });
+        if (pRemoveAllAction && !this->m_spChartCanvas->hasChartObjects())
+            pRemoveAllAction->setDisabled(true);
+    }
 
     addSectionEntryToMenu(&menu, tr("Chart objects"));
     m_spChartCanvas->addContextMenuEntriesForChartObjects(menu);
