@@ -18,6 +18,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QComboBox>
     #include <QLabel>
     #include <QMenu>
+    #include <QPushButton>
     #include <QSplitter>
     #include <QCheckBox>
 
@@ -30,9 +31,10 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QtCharts/QValueAxis>
 #endif
 
-#include <QListWidget>
-#include <QJsonDocument>
-#include <QVariantMap>
+    #include <QListWidget>
+    #include <QJsonDocument>
+    #include <QJsonObject>
+    #include <QVariantMap>
 
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -45,6 +47,19 @@ DFG_END_INCLUDE_QT_HEADERS
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+//   GraphDefinitionEntry
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
+constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
+constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
+
+
 // Defines single graph definition entry, e.g. a definition to display xy-line graph from input from table T with x values from column A in selection and y values from column B.
 class GraphDefinitionEntry
 {
@@ -52,9 +67,9 @@ public:
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
         QVariantMap keyVals;
-        keyVals.insert("enabled", true);
-        keyVals.insert("x_source", sColumnX);
-        keyVals.insert("y_source", sColumnY);
+        keyVals.insert(ChartObjectFieldIdStr_enabled, true);
+        keyVals.insert(ChartObjectFieldIdStr_xSource, sColumnX);
+        keyVals.insert(ChartObjectFieldIdStr_ySource, sColumnY);
         GraphDefinitionEntry rv;
         rv.m_items = QJsonDocument::fromVariant(keyVals);
         return rv;
@@ -74,33 +89,106 @@ public:
         return m_items.toJson(QJsonDocument::Compact);
     }
 
+    bool isEnabled() const;
+
     GraphDataSourceId sourceId() const { return GraphDataSourceId(); }
 
     QJsonDocument m_items;
+private:
+    QJsonValue getField(const char* psz) const; // psz must be a ChartObjectFieldIdStr_
 }; // class GraphDefinitionEntry
 
-class GraphDefinitionWidget : public QListWidget
+
+QJsonValue GraphDefinitionEntry::getField(const char* psz) const
+{
+    return  m_items.object().value(QLatin1String(psz));
+}
+
+bool GraphDefinitionEntry::isEnabled() const
+{
+    return getField(ChartObjectFieldIdStr_enabled).toBool(false); // Default value is false.
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+//   GraphDefinitionWidget
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Defines UI for controlling chart entries
+// Requirements:
+//      -Must provide text-based export/import of settings in order to easily store/restore previous settings.
+class GraphDefinitionWidget : public QWidget
 {
 public:
-    typedef QListWidget BaseClass;
+    typedef QWidget BaseClass;
 
-    GraphDefinitionWidget(QWidget *pParent) :
-        BaseClass(pParent)
-    {
-        // TODO: this should be a "auto"-entry.
-        this->addItem(GraphDefinitionEntry::xyGraph(QString(), QString()).toJson());
-    }
+    GraphDefinitionWidget(GraphControlPanel *pNonNullParent);
+
+    QString getRawTextDefinition() const;
 
     template <class Func_T>
-    void forEachDefinitionEntry(Func_T handler)
-    {
-        for (int i = 0, nCount = count(); i < nCount; ++i)
-        {
-            handler(GraphDefinitionEntry::fromJson(item(i)->text()));
-        }
-    }
+    void forEachDefinitionEntry(Func_T handler);
+
+    ChartController* getController();
+
+    QObjectStorage<QPlainTextEdit> m_spRawTextDefinition; // Guaranteed to be non-null between constructor and destructor.
+    QPointer<GraphControlPanel> m_spParent;
 }; // Class GraphDefinitionWidget
 
+
+GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) :
+    BaseClass(pNonNullParent),
+    m_spParent(pNonNullParent)
+{
+    DFG_ASSERT(m_spParent.data() != nullptr);
+
+    auto spLayout = std::make_unique<QVBoxLayout>(this);
+
+    m_spRawTextDefinition.reset(new QPlainTextEdit(this));
+
+    // TODO: this should be a "auto"-entry.
+    m_spRawTextDefinition->setPlainText(GraphDefinitionEntry::xyGraph(QString(), QString()).toJson());
+
+    spLayout->addWidget(m_spRawTextDefinition.get());
+
+    // Adding control buttons
+    {
+        auto spHlayout = std::make_unique<QHBoxLayout>();
+        auto pApplyButton = new QPushButton(tr("Apply"), this); // Deletion through parentship.
+        auto pController = getController();
+        if (pController)
+            DFG_QT_VERIFY_CONNECT(connect(pApplyButton, &QPushButton::clicked, pController, &ChartController::refresh));
+        spHlayout->addWidget(pApplyButton);
+        spLayout->addLayout(spHlayout.release()); // spHlayout is made child of spLayout.
+    }
+
+    setLayout(spLayout.release()); // Ownership transferred to *this.
+}
+
+QString GraphDefinitionWidget::getRawTextDefinition() const
+{
+    return  (m_spRawTextDefinition) ? m_spRawTextDefinition->toPlainText() : QString();
+}
+
+template <class Func_T>
+void GraphDefinitionWidget::forEachDefinitionEntry(Func_T handler)
+{
+    const auto sText = m_spRawTextDefinition->toPlainText();
+    const auto parts = sText.splitRef('\n');
+    for (const auto& part : parts)
+    {
+        handler(GraphDefinitionEntry::fromJson(part.toString()));
+    }
+}
+
+ChartController* GraphDefinitionWidget::getController()
+{
+    return (m_spParent) ? m_spParent->getController() : nullptr;
+}
 
 class XySeries
 {
@@ -286,7 +374,7 @@ public:
 
     virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
 
-    virtual void addContextMenuEntriesForChartObjects(QMenu&) {};
+    virtual void addContextMenuEntriesForChartObjects(QMenu&) {}
 
 }; // class ChartCanvas
 
@@ -539,6 +627,16 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(QMenu& menu)
 
 }} // module namespace
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+//   GraphControlPanel
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : BaseClass(pParent)
 {
     auto pLayout = new QGridLayout(this);
@@ -584,6 +682,20 @@ void DFG_MODULE_NS(qt)::GraphControlPanel::onShowControlsCheckboxToggled(bool b)
         Q_EMIT sigPreferredSizeChanged(sizeHint());
     }
 }
+
+auto DFG_MODULE_NS(qt)::GraphControlPanel::getController() -> ChartController*
+{
+    return qobject_cast<ChartController*>(parent());
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+//   GraphDisplay
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pParent)
 {
@@ -651,6 +763,14 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
     menu.exec(QCursor::pos());
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+//   GraphControlAndDisplayWidget
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
 {
     auto pLayout = new QGridLayout(this);
@@ -702,7 +822,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggl
     });
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
     // TODO: re-entrancy guard?
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
@@ -713,6 +833,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refresh()
     {
         pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
         {
+            if (!defEntry.isEnabled())
+                return;
             this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
             {
                 // Checking that source type in compatible with graph type

@@ -63,6 +63,18 @@ public:
 }; // DataSourceContainer
 
 
+// Interface for controlling charts
+class ChartController : public QFrame
+{
+    Q_OBJECT
+public slots:
+    void refresh() { refreshImpl(); }
+
+private:
+    virtual void refreshImpl() = 0;
+}; // Class ChartController
+
+
 // Widget that shows graph display, no controls.
 class GraphDisplay : public QWidget
 {
@@ -92,6 +104,8 @@ public:
 
     GraphControlPanel(QWidget* pParent);
 
+    ChartController* getController();
+
 signals:
     void sigPreferredSizeChanged(QSize);
     void sigGraphEnableCheckboxToggled(bool b);
@@ -105,7 +119,7 @@ private:
 
 
 // Widget that shows both graph display and controls.
-class GraphControlAndDisplayWidget : public QFrame
+class GraphControlAndDisplayWidget : public ChartController
 {
     Q_OBJECT
 
@@ -122,11 +136,14 @@ public:
     void privForEachDataSource(std::function<void(GraphDataSource&)> func);
 
 public slots:
-    void refresh();
     void onDataSourceChanged();
     void onDataSourceDestroyed();
     void onControllerPreferredSizeChanged(QSize sizeHint);
     void onGraphEnableCheckboxToggled(bool b);
+
+    // Controller implementations
+private:
+    void refreshImpl() override;
 
 public:
     QObjectStorage<QSplitter> m_spSplitter;
