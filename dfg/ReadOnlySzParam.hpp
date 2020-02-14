@@ -580,6 +580,30 @@ inline bool operator==(const Str_T& s, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_
 }
 
 template<class Char_T, class Str_T>
+inline bool operator!=(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& left, const Str_T& s)
+{
+    return !(left == s);
+}
+
+template<class Char_T, class Str_T>
+inline bool operator!=(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+{
+    return !(s == right);
+}
+
+template<class Char_T, class Str_T, class SzPtr_T>
+inline bool operator!=(DFG_CLASS_NAME(StringView)<Char_T, Str_T> left, const SzPtr_T& right)
+{
+    return !(left == right);
+}
+
+template<class Char_T, class Str_T, class SzPtr_T>
+inline bool operator!=(const SzPtr_T& left, DFG_CLASS_NAME(StringView)<Char_T, Str_T> right)
+{
+    return !(left == right);
+}
+
+template<class Char_T, class Str_T>
 inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& right)
 {
     return DFG_MODULE_NS(str)::strCmp(s.c_str(), right.c_str()) < 0;
@@ -595,6 +619,18 @@ template<class Char_T, class Str_T, class SzPtr_T>
 inline bool operator!=(DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> left, const SzPtr_T& right)
 {
     return !(left == right);
+}
+
+template<class Char_T, class Str_T, class SzPtr_T>
+inline bool operator!=(const SzPtr_T& left, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+{
+    return !(left == right);
+}
+
+template<class Char_T, class Str_T>
+inline bool operator!=(const Str_T& s, const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& right)
+{
+    return !(s == right);
 }
 
 typedef DFG_CLASS_NAME(ReadOnlySzParam)<char>				DFG_CLASS_NAME(ReadOnlySzParamC);

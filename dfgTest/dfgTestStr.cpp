@@ -865,9 +865,13 @@ namespace
         }
         
         EXPECT_TRUE(view == s);
+        EXPECT_FALSE(view != s);
         EXPECT_TRUE(s == view);
+        EXPECT_FALSE(s != view);
         EXPECT_TRUE(view == s.c_str());
+        EXPECT_FALSE(view != s.c_str());
         EXPECT_TRUE(s.c_str() == view);
+        EXPECT_FALSE(s.c_str() != view);
         EXPECT_FALSE(StringView_T(conv(sz)) == StringView_T(conv(sz2)));
         EXPECT_TRUE(StringView_T(conv(sz)) != StringView_T(conv(sz2)));
 
