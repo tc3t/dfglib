@@ -124,7 +124,7 @@ class GraphControlAndDisplayWidget : public ChartController
     Q_OBJECT
 
 public:
-    typedef QFrame BaseClass;
+    typedef ChartController BaseClass;
 
     GraphControlAndDisplayWidget();
     ~GraphControlAndDisplayWidget();

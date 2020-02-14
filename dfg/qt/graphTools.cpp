@@ -378,6 +378,9 @@ public:
 
     virtual void removeAllChartObjects() {}
 
+    virtual std::shared_ptr<XySeries> getSeriesByIndex(int) { return nullptr; }
+    virtual std::shared_ptr<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
+
 }; // class ChartCanvas
 
 
@@ -512,9 +515,7 @@ public:
 
     std::shared_ptr<XySeries> getFirstXySeries() override
     {
-        return (m_spChartView && m_spChartView->graphCount() > 0)
-                  ? std::shared_ptr<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(0)))
-                  : std::shared_ptr<XySeries>();
+        return getSeriesByIndex(0);
     }
 
     void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
@@ -534,6 +535,9 @@ public:
     void addContextMenuEntriesForChartObjects(QMenu& menu) override;
 
     void removeAllChartObjects() override;
+
+    std::shared_ptr<XySeries> getSeriesByIndex(int nIndex) override;
+    std::shared_ptr<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
 
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
@@ -635,6 +639,22 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     while(p->graphCount() > 0)
         p->removeGraph(0);
     p->replot();
+}
+
+auto ChartCanvasQCustomPlot::getSeriesByIndex(const int nIndex) -> std::shared_ptr<XySeries>
+{
+    auto p = getWidget();
+    return (p && nIndex >= 0 && nIndex < p->graphCount()) ? std::shared_ptr<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(nIndex))) : nullptr;
+}
+
+auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nIndex) -> std::shared_ptr<XySeries>
+{
+    auto p = getWidget();
+    if (!p || nIndex < 0)
+        return nullptr;
+    while (nIndex >= p->graphCount())
+        p->addGraph();
+    return getSeriesByIndex(nIndex);
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -842,14 +862,34 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     // TODO: re-entrancy guard?
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
 
+    if (!m_spGraphDisplay)
+    {
+        DFG_ASSERT_WITH_MSG(false, "Internal error, no graph display object");
+        return;
+    }
+    auto pChart = m_spGraphDisplay->chart();
+    if (!pChart)
+    {
+        DFG_ASSERT_WITH_MSG(false, "Internal error, no chart object available");
+        return;
+    }
+
+    // Clearing existing objects.
+    pChart->removeAllChartObjects();
+
     // Going through every item in definition entry table and redrawing them.
     auto pDefWidget = this->m_spControlPanel->findChild<GraphDefinitionWidget*>();
     if (pDefWidget)
     {
+        int nGraphCounter = 0;
         pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
         {
             if (!defEntry.isEnabled())
                 return;
+
+            // Note: this must be after checking enabled so that counter won't increment for disabled entries.
+            auto indexIncrementer = makeScopedCaller([]() {}, [&]() { nGraphCounter++; });
+
             this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
             {
                 // Checking that source type in compatible with graph type
@@ -861,27 +901,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     return;
                 }
 
-                if (!m_spGraphDisplay)
-                {
-                    DFG_ASSERT_WITH_MSG(false, "Internal error, no graph display object");
-                    return;
-                }
-                auto pChart = this->m_spGraphDisplay->chart();
-                if (!pChart)
-                {
-                    DFG_ASSERT_WITH_MSG(false, "Internal error, no chart object available");
-                    return;
-                }
-
                 const auto sourceId = source.uniqueId();
                 auto sTitle = (!sourceId.isEmpty()) ? format_fmt("Data source {}", sourceId.toUtf8().data()) : std::string();
                 pChart->setTitle(SzPtrUtf8(sTitle.c_str()));
 
-                if (!pChart->hasChartObjects())
-                {
-                    pChart->addXySeries();
-                }
-                auto spSeries = pChart->getFirstXySeries();
+                auto spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter);
 
                 if (!spSeries)
                 {
