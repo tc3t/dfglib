@@ -55,9 +55,29 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
-constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
-constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
+constexpr char ChartObjectFieldIdStr_enabled[]      = "enabled";
+constexpr char ChartObjectFieldIdStr_type[]         = "type";
+    constexpr char ChartObjectChartTypeStr_xy[]         = "xy";
+        // xy-type has properties: line_style, point_style
+    constexpr char ChartObjectChartTypeStr_histogram[]  = "histogram";
+        // histogram-type has properties: TODO
+
+constexpr char ChartObjectFieldIdStr_xSource[]      = "x_source";
+constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
+
+// Line style entries
+constexpr char ChartObjectFieldIdStr_lineStyle[]      = "line_style";
+    constexpr char ChartObjectLineStyleStr_none[]         = "none";
+    constexpr char ChartObjectLineStyleStr_basic[]        = "basic";        // Straight line between data points.
+    constexpr char ChartObjectLineStyleStr_stepLeft[]     = "step_left";    // Horizontal line between points, y-value from left point.
+    constexpr char ChartObjectLineStyleStr_stepRight[]    = "step_right";   // Horizontal line between points, y-value from right point.
+    constexpr char ChartObjectLineStyleStr_stepMiddle[]   = "step_middle";  // Horizontal line around point, steps at midway on both sides.
+    constexpr char ChartObjectLineStyleStr_pole[]         = "pole";         // Vertical line from (x, 0) -> (x, y) for each point.
+
+// Point style entries
+constexpr char ChartObjectFieldIdStr_pointStyle[]     = "point_style";
+    constexpr char ChartObjectPointStyleStr_none[]        = "none";
+    constexpr char ChartObjectPointStyleStr_basic[]       = "basic";
 
 
 // Defines single graph definition entry, e.g. a definition to display xy-line graph from input from table T with x values from column A in selection and y values from column B.
@@ -68,14 +88,19 @@ public:
     {
         QVariantMap keyVals;
         keyVals.insert(ChartObjectFieldIdStr_enabled, true);
-        keyVals.insert(ChartObjectFieldIdStr_xSource, sColumnX);
-        keyVals.insert(ChartObjectFieldIdStr_ySource, sColumnY);
+        keyVals.insert(ChartObjectFieldIdStr_type, ChartObjectChartTypeStr_xy);
+        keyVals.insert(ChartObjectFieldIdStr_lineStyle, ChartObjectLineStyleStr_basic);
+        keyVals.insert(ChartObjectFieldIdStr_pointStyle, ChartObjectPointStyleStr_basic);
+        DFG_UNUSED(sColumnX);
+        DFG_UNUSED(sColumnY);
+        //keyVals.insert(ChartObjectFieldIdStr_xSource, sColumnX);
+        //keyVals.insert(ChartObjectFieldIdStr_ySource, sColumnY);
         GraphDefinitionEntry rv;
         rv.m_items = QJsonDocument::fromVariant(keyVals);
         return rv;
     }
 
-    static GraphDefinitionEntry fromJson(const QString& sJson)
+    static GraphDefinitionEntry fromText(const QString& sJson)
     {
         GraphDefinitionEntry rv;
         rv.m_items = QJsonDocument::fromJson(sJson.toUtf8());
@@ -84,18 +109,37 @@ public:
 
     GraphDefinitionEntry() {}
 
-    QString toJson() const
+    QString toText() const
     {
         return m_items.toJson(QJsonDocument::Compact);
     }
 
     bool isEnabled() const;
 
+    // Returns graph type as string. String view is guaranteed valid for lifetime of *this.
+    StringViewC graphTypeStr() const;
+
+    template <class Func_T>
+    void doForLineStyleIfPresent(Func_T&& func) const
+    {
+        doForFieldIfPresent(ChartObjectFieldIdStr_lineStyle, std::forward<Func_T>(func));
+    }
+
+    template <class Func_T>
+    void doForPointStyleIfPresent(Func_T&& func) const
+    {
+        doForFieldIfPresent(ChartObjectFieldIdStr_pointStyle, std::forward<Func_T>(func));
+    }
+
     GraphDataSourceId sourceId() const { return GraphDataSourceId(); }
 
     QJsonDocument m_items;
 private:
     QJsonValue getField(const char* psz) const; // psz must be a ChartObjectFieldIdStr_
+
+    template <class Func_T>
+    void doForFieldIfPresent(const char* id, Func_T&& func) const;
+
 }; // class GraphDefinitionEntry
 
 
@@ -107,6 +151,24 @@ QJsonValue GraphDefinitionEntry::getField(const char* psz) const
 bool GraphDefinitionEntry::isEnabled() const
 {
     return getField(ChartObjectFieldIdStr_enabled).toBool(false); // Default value is false.
+}
+
+auto GraphDefinitionEntry::graphTypeStr() const -> StringViewC
+{
+    const auto s = getField(ChartObjectFieldIdStr_type).toString();
+    if (s == QLatin1String(ChartObjectChartTypeStr_xy))
+        return StringViewC(ChartObjectChartTypeStr_xy);
+    else if (s == QLatin1String(ChartObjectChartTypeStr_histogram))
+        return StringViewC(ChartObjectChartTypeStr_histogram);
+    return StringViewC();
+}
+
+template <class Func_T>
+void GraphDefinitionEntry::doForFieldIfPresent(const char* id, Func_T&& func) const
+{
+    const auto val = getField(id);
+    if (!val.isNull())
+        func(val.toString().toUtf8());
 }
 
 
@@ -151,7 +213,7 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
     m_spRawTextDefinition.reset(new QPlainTextEdit(this));
 
     // TODO: this should be a "auto"-entry.
-    m_spRawTextDefinition->setPlainText(GraphDefinitionEntry::xyGraph(QString(), QString()).toJson());
+    m_spRawTextDefinition->setPlainText(GraphDefinitionEntry::xyGraph(QString(), QString()).toText());
 
     spLayout->addWidget(m_spRawTextDefinition.get());
 
@@ -181,7 +243,7 @@ void GraphDefinitionWidget::forEachDefinitionEntry(Func_T handler)
     const auto parts = sText.splitRef('\n');
     for (const auto& part : parts)
     {
-        handler(GraphDefinitionEntry::fromJson(part.toString()));
+        handler(GraphDefinitionEntry::fromText(part.toString()));
     }
 }
 
@@ -198,6 +260,9 @@ public:
     virtual ~XySeries() {}
     virtual void setOrAppend(const DataSourceIndex, const double, const double) = 0;
     virtual void resize(const DataSourceIndex) = 0;
+
+    virtual void setLineStyle(StringViewC) {}
+    virtual void setPointStyle(StringViewC) {}
 
     // Sets x values and y values. If given x and y ranges have different size, request is ignored.
     virtual void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*>, DFG_CLASS_NAME(RangeIterator_T)<const double*>) = 0;
@@ -353,8 +418,52 @@ public:
         xySeries->setData(xTemp, yTemp);
     }
 
+    void setLineStyle(StringViewC svStyle) override;
+
+    void setPointStyle(StringViewC svStyle) override;
+
     QPointer<QCPGraph> m_spXySeries;
 }; // Class XySeriesQCustomPlot
+
+
+void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
+{
+    if (!m_spXySeries)
+        return;
+    QCPGraph::LineStyle style = QCPGraph::lsNone;
+    if (svStyle == "basic")
+        style = QCPGraph::lsLine;
+    else if (svStyle == "step_left")
+        style = QCPGraph::lsStepLeft;
+    else if (svStyle == "step_right")
+        style = QCPGraph::lsStepRight;
+    else if (svStyle == "step_middle")
+        style = QCPGraph::lsStepCenter;
+    else if (svStyle == "pole")
+        style = QCPGraph::lsImpulse;
+    else if (svStyle != "none")
+    {
+        // Ending up here means that entry was unrecognized. TODO: somekind of logging for this
+    }
+
+    m_spXySeries->setLineStyle(style);
+}
+
+void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
+{
+    if (!m_spXySeries)
+        return;
+    QCPScatterStyle style = QCPScatterStyle::ssNone;
+    if (svStyle == "basic")
+        style = QCPScatterStyle::ssCircle;
+    else if (svStyle != "none")
+    {
+        // Ending up here means that entry was unrecognized. TODO: somekind of logging for this
+    }
+      
+    m_spXySeries->setScatterStyle(style);
+}
+
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
 class ChartCanvas
@@ -989,6 +1098,12 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     nGraphSize = nActualSize;
                 }
                 spSeries->resize(nGraphSize); // Removing excess points (if any)
+
+                // Setting line style
+                defEntry.doForLineStyleIfPresent([&](const char* psz) { spSeries->setLineStyle(psz); });
+
+                // Setting point style
+                defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
 
                 pChart->setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
             });
