@@ -10,6 +10,7 @@
 #include "../str/format_fmt.hpp"
 
 #include "../alg.hpp"
+#include "../math.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
@@ -38,11 +39,15 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 
 DFG_END_INCLUDE_QT_HEADERS
 
-#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-    DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+        // Note: boost/histogram was introduced in 1.70 (2019-04-12)
+        // Note: including boost/histogram here under QCustomPlot section since it is (at least for the time being) only needed when QCustomPlot is available;
+        //       don't want to require boost 1.70 unless it is actually used.
+        #include <boost/histogram.hpp>
         #include "qcustomplot/qcustomplot.h"
-    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
-#endif
+    #endif
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
@@ -268,6 +273,17 @@ public:
     virtual void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*>, DFG_CLASS_NAME(RangeIterator_T)<const double*>) = 0;
 }; // Class XySeries
 
+class Histogram
+{
+protected:
+    Histogram() {}
+public:
+    virtual ~Histogram() {}
+
+    // TODO: define meaning (e.g. bin centre)
+    virtual void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*>, DFG_CLASS_NAME(RangeIterator_T)<const double*>) = 0;
+}; // Class Histogram
+
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 class XySeriesQtChart : public XySeries
 {
@@ -464,6 +480,47 @@ void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
     m_spXySeries->setScatterStyle(style);
 }
 
+
+class HistogramQCustomPlot : public Histogram
+{
+public:
+    HistogramQCustomPlot(QCPBars* pBars);
+    ~HistogramQCustomPlot();
+
+    void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals) override;
+
+    QPointer<QCPBars> m_spBars; // QCPBars is owned by QCustomPlot, not by *this.
+}; // Class HistogramQCustomPlot
+
+HistogramQCustomPlot::HistogramQCustomPlot(QCPBars* pBars)
+{
+    m_spBars = pBars;
+    if (!m_spBars)
+        return;
+    m_spBars->setName("Histogram");
+}
+
+HistogramQCustomPlot::~HistogramQCustomPlot()
+{
+}
+
+void HistogramQCustomPlot::setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals)
+{
+    if (!m_spBars)
+        return;
+    if (xVals.size() >= 3)
+        m_spBars->setWidth(1.0 * (xVals[2] - xVals[1])); // TODO: bin width to be user controllable. Factor 1.0 means that there's no space between bars
+    m_spBars->setWidthType(QCPBars::wtPlotCoords);
+    // TODO: this is vexing: QCPBars insists of having QVector's so must allocate new buffers.
+    QVector<double> x(static_cast<int>(xVals.size()));
+    QVector<double> y(static_cast<int>(yVals.size()));
+    std::copy(xVals.cbegin(), xVals.cend(), x.begin());
+    std::copy(yVals.cbegin(), yVals.cend(), y.begin());
+    m_spBars->setData(x, y);
+    m_spBars->rescaleAxes(); // TODO: revise, probably not desirable when there are more than one plottable in canvas.
+}
+
+
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
 class ChartCanvas
@@ -489,6 +546,11 @@ public:
 
     virtual std::shared_ptr<XySeries> getSeriesByIndex(int) { return nullptr; }
     virtual std::shared_ptr<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
+
+    virtual std::shared_ptr<Histogram> createHistogram(DFG_CLASS_NAME(RangeIterator_T)<const double*>) { return nullptr; }
+
+    // Request to repaint canvas.
+    virtual void repaint() = 0;
 
 }; // class ChartCanvas
 
@@ -645,8 +707,12 @@ public:
 
     void removeAllChartObjects() override;
 
+    void repaint() override;
+
     std::shared_ptr<XySeries> getSeriesByIndex(int nIndex) override;
     std::shared_ptr<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
+
+    std::shared_ptr<Histogram> createHistogram(DFG_CLASS_NAME(RangeIterator_T)<const double*> vals) override;
 
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
@@ -705,38 +771,60 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(QMenu& menu)
 {
     if (!m_spChartView)
         return;
-    const auto nCount = m_spChartView->graphCount();
-    for (int i = 0; i < nCount; ++i)
+
+    /*
+    According to class inheritance tree, plottable can be one of these:
+    QCPGraph, QCPCurve, QCPBars, QCPStatisticalBox, QCPColorMap, QCPFinancial
+    */
+    const auto nPlottableCount = m_spChartView->plottableCount();
+    for (int i = 0; i < nPlottableCount; ++i)
     {
-        auto pGraph = m_spChartView->graph(i);
-        if (!pGraph)
-            continue;
-        auto pSubMenu = menu.addMenu(pGraph->name());
+        auto pPlottable = m_spChartView->plottable(i);
+        const auto name = pPlottable->name();
+
+        // TODO: limit length
+        // TODO: icon based on object type (xy, histogram...)
+        auto pSubMenu = menu.addMenu(pPlottable->name());
         if (!pSubMenu)
             continue;
 
         // Adding menu title
-        addTitleEntryToMenu(pSubMenu, pGraph->name());
+        addTitleEntryToMenu(pSubMenu, pPlottable->name());
 
-        // Adding line style entries
-        {
-            addSectionEntryToMenu(pSubMenu, tr("Line Style"));
-            const auto currentLineStyle = pGraph->lineStyle();
-            forEachQCustomPlotLineStyle([=](const QCPGraph::LineStyle style, const char* pszStyleName)
-            {
-                addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentLineStyle, style, tr(pszStyleName), &QCPGraph::setLineStyle);
-            });
-        }
+        // TODO: add 'per object'-removal for all plottables.
+        //pSubMenu->addAction(tr("Remove"), []() { m_spChartView-> });
 
-        // Adding point style entries
+        auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
+        if (pGraph)
         {
-            addSectionEntryToMenu(pSubMenu, tr("Point Style"));
-            const auto currentPointStyle = pGraph->scatterStyle().shape();
-            forEachQCustomPlotScatterStyle([=](const QCPScatterStyle::ScatterShape style, const char* pszStyleName)
+            // Adding line style entries
             {
-                addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentPointStyle, style, tr(pszStyleName), &QCPGraph::setScatterStyle);
-            });
+                addSectionEntryToMenu(pSubMenu, tr("Line Style"));
+                const auto currentLineStyle = pGraph->lineStyle();
+                forEachQCustomPlotLineStyle([=](const QCPGraph::LineStyle style, const char* pszStyleName)
+                {
+                    addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentLineStyle, style, tr(pszStyleName), &QCPGraph::setLineStyle);
+                });
+            }
+
+            // Adding point style entries
+            {
+                addSectionEntryToMenu(pSubMenu, tr("Point Style"));
+                const auto currentPointStyle = pGraph->scatterStyle().shape();
+                forEachQCustomPlotScatterStyle([=](const QCPScatterStyle::ScatterShape style, const char* pszStyleName)
+                {
+                    addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentPointStyle, style, tr(pszStyleName), &QCPGraph::setScatterStyle);
+                });
+            }
+            continue;
         }
+        auto pBars = qobject_cast<QCPBars*>(pPlottable);
+        if (pBars)
+        {
+            addSectionEntryToMenu(pSubMenu, tr("Histogram controls not implemented"));
+            continue;
+        }
+        
     }
 }
 
@@ -745,9 +833,8 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     auto p = getWidget();
     if (!p)
         return;
-    while(p->graphCount() > 0)
-        p->removeGraph(0);
-    p->replot();
+    p->clearPlottables();
+    repaint();
 }
 
 auto ChartCanvasQCustomPlot::getSeriesByIndex(const int nIndex) -> std::shared_ptr<XySeries>
@@ -764,6 +851,53 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nInd
     while (nIndex >= p->graphCount())
         p->addGraph();
     return getSeriesByIndex(nIndex);
+}
+
+auto ChartCanvasQCustomPlot::createHistogram(DFG_CLASS_NAME(RangeIterator_T)<const double*> valueRange) -> std::shared_ptr<Histogram>
+{
+    auto p = getWidget();
+    if (!p)
+        return nullptr;
+
+    auto minMaxPair = std::minmax_element(valueRange.cbegin(), valueRange.cend());
+    if (*minMaxPair.first >= *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
+        return nullptr;
+
+    auto spHistogram = std::make_shared<HistogramQCustomPlot>(new QCPBars(p->xAxis, p->yAxis)); // Note: QCPBars is owned by QCustomPlot-object.
+
+    try
+    {
+        // TODO: bin count (hard coded value '240' below) to be user controllable.
+        auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(240, *minMaxPair.first, *minMaxPair.second, "x"));
+        std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
+
+        QVector<double> xVals;
+        QVector<double> yVals;
+        for (auto&& x : indexed(hist, boost::histogram::coverage::all))
+        {
+            const double xVal = x.bin().center();
+            if (DFG_MODULE_NS(math)::isNan(xVal) || DFG_MODULE_NS(math)::isInf(xVal))
+                continue;
+            xVals.push_back(xVal);
+            yVals.push_back(*x);
+        }
+
+        spHistogram->setValues(makeRange(xVals), makeRange(yVals));
+    }
+    catch (...)
+    {
+        // Failed to create histogram. TODO: log
+        return nullptr;
+    }
+
+    return spHistogram;
+}
+
+void ChartCanvasQCustomPlot::repaint()
+{
+    auto p = getWidget();
+    if (p)
+        p->replot();
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -996,7 +1130,15 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             if (!defEntry.isEnabled())
                 return;
 
+            if (defEntry.graphTypeStr() != ChartObjectChartTypeStr_xy && defEntry.graphTypeStr() != ChartObjectChartTypeStr_histogram)
+            {
+                // Unsupported graphType.
+                // TODO: log
+                return;
+            }
+
             // Note: this must be after checking enabled so that counter won't increment for disabled entries.
+            // TODO: fix counter handling, creates redundant graph objects when having xy-types after histogram-entries.
             auto indexIncrementer = makeScopedCaller([]() {}, [&]() { nGraphCounter++; });
 
             this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
@@ -1013,14 +1155,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 const auto sourceId = source.uniqueId();
                 auto sTitle = (!sourceId.isEmpty()) ? format_fmt("Data source {}", sourceId.toUtf8().data()) : std::string();
                 pChart->setTitle(SzPtrUtf8(sTitle.c_str()));
-
-                auto spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter);
-
-                if (!spSeries)
-                {
-                    DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
-                    return;
-                }
 
                 typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<double, double> RowToValueMap;
                 typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<DataSourceIndex, RowToValueMap> ColumnToValuesMap;
@@ -1046,19 +1180,49 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
                 DataSourceIndex nGraphSize = 0;
 
+                decltype(pChart->getSeriesByIndex(0)) spSeries;
+
                 if (colToValuesMap.size() == 1)
                 {
-                    const auto& valueCont = colToValuesMap.begin()->second;
-                    nGraphSize = valueCont.size();
-                    minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.keyRange(), minMaxX);
-                    minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.valueRange(), minMaxY);
-                    // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
-                    //       to store new content to those directly or at least allow moving these storages to series
-                    //       so it wouldn't need to duplicate them.
-                    spSeries->setValues(valueCont.keyRange(), valueCont.valueRange());
+                    if (defEntry.graphTypeStr() == ChartObjectChartTypeStr_xy)
+                    {
+                        spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter);
+
+                        if (!spSeries)
+                        {
+                            DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
+                            return;
+                        }
+
+                        const auto& valueCont = colToValuesMap.begin()->second;
+                        nGraphSize = valueCont.size();
+                        minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.keyRange(), minMaxX);
+                        minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.valueRange(), minMaxY);
+                        // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
+                        //       to store new content to those directly or at least allow moving these storages to series
+                        //       so it wouldn't need to duplicate them.
+                        spSeries->setValues(valueCont.keyRange(), valueCont.valueRange());
+                    }
+                    else if (defEntry.graphTypeStr() == ChartObjectChartTypeStr_histogram)
+                    {
+                        const auto& valueRange = colToValuesMap.begin()->second.valueRange();
+                        if (valueRange.size() < 2)
+                            return; // Too few points. TODO: log
+
+                        auto spHistogram = pChart->createHistogram(valueRange);
+                        return;
+                    }
                 }
                 else if (colToValuesMap.size() == 2)
                 {
+                    spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter);
+
+                    if (!spSeries)
+                    {
+                        DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
+                        return;
+                    }
+
                     // xValueMap is also used as final (x,y) table passed to series.
                     auto& xValueMap = colToValuesMap.frontValue();
                     xValueMap.setSorting(false);
@@ -1097,17 +1261,23 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     spSeries->setValues(headRange(xValueMap.keyRange(), nSizeAsPtrdiff), headRange(xValueMap.valueRange(), nSizeAsPtrdiff));
                     nGraphSize = nActualSize;
                 }
-                spSeries->resize(nGraphSize); // Removing excess points (if any)
 
-                // Setting line style
-                defEntry.doForLineStyleIfPresent([&](const char* psz) { spSeries->setLineStyle(psz); });
+                if (spSeries)
+                {
+                    spSeries->resize(nGraphSize); // Removing excess points (if any)
 
-                // Setting point style
-                defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
+                    // Setting line style
+                    defEntry.doForLineStyleIfPresent([&](const char* psz) { spSeries->setLineStyle(psz); });
 
-                pChart->setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
+                    // Setting point style
+                    defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
+
+                    pChart->setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
+                }
             });
         });
+
+        pChart->repaint();
     }
 }
 
