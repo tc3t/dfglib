@@ -86,6 +86,22 @@ TEST(dfgIter, RangeIterator)
         EXPECT_EQ(1, *range2.begin());
         EXPECT_EQ(range.begin(), range2.begin());
     }
+
+    // Testing existence of operator[] for contiguous ranges.
+    {
+        std::vector<double> vec = { 5, 6 };
+        EXPECT_EQ(5, DFG_ROOT_NS::makeRange(vec)[0]);
+        EXPECT_EQ(6, DFG_ROOT_NS::makeRange(vec)[1]);
+
+        const std::vector<double> vecConst = {7, 8};
+        EXPECT_EQ(7, DFG_ROOT_NS::makeRange(vecConst)[0]);
+        EXPECT_EQ(8, DFG_ROOT_NS::makeRange(vecConst)[1]);
+
+        /* This should fail to compile.
+        std::list<int> list(2);
+        DFG_ROOT_NS::makeRange(list)[0];
+        */
+    }
 }
 
 TEST(dfgIter, makeRange)

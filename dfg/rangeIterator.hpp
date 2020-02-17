@@ -3,6 +3,7 @@
 #include "dfgDefs.hpp"
 #include <iterator> // For std::distance
 #include "iter/IsContiguousMemoryIterator.hpp"
+#include "dfgAssert.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
@@ -29,17 +30,20 @@ DFG_ROOT_NS_BEGIN
             iterator m_iterEnd;
         }; // Class RangeIteratorDefaultBase
 
-        // Specialized base that defines data()-method for access to contiguous memory.
+        // Specialized base that defines data() and operator[] for contiguous range.
         template <class Iter_T>
         class RangeIteratorContiguousIterBase : public RangeIteratorDefaultBase<Iter_T>
         {
         public:
             typedef RangeIteratorDefaultBase<Iter_T> BaseClass;
             typedef typename std::iterator_traits<Iter_T>::pointer pointer;
+            typedef typename std::iterator_traits<Iter_T>::reference reference;
             RangeIteratorContiguousIterBase() {}
             RangeIteratorContiguousIterBase(Iter_T iBegin, Iter_T iEnd) : BaseClass(iBegin, iEnd) {}
 
             pointer beginAsPointer() const { return (!this->empty()) ? &*this->begin() : nullptr; }
+
+            reference operator[](const size_t i) const { DFG_ASSERT_UB(i < this->size()); return *(this->begin() + i); }
 
             // Note: This is const given the const-semantics explained in comments for RangeIterator_T.
             // Note: Return value may differ from standard containers data() when range is empty.
