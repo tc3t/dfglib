@@ -559,8 +559,8 @@ public:
 
     virtual ChartObjectHolder<Histogram> createHistogram(InputSpan<double>) { return nullptr; }
 
-    // Request to repaint canvas.
-    virtual void repaint() = 0;
+    // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
+    virtual void repaintCanvas() = 0;
 
 }; // class ChartCanvas
 
@@ -717,7 +717,7 @@ public:
 
     void removeAllChartObjects() override;
 
-    void repaint() override;
+    void repaintCanvas() override;
 
     ChartObjectHolder<XySeries> getSeriesByIndex(int nIndex) override;
     ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
@@ -790,6 +790,8 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(QMenu& menu)
     for (int i = 0; i < nPlottableCount; ++i)
     {
         auto pPlottable = m_spChartView->plottable(i);
+        if (!pPlottable)
+            continue;
         const auto name = pPlottable->name();
 
         // TODO: limit length
@@ -801,8 +803,8 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(QMenu& menu)
         // Adding menu title
         addTitleEntryToMenu(pSubMenu, pPlottable->name());
 
-        // TODO: add 'per object'-removal for all plottables.
-        //pSubMenu->addAction(tr("Remove"), []() { m_spChartView-> });
+        // Adding remove-entry
+        pSubMenu->addAction(tr("Remove"), [=]() { m_spChartView->removePlottable(pPlottable); repaintCanvas(); });
 
         auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
         if (pGraph)
@@ -844,7 +846,7 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     if (!p)
         return;
     p->clearPlottables();
-    repaint();
+    repaintCanvas();
 }
 
 auto ChartCanvasQCustomPlot::getSeriesByIndex(const int nIndex) -> ChartObjectHolder<XySeries>
@@ -903,7 +905,7 @@ auto ChartCanvasQCustomPlot::createHistogram(InputSpan<double> valueRange) -> Ch
     return spHistogram;
 }
 
-void ChartCanvasQCustomPlot::repaint()
+void ChartCanvasQCustomPlot::repaintCanvas()
 {
     auto p = getWidget();
     if (p)
@@ -1287,7 +1289,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             });
         });
 
-        pChart->repaint();
+        pChart->repaintCanvas();
     }
 }
 
