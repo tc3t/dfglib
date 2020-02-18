@@ -257,6 +257,10 @@ ChartController* GraphDefinitionWidget::getController()
     return (m_spParent) ? m_spParent->getController() : nullptr;
 }
 
+template <class T>
+using InputSpan = DFG_CLASS_NAME(RangeIterator_T)<const T*>;
+
+// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
 class XySeries
 {
 protected:
@@ -270,9 +274,11 @@ public:
     virtual void setPointStyle(StringViewC) {}
 
     // Sets x values and y values. If given x and y ranges have different size, request is ignored.
-    virtual void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*>, DFG_CLASS_NAME(RangeIterator_T)<const double*>) = 0;
+    virtual void setValues(InputSpan<double>, InputSpan<double>) = 0;
 }; // Class XySeries
 
+
+// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
 class Histogram
 {
 protected:
@@ -281,7 +287,7 @@ public:
     virtual ~Histogram() {}
 
     // TODO: define meaning (e.g. bin centre)
-    virtual void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*>, DFG_CLASS_NAME(RangeIterator_T)<const double*>) = 0;
+    virtual void setValues(InputSpan<double>, InputSpan<double>) = 0;
 }; // Class Histogram
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
@@ -325,7 +331,7 @@ public:
         return qobject_cast<QXYSeries*>(m_spXySeries.data());
     }
 
-    void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals) override
+    void setValues(InputSpan<double> xVals, InputSpan<double> yVals) override
     {
         auto pXySeries = getXySeriesImpl();
         if (!pXySeries || xVals.size() != yVals.size())
@@ -415,7 +421,7 @@ public:
         return qobject_cast<QCPGraph*>(m_spXySeries.data());
     }
 
-    void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals) override
+    void setValues(InputSpan<double> xVals, InputSpan<double> yVals) override
     {
         auto xySeries = getXySeriesImpl();
         if (!xySeries || xVals.size() != yVals.size())
@@ -487,7 +493,7 @@ public:
     HistogramQCustomPlot(QCPBars* pBars);
     ~HistogramQCustomPlot();
 
-    void setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals) override;
+    void setValues(InputSpan<double> xVals, InputSpan<double> yVals) override;
 
     QPointer<QCPBars> m_spBars; // QCPBars is owned by QCustomPlot, not by *this.
 }; // Class HistogramQCustomPlot
@@ -504,7 +510,7 @@ HistogramQCustomPlot::~HistogramQCustomPlot()
 {
 }
 
-void HistogramQCustomPlot::setValues(DFG_CLASS_NAME(RangeIterator_T)<const double*> xVals, DFG_CLASS_NAME(RangeIterator_T)<const double*> yVals)
+void HistogramQCustomPlot::setValues(InputSpan<double> xVals, InputSpan<double> yVals)
 {
     if (!m_spBars)
         return;
@@ -523,6 +529,10 @@ void HistogramQCustomPlot::setValues(DFG_CLASS_NAME(RangeIterator_T)<const doubl
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
+template <class T>
+using ChartObjectHolder = std::shared_ptr<T>;
+
+// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
 class ChartCanvas
 {
 protected:
@@ -536,7 +546,7 @@ public:
 
     virtual void setTitle(StringViewUtf8) {}
 
-    virtual std::shared_ptr<XySeries> getFirstXySeries() { return nullptr; }
+    virtual ChartObjectHolder<XySeries> getFirstXySeries() { return nullptr; }
 
     virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
 
@@ -544,10 +554,10 @@ public:
 
     virtual void removeAllChartObjects() {}
 
-    virtual std::shared_ptr<XySeries> getSeriesByIndex(int) { return nullptr; }
-    virtual std::shared_ptr<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
+    virtual ChartObjectHolder<XySeries> getSeriesByIndex(int) { return nullptr; }
+    virtual ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
 
-    virtual std::shared_ptr<Histogram> createHistogram(DFG_CLASS_NAME(RangeIterator_T)<const double*>) { return nullptr; }
+    virtual ChartObjectHolder<Histogram> createHistogram(InputSpan<double>) { return nullptr; }
 
     // Request to repaint canvas.
     virtual void repaint() = 0;
@@ -592,13 +602,13 @@ public:
         //pChart->addSeries(new QScatterSeries(m_spChartView.get())); // chart takes ownership
     }
 
-    std::shared_ptr<XySeries> getFirstXySeries() override
+    ChartObjectHolder<XySeries> getFirstXySeries() override
     {
         auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
         if (!pChart)
             return nullptr;
         auto seriesList = pChart->series();
-        return (!seriesList.isEmpty()) ? std::shared_ptr<XySeries>(new XySeriesQtChart(seriesList.front())) : nullptr;
+        return (!seriesList.isEmpty()) ? ChartObjectHolder<XySeries>(new XySeriesQtChart(seriesList.front())) : nullptr;
     }
 
     void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
@@ -684,7 +694,7 @@ public:
         m_spChartView->addGraph();
     }
 
-    std::shared_ptr<XySeries> getFirstXySeries() override
+    ChartObjectHolder<XySeries> getFirstXySeries() override
     {
         return getSeriesByIndex(0);
     }
@@ -709,10 +719,10 @@ public:
 
     void repaint() override;
 
-    std::shared_ptr<XySeries> getSeriesByIndex(int nIndex) override;
-    std::shared_ptr<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
+    ChartObjectHolder<XySeries> getSeriesByIndex(int nIndex) override;
+    ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
 
-    std::shared_ptr<Histogram> createHistogram(DFG_CLASS_NAME(RangeIterator_T)<const double*> vals) override;
+    ChartObjectHolder<Histogram> createHistogram(InputSpan<double> vals) override;
 
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
@@ -837,13 +847,13 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     repaint();
 }
 
-auto ChartCanvasQCustomPlot::getSeriesByIndex(const int nIndex) -> std::shared_ptr<XySeries>
+auto ChartCanvasQCustomPlot::getSeriesByIndex(const int nIndex) -> ChartObjectHolder<XySeries>
 {
     auto p = getWidget();
-    return (p && nIndex >= 0 && nIndex < p->graphCount()) ? std::shared_ptr<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(nIndex))) : nullptr;
+    return (p && nIndex >= 0 && nIndex < p->graphCount()) ? ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(nIndex))) : nullptr;
 }
 
-auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nIndex) -> std::shared_ptr<XySeries>
+auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nIndex) -> ChartObjectHolder<XySeries>
 {
     auto p = getWidget();
     if (!p || nIndex < 0)
@@ -853,7 +863,7 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nInd
     return getSeriesByIndex(nIndex);
 }
 
-auto ChartCanvasQCustomPlot::createHistogram(DFG_CLASS_NAME(RangeIterator_T)<const double*> valueRange) -> std::shared_ptr<Histogram>
+auto ChartCanvasQCustomPlot::createHistogram(InputSpan<double> valueRange) -> ChartObjectHolder<Histogram>
 {
     auto p = getWidget();
     if (!p)
