@@ -1414,7 +1414,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     setModel(nullptr);
 
     bool bSuccess = false;
-    doModalOperation(this, tr("Reading file\n%1").arg(sPath), "CsvTableViewFileLoader", [&]()
+    doModalOperation(this, tr("Reading file of size %1\n%2").arg(formattedDataSize(QFileInfo(sPath).size()), sPath), "CsvTableViewFileLoader", [&]()
         {
             bSuccess = pModel->openFile(sPath, formatDef);
         });

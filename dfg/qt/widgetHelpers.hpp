@@ -3,12 +3,18 @@
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
 
+#include <memory>
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QLabel>
     #include <QMenu>
     #include <QString>
     #include <QWidgetAction>
     #include <QWidget>
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
+        #include <QLocale> // For QLocale::formattedDataSize
+    #endif
+
 DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
@@ -54,5 +60,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         if (pAction)
             pAction->setEnabled(false);
     }
+
+    inline QString formattedDataSize(const qint64 nSizeInBytes, const int nPrecision = 2)
+    {
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
+            return QLocale(QLocale::English).formattedDataSize(nSizeInBytes, nPrecision, QLocale::DataSizeIecFormat);
+        #else
+            // Fallback for older Qt's; not a pretty output.
+            return QString("%1 B").arg(QString::number(static_cast<double>(nSizeInBytes), 'g', nPrecision));
+        #endif
+    }
+    
 
 }} // Module namespace
