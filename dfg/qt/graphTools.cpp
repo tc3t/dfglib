@@ -155,7 +155,7 @@ QJsonValue GraphDefinitionEntry::getField(const char* psz) const
 
 bool GraphDefinitionEntry::isEnabled() const
 {
-    return getField(ChartObjectFieldIdStr_enabled).toBool(false); // Default value is false.
+    return getField(ChartObjectFieldIdStr_enabled).toBool(true); // If field is not present, defaulting to 'enabled'.
 }
 
 auto GraphDefinitionEntry::graphTypeStr() const -> StringViewC
@@ -959,8 +959,6 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
 
     pLayout->setContentsMargins(0, 0, 0, 0);
     pLayout->addWidget(m_spGraphDefinitionWidget.get());
-
-    // TODO: definitions as whole must be copy-pasteable text so that it can be (re)stored easily.
 }
 
 void DFG_MODULE_NS(qt)::GraphControlPanel::onShowControlsCheckboxToggled(bool b)
