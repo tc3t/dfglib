@@ -22,6 +22,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QPushButton>
     #include <QSplitter>
     #include <QCheckBox>
+    #include <QDialog>
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
     #include <QtCharts>
@@ -60,6 +61,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Note: reflect all changes done here to documentation in getGuideString().
+
 constexpr char ChartObjectFieldIdStr_enabled[]      = "enabled";
 constexpr char ChartObjectFieldIdStr_type[]         = "type";
     constexpr char ChartObjectChartTypeStr_xy[]         = "xy";
@@ -73,11 +76,11 @@ constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
 // Line style entries
 constexpr char ChartObjectFieldIdStr_lineStyle[]      = "line_style";
     constexpr char ChartObjectLineStyleStr_none[]         = "none";
-    constexpr char ChartObjectLineStyleStr_basic[]        = "basic";        // Straight line between data points.
-    constexpr char ChartObjectLineStyleStr_stepLeft[]     = "step_left";    // Horizontal line between points, y-value from left point.
-    constexpr char ChartObjectLineStyleStr_stepRight[]    = "step_right";   // Horizontal line between points, y-value from right point.
-    constexpr char ChartObjectLineStyleStr_stepMiddle[]   = "step_middle";  // Horizontal line around point, steps at midway on both sides.
-    constexpr char ChartObjectLineStyleStr_pole[]         = "pole";         // Vertical line from (x, 0) -> (x, y) for each point.
+    constexpr char ChartObjectLineStyleStr_basic[]        = "basic";
+    constexpr char ChartObjectLineStyleStr_stepLeft[]     = "step_left";
+    constexpr char ChartObjectLineStyleStr_stepRight[]    = "step_right";
+    constexpr char ChartObjectLineStyleStr_stepMiddle[]   = "step_middle";
+    constexpr char ChartObjectLineStyleStr_pole[]         = "pole";
 
 // Point style entries
 constexpr char ChartObjectFieldIdStr_pointStyle[]     = "point_style";
@@ -197,12 +200,17 @@ public:
 
     QString getRawTextDefinition() const;
 
+    void showGuideWidget();
+
+    static QString getGuideString();
+
     template <class Func_T>
     void forEachDefinitionEntry(Func_T handler);
 
     ChartController* getController();
 
     QObjectStorage<QPlainTextEdit> m_spRawTextDefinition; // Guaranteed to be non-null between constructor and destructor.
+    QObjectStorage<QWidget> m_spGuideWidget;
     QPointer<GraphControlPanel> m_spParent;
 }; // Class GraphDefinitionWidget
 
@@ -226,14 +234,78 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
     {
         auto spHlayout = std::make_unique<QHBoxLayout>();
         auto pApplyButton = new QPushButton(tr("Apply"), this); // Deletion through parentship.
+        auto pGuideButton = new QPushButton(tr("Show guide"), this); // Deletion through parentship.
+
         auto pController = getController();
         if (pController)
             DFG_QT_VERIFY_CONNECT(connect(pApplyButton, &QPushButton::clicked, pController, &ChartController::refresh));
+        DFG_QT_VERIFY_CONNECT(connect(pGuideButton, &QPushButton::clicked, this, &GraphDefinitionWidget::showGuideWidget));
+
         spHlayout->addWidget(pApplyButton);
+        spHlayout->addWidget(pGuideButton);
         spLayout->addLayout(spHlayout.release()); // spHlayout is made child of spLayout.
     }
 
     setLayout(spLayout.release()); // Ownership transferred to *this.
+}
+
+
+QString GraphDefinitionWidget::getGuideString()
+{
+    return tr(R"(<h2>Basic examples:</h2>
+<ul>
+    <li>Basic graph: {"type":"xy"}
+    <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
+    <lI>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy"}
+    <li>Basic histogram: {"type":"histogram"}
+</ul>
+
+<h2>Common fields</h2>
+<ul>
+   <li>enabled: {<b>true</b>, false}. Defines whether entry is enabled, default value is true.</li>
+   <li>type: Defines entry type</li>
+    <ul>
+        <li>xy       : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
+        <li>histogram: Histogram</li>
+    </ul>
+</ul>
+
+<h2>Fields for type <i>xy</i></h2>
+    <ul>
+        <li>line_style:</li>
+            <ul>
+                <li>none:        No line indicator</li>
+                <li><b>basic</b>:       Straight line between data points. Default value if field not present</li>
+                <li>step_left:   Horizontal line between points, y-value from left point.</li>
+                <li>step_right:  Horizontal line between points, y-value from right point.</li>
+                <li>step_middle: Horizontal line around point, steps at midway on both sides.</li>
+                <li>pole:        Vertical line from (x, 0) -> (x, y) for each point.</li>
+            </ul>
+        <li>point_style:</li>
+            <ul>
+                <li><b>none</b> : No point indicator. Default value if field not present</li>
+                <li>basic: Basic indicator for every point</li>
+            </ul>
+    </ul>
+<h2>Fields for type <i>histogram</i></h2>
+)");
+}
+
+void GraphDefinitionWidget::showGuideWidget()
+{
+    if (!m_spGuideWidget)
+    {
+        m_spGuideWidget.reset(new QDialog(this));
+        m_spGuideWidget->setWindowTitle(tr("Chart guide"));
+        auto pTextEdit = new QTextEdit(m_spGuideWidget.get()); // Deletion through parentship.
+        auto pLayout = new QHBoxLayout(m_spGuideWidget.get());
+        pTextEdit->setHtml(getGuideString());
+        pTextEdit->setReadOnly(true);
+        pLayout->addWidget(pTextEdit);
+        removeContextHelpButtonFromDialog(m_spGuideWidget.get());
+        m_spGuideWidget->resize(600, 500);
+    }
+    m_spGuideWidget->show();
 }
 
 QString GraphDefinitionWidget::getRawTextDefinition() const
