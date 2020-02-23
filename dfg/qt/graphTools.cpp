@@ -172,7 +172,7 @@ template <class Func_T>
 void GraphDefinitionEntry::doForFieldIfPresent(const char* id, Func_T&& func) const
 {
     const auto val = getField(id);
-    if (!val.isNull())
+    if (!val.isNull() && !val.isUndefined())
         func(val.toString().toUtf8());
 }
 
@@ -1277,9 +1277,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     spSeries->resize(nGraphSize); // Removing excess points (if any)
 
                     // Setting line style
+                    spSeries->setLineStyle(ChartObjectLineStyleStr_basic); // Default value
                     defEntry.doForLineStyleIfPresent([&](const char* psz) { spSeries->setLineStyle(psz); });
 
                     // Setting point style
+                    spSeries->setPointStyle(ChartObjectPointStyleStr_none); // Default value
                     defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
 
                     pChart->setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
