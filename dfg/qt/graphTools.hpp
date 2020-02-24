@@ -68,10 +68,12 @@ class ChartController : public QFrame
 {
     Q_OBJECT
 public slots:
-    void refresh() { refreshImpl(); }
+    void refresh();
 
 private:
-    virtual void refreshImpl() = 0;
+    virtual void refreshImpl() = 0; // Guaranteed to not get called by refresh() while already in progress.
+
+    bool m_bRefreshInProgress = false;
 }; // Class ChartController
 
 

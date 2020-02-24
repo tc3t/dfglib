@@ -11,6 +11,7 @@
 
 #include "../alg.hpp"
 #include "../math.hpp"
+#include "../scopedCaller.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
@@ -52,6 +53,14 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
+
+void ChartController::refresh()
+{
+    if (m_bRefreshInProgress)
+        return; // refreshImpl() already in progress; not calling it.
+    auto flagResetter = makeScopedCaller([&]() { m_bRefreshInProgress = true; }, [&]() { m_bRefreshInProgress = false; });
+    refreshImpl();
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -1184,7 +1193,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggl
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
-    // TODO: re-entrancy guard?
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
 
     if (!m_spGraphDisplay)
