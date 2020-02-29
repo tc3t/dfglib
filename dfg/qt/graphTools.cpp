@@ -12,6 +12,7 @@
 #include "../alg.hpp"
 #include "../math.hpp"
 #include "../scopedCaller.hpp"
+#include "../str/strTo.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
@@ -77,7 +78,9 @@ constexpr char ChartObjectFieldIdStr_type[]         = "type";
     constexpr char ChartObjectChartTypeStr_xy[]         = "xy";
         // xy-type has properties: line_style, point_style
     constexpr char ChartObjectChartTypeStr_histogram[]  = "histogram";
-        // histogram-type has properties: TODO
+        // histogram-type has properties: bin_count
+
+constexpr char ChartObjectFieldIdStr_binCount[]     = "bin_count";
 
 constexpr char ChartObjectFieldIdStr_xSource[]      = "x_source";
 constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
@@ -97,8 +100,40 @@ constexpr char ChartObjectFieldIdStr_pointStyle[]     = "point_style";
     constexpr char ChartObjectPointStyleStr_basic[]       = "basic";
 
 
-// Defines single graph definition entry, e.g. a definition to display xy-line graph from input from table T with x values from column A in selection and y values from column B.
-class GraphDefinitionEntry
+// Defines single graph definition entry, e.g. a definition to display xy-line graph from some source data.
+ // TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
+class AbstractGraphDefinitionEntry
+{
+public:
+    typedef StringViewC FieldIdStrView;
+    typedef const StringViewC& FieldIdStrViewInputParam;
+
+    virtual ~AbstractGraphDefinitionEntry() {}
+
+    // Returns value of field 'fieldId' if present, defaultValue otherwise.
+    // Note: defaultValue is returned only when field is not found, not when e.g. field is present but has no value or has invalid value.
+    template <class T>
+    T fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const;
+
+private:
+    virtual std::pair<bool, StringUtf8> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
+};
+
+template <class T>
+T AbstractGraphDefinitionEntry::fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const
+{
+    DFG_STATIC_ASSERT(std::is_arithmetic_v<T>, "Only arithmetic value are supported for now");
+
+    auto rv = fieldValueStrImpl(fieldId);
+    if (!rv.first) // Field not present?
+        return defaultValue;
+    T obj{};
+    ::DFG_MODULE_NS(str)::strTo(rv.second.rawStorage(), obj);
+    return obj;
+}
+
+// TODO: most/all of this should be in AbstractGraphDefinitionEntry. For now mostly here due to the readily available json-tools in Qt.
+class GraphDefinitionEntry : public AbstractGraphDefinitionEntry
 {
 public:
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
@@ -152,7 +187,9 @@ public:
 
     QJsonDocument m_items;
 private:
-    QJsonValue getField(const char* psz) const; // psz must be a ChartObjectFieldIdStr_
+    QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
+
+    std::pair<bool, StringUtf8> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const override;
 
     template <class Func_T>
     void doForFieldIfPresent(const char* id, Func_T&& func) const;
@@ -160,9 +197,9 @@ private:
 }; // class GraphDefinitionEntry
 
 
-QJsonValue GraphDefinitionEntry::getField(const char* psz) const
+QJsonValue GraphDefinitionEntry::getField(FieldIdStrViewInputParam fieldId) const
 {
-    return  m_items.object().value(QLatin1String(psz));
+    return m_items.object().value(QLatin1String(fieldId.data(), static_cast<int>(fieldId.size())));
 }
 
 bool GraphDefinitionEntry::isEnabled() const
@@ -188,6 +225,11 @@ void GraphDefinitionEntry::doForFieldIfPresent(const char* id, Func_T&& func) co
         func(val.toString().toUtf8());
 }
 
+auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const -> std::pair<bool, StringUtf8>
+{
+    const auto val = getField(fieldId);
+    return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, StringUtf8(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, StringUtf8());
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -297,6 +339,9 @@ QString GraphDefinitionWidget::getGuideString()
             </ul>
     </ul>
 <h2>Fields for type <i>histogram</i></h2>
+    <ul>
+        <li>bin_count: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
+    </ul>
 )");
 }
 
@@ -638,7 +683,7 @@ public:
     virtual ChartObjectHolder<XySeries> getSeriesByIndex(int) { return nullptr; }
     virtual ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
 
-    virtual ChartObjectHolder<Histogram> createHistogram(InputSpan<double>) { return nullptr; }
+    virtual ChartObjectHolder<Histogram> createHistogram(const AbstractGraphDefinitionEntry&, InputSpan<double>) { return nullptr; }
 
     // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
     virtual void repaintCanvas() = 0;
@@ -803,7 +848,7 @@ public:
     ChartObjectHolder<XySeries> getSeriesByIndex(int nIndex) override;
     ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
 
-    ChartObjectHolder<Histogram> createHistogram(InputSpan<double> vals) override;
+    ChartObjectHolder<Histogram> createHistogram(const AbstractGraphDefinitionEntry& defEntry, InputSpan<double> vals) override;
 
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
@@ -946,7 +991,7 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nInd
     return getSeriesByIndex(nIndex);
 }
 
-auto ChartCanvasQCustomPlot::createHistogram(InputSpan<double> valueRange) -> ChartObjectHolder<Histogram>
+auto ChartCanvasQCustomPlot::createHistogram(const AbstractGraphDefinitionEntry& defEntry, InputSpan<double> valueRange) -> ChartObjectHolder<Histogram>
 {
     auto p = getWidget();
     if (!p)
@@ -958,10 +1003,11 @@ auto ChartCanvasQCustomPlot::createHistogram(InputSpan<double> valueRange) -> Ch
 
     auto spHistogram = std::make_shared<HistogramQCustomPlot>(new QCPBars(p->xAxis, p->yAxis)); // Note: QCPBars is owned by QCustomPlot-object.
 
+    const auto nBinCount = defEntry.fieldValue<unsigned int>(ChartObjectFieldIdStr_binCount, 100);
+
     try
     {
-        // TODO: bin count (hard coded value '240' below) to be user controllable.
-        auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(240, *minMaxPair.first, *minMaxPair.second, "x"));
+        auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(nBinCount, *minMaxPair.first, *minMaxPair.second, "x"));
         std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
 
         QVector<double> xVals;
@@ -1299,7 +1345,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                         if (valueRange.size() < 2)
                             return; // Too few points. TODO: log
 
-                        auto spHistogram = pChart->createHistogram(valueRange);
+                        auto spHistogram = pChart->createHistogram(defEntry, valueRange);
                         return;
                     }
                 }
