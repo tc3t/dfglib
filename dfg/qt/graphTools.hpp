@@ -87,6 +87,8 @@ public:
     GraphDisplay(QWidget* pParent);
     ~GraphDisplay();
 
+    void showSaveAsImageDialog();
+
     ChartCanvas* chart();
 
 protected:

@@ -21,6 +21,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QComboBox>
     #include <QLabel>
     #include <QMenu>
+    #include <QMessageBox>
     #include <QPushButton>
     #include <QSplitter>
     #include <QCheckBox>
@@ -1148,6 +1149,289 @@ auto DFG_MODULE_NS(qt)::GraphDisplay::chart() -> ChartCanvas*
     return m_spChartCanvas.get();
 }
 
+namespace
+{
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+
+    class GraphDisplayImageExportDialog : public QDialog
+    {
+    public:
+        typedef QDialog BaseClass;
+        typedef QJsonObject PropertyMap;
+        enum class LogType { invalidParameter, error };
+        GraphDisplayImageExportDialog(QCustomPlot* pCustomPlot);
+
+        void accept() override;
+
+        QByteArray getExportDefinition() const;
+
+        void addLog(const LogType logType, const QString& sMsg);
+
+        void onInvalidParameter(const QString& sMsg);
+
+        QCP::ResolutionUnit stringToResolutionUnit(const QString& s);
+
+        QPointer<QCustomPlot> m_spCustomPlot;
+        ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spDefinitionEdit;
+        ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spMessageConsole; // Guaranteed non-null between constructor and destructor.
+
+        template <class T> T propertyValueAs(const PropertyMap&, const char*);
+        template <> bool    propertyValueAs<bool>(const PropertyMap& obj, const char* psz)    { return obj.value(psz).toVariant().toBool(); }
+        template <> int     propertyValueAs<int>(const PropertyMap& obj, const char* psz)     { return obj.value(psz).toVariant().toInt(); }
+        template <> double  propertyValueAs<double>(const PropertyMap& obj, const char* psz)  { return obj.value(psz).toVariant().toDouble(); }
+        template <> QString propertyValueAs<QString>(const PropertyMap& obj, const char* psz) { return obj.value(psz).toVariant().toString(); }
+
+    }; // class GraphDisplayImageExportDialog
+
+    GraphDisplayImageExportDialog::GraphDisplayImageExportDialog(QCustomPlot* pCustomPlot) :
+        m_spCustomPlot(pCustomPlot)
+    {
+        m_spMessageConsole.reset(new QPlainTextEdit(this));
+        m_spMessageConsole->setReadOnly(true);
+        m_spMessageConsole->setMaximumHeight(100);
+
+        DFG_MODULE_NS(qt)::removeContextHelpButtonFromDialog(this);
+
+        // Definition widget
+        {
+            m_spDefinitionEdit.reset(new QPlainTextEdit(this));
+            QVariantMap keyVals;
+            keyVals.insert("format", "");
+            keyVals.insert("type", "png");
+            keyVals.insert("width", 0);
+            keyVals.insert("height", 0);
+            keyVals.insert("scale", 1.0);
+            keyVals.insert("quality", -1);
+            keyVals.insert("resolution", 96);
+            keyVals.insert("resolution_unit", "dots_per_inch");
+            keyVals.insert("pdf_title", "");
+            const QString baseFileName = QString("dfgqte_image_%1").arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"));
+            keyVals.insert("output_base_file_name", baseFileName);
+            auto outputDir = QDir::current();
+            if (!QFileInfo(outputDir.absolutePath()).isWritable()) // If current directory is not writable... 
+                outputDir = QDir::home(); // ...changing output dir to user's home directory.
+            keyVals.insert("output_dir", outputDir.absolutePath());
+
+            // Params ignored for now:
+            //keyVals.insert("pen", "TODO"); // pdf-specific
+            //keyVals.insert("pdfCreator", "TODO"); // pdf-specific
+            m_spDefinitionEdit->setPlainText(QJsonDocument::fromVariant(keyVals).toJson());
+        }
+
+        // Help widget
+        auto pHelpWidget = new QLabel(this);
+        pHelpWidget->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+        pHelpWidget->setText(tr("<h3>Available image types and their parameters</h3>"
+            "Note that most parameters are optional, required ones are underlined."
+            "<ul>"
+            "<li><b>bpm</b>: width, height, scale, resolution, resolution_unit</li>"
+            "<li><b>pdf</b>: width, height, pdf_title</li>"
+            "<li><b>png</b>: width, height, scale, quality, resolution, resolution_unit</li>"
+            //"<li><b>jpg</b>: width, height, scale, quality, resolution, resolution_unit</li>" // Commented out for now as don't know when it would be a good idea to save chart-like content as jpg.
+            "<li><b>rastered</b>: <u>format</u>, width, height, scale, quality, resolution, resolution_unit</li>"
+            "</ul>"
+            "<h3>Parameters</h3>"
+            "<ul>"
+            "<li><b>format</b>: Image format such as 'jpg', 'pbm', 'pgm', 'ppm', 'xbm' or 'xpm'. For more details, see Qt documentation for QImageWriter::supportedImageFormats().</li>"
+            "<li><b>height</b>: Image height. For png, bmp, rastered: height in pixels. For pdf, see documentation of QCustomPlot::savePdf(). If this or width value is zero, uses widget dimensions.</li>"
+            "<li><b>output_dir</b>: Directory where output file will be written.</li>"
+            "<li><b>output_base_file_name</b>: Base name of output file Extension will be added automatically.</li>"
+            "<li><b>output_overwrite</b>: If true, writes output file even if file at given path already exists.</li>"
+            "<li><b>pdf_title</b>: Sets pdf title metadata.</li>"
+            "<li><b>quality</b>: [0, 100], when -1, using default.</li>"
+            "<li><b>resolution</b>: Written to image file header, no direct effect on quality or pixel size.</li>"
+            "<li><b>resolution_unit</b>: Unit of 'resolution'-field. Possible values: dots_per_meter, dots_per_centimeter, dots_per_inch.</li>"
+            "<li><b>scale</b>: Image scaling factor. For example if width is 100 and height 300, using scale factor 2 results to image of size 200*600. This will scale e.g. line widths accordingly.</li>"
+            "<li><b>width</b>: Image width. Details are like for height.</li>"
+            "</ul>"
+        ));
+        
+        // Control buttons
+        auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this));
+
+        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::accepted, this, &GraphDisplayImageExportDialog::accept));
+        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::rejected, this, &QDialog::reject));
+
+        // Adding items to layout.
+        auto pLayout = new QVBoxLayout(this);
+        pLayout->addWidget(m_spDefinitionEdit.get());
+        pLayout->addWidget(pHelpWidget);
+        pLayout->addWidget(m_spMessageConsole.get());
+        pLayout->addWidget(&rButtonBox);
+
+        setWindowTitle(tr("Image export"));
+    }
+
+    void GraphDisplayImageExportDialog::onInvalidParameter(const QString& sMsg)
+    {
+        addLog(LogType::invalidParameter, sMsg);
+    }
+
+    void GraphDisplayImageExportDialog::addLog(const LogType logType, const QString& sMsg)
+    {
+        QString sMsgWithTime = QString("%1: %2").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz"), sMsg);
+        if (logType == LogType::invalidParameter || logType == LogType::error)
+            m_spMessageConsole->appendHtml(QString("<font color=\"#ff0000\">%1</font>").arg(sMsgWithTime));
+        else
+            m_spMessageConsole->appendHtml(sMsgWithTime);
+    }
+
+    QByteArray GraphDisplayImageExportDialog::getExportDefinition() const
+    {
+        return (m_spDefinitionEdit) ? m_spDefinitionEdit->toPlainText().toUtf8() : QByteArray();
+    }
+
+    QCP::ResolutionUnit GraphDisplayImageExportDialog::stringToResolutionUnit(const QString& s)
+    {
+        if (s == QLatin1String("dots_per_meter"))
+            return QCP::ruDotsPerMeter;
+        else if (s == QLatin1String("dots_per_centimeter"))
+            return QCP::ruDotsPerCentimeter;
+        else if (s == QLatin1String("dots_per_inch"))
+            return QCP::ruDotsPerInch;
+        else
+        {
+            onInvalidParameter(tr("Invalid resolution unit '%1'. Using dots_per_inch.").arg(s));
+            return QCP::ruDotsPerInch;
+        }
+    }
+
+    void GraphDisplayImageExportDialog::accept()
+    {
+        if (!m_spCustomPlot)
+            return;
+
+        const auto jsonDoc = QJsonDocument::fromJson(getExportDefinition());
+        const auto propertyMap = jsonDoc.object();
+        const auto sType = propertyValueAs<QString>(propertyMap, "type");
+
+        const char* acceptedTypes[] = { "bmp", "pdf", "png", "rastered" };
+
+        // Checking if type is valid.
+        if (std::end(acceptedTypes) == std::find_if(std::begin(acceptedTypes), std::end(acceptedTypes), [&](const char* psz) { return QLatin1String(psz) == sType; }))
+        {
+            onInvalidParameter(tr("Invalid export type '%1'").arg(sType));
+            return;
+        }
+
+        // Forming extension; uses type as such or in case of 'rastered', deducded from 'format'
+        const QString sExtension = [&]()
+            {
+                if (sType != QLatin1String("rastered"))
+                    return sType;
+                else
+                    return propertyValueAs<QString>(propertyMap, "format");
+            }();
+
+        // Making sure that extension is sane
+        if (sExtension.isEmpty() || sExtension.size() > 4 || std::any_of(sExtension.begin(), sExtension.end(), [](const QChar& c) { return !c.isLetterOrNumber() || c.unicode() > 127; }))
+        {
+            onInvalidParameter(tr("Extension '%1' is not accepted; for now maximum extension length is 4 and only ASCII-letters and numbers are accepted").arg(sExtension));
+            return;
+        }
+
+        const auto sOutputDir = propertyValueAs<QString>(propertyMap, "output_dir");
+        const auto sOutputBaseFileName = propertyValueAs<QString>(propertyMap, "output_base_file_name");
+        if (sOutputDir.isEmpty() || sOutputBaseFileName.isEmpty())
+        {
+            onInvalidParameter(tr("Unable to export image: output directory path or base file name is empty"));
+            return;
+        }
+        const QString sFileName = QString("%1.%2").arg(sOutputBaseFileName, sExtension);
+        const QString sOutputPath = QDir(sOutputDir).absoluteFilePath(sFileName);
+        const QFileInfo fileInfo(sOutputPath);
+        if (fileInfo.isDir())
+        {
+            onInvalidParameter(tr("Unable to write to path '%1': path is an existing directory").arg(sOutputPath));
+            return;
+        }
+        if (fileInfo.exists() && !propertyValueAs<bool>(propertyMap, "output_overwrite"))
+        {
+            onInvalidParameter(tr("Unable to write to path'%1': file already exists. If overwriting is desired, set 'output_overwrite' to true.").arg(sOutputPath));
+            return;
+        }
+
+        bool bSuccess = false;
+        if (sType == "bmp")
+        {
+            bSuccess = m_spCustomPlot->saveBmp(sOutputPath,
+                propertyValueAs<int>(propertyMap, "width"),
+                propertyValueAs<int>(propertyMap, "height"),
+                propertyValueAs<double>(propertyMap, "scale"),
+                propertyValueAs<int>(propertyMap, "resolution"),
+                stringToResolutionUnit(propertyValueAs<QString>(propertyMap, "resolution_unit"))
+            );
+        }
+        else if (sType == "pdf")
+        {
+            bSuccess = m_spCustomPlot->savePdf(sOutputPath,
+                propertyValueAs<int>(propertyMap, "width"),
+                propertyValueAs<int>(propertyMap, "height"),
+                QCP::epAllowCosmetic, // TODO: make customisable.
+                QString(), // TODO: check what to use (is 'pdfCreator'-field)
+                propertyValueAs<QString>(propertyMap, "pdf_title")
+            );
+        }
+        else if (sType == "png")
+        {
+            bSuccess = m_spCustomPlot->savePng(sOutputPath,
+                propertyValueAs<int>(propertyMap, "width"),
+                propertyValueAs<int>(propertyMap, "height"),
+                propertyValueAs<double>(propertyMap, "scale"),
+                propertyValueAs<int>(propertyMap, "quality"),
+                propertyValueAs<int>(propertyMap, "resolution"),
+                stringToResolutionUnit(propertyValueAs<QString>(propertyMap, "resolution_unit"))
+                );
+        }
+        else if (sType == "rastered")
+        {
+            bSuccess = m_spCustomPlot->saveRastered(sOutputPath,
+                propertyValueAs<int>(propertyMap, "width"),
+                propertyValueAs<int>(propertyMap, "height"),
+                propertyValueAs<double>(propertyMap, "scale"),
+                propertyValueAs<QString>(propertyMap, "format").toUtf8(),
+                propertyValueAs<int>(propertyMap, "quality"),
+                propertyValueAs<int>(propertyMap, "resolution"),
+                stringToResolutionUnit(propertyValueAs<QString>(propertyMap, "resolution_unit"))
+            );
+        }
+        else // Case: unknown type
+        {
+            onInvalidParameter(tr("Invalid type '%1'").arg(sType));
+            return;
+        }
+
+        if (bSuccess)
+        {
+            QMessageBox::information(this, nullptr, tr("Successfully exported to path<br>") + QString("<a href=file:///%1>%1</a>").arg(sOutputPath));
+        }
+        else
+        {
+            addLog(LogType::error, tr("Export failed."));
+            return;
+        }
+
+        BaseClass::accept();
+    }
+
+#endif // defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+}
+
+
+void DFG_MODULE_NS(qt)::GraphDisplay::showSaveAsImageDialog()
+{
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+    auto pChart = chart();
+    auto pCustomPlotChart = dynamic_cast<ChartCanvasQCustomPlot*>(pChart);
+    if (!pCustomPlotChart)
+        return;
+    GraphDisplayImageExportDialog dlg(pCustomPlotChart->getWidget());
+    dlg.exec();
+#else
+    QMessageBox::information(this, tr("Not implemented"), tr("Not implemented"));
+#endif
+}
+
 void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent)
 {
     DFG_UNUSED(pEvent);
@@ -1171,6 +1455,13 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
         if (pRemoveAllAction && !this->m_spChartCanvas->hasChartObjects())
             pRemoveAllAction->setDisabled(true);
     }
+
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+    // Export actions
+    {
+        menu.addAction(tr("Save as image..."), this, &GraphDisplay::showSaveAsImageDialog);
+    }
+#endif // QCustomPlot
 
     addSectionEntryToMenu(&menu, tr("Chart objects"));
     m_spChartCanvas->addContextMenuEntriesForChartObjects(menu);
