@@ -684,6 +684,10 @@ public:
     virtual ChartObjectHolder<XySeries> getSeriesByIndex(int) { return nullptr; }
     virtual ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
 
+    virtual bool isLegendSupported() const { return false; }
+    virtual bool isLegendEnabled() const   { return false; }
+    virtual bool enableLegend(bool)        { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
+
     virtual ChartObjectHolder<Histogram> createHistogram(const AbstractGraphDefinitionEntry&, InputSpan<double>) { return nullptr; }
 
     // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
@@ -798,10 +802,8 @@ public:
         m_spChartView->setInteractions(interactions | QCP::iRangeZoom | QCP::iRangeDrag | QCP::iSelectPlottables | QCP::iSelectLegend);
     }
 
-    QCustomPlot* getWidget()
-    {
-        return m_spChartView.get();
-    }
+          QCustomPlot* getWidget()       { return m_spChartView.get(); }
+    const QCustomPlot* getWidget() const { return m_spChartView.get(); }
 
     void setTitle(StringViewUtf8 svTitle) override
     {
@@ -850,6 +852,10 @@ public:
     ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
 
     ChartObjectHolder<Histogram> createHistogram(const AbstractGraphDefinitionEntry& defEntry, InputSpan<double> vals) override;
+
+    bool isLegendSupported() const override { return true; }
+    bool isLegendEnabled() const override;
+    bool enableLegend(bool) override;
 
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
@@ -973,6 +979,7 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     if (!p)
         return;
     p->clearPlottables();
+    // Note: legend is not included in removables.
     repaintCanvas();
 }
 
@@ -1038,6 +1045,25 @@ void ChartCanvasQCustomPlot::repaintCanvas()
     auto p = getWidget();
     if (p)
         p->replot();
+}
+
+bool ChartCanvasQCustomPlot::isLegendEnabled() const
+{
+    auto p = getWidget();
+    return p && p->legend && p->legend->visible();
+}
+
+bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
+{
+    auto p = getWidget();
+    if (p && p->legend)
+    {
+        p->legend->setVisible(bEnable);
+        repaintCanvas();
+        return bEnable;
+    }
+    else
+        return false;
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -1454,14 +1480,21 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
         auto pRemoveAllAction = menu.addAction(tr("Remove all chart objects"), pParentGraphWidget, [&]() { this->m_spChartCanvas->removeAllChartObjects(); });
         if (pRemoveAllAction && !this->m_spChartCanvas->hasChartObjects())
             pRemoveAllAction->setDisabled(true);
-    }
+
+        if (m_spChartCanvas->isLegendSupported())
+        {
+            auto pShowLegendAction = menu.addAction(tr("Show legend"), pParentGraphWidget, [&](bool b) { this->m_spChartCanvas->enableLegend(b); });
+            pShowLegendAction->setCheckable(true);
+            pShowLegendAction->setChecked(m_spChartCanvas->isLegendEnabled());
+        }
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-    // Export actions
-    {
-        menu.addAction(tr("Save as image..."), this, &GraphDisplay::showSaveAsImageDialog);
-    }
+        // Export actions
+        {
+            menu.addAction(tr("Save as image..."), this, &GraphDisplay::showSaveAsImageDialog);
+        }
 #endif // QCustomPlot
+    }
 
     addSectionEntryToMenu(&menu, tr("Chart objects"));
     m_spChartCanvas->addContextMenuEntriesForChartObjects(menu);

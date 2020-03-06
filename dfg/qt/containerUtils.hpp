@@ -79,15 +79,11 @@ public:
         return m_spData.data() != nullptr;
     }
 
-    T* get()
-    {
-        return m_spData.data();
-    }
+    T*       get()       { return m_spData.data(); }
+    const T* get() const { return m_spData.data(); }
 
-    T* data()
-    {
-        return get();
-    }
+    T*       data()       { return get(); }
+    const T* data() const { return get(); }
 
     T* release()
     {
