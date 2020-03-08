@@ -73,6 +73,7 @@ void ChartController::refresh()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Note: reflect all changes done here to documentation in getGuideString().
+// TODO: move these to dfg/charts. They are Qt-specific so should not be in qt-module.
 
 constexpr char ChartObjectFieldIdStr_enabled[]      = "enabled";
 constexpr char ChartObjectFieldIdStr_type[]         = "type";
@@ -81,6 +82,10 @@ constexpr char ChartObjectFieldIdStr_type[]         = "type";
     constexpr char ChartObjectChartTypeStr_histogram[]  = "histogram";
         // histogram-type has properties: bin_count
 
+// name: this will show e.g. in legend.
+constexpr char ChartObjectFieldIdStr_name[] = "name";
+
+// bin_count
 constexpr char ChartObjectFieldIdStr_binCount[]     = "bin_count";
 
 constexpr char ChartObjectFieldIdStr_xSource[]      = "x_source";
@@ -106,6 +111,7 @@ constexpr char ChartObjectFieldIdStr_pointStyle[]     = "point_style";
 class AbstractGraphDefinitionEntry
 {
 public:
+    typedef StringUtf8 GdeString;
     typedef StringViewC FieldIdStrView;
     typedef const StringViewC& FieldIdStrViewInputParam;
 
@@ -116,8 +122,10 @@ public:
     template <class T>
     T fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const;
 
+    GdeString fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<GdeString()> defaultValueGenerator) const;
+
 private:
-    virtual std::pair<bool, StringUtf8> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
+    virtual std::pair<bool, GdeString> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
 };
 
 template <class T>
@@ -131,6 +139,12 @@ T AbstractGraphDefinitionEntry::fieldValue(FieldIdStrViewInputParam fieldId, con
     T obj{};
     ::DFG_MODULE_NS(str)::strTo(rv.second.rawStorage(), obj);
     return obj;
+}
+
+auto AbstractGraphDefinitionEntry::fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<GdeString()> defaultValueGenerator) const -> GdeString
+{
+    auto rv = fieldValueStrImpl(fieldId);
+    return (rv.first) ? rv.second : defaultValueGenerator();
 }
 
 // TODO: most/all of this should be in AbstractGraphDefinitionEntry. For now mostly here due to the readily available json-tools in Qt.
@@ -190,10 +204,10 @@ public:
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
 
-    std::pair<bool, StringUtf8> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const override;
+    std::pair<bool, GdeString> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const override;
 
     template <class Func_T>
-    void doForFieldIfPresent(const char* id, Func_T&& func) const;
+    void doForFieldIfPresent(FieldIdStrViewInputParam id, Func_T&& func) const;
 
 }; // class GraphDefinitionEntry
 
@@ -219,17 +233,17 @@ auto GraphDefinitionEntry::graphTypeStr() const -> StringViewC
 }
 
 template <class Func_T>
-void GraphDefinitionEntry::doForFieldIfPresent(const char* id, Func_T&& func) const
+void GraphDefinitionEntry::doForFieldIfPresent(FieldIdStrViewInputParam id, Func_T&& func) const
 {
     const auto val = getField(id);
     if (!val.isNull() && !val.isUndefined())
         func(val.toString().toUtf8());
 }
 
-auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const -> std::pair<bool, StringUtf8>
+auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const -> std::pair<bool, GdeString>
 {
     const auto val = getField(fieldId);
-    return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, StringUtf8(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, StringUtf8());
+    return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, GdeString(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, GdeString());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -308,8 +322,8 @@ QString GraphDefinitionWidget::getGuideString()
 <ul>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <lI>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic histogram: {"type":"histogram"}
+    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph"}
+    <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
 </ul>
 
 <h2>Common fields</h2>
@@ -320,6 +334,7 @@ QString GraphDefinitionWidget::getGuideString()
         <li>xy       : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
         <li>histogram: Histogram</li>
     </ul>
+   <li>name: name of the object, shown e.g. in legend.
 </ul>
 
 <h2>Fields for type <i>xy</i></h2>
@@ -387,8 +402,36 @@ ChartController* GraphDefinitionWidget::getController()
 template <class T>
 using InputSpan = DFG_CLASS_NAME(RangeIterator_T)<const T*>;
 
+// Abstract base for items in chart.
 // TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-class XySeries
+class ChartObject
+{
+public:
+    typedef DFG_CLASS_NAME(StringUtf8) ChartObjectString;
+    typedef DFG_CLASS_NAME(StringViewUtf8) ChartObjectStringView;
+
+    virtual ~ChartObject() {}
+
+    void setName(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setNameImpl(sv) : setNameImpl(sv); }
+
+protected:
+    ChartObject() {}
+
+    // Sets custom base to which virtual calls get passed.
+    template <class T, class... ArgTypes_T>
+    void setBaseImplementation(ArgTypes_T&&... args)
+    {
+        m_spImplementation.reset(new T(std::forward<ArgTypes_T>(args)...));
+    }
+
+private:
+    virtual void setNameImpl(ChartObjectStringView) const {}
+
+    std::unique_ptr<ChartObject> m_spImplementation;
+};
+
+// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
+class XySeries : public ChartObject
 {
 protected:
     XySeries() {}
@@ -406,7 +449,7 @@ public:
 
 
 // TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-class Histogram
+class Histogram : public ChartObject
 {
 protected:
     Histogram() {}
@@ -417,6 +460,8 @@ public:
     virtual void setValues(InputSpan<double>, InputSpan<double>) = 0;
 }; // Class Histogram
 
+
+// Implementations for Qt Charts
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 class XySeriesQtChart : public XySeries
 {
@@ -481,14 +526,33 @@ public:
 }; // Class XySeriesQtChart
 #endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 
+
+// Implementations for QCustomPlot
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+
+// Defines custom implementation for ChartObject. This is used to avoid repeating virtual overrides in ChartObjects.
+class ChartObjectQCustomPlot : public ChartObject
+{
+public:
+    ChartObjectQCustomPlot(QCPAbstractPlottable* pPlottable)
+        : m_spPlottable(pPlottable)
+    {}
+    virtual ~ChartObjectQCustomPlot() {}
+
+private:
+    void setNameImpl(const ChartObjectStringView s) const override
+    {
+        if (m_spPlottable)
+            m_spPlottable->setName(QString::fromUtf8(s.dataRaw(), static_cast<int>(s.size())));
+    }
+
+    QPointer<QCPAbstractPlottable> m_spPlottable;
+};
+
 class XySeriesQCustomPlot : public XySeries
 {
 public:
-    XySeriesQCustomPlot(QCPGraph* xySeries)
-        : m_spXySeries(xySeries)
-    {
-    }
+    XySeriesQCustomPlot(QCPGraph* xySeries);
 
     void setOrAppend(const DataSourceIndex nIndex, const double x, const double y) override
     {
@@ -575,6 +639,12 @@ public:
 }; // Class XySeriesQCustomPlot
 
 
+XySeriesQCustomPlot::XySeriesQCustomPlot(QCPGraph* xySeries)
+    : m_spXySeries(xySeries)
+{
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spXySeries.data());
+}
+
 void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
 {
     if (!m_spXySeries)
@@ -630,7 +700,7 @@ HistogramQCustomPlot::HistogramQCustomPlot(QCPBars* pBars)
     m_spBars = pBars;
     if (!m_spBars)
         return;
-    m_spBars->setName("Histogram");
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spBars.data());
 }
 
 HistogramQCustomPlot::~HistogramQCustomPlot()
@@ -656,6 +726,7 @@ void HistogramQCustomPlot::setValues(InputSpan<double> xVals, InputSpan<double> 
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
+// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
 template <class T>
 using ChartObjectHolder = std::shared_ptr<T>;
 
@@ -1561,6 +1632,25 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggl
     });
 }
 
+class DefaultNameCreator
+{
+public:
+    // pszType must point to valid string for the lifetime of 'this'.
+    DefaultNameCreator(const char* pszType, const int nIndex)
+        : m_pszType(pszType)
+        , m_nIndex(nIndex)
+    {
+    }
+
+    DFG_ROOT_NS::StringUtf8 operator()() const
+    {
+        return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {}", m_pszType, m_nIndex));
+    }
+
+    const char* m_pszType;
+    const int m_nIndex;
+};
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
@@ -1670,6 +1760,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                             return; // Too few points. TODO: log
 
                         auto spHistogram = pChart->createHistogram(defEntry, valueRange);
+                        spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nGraphCounter)));
                         return;
                     }
                 }
@@ -1734,6 +1825,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     spSeries->setPointStyle(ChartObjectPointStyleStr_none); // Default value
                     defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
 
+                    // Setting object name (used e.g. in legend)
+                    spSeries->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter)));
+
+                    // Rescaling axis.
                     pChart->setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
                 }
             });
