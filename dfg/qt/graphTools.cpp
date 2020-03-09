@@ -73,7 +73,7 @@ void ChartController::refresh()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Note: reflect all changes done here to documentation in getGuideString().
-// TODO: move these to dfg/charts. They are Qt-specific so should not be in qt-module.
+// TODO: move these to dfg/charts. They are not Qt-specific so should not be in qt-module.
 
 constexpr char ChartObjectFieldIdStr_enabled[]      = "enabled";
 constexpr char ChartObjectFieldIdStr_type[]         = "type";
@@ -1675,6 +1675,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     if (pDefWidget)
     {
         int nGraphCounter = 0;
+        int nHistogramCounter = 0;
         pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
         {
             if (!defEntry.isEnabled())
@@ -1686,10 +1687,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 // TODO: log
                 return;
             }
-
-            // Note: this must be after checking enabled so that counter won't increment for disabled entries.
-            // TODO: fix counter handling, creates redundant graph objects when having xy-types after histogram-entries.
-            auto indexIncrementer = makeScopedCaller([]() {}, [&]() { nGraphCounter++; });
 
             this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
             {
@@ -1736,7 +1733,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 {
                     if (defEntry.graphTypeStr() == ChartObjectChartTypeStr_xy)
                     {
-                        spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter);
+                        spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter++);
 
                         if (!spSeries)
                         {
@@ -1760,13 +1757,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                             return; // Too few points. TODO: log
 
                         auto spHistogram = pChart->createHistogram(defEntry, valueRange);
-                        spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nGraphCounter)));
+                        ++nHistogramCounter;
+                        spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nHistogramCounter)));
                         return;
                     }
                 }
                 else if (colToValuesMap.size() == 2)
                 {
-                    spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter);
+                    spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter++);
 
                     if (!spSeries)
                     {
