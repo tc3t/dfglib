@@ -14,6 +14,8 @@
 #include "../scopedCaller.hpp"
 #include "../str/strTo.hpp"
 
+#include "../time/timerCpu.hpp"
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
     #include <QPlainTextEdit>
@@ -55,6 +57,66 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
+
+namespace
+{
+
+enum class ConsoleLogLevel
+{
+    debug,
+    info,
+    warning,
+    error,
+    none
+}; // ConsoleLogLevel
+
+class ConsoleLogHandle
+{
+public:
+    using HandlerT = std::function<void(const char*)>;
+
+    ~ConsoleLogHandle()
+    {
+    }
+
+    void setHandler(HandlerT handler)
+    {
+        m_handler = std::move(handler);
+        if (m_handler)
+            m_effectiveLevel = m_desiredLevel;
+        else
+            m_effectiveLevel = ConsoleLogLevel::none;
+    }
+
+    void log(const char* psz)
+    {
+        if (m_handler)
+            m_handler(psz);
+    }
+
+    void log(const QString& s)
+    {
+        if (m_handler)
+            m_handler(s.toUtf8());
+    }
+
+    ConsoleLogLevel effectiveLevel() const { return m_effectiveLevel; }
+
+    ConsoleLogLevel m_effectiveLevel = ConsoleLogLevel::none;
+    ConsoleLogLevel m_desiredLevel = ConsoleLogLevel::info;
+    HandlerT m_handler = nullptr;
+};
+
+static ConsoleLogHandle gConsoleLogHandle;
+
+} // unnamed namespace
+
+#define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG)
+#define DFG_QT_CHART_CONSOLE_DEBUG(MSG)      DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::debug, MSG)
+#define DFG_QT_CHART_CONSOLE_INFO(MSG)       DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::info, MSG)
+#define DFG_QT_CHART_CONSOLE_WARNING(MSG)    DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::warning, MSG)
+#define DFG_QT_CHART_CONSOLE_ERROR(MSG)      DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::error, MSG)
+
 
 void ChartController::refresh()
 {
@@ -106,6 +168,46 @@ constexpr char ChartObjectFieldIdStr_pointStyle[]     = "point_style";
     constexpr char ChartObjectPointStyleStr_basic[]       = "basic";
 
 
+
+template <class View_T, class Owning_T>
+class StringViewOrOwned : public View_T
+{
+public:
+    typedef View_T BaseClass;
+
+    static StringViewOrOwned makeView(const View_T& view)
+    {
+        return StringViewOrOwned(view);
+    }
+
+    // Move constructor is needed because with default implementation view in 'this' could be pointing to
+    // SSO buffer of moved from -object.
+    StringViewOrOwned(StringViewOrOwned&& other)
+        : BaseClass(std::move(other))
+    {
+        const bool bLocal = (other.m_owned.data() == data());
+        m_owned = std::move(other.m_owned);
+        if (bLocal)
+            BaseClass::operator=(m_owned);
+    }
+
+    static StringViewOrOwned makeOwned(Owning_T other)
+    {
+        auto rv = StringViewOrOwned(other);
+        rv.m_owned = std::move(other);
+        rv.BaseClass::operator=(rv.m_owned);
+        return rv;
+    }
+
+private:
+    StringViewOrOwned(const View_T& view)
+        : BaseClass(view)
+    {}
+
+    Owning_T m_owned;
+};
+
+
 // Defines single graph definition entry, e.g. a definition to display xy-line graph from some source data.
  // TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
 class AbstractGraphDefinitionEntry
@@ -151,6 +253,8 @@ auto AbstractGraphDefinitionEntry::fieldValueStr(FieldIdStrViewInputParam fieldI
 class GraphDefinitionEntry : public AbstractGraphDefinitionEntry
 {
 public:
+    typedef StringViewOrOwned<StringViewSzC, std::string> StringViewOrOwned;
+
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
         QVariantMap keyVals;
@@ -184,7 +288,7 @@ public:
     bool isEnabled() const;
 
     // Returns graph type as string. String view is guaranteed valid for lifetime of *this.
-    StringViewC graphTypeStr() const;
+    StringViewOrOwned graphTypeStr() const;
 
     template <class Func_T>
     void doForLineStyleIfPresent(Func_T&& func) const
@@ -222,14 +326,14 @@ bool GraphDefinitionEntry::isEnabled() const
     return getField(ChartObjectFieldIdStr_enabled).toBool(true); // If field is not present, defaulting to 'enabled'.
 }
 
-auto GraphDefinitionEntry::graphTypeStr() const -> StringViewC
+auto GraphDefinitionEntry::graphTypeStr() const -> StringViewOrOwned
 {
     const auto s = getField(ChartObjectFieldIdStr_type).toString();
     if (s == QLatin1String(ChartObjectChartTypeStr_xy))
-        return StringViewC(ChartObjectChartTypeStr_xy);
+        return StringViewOrOwned::makeView(ChartObjectChartTypeStr_xy);
     else if (s == QLatin1String(ChartObjectChartTypeStr_histogram))
-        return StringViewC(ChartObjectChartTypeStr_histogram);
-    return StringViewC();
+        return StringViewOrOwned::makeView(ChartObjectChartTypeStr_histogram);
+    return StringViewOrOwned::makeOwned(std::string(s.toUtf8()));
 }
 
 template <class Func_T>
@@ -388,9 +492,10 @@ void GraphDefinitionWidget::forEachDefinitionEntry(Func_T handler)
 {
     const auto sText = m_spRawTextDefinition->toPlainText();
     const auto parts = sText.splitRef('\n');
+    size_t i = 0;
     for (const auto& part : parts)
     {
-        handler(GraphDefinitionEntry::fromText(part.toString()));
+        handler(i++, GraphDefinitionEntry::fromText(part.toString()));
     }
 }
 
@@ -638,6 +743,11 @@ public:
     QPointer<QCPGraph> m_spXySeries;
 }; // Class XySeriesQCustomPlot
 
+static QString viewToString(const StringViewC& view)
+{
+    return QString::fromUtf8(view.data(), static_cast<int>(view.length()));
+}
+
 
 XySeriesQCustomPlot::XySeriesQCustomPlot(QCPGraph* xySeries)
     : m_spXySeries(xySeries)
@@ -649,7 +759,7 @@ void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
 {
     if (!m_spXySeries)
         return;
-    QCPGraph::LineStyle style = QCPGraph::lsNone;
+    QCPGraph::LineStyle style = QCPGraph::lsNone; // Note: If changing this, reflect change to logging below.
     if (svStyle == "basic")
         style = QCPGraph::lsLine;
     else if (svStyle == "step_left")
@@ -662,7 +772,8 @@ void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
         style = QCPGraph::lsImpulse;
     else if (svStyle != "none")
     {
-        // Ending up here means that entry was unrecognized. TODO: somekind of logging for this
+        // Ending up here means that entry was unrecognized.
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(viewToString(svStyle)));
     }
 
     m_spXySeries->setLineStyle(style);
@@ -672,12 +783,14 @@ void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
 {
     if (!m_spXySeries)
         return;
-    QCPScatterStyle style = QCPScatterStyle::ssNone;
+    QCPScatterStyle style = QCPScatterStyle::ssNone; // Note: If changing this, reflect change to logging below.
     if (svStyle == "basic")
         style = QCPScatterStyle::ssCircle;
     else if (svStyle != "none")
     {
-        // Ending up here means that entry was unrecognized. TODO: somekind of logging for this
+        // Ending up here means that entry was unrecognized.
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown point style '%1', using style 'none'").arg(viewToString(svStyle)));
+        
     }
       
     m_spXySeries->setScatterStyle(style);
@@ -1102,9 +1215,10 @@ auto ChartCanvasQCustomPlot::createHistogram(const AbstractGraphDefinitionEntry&
 
         spHistogram->setValues(makeRange(xVals), makeRange(yVals));
     }
-    catch (...)
+    catch (const std::exception& e)
     {
-        // Failed to create histogram. TODO: log
+        // Failed to create histogram.
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to create histogram, exception message: '%1'").arg(e.what()));
         return nullptr;
     }
 
@@ -1150,11 +1264,53 @@ bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+class ConsoleWidget : public QPlainTextEdit
+{
+public:
+    using BaseClass = QPlainTextEdit;
+    using BaseClass::BaseClass;
+
+    ConsoleWidget(QWidget* pParent = nullptr)
+        : BaseClass(pParent)
+    {
+        setReadOnly(true);
+    }
+
+    size_t lengthLimit() const { return m_nLengthLimit; }
+    void lengthLimit(const size_t nNewLimit) { m_nLengthLimit = nNewLimit; }
+
+    void addEntry(const QString& s)
+    {
+        m_nLengthCounter += static_cast<size_t>(14 + s.length());
+        appendPlainText(QString("%1: %2").arg(QTime::currentTime().toString("hh:mm:ss.zzz")).arg(s));
+
+        // Checking length are limiting if necessary.
+        if (m_nLengthCounter > lengthLimit())
+        {
+            auto sNew = this->toPlainText();
+            const auto nRemoveCount = sNew.length() / 2;
+            sNew.remove(0, nRemoveCount); // Removing first half of the current log.
+            m_nLengthCounter = static_cast<size_t>(sNew.length());
+            this->setPlainText(sNew);
+        }
+    }
+
+    size_t m_nLengthCounter = 0;
+    size_t m_nLengthLimit = 2000000; // 2 MB
+};
+
 
 DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : BaseClass(pParent)
 {
     auto pLayout = new QGridLayout(this);
     m_spGraphDefinitionWidget.reset(new GraphDefinitionWidget(this));
+
+    {
+        auto pConsole = new ConsoleWidget(this);
+        gConsoleLogHandle.setHandler([=](const QString& s) { pConsole->addEntry(s); } );
+     
+        m_spConsoleWidget.reset(pConsole);
+    }
 
     // Adding some controls
     {
@@ -1168,15 +1324,24 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
             pEnableCheckBox->setChecked(true);
         }
         {
-            auto pShowControlsCheckBox = new QCheckBox(tr("Show controls"), this); // Parent owned
-            DFG_QT_VERIFY_CONNECT(connect(pShowControlsCheckBox, &QCheckBox::toggled, this, &GraphControlPanel::onShowControlsCheckboxToggled));
-            pFirstRowLayout->addWidget(pShowControlsCheckBox);
+            {
+                auto pShowControlsCheckBox = new QCheckBox(tr("Show controls"), this); // Parent owned
+                DFG_QT_VERIFY_CONNECT(connect(pShowControlsCheckBox, &QCheckBox::toggled, this, &GraphControlPanel::onShowControlsCheckboxToggled));
+                pFirstRowLayout->addWidget(pShowControlsCheckBox);
 
-            // Controls are not yet functional so hiding the widget by default.
-            if (pShowControlsCheckBox->isChecked())
-                pShowControlsCheckBox->setChecked(false);
-            else
-                pShowControlsCheckBox->toggled(false); // To trigger slot call; setChecked() won't trigger toggled() signal if state doesn't change.
+                // Controls are not yet functional so hiding the widget by default.
+                if (pShowControlsCheckBox->isChecked())
+                    pShowControlsCheckBox->setChecked(false);
+                else
+                    pShowControlsCheckBox->toggled(false); // To trigger slot call; setChecked() won't trigger toggled() signal if state doesn't change.
+            }
+
+
+            {
+                auto pShowConsole = new QCheckBox(tr("Show console"), this); // Parent owned
+                DFG_QT_VERIFY_CONNECT(connect(pShowConsole, &QCheckBox::toggled, this, &GraphControlPanel::onShowConsoleCheckboxToggled));
+                pFirstRowLayout->addWidget(pShowConsole);
+            }
         }
 
         pLayout->addLayout(pFirstRowLayout.release(), 0, 0); // pFirstRowLayout becomes child of pLayout so releasing for parent deletion.
@@ -1184,6 +1349,12 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
 
     pLayout->setContentsMargins(0, 0, 0, 0);
     pLayout->addWidget(m_spGraphDefinitionWidget.get());
+    pLayout->addWidget(m_spConsoleWidget.get());
+}
+
+DFG_MODULE_NS(qt)::GraphControlPanel::~GraphControlPanel()
+{
+    gConsoleLogHandle.setHandler(nullptr);
 }
 
 void DFG_MODULE_NS(qt)::GraphControlPanel::onShowControlsCheckboxToggled(bool b)
@@ -1191,6 +1362,15 @@ void DFG_MODULE_NS(qt)::GraphControlPanel::onShowControlsCheckboxToggled(bool b)
     if (m_spGraphDefinitionWidget)
     {
         m_spGraphDefinitionWidget->setVisible(b);
+        Q_EMIT sigPreferredSizeChanged(sizeHint());
+    }
+}
+
+void DFG_MODULE_NS(qt)::GraphControlPanel::onShowConsoleCheckboxToggled(const bool b)
+{
+    if (m_spConsoleWidget)
+    {
+        m_spConsoleWidget->setVisible(b);
         Q_EMIT sigPreferredSizeChanged(sizeHint());
     }
 }
@@ -1653,6 +1833,8 @@ public:
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
+    DFG_MODULE_NS(time)::TimerCpu timer;
+
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
 
     if (!m_spGraphDisplay)
@@ -1676,15 +1858,16 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     {
         int nGraphCounter = 0;
         int nHistogramCounter = 0;
-        pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
+        pDefWidget->forEachDefinitionEntry([&](const size_t nEntryIndex, const GraphDefinitionEntry& defEntry)
         {
             if (!defEntry.isEnabled())
                 return;
 
-            if (defEntry.graphTypeStr() != ChartObjectChartTypeStr_xy && defEntry.graphTypeStr() != ChartObjectChartTypeStr_histogram)
+            const auto graphTypeStr = defEntry.graphTypeStr();
+            if (graphTypeStr != ChartObjectChartTypeStr_xy && graphTypeStr != ChartObjectChartTypeStr_histogram)
             {
                 // Unsupported graphType.
-                // TODO: log
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(nEntryIndex).arg(graphTypeStr.c_str()));
                 return;
             }
 
@@ -1694,8 +1877,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 const auto dataType = source.dataType();
                 if (dataType != GraphDataSourceType_tableSelection) // Currently only one type is supported.
                 {
-                    // TODO: generate log entry and/or note to user
-                    DFG_ASSERT_IMPLEMENTED(false);
+                    DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: Unknown source type").arg(nEntryIndex));
                     return;
                 }
 
@@ -1754,9 +1936,16 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     {
                         const auto& valueRange = colToValuesMap.begin()->second.valueRange();
                         if (valueRange.size() < 2)
-                            return; // Too few points. TODO: log
+                        {
+                            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(nEntryIndex).arg(valueRange.size()));
+                            return;
+                        }
 
                         auto spHistogram = pChart->createHistogram(defEntry, valueRange);
+                        if (!spHistogram)
+                        {
+                            return;
+                        }
                         ++nHistogramCounter;
                         spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nHistogramCounter)));
                         return;
@@ -1834,6 +2023,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 
         pChart->repaintCanvas();
     }
+
+    const auto elapsed = timer.elapsedWallSeconds();
+    DFG_QT_CHART_CONSOLE_INFO(tr("Refresh lasted %1 ms").arg(round<int>(1000 * elapsed)));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_ptr<GraphDataSource> spSource)

@@ -107,6 +107,7 @@ public:
     typedef QWidget BaseClass;
 
     GraphControlPanel(QWidget* pParent);
+    ~GraphControlPanel();
 
     ChartController* getController();
 
@@ -116,9 +117,11 @@ signals:
 
 public slots:
     void onShowControlsCheckboxToggled(bool b);
+    void onShowConsoleCheckboxToggled(bool b);
 
 private:
     QObjectStorage<QWidget> m_spGraphDefinitionWidget;
+    QObjectStorage<QWidget> m_spConsoleWidget;
 }; // Class GraphControlPanel
 
 
