@@ -1327,19 +1327,14 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
             {
                 auto pShowControlsCheckBox = new QCheckBox(tr("Show controls"), this); // Parent owned
                 DFG_QT_VERIFY_CONNECT(connect(pShowControlsCheckBox, &QCheckBox::toggled, this, &GraphControlPanel::onShowControlsCheckboxToggled));
+                pShowControlsCheckBox->setChecked(true);
                 pFirstRowLayout->addWidget(pShowControlsCheckBox);
-
-                // Controls are not yet functional so hiding the widget by default.
-                if (pShowControlsCheckBox->isChecked())
-                    pShowControlsCheckBox->setChecked(false);
-                else
-                    pShowControlsCheckBox->toggled(false); // To trigger slot call; setChecked() won't trigger toggled() signal if state doesn't change.
             }
-
 
             {
                 auto pShowConsole = new QCheckBox(tr("Show console"), this); // Parent owned
                 DFG_QT_VERIFY_CONNECT(connect(pShowConsole, &QCheckBox::toggled, this, &GraphControlPanel::onShowConsoleCheckboxToggled));
+                pShowConsole->setChecked(true);
                 pFirstRowLayout->addWidget(pShowConsole);
             }
         }
@@ -1770,7 +1765,6 @@ DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
     m_spGraphDisplay.reset(new GraphDisplay(this));
     m_spSplitter->addWidget(m_spControlPanel.data());
     m_spSplitter->addWidget(m_spGraphDisplay.data());
-    //pLayout->addWidget(new QLabel(tr("Graph display"), this));
     pLayout->addWidget(m_spSplitter.get());
 
     DFG_QT_VERIFY_CONNECT(connect(m_spControlPanel.get(), &GraphControlPanel::sigPreferredSizeChanged, this, &GraphControlAndDisplayWidget::onControllerPreferredSizeChanged));
@@ -1778,6 +1772,10 @@ DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
 
 
     onControllerPreferredSizeChanged(m_spControlPanel->sizeHint());
+
+    const auto nCurrentHeight = this->height();
+    const auto nGraphWidgetHeight = nCurrentHeight * 3 / 4;
+    m_spSplitter->setSizes(QList<int>() << nCurrentHeight - nGraphWidgetHeight << nGraphWidgetHeight);
 
     this->setFrameShape(QFrame::Panel);
 }
