@@ -2,6 +2,8 @@
 
 #include "connectHelper.hpp"
 #include "widgetHelpers.hpp"
+#include "ConsoleDisplay.hpp"
+#include "ConsoleDisplay.cpp"
 
 #include "../cont/MapVector.hpp"
 #include "../rangeIterator.hpp"
@@ -1264,41 +1266,6 @@ bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class ConsoleWidget : public QPlainTextEdit
-{
-public:
-    using BaseClass = QPlainTextEdit;
-    using BaseClass::BaseClass;
-
-    ConsoleWidget(QWidget* pParent = nullptr)
-        : BaseClass(pParent)
-    {
-        setReadOnly(true);
-    }
-
-    size_t lengthLimit() const { return m_nLengthLimit; }
-    void lengthLimit(const size_t nNewLimit) { m_nLengthLimit = nNewLimit; }
-
-    void addEntry(const QString& s)
-    {
-        m_nLengthCounter += static_cast<size_t>(14 + s.length());
-        appendPlainText(QString("%1: %2").arg(QTime::currentTime().toString("hh:mm:ss.zzz")).arg(s));
-
-        // Checking length are limiting if necessary.
-        if (m_nLengthCounter > lengthLimit())
-        {
-            auto sNew = this->toPlainText();
-            const auto nRemoveCount = sNew.length() / 2;
-            sNew.remove(0, nRemoveCount); // Removing first half of the current log.
-            m_nLengthCounter = static_cast<size_t>(sNew.length());
-            this->setPlainText(sNew);
-        }
-    }
-
-    size_t m_nLengthCounter = 0;
-    size_t m_nLengthLimit = 2000000; // 2 MB
-};
-
 
 DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : BaseClass(pParent)
 {
@@ -1306,7 +1273,7 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
     m_spGraphDefinitionWidget.reset(new GraphDefinitionWidget(this));
 
     {
-        auto pConsole = new ConsoleWidget(this);
+        auto pConsole = new ConsoleDisplay(this);
         gConsoleLogHandle.setHandler([=](const QString& s) { pConsole->addEntry(s); } );
      
         m_spConsoleWidget.reset(pConsole);
