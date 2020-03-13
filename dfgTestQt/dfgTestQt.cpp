@@ -4,6 +4,7 @@
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/qt/containerUtils.hpp>
 #include <dfg/qt/CsvTableView.hpp>
+#include <dfg/qt/ConsoleDisplay.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -399,4 +400,18 @@ TEST(dfgQt, QObjectStorage)
     {
         QObjectStorageTestWidget widgetTest;
     }
+}
+
+TEST(dfgQt, ConsoleDisplay)
+{
+    ::DFG_MODULE_NS(qt)::ConsoleDisplay display;
+    const size_t nLengthLimit = 40;
+    display.lengthInCharactersLimit(nLengthLimit);
+    // Note: display adds prefix to entries so not this many entries are really required to go beyond 40 chars.
+    display.addEntry("0123456789");
+    display.addEntry("0123456789");
+    display.addEntry("0123456789");
+    display.addEntry("0123456789");
+    display.addEntry("0123456789");
+    EXPECT_TRUE(display.lengthInCharacters() < nLengthLimit);
 }

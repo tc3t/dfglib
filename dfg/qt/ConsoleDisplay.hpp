@@ -19,14 +19,17 @@ public:
     ConsoleDisplay(QWidget* pParent = nullptr);
     ~ConsoleDisplay();
 
-    size_t lengthLimit() const { return m_nLengthLimit; }
-    void lengthLimit(const size_t nNewLimit) { m_nLengthLimit = nNewLimit; }
+    // Current console display length in characters (codepoints)
+    size_t lengthInCharacters() const { return m_nLengthCounter; }
 
-    // Addes new entry. If after insert total content length is longer than lengthLimit(), cleanup will run.
+    size_t lengthInCharactersLimit() const { return m_nLengthLimit; }
+    void lengthInCharactersLimit(const size_t nNewLimit) { m_nLengthLimit = nNewLimit; }
+
+    // Adds new entry. If after adding total content length is longer than lengthInCharactersLimit(), oldest content will be dropped.
     void addEntry(const QString& s);
 
-    size_t m_nLengthCounter = 0;
-    size_t m_nLengthLimit = 2000000; // 2 MB
+    size_t m_nLengthCounter = 0; // Counts in characters as given by QString::length()
+    size_t m_nLengthLimit = 2000000; // 2 M characters
 };
 
 } } // Module namespace

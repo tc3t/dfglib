@@ -20,7 +20,7 @@ void ::DFG_MODULE_NS(qt)::ConsoleDisplay::addEntry(const QString& s)
     appendPlainText(QString("%1: %2").arg(QTime::currentTime().toString("hh:mm:ss.zzz")).arg(s));
 
     // Checking length are limiting if necessary.
-    if (m_nLengthCounter > lengthLimit())
+    if (lengthInCharacters() > lengthInCharactersLimit())
     {
         auto sNew = this->toPlainText();
         const auto nRemoveCount = sNew.length() / 2;
