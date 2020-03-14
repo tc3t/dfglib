@@ -440,11 +440,13 @@ TEST(dfg, SzPtrTypes)
     funcUtf8(SzPtrAscii("abcd"));
 
     EXPECT_TRUE(SzPtrAscii(szConst) == SzPtrAscii(szConst));
+    EXPECT_FALSE(SzPtrAscii(szConst) != SzPtrAscii(szConst));
     EXPECT_FALSE(SzPtrAscii(szConst) == SzPtrAscii(szNonConst));
     EXPECT_TRUE(SzPtrLatin1(szConst) == SzPtrLatin1(szConst));
     EXPECT_FALSE(SzPtrLatin1(szConst) == SzPtrLatin1(szNonConst));
     EXPECT_TRUE(SzPtrUtf8(szConst) == SzPtrUtf8(szConst));
     EXPECT_FALSE(SzPtrUtf8(szConst) == SzPtrUtf8(szNonConst));
+    EXPECT_TRUE(SzPtrUtf8(szConst) != SzPtrUtf8(szNonConst));
 
     // Test bool conversion and comparison with nullptr
     {

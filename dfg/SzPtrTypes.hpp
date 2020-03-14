@@ -128,6 +128,11 @@ struct TypedCharPtrT
         return m_p == other.m_p;
     }
 
+    bool operator!=(const TypedCharPtrT& other) const
+    {
+        return !(m_p == other.m_p);
+    }
+
     bool operator==(const std::nullptr_t&) const { return m_p == nullptr; }
     bool operator!=(const std::nullptr_t&) const { return m_p != nullptr; }
 
