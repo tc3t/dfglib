@@ -170,46 +170,6 @@ constexpr char ChartObjectFieldIdStr_pointStyle[]     = "point_style";
     constexpr char ChartObjectPointStyleStr_basic[]       = "basic";
 
 
-
-template <class View_T, class Owning_T>
-class StringViewOrOwned : public View_T
-{
-public:
-    typedef View_T BaseClass;
-
-    static StringViewOrOwned makeView(const View_T& view)
-    {
-        return StringViewOrOwned(view);
-    }
-
-    // Move constructor is needed because with default implementation view in 'this' could be pointing to
-    // SSO buffer of moved from -object.
-    StringViewOrOwned(StringViewOrOwned&& other)
-        : BaseClass(std::move(other))
-    {
-        const bool bLocal = (other.m_owned.data() == data());
-        m_owned = std::move(other.m_owned);
-        if (bLocal)
-            BaseClass::operator=(m_owned);
-    }
-
-    static StringViewOrOwned makeOwned(Owning_T other)
-    {
-        auto rv = StringViewOrOwned(other);
-        rv.m_owned = std::move(other);
-        rv.BaseClass::operator=(rv.m_owned);
-        return rv;
-    }
-
-private:
-    StringViewOrOwned(const View_T& view)
-        : BaseClass(view)
-    {}
-
-    Owning_T m_owned;
-};
-
-
 // Defines single graph definition entry, e.g. a definition to display xy-line graph from some source data.
  // TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
 class AbstractGraphDefinitionEntry
@@ -255,7 +215,7 @@ auto AbstractGraphDefinitionEntry::fieldValueStr(FieldIdStrViewInputParam fieldI
 class GraphDefinitionEntry : public AbstractGraphDefinitionEntry
 {
 public:
-    typedef StringViewOrOwned<StringViewSzC, std::string> StringViewOrOwned;
+    using StringViewOrOwner = StringViewOrOwner<StringViewSzC, std::string>;
 
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
@@ -290,7 +250,7 @@ public:
     bool isEnabled() const;
 
     // Returns graph type as string. String view is guaranteed valid for lifetime of *this.
-    StringViewOrOwned graphTypeStr() const;
+    StringViewOrOwner graphTypeStr() const;
 
     template <class Func_T>
     void doForLineStyleIfPresent(Func_T&& func) const
@@ -328,14 +288,9 @@ bool GraphDefinitionEntry::isEnabled() const
     return getField(ChartObjectFieldIdStr_enabled).toBool(true); // If field is not present, defaulting to 'enabled'.
 }
 
-auto GraphDefinitionEntry::graphTypeStr() const -> StringViewOrOwned
+auto GraphDefinitionEntry::graphTypeStr() const -> StringViewOrOwner
 {
-    const auto s = getField(ChartObjectFieldIdStr_type).toString();
-    if (s == QLatin1String(ChartObjectChartTypeStr_xy))
-        return StringViewOrOwned::makeView(ChartObjectChartTypeStr_xy);
-    else if (s == QLatin1String(ChartObjectChartTypeStr_histogram))
-        return StringViewOrOwned::makeView(ChartObjectChartTypeStr_histogram);
-    return StringViewOrOwned::makeOwned(std::string(s.toUtf8()));
+    return StringViewOrOwner::makeOwned(std::string(getField(ChartObjectFieldIdStr_type).toString().toUtf8()));
 }
 
 template <class Func_T>

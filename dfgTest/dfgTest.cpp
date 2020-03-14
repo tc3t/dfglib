@@ -118,6 +118,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView_autoConvToUntyped";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewOrOwner";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewSz";
     //::testing::GTEST_FLAG(filter) = "dfgStr.strTo";
     //::testing::GTEST_FLAG(filter) = "dfgStr.toStr";

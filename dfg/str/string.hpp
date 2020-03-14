@@ -20,6 +20,7 @@ typedef std::string		DFG_CLASS_NAME(StringA);
 typedef std::wstring	DFG_CLASS_NAME(StringW);
 
 // String whose content encoding is guaranteed in compile-time type.
+// Note, though, that it is not guaranteed at runtime that the content is validly encoded (i.e. one can construct StringUtf8 that has invalid UTF8)
 template <CharPtrType Type_T>
 class DFG_CLASS_NAME(StringTyped)
 {
@@ -57,6 +58,8 @@ public:
     }
 
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }
+
+    SzPtrR data() const { return c_str(); }
 
     void append(const TypedPtrT& first, const TypedPtrT& end)
     {

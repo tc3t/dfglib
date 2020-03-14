@@ -651,4 +651,79 @@ typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringAscii)>   DFG_CL
 typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringLatin1)>  DFG_CLASS_NAME(StringViewSzLatin1);
 typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringUtf8)>    DFG_CLASS_NAME(StringViewSzUtf8);
 
+
+// StringView wrapper that can optionally own the content. To be used e.g. in cases where return value from a function
+// can be a view to a string literal or constructed temporary.
+// Note: Beware slicing:
+//      -Creating dangling by not using auto:
+//          const auto func = []() { return StringViewOrOwner<StringViewC, std::string>::makeOwned("abc"); };
+//          StringViewC svBAD = func(); // view will dangle after returned temporary StringViewOrOwner() is destroyed.
+//          auto svOK = func(); // OK
+//      -Note, though, that in case of function arguments as follows slicing is not a problem:
+//          void func(StringViewC sv) { ... }
+//          func(StringViewOrOwner<StringViewC, std::string>::makeOwned("abc"));
+//              func() will get sliced copy of StringViewOrOwner-object, but the original object and thus the viewed string is alive during call of func()
+template <class View_T, class Owned_T>
+class StringViewOrOwner : public View_T
+{
+public:
+    typedef View_T BaseClass;
+
+    ~StringViewOrOwner()
+    {
+    }
+
+    static StringViewOrOwner makeView(const View_T& view)
+    {
+        return StringViewOrOwner(view);
+    }
+
+    // Move constructor is needed because with default implementation view in 'this' could be pointing to
+    // SSO buffer of moved from -object.
+    StringViewOrOwner(StringViewOrOwner&& other)
+        : BaseClass(std::move(other)) // Note: this moves only the view-part.
+    {
+        const bool bLocal = (other.m_owned.data() == this->data());
+        m_owned = std::move(other.m_owned);
+        if (bLocal)
+            BaseClass::operator=(m_owned); // Reinitializes view to make sure that view won't point to SSO-buffer of moved from -object.
+    }
+
+    static StringViewOrOwner makeOwned(Owned_T other)
+    {
+        auto rv = StringViewOrOwner(other);
+        rv.m_owned = std::move(other);
+        rv.BaseClass::operator=(rv.m_owned);
+        return rv;
+    }
+
+    bool isOwner() const
+    {
+        return this->data() == m_owned.data();
+    }
+
+    // Sets this as empty view and returns owned resource by moving.
+    Owned_T release()
+    {
+        auto rv = std::move(m_owned);
+        m_owned.clear();
+        BaseClass::operator=(m_owned); // Note: setting view to owned because in case of SzView, view must be null terminated.
+        return rv;
+    }
+
+    const Owned_T& owned() const
+    {
+        return m_owned;
+    }
+
+private:
+    StringViewOrOwner(const View_T& view)
+        : BaseClass(view)
+    {}
+
+    Owned_T m_owned;
+};
+
+
+
 } // namespace
