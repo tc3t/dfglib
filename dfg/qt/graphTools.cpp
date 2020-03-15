@@ -112,7 +112,7 @@ public:
 static ConsoleLogHandle gConsoleLogHandle;
 
 
-class TableSelectionData
+class TableSelectionCacheItem
 {
 public:
     using IndexT = GraphDataSource::DataSourceIndex;
@@ -123,12 +123,15 @@ public:
 
     std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
 
+    bool isValid() const { return m_bIsValid; }
+
     RowToValueMap releaseOrCopy(const RowToValueMap* pId);
 
     ColumnToValuesMap m_colToValuesMap;
+    bool m_bIsValid = false; 
 };
 
-auto DFG_MODULE_NS(qt)::TableSelectionData::columnDatas() const -> std::vector<std::reference_wrapper<const RowToValueMap>>
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDatas() const -> std::vector<std::reference_wrapper<const RowToValueMap>>
 {
     std::vector<std::reference_wrapper<const RowToValueMap>> datas;
     for (const auto& d : m_colToValuesMap)
@@ -136,7 +139,7 @@ auto DFG_MODULE_NS(qt)::TableSelectionData::columnDatas() const -> std::vector<s
     return datas;
 }
 
-void DFG_MODULE_NS(qt)::TableSelectionData::populateFromSource(GraphDataSource& source)
+void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source)
 {
     source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
     {
@@ -151,16 +154,23 @@ void DFG_MODULE_NS(qt)::TableSelectionData::populateFromSource(GraphDataSource& 
     {
         iter->second.setSorting(true);
     }
+    m_bIsValid = true;
 }
 
-auto DFG_MODULE_NS(qt)::TableSelectionData::releaseOrCopy(const RowToValueMap* pId) -> RowToValueMap
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueMap* pId) -> RowToValueMap
 {
     auto iter = std::find_if(m_colToValuesMap.begin(), m_colToValuesMap.end(), [=](const auto& v)
     {
         return &v.second == pId;
     });
     // For now moving always as there's no permanent caching yet.
-    return (iter != m_colToValuesMap.end()) ? std::move(iter->second) : RowToValueMap();
+    if (iter != m_colToValuesMap.end())
+    {
+        m_bIsValid = false; // Since data gets moved out, marking this cache item invalidated.
+        return std::move(iter->second);
+    }
+    else
+        return RowToValueMap();
 }
 
 } // unnamed namespace
@@ -363,6 +373,81 @@ auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) c
 {
     const auto val = getField(fieldId);
     return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, GdeString(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, GdeString());
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+//   ChartDataCache
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+class ChartDataCache
+{
+public:
+    using CacheEntryKey = QString;
+
+    // Cached types
+    using TableSelectionOptional = std::shared_ptr<TableSelectionCacheItem>;
+    using SingleColumnDoubleValuesOptional = GraphDataSource::SingleColumnDoubleValuesOptional;
+
+    // Maps
+    using IdToTableSelectionaMap = std::map<CacheEntryKey, TableSelectionOptional>;
+    using IdToColumnDoubleValuesMap = std::map<CacheEntryKey, SingleColumnDoubleValuesOptional>;
+
+    CacheEntryKey cacheKey(const GraphDataSource& source, const AbstractGraphDefinitionEntry& defEntry) const;
+
+    void invalidate();
+
+    TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+    SingleColumnDoubleValuesOptional getPlainColumnData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+
+    IdToTableSelectionaMap m_tableSelectionDatas;
+    IdToColumnDoubleValuesMap m_doubleColumnValues;
+}; // ChartDataCache
+
+auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> TableSelectionOptional
+{
+    auto key = this->cacheKey(source, defEntry);
+    auto iter = m_tableSelectionDatas.find(key);
+    if (iter != m_tableSelectionDatas.end() && iter->second && iter->second->isValid())
+        return iter->second;
+
+    if (iter != m_tableSelectionDatas.end())
+        m_tableSelectionDatas.erase(iter); // Removing existing but invalid entry.
+
+    auto rv = std::make_shared<TableSelectionCacheItem>();
+    rv->populateFromSource(source);
+    m_tableSelectionDatas.insert(std::make_pair(key, rv));
+    return rv;
+}
+
+auto DFG_MODULE_NS(qt)::ChartDataCache::getPlainColumnData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> SingleColumnDoubleValuesOptional
+{
+    auto key = this->cacheKey(source, defEntry);
+    auto iter = m_doubleColumnValues.find(key);
+    if (iter != m_doubleColumnValues.end() && iter->second)
+        return iter->second; // Found cached, returning it.
+
+    if (iter != m_doubleColumnValues.end())
+        m_doubleColumnValues.erase(iter); // Removing existing but invalid entry.
+
+    auto rv = source.singleColumnDoubleValues_byOffsetFromFirst(0);
+    m_doubleColumnValues.insert(std::make_pair(key, rv));
+    return rv;
+}
+
+void DFG_MODULE_NS(qt)::ChartDataCache::invalidate()
+{
+    m_tableSelectionDatas.clear();
+    m_doubleColumnValues.clear();
+}
+
+auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractGraphDefinitionEntry& defEntry) const -> CacheEntryKey
+{
+    return source.uniqueId() + defEntry.fieldValueStr(ChartObjectFieldIdStr_type, [] { return StringUtf8(); }).rawStorage().c_str();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1813,6 +1898,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
     DFG_MODULE_NS(time)::TimerCpu timer;
 
+    if (m_spCache)
+        m_spCache->invalidate();
+
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
 
     if (!m_spGraphDisplay)
@@ -1832,59 +1920,69 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     // Clearing existing objects.
     rChart.removeAllChartObjects();
 
-    // Going through every item in definition entry table and redrawing them.
     auto pDefWidget = this->m_spControlPanel->findChild<GraphDefinitionWidget*>();
-    if (pDefWidget)
+    if (!pDefWidget)
     {
-        int nGraphCounter = 0;
-        int nHistogramCounter = 0;
-        pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
-        {
-            if (!defEntry.isEnabled())
-                return;
+        DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing control widget");
+        return;
+    }
 
-            const auto graphTypeStr = defEntry.graphTypeStr();
-            if (graphTypeStr != ChartObjectChartTypeStr_xy && graphTypeStr != ChartObjectChartTypeStr_histogram)
+    int nGraphCounter = 0;
+    int nHistogramCounter = 0;
+    // Going through every item in definition entry table and redrawing them.
+    pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
+    {
+        if (!defEntry.isEnabled())
+            return;
+
+        const auto graphTypeStr = defEntry.graphTypeStr();
+        if (graphTypeStr != ChartObjectChartTypeStr_xy && graphTypeStr != ChartObjectChartTypeStr_histogram)
+        {
+            // Unsupported graphType.
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
+            return;
+        }
+
+        this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
+        {
+            // Checking that source type in compatible with graph type
+            const auto dataType = source.dataType();
+            if (dataType != GraphDataSourceType_tableSelection) // Currently only one type is supported.
             {
-                // Unsupported graphType.
-                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: Unknown source type").arg(defEntry.index()));
                 return;
             }
 
-            this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
+            if (graphTypeStr == ChartObjectChartTypeStr_xy)
+                refreshXy(rChart, source, defEntry, nGraphCounter);
+            else if (graphTypeStr == ChartObjectChartTypeStr_histogram)
+                refreshHistogram(rChart, source, defEntry, nHistogramCounter);
+            else
             {
-                // Checking that source type in compatible with graph type
-                const auto dataType = source.dataType();
-                if (dataType != GraphDataSourceType_tableSelection) // Currently only one type is supported.
-                {
-                    DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: Unknown source type").arg(defEntry.index()));
-                    return;
-                }
-
-                if (graphTypeStr == ChartObjectChartTypeStr_xy)
-                    refreshXy(rChart, source, defEntry, nGraphCounter);
-                else if (graphTypeStr == ChartObjectChartTypeStr_histogram)
-                    refreshHistogram(rChart, source, defEntry, nHistogramCounter);
-                else
-                {
-                    DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
-                    return;
-                }
-            });
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
+                return;
+            }
         });
+    });
 
-        rChart.repaintCanvas();
-    }
-
+    DFG_MODULE_NS(time)::TimerCpu timerRepaint;
+    rChart.repaintCanvas();
+    const auto elapsedRepaint = timerRepaint.elapsedWallSeconds();
     const auto elapsed = timer.elapsedWallSeconds();
-    DFG_QT_CHART_CONSOLE_INFO(tr("Refresh lasted %1 ms").arg(round<int>(1000 * elapsed)));
+    DFG_QT_CHART_CONSOLE_INFO(tr("Refresh lasted %1 ms (repaint took %2 %)").arg(round<int>(1000 * elapsed)).arg(round<int>(100.0 * elapsedRepaint / elapsed)));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
 {
-    TableSelectionData colToValuesMap; // Maps column to "(row, column value)" table.
+    if (!m_spCache)
+        m_spCache.reset(new ChartDataCache);
 
-    colToValuesMap.populateFromSource(source);
+    auto optData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry);
+
+    if (!optData)
+        return;
+    
+    auto& colToValuesMap = *optData;
 
     const auto columnDatas = colToValuesMap.columnDatas();
 
@@ -1989,7 +2087,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     if (nColumnCount != 1)
         return;
 
-    auto optValues = source.singleColumnDoubleValues_byOffsetFromFirst(0);
+    auto optValues = m_spCache->getPlainColumnData_createIfMissing(source, defEntry);
+
     if (!optValues)
         return;
 
