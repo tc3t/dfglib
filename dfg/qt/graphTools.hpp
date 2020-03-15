@@ -22,6 +22,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 typedef QString GraphDataSourceId;
 typedef std::size_t DataSourceIndex;
 class ChartCanvas;
+class GraphDefinitionEntry;
 
 enum GraphDataSourceType
 {
@@ -151,6 +152,10 @@ public slots:
     // Controller implementations
 private:
     void refreshImpl() override;
+
+private:
+    void refreshXy(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
+    void refreshHistogram(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
 
 public:
     QObjectStorage<QSplitter> m_spSplitter;

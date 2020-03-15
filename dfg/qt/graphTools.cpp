@@ -285,10 +285,11 @@ public:
         return rv;
     }
 
-    static GraphDefinitionEntry fromText(const QString& sJson)
+    static GraphDefinitionEntry fromText(const QString& sJson, const int nIndex)
     {
         GraphDefinitionEntry rv;
         rv.m_items = QJsonDocument::fromJson(sJson.toUtf8());
+        rv.m_nContainerIndex = nIndex;
         return rv;
     }
 
@@ -318,7 +319,8 @@ public:
 
     GraphDataSourceId sourceId() const { return GraphDataSourceId(); }
 
-    QJsonDocument m_items;
+    int index() const { return m_nContainerIndex; }
+
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
 
@@ -326,6 +328,10 @@ private:
 
     template <class Func_T>
     void doForFieldIfPresent(FieldIdStrViewInputParam id, Func_T&& func) const;
+
+
+    QJsonDocument m_items;
+    int m_nContainerIndex = -1;
 
 }; // class GraphDefinitionEntry
 
@@ -501,10 +507,10 @@ void GraphDefinitionWidget::forEachDefinitionEntry(Func_T handler)
 {
     const auto sText = m_spRawTextDefinition->toPlainText();
     const auto parts = sText.splitRef('\n');
-    size_t i = 0;
+    int i = 0;
     for (const auto& part : parts)
     {
-        handler(i++, GraphDefinitionEntry::fromText(part.toString()));
+        handler(GraphDefinitionEntry::fromText(part.toString(), i++));
     }
 }
 
@@ -1821,8 +1827,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         return;
     }
 
+    auto& rChart = *pChart;
+
     // Clearing existing objects.
-    pChart->removeAllChartObjects();
+    rChart.removeAllChartObjects();
 
     // Going through every item in definition entry table and redrawing them.
     auto pDefWidget = this->m_spControlPanel->findChild<GraphDefinitionWidget*>();
@@ -1830,7 +1838,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     {
         int nGraphCounter = 0;
         int nHistogramCounter = 0;
-        pDefWidget->forEachDefinitionEntry([&](const size_t nEntryIndex, const GraphDefinitionEntry& defEntry)
+        pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
         {
             if (!defEntry.isEnabled())
                 return;
@@ -1839,7 +1847,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             if (graphTypeStr != ChartObjectChartTypeStr_xy && graphTypeStr != ChartObjectChartTypeStr_histogram)
             {
                 // Unsupported graphType.
-                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(nEntryIndex).arg(graphTypeStr.c_str()));
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
                 return;
             }
 
@@ -1849,143 +1857,156 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 const auto dataType = source.dataType();
                 if (dataType != GraphDataSourceType_tableSelection) // Currently only one type is supported.
                 {
-                    DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: Unknown source type").arg(nEntryIndex));
+                    DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: Unknown source type").arg(defEntry.index()));
                     return;
                 }
 
-                const auto sourceId = source.uniqueId();
-                auto sTitle = (!sourceId.isEmpty()) ? format_fmt("Data source {}", sourceId.toUtf8().data()) : std::string();
-                pChart->setTitle(SzPtrUtf8(sTitle.c_str()));
-
-                TableSelectionData colToValuesMap; // Maps column to "(row, column value)" table.
-
-                colToValuesMap.populateFromSource(source);
-
-                const auto columnDatas = colToValuesMap.columnDatas();
-
-                DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
-                DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
-                DataSourceIndex nGraphSize = 0;
-
-                decltype(pChart->getSeriesByIndex(0)) spSeries;
-
-                if (columnDatas.size() == 1)
+                if (graphTypeStr == ChartObjectChartTypeStr_xy)
+                    refreshXy(rChart, source, defEntry, nGraphCounter);
+                else if (graphTypeStr == ChartObjectChartTypeStr_histogram)
+                    refreshHistogram(rChart, source, defEntry, nHistogramCounter);
+                else
                 {
-                    if (defEntry.graphTypeStr() == ChartObjectChartTypeStr_xy)
-                    {
-                        spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter++);
-
-                        if (!spSeries)
-                        {
-                            DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
-                            return;
-                        }
-
-                        const auto& valueCont = columnDatas.front().get();
-                        nGraphSize = valueCont.size();
-                        minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.keyRange(), minMaxX);
-                        minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.valueRange(), minMaxY);
-                        // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
-                        //       to store new content to those directly or at least allow moving these storages to series
-                        //       so it wouldn't need to duplicate them.
-                        spSeries->setValues(valueCont.keyRange(), valueCont.valueRange());
-                    }
-                    else if (defEntry.graphTypeStr() == ChartObjectChartTypeStr_histogram)
-                    {
-                        // TODO: using the default (row, value) population with histograms is suboptimal, since only values are needed. 
-                        const auto& valueRange = columnDatas.front().get().valueRange();
-                        if (valueRange.size() < 2)
-                        {
-                            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(nEntryIndex).arg(valueRange.size()));
-                            return;
-                        }
-
-                        auto spHistogram = pChart->createHistogram(defEntry, valueRange);
-                        if (!spHistogram)
-                        {
-                            return;
-                        }
-                        ++nHistogramCounter;
-                        spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nHistogramCounter)));
-                        return;
-                    }
-                }
-                else if (columnDatas.size() == 2)
-                {
-                    spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter++);
-
-                    if (!spSeries)
-                    {
-                        DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
-                        return;
-                    }
-
-                    // xValueMap is also used as final (x,y) table passed to series.
-                    // releaseOrCopy() will return either moved data or copy of it.
-                    auto xValueMap = colToValuesMap.releaseOrCopy(&columnDatas.front().get());
-                    xValueMap.setSorting(false);
-                    const auto& yValueMap = columnDatas.back().get();
-                    auto xIter = xValueMap.cbegin();
-                    auto yIter = yValueMap.cbegin();
-                    DataSourceIndex nActualSize = 0;
-                    for (; xIter != xValueMap.cend() && yIter != yValueMap.cend();)
-                    {
-                        const auto xRow = xIter->first;
-                        const auto yRow = yIter->first;
-                        if (xRow < yRow)
-                        {
-                            ++xIter;
-                            continue;
-                        }
-                        else if (yRow < xRow)
-                        {
-                            ++yIter;
-                            continue;
-                        }
-                        // Current xIter and yIter point to the same row ->
-                        // store (x,y) values to start of xValueMap.
-                        const auto x = xIter->second;
-                        const auto y = yIter->second;
-
-                        xValueMap.m_keyStorage[nActualSize] = x;
-                        xValueMap.m_valueStorage[nActualSize] = y;
-                        minMaxX(x);
-                        minMaxY(y);
-                        nActualSize++;
-                        ++xIter;
-                        ++yIter;
-                    }
-                    const ptrdiff_t nSizeAsPtrdiff = static_cast<ptrdiff_t>(nActualSize);
-                    spSeries->setValues(headRange(xValueMap.keyRange(), nSizeAsPtrdiff), headRange(xValueMap.valueRange(), nSizeAsPtrdiff));
-                    nGraphSize = nActualSize;
-                }
-
-                if (spSeries)
-                {
-                    spSeries->resize(nGraphSize); // Removing excess points (if any)
-
-                    // Setting line style
-                    spSeries->setLineStyle(ChartObjectLineStyleStr_basic); // Default value
-                    defEntry.doForLineStyleIfPresent([&](const char* psz) { spSeries->setLineStyle(psz); });
-
-                    // Setting point style
-                    spSeries->setPointStyle(ChartObjectPointStyleStr_none); // Default value
-                    defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
-
-                    // Setting object name (used e.g. in legend)
-                    spSeries->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter)));
-
-                    // Rescaling axis.
-                    pChart->setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
+                    DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
+                    return;
                 }
             });
         });
 
-        pChart->repaintCanvas();
+        rChart.repaintCanvas();
     }
 
     const auto elapsed = timer.elapsedWallSeconds();
     DFG_QT_CHART_CONSOLE_INFO(tr("Refresh lasted %1 ms").arg(round<int>(1000 * elapsed)));
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
+{
+    TableSelectionData colToValuesMap; // Maps column to "(row, column value)" table.
+
+    colToValuesMap.populateFromSource(source);
+
+    const auto columnDatas = colToValuesMap.columnDatas();
+
+    DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
+    DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
+    DataSourceIndex nGraphSize = 0;
+
+    decltype(rChart.getSeriesByIndex(0)) spSeries;
+
+    if (columnDatas.size() == 1)
+    {
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
+
+        if (!spSeries)
+        {
+            DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
+            return;
+        }
+
+        const auto& valueCont = columnDatas.front().get();
+        nGraphSize = valueCont.size();
+        minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.keyRange(), minMaxX);
+        minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.valueRange(), minMaxY);
+        // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
+        //       to store new content to those directly or at least allow moving these storages to series
+        //       so it wouldn't need to duplicate them.
+        spSeries->setValues(valueCont.keyRange(), valueCont.valueRange());
+    }
+    else if (columnDatas.size() == 2)
+    {
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
+
+        if (!spSeries)
+        {
+            DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
+            return;
+        }
+
+        // xValueMap is also used as final (x,y) table passed to series.
+        // releaseOrCopy() will return either moved data or copy of it.
+        auto xValueMap = colToValuesMap.releaseOrCopy(&columnDatas.front().get());
+        xValueMap.setSorting(false);
+        const auto& yValueMap = columnDatas.back().get();
+        auto xIter = xValueMap.cbegin();
+        auto yIter = yValueMap.cbegin();
+        DataSourceIndex nActualSize = 0;
+        for (; xIter != xValueMap.cend() && yIter != yValueMap.cend();)
+        {
+            const auto xRow = xIter->first;
+            const auto yRow = yIter->first;
+            if (xRow < yRow)
+            {
+                ++xIter;
+                continue;
+            }
+            else if (yRow < xRow)
+            {
+                ++yIter;
+                continue;
+            }
+            // Current xIter and yIter point to the same row ->
+            // store (x,y) values to start of xValueMap.
+            const auto x = xIter->second;
+            const auto y = yIter->second;
+
+            xValueMap.m_keyStorage[nActualSize] = x;
+            xValueMap.m_valueStorage[nActualSize] = y;
+            minMaxX(x);
+            minMaxY(y);
+            nActualSize++;
+            ++xIter;
+            ++yIter;
+        }
+        const ptrdiff_t nSizeAsPtrdiff = static_cast<ptrdiff_t>(nActualSize);
+        spSeries->setValues(headRange(xValueMap.keyRange(), nSizeAsPtrdiff), headRange(xValueMap.valueRange(), nSizeAsPtrdiff));
+        nGraphSize = nActualSize;
+    }
+
+    if (spSeries)
+    {
+        spSeries->resize(nGraphSize); // Removing excess points (if any)
+
+        // Setting line style
+        spSeries->setLineStyle(ChartObjectLineStyleStr_basic); // Default value
+        defEntry.doForLineStyleIfPresent([&](const char* psz) { spSeries->setLineStyle(psz); });
+
+        // Setting point style
+        spSeries->setPointStyle(ChartObjectPointStyleStr_none); // Default value
+        defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
+
+        // Setting object name (used e.g. in legend)
+        spSeries->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter)));
+
+        // Rescaling axis.
+        rChart.setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
+    }
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
+{
+    TableSelectionData colToValuesMap; // Maps column to "(row, column value)" table.
+
+    colToValuesMap.populateFromSource(source);
+
+    const auto columnDatas = colToValuesMap.columnDatas();
+
+    // TODO: using the default (row, value) population with histograms is suboptimal, since only values are needed. 
+    const auto& valueRange = columnDatas.front().get().valueRange();
+    if (valueRange.size() < 2)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(valueRange.size()));
+        return;
+    }
+
+    auto spHistogram = rChart.createHistogram(defEntry, valueRange);
+    if (!spHistogram)
+    {
+        return;
+    }
+    ++nHistogramCounter;
+    spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nHistogramCounter)));
+    return;
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_ptr<GraphDataSource> spSource)
