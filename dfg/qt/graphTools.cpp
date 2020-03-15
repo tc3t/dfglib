@@ -111,6 +111,58 @@ public:
 
 static ConsoleLogHandle gConsoleLogHandle;
 
+
+class TableSelectionData
+{
+public:
+    using IndexT = GraphDataSource::DataSourceIndex;
+    using RowToValueMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double>;
+    using ColumnToValuesMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
+
+    void populateFromSource(GraphDataSource& source);
+
+    std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
+
+    RowToValueMap releaseOrCopy(const RowToValueMap* pId);
+
+    ColumnToValuesMap m_colToValuesMap;
+};
+
+auto DFG_MODULE_NS(qt)::TableSelectionData::columnDatas() const -> std::vector<std::reference_wrapper<const RowToValueMap>>
+{
+    std::vector<std::reference_wrapper<const RowToValueMap>> datas;
+    for (const auto& d : m_colToValuesMap)
+        datas.push_back(d.second);
+    return datas;
+}
+
+void DFG_MODULE_NS(qt)::TableSelectionData::populateFromSource(GraphDataSource& source)
+{
+    source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
+    {
+        auto insertRv = m_colToValuesMap.insert(std::move(c), RowToValueMap());
+        if (insertRv.second) // If new RowToValueMap was added, temporarily disabling sorting.
+            insertRv.first->second.setSorting(false);
+        insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
+        insertRv.first->second.m_valueStorage.push_back(val.toDouble());
+    });
+    // Sorting values by row now that all data has been added.
+    for (auto iter = m_colToValuesMap.begin(), iterEnd = m_colToValuesMap.end(); iter != iterEnd; ++iter)
+    {
+        iter->second.setSorting(true);
+    }
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionData::releaseOrCopy(const RowToValueMap* pId) -> RowToValueMap
+{
+    auto iter = std::find_if(m_colToValuesMap.begin(), m_colToValuesMap.end(), [=](const auto& v)
+    {
+        return &v.second == pId;
+    });
+    // For now moving always as there's no permanent caching yet.
+    return (iter != m_colToValuesMap.end()) ? std::move(iter->second) : RowToValueMap();
+}
+
 } // unnamed namespace
 
 #define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG)
@@ -1805,25 +1857,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 auto sTitle = (!sourceId.isEmpty()) ? format_fmt("Data source {}", sourceId.toUtf8().data()) : std::string();
                 pChart->setTitle(SzPtrUtf8(sTitle.c_str()));
 
-                typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<double, double> RowToValueMap;
-                typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<DataSourceIndex, RowToValueMap> ColumnToValuesMap;
+                TableSelectionData colToValuesMap; // Maps column to "(row, column value)" table.
 
-                ColumnToValuesMap colToValuesMap; // Maps column to "(row, column value)" table.
+                colToValuesMap.populateFromSource(source);
 
-                // Fetching data from source.
-                source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
-                {
-                    auto insertRv = colToValuesMap.insert(std::move(c), RowToValueMap());
-                    if (insertRv.second) // If new RowToValueMap was added, temporarily disabling sorting.
-                        insertRv.first->second.setSorting(false);
-                    insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
-                    insertRv.first->second.m_valueStorage.push_back(val.toDouble());
-                });
-                // Sorting values by row now that all data has been added.
-                for (auto iter = colToValuesMap.begin(), iterEnd = colToValuesMap.end(); iter != iterEnd; ++iter)
-                {
-                    iter->second.setSorting(true);
-                }
+                const auto columnDatas = colToValuesMap.columnDatas();
 
                 DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
                 DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
@@ -1831,7 +1869,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 
                 decltype(pChart->getSeriesByIndex(0)) spSeries;
 
-                if (colToValuesMap.size() == 1)
+                if (columnDatas.size() == 1)
                 {
                     if (defEntry.graphTypeStr() == ChartObjectChartTypeStr_xy)
                     {
@@ -1843,7 +1881,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                             return;
                         }
 
-                        const auto& valueCont = colToValuesMap.begin()->second;
+                        const auto& valueCont = columnDatas.front().get();
                         nGraphSize = valueCont.size();
                         minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.keyRange(), minMaxX);
                         minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.valueRange(), minMaxY);
@@ -1854,7 +1892,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     }
                     else if (defEntry.graphTypeStr() == ChartObjectChartTypeStr_histogram)
                     {
-                        const auto& valueRange = colToValuesMap.begin()->second.valueRange();
+                        // TODO: using the default (row, value) population with histograms is suboptimal, since only values are needed. 
+                        const auto& valueRange = columnDatas.front().get().valueRange();
                         if (valueRange.size() < 2)
                         {
                             DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(nEntryIndex).arg(valueRange.size()));
@@ -1871,7 +1910,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                         return;
                     }
                 }
-                else if (colToValuesMap.size() == 2)
+                else if (columnDatas.size() == 2)
                 {
                     spSeries = pChart->getSeriesByIndex_createIfNonExistent(nGraphCounter++);
 
@@ -1882,9 +1921,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                     }
 
                     // xValueMap is also used as final (x,y) table passed to series.
-                    auto& xValueMap = colToValuesMap.frontValue();
+                    // releaseOrCopy() will return either moved data or copy of it.
+                    auto xValueMap = colToValuesMap.releaseOrCopy(&columnDatas.front().get());
                     xValueMap.setSorting(false);
-                    const auto& yValueMap = colToValuesMap.backValue();
+                    const auto& yValueMap = columnDatas.back().get();
                     auto xIter = xValueMap.cbegin();
                     auto yIter = yValueMap.cbegin();
                     DataSourceIndex nActualSize = 0;
