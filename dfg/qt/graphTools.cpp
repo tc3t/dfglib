@@ -1985,28 +1985,26 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
 {
-    TableSelectionData colToValuesMap; // Maps column to "(row, column value)" table.
+    const auto nColumnCount = source.columnCount();
+    if (nColumnCount != 1)
+        return;
 
-    colToValuesMap.populateFromSource(source);
+    auto optValues = source.singleColumnDoubleValues_byOffsetFromFirst(0);
+    if (!optValues)
+        return;
 
-    const auto columnDatas = colToValuesMap.columnDatas();
-
-    // TODO: using the default (row, value) population with histograms is suboptimal, since only values are needed. 
-    const auto& valueRange = columnDatas.front().get().valueRange();
-    if (valueRange.size() < 2)
+    const auto& values = *optValues;
+    if (values.size() < 2)
     {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(valueRange.size()));
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(values.size()));
         return;
     }
 
-    auto spHistogram = rChart.createHistogram(defEntry, valueRange);
+    auto spHistogram = rChart.createHistogram(defEntry, makeRange(values));
     if (!spHistogram)
-    {
         return;
-    }
     ++nHistogramCounter;
     spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nHistogramCounter)));
-    return;
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_ptr<GraphDataSource> spSource)

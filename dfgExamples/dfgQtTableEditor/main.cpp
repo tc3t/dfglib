@@ -191,6 +191,7 @@ public:
     dfg::cont::ViewableSharedPtr<Table> m_spTable;
 };
 
+// TODO: consider moving to dfg/qt instead of being here in dfgQtTableEditor main.cpp
 class CsvTableViewDataSource : public dfg::qt::GraphDataSource
 {
 public:
@@ -228,6 +229,33 @@ public:
                 handler(static_cast<DataSourceIndex>(iterRow->first), static_cast<DataSourceIndex>(iterCol->first), iterRow->second);
             }
         }
+    }
+
+    DataSourceIndex columnCount() const override
+    {
+        auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+        return (spTableView) ? spTableView->size() : 0;
+    }
+
+    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) override
+    {
+        auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+        if (!spTableView) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
+            return SingleColumnDoubleValuesOptional();
+        const auto& rTable = *spTableView;
+        if (rTable.empty())
+            return SingleColumnDoubleValuesOptional();
+        const DataSourceIndex nFirstCol = rTable.frontKey();
+        const auto nTargetCol = nFirstCol + offsetFromFirst;
+        auto iter = rTable.find(nTargetCol);
+        if (iter == rTable.end())
+            return SingleColumnDoubleValuesOptional();
+
+        const auto& values = iter->second.valueRange();
+        auto rv = std::make_shared<DoubleValueVector>();
+        rv->resize(values.size());
+        std::copy(values.cbegin(), values.cend(), rv->begin());
+        return rv;
     }
 
     void enable(const bool b) override

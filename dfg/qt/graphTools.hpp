@@ -4,6 +4,7 @@
 #include "qtIncludeHelpers.hpp"
 #include "containerUtils.hpp"
 #include "../dfgAssert.hpp"
+#include "../cont/valueArray.hpp"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -35,6 +36,8 @@ class GraphDataSource : public QObject
     Q_OBJECT
 public:
     typedef ::DFG_MODULE_NS(qt)::DataSourceIndex DataSourceIndex;
+    using DoubleValueVector = DFG_MODULE_NS(cont)::ValueVector<double>;
+    using SingleColumnDoubleValuesOptional = std::shared_ptr<const DoubleValueVector>;
 
     virtual ~GraphDataSource() {}
 
@@ -44,7 +47,11 @@ public:
 
     virtual QObject* underlyingSource() = 0;
 
-    virtual void forEachElement_fromTableSelection(std::function<void (DataSourceIndex, DataSourceIndex, QVariant)>) { DFG_ASSERT_IMPLEMENTED(false);  }
+    virtual void forEachElement_fromTableSelection(std::function<void (DataSourceIndex, DataSourceIndex, QVariant)>) { DFG_ASSERT_IMPLEMENTED(false); }
+
+    virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex /*offsetFromFirst*/) { return SingleColumnDoubleValuesOptional(); }
+
+    virtual DataSourceIndex columnCount() const { return 0; }
 
     // Enables or disables data source. When disabled, data source should be completely inactive, e.g. may not emit sigChanged() signals or update it's internal data structures.
     virtual void enable(bool) = 0; 
@@ -55,7 +62,6 @@ signals:
 public:
     GraphDataSourceId m_uniqueId; // Unique ID by which data source can be queried with.
 }; // Class GraphDataSource
-
 
 class DataSourceContainer
 {
