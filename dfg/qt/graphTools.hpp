@@ -24,6 +24,7 @@ typedef QString GraphDataSourceId;
 typedef std::size_t DataSourceIndex;
 class ChartCanvas;
 class GraphDefinitionEntry;
+class ChartDataCache;
 
 enum GraphDataSourceType
 {
@@ -54,7 +55,7 @@ public:
     virtual DataSourceIndex columnCount() const { return 0; }
 
     // Enables or disables data source. When disabled, data source should be completely inactive, e.g. may not emit sigChanged() signals or update it's internal data structures.
-    virtual void enable(bool) = 0; 
+    virtual void enable(bool) = 0;
 
 signals:
     void sigChanged(); // Emitted when data has changed. TODO: Add parameter?
@@ -168,6 +169,7 @@ public:
     QObjectStorage<GraphControlPanel> m_spControlPanel;
     QObjectStorage<GraphDisplay> m_spGraphDisplay;
     DataSourceContainer m_dataSources;
+    std::unique_ptr<ChartDataCache> m_spCache;
 
 }; // Class GraphControlAndDisplayWidget
 
