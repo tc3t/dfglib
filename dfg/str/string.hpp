@@ -25,7 +25,8 @@ template <CharPtrType Type_T>
 class DFG_CLASS_NAME(StringTyped)
 {
 public:
-    typedef std::string                         StorageType;
+    using CharType = char;
+    typedef std::basic_string<CharType>         StorageType;
     typedef TypedCharPtrT<const char, Type_T>   TypedPtrT;
     typedef SzPtrT<const char, Type_T>          SzPtrR;
     typedef SzPtrT<char, Type_T>                SzPtrW;
@@ -49,12 +50,17 @@ public:
 #endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
     // Precondition: sRaw must be correctly encoded.
-    // TODO: test
     static DFG_CLASS_NAME(StringTyped) fromRawString(StorageType sRaw)
     {
         DFG_CLASS_NAME(StringTyped) s;
         s.m_s = std::move(sRaw);
         return s;
+    }
+
+    // Convenience overload
+    static DFG_CLASS_NAME(StringTyped) fromRawString(const CharType* pBegin, const CharType* pEnd)
+    {
+        return fromRawString(StorageType(pBegin, pEnd));
     }
 
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }

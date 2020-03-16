@@ -737,17 +737,20 @@ namespace
     {
         using namespace DFG_ROOT_NS;
         typedef typename Str_T::SzPtrR SzPtrType;
-        Str_T s(SzPtrType("abc"));
-        DFGTEST_STATIC((std::is_same<typename Str_T::SzPtrR, decltype(s.c_str())>::value));
-        EXPECT_TRUE(s == SzPtrType("abc"));
-        EXPECT_FALSE(s != SzPtrType("abc"));
-        EXPECT_FALSE(s == SzPtrType("abc2"));
-        EXPECT_TRUE(s != SzPtrType("abc2"));
-        EXPECT_TRUE(s == s);
-        EXPECT_FALSE(s != s);
-        EXPECT_FALSE(s < s);
-        EXPECT_FALSE(s.c_str() < s);
-        EXPECT_FALSE(s < s.c_str());
+
+        {
+            Str_T s(SzPtrType("abc"));
+            DFGTEST_STATIC((std::is_same<typename Str_T::SzPtrR, decltype(s.c_str())>::value));
+            EXPECT_TRUE(s == SzPtrType("abc"));
+            EXPECT_FALSE(s != SzPtrType("abc"));
+            EXPECT_FALSE(s == SzPtrType("abc2"));
+            EXPECT_TRUE(s != SzPtrType("abc2"));
+            EXPECT_TRUE(s == s);
+            EXPECT_FALSE(s != s);
+            EXPECT_FALSE(s < s);
+            EXPECT_FALSE(s.c_str() < s);
+            EXPECT_FALSE(s < s.c_str());
+        }
 
         // Test moving
         {
@@ -767,6 +770,16 @@ namespace
             EXPECT_EQ(c, e);
             // Test that the actual data location hasn't changed; note that the input string must long enough to avoid SSO-effects.
             EXPECT_TRUE(pData == c.rawStorage().data());
+        }
+
+        // Testing construction with fromRawString()
+        {
+            const char sz[] = "abc";
+            const auto s = Str_T::fromRawString(std::string(sz, sz + 2));
+            const auto s2 = Str_T::fromRawString(sz, sz + 2);
+            EXPECT_EQ(SzPtrType("ab"), s);
+            EXPECT_EQ(SzPtrType("ab"), s2);
+            EXPECT_EQ(s, s2);
         }
     }
 }
