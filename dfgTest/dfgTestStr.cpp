@@ -913,6 +913,17 @@ TEST(dfgStr, StringView)
         DFG_UNUSED(svUtf8);
     }
 
+    // Testing that view can be constructed from (typed) pointer pair
+    {
+        const char sz[] = "abc";
+        DFG_CLASS_NAME(StringViewC) svc(sz, sz + 2);
+        DFG_CLASS_NAME(StringViewAscii) sva(SzPtrAscii(sz), SzPtrAscii(sz + 2));
+        DFG_CLASS_NAME(StringViewUtf8) svu(SzPtrUtf8(sz), SzPtrUtf8(sz + 2));
+        EXPECT_TRUE("ab" == svc);
+        EXPECT_TRUE(SzPtrAscii("ab") == sva);
+        EXPECT_TRUE(DFG_UTF8("ab") == svu);
+    }
+
     // Test that can compare views that have compare-compatible types.
     // TODO: make this work.
     /*

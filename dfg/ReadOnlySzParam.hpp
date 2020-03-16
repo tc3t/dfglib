@@ -309,8 +309,13 @@ public:
     {
     }
 
-    DFG_CLASS_NAME(StringView)(PtrT psz, const size_t nCount) :
-        BaseClass(psz, nCount)
+    DFG_CLASS_NAME(StringView)(PtrT psz, const size_t nCountOfBaseChars) :
+        BaseClass(psz, nCountOfBaseChars)
+    {
+    }
+
+    DFG_CLASS_NAME(StringView)(PtrT pBegin, PtrT pEnd) :
+        BaseClass(pBegin, toCharPtr_raw(pEnd) - toCharPtr_raw(pBegin))
     {
     }
 
