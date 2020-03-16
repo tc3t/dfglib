@@ -18,6 +18,9 @@
 
 #include "../time/timerCpu.hpp"
 
+#include "../io/BasicImStream.hpp"
+#include "../io/DelimitedTextReader.hpp"
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
     #include <QPlainTextEdit>
@@ -111,66 +114,9 @@ public:
 
 static ConsoleLogHandle gConsoleLogHandle;
 
-
-class TableSelectionCacheItem
+static QString viewToString(const StringViewC& view)
 {
-public:
-    using IndexT = GraphDataSource::DataSourceIndex;
-    using RowToValueMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double>;
-    using ColumnToValuesMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
-
-    void populateFromSource(GraphDataSource& source);
-
-    std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
-
-    bool isValid() const { return m_bIsValid; }
-
-    RowToValueMap releaseOrCopy(const RowToValueMap* pId);
-
-    ColumnToValuesMap m_colToValuesMap;
-    bool m_bIsValid = false; 
-};
-
-auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDatas() const -> std::vector<std::reference_wrapper<const RowToValueMap>>
-{
-    std::vector<std::reference_wrapper<const RowToValueMap>> datas;
-    for (const auto& d : m_colToValuesMap)
-        datas.push_back(d.second);
-    return datas;
-}
-
-void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source)
-{
-    source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
-    {
-        auto insertRv = m_colToValuesMap.insert(std::move(c), RowToValueMap());
-        if (insertRv.second) // If new RowToValueMap was added, temporarily disabling sorting.
-            insertRv.first->second.setSorting(false);
-        insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
-        insertRv.first->second.m_valueStorage.push_back(val.toDouble());
-    });
-    // Sorting values by row now that all data has been added.
-    for (auto iter = m_colToValuesMap.begin(), iterEnd = m_colToValuesMap.end(); iter != iterEnd; ++iter)
-    {
-        iter->second.setSorting(true);
-    }
-    m_bIsValid = true;
-}
-
-auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueMap* pId) -> RowToValueMap
-{
-    auto iter = std::find_if(m_colToValuesMap.begin(), m_colToValuesMap.end(), [=](const auto& v)
-    {
-        return &v.second == pId;
-    });
-    // For now moving always as there's no permanent caching yet.
-    if (iter != m_colToValuesMap.end())
-    {
-        m_bIsValid = false; // Since data gets moved out, marking this cache item invalidated.
-        return std::move(iter->second);
-    }
-    else
-        return RowToValueMap();
+    return QString::fromUtf8(view.data(), static_cast<int>(view.length()));
 }
 
 } // unnamed namespace
@@ -204,7 +150,7 @@ void ChartController::refresh()
 constexpr char ChartObjectFieldIdStr_enabled[]      = "enabled";
 constexpr char ChartObjectFieldIdStr_type[]         = "type";
     constexpr char ChartObjectChartTypeStr_xy[]         = "xy";
-        // xy-type has properties: line_style, point_style
+        // xy-type has properties: line_style, point_style, x_source
     constexpr char ChartObjectChartTypeStr_histogram[]  = "histogram";
         // histogram-type has properties: bin_count
 
@@ -214,8 +160,9 @@ constexpr char ChartObjectFieldIdStr_name[] = "name";
 // bin_count
 constexpr char ChartObjectFieldIdStr_binCount[]     = "bin_count";
 
-constexpr char ChartObjectFieldIdStr_xSource[]      = "x_source";
-constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
+constexpr char ChartObjectFieldIdStr_xSource[]      = "x_source"; // value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
+    constexpr char ChartObjectSourceTypeStr_columnName[] = "column_name";
+//constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
 
 // Line style entries
 constexpr char ChartObjectFieldIdStr_lineStyle[]      = "line_style";
@@ -331,6 +278,8 @@ public:
 
     int index() const { return m_nContainerIndex; }
 
+    bool isType(FieldIdStrViewInputParam fieldId) const;
+
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
 
@@ -375,6 +324,11 @@ auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) c
     return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, GdeString(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, GdeString());
 }
 
+bool GraphDefinitionEntry::isType(FieldIdStrViewInputParam fieldId) const
+{
+    return getField(ChartObjectFieldIdStr_type).toString().toUtf8().data() == fieldId;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -382,6 +336,149 @@ auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) c
 //
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+class TableSelectionCacheItem
+{
+public:
+    using IndexT = GraphDataSource::DataSourceIndex;
+    using RowToValueMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double>;
+    using ColumnToValuesMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
+
+    void populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+
+    std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
+
+    bool isValid() const { return m_bIsValid; }
+
+    RowToValueMap releaseOrCopy(const RowToValueMap* pId);
+
+    ColumnToValuesMap m_colToValuesMap;
+    bool m_bIsValid = false;
+};
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDatas() const -> std::vector<std::reference_wrapper<const RowToValueMap>>
+{
+    std::vector<std::reference_wrapper<const RowToValueMap>> datas;
+    for (const auto& d : m_colToValuesMap)
+        datas.push_back(d.second);
+    return datas;
+}
+
+namespace
+{
+    class ParenthesisItem
+    {
+    public:
+        using StringT = StringUtf8;
+        using StringView = StringViewUtf8;
+
+        ParenthesisItem(const StringView& sv);
+
+        StringView key() const { return m_key; }
+
+        size_t valueCount() const { return m_values.size(); }
+
+        StringView value(const size_t nIndex) const
+        {
+            return (isValidIndex(m_values, nIndex)) ? m_values[nIndex] : StringView();
+        }
+
+        StringView m_key;
+        std::vector<StringT> m_values;
+    };
+
+    ParenthesisItem::ParenthesisItem(const StringView& sv)
+    {
+        auto iterOpen = std::find(sv.beginRaw(), sv.endRaw(), '(');
+        if (iterOpen == sv.endRaw())
+            return; // Didn't find opening parenthesis
+        m_key = StringView(sv.begin(), SzPtrUtf8(iterOpen));
+        iterOpen++; // Skipping opening parenthesis
+        DFG_MODULE_NS(io)::BasicImStream istrm(iterOpen, sv.endRaw() - iterOpen);
+        DFG_MODULE_NS(io)::DelimitedTextReader::readRow<char>(istrm, ',', '"', ')', [&](size_t, const char* p, const size_t nSize)
+        {
+            m_values.push_back(StringT(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(p + nSize)));
+        });
+    }
+}
+
+void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry)
+{
+    m_colToValuesMap.clear();
+
+    DataSourceIndex xColumnIndex = source.invalidIndex();
+
+    if (defEntry.isType(ChartObjectChartTypeStr_xy))
+    {
+        auto xSource = defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); });
+        if (!xSource.empty())
+        {
+            const ParenthesisItem items(xSource);
+            if (items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnName))
+            {
+                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unknown x source type, got %2").arg(defEntry.index()).arg(viewToString(items.key())));
+                return;
+            }
+            if (items.valueCount() != 1)
+            {
+                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unexpected value count for %2: expected 1, got %3").arg(defEntry.index()).arg(ChartObjectSourceTypeStr_columnName).arg(items.valueCount()));
+                return;
+            }
+            const auto sColumnName = items.value(0);
+            xColumnIndex = source.columnIndexByName(sColumnName);
+            if (xColumnIndex == source.invalidIndex())
+            {
+                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToString(sColumnName)));
+                return;
+            }
+        }
+    }
+
+    if (xColumnIndex != source.invalidIndex())
+    {
+        m_colToValuesMap.setSorting(false);
+        m_colToValuesMap[xColumnIndex] = RowToValueMap();
+    }
+
+    bool bXcolFound = false;
+    source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
+    {
+        bXcolFound = (bXcolFound || c == xColumnIndex);
+        auto insertRv = m_colToValuesMap.insert(std::move(c), RowToValueMap());
+        if (insertRv.second) // If new RowToValueMap was added, temporarily disabling sorting.
+            insertRv.first->second.setSorting(false);
+        insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
+        insertRv.first->second.m_valueStorage.push_back(val.toDouble());
+    });
+    if (xColumnIndex != source.invalidIndex() && !bXcolFound)
+    {
+        DFG_QT_CHART_CONSOLE_INFO("Didn't find x column from selection");
+        m_colToValuesMap.clear();
+    }
+    // Sorting values by row now that all data has been added.
+    for (auto iter = m_colToValuesMap.begin(), iterEnd = m_colToValuesMap.end(); iter != iterEnd; ++iter)
+    {
+        iter->second.setSorting(true);
+    }
+    m_bIsValid = true;
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueMap* pId) -> RowToValueMap
+{
+    auto iter = std::find_if(m_colToValuesMap.begin(), m_colToValuesMap.end(), [=](const auto& v)
+    {
+        return &v.second == pId;
+    });
+    // For now moving always as there's no permanent caching yet.
+    if (iter != m_colToValuesMap.end())
+    {
+        m_bIsValid = false; // Since data gets moved out, marking this cache item invalidated.
+        return std::move(iter->second);
+    }
+    else
+        return RowToValueMap();
+}
 
 
 class ChartDataCache
@@ -419,7 +516,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
         m_tableSelectionDatas.erase(iter); // Removing existing but invalid entry.
 
     auto rv = std::make_shared<TableSelectionCacheItem>();
-    rv->populateFromSource(source);
+    rv->populateFromSource(source, defEntry);
     m_tableSelectionDatas.insert(std::make_pair(key, rv));
     return rv;
 }
@@ -526,7 +623,7 @@ QString GraphDefinitionWidget::getGuideString()
 <ul>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph"}
+    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(name) "}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
 </ul>
 
@@ -543,6 +640,10 @@ QString GraphDefinitionWidget::getGuideString()
 
 <h2>Fields for type <i>xy</i></h2>
     <ul>
+        <li>x_source:</li>
+            <ul>
+                <li>column_name(name): x-values will be taken from column that has name <i>name</i>.</li>
+            </ul>
         <li>line_style:</li>
             <ul>
                 <li>none:        No line indicator</li>
@@ -842,12 +943,6 @@ public:
 
     QPointer<QCPGraph> m_spXySeries;
 }; // Class XySeriesQCustomPlot
-
-static QString viewToString(const StringViewC& view)
-{
-    return QString::fromUtf8(view.data(), static_cast<int>(view.length()));
-}
-
 
 XySeriesQCustomPlot::XySeriesQCustomPlot(QCPGraph* xySeries)
     : m_spXySeries(xySeries)

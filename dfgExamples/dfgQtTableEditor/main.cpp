@@ -35,6 +35,8 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <dfg/str/fmtlib/format.cc>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
+#include <dfg/qt/CsvItemModel.hpp>
+
 static QWidget* gpMainWindow = nullptr;
 
 
@@ -235,6 +237,15 @@ public:
     {
         auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
         return (spTableView) ? spTableView->size() : 0;
+    }
+
+    DataSourceIndex columnIndexByName(const dfg::StringViewUtf8 sv) const override
+    {
+        auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+        if (!pModel)
+            return invalidIndex();
+        auto nIndex = pModel->findColumnIndexByName(QString::fromUtf8(sv.beginRaw(), static_cast<int>(sv.size())), -1);
+        return (nIndex >= 0) ? static_cast<DataSourceIndex>(nIndex) : invalidIndex();
     }
 
     SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) override
