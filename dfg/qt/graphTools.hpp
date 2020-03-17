@@ -17,14 +17,18 @@ DFG_END_INCLUDE_QT_HEADERS
 
 class QSplitter;
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
+    class ChartCanvas;
+}}
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
 
 typedef QString GraphDataSourceId;
 typedef std::size_t DataSourceIndex;
-class ChartCanvas;
 class GraphDefinitionEntry;
 class ChartDataCache;
+using ChartCanvas = DFG_MODULE_NS(charts)::ChartCanvas;
 
 enum GraphDataSourceType
 {

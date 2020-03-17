@@ -948,6 +948,8 @@
     <ClInclude Include="..\dfg\build\inlineTools.hpp" />
     <ClInclude Include="..\dfg\build\languageFeatureInfo.hpp" />
     <ClInclude Include="..\dfg\build\utils.hpp" />
+    <ClInclude Include="..\dfg\chartsAll.hpp" />
+    <ClInclude Include="..\dfg\charts\commonChartTools.hpp" />
     <ClInclude Include="..\dfg\colour.hpp" />
     <ClInclude Include="..\dfg\colour\defs.hpp" />
     <ClInclude Include="..\dfg\colour\specRendJw.hpp" />

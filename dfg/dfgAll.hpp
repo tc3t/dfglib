@@ -28,6 +28,7 @@
 #include "typeTraits.hpp"
 
 #include "algAll.hpp"
+#include "chartsAll.hpp"
 #include "contAll.hpp"
 #include "dataAnalysisAll.hpp"
 #include "debugAll.hpp"

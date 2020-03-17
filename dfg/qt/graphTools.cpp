@@ -21,6 +21,8 @@
 #include "../io/BasicImStream.hpp"
 #include "../io/DelimitedTextReader.hpp"
 
+#include "../chartsAll.hpp"
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
     #include <QPlainTextEdit>
@@ -59,6 +61,8 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
         #include "qcustomplot/qcustomplot.h"
     #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+
+using namespace DFG_MODULE_NS(charts); // TODO: replace by something less coarse.
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
@@ -143,82 +147,6 @@ void ChartController::refresh()
 //
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Note: reflect all changes done here to documentation in getGuideString().
-// TODO: move these to dfg/charts. They are not Qt-specific so should not be in qt-module.
-
-constexpr char ChartObjectFieldIdStr_enabled[]      = "enabled";
-constexpr char ChartObjectFieldIdStr_type[]         = "type";
-    constexpr char ChartObjectChartTypeStr_xy[]         = "xy";
-        // xy-type has properties: line_style, point_style, x_source
-    constexpr char ChartObjectChartTypeStr_histogram[]  = "histogram";
-        // histogram-type has properties: bin_count
-
-// name: this will show e.g. in legend.
-constexpr char ChartObjectFieldIdStr_name[] = "name";
-
-// bin_count
-constexpr char ChartObjectFieldIdStr_binCount[]     = "bin_count";
-
-constexpr char ChartObjectFieldIdStr_xSource[]      = "x_source"; // value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
-    constexpr char ChartObjectSourceTypeStr_columnName[] = "column_name";
-//constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
-
-// Line style entries
-constexpr char ChartObjectFieldIdStr_lineStyle[]      = "line_style";
-    constexpr char ChartObjectLineStyleStr_none[]         = "none";
-    constexpr char ChartObjectLineStyleStr_basic[]        = "basic";
-    constexpr char ChartObjectLineStyleStr_stepLeft[]     = "step_left";
-    constexpr char ChartObjectLineStyleStr_stepRight[]    = "step_right";
-    constexpr char ChartObjectLineStyleStr_stepMiddle[]   = "step_middle";
-    constexpr char ChartObjectLineStyleStr_pole[]         = "pole";
-
-// Point style entries
-constexpr char ChartObjectFieldIdStr_pointStyle[]     = "point_style";
-    constexpr char ChartObjectPointStyleStr_none[]        = "none";
-    constexpr char ChartObjectPointStyleStr_basic[]       = "basic";
-
-
-// Defines single graph definition entry, e.g. a definition to display xy-line graph from some source data.
- // TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-class AbstractGraphDefinitionEntry
-{
-public:
-    typedef StringUtf8 GdeString;
-    typedef StringViewC FieldIdStrView;
-    typedef const StringViewC& FieldIdStrViewInputParam;
-
-    virtual ~AbstractGraphDefinitionEntry() {}
-
-    // Returns value of field 'fieldId' if present, defaultValue otherwise.
-    // Note: defaultValue is returned only when field is not found, not when e.g. field is present but has no value or has invalid value.
-    template <class T>
-    T fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const;
-
-    GdeString fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<GdeString()> defaultValueGenerator) const;
-
-private:
-    virtual std::pair<bool, GdeString> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
-};
-
-template <class T>
-T AbstractGraphDefinitionEntry::fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const
-{
-    DFG_STATIC_ASSERT(std::is_arithmetic_v<T>, "Only arithmetic value are supported for now");
-
-    auto rv = fieldValueStrImpl(fieldId);
-    if (!rv.first) // Field not present?
-        return defaultValue;
-    T obj{};
-    ::DFG_MODULE_NS(str)::strTo(rv.second.rawStorage(), obj);
-    return obj;
-}
-
-auto AbstractGraphDefinitionEntry::fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<GdeString()> defaultValueGenerator) const -> GdeString
-{
-    auto rv = fieldValueStrImpl(fieldId);
-    return (rv.first) ? rv.second : defaultValueGenerator();
-}
 
 // TODO: most/all of this should be in AbstractGraphDefinitionEntry. For now mostly here due to the readily available json-tools in Qt.
 class GraphDefinitionEntry : public AbstractGraphDefinitionEntry
@@ -705,68 +633,6 @@ ChartController* GraphDefinitionWidget::getController()
     return (m_spParent) ? m_spParent->getController() : nullptr;
 }
 
-template <class T>
-using InputSpan = DFG_CLASS_NAME(RangeIterator_T)<const T*>;
-
-// Abstract base for items in chart.
-// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-class ChartObject
-{
-public:
-    typedef DFG_CLASS_NAME(StringUtf8) ChartObjectString;
-    typedef DFG_CLASS_NAME(StringViewUtf8) ChartObjectStringView;
-
-    virtual ~ChartObject() {}
-
-    void setName(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setNameImpl(sv) : setNameImpl(sv); }
-
-protected:
-    ChartObject() {}
-
-    // Sets custom base to which virtual calls get passed.
-    template <class T, class... ArgTypes_T>
-    void setBaseImplementation(ArgTypes_T&&... args)
-    {
-        m_spImplementation.reset(new T(std::forward<ArgTypes_T>(args)...));
-    }
-
-private:
-    virtual void setNameImpl(ChartObjectStringView) const {}
-
-    std::unique_ptr<ChartObject> m_spImplementation;
-};
-
-// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-class XySeries : public ChartObject
-{
-protected:
-    XySeries() {}
-public:
-    virtual ~XySeries() {}
-    virtual void setOrAppend(const DataSourceIndex, const double, const double) = 0;
-    virtual void resize(const DataSourceIndex) = 0;
-
-    virtual void setLineStyle(StringViewC) {}
-    virtual void setPointStyle(StringViewC) {}
-
-    // Sets x values and y values. If given x and y ranges have different size, request is ignored.
-    virtual void setValues(InputSpan<double>, InputSpan<double>) = 0;
-}; // Class XySeries
-
-
-// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-class Histogram : public ChartObject
-{
-protected:
-    Histogram() {}
-public:
-    virtual ~Histogram() {}
-
-    // TODO: define meaning (e.g. bin centre)
-    virtual void setValues(InputSpan<double>, InputSpan<double>) = 0;
-}; // Class Histogram
-
-
 // Implementations for Qt Charts
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 class XySeriesQtChart : public XySeries
@@ -1034,46 +900,6 @@ void HistogramQCustomPlot::setValues(InputSpan<double> xVals, InputSpan<double> 
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
-// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-template <class T>
-using ChartObjectHolder = std::shared_ptr<T>;
-
-// TODO: move this to dfg/charts. This is supposed to be general interface that is not bound to Qt or any chart library.
-class ChartCanvas
-{
-protected:
-    ChartCanvas() {}
-public:
-    virtual ~ChartCanvas() {}
-
-    virtual bool hasChartObjects() const = 0;
-
-    virtual void addXySeries() = 0;
-
-    virtual void setTitle(StringViewUtf8) {}
-
-    virtual ChartObjectHolder<XySeries> getFirstXySeries() { return nullptr; }
-
-    virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
-
-    virtual void addContextMenuEntriesForChartObjects(QMenu&) {}
-
-    virtual void removeAllChartObjects() {}
-
-    virtual ChartObjectHolder<XySeries> getSeriesByIndex(int) { return nullptr; }
-    virtual ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
-
-    virtual bool isLegendSupported() const { return false; }
-    virtual bool isLegendEnabled() const   { return false; }
-    virtual bool enableLegend(bool)        { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
-
-    virtual ChartObjectHolder<Histogram> createHistogram(const AbstractGraphDefinitionEntry&, InputSpan<double>) { return nullptr; }
-
-    // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
-    virtual void repaintCanvas() = 0;
-
-}; // class ChartCanvas
-
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 class ChartCanvasQtChart : public ChartCanvas, QObject
@@ -1165,7 +991,7 @@ public:
 #endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-class ChartCanvasQCustomPlot : public ChartCanvas, QObject
+class ChartCanvasQCustomPlot : public DFG_MODULE_NS(charts)::ChartCanvas, QObject
 {
 public:
 
@@ -1221,7 +1047,7 @@ public:
         }
     }
 
-    void addContextMenuEntriesForChartObjects(QMenu& menu) override;
+    void addContextMenuEntriesForChartObjects(void* pMenu) override;
 
     void removeAllChartObjects() override;
 
@@ -1289,10 +1115,16 @@ namespace
     }
 }
 
-void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(QMenu& menu)
+void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHandle)
 {
-    if (!m_spChartView)
+    if (!m_spChartView || !pMenuHandle)
         return;
+    auto pMenuRawObj = reinterpret_cast<QObject*>(pMenuHandle);
+    auto pMenu = qobject_cast<QMenu*>(pMenuRawObj);
+    if (!pMenu)
+        return;
+
+    QMenu& menu = *pMenu;
 
     /*
     According to class inheritance tree, plottable can be one of these:
@@ -1903,7 +1735,7 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
     }
 
     addSectionEntryToMenu(&menu, tr("Chart objects"));
-    m_spChartCanvas->addContextMenuEntriesForChartObjects(menu);
+    m_spChartCanvas->addContextMenuEntriesForChartObjects(&menu);
 
     menu.exec(QCursor::pos());
 }
