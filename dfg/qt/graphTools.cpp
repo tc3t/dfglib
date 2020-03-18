@@ -148,8 +148,8 @@ void ChartController::refresh()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: most/all of this should be in AbstractGraphDefinitionEntry. For now mostly here due to the readily available json-tools in Qt.
-class GraphDefinitionEntry : public AbstractGraphDefinitionEntry
+// TODO: most/all of this should be in AbstractChartControlItem. For now mostly here due to the readily available json-tools in Qt.
+class GraphDefinitionEntry : public AbstractChartControlItem
 {
 public:
     using StringViewOrOwner = StringViewOrOwner<StringViewSzC, std::string>;
@@ -211,7 +211,7 @@ public:
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
 
-    std::pair<bool, GdeString> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const override;
+    std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const override;
 
     template <class Func_T>
     void doForFieldIfPresent(FieldIdStrViewInputParam id, Func_T&& func) const;
@@ -246,10 +246,10 @@ void GraphDefinitionEntry::doForFieldIfPresent(FieldIdStrViewInputParam id, Func
         func(val.toString().toUtf8());
 }
 
-auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const -> std::pair<bool, GdeString>
+auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const -> std::pair<bool, String>
 {
     const auto val = getField(fieldId);
-    return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, GdeString(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, GdeString());
+    return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, String(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, String());
 }
 
 bool GraphDefinitionEntry::isType(FieldIdStrViewInputParam fieldId) const
@@ -422,7 +422,7 @@ public:
     using IdToTableSelectionaMap = std::map<CacheEntryKey, TableSelectionOptional>;
     using IdToColumnDoubleValuesMap = std::map<CacheEntryKey, SingleColumnDoubleValuesOptional>;
 
-    CacheEntryKey cacheKey(const GraphDataSource& source, const AbstractGraphDefinitionEntry& defEntry) const;
+    CacheEntryKey cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const;
 
     void invalidate();
 
@@ -470,7 +470,7 @@ void DFG_MODULE_NS(qt)::ChartDataCache::invalidate()
     m_doubleColumnValues.clear();
 }
 
-auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractGraphDefinitionEntry& defEntry) const -> CacheEntryKey
+auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const -> CacheEntryKey
 {
     return source.uniqueId() + defEntry.fieldValueStr(ChartObjectFieldIdStr_type, [] { return StringUtf8(); }).rawStorage().c_str();
 }
@@ -1056,7 +1056,7 @@ public:
     ChartObjectHolder<XySeries> getSeriesByIndex(int nIndex) override;
     ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
 
-    ChartObjectHolder<Histogram> createHistogram(const AbstractGraphDefinitionEntry& defEntry, InputSpan<double> vals) override;
+    ChartObjectHolder<Histogram> createHistogram(const AbstractChartControlItem& defEntry, InputSpan<double> vals) override;
 
     bool isLegendSupported() const override { return true; }
     bool isLegendEnabled() const override;
@@ -1210,7 +1210,7 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nInd
     return getSeriesByIndex(nIndex);
 }
 
-auto ChartCanvasQCustomPlot::createHistogram(const AbstractGraphDefinitionEntry& defEntry, InputSpan<double> valueRange) -> ChartObjectHolder<Histogram>
+auto ChartCanvasQCustomPlot::createHistogram(const AbstractChartControlItem& defEntry, InputSpan<double> valueRange) -> ChartObjectHolder<Histogram>
 {
     auto p = getWidget();
     if (!p)

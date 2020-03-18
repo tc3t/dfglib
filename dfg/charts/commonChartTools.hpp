@@ -10,6 +10,21 @@
 #include "../str/string.hpp"
 #include "../str/strTo.hpp"
 
+/*
+Terminology used in dfglib:
+    -'chart': general term referring to the whole graphical representation
+        -a chart can include multiple elements such as function curves (e.g. curve of f(x) = 2*x in (x,y) coordinate system), legend, axis etc.
+    -'graph': tentatively a graphical representation of a single data set (e.g. graph of (x,y) data); note, though, that in some places a synonym for 'chart' (e.g. qt/graphTools)
+    -Classes:
+        -ChartObject: An abstract class for various chart items
+            -XySeries: (x,y) data with ordered x-values.
+            -Histogram:
+        -ChartObjectHolder: Container for (shared) ChartObject
+        -ChartCanvas: Implements a 'chart' as specified above.
+            -Offers functionality e.g. for adding ChartObjects and enabling/disabling legend.
+*/
+
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
 
@@ -46,30 +61,30 @@ constexpr char ChartObjectFieldIdStr_xSource[] = "x_source"; // value is parenth
             constexpr char ChartObjectPointStyleStr_basic[] = "basic";
 
 
-// Defines single chart definition entry, e.g. a definition to display xy-line graph from some source data.
-class AbstractGraphDefinitionEntry
+// Abstract class representing an entry that defines what kind of ChartObjects to create on chart.
+class AbstractChartControlItem
 {
 public:
-    typedef StringUtf8 GdeString;
+    typedef StringUtf8 String;
     typedef StringViewC FieldIdStrView;
     typedef const StringViewC& FieldIdStrViewInputParam;
 
-    virtual ~AbstractGraphDefinitionEntry() {}
+    virtual ~AbstractChartControlItem() {}
 
     // Returns value of field 'fieldId' if present, defaultValue otherwise.
     // Note: defaultValue is returned only when field is not found, not when e.g. field is present but has no value or has invalid value.
     template <class T>
     T fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const;
 
-    GdeString fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<GdeString()> defaultValueGenerator) const;
+    String fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<String()> defaultValueGenerator) const;
 
 private:
-    virtual std::pair<bool, GdeString> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
-}; // class AbstractGraphDefinitionEntry
+    virtual std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
+}; // class AbstractChartControlItem
 
 
 template <class T>
-T AbstractGraphDefinitionEntry::fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const
+T AbstractChartControlItem::fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const
 {
     DFG_STATIC_ASSERT(std::is_arithmetic<T>::value, "Only arithmetic value are supported for now");
 
@@ -81,7 +96,7 @@ T AbstractGraphDefinitionEntry::fieldValue(FieldIdStrViewInputParam fieldId, con
     return obj;
 }
 
-auto AbstractGraphDefinitionEntry::fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<GdeString()> defaultValueGenerator) const -> GdeString
+auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<String()> defaultValueGenerator) const -> String
 {
     auto rv = fieldValueStrImpl(fieldId);
     return (rv.first) ? rv.second : defaultValueGenerator();
@@ -180,7 +195,7 @@ public:
     virtual bool isLegendEnabled() const { return false; }
     virtual bool enableLegend(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
 
-    virtual ChartObjectHolder<Histogram> createHistogram(const AbstractGraphDefinitionEntry&, InputSpan<double>) { return nullptr; }
+    virtual ChartObjectHolder<Histogram> createHistogram(const AbstractChartControlItem&, InputSpan<double>) { return nullptr; }
 
     // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
     virtual void repaintCanvas() = 0;
