@@ -781,6 +781,13 @@ namespace
             EXPECT_EQ(SzPtrType("ab"), s2);
             EXPECT_EQ(s, s2);
         }
+
+        // Testing raw iterator access
+        {
+            Str_T s(SzPtrType("abc"));
+            EXPECT_EQ('a', *s.beginRaw());
+            EXPECT_EQ(s.beginRaw() + 3, s.endRaw());
+        }
     }
 }
 

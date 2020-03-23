@@ -28,6 +28,7 @@ public:
     using CharType = char;
     typedef std::basic_string<CharType>         StorageType;
     typedef TypedCharPtrT<const char, Type_T>   TypedPtrT;
+    typedef const CharType*                     PtrRawT;
     typedef SzPtrT<const char, Type_T>          SzPtrR;
     typedef SzPtrT<char, Type_T>                SzPtrW;
     typedef StorageType::size_type              size_type;
@@ -66,6 +67,10 @@ public:
     SzPtrR c_str() const { return SzPtrR(m_s.c_str()); }
 
     SzPtrR data() const { return c_str(); }
+
+    // Note: begin() and end() are omitted on purpose because TypedPtrT might not have increment/decrement operators.
+    PtrRawT beginRaw() const { return m_s.c_str(); }
+    PtrRawT endRaw()   const { return beginRaw() + sizeInRawUnits(); }
 
     void append(const TypedPtrT& first, const TypedPtrT& end)
     {
