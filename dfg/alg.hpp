@@ -22,6 +22,13 @@ size_t indexOf(const RangeT& range, const T& val)
     return std::distance(DFG_ROOT_NS::cbegin(range), std::find(DFG_ROOT_NS::cbegin(range), DFG_ROOT_NS::cend(range), val));
 }
 
+// Tests existence of element in a range.
+template <class Range_T, class T>
+bool contains(const Range_T& range, const T& val)
+{
+    return isValidIndex(range, indexOf(range, val));
+}
+
 // For a given range of ascending sorted values, returns interpolated floating position of 'val' in given range.
 // If val matches any of the range elements exactly, return value is identical to indexOf.
 // If 'val' is smaller than first, it's index if extrapolated linearly from first bin width.

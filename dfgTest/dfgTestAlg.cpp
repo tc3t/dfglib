@@ -255,6 +255,29 @@ TEST(dfgAlg, indexOf)
     EXPECT_EQ(1, indexOf(list, 1));
 }
 
+TEST(dfgAlg, contains)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(alg);
+    const std::array<double, 3> arr = { -1.5, 2.5, -5.3 };
+    EXPECT_TRUE(contains(arr, -1.5));
+    EXPECT_TRUE(contains(arr, 2.5));
+    EXPECT_TRUE(contains(arr, -5.3));
+    EXPECT_FALSE(contains(arr, 0));
+
+    const std::array<int, 8> arr2 = { 0, 1, 1, 1, 1, 1, 2, 2 };
+    EXPECT_TRUE(contains(arr2, 1));
+    EXPECT_TRUE(contains(arr2, 2));
+    EXPECT_FALSE(contains(arr2, -1));
+    EXPECT_FALSE(contains(arr2, 515616));
+
+    std::list<int> list(arr2.begin(), arr2.end());
+    EXPECT_TRUE(contains(list, 0));
+    EXPECT_TRUE(contains(list, 1));
+    EXPECT_FALSE(contains(list, -1));
+    EXPECT_FALSE(contains(list, 9));
+}
+
 TEST(dfgAlg, floatIndexInSorted)
 {
     using namespace DFG_ROOT_NS;
