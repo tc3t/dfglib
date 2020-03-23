@@ -295,13 +295,18 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDatas() const -> std::vec
 
 namespace
 {
+    // Helper class for dealing with items of format key_name(comma-separated list of args with csv-quoting)
+    // Examples: 
+    //      input: 'some_id(arg one,"arg two that has , in it",arg three)' -> {key="some_id", values[2]={"arg one", "arg two that has , in it", "arg three"}
     class ParenthesisItem
     {
     public:
         using StringT = StringUtf8;
         using StringView = StringViewUtf8;
 
-        ParenthesisItem(const StringView& sv);
+        // Given string must accessible for the lifetime of 'this'
+        ParenthesisItem(const StringT& sv);
+        ParenthesisItem(StringT&&) = delete;
 
         StringView key() const { return m_key; }
 
@@ -316,20 +321,31 @@ namespace
         std::vector<StringT> m_values;
     };
 
-    ParenthesisItem::ParenthesisItem(const StringView& sv)
+    ParenthesisItem::ParenthesisItem(const StringT& sv)
     {
         auto iterOpen = std::find(sv.beginRaw(), sv.endRaw(), '(');
         if (iterOpen == sv.endRaw())
             return; // Didn't find opening parenthesis
-        m_key = StringView(sv.begin(), SzPtrUtf8(iterOpen));
+        m_key = StringView(sv.data(), SzPtrUtf8(iterOpen));
         iterOpen++; // Skipping opening parenthesis
-        DFG_MODULE_NS(io)::BasicImStream istrm(iterOpen, sv.endRaw() - iterOpen);
-        DFG_MODULE_NS(io)::DelimitedTextReader::readRow<char>(istrm, ',', '"', ')', [&](size_t, const char* p, const size_t nSize)
+        auto iterEnd = sv.endRaw();
+        if (iterOpen == iterEnd)
+            return;
+        --iterEnd;
+        // Skipping trailing whitespaces
+        while (iterEnd != iterOpen && DFG_MODULE_NS(alg)::contains(" ", *iterEnd))
+            --iterEnd;
+        // Checking that items end with closing parenthesis.
+        if (*iterEnd != ')')
+            return;
+        // Parsing item inside parenthesis as standard comma-delimited item with quotes.
+        DFG_MODULE_NS(io)::BasicImStream istrm(iterOpen, iterEnd - iterOpen);
+        DFG_MODULE_NS(io)::DelimitedTextReader::read<char>(istrm, ',', '"', DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, [&](size_t, size_t, const char* p, const size_t nSize)
         {
             m_values.push_back(StringT(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(p + nSize)));
         });
     }
-}
+} // unnamed namespace
 
 void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry)
 {
@@ -339,7 +355,7 @@ void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSou
 
     if (defEntry.isType(ChartObjectChartTypeStr_xy))
     {
-        auto xSource = defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); });
+        const auto xSource = defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); });
         if (!xSource.empty())
         {
             const ParenthesisItem items(xSource);
