@@ -7,6 +7,8 @@
 #include "cont/tableCsv.hpp"
 #include "cont/elementType.hpp"
 #include "cont/interleavedXsortedTwoChannelWrapper.hpp"
+#include "cont/IntervalSet.hpp"
+#include "cont/IntervalSetSerialization.hpp"
 #include "cont/MapVector.hpp"
 #include "cont/SetVector.hpp"
 #include "cont/SortedSequence.hpp"

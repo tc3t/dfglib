@@ -660,6 +660,12 @@
     <ClInclude Include="..\dfg\charts\commonChartTools.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\cont\IntervalSet.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\IntervalSetSerialization.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

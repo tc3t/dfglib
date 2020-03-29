@@ -12,6 +12,8 @@
 #include <dfg/cont/interleavedXsortedTwoChannelWrapper.hpp>
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/CsvConfig.hpp>
+#include <dfg/cont/IntervalSet.hpp>
+#include <dfg/cont/IntervalSetSerialization.hpp>
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
 #include <dfg/cont/SetVector.hpp>
@@ -2360,5 +2362,180 @@ TEST(dfgCont, CsvFormatDefinition_ToConfig)
         CsvConfig config;
         format.appendToConfig(config);
         EXPECT_TRUE(DFG_MODULE_NS(str)::isEmptyStr(config.value(DFG_UTF8("enclosing_char"), DFG_UTF8("a"))));
+    }
+}
+
+namespace
+{
+    void testIntIntervalSet1to4(const char* psz)
+    {
+        auto intIntervalSet = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(psz);
+        EXPECT_TRUE(intIntervalSet.hasValue(1));
+        EXPECT_TRUE(intIntervalSet.hasValue(2));
+        EXPECT_TRUE(intIntervalSet.hasValue(3));
+        EXPECT_TRUE(intIntervalSet.hasValue(4));
+        EXPECT_FALSE(intIntervalSet.hasValue(0));
+        EXPECT_FALSE(intIntervalSet.hasValue(5));
+        EXPECT_EQ(4, intIntervalSet.sizeOfSet()); // size() returns the number of elements, not the number of intervals.
+    }
+
+    void testIntIntervalSetMinus4toMinus2(const char* psz)
+    {
+        auto intIntervalSet = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(psz);
+        EXPECT_TRUE(intIntervalSet.hasValue(-4));
+        EXPECT_TRUE(intIntervalSet.hasValue(-3));
+        EXPECT_TRUE(intIntervalSet.hasValue(-2));
+        EXPECT_EQ(3, intIntervalSet.sizeOfSet());
+    }
+}
+
+TEST(dfgCont, IntervalSet)
+{
+    {
+        ::DFG_MODULE_NS(cont)::IntervalSet<int> is;
+        is.insertClosed(1, 3);
+        EXPECT_EQ(3, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+
+        is.insertClosed(1, 1);
+        EXPECT_EQ(3, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+        is.insertClosed(2, 2);
+
+        EXPECT_EQ(3, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+        is.insertClosed(3, 3);
+
+        EXPECT_EQ(3, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+
+        is.insertClosed(1, 3);
+        EXPECT_EQ(3, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+
+        is.insertClosed(2, 3);
+        EXPECT_EQ(3, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+
+        is.insertClosed(4, 3);
+        EXPECT_EQ(3, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+
+        is.insertClosed(4, 4);
+        EXPECT_EQ(4, is.sizeOfSet());
+        //EXPECT_EQ(1, is.intervalCount()); This can be either 1 or 2
+
+        is.insertClosed(0, 0);
+        EXPECT_EQ(5, is.sizeOfSet());
+
+        is.insertClosed(-3, -2);
+        EXPECT_EQ(7, is.sizeOfSet());
+
+        is.insertClosed(6, 8);
+        EXPECT_EQ(10, is.sizeOfSet());
+
+        is.insertClosed(5, 8);
+        EXPECT_EQ(11, is.sizeOfSet());
+
+        is.insertClosed(0, 10);
+        // Should now have [-3, -2] and [0, 10]
+        EXPECT_EQ(13, is.sizeOfSet());
+        EXPECT_EQ(2, is.intervalCount());
+
+        is.insertClosed(-2, 1);
+        // Should now have [-3, 10]
+        EXPECT_EQ(14, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+
+        is.insertClosed(-4, 11);
+        // Should now have [-4, 11]
+        EXPECT_EQ(16, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+
+        is.insertClosed(-6, -6);
+        // Should now have [-6, -6], [-4, 11]
+        EXPECT_EQ(17, is.sizeOfSet());
+        EXPECT_EQ(2, is.intervalCount());
+
+        is.insertClosed(-9, -8);
+        // Should now have [-9, -8], [-6, -6], [-4, 11]
+        EXPECT_EQ(19, is.sizeOfSet());
+        EXPECT_EQ(3, is.intervalCount());
+
+        is.insertClosed(-9, 12);
+        // Should now have [-9, -8], [-6, -6], [-4, 11]
+        EXPECT_EQ(22, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+    }
+
+    {
+        ::DFG_MODULE_NS(cont)::IntervalSet<int> is;
+        for (int i = 0; i < 100; ++i)
+            is.insertClosed(i, i);
+        EXPECT_EQ(100, is.sizeOfSet());
+        EXPECT_EQ(100, is.intervalCount()); // 1 would also be acceptable.
+        is.insertClosed(0, 99);
+        EXPECT_EQ(100, is.sizeOfSet());
+        EXPECT_EQ(1, is.intervalCount());
+    }
+}
+
+namespace
+{
+    void testInt32IntervalBounds(std::true_type) // Case: 64-bit size_t
+    {
+        auto ic32 = ::DFG_MODULE_NS(cont)::intervalSetFromString<DFG_ROOT_NS::int32>("-2147483648 - 2147483647");
+        EXPECT_EQ(4294967296ull, ic32.sizeOfSet());
+    }
+
+    void testInt32IntervalBounds(std::false_type) // Case: 32-bit size_t
+    {
+    }
+}
+
+TEST(dfgCont, intervalSetFromString)
+{
+    {
+        testIntIntervalSet1to4("1-4");
+        testIntIntervalSet1to4(" 1-4");
+        testIntIntervalSet1to4(" 1 -4");
+        testIntIntervalSet1to4(" 1 -  4");
+        testIntIntervalSet1to4("1;2;3;4");
+        testIntIntervalSet1to4("4;3;2;1");
+        testIntIntervalSet1to4("1-2;3-4");
+        testIntIntervalSet1to4("1-3;2-4");
+        testIntIntervalSet1to4("5-3;1-3;2-4");
+    }
+
+    // Testing bound handling
+    {
+        {
+            using namespace DFG_ROOT_NS;
+
+            // int8 case commented out as strTo() doesn't properly parse int8-types.
+            //auto ic8 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int8>("-128 - 127");
+            //EXPECT_EQ(256, ic8.sizeOfSet());
+
+            auto ic16 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int16>("-32768 - 32767");
+            EXPECT_EQ(65536, ic16.sizeOfSet());
+
+            auto ic32_0 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int32>("-2147483648 - 0");
+            EXPECT_EQ(2147483649, ic32_0.sizeOfSet());
+
+            auto ic32_1 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int32>("-2147483648 - -1");
+            EXPECT_EQ(2147483648, ic32_1.sizeOfSet());
+
+            testInt32IntervalBounds(std::integral_constant<bool, sizeof(size_t) >= 8>());
+
+            //auto ic64 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int16>("-32768-32767");
+            //EXPECT_EQ(65536, intIntervalSet.size());
+        }
+    }
+
+    // Testing parsing of negative items
+    {
+        testIntIntervalSetMinus4toMinus2("-4--2");
+        testIntIntervalSetMinus4toMinus2("-4--4; -3 - -2");
+        
     }
 }
