@@ -351,3 +351,49 @@ TEST(dfgMath, logOfBase)
     EXPECT_TRUE(isNan(logOfBase(1, -1)));
     EXPECT_TRUE(isNan(logOfBase(-2, 2)));
 }
+
+TEST(dfgMath, isIntegerValued)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+
+    // Testing integer types
+    {
+        EXPECT_TRUE(true);
+        EXPECT_TRUE(isIntegerValued(1));
+        EXPECT_TRUE(isIntegerValued(1ull));
+    }
+
+    {
+        EXPECT_TRUE(isIntegerValued(0.0f));
+        EXPECT_TRUE(isIntegerValued(0.0));
+        EXPECT_TRUE(isIntegerValued(1.0f));
+        EXPECT_TRUE(isIntegerValued(1.0));
+        EXPECT_TRUE(isIntegerValued(-1.0f));
+        EXPECT_TRUE(isIntegerValued(-1.0));
+
+        EXPECT_FALSE(isIntegerValued(-0.99999f));
+        EXPECT_FALSE(isIntegerValued(-0.999999));
+
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<float>::epsilon()));
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<double>::epsilon()));
+
+        EXPECT_TRUE(isIntegerValued(double(NumericTraits<int>::minValue)));
+        EXPECT_TRUE(isIntegerValued(double(NumericTraits<int>::maxValue)));
+
+        EXPECT_TRUE(isIntegerValued(std::numeric_limits<float>::lowest()));
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<float>::min()));
+        EXPECT_TRUE(isIntegerValued(std::numeric_limits<float>::max()));
+        EXPECT_TRUE(isIntegerValued(std::numeric_limits<double>::lowest()));
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<double>::min()));
+        EXPECT_TRUE(isIntegerValued(std::numeric_limits<double>::max()));
+
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<float>::quiet_NaN()));
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<double>::quiet_NaN()));
+
+        EXPECT_FALSE(isIntegerValued(-std::numeric_limits<float>::infinity()));
+        EXPECT_FALSE(isIntegerValued(-std::numeric_limits<double>::infinity()));
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<float>::infinity()));
+        EXPECT_FALSE(isIntegerValued(std::numeric_limits<double>::infinity()));
+    }
+}

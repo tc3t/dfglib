@@ -140,4 +140,34 @@ auto logOfBase(const Value_T x, const Base_T base) -> typename std::conditional<
     return static_cast<ReturnValueType>(DFG_DETAIL_NS::logOfBaseImpl(static_cast<CommonType>(x), static_cast<CommonType>(base)));
 }
 
+namespace DFG_DETAIL_NS
+{
+    template <class Val_T>
+    inline bool isIntegerValuedImpl(const Val_T, std::true_type) // case: Val_T is integer
+    {
+        return true;
+    }
+
+    template <class Val_T>
+    inline bool isIntegerValuedImpl(const Val_T val, std::false_type) // case: Val_T is not integer
+    {
+        DFG_STATIC_ASSERT(std::is_floating_point<Val_T>::value, "isIntegerValued() expects either integer or floating point type");
+        if (!isFinite(val))
+            return false;
+        Val_T intPart;
+        return std::modf(val, &intPart) == 0;
+    }
+}
+
+// Returns true iff value is integer value.
+// Return values for some special floating point values:
+//      -NaN's: false
+//      -+-inf: false
+// Note: returned true does not mean that the value can be represented e.g. as int (value can for example be > INT_MAX)
+template <class Val_T>
+inline bool isIntegerValued(const Val_T val)
+{
+    return DFG_DETAIL_NS::isIntegerValuedImpl(val, std::is_integral<Val_T>());
+}
+
 }} // module math
