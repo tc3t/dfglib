@@ -2484,7 +2484,7 @@ namespace
 {
     void testInt32IntervalBounds(std::true_type) // Case: 64-bit size_t
     {
-        auto ic32 = ::DFG_MODULE_NS(cont)::intervalSetFromString<DFG_ROOT_NS::int32>("-2147483648 - 2147483647");
+        auto ic32 = ::DFG_MODULE_NS(cont)::intervalSetFromString<DFG_ROOT_NS::int32>("-2147483648 : 2147483647");
         EXPECT_EQ(4294967296ull, ic32.sizeOfSet());
     }
 
@@ -2496,15 +2496,15 @@ namespace
 TEST(dfgCont, intervalSetFromString)
 {
     {
-        testIntIntervalSet1to4("1-4");
-        testIntIntervalSet1to4(" 1-4");
-        testIntIntervalSet1to4(" 1 -4");
-        testIntIntervalSet1to4(" 1 -  4");
+        testIntIntervalSet1to4("1:4");
+        testIntIntervalSet1to4(" 1:4");
+        testIntIntervalSet1to4(" 1 :4");
+        testIntIntervalSet1to4(" 1 :  4");
         testIntIntervalSet1to4("1;2;3;4");
         testIntIntervalSet1to4("4;3;2;1");
-        testIntIntervalSet1to4("1-2;3-4");
-        testIntIntervalSet1to4("1-3;2-4");
-        testIntIntervalSet1to4("5-3;1-3;2-4");
+        testIntIntervalSet1to4("1:2;3:4");
+        testIntIntervalSet1to4("1:3;2:4");
+        testIntIntervalSet1to4("5:3;1:3;2:4");
     }
 
     // Testing bound handling
@@ -2516,13 +2516,13 @@ TEST(dfgCont, intervalSetFromString)
             //auto ic8 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int8>("-128 - 127");
             //EXPECT_EQ(256, ic8.sizeOfSet());
 
-            auto ic16 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int16>("-32768 - 32767");
+            auto ic16 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int16>("-32768 : 32767");
             EXPECT_EQ(65536, ic16.sizeOfSet());
 
-            auto ic32_0 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int32>("-2147483648 - 0");
+            auto ic32_0 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int32>("-2147483648 : 0");
             EXPECT_EQ(2147483649, ic32_0.sizeOfSet());
 
-            auto ic32_1 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int32>("-2147483648 - -1");
+            auto ic32_1 = ::DFG_MODULE_NS(cont)::intervalSetFromString<int32>("-2147483648 : -1");
             EXPECT_EQ(2147483648, ic32_1.sizeOfSet());
 
             testInt32IntervalBounds(std::integral_constant<bool, sizeof(size_t) >= 8>());
@@ -2534,8 +2534,8 @@ TEST(dfgCont, intervalSetFromString)
 
     // Testing parsing of negative items
     {
-        testIntIntervalSetMinus4toMinus2("-4--2");
-        testIntIntervalSetMinus4toMinus2("-4--4; -3 - -2");
+        testIntIntervalSetMinus4toMinus2("-4:-2");
+        testIntIntervalSetMinus4toMinus2("-4:-4; -3 : -2");
         
     }
 }

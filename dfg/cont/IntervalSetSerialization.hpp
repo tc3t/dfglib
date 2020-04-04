@@ -28,19 +28,19 @@ namespace DFG_DETAIL_NS
         auto iterStart = skipWhitespaces(sv.beginRaw(), iterEnd);
         if (iterStart == iterEnd)
             return;
-        auto iterDash = std::find((*iterStart != '-') ? iterStart : iterStart + 1, sv.end(), '-');
-        if (iterDash == iterEnd)
+        auto iterSep = std::find(iterStart, sv.end(), ':');
+        if (iterSep == iterEnd)
         {
-            // Did't find dash -> looks like single value
+            // Did't find ':' -> looks like single value
             // No error checking here, using GIGO.
             is.insert(::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterStart, iterEnd)));
             return;
         }
-        const auto firstVal = ::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterStart, iterDash));
-        ++iterDash;
-        if (iterDash == iterEnd)
+        const auto firstVal = ::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterStart, iterSep));
+        ++iterSep;
+        if (iterSep == iterEnd)
             return; // Invalid input; nothing after dash
-        const auto secondVal = ::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterDash, iterEnd));
+        const auto secondVal = ::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterSep, iterEnd));
         if (secondVal < firstVal)
             return;
         is.insertClosed(firstVal, secondVal);
