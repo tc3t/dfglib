@@ -5,6 +5,7 @@
 #include "ConsoleDisplay.hpp"
 #include "ConsoleDisplay.cpp"
 
+#include "../cont/IntervalSetSerialization.hpp"
 #include "../cont/MapVector.hpp"
 #include "../rangeIterator.hpp"
 
@@ -297,7 +298,7 @@ namespace
 {
     // Helper class for dealing with items of format key_name(comma-separated list of args with csv-quoting)
     // Examples: 
-    //      input: 'some_id(arg one,"arg two that has , in it",arg three)' -> {key="some_id", values[2]={"arg one", "arg two that has , in it", "arg three"}
+    //      input: 'some_id(arg one,"arg two that has , in it",arg three)' -> {key="some_id", values[3]={"arg one", "arg two that has , in it", "arg three"}
     class ParenthesisItem
     {
     public:
@@ -563,11 +564,11 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
 
 QString GraphDefinitionWidget::getGuideString()
 {
-    return tr(R"(<h2>Basic examples:</h2>
+    return tr(R"ENDTAG(<h2>Basic examples:</h2>
 <ul>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(name) "}
+    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(name)", "x_rows":"1:3; 5; 7:8"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
 </ul>
 
@@ -588,6 +589,11 @@ QString GraphDefinitionWidget::getGuideString()
             <ul>
                 <li>column_name(name): x-values will be taken from column that has name <i>name</i>.</li>
             </ul>
+        <li>x_rows:</li>
+            <ul>
+                <li>x_rows: List of rows to include as semicolon separated list, e.g. "1:3; 4; 7:8" means 1, 2, 3, 4, 7, 8.</li>
+                <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
+            </ul>
         <li>line_style:</li>
             <ul>
                 <li>none:        No line indicator</li>
@@ -607,7 +613,7 @@ QString GraphDefinitionWidget::getGuideString()
     <ul>
         <li>bin_count: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
     </ul>
-)");
+)ENDTAG");
 }
 
 void GraphDefinitionWidget::showGuideWidget()
@@ -691,7 +697,7 @@ public:
         return qobject_cast<QXYSeries*>(m_spXySeries.data());
     }
 
-    void setValues(InputSpan<double> xVals, InputSpan<double> yVals) override
+    void setValues(InputSpan<double> xVals, InputSpan<double> yVals, const std::vector<bool>* filterFlags = nullptr) override
     {
         auto pXySeries = getXySeriesImpl();
         if (!pXySeries || xVals.size() != yVals.size())
@@ -800,7 +806,7 @@ public:
         return qobject_cast<QCPGraph*>(m_spXySeries.data());
     }
 
-    void setValues(InputSpan<double> xVals, InputSpan<double> yVals) override
+    void setValues(InputSpan<double> xVals, InputSpan<double> yVals, const std::vector<bool>* pFilterFlags) override
     {
         auto xySeries = getXySeriesImpl();
         if (!xySeries || xVals.size() != yVals.size())
@@ -811,10 +817,25 @@ public:
         QVector<double> yTemp;
         xTemp.reserve(static_cast<int>(xVals.size()));
         yTemp.reserve(static_cast<int>(xVals.size()));
-        for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY)
+        if (pFilterFlags && pFilterFlags->size() == xVals.size())
         {
-            xTemp.push_back(*iterX);
-            yTemp.push_back(*iterY);
+            auto iterFlag = pFilterFlags->begin();
+            for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY, ++iterFlag)
+            {
+                if (*iterFlag)
+                {
+                    xTemp.push_back(*iterX);
+                    yTemp.push_back(*iterY);
+                }
+            }
+        }
+        else
+        {
+            for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY)
+            {
+                xTemp.push_back(*iterX);
+                yTemp.push_back(*iterY);
+            }
         }
         xySeries->setData(xTemp, yTemp);
     }
@@ -1915,6 +1936,25 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     DFG_QT_CHART_CONSOLE_INFO(tr("Refresh lasted %1 ms (repaint took %2 %)").arg(round<int>(1000 * elapsed)).arg(round<int>(100.0 * elapsedRepaint / elapsed)));
 }
 
+namespace
+{
+    template <class ValueCont_T>
+    std::vector<bool> createIncludeMask(const ::DFG_MODULE_NS(cont)::IntervalSet<int>* pIntervals, const ValueCont_T& rowValues)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(math);
+        if (!pIntervals)
+            return std::vector<bool>();
+        std::vector<bool> rv(rowValues.size(), true);
+        auto iter = rv.begin();
+        for (const auto& row : rowValues)
+        {
+            *iter++ = row >= 0 && row <= double(NumericTraits<int>::maxValue) && isIntegerValued(row) && pIntervals->hasValue(static_cast<int>(row));
+        }
+        return rv;
+    }
+}
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
 {
     if (!m_spCache)
@@ -1932,6 +1972,18 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
     DataSourceIndex nGraphSize = 0;
+
+    using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
+    IntervalSet xRows;
+    IntervalSet* pxRowSet = nullptr;
+
+    const auto xRowsStr = defEntry.fieldValueStr(ChartObjectFieldIdStr_xRows, []() { return StringUtf8(DFG_UTF8("*")); });
+    if (!xRowsStr.empty() && xRowsStr != DFG_UTF8("*"))
+    {
+        xRows = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(xRowsStr.rawStorage());
+        DFG_QT_CHART_CONSOLE_DEBUG(QString("Entry %1: x_rows-entry defines %2 row(s)").arg(defEntry.index()).arg(xRows.sizeOfSet()));
+        pxRowSet = &xRows;
+    }
 
     decltype(rChart.getSeriesByIndex(0)) spSeries;
 
@@ -1952,7 +2004,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
         //       to store new content to those directly or at least allow moving these storages to series
         //       so it wouldn't need to duplicate them.
-        spSeries->setValues(valueCont.keyRange(), valueCont.valueRange());
+        const auto includeMask = createIncludeMask(pxRowSet, valueCont.keyRange());
+        spSeries->setValues(valueCont.keyRange(), valueCont.valueRange(), (pxRowSet) ? &includeMask : nullptr);
     }
     else if (columnDatas.size() == 2)
     {
@@ -1987,15 +2040,18 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
                 continue;
             }
             // Current xIter and yIter point to the same row ->
-            // store (x,y) values to start of xValueMap.
-            const auto x = xIter->second;
-            const auto y = yIter->second;
+            // store (x,y) values to start of xValueMap if not filtered out.
+            if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow))) // Trusting xRow to have value that can be casted to int.
+            {
+                const auto x = xIter->second;
+                const auto y = yIter->second;
 
-            xValueMap.m_keyStorage[nActualSize] = x;
-            xValueMap.m_valueStorage[nActualSize] = y;
-            minMaxX(x);
-            minMaxY(y);
-            nActualSize++;
+                xValueMap.m_keyStorage[nActualSize] = x;
+                xValueMap.m_valueStorage[nActualSize] = y;
+                minMaxX(x);
+                minMaxY(y);
+                nActualSize++;
+            }
             ++xIter;
             ++yIter;
         }

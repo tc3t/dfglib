@@ -27,12 +27,11 @@ Terminology used in dfglib:
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
-
-// Note: reflect all changes done here to documentation in qt/graphTools.cpp getGuideString().
+// Note: reflect all changes done here to documentation in qt/graphTools.cpp getGuideString() (remember also examples).
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
-        // xy-type has properties: line_style, point_style, x_source
+        // xy-type has properties: line_style, point_style, x_source, x_rows
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
     // histogram-type has properties: bin_count
 
@@ -42,23 +41,27 @@ constexpr char ChartObjectFieldIdStr_name[] = "name";
 // bin_count
 constexpr char ChartObjectFieldIdStr_binCount[] = "bin_count";
 
-constexpr char ChartObjectFieldIdStr_xSource[] = "x_source"; // value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
+// x_rows, value is semicolon separated list defining an IntervalSet of row indexes. For example "1:4; 8; 12:13" means rows 1, 2, 3, 4, 8, 12, 13.
+constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
+
+// x_source, value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
+constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
     constexpr char ChartObjectSourceTypeStr_columnName[] = "column_name";
     //constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
 
-    // Line style entries
-    constexpr char ChartObjectFieldIdStr_lineStyle[] = "line_style";
-        constexpr char ChartObjectLineStyleStr_none[] = "none";
-        constexpr char ChartObjectLineStyleStr_basic[] = "basic";
-        constexpr char ChartObjectLineStyleStr_stepLeft[] = "step_left";
-        constexpr char ChartObjectLineStyleStr_stepRight[] = "step_right";
-        constexpr char ChartObjectLineStyleStr_stepMiddle[] = "step_middle";
-        constexpr char ChartObjectLineStyleStr_pole[] = "pole";
+// Line style entries
+constexpr char ChartObjectFieldIdStr_lineStyle[] = "line_style";
+    constexpr char ChartObjectLineStyleStr_none[] = "none";
+    constexpr char ChartObjectLineStyleStr_basic[] = "basic";
+    constexpr char ChartObjectLineStyleStr_stepLeft[] = "step_left";
+    constexpr char ChartObjectLineStyleStr_stepRight[] = "step_right";
+    constexpr char ChartObjectLineStyleStr_stepMiddle[] = "step_middle";
+    constexpr char ChartObjectLineStyleStr_pole[] = "pole";
 
-        // Point style entries
-        constexpr char ChartObjectFieldIdStr_pointStyle[] = "point_style";
-            constexpr char ChartObjectPointStyleStr_none[] = "none";
-            constexpr char ChartObjectPointStyleStr_basic[] = "basic";
+// Point style entries
+constexpr char ChartObjectFieldIdStr_pointStyle[] = "point_style";
+constexpr char ChartObjectPointStyleStr_none[] = "none";
+constexpr char ChartObjectPointStyleStr_basic[] = "basic";
 
 
 // Abstract class representing an entry that defines what kind of ChartObjects to create on chart.
@@ -147,7 +150,7 @@ public:
     virtual void setPointStyle(StringViewC) {}
 
     // Sets x values and y values. If given x and y ranges have different size, request is ignored.
-    virtual void setValues(InputSpan<double>, InputSpan<double>) = 0;
+    virtual void setValues(InputSpan<double>, InputSpan<double>, const std::vector<bool>* pFilterFlags = nullptr) = 0;
 }; // Class XySeries
 
 
