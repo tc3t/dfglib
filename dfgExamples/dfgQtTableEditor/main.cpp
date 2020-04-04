@@ -174,7 +174,7 @@ public:
                 auto sVal = mi.data().toString();
                 presentColumnIndexes.insert(mi.column());
                 sVal.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
-                rTable[mi.column()][mi.row()] = sVal.toDouble(); // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
+                rTable[mi.column()][dfg::qt::CsvItemModel::internalRowIndexToVisible(mi.row())] = sVal.toDouble(); // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
             });
 
             // Removing unused columns from rTable.
