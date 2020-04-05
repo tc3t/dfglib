@@ -26,7 +26,9 @@ public:
     bool hasValue(const T& val) const;
 
     // Returns the number of elements in set defined by the ranges
-    // Note: this may overflow. Guarantees not to trigger UB, but result may be wrong in case of overflow.
+    // Note: guaranteed to return valid value only if size is at most NumericTraits<size_t>::maxValue. If value is greater, returned value is faulty, but will not trigger UB.
+    //       In practice this means that if sizeof(T) < sizeof(size_t), don't need to worry about this. And in case of sizeof(T) == sizeof(size_t), only failing case is that 
+    //       intervals define the whole range [NumericTraits<T>::minValue, NumericTraits<T>::maxValue].
     sizeType sizeOfSet() const;
 
     sizeType intervalCount() const { return m_intervals.size(); }
@@ -49,33 +51,12 @@ void IntervalSet<T>::insert(const T& t)
     insertClosed(t, t);
 }
 
-namespace
-{
-    // TODO: should have generic safeInt operations in a separate module instead of quick hacks like this.
-    template <class T>
-    typename std::make_unsigned<T>::type safeDiff(const T& lesser, const T& greater, std::true_type)
-    {
-        if (greater < 0)
-            return greater - lesser;
-        else if (lesser < 0)
-            return static_cast<typename std::make_unsigned<T>::type>(greater) + ::DFG_MODULE_NS(math)::absAsUnsigned(lesser);
-        else
-            return static_cast<typename std::make_unsigned<T>::type>(greater - lesser);
-    }
-
-    template <class T>
-    typename std::make_unsigned<T>::type safeDiff(const T& lesser, const T& greater, std::false_type)
-    {
-        return greater - lesser; // T is unsigned.
-    }
-}
-
 template <class T>
 auto IntervalSet<T>::sizeOfSet() const -> sizeType
 {
     sizeType n = 0;
     for (const auto item : m_intervals)
-        n += safeDiff(item.first, item.second, std::is_signed<T>()) + sizeType(1);
+        n += ::DFG_MODULE_NS(math)::numericDistance(item.first, item.second) + sizeType(1);
     return n;
 }
 

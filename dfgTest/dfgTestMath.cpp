@@ -397,3 +397,45 @@ TEST(dfgMath, isIntegerValued)
         EXPECT_FALSE(isIntegerValued(std::numeric_limits<double>::infinity()));
     }
 }
+
+namespace
+{
+    template <class T>
+    void testnumericDistanceLimits()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(math);
+        using UnsignedT = typename std::make_unsigned<T>::type;
+        const auto minValue = NumericTraits<T>::minValue;
+        const auto maxValue = NumericTraits<T>::maxValue;
+        const auto minUValue = NumericTraits<UnsignedT>::minValue;
+        const auto maxUValue = NumericTraits<UnsignedT>::maxValue;
+        
+        EXPECT_EQ(maxUValue, numericDistance(minValue, maxValue));
+        EXPECT_EQ(maxUValue, numericDistance(maxValue, minValue));
+        EXPECT_EQ(maxUValue, numericDistance(minUValue, maxUValue));
+        EXPECT_EQ(maxUValue, numericDistance(maxUValue, minUValue));
+        EXPECT_EQ(UnsignedT(0), numericDistance(maxValue, maxValue));
+        EXPECT_EQ(UnsignedT(0), numericDistance(minValue, minValue));  
+    }
+}
+
+TEST(dfgMath, numericDistance)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+
+    testnumericDistanceLimits<int8>();
+    testnumericDistanceLimits<int16>();
+    testnumericDistanceLimits<int32>();
+    testnumericDistanceLimits<int64>();
+
+    EXPECT_EQ(uint8(254), numericDistance(int8(-127), int8(127)));
+    EXPECT_EQ(uint8(128), numericDistance(int8(-1), int8(127)));
+    EXPECT_EQ(uint8(128), numericDistance(int8(127), int8(-1)));
+    EXPECT_EQ(uint8(128), numericDistance(int8(0), int8(-128)));
+    EXPECT_EQ(uint8(128), numericDistance(int8(1), int8(-127)));
+    EXPECT_EQ(uint8(10), numericDistance(int8(12), int8(2)));
+    EXPECT_EQ(uint8(127), numericDistance(int8(127), int8(0)));
+    EXPECT_EQ(uint8(127), numericDistance(int8(-128), int8(-1)));
+}
