@@ -61,6 +61,9 @@ TEST(dfgIter, RangeIterator)
         EXPECT_EQ(vec[1], *(ptrRange.begin() + 1));
         EXPECT_EQ(vec[1], *(cptrRange.begin() + 1));
 
+        EXPECT_EQ(1, vecRange.front());
+        EXPECT_EQ(2, vecRange.back());
+
         std::vector<int> vecEmpty;
         auto vecEmptyRange = DFG_ROOT_NS::makeRange(vecEmpty);
         DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptrEmptyRange(vecEmptyRange);
@@ -85,6 +88,9 @@ TEST(dfgIter, RangeIterator)
         EXPECT_EQ(1, *range.begin());
         EXPECT_EQ(1, *range2.begin());
         EXPECT_EQ(range.begin(), range2.begin());
+
+        EXPECT_EQ(1, range.front());
+        EXPECT_EQ(1, range.back());
     }
 
     // Testing existence of operator[] for contiguous ranges.

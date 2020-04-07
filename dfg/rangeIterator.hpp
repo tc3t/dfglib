@@ -25,6 +25,10 @@ DFG_ROOT_NS_BEGIN
             iterator cend() const	{ return end(); }
             size_t size() const		{ return std::distance(begin(), end()); }
             bool empty() const      { return m_iterBegin == m_iterEnd; }
+                  value_type& front()       { return *begin(); } // Precondition: !empty()
+            const value_type& front() const { return *begin(); } // Precondition: !empty()
+                  value_type& back()        { auto i = end(); --i; return *i; } // Precondition: !empty()
+            const value_type& back() const  { auto i = end(); --i; return *i; } // Precondition: !empty()
 
             iterator m_iterBegin;
             iterator m_iterEnd;
