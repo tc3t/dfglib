@@ -164,8 +164,6 @@ public:
         keyVals.insert(ChartObjectFieldIdStr_pointStyle, ChartObjectPointStyleStr_basic);
         DFG_UNUSED(sColumnX);
         DFG_UNUSED(sColumnY);
-        //keyVals.insert(ChartObjectFieldIdStr_xSource, sColumnX);
-        //keyVals.insert(ChartObjectFieldIdStr_ySource, sColumnY);
         GraphDefinitionEntry rv;
         rv.m_items = QJsonDocument::fromVariant(keyVals);
         return rv;
@@ -278,9 +276,20 @@ public:
 
     std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
 
+    const RowToValueMap* columnDataByIndex(IndexT nColumnIndex);
+
+    IndexT columnCount() const;
+
+    IndexT firstColumnIndex() const; // GraphDataSource::invalidIndex() if not defined
+    IndexT lastColumnIndex() const; // GraphDataSource::invalidIndex() if not defined
+
+    decltype(ColumnToValuesMap().keyRange()) columnRange() const;
+
     bool isValid() const { return m_bIsValid; }
 
     RowToValueMap releaseOrCopy(const RowToValueMap* pId);
+
+    bool hasColumnIndex(const IndexT nCol) const;
 
     ColumnToValuesMap m_colToValuesMap;
     bool m_bIsValid = false;
@@ -292,6 +301,37 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDatas() const -> std::vec
     for (const auto& d : m_colToValuesMap)
         datas.push_back(d.second);
     return datas;
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnCount() const -> IndexT
+{
+    return m_colToValuesMap.size();
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnRange() const -> decltype(m_colToValuesMap.keyRange())
+{
+    return m_colToValuesMap.keyRange();
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataByIndex(IndexT nColumnIndex) -> const RowToValueMap*
+{
+    auto iter = m_colToValuesMap.find(nColumnIndex);
+    return (iter != m_colToValuesMap.end()) ? &iter->second : nullptr;
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::firstColumnIndex() const -> IndexT
+{
+    return (!m_colToValuesMap.empty()) ? m_colToValuesMap.frontKey() : GraphDataSource::invalidIndex();
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::lastColumnIndex() const -> IndexT
+{
+    return (!m_colToValuesMap.empty()) ? m_colToValuesMap.backKey() : GraphDataSource::invalidIndex();
+}
+
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::hasColumnIndex(const IndexT nCol) const
+{
+    return m_colToValuesMap.hasKey(nCol);
 }
 
 namespace
@@ -350,57 +390,18 @@ namespace
 
 void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry)
 {
+    DFG_UNUSED(defEntry);
     m_colToValuesMap.clear();
 
-    DataSourceIndex xColumnIndex = source.invalidIndex();
-
-    if (defEntry.isType(ChartObjectChartTypeStr_xy))
-    {
-        const auto xSource = defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); });
-        if (!xSource.empty())
-        {
-            const ParenthesisItem items(xSource);
-            if (items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnName))
-            {
-                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unknown x source type, got %2").arg(defEntry.index()).arg(viewToString(items.key())));
-                return;
-            }
-            if (items.valueCount() != 1)
-            {
-                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unexpected value count for %2: expected 1, got %3").arg(defEntry.index()).arg(ChartObjectSourceTypeStr_columnName).arg(items.valueCount()));
-                return;
-            }
-            const auto sColumnName = items.value(0);
-            xColumnIndex = source.columnIndexByName(sColumnName);
-            if (xColumnIndex == source.invalidIndex())
-            {
-                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToString(sColumnName)));
-                return;
-            }
-        }
-    }
-
-    if (xColumnIndex != source.invalidIndex())
-    {
-        m_colToValuesMap.setSorting(false);
-        m_colToValuesMap[xColumnIndex] = RowToValueMap();
-    }
-
-    bool bXcolFound = false;
     source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
     {
-        bXcolFound = (bXcolFound || c == xColumnIndex);
         auto insertRv = m_colToValuesMap.insert(std::move(c), RowToValueMap());
-        if (insertRv.second) // If new RowToValueMap was added, temporarily disabling sorting.
-            insertRv.first->second.setSorting(false);
+        if (insertRv.second) // Was new inserted?
+            insertRv.first->second.setSorting(false); // Disabling sorting while adding
         insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
         insertRv.first->second.m_valueStorage.push_back(val.toDouble());
     });
-    if (xColumnIndex != source.invalidIndex() && !bXcolFound)
-    {
-        DFG_QT_CHART_CONSOLE_INFO("Didn't find x column from selection");
-        m_colToValuesMap.clear();
-    }
+
     // Sorting values by row now that all data has been added.
     for (auto iter = m_colToValuesMap.begin(), iterEnd = m_colToValuesMap.end(); iter != iterEnd; ++iter)
     {
@@ -568,7 +569,7 @@ QString GraphDefinitionWidget::getGuideString()
 <ul>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(name)", "x_rows":"1:3; 5; 7:8"}
+    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(x col name)", "y_source":"column_name(y col name)", "x_rows":"1:3; 5; 7:8"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
 </ul>
 
@@ -588,6 +589,10 @@ QString GraphDefinitionWidget::getGuideString()
         <li>x_source:</li>
             <ul>
                 <li>column_name(name): x-values will be taken from column that has name <i>name</i>.</li>
+            </ul>
+        <li>y_source:</li>
+            <ul>
+                <li>column_name(name): y-values will be taken from column that has name <i>name</i>.</li>
             </ul>
         <li>x_rows:</li>
             <ul>
@@ -1955,6 +1960,66 @@ namespace
     }
 }
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
+{
+
+    // Returns defaultValue if not set, GraphDataSource::invalidIndex() if set but not found.
+    auto getChosenColumnIndex(const TableSelectionCacheItem& cacheData,
+                              GraphDataSource& dataSource,
+                              const decltype(ChartObjectFieldIdStr_xSource)& id,
+                              const GraphDefinitionEntry& defEntry,
+                              const GraphDataSource::DataSourceIndex defaultValue) -> GraphDataSource::DataSourceIndex
+    {
+        const auto sSource = defEntry.fieldValueStr(id, [] { return StringUtf8(); });
+        if (sSource.empty())
+            return defaultValue;
+        const ParenthesisItem items(sSource);
+        if (items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnName))
+        {
+            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unknown source type, got %2").arg(defEntry.index()).arg(viewToString(items.key())));
+            return GraphDataSource::invalidIndex();
+        }
+        if (items.valueCount() != 1)
+        {
+            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unexpected value count for %2: expected 1, got %3").arg(defEntry.index()).arg(ChartObjectSourceTypeStr_columnName).arg(items.valueCount()));
+            return GraphDataSource::invalidIndex();
+        }
+        const auto sColumnName = items.value(0);
+        const auto columnIndex = dataSource.columnIndexByName(sColumnName);
+        if (columnIndex == dataSource.invalidIndex() || !cacheData.hasColumnIndex(columnIndex))
+        {
+            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToString(sColumnName)));
+            return GraphDataSource::invalidIndex();
+        }
+        return columnIndex;
+    }
+
+    template <class ColRange_T>
+    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange)
+    {
+        if (colRange.size() < 2)
+            return;
+        const auto indexOf = [&](auto i) { return size_t(std::find(colRange.begin(), colRange.end(), i) - colRange.begin()); };
+        const auto isPresent = [&](auto i) {return indexOf(i) < colRange.size(); };
+        
+        if (isPresent(x)) // Case: x was defined
+        {
+            if (!isPresent(y)) // y is not set?
+                y = colRange[(indexOf(x) + 1) % colRange.size()]; // Using next column as y (wrapping to beginning if x is last).
+        }
+        else if (isPresent(y)) // case: x is not defined and y defined
+        {
+            const auto indexOfy = indexOf(y);
+            x = (indexOfy > 0) ? colRange[indexOfy - 1] : colRange.back(); // Using one before y-column as x (wrapping to end if y is first)
+        }
+        else // Case: both are undefined, using defaults i.e. first column as x and second as y
+        {
+            x = colRange[0];
+            y = colRange[1];
+        }
+    }
+} } } // dfg:::qt::<unnamed>
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
 {
     if (!m_spCache)
@@ -1965,9 +2030,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     if (!optData)
         return;
     
-    auto& colToValuesMap = *optData;
-
-    const auto columnDatas = colToValuesMap.columnDatas();
+    auto& tableData = *optData;
 
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
@@ -1987,41 +2050,93 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
     decltype(rChart.getSeriesByIndex(0)) spSeries;
 
-    if (columnDatas.size() == 1)
+    if (tableData.columnCount() == 1)
     {
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
+        const auto nFirstIndex = tableData.firstColumnIndex();
+        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nFirstIndex + 1);
+        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nFirstIndex + 1);
+        if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex()) // Either column was defined but not found?
+            return;
+        if (xColumnIndex != nFirstIndex && yColumnIndex != nFirstIndex) // Case: neither column was selected, default to using selected as y
+            yColumnIndex = nFirstIndex;
 
+        auto pColumnDataX = tableData.columnDataByIndex(xColumnIndex);
+        auto pColumnDataY = tableData.columnDataByIndex(yColumnIndex);
+        
+        if (!pColumnDataX && !pColumnDataY)
+        {
+            DFG_ASSERT(false); // Not expected to ever get here.
+            return;
+        }
+
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
         if (!spSeries)
         {
             DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
             return;
         }
 
-        const auto& valueCont = columnDatas.front().get();
-        nGraphSize = valueCont.size();
-        minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.keyRange(), minMaxX);
-        minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(valueCont.valueRange(), minMaxY);
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
+
+        decltype(pColumnDataX->keyRange()) xRange;
+        decltype(xRange) yRange;
+
+        if (pColumnDataX && pColumnDataY)
+        {
+            // Since there was only one column selected, x and y should be the same.
+            DFG_ASSERT_CORRECTNESS(pColumnDataX == pColumnDataY); // If this fails, there's logic bug somewhere.
+            xRange = pColumnDataX->valueRange();
+            yRange = pColumnDataY->valueRange();
+        }
+        else if (pColumnDataY)
+        {
+            xRange = pColumnDataY->keyRange();
+            yRange = pColumnDataY->valueRange();
+        }
+        else if (pColumnDataX)
+        {
+            xRange = pColumnDataX->valueRange();
+            yRange = pColumnDataX->keyRange();
+        }
+
+        nGraphSize = xRange.size();
+        minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(xRange, minMaxX);
+        minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(yRange, minMaxY);
         // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
         //       to store new content to those directly or at least allow moving these storages to series
         //       so it wouldn't need to duplicate them.
-        const auto includeMask = createIncludeMask(pxRowSet, valueCont.keyRange());
-        spSeries->setValues(valueCont.keyRange(), valueCont.valueRange(), (pxRowSet) ? &includeMask : nullptr);
+        const auto includeMask = createIncludeMask(pxRowSet, xRange); // TODO: probably should be omitted if xRange is not rows.
+        spSeries->setValues(xRange, yRange, (pxRowSet) ? &includeMask : nullptr);
     }
-    else if (columnDatas.size() == 2)
+    else if (tableData.columnCount() >= 2)
     {
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
+        const auto columns = tableData.columnRange();
+        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, tableData.lastColumnIndex() + 1);
+        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, tableData.lastColumnIndex() + 1);
 
+        if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
+            return; // Either column was defined but not found.
+
+        makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns);
+        
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
         if (!spSeries)
         {
             DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
             return;
         }
 
+        auto pXdata = tableData.columnDataByIndex(xColumnIndex);
+        auto pYdata = tableData.columnDataByIndex(yColumnIndex);
+
+        if (!pXdata || !pYdata)
+            return;
+
         // xValueMap is also used as final (x,y) table passed to series.
         // releaseOrCopy() will return either moved data or copy of it.
-        auto xValueMap = colToValuesMap.releaseOrCopy(&columnDatas.front().get());
+        auto xValueMap = (pXdata != pYdata) ? tableData.releaseOrCopy(pXdata) : *pXdata;
         xValueMap.setSorting(false);
-        const auto& yValueMap = columnDatas.back().get();
+        const auto& yValueMap = *pYdata;
         auto xIter = xValueMap.cbegin();
         auto yIter = yValueMap.cbegin();
         DataSourceIndex nActualSize = 0;

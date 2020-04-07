@@ -31,7 +31,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
-        // xy-type has properties: line_style, point_style, x_source, x_rows
+        // xy-type has properties: line_style, point_style, x_source, y_source, x_rows
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
     // histogram-type has properties: bin_count
 
@@ -44,10 +44,10 @@ constexpr char ChartObjectFieldIdStr_binCount[] = "bin_count";
 // x_rows, value is semicolon separated list defining an IntervalSet of row indexes. For example "1:4; 8; 12:13" means rows 1, 2, 3, 4, 8, 12, 13.
 constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 
-// x_source, value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
+// x_source/y_source, value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
 constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
+constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
     constexpr char ChartObjectSourceTypeStr_columnName[] = "column_name";
-    //constexpr char ChartObjectFieldIdStr_ySource[]      = "y_source";
 
 // Line style entries
 constexpr char ChartObjectFieldIdStr_lineStyle[] = "line_style";
