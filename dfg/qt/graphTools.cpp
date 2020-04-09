@@ -2076,8 +2076,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
             return;
         }
 
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
-
         decltype(pColumnDataX->keyRange()) xRange;
         decltype(xRange) yRange;
 
