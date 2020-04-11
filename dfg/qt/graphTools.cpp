@@ -593,7 +593,7 @@ QString GraphDefinitionWidget::getGuideString()
 <ul>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(x col name)", "y_source":"column_name(y col name)", "x_rows":"1:3; 5; 7:8"}
+    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(x col name)", "y_source":"column_name(y col name)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
 </ul>
 
@@ -605,7 +605,8 @@ QString GraphDefinitionWidget::getGuideString()
         <li>xy       : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
         <li>histogram: Histogram</li>
     </ul>
-   <li>name: name of the object, shown e.g. in legend.
+   <li>name: name of the object, shown e.g. in legend.</li>
+   <li>panel_id: Panel in which chart object is to be drawn to. Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
 </ul>
 
 <h2>Fields for type <i>xy</i></h2>
