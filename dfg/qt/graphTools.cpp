@@ -2130,7 +2130,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry));
         if (!spSeries)
         {
-            DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
             return;
         }
 
@@ -2178,7 +2178,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry));
         if (!spSeries)
         {
-            DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
             return;
         }
 
