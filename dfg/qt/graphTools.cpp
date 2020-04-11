@@ -1108,11 +1108,17 @@ public:
     ChartObjectHolder<XySeries> getSeriesByIndex(const XySeriesCreationParam& param) override;
     ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) override;
 
-    ChartObjectHolder<Histogram> createHistogram(const AbstractChartControlItem& defEntry, InputSpan<double> vals) override;
+    ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
 
     bool isLegendSupported() const override { return true; }
     bool isLegendEnabled() const override;
     bool enableLegend(bool) override;
+
+    // Implementation details
+    QCPAxisRect* getAxisRect(const ChartObjectCreationParam& param);
+    QCPAxis* getAxis(const ChartObjectCreationParam& param, QCPAxis::AxisType axisType);
+    QCPAxis* getXAxis(const ChartObjectCreationParam& param);
+    QCPAxis* getYAxis(const ChartObjectCreationParam& param);
 
     QObjectStorage<QCustomPlot> m_spChartView;
 }; // ChartCanvasQCustomPlot
@@ -1272,57 +1278,44 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
     auto p = getWidget();
     if (!p || param.nIndex < 0)
         return nullptr;
-    auto panelId = ParenthesisItem::fromStableView(param.panelId());
-    if (!param.panelId().empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
+
+    auto pXaxis = getXAxis(param);
+    auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
+    if (!pXaxis || !pYaxis)
     {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to create XySeries: invalid panel definition '%1'").arg(QString::fromUtf8(param.panelId().dataRaw(), static_cast<int>(param.panelId().length()))));
-        return nullptr;
-    }
-    auto nRow = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(0);
-    auto nCol = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(1);
-    if (nRow < 1 || nCol < 1 || nRow > 1000 || nCol > 1000)
-    {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid panel grid index, expecting [1, 1000], got row = %1, column = %2").arg(nRow).arg(nCol));
-        return nullptr;
-    }
-    // Converting from user's 1-based index to internal 0-based.
-    --nRow; --nCol;
-    auto pLayout = p->plotLayout();
-    if (!pLayout)
-    {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: layout object does not exist"));
-        return nullptr;
-    }
-    auto pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
-    if (!pExistingAxisRect)
-    {
-        pLayout->addElement(nRow, nCol, new QCPAxisRect(p)); // QCPAxisRect is owned by pLayout.
-        pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
-    }
-    if (!pExistingAxisRect)
-    {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: no panel object"));
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to obtain axis for xySeries"));
         return nullptr;
     }
 
     while (param.nIndex >= p->graphCount())
-        p->addGraph(pExistingAxisRect->axis(QCPAxis::atBottom), pExistingAxisRect->axis(QCPAxis::atLeft));
+        p->addGraph(pXaxis, pYaxis);
     return getSeriesByIndex(param);
 }
 
-auto ChartCanvasQCustomPlot::createHistogram(const AbstractChartControlItem& defEntry, InputSpan<double> valueRange) -> ChartObjectHolder<Histogram>
+auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param) -> ChartObjectHolder<Histogram>
 {
     auto p = getWidget();
     if (!p)
         return nullptr;
 
+    const auto valueRange = param.valueRange;
+
     auto minMaxPair = std::minmax_element(valueRange.cbegin(), valueRange.cend());
     if (*minMaxPair.first >= *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
         return nullptr;
 
-    auto spHistogram = std::make_shared<HistogramQCustomPlot>(new QCPBars(p->xAxis, p->yAxis)); // Note: QCPBars is owned by QCustomPlot-object.
+    auto pXaxis = getXAxis(param);
+    auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
 
-    const auto nBinCount = defEntry.fieldValue<unsigned int>(ChartObjectFieldIdStr_binCount, 100);
+    if (!pXaxis || !pYaxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create histogram, no suitable target panel found'"));
+        return nullptr;
+    }
+
+    auto spHistogram = std::make_shared<HistogramQCustomPlot>(new QCPBars(pXaxis, pYaxis)); // Note: QCPBars is owned by QCustomPlot-object.
+
+    const auto nBinCount = param.definitionEntry().fieldValue<unsigned int>(ChartObjectFieldIdStr_binCount, 100);
 
     try
     {
@@ -1376,6 +1369,63 @@ bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
     }
     else
         return false;
+}
+
+auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) -> QCPAxisRect*
+{
+    auto p = getWidget();
+    if (!p)
+        return nullptr;
+
+    auto panelId = ParenthesisItem::fromStableView(param.panelId());
+    if (!param.panelId().empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to retrieve axis: invalid panel definition '%1'").arg(QString::fromUtf8(param.panelId().dataRaw(), static_cast<int>(param.panelId().length()))));
+        return nullptr;
+    }
+    auto nRow = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(0);
+    auto nCol = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(1);
+    if (nRow < 1 || nCol < 1 || nRow > 1000 || nCol > 1000)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid panel grid index, expecting [1, 1000], got row = %1, column = %2").arg(nRow).arg(nCol));
+        return nullptr;
+    }
+    // Converting from user's 1-based index to internal 0-based.
+    --nRow; --nCol;
+    auto pLayout = p->plotLayout();
+    if (!pLayout)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: layout object does not exist"));
+        return nullptr;
+    }
+    auto pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
+    if (!pExistingAxisRect)
+    {
+        pLayout->addElement(nRow, nCol, new QCPAxisRect(p)); // QCPAxisRect is owned by pLayout.
+        pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
+    }
+    if (!pExistingAxisRect)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: no panel object"));
+        return nullptr;
+    }
+    return pExistingAxisRect;
+}
+
+auto ChartCanvasQCustomPlot::getAxis(const ChartObjectCreationParam& param, const QCPAxis::AxisType axisType) -> QCPAxis*
+{
+    auto pAxisRect = getAxisRect(param);
+    return (pAxisRect) ? pAxisRect->axis(axisType) : nullptr;
+}
+
+auto ChartCanvasQCustomPlot::getXAxis(const ChartObjectCreationParam& param) -> QCPAxis*
+{
+    return getAxis(param, QCPAxis::atBottom);
+}
+
+auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> QCPAxis*
+{
+    return getAxis(param, QCPAxis::atLeft);
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -2269,7 +2319,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         return;
     }
 
-    auto spHistogram = rChart.createHistogram(defEntry, makeRange(values));
+    auto spHistogram = rChart.createHistogram(HistogramCreationParam(defEntry, makeRange(values)));
     if (!spHistogram)
         return;
     ++nHistogramCounter;

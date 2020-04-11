@@ -33,7 +33,7 @@ constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
         // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
-    // histogram-type has properties: bin_count // TODO: panel_id
+    // histogram-type has properties: bin_count, panel_id
 
 // name: this will show e.g. in legend.
 constexpr char ChartObjectFieldIdStr_name[] = "name";
@@ -174,26 +174,65 @@ public:
 template <class T>
 using ChartObjectHolder = std::shared_ptr<T>;
 
-class XySeriesCreationParam
+
+class ChartObjectCreationParam
 {
 public:
-    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry);
+    ChartObjectCreationParam(const AbstractChartControlItem& defEntry);
 
+    const AbstractChartControlItem& definitionEntry() const;
     StringViewUtf8 panelId() const;
 
-    int nIndex;
     StringUtf8 sPanelId;
+    const AbstractChartControlItem& m_rDefEntry;
 };
 
-XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry)
-    : nIndex(argIndex)
+ChartObjectCreationParam::ChartObjectCreationParam(const AbstractChartControlItem& defEntry) :
+    m_rDefEntry(defEntry)
 {
     sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId, []() { return StringUtf8(); });
 }
 
-auto XySeriesCreationParam::panelId() const -> StringViewUtf8
+const AbstractChartControlItem& ChartObjectCreationParam::definitionEntry() const
+{
+    return m_rDefEntry;
+}
+
+auto ChartObjectCreationParam::panelId() const -> StringViewUtf8
 {
     return sPanelId;
+}
+
+class XySeriesCreationParam : public ChartObjectCreationParam
+{
+public:
+    using BaseClass = ChartObjectCreationParam;
+    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry);
+
+    int nIndex;
+};
+
+XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry)
+    : BaseClass(defEntry)
+    , nIndex(argIndex)
+{
+    
+}
+
+class HistogramCreationParam : public ChartObjectCreationParam
+{
+public:
+    using BaseClass = ChartObjectCreationParam;
+    HistogramCreationParam(const AbstractChartControlItem& defEntry, InputSpan<double>);
+
+    InputSpan<double> valueRange;
+};
+
+HistogramCreationParam::HistogramCreationParam(const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan)
+    : BaseClass(defEntry)
+    , valueRange(inputSpan)
+{
+
 }
 
 class ChartCanvas
@@ -222,7 +261,7 @@ public:
     virtual bool isLegendEnabled() const { return false; }
     virtual bool enableLegend(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
 
-    virtual ChartObjectHolder<Histogram> createHistogram(const AbstractChartControlItem&, InputSpan<double>) { return nullptr; }
+    virtual ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam&) { return nullptr; }
 
     // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
     virtual void repaintCanvas() = 0;
