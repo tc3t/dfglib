@@ -49,17 +49,15 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
         {
             if (!b)
             {
-                const auto nParamLengths = std::strlen(pszAssertType) + std::strlen(pszFile) + std::strlen(pszFuncName) + std::strlen(pszExp);
+                const auto nParamLengths = std::strlen(pszAssertType) + std::strlen(pszFuncName) + std::strlen(pszExp);
                 std::vector<char> chars(nParamLengths + 100);
 #ifdef _MSC_VER
                 sprintf_s(chars.data(), chars.size(),
 #else
                 sprintf(chars.data(),
 #endif
-                    "%s. File %s, line: %d, function: %s\nAssert expression:\n%s",
+                    "%s.\nFunction: %s\nAssert expression: %s",
                     pszAssertType,
-                    pszFile,
-                    nLine,
                     pszFuncName,
                     pszExp);
                 onAssertFailure(pszFile, nLine, chars.data());
