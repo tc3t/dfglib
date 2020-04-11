@@ -349,20 +349,38 @@ namespace
         ParenthesisItem(const StringT& sv);
         ParenthesisItem(StringT&&) = delete;
 
+        // Constructs from StringView promised to outlive 'this'
+        static ParenthesisItem fromStableView(StringView sv);
+
         StringView key() const { return m_key; }
 
         size_t valueCount() const { return m_values.size(); }
+
+        template <class T>
+        T valueAs(const size_t nIndex) const
+        {
+            return ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex));
+        }
 
         StringView value(const size_t nIndex) const
         {
             return (isValidIndex(m_values, nIndex)) ? m_values[nIndex] : StringView();
         }
 
+    private:
+        ParenthesisItem(const StringView& sv);
+
+    public:
         StringView m_key;
         std::vector<StringT> m_values;
     };
 
-    ParenthesisItem::ParenthesisItem(const StringT& sv)
+    ParenthesisItem::ParenthesisItem(const StringT& s) :
+        ParenthesisItem(StringView(s))
+    {
+    }
+
+    ParenthesisItem::ParenthesisItem(const StringView& sv)
     {
         auto iterOpen = std::find(sv.beginRaw(), sv.endRaw(), '(');
         if (iterOpen == sv.endRaw())
@@ -386,6 +404,12 @@ namespace
             m_values.push_back(StringT(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(p + nSize)));
         });
     }
+
+    auto ParenthesisItem::fromStableView(StringView sv) -> ParenthesisItem
+    {
+        return ParenthesisItem(sv);
+    }
+
 } // unnamed namespace
 
 void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry)
@@ -980,15 +1004,6 @@ public:
         //pChart->addSeries(new QScatterSeries(m_spChartView.get())); // chart takes ownership
     }
 
-    ChartObjectHolder<XySeries> getFirstXySeries() override
-    {
-        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
-        if (!pChart)
-            return nullptr;
-        auto seriesList = pChart->series();
-        return (!seriesList.isEmpty()) ? ChartObjectHolder<XySeries>(new XySeriesQtChart(seriesList.front())) : nullptr;
-    }
-
     void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
     {
         if (!pSeries || !m_spChartView)
@@ -1070,11 +1085,6 @@ public:
         m_spChartView->addGraph();
     }
 
-    ChartObjectHolder<XySeries> getFirstXySeries() override
-    {
-        return getSeriesByIndex(0);
-    }
-
     void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
     {
         DFG_UNUSED(pSeries);
@@ -1095,8 +1105,8 @@ public:
 
     void repaintCanvas() override;
 
-    ChartObjectHolder<XySeries> getSeriesByIndex(int nIndex) override;
-    ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int nIndex) override;
+    ChartObjectHolder<XySeries> getSeriesByIndex(const XySeriesCreationParam& param) override;
+    ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) override;
 
     ChartObjectHolder<Histogram> createHistogram(const AbstractChartControlItem& defEntry, InputSpan<double> vals) override;
 
@@ -1232,24 +1242,72 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     if (!p)
         return;
     p->clearPlottables();
+
+    // Clearing excess panels (AxisRect's)
+    {
+        auto axisRects = p->axisRects();
+        if (!axisRects.isEmpty())
+            axisRects.pop_front(); // Not deleting default AxisRect
+        auto pLayout = p->plotLayout();
+        if (pLayout)
+        {
+            for (auto pAxisRect : axisRects)
+                pLayout->remove(pAxisRect); // This also deletes pAxisRect
+            pLayout->simplify(); // This removes the empty space that removed items free.
+        }
+    }
+
     // Note: legend is not included in removables.
     repaintCanvas();
 }
 
-auto ChartCanvasQCustomPlot::getSeriesByIndex(const int nIndex) -> ChartObjectHolder<XySeries>
+auto ChartCanvasQCustomPlot::getSeriesByIndex(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
 {
     auto p = getWidget();
-    return (p && nIndex >= 0 && nIndex < p->graphCount()) ? ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(nIndex))) : nullptr;
+    return (p && param.nIndex >= 0 && param.nIndex < p->graphCount()) ? ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(param.nIndex))) : nullptr;
 }
 
-auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const int nIndex) -> ChartObjectHolder<XySeries>
+auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
 {
     auto p = getWidget();
-    if (!p || nIndex < 0)
+    if (!p || param.nIndex < 0)
         return nullptr;
-    while (nIndex >= p->graphCount())
-        p->addGraph();
-    return getSeriesByIndex(nIndex);
+    auto panelId = ParenthesisItem::fromStableView(param.panelId());
+    if (!param.panelId().empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to create XySeries: invalid panel definition '%1'").arg(QString::fromUtf8(param.panelId().dataRaw(), static_cast<int>(param.panelId().length()))));
+        return nullptr;
+    }
+    auto nRow = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(0);
+    auto nCol = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(1);
+    if (nRow < 1 || nCol < 1 || nRow > 1000 || nCol > 1000)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid panel grid index, expecting [1, 1000], got row = %1, column = %2").arg(nRow).arg(nCol));
+        return nullptr;
+    }
+    // Converting from user's 1-based index to internal 0-based.
+    --nRow; --nCol;
+    auto pLayout = p->plotLayout();
+    if (!pLayout)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: layout object does not exist"));
+        return nullptr;
+    }
+    auto pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
+    if (!pExistingAxisRect)
+    {
+        pLayout->addElement(nRow, nCol, new QCPAxisRect(p)); // QCPAxisRect is owned by pLayout.
+        pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
+    }
+    if (!pExistingAxisRect)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: no panel object"));
+        return nullptr;
+    }
+
+    while (param.nIndex >= p->graphCount())
+        p->addGraph(pExistingAxisRect->axis(QCPAxis::atBottom), pExistingAxisRect->axis(QCPAxis::atLeft));
+    return getSeriesByIndex(param);
 }
 
 auto ChartCanvasQCustomPlot::createHistogram(const AbstractChartControlItem& defEntry, InputSpan<double> valueRange) -> ChartObjectHolder<Histogram>
@@ -2048,7 +2106,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         pxRowSet = &xRows;
     }
 
-    decltype(rChart.getSeriesByIndex(0)) spSeries;
+    decltype(rChart.getSeriesByIndex(XySeriesCreationParam(0, defEntry))) spSeries;
 
     if (tableData.columnCount() == 1)
     {
@@ -2069,7 +2127,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
             return;
         }
 
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry));
         if (!spSeries)
         {
             DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");
@@ -2117,7 +2175,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
         makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns);
         
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(nGraphCounter++);
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry));
         if (!spSeries)
         {
             DFG_ASSERT_WITH_MSG(false, "Internal error, unexpected series type");

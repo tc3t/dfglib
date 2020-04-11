@@ -31,9 +31,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
-        // xy-type has properties: line_style, point_style, x_source, y_source, x_rows
+        // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
-    // histogram-type has properties: bin_count
+    // histogram-type has properties: bin_count // TODO: panel_id
 
 // name: this will show e.g. in legend.
 constexpr char ChartObjectFieldIdStr_name[] = "name";
@@ -48,6 +48,11 @@ constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
 constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
     constexpr char ChartObjectSourceTypeStr_columnName[] = "column_name";
+
+// panel_id: defines panel to which ChartObject is to be assigned to.
+//      Possible values:
+//          -grid(r, c): instructs to put chart object to position row = r, column = c on a panel grid. Indexing is 1-based. Value (1,1) means top left corner.
+constexpr char ChartObjectFieldIdStr_panelId[] = "panel_id";
 
 // Line style entries
 constexpr char ChartObjectFieldIdStr_lineStyle[] = "line_style";
@@ -169,6 +174,27 @@ public:
 template <class T>
 using ChartObjectHolder = std::shared_ptr<T>;
 
+class XySeriesCreationParam
+{
+public:
+    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry);
+
+    StringViewUtf8 panelId() const;
+
+    int nIndex;
+    StringUtf8 sPanelId;
+};
+
+XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry)
+    : nIndex(argIndex)
+{
+    sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId, []() { return StringUtf8(); });
+}
+
+auto XySeriesCreationParam::panelId() const -> StringViewUtf8
+{
+    return sPanelId;
+}
 
 class ChartCanvas
 {
@@ -183,16 +209,14 @@ public:
 
     virtual void setTitle(StringViewUtf8) {}
 
-    virtual ChartObjectHolder<XySeries> getFirstXySeries() { return nullptr; }
-
     virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
 
     virtual void addContextMenuEntriesForChartObjects(void*) {} // TODO: no void*
 
     virtual void removeAllChartObjects() {}
 
-    virtual ChartObjectHolder<XySeries> getSeriesByIndex(int) { return nullptr; }
-    virtual ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(int) { return nullptr; }
+    virtual ChartObjectHolder<XySeries> getSeriesByIndex(const XySeriesCreationParam&) { return nullptr; }
+    virtual ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam&) { return nullptr; }
 
     virtual bool isLegendSupported() const { return false; }
     virtual bool isLegendEnabled() const { return false; }
