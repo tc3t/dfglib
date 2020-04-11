@@ -1113,6 +1113,7 @@ public:
     bool isLegendSupported() const override { return true; }
     bool isLegendEnabled() const override;
     bool enableLegend(bool) override;
+    void createLegends() override;
 
     // Implementation details
     QCPAxisRect* getAxisRect(const ChartObjectCreationParam& param);
@@ -1121,6 +1122,8 @@ public:
     QCPAxis* getYAxis(const ChartObjectCreationParam& param);
 
     QObjectStorage<QCustomPlot> m_spChartView;
+    bool m_bLegendEnabled = false;
+    QVector<QCPLegend*> m_legends; // All but the default legend
 }; // ChartCanvasQCustomPlot
 
 namespace
@@ -1249,6 +1252,12 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
         return;
     p->clearPlottables();
 
+    // Removing legends (would get deleted automatically with AxisRect's, but doing it here expclitly to keep m_legends up-to-date.)
+    {
+        qDeleteAll(m_legends);
+        m_legends.clear();
+    }
+
     // Clearing excess panels (AxisRect's)
     {
         auto axisRects = p->axisRects();
@@ -1263,7 +1272,6 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
         }
     }
 
-    // Note: legend is not included in removables.
     repaintCanvas();
 }
 
@@ -1354,21 +1362,96 @@ void ChartCanvasQCustomPlot::repaintCanvas()
 
 bool ChartCanvasQCustomPlot::isLegendEnabled() const
 {
-    auto p = getWidget();
-    return p && p->legend && p->legend->visible();
+    return m_bLegendEnabled;
 }
 
 bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
 {
-    auto p = getWidget();
-    if (p && p->legend)
+    if (m_bLegendEnabled == bEnable)
+        return m_bLegendEnabled;
+
+    m_bLegendEnabled = bEnable;
+
+    if (m_bLegendEnabled)
     {
-        p->legend->setVisible(bEnable);
-        repaintCanvas();
-        return bEnable;
+        createLegends();
     }
     else
-        return false;
+    {
+        qDeleteAll(m_legends);
+        m_legends.clear();
+        auto p = getWidget();
+        if (p && p->legend)
+            p->legend->setVisible(false);
+    }
+    repaintCanvas();
+    return m_bLegendEnabled;
+}
+
+void ChartCanvasQCustomPlot::createLegends()
+{
+    // Creating legends for all AxisRects
+    auto p = getWidget();
+    if (!p)
+        return;
+
+    // Clearing old legends
+    {
+        if (p->legend)
+            p->legend->clearItems();
+        p->legend->clearItems();
+
+        qDeleteAll(m_legends);
+        m_legends.clear();
+    }
+    
+    auto axisRects = p->axisRects();
+    QVector<QCPAbstractPlottable*> plottables;
+    for (int i = 0, nCount = p->plottableCount(); i < nCount; ++i)
+        plottables.push_back(p->plottable(i));
+    for (const auto& pAxisRect : axisRects)
+    {
+        if (!pAxisRect)
+            continue;
+        if (plottables.isEmpty())
+            break; // All plottables added to legends, nothing left to do.
+
+        QCPLegend* pLegend = nullptr;
+        if (pAxisRect != p->axisRect())
+        {
+            pLegend = new QCPLegend;
+            m_legends.push_back(pLegend);
+            auto pLayout = pAxisRect->insetLayout();
+            if (!pLayout)
+            {
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error inserLayout() returned null"));
+                continue;
+            }
+            pLayout->addElement(pLegend , Qt::AlignTop | Qt::AlignRight);
+            pLegend->setLayer(QLatin1String("legend"));
+        }
+        else // Case: default AxisRect, uses existing legend. Would crash if creating another.
+            pLegend = p->legend;
+
+        if (!pLegend)
+            continue;
+
+        // Add all plottables in this AxisRect to legend.
+        for (int i = 0; i < plottables.size();)
+        {
+            auto pPlottable = plottables[i];
+            if (pPlottable->keyAxis() == pAxisRect->axis(QCPAxis::atBottom)) // This is probably not very future proof in case of advanced axis options.
+            {
+                pPlottable->addToLegend(pLegend);
+                plottables.remove(i);
+            }
+            else
+                ++i;
+        }
+        pLegend->setVisible(true);
+    }
+    if (!plottables.isEmpty())
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Number of items that didn't end up in any legend: %1").arg(plottables.size()));
 }
 
 auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) -> QCPAxisRect*
@@ -2041,6 +2124,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             }
         });
     });
+
+    if (pChart->isLegendEnabled())
+        pChart->createLegends();
 
     DFG_MODULE_NS(time)::TimerCpu timerRepaint;
     rChart.repaintCanvas();

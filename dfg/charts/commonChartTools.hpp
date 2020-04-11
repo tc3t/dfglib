@@ -260,6 +260,7 @@ public:
     virtual bool isLegendSupported() const { return false; }
     virtual bool isLegendEnabled() const { return false; }
     virtual bool enableLegend(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
+    virtual void createLegends() {}
 
     virtual ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam&) { return nullptr; }
 
