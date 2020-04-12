@@ -55,6 +55,7 @@ public:
     virtual void forEachElement_fromTableSelection(std::function<void (DataSourceIndex, DataSourceIndex, QVariant)>) { DFG_ASSERT_IMPLEMENTED(false); }
 
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex /*offsetFromFirst*/) { return SingleColumnDoubleValuesOptional(); }
+    virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }
 
     virtual DataSourceIndex columnCount() const { return 0; }
 

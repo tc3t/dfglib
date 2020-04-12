@@ -414,6 +414,7 @@ namespace
 
 void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry)
 {
+    // NOTE: any change that affects the content might require changes to generation of cacheKey, see ChartDataCache documentation for details.
     DFG_UNUSED(defEntry);
     m_colToValuesMap.clear();
 
@@ -450,7 +451,30 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
         return RowToValueMap();
 }
 
-
+/*
+ * ChartDataCache
+ * --------------
+ *
+ * Implements caching for fetching data from DataSource for ChartObjects.
+ *
+ * Why caching instead of querying directly?
+ *      -At this level there's little information about DataSource and what it actually does when querying data (e.g. disk access perhaps?)
+ *          -> avoiding redundant queries is reasonable.
+ *      -Generic dataSource does not have optimized queries for specific type of chart objects
+ *          -> by fetching data once and storing it in cache in specific format allows efficient handling of similar ChartObjects.
+ *
+ * Current implementation in the context of dfgQtTableEditor and TableSelection source:
+ *  1. User changes selection
+ *  2. SelectionAnalyzerForGraphing notices changed selection and stores all data in the selection to it's own data table.
+ *      Note that it does not known anything about ChartObject definitions so big proportions of the stored data might not be used at all in charts.
+ *  3. Changed selection leads to recreation of ChartObjects:
+ *      a. ChartObjects do not directly query data from data source, but instead they ask data from object of this class (ChartDataCache)
+ *      b. ChartObject definition defines a cacheKey so that items with identical cacheKeys can use the same fecthed cache data.
+ *          -Examples:
+ *              -Two xySeries with only difference being panel in which they are drawn shall have identical cacheKey so they can be constructed from the same cache-data.
+ *              -Two xySeries otherwise identical, but other has x_rows-filter
+ *                  -This is implementation dependent: if caching stores the whole column in any case, then cacheKey can be identical, otherwise not.
+ */
 class ChartDataCache
 {
 public:
@@ -461,8 +485,8 @@ public:
     using SingleColumnDoubleValuesOptional = GraphDataSource::SingleColumnDoubleValuesOptional;
 
     // Maps
-    using IdToTableSelectionaMap = std::map<CacheEntryKey, TableSelectionOptional>;
-    using IdToColumnDoubleValuesMap = std::map<CacheEntryKey, SingleColumnDoubleValuesOptional>;
+    using CacheKeyToTableSelectionaMap = std::map<CacheEntryKey, TableSelectionOptional>;
+    using CacheKeyToColumnDoubleValuesMap = std::map<CacheEntryKey, SingleColumnDoubleValuesOptional>;
 
     CacheEntryKey cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const;
 
@@ -471,8 +495,8 @@ public:
     TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
     SingleColumnDoubleValuesOptional getPlainColumnData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
 
-    IdToTableSelectionaMap m_tableSelectionDatas;
-    IdToColumnDoubleValuesMap m_doubleColumnValues;
+    CacheKeyToTableSelectionaMap m_tableSelectionDatas;
+    CacheKeyToColumnDoubleValuesMap m_doubleColumnValues;
 }; // ChartDataCache
 
 auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> TableSelectionOptional
@@ -501,8 +525,27 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getPlainColumnData_createIfMissing(Graph
     if (iter != m_doubleColumnValues.end())
         m_doubleColumnValues.erase(iter); // Removing existing but invalid entry.
 
-    auto rv = source.singleColumnDoubleValues_byOffsetFromFirst(0);
-    m_doubleColumnValues.insert(std::make_pair(key, rv));
+    SingleColumnDoubleValuesOptional rv;
+
+    const auto sXsource = defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); });
+    if (sXsource.empty())
+        rv = source.singleColumnDoubleValues_byOffsetFromFirst(0);
+    else // Case: have non-empty x_source
+    {
+        const ParenthesisItem items(sXsource);
+        if (items.key() == SzPtrUtf8(ChartObjectSourceTypeStr_columnName) && items.valueCount() >= 1)
+        {
+            const auto svColumnName = items.value(0);
+            const auto nIndex = source.columnIndexByName(svColumnName);
+            if (nIndex != GraphDataSource::invalidIndex())
+                rv = source.singleColumnDoubleValues_byColumnIndex(nIndex);
+            else
+                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToString(svColumnName)));
+        }
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: Bad %2 specifier '%3'").arg(defEntry.index()).arg(ChartObjectFieldIdStr_xSource).arg(sXsource.rawStorage().c_str()));
+    }
+    m_doubleColumnValues.insert(std::make_pair(std::move(key), rv));
     return rv;
 }
 
@@ -514,7 +557,12 @@ void DFG_MODULE_NS(qt)::ChartDataCache::invalidate()
 
 auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const -> CacheEntryKey
 {
-    return source.uniqueId() + defEntry.fieldValueStr(ChartObjectFieldIdStr_type, [] { return StringUtf8(); }).rawStorage().c_str();
+    const auto sType = defEntry.fieldValueStr(ChartObjectFieldIdStr_type, [] { return StringUtf8(); }).rawStorage();
+    if (sType == ChartObjectChartTypeStr_xy)
+        return source.uniqueId() + sType.c_str(); // For xySeries defEntry does not affect cache content so "source + xy" is good enough
+    if (sType == ChartObjectChartTypeStr_histogram)
+        return source.uniqueId() + sType.c_str() + defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); }).rawStorage().c_str(); // For histograms only the requested column is cached so adding x_source to "source + histogram"
+    return "";
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -642,6 +690,7 @@ QString GraphDefinitionWidget::getGuideString()
 <h2>Fields for type <i>histogram</i></h2>
     <ul>
         <li>bin_count: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
+        <li>x_source: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
     </ul>
 )ENDTAG");
 }
@@ -2391,7 +2440,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
 {
     const auto nColumnCount = source.columnCount();
-    if (nColumnCount != 1)
+    if (nColumnCount < 1)
         return;
 
     auto optValues = m_spCache->getPlainColumnData_createIfMissing(source, defEntry);

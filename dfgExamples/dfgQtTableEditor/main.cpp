@@ -258,10 +258,20 @@ public:
             return SingleColumnDoubleValuesOptional();
         const DataSourceIndex nFirstCol = rTable.frontKey();
         const auto nTargetCol = nFirstCol + offsetFromFirst;
-        auto iter = rTable.find(nTargetCol);
+        return singleColumnDoubleValues_byColumnIndex(nTargetCol);
+    }
+
+    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) override
+    {
+        auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+        if (!spTableView) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
+            return SingleColumnDoubleValuesOptional();
+        const auto& rTable = *spTableView;
+        if (rTable.empty())
+            return SingleColumnDoubleValuesOptional();
+        auto iter = rTable.find(nColIndex);
         if (iter == rTable.end())
             return SingleColumnDoubleValuesOptional();
-
         const auto& values = iter->second.valueRange();
         auto rv = std::make_shared<DoubleValueVector>();
         rv->resize(values.size());

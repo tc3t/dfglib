@@ -33,7 +33,7 @@ constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
         // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
-    // histogram-type has properties: bin_count, panel_id
+    // histogram-type has properties: bin_count, x_source, panel_id
 
 // name: this will show e.g. in legend.
 constexpr char ChartObjectFieldIdStr_name[] = "name";
