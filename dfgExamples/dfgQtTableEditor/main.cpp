@@ -235,7 +235,7 @@ public:
 
     DataSourceIndex columnCount() const override
     {
-        auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+        auto spTableView = privGetTableView();
         return (spTableView) ? spTableView->size() : 0;
     }
 
@@ -245,12 +245,20 @@ public:
         if (!pModel)
             return invalidIndex();
         auto nIndex = pModel->findColumnIndexByName(QString::fromUtf8(sv.beginRaw(), static_cast<int>(sv.size())), -1);
-        return (nIndex >= 0) ? static_cast<DataSourceIndex>(nIndex) : invalidIndex();
+        if (nIndex < 0)
+            return invalidIndex();
+        // Getting here means that column was found from the CsvItemModel table; must still check if the column is present in selection.
+        auto spTableView = privGetTableView();
+        auto pTable = (spTableView) ? &*spTableView : nullptr;
+        if (!pTable)
+            return invalidIndex();
+        auto iter = pTable->find(nIndex);
+        return (iter != pTable->end()) ? static_cast<DataSourceIndex>(iter->first) : invalidIndex();
     }
 
     SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) override
     {
-        auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+        auto spTableView = privGetTableView();
         if (!spTableView) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
             return SingleColumnDoubleValuesOptional();
         const auto& rTable = *spTableView;
@@ -263,7 +271,7 @@ public:
 
     SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) override
     {
-        auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+        auto spTableView = privGetTableView();
         if (!spTableView) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
             return SingleColumnDoubleValuesOptional();
         const auto& rTable = *spTableView;
@@ -290,6 +298,11 @@ public:
         }
         else
             m_spView->removeSelectionAnalyzer(m_spSelectionAnalyzer.get());
+    }
+
+    std::shared_ptr<const SelectionAnalyzerForGraphing::Table> privGetTableView() const
+    {
+        return (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
     }
 
     QPointer<dfg::qt::CsvTableView> m_spView;
