@@ -662,10 +662,12 @@ QString GraphDefinitionWidget::getGuideString()
         <li>x_source:</li>
             <ul>
                 <li>column_name(name): x-values will be taken from column that has name <i>name</i>.</li>
+                <li>row_index: values will be taken from row index of y-values</li>
             </ul>
         <li>y_source:</li>
             <ul>
                 <li>column_name(name): y-values will be taken from column that has name <i>name</i>.</li>
+                <li>row_index: values will be taken from row index of x-values</li>
             </ul>
         <li>x_rows:</li>
             <ul>
@@ -2207,7 +2209,10 @@ namespace
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
 {
 
-    // Returns defaultValue if not set, GraphDataSource::invalidIndex() if set but not found.
+    // Returns
+    //      -defaultValue if not set
+    //      -defaultValue + 1 if defined as row index.
+    //      -GraphDataSource::invalidIndex() if set but not found.
     auto getChosenColumnIndex(const TableSelectionCacheItem& cacheData,
                               GraphDataSource& dataSource,
                               const decltype(ChartObjectFieldIdStr_xSource)& id,
@@ -2217,6 +2222,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         const auto sSource = defEntry.fieldValueStr(id, [] { return StringUtf8(); });
         if (sSource.empty())
             return defaultValue;
+        if (sSource == SzPtrUtf8(ChartObjectSourceTypeStr_rowIndex))
+            return defaultValue + 1;
         const ParenthesisItem items(sSource);
         if (items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnName))
         {
@@ -2238,28 +2245,58 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         return columnIndex;
     }
 
-    template <class ColRange_T>
-    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange)
+    template <class ColRange_T, class IsRowSpecifier_T>
+    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier)
     {
         if (colRange.size() < 2)
             return;
         const auto indexOf = [&](auto i) { return size_t(std::find(colRange.begin(), colRange.end(), i) - colRange.begin()); };
         const auto isPresent = [&](auto i) {return indexOf(i) < colRange.size(); };
+
+        if (isRowIndexSpecifier(x) && isRowIndexSpecifier(y))
+        {
+            DFG_QT_CHART_CONSOLE_ERROR("Internal error: both x and y are of type row_index");
+            return;
+        }
         
         if (isPresent(x)) // Case: x was defined
         {
             if (!isPresent(y)) // y is not set?
-                y = colRange[(indexOf(x) + 1) % colRange.size()]; // Using next column as y (wrapping to beginning if x is last).
+            {
+                if (isRowIndexSpecifier(y))
+                    y = x;
+                else
+                    y = colRange[(indexOf(x) + 1) % colRange.size()]; // Using next column as y (wrapping to beginning if x is last).
+            }
         }
         else if (isPresent(y)) // case: x is not defined and y defined
         {
-            const auto indexOfy = indexOf(y);
-            x = (indexOfy > 0) ? colRange[indexOfy - 1] : colRange.back(); // Using one before y-column as x (wrapping to end if y is first)
+            if (isRowIndexSpecifier(x))
+                x = y;
+            else
+            {
+                const auto indexOfy = indexOf(y);
+                x = (indexOfy > 0) ? colRange[indexOfy - 1] : colRange.back(); // Using one before y-column as x (wrapping to end if y is first)
+            }
         }
-        else // Case: both are undefined, using defaults i.e. first column as x and second as y
+        else // Case: both are either undefined or other one is row_index-specifier
         {
-            x = colRange[0];
-            y = colRange[1];
+            if (isRowIndexSpecifier(x))
+            {
+                y = colRange[1];
+                x = y;
+            }
+            else if (isRowIndexSpecifier(y))
+            {
+                x = colRange[0];
+                y = x;
+            }
+            else
+            {
+                //using defaults i.e.first column as x and second as y
+                x = colRange[0];
+                y = colRange[1];
+            }
         }
     }
 } } } // dfg:::qt::<unnamed>
@@ -2301,8 +2338,20 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nFirstIndex + 1);
         if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex()) // Either column was defined but not found?
             return;
-        if (xColumnIndex != nFirstIndex && yColumnIndex != nFirstIndex) // Case: neither column was selected, default to using selected as y
-            yColumnIndex = nFirstIndex;
+        const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nFirstIndex + 2; };
+        if (isRowIndexSpecifier(xColumnIndex) && isRowIndexSpecifier(yColumnIndex))
+        {
+            // Ending up here means that both x and y were defined as row_index; this is invalid definition; at least other one should be concrete.
+            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: both x and y column are defined as row_index").arg(defEntry.index()));
+            return;
+        }
+        if (xColumnIndex != nFirstIndex && yColumnIndex != nFirstIndex) // Case: neither column was selected
+        {
+            if (!isRowIndexSpecifier(yColumnIndex))
+                yColumnIndex = nFirstIndex; // default to using selected as y
+            else // case: y is specified as row index -> using column values as x
+                xColumnIndex = nFirstIndex;
+        }
 
         auto pColumnDataX = tableData.columnDataByIndex(xColumnIndex);
         auto pColumnDataY = tableData.columnDataByIndex(yColumnIndex);
@@ -2353,14 +2402,32 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     else if (tableData.columnCount() >= 2)
     {
         const auto columns = tableData.columnRange();
-        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, tableData.lastColumnIndex() + 1);
-        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, tableData.lastColumnIndex() + 1);
+        const auto nLastColumnIndex = tableData.lastColumnIndex();
+        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nLastColumnIndex + 1);
+        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nLastColumnIndex + 1);
+
+        const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nLastColumnIndex + 2; };
 
         if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
             return; // Either column was defined but not found.
 
-        makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns);
+        const bool bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
+        const bool bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
+
+        if (bXisRowIndex && bYisRowIndex)
+        {
+            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Both columns are specified as row_index").arg(defEntry.index()));
+            return;
+        }
         
+        makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
+
+        auto pXdata = tableData.columnDataByIndex(xColumnIndex);
+        auto pYdata = (pXdata) ? tableData.columnDataByIndex(yColumnIndex) : nullptr;
+
+        if (!pXdata || !pYdata)
+            return;
+
         spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry));
         if (!spSeries)
         {
@@ -2368,11 +2435,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
             return;
         }
 
-        auto pXdata = tableData.columnDataByIndex(xColumnIndex);
-        auto pYdata = tableData.columnDataByIndex(yColumnIndex);
-
-        if (!pXdata || !pYdata)
-            return;
 
         // xValueMap is also used as final (x,y) table passed to series.
         // releaseOrCopy() will return either moved data or copy of it.
@@ -2400,8 +2462,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
             // store (x,y) values to start of xValueMap if not filtered out.
             if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow))) // Trusting xRow to have value that can be casted to int.
             {
-                const auto x = xIter->second;
-                const auto y = yIter->second;
+                const auto x = (bXisRowIndex) ? xRow : xIter->second;
+                const auto y = (bYisRowIndex) ? yRow : yIter->second;
 
                 xValueMap.m_keyStorage[nActualSize] = x;
                 xValueMap.m_valueStorage[nActualSize] = y;

@@ -47,7 +47,8 @@ constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 // x_source/y_source, value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
 constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
 constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
-    constexpr char ChartObjectSourceTypeStr_columnName[] = "column_name";
+    constexpr char ChartObjectSourceTypeStr_columnName[]    = "column_name";
+    constexpr char ChartObjectSourceTypeStr_rowIndex[]      = "row_index"; // Value is to be taken from row index of another column.
 
 // panel_id: defines panel to which ChartObject is to be assigned to.
 //      Possible values:
