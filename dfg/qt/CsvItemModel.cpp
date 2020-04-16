@@ -150,6 +150,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::initFromItemM
     {
         // If model seems to have been opened from existing input (file/memory), use format of m_table, otherwise use save format from settings.
         *this = (pItemModel->latestReadTimeInSeconds() >= 0) ? pItemModel->m_table.saveFormat() : defaultSaveOptions(pItemModel);
+        if (::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(this->separatorChar()))
+            this->separatorChar(defaultSaveOptions(pItemModel).separatorChar());
         if (!pItemModel->isSupportedEncodingForSaving(textEncoding()))
         {
             // Encoding is not supported, fallback to UTF-8.
