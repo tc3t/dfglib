@@ -641,7 +641,7 @@ QString GraphDefinitionWidget::getGuideString()
 <ul>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(x col name)", "y_source":"column_name(y col name)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
+    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
 </ul>
 
