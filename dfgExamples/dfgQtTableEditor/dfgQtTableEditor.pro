@@ -167,6 +167,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/containerUtils.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableView.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/ConsoleDisplay.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewChartDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/chartsAll.hpp
 
