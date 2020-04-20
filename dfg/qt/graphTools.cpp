@@ -466,7 +466,7 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
  * Current implementation in the context of dfgQtTableEditor and TableSelection source:
  *  1. User changes selection
  *  2. SelectionAnalyzerForGraphing notices changed selection and stores all data in the selection to it's own data table.
- *      Note that it does not known anything about ChartObject definitions so big proportions of the stored data might not be used at all in charts.
+ *      Note that it does not know anything about ChartObject definitions so big proportions of the stored data might not be used at all in charts.
  *  3. Changed selection leads to recreation of ChartObjects:
  *      a. ChartObjects do not directly query data from data source, but instead they ask data from object of this class (ChartDataCache)
  *      b. ChartObject definition defines a cacheKey so that items with identical cacheKeys can use the same fecthed cache data.
@@ -507,7 +507,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
         return iter->second;
 
     if (iter != m_tableSelectionDatas.end())
-        m_tableSelectionDatas.erase(iter); // Removing existing but invalid entry.
+        m_tableSelectionDatas.erase(iter); // Removing existing but invalid entry to make sure it doesn't mess up new data.
 
     auto rv = std::make_shared<TableSelectionCacheItem>();
     rv->populateFromSource(source, defEntry);
@@ -2248,9 +2248,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
     template <class ColRange_T, class IsRowSpecifier_T>
     void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier)
     {
-        if (colRange.size() < 2)
+        if (colRange.empty())
             return;
-        const auto indexOf = [&](auto i) { return size_t(std::find(colRange.begin(), colRange.end(), i) - colRange.begin()); };
+        const auto indexOf = [&](auto i) { return ::DFG_MODULE_NS(alg)::indexOf(colRange, i); };
         const auto isPresent = [&](auto i) {return indexOf(i) < colRange.size(); };
 
         if (isRowIndexSpecifier(x) && isRowIndexSpecifier(y))
@@ -2276,14 +2276,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             else
             {
                 const auto indexOfy = indexOf(y);
-                x = (indexOfy > 0) ? colRange[indexOfy - 1] : colRange.back(); // Using one before y-column as x (wrapping to end if y is first)
+                if (colRange.size() >= 2)
+                    x = (indexOfy > 0) ? colRange[indexOfy - 1] : colRange.back(); // Using one before y-column as x (wrapping to end if y is first)
+                else // Case: only one column -> x = y
+                    x = y;
             }
         }
         else // Case: both are either undefined or other one is row_index-specifier
         {
+            const auto nDefaultYindex = (colRange.size() >= 2) ? 1 : 0;
             if (isRowIndexSpecifier(x))
             {
-                y = colRange[1];
+                y = colRange[nDefaultYindex];
                 x = y;
             }
             else if (isRowIndexSpecifier(y))
@@ -2293,9 +2297,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             }
             else
             {
-                //using defaults i.e.first column as x and second as y
+                //using defaults i.e.first column as x and next (if available) as y
                 x = colRange[0];
-                y = colRange[1];
+                y = colRange[nDefaultYindex];
             }
         }
     }
@@ -2331,95 +2335,36 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
     decltype(rChart.getSeriesByIndex(XySeriesCreationParam(0, defEntry))) spSeries;
 
-    if (tableData.columnCount() == 1)
-    {
-        const auto nFirstIndex = tableData.firstColumnIndex();
-        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nFirstIndex + 1);
-        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nFirstIndex + 1);
-        if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex()) // Either column was defined but not found?
-            return;
-        const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nFirstIndex + 2; };
-        if (isRowIndexSpecifier(xColumnIndex) && isRowIndexSpecifier(yColumnIndex))
-        {
-            // Ending up here means that both x and y were defined as row_index; this is invalid definition; at least other one should be concrete.
-            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: both x and y column are defined as row_index").arg(defEntry.index()));
-            return;
-        }
-        if (xColumnIndex != nFirstIndex && yColumnIndex != nFirstIndex) // Case: neither column was selected
-        {
-            if (!isRowIndexSpecifier(yColumnIndex))
-                yColumnIndex = nFirstIndex; // default to using selected as y
-            else // case: y is specified as row index -> using column values as x
-                xColumnIndex = nFirstIndex;
-        }
-
-        auto pColumnDataX = tableData.columnDataByIndex(xColumnIndex);
-        auto pColumnDataY = tableData.columnDataByIndex(yColumnIndex);
-        
-        if (!pColumnDataX && !pColumnDataY)
-        {
-            DFG_ASSERT(false); // Not expected to ever get here.
-            return;
-        }
-
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry));
-        if (!spSeries)
-        {
-            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
-            return;
-        }
-
-        decltype(pColumnDataX->keyRange()) xRange;
-        decltype(xRange) yRange;
-
-        if (pColumnDataX && pColumnDataY)
-        {
-            // Since there was only one column selected, x and y should be the same.
-            DFG_ASSERT_CORRECTNESS(pColumnDataX == pColumnDataY); // If this fails, there's logic bug somewhere.
-            xRange = pColumnDataX->valueRange();
-            yRange = pColumnDataY->valueRange();
-        }
-        else if (pColumnDataY)
-        {
-            xRange = pColumnDataY->keyRange();
-            yRange = pColumnDataY->valueRange();
-        }
-        else if (pColumnDataX)
-        {
-            xRange = pColumnDataX->valueRange();
-            yRange = pColumnDataX->keyRange();
-        }
-
-        nGraphSize = xRange.size();
-        minMaxX = ::DFG_MODULE_NS(alg)::forEachFwd(xRange, minMaxX);
-        minMaxY = ::DFG_MODULE_NS(alg)::forEachFwd(yRange, minMaxY);
-        // TODO: valueCont has effectively temporaries - ideally should be possible to use existing storages
-        //       to store new content to those directly or at least allow moving these storages to series
-        //       so it wouldn't need to duplicate them.
-        const auto includeMask = createIncludeMask(pxRowSet, xRange); // TODO: probably should be omitted if xRange is not rows.
-        spSeries->setValues(xRange, yRange, (pxRowSet) ? &includeMask : nullptr);
-    }
-    else if (tableData.columnCount() >= 2)
+    if (tableData.columnCount() >= 1)
     {
         const auto columns = tableData.columnRange();
         const auto nLastColumnIndex = tableData.lastColumnIndex();
-        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nLastColumnIndex + 1);
-        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nLastColumnIndex + 1);
+        const auto nDefaultValue = nLastColumnIndex + 1;
+        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nDefaultValue);
+        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nDefaultValue);
 
         const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nLastColumnIndex + 2; };
 
         if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
             return; // Either column was defined but not found.
 
-        const bool bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
-        const bool bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
+        bool bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
+        bool bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
 
         if (bXisRowIndex && bYisRowIndex)
         {
             DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Both columns are specified as row_index").arg(defEntry.index()));
             return;
         }
-        
+
+        if (columns.size() == 1 && !bXisRowIndex && !bYisRowIndex)
+        {
+            if (xColumnIndex == nDefaultValue)
+                bXisRowIndex = true;
+            else if (yColumnIndex == nDefaultValue)
+                bYisRowIndex = true;
+        }
+       
         makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
 
         auto pXdata = tableData.columnDataByIndex(xColumnIndex);
