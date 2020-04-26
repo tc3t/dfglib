@@ -69,6 +69,15 @@ constexpr char ChartObjectFieldIdStr_pointStyle[] = "point_style";
 constexpr char ChartObjectPointStyleStr_none[] = "none";
 constexpr char ChartObjectPointStyleStr_basic[] = "basic";
 
+enum class ChartDataType
+{
+    unknown,
+    dayTime,
+    dayTimeMillisecond,
+    dateOnly,
+    dateAndTime,
+    dateAndTimeMillisecond
+};
 
 // Abstract class representing an entry that defines what kind of ChartObjects to create on chart.
 class AbstractChartControlItem
@@ -105,7 +114,7 @@ T AbstractChartControlItem::fieldValue(FieldIdStrViewInputParam fieldId, const T
     return obj;
 }
 
-auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<String()> defaultValueGenerator) const -> String
+inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<String()> defaultValueGenerator) const -> String
 {
     auto rv = fieldValueStrImpl(fieldId);
     return (rv.first) ? rv.second : defaultValueGenerator();
@@ -188,18 +197,18 @@ public:
     const AbstractChartControlItem& m_rDefEntry;
 };
 
-ChartObjectCreationParam::ChartObjectCreationParam(const AbstractChartControlItem& defEntry) :
+inline ChartObjectCreationParam::ChartObjectCreationParam(const AbstractChartControlItem& defEntry) :
     m_rDefEntry(defEntry)
 {
     sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId, []() { return StringUtf8(); });
 }
 
-const AbstractChartControlItem& ChartObjectCreationParam::definitionEntry() const
+inline const AbstractChartControlItem& ChartObjectCreationParam::definitionEntry() const
 {
     return m_rDefEntry;
 }
 
-auto ChartObjectCreationParam::panelId() const -> StringViewUtf8
+inline auto ChartObjectCreationParam::panelId() const -> StringViewUtf8
 {
     return sPanelId;
 }
@@ -208,14 +217,18 @@ class XySeriesCreationParam : public ChartObjectCreationParam
 {
 public:
     using BaseClass = ChartObjectCreationParam;
-    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry);
+    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry, ChartDataType, ChartDataType);
 
     int nIndex;
+    ChartDataType xType = ChartDataType::unknown;
+    ChartDataType yType = ChartDataType::unknown;
 };
 
-XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry)
+inline XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry, ChartDataType argXtype, ChartDataType argYtype)
     : BaseClass(defEntry)
     , nIndex(argIndex)
+    , xType(argXtype)
+    , yType(argYtype)
 {
     
 }
@@ -229,7 +242,7 @@ public:
     InputSpan<double> valueRange;
 };
 
-HistogramCreationParam::HistogramCreationParam(const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan)
+inline HistogramCreationParam::HistogramCreationParam(const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan)
     : BaseClass(defEntry)
     , valueRange(inputSpan)
 {

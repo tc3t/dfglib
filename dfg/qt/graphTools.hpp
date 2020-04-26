@@ -4,7 +4,9 @@
 #include "qtIncludeHelpers.hpp"
 #include "containerUtils.hpp"
 #include "../dfgAssert.hpp"
+#include "../cont/MapVector.hpp"
 #include "../cont/valueArray.hpp"
+#include "../charts/commonChartTools.hpp"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -29,6 +31,7 @@ typedef std::size_t DataSourceIndex;
 class GraphDefinitionEntry;
 class ChartDataCache;
 using ChartCanvas = DFG_MODULE_NS(charts)::ChartCanvas;
+using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
 
 enum GraphDataSourceType
 {
@@ -43,6 +46,7 @@ public:
     typedef ::DFG_MODULE_NS(qt)::DataSourceIndex DataSourceIndex;
     using DoubleValueVector = DFG_MODULE_NS(cont)::ValueVector<double>;
     using SingleColumnDoubleValuesOptional = std::shared_ptr<const DoubleValueVector>;
+    using ColumnDataTypeMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ChartDataType>;
 
     virtual ~GraphDataSource() {}
 
@@ -52,10 +56,12 @@ public:
 
     virtual QObject* underlyingSource() = 0;
 
-    virtual void forEachElement_fromTableSelection(std::function<void (DataSourceIndex, DataSourceIndex, QVariant)>) { DFG_ASSERT_IMPLEMENTED(false); }
+    virtual void forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)>) { DFG_ASSERT_IMPLEMENTED(false); }
 
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex /*offsetFromFirst*/) { return SingleColumnDoubleValuesOptional(); }
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }
+
+    virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
 
     virtual DataSourceIndex columnCount() const { return 0; }
 

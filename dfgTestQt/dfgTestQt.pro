@@ -63,7 +63,8 @@ HEADERS += \
     ../dfg/qt/qxt/gui/qxtspanslider.h \
     ../dfg/qt/qxt/gui/qxtspanslider_p.h \
     ../dfg/qt/tableViewUndoCommands.hpp \
-    ../dfg/qt/widgetHelpers.hpp
+    ../dfg/qt/widgetHelpers.hpp \
+    ../dfg/qt/CsvTableViewChartDataSource.hpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

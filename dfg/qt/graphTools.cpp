@@ -291,7 +291,12 @@ public:
 
     bool hasColumnIndex(const IndexT nCol) const;
 
+    ChartDataType columnDataType(const RowToValueMap* pColumn) const;
+
+    IndexT columnToIndex(const RowToValueMap* pColumn) const;
+
     ColumnToValuesMap m_colToValuesMap;
+    GraphDataSource::ColumnDataTypeMap m_columnTypes;
     bool m_bIsValid = false;
 };
 
@@ -427,6 +432,8 @@ void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSou
         insertRv.first->second.m_valueStorage.push_back(val.toDouble());
     });
 
+    m_columnTypes = source.columnDataTypes();
+
     // Sorting values by row now that all data has been added.
     for (auto iter = m_colToValuesMap.begin(), iterEnd = m_colToValuesMap.end(); iter != iterEnd; ++iter)
     {
@@ -449,6 +456,22 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
     }
     else
         return RowToValueMap();
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnToIndex(const RowToValueMap* pColumn) const -> IndexT
+{
+    auto iter = std::find_if(m_colToValuesMap.begin(), m_colToValuesMap.end(), [=](const auto& v)
+    {
+        return &v.second == pColumn;
+    });
+    return (iter != m_colToValuesMap.end()) ? iter->first : GraphDataSource::invalidIndex();
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const RowToValueMap* pColumn) const -> ChartDataType
+{
+    const auto nCol = columnToIndex(pColumn);
+    auto iter = m_columnTypes.find(nCol);
+    return (iter != m_columnTypes.end()) ? iter->second : ChartDataType::unknown;
 }
 
 /*
@@ -1333,6 +1356,33 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex(const XySeriesCreationParam& param
     return (p && param.nIndex >= 0 && param.nIndex < p->graphCount()) ? ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(param.nIndex))) : nullptr;
 }
 
+namespace
+{
+    void createDateTimeTicker(QCPAxis& rAxis, const QLatin1String sFormat)
+    {
+        QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
+        dateTicker->setDateTimeFormat(sFormat);
+        rAxis.setTicker(dateTicker);
+    }
+
+    void setAxisTicker(QCPAxis& rAxis, const ChartDataType type)
+    {
+        // TODO: should use the same date format as in input data and/or have the format customisable.
+        if (type == ChartDataType::dateAndTimeMillisecond)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd hh:mm:ss.zzz"));
+        else if (type == ChartDataType::dateAndTime)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd hh:mm:ss"));
+        else if (type == ChartDataType::dateOnly)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd"));
+        else if (type == ChartDataType::dayTimeMillisecond)
+            createDateTimeTicker(rAxis, QLatin1String("hh:mm:ss.zzz"));
+        else if (type == ChartDataType::dayTime)
+            createDateTimeTicker(rAxis, QLatin1String("hh:mm:ss"));
+        else
+            rAxis.setTicker(QSharedPointer<QCPAxisTicker>(new QCPAxisTicker)); // Resets to default ticker. TODO: do only if needed (i.e. if current ticker is something else than plain QCPAxisTicker)
+    }
+}
+
 auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
 {
     auto p = getWidget();
@@ -1348,7 +1398,12 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
     }
 
     while (param.nIndex >= p->graphCount())
+    {
+        // No graph exists at requested index -> creating new.
         p->addGraph(pXaxis, pYaxis);
+        setAxisTicker(*pXaxis, param.xType);
+        setAxisTicker(*pYaxis, param.yType);
+    }
     return getSeriesByIndex(param);
 }
 
@@ -2333,7 +2388,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         pxRowSet = &xRows;
     }
 
-    decltype(rChart.getSeriesByIndex(XySeriesCreationParam(0, defEntry))) spSeries;
+    decltype(rChart.getSeriesByIndex(XySeriesCreationParam(0, defEntry, ChartDataType::unknown, ChartDataType::unknown))) spSeries;
 
     if (tableData.columnCount() >= 1)
     {
@@ -2373,7 +2428,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         if (!pXdata || !pYdata)
             return;
 
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry));
+        const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType::unknown;
+        const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry, xType, yType));
         if (!spSeries)
         {
             DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));

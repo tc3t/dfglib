@@ -5,6 +5,8 @@
 #include <dfg/qt/containerUtils.hpp>
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/ConsoleDisplay.hpp>
+#include <dfg/qt/CsvTableViewChartDataSource.hpp>
+#include <dfg/math.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -80,7 +82,7 @@ TEST(dfgQt, CsvItemModel_removeRows)
     EXPECT_EQ(1, model.columnCount());
     for (int r = 0, nRowCount = model.rowCount(); r < nRowCount; ++r)
     {
-        char c[2] = { 'a' + r, '\0' };
+        char c[2] = { static_cast<char>('a' + r), '\0' };
         model.setDataNoUndo(r, 0, DFG_ROOT_NS::SzPtrAscii(c));
     }
     model.removeRows(0, 2);
@@ -414,4 +416,94 @@ TEST(dfgQt, ConsoleDisplay)
     display.addEntry("0123456789");
     display.addEntry("0123456789");
     EXPECT_TRUE(display.lengthInCharacters() < nLengthLimit);
+}
+
+namespace
+{
+    static const double baseDateTestDoubleValue = static_cast<double>(QDateTime::fromString("2020-04-25", "yyyy-MM-dd").toMSecsSinceEpoch()) / 1000.0;
+
+    void testDateToDouble(const char* pszDateString, ::DFG_MODULE_NS(qt)::ChartDataType dataType, const double offsetFromBase, const double baseValue = baseDateTestDoubleValue)
+    {
+        using namespace  ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;
+        using ColumnDataTypeMap = ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap;
+        ColumnDataTypeMap columnDataTypes;
+        EXPECT_EQ(baseValue + offsetFromBase, cellStringToDouble(pszDateString, 1, columnDataTypes));
+        EXPECT_TRUE(columnDataTypes.size() == 1 && columnDataTypes.frontKey() == 1 && columnDataTypes.frontValue() == dataType);
+    }
+
+    void testDateToDouble_invalidDateFormat(const char* pszDateString)
+    {
+        using namespace  ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;
+        using ColumnDataTypeMap = ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap;
+        ColumnDataTypeMap columnDataTypes;
+        EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(cellStringToDouble(pszDateString, 1, columnDataTypes)));
+    }
+}
+
+TEST(dfgQt, CsvTableView_stringToDouble)
+{
+    using namespace  ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;
+    using DataType = ::DFG_MODULE_NS(qt)::ChartDataType;
+
+    // yyyy-MM-dd
+    testDateToDouble("2020-04-25", DataType::dateOnly, 0);
+    //yyyy-MM-dd Wd
+    testDateToDouble("2020-04-25 la", DataType::dateOnly, 0);
+    // yyyy-MM-dd[T ]hh:mm:ss
+    testDateToDouble("2020-04-25T12:34:56", DataType::dateAndTime, 60 * (12 * 60 + 34) + 56);
+    testDateToDouble("2020-04-25 12:34:56", DataType::dateAndTime, 60 * (12 * 60 + 34) + 56);
+    // yyyy-MM-dd[T ]hh:mm:ss.123
+    testDateToDouble("2020-04-25T12:34:56.123", DataType::dateAndTimeMillisecond, 60 * (12 * 60 + 34) + 56 + 0.123);
+    testDateToDouble("2020-04-25 12:34:56.123", DataType::dateAndTimeMillisecond, 60 * (12 * 60 + 34) + 56 + 0.123);
+
+    //dd.MM.yyyy et al.
+    {
+        testDateToDouble("25.04.2020", DataType::dateOnly, 0);
+        testDateToDouble("la 25.04.2020", DataType::dateOnly, 0);
+        testDateToDouble("25.4.2020", DataType::dateOnly, 0);
+        testDateToDouble("1.5.2020", DataType::dateOnly, 6 * 24 * 60 * 60);
+        testDateToDouble("pe 1.5.2020", DataType::dateOnly, 6 * 24 * 60 * 60);
+    }
+
+    // Times only
+    {
+        // hh:mm:ss
+        testDateToDouble("12:34:56", DataType::dayTime, 60 * (12 * 60 + 34) + 56, 0);
+        testDateToDouble("12:34:56.123", DataType::dayTimeMillisecond, 60 * (12 * 60 + 34) + 56 + 0.123, 0);
+    }
+
+    // Testing that invalid format produce NaN's
+    {
+        testDateToDouble_invalidDateFormat("2020-4-25");
+        testDateToDouble_invalidDateFormat("2020-04-25la");
+        testDateToDouble_invalidDateFormat("2020-04-25 abc");
+        testDateToDouble_invalidDateFormat("2020-04-25a");
+        testDateToDouble_invalidDateFormat("2020-04-31"); // Invalid value
+        testDateToDouble_invalidDateFormat("20-04-25");
+        testDateToDouble_invalidDateFormat("25-04-2020");
+
+        testDateToDouble_invalidDateFormat("2020-04-25a12:34:56");
+        testDateToDouble_invalidDateFormat("25-04-2020T12:34:56");
+        testDateToDouble_invalidDateFormat("2020-4-25T32:34:56");
+        testDateToDouble_invalidDateFormat("2020-13-25T12:34:56"); // Invalid date value
+        testDateToDouble_invalidDateFormat("2020-04-25T32:34:56"); // Invalid time value
+        testDateToDouble_invalidDateFormat("2020-04-25T12:34:56.");
+        testDateToDouble_invalidDateFormat("2020-04-25T12:34:56.1");
+        testDateToDouble_invalidDateFormat("2020-04-25T12:34:56.12");
+        testDateToDouble_invalidDateFormat("2020-04-25T12:34:56.abc");
+
+        testDateToDouble_invalidDateFormat("abc 31.4.2020");
+        testDateToDouble_invalidDateFormat("31.4.2020"); // Invalid day
+        testDateToDouble_invalidDateFormat("31..2020");
+        testDateToDouble_invalidDateFormat("1.13.2020"); // Invalid month
+        testDateToDouble_invalidDateFormat("1.-1.2020"); // Invalid month
+        testDateToDouble_invalidDateFormat("1.0.2020"); // Invalid month
+
+        testDateToDouble_invalidDateFormat("32:34:56");
+        testDateToDouble_invalidDateFormat("32:34::56");
+        testDateToDouble_invalidDateFormat("12::34:56");
+        testDateToDouble_invalidDateFormat("12:34:56.");
+        testDateToDouble_invalidDateFormat("12:34:56.1");
+        testDateToDouble_invalidDateFormat("12:34:56.12");
+    }
 }
