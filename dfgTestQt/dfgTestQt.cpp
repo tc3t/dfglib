@@ -420,7 +420,7 @@ TEST(dfgQt, ConsoleDisplay)
 
 namespace
 {
-    static const double baseDateTestDoubleValue = static_cast<double>(QDateTime::fromString("2020-04-25", "yyyy-MM-dd").toMSecsSinceEpoch()) / 1000.0;
+    static const double baseDateTestDoubleValue = static_cast<double>(QDateTime::fromString("2020-04-25T00:00:00Z", Qt::ISODate).toMSecsSinceEpoch()) / 1000.0;
 
     void testDateToDouble(const char* pszDateString, ::DFG_MODULE_NS(qt)::ChartDataType dataType, const double offsetFromBase, const double baseValue = baseDateTestDoubleValue)
     {
@@ -442,7 +442,7 @@ namespace
 
 TEST(dfgQt, CsvTableView_stringToDouble)
 {
-    using namespace  ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;
+    using namespace ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;
     using DataType = ::DFG_MODULE_NS(qt)::ChartDataType;
 
     // yyyy-MM-dd

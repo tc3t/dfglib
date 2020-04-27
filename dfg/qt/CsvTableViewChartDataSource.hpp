@@ -19,9 +19,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
 namespace DFG_DETAIL_NS
 {
-    double dateToDouble(const QDateTime& dt)
+    double dateToDouble(QDateTime&& dt)
     {
-        return (dt.isValid()) ? static_cast<double>(dt.toMSecsSinceEpoch()) / 1000.0 : std::numeric_limits<double>::quiet_NaN();
+        if (dt.isValid())
+        {
+            dt.setTimeSpec(Qt::UTC);
+            return static_cast<double>(dt.toMSecsSinceEpoch()) / 1000.0;
+        }
+        else
+            return std::numeric_limits<double>::quiet_NaN();
     }
 
     double timeToDouble(const QTime& t)

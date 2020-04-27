@@ -1362,6 +1362,7 @@ namespace
     {
         QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
         dateTicker->setDateTimeFormat(sFormat);
+        dateTicker->setDateTimeSpec(Qt::UTC);
         rAxis.setTicker(dateTicker);
     }
 
