@@ -1170,6 +1170,22 @@ public:
         if (m_spChartView)
         {
             m_spChartView->rescaleAxes();
+            
+            // Adding margin to axes so that min/max point markers won't get clipped by axisRect.
+            const auto axisRects = m_spChartView->axisRects();
+            for (auto& pAr : axisRects)
+            {
+                if (!pAr)
+                    continue;
+                const auto axes = pAr->axes();
+                for (auto pAxis : axes)
+                {
+                    if (pAxis)
+                        pAxis->scaleRange(1.1);
+                }
+                
+            }
+
             m_spChartView->replot();
         }
     }
