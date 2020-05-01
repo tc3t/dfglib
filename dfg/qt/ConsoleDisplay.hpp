@@ -10,6 +10,13 @@ DFG_END_INCLUDE_QT_HEADERS
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
 
+enum class ConsoleDisplayEntryType
+{
+    error,
+    warning,
+    generic,
+};
+
 // Widget for displaying console-like messages.
 class ConsoleDisplay : public QPlainTextEdit
 {
@@ -27,6 +34,8 @@ public:
 
     // Adds new entry. If after adding total content length is longer than lengthInCharactersLimit(), oldest content will be dropped.
     void addEntry(const QString& s);
+
+    void addEntry(const QString& s, ConsoleDisplayEntryType entryType);
 
     size_t m_nLengthCounter = 0; // Counts in characters as given by QString::length()
     size_t m_nLengthLimit = 2000000; // 2 M characters
