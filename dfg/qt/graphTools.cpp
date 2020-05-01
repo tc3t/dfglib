@@ -2365,8 +2365,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         // Handling case type == panel_properties
         if (sEntryType == ChartObjectChartTypeStr_panelProperties)
         {
-            const auto sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId, [] { return StringUtf8(); });
-            pChart->setTitle(sPanelId, defEntry.fieldValueStr(ChartObjectFieldIdStr_title, [] { return StringUtf8(); }));
+            handlePanelProperties(rChart, defEntry);
             return;
         }
 
@@ -2684,6 +2683,12 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         return;
     ++nHistogramCounter;
     spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nHistogramCounter)));
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry)
+{
+    const auto sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId);
+    rChart.setTitle(sPanelId, defEntry.fieldValueStr(ChartObjectFieldIdStr_title));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_ptr<GraphDataSource> spSource)

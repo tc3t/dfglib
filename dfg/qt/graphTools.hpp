@@ -178,6 +178,7 @@ private:
 private:
     void refreshXy(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
     void refreshHistogram(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
+    void handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry);
 
 public:
     QObjectStorage<QSplitter> m_spSplitter;
