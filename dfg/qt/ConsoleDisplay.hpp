@@ -37,6 +37,12 @@ public:
 
     void addEntry(const QString& s, ConsoleDisplayEntryType entryType);
 
+    void clear();
+
+protected:
+    void contextMenuEvent(QContextMenuEvent* pEvent) override;
+
+public:
     size_t m_nLengthCounter = 0; // Counts in characters as given by QString::length()
     size_t m_nLengthLimit = 2000000; // 2 M characters
 };
