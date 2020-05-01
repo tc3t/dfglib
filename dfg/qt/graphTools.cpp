@@ -227,6 +227,7 @@ private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
 
     std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const override;
+    void forEachPropertyIdImpl(std::function<void(StringView svId)>) const override;
 
     template <class Func_T>
     void doForFieldIfPresent(FieldIdStrViewInputParam id, Func_T&& func) const;
@@ -265,6 +266,17 @@ auto GraphDefinitionEntry::fieldValueStrImpl(FieldIdStrViewInputParam fieldId) c
 {
     const auto val = getField(fieldId);
     return (!val.isNull() && !val.isUndefined()) ? std::make_pair(true, String(SzPtrUtf8(val.toVariant().toString().toUtf8()))) : std::make_pair(false, String());
+}
+
+void GraphDefinitionEntry::forEachPropertyIdImpl(std::function<void(StringView svId)> func) const
+{
+    if (!func)
+        return;
+    const auto keys = m_items.object().keys();
+    for (const auto& sKey : keys)
+    {
+        func(SzPtrUtf8(sKey.toUtf8()));
+    }
 }
 
 bool GraphDefinitionEntry::isType(FieldIdStrViewInputParam fieldId) const
@@ -2336,18 +2348,25 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 
         const auto sEntryType = defEntry.graphTypeStr();
 
-        // type == panel_properties
+        bool bUnknownType = false;
+        forEachUnrecognizedPropertyId(defEntry, [&](StringViewUtf8 svId)
+        {
+            if (svId == SzPtrUtf8(ChartObjectFieldIdStr_type))
+            {
+                bUnknownType = true;
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(viewToQString(sEntryType)));
+            }
+            else
+                DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: unknown property '%2'").arg(defEntry.index()).arg(viewToQString(svId)));
+        });
+        if (bUnknownType)
+            return;
+
+        // Handling case type == panel_properties
         if (sEntryType == ChartObjectChartTypeStr_panelProperties)
         {
             const auto sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId, [] { return StringUtf8(); });
             pChart->setTitle(sPanelId, defEntry.fieldValueStr(ChartObjectFieldIdStr_title, [] { return StringUtf8(); }));
-            return;
-        }
-
-        if (sEntryType != ChartObjectChartTypeStr_xy && sEntryType != ChartObjectChartTypeStr_histogram)
-        {
-            // Unsupported graphType.
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(sEntryType.c_str()));
             return;
         }
 

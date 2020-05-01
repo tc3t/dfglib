@@ -27,7 +27,11 @@ Terminology used in dfglib:
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
-// Note: reflect all changes done here to documentation in qt/graphTools.cpp getGuideString() (remember also examples).
+/* Checklist for doing changes:
+    -Reflect all changes done here to documentation in qt/graphTools.cpp getGuideString() (remember also examples).
+    -if adding properties for types, update forEachUnrecognizedPropertyId()
+*/
+
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
@@ -89,6 +93,7 @@ class AbstractChartControlItem
 {
 public:
     typedef StringUtf8 String;
+    typedef StringViewUtf8 StringView;
     typedef StringViewC FieldIdStrView;
     typedef const StringViewC& FieldIdStrViewInputParam;
 
@@ -100,9 +105,13 @@ public:
     T fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const;
 
     String fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<String()> defaultValueGenerator) const;
+    String fieldValueStr(FieldIdStrViewInputParam fieldId) const; // Convenience overload, returns empty string as default.
+
+    void forEachPropertyId(std::function<void(StringView svId)>) const;
 
 private:
     virtual std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
+    virtual void forEachPropertyIdImpl(std::function<void (StringView svId)>) const = 0;
 }; // class AbstractChartControlItem
 
 
@@ -125,6 +134,15 @@ inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fie
     return (rv.first) ? rv.second : defaultValueGenerator();
 }
 
+inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fieldId) const -> String
+{
+    return fieldValueStr(fieldId, [] { return String(); });
+}
+
+inline void AbstractChartControlItem::forEachPropertyId(std::function<void(StringView svId)> func) const
+{
+    forEachPropertyIdImpl(func);
+}
 
 template <class T>
 using InputSpan = RangeIterator_T<const T*>;
@@ -287,6 +305,66 @@ public:
     virtual void repaintCanvas() = 0;
 
 }; // class ChartCanvas
+
+namespace DFG_DETAIL_NS
+{
+    static inline void checkForUnrecongnizedProperties(const AbstractChartControlItem& controlItem, std::function<void(AbstractChartControlItem::StringView)> func, const std::array<const char*, 10> knownItems)
+    {
+        controlItem.forEachPropertyId([&](auto sv)
+        {
+            if (sv == SzPtrUtf8(ChartObjectFieldIdStr_type))
+                return;
+            auto iter = std::find_if(knownItems.begin(), knownItems.end(), [&](const char* psz)
+            {
+                return (psz && sv == SzPtrUtf8(psz));
+            });
+            if (iter == knownItems.end())
+                func(sv);
+        });
+    }
+} // namespace DFG_DETAIL_NS
+
+// Calls given func for each unrecognized property.
+inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& controlItem, std::function<void (AbstractChartControlItem::StringView)> func)
+{
+    using namespace DFG_DETAIL_NS;
+    const auto sType = controlItem.fieldValueStr(ChartObjectFieldIdStr_type);
+    if (sType == SzPtrUtf8(ChartObjectChartTypeStr_xy))
+    {
+        checkForUnrecongnizedProperties(controlItem, func, {
+            ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_name,
+            ChartObjectFieldIdStr_lineStyle,
+            ChartObjectFieldIdStr_pointStyle,
+            ChartObjectFieldIdStr_xSource,
+            ChartObjectFieldIdStr_ySource,
+            ChartObjectFieldIdStr_xRows,
+            ChartObjectFieldIdStr_panelId
+            });
+    }
+    else if (sType == SzPtrUtf8(ChartObjectChartTypeStr_histogram))
+    {
+        checkForUnrecongnizedProperties(controlItem, func, {
+            ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_name,
+            ChartObjectFieldIdStr_binCount,
+            ChartObjectFieldIdStr_xSource,
+            ChartObjectFieldIdStr_panelId
+            });
+    }
+    else if (sType == SzPtrUtf8(ChartObjectChartTypeStr_panelProperties))
+    {
+        checkForUnrecongnizedProperties(controlItem, func, {
+            ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_title
+            });
+    }
+    else
+    {
+        func(SzPtrUtf8(ChartObjectFieldIdStr_type));
+    }
+}
 
 
 } } // Module namespace
