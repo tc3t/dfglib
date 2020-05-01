@@ -33,13 +33,18 @@ constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
         // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
-    // histogram-type has properties: bin_count, x_source, panel_id
+        // histogram-type has properties: bin_count, x_source, panel_id
+    constexpr char ChartObjectChartTypeStr_panelProperties[] = "panel_properties";
+        // panel_properties-type has properties: panel_id, title
 
 // name: this will show e.g. in legend.
 constexpr char ChartObjectFieldIdStr_name[] = "name";
 
 // bin_count
 constexpr char ChartObjectFieldIdStr_binCount[] = "bin_count";
+
+// title
+constexpr char ChartObjectFieldIdStr_title[] = "title";
 
 // x_rows, value is semicolon separated list defining an IntervalSet of row indexes. For example "1:4; 8; 12:13" means rows 1, 2, 3, 4, 8, 12, 13.
 constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
@@ -260,7 +265,7 @@ public:
 
     virtual void addXySeries() = 0;
 
-    virtual void setTitle(StringViewUtf8) {}
+    virtual void setTitle(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svTitle*/) {}
 
     virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
 

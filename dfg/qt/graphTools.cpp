@@ -119,9 +119,14 @@ public:
 
 static ConsoleLogHandle gConsoleLogHandle;
 
-static QString viewToString(const StringViewC& view)
+static QString viewToQString(const StringViewC& view)
 {
     return QString::fromUtf8(view.data(), static_cast<int>(view.length()));
+}
+
+static QString viewToQString(const StringViewUtf8& view)
+{
+    return QString::fromUtf8(view.dataRaw(), static_cast<int>(view.length()));
 }
 
 } // unnamed namespace
@@ -563,7 +568,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getPlainColumnData_createIfMissing(Graph
             if (nIndex != GraphDataSource::invalidIndex())
                 rv = source.singleColumnDoubleValues_byColumnIndex(nIndex);
             else
-                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToString(svColumnName)));
+                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(svColumnName)));
         }
         else
             DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: Bad %2 specifier '%3'").arg(defEntry.index()).arg(ChartObjectFieldIdStr_xSource).arg(sXsource.rawStorage().c_str()));
@@ -666,6 +671,7 @@ QString GraphDefinitionWidget::getGuideString()
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
     <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
+    <li>Setting panel title: {"type":"panel_properties","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)"}
 </ul>
 
 <h2>Common fields</h2>
@@ -677,7 +683,7 @@ QString GraphDefinitionWidget::getGuideString()
         <li>histogram: Histogram</li>
     </ul>
    <li>name: name of the object, shown e.g. in legend.</li>
-   <li>panel_id: Panel in which chart object is to be drawn to. Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
+   <li>panel_id: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
 </ul>
 
 <h2>Fields for type <i>xy</i></h2>
@@ -716,6 +722,10 @@ QString GraphDefinitionWidget::getGuideString()
     <ul>
         <li>bin_count: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
         <li>x_source: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
+    </ul>
+<h2>Fields for type <i>panel_properties</i></h2>
+    <ul>
+        <li>title: Panel title. New lines can be added with \n</li>
     </ul>
 )ENDTAG");
 }
@@ -975,7 +985,7 @@ void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
     else if (svStyle != "none")
     {
         // Ending up here means that entry was unrecognized.
-        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(viewToString(svStyle)));
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(viewToQString(svStyle)));
     }
 
     m_spXySeries->setLineStyle(style);
@@ -991,7 +1001,7 @@ void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
     else if (svStyle != "none")
     {
         // Ending up here means that entry was unrecognized.
-        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown point style '%1', using style 'none'").arg(viewToString(svStyle)));
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown point style '%1', using style 'none'").arg(viewToQString(svStyle)));
         
     }
       
@@ -1059,7 +1069,7 @@ public:
         return m_spChartView.get();
     }
 
-    void setTitle(StringViewUtf8 svTitle) override
+    void setTitle(StringViewUtf8 /*svPanelId*/, StringViewUtf8 svTitle) override
     {
         auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
         if (pChart)
@@ -1142,11 +1152,7 @@ public:
           QCustomPlot* getWidget()       { return m_spChartView.get(); }
     const QCustomPlot* getWidget() const { return m_spChartView.get(); }
 
-    void setTitle(StringViewUtf8 svTitle) override
-    {
-        // Not implemented.
-        DFG_UNUSED(svTitle);
-    }
+    void setTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle) override;
 
     bool hasChartObjects() const override
     {
@@ -1211,11 +1217,63 @@ public:
     QCPAxis* getAxis(const ChartObjectCreationParam& param, QCPAxis::AxisType axisType);
     QCPAxis* getXAxis(const ChartObjectCreationParam& param);
     QCPAxis* getYAxis(const ChartObjectCreationParam& param);
+    bool getGridPos(const StringViewUtf8 svPanelId, int& nRow, int& nCol);
 
     QObjectStorage<QCustomPlot> m_spChartView;
     bool m_bLegendEnabled = false;
     QVector<QCPLegend*> m_legends; // All but the default legend
 }; // ChartCanvasQCustomPlot
+
+
+class ChartPanel : public QCPLayoutGrid
+{
+    //Q_OBJECT
+public:
+    ChartPanel(QCustomPlot* pQcp);
+    QCPAxisRect* axisRect();
+
+    void setTitle(StringViewUtf8 svTitle);
+
+    QCustomPlot* m_pQcp = nullptr;
+};
+
+ChartPanel::ChartPanel(QCustomPlot* pQcp)
+    : m_pQcp(pQcp)
+{
+}
+
+auto ChartPanel::axisRect() -> QCPAxisRect*
+{
+    const auto nElemCount = this->elementCount();
+    if (nElemCount == 0 || (nElemCount == 1 && qobject_cast<QCPTextElement*>(this->elementAt(0)) != nullptr))
+        addElement(nElemCount, 0, new QCPAxisRect(m_pQcp));
+    return qobject_cast<QCPAxisRect*>(elementAt(elementCount() - 1));
+}
+
+void ChartPanel::setTitle(StringViewUtf8 svTitle)
+{
+    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
+    if (svTitle.empty())
+    {
+        // In case of empty title removing the text element.
+        if (pTitle)
+        {
+            this->remove(pTitle);
+            this->simplify(); // To remove the empty space.
+        }
+    }
+    else
+    {
+        if (!pTitle)
+        {
+            pTitle = new QCPTextElement(this->parentPlot());
+            this->insertRow(0); // insert an empty row above the axis rect
+            addElement(0, 0, pTitle);
+        }
+        pTitle->setText(viewToQString(svTitle));
+        pTitle->setFont(QFont("sans", 12, QFont::Bold));
+    }
+}
 
 namespace
 {
@@ -1349,18 +1407,17 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
         m_legends.clear();
     }
 
-    // Clearing excess panels (AxisRect's)
+    // Removing all but first panel
+    auto pPlotLayout = p->plotLayout();
+    if (pPlotLayout)
     {
-        auto axisRects = p->axisRects();
-        if (!axisRects.isEmpty())
-            axisRects.pop_front(); // Not deleting default AxisRect
-        auto pLayout = p->plotLayout();
-        if (pLayout)
+        while (pPlotLayout->elementCount() > 1 && pPlotLayout->removeAt(pPlotLayout->elementCount() - 1))
         {
-            for (auto pAxisRect : axisRects)
-                pLayout->remove(pAxisRect); // This also deletes pAxisRect
-            pLayout->simplify(); // This removes the empty space that removed items free.
         }
+        auto pFirstPanel = (pPlotLayout->elementCount() >= 1) ? dynamic_cast<ChartPanel*>(pPlotLayout->elementAt(0)) : nullptr;
+        if (pFirstPanel)
+            pFirstPanel->setTitle(StringViewUtf8());
+        pPlotLayout->simplify(); // This removes the empty space that removed items free.
     }
 
     repaintCanvas();
@@ -1578,27 +1635,37 @@ void ChartCanvasQCustomPlot::createLegends()
         DFG_QT_CHART_CONSOLE_WARNING(tr("Number of items that didn't end up in any legend: %1").arg(plottables.size()));
 }
 
+bool ChartCanvasQCustomPlot::getGridPos(const StringViewUtf8 svPanelId, int& nRow, int& nCol)
+{
+    auto panelId = ParenthesisItem::fromStableView(svPanelId);
+    if (!svPanelId.empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to retrieve grid panel: invalid panel definition '%1'").arg(QString::fromUtf8(svPanelId.dataRaw(), static_cast<int>(svPanelId.length()))));
+        return false;
+    }
+    nRow = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(0);
+    nCol = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(1);
+    if (nRow < 1 || nCol < 1 || nRow > 1000 || nCol > 1000)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid panel grid index, expecting [1, 1000], got row = %1, column = %2").arg(nRow).arg(nCol));
+        return false;
+    }
+    // Converting from user's 1-based index to internal 0-based.
+    --nRow; --nCol;
+    return true;
+}
+
 auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) -> QCPAxisRect*
 {
+    int nRow = 0;
+    int nCol = 0;
+    if (!getGridPos(param.sPanelId, nRow, nCol))
+        return nullptr;
+
     auto p = getWidget();
     if (!p)
         return nullptr;
 
-    auto panelId = ParenthesisItem::fromStableView(param.panelId());
-    if (!param.panelId().empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
-    {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to retrieve axis: invalid panel definition '%1'").arg(QString::fromUtf8(param.panelId().dataRaw(), static_cast<int>(param.panelId().length()))));
-        return nullptr;
-    }
-    auto nRow = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(0);
-    auto nCol = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(1);
-    if (nRow < 1 || nCol < 1 || nRow > 1000 || nCol > 1000)
-    {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid panel grid index, expecting [1, 1000], got row = %1, column = %2").arg(nRow).arg(nCol));
-        return nullptr;
-    }
-    // Converting from user's 1-based index to internal 0-based.
-    --nRow; --nCol;
     auto pLayout = p->plotLayout();
     if (!pLayout)
     {
@@ -1606,10 +1673,21 @@ auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) 
         return nullptr;
     }
     auto pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
+    ChartPanel* pChartPanel = nullptr;
     if (!pExistingAxisRect)
     {
-        pLayout->addElement(nRow, nCol, new QCPAxisRect(p)); // QCPAxisRect is owned by pLayout.
-        pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
+        pChartPanel = dynamic_cast<ChartPanel*>(pLayout->element(nRow, nCol));
+        if (pChartPanel)
+            pExistingAxisRect = pChartPanel->axisRect();
+    }
+    if (!pExistingAxisRect)
+    {
+        if (!pChartPanel)
+        {
+            pChartPanel = new ChartPanel(p);
+            pLayout->addElement(nRow, nCol, pChartPanel);
+        }
+        pExistingAxisRect = pChartPanel->axisRect();
     }
     if (!pExistingAxisRect)
     {
@@ -1633,6 +1711,31 @@ auto ChartCanvasQCustomPlot::getXAxis(const ChartObjectCreationParam& param) -> 
 auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> QCPAxis*
 {
     return getAxis(param, QCPAxis::atLeft);
+}
+
+void ChartCanvasQCustomPlot::setTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle)
+{
+    auto p = getWidget();
+    auto pMainLayout = (p) ? p->plotLayout() : nullptr;
+    if (!pMainLayout)
+        return;
+
+    int nRow = 0;
+    int nCol = 0;
+    if (!getGridPos(svPanelId, nRow, nCol))
+        return;
+
+    auto pElement = pMainLayout->element(nRow, nCol);
+    auto pPanel = dynamic_cast<ChartPanel*>(pElement);
+    if (pPanel == nullptr)
+    {
+        pPanel = new ChartPanel(p);
+        if (pElement)
+            pPanel->addElement(pElement); // This transfers existing element to new layout.
+        pMainLayout->addElement(nRow, nCol, pPanel);
+    }
+    if (pPanel)
+        pPanel->setTitle(svTitle);
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -2219,11 +2322,20 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         if (!defEntry.isEnabled())
             return;
 
-        const auto graphTypeStr = defEntry.graphTypeStr();
-        if (graphTypeStr != ChartObjectChartTypeStr_xy && graphTypeStr != ChartObjectChartTypeStr_histogram)
+        const auto sEntryType = defEntry.graphTypeStr();
+
+        // type == panel_properties
+        if (sEntryType == ChartObjectChartTypeStr_panelProperties)
+        {
+            const auto sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId, [] { return StringUtf8(); });
+            pChart->setTitle(sPanelId, defEntry.fieldValueStr(ChartObjectFieldIdStr_title, [] { return StringUtf8(); }));
+            return;
+        }
+
+        if (sEntryType != ChartObjectChartTypeStr_xy && sEntryType != ChartObjectChartTypeStr_histogram)
         {
             // Unsupported graphType.
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(sEntryType.c_str()));
             return;
         }
 
@@ -2237,13 +2349,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 return;
             }
 
-            if (graphTypeStr == ChartObjectChartTypeStr_xy)
+            if (sEntryType == ChartObjectChartTypeStr_xy)
                 refreshXy(rChart, source, defEntry, nGraphCounter);
-            else if (graphTypeStr == ChartObjectChartTypeStr_histogram)
+            else if (sEntryType == ChartObjectChartTypeStr_histogram)
                 refreshHistogram(rChart, source, defEntry, nHistogramCounter);
             else
             {
-                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(graphTypeStr.c_str()));
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(sEntryType.c_str()));
                 return;
             }
         });
@@ -2299,7 +2411,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         const ParenthesisItem items(sSource);
         if (items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnName))
         {
-            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unknown source type, got %2").arg(defEntry.index()).arg(viewToString(items.key())));
+            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unknown source type, got %2").arg(defEntry.index()).arg(viewToQString(items.key())));
             return GraphDataSource::invalidIndex();
         }
         if (items.valueCount() != 1)
@@ -2311,7 +2423,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         const auto columnIndex = dataSource.columnIndexByName(sColumnName);
         if (columnIndex == dataSource.invalidIndex() || !cacheData.hasColumnIndex(columnIndex))
         {
-            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToString(sColumnName)));
+            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(sColumnName)));
             return GraphDataSource::invalidIndex();
         }
         return columnIndex;
