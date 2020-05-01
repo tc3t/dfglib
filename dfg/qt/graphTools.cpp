@@ -80,10 +80,21 @@ enum class ConsoleLogLevel
     none
 }; // ConsoleLogLevel
 
+
+static ConsoleDisplayEntryType consoleLogLevelToEntryType(const ConsoleLogLevel logLevel)
+{
+    switch (logLevel)
+    {
+        case ConsoleLogLevel::error:   return ConsoleDisplayEntryType::error;
+        case ConsoleLogLevel::warning: return ConsoleDisplayEntryType::warning;
+        default:                       return ConsoleDisplayEntryType::generic;
+    }
+}
+
 class ConsoleLogHandle
 {
 public:
-    using HandlerT = std::function<void(const char*)>;
+    using HandlerT = std::function<void(const char*, ConsoleLogLevel)>;
 
     ~ConsoleLogHandle()
     {
@@ -98,16 +109,16 @@ public:
             m_effectiveLevel = ConsoleLogLevel::none;
     }
 
-    void log(const char* psz)
+    void log(const char* psz, const ConsoleLogLevel msgLogLevel)
     {
         if (m_handler)
-            m_handler(psz);
+            m_handler(psz, msgLogLevel);
     }
 
-    void log(const QString& s)
+    void log(const QString& s, const ConsoleLogLevel msgLogLevel)
     {
         if (m_handler)
-            m_handler(s.toUtf8());
+            m_handler(s.toUtf8(), msgLogLevel);
     }
 
     ConsoleLogLevel effectiveLevel() const { return m_effectiveLevel; }
@@ -131,7 +142,7 @@ static QString viewToQString(const StringViewUtf8& view)
 
 } // unnamed namespace
 
-#define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG)
+#define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG, LEVEL)
 #define DFG_QT_CHART_CONSOLE_DEBUG(MSG)      DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::debug, MSG)
 #define DFG_QT_CHART_CONSOLE_INFO(MSG)       DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::info, MSG)
 #define DFG_QT_CHART_CONSOLE_WARNING(MSG)    DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::warning, MSG)
@@ -1760,7 +1771,7 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
 
     {
         auto pConsole = new ConsoleDisplay(this);
-        gConsoleLogHandle.setHandler([=](const QString& s) { pConsole->addEntry(s); } );
+        gConsoleLogHandle.setHandler([=](const QString& s, ConsoleLogLevel logLevel) { pConsole->addEntry(s, consoleLogLevelToEntryType(logLevel)); } );
      
         m_spConsoleWidget.reset(pConsole);
     }
