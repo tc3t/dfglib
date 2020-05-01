@@ -760,7 +760,8 @@ void GraphDefinitionWidget::forEachDefinitionEntry(Func_T handler)
     int i = 0;
     for (const auto& part : parts)
     {
-        handler(GraphDefinitionEntry::fromText(part.toString(), i++));
+        if (!part.isEmpty() && part.front() != '#')
+            handler(GraphDefinitionEntry::fromText(part.toString(), i++));
     }
 }
 
