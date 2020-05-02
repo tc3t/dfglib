@@ -688,7 +688,15 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
 
 QString GraphDefinitionWidget::getGuideString()
 {
-    return tr(R"ENDTAG(<h2>Basic examples:</h2>
+    return tr(R"ENDTAG(
+<h2>Overview:</h2>
+<ul>
+    <li>Charts are defined as a list of single line JSON-entries. One entry typically defines one graph.
+    <li>All entries have a <i>type</i> that defines list of accepted fields.
+    <li>List can have comments: lines beginning with # are not parsed.
+</ul>
+
+<h2>Basic examples:</h2>
 <ul>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
@@ -700,37 +708,38 @@ QString GraphDefinitionWidget::getGuideString()
 
 <h2>Common fields</h2>
 <ul>
-   <li>enabled: {<b>true</b>, false}. Defines whether entry is enabled, default value is true.</li>
+   <li><i>enabled</i>: {<b>true</b>, false}. Defines whether entry is enabled, default value is true.</li>
     <ul>
-        <li>Entry can also be disabled by starting line with #. When commenting, the line is not parsed at all.</li>
+        <li>Entry can also be disabled by beginning line with #. When commented, the line is not parsed at all.</li>
     </ul>
-   <li>type: Defines entry type</li>
+   <li><i>type</i>: Defines entry type</li>
     <ul>
-        <li>xy       : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
-        <li>histogram: Histogram</li>
+        <li>xy              : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
+        <li>histogram       : Histogram</li>
+        <li>panel_properties: Defines panel items such as title and axes labels</li>
     </ul>
-   <li>name: name of the object, shown e.g. in legend.</li>
-   <li>panel_id: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
+   <li><i>name</i>: name of the object, shown e.g. in legend.</li>
+   <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
 </ul>
 
 <h2>Fields for type <i>xy</i></h2>
     <ul>
-        <li>x_source:</li>
+        <li><i>x_source</i>:</li>
             <ul>
                 <li>column_name(name): x-values will be taken from column that has name <i>name</i>.</li>
                 <li>row_index: values will be taken from row index of y-values</li>
             </ul>
-        <li>y_source:</li>
+        <li><i>y_source</i>:</li>
             <ul>
                 <li>column_name(name): y-values will be taken from column that has name <i>name</i>.</li>
                 <li>row_index: values will be taken from row index of x-values</li>
             </ul>
-        <li>x_rows:</li>
+        <li><i>x_rows</i>:</li>
             <ul>
                 <li>x_rows: List of rows to include as semicolon separated list, e.g. "1:3; 4; 7:8" means 1, 2, 3, 4, 7, 8.</li>
                 <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
             </ul>
-        <li>line_style:</li>
+        <li><i>line_style</i>:</li>
             <ul>
                 <li>none:        No line indicator</li>
                 <li><b>basic</b>:       Straight line between data points. Default value if field not present</li>
@@ -739,7 +748,7 @@ QString GraphDefinitionWidget::getGuideString()
                 <li>step_middle: Horizontal line around point, steps at midway on both sides.</li>
                 <li>pole:        Vertical line from (x, 0) -> (x, y) for each point.</li>
             </ul>
-        <li>point_style:</li>
+        <li><i>point_style</i>:</li>
             <ul>
                 <li><b>none</b> : No point indicator. Default value if field not present</li>
                 <li>basic: Basic indicator for every point</li>
@@ -747,14 +756,14 @@ QString GraphDefinitionWidget::getGuideString()
     </ul>
 <h2>Fields for type <i>histogram</i></h2>
     <ul>
-        <li>bin_count: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
-        <li>x_source: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
+        <li><i>bin_count</i>: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
+        <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
     </ul>
 <h2>Fields for type <i>panel_properties</i></h2>
     <ul>
-        <li>title: Panel title. New lines can be added with \n</li>
-        <li>x_label: Label of x-axis. New lines can be added with \n</li>
-        <li>y_label: Label of y-axis. New lines can be added with \n</li>
+        <li><i>title</i>: Panel title. New lines can be added with \n</li>
+        <li><i>x_label</i>: Label of x-axis. New lines can be added with \n</li>
+        <li><i>y_label</i>: Label of y-axis. New lines can be added with \n</li>
     </ul>
 )ENDTAG");
 }
