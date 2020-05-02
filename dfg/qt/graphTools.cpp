@@ -694,12 +694,16 @@ QString GraphDefinitionWidget::getGuideString()
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
     <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
-    <li>Setting panel title: {"type":"panel_properties","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)"}
+    <li>Setting panel title and axis labels: {"type":"panel_properties","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)","x_label":"This is x axis label","y_label":"This is y axis label"}
+    <li>Disabling an entry by commenting: #{"type":"histogram","name":"Basic histogram"}
 </ul>
 
 <h2>Common fields</h2>
 <ul>
    <li>enabled: {<b>true</b>, false}. Defines whether entry is enabled, default value is true.</li>
+    <ul>
+        <li>Entry can also be disabled by starting line with #. When commenting, the line is not parsed at all.</li>
+    </ul>
    <li>type: Defines entry type</li>
     <ul>
         <li>xy       : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
@@ -749,6 +753,8 @@ QString GraphDefinitionWidget::getGuideString()
 <h2>Fields for type <i>panel_properties</i></h2>
     <ul>
         <li>title: Panel title. New lines can be added with \n</li>
+        <li>x_label: Label of x-axis. New lines can be added with \n</li>
+        <li>y_label: Label of y-axis. New lines can be added with \n</li>
     </ul>
 )ENDTAG");
 }
@@ -1231,6 +1237,8 @@ public:
 
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
 
+    void setAxisLabel(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 axisLabel) override;
+
     bool isLegendSupported() const override { return true; }
     bool isLegendEnabled() const override;
     bool enableLegend(bool) override;
@@ -1241,7 +1249,19 @@ public:
     QCPAxis* getAxis(const ChartObjectCreationParam& param, QCPAxis::AxisType axisType);
     QCPAxis* getXAxis(const ChartObjectCreationParam& param);
     QCPAxis* getYAxis(const ChartObjectCreationParam& param);
+    QCPAxisRect* getAxisRect(const StringViewUtf8& svPanelId);
+    QCPAxis* getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId);
     bool getGridPos(const StringViewUtf8 svPanelId, int& nRow, int& nCol);
+
+private:
+    template <class This_T, class Func_T>
+    static void forEachAxisRectImpl(This_T& rThis, Func_T&& func);
+    template <class Func_T> void forEachAxisRect(Func_T&& func);
+    template <class Func_T> void forEachAxisRect(Func_T&& func) const;
+
+    template <class Func_T> static void forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func);
+
+public:
 
     QObjectStorage<QCustomPlot> m_spChartView;
     bool m_bLegendEnabled = false;
@@ -1442,6 +1462,15 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
         if (pFirstPanel)
             pFirstPanel->setTitle(StringViewUtf8());
         pPlotLayout->simplify(); // This removes the empty space that removed items free.
+
+        // Removing axis labels
+        forEachAxisRect([&](QCPAxisRect& axisRect)
+        {
+            forEachAxis(&axisRect, [](QCPAxis& rAxis)
+            {
+                rAxis.setLabel(QString());
+            });
+        });
     }
 
     repaintCanvas();
@@ -1556,6 +1585,13 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
     }
 
     return spHistogram;
+}
+
+void ChartCanvasQCustomPlot::setAxisLabel(StringViewUtf8 svPanelId, StringViewUtf8 svAxisId, StringViewUtf8 svAxisLabel)
+{
+    auto pAxis = getAxis(svPanelId, svAxisId);
+    if (pAxis)
+        pAxis->setLabel(viewToQString(svAxisLabel));
 }
 
 void ChartCanvasQCustomPlot::repaintCanvas()
@@ -1679,11 +1715,41 @@ bool ChartCanvasQCustomPlot::getGridPos(const StringViewUtf8 svPanelId, int& nRo
     return true;
 }
 
-auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) -> QCPAxisRect*
+template <class This_T, class Func_T>
+void ChartCanvasQCustomPlot::forEachAxisRectImpl(This_T& rThis, Func_T&& func)
+{
+    auto pQcp = rThis.getWidget();
+    if (!pQcp)
+        return;
+    auto axisRects = pQcp->axisRects();
+    for (auto pAxisRect : axisRects)
+    {
+        if (pAxisRect)
+            func(*pAxisRect);
+    }
+}
+
+template <class Func_T> void ChartCanvasQCustomPlot::forEachAxisRect(Func_T&& func)       { forEachAxisRectImpl(*this, std::forward<Func_T>(func)); }
+template <class Func_T> void ChartCanvasQCustomPlot::forEachAxisRect(Func_T&& func) const { forEachAxisRectImpl(*this, std::forward<Func_T>(func)); }
+
+template <class Func_T>
+void ChartCanvasQCustomPlot::forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func)
+{
+    if (!pAxisRect)
+        return;
+    auto axes = pAxisRect->axes();
+    for (auto pAxis : axes)
+    {
+        if (pAxis)
+            func(*pAxis);
+    }
+}
+
+auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCPAxisRect*
 {
     int nRow = 0;
     int nCol = 0;
-    if (!getGridPos(param.sPanelId, nRow, nCol))
+    if (!getGridPos(svPanelId, nRow, nCol))
         return nullptr;
 
     auto p = getWidget();
@@ -1719,6 +1785,23 @@ auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) 
         return nullptr;
     }
     return pExistingAxisRect;
+}
+
+auto ChartCanvasQCustomPlot::getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId) -> QCPAxis*
+{
+    auto pAxisRect = getAxisRect(svPanelId);
+    if (svAxisId == DFG_UTF8("x"))
+        return pAxisRect->axis(QCPAxis::atBottom);
+    else if (svAxisId == DFG_UTF8("y"))
+        return pAxisRect->axis(QCPAxis::atLeft);
+   
+    DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find axis %1 from panel %2").arg(viewToQString(svPanelId), viewToQString(svAxisId)));
+    return nullptr;
+}
+
+auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) -> QCPAxisRect*
+{
+    return getAxisRect(param.panelId());
 }
 
 auto ChartCanvasQCustomPlot::getAxis(const ChartObjectCreationParam& param, const QCPAxis::AxisType axisType) -> QCPAxis*
@@ -2689,6 +2772,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(Char
 {
     const auto sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId);
     rChart.setTitle(sPanelId, defEntry.fieldValueStr(ChartObjectFieldIdStr_title));
+
+    rChart.setAxisLabel(sPanelId, DFG_UTF8("x"), defEntry.fieldValueStr(ChartObjectFieldIdStr_xLabel));
+    rChart.setAxisLabel(sPanelId, DFG_UTF8("y"), defEntry.fieldValueStr(ChartObjectFieldIdStr_yLabel));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_ptr<GraphDataSource> spSource)
