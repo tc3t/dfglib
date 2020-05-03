@@ -47,6 +47,7 @@ public:
     using DoubleValueVector = DFG_MODULE_NS(cont)::ValueVector<double>;
     using SingleColumnDoubleValuesOptional = std::shared_ptr<const DoubleValueVector>;
     using ColumnDataTypeMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ChartDataType>;
+    using ColumnNameMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, QString>;
 
     virtual ~GraphDataSource() {}
 
@@ -62,6 +63,8 @@ public:
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }
 
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
+
+    virtual ColumnNameMap columnNames() const { return ColumnNameMap(); }
 
     virtual DataSourceIndex columnCount() const { return 0; }
 

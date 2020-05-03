@@ -128,6 +128,7 @@ public:
     {
     public:
         GraphDataSource::ColumnDataTypeMap m_columnTypes;
+        GraphDataSource::ColumnNameMap m_columnNames;
     };
 
     inline void analyzeImpl(const QItemSelection selection) override;
@@ -164,6 +165,18 @@ void SelectionAnalyzerForGraphing::analyzeImpl(const QItemSelection selection)
 
         CompletionStatus completionStatus = CompletionStatus_started;
         rTable.m_columnTypes.clear();
+        rTable.m_columnNames.clear();
+
+        // Getting column names
+        {
+            auto pModel = pView->csvModel();
+            if (pModel)
+            {
+                const auto nCount = pModel->columnCount();
+                for (int i = 0; i < nCount; ++i)
+                    rTable.m_columnNames[i] = pModel->getHeaderName(i);
+            }
+        }
 
         CsvTableView::forEachIndexInSelection(*pView, selection, CsvTableView::ModelIndexTypeView, [&](const QModelIndex& mi, bool& rbContinue)
         {
@@ -223,6 +236,8 @@ public:
     void enable(const bool b) override;
 
     ColumnDataTypeMap columnDataTypes() const override;
+
+    ColumnNameMap columnNames() const override;
 
     std::shared_ptr<const SelectionAnalyzerForGraphing::Table> privGetTableView() const;
 
@@ -338,6 +353,12 @@ auto CsvTableViewChartDataSource::columnDataTypes() const -> ColumnDataTypeMap
 {
     auto spViewer = privGetTableView();
     return (spViewer) ? spViewer->m_columnTypes : ColumnDataTypeMap();
+}
+
+auto CsvTableViewChartDataSource::columnNames() const -> ColumnNameMap
+{
+    auto spViewer = privGetTableView();
+    return (spViewer) ? spViewer->m_columnNames : ColumnNameMap();
 }
 
 auto CsvTableViewChartDataSource::privGetTableView() const -> std::shared_ptr<const SelectionAnalyzerForGraphing::Table>

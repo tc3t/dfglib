@@ -140,6 +140,12 @@ static QString viewToQString(const StringViewUtf8& view)
     return QString::fromUtf8(view.dataRaw(), static_cast<int>(view.length()));
 }
 
+static StringUtf8 qStringToUtf8(const QString& s)
+{
+    auto bytes = s.toUtf8();
+    return StringUtf8(SzPtrUtf8(bytes.begin()), SzPtrUtf8(bytes.end()));
+}
+
 } // unnamed namespace
 
 #define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG, LEVEL)
@@ -320,11 +326,13 @@ public:
     bool hasColumnIndex(const IndexT nCol) const;
 
     ChartDataType columnDataType(const RowToValueMap* pColumn) const;
+    QString columnName(const RowToValueMap* pColumn) const;
 
     IndexT columnToIndex(const RowToValueMap* pColumn) const;
 
     ColumnToValuesMap m_colToValuesMap;
     GraphDataSource::ColumnDataTypeMap m_columnTypes;
+    GraphDataSource::ColumnNameMap m_columnNames;
     bool m_bIsValid = false;
 };
 
@@ -461,6 +469,7 @@ void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSou
     });
 
     m_columnTypes = source.columnDataTypes();
+    m_columnNames = source.columnNames();
 
     // Sorting values by row now that all data has been added.
     for (auto iter = m_colToValuesMap.begin(), iterEnd = m_colToValuesMap.end(); iter != iterEnd; ++iter)
@@ -500,6 +509,13 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const RowToValue
     const auto nCol = columnToIndex(pColumn);
     auto iter = m_columnTypes.find(nCol);
     return (iter != m_columnTypes.end()) ? iter->second : ChartDataType::unknown;
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap* pColumn) const -> QString
+{
+    const auto nCol = columnToIndex(pColumn);
+    auto iter = m_columnNames.find(nCol);
+    return (iter != m_columnNames.end()) ? iter->second : QString();
 }
 
 /*
@@ -1517,6 +1533,15 @@ namespace
         else
             rAxis.setTicker(QSharedPointer<QCPAxisTicker>(new QCPAxisTicker)); // Resets to default ticker. TODO: do only if needed (i.e. if current ticker is something else than plain QCPAxisTicker)
     }
+
+    void setAutoAxisLabel(QCPAxis& rAxis, const StringViewUtf8 svDataName)
+    {
+        auto sNew = rAxis.label();
+        if (!sNew.isEmpty())
+            sNew += QLatin1String(", ");
+        sNew += viewToQString(svDataName);
+        rAxis.setLabel(sNew);
+    }
 }
 
 auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
@@ -1539,6 +1564,9 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
         p->addGraph(pXaxis, pYaxis);
         setAxisTicker(*pXaxis, param.xType);
         setAxisTicker(*pYaxis, param.yType);
+
+        setAutoAxisLabel(*pXaxis, param.m_sXname);
+        setAutoAxisLabel(*pYaxis, param.m_sYname);
     }
     return getSeriesByIndex(param);
 }
@@ -2679,9 +2707,12 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         if (!pXdata || !pYdata)
             return;
 
+        const char szRowIndexName[] = QT_TR_NOOP("Row number");
         const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType::unknown;
         const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry, xType, yType));
+        const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
+        const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry, xType, yType, qStringToUtf8(sXname), qStringToUtf8(sYname)));
         if (!spSeries)
         {
             DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));

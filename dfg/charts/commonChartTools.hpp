@@ -246,18 +246,23 @@ class XySeriesCreationParam : public ChartObjectCreationParam
 {
 public:
     using BaseClass = ChartObjectCreationParam;
-    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry, ChartDataType, ChartDataType);
+    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry, ChartDataType, ChartDataType, StringUtf8 sXname = StringUtf8(), StringUtf8 sYname = StringUtf8());
 
     int nIndex;
     ChartDataType xType = ChartDataType::unknown;
     ChartDataType yType = ChartDataType::unknown;
+    StringUtf8 m_sXname;
+    StringUtf8 m_sYname;
 };
 
-inline XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry, ChartDataType argXtype, ChartDataType argYtype)
+inline XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry, ChartDataType argXtype, ChartDataType argYtype,
+                                                    StringUtf8 sXname, StringUtf8 sYname)
     : BaseClass(defEntry)
     , nIndex(argIndex)
     , xType(argXtype)
     , yType(argYtype)
+    , m_sXname(std::move(sXname))
+    , m_sYname(std::move(sYname))
 {
     
 }
