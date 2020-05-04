@@ -383,7 +383,7 @@ namespace DFG_DETAIL_NS
 {
     static inline void checkForUnrecongnizedProperties(const AbstractChartControlItem& controlItem, std::function<void(AbstractChartControlItem::StringView)> func, const std::array<const char*, 10> knownItems)
     {
-        controlItem.forEachPropertyId([&](auto sv)
+        controlItem.forEachPropertyId([&](StringViewUtf8 sv)
         {
             if (sv == SzPtrUtf8(ChartObjectFieldIdStr_type))
                 return;
