@@ -468,6 +468,28 @@ TEST(dfgStr, strTo)
 
 namespace
 {
+    template <class Char_T>
+    static void testStrToBool()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+        EXPECT_EQ(true, strTo<bool>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "1")));
+        EXPECT_EQ(true, strTo<bool>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "true")));
+        EXPECT_EQ(true, strTo<bool>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " true ")));
+        EXPECT_EQ(false, strTo<bool>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "0")));
+        EXPECT_EQ(false, strTo<bool>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "false")));
+        EXPECT_EQ(false, strTo<bool>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " false ")));
+    }
+}
+
+TEST(dfgStr, strTo_bool)
+{
+    testStrToBool<char>();
+    testStrToBool<wchar_t>();
+}
+
+namespace
+{
     template <class T>
     void toStrCommonFloatingPointTests(const char* pExpectedLowest, const char* pExpectedMax, const char* pExpectedMinPositive)
     {

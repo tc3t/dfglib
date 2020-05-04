@@ -125,6 +125,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewOrOwner";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewSz";
     //::testing::GTEST_FLAG(filter) = "dfgStr.strTo";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.strTo_bool";
     //::testing::GTEST_FLAG(filter) = "dfgStr.toStr";
     //::testing::GTEST_FLAG(filter) = "dfgStr.TypedCharPtrT";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";

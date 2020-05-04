@@ -55,6 +55,21 @@ T& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewC)& sv, T& val, bool* pS
 template <class T>
 T& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewW)& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
 
+template <class Char_T>
+bool& strToBoolNoThrowLexCast(const DFG_CLASS_NAME(StringView)<Char_T>& sv, bool& val, bool* pSuccess = nullptr)
+{ 
+    if (sv == DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "true"))
+        val = true;
+    else if (sv == DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "false"))
+        val = false;
+    else
+        val = strToByNoThrowLexCastImpl(sv, val, pSuccess);
+    return val;
+}
+
+template <> inline bool& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewC)& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
+template <> inline bool& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewW)& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
+
 template <class T>
 T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlySzParamC)& s, bool* pSuccess = nullptr)
 {
