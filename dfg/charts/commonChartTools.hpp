@@ -29,17 +29,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
 /* Checklist for doing changes:
     -Reflect all changes done here to documentation in qt/graphTools.cpp getGuideString() (remember also examples).
-    -if adding properties for types, update forEachUnrecognizedPropertyId()
+    -if adding new types or properties for existing types, update forEachUnrecognizedPropertyId()
 */
 
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
         // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id
+
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
         // histogram-type has properties: bin_count, x_source, panel_id
+
     constexpr char ChartObjectChartTypeStr_panelProperties[] = "panel_properties";
         // panel_properties-type has properties: panel_id, title, x_label, y_label
+
+    constexpr char ChartObjectChartTypeStr_globalConfig[] = "global_config";
+        // global_config-type has properties: show_legend, auto_axis_labels
 
 // name: this will show e.g. in legend.
 constexpr char ChartObjectFieldIdStr_name[] = "name";
@@ -49,6 +54,12 @@ constexpr char ChartObjectFieldIdStr_binCount[] = "bin_count";
 
 // title
 constexpr char ChartObjectFieldIdStr_title[] = "title";
+
+// show_legend
+constexpr char ChartObjectFieldIdStr_showLegend[] = "show_legend";
+
+// auto_axis_labels
+constexpr char ChartObjectFieldIdStr_autoAxisLabels[] = "auto_axis_labels";
 
 // x label
 constexpr char ChartObjectFieldIdStr_xLabel[] = "x_label";
@@ -108,10 +119,12 @@ public:
     // Returns value of field 'fieldId' if present, defaultValue otherwise.
     // Note: defaultValue is returned only when field is not found, not when e.g. field is present but has no value or has invalid value.
     template <class T>
-    T fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const;
+    T fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue, bool* pFieldExists = nullptr) const;
 
     String fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<String()> defaultValueGenerator) const;
     String fieldValueStr(FieldIdStrViewInputParam fieldId) const; // Convenience overload, returns empty string as default.
+    // Convenience overload, returns empty string as default and sets pFieldPresent to indicate existence of requested field.
+    String fieldValueStr(FieldIdStrViewInputParam fieldId, bool* pFieldPresent) const;
 
     void forEachPropertyId(std::function<void(StringView svId)>) const;
 
@@ -122,11 +135,13 @@ private:
 
 
 template <class T>
-T AbstractChartControlItem::fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue) const
+T AbstractChartControlItem::fieldValue(FieldIdStrViewInputParam fieldId, const T& defaultValue, bool* pFieldExists) const
 {
     DFG_STATIC_ASSERT(std::is_arithmetic<T>::value, "Only arithmetic value are supported for now");
 
     auto rv = fieldValueStrImpl(fieldId);
+    if (pFieldExists)
+        *pFieldExists = rv.first;
     if (!rv.first) // Field not present?
         return defaultValue;
     T obj{};
@@ -143,6 +158,13 @@ inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fie
 inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fieldId) const -> String
 {
     return fieldValueStr(fieldId, [] { return String(); });
+}
+
+inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fieldId, bool* pFieldPresent) const -> String
+{
+    if (pFieldPresent)
+        *pFieldPresent = true;
+    return fieldValueStr(fieldId, [&] { if (pFieldPresent) *pFieldPresent = false; return String(); });
 }
 
 inline void AbstractChartControlItem::forEachPropertyId(std::function<void(StringView svId)> func) const
@@ -213,21 +235,59 @@ public:
 template <class T>
 using ChartObjectHolder = std::shared_ptr<T>;
 
+class ChartConfigParam
+{
+public:
+    using FieldIdStrViewInputParam = AbstractChartControlItem::FieldIdStrViewInputParam;
+
+    ChartConfigParam(const AbstractChartControlItem* pPrimary = nullptr, const AbstractChartControlItem* pSecondary = nullptr)
+    {
+        m_configs[0] = pPrimary;
+        m_configs[1] = pSecondary;
+    }
+
+    template <class T>
+    T value(FieldIdStrViewInputParam id, T defaultVal = T()) const;
+
+    // In order of use, most specific at index 0. The idea is to support setting hierarchy: e.g. first use value from panel settings, if not found, use global settings.
+    // For now restricted to two levels without particular reason (i.e. can be increased).
+    std::array<const AbstractChartControlItem*, 2> m_configs;
+}; // Class ChartConfigParam
+
+template <class T>
+T ChartConfigParam::value(FieldIdStrViewInputParam fieldId, T defaultVal) const
+{
+    // Returning setting from most specific item that has requested ID
+    for (auto pItem : m_configs)
+    {
+        if (!pItem)
+            continue;
+        bool bExists = false;
+        auto rv = pItem->fieldValue<T>(fieldId, defaultVal, &bExists);
+        if (bExists)
+            return rv;
+    }
+    return defaultVal;
+}
 
 class ChartObjectCreationParam
 {
 public:
-    ChartObjectCreationParam(const AbstractChartControlItem& defEntry);
+    ChartObjectCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry);
 
     const AbstractChartControlItem& definitionEntry() const;
     StringViewUtf8 panelId() const;
 
+    const ChartConfigParam& config() const { return m_config; }
+
     StringUtf8 sPanelId;
+    ChartConfigParam m_config;
     const AbstractChartControlItem& m_rDefEntry;
 };
 
-inline ChartObjectCreationParam::ChartObjectCreationParam(const AbstractChartControlItem& defEntry) :
-    m_rDefEntry(defEntry)
+inline ChartObjectCreationParam::ChartObjectCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry)
+    : m_config(configParam)
+    , m_rDefEntry(defEntry)
 {
     sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId, []() { return StringUtf8(); });
 }
@@ -246,7 +306,7 @@ class XySeriesCreationParam : public ChartObjectCreationParam
 {
 public:
     using BaseClass = ChartObjectCreationParam;
-    XySeriesCreationParam(int argIndex, const AbstractChartControlItem& defEntry, ChartDataType, ChartDataType, StringUtf8 sXname = StringUtf8(), StringUtf8 sYname = StringUtf8());
+    XySeriesCreationParam(int argIndex, ChartConfigParam configParam, const AbstractChartControlItem& defEntry, ChartDataType, ChartDataType, StringUtf8 sXname = StringUtf8(), StringUtf8 sYname = StringUtf8());
 
     int nIndex;
     ChartDataType xType = ChartDataType::unknown;
@@ -255,9 +315,9 @@ public:
     StringUtf8 m_sYname;
 };
 
-inline XySeriesCreationParam::XySeriesCreationParam(const int argIndex, const AbstractChartControlItem& defEntry, ChartDataType argXtype, ChartDataType argYtype,
+inline XySeriesCreationParam::XySeriesCreationParam(const int argIndex, ChartConfigParam configParam, const AbstractChartControlItem& defEntry, ChartDataType argXtype, ChartDataType argYtype,
                                                     StringUtf8 sXname, StringUtf8 sYname)
-    : BaseClass(defEntry)
+    : BaseClass(configParam, defEntry)
     , nIndex(argIndex)
     , xType(argXtype)
     , yType(argYtype)
@@ -271,13 +331,13 @@ class HistogramCreationParam : public ChartObjectCreationParam
 {
 public:
     using BaseClass = ChartObjectCreationParam;
-    HistogramCreationParam(const AbstractChartControlItem& defEntry, InputSpan<double>);
+    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double>);
 
     InputSpan<double> valueRange;
 };
 
-inline HistogramCreationParam::HistogramCreationParam(const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan)
-    : BaseClass(defEntry)
+inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan)
+    : BaseClass(configParam, defEntry)
     , valueRange(inputSpan)
 {
 
@@ -342,7 +402,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
 {
     using namespace DFG_DETAIL_NS;
     const auto sType = controlItem.fieldValueStr(ChartObjectFieldIdStr_type);
-    if (sType == SzPtrUtf8(ChartObjectChartTypeStr_xy))
+    const auto isType = [&](const char* pszId) { return sType == SzPtrUtf8(pszId); };
+    if (isType(ChartObjectChartTypeStr_xy))
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
@@ -355,7 +416,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_panelId
             });
     }
-    else if (sType == SzPtrUtf8(ChartObjectChartTypeStr_histogram))
+    else if (isType(ChartObjectChartTypeStr_histogram))
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
@@ -365,7 +426,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_panelId
             });
     }
-    else if (sType == SzPtrUtf8(ChartObjectChartTypeStr_panelProperties))
+    else if (isType(ChartObjectChartTypeStr_panelProperties))
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
@@ -373,6 +434,14 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_title,
             ChartObjectFieldIdStr_xLabel,
             ChartObjectFieldIdStr_yLabel
+            });
+    }
+    else if (isType(ChartObjectChartTypeStr_globalConfig))
+    {
+        checkForUnrecongnizedProperties(controlItem, func, {
+            ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_showLegend,
+            ChartObjectFieldIdStr_autoAxisLabels,
             });
     }
     else

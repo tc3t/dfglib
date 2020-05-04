@@ -656,6 +656,7 @@ public:
 
     static QString getGuideString();
 
+    // Calls given handler for each entry. Note that entry given to handler is temporary so it's address must not be stored and used after handler call; make a copy if it needs to be stored.
     template <class Func_T>
     void forEachDefinitionEntry(Func_T handler);
 
@@ -708,12 +709,14 @@ QString GraphDefinitionWidget::getGuideString()
 <h2>Overview:</h2>
 <ul>
     <li>Charts are defined as a list of single line JSON-entries. One entry typically defines one graph.
+    <li>Entries are evaluated in order from top to bottom.
     <li>All entries have a <i>type</i> that defines list of accepted fields.
     <li>List can have comments: lines beginning with # are not parsed.
 </ul>
 
 <h2>Basic examples:</h2>
 <ul>
+    <li>Setting default config: {"type":"global_config","show_legend":true,"auto_axis_labels":true}</li>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
     <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
@@ -733,6 +736,7 @@ QString GraphDefinitionWidget::getGuideString()
         <li>xy              : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
         <li>histogram       : Histogram</li>
         <li>panel_properties: Defines panel items such as title and axes labels</li>
+        <li>global_config   : Defines default config values for all panels.</li>
     </ul>
    <li><i>name</i>: name of the object, shown e.g. in legend.</li>
    <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
@@ -780,6 +784,14 @@ QString GraphDefinitionWidget::getGuideString()
         <li><i>title</i>: Panel title. New lines can be added with \n</li>
         <li><i>x_label</i>: Label of x-axis. New lines can be added with \n</li>
         <li><i>y_label</i>: Label of y-axis. New lines can be added with \n</li>
+    </ul>
+<h2>Fields for type <i>global_config</i></h2>
+    <ul>
+        <li><i>show_legend</i>: {true, <b>false</b>}. Enables or disables showing legends, sets default behaviour for all panels.</li>
+        <li><i>auto_axis_labels</i>: {<b>true</b>, false}. Enables or disables auto axis labels, sets default behaviour for all panels.
+        <ul>
+            <li><b>Note:</b> affects only graphs created after global_config -item.</li>
+        </ul>
     </ul>
 )ENDTAG");
 }
@@ -1278,6 +1290,8 @@ public:
     QCPAxis* getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId);
     bool getGridPos(const StringViewUtf8 svPanelId, int& nRow, int& nCol);
 
+    void removeLegends();
+
 private:
     template <class This_T, class Func_T>
     static void forEachAxisRectImpl(This_T& rThis, Func_T&& func);
@@ -1470,11 +1484,8 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
         return;
     p->clearPlottables();
 
-    // Removing legends (would get deleted automatically with AxisRect's, but doing it here expclitly to keep m_legends up-to-date.)
-    {
-        qDeleteAll(m_legends);
-        m_legends.clear();
-    }
+    // Removing legends
+    removeLegends();
 
     // Removing all but first panel
     auto pPlotLayout = p->plotLayout();
@@ -1565,8 +1576,11 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
         setAxisTicker(*pXaxis, param.xType);
         setAxisTicker(*pYaxis, param.yType);
 
-        setAutoAxisLabel(*pXaxis, param.m_sXname);
-        setAutoAxisLabel(*pYaxis, param.m_sYname);
+        if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
+        {
+            setAutoAxisLabel(*pXaxis, param.m_sXname);
+            setAutoAxisLabel(*pYaxis, param.m_sYname);
+        }
     }
     return getSeriesByIndex(param);
 }
@@ -1651,19 +1665,25 @@ bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
     m_bLegendEnabled = bEnable;
 
     if (m_bLegendEnabled)
-    {
         createLegends();
-    }
     else
-    {
-        qDeleteAll(m_legends);
-        m_legends.clear();
-        auto p = getWidget();
-        if (p && p->legend)
-            p->legend->setVisible(false);
-    }
+        removeLegends();
+
     repaintCanvas();
     return m_bLegendEnabled;
+}
+
+void ChartCanvasQCustomPlot::removeLegends()
+{
+    // Removing legends (would get deleted automatically with AxisRect's, but doing it here expclitly to keep m_legends up-to-date.)
+    qDeleteAll(m_legends);
+    m_legends.clear();
+    auto p = getWidget();
+    if (p && p->legend)
+    {
+        p->legend->clearItems();
+        p->legend->setVisible(false);
+    }
 }
 
 void ChartCanvasQCustomPlot::createLegends()
@@ -1674,14 +1694,7 @@ void ChartCanvasQCustomPlot::createLegends()
         return;
 
     // Clearing old legends
-    {
-        if (p->legend)
-            p->legend->clearItems();
-        p->legend->clearItems();
-
-        qDeleteAll(m_legends);
-        m_legends.clear();
-    }
+    removeLegends();
     
     auto axisRects = p->axisRects();
     QVector<QCPAbstractPlottable*> plottables;
@@ -2460,6 +2473,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 
     int nGraphCounter = 0;
     int nHistogramCounter = 0;
+    GraphDefinitionEntry globalConfigEntry; // Stores global config entry if present.
+    GraphDefinitionEntry* pGlobalConfigEntry = nullptr; // Set to point to global config if such exists. This and globalConfigEntry are nothing but inconvenient way to do what optional would provide.
+    ::DFG_MODULE_NS(cont)::MapVectorAoS<StringUtf8, GraphDefinitionEntry> mapPanelIdToConfig;
     // Going through every item in definition entry table and redrawing them.
     pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
     {
@@ -2482,12 +2498,27 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         if (bUnknownType)
             return;
 
+        // Handling case type == global_config
+        if (sEntryType == ChartObjectChartTypeStr_globalConfig)
+        {
+            globalConfigEntry = defEntry;
+            pGlobalConfigEntry = &globalConfigEntry;
+            return;
+        }
+        
         // Handling case type == panel_properties
         if (sEntryType == ChartObjectChartTypeStr_panelProperties)
         {
             handlePanelProperties(rChart, defEntry);
+            mapPanelIdToConfig[defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId)] = defEntry;
             return;
         }
+
+        const auto configParamCreator = [&]()
+        { 
+            auto iter = mapPanelIdToConfig.find(defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId));
+            return ChartConfigParam((iter != mapPanelIdToConfig.end()) ? &iter->second : nullptr, pGlobalConfigEntry);
+        };
 
         this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
         {
@@ -2500,9 +2531,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             }
 
             if (sEntryType == ChartObjectChartTypeStr_xy)
-                refreshXy(rChart, source, defEntry, nGraphCounter);
+                refreshXy(rChart, configParamCreator, source, defEntry, nGraphCounter);
             else if (sEntryType == ChartObjectChartTypeStr_histogram)
-                refreshHistogram(rChart, source, defEntry, nHistogramCounter);
+                refreshHistogram(rChart, configParamCreator, source, defEntry, nHistogramCounter);
             else
             {
                 DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(sEntryType.c_str()));
@@ -2511,8 +2542,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         });
     });
 
-    if (pChart->isLegendEnabled())
+    if (ChartConfigParam(pGlobalConfigEntry).value(ChartObjectFieldIdStr_showLegend, pChart->isLegendEnabled()))
+    {
+        pChart->enableLegend(true);
         pChart->createLegends();
+    }
+    else
+        pChart->enableLegend(false);
 
     DFG_MODULE_NS(time)::TimerCpu timerRepaint;
     rChart.repaintCanvas();
@@ -2639,7 +2675,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
     }
 } } } // dfg:::qt::<unnamed>
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
 {
     if (!m_spCache)
         m_spCache.reset(new ChartDataCache);
@@ -2667,7 +2703,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         pxRowSet = &xRows;
     }
 
-    decltype(rChart.getSeriesByIndex(XySeriesCreationParam(0, defEntry, ChartDataType::unknown, ChartDataType::unknown))) spSeries;
+    decltype(rChart.getSeriesByIndex(XySeriesCreationParam(0, configParamCreator(), defEntry, ChartDataType::unknown, ChartDataType::unknown))) spSeries;
 
     if (tableData.columnCount() >= 1)
     {
@@ -2712,7 +2748,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
         const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
         const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, defEntry, xType, yType, qStringToUtf8(sXname), qStringToUtf8(sYname)));
+        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToUtf8(sXname), qStringToUtf8(sYname)));
         if (!spSeries)
         {
             DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
@@ -2783,7 +2819,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     }
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
 {
     const auto nColumnCount = source.columnCount();
     if (nColumnCount < 1)
@@ -2801,7 +2837,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         return;
     }
 
-    auto spHistogram = rChart.createHistogram(HistogramCreationParam(defEntry, makeRange(values)));
+    auto spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(values)));
     if (!spHistogram)
         return;
     ++nHistogramCounter;
