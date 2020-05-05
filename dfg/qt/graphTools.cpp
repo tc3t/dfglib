@@ -918,7 +918,7 @@ private:
     void setNameImpl(const ChartObjectStringView s) const override
     {
         if (m_spPlottable)
-            m_spPlottable->setName(QString::fromUtf8(s.dataRaw(), static_cast<int>(s.size())));
+            m_spPlottable->setName(viewToQString(s));
     }
 
     QPointer<QCPAbstractPlottable> m_spPlottable;
@@ -1750,7 +1750,7 @@ bool ChartCanvasQCustomPlot::getGridPos(const StringViewUtf8 svPanelId, int& nRo
     auto panelId = ParenthesisItem::fromStableView(svPanelId);
     if (!svPanelId.empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
     {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to retrieve grid panel: invalid panel definition '%1'").arg(QString::fromUtf8(svPanelId.dataRaw(), static_cast<int>(svPanelId.length()))));
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to retrieve grid panel: invalid panel definition '%1'").arg(viewToQString(svPanelId)));
         return false;
     }
     nRow = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(0);
@@ -2682,7 +2682,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
     auto optData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry);
 
-    if (!optData)
+    if (!optData || optData->columnCount() < 1)
         return;
     
     auto& tableData = *optData;
@@ -2703,120 +2703,112 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         pxRowSet = &xRows;
     }
 
-    decltype(rChart.getSeriesByIndex(XySeriesCreationParam(0, configParamCreator(), defEntry, ChartDataType::unknown, ChartDataType::unknown))) spSeries;
+    const auto columns = tableData.columnRange();
+    const auto nLastColumnIndex = tableData.lastColumnIndex();
+    const auto nDefaultValue = nLastColumnIndex + 1;
+    DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nDefaultValue);
+    DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nDefaultValue);
 
-    if (tableData.columnCount() >= 1)
+    const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nLastColumnIndex + 2; };
+
+    if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
+        return; // Either column was defined but not found.
+
+    bool bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
+    bool bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
+
+    if (bXisRowIndex && bYisRowIndex)
     {
-        const auto columns = tableData.columnRange();
-        const auto nLastColumnIndex = tableData.lastColumnIndex();
-        const auto nDefaultValue = nLastColumnIndex + 1;
-        DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nDefaultValue);
-        DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nDefaultValue);
+        DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Both columns are specified as row_index").arg(defEntry.index()));
+        return;
+    }
 
-        const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nLastColumnIndex + 2; };
-
-        if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
-            return; // Either column was defined but not found.
-
-        bool bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
-        bool bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
-
-        if (bXisRowIndex && bYisRowIndex)
-        {
-            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Both columns are specified as row_index").arg(defEntry.index()));
-            return;
-        }
-
-        if (columns.size() == 1 && !bXisRowIndex && !bYisRowIndex)
-        {
-            if (xColumnIndex == nDefaultValue)
-                bXisRowIndex = true;
-            else if (yColumnIndex == nDefaultValue)
-                bYisRowIndex = true;
-        }
+    if (columns.size() == 1 && !bXisRowIndex && !bYisRowIndex)
+    {
+        if (xColumnIndex == nDefaultValue)
+            bXisRowIndex = true;
+        else if (yColumnIndex == nDefaultValue)
+            bYisRowIndex = true;
+    }
        
-        makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
+    makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
 
-        auto pXdata = tableData.columnDataByIndex(xColumnIndex);
-        auto pYdata = (pXdata) ? tableData.columnDataByIndex(yColumnIndex) : nullptr;
+    auto pXdata = tableData.columnDataByIndex(xColumnIndex);
+    auto pYdata = (pXdata) ? tableData.columnDataByIndex(yColumnIndex) : nullptr;
 
-        if (!pXdata || !pYdata)
-            return;
+    if (!pXdata || !pYdata)
+        return;
 
-        const char szRowIndexName[] = QT_TR_NOOP("Row number");
-        const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType::unknown;
-        const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
-        const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
-        const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
-        spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToUtf8(sXname), qStringToUtf8(sYname)));
-        if (!spSeries)
-        {
-            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
-            return;
-        }
-
-
-        // xValueMap is also used as final (x,y) table passed to series.
-        // releaseOrCopy() will return either moved data or copy of it.
-        auto xValueMap = (pXdata != pYdata) ? tableData.releaseOrCopy(pXdata) : *pXdata;
-        xValueMap.setSorting(false);
-        const auto& yValueMap = *pYdata;
-        auto xIter = xValueMap.cbegin();
-        auto yIter = yValueMap.cbegin();
-        DataSourceIndex nActualSize = 0;
-        for (; xIter != xValueMap.cend() && yIter != yValueMap.cend();)
-        {
-            const auto xRow = xIter->first;
-            const auto yRow = yIter->first;
-            if (xRow < yRow)
-            {
-                ++xIter;
-                continue;
-            }
-            else if (yRow < xRow)
-            {
-                ++yIter;
-                continue;
-            }
-            // Current xIter and yIter point to the same row ->
-            // store (x,y) values to start of xValueMap if not filtered out.
-            if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow))) // Trusting xRow to have value that can be casted to int.
-            {
-                const auto x = (bXisRowIndex) ? xRow : xIter->second;
-                const auto y = (bYisRowIndex) ? yRow : yIter->second;
-
-                xValueMap.m_keyStorage[nActualSize] = x;
-                xValueMap.m_valueStorage[nActualSize] = y;
-                minMaxX(x);
-                minMaxY(y);
-                nActualSize++;
-            }
-            ++xIter;
-            ++yIter;
-        }
-        const ptrdiff_t nSizeAsPtrdiff = static_cast<ptrdiff_t>(nActualSize);
-        spSeries->setValues(headRange(xValueMap.keyRange(), nSizeAsPtrdiff), headRange(xValueMap.valueRange(), nSizeAsPtrdiff));
-        nGraphSize = nActualSize;
-    }
-
-    if (spSeries)
+    const char szRowIndexName[] = QT_TR_NOOP("Row number");
+    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType::unknown;
+    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
+    const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
+    const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
+    auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToUtf8(sXname), qStringToUtf8(sYname)));
+    if (!spSeries)
     {
-        spSeries->resize(nGraphSize); // Removing excess points (if any)
-
-        // Setting line style
-        spSeries->setLineStyle(ChartObjectLineStyleStr_basic); // Default value
-        defEntry.doForLineStyleIfPresent([&](const char* psz) { spSeries->setLineStyle(psz); });
-
-        // Setting point style
-        spSeries->setPointStyle(ChartObjectPointStyleStr_none); // Default value
-        defEntry.doForPointStyleIfPresent([&](const char* psz) { spSeries->setPointStyle(psz); });
-
-        // Setting object name (used e.g. in legend)
-        spSeries->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter)));
-
-        // Rescaling axis.
-        rChart.setAxisForSeries(spSeries.get(), minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
+        return;
     }
+    auto& rSeries = *spSeries;
+
+    // xValueMap is also used as final (x,y) table passed to series.
+    // releaseOrCopy() will return either moved data or copy of it.
+    auto xValueMap = (pXdata != pYdata) ? tableData.releaseOrCopy(pXdata) : *pXdata;
+    xValueMap.setSorting(false);
+    const auto& yValueMap = *pYdata;
+    auto xIter = xValueMap.cbegin();
+    auto yIter = yValueMap.cbegin();
+    DataSourceIndex nActualSize = 0;
+    for (; xIter != xValueMap.cend() && yIter != yValueMap.cend();)
+    {
+        const auto xRow = xIter->first;
+        const auto yRow = yIter->first;
+        if (xRow < yRow)
+        {
+            ++xIter;
+            continue;
+        }
+        else if (yRow < xRow)
+        {
+            ++yIter;
+            continue;
+        }
+        // Current xIter and yIter point to the same row ->
+        // store (x,y) values to start of xValueMap if not filtered out.
+        if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow))) // Trusting xRow to have value that can be casted to int.
+        {
+            const auto x = (bXisRowIndex) ? xRow : xIter->second;
+            const auto y = (bYisRowIndex) ? yRow : yIter->second;
+
+            xValueMap.m_keyStorage[nActualSize] = x;
+            xValueMap.m_valueStorage[nActualSize] = y;
+            minMaxX(x);
+            minMaxY(y);
+            nActualSize++;
+        }
+        ++xIter;
+        ++yIter;
+    }
+    const ptrdiff_t nSizeAsPtrdiff = static_cast<ptrdiff_t>(nActualSize);
+    rSeries.setValues(headRange(xValueMap.keyRange(), nSizeAsPtrdiff), headRange(xValueMap.valueRange(), nSizeAsPtrdiff));
+    nGraphSize = nActualSize;
+
+    rSeries.resize(nGraphSize); // Removing excess points (if any)
+
+    // Setting line style
+    rSeries.setLineStyle(ChartObjectLineStyleStr_basic); // Default value
+    defEntry.doForLineStyleIfPresent([&](const char* psz) { rSeries.setLineStyle(psz); });
+
+    // Setting point style
+    rSeries.setPointStyle(ChartObjectPointStyleStr_none); // Default value
+    defEntry.doForPointStyleIfPresent([&](const char* psz) { rSeries.setPointStyle(psz); });
+
+    // Setting object name (used e.g. in legend)
+    rSeries.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter)));
+
+    // Rescaling axis.
+    rChart.setAxisForSeries(&rSeries, minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
