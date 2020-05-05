@@ -2423,19 +2423,26 @@ class DefaultNameCreator
 {
 public:
     // pszType must point to valid string for the lifetime of 'this'.
-    DefaultNameCreator(const char* pszType, const int nIndex)
+    DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname = QString(), const QString& sYname = QString())
         : m_pszType(pszType)
         , m_nIndex(nIndex)
+        , m_sXname(sXname)
+        , m_sYname(sYname)
     {
     }
 
     DFG_ROOT_NS::StringUtf8 operator()() const
     {
-        return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {}", m_pszType, m_nIndex));
+        if (!m_sXname.isEmpty() || !m_sYname.isEmpty())
+            return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {} ('{}', '{}')", m_pszType, m_nIndex, m_sXname.toUtf8().data(), m_sYname.toUtf8().data()));
+        else
+            return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {}", m_pszType, m_nIndex));
     }
 
     const char* m_pszType;
     const int m_nIndex;
+    QString m_sXname;
+    QString m_sYname;
 };
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
@@ -2805,7 +2812,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     defEntry.doForPointStyleIfPresent([&](const char* psz) { rSeries.setPointStyle(psz); });
 
     // Setting object name (used e.g. in legend)
-    rSeries.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter)));
+    rSeries.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname)));
 
     // Rescaling axis.
     rChart.setAxisForSeries(&rSeries, minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
