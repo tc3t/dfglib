@@ -721,7 +721,7 @@ QString GraphDefinitionWidget::getGuideString()
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
     <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
-    <li>Setting panel title and axis labels: {"type":"panel_properties","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)","x_label":"This is x axis label","y_label":"This is y axis label"}
+    <li>Setting panel title and axis labels: {"type":"panel_config","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)","x_label":"This is x axis label","y_label":"This is y axis label"}
     <li>Disabling an entry by commenting: #{"type":"histogram","name":"Basic histogram"}
 </ul>
 
@@ -735,7 +735,7 @@ QString GraphDefinitionWidget::getGuideString()
     <ul>
         <li>xy              : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
         <li>histogram       : Histogram</li>
-        <li>panel_properties: Defines panel items such as title and axes labels</li>
+        <li>panel_config    : Defines panel items such as title and axes labels</li>
         <li>global_config   : Defines default config values for all panels.</li>
     </ul>
    <li><i>name</i>: name of the object, shown e.g. in legend.</li>
@@ -779,7 +779,7 @@ QString GraphDefinitionWidget::getGuideString()
         <li><i>bin_count</i>: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
         <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
     </ul>
-<h2>Fields for type <i>panel_properties</i></h2>
+<h2>Fields for type <i>panel_config</i></h2>
     <ul>
         <li><i>title</i>: Panel title. New lines can be added with \n</li>
         <li><i>x_label</i>: Label of x-axis. New lines can be added with \n</li>
@@ -2513,8 +2513,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             return;
         }
         
-        // Handling case type == panel_properties
-        if (sEntryType == ChartObjectChartTypeStr_panelProperties)
+        // Handling case type == panel_config
+        if (sEntryType == ChartObjectChartTypeStr_panelConfig)
         {
             handlePanelProperties(rChart, defEntry);
             mapPanelIdToConfig[defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId)] = defEntry;

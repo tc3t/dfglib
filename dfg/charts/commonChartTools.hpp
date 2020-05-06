@@ -40,8 +40,8 @@ constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
         // histogram-type has properties: bin_count, x_source, panel_id
 
-    constexpr char ChartObjectChartTypeStr_panelProperties[] = "panel_properties";
-        // panel_properties-type has properties: panel_id, title, x_label, y_label
+    constexpr char ChartObjectChartTypeStr_panelConfig[] = "panel_config";
+        // panel_config-type has properties: panel_id, title, x_label, y_label
 
     constexpr char ChartObjectChartTypeStr_globalConfig[] = "global_config";
         // global_config-type has properties: show_legend, auto_axis_labels
@@ -426,7 +426,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_panelId
             });
     }
-    else if (isType(ChartObjectChartTypeStr_panelProperties))
+    else if (isType(ChartObjectChartTypeStr_panelConfig))
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
