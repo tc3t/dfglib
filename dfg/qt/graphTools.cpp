@@ -166,6 +166,45 @@ void ChartController::refresh()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
+//   DefaultNameCreator
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class DefaultNameCreator
+{
+public:
+    // pszType must point to valid string for the lifetime of 'this'.
+    DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname = QString(), const QString& sYname = QString());
+
+    StringUtf8 operator()() const;
+
+    const char* m_pszType;
+    const int m_nIndex;
+    QString m_sXname;
+    QString m_sYname;
+};
+
+
+DefaultNameCreator::DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname, const QString& sYname)
+    : m_pszType(pszType)
+    , m_nIndex(nIndex)
+    , m_sXname(sXname)
+    , m_sYname(sYname)
+{
+}
+
+auto DefaultNameCreator::operator()() const -> StringUtf8
+{
+    if (!m_sXname.isEmpty() || !m_sYname.isEmpty())
+        return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {} ('{}', '{}')", m_pszType, m_nIndex, m_sXname.toUtf8().data(), m_sYname.toUtf8().data()));
+    else
+        return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {}", m_pszType, m_nIndex));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
 //   GraphDefinitionEntry
 //
 //
@@ -719,7 +758,7 @@ QString GraphDefinitionWidget::getGuideString()
     <li>Setting default config: {"type":"global_config","show_legend":true,"auto_axis_labels":true}</li>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
+    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","line_colour":"#7fFF00FF","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
     <li>Setting panel title and axis labels: {"type":"panel_config","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)","x_label":"This is x axis label","y_label":"This is y axis label"}
     <li>Disabling an entry by commenting: #{"type":"histogram","name":"Basic histogram"}
@@ -759,6 +798,20 @@ QString GraphDefinitionWidget::getGuideString()
                 <li>x_rows: List of rows to include as semicolon separated list, e.g. "1:3; 4; 7:8" means 1, 2, 3, 4, 7, 8.</li>
                 <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
             </ul>
+        <li><i>line_colour</i>:</li>
+            <ul>
+                <li>Sets line colour for drawn graph line. Also affects point marker colour.</li>
+                <li>Accepted format as defined in QColor::setNamedColor()
+                    <ul>
+                        <li>#RGB (each item is a single hex digit)</li>
+                        <li>#RRGGBB (each as two digit hex)</li>
+                        <li>#AARRGGBB (AA is alpha channel that specifies transparency, 00 means fully transparent and ff fully opaque.)</li>
+                        <li>#RRRGGGBBB</li>
+                        <li>#RRRRGGGGBBBB</li>
+                        <li>Item from list of SVG color keyword names by World Wide Web Consortium, for example 'red', green', 'blue'</li>
+                    </ul>
+                <li>example: line_colour: #7f1b2eff). Sets semi-transparent, mostly blue line.</li>
+            </ul>
         <li><i>line_style</i>:</li>
             <ul>
                 <li>none:        No line indicator</li>
@@ -778,6 +831,7 @@ QString GraphDefinitionWidget::getGuideString()
     <ul>
         <li><i>bin_count</i>: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
         <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
+        <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
     </ul>
 <h2>Fields for type <i>panel_config</i></h2>
     <ul>
@@ -804,8 +858,8 @@ void GraphDefinitionWidget::showGuideWidget()
         m_spGuideWidget->setWindowTitle(tr("Chart guide"));
         auto pTextEdit = new QTextEdit(m_spGuideWidget.get()); // Deletion through parentship.
         auto pLayout = new QHBoxLayout(m_spGuideWidget.get());
+        pTextEdit->setTextInteractionFlags(Qt::TextBrowserInteraction);
         pTextEdit->setHtml(getGuideString());
-        pTextEdit->setReadOnly(true);
         pLayout->addWidget(pTextEdit);
         removeContextHelpButtonFromDialog(m_spGuideWidget.get());
         m_spGuideWidget->resize(600, 500);
@@ -921,8 +975,26 @@ private:
             m_spPlottable->setName(viewToQString(s));
     }
 
+    void setLineColourImpl(ChartObjectStringView svLineColour) const override;
+
     QPointer<QCPAbstractPlottable> m_spPlottable;
 };
+
+void ChartObjectQCustomPlot::setLineColourImpl(ChartObjectStringView svLineColour) const
+{
+    if (!m_spPlottable || svLineColour.empty())
+        return;
+    const QString s = viewToQString(svLineColour);
+    QColor color(s);
+    if (color.isValid())
+    {
+        auto pen = m_spPlottable->pen();
+        pen.setColor(color);
+        m_spPlottable->setPen(pen);
+    }
+    else
+        DFG_QT_CHART_CONSOLE_WARNING(m_spPlottable->tr("Unable to parse colour with definition %1").arg(viewToQString(svLineColour)));
+}
 
 class XySeriesQCustomPlot : public XySeries
 {
@@ -1572,10 +1644,18 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
     while (param.nIndex >= p->graphCount())
     {
         // No graph exists at requested index -> creating new.
-        p->addGraph(pXaxis, pYaxis);
+        auto pQcpGraph = p->addGraph(pXaxis, pYaxis);
+        if (!pQcpGraph)
+        {
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: failed to create QCPGraph-object"));
+            return nullptr;
+        }
+
+        // Setting axis type
         setAxisTicker(*pXaxis, param.xType);
         setAxisTicker(*pYaxis, param.yType);
 
+        // Setting auto axis labels if enabled
         if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
         {
             setAutoAxisLabel(*pXaxis, param.m_sXname);
@@ -2419,32 +2499,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggl
     });
 }
 
-class DefaultNameCreator
-{
-public:
-    // pszType must point to valid string for the lifetime of 'this'.
-    DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname = QString(), const QString& sYname = QString())
-        : m_pszType(pszType)
-        , m_nIndex(nIndex)
-        , m_sXname(sXname)
-        , m_sYname(sYname)
-    {
-    }
-
-    DFG_ROOT_NS::StringUtf8 operator()() const
-    {
-        if (!m_sXname.isEmpty() || !m_sYname.isEmpty())
-            return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {} ('{}', '{}')", m_pszType, m_nIndex, m_sXname.toUtf8().data(), m_sYname.toUtf8().data()));
-        else
-            return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {}", m_pszType, m_nIndex));
-    }
-
-    const char* m_pszType;
-    const int m_nIndex;
-    QString m_sXname;
-    QString m_sYname;
-};
-
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
     DFG_MODULE_NS(time)::TimerCpu timer;
@@ -2811,8 +2865,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     rSeries.setPointStyle(ChartObjectPointStyleStr_none); // Default value
     defEntry.doForPointStyleIfPresent([&](const char* psz) { rSeries.setPointStyle(psz); });
 
-    // Setting object name (used e.g. in legend)
-    rSeries.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname)));
+    setCommonChartObjectProperties(rSeries, defEntry, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname));
 
     // Rescaling axis.
     rChart.setAxisForSeries(&rSeries, minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
@@ -2840,7 +2893,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     if (!spHistogram)
         return;
     ++nHistogramCounter;
-    spHistogram->setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, DefaultNameCreator("Histogram", nHistogramCounter)));
+    setCommonChartObjectProperties(*spHistogram, defEntry, DefaultNameCreator("Histogram", nHistogramCounter));
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, const DefaultNameCreator& defaultNameCreator)
+{
+    rObject.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, defaultNameCreator));
+    rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry)

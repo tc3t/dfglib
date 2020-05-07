@@ -30,6 +30,7 @@ typedef QString GraphDataSourceId;
 typedef std::size_t DataSourceIndex;
 class GraphDefinitionEntry;
 class ChartDataCache;
+class DefaultNameCreator;
 using ChartCanvas = DFG_MODULE_NS(charts)::ChartCanvas;
 using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
 
@@ -158,6 +159,7 @@ class GraphControlAndDisplayWidget : public ChartController
 
 public:
     typedef ChartController BaseClass;
+    using ChartObject = ::DFG_MODULE_NS(charts)::ChartObject;
 
     GraphControlAndDisplayWidget();
     ~GraphControlAndDisplayWidget();
@@ -183,6 +185,8 @@ private:
     void refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
     void refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
     void handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry);
+
+    void setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, const DefaultNameCreator& defaultNameCreator);
 
 public:
     QObjectStorage<QSplitter> m_spSplitter;

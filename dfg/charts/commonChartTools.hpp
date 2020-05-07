@@ -35,10 +35,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
-        // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id
+        // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id, line_colour
 
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
-        // histogram-type has properties: bin_count, x_source, panel_id
+        // histogram-type has properties: bin_count, x_source, panel_id, line_colour
 
     constexpr char ChartObjectChartTypeStr_panelConfig[] = "panel_config";
         // panel_config-type has properties: panel_id, title, x_label, y_label
@@ -94,6 +94,9 @@ constexpr char ChartObjectFieldIdStr_lineStyle[] = "line_style";
 constexpr char ChartObjectFieldIdStr_pointStyle[] = "point_style";
 constexpr char ChartObjectPointStyleStr_none[] = "none";
 constexpr char ChartObjectPointStyleStr_basic[] = "basic";
+
+// line_colour
+constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
 
 enum class ChartDataType
 {
@@ -185,6 +188,7 @@ public:
     virtual ~ChartObject() {}
 
     void setName(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setNameImpl(sv) : setNameImpl(sv); }
+    void setLineColour(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setLineColourImpl(sv) : setLineColourImpl(sv); }
 
 protected:
     ChartObject() {}
@@ -198,6 +202,7 @@ protected:
 
 private:
     virtual void setNameImpl(ChartObjectStringView) const {}
+    virtual void setLineColourImpl(ChartObjectStringView) const {}
 
     std::unique_ptr<ChartObject> m_spImplementation;
 }; // class ChartObject
@@ -413,7 +418,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_ySource,
             ChartObjectFieldIdStr_xRows,
-            ChartObjectFieldIdStr_panelId
+            ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_lineColour
             });
     }
     else if (isType(ChartObjectChartTypeStr_histogram))
@@ -423,7 +429,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_binCount,
             ChartObjectFieldIdStr_xSource,
-            ChartObjectFieldIdStr_panelId
+            ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_lineColour
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))
