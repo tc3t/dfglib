@@ -52,7 +52,7 @@ public:
 
     virtual ~GraphDataSource() {}
 
-    GraphDataSourceId uniqueId() const { return GraphDataSourceId(); }
+    GraphDataSourceId uniqueId() const { return m_uniqueId; }
 
     GraphDataSourceType dataType() const { return GraphDataSourceType_tableSelection; }
 
@@ -86,6 +86,9 @@ public:
 class DataSourceContainer
 {
 public:
+    QString idListAsString() const;
+    size_t size() const { return m_sources.size(); }
+
     std::vector<std::shared_ptr<GraphDataSource>> m_sources;
 }; // DataSourceContainer
 
@@ -166,6 +169,8 @@ public:
 
     void addDataSource(std::unique_ptr<GraphDataSource> spSource);
 
+    void setDefaultDataSourceId(const GraphDataSourceId& sDefaultDataSource);
+
     void forDataSource(const GraphDataSourceId& id, std::function<void (GraphDataSource&)>);
 
     void privForEachDataSource(std::function<void(GraphDataSource&)> func);
@@ -193,6 +198,8 @@ public:
     QObjectStorage<GraphControlPanel> m_spControlPanel;
     QObjectStorage<GraphDisplay> m_spGraphDisplay;
     DataSourceContainer m_dataSources;
+    GraphDataSourceId m_sDefaultDataSource;
+
     std::unique_ptr<ChartDataCache> m_spCache;
 
 }; // Class GraphControlAndDisplayWidget

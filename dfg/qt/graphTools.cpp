@@ -19,6 +19,7 @@
 
 #include "../time/timerCpu.hpp"
 
+#include "../io.hpp"
 #include "../io/BasicImStream.hpp"
 #include "../io/DelimitedTextReader.hpp"
 
@@ -50,6 +51,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QJsonDocument>
     #include <QJsonObject>
     #include <QVariantMap>
+    #include <QTextStream>
 
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -205,6 +207,26 @@ auto DefaultNameCreator::operator()() const -> StringUtf8
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
+//   DataSourceContainer
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+auto DataSourceContainer::idListAsString() const -> QString
+{
+    QString s;
+    QTextStream strm(&s);
+    dfg::io::writeDelimited(strm, this->m_sources, QLatin1String(", "), [](QTextStream& strm, const std::shared_ptr<GraphDataSource>& sp)
+    {
+        if (sp)
+            strm << sp->uniqueId();
+    });
+    return s;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
 //   GraphDefinitionEntry
 //
 //
@@ -261,7 +283,7 @@ public:
         doForFieldIfPresent(ChartObjectFieldIdStr_pointStyle, std::forward<Func_T>(func));
     }
 
-    GraphDataSourceId sourceId() const { return GraphDataSourceId(); }
+    GraphDataSourceId sourceId(const GraphDataSourceId& sDefault) const;
 
     int index() const { return m_nContainerIndex; }
 
@@ -326,6 +348,15 @@ void GraphDefinitionEntry::forEachPropertyIdImpl(std::function<void(StringView s
 bool GraphDefinitionEntry::isType(FieldIdStrViewInputParam fieldId) const
 {
     return getField(ChartObjectFieldIdStr_type).toString().toUtf8().data() == fieldId;
+}
+
+auto GraphDefinitionEntry::sourceId(const GraphDataSourceId& sDefault) const -> GraphDataSourceId
+{
+    const auto val = getField(ChartObjectFieldIdStr_dataSource);
+    if (!val.isNull() && !val.isUndefined())
+        return val.toString();
+    else
+        return sDefault;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2580,7 +2611,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             return ChartConfigParam((iter != mapPanelIdToConfig.end()) ? &iter->second : nullptr, pGlobalConfigEntry);
         };
 
-        this->forDataSource(defEntry.sourceId(), [&](GraphDataSource& source)
+        this->forDataSource(defEntry.sourceId(this->m_sDefaultDataSource), [&](GraphDataSource& source)
         {
             // Checking that source type in compatible with graph type
             const auto dataType = source.dataType();
@@ -2921,6 +2952,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_
     m_dataSources.m_sources.push_back(std::shared_ptr<GraphDataSource>(spSource.release()));
 }
 
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setDefaultDataSourceId(const GraphDataSourceId& sDefaultDataSource)
+{
+    m_sDefaultDataSource = sDefaultDataSource;
+}
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
 {
     refresh();
@@ -2939,6 +2975,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::forDataSource(const GraphD
     });
     if (iter != m_dataSources.m_sources.end())
         func(**iter);
+    else
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find data source '%1', available sources (%2 in total): { %3 }")
+            .arg(id)
+            .arg(m_dataSources.size())
+            .arg(m_dataSources.idListAsString()));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::privForEachDataSource(std::function<void(GraphDataSource&)> func)

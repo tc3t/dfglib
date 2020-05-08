@@ -219,6 +219,8 @@ void SelectionAnalyzerForGraphing::analyzeImpl(const QItemSelection selection)
 class CsvTableViewChartDataSource : public GraphDataSource
 {
 public:
+    using BaseClass = GraphDataSource;
+
     CsvTableViewChartDataSource(CsvTableView* view);
 
     QObject* underlyingSource() override;
@@ -251,6 +253,7 @@ CsvTableViewChartDataSource::CsvTableViewChartDataSource(CsvTableView* view)
 {
     if (!m_spView)
         return;
+    m_uniqueId = QString("viewSelection_%1").arg(QString::number(QDateTime::currentMSecsSinceEpoch() % 1000000));
     m_spSelectionAnalyzer = std::make_shared<SelectionAnalyzerForGraphing>();
     m_spSelectionAnalyzer->m_spTable.reset(std::make_shared<SelectionAnalyzerForGraphing::Table>());
     m_spDataViewer = m_spSelectionAnalyzer->m_spTable.createViewer();

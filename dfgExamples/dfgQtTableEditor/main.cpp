@@ -149,8 +149,15 @@ int main(int argc, char *argv[])
 
 #if (defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)) || (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
     dfg::qt::GraphControlAndDisplayWidget graphDisplay;
-    std::unique_ptr<dfg::qt::CsvTableViewChartDataSource> selectionSource(new dfg::qt::CsvTableViewChartDataSource(tableEditor.m_spTableView.get()));
-    graphDisplay.addDataSource(std::move(selectionSource));
+
+    // Setting data sources to chart display.
+    {
+        std::unique_ptr<dfg::qt::CsvTableViewChartDataSource> selectionSource(new dfg::qt::CsvTableViewChartDataSource(tableEditor.m_spTableView.get()));
+        const auto selectionSourceId = selectionSource->uniqueId();
+        graphDisplay.addDataSource(std::move(selectionSource));
+        // Setting selection as default source, i.e. when data_source is not specified, ChartObject will query data from selection.
+        graphDisplay.setDefaultDataSourceId(selectionSourceId);
+    }
     tableEditor.setGraphDisplay(&graphDisplay);
 #endif
 

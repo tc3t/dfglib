@@ -46,6 +46,10 @@ constexpr char ChartObjectFieldIdStr_type[] = "type";
     constexpr char ChartObjectChartTypeStr_globalConfig[] = "global_config";
         // global_config-type has properties: show_legend, auto_axis_labels
 
+
+// data_source: defines data source for ChartObject.
+constexpr char ChartObjectFieldIdStr_dataSource[] = "data_source";
+
 // name: this will show e.g. in legend.
 constexpr char ChartObjectFieldIdStr_name[] = "name";
 
@@ -419,7 +423,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_ySource,
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_panelId,
-            ChartObjectFieldIdStr_lineColour
+            ChartObjectFieldIdStr_lineColour,
+            ChartObjectFieldIdStr_dataSource
             });
     }
     else if (isType(ChartObjectChartTypeStr_histogram))
@@ -430,7 +435,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_binCount,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_panelId,
-            ChartObjectFieldIdStr_lineColour
+            ChartObjectFieldIdStr_lineColour,
+            ChartObjectFieldIdStr_dataSource
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))
