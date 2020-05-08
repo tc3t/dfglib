@@ -219,7 +219,6 @@ public:
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
         QVariantMap keyVals;
-        keyVals.insert(ChartObjectFieldIdStr_enabled, true);
         keyVals.insert(ChartObjectFieldIdStr_type, ChartObjectChartTypeStr_xy);
         keyVals.insert(ChartObjectFieldIdStr_lineStyle, ChartObjectLineStyleStr_basic);
         keyVals.insert(ChartObjectFieldIdStr_pointStyle, ChartObjectPointStyleStr_basic);
