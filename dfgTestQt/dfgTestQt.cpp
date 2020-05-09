@@ -507,3 +507,12 @@ TEST(dfgQt, CsvTableView_stringToDouble)
         testDateToDouble_invalidDateFormat("12:34:56.12");
     }
 }
+
+TEST(dfgQt, qstringUtils)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+    EXPECT_EQ(QString("abc"), viewToQString(DFG_UTF8("abc")));
+    EXPECT_EQ(QString("abc"), untypedViewToQStringAsUtf8("abc"));
+    EXPECT_EQ(DFG_UTF8("abc"), qStringToStringUtf8(QString("abc")));
+}

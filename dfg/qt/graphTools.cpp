@@ -5,6 +5,8 @@
 #include "ConsoleDisplay.hpp"
 #include "ConsoleDisplay.cpp"
 
+#include "qtBasic.hpp"
+
 #include "../cont/IntervalSetSerialization.hpp"
 #include "../cont/MapVector.hpp"
 #include "../rangeIterator.hpp"
@@ -131,22 +133,6 @@ public:
 };
 
 static ConsoleLogHandle gConsoleLogHandle;
-
-static QString viewToQString(const StringViewC& view)
-{
-    return QString::fromUtf8(view.data(), static_cast<int>(view.length()));
-}
-
-static QString viewToQString(const StringViewUtf8& view)
-{
-    return QString::fromUtf8(view.dataRaw(), static_cast<int>(view.length()));
-}
-
-static StringUtf8 qStringToUtf8(const QString& s)
-{
-    auto bytes = s.toUtf8();
-    return StringUtf8(SzPtrUtf8(bytes.begin()), SzPtrUtf8(bytes.end()));
-}
 
 } // unnamed namespace
 
@@ -1154,7 +1140,7 @@ void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
     else if (svStyle != "none")
     {
         // Ending up here means that entry was unrecognized.
-        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(viewToQString(svStyle)));
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
     }
 
     m_spXySeries->setLineStyle(style);
@@ -1170,7 +1156,7 @@ void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
     else if (svStyle != "none")
     {
         // Ending up here means that entry was unrecognized.
-        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown point style '%1', using style 'none'").arg(viewToQString(svStyle)));
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown point style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
         
     }
       
@@ -2581,7 +2567,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             if (svId == SzPtrUtf8(ChartObjectFieldIdStr_type))
             {
                 bUnknownType = true;
-                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(viewToQString(sEntryType)));
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(untypedViewToQStringAsUtf8(sEntryType)));
             }
             else
                 DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: unknown property '%2'").arg(defEntry.index()).arg(viewToQString(svId)));
@@ -2835,7 +2821,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
     const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
     const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
-    auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToUtf8(sXname), qStringToUtf8(sYname)));
+    auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
     if (!spSeries)
     {
         DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));

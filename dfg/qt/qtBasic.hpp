@@ -2,6 +2,8 @@
 
 #include "../dfgBase.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../str/string.hpp"
+#include "../ReadOnlySzParam.hpp"
 #include <string>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
@@ -77,6 +79,22 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
     inline std::string qStringToFileApi8Bit(const QString& sPath)
     {
         return std::string(sPath.toLocal8Bit());
+    }
+
+    inline QString untypedViewToQStringAsUtf8(const StringViewC& view)
+    {
+        return QString::fromUtf8(view.data(), static_cast<int>(view.length()));
+    }
+
+    inline QString viewToQString(const StringViewUtf8& view)
+    {
+        return QString::fromUtf8(view.dataRaw(), static_cast<int>(view.length()));
+    }
+
+    inline StringUtf8 qStringToStringUtf8(const QString& s)
+    {
+        auto bytes = s.toUtf8();
+        return StringUtf8(SzPtrUtf8(bytes.begin()), SzPtrUtf8(bytes.end()));
     }
 
 } } // Module qt
