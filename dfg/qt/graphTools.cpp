@@ -910,7 +910,7 @@ void GraphDefinitionWidget::forEachDefinitionEntry(Func_T handler)
     int i = 0;
     for (const auto& part : parts)
     {
-        if (!part.isEmpty() && part.front() != '#')
+        if (!part.isEmpty() && part[0] != '#')
             handler(GraphDefinitionEntry::fromText(part.toString(), i++));
     }
 }
