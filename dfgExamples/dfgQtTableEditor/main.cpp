@@ -20,6 +20,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/qt/qtBasic.hpp>
 #include <dfg/qt/graphTools.hpp>
 #include <dfg/qt/CsvTableViewChartDataSource.hpp>
+#include <dfg/qt/CsvItemModelChartDataSource.hpp>
 #include <dfg/build/buildTimeDetails.hpp>
 #include <dfg/debug/structuredExceptionHandling.h>
 #include <dfg/qt/CsvTableView.hpp>
@@ -157,6 +158,16 @@ int main(int argc, char *argv[])
         graphDisplay.addDataSource(std::move(selectionSource));
         // Setting selection as default source, i.e. when data_source is not specified, ChartObject will query data from selection.
         graphDisplay.setDefaultDataSourceId(selectionSourceId);
+
+        // Adding 'whole table'-source
+        {
+            DFG_ASSERT(tableEditor.m_spTableView != nullptr);
+            if (tableEditor.m_spTableView)
+            {
+                std::unique_ptr<dfg::qt::CsvItemModelChartDataSource> tableSource(new dfg::qt::CsvItemModelChartDataSource(tableEditor.m_spTableView->csvModel(), "table"));
+                graphDisplay.addDataSource(std::move(tableSource));
+            }
+        }
     }
     tableEditor.setGraphDisplay(&graphDisplay);
 #endif
