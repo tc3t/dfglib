@@ -662,7 +662,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getPlainColumnData_createIfMissing(Graph
             if (nIndex != GraphDataSource::invalidIndex())
                 rv = source.singleColumnDoubleValues_byColumnIndex(nIndex);
             else
-                DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(svColumnName)));
+                DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(svColumnName)));
         }
         else
             DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: Bad %2 specifier '%3'").arg(defEntry.index()).arg(ChartObjectFieldIdStr_xSource).arg(sXsource.rawStorage().c_str()));
@@ -2686,7 +2686,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         const auto columnIndex = dataSource.columnIndexByName(sColumnName);
         if (columnIndex == dataSource.invalidIndex() || !cacheData.hasColumnIndex(columnIndex))
         {
-            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(sColumnName)));
+            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(sColumnName)));
             return GraphDataSource::invalidIndex();
         }
         return columnIndex;
