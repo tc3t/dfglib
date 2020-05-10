@@ -38,6 +38,7 @@ SOURCES += \
     ../dfg/qt/TableEditor.cpp \
     ../dfg/qt/graphTools.cpp \
     ../dfg/qt/qtBasic.cpp \
+    ../dfg/qt/CsvItemModelChartDataSource.cpp \
     ../dfg/qt/qxt/gui/qxtspanslider.cpp \
     ../dfg/str/fmtlib/format.cc \
     ../externals/gtest/gtest-all.cc \
@@ -64,7 +65,8 @@ HEADERS += \
     ../dfg/qt/qxt/gui/qxtspanslider_p.h \
     ../dfg/qt/tableViewUndoCommands.hpp \
     ../dfg/qt/widgetHelpers.hpp \
-    ../dfg/qt/CsvTableViewChartDataSource.hpp
+    ../dfg/qt/CsvTableViewChartDataSource.hpp \
+    ../dfg/qt/CsvItemModelChartDataSource.hpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

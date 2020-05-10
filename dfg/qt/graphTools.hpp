@@ -71,7 +71,8 @@ public:
 
     virtual DataSourceIndex columnIndexByName(const StringViewUtf8) const { return invalidIndex(); }
 
-    // Enables or disables data source. When disabled, data source should be completely inactive, e.g. may not emit sigChanged() signals or update it's internal data structures.
+    // Enables or disables data source. When disabled, data source may not emit sigChanged() signals or update it's internal data structures.
+    // It may, however, respond to data requests e.g. if data is readily available in it's data structures.
     virtual void enable(bool) = 0;
 
     static DataSourceIndex invalidIndex() { return NumericTraits<DataSourceIndex>::maxValue; }
