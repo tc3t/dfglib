@@ -37,16 +37,16 @@ public:
 
     // TODO: life-time requirements
     CsvItemModelChartDataSource(CsvItemModel* pModel, QString sId);
-    ~CsvItemModelChartDataSource();
+    ~CsvItemModelChartDataSource() override;
 
     // Begin: interface overloads -->
     QObject* underlyingSource() override;
     void forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)> handler) override;
     DataSourceIndex columnCount() const override;
     DataSourceIndex columnIndexByName(const StringViewUtf8 sv) const override;
-    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) override;
-    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) override;
-    void enable(const bool b) override;
+    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex offsetFromFirst) override;
+    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex nColIndex) override;
+    void enable(bool b) override;
     ColumnDataTypeMap columnDataTypes() const override;
     ColumnNameMap columnNames() const override;
     // End interface overloads <--

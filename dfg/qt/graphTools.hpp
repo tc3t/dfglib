@@ -116,7 +116,7 @@ public:
     typedef QWidget BaseClass;
 
     GraphDisplay(QWidget* pParent);
-    ~GraphDisplay();
+    ~GraphDisplay() override;
 
     void showSaveAsImageDialog();
 
@@ -166,7 +166,7 @@ public:
     using ChartObject = ::DFG_MODULE_NS(charts)::ChartObject;
 
     GraphControlAndDisplayWidget();
-    ~GraphControlAndDisplayWidget();
+    ~GraphControlAndDisplayWidget() override;
 
     void addDataSource(std::unique_ptr<GraphDataSource> spSource);
 

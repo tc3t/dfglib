@@ -43,13 +43,13 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_fromTableS
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnCount() const -> DataSourceIndex
 {
     auto pModel = privGetCsvModel();
-    return (pModel) ? pModel->columnCount() : 0;
+    return (pModel) ? static_cast<DataSourceIndex>(pModel->columnCount()) : 0;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexByName(const StringViewUtf8 sv) const -> DataSourceIndex
 {
     auto rv = m_spModel->findColumnIndexByName(viewToQString(sv), -1);
-    return (rv != -1) ? rv : invalidIndex();
+    return (rv != -1) ? static_cast<DataSourceIndex>(rv) : invalidIndex();
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) -> SingleColumnDoubleValuesOptional
@@ -68,7 +68,7 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_
     {
         outputVec.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz));
     });
-    return rv;
+    return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator
 }
 
 void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::enable(const bool /*b*/)

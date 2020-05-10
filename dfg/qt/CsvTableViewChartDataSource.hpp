@@ -1,5 +1,7 @@
 #pragma once
 
+#include "qtIncludeHelpers.hpp"
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QObject>
 #include <QDateTime>
@@ -142,7 +144,7 @@ public:
         GraphDataSource::ColumnNameMap m_columnNames;
     };
 
-    inline void analyzeImpl(const QItemSelection selection) override;
+    inline void analyzeImpl(QItemSelection selection) override;
 
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<Table> m_spTable;
 };
@@ -250,11 +252,11 @@ public:
 
     DataSourceIndex columnIndexByName(const StringViewUtf8 sv) const override;
 
-    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) override;
+    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex offsetFromFirst) override;
 
-    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) override;
+    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex nColIndex) override;
 
-    void enable(const bool b) override;
+    void enable(bool b) override;
 
     ColumnDataTypeMap columnDataTypes() const override;
 
@@ -335,7 +337,7 @@ auto CsvTableViewChartDataSource::singleColumnDoubleValues_byOffsetFromFirst(con
     const auto& rTable = *spTableView;
     if (rTable.empty())
         return SingleColumnDoubleValuesOptional();
-    const DataSourceIndex nFirstCol = rTable.frontKey();
+    const DataSourceIndex nFirstCol = static_cast<DataSourceIndex>(rTable.frontKey());
     const auto nTargetCol = nFirstCol + offsetFromFirst;
     return singleColumnDoubleValues_byColumnIndex(nTargetCol);
 }
@@ -355,7 +357,7 @@ auto CsvTableViewChartDataSource::singleColumnDoubleValues_byColumnIndex(const D
     auto rv = std::make_shared<DoubleValueVector>();
     rv->resize(values.size());
     std::copy(values.cbegin(), values.cend(), rv->begin());
-    return rv;
+    return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator
 }
 
 void CsvTableViewChartDataSource::enable(const bool b)
