@@ -4,6 +4,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QVariant>
 DFG_END_INCLUDE_QT_HEADERS
 
+#include "../alg.hpp"
+
 ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::CsvItemModelChartDataSource(CsvItemModel* pModel, QString sId)
     : m_spModel(pModel)
 {
@@ -44,6 +46,19 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnCount() const -> Da
 {
     auto pModel = privGetCsvModel();
     return (pModel) ? static_cast<DataSourceIndex>(pModel->columnCount()) : 0;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexes() const -> IndexList
+{
+    auto pModel = privGetCsvModel();
+    if (pModel)
+    {
+        IndexList indexList(pModel->columnCount());
+        ::DFG_MODULE_NS(alg)::generateAdjacent(indexList, 0, 1);
+        return indexList;
+    }
+    else
+        return IndexList();
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexByName(const StringViewUtf8 sv) const -> DataSourceIndex

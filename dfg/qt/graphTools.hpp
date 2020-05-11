@@ -49,6 +49,7 @@ public:
     using SingleColumnDoubleValuesOptional = std::shared_ptr<const DoubleValueVector>;
     using ColumnDataTypeMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ChartDataType>;
     using ColumnNameMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, QString>;
+    using IndexList = ::DFG_MODULE_NS(cont)::ValueVector<DataSourceIndex>;
 
     virtual ~GraphDataSource() {}
 
@@ -64,11 +65,10 @@ public:
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }
 
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
+    virtual ColumnNameMap     columnNames()     const { return ColumnNameMap(); }
 
-    virtual ColumnNameMap columnNames() const { return ColumnNameMap(); }
-
-    virtual DataSourceIndex columnCount() const { return 0; }
-
+    virtual IndexList       columnIndexes() const                         { return IndexList(); }
+    virtual DataSourceIndex columnCount()   const                         { return 0; }
     virtual DataSourceIndex columnIndexByName(const StringViewUtf8) const { return invalidIndex(); }
 
     // Enables or disables data source. When disabled, data source may not emit sigChanged() signals or update it's internal data structures.

@@ -248,6 +248,8 @@ public:
 
     void forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)> handler) override;
 
+    IndexList columnIndexes() const override;
+
     DataSourceIndex columnCount() const override;
 
     DataSourceIndex columnIndexByName(const StringViewUtf8 sv) const override;
@@ -304,6 +306,15 @@ void CsvTableViewChartDataSource::forEachElement_fromTableSelection(std::functio
             handler(static_cast<DataSourceIndex>(iterRow->first), static_cast<DataSourceIndex>(iterCol->first), iterRow->second);
         }
     }
+}
+
+auto CsvTableViewChartDataSource::columnIndexes() const -> IndexList
+{
+    IndexList rv;
+    auto spTableView = privGetTableView();
+    if (spTableView)
+        rv.assign(spTableView->keyRange());
+    return rv;
 }
 
 auto CsvTableViewChartDataSource::columnCount() const -> DataSourceIndex

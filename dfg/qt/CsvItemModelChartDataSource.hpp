@@ -43,6 +43,7 @@ public:
     QObject* underlyingSource() override;
     void forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)> handler) override;
     DataSourceIndex columnCount() const override;
+    IndexList       columnIndexes() const override;
     DataSourceIndex columnIndexByName(const StringViewUtf8 sv) const override;
     SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex offsetFromFirst) override;
     SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex nColIndex) override;

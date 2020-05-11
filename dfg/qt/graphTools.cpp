@@ -69,6 +69,22 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 using namespace DFG_MODULE_NS(charts); // TODO: replace by something less coarse.
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
+{
+
+    // Returns
+    //      -defaultValue if not set
+    //      -defaultValue + 1 if defined as row index.
+    //      -GraphDataSource::invalidIndex() if set but not found.
+    auto getChosenColumnIndex(GraphDataSource& dataSource,
+                              const decltype(ChartObjectFieldIdStr_xSource)& id,
+                              const GraphDefinitionEntry& defEntry,
+                              const GraphDataSource::DataSourceIndex defaultValue)->GraphDataSource::DataSourceIndex;
+
+    template <class ColRange_T, class IsRowSpecifier_T>
+    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier);
+} } } // dfg:::qt::<unnamed>
+
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
 
@@ -385,6 +401,8 @@ public:
 
     IndexT columnToIndex(const RowToValueMap* pColumn) const;
 
+    bool storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn);
+
     ColumnToValuesMap m_colToValuesMap;
     GraphDataSource::ColumnDataTypeMap m_columnTypes;
     GraphDataSource::ColumnNameMap m_columnNames;
@@ -428,6 +446,28 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::lastColumnIndex() const -> Inde
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::hasColumnIndex(const IndexT nCol) const
 {
     return m_colToValuesMap.hasKey(nCol);
+}
+
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphDataSource& source, DataSourceIndex nColumn)
+{
+    auto insertRv = m_colToValuesMap.insert(std::move(nColumn), RowToValueMap());
+    if (insertRv.second) // Was new inserted?
+        insertRv.first->second.setSorting(false); // Disabling sorting while adding
+    auto& destValues = insertRv.first->second;
+    // TODO: create per-column query interface.
+    source.forEachElement_fromTableSelection([&](const DataSourceIndex r, const DataSourceIndex c, QVariant var)
+    {
+        if (c == nColumn)
+        {
+            destValues.m_keyStorage.push_back(static_cast<double>(r));
+            destValues.m_valueStorage.push_back(var.toDouble());
+            destValues[r] = var.toDouble(); // TODO: typen käsittely?
+        }
+    });
+    destValues.setSorting(true);
+    m_columnTypes = source.columnDataTypes();
+    m_columnNames = source.columnNames();
+    return true;
 }
 
 namespace
@@ -591,7 +631,7 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap*
  *      Note that it does not know anything about ChartObject definitions so big proportions of the stored data might not be used at all in charts.
  *  3. Changed selection leads to recreation of ChartObjects:
  *      a. ChartObjects do not directly query data from data source, but instead they ask data from object of this class (ChartDataCache)
- *      b. ChartObject definition defines a cacheKey so that items with identical cacheKeys can use the same fecthed cache data.
+ *      b. ChartObject definition defines a cacheKey so that items with identical cacheKeys can use the same fetched cache data.
  *          -Examples:
  *              -Two xySeries with only difference being panel in which they are drawn shall have identical cacheKey so they can be constructed from the same cache-data.
  *              -Two xySeries otherwise identical, but other has x_rows-filter
@@ -614,27 +654,72 @@ public:
 
     void invalidate();
 
-    TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+    /**
+     *   Returns TableSelectionOptional, which is effectively an optional list of column data: map columnIndex -> column data.
+     *      -The list may have more than requested number of columns. For xy-type, column index of x is placed in rColumnIndexes[0] and y in rColumnIndexes[1] respectively.
+     *      -rRowFlag-array receives isColumnRowIndex() flags.
+     */
+    TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 2>& rColumnIndexes, std::array<bool, 2>& rRowFlags);
     SingleColumnDoubleValuesOptional getPlainColumnData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
 
     CacheKeyToTableSelectionaMap m_tableSelectionDatas;
     CacheKeyToColumnDoubleValuesMap m_doubleColumnValues;
 }; // ChartDataCache
 
-auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> TableSelectionOptional
+
+auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 2>& rColumnIndexes, std::array<bool, 2>& rRowFlags) -> TableSelectionOptional
 {
+    std::fill(rColumnIndexes.begin(), rColumnIndexes.end(), GraphDataSource::invalidIndex());
+    std::fill(rRowFlags.begin(), rRowFlags.end(), false);
+    const auto columns = source.columnIndexes();
+    if (columns.empty())
+        return TableSelectionOptional();
     auto key = this->cacheKey(source, defEntry);
     auto iter = m_tableSelectionDatas.find(key);
-    if (iter != m_tableSelectionDatas.end() && iter->second && iter->second->isValid())
+    if (iter == m_tableSelectionDatas.end())
+        iter = m_tableSelectionDatas.insert(std::make_pair(key, std::make_shared<TableSelectionCacheItem>())).first;
+
+    auto& rCacheItem = *iter->second;
+
+    const auto nLastColumnIndex = columns.back();
+    const auto nDefaultValue = nLastColumnIndex + 1;
+
+    auto& xColumnIndex = rColumnIndexes[0];
+    auto& yColumnIndex = rColumnIndexes[1];
+    xColumnIndex = getChosenColumnIndex(source, ChartObjectFieldIdStr_xSource, defEntry, nDefaultValue);
+    yColumnIndex = getChosenColumnIndex(source, ChartObjectFieldIdStr_ySource, defEntry, nDefaultValue);
+
+    const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nLastColumnIndex + 2; };
+
+    if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
+        return TableSelectionOptional(); // Either column was defined but not found.
+
+    auto& bXisRowIndex = rRowFlags[0];
+    auto& bYisRowIndex = rRowFlags[1];
+    bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
+    bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
+
+    if (bXisRowIndex && bYisRowIndex)
+    {
+        DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Both columns are specified as row_index").arg(defEntry.index()));
+        return TableSelectionOptional();
+    }
+
+    if (source.columnCount() == 1 && !bXisRowIndex && !bYisRowIndex)
+    {
+        if (xColumnIndex == nDefaultValue)
+            bXisRowIndex = true;
+        else if (yColumnIndex == nDefaultValue)
+            bYisRowIndex = true;
+    }
+
+    makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
+
+    if (rCacheItem.storeColumnFromSource(source, xColumnIndex) &&
+        rCacheItem.storeColumnFromSource(source, yColumnIndex))
         return iter->second;
-
-    if (iter != m_tableSelectionDatas.end())
-        m_tableSelectionDatas.erase(iter); // Removing existing but invalid entry to make sure it doesn't mess up new data.
-
-    auto rv = std::make_shared<TableSelectionCacheItem>();
-    rv->populateFromSource(source, defEntry);
-    m_tableSelectionDatas.insert(std::make_pair(key, rv));
-    return rv;
+    else
+        return TableSelectionOptional(); // Failed to read columns
 }
 
 auto DFG_MODULE_NS(qt)::ChartDataCache::getPlainColumnData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> SingleColumnDoubleValuesOptional
@@ -2660,8 +2745,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
     //      -defaultValue if not set
     //      -defaultValue + 1 if defined as row index.
     //      -GraphDataSource::invalidIndex() if set but not found.
-    auto getChosenColumnIndex(const TableSelectionCacheItem& cacheData,
-                              GraphDataSource& dataSource,
+    auto getChosenColumnIndex(GraphDataSource& dataSource,
                               const decltype(ChartObjectFieldIdStr_xSource)& id,
                               const GraphDefinitionEntry& defEntry,
                               const GraphDataSource::DataSourceIndex defaultValue) -> GraphDataSource::DataSourceIndex
@@ -2684,7 +2768,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         }
         const auto sColumnName = items.value(0);
         const auto columnIndex = dataSource.columnIndexByName(sColumnName);
-        if (columnIndex == dataSource.invalidIndex() || !cacheData.hasColumnIndex(columnIndex))
+        if (columnIndex == dataSource.invalidIndex())
         {
             DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(sColumnName)));
             return GraphDataSource::invalidIndex();
@@ -2705,7 +2789,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             DFG_QT_CHART_CONSOLE_ERROR("Internal error: both x and y are of type row_index");
             return;
         }
-        
+
         if (isPresent(x)) // Case: x was defined
         {
             if (!isPresent(y)) // y is not set?
@@ -2757,12 +2841,36 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     if (!m_spCache)
         m_spCache.reset(new ChartDataCache);
 
-    auto optData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry);
+    std::array<DataSourceIndex, 2> columnIndexes;
+    std::array<bool, 2> rowFlags;
+    auto optData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optData || optData->columnCount() < 1)
         return;
     
     auto& tableData = *optData;
+
+    auto pXdata = tableData.columnDataByIndex(columnIndexes[0]);
+    auto pYdata = tableData.columnDataByIndex(columnIndexes[1]);
+
+    if (!pXdata || !pYdata)
+        return;
+
+    const bool bXisRowIndex = rowFlags[0];
+    const bool bYisRowIndex = rowFlags[1];
+
+    const char szRowIndexName[] = QT_TR_NOOP("Row number");
+    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType::unknown;
+    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
+    const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
+    const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
+    auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
+    if (!spSeries)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
+        return;
+    }
+    auto& rSeries = *spSeries;
 
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
@@ -2779,55 +2887,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
         DFG_QT_CHART_CONSOLE_DEBUG(QString("Entry %1: x_rows-entry defines %2 row(s)").arg(defEntry.index()).arg(xRows.sizeOfSet()));
         pxRowSet = &xRows;
     }
-
-    const auto columns = tableData.columnRange();
-    const auto nLastColumnIndex = tableData.lastColumnIndex();
-    const auto nDefaultValue = nLastColumnIndex + 1;
-    DataSourceIndex xColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_xSource, defEntry, nDefaultValue);
-    DataSourceIndex yColumnIndex = getChosenColumnIndex(tableData, source, ChartObjectFieldIdStr_ySource, defEntry, nDefaultValue);
-
-    const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nLastColumnIndex + 2; };
-
-    if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
-        return; // Either column was defined but not found.
-
-    bool bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
-    bool bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
-
-    if (bXisRowIndex && bYisRowIndex)
-    {
-        DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Both columns are specified as row_index").arg(defEntry.index()));
-        return;
-    }
-
-    if (columns.size() == 1 && !bXisRowIndex && !bYisRowIndex)
-    {
-        if (xColumnIndex == nDefaultValue)
-            bXisRowIndex = true;
-        else if (yColumnIndex == nDefaultValue)
-            bYisRowIndex = true;
-    }
-       
-    makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
-
-    auto pXdata = tableData.columnDataByIndex(xColumnIndex);
-    auto pYdata = (pXdata) ? tableData.columnDataByIndex(yColumnIndex) : nullptr;
-
-    if (!pXdata || !pYdata)
-        return;
-
-    const char szRowIndexName[] = QT_TR_NOOP("Row number");
-    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType::unknown;
-    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
-    const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
-    const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
-    auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
-    if (!spSeries)
-    {
-        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
-        return;
-    }
-    auto& rSeries = *spSeries;
 
     // xValueMap is also used as final (x,y) table passed to series.
     // releaseOrCopy() will return either moved data or copy of it.
