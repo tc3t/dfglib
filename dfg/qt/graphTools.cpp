@@ -448,11 +448,13 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::hasColumnIndex(const IndexT nCo
     return m_colToValuesMap.hasKey(nCol);
 }
 
-bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphDataSource& source, DataSourceIndex nColumn)
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn)
 {
-    auto insertRv = m_colToValuesMap.insert(std::move(nColumn), RowToValueMap());
-    if (insertRv.second) // Was new inserted?
-        insertRv.first->second.setSorting(false); // Disabling sorting while adding
+    auto insertRv = m_colToValuesMap.insert(nColumn, RowToValueMap());
+    if (!insertRv.second)
+        return true; // Column was already present; since currently caching stores whole column, it should already have everything ready so nothing left to do.
+
+    insertRv.first->second.setSorting(false); // Disabling sorting while adding
     auto& destValues = insertRv.first->second;
     // TODO: create per-column query interface.
     source.forEachElement_fromTableSelection([&](const DataSourceIndex r, const DataSourceIndex c, QVariant var)
@@ -461,7 +463,6 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
         {
             destValues.m_keyStorage.push_back(static_cast<double>(r));
             destValues.m_valueStorage.push_back(var.toDouble());
-            destValues[r] = var.toDouble(); // TODO: typen käsittely?
         }
     });
     destValues.setSorting(true);
@@ -556,7 +557,7 @@ void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSou
 
     source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
     {
-        auto insertRv = m_colToValuesMap.insert(std::move(c), RowToValueMap());
+        auto insertRv = m_colToValuesMap.insert(c, RowToValueMap());
         if (insertRv.second) // Was new inserted?
             insertRv.first->second.setSorting(false); // Disabling sorting while adding
         insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
