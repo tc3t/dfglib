@@ -581,14 +581,8 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
     {
         return &v.second == pId;
     });
-    // For now moving always as there's no permanent caching yet.
-    if (iter != m_colToValuesMap.end())
-    {
-        m_bIsValid = false; // Since data gets moved out, marking this cache item invalidated.
-        return std::move(iter->second);
-    }
-    else
-        return RowToValueMap();
+    // As there's no mechanism to verify if cacheItem is to be used by someone else, always copying.
+    return (iter != m_colToValuesMap.end()) ? iter->second : RowToValueMap();
 }
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnToIndex(const RowToValueMap* pColumn) const -> IndexT
@@ -765,12 +759,16 @@ void DFG_MODULE_NS(qt)::ChartDataCache::invalidate()
 
 auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const -> CacheEntryKey
 {
+    DFG_UNUSED(defEntry);
+    return source.uniqueId();
+#if 0
     const auto sType = defEntry.fieldValueStr(ChartObjectFieldIdStr_type, [] { return StringUtf8(); }).rawStorage();
     if (sType == ChartObjectChartTypeStr_xy)
         return source.uniqueId() + sType.c_str(); // For xySeries defEntry does not affect cache content so "source + xy" is good enough
     if (sType == ChartObjectChartTypeStr_histogram)
         return source.uniqueId() + sType.c_str() + defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); }).rawStorage().c_str(); // For histograms only the requested column is cached so adding x_source to "source + histogram"
     return "";
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2953,19 +2951,26 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     if (nColumnCount < 1)
         return;
 
-    auto optValues = m_spCache->getPlainColumnData_createIfMissing(source, defEntry);
+    std::array<DataSourceIndex, 2> columnIndexes;
+    std::array<bool, 2> rowFlags;
+    auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
-    if (!optValues)
+    if (!optTableData || optTableData->columnCount() < 1)
         return;
 
-    const auto& values = *optValues;
-    if (values.size() < 2)
+    auto pSingleColumn = optTableData->columnDataByIndex(columnIndexes[0]);
+
+    if (!pSingleColumn)
+        return;
+
+    const auto valueRange = pSingleColumn->valueRange();
+    if (valueRange.size() < 2)
     {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(values.size()));
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(valueRange.size()));
         return;
     }
 
-    auto spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(values)));
+    auto spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange));
     if (!spHistogram)
         return;
     ++nHistogramCounter;
