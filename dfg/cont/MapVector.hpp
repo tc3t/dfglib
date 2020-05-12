@@ -272,6 +272,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 }
             }
 
+            std::pair<iterator, bool> insert(const key_type& key, mapped_type&& val)
+            {
+                auto keyTemp = key;
+                return insert(std::move(keyTemp), std::move(val));
+            }
+
             void reserve(const size_t nReserve) { static_cast<Impl_T&>(*this).reserve(nReserve); }
 
             size_t capacity() const             { return static_cast<const Impl_T&>(*this).capacity(); }

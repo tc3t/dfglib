@@ -1641,6 +1641,29 @@ TEST(dfgCont, MapVector)
         EXPECT_EQ(14, DFG_MODULE_NS(numeric)::accumulate(xyVals.keyRange()));
         EXPECT_EQ(30, DFG_MODULE_NS(numeric)::accumulate(xyVals.valueRange()));
     }
+
+    // Test insert
+    {
+        using namespace DFG_ROOT_NS;
+        DFG_CLASS_NAME(MapVectorAoS)<int32, double> mmAos;
+        DFG_CLASS_NAME(MapVectorSoA)<int32, double> mmSoa;
+        int16 i16 = 3;
+        int32 i = 1;
+        const int32 ci = 2;
+        mmAos.insert(i, 10.0);
+        mmAos.insert(i, 10.0);
+        mmAos.insert(ci, 20.0);
+        mmSoa.insert(i, 10.0);
+        mmSoa.insert(ci, 20.0);
+        mmAos.insert(i16, 30.0);
+        mmSoa.insert(i16, 30.0);
+        EXPECT_EQ(10, mmAos[i]);
+        EXPECT_EQ(10, mmSoa[i]);
+        EXPECT_EQ(20, mmAos[ci]);
+        EXPECT_EQ(20, mmSoa[ci]);
+        EXPECT_EQ(30, mmAos[i16]);
+        EXPECT_EQ(30, mmSoa[i16]);
+    }
 }
 
 namespace
