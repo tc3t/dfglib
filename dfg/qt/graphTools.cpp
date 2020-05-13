@@ -377,8 +377,6 @@ public:
     using RowToValueMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double>;
     using ColumnToValuesMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
 
-    void populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
-
     std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
 
     const RowToValueMap* columnDataByIndex(IndexT nColumnIndex);
@@ -549,32 +547,6 @@ namespace
 
 } // unnamed namespace
 
-void DFG_MODULE_NS(qt)::TableSelectionCacheItem::populateFromSource(GraphDataSource& source, const GraphDefinitionEntry& defEntry)
-{
-    // NOTE: any change that affects the content might require changes to generation of cacheKey, see ChartDataCache documentation for details.
-    DFG_UNUSED(defEntry);
-    m_colToValuesMap.clear();
-
-    source.forEachElement_fromTableSelection([&](DataSourceIndex r, DataSourceIndex c, const QVariant& val)
-    {
-        auto insertRv = m_colToValuesMap.insert(c, RowToValueMap());
-        if (insertRv.second) // Was new inserted?
-            insertRv.first->second.setSorting(false); // Disabling sorting while adding
-        insertRv.first->second.m_keyStorage.push_back(static_cast<double>(r));
-        insertRv.first->second.m_valueStorage.push_back(val.toDouble());
-    });
-
-    m_columnTypes = source.columnDataTypes();
-    m_columnNames = source.columnNames();
-
-    // Sorting values by row now that all data has been added.
-    for (auto iter = m_colToValuesMap.begin(), iterEnd = m_colToValuesMap.end(); iter != iterEnd; ++iter)
-    {
-        iter->second.setSorting(true);
-    }
-    m_bIsValid = true;
-}
-
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueMap* pId) -> RowToValueMap
 {
     auto iter = std::find_if(m_colToValuesMap.begin(), m_colToValuesMap.end(), [=](const auto& v)
@@ -655,10 +627,8 @@ public:
      *      -rRowFlag-array receives isColumnRowIndex() flags.
      */
     TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 2>& rColumnIndexes, std::array<bool, 2>& rRowFlags);
-    SingleColumnDoubleValuesOptional getPlainColumnData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
 
     CacheKeyToTableSelectionaMap m_tableSelectionDatas;
-    CacheKeyToColumnDoubleValuesMap m_doubleColumnValues;
 }; // ChartDataCache
 
 
@@ -717,58 +687,15 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
         return TableSelectionOptional(); // Failed to read columns
 }
 
-auto DFG_MODULE_NS(qt)::ChartDataCache::getPlainColumnData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> SingleColumnDoubleValuesOptional
-{
-    auto key = this->cacheKey(source, defEntry);
-    auto iter = m_doubleColumnValues.find(key);
-    if (iter != m_doubleColumnValues.end() && iter->second)
-        return iter->second; // Found cached, returning it.
-
-    if (iter != m_doubleColumnValues.end())
-        m_doubleColumnValues.erase(iter); // Removing existing but invalid entry.
-
-    SingleColumnDoubleValuesOptional rv;
-
-    const auto sXsource = defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); });
-    if (sXsource.empty())
-        rv = source.singleColumnDoubleValues_byOffsetFromFirst(0);
-    else // Case: have non-empty x_source
-    {
-        const ParenthesisItem items(sXsource);
-        if (items.key() == SzPtrUtf8(ChartObjectSourceTypeStr_columnName) && items.valueCount() >= 1)
-        {
-            const auto svColumnName = items.value(0);
-            const auto nIndex = source.columnIndexByName(svColumnName);
-            if (nIndex != GraphDataSource::invalidIndex())
-                rv = source.singleColumnDoubleValues_byColumnIndex(nIndex);
-            else
-                DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(svColumnName)));
-        }
-        else
-            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: Bad %2 specifier '%3'").arg(defEntry.index()).arg(ChartObjectFieldIdStr_xSource).arg(sXsource.rawStorage().c_str()));
-    }
-    m_doubleColumnValues.insert(std::make_pair(std::move(key), rv));
-    return rv;
-}
-
 void DFG_MODULE_NS(qt)::ChartDataCache::invalidate()
 {
     m_tableSelectionDatas.clear();
-    m_doubleColumnValues.clear();
 }
 
 auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const -> CacheEntryKey
 {
     DFG_UNUSED(defEntry);
     return source.uniqueId();
-#if 0
-    const auto sType = defEntry.fieldValueStr(ChartObjectFieldIdStr_type, [] { return StringUtf8(); }).rawStorage();
-    if (sType == ChartObjectChartTypeStr_xy)
-        return source.uniqueId() + sType.c_str(); // For xySeries defEntry does not affect cache content so "source + xy" is good enough
-    if (sType == ChartObjectChartTypeStr_histogram)
-        return source.uniqueId() + sType.c_str() + defEntry.fieldValueStr(ChartObjectFieldIdStr_xSource, [] { return StringUtf8(); }).rawStorage().c_str(); // For histograms only the requested column is cached so adding x_source to "source + histogram"
-    return "";
-#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
