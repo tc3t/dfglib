@@ -78,4 +78,18 @@ bool tryReserve(Cont_T& cont, const size_t nCount)
     }
 }
 
+// Element-wise erase
+// For now restricted to maps as element-wise erase wouldn't be optimal for storages like std::vector.
+template <class T0, class T1, class Pred_T>
+void eraseIf(std::map<T0, T1>& cont, Pred_T&& pred)
+{
+    for (auto iter = std::begin(cont), iterEnd = std::end(cont); iter != iterEnd;)
+    {
+        if (pred(*iter))
+            iter = cont.erase(iter);
+        else
+            ++iter;
+    }
+}
+
 } } // module namespace
