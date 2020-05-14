@@ -1,4 +1,5 @@
 #include "CsvItemModelChartDataSource.hpp"
+#include "connectHelper.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QVariant>
@@ -12,6 +13,8 @@ DFG_END_INCLUDE_QT_HEADERS
     this->m_uniqueId = std::move(sId);
     if (!m_spModel)
         return;
+    DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
+    this->m_bAreChangesSignaled = true;
 }
 
 ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::~CsvItemModelChartDataSource()
