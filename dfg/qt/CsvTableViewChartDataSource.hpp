@@ -281,6 +281,7 @@ CsvTableViewChartDataSource::CsvTableViewChartDataSource(CsvTableView* view)
     m_spSelectionAnalyzer->m_spTable.reset(std::make_shared<SelectionAnalyzerForGraphing::Table>());
     m_spDataViewer = m_spSelectionAnalyzer->m_spTable.createViewer();
     DFG_QT_VERIFY_CONNECT(connect(m_spSelectionAnalyzer.get(), &CsvTableViewSelectionAnalyzer::sigAnalyzeCompleted, this, &GraphDataSource::sigChanged));
+    this->m_bAreChangesSignaled = true;
     m_spView->addSelectionAnalyzer(m_spSelectionAnalyzer);
 }
 

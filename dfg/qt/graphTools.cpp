@@ -15,6 +15,7 @@
 #include "../str/format_fmt.hpp"
 
 #include "../alg.hpp"
+#include "../cont/contAlg.hpp"
 #include "../math.hpp"
 #include "../scopedCaller.hpp"
 #include "../str/strTo.hpp"
@@ -370,7 +371,7 @@ auto GraphDefinitionEntry::sourceId(const GraphDataSourceId& sDefault) const -> 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-class TableSelectionCacheItem
+class TableSelectionCacheItem : public QObject
 {
 public:
     using IndexT = GraphDataSource::DataSourceIndex;
@@ -401,10 +402,16 @@ public:
 
     bool storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn);
 
+    // CacheItem is volatile if it doesn't have mechanism to know when it's source has changed.
+    bool isVolatileCache() const;
+
+    void onDataSourceChanged();
+
     ColumnToValuesMap m_colToValuesMap;
     GraphDataSource::ColumnDataTypeMap m_columnTypes;
     GraphDataSource::ColumnNameMap m_columnNames;
     bool m_bIsValid = false;
+    QPointer<GraphDataSource> m_spSource;
 };
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDatas() const -> std::vector<std::reference_wrapper<const RowToValueMap>>
@@ -446,8 +453,24 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::hasColumnIndex(const IndexT nCo
     return m_colToValuesMap.hasKey(nCol);
 }
 
+void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged()
+{
+    // Source has changes, simply marking cache as invalid so that it gets recreated.
+    this->m_bIsValid = false;
+}
+
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn)
 {
+    if (m_spSource && m_spSource != &source)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Internal error: cache item source changed, was '%1', now using '%2'").arg(m_spSource->uniqueId(), source.uniqueId()));
+        m_colToValuesMap.clear();
+    }
+    if (m_spSource != &source)
+    {
+        m_spSource = &source;
+        DFG_QT_VERIFY_CONNECT(QObject::connect(&source, &GraphDataSource::sigChanged, this, &TableSelectionCacheItem::onDataSourceChanged));
+    }
     auto insertRv = m_colToValuesMap.insert(nColumn, RowToValueMap());
     if (!insertRv.second)
         return true; // Column was already present; since currently caching stores whole column, it should already have everything ready so nothing left to do.
@@ -466,6 +489,7 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
     destValues.setSorting(true);
     m_columnTypes = source.columnDataTypes();
     m_columnNames = source.columnNames();
+    this->m_bIsValid = true;
     return true;
 }
 
@@ -580,6 +604,13 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap*
     return (iter != m_columnNames.end()) ? iter->second : QString();
 }
 
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::isVolatileCache() const
+{
+    auto pSource = m_spSource.data();
+    return (!pSource || !pSource->hasChangeSignaling());
+}
+
+
 /*
  * ChartDataCache
  * --------------
@@ -619,7 +650,8 @@ public:
 
     CacheEntryKey cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const;
 
-    void invalidate();
+    // Removes caches that have been invalidated.
+    void removeInvalidCaches();
 
     /**
      *   Returns TableSelectionOptional, which is effectively an optional list of column data: map columnIndex -> column data.
@@ -687,9 +719,13 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
         return TableSelectionOptional(); // Failed to read columns
 }
 
-void DFG_MODULE_NS(qt)::ChartDataCache::invalidate()
+void DFG_MODULE_NS(qt)::ChartDataCache::removeInvalidCaches()
 {
-    m_tableSelectionDatas.clear();
+    ::DFG_MODULE_NS(cont)::eraseIf(m_tableSelectionDatas, [](const decltype(*m_tableSelectionDatas.begin())& pairItem)
+    {
+        auto& opt = pairItem.second;
+        return !opt || opt->isVolatileCache() || !opt->isValid();
+    });
 }
 
 auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const -> CacheEntryKey
@@ -2531,7 +2567,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     DFG_MODULE_NS(time)::TimerCpu timer;
 
     if (m_spCache)
-        m_spCache->invalidate();
+        m_spCache->removeInvalidCaches();
 
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
 
@@ -2924,7 +2960,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_
     if (!spSource)
         return;
 
-    DFG_QT_VERIFY_CONNECT(connect(spSource.get(), &GraphDataSource::sigChanged, this, &GraphControlAndDisplayWidget::onDataSourceChanged));
+    // Brittle hack with connection types: when sources are signaling changes to caches with directConnection, having this connection as queud connection
+    // allows caches to invalidate themselves before onDataSourceChanged() gets handled.
+    DFG_QT_VERIFY_CONNECT(connect(spSource.get(), &GraphDataSource::sigChanged, this, &GraphControlAndDisplayWidget::onDataSourceChanged, Qt::QueuedConnection));
+
     DFG_QT_VERIFY_CONNECT(connect(spSource.get(), &QObject::destroyed, this, &GraphControlAndDisplayWidget::onDataSourceDestroyed));
 
     m_dataSources.m_sources.push_back(std::shared_ptr<GraphDataSource>(spSource.release()));

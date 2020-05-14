@@ -75,13 +75,16 @@ public:
     // It may, however, respond to data requests e.g. if data is readily available in it's data structures.
     virtual void enable(bool) = 0;
 
+    bool hasChangeSignaling() const { return m_bAreChangesSignaled; }
+
     static DataSourceIndex invalidIndex() { return NumericTraits<DataSourceIndex>::maxValue; }
 
 signals:
-    void sigChanged(); // Emitted when data has changed. TODO: Add parameter?
+    void sigChanged(); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.
 
 public:
     GraphDataSourceId m_uniqueId; // Unique ID by which data source can be queried with.
+    bool m_bAreChangesSignaled = false;
 }; // Class GraphDataSource
 
 class DataSourceContainer
