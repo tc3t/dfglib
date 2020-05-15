@@ -246,7 +246,7 @@ public:
 
     QObject* underlyingSource() override;
 
-    void forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)> handler) override;
+    void forEachElement_byColumn(DataSourceIndex c, ForEachElementByColumHandler handler) override;
 
     IndexList columnIndexes() const override;
 
@@ -290,7 +290,7 @@ QObject* CsvTableViewChartDataSource::underlyingSource()
     return m_spView;
 }
 
-void CsvTableViewChartDataSource::forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)> handler)
+void CsvTableViewChartDataSource::forEachElement_byColumn(DataSourceIndex c, ForEachElementByColumHandler handler)
 {
     if (!handler || !m_spView)
         return;
@@ -300,13 +300,14 @@ void CsvTableViewChartDataSource::forEachElement_fromTableSelection(std::functio
         return;
     const auto& rTable = *spTableView;
 
-    for (auto iterCol = rTable.begin(); iterCol != rTable.end(); ++iterCol)
-    {
-        for (auto iterRow = iterCol->second.begin(); iterRow != iterCol->second.end(); ++iterRow)
-        {
-            handler(static_cast<DataSourceIndex>(iterRow->first), static_cast<DataSourceIndex>(iterCol->first), iterRow->second);
-        }
-    }
+    auto iter = rTable.find(c);
+
+    if (iter == rTable.end())
+        return;
+
+    const auto& columnData = iter->second;
+
+    handler(columnData.m_keyStorage.data(), columnData.m_valueStorage.data(), nullptr, columnData.size());
 }
 
 auto CsvTableViewChartDataSource::columnIndexes() const -> IndexList

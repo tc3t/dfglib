@@ -50,6 +50,7 @@ public:
     using ColumnDataTypeMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ChartDataType>;
     using ColumnNameMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, QString>;
     using IndexList = ::DFG_MODULE_NS(cont)::ValueVector<DataSourceIndex>;
+    using ForEachElementByColumHandler = std::function<void(const double*, const double*, const QVariant*, DataSourceIndex)>; // row array, value array (null if not available as doubles), value array as variant (null if not available), array size
 
     virtual ~GraphDataSource() {}
 
@@ -59,7 +60,7 @@ public:
 
     virtual QObject* underlyingSource() = 0;
 
-    virtual void forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)>) { DFG_ASSERT_IMPLEMENTED(false); }
+    virtual void forEachElement_byColumn(DataSourceIndex, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
 
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex /*offsetFromFirst*/) { return SingleColumnDoubleValuesOptional(); }
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }

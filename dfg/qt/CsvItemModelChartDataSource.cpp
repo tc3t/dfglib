@@ -1,5 +1,6 @@
 #include "CsvItemModelChartDataSource.hpp"
 #include "connectHelper.hpp"
+#include "../cont/valueArray.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QVariant>
@@ -27,7 +28,7 @@ QObject* ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::underlyingSource()
     return nullptr; // modifiable ptr is not available
 }
 
-void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)> handler)
+void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(const DataSourceIndex c, ForEachElementByColumHandler handler)
 {
     auto pTable = (handler) ? privGetDataTable() : nullptr;
     if (!pTable)
@@ -35,14 +36,24 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_fromTableS
 
     const auto& rTable = *pTable;
 
-    rTable.forEachFwdColumnIndex([&](const int c)
+    ::DFG_MODULE_NS(cont)::ValueVector<double> rows;
+    ::DFG_MODULE_NS(cont)::ValueVector<double> vals;
+    const auto nBlockSize = Min(1024, rTable.rowCountByMaxRowIndex());
+    rows.reserve(nBlockSize);
+    vals.reserve(nBlockSize);
+    rTable.forEachFwdRowInColumn(static_cast<int>(c), [&](const int r, const SzPtrUtf8R psz)
     {
-        rTable.forEachFwdRowInColumn(c, [&](const int r, const SzPtrUtf8R psz)
+        if (vals.size() >= nBlockSize)
         {
-            // TODO: makes redundant QString (inside QVariant) on each call.
-            handler(static_cast<DataSourceIndex>(r), static_cast<DataSourceIndex>(c), psz.rawPtr());
-        });
+            handler(rows.data(), vals.data(), nullptr, vals.size());
+            rows.clear();
+            vals.clear();
+        }
+        rows.push_back(static_cast<double>(r));
+        vals.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz.c_str()));
     });
+    if (!vals.empty())
+        handler(rows.data(), vals.data(), nullptr, vals.size());
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnCount() const -> DataSourceIndex

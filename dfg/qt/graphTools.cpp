@@ -477,14 +477,12 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
 
     insertRv.first->second.setSorting(false); // Disabling sorting while adding
     auto& destValues = insertRv.first->second;
-    // TODO: create per-column query interface.
-    source.forEachElement_fromTableSelection([&](const DataSourceIndex r, const DataSourceIndex c, QVariant var)
+    source.forEachElement_byColumn(nColumn, [&](const double* pRows, const double* pDoubles, const QVariant* pVariants, const DataSourceIndex nArrSize)
     {
-        if (c == nColumn)
-        {
-            destValues.m_keyStorage.push_back(static_cast<double>(r));
-            destValues.m_valueStorage.push_back(var.toDouble());
-        }
+        DFG_UNUSED(pVariants);
+        if (!pRows || !pDoubles || nArrSize == 0)
+            return;
+        destValues.pushBackToUnsorted(makeRange(pRows, pRows + nArrSize), makeRange(pDoubles, pDoubles + nArrSize));
     });
     destValues.setSorting(true);
     m_columnTypes = source.columnDataTypes();

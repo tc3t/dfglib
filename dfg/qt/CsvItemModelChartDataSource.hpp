@@ -41,7 +41,7 @@ public:
 
     // Begin: interface overloads -->
     QObject* underlyingSource() override;
-    void forEachElement_fromTableSelection(std::function<void(DataSourceIndex, DataSourceIndex, QVariant)> handler) override;
+    void forEachElement_byColumn(DataSourceIndex c, ForEachElementByColumHandler handler) override;
     DataSourceIndex columnCount() const override;
     IndexList       columnIndexes() const override;
     DataSourceIndex columnIndexByName(const StringViewUtf8 sv) const override;
