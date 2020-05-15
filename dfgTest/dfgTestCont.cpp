@@ -1666,6 +1666,43 @@ TEST(dfgCont, MapVector)
     }
 }
 
+TEST(dfgCont, MapVector_pushBack)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    using MapSoaIntInt = DFG_CLASS_NAME(MapVectorSoA)<int, int>;
+
+    {
+        MapSoaIntInt m;
+        std::vector<int> vals0 = { 10, 20, 30 };
+        std::vector<int> vals1 = { 1, 2, 3 };
+        m.pushBackToUnsorted(vals0, vals1);
+        EXPECT_EQ(0, m.size());
+        m.setSorting(false);
+        m.pushBackToUnsorted(vals0, vals1);
+        EXPECT_EQ(3, m.size());
+        m.pushBackToUnsorted(vals1, vals0);
+        EXPECT_EQ(6, m.size());
+        std::vector<int> expectedKeys = { 10, 20, 30, 1, 2, 3 };
+        std::vector<int> expectedVals = { 1, 2, 3, 10, 20, 30 };
+        ASSERT_EQ(expectedKeys.size(), m.keyRange().size());
+        ASSERT_EQ(expectedVals.size(), m.valueRange().size());
+        EXPECT_TRUE(std::equal(m.keyRange().begin(), m.keyRange().end(), expectedKeys.begin()));
+        EXPECT_TRUE(std::equal(m.valueRange().begin(), m.valueRange().end(), expectedVals.begin()));
+
+
+        m.pushBackToUnsorted(vals0, [](int i) { return i + 1; }, vals1, [](int i) { return i - 1; });
+        expectedKeys.push_back(11);
+        expectedKeys.push_back(21);
+        expectedKeys.push_back(31);
+        expectedVals.push_back(0);
+        expectedVals.push_back(1);
+        expectedVals.push_back(2);
+        EXPECT_TRUE(std::equal(m.keyRange().begin(), m.keyRange().end(), expectedKeys.begin()));
+        EXPECT_TRUE(std::equal(m.valueRange().begin(), m.valueRange().end(), expectedVals.begin()));
+    }
+}
+
 namespace
 {
     template <class Set_T>

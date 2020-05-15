@@ -383,6 +383,37 @@ public:
         ::DFG_MODULE_NS(alg)::sortMultiple(m_keyStorage, m_valueStorage);
     }
 
+    template <class KeyIterable_T, class ValueIterable_T>
+    void pushBackToUnsorted(const KeyIterable_T& keyRange, const ValueIterable_T& valueRange)
+    {
+        if (this->isSorted() || keyRange.size() != valueRange.size() || keyRange.empty())
+            return;
+        const auto nSizeIncrement = keyRange.size();
+        if (nSizeIncrement > m_keyStorage.max_size() || m_keyStorage.max_size() - nSizeIncrement < m_keyStorage.size())
+            return;
+        DFG_ASSERT_UB(this->size() == m_keyStorage.size() && this->size() == m_keyStorage.size());
+
+        m_keyStorage.insert(m_keyStorage.end(), keyRange.begin(), keyRange.end());
+        m_valueStorage.insert(m_valueStorage.end(), valueRange.begin(), valueRange.end());
+    }
+
+    template <class KeyIterable_T, class KeyTransform_T, class ValueIterable_T, class ValueTransform_T>
+    void pushBackToUnsorted(const KeyIterable_T& keyRange, KeyTransform_T funcKey, const ValueIterable_T& valueRange, ValueTransform_T&& funcValue)
+    {
+        if (this->isSorted() || keyRange.size() != valueRange.size() || keyRange.empty())
+            return;
+        const auto nSizeIncrement = keyRange.size();
+        if (nSizeIncrement > m_keyStorage.max_size() || m_keyStorage.max_size() - nSizeIncrement < m_keyStorage.size())
+            return;
+        DFG_ASSERT_UB(size() == m_keyStorage.size() && size() == m_keyStorage.size());
+        const auto nOldSize = size();
+        m_keyStorage.resize(m_keyStorage.size() + nSizeIncrement);
+        m_valueStorage.resize(m_valueStorage.size() + nSizeIncrement);
+
+        std::transform(keyRange.begin(), keyRange.end(), m_keyStorage.begin() + nOldSize, funcKey);
+        std::transform(valueRange.begin(), valueRange.end(), m_valueStorage.begin() + nOldSize, funcValue);
+    }
+
     iterator eraseImpl(iterator iterRangeFirst, iterator iterRangeEnd)
     { 
         const auto nFirst = iterRangeFirst - this->begin();
