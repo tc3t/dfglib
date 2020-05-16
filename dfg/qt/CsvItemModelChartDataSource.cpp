@@ -3,7 +3,7 @@
 #include "../cont/valueArray.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-    #include <QVariant>
+
 DFG_END_INCLUDE_QT_HEADERS
 
 #include "../alg.hpp"
@@ -37,8 +37,21 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
 
     const auto& rTable = *pTable;
 
-    ::DFG_MODULE_NS(cont)::ValueVector<double> rows;
-    ::DFG_MODULE_NS(cont)::ValueVector<double> vals;
+    bool bFound = false;
+    auto whileFunc = [&](const int) { return !bFound; };
+    rTable.forEachFwdRowInColumnWhile(static_cast<int>(c), whileFunc, [&](const int /*r*/, const SzPtrUtf8R psz)
+    {
+        const auto val = GraphDataSource::cellStringToDouble(QString::fromUtf8(psz.c_str()), c, m_columnTypes);
+        if (!::DFG_MODULE_NS(math)::isNan(val))
+            bFound = true;
+        // Simply taking column type from first recognized type.
+    });
+
+    const auto colType = m_columnTypes[c];
+
+    using ValueVector = ::DFG_MODULE_NS(cont)::ValueVector<double>;
+    ValueVector rows;
+    ValueVector vals;
     const auto nBlockSize = Min(1024, rTable.rowCountByMaxRowIndex());
     rows.reserve(nBlockSize);
     vals.reserve(nBlockSize);
@@ -51,7 +64,10 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
             vals.clear();
         }
         rows.push_back(static_cast<double>(r));
-        vals.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz.c_str()));
+        if (colType == ChartDataType::unknown && std::strchr(psz.c_str(), ',') == nullptr)
+            vals.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz));
+        else
+            vals.push_back(cellStringToDouble(QString::fromUtf8(psz.c_str()), c, m_columnTypes));
     });
     if (!vals.empty())
         handler(rows.data(), vals.data(), nullptr, vals.size());
@@ -94,9 +110,10 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_
         return SingleColumnDoubleValuesOptional();
     auto rv = std::make_shared<DoubleValueVector>();
     auto& outputVec = *rv;
-    pCsvTable->forEachFwdRowInColumn(static_cast<int>(nColIndex), [&](const int /*r*/, const SzPtrUtf8R psz)
+
+    forEachElement_byColumn(nColIndex, [&](const double* /*pRows*/, const double* pVals, const QVariant*, DataSourceIndex nArrSize)
     {
-        outputVec.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz));
+        outputVec.insert(outputVec.end(), pVals, pVals + nArrSize);
     });
     return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator
 }
@@ -108,8 +125,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::enable(const bool /*b*/)
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnDataTypes() const -> ColumnDataTypeMap
 {
-    // TODO
-    return ColumnDataTypeMap();
+    return m_columnTypes;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnNames() const -> ColumnNameMap

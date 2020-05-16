@@ -289,6 +289,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         private:
             void assignImpl(CharStorageItem&& other) DFG_NOEXCEPT_TRUE
             {
+                // Note: if *this has capacity, it is effectively lost
+                // (note though that can't just swap() capacity as *this is uninitialized if called from move constructor).
                 m_nSize = other.m_nSize;
                 m_nCapacity = other.m_nCapacity;
                 m_spStorage.swap(other.m_spStorage);
@@ -458,6 +460,19 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return;
 
             for (auto iter = m_colToRows[nCol].begin(), iterEnd = m_colToRows[nCol].end(); iter != iterEnd; ++iter)
+                func(iter->first, SzPtrR(iter->second));
+        }
+
+        // Like forEachFwdRowInColumn, but goes through column only as long as whileFunc returns true.
+        // whileFunc is given one parameter (row index) and it should return bool.
+        // TODO: test
+        template <class Func_T, class WhileFunc_T>
+        void forEachFwdRowInColumnWhile(const Index_T nCol, WhileFunc_T&& whileFunc, Func_T&& func) const
+        {
+            if (!isValidIndex(m_colToRows, nCol))
+                return;
+
+            for (auto iter = m_colToRows[nCol].begin(), iterEnd = m_colToRows[nCol].end(); iter != iterEnd && whileFunc(iter->first); ++iter)
                 func(iter->first, SzPtrR(iter->second));
         }
 
