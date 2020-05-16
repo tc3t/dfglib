@@ -15,6 +15,7 @@ DFG_END_INCLUDE_QT_HEADERS
     if (!m_spModel)
         return;
     DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
     this->m_bAreChangesSignaled = true;
 }
 
