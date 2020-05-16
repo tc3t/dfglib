@@ -5,6 +5,8 @@
 #include "../ReadOnlySzParam.hpp"
 #include "../alg.hpp"
 #include "../str/strTo.hpp"
+#include "../io/BasicImStream.hpp"
+#include "../io/DelimitedTextReader.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 

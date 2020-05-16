@@ -239,7 +239,7 @@ auto DataSourceContainer::idListAsString() const -> QString
 class GraphDefinitionEntry : public AbstractChartControlItem
 {
 public:
-    using StringViewOrOwner = StringViewOrOwner<StringViewSzC, std::string>;
+    using StringViewOrOwner = ::DFG_ROOT_NS::StringViewOrOwner<StringViewSzC, std::string>;
 
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
