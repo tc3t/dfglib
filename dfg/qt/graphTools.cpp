@@ -260,7 +260,7 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const QString& s)
 }
 
 // Return value in case of invalid input as GIGO, in most cases returns NaN. Also in case of invalid input typeMap's value at nCol is unspecified.
-double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s, const int nCol, ColumnDataTypeMap& typeMap)
+double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s, const DataSourceIndex nCol, ColumnDataTypeMap& typeMap)
 {
     const auto setColumnDataType = [&](const ChartDataType t)
     {

@@ -104,6 +104,11 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
     m_spView->addSelectionAnalyzer(m_spSelectionAnalyzer);
 }
 
+::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::~CsvTableViewChartDataSource()
+{
+
+}
+
 QObject* ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::underlyingSource()
 {
     return m_spView;

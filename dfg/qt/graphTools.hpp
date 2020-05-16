@@ -86,7 +86,7 @@ public:
     static double dateToDouble(QDateTime&& dt);
     static double timeToDouble(const QTime& t);
     static double stringToDouble(const QString& s);
-    static double cellStringToDouble(const QString& s, const int nCol, ColumnDataTypeMap& typeMap);
+    static double cellStringToDouble(const QString& s, const DataSourceIndex nCol, ColumnDataTypeMap& typeMap);
 
 signals:
     void sigChanged(); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.

@@ -59,6 +59,7 @@ public:
     using BaseClass = GraphDataSource;
 
     CsvTableViewChartDataSource(CsvTableView* view);
+    ~CsvTableViewChartDataSource();
 
     QObject* underlyingSource() override;
 
