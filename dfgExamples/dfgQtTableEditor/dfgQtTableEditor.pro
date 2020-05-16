@@ -147,6 +147,7 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableEditor.cpp \
         $$_PRO_FILE_PWD_/../../dfg/os/memoryMappedFile.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewChartDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp
 

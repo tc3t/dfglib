@@ -230,6 +230,112 @@ auto DataSourceContainer::idListAsString() const -> QString
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
+//   GraphDataSource
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+double ::DFG_MODULE_NS(qt)::GraphDataSource::dateToDouble(QDateTime&& dt)
+{
+    if (dt.isValid())
+    {
+        dt.setTimeSpec(Qt::UTC);
+        return static_cast<double>(dt.toMSecsSinceEpoch()) / 1000.0;
+    }
+    else
+        return std::numeric_limits<double>::quiet_NaN();
+}
+
+double ::DFG_MODULE_NS(qt)::GraphDataSource::timeToDouble(const QTime& t)
+{
+    return (t.isValid()) ? static_cast<double>(t.msecsSinceStartOfDay()) / 1000.0 : std::numeric_limits<double>::quiet_NaN();
+}
+
+double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const QString& s)
+{
+    bool b;
+    const auto v = s.toDouble(&b);
+    return (b) ? v : std::numeric_limits<double>::quiet_NaN();
+}
+
+// Return value in case of invalid input as GIGO, in most cases returns NaN. Also in case of invalid input typeMap's value at nCol is unspecified.
+double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s, const int nCol, ColumnDataTypeMap& typeMap)
+{
+    const auto setColumnDataType = [&](const ChartDataType t)
+    {
+        typeMap[nCol] = t;
+    };
+    // TODO: add parsing for timezone specifier (e.g. 2020-04-25 12:00:00.123+0300)
+    // TODO: add parsing for fractional part longer than 3 digits.
+    if (s.size() >= 8 && s[4] == '-' && s[7] == '-') // Something starting with ????-??-?? (ISO 8601, https://en.wikipedia.org/wiki/ISO_8601)
+    {
+        if (s.size() >= 19 && s[13] == ':' && s[16] == ':' && ::DFG_MODULE_NS(alg)::contains("T ", s[10].toLatin1())) // Case ????-??-??[T ]hh:mm:ss[.zzz]
+        {
+            if (s.size() >= 23 && s[19] == '.')
+            {
+                setColumnDataType(ChartDataType::dateAndTimeMillisecond);
+                return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss.zzz").arg(s[10])));
+            }
+            else
+            {
+                setColumnDataType(ChartDataType::dateAndTime);
+                return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss").arg(s[10])));
+            }
+        }
+        else if (s.size() == 13 && s[10] == ' ') // Case: "yyyy-MM-dd Wd". where Wd is two char weekday indicator.
+        {
+            setColumnDataType(ChartDataType::dateOnly);
+            return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd'%1'").arg(s.mid(10, 3))));
+        }
+        else if (s.size() == 10) // Case: "yyyy-MM-dd"
+        {
+            setColumnDataType(ChartDataType::dateOnly);
+            return dateToDouble(QDateTime::fromString(s, "yyyy-MM-dd"));
+        }
+        else
+        {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    }
+    // [d]d.[m]m.yyyy
+    QRegExp regExp(R"((?:^|^\w\w )(\d{1,2})(?:\.)(\d{1,2})(?:\.)(\d\d\d\d)$)");
+    if (regExp.exactMatch(s) && regExp.captureCount() == 3)
+    {
+        setColumnDataType(ChartDataType::dateOnly);
+        const auto items = regExp.capturedTexts();
+        // 0 has entire match, so actual captures start from index 1.
+        return dateToDouble(QDateTime(QDate(regExp.cap(3).toInt(), regExp.cap(2).toInt(), regExp.cap(1).toInt())));
+    }
+
+    if (s.size() >= 8 && s[2] == ':' && s[5] == ':')
+    {
+        if (s.size() >= 10 && s[8] == '.')
+        {
+            setColumnDataType(ChartDataType::dayTimeMillisecond);
+            return timeToDouble(QTime::fromString(s, "hh:mm:ss.zzz"));
+        }
+        else
+        {
+            setColumnDataType(ChartDataType::dayTime);
+            return timeToDouble(QTime::fromString(s, "hh:mm:ss"));
+        }
+    }
+    if (std::count(s.begin(), s.end(), '-') >= 2 || std::count(s.begin(), s.end(), '.') >= 2 || std::count(s.begin(), s.end(), ':') >= 2)
+        return std::numeric_limits<double>::quiet_NaN();
+    if (s.indexOf(',') < 0)
+        return stringToDouble(s);
+    else
+    {
+        auto s2 = s;
+        s2.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
+        return stringToDouble(s2);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
 //   GraphDefinitionEntry
 //
 //

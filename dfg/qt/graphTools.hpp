@@ -17,7 +17,9 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QVariant>
 DFG_END_INCLUDE_QT_HEADERS
 
+class QDateTime;
 class QSplitter;
+class QTime;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     class ChartCanvas;
@@ -79,6 +81,12 @@ public:
     bool hasChangeSignaling() const { return m_bAreChangesSignaled; }
 
     static DataSourceIndex invalidIndex() { return NumericTraits<DataSourceIndex>::maxValue; }
+
+    // Static helpers fro converting different types to double value.
+    static double dateToDouble(QDateTime&& dt);
+    static double timeToDouble(const QTime& t);
+    static double stringToDouble(const QString& s);
+    static double cellStringToDouble(const QString& s, const int nCol, ColumnDataTypeMap& typeMap);
 
 signals:
     void sigChanged(); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.
