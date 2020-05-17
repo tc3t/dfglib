@@ -1001,6 +1001,12 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_N
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
 {
+    QFileInfo fileInfo(path);
+    if (fileInfo.exists() && !fileInfo.isWritable())
+    {
+        QMessageBox::warning(nullptr, tr("Save failed"), tr("Target path has existing file that can't be written to (read-only file?)\n\n%1").arg(path));
+        return false;
+    }
     auto pModel = csvModel();
 
     if (!pModel)
@@ -1014,7 +1020,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG
         });
 
     if (!bSuccess)
-        QMessageBox::information(nullptr, tr("Save failed"), tr("Failed to save to path %1").arg(path));
+        QMessageBox::warning(nullptr, tr("Save failed"), tr("Failed to save to path\n%1").arg(path));
 
     return bSuccess;
 }

@@ -276,10 +276,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
 template <class OutFile_T, class Stream_T>
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options)
 {
-    const bool bSuccess = saveImpl(strm, options);
+    const bool bSuccess = saveImpl(strm, options) && (outFile.writeIntermediateToFinalLocation() == 0);
     if (bSuccess)
     {
-        outFile.writeIntermediateToFinalLocation();
         setFilePathWithSignalEmit(sPath);
         setModifiedStatus(false);
     }
@@ -302,7 +301,10 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getOutputFileSizeEstimate(
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath, const SaveOptions& options)
 {
-    if (!QDir().mkpath(QFileInfo(sPath).absolutePath())) // Make sure that the target folder exists, otherwise opening the file will fail.
+    QFileInfo fileInfo(sPath);
+    if (!QDir().mkpath(fileInfo.absolutePath())) // Making sure that the target folder exists, otherwise opening the file will fail.
+        return false;
+    if (fileInfo.exists() && !fileInfo.isWritable())
         return false;
 
     DFG_MODULE_NS(os)::OutputFile_completeOrNone<> outFile(qStringToFileApi8Bit(sPath));
