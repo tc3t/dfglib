@@ -131,6 +131,19 @@ namespace DFG_DETAIL_NS
     }
 #endif
 
+    template <class Char_T, class T>
+    inline void convertImpl(DFG_CLASS_NAME(StringView)<Char_T> sv, T& t)
+    {
+        strToByNoThrowLexCast(sv, t);
+    }
+
+    inline void convertImpl(DFG_CLASS_NAME(StringView)<char> sv, double& t)
+    {
+        // While view itself is not necessarily null-terminated, the underlying string is and since
+        // trailing spaces seem to be no problem for strtod(), passing the start pointer as such.
+        t = std::strtod(sv.data(), nullptr);
+    }
+
     template <class T, class Char_T>
     T genericImpl(const Char_T* psz)
     {
@@ -151,7 +164,7 @@ namespace DFG_DETAIL_NS
             --pEnd;
 
         DFG_CLASS_NAME(StringView)<Char_T> sv(psz, pEnd - psz);
-        strToByNoThrowLexCast(sv, t);
+        convertImpl(sv, t);
         return t;
     }
 
