@@ -74,6 +74,21 @@ static void onShowAboutBox()
             s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId)).arg(psz);
     });
 
+#ifdef DFGQTE_GIT_BRANCH
+    s += QString("Build from git branch: %1<br>").arg(DFGQTE_GIT_BRANCH);
+#endif
+#ifdef DFGQTE_GIT_COMMIT
+    s += QString("Build from git commit: %1").arg(QString("%1").arg(DFGQTE_GIT_COMMIT).mid(0, 8));
+    #ifdef DFGQTE_GIT_WORKING_TREE_STATUS
+        if (DFGQTE_GIT_WORKING_TREE_STATUS == QLatin1String("unmodified"))
+            s += " (no local changes)";
+        else
+            s += " (with local changes)";
+    s += "<br>";
+    #endif
+#endif
+
+
     s += QApplication::tr("<br>Source code: <a href=%1>%1</a>").arg("https://github.com/tc3t/dfglib");
     s += QApplication::tr("<br>3rd party libraries used in this application: ") +
                  "<a href=www.boost.org>Boost</a>"

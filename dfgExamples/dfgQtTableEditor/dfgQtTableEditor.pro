@@ -110,6 +110,42 @@ win32 {
     version_time_epoch_start_readable = $$system(date -u --date='@$$version_time_epoch_start' +%Y-%m-%dT%H:%m:%S)
 }
 
+win32 {
+    #git_executable_path = "C:\Program Files\Git\bin\git.exe"
+} else {
+    git_executable_path = ""
+}
+
+isEmpty(git_executable_path) {
+} else {
+    message("git executable path is " $$git_executable_path)
+    exists($$git_executable_path) {
+        git_branch = $$system($$system_quote($$git_executable_path) rev-parse --abbrev-ref HEAD)
+        git_commit = $$system($$system_quote($$git_executable_path) rev-parse HEAD)
+        git_diff_stat = $$system($$system_quote($$git_executable_path) diff --stat)
+    } else {
+        message("No git-executable found, not defining git info macros")
+    }
+}
+
+isEmpty(git_branch) {
+} else {
+    message("git branch is " $$git_branch)
+    DEFINES += DFGQTE_GIT_BRANCH=\\\"$$git_branch\\\"
+}
+
+isEmpty(git_commit) {
+} else {
+    message("git commit is " $$git_commit)
+    isEmpty(git_diff_stat) {
+        DEFINES += DFGQTE_GIT_WORKING_TREE_STATUS=\\\"unmodified\\\"
+    } else {
+        DEFINES += DFGQTE_GIT_WORKING_TREE_STATUS=\\\"modified\\\"
+    }
+    DEFINES += DFGQTE_GIT_COMMIT=\\\"$$git_commit\\\"
+}
+
+
 # Application version. Meaning of fields:
 # First (left-hand): unspecified
 # Second: unspecified
