@@ -30,6 +30,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
 typedef QString GraphDataSourceId;
 typedef std::size_t DataSourceIndex;
+class GraphDefinitionWidget;
 class GraphDefinitionEntry;
 class ChartDataCache;
 class DefaultNameCreator;
@@ -205,6 +206,8 @@ private:
     void handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry);
 
     void setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, const DefaultNameCreator& defaultNameCreator);
+
+    GraphDefinitionWidget* getDefinitionWidget();
 
 public:
     QObjectStorage<QSplitter> m_spSplitter;

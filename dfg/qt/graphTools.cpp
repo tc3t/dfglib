@@ -841,6 +841,69 @@ auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractChart
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
+//   ChartDefinition
+//
+//       Represents an object that has all instructions needed to construct a chart and do operations on it.
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class ChartDefinition
+{
+public:
+    ChartDefinition(const QString& sJson);
+
+    // Calls given handler for each entry. Note that entry given to handler is temporary so it's address must not be stored and used after handler call; make a copy if it needs to be stored.
+    template <class Func_T>
+    void forEachEntry(Func_T&& handler) const;
+
+    // Like forEachEntry(), but with while-condition.
+    template <class While_T, class Func_T>
+    void forEachEntryWhile(While_T&& whileFunc, Func_T&& handler) const;
+
+    bool isSourceUsed(const GraphDataSourceId& sourceId, const GraphDataSourceId& defaultSourceId) const;
+
+    QStringList m_controlEntries;
+};
+
+ChartDefinition::ChartDefinition(const QString& sJson)
+{
+    m_controlEntries = sJson.split('\n');
+}
+
+template <class While_T, class Func_T>
+void ChartDefinition::forEachEntryWhile(While_T&& whileFunc, Func_T&& handler) const
+{
+    int i = 0;
+    for (const auto& sEntry : m_controlEntries)
+    {
+        if (!whileFunc())
+            return;
+        if (!sEntry.isEmpty() && sEntry[0] != '#')
+            handler(GraphDefinitionEntry::fromText(sEntry, i++));
+    }
+}
+
+template <class Func_T>
+void ChartDefinition::forEachEntry(Func_T&& handler) const
+{
+    forEachEntryWhile([] { return true; }, std::forward<Func_T>(handler));
+}
+
+bool ChartDefinition::isSourceUsed(const GraphDataSourceId& sourceId, const GraphDataSourceId& defaultSourceId) const
+{
+    bool bFound = false;
+    forEachEntryWhile([&] { return !bFound; }, [&](const GraphDefinitionEntry& entry)
+    {
+        if (entry.isEnabled() && sourceId == entry.sourceId(defaultSourceId))
+            bFound = true;
+    });
+    return bFound;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
 //   GraphDefinitionWidget
 //
 //
@@ -862,9 +925,7 @@ public:
 
     static QString getGuideString();
 
-    // Calls given handler for each entry. Note that entry given to handler is temporary so it's address must not be stored and used after handler call; make a copy if it needs to be stored.
-    template <class Func_T>
-    void forEachDefinitionEntry(Func_T handler);
+    ChartDefinition getChartDefinition();
 
     ChartController* getController();
 
@@ -1034,22 +1095,14 @@ void GraphDefinitionWidget::showGuideWidget()
     m_spGuideWidget->show();
 }
 
-QString GraphDefinitionWidget::getRawTextDefinition() const
+auto GraphDefinitionWidget::getChartDefinition() -> ChartDefinition
 {
-    return  (m_spRawTextDefinition) ? m_spRawTextDefinition->toPlainText() : QString();
+    return ChartDefinition((m_spRawTextDefinition) ? m_spRawTextDefinition->toPlainText() : QString());
 }
 
-template <class Func_T>
-void GraphDefinitionWidget::forEachDefinitionEntry(Func_T handler)
+QString GraphDefinitionWidget::getRawTextDefinition() const
 {
-    const auto sText = m_spRawTextDefinition->toPlainText();
-    const auto parts = sText.splitRef('\n');
-    int i = 0;
-    for (const auto& part : parts)
-    {
-        if (!part.isEmpty() && part[0] != '#')
-            handler(GraphDefinitionEntry::fromText(part.toString(), i++));
-    }
+    return (m_spRawTextDefinition) ? m_spRawTextDefinition->toPlainText() : QString();
 }
 
 ChartController* GraphDefinitionWidget::getController()
@@ -2692,7 +2745,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     // Clearing existing objects.
     rChart.removeAllChartObjects();
 
-    auto pDefWidget = this->m_spControlPanel->findChild<GraphDefinitionWidget*>();
+    auto pDefWidget = getDefinitionWidget();
     if (!pDefWidget)
     {
         DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing control widget");
@@ -2705,7 +2758,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     GraphDefinitionEntry* pGlobalConfigEntry = nullptr; // Set to point to global config if such exists. This and globalConfigEntry are nothing but inconvenient way to do what optional would provide.
     ::DFG_MODULE_NS(cont)::MapVectorAoS<StringUtf8, GraphDefinitionEntry> mapPanelIdToConfig;
     // Going through every item in definition entry table and redrawing them.
-    pDefWidget->forEachDefinitionEntry([&](const GraphDefinitionEntry& defEntry)
+    pDefWidget->getChartDefinition().forEachEntry([&](const GraphDefinitionEntry& defEntry)
     {
         if (!defEntry.isEnabled())
             return;
@@ -3078,8 +3131,35 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setDefaultDataSourceId(con
     m_sDefaultDataSource = sDefaultDataSource;
 }
 
+auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() -> GraphDefinitionWidget*
+{
+    return (m_spControlPanel) ? m_spControlPanel->findChild<GraphDefinitionWidget*>() : nullptr;
+}
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
 {
+    // Hack: accessing through sender() for now (onDataSourceChanged() probably needs params)
+    auto pSenderSource = qobject_cast<const GraphDataSource*>(sender());
+
+    if (!pSenderSource)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING("Internal bug: received change signal from unknown data source.");
+        return;
+    }
+
+    auto pDefWidget = getDefinitionWidget();
+    if (!pDefWidget)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing definition widget");
+        return;
+    }
+
+    if (!pDefWidget->getChartDefinition().isSourceUsed(pSenderSource->uniqueId(), this->m_sDefaultDataSource))
+    {
+        DFG_QT_CHART_CONSOLE_DEBUG("Received change signal from unused source -> ignoring refresh.");
+        return;
+    }
+
     refresh();
 }
 
