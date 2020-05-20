@@ -2465,14 +2465,29 @@ TEST(dfgCont, IntervalSet)
 {
     {
         ::DFG_MODULE_NS(cont)::IntervalSet<int> is;
+        const auto verifyIntervals = [&](const std::vector<int>& expectedItems)
+            {
+                std::vector<int> intervalBoundaries;
+                is.forEachContiguousRange([&](const int left, const int right)
+                {
+                    intervalBoundaries.push_back(left);
+                    intervalBoundaries.push_back(right);
+                });
+                EXPECT_EQ(expectedItems, intervalBoundaries);
+            };
+        
+        verifyIntervals({});
+
         is.insertClosed(1, 3);
         EXPECT_EQ(3, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
+        verifyIntervals({1, 3});
 
         is.insertClosed(1, 1);
         EXPECT_EQ(3, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
         is.insertClosed(2, 2);
+        verifyIntervals({ 1, 3 });
 
         EXPECT_EQ(3, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
@@ -2495,7 +2510,8 @@ TEST(dfgCont, IntervalSet)
 
         is.insertClosed(4, 4);
         EXPECT_EQ(4, is.sizeOfSet());
-        //EXPECT_EQ(1, is.intervalCount()); This can be either 1 or 2
+        EXPECT_EQ(1, is.intervalCount());
+        verifyIntervals({ 1, 4 });
 
         is.insertClosed(0, 0);
         EXPECT_EQ(5, is.sizeOfSet());
@@ -2513,6 +2529,7 @@ TEST(dfgCont, IntervalSet)
         // Should now have [-3, -2] and [0, 10]
         EXPECT_EQ(13, is.sizeOfSet());
         EXPECT_EQ(2, is.intervalCount());
+        verifyIntervals({ -3, -2, 0, 10 });
 
         is.insertClosed(-2, 1);
         // Should now have [-3, 10]
@@ -2523,6 +2540,7 @@ TEST(dfgCont, IntervalSet)
         // Should now have [-4, 11]
         EXPECT_EQ(16, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
+        verifyIntervals({ -4, 11 });
 
         is.insertClosed(-6, -6);
         // Should now have [-6, -6], [-4, 11]
@@ -2533,6 +2551,7 @@ TEST(dfgCont, IntervalSet)
         // Should now have [-9, -8], [-6, -6], [-4, 11]
         EXPECT_EQ(19, is.sizeOfSet());
         EXPECT_EQ(3, is.intervalCount());
+        verifyIntervals({ -9, -8, -6, -6, -4, 11 });
 
         is.insertClosed(-9, 12);
         // Should now have [-9, -8], [-6, -6], [-4, 11]
@@ -2545,7 +2564,7 @@ TEST(dfgCont, IntervalSet)
         for (int i = 0; i < 100; ++i)
             is.insertClosed(i, i);
         EXPECT_EQ(100, is.sizeOfSet());
-        EXPECT_EQ(100, is.intervalCount()); // 1 would also be acceptable.
+        EXPECT_EQ(1, is.intervalCount());
         is.insertClosed(0, 99);
         EXPECT_EQ(100, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());

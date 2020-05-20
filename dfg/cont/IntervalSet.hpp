@@ -37,6 +37,11 @@ public:
 
     bool privIsWithinInterval(const sizeType n, const T& item) const;
 
+    // Calls given function for each contiguous range in ascending order.
+    // Function gets two arguments: (T lowerBound, T upperBound).
+    template <class Func_T>
+    void forEachContiguousRange(Func_T&& func) const;
+
     // Key = start, value = end. (both are inclusive)
     // Content in m_intervals shall always fulfill the following conditions:
     //  1. m_intervals.keyRange()[i] <= m_intervals.valueRange()[i] for all i in [0, m_intervals.size()[
@@ -103,7 +108,7 @@ void IntervalSet<T>::insertClosed(const T& left, const T& right)
             return;
         }
         const auto& backValue = m_intervals.backValue();
-        if (backValue < left)
+        if (backValue < left && left - backValue > 1)
         {
             m_intervals[left] = right; // New interval
         }
@@ -155,6 +160,16 @@ bool IntervalSet<T>::hasValue(const T& val) const
         return val <= m_intervals.valueRange()[iter - keys.begin()];
     }
     return false;
+}
+
+template <class T>
+template <class Func_T>
+void IntervalSet<T>::forEachContiguousRange(Func_T&& func) const
+{
+    for (const auto& kv : m_intervals)
+    {
+        func(kv.first, kv.second);
+    }
 }
 
 } } // module namespace
