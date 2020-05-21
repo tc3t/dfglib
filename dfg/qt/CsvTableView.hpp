@@ -177,7 +177,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Returned list is free of duplicates. If @p pProxy != nullptr,
         // the selected indexes will be mapped by the proxy.
-        std::vector<int> getRowsOfSelectedItems(const QAbstractProxyModel* pProxy, const bool bSort = true) const;
+        std::vector<int> getRowsOfSelectedItems(const QAbstractProxyModel* pProxy) const;
 
         // Returns list of selected indexes as model indexes of underlying data model.
         QModelIndexList getSelectedItemIndexes_dataModel() const;
@@ -191,9 +191,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Convenience method for returning row count of visible model (i.e. the number of visible rows).
         int getRowCount_viewModel() const;
 
-        std::vector<int> getDataModelRowsOfSelectedItems(const bool bSort = true) const
+        std::vector<int> getDataModelRowsOfSelectedItems() const
         {
-            return getRowsOfSelectedItems(getProxyModelPtr(), bSort);
+            return getRowsOfSelectedItems(getProxyModelPtr());
         }
 
         void invertSelection();

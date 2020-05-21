@@ -15,6 +15,7 @@
 #include "TableEditor.hpp"
 #include "../rand.hpp"
 #include "../rand/distributionHelpers.hpp"
+#include "../cont/SetVector.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -51,7 +52,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QStringListModel>
 DFG_END_INCLUDE_QT_HEADERS
 
-#include <set>
 #include <map>
 #include "../alg.hpp"
 #include "../cont/SortedSequence.hpp"
@@ -914,27 +914,17 @@ QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_viewModel()
     return indexes;
 }
 
-std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbstractProxyModel* pProxy, const bool bSort) const
+std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbstractProxyModel* pProxy) const
 {
     QModelIndexList listSelected = (!pProxy) ? getSelectedItemIndexes_viewModel() : getSelectedItemIndexes_dataModel();
 
-    std::set<int> setRows;
-    std::vector<int> vRows;
+    ::DFG_MODULE_NS(cont)::SetVector<int> rows;
     for (QModelIndexList::const_iterator iter = listSelected.begin(); iter != listSelected.end(); ++iter)
     {
         if (iter->isValid())
-        {
-            if (setRows.find(iter->row()) != setRows.end())
-                continue;
-            setRows.insert(iter->row());
-            vRows.push_back(iter->row());
-        }
+            rows.insert(iter->row());
     }
-
-    DFG_ASSERT(setRows.size() == vRows.size());
-    if (bSort)
-        std::copy(setRows.begin(), setRows.end(), vRows.begin());
-    return vRows;
+    return std::move(rows.m_storage);
 }
 
 void DFG_CLASS_NAME(CsvTableView)::invertSelection()
