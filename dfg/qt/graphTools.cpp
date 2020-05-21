@@ -2228,6 +2228,7 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
         // enable / disabled control
         {
             auto pEnableCheckBox = new QCheckBox(tr("Enable"), this); // Parent owned.
+            pEnableCheckBox->setObjectName("cb_enabled");
             DFG_QT_VERIFY_CONNECT(connect(pEnableCheckBox, &QCheckBox::toggled, this, &GraphControlPanel::sigGraphEnableCheckboxToggled));
             pFirstRowLayout->addWidget(pEnableCheckBox);
             pEnableCheckBox->setChecked(true);
@@ -2284,6 +2285,11 @@ auto DFG_MODULE_NS(qt)::GraphControlPanel::getController() -> ChartController*
     return qobject_cast<ChartController*>(parent());
 }
 
+bool DFG_MODULE_NS(qt)::GraphControlPanel::getEnabledFlag() const
+{
+    auto pCbEnabled = findChild<const QCheckBox*>(QLatin1String("cb_enabled"));
+    return (pCbEnabled) ? pCbEnabled->isChecked() : true;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -3138,6 +3144,12 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() -> G
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
 {
+    if (m_spControlPanel && !m_spControlPanel->getEnabledFlag())
+    {
+        DFG_QT_CHART_CONSOLE_DEBUG("Chart is disable, ignoring data source change notification");
+        return;
+    }
+
     // Hack: accessing through sender() for now (onDataSourceChanged() probably needs params)
     auto pSenderSource = qobject_cast<const GraphDataSource*>(sender());
 

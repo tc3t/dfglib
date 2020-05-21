@@ -14,14 +14,28 @@ DFG_END_INCLUDE_QT_HEADERS
     this->m_uniqueId = std::move(sId);
     if (!m_spModel)
         return;
-    DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
-    DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
+    setChangeSignaling(true);
+    
     this->m_bAreChangesSignaled = true;
 }
 
 ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::~CsvItemModelChartDataSource()
 {
 
+}
+
+void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::setChangeSignaling(const bool bEnable)
+{
+    if (bEnable)
+    {
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
+    }
+    else
+    {
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
+    }
 }
 
 QObject* ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::underlyingSource()
@@ -118,9 +132,9 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_
     return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator
 }
 
-void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::enable(const bool /*b*/)
+void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::enable(const bool b)
 {
-    // Not supported: there's no hidden activity (e.g data fetching) so no need to enable/disable anything.
+    setChangeSignaling(b);
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnDataTypes() const -> ColumnDataTypeMap

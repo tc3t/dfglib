@@ -55,6 +55,8 @@ public:
     const CsvItemModel* privGetCsvModel() const;
     const CsvItemModel::DataTable* privGetDataTable() const;
 
+    void setChangeSignaling(bool bEnable);
+
     QPointer<const CsvItemModel> m_spModel;
     ColumnDataTypeMap m_columnTypes;
 }; // class CsvItemModelChartDataSource

@@ -155,6 +155,8 @@ public:
 
     ChartController* getController();
 
+    bool getEnabledFlag() const;
+
 signals:
     void sigPreferredSizeChanged(QSize);
     void sigGraphEnableCheckboxToggled(bool b);
