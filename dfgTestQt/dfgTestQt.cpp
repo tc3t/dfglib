@@ -283,6 +283,8 @@ TEST(dfgQt, CsvTableView_copyToClipboard)
     {
         viewModel.setFilterKeyColumn(-1);
         viewModel.setFilterFixedString("12");
+        EXPECT_EQ(csvModel.getRowCount(), view.getRowCount_dataModel());
+        EXPECT_EQ(1, view.getRowCount_viewModel());
         view.selectAll();
         EXPECT_EQ(QString("10\t11\t12\t13\n"), view.makeClipboardStringForCopy());
         viewModel.setFilterFixedString(QString());
@@ -302,6 +304,8 @@ TEST(dfgQt, CsvTableView_copyToClipboard)
     {
         viewModel.setFilterKeyColumn(-1);
         viewModel.setFilterFixedString("33");
+        EXPECT_EQ(csvModel.getRowCount(), view.getRowCount_dataModel());
+        EXPECT_EQ(1, view.getRowCount_viewModel());
         view.clearSelection();
         QItemSelection selection;
         selection.push_back(QItemSelectionRange(viewModel.index(0, 0), viewModel.index(0, 0)));

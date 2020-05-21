@@ -186,6 +186,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // returns the same as getSelectedItemIndexes_dataModel().
         QModelIndexList getSelectedItemIndexes_viewModel() const;
 
+        // Convenience method for returning row count of data model (i.e. the number of rows in the underlying table).
+        int getRowCount_dataModel() const;
+        // Convenience method for returning row count of visible model (i.e. the number of visible rows).
+        int getRowCount_viewModel() const;
+
         std::vector<int> getDataModelRowsOfSelectedItems(const bool bSort = true) const
         {
             return getRowsOfSelectedItems(getProxyModelPtr(), bSort);

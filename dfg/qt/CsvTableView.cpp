@@ -877,6 +877,18 @@ QModelIndexList DFG_CLASS_NAME(CsvTableView)::selectedIndexes() const
     return BaseClass::selectedIndexes();
 }
 
+int DFG_CLASS_NAME(CsvTableView)::getRowCount_dataModel() const
+{
+    auto pModel = this->csvModel();
+    return (pModel) ? pModel->getRowCount() : 0;
+}
+
+int DFG_CLASS_NAME(CsvTableView)::getRowCount_viewModel() const
+{
+    auto pModel = this->model();
+    return (pModel) ? pModel->rowCount() : 0;
+}
+
 QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_dataModel() const
 {
     auto pSelectionModel = selectionModel();
