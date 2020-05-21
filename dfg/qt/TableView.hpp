@@ -7,6 +7,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTableView>
 #include <QKeyEvent>
 #include <QEvent>
+#include <QItemSelection>
 DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
@@ -145,6 +146,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
 #undef DFG_TEMP_IMPL_CTRL_MOVE
 
+        // Convenience method: clears existing selection and selects cell at (r,c). If index (r, c) does not exist, does nothing.
+        void makeSingleCellSelection(int r, int c);
+
     protected:
         QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers) override
         {
@@ -182,3 +186,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         }
     }; // DFG_CLASS_NAME(TableView)
 }}
+
+inline void ::DFG_MODULE_NS(qt)::TableView::makeSingleCellSelection(const int r, const int c)
+{
+    QItemSelection selection;
+    auto pModel = model();
+    if (!pModel)
+        return;
+    const auto index = pModel->index(r, c);
+    if (!index.isValid())
+        return;
+    selection.push_back(QItemSelectionRange(index, index));
+    auto pSelectionModel = selectionModel();
+    if (pSelectionModel)
+        pSelectionModel->select(selection, QItemSelectionModel::SelectCurrent);
+}

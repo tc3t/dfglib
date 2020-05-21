@@ -155,6 +155,22 @@ TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
     EXPECT_EQ(QString("d"), model.data(model.index(3, 1)).toString());
 }
 
+namespace
+{
+    void populateModelWithRowColumnIndexStrings(::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
+    {
+        const auto nRowCount = csvModel.rowCount();
+        const auto nColCount = csvModel.columnCount();
+        for (int c = 0; c < nColCount; ++c)
+        {
+            for (int r = 0; r < nRowCount; ++r)
+            {
+                csvModel.setDataNoUndo(r, c, QString::number(r) + QString::number(c));
+            }
+        }
+    }
+}
+
 TEST(dfgQt, CsvTableView_copyToClipboard)
 {
     // Note: this tests only that the created strings, which would be copied clipboard, are well formed, clipboard is not changed.
@@ -170,13 +186,7 @@ TEST(dfgQt, CsvTableView_copyToClipboard)
     csvModel.insertRows(0, 4);
     csvModel.insertColumns(0, 4);
 
-    for (int r = 0; r < 4; ++r)
-    {
-        for (int c = 0; c < 4; ++c)
-        {
-            csvModel.setDataNoUndo(r, c, QString::number(r) + QString::number(c));
-        }
-    }
+    populateModelWithRowColumnIndexStrings(csvModel);
     csvModel.insertRow(4);
     csvModel.setDataNoUndo(4, 2, "42"); // For testing leading null cells.
 
@@ -507,6 +517,27 @@ TEST(dfgQt, CsvTableView_stringToDouble)
         testDateToDouble_invalidDateFormat("12:34:56.1");
         testDateToDouble_invalidDateFormat("12:34:56.12");
     }
+}
+
+TEST(dfgQt, TableView_makeSingleCellSelection)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr);
+    view.setModel(&csvModel);
+    csvModel.insertRows(0, 4);
+    csvModel.insertColumns(0, 4);
+    populateModelWithRowColumnIndexStrings(csvModel);
+    view.makeSingleCellSelection(3, 3);
+    auto pSelectionModel = view.selectionModel();
+    ASSERT_TRUE(pSelectionModel != nullptr);
+    const auto makeSingleCellIndexList = [&](const int r, const int c) { QModelIndexList list; list.push_back(csvModel.index(r,c)); return list; };
+    EXPECT_EQ(makeSingleCellIndexList(3, 3), pSelectionModel->selectedIndexes());
+    view.makeSingleCellSelection(1, 1);
+    EXPECT_EQ(makeSingleCellIndexList(1, 1), pSelectionModel->selectedIndexes());
+    view.selectColumn(2);
+    view.makeSingleCellSelection(0, 0);
+    EXPECT_EQ(makeSingleCellIndexList(0, 0), pSelectionModel->selectedIndexes());
 }
 
 TEST(dfgQt, qstringUtils)
