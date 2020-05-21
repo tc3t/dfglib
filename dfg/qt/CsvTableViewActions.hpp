@@ -81,10 +81,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         static void restoreCells(const CellMemory& cellMemory, DFG_CLASS_NAME(CsvItemModel)& rModel)
         {
-            cellMemory.forEachNonNullCell([&](const int nRow, const int nCol, SzPtrUtf8R tpsz)
-            {
-                rModel.setDataNoUndo(nRow, nCol, tpsz);
-            });
+            rModel.setDataByBatch_noUndo(cellMemory);
         }
 
     } // namespace DFG_DETAIL_NS

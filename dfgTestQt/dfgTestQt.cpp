@@ -6,6 +6,7 @@
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/ConsoleDisplay.hpp>
 #include <dfg/qt/CsvTableViewChartDataSource.hpp>
+#include <dfg/qt/connectHelper.hpp>
 #include <dfg/math.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -308,6 +309,83 @@ TEST(dfgQt, CsvTableView_copyToClipboard)
         view.selectionModel()->select(selection, QItemSelectionModel::Select);
         EXPECT_EQ(QString("30\t33\n"), view.makeClipboardStringForCopy());
     }
+}
+
+TEST(dfgQt, CsvTableView_paste)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    //viewModel.setDynamicSortFilter(true);
+    view.setModel(&viewModel);
+
+    const int nRowCount = 100;
+    const int nColCount = 4;
+    csvModel.insertRows(0, nRowCount);
+    csvModel.insertColumns(0, nColCount);
+
+    populateModelWithRowColumnIndexStrings(csvModel);
+
+    view.selectColumn(0);
+    const auto clipboardStringCol0 = view.makeClipboardStringForCopy();
+    view.copy();
+
+    // Connecting to dataChanged-signal
+    size_t nSignalCount = 0;
+    DFG_QT_VERIFY_CONNECT(QObject::connect(&csvModel, &CsvItemModel::dataChanged, [&]() { ++nSignalCount; }));
+
+    // Selecting 0, 1 and paste
+    view.makeSingleCellSelection(0, 1);
+    view.paste();
+
+    // Making sure that got only one change notification
+    EXPECT_EQ(1, nSignalCount);
+
+    // Making sure that columns 0 and 1 are identical.
+    view.selectColumn(1);
+    EXPECT_EQ(clipboardStringCol0, view.makeClipboardStringForCopy());
+
+    // Trying to paste again and making sure that don't receive dataChanged-signal
+    view.makeSingleCellSelection(0, 1);
+    nSignalCount = 0;
+    view.paste();
+    EXPECT_EQ(0, nSignalCount);
+
+    // Setting a few cells to column 1, pasting again and making sure that get expected number of change notifications.
+    // Note: this is partly implementation test rather than interface test (i.e. point is not to make interface guarantees that there will be
+    //       exactly certain number of dataChanged-signals, but guarantee that paste won't generate ridiculous number of signals.
+    csvModel.setDataNoUndo(10, 1, "a");
+    csvModel.setDataNoUndo(11, 1, "a");
+    csvModel.setDataNoUndo(12, 1, "a");
+    csvModel.setDataNoUndo(50, 1, "b");
+    csvModel.setDataNoUndo(75, 1, "c");
+    view.makeSingleCellSelection(0, 1);
+    nSignalCount = 0;
+    view.paste();
+    EXPECT_EQ(3, nSignalCount);
+    view.selectColumn(1);
+    EXPECT_EQ(clipboardStringCol0, view.makeClipboardStringForCopy());
+
+    // Testing signal count when whole table is getting pasted
+    view.selectAll();
+    view.copy();
+    view.clearSelected();
+    view.makeSingleCellSelection(0, 0);
+    nSignalCount = 0;
+    view.paste();
+    EXPECT_EQ(nColCount, nSignalCount); // Having only 1 signal would be better, but as commented above, at least making sure that there's no signal per cell.
+
+    // Testing signal count when pasting row
+    view.selectAll();
+    view.copy();
+    view.clearSelected();
+    view.selectRow(0);
+    view.makeSingleCellSelection(1, 0);
+    nSignalCount = 0;
+    view.paste();
+    EXPECT_EQ(nColCount, nSignalCount); // Having only 1 signal would be better.
 }
 
 namespace

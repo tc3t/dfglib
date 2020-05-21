@@ -27,6 +27,8 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/SetVector.hpp"
 #include "../str/strTo.hpp"
 #include "../os/OutputFile.hpp"
+#include "../cont/MapVector.hpp"
+#include "../cont/IntervalSet.hpp"
 
 namespace
 {
@@ -806,12 +808,42 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section
         return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nRow, const int nCol, SzPtrUtf8R pszU8)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(const RawDataTable& table)
+{
+    using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ::DFG_MODULE_NS(cont) ::IntervalSet<int>>;
+    IntervalContainer intervalsByColumn; 
+    table.forEachFwdColumnIndex([&](const int c)
+    {
+        table.forEachFwdRowInColumn(c, [&](const int r, SzPtrUtf8R tpsz)
+        {
+            if (tpsz && privSetDataToTable(r, c, tpsz))
+                intervalsByColumn[c].insert(r);
+        });
+    });
+
+    if (intervalsByColumn.empty())
+        return; // Nothing was changed.
+
+    // Now sending dataChanged-signal for each change block
+    for (const auto& kv : intervalsByColumn)
+    {
+        const auto nCol = kv.first;
+        const auto& intervalSet = kv.second;
+        intervalSet.forEachContiguousRange([&](const int up, const int down)
+        {
+            Q_EMIT dataChanged(this->index(up, nCol), this->index(down, nCol));
+        });
+    }
+    
+    setModifiedStatus(true);
+}
+
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::privSetDataToTable(const int nRow, const int nCol, SzPtrUtf8R pszU8)
 {
     if (!isValidRow(nRow) || !isValidColumn(nCol))
     {
         DFG_ASSERT(false);
-        return;
+        return false;
     }
 
     // Check whether the new value is different from old to avoid setting modified even if nothing changes.
@@ -819,10 +851,16 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nR
     if (pExisting && std::strlen(pszU8.c_str()) <= std::strlen(pExisting.c_str()))
     {
         if (std::strcmp(pExisting.c_str(), pszU8.c_str()) == 0) // Identical item? If yes, skip rest to avoid setting modified.
-            return;
+            return false;
     }
 
-    setItem(nRow, nCol, pszU8);
+    return setItem(nRow, nCol, pszU8);
+}
+
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nRow, const int nCol, SzPtrUtf8R pszU8)
+{
+    if (!privSetDataToTable(nRow, nCol, pszU8))
+        return;
 
     auto indexItem = index(nRow, nCol);
     Q_EMIT dataChanged(indexItem, indexItem);

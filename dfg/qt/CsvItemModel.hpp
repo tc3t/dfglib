@@ -86,6 +86,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef QAbstractTableModel BaseClass;
         typedef int64 LinearIndex; // LinearIndex guarantees that LinearIndex(rowCount()) * LinearIndex(columnCount()) does not overflow.
         typedef std::ostream StreamT;
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int, DFG_MODULE_NS(io)::encodingUTF8 > RawDataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
@@ -262,6 +263,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setDataNoUndo(const int nRow, const int nCol, const QString& str);
         void setDataNoUndo(const int nRow, const int nCol, SzPtrUtf8R pszU8);
 
+        // Sets data to table as follows:
+        //      -Checks if target indexes are valid, returns false if not.
+        //      -Checks if existing item is identical and returns false if identical.
+        //      -Does NOT handle setting modified.
+        //      -Does NOT signal dataChanged()
+        // Note: Caller must handle dataChanged signaling and setting modified.
+        // Return: true if value was set, false otherwise.
+        bool privSetDataToTable(int nRow, int nCol, SzPtrUtf8R pszU8);
+
         void setColumnName(const int nCol, const QString& sName);
 
         template <class Cont_T>
@@ -293,6 +303,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Note: This resets model (for details, see QAbstractItemModel::beginResetModel()). This means that e.g. view selection is lost when calling this function.
         //       If caller wishes to have the same selection before and after this call, it must be handled manually.
         template <class Func_T> void batchEditNoUndo(Func_T func);
+
+        // Copies all elements from 'table' to this by (row, column) indexes and bypasses undo.
+        void setDataByBatch_noUndo(const RawDataTable& table);
 
         void setHighlighter(HighlightDefinition hld);
 
