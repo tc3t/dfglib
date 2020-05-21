@@ -192,11 +192,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 if (!m_pCsvModel)
                     return;
-                const auto pszEmpty = SzPtrUtf8("");
-                m_cellMemory.forEachNonNullCell([=](const int nRow, const int nCol, DFG_CLASS_NAME(Dummy))
-                {
-                    m_pCsvModel->setDataNoUndo(nRow, nCol, pszEmpty);
-                });
+                m_pCsvModel->setDataByBatch_noUndo(m_cellMemory, DFG_UTF8(""));
                 if (m_pView)
                     m_pView->onSelectionContentChanged();
             }

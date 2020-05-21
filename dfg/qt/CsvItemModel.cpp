@@ -808,7 +808,7 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section
         return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(const RawDataTable& table)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill)
 {
     using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ::DFG_MODULE_NS(cont) ::IntervalSet<int>>;
     IntervalContainer intervalsByColumn; 
@@ -816,7 +816,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(cons
     {
         table.forEachFwdRowInColumn(c, [&](const int r, SzPtrUtf8R tpsz)
         {
-            if (tpsz && privSetDataToTable(r, c, tpsz))
+            auto tpszEffective = (pFill) ? pFill : tpsz;
+            if (tpszEffective && privSetDataToTable(r, c, tpszEffective))
                 intervalsByColumn[c].insert(r);
         });
     });

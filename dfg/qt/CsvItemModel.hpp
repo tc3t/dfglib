@@ -86,7 +86,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef QAbstractTableModel BaseClass;
         typedef int64 LinearIndex; // LinearIndex guarantees that LinearIndex(rowCount()) * LinearIndex(columnCount()) does not overflow.
         typedef std::ostream StreamT;
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int, DFG_MODULE_NS(io)::encodingUTF8 > RawDataTable;
+        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int, DFG_MODULE_NS(io)::encodingUTF8> RawDataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
@@ -305,7 +305,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class Func_T> void batchEditNoUndo(Func_T func);
 
         // Copies all elements from 'table' to this by (row, column) indexes and bypasses undo.
-        void setDataByBatch_noUndo(const RawDataTable& table);
+        // If pFill is given, data written to each (row, column) will be pFill instead of table(row, column)
+        void setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill = SzPtrUtf8R(nullptr));
 
         void setHighlighter(HighlightDefinition hld);
 
