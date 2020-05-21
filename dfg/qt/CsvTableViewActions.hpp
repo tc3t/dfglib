@@ -168,6 +168,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 if (m_pCsvModel)
                     DFG_DETAIL_NS::restoreCells(m_cellMemory, *m_pCsvModel);
+                if (m_pView)
+                    m_pView->onSelectionContentChanged();
             }
 
         }
