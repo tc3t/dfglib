@@ -317,6 +317,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool paste();
         bool copy();
         bool cut();
+        void undo();
+        void redo();
 
         bool deleteCurrentColumn();
         bool deleteCurrentColumn(const int nCol);

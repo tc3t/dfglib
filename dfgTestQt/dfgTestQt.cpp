@@ -158,10 +158,15 @@ TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
 
 namespace
 {
-    void populateModelWithRowColumnIndexStrings(::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
+    void populateModelWithRowColumnIndexStrings(::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel, int nRowCount = -1, int nColCount = -1)
     {
-        const auto nRowCount = csvModel.rowCount();
-        const auto nColCount = csvModel.columnCount();
+        if (csvModel.rowCount() == 0 && nRowCount >= 0)
+            csvModel.insertRows(0, nRowCount);
+        if (csvModel.columnCount() == 0 && nColCount >= 0)
+            csvModel.insertColumns(0, nColCount);
+
+        nRowCount = csvModel.rowCount();
+        nColCount = csvModel.columnCount();
         for (int c = 0; c < nColCount; ++c)
         {
             for (int r = 0; r < nRowCount; ++r)
@@ -184,10 +189,7 @@ TEST(dfgQt, CsvTableView_copyToClipboard)
 
     view.setModel(&viewModel);
 
-    csvModel.insertRows(0, 4);
-    csvModel.insertColumns(0, 4);
-
-    populateModelWithRowColumnIndexStrings(csvModel);
+    populateModelWithRowColumnIndexStrings(csvModel, 4, 4);
     csvModel.insertRow(4);
     csvModel.setDataNoUndo(4, 2, "42"); // For testing leading null cells.
 
@@ -327,10 +329,7 @@ TEST(dfgQt, CsvTableView_paste)
 
     const int nRowCount = 100;
     const int nColCount = 4;
-    csvModel.insertRows(0, nRowCount);
-    csvModel.insertColumns(0, nColCount);
-
-    populateModelWithRowColumnIndexStrings(csvModel);
+    populateModelWithRowColumnIndexStrings(csvModel, nRowCount, nColCount);
 
     view.selectColumn(0);
     const auto clipboardStringCol0 = view.makeClipboardStringForCopy();
@@ -390,6 +389,39 @@ TEST(dfgQt, CsvTableView_paste)
     nSignalCount = 0;
     view.paste();
     EXPECT_EQ(nColCount, nSignalCount); // Having only 1 signal would be better.
+}
+
+TEST(dfgQt, CsvTableView_clear)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    view.setModel(&viewModel);
+
+    const int nRowCount = 10;
+    const int nColCount = 4;
+    populateModelWithRowColumnIndexStrings(csvModel, nRowCount, nColCount);
+
+    size_t nSignalCount = 0;
+    DFG_QT_VERIFY_CONNECT(QObject::connect(&csvModel, &CsvItemModel::dataChanged, [&]() { ++nSignalCount; }));
+
+    view.selectAll();
+    const auto sAfterPopulating = view.makeClipboardStringForCopy();
+    view.selectAll();
+    nSignalCount = 0;
+    view.clearSelected();
+    const auto sAfterClearing = view.makeClipboardStringForCopy();
+    EXPECT_EQ(nColCount, nSignalCount); // Expecting signaling from clear to behave similarly to pasting.
+    nSignalCount = 0;
+    view.undo();
+    EXPECT_EQ(sAfterPopulating, view.makeClipboardStringForCopy());
+    EXPECT_EQ(nColCount, nSignalCount);
+    nSignalCount = 0;
+    view.redo();
+    EXPECT_EQ(sAfterClearing, view.makeClipboardStringForCopy());
+    EXPECT_EQ(nColCount, nSignalCount);
 }
 
 namespace

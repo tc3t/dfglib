@@ -1694,6 +1694,18 @@ bool DFG_CLASS_NAME(CsvTableView)::cut()
     return true;
 }
 
+void DFG_CLASS_NAME(CsvTableView)::undo()
+{
+    if (m_spUndoStack)
+        m_spUndoStack->item().undo();
+}
+
+void DFG_CLASS_NAME(CsvTableView)::redo()
+{
+    if (m_spUndoStack)
+        m_spUndoStack->item().redo();
+}
+
 QString DFG_MODULE_NS(qt)::CsvTableView::makeClipboardStringForCopy(QChar cDelim)
 {
     auto pViewModel = model();
