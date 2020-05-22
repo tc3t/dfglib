@@ -810,12 +810,20 @@ void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
 
 void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
 {
+    const CsvModel* pPreviousCsvModel = csvModel();
+    if (pPreviousCsvModel)
+    {
+        DFG_VERIFY(disconnect(pPreviousCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
+    }
     BaseClass::setModel(pModel);
     auto pCsvModel = csvModel();
     if (m_spUndoStack && pCsvModel)
         pCsvModel->setUndoStack(&m_spUndoStack->item());
     if (pCsvModel)
-        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
+    {
+        // From Qt documentation: "Note: Qt::UniqueConnections do not work for lambdas, non-member functions and functors; they only apply to connecting to member functions"
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened, Qt::UniqueConnection));
+    }
     DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
 }
 
@@ -1417,9 +1425,9 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     // Reset models to prevent event loop from updating stuff while model is being read in another thread
     auto pViewModel = model();
     auto pProxyModel = getProxyModelPtr();
+    setModel(nullptr);
     if (pProxyModel && pProxyModel->sourceModel() == pModel)
         pProxyModel->setSourceModel(nullptr);
-    setModel(nullptr);
 
     bool bSuccess = false;
     doModalOperation(this, tr("Reading file of size %1\n%2").arg(formattedDataSize(QFileInfo(sPath).size()), sPath), "CsvTableViewFileLoader", [&]()
