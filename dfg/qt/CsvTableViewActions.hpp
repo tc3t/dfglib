@@ -209,10 +209,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 return;
             }
 
-            rTableView.forEachCsvModelIndexInSelection([=](const QModelIndex& index, bool& /*bContinue*/)
+            // Creating a temporary cellMemory just to get the indexes in order to avoid the dataChanged-flood 
+            // that would result if changing one by one. Compared to the previous one-by-one implementation, this
+            // is a regression at least from memory usage perspective, but for now considering signal flood as 
+            // worse option - there obviously would be a more optimal overall solution between the two.
+            DFG_DETAIL_NS::CellMemory cellMemory;
+            rTableView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*bContinue*/)
             {
-                pCsvModel->setDataNoUndo(index.row(), index.column(), DFG_UTF8(""));
+                cellMemory.addString(DFG_UTF8(""), index.row(), index.column());
             });
+            pCsvModel->setDataByBatch_noUndo(cellMemory, DFG_UTF8(""));
         }
 
     private:
