@@ -3171,6 +3171,9 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() -> G
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
 {
+    if (m_bRefreshPending)
+        return;
+
     if (m_spControlPanel && !m_spControlPanel->getEnabledFlag())
     {
         DFG_QT_CHART_CONSOLE_DEBUG("Chart is disable, ignoring data source change notification");
@@ -3199,7 +3202,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
         return;
     }
 
-    refresh();
+    m_bRefreshPending = true;
+    QTimer::singleShot(0, [&]() { refresh(); m_bRefreshPending = false; });
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceDestroyed()

@@ -225,6 +225,7 @@ public:
     GraphDataSourceId m_sDefaultDataSource;
 
     std::unique_ptr<ChartDataCache> m_spCache;
+    bool m_bRefreshPending = false; // Set to true if refresh has been scheduled so new refresh requests can be ignored.
 
 }; // Class GraphControlAndDisplayWidget
 
