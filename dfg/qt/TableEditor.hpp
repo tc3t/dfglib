@@ -105,9 +105,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onNewSourceOpened();
         void onModifiedStatusChanged(bool);
         void onSaveCompleted(bool, double);
-        void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+        void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& edited);
         void onCellEditorTextChanged();
-        void onModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles = QVector<int>());
         void onHighlightTextChanged(const QString& text);
         void onFilterTextChanged(const QString& text);
         void onFindColumnChanged(int newCol);

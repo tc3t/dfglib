@@ -810,11 +810,14 @@ void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
 
 void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
 {
+    const QAbstractItemModel* pPreviousViewModel = model();
     const CsvModel* pPreviousCsvModel = csvModel();
     if (pPreviousCsvModel)
     {
         DFG_VERIFY(disconnect(pPreviousCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
     }
+    if (pPreviousViewModel)
+        DFG_VERIFY(disconnect(pPreviousViewModel, &CsvModel::dataChanged, this, &ThisClass::onViewModelDataChanged));
     BaseClass::setModel(pModel);
     auto pCsvModel = csvModel();
     if (m_spUndoStack && pCsvModel)
@@ -824,7 +827,9 @@ void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
         // From Qt documentation: "Note: Qt::UniqueConnections do not work for lambdas, non-member functions and functors; they only apply to connecting to member functions"
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened, Qt::UniqueConnection));
     }
-    DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionChanged));
+    if (pModel)
+        DFG_QT_VERIFY_CONNECT(connect(pModel, &CsvModel::dataChanged, this, &ThisClass::onViewModelDataChanged, Qt::UniqueConnection));
+    DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionModelChanged));
 }
 
 namespace
@@ -2368,7 +2373,6 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
             if (generateContentImpl(*pGeneratorDialog->m_spSettingsModel))
             {
                 pGeneratorDialog->setGenerateFailed(false);
-                onSelectionContentChanged();
                 return true;
             }
             pGeneratorDialog->setGenerateFailed(true);
@@ -2949,8 +2953,6 @@ void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
                 existingColumnDelegate->m_spCompleter = pColInfo->m_spCompleter.get();
         }
     });
-
-    onSelectionContentChanged();
 }
 
 namespace
@@ -3157,14 +3159,21 @@ bool DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::isStopRequested() 
     return (m_spStopButton && m_spStopButton->isChecked());
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onSelectionContentChanged()
+void DFG_CLASS_NAME(CsvTableView)::onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    onSelectionChanged(QItemSelection(), QItemSelection());
+    onSelectionModelOrContentChanged(selected, deselected, QItemSelection());
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+void DFG_CLASS_NAME(CsvTableView)::onViewModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
 {
-    Q_EMIT sigSelectionChanged(selected, deselected);
+    DFG_UNUSED(roles);
+    // For now not checking if change actually happened within selection, to be improved later if there are practical cases where content gets changed outside the selection.
+    onSelectionModelOrContentChanged(QItemSelection(), QItemSelection(), QItemSelection(topLeft, bottomRight));
+}
+
+void DFG_CLASS_NAME(CsvTableView)::onSelectionModelOrContentChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedViewModelItems)
+{
+    Q_EMIT sigSelectionChanged(selected, deselected, editedViewModelItems);
 
     if (m_selectionAnalyzers.empty())
         return;

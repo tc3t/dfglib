@@ -285,7 +285,6 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnSaveToFileCompleted, this, &ThisClass::onSaveCompleted));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::dataChanged, this, &ThisClass::onModelDataChanged));
 
     // Proxy model
     m_spProxyModel.reset(new ProxyModelClass(this));
@@ -524,11 +523,15 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSaveCompleted(const bool 
         m_spStatusBar->showMessage(tr("Saving failed lasting %1 s").arg(saveTimeInSeconds, 0, 'g', 4));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& edited)
 {
     DFG_UNUSED(selected);
     DFG_UNUSED(deselected);
+    DFG_UNUSED(edited);
     int selectedCount = -1;
+
+    if (m_bHandlingOnCellEditorTextChanged) // To prevent cell editor change signal triggering reloading cell editor data from model. In practice this could cause e.g. cursor jumping to beginning after entering a letter to end.
+        return;
 
     if (m_spCellEditor && m_spTableView && m_spTableModel && (selectedCount = m_spTableView->getSelectedItemCount()) == 1)
     {
@@ -685,28 +688,6 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onCellEditorTextChanged()
         auto flagHandler = makeScopedCaller([&] { m_bHandlingOnCellEditorTextChanged = true ;}, [=] { m_bHandlingOnCellEditorTextChanged = oldFlag; });
         this->m_spTableModel->setData(indexes.front(), m_spCellEditor->toPlainText());
     }
-}
-
-namespace
-{
-    static bool isModelIndexWithinSelectionRectangle(const QModelIndex& target, const QModelIndex& topLeft, const QModelIndex& bottomRight)
-    {
-        return (target.row() >= topLeft.row() && target.row() <= bottomRight.row()
-                &&
-                target.column() >= topLeft.column() && target.column() <= bottomRight.column());
-    }
-}
-
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles)
-{
-    DFG_UNUSED(roles);
-    if (!m_spCellEditor || !m_spTableView)
-        return;
-    if (m_bHandlingOnCellEditorTextChanged) // To prevent cell editor change signal triggering reloading cell editor data from model.
-        return;
-    const auto& indexes = (m_spTableView->getSelectedItemCount() == 1) ? m_spTableView->getSelectedItemIndexes_dataModel() : QModelIndexList();
-    if (indexes.size() == 1 && isModelIndexWithinSelectionRectangle(indexes[0], topLeft, bottomRight))
-            onSelectionChanged(QItemSelection(indexes[0], indexes[0]), QItemSelection());
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(const QString& text)

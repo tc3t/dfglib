@@ -344,8 +344,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onNewSourceOpened();
 
-        void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
-        void onSelectionContentChanged();
+        void onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected);
+        void onViewModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles);
+
+        // To be triggered when either set of selected cells or content in existing selection changes.
+        void onSelectionModelOrContentChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedViewModelItems);
 
         void onColumnResizeAction_toViewEvenly();
         void onColumnResizeAction_toViewContentAware();
@@ -386,7 +389,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     signals:
         void sigFindActivated();
         void sigFilterActivated();
-        void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+        void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedItems);
         void sigOnAllowApplicationSettingsUsageChanged(bool);
 
     protected:

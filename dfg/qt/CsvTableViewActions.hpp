@@ -168,8 +168,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 if (m_pCsvModel)
                     DFG_DETAIL_NS::restoreCells(m_cellMemory, *m_pCsvModel);
-                if (m_pView)
-                    m_pView->onSelectionContentChanged();
             }
 
         }
@@ -195,8 +193,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 if (!m_pCsvModel)
                     return;
                 m_pCsvModel->setDataByBatch_noUndo(m_cellMemory, DFG_UTF8(""));
-                if (m_pView)
-                    m_pView->onSelectionContentChanged();
             }
         }
 
@@ -217,7 +213,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 pCsvModel->setDataNoUndo(index.row(), index.column(), DFG_UTF8(""));
             });
-            rTableView.onSelectionContentChanged();
         }
 
     private:
