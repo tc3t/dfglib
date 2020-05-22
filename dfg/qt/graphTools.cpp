@@ -2655,12 +2655,34 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
             menu.addAction(tr("Save as image..."), this, &GraphDisplay::showSaveAsImageDialog);
         }
 #endif // QCustomPlot
+
+        // Clear caches -action
+        menu.addAction(tr("Clear chart caches"), this, &GraphDisplay::clearCaches);
     }
 
     addSectionEntryToMenu(&menu, tr("Chart objects"));
     m_spChartCanvas->addContextMenuEntriesForChartObjects(&menu);
 
     menu.exec(QCursor::pos());
+}
+
+void DFG_MODULE_NS(qt)::GraphDisplay::clearCaches()
+{
+    auto pController = getController();
+    if (pController)
+        pController->clearCaches();
+    else
+        DFG_QT_CHART_CONSOLE_WARNING("Failed to clear caches: no controller object");
+
+}
+
+auto DFG_MODULE_NS(qt)::GraphDisplay::getController() -> ChartController*
+{
+    auto pParent = parent();
+    auto p = qobject_cast<ChartController*>(pParent);
+    if (pParent && !p)
+        p = qobject_cast<ChartController*>(pParent->parent());
+    return p;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2723,6 +2745,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggl
     {
         ds.enable(b);
     });
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::clearCachesImpl()
+{
+    m_spCache.reset();
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()

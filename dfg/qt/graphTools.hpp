@@ -113,9 +113,11 @@ class ChartController : public QFrame
     Q_OBJECT
 public slots:
     void refresh();
+    void clearCaches() { clearCachesImpl(); }
 
 private:
     virtual void refreshImpl() = 0; // Guaranteed to not get called by refresh() while already in progress.
+    virtual void clearCachesImpl() {}
 
     bool m_bRefreshInProgress = false;
 }; // Class ChartController
@@ -132,8 +134,11 @@ public:
     ~GraphDisplay() override;
 
     void showSaveAsImageDialog();
+    void clearCaches();
 
     ChartCanvas* chart();
+
+    ChartController* getController();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* pEvent) override;
@@ -200,6 +205,7 @@ public slots:
     // Controller implementations
 private:
     void refreshImpl() override;
+    void clearCachesImpl() override;
 
 private:
     using ConfigParamCreator = std::function<::DFG_MODULE_NS(charts)::ChartConfigParam ()>;
