@@ -40,6 +40,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QSplitter>
     #include <QCheckBox>
     #include <QDialog>
+    #include <QTimer>
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
     #include <QtCharts>
