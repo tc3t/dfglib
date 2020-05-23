@@ -84,6 +84,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
 
     template <class ColRange_T, class IsRowSpecifier_T>
     void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier);
+
+    ChartController* getControllerFromParents(QObject* pThis)
+    {
+        if (!pThis)
+            return nullptr;
+        auto pParent = pThis->parent();
+        auto p = qobject_cast<ChartController*>(pParent);
+        if (pParent && !p)
+            p = qobject_cast<ChartController*>(pParent->parent());
+        return p;
+    }
+
 } } } // dfg:::qt::<unnamed>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
@@ -843,30 +855,11 @@ auto ChartDataCache::cacheKey(const GraphDataSource& source, const AbstractChart
 //
 //   ChartDefinition
 //
-//       Represents an object that has all instructions needed to construct a chart and do operations on it.
-//
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class ChartDefinition
-{
-public:
-    ChartDefinition(const QString& sJson);
-
-    // Calls given handler for each entry. Note that entry given to handler is temporary so it's address must not be stored and used after handler call; make a copy if it needs to be stored.
-    template <class Func_T>
-    void forEachEntry(Func_T&& handler) const;
-
-    // Like forEachEntry(), but with while-condition.
-    template <class While_T, class Func_T>
-    void forEachEntryWhile(While_T&& whileFunc, Func_T&& handler) const;
-
-    bool isSourceUsed(const GraphDataSourceId& sourceId, const GraphDataSourceId& defaultSourceId) const;
-
-    QStringList m_controlEntries;
-};
-
-ChartDefinition::ChartDefinition(const QString& sJson)
+ChartDefinition::ChartDefinition(const QString& sJson, GraphDataSourceId defaultSourceId)
+    : m_defaultSourceId(std::move(defaultSourceId))
 {
     m_controlEntries = sJson.split('\n');
 }
@@ -927,11 +920,14 @@ public:
 
     ChartDefinition getChartDefinition();
 
+    std::shared_ptr<ChartDefinitionViewer> getChartDefinitionViewer();
+
     ChartController* getController();
 
     QObjectStorage<QPlainTextEdit> m_spRawTextDefinition; // Guaranteed to be non-null between constructor and destructor.
     QObjectStorage<QWidget> m_spGuideWidget;
     QPointer<GraphControlPanel> m_spParent;
+    ChartDefinitionViewable m_chartDefinitionViewable;
 }; // Class GraphDefinitionWidget
 
 
@@ -1097,7 +1093,14 @@ void GraphDefinitionWidget::showGuideWidget()
 
 auto GraphDefinitionWidget::getChartDefinition() -> ChartDefinition
 {
-    return ChartDefinition((m_spRawTextDefinition) ? m_spRawTextDefinition->toPlainText() : QString());
+    auto pController = getController();
+    auto defaultSource = (pController) ? pController->defaultSourceId() : GraphDataSourceId();
+    return ChartDefinition((m_spRawTextDefinition) ? m_spRawTextDefinition->toPlainText() : QString(), defaultSource);
+}
+
+auto GraphDefinitionWidget::getChartDefinitionViewer() -> std::shared_ptr<ChartDefinitionViewer>
+{
+    return m_chartDefinitionViewable.createViewer();
 }
 
 QString GraphDefinitionWidget::getRawTextDefinition() const
@@ -2282,7 +2285,7 @@ void DFG_MODULE_NS(qt)::GraphControlPanel::onShowConsoleCheckboxToggled(const bo
 
 auto DFG_MODULE_NS(qt)::GraphControlPanel::getController() -> ChartController*
 {
-    return qobject_cast<ChartController*>(parent());
+    return getControllerFromParents(this);
 }
 
 bool DFG_MODULE_NS(qt)::GraphControlPanel::getEnabledFlag() const
@@ -2673,16 +2676,11 @@ void DFG_MODULE_NS(qt)::GraphDisplay::clearCaches()
         pController->clearCaches();
     else
         DFG_QT_CHART_CONSOLE_WARNING("Failed to clear caches: no controller object");
-
 }
 
 auto DFG_MODULE_NS(qt)::GraphDisplay::getController() -> ChartController*
 {
-    auto pParent = parent();
-    auto p = qobject_cast<ChartController*>(pParent);
-    if (pParent && !p)
-        p = qobject_cast<ChartController*>(pParent->parent());
-    return p;
+    return getControllerFromParents(this);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2745,6 +2743,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggl
     {
         ds.enable(b);
     });
+}
+
+auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::defaultSourceIdImpl() const -> GraphDataSourceId 
+{
+    return this->m_sDefaultDataSource;
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::clearCachesImpl()
@@ -3150,11 +3153,17 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_
     if (!spSource)
         return;
 
-    // Brittle hack with connection types: when sources are signaling changes to caches with directConnection, having this connection as queud connection
+    // Brittle hack with connection types: when sources are signaling changes to caches with directConnection, having this connection as queued connection
     // allows caches to invalidate themselves before onDataSourceChanged() gets handled.
     DFG_QT_VERIFY_CONNECT(connect(spSource.get(), &GraphDataSource::sigChanged, this, &GraphControlAndDisplayWidget::onDataSourceChanged, Qt::QueuedConnection));
 
     DFG_QT_VERIFY_CONNECT(connect(spSource.get(), &QObject::destroyed, this, &GraphControlAndDisplayWidget::onDataSourceDestroyed));
+
+    auto pDefWidget = getDefinitionWidget();
+    if (pDefWidget)
+        spSource->setChartDefinitionViewer(pDefWidget->getChartDefinitionViewer());
+    else
+        DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing definition widget");
 
     m_dataSources.m_sources.push_back(std::shared_ptr<GraphDataSource>(spSource.release()));
 }

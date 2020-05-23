@@ -17,6 +17,10 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
     if (!pView || !m_spTable)
         return;
 
+    decltype(m_spChartDefinition->view()) spChartDefinitionView;
+    if (m_spChartDefinition)
+        spChartDefinitionView = m_spChartDefinition->view();
+
     m_spTable.edit([&](Table& rTable, const Table* pOld)
     {
         // TODO: this may be storing way too much data: e.g. if all items are selected, graphing may not use any or perhaps only two columns.
@@ -27,6 +31,9 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
         //       graph definitions should be somehow known at this point.
 
         DFG_UNUSED(pOld);
+
+        if (spChartDefinitionView && !spChartDefinitionView->isSourceUsed(m_sSourceId))
+            return;
 
         ::DFG_MODULE_NS(cont)::SetVector<int> presentColumnIndexes;
         presentColumnIndexes.setSorting(true); // Sorting is needed for std::set_difference
@@ -98,6 +105,7 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
     m_uniqueId = QString("viewSelection_%1").arg(QString::number(QDateTime::currentMSecsSinceEpoch() % 1000000));
     m_spSelectionAnalyzer = std::make_shared<SelectionAnalyzerForGraphing>();
     m_spSelectionAnalyzer->m_spTable.reset(std::make_shared<SelectionAnalyzerForGraphing::Table>());
+    m_spSelectionAnalyzer->m_sSourceId = this->uniqueId();
     m_spDataViewer = m_spSelectionAnalyzer->m_spTable.createViewer();
     DFG_QT_VERIFY_CONNECT(connect(m_spSelectionAnalyzer.get(), &CsvTableViewSelectionAnalyzer::sigAnalyzeCompleted, this, &GraphDataSource::sigChanged));
     this->m_bAreChangesSignaled = true;
@@ -225,4 +233,9 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnNames() const -> Co
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::privGetTableView() const -> std::shared_ptr<const SelectionAnalyzerForGraphing::Table>
 {
     return (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer> sp)
+{
+    // TODO
 }

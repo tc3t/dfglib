@@ -6,6 +6,7 @@
 #include "../dfgAssert.hpp"
 #include "../cont/MapVector.hpp"
 #include "../cont/valueArray.hpp"
+#include "../cont/ViewableSharedPtr.hpp"
 #include "../charts/commonChartTools.hpp"
 #include <memory>
 #include <vector>
@@ -41,6 +42,31 @@ enum GraphDataSourceType
 {
     GraphDataSourceType_tableSelection // Arbitrarily shaped selection from a table-like structure like table view.
 };
+
+// Represents an object that has all instructions needed to construct a chart and do operations on it.
+class ChartDefinition
+{
+public:
+    ChartDefinition(const QString& sJson = QString(), GraphDataSourceId defaultSourceId = GraphDataSourceId());
+
+    // Calls given handler for each entry. Note that entry given to handler is temporary so it's address must not be stored and used after handler call; make a copy if it needs to be stored.
+    template <class Func_T>
+    void forEachEntry(Func_T&& handler) const;
+
+    // Like forEachEntry(), but with while-condition.
+    template <class While_T, class Func_T>
+    void forEachEntryWhile(While_T&& whileFunc, Func_T&& handler) const;
+
+    bool isSourceUsed(const GraphDataSourceId& sourceId) const { return isSourceUsed(sourceId, m_defaultSourceId); }
+    bool isSourceUsed(const GraphDataSourceId& sourceId, const GraphDataSourceId& defaultSourceId) const;
+
+    QStringList m_controlEntries;
+    GraphDataSourceId m_defaultSourceId;
+};
+
+using ChartDefinitionViewable = ::DFG_MODULE_NS(cont)::ViewableSharedPtr<ChartDefinition>;
+using ChartDefinitionViewer = ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<ChartDefinition>;
+
 
 // Abstract class representing graph data source.
 class GraphDataSource : public QObject
@@ -79,6 +105,10 @@ public:
     // It may, however, respond to data requests e.g. if data is readily available in it's data structures.
     virtual void enable(bool) = 0;
 
+    // Sets definition viewer so that source can, if needed, know what data is needed from it.
+    // Development note: for now as a quick solution interface is restricted to setting only one viewer.
+    virtual void setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer>) {}
+
     bool hasChangeSignaling() const { return m_bAreChangesSignaled; }
 
     static DataSourceIndex invalidIndex() { return NumericTraits<DataSourceIndex>::maxValue; }
@@ -114,10 +144,12 @@ class ChartController : public QFrame
 public slots:
     void refresh();
     void clearCaches() { clearCachesImpl(); }
+    GraphDataSourceId defaultSourceId() const { return defaultSourceIdImpl(); }
 
 private:
     virtual void refreshImpl() = 0; // Guaranteed to not get called by refresh() while already in progress.
     virtual void clearCachesImpl() {}
+    virtual GraphDataSourceId defaultSourceIdImpl() const { return GraphDataSourceId(); }
 
     bool m_bRefreshInProgress = false;
 }; // Class ChartController
@@ -206,6 +238,7 @@ public slots:
 private:
     void refreshImpl() override;
     void clearCachesImpl() override;
+    GraphDataSourceId defaultSourceIdImpl() const override;
 
 private:
     using ConfigParamCreator = std::function<::DFG_MODULE_NS(charts)::ChartConfigParam ()>;

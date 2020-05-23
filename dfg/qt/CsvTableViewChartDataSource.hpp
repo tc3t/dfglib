@@ -43,6 +43,8 @@ public:
     inline void analyzeImpl(QItemSelection selection) override;
 
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<Table> m_spTable;
+    GraphDataSourceId m_sSourceId;
+    std::shared_ptr<ChartDefinitionViewer> m_spChartDefinition;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +82,8 @@ public:
     ColumnDataTypeMap columnDataTypes() const override;
 
     ColumnNameMap columnNames() const override;
+
+    void setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer>) override;
 
     std::shared_ptr<const SelectionAnalyzerForGraphing::Table> privGetTableView() const;
 
