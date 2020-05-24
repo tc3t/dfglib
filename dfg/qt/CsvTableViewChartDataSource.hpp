@@ -12,8 +12,8 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/MapVector.hpp"
 #include "../cont/ViewableSharedPtr.hpp"
 
+#include <atomic>
 #include <memory>
-
 
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
@@ -40,11 +40,14 @@ public:
         GraphDataSource::ColumnNameMap m_columnNames;
     };
 
-    inline void analyzeImpl(QItemSelection selection) override;
+    void analyzeImpl(QItemSelection selection) override;
+
+    void setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer> spCd);
 
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<Table> m_spTable;
     GraphDataSourceId m_sSourceId;
     std::shared_ptr<ChartDefinitionViewer> m_spChartDefinition;
+    std::atomic<ChartDefinitionViewer*> m_apChartDefinitionViewer;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

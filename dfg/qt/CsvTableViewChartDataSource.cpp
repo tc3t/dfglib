@@ -11,15 +11,29 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/valueArray.hpp"
 
 
+void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer> spCd)
+{
+    if (m_spChartDefinition)
+    {
+        DFG_ASSERT_INVALID_ARGUMENT(false, "Viewer can be set only once"); // For now not supporting resetting viewer.
+        return;
+    }
+    m_spChartDefinition = std::move(spCd);
+    m_apChartDefinitionViewer = m_spChartDefinition.get();
+}
+
 void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemSelection selection)
 {
     auto pView = qobject_cast<CsvTableView*>(this->m_spView.data());
     if (!pView || !m_spTable)
         return;
 
-    decltype(m_spChartDefinition->view()) spChartDefinitionView;
-    if (m_spChartDefinition)
-        spChartDefinitionView = m_spChartDefinition->view();
+    ChartDefinitionViewer* pViewer = m_apChartDefinitionViewer;
+    decltype(pViewer->view()) spChartDefinitionView;
+    if (pViewer)
+        spChartDefinitionView = pViewer->view();
+
+    bool bSignalChange = true;
 
     m_spTable.edit([&](Table& rTable, const Table* pOld)
     {
@@ -32,8 +46,14 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
 
         DFG_UNUSED(pOld);
 
-        if (spChartDefinitionView && !spChartDefinitionView->isSourceUsed(m_sSourceId))
+        bool bErrorEntries = false;
+        if (spChartDefinitionView && !spChartDefinitionView->isSourceUsed(m_sSourceId, &bErrorEntries))
+        {
+            rTable.clear();
+            if (!bErrorEntries) // If there are no error entries, considering this source as definitely not used so not signaling changes.
+                bSignalChange = false;
             return;
+        }
 
         ::DFG_MODULE_NS(cont)::SetVector<int> presentColumnIndexes;
         presentColumnIndexes.setSorting(true); // Sorting is needed for std::set_difference
@@ -94,7 +114,8 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
         }
     });
 
-    Q_EMIT sigAnalyzeCompleted();
+    if (bSignalChange)
+        Q_EMIT sigAnalyzeCompleted();
 }
 
 ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::CsvTableViewChartDataSource(CsvTableView* view)
@@ -237,5 +258,6 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::privGetTableView() const 
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer> sp)
 {
-    // TODO
+    if (m_spSelectionAnalyzer)
+        m_spSelectionAnalyzer->setChartDefinitionViewer(std::move(sp));
 }

@@ -57,8 +57,7 @@ public:
     template <class While_T, class Func_T>
     void forEachEntryWhile(While_T&& whileFunc, Func_T&& handler) const;
 
-    bool isSourceUsed(const GraphDataSourceId& sourceId) const { return isSourceUsed(sourceId, m_defaultSourceId); }
-    bool isSourceUsed(const GraphDataSourceId& sourceId, const GraphDataSourceId& defaultSourceId) const;
+    bool isSourceUsed(const GraphDataSourceId& sourceId, bool* pHasErrorEntries = nullptr) const;
 
     QStringList m_controlEntries;
     GraphDataSourceId m_defaultSourceId;

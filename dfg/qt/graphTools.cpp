@@ -41,6 +41,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QCheckBox>
     #include <QDialog>
     #include <QTimer>
+    #include <QElapsedTimer>
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
     #include <QtCharts>
@@ -897,13 +898,17 @@ void ChartDefinition::forEachEntry(Func_T&& handler) const
     forEachEntryWhile([] { return true; }, std::forward<Func_T>(handler));
 }
 
-bool ChartDefinition::isSourceUsed(const GraphDataSourceId& sourceId, const GraphDataSourceId& defaultSourceId) const
+bool ChartDefinition::isSourceUsed(const GraphDataSourceId& sourceId, bool* pHasErrorEntries) const
 {
     bool bFound = false;
+    if (pHasErrorEntries)
+        *pHasErrorEntries = false;
     forEachEntryWhile([&] { return !bFound; }, [&](const GraphDefinitionEntry& entry)
     {
-        if (entry.isEnabled() && sourceId == entry.sourceId(defaultSourceId))
+        if (entry.isEnabled() && sourceId == entry.sourceId(this->m_defaultSourceId))
             bFound = true;
+        if (pHasErrorEntries && *pHasErrorEntries == false && !entry.fieldValueStr(ChartObjectFieldIdStr_errorString).empty())
+            *pHasErrorEntries = true;
     });
     return bFound;
 }
@@ -938,10 +943,18 @@ public:
 
     ChartController* getController();
 
+    void onTextDefinitionChanged();
+
+    void updateChartDefinitionViewable();
+    void checkUpdateChartDefinitionViewableTimer();
+
     QObjectStorage<QPlainTextEdit> m_spRawTextDefinition; // Guaranteed to be non-null between constructor and destructor.
     QObjectStorage<QWidget> m_spGuideWidget;
     QPointer<GraphControlPanel> m_spParent;
     ChartDefinitionViewable m_chartDefinitionViewable;
+    QElapsedTimer m_timeSinceLastEdit;
+    QTimer m_chartDefinitionTimer;
+    const int m_nChartDefinitionUpdateMinimumIntervalInMs = 250;
 }; // Class GraphDefinitionWidget
 
 
@@ -954,9 +967,8 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
     auto spLayout = std::make_unique<QVBoxLayout>(this);
 
     m_spRawTextDefinition.reset(new QPlainTextEdit(this));
-
-    // TODO: this should be a "auto"-entry.
     m_spRawTextDefinition->setPlainText(GraphDefinitionEntry::xyGraph(QString(), QString()).toText());
+    DFG_QT_VERIFY_CONNECT(connect(m_spRawTextDefinition.get(), &QPlainTextEdit::textChanged, this, &GraphDefinitionWidget::onTextDefinitionChanged));
 
     spLayout->addWidget(m_spRawTextDefinition.get());
 
@@ -977,8 +989,42 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
     }
 
     setLayout(spLayout.release()); // Ownership transferred to *this.
+
+    // Setting m_chartDefinitionTimer
+    {
+        DFG_QT_VERIFY_CONNECT(connect(&m_chartDefinitionTimer, &QTimer::timeout, this, &GraphDefinitionWidget::checkUpdateChartDefinitionViewableTimer));
+        m_chartDefinitionTimer.setSingleShot(true);
+    }
 }
 
+void GraphDefinitionWidget::onTextDefinitionChanged()
+{
+    m_timeSinceLastEdit.start();
+    if (!m_chartDefinitionTimer.isActive())
+        m_chartDefinitionTimer.start(m_nChartDefinitionUpdateMinimumIntervalInMs);
+}
+
+void GraphDefinitionWidget::updateChartDefinitionViewable()
+{
+    auto newChartDef = getChartDefinition();
+    m_chartDefinitionViewable.edit([&](ChartDefinition& cd, const ChartDefinition* pOld)
+    {
+        DFG_UNUSED(pOld);
+        cd = std::move(newChartDef);
+    });
+}
+
+void GraphDefinitionWidget::checkUpdateChartDefinitionViewableTimer()
+{
+    if (!m_timeSinceLastEdit.isValid())
+        return;
+    const auto elapsed = m_timeSinceLastEdit.elapsed();
+    const auto nEffectiveLimit = m_nChartDefinitionUpdateMinimumIntervalInMs * 19 / 20; // Allowing some inaccuracies (5 %) so that if this function gets called e.g. at 249 ms with limit 250 ms, interpreting as close enough.
+    if (elapsed >= nEffectiveLimit)
+        updateChartDefinitionViewable();
+    else // case: not time to update yet, scheduling new check.
+        m_chartDefinitionTimer.start(m_nChartDefinitionUpdateMinimumIntervalInMs - static_cast<int>(elapsed));
+}
 
 QString GraphDefinitionWidget::getGuideString()
 {
@@ -1114,6 +1160,7 @@ auto GraphDefinitionWidget::getChartDefinition() -> ChartDefinition
 
 auto GraphDefinitionWidget::getChartDefinitionViewer() -> std::shared_ptr<ChartDefinitionViewer>
 {
+    this->updateChartDefinitionViewable();
     return m_chartDefinitionViewable.createViewer();
 }
 
@@ -3225,10 +3272,16 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
         return;
     }
 
-    if (!pDefWidget->getChartDefinition().isSourceUsed(pSenderSource->uniqueId(), this->m_sDefaultDataSource))
+    bool bHasErrorEntries = false;
+    if (!pDefWidget->getChartDefinition().isSourceUsed(pSenderSource->uniqueId(), &bHasErrorEntries))
     {
-        DFG_QT_CHART_CONSOLE_DEBUG("Received change signal from unused source -> ignoring refresh.");
-        return;
+        // Ignoring signal only if there no error entries: user might have meant this source to be used so
+        // don't want to skip possible error message from invalid json.
+        if (!bHasErrorEntries)
+        {
+            DFG_QT_CHART_CONSOLE_DEBUG("Received change signal from unused source -> ignoring refresh.");
+            return;
+        }
     }
 
     m_bRefreshPending = true;
