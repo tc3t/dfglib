@@ -373,13 +373,7 @@ public:
         return rv;
     }
 
-    static GraphDefinitionEntry fromText(const QString& sJson, const int nIndex)
-    {
-        GraphDefinitionEntry rv;
-        rv.m_items = QJsonDocument::fromJson(sJson.toUtf8());
-        rv.m_nContainerIndex = nIndex;
-        return rv;
-    }
+    static GraphDefinitionEntry fromText(const QString& sJson, const int nIndex);
 
     GraphDefinitionEntry() {}
 
@@ -426,6 +420,25 @@ private:
 
 }; // class GraphDefinitionEntry
 
+auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> GraphDefinitionEntry
+{
+    GraphDefinitionEntry rv;
+    QJsonParseError parseError;
+    rv.m_items = QJsonDocument::fromJson(sJson.toUtf8(), &parseError);
+    if (rv.m_items.isNull()) // Parsing failed?
+    {
+        // If parsing failed, creating a disabled entry that has field error_string describing the parse error.
+        QString sJsonError = parseError.errorString();
+        sJsonError.replace('"', '\'');
+        const auto nOffset = parseError.offset;
+        const QString sError = QString("parse error '%1' at offset %2").arg(sJsonError).arg(nOffset);
+        const QString sReplacementJson = QString(R"( { "enabled":false, "%1":"%2" } )").arg(untypedViewToQStringAsUtf8(ChartObjectFieldIdStr_errorString), sError);
+        rv.m_items = QJsonDocument::fromJson(sReplacementJson.toUtf8(), &parseError);
+        DFG_ASSERT(!rv.m_items.isNull());
+    }
+    rv.m_nContainerIndex = nIndex;
+    return rv;
+}
 
 QJsonValue GraphDefinitionEntry::getField(FieldIdStrViewInputParam fieldId) const
 {
@@ -2797,6 +2810,12 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     // Going through every item in definition entry table and redrawing them.
     pDefWidget->getChartDefinition().forEachEntry([&](const GraphDefinitionEntry& defEntry)
     {
+        const auto sErrorString = defEntry.fieldValueStr(ChartObjectFieldIdStr_errorString);
+        if (!sErrorString.empty())
+        {
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: %2").arg(defEntry.index()).arg(viewToQString(sErrorString)));
+        }
+
         if (!defEntry.isEnabled())
             return;
 

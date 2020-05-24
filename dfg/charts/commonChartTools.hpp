@@ -34,6 +34,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
+constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for example contruction from string failed due to parse error, error message can be set to this field.
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
         // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id, line_colour
 
