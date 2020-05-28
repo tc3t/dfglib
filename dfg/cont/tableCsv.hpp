@@ -16,6 +16,7 @@
 #include "CsvConfig.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
 #include "../io/IfmmStream.hpp"
+#include "IntervalSet.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
     
@@ -207,11 +208,45 @@ DFG_ROOT_NS_BEGIN{
     
     DFG_SUB_NS(cont)
     {
+        namespace DFG_DETAIL_NS
+        {
+            template <class Table_T>
+            class FilterCellHandler
+            {
+            public:
+                using IndexT = typename Table_T::IndexT;
+                using IntervalSet = IntervalSet<IndexT>;
+
+                FilterCellHandler(Table_T& rTable)
+                    : m_rTable(rTable)
+                {}
+
+                // Note: Indexes starts from 0. If file has header, first data row is 1.
+                void setIncludeRows(IntervalSet is)
+                {
+                    m_includeRows = std::move(is);
+                }
+
+                void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+                {
+                    if (m_includeRows.hasValue(static_cast<IndexT>(nRow)))
+                        m_rTable.setElement(nRow - m_nFilteredRowCount, nCol, dfg::DFG_CLASS_NAME(StringViewUtf8)(dfg::TypedCharPtrUtf8R(pData), nCount));
+                    else if (nCol == 0)
+                        m_nFilteredRowCount++;
+                };
+
+                Table_T& m_rTable;
+                IntervalSet m_includeRows;
+                IndexT m_nFilteredRowCount = 0;
+            };
+        } // namespace DFG_DETAIL_NS
+
 
         template <class Char_T, class Index_T, DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUTF8>
         class DFG_CLASS_NAME(TableCsv) : public DFG_CLASS_NAME(TableSz)<Char_T, Index_T, InternalEncoding_T>
         {
         public:
+            using ThisClass = DFG_CLASS_NAME(TableCsv);
             typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
             typedef typename DFG_CLASS_NAME(TableSz)<Char_T, Index_T>::ColumnIndexPairContainer ColumnIndexPairContainer;
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DelimitedTextReaderBufferTypeC;
@@ -245,6 +280,13 @@ DFG_ROOT_NS_BEGIN{
             DefaultCellHandler defaultCellHandler()
             {
                 return DefaultCellHandler(*this);
+            }
+
+            // Creates filter cell handler that can used to do filtered reading.
+            // Note: lifetime of returned object is bound to lifetime of 'this'
+            auto createFilterCellHandler() -> DFG_DETAIL_NS::FilterCellHandler<ThisClass>
+            {
+                return DFG_DETAIL_NS::FilterCellHandler<ThisClass>(*this);
             }
 
             auto defaultAppender() const -> DelimitedTextReader::CharAppenderUtf<DelimitedTextReaderBufferTypeC>

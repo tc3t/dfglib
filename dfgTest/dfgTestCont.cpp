@@ -1298,6 +1298,80 @@ TEST(dfgCont, TableCsv_memStreamTypes)
     EXPECT_EQ(bytesStd, bytesBasicOmc);
 }
 
+TEST(dfgCont, TableCsv_filterCellHandler)
+{
+    using namespace DFG_ROOT_NS;
+
+    const char szExample0[] = "00,01\n"
+                              "10,11\n"
+                              "20,21\n"
+                              "30,31\n"
+                              "40,41\n"
+                              "50,51";
+
+    const char szExample1[] = "00,01\n"
+                              "\n"
+                              "20,21\n"
+                              "\n"
+                              "\n"
+                              "50,51";
+
+    using IndexT = uint32;
+    using TableT = DFG_MODULE_NS(cont)::TableCsv<char, IndexT>;
+
+    // Simple test
+    {
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler();
+        filterCellHandler.setIncludeRows(::DFG_MODULE_NS(cont)::intervalSetFromString<IndexT>("1;3:4"));
+        table.readFromMemory(szExample0, DFG_COUNTOF_SZ(szExample0), table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(3, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(2, table.colCountByMaxColIndex());
+        EXPECT_STREQ("10", table(0, 0).c_str());
+        EXPECT_STREQ("11", table(0, 1).c_str());
+        EXPECT_STREQ("30", table(1, 0).c_str());
+        EXPECT_STREQ("31", table(1, 1).c_str());
+        EXPECT_STREQ("40", table(2, 0).c_str());
+        EXPECT_STREQ("41", table(2, 1).c_str());
+    }
+    
+    // Testing handling of empty lines.
+    {
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler();
+        filterCellHandler.setIncludeRows(::DFG_MODULE_NS(cont)::intervalSetFromString<IndexT>("1;5"));
+        table.readFromMemory(szExample1, DFG_COUNTOF_SZ(szExample1), table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(2, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(2, table.colCountByMaxColIndex());
+        EXPECT_STREQ("", table(0, 0).c_str());
+        EXPECT_EQ(nullptr, table(0, 1).c_str());
+        EXPECT_STREQ("50", table(1, 0).c_str());
+        EXPECT_STREQ("51", table(1, 1).c_str());
+    }
+
+    // Testing handling of empty filter
+    {
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler();
+        table.readFromMemory(szExample1, DFG_COUNTOF_SZ(szExample1), table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(0, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(0, table.colCountByMaxColIndex());
+    }
+
+    // Simple file read test
+    {
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler();
+        filterCellHandler.setIncludeRows(::DFG_MODULE_NS(cont)::intervalSetFromString<IndexT>("1"));
+        table.readFromFile("testfiles/matrix_3x3.txt", table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(1, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(3, table.colCountByMaxColIndex());
+        EXPECT_STREQ("14510", table(0, 0).c_str());
+        EXPECT_STREQ("26690", table(0, 1).c_str());
+        EXPECT_STREQ("41354", table(0, 2).c_str());
+    }
+}
+
 TEST(dfgCont, SortedSequence)
 {
     using namespace DFG_MODULE_NS(cont);

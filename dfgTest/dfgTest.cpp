@@ -69,6 +69,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVectorPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SetVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_filterCellHandler";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_memStreamTypes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertToFrontPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_contentStorageSizeInBytes";

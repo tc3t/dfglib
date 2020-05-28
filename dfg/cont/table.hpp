@@ -304,6 +304,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             std::unique_ptr<Char_T[]> m_spStorage;
         }; // Class CharStorageItem
 
+        using IndexT = Index_T;
         typedef DFG_CLASS_NAME(TrivialPair)<Index_T, const Char_T*> IndexPtrPair;
         typedef DFG_CLASS_NAME(Vector)<IndexPtrPair> ColumnIndexPairContainer;
         typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
