@@ -539,6 +539,12 @@ TEST(dfg, ScopedCaller)
     }
 }
 
+TEST(dfg, Dummy)
+{
+    using namespace DFG_ROOT_NS;
+    constexpr Dummy d0(1); // Making sure that can construct Dummy as constexpr.
+}
+
 TEST(dfgTypeTraits, IsTrueTrait)
 {
     using namespace DFG_ROOT_NS;

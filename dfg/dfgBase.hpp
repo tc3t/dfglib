@@ -222,7 +222,7 @@ class DFG_CLASS_NAME(Dummy)
 {
 public:
     template <class T>
-    DFG_CLASS_NAME(Dummy)(const T&) {}
+    constexpr DFG_CLASS_NAME(Dummy)(const T&) {}
 };
 
 // stringLiteralByCharType(): helper for DFG_STRING_LITERAL_BY_CHARTYPE
