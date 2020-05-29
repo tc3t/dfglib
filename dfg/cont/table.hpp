@@ -192,13 +192,15 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             typedef Char_T* SzPtrW;
             typedef const Char_T* SzPtrR;
             typedef std::basic_string<Char_T> StringT;
+            using StringViewT = StringView<Char_T, StringT>;
         };
 
         template <> struct TableInterfaceTypes<char, DFG_MODULE_NS(io)::encodingUTF8>
         {
             typedef SzPtrUtf8W SzPtrW;
             typedef SzPtrUtf8R SzPtrR;
-            typedef DFG_CLASS_NAME(StringTyped) < CharPtrTypeUtf8 > StringT;
+            typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeUtf8> StringT;
+            using  StringViewT = StringViewUtf8;
         };
     } // namespace DFG_DETAIL_NS
 
@@ -313,6 +315,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef typename InterfaceTypes_T::SzPtrW SzPtrW;
         typedef typename InterfaceTypes_T::SzPtrR SzPtrR;
         typedef typename InterfaceTypes_T::StringT StringT;
+        using StringViewT = typename InterfaceTypes_T::StringViewT;
 
         DFG_CLASS_NAME(TableSz)() : 
             m_emptyString('\0'),
@@ -371,7 +374,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // If element at (nRow, nCol) already exists, it is overwritten.
         // Return: true if string was added, false otherwise.
         // Note: Even in case of overwrite, previous item is not cleared from string storage (this is implementation detail that is not part of the interface, i.e. it is not to be relied on).
-        bool addString(const DFG_CLASS_NAME(StringView)<Char_T, StringT> sv, const Index_T nRow, const Index_T nCol)
+        bool addString(const StringViewT sv, const Index_T nRow, const Index_T nCol)
         {
             if (!isValidIndex(m_colToRows, nCol))
             {
