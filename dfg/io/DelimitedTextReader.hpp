@@ -1383,7 +1383,7 @@ public:
     }
 
     template <class Stream_T, class CellData_T, class ReaderCreator_T, class ItemHandlerFunc_T>
-    static auto readImpl(Stream_T& istrm, CellData_T& cellData, ReaderCreator_T readerCreator, ItemHandlerFunc_T ihFunc) -> FormatDefinitionSingleChars
+    static auto readImpl(Stream_T& istrm, CellData_T& cellData, ReaderCreator_T readerCreator, ItemHandlerFunc_T&& ihFunc) -> FormatDefinitionSingleChars
     {
         auto reader = readerCreator(istrm, cellData);
         read(reader, [&](const size_t r, const size_t c, const CellData_T& cd)
@@ -1394,15 +1394,15 @@ public:
     }
 
     template <class Stream_T, class CellData_T, class ItemHandlerFunc_T>
-    static auto readImpl(std::true_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T ihFunc) -> FormatDefinitionSingleChars
+    static auto readImpl(std::true_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T&& ihFunc) -> FormatDefinitionSingleChars
     {
-        return readImpl(istrm, cellData, &createReader_basic<Stream_T, CellData_T&>, ihFunc);
+        return readImpl(istrm, cellData, &createReader_basic<Stream_T, CellData_T&>, std::forward<ItemHandlerFunc_T>(ihFunc));
     }
 
     template <class Stream_T, class CellData_T, class ItemHandlerFunc_T>
-    static auto readImpl(std::false_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T ihFunc) -> FormatDefinitionSingleChars
+    static auto readImpl(std::false_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T&& ihFunc) -> FormatDefinitionSingleChars
     {
-        return readImpl(istrm, cellData, &createReader<Stream_T, CellData_T&>, ihFunc);
+        return readImpl(istrm, cellData, &createReader<Stream_T, CellData_T&>, std::forward<ItemHandlerFunc_T>(ihFunc));
     }
 
     // Item handler function is given four parameters:
@@ -1415,7 +1415,7 @@ public:
                      const InternalCharType cSeparator,
                      const InternalCharType cEnclosing,
                      const InternalCharType cEndOfLine,
-                     ItemHandlerFunc ihFunc) -> FormatDefinitionSingleChars
+                     ItemHandlerFunc&& ihFunc) -> FormatDefinitionSingleChars
     {
         typedef typename FormatDefinition_T::BufferChar Char;
         typedef typename FormatDefinition_T::CharAppender Appender;
@@ -1424,9 +1424,9 @@ public:
 
         auto cellData = CellData<Char, Char, typename Appender::BufferType, Appender>(cSeparator, cEnclosing, cEndOfLine);
         if (cEnclosing == s_nMetaCharNone && cSeparator != s_nMetaCharAutoDetect && cEndOfLine != s_nMetaCharAutoDetect)
-            return readImpl(typename FormatDefinition_T::IsBasicReaderPossibleType(), istrm, cellData, ihFunc);
+            return readImpl(typename FormatDefinition_T::IsBasicReaderPossibleType(), istrm, cellData, std::forward<ItemHandlerFunc>(ihFunc));
         else
-            return readImpl(std::false_type(), istrm, cellData, ihFunc);
+            return readImpl(std::false_type(), istrm, cellData, std::forward<ItemHandlerFunc>(ihFunc));
     }
 
     // Note: Data parameter is char* instead of void* to make it less likely to call this wrongly for example like
