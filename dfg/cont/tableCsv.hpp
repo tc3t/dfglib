@@ -210,15 +210,141 @@ DFG_ROOT_NS_BEGIN{
     {
         namespace DFG_DETAIL_NS
         {
-            template <class Table_T>
+            template <class Index_T>
+            constexpr Index_T anyColumn()
+            {
+                return NumericTraits<Index_T>::maxValue;
+            }
+
+            class RowContentDummyFilter
+            {
+            public:
+                constexpr bool operator()(Dummy, Dummy, Dummy, Dummy, Dummy) const
+                {
+                    return true;
+                }
+                void onReadDone(Dummy)
+                {
+                }
+            };
+
+            template <class Index_T> using RowContentFilterBuffer = MapVectorSoA<Index_T, StringUtf8>;
+
+            template <class Table_T, class StringMatcher_T>
+            class RowContentFilter
+            {
+            public:
+                using IndexT = typename Table_T::IndexT;
+                using RowBuffer = RowContentFilterBuffer<IndexT>;
+                using StringViewT = StringViewUtf8;
+
+                enum class RowFilterStatus
+                {
+                    unresolved, // Filter status not yet known, so content is to be stored to temporary buffer.
+                    include,    // Row content has matched filter -> content can be stored directly to destination.
+                    ignore      // Row is filtered out so nothing to be done for the content.
+                };
+
+                RowContentFilter(StringMatcher_T matcher, IndexT nMatchCol = anyColumn<IndexT>())
+                    : m_stringMatcher(matcher)
+                    , m_nFilterCol(nMatchCol)
+                {}
+
+                bool isAnyColumnFilter() const
+                {
+                    return m_nFilterCol == anyColumn<IndexT>();
+                }
+
+                void updateFilterStatus(Table_T& rTable, const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+                {
+                    DFG_UNUSED(nRow);
+                    if (nCol != m_nFilterCol)
+                        return;
+                    if (m_stringMatcher.isMatch(toView(pData, nCount)))
+                    {
+                        // When having single column matching and match found from target column, flushing buffer to destination and setting status
+                        // so that remaining items on the row gets written directly to destination.
+                        writeToDestination(rTable, m_rowBuffer);
+                        m_rowFilterStatus = RowFilterStatus::include;
+                    }
+                    else
+                        m_rowFilterStatus = RowFilterStatus::ignore;
+                }
+
+                void writeToDestination(Table_T& table, const size_t nCol, const StringViewT& sv)
+                {
+                    table.setElement(m_nBufferRow - m_nFilteredRowCount, nCol, sv);
+                }
+
+                void writeToDestination(Table_T& table, RowBuffer& rowBuffer)
+                {
+                    for (const auto& item : rowBuffer)
+                        writeToDestination(table, item.first, item.second);
+                    rowBuffer.clear(); // TODO: no deallocations.
+                }
+
+                StringViewT toView(const char* pData, const size_t nCount)
+                {
+                    return StringViewT(TypedCharPtrUtf8R(pData), nCount);
+                }
+
+                void finishRow(Table_T& rTable, const IndexT nNewRow)
+                {
+                    if (!m_rowBuffer.empty())
+                    {
+                        // Note: ending up here with single column filter means that filter column was not encountered (e.g. filter column at 3 and only 2 columns at current row)
+                        //       In this case passing the whole buffer to matcher and letting it decide how to interpret such case.
+                        if (m_rowFilterStatus != RowFilterStatus::ignore && m_stringMatcher.isMatch(m_rowBuffer))
+                            writeToDestination(rTable, m_rowBuffer);
+                        else
+                            m_nFilteredRowCount++;
+                        m_rowBuffer.clear();
+                    }
+                    m_nBufferRow = nNewRow;
+                    m_rowFilterStatus = RowFilterStatus::unresolved;
+                }
+
+                // Return true if caller should add data to table, false otherwise. With this implementation 
+                // always returning false since all writing gets handling by 'this'.
+                bool operator()(Table_T& rTable, const IndexT nRow, const IndexT nCol, const char* pData, const size_t nCount)
+                {
+                    if (nCol == 0) // On column 0 (=new row), checking if previous row needs to be added to destination table.
+                        finishRow(rTable, nRow);
+                    updateFilterStatus(rTable, nRow, nCol, pData, nCount);
+                    if (m_rowFilterStatus == RowFilterStatus::unresolved)
+                    {
+                        auto& s = m_rowBuffer[nCol];
+                        s.append(TypedCharPtrUtf8R(pData), TypedCharPtrUtf8R(pData + nCount));
+                    }
+                    else if (m_rowFilterStatus == RowFilterStatus::include)
+                        writeToDestination(rTable, nCol, toView(pData, nCount));
+                    return false;
+                }
+
+                void onReadDone(Table_T& rTable)
+                {
+                    finishRow(rTable, m_nBufferRow + 1);
+                }
+
+                size_t m_nFilterCol = anyColumn<IndexT>();
+                StringMatcher_T m_stringMatcher;
+                RowFilterStatus m_rowFilterStatus = RowFilterStatus::unresolved;
+                RowBuffer m_rowBuffer;
+                IndexT m_nBufferRow = 0; // Stores index of the row that m_rowBuffer stores.
+                IndexT m_nFilteredRowCount = 0;
+            };
+
+
+            template <class Table_T, class RowContentFilter_T>
             class FilterCellHandler
             {
             public:
                 using IndexT = typename Table_T::IndexT;
                 using IntervalSet = IntervalSet<IndexT>;
 
-                FilterCellHandler(Table_T& rTable)
+                FilterCellHandler(Table_T& rTable, RowContentFilter_T&& rowContentFilter)
                     : m_rTable(rTable)
+                    , m_rowContentFilter(rowContentFilter)
                 {}
 
                 // Note: Indexes starts from 0. If file has header, first data row is 1.
@@ -229,15 +355,26 @@ DFG_ROOT_NS_BEGIN{
 
                 void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
                 {
-                    if (m_includeRows.hasValue(static_cast<IndexT>(nRow)))
-                        m_rTable.setElement(nRow - m_nFilteredRowCount, nCol, dfg::DFG_CLASS_NAME(StringViewUtf8)(dfg::TypedCharPtrUtf8R(pData), nCount));
-                    else if (nCol == 0)
-                        m_nFilteredRowCount++;
+                    if (!m_includeRows.hasValue(static_cast<IndexT>(nRow)))
+                    {
+                        if (nCol == 0)
+                            m_nFilteredRowCount++;
+                        return;
+                    }
+                    const auto nTargetRow = nRow - m_nFilteredRowCount;
+                    if (m_rowContentFilter(m_rTable, nTargetRow, nCol, pData, nCount))
+                        m_rTable.setElement(nTargetRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
                 };
+
+                void onReadDone()
+                {
+                    m_rowContentFilter.onReadDone(m_rTable);
+                }
 
                 Table_T& m_rTable;
                 IntervalSet m_includeRows;
                 IndexT m_nFilteredRowCount = 0;
+                RowContentFilter_T m_rowContentFilter;
             };
         } // namespace DFG_DETAIL_NS
 
@@ -247,11 +384,15 @@ DFG_ROOT_NS_BEGIN{
         {
         public:
             using ThisClass = DFG_CLASS_NAME(TableCsv);
+            using BaseClass = DFG_CLASS_NAME(TableSz)<Char_T, Index_T, InternalEncoding_T>;
+            using IndexT = typename BaseClass::IndexT;
             typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
             typedef typename DFG_CLASS_NAME(TableSz)<Char_T, Index_T>::ColumnIndexPairContainer ColumnIndexPairContainer;
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DelimitedTextReaderBufferTypeC;
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T> DelimitedTextReaderBufferTypeT;
             using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
+            template <class StringMatcher_T> using RowContentFilter = DFG_DETAIL_NS::RowContentFilter<ThisClass, StringMatcher_T>;
+            using RowContentFilterBuffer = DFG_DETAIL_NS::RowContentFilterBuffer<IndexT>;
 
         private:
             class DefaultCellHandler
@@ -267,6 +408,11 @@ DFG_ROOT_NS_BEGIN{
                     // TODO: this effectively assumes that user given input is valid UTF8.
                     m_rTable.setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
                 };
+
+                void onReadDone()
+                {
+                }
+
                 TableCsv& m_rTable;
             };
 
@@ -284,9 +430,21 @@ DFG_ROOT_NS_BEGIN{
 
             // Creates filter cell handler that can used to do filtered reading.
             // Note: lifetime of returned object is bound to lifetime of 'this'
-            auto createFilterCellHandler() -> DFG_DETAIL_NS::FilterCellHandler<ThisClass>
+            auto createFilterCellHandler() -> DFG_DETAIL_NS::FilterCellHandler<ThisClass, DFG_DETAIL_NS::RowContentDummyFilter>
             {
-                return DFG_DETAIL_NS::FilterCellHandler<ThisClass>(*this);
+                return DFG_DETAIL_NS::FilterCellHandler<ThisClass, DFG_DETAIL_NS::RowContentDummyFilter>(*this, DFG_DETAIL_NS::RowContentDummyFilter());
+            }
+
+            template <class StringMatcher_T>
+            auto createFilterCellHandler(StringMatcher_T matcher, const IndexT nMatchCol = DFG_DETAIL_NS::anyColumn<IndexT>()) -> DFG_DETAIL_NS::FilterCellHandler<ThisClass, RowContentFilter<StringMatcher_T>>
+            {
+                auto rv = DFG_DETAIL_NS::FilterCellHandler<ThisClass, RowContentFilter<StringMatcher_T>>(*this, RowContentFilter<StringMatcher_T>(matcher, nMatchCol));
+                // When using string matcher filtering, by default enabling all rows.
+                IntervalSet<IndexT> is;
+                const auto maxVal = NumericTraits<IndexT>::maxValue;
+                is.insertClosed(0, maxVal);
+                rv.setIncludeRows(is);
+                return rv;
             }
 
             auto defaultAppender() const -> DelimitedTextReader::CharAppenderUtf<DelimitedTextReaderBufferTypeC>
@@ -426,7 +584,8 @@ DFG_ROOT_NS_BEGIN{
                 this->clear();
 
                 typedef DelimitedTextReader::ParsingDefinition<char, CharAppender_T> ParseDef;
-                const auto& readFormat = DelimitedTextReader::readEx(ParseDef(), strm, formatDef.separatorChar(), formatDef.enclosingChar(), formatDef.eolCharFromEndOfLineType(), cellHandler);
+                const auto& readFormat = DelimitedTextReader::readEx(ParseDef(), strm, formatDef.separatorChar(), formatDef.enclosingChar(), formatDef.eolCharFromEndOfLineType(), std::forward<Reader_T>(cellHandler));
+                cellHandler.onReadDone();
 
                 m_readFormat.separatorChar(readFormat.getSep());
                 m_readFormat.enclosingChar(readFormat.getEnc());

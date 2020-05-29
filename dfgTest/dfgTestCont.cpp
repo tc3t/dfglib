@@ -1260,7 +1260,7 @@ TEST(dfgCont, TableCsv_memStreamTypes)
     using namespace DFG_ROOT_NS;
     const auto nRowCount = 10;
     const auto nColCount = 5;
-    dfg::cont::TableCsv<char, uint32> table;
+    DFG_MODULE_NS(cont)::TableCsv<char, uint32> table;
     for (int c = 0; c < nColCount; ++c)
         for (int r = 0; r < nRowCount; ++r)
             table.setElement(r, c, DFG_UTF8("a"));
@@ -1296,6 +1296,38 @@ TEST(dfgCont, TableCsv_memStreamTypes)
 
     EXPECT_EQ(bytesStd, bytesOmc);
     EXPECT_EQ(bytesStd, bytesBasicOmc);
+}
+
+
+namespace
+{
+    class SimpleStringMatcher
+    {
+    public:
+        SimpleStringMatcher(DFG_ROOT_NS::StringViewSzUtf8 sv)
+        {
+            m_s = sv.c_str();
+        }
+
+        bool isMatch(const DFG_ROOT_NS::StringViewUtf8& sv)
+        {
+            std::string s(sv.dataRaw(), sv.length());
+            return s.find(m_s.rawStorage()) != std::string::npos;
+        }
+
+        bool isMatch(const DFG_MODULE_NS(cont)::TableCsv<char, DFG_ROOT_NS::uint32>::RowContentFilterBuffer& rowBuffer)
+        {
+            for (const auto& item : rowBuffer)
+            {
+                if (isMatch(item.second))
+                    return true;
+            }
+            return false;
+        }
+
+        DFG_ROOT_NS::StringUtf8 m_s;
+    };
+
 }
 
 TEST(dfgCont, TableCsv_filterCellHandler)
@@ -1334,7 +1366,7 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_STREQ("40", table(2, 0).c_str());
         EXPECT_STREQ("41", table(2, 1).c_str());
     }
-    
+
     // Testing handling of empty lines.
     {
         TableT table;
@@ -1363,6 +1395,63 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         TableT table;
         auto filterCellHandler = table.createFilterCellHandler();
         filterCellHandler.setIncludeRows(::DFG_MODULE_NS(cont)::intervalSetFromString<IndexT>("1"));
+        table.readFromFile("testfiles/matrix_3x3.txt", table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(1, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(3, table.colCountByMaxColIndex());
+        EXPECT_STREQ("14510", table(0, 0).c_str());
+        EXPECT_STREQ("26690", table(0, 1).c_str());
+        EXPECT_STREQ("41354", table(0, 2).c_str());
+    }
+
+    // Row content filter: basic test
+    {
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler(SimpleStringMatcher(DFG_UTF8("1")));
+        /*
+        matrix_3x3.txt
+            8925, 25460, 46586
+            14510, 26690, 41354
+            17189, 42528, 49812
+        */
+        table.readFromFile("testfiles/matrix_3x3.txt", table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(2, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(3, table.colCountByMaxColIndex());
+        EXPECT_STREQ("14510", table(0, 0).c_str());
+        EXPECT_STREQ("26690", table(0, 1).c_str());
+        EXPECT_STREQ("41354", table(0, 2).c_str());
+        EXPECT_STREQ("17189", table(1, 0).c_str());
+        EXPECT_STREQ("42528", table(1, 1).c_str());
+        EXPECT_STREQ("49812", table(1, 2).c_str());
+    }
+
+    // Row content filter: last row handling
+    {
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler(SimpleStringMatcher(DFG_UTF8("49812")));
+        /*
+        matrix_3x3.txt
+            8925, 25460, 46586
+            14510, 26690, 41354
+            17189, 42528, 49812
+        */
+        table.readFromFile("testfiles/matrix_3x3.txt", table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(1, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(3, table.colCountByMaxColIndex());
+        EXPECT_STREQ("17189", table(0, 0).c_str());
+        EXPECT_STREQ("42528", table(0, 1).c_str());
+        EXPECT_STREQ("49812", table(0, 2).c_str());
+    }
+
+    // Row content filter: single column filter
+    {
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler(SimpleStringMatcher(DFG_UTF8("9")), 1);
+        /*
+        matrix_3x3.txt
+            8925, 25460, 46586
+            14510, 26690, 41354
+            17189, 42528, 49812
+        */
         table.readFromFile("testfiles/matrix_3x3.txt", table.defaultReadFormat(), filterCellHandler);
         EXPECT_EQ(1, table.rowCountByMaxRowIndex());
         EXPECT_EQ(3, table.colCountByMaxColIndex());
