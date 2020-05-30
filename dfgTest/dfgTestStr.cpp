@@ -877,6 +877,8 @@ namespace
         const Char_T sz2[] = { 'b', 'c', 'a', '\0' };
         const Str_T s(conv(sz));
 
+        DFGTEST_STATIC_TEST((std::is_same<Str_T, typename StringView_T::StringT>::value));
+
         StringView_T view(conv(sz));
         StringView_T view2Chars(conv(&sz[0] + 1), 2);
         EXPECT_EQ(conv(&sz[1]), view2Chars.begin());
@@ -928,6 +930,12 @@ namespace
         {
             EXPECT_EQ(view.begin(), view.data());
             EXPECT_EQ(view2.begin(), view2.data());
+        }
+
+        // Testing begin/endRaw()
+        {
+            EXPECT_EQ(toCharPtr_raw(view.begin()), view.beginRaw());
+            EXPECT_EQ(toCharPtr_raw(view.end()), view.endRaw());
         }
 
         //DFG_CLASS_NAME(StringViewUtf8)() == DFG_ASCII("a"); // TODO: make this work

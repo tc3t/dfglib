@@ -285,6 +285,7 @@ public:
     typedef decltype(toCharPtr_raw(Str_T().c_str()))    PtrRawT;
     typedef typename DFG_DETAIL_NS::StringViewBase<Str_T>::type BaseClass;
     typedef Char_T                                      CharT;
+    using StringT       = Str_T;
     
     typedef PtrT const_iterator;
 
@@ -407,7 +408,9 @@ public:
 
     typedef decltype(Str_T().c_str())               SzPtrT;
     typedef decltype(toCharPtr(Str_T().c_str()))    PtrT;
+    typedef decltype(toCharPtr_raw(Str_T().c_str())) PtrRawT;
     typedef Char_T                                  CharT;
+    using StringT           = Str_T;
 
     typedef PtrT const_iterator;
 
@@ -477,6 +480,11 @@ public:
         return m_psz;
     }
 
+    PtrRawT beginRaw() const
+    {
+        return toCharPtr_raw(begin());
+    }
+
     const_iterator cbegin() const
     {
         return begin();
@@ -490,6 +498,11 @@ public:
     const_iterator end() const
     {
         return PtrT(toCharPtr_raw(m_psz) + lengthNonCaching());
+    }
+
+    PtrRawT endRaw() const
+    {
+        return toCharPtr_raw(end());
     }
 
     const_iterator cend() const
