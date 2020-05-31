@@ -17,6 +17,7 @@
 #include "../str/stringLiteralCharToValue.hpp"
 #include "../io/IfmmStream.hpp"
 #include "IntervalSet.hpp"
+#include "MapToStringViews.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
     
@@ -228,7 +229,7 @@ DFG_ROOT_NS_BEGIN{
                 }
             };
 
-            template <class Index_T> using RowContentFilterBuffer = MapVectorSoA<Index_T, StringUtf8>;
+            template <class Index_T> using RowContentFilterBuffer = MapToStringViews<Index_T, StringUtf8, StringStorageType::sizeOnly>;
 
             template <class Table_T, class StringMatcher_T>
             class RowContentFilter
@@ -279,8 +280,8 @@ DFG_ROOT_NS_BEGIN{
                 void writeToDestination(Table_T& table, RowBuffer& rowBuffer)
                 {
                     for (const auto& item : rowBuffer)
-                        writeToDestination(table, item.first, item.second);
-                    rowBuffer.clear(); // TODO: no deallocations.
+                        writeToDestination(table, item.first, item.second(rowBuffer));
+                    rowBuffer.clear_noDealloc();
                 }
 
                 StringViewT toView(const char* pData, const size_t nCount)
@@ -298,7 +299,7 @@ DFG_ROOT_NS_BEGIN{
                             writeToDestination(rTable, m_rowBuffer);
                         else
                             m_nFilteredRowCount++;
-                        m_rowBuffer.clear();
+                        m_rowBuffer.clear_noDealloc();
                     }
                     m_nBufferRow = nNewRow;
                     m_rowFilterStatus = RowFilterStatus::unresolved;
@@ -312,10 +313,7 @@ DFG_ROOT_NS_BEGIN{
                         finishRow(rTable, nRow);
                     updateFilterStatus(rTable, nRow, nCol, pData, nCount);
                     if (m_rowFilterStatus == RowFilterStatus::unresolved)
-                    {
-                        auto& s = m_rowBuffer[nCol];
-                        s.append(TypedCharPtrUtf8R(pData), TypedCharPtrUtf8R(pData + nCount));
-                    }
+                        m_rowBuffer.insert(nCol, StringViewT(TypedCharPtrUtf8R(pData), TypedCharPtrUtf8R(pData + nCount)));
                     else if (m_rowFilterStatus == RowFilterStatus::include)
                         writeToDestination(rTable, nCol, toView(pData, nCount));
                     return false;

@@ -1320,7 +1320,7 @@ namespace
         {
             for (const auto& item : rowBuffer)
             {
-                if (isMatch(item.second))
+                if (isMatch(item.second(rowBuffer)))
                     return true;
             }
             return false;
