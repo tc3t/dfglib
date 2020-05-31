@@ -1005,6 +1005,7 @@ namespace
         const Char_T sz0[] = { 'a', 'b', 'c', '\0' };
         const Char_T sz1[] = { 'a', 'b', 'c', 'd', '\0' };
         const Char_T sz2[] = { 'a', 'b', 'd', '\0' };
+        const Char_T sz3[] = { 'a', '\0', 'b', '\0' };
         StringView_T szView(conv(sz0));
         EXPECT_EQ(conv(sz0), szView.c_str());             // Test existence of c_str()
         EXPECT_TRUE(szView == conv(sz0));
@@ -1020,6 +1021,17 @@ namespace
         EXPECT_FALSE(szView == conv(sz2));
         EXPECT_TRUE(szView != conv(sz2));
         EXPECT_FALSE(szView != conv(sz0));
+
+        // Testing that constructing from string that has embedded nulls can be correctly done with size-constructor.
+        {
+            StringView_T szView1(conv(sz3));
+            StringView_T szView2(conv(sz3), 3);
+            EXPECT_EQ(1, szView1.size());
+            EXPECT_EQ(3, szView2.size());
+            EXPECT_EQ('a', szView2.dataRaw()[0]);
+            EXPECT_EQ('\0', szView2.dataRaw()[1]);
+            EXPECT_EQ('b', szView2.dataRaw()[2]);
+        }
     }
 }
 

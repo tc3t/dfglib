@@ -473,6 +473,8 @@ public:
 
     PtrT data() const { return m_psz; }
 
+    PtrRawT dataRaw() const { return toCharPtr_raw(this->data()); }
+
     SzPtrT c_str() const { return m_psz; }
 
     const_iterator begin() const
