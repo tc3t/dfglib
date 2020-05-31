@@ -9,6 +9,7 @@
 #include "cont/interleavedXsortedTwoChannelWrapper.hpp"
 #include "cont/IntervalSet.hpp"
 #include "cont/IntervalSetSerialization.hpp"
+#include "cont/MapToStringViews.hpp"
 #include "cont/MapVector.hpp"
 #include "cont/SetVector.hpp"
 #include "cont/SortedSequence.hpp"

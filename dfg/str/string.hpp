@@ -26,6 +26,7 @@ class DFG_CLASS_NAME(StringTyped)
 {
 public:
     using CharType = char;
+    using value_type = CharType;
     typedef std::basic_string<CharType>         StorageType;
     typedef TypedCharPtrT<const char, Type_T>   TypedPtrT;
     typedef const CharType*                     PtrRawT;

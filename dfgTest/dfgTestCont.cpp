@@ -14,6 +14,7 @@
 #include <dfg/cont/CsvConfig.hpp>
 #include <dfg/cont/IntervalSet.hpp>
 #include <dfg/cont/IntervalSetSerialization.hpp>
+#include <dfg/cont/MapToStringViews.hpp>
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/cont/ViewableSharedPtr.hpp>
 #include <dfg/cont/SetVector.hpp>
@@ -1328,6 +1329,171 @@ namespace
         DFG_ROOT_NS::StringUtf8 m_s;
     };
 
+}
+
+TEST(dfgCont, MapToStringViews)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+
+    DFGTEST_STATIC_TEST(
+                        (sizeof(MapToStringViews<int, std::string, StringStorageType::sizeOnly>::StringDetail))
+                            >
+                         sizeof(MapToStringViews<int, std::string, StringStorageType::szSized>::StringDetail)
+                        );
+    DFGTEST_STATIC_TEST(
+                        (sizeof(MapToStringViews<int, std::string, StringStorageType::sizeAndNullTerminated>::StringDetail))
+                            >
+                        sizeof(MapToStringViews<int, std::string, StringStorageType::szSized>::StringDetail)
+                        );
+
+    // Basic testing with untyped string
+    {
+        MapToStringViews<int, std::string, StringStorageType::sizeOnly> v;
+        EXPECT_TRUE(v.empty());
+        EXPECT_EQ(0, v.size());
+        v.insert(0, "a");
+        EXPECT_EQ("a", v[0]);
+        EXPECT_FALSE(v.empty());
+        EXPECT_EQ(1, v.size());
+        EXPECT_EQ(2, v.m_data.size());
+        v.insert(1, "b");
+        EXPECT_EQ("a", v[0]);
+        EXPECT_EQ("b", v[1]);
+        EXPECT_FALSE(v.empty());
+        EXPECT_EQ(2, v.size());
+        const auto nDataCapacityBeforeClear = v.m_data.capacity();
+        const auto nDetailCapacityBeforeClear = v.m_keyToStringDetails.capacity();
+        v.clear_noDealloc();
+        EXPECT_TRUE(v.empty());
+        EXPECT_EQ(0, v.size());
+        EXPECT_EQ(1, v.m_data.size()); // Checking that shared null wasn't removed.
+        EXPECT_EQ(nDataCapacityBeforeClear, v.m_data.capacity());
+        EXPECT_EQ(nDetailCapacityBeforeClear, v.m_keyToStringDetails.capacity());
+        v.insert(-50, "c");
+        EXPECT_EQ("", v[0]);
+        EXPECT_EQ("c", v[-50]);
+        EXPECT_FALSE(v.empty());
+        EXPECT_EQ(1, v.size());
+    }
+
+    // Null terminator handling
+    {
+        MapToStringViews<int, std::string, StringStorageType::sizeAndNullTerminated> v;
+        EXPECT_TRUE(v.empty());
+        EXPECT_EQ(0, v.size());
+        v.insert(0, "a");
+        EXPECT_EQ("a", v[0]);
+        EXPECT_FALSE(v.empty());
+        EXPECT_EQ(1, v.size());
+        ASSERT_EQ(3, v.m_data.size()); // Making sure that null terminator has been added
+        EXPECT_EQ('\0', v.m_data[2]); // Making sure that null terminator has been added
+    }
+
+    // realloc testing
+    {
+        MapToStringViews<int, std::string, StringStorageType::sizeOnly> v;
+        for (int i = 0; i < 100; ++i)
+            v.insert(i, std::string(1, static_cast<char>(i)));
+        EXPECT_EQ(100, v.size());
+        for (size_t i = 0, nCount = v.size(); i < nCount; ++i)
+        {
+            ASSERT_EQ(1, v[i].size());
+            EXPECT_EQ(i, *v[i].beginRaw());
+        }
+    }
+
+    // Basic typed testing.
+    {
+        MapToStringViews<int, StringUtf8, StringStorageType::szSized> v;
+        EXPECT_TRUE(v.empty());
+        EXPECT_EQ(0, v.size());
+        v.insert(0, DFG_UTF8("a"));
+        EXPECT_EQ(1, v[0].length());
+        EXPECT_EQ('a', *v[0].beginRaw());
+        v.insert(5, DFG_UTF8("abcdefgh"));
+        ASSERT_EQ(2, v.size());
+        EXPECT_EQ("abcdefgh", StringViewC(v[5].beginRaw(), v[5].endRaw()));
+    }
+
+    // Testing storage handling
+    {
+        MapToStringViews<int, std::string, StringStorageType::szSized> vSzSized;
+        MapToStringViews<int, std::string, StringStorageType::sizeAndNullTerminated> vSizeAndSz;
+        MapToStringViews<int, std::string, StringStorageType::sizeOnly> vSizeOnly;
+        vSzSized.insert(0, "ab");
+        vSizeAndSz.insert(0, "ab");
+        vSizeOnly.insert(0, "ab");
+        vSzSized.insert(1, "cd");
+        vSizeAndSz.insert(1, "cd");
+        vSizeOnly.insert(1, "cd");
+        EXPECT_EQ(7, vSzSized.m_data.size());
+        EXPECT_EQ(7, vSizeAndSz.m_data.size());
+        EXPECT_EQ(5, vSizeOnly.m_data.size());
+    }
+
+    // Testing handling of size_type argument
+    {
+        MapToStringViews<int, std::string, StringStorageType::sizeAndNullTerminated, uint16> v16;
+        MapToStringViews<int, std::string, StringStorageType::sizeAndNullTerminated, uint32> v32;
+        DFGTEST_STATIC(sizeof(decltype(v16)::StringDetail) < sizeof(decltype(v32)::StringDetail));
+        v16.insert(0, "abc");
+        v32.insert(0, "abc");
+        EXPECT_EQ(v16[0], v32[0]);
+    }
+
+    // Testing that trying to insert more chars than allowed by size_type is handled.
+    {
+        MapToStringViews<int, std::string, StringStorageType::sizeAndNullTerminated, uint8> v8;
+        const std::string s = std::string(200, 'a');
+        v8.insert(0, s);
+        v8.insert(1, s);
+        EXPECT_EQ(1, v8.size()); // Expecting that latter insert-request is ignored.
+        EXPECT_EQ(s, v8[0]);
+    }
+
+    // Testing that inserting empty items use sharedNull.
+    {
+        MapToStringViews<int, std::string> mDefault;
+        MapToStringViews<int, std::string, StringStorageType::szSized> mSzSized;
+        MapToStringViews<int, std::string, StringStorageType::sizeOnly> mSizeOnly;
+        for (int i = 0; i < 10; ++i)
+        {
+            mDefault.insert(i, "");
+            mSzSized.insert(i, "");
+            mSizeOnly.insert(i, "");
+        }
+        EXPECT_EQ("", mDefault[0]);
+        EXPECT_EQ("", mSzSized[0]);
+        EXPECT_EQ("", mSizeOnly[0]);
+        EXPECT_EQ(1, mDefault.m_data.size());
+        EXPECT_EQ(1, mSzSized.m_data.size());
+        EXPECT_EQ(1, mSizeOnly.m_data.size());
+    }
+
+    // Testing that trying to insert more entries than allowed by size_type is handled.
+    {
+        MapToStringViews<int, std::string, StringStorageType::sizeAndNullTerminated, uint8> m8;
+        for (int i = 0; i < 260; ++i)
+        {
+            m8.insert(i, "");
+        }
+        EXPECT_EQ(255, m8.size());
+    }
+
+    // Testing basic iteration
+    {
+        MapToStringViews<int, std::string> m8;
+        m8.insert(0, "a");
+        m8.insert(1, "b");
+        m8.insert(2, "c");
+        std::string s;
+        for (const auto& item : m8)
+        {
+            s.append(item.second(m8).c_str());
+        }
+        EXPECT_EQ("abc", s);
+    }
 }
 
 TEST(dfgCont, TableCsv_filterCellHandler)

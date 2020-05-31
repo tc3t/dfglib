@@ -759,6 +759,7 @@ namespace
     {
         using namespace DFG_ROOT_NS;
         typedef typename Str_T::SzPtrR SzPtrType;
+        DFGTEST_STATIC_TEST((std::is_same<typename Str_T::value_type, typename Str_T::CharType>::value));
 
         {
             Str_T s(SzPtrType("abc"));
