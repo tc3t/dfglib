@@ -13,7 +13,6 @@
 #include "scopedCaller.hpp"
 #include "rangeIterator.hpp"
 #include <cmath>
-#include <algorithm> // for std::max
 
 #include "dfgBaseTypedefs.hpp"
 #include "bits/byteSwap.hpp"
@@ -25,16 +24,6 @@
 
 DFG_ROOT_NS_BEGIN
 {
-
-// Note: Min and Max differ from normal naming to avoid problems with windows headers that
-//       define min and max as macros.
-template <class T> inline const T& Min(const T& v1, const T& v2) {return (std::min)(v1, v2);}
-template <class T> inline const T& Min(const T& v1, const T& v2, const T& v3) {return Min(Min(v1, v2), v3);}
-template <class T> inline const T& Min(const T& v1, const T& v2, const T& v3, const T& v4) {return Min(Min(v1,v2,v3), v4);}
-
-template <class T> inline const T& Max(const T& v1, const T& v2) {return (std::max)(v1, v2);}
-template <class T> inline const T& Max(const T& v1, const T& v2, const T& v3) {return Max(Max(v1, v2), v3);}
-template <class T> inline const T& Max(const T& v1, const T& v2, const T& v3, const T& v4) {return Max(Max(v1,v2,v3), v4);}
 
 // Returns the size of given container.
 template<class ContT> size_t count(const ContT& cont) {return cont.size();}

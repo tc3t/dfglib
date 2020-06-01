@@ -545,6 +545,77 @@ TEST(dfg, Dummy)
     constexpr Dummy d0(1); // Making sure that can construct Dummy as constexpr.
 }
 
+namespace
+{
+    template <class Dst_T, class Src_T>
+    static void testSaturatedPositive()
+    {
+        using namespace DFG_ROOT_NS;
+        EXPECT_EQ(123, saturateCast<Dst_T>(Src_T(123)));
+        EXPECT_EQ(maxValueOfType<Dst_T>(), saturateCast<Dst_T>(Src_T(NumericTraits<Dst_T>::maxValue) + 1));
+        EXPECT_EQ(maxValueOfType<Dst_T>(), saturateCast<Dst_T>(NumericTraits<Src_T>::maxValue));
+    }
+
+    template <class Dst_T, class Src_T>
+    static void testSaturatedNegative()
+    {
+        using namespace DFG_ROOT_NS;
+        EXPECT_EQ(-123, saturateCast<Dst_T>(Src_T(-123)));
+        EXPECT_EQ(minValueOfType<Dst_T>(), saturateCast<Dst_T>(Src_T(NumericTraits<Dst_T>::minValue) - 1));
+        EXPECT_EQ(minValueOfType<Dst_T>(), saturateCast<Dst_T>(NumericTraits<Src_T>::minValue));
+    }
+}
+
+TEST(dfg, saturateCast)
+{
+    using namespace DFG_ROOT_NS;
+    testSaturatedPositive<int, size_t>();
+
+    testSaturatedPositive<int32, uint64>();
+    testSaturatedPositive<int32, uint32>();
+    testSaturatedPositive<uint32, uint64>();
+    testSaturatedPositive<uint16, uint64>();
+    testSaturatedPositive<uint16, uint32>();
+    testSaturatedPositive<uint16, int32>();
+
+    // The same unsigned src and dst
+    EXPECT_EQ(maxValueOfType<uint16>(), saturateCast<uint16>(maxValueOfType<uint16>()));
+    EXPECT_EQ(maxValueOfType<uint32>(), saturateCast<uint32>(maxValueOfType<uint32>()));
+    EXPECT_EQ(maxValueOfType<uint64>(), saturateCast<uint64>(maxValueOfType<uint64>()));
+
+    // The same signed src and dst
+    EXPECT_EQ(maxValueOfType<int16>(), saturateCast<int16>(maxValueOfType<int16>()));
+    EXPECT_EQ(maxValueOfType<int32>(), saturateCast<int32>(maxValueOfType<int32>()));
+    EXPECT_EQ(maxValueOfType<int64>(), saturateCast<int64>(maxValueOfType<int64>()));
+
+    // Smaller to larger unsigned
+    EXPECT_EQ(maxValueOfType<uint16>(), saturateCast<uint32>(maxValueOfType<uint16>()));
+    EXPECT_EQ(minValueOfType<uint32>(), saturateCast<uint64>(minValueOfType<uint32>()));
+
+    // Smaller to larger signed
+    EXPECT_EQ(maxValueOfType<int16>(), saturateCast<int32>(maxValueOfType<int16>()));
+    EXPECT_EQ(maxValueOfType<int32>(), saturateCast<int64>(maxValueOfType<int32>()));
+
+    // Smaller signed to unsigned
+    EXPECT_EQ(maxValueOfType<int16>(), saturateCast<uint32>(maxValueOfType<int16>()));
+    EXPECT_EQ(maxValueOfType<int32>(), saturateCast<uint64>(maxValueOfType<int32>()));
+    EXPECT_EQ(0, saturateCast<uint32>(minValueOfType<int16>()));
+    EXPECT_EQ(0, saturateCast<uint64>(minValueOfType<int32>()));
+
+    // Smaller unsigned to signed
+    EXPECT_EQ(maxValueOfType<uint16>(), saturateCast<int32>(maxValueOfType<uint16>()));
+    EXPECT_EQ(minValueOfType<uint32>(), saturateCast<int64>(minValueOfType<uint32>()));
+
+    // Larger signed to unsigned
+    EXPECT_EQ(maxValueOfType<uint32>(), saturateCast<uint32>(maxValueOfType<int64>()));
+    EXPECT_EQ(0, saturateCast<uint32>(minValueOfType<int64>()));
+
+    testSaturatedNegative<int32, int64>();
+    testSaturatedNegative<int16, int64>();
+    testSaturatedNegative<int16, int32>();
+    testSaturatedNegative<int32, int64>();
+}
+
 TEST(dfgTypeTraits, IsTrueTrait)
 {
     using namespace DFG_ROOT_NS;

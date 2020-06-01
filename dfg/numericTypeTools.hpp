@@ -4,6 +4,7 @@
 #include "dfgBaseTypedefs.hpp"
 #include <limits>
 #include <type_traits>
+#include <algorithm> // for std::max
 
 DFG_ROOT_NS_BEGIN
 {
@@ -106,4 +107,87 @@ DFG_ROOT_NS_BEGIN
     {
         return isValWithinLimitsOfType<To_T>(val);
     }
-}
+
+    // Note: Min and Max differ from normal naming to avoid problems with windows headers that
+    //       define min and max as macros.
+    template <class T> inline const T& Min(const T& v1, const T& v2) { return (std::min)(v1, v2); }
+    template <class T> inline const T& Min(const T& v1, const T& v2, const T& v3) { return Min(Min(v1, v2), v3); }
+    template <class T> inline const T& Min(const T& v1, const T& v2, const T& v3, const T& v4) { return Min(Min(v1, v2, v3), v4); }
+
+    template <class T> inline const T& Max(const T& v1, const T& v2) { return (std::max)(v1, v2); }
+    template <class T> inline const T& Max(const T& v1, const T& v2, const T& v3) { return Max(Max(v1, v2), v3); }
+    template <class T> inline const T& Max(const T& v1, const T& v2, const T& v3, const T& v4) { return Max(Max(v1, v2, v3), v4); }
+
+    template <class Dst_T, class Src_T>
+    Dst_T saturateCast(const Src_T val);
+
+    namespace DFG_DETAIL_NS
+    {
+        // Smallar signed to signed
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::true_type /*src signed*/, std::true_type /*dst signed*/, std::true_type /*sizeof(src) < sizeof(dst)*/)
+        {
+            return val;
+        }
+
+        // Larger or equal-sized signed to signed.
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::true_type /*src signed*/, std::true_type /*dst signed*/, std::false_type /*sizeof(src) >= sizeof(dst)*/)
+        {
+            if (val >= 0)
+                return static_cast<Dst_T>(Min(val, Src_T(NumericTraits<Dst_T>::maxValue)));
+            else
+                return static_cast<Dst_T>(Max(val, Src_T(NumericTraits<Dst_T>::minValue)));
+        }
+
+        // Smaller signed to unsigned.
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::true_type /*src signed*/, std::false_type /*dst unsigned*/, std::true_type /*sizeof(src) < sizeof(dst)*/)
+        {
+            return (val >= 0) ? static_cast<Dst_T>(val) : 0;
+        }
+
+        // Larger or equal-sized signed to unsigned.
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::true_type /*src signed*/, std::false_type /*dst unsigned*/, std::false_type /*sizeof(src) >= sizeof(dst)*/)
+        {
+            return (val >= 0) ? saturateCast<Dst_T>(static_cast<typename std::make_unsigned<Src_T>::type>(val)) : 0;
+        }
+
+        // Smaller unsigned to signed
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::false_type /*src unsigned*/, std::true_type /*dst signed*/, std::true_type /*sizeof(src) < sizeof(dst)*/)
+        {
+            return static_cast<Dst_T>(val);
+        }
+
+        // Larger or equal-sized unsigned to signed.
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::false_type /*src unsigned*/, std::true_type /*dst signed*/, std::false_type /*sizeof(src) >= sizeof(dst)*/)
+        {
+            return static_cast<Dst_T>(Min(val, static_cast<Src_T>(NumericTraits<Dst_T>::maxValue)));
+        }
+
+        // Smaller unsigned to unsigned
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::false_type /*src unsigned*/, std::false_type /*dst unsigned*/, std::true_type /*sizeof(src) < sizeof(dst)*/)
+        {
+            return val;
+        }
+
+        // Larger or equal-sized unsigned to unsigned.
+        template <class Dst_T, class Src_T>
+        Dst_T saturateCastImpl(const Src_T val, std::false_type /*src unsigned*/, std::false_type /*dst unsigned*/, std::false_type /*sizeof(src) >= sizeof(dst)*/)
+        {
+            return static_cast<Dst_T>(Min(val, static_cast<Src_T>(NumericTraits<Dst_T>::maxValue)));
+        }
+    } // DFG_DETAIL_NS
+
+    // Returns value casted from Src_T to Dst_T so that if input value is not within [min, max] of Dst_T, returns min if val < min and max if val > max
+    template <class Dst_T, class Src_T>
+    Dst_T saturateCast(const Src_T val)
+    {
+        return DFG_DETAIL_NS::saturateCastImpl<Dst_T, Src_T>(val, std::is_signed<Src_T>(), std::is_signed<Dst_T>(), std::integral_constant<bool, sizeof(Src_T) < sizeof(Dst_T)>());
+    }
+
+} // namespace
