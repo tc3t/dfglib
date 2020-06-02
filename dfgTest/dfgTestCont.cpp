@@ -474,6 +474,44 @@ TEST(dfgCont, TableSz_forEachNonNullCell)
     }
 }
 
+TEST(dfgCont, TableSz_maxLimits)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    EXPECT_EQ(maxValueOfType<int16>(), (TableSz<char, int16>().maxColumnCount()));
+    EXPECT_EQ(maxValueOfType<int16>() - 1, (TableSz<char, int16>().maxColumnIndex()));
+    EXPECT_EQ(maxValueOfType<int16>(), (TableSz<char, int16>().maxRowCount()));
+    EXPECT_EQ(maxValueOfType<int16>() - 1, (TableSz<char, int16>().maxRowIndex()));
+    EXPECT_EQ((TableSz<char, size_t>().m_colToRows.max_size()), (TableSz<char, size_t>().maxColumnCount()));
+    EXPECT_EQ(maxValueOfType<size_t>(), (TableSz<char, size_t>().maxRowCount()));
+    EXPECT_EQ(maxValueOfType<size_t>() - 1, (TableSz<char, size_t>().maxRowIndex()));
+
+    TableSz<char, int> t;
+    t.setElement(t.maxRowIndex(), 0, "a");
+    EXPECT_EQ(t.maxRowCount(), t.rowCountByMaxRowIndex());
+    t.setElement(t.maxRowIndex() + 1, 0, "b"); // This shouldn't add anything since index is too big.
+    t.setElement(0, t.maxColumnIndex() + 1, "b"); // Nor this
+    EXPECT_EQ(1, t.cellCountNonEmpty());
+}
+
+TEST(dfgCont, TableSz_insertRowsAt)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    // Overflow handling
+    {
+        TableSz<char, int16> t;
+        t.setElement(0, 0, "a");
+        t.insertRowsAt(0, maxValueOfType<int16>());
+        EXPECT_EQ(t.maxRowCount(), t.rowCountByMaxRowIndex());
+        t.removeRows(0, 32000);
+        t.setElement(1000, 0, "b");
+        EXPECT_EQ(1001, t.rowCountByMaxRowIndex());
+        t.insertRowsAt(0, maxValueOfType<int16>());
+        EXPECT_EQ(t.maxRowCount(), t.rowCountByMaxRowIndex());
+    }
+}
+
 TEST(dfgCont, TableSz_removeRows)
 {
     using namespace DFG_MODULE_NS(cont);
@@ -518,6 +556,23 @@ TEST(dfgCont, TableSz_removeRows)
         table.removeRows(0, 4);
         ASSERT_EQ(2, table.rowCountByMaxRowIndex());
         EXPECT_STREQ("b", table(1, 0));
+    }
+
+    // Test handling of big indexes.
+    {
+        TableSz<char, int> tableInt;
+        tableInt.setElement(0, 0, "a");
+        tableInt.setElement(1, 0, "b");
+        tableInt.removeRows(1, DFG_ROOT_NS::maxValueOfType<int>());
+        EXPECT_EQ(1, tableInt.rowCountByMaxRowIndex());
+        EXPECT_STREQ("a", tableInt(0, 0));
+
+        tableInt.setElement(tableInt.maxRowIndex(), 0, "c");
+        EXPECT_EQ(2, tableInt.cellCountNonEmpty());
+        tableInt.removeRows(tableInt.maxRowCount(), tableInt.maxRowCount());
+        EXPECT_EQ(2, tableInt.cellCountNonEmpty());
+        tableInt.removeRows(tableInt.maxRowIndex(), tableInt.maxRowCount());
+        EXPECT_EQ(1, tableInt.cellCountNonEmpty());
     }
 }
 
@@ -616,6 +671,15 @@ TEST(dfgCont, TableSz_addRemoveColumns)
     EXPECT_STREQ("a", table(0, 0));
     EXPECT_STREQ("d", table(0, 1));
     EXPECT_EQ(2, table.colCountByMaxColIndex());
+
+    // Negative index handling
+    {
+        using namespace DFG_ROOT_NS;
+        TableSz<char, int> tableInt;
+        tableInt.insertColumnsAt(-1, 0);
+        tableInt.insertColumnsAt(0, -1);
+        EXPECT_EQ(0, tableInt.colCountByMaxColIndex());
+    }
 }
 
 /*
@@ -661,6 +725,26 @@ TEST(dfgCont, TableSz_insertToFrontPerformance)
 #endif //DFGTEST_ENABLE_BENCHMARKS
 }
 
+TEST(dfgCont, TableSz_indexHandling)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    TableSz<char, int32> table;
+
+    // Making sure that with negative row, item is not added.
+    {
+        table.addString("", -1, 0);
+        table.addString("a", -1, 1);
+        EXPECT_EQ(0, table.cellCountNonEmpty());
+    }
+
+    // Making sure that with negative column, item is not added.
+    {
+        table.addString("", 0, -1);
+        table.addString("a", 0, -2);
+        EXPECT_EQ(0, table.cellCountNonEmpty());
+    }
+}
 
 TEST(dfgCont, ArrayWrapper)
 {

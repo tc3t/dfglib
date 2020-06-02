@@ -372,10 +372,14 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // Sets element to (nRow, nCol). This does not invalidate any previous pointers returned by operator()(), but after this call all pointers returned for (nRow, nCol)
         // will point to the previous element, not current.
         // If element at (nRow, nCol) already exists, it is overwritten.
+        // If either index is negative, string is not added.
         // Return: true if string was added, false otherwise.
         // Note: Even in case of overwrite, previous item is not cleared from string storage (this is implementation detail that is not part of the interface, i.e. it is not to be relied on).
         bool addString(const StringViewT sv, const Index_T nRow, const Index_T nCol)
         {
+            // Checking (row, column) index validity.
+            if (nRow < 0 || nCol < 0 || nRow > maxRowIndex() || nCol > maxColumnIndex())
+                return false;
             if (!isValidIndex(m_colToRows, nCol))
             {
                 DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
@@ -505,7 +509,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             for (size_t i = 0; i < nCount; ++i)
             {
                 if (!m_colToRows[i].empty())
-                    nRowCount = Max(nRowCount, m_colToRows[i].back().first + 1);
+                    nRowCount = Max(nRowCount, static_cast<IndexT>(m_colToRows[i].back().first + 1));
             }
             return nRowCount;
         }
@@ -513,7 +517,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         Index_T colCountByMaxColIndex() const
         {
             DFG_ASSERT_CORRECTNESS(m_colToRows.size() == m_charBuffers.size());
-            return (!m_colToRows.empty()) ? static_cast<Index_T>(m_colToRows.size()) : 0;
+            return static_cast<Index_T>(m_colToRows.size());
         }
 
         void privShiftRowIndexesInRowGreaterOrEqual(Index_T nRow, const Index_T nShift, const bool bPositiveShift)
@@ -527,15 +531,30 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             }
         }
 
+        Index_T maxRowCount() const { return maxValueOfType<IndexT>(); }
+        Index_T maxRowIndex() const { return maxRowCount() - IndexT(1); }
+
+        Index_T maxColumnCount() const { return Min(maxValueOfType<IndexT>(), saturateCast<IndexT>(m_colToRows.max_size()), saturateCast<IndexT>(m_charBuffers.max_size())); }
+        Index_T maxColumnIndex() const { return maxColumnCount() - IndexT(1); }
+
         // TODO: test
         // Note: appending rows at end will actually do nothing at the moment.
         void insertRowsAt(Index_T nRow, Index_T nInsertCount)
         {
+            if (nInsertCount <= 0)
+                return;
+            const auto nCurrentCount = rowCountByMaxRowIndex();
+            if (nRow < 0 || nRow > nCurrentCount)
+                nRow = nCurrentCount;
+            nInsertCount = Min(nInsertCount, static_cast<IndexT>(maxRowCount() - nCurrentCount));
             privShiftRowIndexesInRowGreaterOrEqual(nRow, nInsertCount, true);
         }
 
         void removeRows(Index_T nRow, Index_T nRemoveCount)
         {
+            if (nRow < 0 || nRemoveCount <= 0 || nRow > maxRowIndex())
+                return;
+            limitMax(nRemoveCount, static_cast<IndexT>(maxRowCount() - nRow));
             for(auto iterRowCont = m_colToRows.begin(); iterRowCont != m_colToRows.end(); ++iterRowCont)
             {
                 auto iterFirst = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(*iterRowCont, nRow);
@@ -547,10 +566,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         void insertColumnsAt(Index_T nCol, Index_T nInsertCount)
         {
+            if (nInsertCount <= 0)
+                return;
             DFG_ASSERT_UB(m_colToRows.size() == m_charBuffers.size());
             const Index_T nColCount = static_cast<Index_T>(m_colToRows.size());
             if (nCol < 0 || nCol > nColCount)
                 nCol = nColCount;
+            nInsertCount = Min(nInsertCount, maxColumnCount() - nColCount);
             m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, ColumnIndexPairContainer());
 
             // Insert new columns. Note that can't use insert(iterStart, iterEnd, val) because CharStorage() is not copy-assignable.
@@ -629,9 +651,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return privIteratorToIndexPairImpl<typename ColumnIndexPairContainer::const_iterator>(*this, row, col);
         }
 
+        // Returns the number of non-empty cells in the table.
+        // Note: if number does not fit to IndexT, return value is unspecified.
         Index_T cellCountNonEmpty() const
         {
-            Index_T nCount = 0;
+            typename std::make_unsigned<IndexT>::type nCount = 0;
             forEachFwdColumnIndex([&](Index_T col)
             {
                 forEachFwdRowInColumn(col, [&](const Index_T, const SzPtrR psz)
@@ -640,7 +664,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                         nCount++;
                 });
             });
-            return nCount;
+            return saturateCast<IndexT>(nCount);
         }
 
         // Returns content storage size in bytes. Note that returned value includes nulls and possibly content from removed cells.

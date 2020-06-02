@@ -52,6 +52,7 @@ int main(int argc, char **argv)
     //      -Output test results to xml:  dfgTest --gtest_output=xml
     // For more details, see              dfgTest --help
 
+    //::testing::GTEST_FLAG(filter) = "dfg.saturateCast";
     //::testing::GTEST_FLAG(filter) = "dfg.isEmpty";
     //::testing::GTEST_FLAG(filter) = "dfg.ScopedCaller";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.arrayCopy";
@@ -75,6 +76,9 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertToFrontPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_contentStorageSizeInBytes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_addRemoveColumns";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertRowsAt";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_indexHandling";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_maxLimits";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TrivialPair";
     //::testing::GTEST_FLAG(filter) = "dfgCont.UniqueResourceHolder";
     //::testing::GTEST_FLAG(filter) = "dfgCont.ValueArray"
