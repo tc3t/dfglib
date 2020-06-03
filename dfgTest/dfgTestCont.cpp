@@ -1400,7 +1400,8 @@ namespace
             return s.find(m_s.rawStorage()) != std::string::npos;
         }
 
-        bool isMatch(const DFG_MODULE_NS(cont)::TableCsv<char, DFG_ROOT_NS::uint32>::RowContentFilterBuffer& rowBuffer)
+        template <class Char_T, class Index_T>
+        bool isMatchImpl(const typename DFG_MODULE_NS(cont)::TableCsv<Char_T, Index_T>::RowContentFilterBuffer& rowBuffer)
         {
             for (const auto& item : rowBuffer)
             {
@@ -1408,6 +1409,16 @@ namespace
                     return true;
             }
             return false;
+        }
+
+        bool isMatch(const DFG_MODULE_NS(cont)::TableCsv<char, DFG_ROOT_NS::uint32>::RowContentFilterBuffer& rowBuffer)
+        {
+            return isMatchImpl<char, DFG_ROOT_NS::uint32>(rowBuffer);
+        }
+
+        bool isMatch(const DFG_MODULE_NS(cont)::TableCsv<char, int>::RowContentFilterBuffer& rowBuffer)
+        {
+            return isMatchImpl<char, int>(rowBuffer);
         }
 
         DFG_ROOT_NS::StringUtf8 m_s;
@@ -1480,7 +1491,7 @@ TEST(dfgCont, MapToStringViews)
         for (int i = 0; i < 100; ++i)
             v.insert(i, std::string(1, static_cast<char>(i)));
         EXPECT_EQ(100, v.size());
-        for (size_t i = 0, nCount = v.size(); i < nCount; ++i)
+        for (int i = 0; i < 100; ++i)
         {
             ASSERT_EQ(1, v[i].size());
             EXPECT_EQ(i, *v[i].beginRaw());
@@ -1672,6 +1683,15 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_STREQ("17189", table(1, 0).c_str());
         EXPECT_STREQ("42528", table(1, 1).c_str());
         EXPECT_STREQ("49812", table(1, 2).c_str());
+    }
+
+    // Index handling with int-index, mostly to check that this doesn't generate warnings.
+    {
+        DFG_MODULE_NS(cont)::TableCsv<char, int> table;
+        auto filterCellHandler = table.createFilterCellHandler(SimpleStringMatcher(DFG_UTF8("1")));
+        table.readFromFile("testfiles/matrix_3x3.txt", table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(2, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(3, table.colCountByMaxColIndex());
     }
 
     // Row content filter: last row handling

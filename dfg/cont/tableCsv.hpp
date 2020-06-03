@@ -18,6 +18,7 @@
 #include "../io/IfmmStream.hpp"
 #include "IntervalSet.hpp"
 #include "MapToStringViews.hpp"
+#include "../numericTypeTools.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
     
@@ -256,7 +257,7 @@ DFG_ROOT_NS_BEGIN{
                     return m_nFilterCol == anyColumn<IndexT>();
                 }
 
-                void updateFilterStatus(Table_T& rTable, const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+                void updateFilterStatus(Table_T& rTable, const IndexT nRow, const IndexT nCol, const char* pData, const size_t nCount)
                 {
                     DFG_UNUSED(nRow);
                     if (nCol != m_nFilterCol)
@@ -272,7 +273,7 @@ DFG_ROOT_NS_BEGIN{
                         m_rowFilterStatus = RowFilterStatus::ignore;
                 }
 
-                void writeToDestination(Table_T& table, const size_t nCol, const StringViewT& sv)
+                void writeToDestination(Table_T& table, const IndexT nCol, const StringViewT& sv)
                 {
                     table.setElement(m_nBufferRow - m_nFilteredRowCount, nCol, sv);
                 }
@@ -324,7 +325,7 @@ DFG_ROOT_NS_BEGIN{
                     finishRow(rTable, m_nBufferRow + 1);
                 }
 
-                size_t m_nFilterCol = anyColumn<IndexT>();
+                IndexT m_nFilterCol = anyColumn<IndexT>();
                 StringMatcher_T m_stringMatcher;
                 RowFilterStatus m_rowFilterStatus = RowFilterStatus::unresolved;
                 RowBuffer m_rowBuffer;
@@ -351,9 +352,13 @@ DFG_ROOT_NS_BEGIN{
                     m_includeRows = std::move(is);
                 }
 
-                void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+                void operator()(const size_t nRowArg, const size_t nColArg, const char* pData, const size_t nCount)
                 {
-                    if (!m_includeRows.hasValue(static_cast<IndexT>(nRow)))
+                    if (!isValWithinLimitsOfType<IndexT>(nRowArg) || !isValWithinLimitsOfType<IndexT>(nColArg))
+                        return;
+                    const auto nRow = static_cast<IndexT>(nRowArg);
+                    const auto nCol = static_cast<IndexT>(nColArg);
+                    if (!m_includeRows.hasValue(nRow))
                     {
                         if (nCol == 0)
                             m_nFilteredRowCount++;
