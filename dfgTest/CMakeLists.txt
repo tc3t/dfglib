@@ -23,6 +23,7 @@ set(SOURCE
     dfgTestBits.cpp
     dfgTestColour.cpp
     dfgTestCont.cpp
+	dfgTestCont_tables.cpp
     dfgTestContMapVectorPerformance.cpp
     dfgTestCrypt.cpp
     dfgTestCsvPerformance.cpp

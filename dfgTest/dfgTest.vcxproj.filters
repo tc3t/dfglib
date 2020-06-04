@@ -770,5 +770,8 @@
     <ClCompile Include="dfgTestContMapVectorPerformance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dfgTestCont_tables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

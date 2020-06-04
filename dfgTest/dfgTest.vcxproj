@@ -1207,6 +1207,7 @@
     <ClCompile Include="dfgTestColour.cpp" />
     <ClCompile Include="dfgTestCont.cpp" />
     <ClCompile Include="dfgTestContMapVectorPerformance.cpp" />
+    <ClCompile Include="dfgTestCont_tables.cpp" />
     <ClCompile Include="dfgTestCrypt.cpp" />
     <ClCompile Include="dfgTestCsvPerformance.cpp" />
     <ClCompile Include="dfgTestDataAnalysis.cpp" />
