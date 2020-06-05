@@ -207,6 +207,43 @@ DFG_ROOT_NS_BEGIN{
             //m_genericProperties
         }
     }
+
+    namespace DFG_DETAIL_NS
+    {
+        template <class Strm_T>
+        inline CsvFormatDefinition peekCsvFormat(Strm_T&& rawStrm)
+        {
+            using namespace ::DFG_MODULE_NS(io);
+            std::array<char, 200> peekBuffer; // 200 is an arbitrary limit;
+            const auto encoding = checkBOM(rawStrm);
+            const auto nRead = rawStrm.readBytes(peekBuffer.data(), peekBuffer.size());
+            ImStreamWithEncoding istrm(peekBuffer.data(), nRead, encoding);
+
+            DelimitedTextReader::CellData<char> cellData(DelimitedTextReader::s_nMetaCharAutoDetect, '"', '\n');
+            auto reader = DelimitedTextReader::createReader(istrm, cellData);
+            DelimitedTextReader::read(reader, [&](size_t, size_t, decltype(cellData)& cd)
+            {
+                // Terminating reading after first cell since separator detection is ready.
+                cd.setReadStatus(DelimitedTextReader::cellHrvTerminateRead);
+            });
+            const auto formatDefInfo = reader.getFormatDefInfo();
+            const auto rawSep = formatDefInfo.getSep();
+            const auto nEffectiveSep = (rawSep > 0 && rawSep < 128) ? static_cast<char>(rawSep) : ',';
+            return CsvFormatDefinition(nEffectiveSep, '"', EndOfLineTypeN, encoding);
+        }
+    } // namespace DFG_DETAIL_NS
+
+    // Peeks at given file to determine its CSV format.
+    // Currently supports detecting:
+    //      -Any of the auto-detected separators
+    //      -Encoding
+    // The following are NOT detected:
+    //      -enclosing character
+    //      -End of line type
+    inline CsvFormatDefinition peekCsvFormatFromFile(const StringViewSzC& sPath)
+    {
+        return DFG_DETAIL_NS::peekCsvFormat(::DFG_MODULE_NS(io)::createInputStreamBinaryFile(ReadOnlySzParamC(sPath.c_str())));
+    }
     
     DFG_SUB_NS(cont)
     {
@@ -477,7 +514,6 @@ DFG_ROOT_NS_BEGIN{
                 }
                 return true;
             }
-                
 
             void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
             void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }

@@ -1128,6 +1128,55 @@ TEST(dfgCont, TableCsv_filterCellHandler)
     }
 }
 
+namespace
+{
+    static void verifyFormatInFile(const ::DFG_ROOT_NS::StringViewSzC svPath,
+                                   const char cSep,
+                                   const char cEnc,
+                                   const ::DFG_MODULE_NS(io)::EndOfLineType eolType,
+                                   const ::DFG_MODULE_NS(io)::TextEncoding encoding
+                                 )
+    {
+        using namespace DFG_ROOT_NS;
+        const auto format = peekCsvFormatFromFile(svPath);
+        EXPECT_EQ(cSep, format.separatorChar());
+        DFG_UNUSED(cEnc);
+        DFG_UNUSED(eolType);
+        //EXPECT_EQ(cEnc, format.enclosingChar()); Detection is not supported
+        //EXPECT_EQ(eolType, format.eolType()); Detection is not supported
+        EXPECT_EQ(encoding, format.textEncoding());
+    }
+}
+
+TEST(dfgCont, TableCsv_peekCsvFormatFromFile)
+{
+    using namespace ::DFG_MODULE_NS(io);
+
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16BE_BOM_sep_09_eol_n.csv",  '\t',   '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16BE_BOM_sep_2C_eol_n.csv",  ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16BE_BOM_sep_3B_eol_n.csv",  ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_09_eol_n.csv",  '\t',   '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_09_eol_rn.csv", '\t',   '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_2C_eol_n.csv",  ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_2C_eol_rn.csv", ',',    '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_3B_eol_n.csv",  ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_3B_eol_rn.csv", ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_09_eol_n.csv",  '\t',   '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_2C_eol_n.csv",  ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_3B_eol_n.csv",  ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32LE_BOM_sep_09_eol_n.csv",  '\t',   '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32LE_BOM_sep_2C_eol_n.csv",  ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32LE_BOM_sep_3B_eol_n.csv",  ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_09_eol_n.csv",     '\t',   '"', EndOfLineType::EndOfLineTypeN,   encodingUTF8);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_09_eol_rn.csv",    '\t',   '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF8);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_2C_eol_n.csv",     ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF8);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_2C_eol_rn.csv",    ',',    '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF8);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_3B_eol_n.csv",     ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF8);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_3B_eol_rn.csv",    ';',    '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF8);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_1F_eol_n.csv",     '\x1F', '"', EndOfLineType::EndOfLineTypeN,   encodingUTF8);
+    verifyFormatInFile("testfiles/csvtest_plain_ascii_3x3_sep_2C_eol_n.csv",           ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUnknown);
+}
+
 TEST(dfgCont, CsvConfig)
 {
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
