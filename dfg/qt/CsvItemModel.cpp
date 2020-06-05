@@ -29,6 +29,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../os/OutputFile.hpp"
 #include "../cont/MapVector.hpp"
 #include "../cont/IntervalSet.hpp"
+#include "../cont/IntervalSetSerialization.hpp"
 
 namespace
 {
@@ -731,8 +732,21 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
         setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(fileInfo.size()));
         auto rv = readData(loadOptions, [&]()
         {
-            m_table.readFromFile(qStringToFileApi8Bit(sDbFilePath), loadOptions); // TODO: return value
-            setFilePathWithoutSignalEmit(std::move(sDbFilePath));
+            const auto sIncludeRows = loadOptions.getProperty(CsvOptionProperty_includeRows, "");
+            const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
+            if (!sIncludeRows.empty())
+            {
+                auto filter = m_table.createFilterCellHandler();
+                filter.setIncludeRows(DFG_MODULE_NS(cont)::intervalSetFromString<int>(sIncludeRows));
+                m_table.readFromFile(sReadPath, loadOptions, filter);
+            }
+            else
+            {
+                m_table.readFromFile(sReadPath, loadOptions);
+                // Note: setting file path is done only for non-filtered reads because after filtered read it makes no sense
+                //       to conveniently overwrite source file given the (possibly) lossy opening.
+                setFilePathWithoutSignalEmit(std::move(sDbFilePath));
+            }
         });
 
         return rv;

@@ -1087,6 +1087,7 @@ public:
         else
         {
             m_spCompleterColumns.reset(new QLineEdit(this));
+            m_spIncludeRows.reset(new QLineEdit(this));
         }
 
         const auto defaultFormatSettings = (isSaveDialog()) ? m_saveOptions : peekCsvFormatFromFile(qStringToFileApi8Bit(sFilePath));
@@ -1158,10 +1159,18 @@ public:
         }
         else // Case: load dialog
         {
+            // Completer columns
             spLayout->addRow(tr("Completer columns"), m_spCompleterColumns.get());
             CsvItemModel::setCompleterHandlingFromInputSize(m_loadOptions, DFG_MODULE_NS(os)::fileSize(qStringToFileApi8Bit(sFilePath)), nullptr);
             m_spCompleterColumns->setText(m_loadOptions.getProperty(CsvOptionProperty_completerColumns, "*").c_str());
             m_spCompleterColumns->setToolTip(tr("Column indexes (starting from 0) where completion is available, use * to enable on all."));
+
+            // Include rows
+            spLayout->addRow(tr("Include rows"), m_spIncludeRows.get());
+            DFG_REQUIRE(m_spIncludeRows != nullptr);
+            m_spIncludeRows->setPlaceholderText(tr("all"));
+            m_spIncludeRows->setToolTip(tr("Defines rows to include from file, all when empty. If filtered table should have header from the original table, include row 0 in the filter\
+                                            <br>Syntax example: to include header and rows 4, 7 and 10-20, use <i>0; 4; 7; 10:20</i>"));
         }
         //spLayout->addRow(new QLabel(tr("Note: "), this));
 
@@ -1280,6 +1289,7 @@ public:
             m_loadOptions.m_cSep = sep.second;
             m_loadOptions.m_eolType = eolType;
             m_loadOptions.setProperty(CsvOptionProperty_completerColumns, m_spCompleterColumns->text().toStdString());
+            m_loadOptions.setProperty(CsvOptionProperty_includeRows, m_spIncludeRows->text().toStdString());
             m_loadOptions.textEncoding(encoding);
         }
         else // case: save dialog
@@ -1319,6 +1329,7 @@ public:
     std::unique_ptr<QCheckBox> m_spWriteBOM;
     // Load-only properties
     std::unique_ptr<QLineEdit> m_spCompleterColumns;
+    QObjectStorage<QLineEdit> m_spIncludeRows;
 }; // Class CsvFormatDefinitionDialog
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
