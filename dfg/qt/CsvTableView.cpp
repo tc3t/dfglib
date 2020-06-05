@@ -1066,10 +1066,11 @@ public:
     typedef DFG_CLASS_NAME(CsvItemModel)::LoadOptions LoadOptions;
     typedef DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptions;
 
-    CsvFormatDefinitionDialog(const DialogType dialogType, const DFG_CLASS_NAME(CsvTableView)::CsvModel* pModel)
+    CsvFormatDefinitionDialog(const DialogType dialogType, const DFG_CLASS_NAME(CsvTableView)::CsvModel* pModel, const QString& sFilePath = QString())
         : m_dialogType(dialogType)
         ,  m_saveOptions(pModel)
     {
+        using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
         removeContextHelpButtonFromDialog(this);
         auto spLayout = std::unique_ptr<QFormLayout>(new QFormLayout);
@@ -1088,14 +1089,18 @@ public:
             m_spCompleterColumns.reset(new QLineEdit(this));
         }
 
+        const auto defaultFormatSettings = (isSaveDialog()) ? m_saveOptions : peekCsvFormatFromFile(qStringToFileApi8Bit(sFilePath));
+
         // Separator
         {
             m_spSeparatorEdit->addItems(QStringList() << "\\x1f" << "," << "\\t" << ";");
             if (isSaveDialog())
             {
                 // When populating save dialog, default-select separator that is defined in model options.
-                addCurrentOptionToCombobox(*m_spSeparatorEdit, m_saveOptions.separatorChar());
+                addCurrentOptionToCombobox(*m_spSeparatorEdit, defaultFormatSettings.separatorChar());
             }
+            else // Case load dialog: adding peeked separator
+                addCurrentOptionToCombobox(*m_spSeparatorEdit, defaultFormatSettings.separatorChar());
             m_spSeparatorEdit->setEditable(true);
         }
 
@@ -1104,7 +1109,7 @@ public:
         if (isSaveDialog())
         {
             // When populating save dialog, default-select encloser that is defined in model options.
-            addCurrentOptionToCombobox(*m_spEnclosingEdit, m_saveOptions.enclosingChar());
+            addCurrentOptionToCombobox(*m_spEnclosingEdit, defaultFormatSettings.enclosingChar());
         }
         m_spEnclosingEdit->setEditable(true);
 
@@ -1113,7 +1118,7 @@ public:
         if (isSaveDialog())
         {
             // When populating save dialog, default-select eol that is defined in model options.
-            addCurrentOptionToCombobox(*m_spEolEdit, DFG_MODULE_NS(io)::eolStrFromEndOfLineType(m_saveOptions.eolType()).c_str());
+            addCurrentOptionToCombobox(*m_spEolEdit, DFG_MODULE_NS(io)::eolStrFromEndOfLineType(defaultFormatSettings.eolType()).c_str());
         }
         m_spEolEdit->setEditable(false);
 
@@ -1123,7 +1128,7 @@ public:
             m_spEnclosingOptions->addItem(tr("Every non-empty cell"), static_cast<int>(EbEncloseIfNonEmpty));
 
             m_spEncodingEdit->addItems(QStringList() << encodingToStrId(encodingUTF8) << encodingToStrId(encodingLatin1));
-            addCurrentOptionToCombobox(*m_spEncodingEdit, encodingToStrId(m_saveOptions.textEncoding()));
+            addCurrentOptionToCombobox(*m_spEncodingEdit, encodingToStrId(defaultFormatSettings.textEncoding()));
             m_spEncodingEdit->setEditable(false);
 
             m_spSaveHeader->setChecked(true);
@@ -1151,10 +1156,11 @@ public:
             spLayout->addRow(tr("Save header"), m_spSaveHeader.get());
             spLayout->addRow(tr("Write BOM"), m_spWriteBOM.get());
         }
-        else
+        else // Case: load dialog
         {
             spLayout->addRow(tr("Completer columns"), m_spCompleterColumns.get());
-            m_spCompleterColumns->setText("*"); // TODO: might want some logics here; not reasonable to have this enabled by default for huge files.
+            CsvItemModel::setCompleterHandlingFromInputSize(m_loadOptions, DFG_MODULE_NS(os)::fileSize(qStringToFileApi8Bit(sFilePath)), nullptr);
+            m_spCompleterColumns->setText(m_loadOptions.getProperty(CsvOptionProperty_completerColumns, "*").c_str());
             m_spCompleterColumns->setToolTip(tr("Column indexes (starting from 0) where completion is available, use * to enable on all."));
         }
         //spLayout->addRow(new QLabel(tr("Note: "), this));
@@ -1559,7 +1565,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
     const auto sPath = getOpenFileName(this);
     if (sPath.isEmpty())
         return false;
-    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeLoad, csvModel());
+    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeLoad, csvModel(), sPath);
     if (dlg.exec() != QDialog::Accepted)
         return false;
     auto loadOptions = dlg.getLoadOptions();

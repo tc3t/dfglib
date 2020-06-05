@@ -703,14 +703,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::importFiles(const QStringL
     return true; // TODO: more detailed return value (e.g. that how many were read successfully).
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes) const
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes, const CsvItemModel* pModel)
 {
     const auto optionsHasCompleterLimit = loadOptions.hasProperty(CsvOptionProperty_completerEnabledSizeLimit);
     const auto limit = (optionsHasCompleterLimit)
                 ?
                 DFG_MODULE_NS(str)::strTo<uint64>(loadOptions.getProperty(CsvOptionProperty_completerEnabledSizeLimit, "0").c_str())
                 :
-                getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledSizeLimit>(this);
+                getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledSizeLimit>(pModel);
     if (nSizeInBytes > limit)
     {
         // If size is bigger than limit, disable completer by removing all columns from completer columns.

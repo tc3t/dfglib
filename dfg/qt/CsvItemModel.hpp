@@ -324,6 +324,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool isSupportedEncodingForSaving(DFG_MODULE_NS(io)::TextEncoding encoding) const;
 
+        static void setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes, const CsvItemModel* pModel);
+        void setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes) const { setCompleterHandlingFromInputSize(loadOptions, nSizeInBytes, this); }
+
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const override;
         int columnCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -354,7 +357,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void clear();
 
         void insertColumnsImpl(int position, int count);
-        void setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes) const;
 
     private:
         template <class Stream_T>
