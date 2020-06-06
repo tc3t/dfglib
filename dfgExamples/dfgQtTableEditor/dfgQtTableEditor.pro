@@ -157,7 +157,7 @@ DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
 message("Version time epoch start is " $$version_time_epoch_start_readable " (" $$version_time_epoch_start ")")
 message("Version is " $$VERSION)
 
-CONFIG += c++11
+CONFIG += c++14
 
 msvc {
     # Adjustments on MSVC:
