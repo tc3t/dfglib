@@ -376,7 +376,7 @@ DFG_ROOT_NS_BEGIN{
             {
             public:
                 using IndexT = typename Table_T::IndexT;
-                using IntervalSet = IntervalSet<IndexT>;
+                using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<IndexT>;
 
                 FilterCellHandler(Table_T& rTable, RowContentFilter_T&& rowContentFilter)
                     : m_rTable(rTable)
