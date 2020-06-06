@@ -3,6 +3,7 @@
 #include "../dfgDefs.hpp"
 #include "MapVector.hpp"
 #include "../math.hpp"
+#include "../numericTypeTools.hpp"
 
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
@@ -16,6 +17,7 @@ class IntervalSet
 {
 public:
     using sizeType = ::std::size_t;
+    using IntervalCont = MapVectorSoA<T, T>;
 
     // Inserts single item
     void insert(const T& t);
@@ -33,14 +35,30 @@ public:
 
     sizeType intervalCount() const { return m_intervals.size(); }
 
-    void privMergeIntervalsStartingFrom(const sizeType n);
-
-    bool privIsWithinInterval(const sizeType n, const T& item) const;
-
     // Calls given function for each contiguous range in ascending order.
     // Function gets two arguments: (T lowerBound, T upperBound).
     template <class Func_T>
     void forEachContiguousRange(Func_T&& func) const;
+
+    bool empty() const;
+
+    // Returns the number of elements in range [lower, uppper].
+    // Note: like with sizeOfSet(), this will return faulty result if count would be > maxOf(sizeType).
+    sizeType countOfElementsInRange(const T lower, const T upper) const;
+
+    // Returns the largest element in the set.
+    // Precondition: !empty()
+    T maxElement() const;
+
+    // Returns the smallest element in the set.
+    // Precondition: !empty()
+    T minElement() const;
+
+    static sizeType countOfElementsInIntersection(const T lower0, const T upper0, const T lower1, const T upper1);
+
+    void privMergeIntervalsStartingFrom(const sizeType n);
+    bool privIsWithinInterval(const sizeType n, const T& item) const;
+    typename IntervalCont::const_iterator privFirstIntervalWithLeftLowerOrEqualTo(const T item) const;
 
     // Key = start, value = end. (both are inclusive)
     // Content in m_intervals shall always fulfill the following conditions:
@@ -170,6 +188,85 @@ void IntervalSet<T>::forEachContiguousRange(Func_T&& func) const
     {
         func(kv.first, kv.second);
     }
+}
+
+template <class T>
+auto IntervalSet<T>::countOfElementsInIntersection(const T lower0, const T upper0, const T lower1, const T upper1) -> sizeType
+{
+    DFG_STATIC_ASSERT(std::is_integral<T>::value, "This function is for integer types only");
+    if (lower0 > upper0 || lower1 > upper1)
+        return 0;
+    const auto firstLower = Min(lower0, lower1);
+    const auto firstUpper = (firstLower == lower0) ? upper0 : upper1;
+    const auto secondLower = (firstLower == lower0) ? lower1 : lower0;
+    const auto secondUpper = (firstLower == lower0) ? upper1 : upper0;
+    if (secondLower > firstUpper)
+        return 0; // Disjoint intervals.
+    else // Case: secondLower is within first interval.
+        return sizeType(Min(firstUpper, secondUpper) - Max(firstLower, secondLower)) + 1;
+}
+
+
+template <class T>
+auto IntervalSet<T>::countOfElementsInRange(const T lower, const T upper) const -> sizeType
+{
+    DFG_STATIC_ASSERT(std::is_integral<T>::value, "This function is for integer types only");
+    sizeType n = 0;
+    if (empty() || lower > upper)
+        return 0;
+    auto iter = privFirstIntervalWithLeftLowerOrEqualTo(lower);
+    if (iter == m_intervals.end())
+    {
+        // lower is less than left in all intervals -> starting from first interval
+        iter = m_intervals.begin();
+    }
+    const auto iterEnd = m_intervals.end();
+    for (; iter != iterEnd; ++iter)
+    {
+        if (iter->first > upper) // Remaining intervals are beyond upper so there's nothing left to do.
+            return n;
+        n += countOfElementsInIntersection(iter->first, iter->second, lower, upper);
+    }
+    return n;
+}
+
+template <class T>
+bool IntervalSet<T>::empty() const
+{
+    return m_intervals.empty();
+}
+
+// Returns the largest element in the set.
+// Precondition: !empty()
+template <class T>
+auto IntervalSet<T>::maxElement() const -> T
+{
+    DFG_ASSERT(!empty());
+    return (!empty()) ? m_intervals.backValue() : minValueOfType<T>();
+}
+
+// Returns the smallest element in the set.
+// Precondition: !empty()
+template <class T>
+auto IntervalSet<T>::minElement() const->T
+{
+    DFG_ASSERT(!empty());
+    return (!empty()) ? m_intervals.frontKey() : maxValueOfType<T>();
+}
+
+template <class T>
+auto IntervalSet<T>::privFirstIntervalWithLeftLowerOrEqualTo(const T item) const -> typename IntervalCont::const_iterator
+{
+    if (empty())
+        return m_intervals.end();
+    const auto keys = m_intervals.keyRange();
+    auto iterLb = std::lower_bound(keys.cbegin(), keys.cend(), item); // iterLb points to first element >= 'item'
+    if (iterLb != keys.end() && *iterLb == item)
+        return m_intervals.begin() + (iterLb - keys.begin());
+    if (iterLb == keys.begin())
+        return m_intervals.end();
+    --iterLb;
+    return m_intervals.begin() + (iterLb - keys.begin());
 }
 
 } } // module namespace

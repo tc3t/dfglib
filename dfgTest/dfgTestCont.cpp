@@ -1683,8 +1683,12 @@ TEST(dfgCont, IntervalSet)
             };
         
         verifyIntervals({});
+        EXPECT_TRUE(is.empty());
 
         is.insertClosed(1, 3);
+        EXPECT_FALSE(is.empty());
+        EXPECT_EQ(1, is.minElement());
+        EXPECT_EQ(3, is.maxElement());
         EXPECT_EQ(3, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
         verifyIntervals({1, 3});
@@ -1758,22 +1762,96 @@ TEST(dfgCont, IntervalSet)
         EXPECT_EQ(19, is.sizeOfSet());
         EXPECT_EQ(3, is.intervalCount());
         verifyIntervals({ -9, -8, -6, -6, -4, 11 });
+        EXPECT_FALSE(is.empty());
+        EXPECT_EQ(-9, is.minElement());
+        EXPECT_EQ(11, is.maxElement());
 
         is.insertClosed(-9, 12);
-        // Should now have [-9, -8], [-6, -6], [-4, 11]
+        // Should now have [-9, 12]
         EXPECT_EQ(22, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
+        EXPECT_FALSE(is.empty());
+        EXPECT_EQ(-9, is.minElement());
+        EXPECT_EQ(12, is.maxElement());
     }
 
     {
+        using namespace DFG_ROOT_NS;
         ::DFG_MODULE_NS(cont)::IntervalSet<int> is;
         for (int i = 0; i < 100; ++i)
             is.insertClosed(i, i);
         EXPECT_EQ(100, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
+        EXPECT_FALSE(is.empty());
+        EXPECT_EQ(0, is.minElement());
+        EXPECT_EQ(99, is.maxElement());
         is.insertClosed(0, 99);
         EXPECT_EQ(100, is.sizeOfSet());
         EXPECT_EQ(1, is.intervalCount());
+        EXPECT_FALSE(is.empty());
+        EXPECT_EQ(0, is.minElement());
+        EXPECT_EQ(99, is.maxElement());
+
+        EXPECT_EQ(1, is.countOfElementsInRange(0, 0));
+        EXPECT_EQ(51, is.countOfElementsInRange(0, 50));
+        EXPECT_EQ(100, is.countOfElementsInRange(0, 99));
+        EXPECT_EQ(100, is.countOfElementsInRange(0, 1000));
+        EXPECT_EQ(100, is.countOfElementsInRange(-100, 1000));
+        EXPECT_EQ(0, is.countOfElementsInRange(100, 1000));
+        EXPECT_EQ(100, is.countOfElementsInRange(minValueOfType<int>(), maxValueOfType<int>()));
+    }
+
+    // countOfElementsInRange()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(cont);
+        IntervalSet<int> is;
+        EXPECT_EQ(0, is.countOfElementsInRange(minValueOfType<int>(), maxValueOfType<int>()));
+        is.insertClosed(0, 10);
+        EXPECT_EQ(11, is.countOfElementsInRange(minValueOfType<int>(), maxValueOfType<int>()));
+        EXPECT_EQ(11, is.countOfElementsInRange(minValueOfType<int>(), 10));
+        EXPECT_EQ(1, is.countOfElementsInRange(10, maxValueOfType<int>()));
+
+        is.insert(20);
+        is.insertClosed(30, 33);
+        is.insertClosed(40, 45);
+        is.insert(50);
+
+        EXPECT_EQ(12, is.countOfElementsInRange(15, 50));
+        EXPECT_EQ(2, is.countOfElementsInRange(20, 30));
+        EXPECT_EQ(3, is.countOfElementsInRange(20, 31));
+        EXPECT_EQ(4, is.countOfElementsInRange(20, 32));
+        EXPECT_EQ(5, is.countOfElementsInRange(20, 33));
+        EXPECT_EQ(6, is.countOfElementsInRange(20, 40));
+        EXPECT_EQ(9, is.countOfElementsInRange(20, 43));
+        EXPECT_EQ(11, is.countOfElementsInRange(20, 45));
+        EXPECT_EQ(4, is.countOfElementsInRange(30, 39));
+        EXPECT_EQ(5, is.countOfElementsInRange(30, 40));
+        EXPECT_EQ(8, is.countOfElementsInRange(30, 43));
+        EXPECT_EQ(10, is.countOfElementsInRange(30, 45));
+        EXPECT_EQ(10, is.countOfElementsInRange(30, 46));
+        EXPECT_EQ(4, is.countOfElementsInRange(31, 40));
+        EXPECT_EQ(2, is.countOfElementsInRange(33, 40));
+        EXPECT_EQ(1, is.countOfElementsInRange(34, 40));
+        EXPECT_EQ(2, is.countOfElementsInRange(34, 41));
+        EXPECT_EQ(6, is.countOfElementsInRange(34, 45));
+        EXPECT_EQ(6, is.countOfElementsInRange(34, 46));
+        EXPECT_EQ(7, is.countOfElementsInRange(34, 50));
+        EXPECT_EQ(7, is.countOfElementsInRange(34, 51));
+        EXPECT_EQ(0, is.countOfElementsInRange(51, 34));
+    }
+
+    // countOfElementsInIntersection
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(cont);
+        EXPECT_EQ(256, IntervalSet<int8>::countOfElementsInIntersection(-128, 127, -128, 127));
+        EXPECT_EQ(128, IntervalSet<int8>::countOfElementsInIntersection(0, 127, -128, 127));
+        EXPECT_EQ(128, IntervalSet<int8>::countOfElementsInIntersection(-128, 127, 0, 127));
+        EXPECT_EQ(0, IntervalSet<int8>::countOfElementsInIntersection(0, 127, -128, -127));
+        EXPECT_EQ(0, IntervalSet<int8>::countOfElementsInIntersection(-128, -127, 0, 127));
+        EXPECT_EQ(51, IntervalSet<int8>::countOfElementsInIntersection(-128, 50, 0, 127));
+        EXPECT_EQ(51, IntervalSet<int8>::countOfElementsInIntersection(0, 127, -128, 50));
     }
 }
 
