@@ -48,7 +48,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     const char CsvOptionProperty_completerColumns[]             = "completerColumns";
     const char CsvOptionProperty_completerEnabledSizeLimit[]    = "completerEnabledSizeLimit";
-    const char CsvOptionProperty_includeRows[]                  = "includeRows"; // To define rows to read from file, as IntervalSet syntax.
+    const char CsvOptionProperty_includeRows[]                  = "includeRows"; // To define rows to read from file, as IntervalSet syntax. 0-based index
+    const char CsvOptionProperty_includeColumns[]               = "includeColumns"; // To define columns to read from file, as IntervalSet syntax. 0-based index
 
     namespace DFG_DETAIL_NS
     {

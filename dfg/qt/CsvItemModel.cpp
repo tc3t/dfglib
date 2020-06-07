@@ -733,11 +733,17 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
         auto rv = readData(loadOptions, [&]()
         {
             const auto sIncludeRows = loadOptions.getProperty(CsvOptionProperty_includeRows, "");
+            const auto sIncludeColumns = loadOptions.getProperty(CsvOptionProperty_includeColumns, "");
             const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
-            if (!sIncludeRows.empty())
+            if (!sIncludeRows.empty() || !sIncludeColumns.empty())
             {
                 auto filter = m_table.createFilterCellHandler();
-                filter.setIncludeRows(DFG_MODULE_NS(cont)::intervalSetFromString<int>(sIncludeRows));
+                if (!sIncludeRows.empty())
+                    filter.setIncludeRows(DFG_MODULE_NS(cont)::intervalSetFromString<int>(sIncludeRows));
+                else
+                    filter.setIncludeRows(DFG_MODULE_NS(cont)::IntervalSet<int>::makeSingleInterval(0, maxValueOfType<int>()));
+                if (!sIncludeColumns.empty())
+                    filter.setIncludeColumns(DFG_MODULE_NS(cont)::intervalSetFromString<int>(sIncludeColumns));
                 m_table.readFromFile(sReadPath, loadOptions, filter);
             }
             else

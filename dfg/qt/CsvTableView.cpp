@@ -1088,6 +1088,7 @@ public:
         {
             m_spCompleterColumns.reset(new QLineEdit(this));
             m_spIncludeRows.reset(new QLineEdit(this));
+            m_spIncludeColumns.reset(new QLineEdit(this));
         }
 
         const auto defaultFormatSettings = (isSaveDialog()) ? m_saveOptions : peekCsvFormatFromFile(qStringToFileApi8Bit(sFilePath));
@@ -1170,7 +1171,14 @@ public:
             DFG_REQUIRE(m_spIncludeRows != nullptr);
             m_spIncludeRows->setPlaceholderText(tr("all"));
             m_spIncludeRows->setToolTip(tr("Defines rows to include from file, all when empty. If filtered table should have header from the original table, include row 0 in the filter\
-                                            <br>Syntax example: to include header and rows 4, 7 and 10-20, use <i>0; 4; 7; 10:20</i>"));
+                                            <br>Syntax example: to include header and rows 4, 7 and 10-20: <i>0; 4; 7; 10:20</i>"));
+
+            // Include columns
+            spLayout->addRow(tr("Include columns"), m_spIncludeColumns.get());
+            DFG_REQUIRE(m_spIncludeColumns != nullptr);
+            m_spIncludeColumns->setPlaceholderText(tr("all"));
+            m_spIncludeColumns->setToolTip(tr("Defines columns to include from file, all when empty.\
+                                              <br>Syntax example: to include first, second and fourth column: <i>0:1; 3</i>"));
         }
         //spLayout->addRow(new QLabel(tr("Note: "), this));
 
@@ -1290,6 +1298,7 @@ public:
             m_loadOptions.m_eolType = eolType;
             m_loadOptions.setProperty(CsvOptionProperty_completerColumns, m_spCompleterColumns->text().toStdString());
             m_loadOptions.setProperty(CsvOptionProperty_includeRows, m_spIncludeRows->text().toStdString());
+            m_loadOptions.setProperty(CsvOptionProperty_includeColumns, m_spIncludeColumns->text().toStdString());
             m_loadOptions.textEncoding(encoding);
         }
         else // case: save dialog
@@ -1330,6 +1339,7 @@ public:
     // Load-only properties
     std::unique_ptr<QLineEdit> m_spCompleterColumns;
     QObjectStorage<QLineEdit> m_spIncludeRows;
+    QObjectStorage<QLineEdit> m_spIncludeColumns;
 }; // Class CsvFormatDefinitionDialog
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
