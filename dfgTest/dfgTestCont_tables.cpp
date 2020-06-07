@@ -1006,6 +1006,12 @@ TEST(dfgCont, TableCsv_filterCellHandler)
                               "\n"
                               "50,51";
 
+    const char szExample2[] = "00,01,02,03\n"
+                              "10,11,12,13\n"
+                              "20,21,22,23\n"
+                              "30,31,32,33\n"
+                              "40,41,42,43\n";
+
     using IndexT = uint32;
     using TableT = DFG_MODULE_NS(cont)::TableCsv<char, IndexT>;
 
@@ -1125,6 +1131,48 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_STREQ("14510", table(0, 0).c_str());
         EXPECT_STREQ("26690", table(0, 1).c_str());
         EXPECT_STREQ("41354", table(0, 2).c_str());
+    }
+
+    // Column filter
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(cont);
+        {
+            TableT table;
+            auto filterCellHandler = table.createFilterCellHandler();
+            filterCellHandler.setIncludeRows(intervalSetFromString<IndexT>("1;3"));
+            filterCellHandler.setIncludeColumns(intervalSetFromString<IndexT>(""));
+            table.readFromMemory(szExample2, DFG_COUNTOF_SZ(szExample2), table.defaultReadFormat(), filterCellHandler);
+            EXPECT_EQ(0, table.cellCountNonEmpty());
+        }
+
+        {
+            TableT table;
+            auto filterCellHandler = table.createFilterCellHandler();
+            filterCellHandler.setIncludeRows(intervalSetFromString<IndexT>("1;3"));
+            filterCellHandler.setIncludeColumns(intervalSetFromString<IndexT>("3"));
+            table.readFromMemory(szExample2, DFG_COUNTOF_SZ(szExample2), table.defaultReadFormat(), filterCellHandler);
+            EXPECT_EQ(2, table.rowCountByMaxRowIndex());
+            EXPECT_EQ(1, table.colCountByMaxColIndex());
+            EXPECT_STREQ("13", table(0, 0).c_str());
+            EXPECT_STREQ("33", table(1, 0).c_str());
+        }
+
+        {
+            TableT table;
+            auto filterCellHandler = table.createFilterCellHandler();
+            filterCellHandler.setIncludeRows(intervalSetFromString<IndexT>("1;3"));
+            filterCellHandler.setIncludeColumns(intervalSetFromString<IndexT>("0:1;3"));
+            table.readFromMemory(szExample2, DFG_COUNTOF_SZ(szExample2), table.defaultReadFormat(), filterCellHandler);
+            EXPECT_EQ(2, table.rowCountByMaxRowIndex());
+            EXPECT_EQ(3, table.colCountByMaxColIndex());
+            EXPECT_STREQ("10", table(0, 0).c_str());
+            EXPECT_STREQ("11", table(0, 1).c_str());
+            EXPECT_STREQ("13", table(0, 2).c_str());
+            EXPECT_STREQ("30", table(1, 0).c_str());
+            EXPECT_STREQ("31", table(1, 1).c_str());
+            EXPECT_STREQ("33", table(1, 2).c_str());
+        }
     }
 }
 

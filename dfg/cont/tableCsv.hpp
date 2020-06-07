@@ -389,6 +389,12 @@ DFG_ROOT_NS_BEGIN{
                     m_includeRows = std::move(is);
                 }
 
+                // Note: Indexes starts from 0.
+                void setIncludeColumns(IntervalSet is)
+                {
+                    m_includeColumns = std::move(is);
+                }
+
                 void operator()(const size_t nRowArg, const size_t nColArg, const char* pData, const size_t nCount)
                 {
                     if (!isValWithinLimitsOfType<IndexT>(nRowArg) || !isValWithinLimitsOfType<IndexT>(nColArg))
@@ -401,9 +407,20 @@ DFG_ROOT_NS_BEGIN{
                             m_nFilteredRowCount++;
                         return;
                     }
+                    if (!m_includeColumns.hasValue(nCol))
+                        return;
+                    const bool bAllColumns = m_includeColumns.isSingleInterval(0, maxValueOfType<IndexT>());
+                    auto nTargetCol = nCol;
+                    if (!bAllColumns)
+                    {
+                        auto iter = m_mapInputColumnToTargetColumn.find(nCol);
+                        if (iter == m_mapInputColumnToTargetColumn.end())
+                            iter = m_mapInputColumnToTargetColumn.insert(nCol, static_cast<IndexT>(m_includeColumns.countOfElementsInRange(0, nCol) - 1)).first;
+                        nTargetCol = iter->second;
+                    }
                     const auto nTargetRow = nRow - m_nFilteredRowCount;
-                    if (m_rowContentFilter(m_rTable, nTargetRow, nCol, pData, nCount))
-                        m_rTable.setElement(nTargetRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
+                    if (m_rowContentFilter(m_rTable, nTargetRow, nTargetCol, pData, nCount))
+                        m_rTable.setElement(nTargetRow, nTargetCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
                 };
 
                 void onReadDone()
@@ -413,6 +430,8 @@ DFG_ROOT_NS_BEGIN{
 
                 Table_T& m_rTable;
                 IntervalSet m_includeRows;
+                IntervalSet m_includeColumns;
+                MapVectorSoA<IndexT, IndexT> m_mapInputColumnToTargetColumn;
                 IndexT m_nFilteredRowCount = 0;
                 RowContentFilter_T m_rowContentFilter;
             };
@@ -470,20 +489,21 @@ DFG_ROOT_NS_BEGIN{
 
             // Creates filter cell handler that can used to do filtered reading.
             // Note: lifetime of returned object is bound to lifetime of 'this'
+            // Returned filter has all rows excluded and all columns included
             auto createFilterCellHandler() -> DFG_DETAIL_NS::FilterCellHandler<ThisClass, DFG_DETAIL_NS::RowContentDummyFilter>
             {
-                return DFG_DETAIL_NS::FilterCellHandler<ThisClass, DFG_DETAIL_NS::RowContentDummyFilter>(*this, DFG_DETAIL_NS::RowContentDummyFilter());
+                auto rv = DFG_DETAIL_NS::FilterCellHandler<ThisClass, DFG_DETAIL_NS::RowContentDummyFilter>(*this, DFG_DETAIL_NS::RowContentDummyFilter());
+                rv.setIncludeColumns(IntervalSet<IndexT>::makeSingleInterval(0, maxValueOfType<IndexT>()));
+                return rv;
             }
 
             template <class StringMatcher_T>
             auto createFilterCellHandler(StringMatcher_T matcher, const IndexT nMatchCol = DFG_DETAIL_NS::anyColumn<IndexT>()) -> DFG_DETAIL_NS::FilterCellHandler<ThisClass, RowContentFilter<StringMatcher_T>>
             {
                 auto rv = DFG_DETAIL_NS::FilterCellHandler<ThisClass, RowContentFilter<StringMatcher_T>>(*this, RowContentFilter<StringMatcher_T>(matcher, nMatchCol));
-                // When using string matcher filtering, by default enabling all rows.
-                IntervalSet<IndexT> is;
-                const auto maxVal = NumericTraits<IndexT>::maxValue;
-                is.insertClosed(0, maxVal);
-                rv.setIncludeRows(is);
+                // When using string matcher filtering, by default enabling all rows and columns.
+                rv.setIncludeRows(IntervalSet<IndexT>::makeSingleInterval(0, maxValueOfType<IndexT>()));
+                rv.setIncludeColumns(IntervalSet<IndexT>::makeSingleInterval(0, maxValueOfType<IndexT>()));
                 return rv;
             }
 
