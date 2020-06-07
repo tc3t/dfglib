@@ -1853,6 +1853,24 @@ TEST(dfgCont, IntervalSet)
         EXPECT_EQ(51, IntervalSet<int8>::countOfElementsInIntersection(-128, 50, 0, 127));
         EXPECT_EQ(51, IntervalSet<int8>::countOfElementsInIntersection(0, 127, -128, 50));
     }
+
+    // isSingleInterval(), makeSingleInterval()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(cont);
+        EXPECT_TRUE(IntervalSet<int>::makeSingleInterval(0, 2).isSingleInterval(0, 2));
+        EXPECT_FALSE(IntervalSet<int>::makeSingleInterval(0, 2).isSingleInterval(0, 3));
+        EXPECT_FALSE(IntervalSet<int>::makeSingleInterval(0, 2).isSingleInterval(1, 2));
+        EXPECT_TRUE(IntervalSet<int>::makeSingleInterval(1, 0).empty());
+        IntervalSet<int> is;
+        EXPECT_FALSE(is.isSingleInterval(1, 3));
+        is.insert(1);
+        EXPECT_TRUE(is.isSingleInterval(1, 1));
+        is.insert(2);
+        EXPECT_TRUE(is.isSingleInterval(1, 2));
+        is.insert(4);
+        EXPECT_FALSE(is.isSingleInterval(1, 4));
+    }
 }
 
 namespace

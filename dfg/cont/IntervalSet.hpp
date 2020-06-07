@@ -18,6 +18,9 @@ class IntervalSet
 public:
     using sizeType = ::std::size_t;
     using IntervalCont = MapVectorSoA<T, T>;
+    using ReadOnlyInputT = typename std::conditional<std::is_integral<T>::value, T, const T&>::type;
+
+    static IntervalSet makeSingleInterval(ReadOnlyInputT left, ReadOnlyInputT right);
 
     // Inserts single item
     void insert(const T& t);
@@ -34,6 +37,8 @@ public:
     sizeType sizeOfSet() const;
 
     sizeType intervalCount() const { return m_intervals.size(); }
+
+    bool isSingleInterval(ReadOnlyInputT left, ReadOnlyInputT right) const;
 
     // Calls given function for each contiguous range in ascending order.
     // Function gets two arguments: (T lowerBound, T upperBound).
@@ -66,7 +71,21 @@ public:
     //  2. m_intervals.value(i) < m_intervals.keyRange()[i + 1] for all i in [0, m_intervals.size() - 1[
     // In other words all intervals are disjoint and stored in ascending order.
     MapVectorSoA<T, T> m_intervals; 
-};
+}; // IntervalSet
+
+template <class T>
+auto IntervalSet<T>::makeSingleInterval(ReadOnlyInputT left, ReadOnlyInputT right) -> IntervalSet<T>
+{
+    IntervalSet<T> is;
+    is.insertClosed(left, right);
+    return is;
+}
+
+template <class T>
+bool IntervalSet<T>::isSingleInterval(ReadOnlyInputT left, ReadOnlyInputT right) const
+{
+    return m_intervals.size() == 1 && m_intervals.frontKey() == left && m_intervals.frontValue() == right;
+}
 
 template <class T>
 void IntervalSet<T>::insert(const T& t)
