@@ -3174,6 +3174,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     if (nColumnCount < 1)
         return;
 
+    if (!m_spCache)
+        m_spCache.reset(new ChartDataCache);
+
     std::array<DataSourceIndex, 2> columnIndexes;
     std::array<bool, 2> rowFlags;
     auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
