@@ -1042,9 +1042,10 @@ QString GraphDefinitionWidget::getGuideString()
     <li>Setting default config: {"type":"global_config","show_legend":true,"auto_axis_labels":true}</li>
     <li>Basic graph: {"type":"xy"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
-    <li>Basic graph with all options present: {"enabled":true,"line_style":"basic","point_style":"basic","line_colour":"#7fFF00FF","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
+    <li>Basic graph with most options present: {"enabled":true,"line_style":"basic","point_style":"basic","line_colour":"#7fFF00FF","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
     <li>Setting panel title and axis labels: {"type":"panel_config","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)","x_label":"This is x axis label","y_label":"This is y axis label"}
+    <li>Histogram from source named 'table': {"type":"histogram","data_source":"table","name":"Basic histogram"}
     <li>Disabling an entry by commenting: #{"type":"histogram","name":"Basic histogram"}
 </ul>
 
@@ -1063,6 +1064,7 @@ QString GraphDefinitionWidget::getGuideString()
     </ul>
    <li><i>name</i>: name of the object, shown e.g. in legend.</li>
    <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
+   <li><i>data_source</i>: Defines data source from which to fetch data. If omitted, default source is used.</li>
 </ul>
 
 <h2>Fields for type <i>xy</i></h2>
