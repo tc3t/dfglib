@@ -330,6 +330,12 @@ public:
         return length();
     }
 
+    // Returns size() as int through saturateCast.
+    int sizeAsInt() const
+    {
+        return saturateCast<int>(size());
+    }
+
     PtrRawT dataRaw() const
     {
         return toCharPtr_raw(this->data());

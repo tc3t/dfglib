@@ -662,3 +662,30 @@ TEST(dfgQt, qstringUtils)
     EXPECT_EQ(QString("abc"), untypedViewToQStringAsUtf8("abc"));
     EXPECT_EQ(DFG_UTF8("abc"), qStringToStringUtf8(QString("abc")));
 }
+
+TEST(dfgQt, StringMatchDefinition)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+#define DFGTEST_TEMP_VERIFY(JSON_STR, EXPECTED_STR, EXPECTED_CASE, EXPECTED_SYNTAX) \
+    { \
+        const auto smd = StringMatchDefinition::fromJson(DFG_UTF8(JSON_STR)); \
+        EXPECT_EQ(EXPECTED_STR, smd.matchString()); \
+        EXPECT_EQ(EXPECTED_CASE, smd.caseSensitivity()); \
+        EXPECT_EQ(EXPECTED_SYNTAX, smd.patternSyntax()); \
+    }
+
+    DFGTEST_TEMP_VERIFY("non_json", "*", Qt::CaseInsensitive, QRegExp::Wildcard);
+    DFGTEST_TEMP_VERIFY("{}", "", Qt::CaseInsensitive, QRegExp::Wildcard);
+    DFGTEST_TEMP_VERIFY(R"( { "text": "abc" } )", "abc", Qt::CaseInsensitive, QRegExp::Wildcard);
+    DFGTEST_TEMP_VERIFY(R"( { "case_sensitive": true } )", "", Qt::CaseSensitive, QRegExp::Wildcard);
+    DFGTEST_TEMP_VERIFY(R"( { "type": "wildcard" } )", "", Qt::CaseInsensitive, QRegExp::Wildcard);
+    DFGTEST_TEMP_VERIFY(R"( { "type": "wildcard_unix" } )", "", Qt::CaseInsensitive, QRegExp::WildcardUnix);
+    DFGTEST_TEMP_VERIFY(R"( { "type": "fixed" } )", "", Qt::CaseInsensitive, QRegExp::FixedString);
+    DFGTEST_TEMP_VERIFY(R"( { "type": "reg_exp" } )", "", Qt::CaseInsensitive, QRegExp::RegExp);
+    DFGTEST_TEMP_VERIFY(R"( { "type": "reg_exp2" } )", "", Qt::CaseInsensitive, QRegExp::RegExp2);
+    DFGTEST_TEMP_VERIFY(R"( { "type": "reg_exp_w3c_xml_schema_11" } )", "", Qt::CaseInsensitive, QRegExp::W3CXmlSchema11);
+    DFGTEST_TEMP_VERIFY(R"( { "text": "a|B", "case_sensitive":true, "type": "reg_exp" } )", "a|B", Qt::CaseSensitive, QRegExp::RegExp);
+
+#undef DFGTEST_TEMP_VERIFY
+}
