@@ -258,7 +258,7 @@ DFG_ROOT_NS_BEGIN{
             class RowContentDummyFilter
             {
             public:
-                constexpr bool operator()(Dummy, Dummy, Dummy, Dummy, Dummy) const
+                constexpr bool operator()(Dummy, Dummy, Dummy, Dummy, Dummy, Dummy, Dummy) const
                 {
                     return true;
                 }
@@ -294,12 +294,13 @@ DFG_ROOT_NS_BEGIN{
                     return m_nFilterCol == anyColumn<IndexT>();
                 }
 
-                void updateFilterStatus(Table_T& rTable, const IndexT nRow, const IndexT nCol, const char* pData, const size_t nCount)
+                void updateFilterStatus(Table_T& rTable, const IndexT nInputRow, const IndexT nInputCol, const IndexT nTargetRow, const IndexT nTargetCol, const char* pData, const size_t nCount)
                 {
-                    DFG_UNUSED(nRow);
-                    if (nCol != m_nFilterCol)
+                    DFG_UNUSED(nTargetRow);
+                    DFG_UNUSED(nTargetCol);
+                    if (nInputCol != m_nFilterCol)
                         return;
-                    if (m_stringMatcher.isMatch(toView(pData, nCount)))
+                    if (m_stringMatcher.isMatch(nInputRow, toView(pData, nCount)))
                     {
                         // When having single column matching and match found from target column, flushing buffer to destination and setting status
                         // so that remaining items on the row gets written directly to destination.
@@ -312,7 +313,7 @@ DFG_ROOT_NS_BEGIN{
 
                 void writeToDestination(Table_T& table, const IndexT nCol, const StringViewT& sv)
                 {
-                    table.setElement(m_nBufferRow - m_nFilteredRowCount, nCol, sv);
+                    table.setElement(m_nBufferTargetRow - m_nFilteredRowCount, nCol, sv);
                 }
 
                 void writeToDestination(Table_T& table, RowBuffer& rowBuffer)
@@ -327,48 +328,50 @@ DFG_ROOT_NS_BEGIN{
                     return StringViewT(TypedCharPtrUtf8R(pData), nCount);
                 }
 
-                void finishRow(Table_T& rTable, const IndexT nNewRow)
+                void finishRow(Table_T& rTable, const IndexT nNewInputRow, const IndexT nNewTargetRow)
                 {
                     if (!m_rowBuffer.empty())
                     {
                         // Note: ending up here with single column filter means that filter column was not encountered (e.g. filter column at 3 and only 2 columns at current row)
                         //       In this case passing the whole buffer to matcher and letting it decide how to interpret such case.
-                        if (m_rowFilterStatus != RowFilterStatus::ignore && m_stringMatcher.isMatch(m_rowBuffer))
+                        if (m_rowFilterStatus != RowFilterStatus::ignore && m_stringMatcher.isMatch(m_nBufferInputRow, m_rowBuffer))
                             writeToDestination(rTable, m_rowBuffer);
                         else
                             m_nFilteredRowCount++;
                         m_rowBuffer.clear_noDealloc();
                     }
-                    m_nBufferRow = nNewRow;
+                    m_nBufferInputRow = nNewInputRow;
+                    m_nBufferTargetRow = nNewTargetRow;
                     m_rowFilterStatus = RowFilterStatus::unresolved;
                 }
 
                 // Return true if caller should add data to table, false otherwise. With this implementation 
                 // always returning false since all writing gets handling by 'this'.
-                bool operator()(Table_T& rTable, const IndexT nRow, const IndexT nCol, const char* pData, const size_t nCount)
+                bool operator()(Table_T& rTable, const IndexT nInputRow, const IndexT nInputCol, const IndexT nTargetRow, const IndexT nTargetCol, const char* pData, const size_t nCount)
                 {
-                    if (nCol == 0) // On column 0 (=new row), checking if previous row needs to be added to destination table.
-                        finishRow(rTable, nRow);
-                    updateFilterStatus(rTable, nRow, nCol, pData, nCount);
+                    if (nTargetCol == 0) // On columnm 0 (=new row), checking if previous row needs to be added to destination table.
+                        finishRow(rTable, nInputRow, nTargetRow);
+                    updateFilterStatus(rTable, nInputRow, nInputCol, nTargetRow, nTargetCol, pData, nCount);
                     if (m_rowFilterStatus == RowFilterStatus::unresolved)
-                        m_rowBuffer.insert(nCol, StringViewT(TypedCharPtrUtf8R(pData), TypedCharPtrUtf8R(pData + nCount)));
+                        m_rowBuffer.insert(nInputCol, StringViewT(TypedCharPtrUtf8R(pData), TypedCharPtrUtf8R(pData + nCount)));
                     else if (m_rowFilterStatus == RowFilterStatus::include)
-                        writeToDestination(rTable, nCol, toView(pData, nCount));
+                        writeToDestination(rTable, nTargetCol, toView(pData, nCount));
                     return false;
                 }
 
                 void onReadDone(Table_T& rTable)
                 {
-                    finishRow(rTable, m_nBufferRow + 1);
+                    finishRow(rTable, m_nBufferInputRow + 1, m_nBufferTargetRow + 1);
                 }
 
                 IndexT m_nFilterCol = anyColumn<IndexT>();
                 StringMatcher_T m_stringMatcher;
                 RowFilterStatus m_rowFilterStatus = RowFilterStatus::unresolved;
                 RowBuffer m_rowBuffer;
-                IndexT m_nBufferRow = 0; // Stores index of the row that m_rowBuffer stores.
-                IndexT m_nFilteredRowCount = 0;
-            };
+                IndexT m_nBufferInputRow = 0; // Stores input index of the row that m_rowBuffer stores.
+                IndexT m_nBufferTargetRow = 0; // Stores target index of the row that m_rowBuffer stores.
+                IndexT m_nFilteredRowCount = 0; // Stores the number of rows filter because of content filter. Note: row include filter not included here.
+            }; // RowContentFilter
 
 
             template <class Table_T, class RowContentFilter_T>
@@ -399,27 +402,27 @@ DFG_ROOT_NS_BEGIN{
                 {
                     if (!isValWithinLimitsOfType<IndexT>(nRowArg) || !isValWithinLimitsOfType<IndexT>(nColArg))
                         return;
-                    const auto nRow = static_cast<IndexT>(nRowArg);
-                    const auto nCol = static_cast<IndexT>(nColArg);
-                    if (!m_includeRows.hasValue(nRow))
+                    const auto nInputRow = static_cast<IndexT>(nRowArg);
+                    const auto nInputCol = static_cast<IndexT>(nColArg);
+                    if (!m_includeRows.hasValue(nInputRow))
                     {
-                        if (nCol == 0)
+                        if (nInputCol == 0)
                             m_nFilteredRowCount++;
                         return;
                     }
-                    if (!m_includeColumns.hasValue(nCol))
+                    if (!m_includeColumns.hasValue(nInputCol))
                         return;
                     const bool bAllColumns = m_includeColumns.isSingleInterval(0, maxValueOfType<IndexT>());
-                    auto nTargetCol = nCol;
+                    auto nTargetCol = nInputCol;
                     if (!bAllColumns)
                     {
-                        auto iter = m_mapInputColumnToTargetColumn.find(nCol);
+                        auto iter = m_mapInputColumnToTargetColumn.find(nInputCol);
                         if (iter == m_mapInputColumnToTargetColumn.end())
-                            iter = m_mapInputColumnToTargetColumn.insert(nCol, static_cast<IndexT>(m_includeColumns.countOfElementsInRange(0, nCol) - 1)).first;
+                            iter = m_mapInputColumnToTargetColumn.insert(nInputCol, static_cast<IndexT>(m_includeColumns.countOfElementsInRange(0, nInputCol) - 1)).first;
                         nTargetCol = iter->second;
                     }
-                    const auto nTargetRow = nRow - m_nFilteredRowCount;
-                    if (m_rowContentFilter(m_rTable, nTargetRow, nTargetCol, pData, nCount))
+                    const auto nTargetRow = nInputRow - m_nFilteredRowCount;
+                    if (m_rowContentFilter(m_rTable, nInputRow, nInputCol, nTargetRow, nTargetCol, pData, nCount))
                         m_rTable.setElement(nTargetRow, nTargetCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
                 };
 
@@ -434,7 +437,7 @@ DFG_ROOT_NS_BEGIN{
                 MapVectorSoA<IndexT, IndexT> m_mapInputColumnToTargetColumn;
                 IndexT m_nFilteredRowCount = 0;
                 RowContentFilter_T m_rowContentFilter;
-            };
+            }; // Class FilterCellHandler
         } // namespace DFG_DETAIL_NS
 
 
@@ -451,7 +454,9 @@ DFG_ROOT_NS_BEGIN{
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T> DelimitedTextReaderBufferTypeT;
             using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
             template <class StringMatcher_T> using RowContentFilter = DFG_DETAIL_NS::RowContentFilter<ThisClass, StringMatcher_T>;
-            using RowContentFilterBuffer = DFG_DETAIL_NS::RowContentFilterBuffer<IndexT>;
+
+            // RowContentFilterBuffer is a map-like structure that can be iterated with regular range-based for like described in iterating through MapToStringViews.
+            using RowContentFilterBuffer = DFG_DETAIL_NS::RowContentFilterBuffer<IndexT>; 
 
         private:
             class DefaultCellHandler

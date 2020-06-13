@@ -956,31 +956,32 @@ namespace
             m_s = sv.c_str();
         }
 
-        bool isMatch(const DFG_ROOT_NS::StringViewUtf8& sv)
+        bool isMatch(const int nInputRow, const DFG_ROOT_NS::StringViewUtf8& sv)
         {
+            DFG_UNUSED(nInputRow);
             std::string s(sv.dataRaw(), sv.length());
             return s.find(m_s.rawStorage()) != std::string::npos;
         }
 
         template <class Char_T, class Index_T>
-        bool isMatchImpl(const typename DFG_MODULE_NS(cont)::TableCsv<Char_T, Index_T>::RowContentFilterBuffer& rowBuffer)
+        bool isMatchImpl(const int nInputRow, const typename DFG_MODULE_NS(cont)::TableCsv<Char_T, Index_T>::RowContentFilterBuffer& rowBuffer)
         {
             for (const auto& item : rowBuffer)
             {
-                if (isMatch(item.second(rowBuffer)))
+                if (isMatch(nInputRow, item.second(rowBuffer)))
                     return true;
             }
             return false;
         }
 
-        bool isMatch(const DFG_MODULE_NS(cont)::TableCsv<char, DFG_ROOT_NS::uint32>::RowContentFilterBuffer& rowBuffer)
+        bool isMatch(const int nInputRow, const DFG_MODULE_NS(cont)::TableCsv<char, DFG_ROOT_NS::uint32>::RowContentFilterBuffer& rowBuffer)
         {
-            return isMatchImpl<char, DFG_ROOT_NS::uint32>(rowBuffer);
+            return isMatchImpl<char, DFG_ROOT_NS::uint32>(nInputRow, rowBuffer);
         }
 
-        bool isMatch(const DFG_MODULE_NS(cont)::TableCsv<char, int>::RowContentFilterBuffer& rowBuffer)
+        bool isMatch(const int nInputRow, const DFG_MODULE_NS(cont)::TableCsv<char, int>::RowContentFilterBuffer& rowBuffer)
         {
-            return isMatchImpl<char, int>(rowBuffer);
+            return isMatchImpl<char, int>(nInputRow, rowBuffer);
         }
 
         DFG_ROOT_NS::StringUtf8 m_s;
