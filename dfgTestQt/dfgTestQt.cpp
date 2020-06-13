@@ -688,4 +688,11 @@ TEST(dfgQt, StringMatchDefinition)
     DFGTEST_TEMP_VERIFY(R"( { "text": "a|B", "case_sensitive":true, "type": "reg_exp" } )", "a|B", Qt::CaseSensitive, QRegExp::RegExp);
 
 #undef DFGTEST_TEMP_VERIFY
+
+    {
+        EXPECT_FALSE(StringMatchDefinition("A", Qt::CaseSensitive, QRegExp::Wildcard).isMatchWith(DFG_UTF8("abc")));
+        EXPECT_FALSE(StringMatchDefinition("A", Qt::CaseSensitive, QRegExp::Wildcard).isMatchWith(QString("abc")));
+        EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, QRegExp::Wildcard).isMatchWith(DFG_UTF8("abc")));
+        EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, QRegExp::Wildcard).isMatchWith(QString("abc")));
+    }
 }

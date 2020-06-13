@@ -113,10 +113,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             const auto isSpecialWildcardChar = [](const QChar& c) { return c == '*' || c == '?' || c == '[' || c == ']'; };
 
             // TODO: handle other pattern syntaxes as well (e.g. RegExp without special characters could be done with substring matching).
-            const bool bCanDoSubStringMatching = (m_patternSyntax == QRegExp::FixedString)
+            const bool bCanDoSubStringMatching = m_caseSensitivity == Qt::CaseSensitive &&
+                                        ((m_patternSyntax == QRegExp::FixedString)
                                         ||
                                         (m_patternSyntax == QRegExp::Wildcard &&
-                                         !std::any_of(m_matchString.cbegin(), m_matchString.cend(), isSpecialWildcardChar));
+                                         !std::any_of(m_matchString.cbegin(), m_matchString.cend(), isSpecialWildcardChar)));
             if (bCanDoSubStringMatching)
             {
                 const auto utf8Bytes = m_matchString.toUtf8();
