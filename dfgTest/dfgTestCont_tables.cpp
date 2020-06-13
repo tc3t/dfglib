@@ -1175,6 +1175,27 @@ TEST(dfgCont, TableCsv_filterCellHandler)
             EXPECT_STREQ("33", table(1, 2).c_str());
         }
     }
+
+    // Row, column and content filter
+    {
+        /*
+        matrix_3x3.txt
+            8925, 25460, 46586
+            14510, 26690, 41354
+            17189, 42528, 49812
+        */
+        using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(cont);
+        TableT table;
+        auto filterCellHandler = table.createFilterCellHandler(SimpleStringMatcher(DFG_UTF8("8")));
+        filterCellHandler.setIncludeRows(intervalSetFromString<IndexT>("0;2"));
+        filterCellHandler.setIncludeColumns(intervalSetFromString<IndexT>("1"));
+        table.readFromFile("testfiles/matrix_3x3.txt", table.defaultReadFormat(), filterCellHandler);
+        EXPECT_EQ(1, table.rowCountByMaxRowIndex());
+        EXPECT_EQ(1, table.colCountByMaxColIndex());
+        EXPECT_EQ(1, table.cellCountNonEmpty());
+        EXPECT_STREQ("42528", table(0, 0).c_str());
+    }
 }
 
 namespace

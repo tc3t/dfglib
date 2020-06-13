@@ -319,8 +319,12 @@ DFG_ROOT_NS_BEGIN{
                 void writeToDestination(Table_T& table, RowBuffer& rowBuffer)
                 {
                     for (const auto& item : rowBuffer)
-                        writeToDestination(table, item.first, item.second(rowBuffer));
+                    {
+                        DFG_ASSERT_CORRECTNESS(m_mapInputColumnToTargetColumn.hasKey(item.first));
+                        writeToDestination(table, m_mapInputColumnToTargetColumn[item.first], item.second(rowBuffer));
+                    }
                     rowBuffer.clear_noDealloc();
+                    m_mapInputColumnToTargetColumn.clear();
                 }
 
                 StringViewT toView(const char* pData, const size_t nCount)
@@ -351,6 +355,7 @@ DFG_ROOT_NS_BEGIN{
                 {
                     if (nTargetCol == 0) // On columnm 0 (=new row), checking if previous row needs to be added to destination table.
                         finishRow(rTable, nInputRow, nTargetRow);
+                    m_mapInputColumnToTargetColumn[nInputCol] = nTargetCol;
                     updateFilterStatus(rTable, nInputRow, nInputCol, nTargetRow, nTargetCol, pData, nCount);
                     if (m_rowFilterStatus == RowFilterStatus::unresolved)
                         m_rowBuffer.insert(nInputCol, StringViewT(TypedCharPtrUtf8R(pData), TypedCharPtrUtf8R(pData + nCount)));
@@ -368,6 +373,7 @@ DFG_ROOT_NS_BEGIN{
                 StringMatcher_T m_stringMatcher;
                 RowFilterStatus m_rowFilterStatus = RowFilterStatus::unresolved;
                 RowBuffer m_rowBuffer;
+                MapVectorSoA<IndexT, IndexT> m_mapInputColumnToTargetColumn;
                 IndexT m_nBufferInputRow = 0; // Stores input index of the row that m_rowBuffer stores.
                 IndexT m_nBufferTargetRow = 0; // Stores target index of the row that m_rowBuffer stores.
                 IndexT m_nFilteredRowCount = 0; // Stores the number of rows filter because of content filter. Note: row include filter not included here.
