@@ -46,10 +46,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     #define DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS  0
 #endif
 
-    const char CsvOptionProperty_completerColumns[]             = "completerColumns";
-    const char CsvOptionProperty_completerEnabledSizeLimit[]    = "completerEnabledSizeLimit";
-    const char CsvOptionProperty_includeRows[]                  = "includeRows"; // To define rows to read from file, as IntervalSet syntax. 0-based index
-    const char CsvOptionProperty_includeColumns[]               = "includeColumns"; // To define columns to read from file, as IntervalSet syntax. 0-based index
+    const char CsvOptionProperty_completerColumns[]          = "completerColumns";
+    const char CsvOptionProperty_completerEnabledSizeLimit[] = "completerEnabledSizeLimit";
+    const char CsvOptionProperty_includeRows[]               = "includeRows"; // To define rows to read from file, as IntervalSet syntax. ASCII, 0-based index
+    const char CsvOptionProperty_includeColumns[]            = "includeColumns"; // To define columns to read from file, as IntervalSet syntax. ASCII, 0-based index
+    const char CsvOptionProperty_readFilters[]               = "readFilters"; // Newline (\n) separated list of extended StringMatchDefinitions, UTF-8
+                                                                              // Read filters can be both OR'ed and AND'ed; all AND-groups are OR'ed, i.e. if any AND-group
+                                                                              // evaluates true, filter is considered matching. By default all filters are AND'ed, see and_group -property.
+                                                                              //
+                                                                              // In addition to properties defined for StringMatchDefinitions, the following one can be used:
+                                                                              //     -apply_rows: defines rows on which filter is applied; on non-applied rows filter is interpreted matching.
+                                                                              //                  Note that by default row 0, which is typically header, is not included in the filter.
+                                                                              //     -apply_columns: Like apply_rows, but for colums.
+                                                                              //     -and_group: defines ID for filter AND-group
+                                                                              //                  For example if there are 4 filters A, B, C, D and desired logics is
+                                                                              //                  (A && B) || (C && D)
+                                                                              //                  Filters A and B should be in the same and_group that is different from and_group of C and D.
+                                                                              //                  When and_group is not given for any filter, they belong to the same AND-group so the
+                                                                              //                  logics is A && B && C && D.
 
     namespace DFG_DETAIL_NS
     {

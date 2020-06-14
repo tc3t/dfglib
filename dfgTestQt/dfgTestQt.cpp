@@ -117,6 +117,132 @@ TEST(dfgQt, CsvItemModel_removeRows)
     EXPECT_EQ(0, model.rowCount());
 }
 
+TEST(dfgQt, CsvItemModel_filteredRead)
+{
+    using namespace DFG_MODULE_NS(qt);
+    const char szFilePath5x5[] = "testfiles/test_5x5_sep1F_content_row_comma_column.csv";
+    const char szFilePathAb[] = "testfiles/example_forFilterRead.csv";
+
+    CsvItemModel model;
+
+    // Row and column filter.
+    {
+        auto options = model.getLoadOptionsForFile(szFilePath5x5);
+        options.setProperty(CsvOptionProperty_includeRows, "0;2;4");
+        options.setProperty(CsvOptionProperty_includeColumns, "1;2;4");
+        model.openFile(szFilePath5x5, options);
+        ASSERT_EQ(2, model.rowCount());
+        ASSERT_EQ(3, model.columnCount());
+        EXPECT_EQ(QString("Col1"), model.getHeaderName(0));
+        EXPECT_EQ(QString("Col2"), model.getHeaderName(1));
+        EXPECT_EQ(QString("Col4"), model.getHeaderName(2));
+        EXPECT_EQ(QString("2,1"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(QString("2,2"), QString::fromUtf8(model.RawStringPtrAt(0, 1).c_str()));
+        EXPECT_EQ(QString("2,4"), QString::fromUtf8(model.RawStringPtrAt(0, 2).c_str()));
+        EXPECT_EQ(QString("4,1"), QString::fromUtf8(model.RawStringPtrAt(1, 0).c_str()));
+        EXPECT_EQ(QString("4,2"), QString::fromUtf8(model.RawStringPtrAt(1, 1).c_str()));
+        EXPECT_EQ(QString("4,4"), QString::fromUtf8(model.RawStringPtrAt(1, 2).c_str()));
+    }
+
+    // Content filter, basic test
+    {
+        auto options = model.getLoadOptionsForFile(szFilePath5x5);
+        const char szFilters[] = R"({ "text": "1,4" })";
+        options.setProperty(CsvOptionProperty_readFilters, szFilters);
+        model.openFile(szFilePath5x5, options);
+        ASSERT_EQ(1, model.rowCount());
+        ASSERT_EQ(5, model.columnCount());
+        EXPECT_EQ(QString("Col4"), model.getHeaderName(4));
+        EXPECT_EQ(QString("1,4"), QString::fromUtf8(model.RawStringPtrAt(0, 4).c_str()));
+        EXPECT_EQ(5, model.m_table.cellCountNonEmpty());
+    }
+
+    // Content filter, both OR and AND filters
+    {
+        auto options = model.getLoadOptionsForFile(szFilePath5x5);
+        const char szFilters[] = R"({ "text": "3,*", "and_group": "a" }
+                                    { "text": "*,0", "and_group": "a" }
+                                    {"text": "1,4", "and_group": "b"} )";
+        options.setProperty(CsvOptionProperty_readFilters, szFilters);
+        model.openFile(szFilePath5x5, options);
+        ASSERT_EQ(2, model.rowCount());
+        ASSERT_EQ(5, model.columnCount());
+        EXPECT_EQ(QString("Col0"), model.getHeaderName(0));
+        EXPECT_EQ(QString("Col4"), model.getHeaderName(4));
+        EXPECT_EQ(QString("1,4"), QString::fromUtf8(model.RawStringPtrAt(0, 4).c_str()));
+        EXPECT_EQ(QString("3,0"), QString::fromUtf8(model.RawStringPtrAt(1, 0).c_str()));
+        EXPECT_EQ(10, model.m_table.cellCountNonEmpty());
+    }
+
+    // Row, column and content filters
+    {
+        auto options = model.getLoadOptionsForFile(szFilePath5x5);
+        const char szFilters[] = R"({ "text": "3,*", "and_group": "a" }
+                                    { "text": "*,1", "and_group": "a" }
+                                    { "text": "4,1", "and_group": "b"} )";
+        options.setProperty(CsvOptionProperty_includeRows, "0;3;5");
+        options.setProperty(CsvOptionProperty_includeColumns, "1");
+        options.setProperty(CsvOptionProperty_readFilters, szFilters);
+        model.openFile(szFilePath5x5, options);
+        ASSERT_EQ(1, model.rowCount());
+        ASSERT_EQ(1, model.columnCount());
+        EXPECT_EQ(QString("Col1"), model.getHeaderName(0));
+        EXPECT_EQ(QString("3,1"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(1, model.m_table.cellCountNonEmpty());
+    }
+
+    // Case sensitivity in content filter
+    {
+        {
+            auto options = model.getLoadOptionsForFile(szFilePathAb);
+            const char szFilters[] = R"({ "text": "A", "case_sensitive": true } )";
+            options.setProperty(CsvOptionProperty_readFilters, szFilters);
+            model.openFile(szFilePathAb, options);
+            EXPECT_EQ(0, model.m_table.cellCountNonEmpty());
+        }
+
+        {
+            auto options = model.getLoadOptionsForFile(szFilePathAb);
+            const char szFilters[] = R"({ "text": "A", "case_sensitive": false } )";
+            options.setProperty(CsvOptionProperty_readFilters, szFilters);
+            model.openFile(szFilePathAb, options);
+            EXPECT_EQ(6, model.m_table.cellCountNonEmpty());
+        }
+    }
+
+    // Column apply-filters in content filter
+    {
+        auto options = model.getLoadOptionsForFile(szFilePathAb);
+        const char szFilters[] = R"({ "text": "a", "apply_columns": "1" } )";
+        options.setProperty(CsvOptionProperty_readFilters, szFilters);
+        model.openFile(szFilePathAb, options);
+        ASSERT_EQ(1, model.rowCount());
+        ASSERT_EQ(2, model.columnCount());
+        EXPECT_EQ(QString("Col0"), model.getHeaderName(0));
+        EXPECT_EQ(QString("Col1"), model.getHeaderName(1));
+        EXPECT_EQ(QString("b"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.RawStringPtrAt(0, 1).c_str()));
+        EXPECT_EQ(2, model.m_table.cellCountNonEmpty());
+    }
+
+    // Row apply-filters in content filter
+    {
+        auto options = model.getLoadOptionsForFile(szFilePathAb);
+        const char szFilters[] = R"({ "text": "c", "apply_rows": "1;3" } )";
+        options.setProperty(CsvOptionProperty_readFilters, szFilters);
+        model.openFile(szFilePathAb, options);
+        ASSERT_EQ(2, model.rowCount());
+        ASSERT_EQ(2, model.columnCount());
+        EXPECT_EQ(QString("Col0"), model.getHeaderName(0));
+        EXPECT_EQ(QString("Col1"), model.getHeaderName(1));
+        EXPECT_EQ(QString("b"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.RawStringPtrAt(0, 1).c_str()));
+        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.RawStringPtrAt(1, 0).c_str()));
+        EXPECT_EQ(QString("c"), QString::fromUtf8(model.RawStringPtrAt(1, 1).c_str()));
+        EXPECT_EQ(4, model.m_table.cellCountNonEmpty());
+    }
+}
+
 TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
 {
     ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) model;

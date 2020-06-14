@@ -10,6 +10,9 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QFileInfo>
 #include <QDir>
 #include <QCompleter>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QTextStream>
 #include <QStringListModel>
 DFG_END_INCLUDE_QT_HEADERS
@@ -30,6 +33,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/MapVector.hpp"
 #include "../cont/IntervalSet.hpp"
 #include "../cont/IntervalSetSerialization.hpp"
+#include "StringMatchDefinition.hpp"
 
 namespace
 {
@@ -719,6 +723,109 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setCompleterHandlingFromIn
     }
 }
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
+ namespace DFG_DETAIL_NS
+{
+    // Provides matching implementation for filter reading.
+    class TextFilterMatcher
+    {
+    public:
+        // Extended StringMatchDefinition
+        class MatcherDefinition : public StringMatchDefinition
+        {
+        public:
+            using BaseClass = StringMatchDefinition;
+            using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
+
+            MatcherDefinition(BaseClass&& base) :
+                BaseClass(std::move(base))
+            {}
+
+            static std::pair<MatcherDefinition, std::string> fromJson(const StringViewUtf8& sv)
+            {
+                QJsonParseError parseError;
+                auto doc = QJsonDocument::fromJson(QByteArray(sv.dataRaw(), sv.sizeAsInt()), &parseError);
+                if (doc.isNull())
+                    return std::make_pair(MatcherDefinition(StringMatchDefinition::makeMatchEverythingMatcher()), std::string());
+                const auto jsonObject = doc.object();
+                auto rv = std::pair<MatcherDefinition, std::string>(BaseClass::fromJson(jsonObject), std::string(jsonObject.value("and_group").toString().toUtf8().data()));
+                const auto iterRows = jsonObject.find(QLatin1String("apply_rows"));
+                const auto iterColumns = jsonObject.find(QLatin1String("apply_columns"));
+                if (iterRows != jsonObject.end())
+                    rv.first.m_rows = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(iterRows->toString().toUtf8().data());
+                if (iterColumns != jsonObject.end())
+                    rv.first.m_columns = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(iterColumns->toString().toUtf8().data());
+                return rv;
+            }
+
+            bool isMatchWith(const int nRow, const int nCol, const StringViewUtf8& sv) const
+            {
+                DFG_UNUSED(nCol);
+                return !m_rows.hasValue(nRow) || BaseClass::isMatchWith(sv);
+            }
+
+            bool isApplyColumn(const int nCol) const
+            {
+                return m_columns.hasValue(nCol);
+            }
+
+            // Defines rows on which to apply filter.
+            IntervalSet m_rows = IntervalSet::makeSingleInterval(1, maxValueOfType<int>());
+            // Defines columns on which to apply filter.
+            IntervalSet m_columns = IntervalSet::makeSingleInterval(0, maxValueOfType<int>());
+        }; // MatcherDefinition
+
+        using MatcherStorage = ::DFG_MODULE_NS(cont)::MapVectorSoA<std::string, std::vector<MatcherDefinition>>;
+
+        TextFilterMatcher(const StringViewUtf8& sv)
+        {
+            using DelimitedTextReader = :: DFG_MODULE_NS(io)::DelimitedTextReader;
+            const auto metaNone = DelimitedTextReader::s_nMetaCharNone;
+            :: DFG_MODULE_NS(io)::BasicImStream istrm(sv.dataRaw(), sv.size());
+            DelimitedTextReader::readRow<char>(istrm, '\n', metaNone, metaNone, [&](Dummy, const char* psz, const size_t nCount)
+            {
+                auto matcherAndOrGroup = MatcherDefinition::fromJson(StringViewUtf8(SzPtrUtf8(psz), nCount));
+                m_matchers[matcherAndOrGroup.second].push_back(std::move(matcherAndOrGroup.first));
+            });
+        }
+
+        // This is not expected to be used, but must be defined in order to get compiled.
+        bool isMatch(const int nInputRow, const StringViewUtf8) const
+        {
+            DFG_UNUSED(nInputRow);
+            DFG_ASSERT_IMPLEMENTED(false);
+            return false;
+        }
+
+        bool isMatch(const int nInputRow, const CsvItemModel::DataTable::RowContentFilterBuffer& rowBuffer)
+        {
+            for (const auto& kv : m_matchers) // For all OR-sets
+            {
+                bool bIsMatch = true;
+                for (const auto& matcher : kv.second) // For all matchers in AND-set
+                {
+                    // Checking if finding a match from any of the columns that are within apply columns.
+                    // Note: if matcher is matching content on column C and some row happens to miss such column,
+                    //       filter-wise that gets interpreted as match. This might not be desired behaviour; to be revised if needed.
+                    for (const auto& colAndStr : rowBuffer) if (matcher.isApplyColumn(colAndStr.first))
+                    {
+                        bIsMatch = matcher.isMatchWith(nInputRow, colAndStr.first, colAndStr.second(rowBuffer));
+                        if (bIsMatch)
+                            break; // Found a match for this matcher, no need to check remaining columns.
+                    }
+                    if (!bIsMatch)
+                        break; // One item in AND-set was false; not checking the rest.
+                }
+                if (bIsMatch)
+                    return true; // One OR-item was true so return value is known..
+            }
+            return false; // None of the OR'ed items matched so returning false.
+        }
+
+        MatcherStorage m_matchers; // Each mapped item defines a set of AND'ed items and the result is obtained by OR'ing each AND-set.
+    }; // TextFilterMatcher
+} }} // namespace dfg::qt::DFG_DETAIL_NS
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, LoadOptions loadOptions)
 {
     if (sDbFilePath.isEmpty())
@@ -734,17 +841,33 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
         {
             const auto sIncludeRows = loadOptions.getProperty(CsvOptionProperty_includeRows, "");
             const auto sIncludeColumns = loadOptions.getProperty(CsvOptionProperty_includeColumns, "");
+            const auto sFilterItems = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
             const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
-            if (!sIncludeRows.empty() || !sIncludeColumns.empty())
+            if (!sIncludeRows.empty() || !sIncludeColumns.empty() || !sFilterItems.empty())
             {
-                auto filter = m_table.createFilterCellHandler();
-                if (!sIncludeRows.empty())
-                    filter.setIncludeRows(DFG_MODULE_NS(cont)::intervalSetFromString<int>(sIncludeRows));
-                else
-                    filter.setIncludeRows(DFG_MODULE_NS(cont)::IntervalSet<int>::makeSingleInterval(0, maxValueOfType<int>()));
-                if (!sIncludeColumns.empty())
-                    filter.setIncludeColumns(DFG_MODULE_NS(cont)::intervalSetFromString<int>(sIncludeColumns));
-                m_table.readFromFile(sReadPath, loadOptions, filter);
+                using namespace ::DFG_MODULE_NS(cont);
+                if (!sFilterItems.empty())
+                {
+                    auto filter = m_table.createFilterCellHandler(DFG_DETAIL_NS::TextFilterMatcher(SzPtrUtf8(sFilterItems.c_str())));
+                    if (!sIncludeRows.empty())
+                        filter.setIncludeRows(intervalSetFromString<int>(sIncludeRows));
+                    if (!sIncludeColumns.empty())
+                        filter.setIncludeColumns(intervalSetFromString<int>(sIncludeColumns));
+                    m_table.readFromFile(sReadPath, loadOptions, filter);
+                }
+                else // Case: not having readFilters.
+                {
+                    auto filter = m_table.createFilterCellHandler();
+                    if (!sIncludeRows.empty())
+                        filter.setIncludeRows(intervalSetFromString<int>(sIncludeRows));
+                    else
+                        filter.setIncludeRows(IntervalSet<int>::makeSingleInterval(0, maxValueOfType<int>()));
+                    if (!sIncludeColumns.empty())
+                        filter.setIncludeColumns(intervalSetFromString<int>(sIncludeColumns));
+                    m_table.readFromFile(sReadPath, loadOptions, filter);
+                }
+                
+                
             }
             else
             {
