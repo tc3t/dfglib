@@ -40,6 +40,7 @@ SOURCES += \
     ../dfg/qt/qtBasic.cpp \
     ../dfg/qt/CsvItemModelChartDataSource.cpp \
     ../dfg/qt/qxt/gui/qxtspanslider.cpp \
+    ../dfg/qt/JsonListWidget.cpp \
     ../dfg/str/fmtlib/format.cc \
     ../externals/gtest/gtest-all.cc \
     dfgTestQt.cpp \
@@ -66,7 +67,8 @@ HEADERS += \
     ../dfg/qt/tableViewUndoCommands.hpp \
     ../dfg/qt/widgetHelpers.hpp \
     ../dfg/qt/CsvTableViewChartDataSource.hpp \
-    ../dfg/qt/CsvItemModelChartDataSource.hpp
+    ../dfg/qt/CsvItemModelChartDataSource.hpp \
+    ../dfg/qt/JsonListWidget.hpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

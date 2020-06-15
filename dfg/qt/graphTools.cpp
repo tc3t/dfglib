@@ -4,6 +4,7 @@
 #include "widgetHelpers.hpp"
 #include "ConsoleDisplay.hpp"
 #include "ConsoleDisplay.cpp"
+#include "JsonListWidget.hpp"
 
 #include "qtBasic.hpp"
 
@@ -2425,7 +2426,7 @@ namespace
         QCP::ResolutionUnit stringToResolutionUnit(const QString& s);
 
         QPointer<QCustomPlot> m_spCustomPlot;
-        ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spDefinitionEdit;
+        ::DFG_MODULE_NS(qt)::QObjectStorage<::DFG_MODULE_NS(qt)::JsonListWidget> m_spDefinitionEdit;
         ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spMessageConsole; // Guaranteed non-null between constructor and destructor.
 
         template <class T> T propertyValueAs(const PropertyMap&, const char*);
@@ -2447,7 +2448,7 @@ namespace
 
         // Definition widget
         {
-            m_spDefinitionEdit.reset(new QPlainTextEdit(this));
+            m_spDefinitionEdit.reset(new ::DFG_MODULE_NS(qt)::JsonListWidget(this));
             QVariantMap keyVals;
             keyVals.insert("format", "");
             keyVals.insert("type", "png");
