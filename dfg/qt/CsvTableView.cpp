@@ -16,6 +16,7 @@
 #include "../rand.hpp"
 #include "../rand/distributionHelpers.hpp"
 #include "../cont/SetVector.hpp"
+#include "JsonListWidget.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -1057,6 +1058,34 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
     return (pModel) ? saveToFileImpl(pModel->getSaveOptions()) : false;
 }
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
+
+const char szContentFilterHelpText[] =
+    QT_TR_NOOP("List of single line JSON-strings defining list of filters\n"
+               "Example: { \"text\":\"abc\", \"apply_columns\":\"2\" }\n"
+               "The following fields are available:\n"
+               "    text: \"<filter text>\"\n"
+               "        Defines actual filter text whose meaning depends on filter type\n"
+               "        Default: empty\n"
+               "    type: {wildcard, wildcard_unix, fixed, reg_exp, reg_exp2, reg_exp_w3c_xml_schema_11}\n"
+               "        Defines filter type; for details, see documentation of QRegExp::PatternSyntax.\n"
+               "        Default: wildcard\n"
+               "    case_sensitive: {true, false}\n"
+               "        Defines whether this filter is case sensitive or not.\n"
+               "        Default: false (=case insensitive)\n"
+               "    apply_columns: List of columns in IntervalSet syntax\n"
+               "        Defines columns where the filter is applied, first column is 0.\n"
+               "        Default: Empty (=match any column)\n"
+               "    apply_rows: List of rows in IntervalSet syntax\n"
+               "        Defines rows on which filter is applied, header is row 0.\n"
+               "        Default: All rows expect header\n"
+               "    and_group: arbitrary string identifier\n"
+               "        Defines filter group for filters that are AND'ed; different and-groups are OR'ed.\n"
+               "        Default: Filter belongs to default and-group.\n"
+              );
+} } }
+
+
 class CsvFormatDefinitionDialog : public QDialog
 {
 public:
@@ -1089,6 +1118,7 @@ public:
             m_spCompleterColumns.reset(new QLineEdit(this));
             m_spIncludeRows.reset(new QLineEdit(this));
             m_spIncludeColumns.reset(new QLineEdit(this));
+            m_spContentFilterWidget.reset(new JsonListWidget(this));
         }
 
         const auto defaultFormatSettings = (isSaveDialog()) ? m_saveOptions : peekCsvFormatFromFile(qStringToFileApi8Bit(sFilePath));
@@ -1179,6 +1209,13 @@ public:
             m_spIncludeColumns->setPlaceholderText(tr("all"));
             m_spIncludeColumns->setToolTip(tr("Defines columns to include from file, all when empty.\
                                               <br>Syntax example: to include first, second and fourth column: <i>0:1; 3</i>"));
+
+            // Content filters
+            spLayout->addRow(tr("Content filters"), m_spContentFilterWidget.get());
+            DFG_REQUIRE(m_spContentFilterWidget != nullptr);
+            m_spContentFilterWidget->setPlaceholderText(tr("List of filters, see tooltip for syntax guide"));
+            m_spContentFilterWidget->setToolTip(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::szContentFilterHelpText);
+            m_spContentFilterWidget->setMaximumHeight(100);
         }
         //spLayout->addRow(new QLabel(tr("Note: "), this));
 
@@ -1299,6 +1336,7 @@ public:
             m_loadOptions.setProperty(CsvOptionProperty_completerColumns, m_spCompleterColumns->text().toStdString());
             m_loadOptions.setProperty(CsvOptionProperty_includeRows, m_spIncludeRows->text().toStdString());
             m_loadOptions.setProperty(CsvOptionProperty_includeColumns, m_spIncludeColumns->text().toStdString());
+            m_loadOptions.setProperty(CsvOptionProperty_readFilters, m_spContentFilterWidget->toPlainText().toUtf8().data());
             m_loadOptions.textEncoding(encoding);
         }
         else // case: save dialog
@@ -1340,6 +1378,7 @@ public:
     std::unique_ptr<QLineEdit> m_spCompleterColumns;
     QObjectStorage<QLineEdit> m_spIncludeRows;
     QObjectStorage<QLineEdit> m_spIncludeColumns;
+    QObjectStorage<JsonListWidget> m_spContentFilterWidget;
 }; // Class CsvFormatDefinitionDialog
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
