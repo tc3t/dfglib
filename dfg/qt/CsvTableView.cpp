@@ -1336,6 +1336,12 @@ public:
             m_loadOptions.setProperty(CsvOptionProperty_completerColumns, m_spCompleterColumns->text().toStdString());
             m_loadOptions.setProperty(CsvOptionProperty_includeRows, m_spIncludeRows->text().toStdString());
             m_loadOptions.setProperty(CsvOptionProperty_includeColumns, m_spIncludeColumns->text().toStdString());
+            const auto syntaxCheckResult = m_spContentFilterWidget->checkSyntax();
+            if (!syntaxCheckResult.first)
+            {
+                QMessageBox::information(this, tr("Invalid content filters"), tr("Invalid content filters detected:\n\n%1").arg(JsonListWidget::formatErrorMessage(syntaxCheckResult)));
+                return;
+            }
             m_loadOptions.setProperty(CsvOptionProperty_readFilters, m_spContentFilterWidget->toPlainText().toUtf8().data());
             m_loadOptions.textEncoding(encoding);
         }
