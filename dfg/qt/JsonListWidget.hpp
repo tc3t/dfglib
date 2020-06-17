@@ -29,6 +29,12 @@ public:
     using BaseClass::BaseClass; // Inheriting constructor
     using SyntaxCheckResult = std::pair<bool, std::vector<JsonListParseError>>;
 
+    // Returns entries (empty and commented out items excluded) as '\n' separated string.
+    QString entriesAsNewLineSeparatedString() const;
+
+    // Returns entries (empty and commented out items excluded) as QStringList
+    QStringList entriesAsStringList() const;
+
     SyntaxCheckResult checkSyntax() const;
     static QString formatErrorMessage(const SyntaxCheckResult&);
 

@@ -14,12 +14,10 @@ auto ::DFG_MODULE_NS(qt)::JsonListWidget::checkSyntax() const -> std::pair<bool,
 {
     std::pair<bool, std::vector<JsonListParseError>> rv;
     rv.first = true;
-    const auto items = this->toPlainText().split('\n');
+    const auto items = entriesAsStringList();
     for (int r = 0, nCount = items.size(); r < nCount; ++r)
     {
         const auto& sJson = items[r];
-        if (sJson.isEmpty() || sJson[0] == '#')
-            continue;
         QJsonParseError parseError;
         auto parsed = QJsonDocument::fromJson(sJson.toUtf8(), &parseError);
         if (parsed.isNull()) // Parsing failed?
@@ -43,4 +41,17 @@ auto ::DFG_MODULE_NS(qt)::JsonListWidget::formatErrorMessage(const SyntaxCheckRe
         rv += tr("Line %1, offset %2: %3").arg(item.m_nRow).arg(item.m_parseError.offset).arg(item.m_parseError.errorString());
     }
     return rv;
+}
+
+auto ::DFG_MODULE_NS(qt)::JsonListWidget::entriesAsStringList() const -> QStringList
+{
+    auto items = this->toPlainText().split('\n');
+    const auto isEmptyOrCommented = [](const QString& s) { return s.isEmpty() || s[0] == '#'; };
+    items.erase(std::remove_if(items.begin(), items.end(), isEmptyOrCommented), items.end());
+    return items;
+}
+
+auto ::DFG_MODULE_NS(qt)::JsonListWidget::entriesAsNewLineSeparatedString() const -> QString
+{
+    return entriesAsStringList().join('\n');
 }

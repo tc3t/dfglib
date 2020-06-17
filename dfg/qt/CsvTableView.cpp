@@ -1342,7 +1342,7 @@ public:
                 QMessageBox::information(this, tr("Invalid content filters"), tr("Invalid content filters detected:\n\n%1").arg(JsonListWidget::formatErrorMessage(syntaxCheckResult)));
                 return;
             }
-            m_loadOptions.setProperty(CsvOptionProperty_readFilters, m_spContentFilterWidget->toPlainText().toUtf8().data());
+            m_loadOptions.setProperty(CsvOptionProperty_readFilters, m_spContentFilterWidget->entriesAsNewLineSeparatedString().toUtf8().data());
             m_loadOptions.textEncoding(encoding);
         }
         else // case: save dialog
