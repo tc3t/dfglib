@@ -15,6 +15,7 @@
 #include "TrivialPair.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include "../build/inlineTools.hpp"
+#include "MapVector.hpp"
 
 #ifdef _MSC_VER
     #define DFG_TABLESZ_INLINING    DFG_FORCEINLINE
@@ -202,6 +203,35 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeUtf8> StringT;
             using  StringViewT = StringViewUtf8;
         };
+
+        template <class Index_T, class Char_T>
+        class RowToContentMapAoS : public MapVectorAoS<Index_T, const Char_T*>
+        {
+        public:
+            using BaseClass = MapVectorAoS<Index_T, const Char_T*>;
+            void push_back(const Index_T i, const Char_T* p)
+            {
+                this->m_storage.push_back(TrivialPair<Index_T, const Char_T*>(i, p));
+            }
+
+            void insertNonExisting(const typename BaseClass::iterator iterInsertPos, Index_T i, const Char_T* p)
+            {
+                this->insertNonExistingTo(std::move(i), std::move(p), iterInsertPos);
+            }
+
+            template <class This_T>
+            static auto lowerBoundImpl(This_T& rThis, const Index_T nRow) -> decltype(rThis.begin())
+            {
+                using ValueT = typename BaseClass::value_type;
+                const ValueT searchItem(nRow, nullptr);
+                const auto pred = [](const ValueT& a, const ValueT& b) {return a.first < b.first; };
+                return std::lower_bound(rThis.begin(), rThis.end(), searchItem, pred);
+            }
+
+            auto lowerBound(const Index_T nRow)       -> typename BaseClass::iterator       { return lowerBoundImpl(*this, nRow); }
+            auto lowerBound(const Index_T nRow) const -> typename BaseClass::const_iterator { return lowerBoundImpl(*this, nRow); }
+        }; // class RowToContentMapAoS
+
     } // namespace DFG_DETAIL_NS
 
     // Class for efficiently storing big table of small strings with no embedded nulls.
@@ -307,9 +337,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }; // Class CharStorageItem
 
         using IndexT = Index_T;
-        typedef DFG_CLASS_NAME(TrivialPair)<Index_T, const Char_T*> IndexPtrPair;
-        typedef DFG_CLASS_NAME(Vector)<IndexPtrPair> ColumnIndexPairContainer;
-        typedef std::vector<ColumnIndexPairContainer> TableIndexPairContainer;
+        typedef DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T> RowToContentMap;
+        typedef std::vector<RowToContentMap> TableIndexContainer;
         typedef std::vector<CharStorageItem> CharStorage;
         typedef std::vector<CharStorage> CharStorageContainer;
         typedef typename InterfaceTypes_T::SzPtrW SzPtrW;
@@ -336,22 +365,22 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }
         bool isBlockSizeFixed() const { return m_bAllowStringsLongerThanBlockSize; }
 
-        DFG_TABLESZ_INLINING void privSetRowContent(ColumnIndexPairContainer& rowsInCol, Index_T nRow, const Char_T* pData)
+        DFG_TABLESZ_INLINING void privSetRowContent(RowToContentMap& rowsInCol, Index_T nRow, const Char_T* pData)
         {
             // If row is non-existing because it is > than any existing row, simply push_back() and return.
-            if (rowsInCol.empty() || nRow > rowsInCol.back().first)
+            if (rowsInCol.empty() || nRow > rowsInCol.backKey())
             {
 #ifdef _MSC_VER // Manually implement growth factor of 2 on MSVC to get more consistent performance characteristics between compilers.
                 // TODO: use a more suitable data structure to begin with.
                 if (rowsInCol.size() == rowsInCol.capacity())
                     rowsInCol.reserve(2 * rowsInCol.capacity());
 #endif
-                rowsInCol.push_back(IndexPtrPair(nRow, pData));
+                rowsInCol.push_back(nRow, pData);
                 return;
             }
 
             // Check if the given row already exists.
-            auto iterGreaterOrEqualToRow = privLowerBoundInColumnNonConst(rowsInCol, nRow);
+            auto iterGreaterOrEqualToRow = rowsInCol.lowerBound(nRow);
             if (iterGreaterOrEqualToRow != rowsInCol.end() && iterGreaterOrEqualToRow->first == nRow)
             {
                 // Already have given row; overwrite the pointer.
@@ -360,7 +389,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             }
 
             // Didn't have, insert it.
-            rowsInCol.insert(iterGreaterOrEqualToRow, IndexPtrPair(nRow, pData));
+            rowsInCol.insertNonExisting(iterGreaterOrEqualToRow, nRow, pData);
         }
 
         template <class Str_T>
@@ -509,7 +538,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             for (size_t i = 0; i < nCount; ++i)
             {
                 if (!m_colToRows[i].empty())
-                    nRowCount = Max(nRowCount, static_cast<IndexT>(m_colToRows[i].back().first + 1));
+                    nRowCount = Max(nRowCount, static_cast<IndexT>(m_colToRows[i].backKey() + 1));
             }
             return nRowCount;
         }
@@ -525,7 +554,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             for(Index_T i = 0, nCount = static_cast<Index_T>(m_colToRows.size()); i < nCount; ++i)
             {
                 auto& colToRows = m_colToRows[i];
-                auto iter = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(colToRows, nRow);
+                auto iter = colToRows.lowerBound(nRow);
                 for(; iter != colToRows.end(); ++iter)
                     iter->first = (bPositiveShift) ? iter->first + nShift : iter->first - nShift;
             }
@@ -557,8 +586,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             limitMax(nRemoveCount, static_cast<IndexT>(maxRowCount() - nRow));
             for(auto iterRowCont = m_colToRows.begin(); iterRowCont != m_colToRows.end(); ++iterRowCont)
             {
-                auto iterFirst = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(*iterRowCont, nRow);
-                auto iterEnd = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(*iterRowCont, nRow + nRemoveCount);
+                auto iterFirst = iterRowCont->lowerBound(nRow);
+                auto iterEnd = iterRowCont->lowerBound(nRow + nRemoveCount);
                 iterRowCont->erase(iterFirst, iterEnd);
             }
             privShiftRowIndexesInRowGreaterOrEqual(nRow + nRemoveCount, nRemoveCount, false);
@@ -573,7 +602,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (nCol < 0 || nCol > nColCount)
                 nCol = nColCount;
             nInsertCount = Min(nInsertCount, maxColumnCount() - nColCount);
-            m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, ColumnIndexPairContainer());
+            m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, RowToContentMap());
 
             // Insert new columns. Note that can't use insert(iterStart, iterEnd, val) because CharStorage() is not copy-assignable.
             m_charBuffers.reserve(m_charBuffers.size() + nInsertCount);
@@ -612,43 +641,29 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return (iter.first && iter.second->first == row) ? SzPtrR(iter.second->second) : SzPtrR(nullptr);
         }
 
-        template <class Iter_T, class ColumnIndexPairContainer_T>
-        static Iter_T privLowerBoundInColumn(ColumnIndexPairContainer_T& cont, const Index_T nRow)
+        typename RowToContentMap::const_iterator privLowerBoundInColumnConst(RowToContentMap& cont, const Index_T nRow)
         {
-            const IndexPtrPair searchItem(nRow, nullptr);
-            const auto pred = [](const IndexPtrPair& a, const IndexPtrPair& b) {return a.first < b.first; };
-            auto iter = std::lower_bound(cont.begin(), cont.end(), searchItem, pred);
-            return iter;
-        }
-
-        typename ColumnIndexPairContainer::iterator privLowerBoundInColumnNonConst(ColumnIndexPairContainer& cont, const Index_T nRow)
-        {
-            return privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(cont, nRow);
-        }
-
-        typename ColumnIndexPairContainer::const_iterator privLowerBoundInColumnConst(ColumnIndexPairContainer& cont, const Index_T nRow)
-        {
-            return privLowerBoundInColumn<typename ColumnIndexPairContainer::const_iterator>(static_cast<const ColumnIndexPairContainer&>(cont), nRow);
+            return static_cast<const RowToContentMap&>(cont).lowerBound(nRow);
         }
 
         template <class Iterator_T, class ThisClass>
         static std::pair<bool, Iterator_T> privIteratorToIndexPairImpl(ThisClass& rThis, const Index_T row, const Index_T col)
         {
             if (!isValidIndex(rThis.m_colToRows, col))
-                return std::pair<bool, Iterator_T>(false, ColumnIndexPairContainer().begin());
+                return std::pair<bool, Iterator_T>(false, RowToContentMap().begin());
             auto& colToRowCont = rThis.m_colToRows[col];
-            auto iter = privLowerBoundInColumn<Iterator_T>(colToRowCont, row);
+            auto iter = colToRowCont.lowerBound(row);
             return std::pair<bool, Iterator_T>(iter != colToRowCont.end(), iter);
         }
 
-        std::pair<bool, typename ColumnIndexPairContainer::iterator> privIteratorToIndexPair(const Index_T row, const Index_T col)
+        std::pair<bool, typename RowToContentMap::iterator> privIteratorToIndexPair(const Index_T row, const Index_T col)
         {
-            return privIteratorToIndexPairImpl<typename ColumnIndexPairContainer::iterator>(*this, row, col);
+            return privIteratorToIndexPairImpl<typename RowToContentMap::iterator>(*this, row, col);
         }
 
-        std::pair<bool, typename ColumnIndexPairContainer::const_iterator> privIteratorToIndexPair(const Index_T row, const Index_T col) const
+        std::pair<bool, typename RowToContentMap::const_iterator> privIteratorToIndexPair(const Index_T row, const Index_T col) const
         {
-            return privIteratorToIndexPairImpl<typename ColumnIndexPairContainer::const_iterator>(*this, row, col);
+            return privIteratorToIndexPairImpl<typename RowToContentMap::const_iterator>(*this, row, col);
         }
 
         // Returns the number of non-empty cells in the table.
@@ -687,10 +702,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_colToRows.clear();
         }
 
-        void swapCellContentInColumn(ColumnIndexPairContainer& colItems, const Index_T r0, const Index_T r1)
+        void swapCellContentInColumn(RowToContentMap& colItems, const Index_T r0, const Index_T r1)
         {
-            auto iterA = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(colItems, r0);
-            auto iterB = privLowerBoundInColumn<typename ColumnIndexPairContainer::iterator>(colItems, r1);
+            auto iterA = colItems.lowerBound(r0);
+            auto iterB = colItems.lowerBound(r1);
             const bool br0Match = (iterA != colItems.end() && iterA->first == r0);
             const bool br1Match = (iterB != colItems.end() && iterB->first == r1);
             if (!br0Match && !br1Match) // Check whether of neither cell has content, no swapping is needed in that case.
@@ -763,7 +778,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         */
         const Char_T m_emptyString; // Shared empty item.
         CharStorageContainer m_charBuffers;
-        TableIndexPairContainer m_colToRows;
+        TableIndexContainer m_colToRows;
         size_t m_nBlockSize;
         bool m_bAllowStringsLongerThanBlockSize; // If false, strings longer than m_nBlockSize can't be added to table.
     };

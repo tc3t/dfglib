@@ -455,7 +455,7 @@ DFG_ROOT_NS_BEGIN{
             using BaseClass = DFG_CLASS_NAME(TableSz)<Char_T, Index_T, InternalEncoding_T>;
             using IndexT = typename BaseClass::IndexT;
             typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
-            typedef typename DFG_CLASS_NAME(TableSz)<Char_T, Index_T>::ColumnIndexPairContainer ColumnIndexPairContainer;
+            typedef typename DFG_CLASS_NAME(TableSz)<Char_T, Index_T>::RowToContentMap RowToContentMap;
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DelimitedTextReaderBufferTypeC;
             typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T> DelimitedTextReaderBufferTypeT;
             using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
@@ -766,7 +766,7 @@ DFG_ROOT_NS_BEGIN{
                 if (this->m_colToRows.empty())
                     return;
                 // nextColItemRowIters[i] is the valid iterator to the next row entry in column i.
-                std::unordered_map<Index_T, typename ColumnIndexPairContainer::const_iterator> nextColItemRowIters;
+                std::unordered_map<Index_T, typename RowToContentMap::const_iterator> nextColItemRowIters;
                 this->forEachFwdColumnIndex([&](const Index_T nCol)
                 {
                     if (isValidIndex(this->m_colToRows, nCol) && !this->m_colToRows[nCol].empty())
