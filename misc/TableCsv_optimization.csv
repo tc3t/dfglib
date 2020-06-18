@@ -70,3 +70,9 @@
 2019-07-20,,MSVC_2019.1,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.757551,0.766369,0.78394,0.783984,0.78576,0.78394
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.803325,0.833571,0.826268,0.818934,0.832294,0.826268
 2019-07-20,,MinGW_4.8.0,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.809705,0.834691,0.824789,0.831121,0.804088,0.824789
+,,,,,,,,,,,,
+2020-06-18,Reference run,Commit 032b93bc7e9876a84d80ee5f76d771197d18a2ed,,,,,,,,,,
+2020-06-18,,MSVC_2015_u3,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.849504,0.832553,0.829126,0.837314,0.835309,0.835309
+2020-06-18,,MSVC_2017.9,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.800334,0.784898,0.799029,0.824341,0.808068,0.800334
+2020-06-18,,MSVC_2017.9,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.05194,1.08296,1.06661,1.07425,1.062,1.06661
+2020-06-18,,MSVC_2019.5,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.796071,0.761728,0.773637,0.791115,0.784011,0.784011
