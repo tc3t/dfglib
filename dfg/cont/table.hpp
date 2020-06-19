@@ -209,6 +209,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         {
         public:
             using BaseClass = MapVectorAoS<Index_T, const Char_T*>;
+
             void push_back(const Index_T i, const Char_T* p)
             {
                 this->m_storage.push_back(TrivialPair<Index_T, const Char_T*>(i, p));
@@ -226,6 +227,43 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 const ValueT searchItem(nRow, nullptr);
                 const auto pred = [](const ValueT& a, const ValueT& b) {return a.first < b.first; };
                 return std::lower_bound(rThis.begin(), rThis.end(), searchItem, pred);
+            }
+
+            const Char_T* content(const Index_T nRow, Dummy) const
+            {
+                auto iter = this->find(nRow);
+                return (iter != this->end()) ? iter->second : nullptr;
+            }
+
+            void privShiftRowIndexesInRowGreaterOrEqual(Index_T nRow, const Index_T nShift, const bool bPositiveShift)
+            {
+                for (auto iter = this->lowerBound(nRow), iterEnd = this->end(); iter != iterEnd; ++iter)
+                    iter->first = (bPositiveShift) ? iter->first + nShift : iter->first - nShift;
+            }
+
+            void removeRows(const Index_T nRow, const Index_T nRemoveCount)
+            {
+                auto iterFirst = this->lowerBound(nRow);
+                auto iterEnd = this->lowerBound(nRow + nRemoveCount);
+                this->erase(iterFirst, iterEnd);
+                privShiftRowIndexesInRowGreaterOrEqual(nRow + nRemoveCount, nRemoveCount, false);
+            }
+
+            void insertRowsAt(const Index_T nRow, const Index_T nInsertCount)
+            {
+                privShiftRowIndexesInRowGreaterOrEqual(nRow, nInsertCount, true);
+            }
+
+            // Precondition: iter is dereferencable
+            Index_T iteratorToRow(const typename BaseClass::const_iterator iter) const
+            {
+                return iter->first;
+            }
+
+            // Precondition: iter is dereferencabl
+            void setContent(typename BaseClass::iterator iter, const Char_T* p)
+            {
+                iter->second = p;
             }
 
             auto lowerBound(const Index_T nRow)       -> typename BaseClass::iterator       { return lowerBoundImpl(*this, nRow); }
@@ -381,10 +419,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
             // Check if the given row already exists.
             auto iterGreaterOrEqualToRow = rowsInCol.lowerBound(nRow);
-            if (iterGreaterOrEqualToRow != rowsInCol.end() && iterGreaterOrEqualToRow->first == nRow)
+            if (iterGreaterOrEqualToRow != rowsInCol.end() && rowsInCol.iteratorToRow(iterGreaterOrEqualToRow) == nRow)
             {
                 // Already have given row; overwrite the pointer.
-                iterGreaterOrEqualToRow->second = pData;
+                rowsInCol.setContent(iterGreaterOrEqualToRow, pData);
                 return;
             }
 
@@ -478,6 +516,26 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             privForEachFwdColumnIndexImpl(*this, std::forward<Func_T>(func));
         }
 
+        // Precondition: iter must be dereferencable.
+        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
+        {
+            DFG_UNUSED(nCol);
+            return iter->second;
+        }
+
+        // Precondition: iter must be dereferencable.
+        SzPtrR privRowIteratorToContentView(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
+        {
+            return SzPtrR(privRowIteratorToRawContent(nCol, iter));
+        }
+
+        // Precondition: iter is dereferencable.
+        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
+        {
+            DFG_UNUSED(nCol);
+            return iter->first;
+        }
+
         // Functor is given two parameters: row index and null terminated string for cell in (row, nCol).
         template <class Func_T>
         void forEachFwdRowInColumn(const Index_T nCol, Func_T&& func)
@@ -485,8 +543,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (!isValidIndex(m_colToRows, nCol))
                 return;
 
-            for (auto iter = m_colToRows[nCol].begin(), iterEnd = m_colToRows[nCol].end(); iter != iterEnd; ++iter)
-                func(iter->first, SzPtrR(iter->second));
+            const auto& rowContent = m_colToRows[nCol];
+            for (auto iter = rowContent.begin(), iterEnd = rowContent.end(); iter != iterEnd; ++iter)
+                func(rowContent.iteratorToRow(iter), privRowIteratorToContentView(nCol, iter));
         }
 
         // const-overload.
@@ -496,8 +555,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (!isValidIndex(m_colToRows, nCol))
                 return;
 
-            for (auto iter = m_colToRows[nCol].begin(), iterEnd = m_colToRows[nCol].end(); iter != iterEnd; ++iter)
-                func(iter->first, SzPtrR(iter->second));
+            const auto& rowContent = m_colToRows[nCol];
+            for (auto iter = rowContent.begin(), iterEnd = rowContent.end(); iter != iterEnd; ++iter)
+                func(rowContent.iteratorToRow(iter), privRowIteratorToContentView(nCol, iter));
         }
 
         // Like forEachFwdRowInColumn, but goes through column only as long as whileFunc returns true.
@@ -509,8 +569,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (!isValidIndex(m_colToRows, nCol))
                 return;
 
-            for (auto iter = m_colToRows[nCol].begin(), iterEnd = m_colToRows[nCol].end(); iter != iterEnd && whileFunc(iter->first); ++iter)
-                func(iter->first, SzPtrR(iter->second));
+            const auto& rowContent = m_colToRows[nCol];
+            for (auto iter = rowContent.begin(), iterEnd = rowContent.end(); iter != iterEnd && whileFunc(iter->first); ++iter)
+                func(rowContent.iteratorToRow(iter), privRowIteratorToContentView(nCol, iter));
         }
 
         // Visits all cells that have non-null ptr in unspecified order.
@@ -549,17 +610,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return static_cast<Index_T>(m_colToRows.size());
         }
 
-        void privShiftRowIndexesInRowGreaterOrEqual(Index_T nRow, const Index_T nShift, const bool bPositiveShift)
-        {
-            for(Index_T i = 0, nCount = static_cast<Index_T>(m_colToRows.size()); i < nCount; ++i)
-            {
-                auto& colToRows = m_colToRows[i];
-                auto iter = colToRows.lowerBound(nRow);
-                for(; iter != colToRows.end(); ++iter)
-                    iter->first = (bPositiveShift) ? iter->first + nShift : iter->first - nShift;
-            }
-        }
-
         Index_T maxRowCount() const { return maxValueOfType<IndexT>(); }
         Index_T maxRowIndex() const { return maxRowCount() - IndexT(1); }
 
@@ -576,7 +626,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (nRow < 0 || nRow > nCurrentCount)
                 nRow = nCurrentCount;
             nInsertCount = Min(nInsertCount, static_cast<IndexT>(maxRowCount() - nCurrentCount));
-            privShiftRowIndexesInRowGreaterOrEqual(nRow, nInsertCount, true);
+            forEachFwdColumnIndex([&](const Index_T nCol)
+            {
+                this->m_colToRows[nCol].insertRowsAt(nRow, nInsertCount);
+            });
         }
 
         void removeRows(Index_T nRow, Index_T nRemoveCount)
@@ -584,13 +637,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (nRow < 0 || nRemoveCount <= 0 || nRow > maxRowIndex())
                 return;
             limitMax(nRemoveCount, static_cast<IndexT>(maxRowCount() - nRow));
-            for(auto iterRowCont = m_colToRows.begin(); iterRowCont != m_colToRows.end(); ++iterRowCont)
+            forEachFwdColumnIndex([&](const Index_T nCol)
             {
-                auto iterFirst = iterRowCont->lowerBound(nRow);
-                auto iterEnd = iterRowCont->lowerBound(nRow + nRemoveCount);
-                iterRowCont->erase(iterFirst, iterEnd);
-            }
-            privShiftRowIndexesInRowGreaterOrEqual(nRow + nRemoveCount, nRemoveCount, false);
+                this->m_colToRows[nCol].removeRows(nRow, nRemoveCount);
+            });
         }
 
         void insertColumnsAt(Index_T nCol, Index_T nInsertCount)
@@ -623,47 +673,20 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_charBuffers.erase(m_charBuffers.begin() + nCol, m_charBuffers.begin() + nCol + nRemoveCount);
         }
 
-        // Erases cell at (row, col) so that after this operator()(row, col) returns nullptr.
-        // TODO: test
-        void eraseCell(const Index_T row, const Index_T col)
-        {
-            auto iter = privIteratorToIndexPair(row, col);
-            if (iter.first)
-                m_colToRows[col].erase(iter.second);
-        }
-
         // Returns either pointer to null terminated string or nullptr, if no element exists.
         // Note: Returned pointer remains valid even if adding new strings. For behaviour in case of 
         //       overwriting item at (row, col), see documentation for addString.
         SzPtrR operator()(Index_T row, Index_T col) const
         {
-            auto iter = privIteratorToIndexPair(row, col);
-            return (iter.first && iter.second->first == row) ? SzPtrR(iter.second->second) : SzPtrR(nullptr);
+            if (!isValidIndex(m_colToRows, col))
+                return SzPtrR(nullptr);
+            const auto& colContent = m_colToRows[col];
+            return SzPtrR(colContent.content(row, m_charBuffers));
         }
 
         typename RowToContentMap::const_iterator privLowerBoundInColumnConst(RowToContentMap& cont, const Index_T nRow)
         {
             return static_cast<const RowToContentMap&>(cont).lowerBound(nRow);
-        }
-
-        template <class Iterator_T, class ThisClass>
-        static std::pair<bool, Iterator_T> privIteratorToIndexPairImpl(ThisClass& rThis, const Index_T row, const Index_T col)
-        {
-            if (!isValidIndex(rThis.m_colToRows, col))
-                return std::pair<bool, Iterator_T>(false, RowToContentMap().begin());
-            auto& colToRowCont = rThis.m_colToRows[col];
-            auto iter = colToRowCont.lowerBound(row);
-            return std::pair<bool, Iterator_T>(iter != colToRowCont.end(), iter);
-        }
-
-        std::pair<bool, typename RowToContentMap::iterator> privIteratorToIndexPair(const Index_T row, const Index_T col)
-        {
-            return privIteratorToIndexPairImpl<typename RowToContentMap::iterator>(*this, row, col);
-        }
-
-        std::pair<bool, typename RowToContentMap::const_iterator> privIteratorToIndexPair(const Index_T row, const Index_T col) const
-        {
-            return privIteratorToIndexPairImpl<typename RowToContentMap::const_iterator>(*this, row, col);
         }
 
         // Returns the number of non-empty cells in the table.
@@ -702,22 +725,22 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_colToRows.clear();
         }
 
-        void swapCellContentInColumn(RowToContentMap& colItems, const Index_T r0, const Index_T r1)
+        void swapCellContentInColumn(const Index_T nCol, RowToContentMap& colItems, const Index_T r0, const Index_T r1)
         {
             auto iterA = colItems.lowerBound(r0);
             auto iterB = colItems.lowerBound(r1);
-            const bool br0Match = (iterA != colItems.end() && iterA->first == r0);
-            const bool br1Match = (iterB != colItems.end() && iterB->first == r1);
+            const bool br0Match = (iterA != colItems.end() && colItems.iteratorToRow(iterA) == r0);
+            const bool br1Match = (iterB != colItems.end() && colItems.iteratorToRow(iterB) == r1);
             if (!br0Match && !br1Match) // Check whether of neither cell has content, no swapping is needed in that case.
                 return;
             if (!br0Match)
             {
-                privSetRowContent(colItems, r0, iterB->second); // Note: this may invalidate iters.
+                privSetRowContent(colItems, r0, privRowIteratorToContentView(nCol, iterB)); // Note: this may invalidate iters.
                 privSetRowContent(colItems, r1, nullptr);
             }
             else if (!br1Match)
             {
-                privSetRowContent(colItems, r1, iterA->second); // Note: this may invalidate iters.
+                privSetRowContent(colItems, r1, privRowIteratorToContentView(nCol, iterA)); // Note: this may invalidate iters.
                 privSetRowContent(colItems, r0, nullptr);
             }
             else
@@ -736,8 +759,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             {
                 auto iterA = privLowerBoundInColumnConst(colItems, static_cast<Index_T>(a));
                 auto iterB = privLowerBoundInColumnConst(colItems, static_cast<Index_T>(b));
-                auto pA = (iterA != colItems.end()) ? iterA->second : nullptr;
-                auto pB = (iterB != colItems.end()) ? iterB->second : nullptr;
+                auto pA = (iterA != colItems.end()) ? privRowIteratorToContentView(nCol, iterA) : nullptr;
+                auto pB = (iterB != colItems.end()) ? privRowIteratorToContentView(nCol, iterB) : nullptr;
                 return pred(pA, pB);
             });
             forEachFwdColumnIndex([&](const Index_T nCol)
@@ -746,7 +769,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 auto& rowAtCol = m_colToRows[nCol];
                 DFG_MODULE_NS(alg)::DFG_DETAIL_NS::sortByIndexArray_tN_sN_WithSwapImpl(indexes, [&](size_t a, size_t b)
                 {
-                    swapCellContentInColumn(rowAtCol, static_cast<IndexTypedefWorkAroundForVC2010>(a), static_cast<IndexTypedefWorkAroundForVC2010>(b));
+                    swapCellContentInColumn(nCol, rowAtCol, static_cast<IndexTypedefWorkAroundForVC2010>(a), static_cast<IndexTypedefWorkAroundForVC2010>(b));
                 });
             });
         }
@@ -781,5 +804,5 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         TableIndexContainer m_colToRows;
         size_t m_nBlockSize;
         bool m_bAllowStringsLongerThanBlockSize; // If false, strings longer than m_nBlockSize can't be added to table.
-    };
+    }; // Class TableSz
 }} // module cont

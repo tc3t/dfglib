@@ -778,11 +778,11 @@ DFG_ROOT_NS_BEGIN{
                     for (Index_T nCol = 0; nCol < nMaxColCount; ++nCol)
                     {
                         auto iter = nextColItemRowIters.find(nCol);
-                        if (iter != nextColItemRowIters.end() && iter->second->first == nRow) // Case: (row, col) has item
+                        if (iter != nextColItemRowIters.end() && this->privRowIteratorToRowNumber(nCol, iter->second) == nRow) // Case: (row, col) has item
                         {
                             auto& rowEntryIter = iter->second;
-                            const auto pData = rowEntryIter->second;
-                            policy.write(strm, pData, rowEntryIter->first, nCol);
+                            const auto pData = this->privRowIteratorToRawContent(nCol, rowEntryIter);
+                            policy.write(strm, pData, this->privRowIteratorToRowNumber(nCol, rowEntryIter), nCol);
                             ++rowEntryIter;
                             if (rowEntryIter == this->m_colToRows[nCol].cend())
                                 nextColItemRowIters.erase(iter);
