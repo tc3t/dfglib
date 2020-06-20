@@ -210,13 +210,20 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         public:
             using BaseClass = MapVectorAoS<Index_T, const Char_T*>;
 
+            // Precondition: p != nullptr
+            // Precondition: empty() || i > backKey()
             void push_back(const Index_T i, const Char_T* p)
             {
+                DFG_ASSERT_UB(p != nullptr);
+                DFG_ASSERT_UB(empty() || i > this->backKey());
                 this->m_storage.push_back(TrivialPair<Index_T, const Char_T*>(i, p));
             }
 
+            // Precondition: p != nullptr
+            // Precondition: There's no existing key 'i'
             void insertNonExisting(const typename BaseClass::iterator iterInsertPos, Index_T i, const Char_T* p)
             {
+                DFG_ASSERT_UB(p != nullptr);
                 this->insertNonExistingTo(std::move(i), std::move(p), iterInsertPos);
             }
 
@@ -266,10 +273,111 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 iter->second = p;
             }
 
+            void swapRowContents(typename BaseClass::iterator iterA, typename BaseClass::iterator iterB)
+            {
+                std::swap(iterA->second, iterB->second);
+            }
+
+            static constexpr Index_T maxRowCount()
+            {
+                return maxValueOfType<Index_T>();
+            }
+
+            // Precondition: iter must be dereferencable.
+            bool isExistingRow(const typename BaseClass::const_iterator) const { return true; }
+
             auto lowerBound(const Index_T nRow)       -> typename BaseClass::iterator       { return lowerBoundImpl(*this, nRow); }
             auto lowerBound(const Index_T nRow) const -> typename BaseClass::const_iterator { return lowerBoundImpl(*this, nRow); }
         }; // class RowToContentMapAoS
 
+        template <class Index_T, class Char_T>
+        class RowToContentMapVector : public Vector<const Char_T*>
+        {
+        public:
+            using BaseClass = Vector<const Char_T*>;
+
+            // Precondition: p != nullptr
+            // Precondition: empty() || (i >= size() && i + 1 <= maxValueOfType<Index_T>()
+            void push_back(const Index_T i, const Char_T* p)
+            {
+                DFG_ASSERT_UB(p != nullptr);
+                DFG_ASSERT_UB(this->empty() || i >= this->sizeAsIndexT());
+                DFG_ASSERT_UB(i <= maxValueOfType<Index_T>() - 1);
+                if (i == this->size())
+                    BaseClass::push_back(p);
+                else
+                {
+                    this->resize(i + 1, nullptr);
+                    this->back() = p;
+                }
+            }
+
+            // Precondition: !empty()
+            Index_T backKey() const { return sizeAsIndexT() - 1; }
+
+            Index_T sizeAsIndexT() const { return static_cast<Index_T>(this->size()); }
+
+            const Char_T* content(const Index_T nRow, Dummy) const
+            {
+                return (isValidIndex(*this, nRow)) ? (*this)[nRow] : nullptr;
+            }
+
+            void insertNonExisting(const typename BaseClass::iterator iterInsertPos, Index_T i, const Char_T* p)
+            {
+                DFG_UNUSED(i);
+                this->insert(iterInsertPos, p);
+            }
+
+            template <class This_T>
+            static auto lowerBoundImpl(This_T& rThis, const Index_T nRow) -> decltype(rThis.begin())
+            {
+                return rThis.begin() + Min(nRow, rThis.sizeAsIndexT());
+            }
+
+            Index_T iteratorToRow(const typename BaseClass::const_iterator iter) const
+            {
+                return static_cast<Index_T>(iter - this->begin());
+            }
+
+            // Precondition: iter can be written to.
+            void setContent(typename BaseClass::iterator iter, const Char_T* p)
+            {
+                *iter = p;
+            }
+
+            // Precondition: nInsertCount is valid count.
+            void insertRowsAt(const Index_T nRow, const Index_T nInsertCount)
+            {
+                auto iter = lowerBound(nRow);
+                static_cast<std::vector<const Char_T*>&>(*this).insert(iter, nInsertCount, static_cast<const Char_T*>(nullptr));
+            }
+
+            // Precondition: nRemoveCount is valid count.
+            void removeRows(const Index_T nRow, const Index_T nRemoveCount)
+            {
+                auto iter = lowerBound(nRow);
+                this->erase(iter, iter + Min(nRemoveCount, static_cast<Index_T>(this->size() - (iter - this->begin()))));
+            }
+
+            void swapRowContents(typename BaseClass::iterator iterA, typename BaseClass::iterator iterB)
+            {
+                std::swap(*iterA, *iterB);
+            }
+
+            static constexpr Index_T maxRowCount()
+            {
+                return static_cast<Index_T>(Min(saturateCast<size_t>(maxValueOfType<Index_T>()), size_t(100000000))); // Arbitrary limit.
+            }
+
+            // Precondition: iter must be dereferencable.
+            bool isExistingRow(const typename BaseClass::const_iterator iter) const
+            {
+                return *iter != nullptr;
+            }
+
+            auto lowerBound(const Index_T nRow)       -> typename BaseClass::iterator       { return lowerBoundImpl(*this, nRow); }
+            auto lowerBound(const Index_T nRow) const -> typename BaseClass::const_iterator { return lowerBoundImpl(*this, nRow); }
+        }; // class RowToContentMapVector
     } // namespace DFG_DETAIL_NS
 
     // Class for efficiently storing big table of small strings with no embedded nulls.
@@ -376,6 +484,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         using IndexT = Index_T;
         typedef DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T> RowToContentMap;
+        //typedef DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T> RowToContentMap;
         typedef std::vector<RowToContentMap> TableIndexContainer;
         typedef std::vector<CharStorageItem> CharStorage;
         typedef std::vector<CharStorage> CharStorageContainer;
@@ -516,11 +625,22 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             privForEachFwdColumnIndexImpl(*this, std::forward<Func_T>(func));
         }
 
-        // Precondition: iter must be dereferencable.
-        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
+        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T>*) const
         {
             DFG_UNUSED(nCol);
             return iter->second;
+        }
+
+        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T>*) const
+        {
+            DFG_UNUSED(nCol);
+            return *iter;
+        }
+
+        // Precondition: iter must be dereferencable.
+        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
+        {
+            return privRowIteratorToRawContent(nCol, iter, static_cast<const RowToContentMap*>(nullptr));
         }
 
         // Precondition: iter must be dereferencable.
@@ -530,34 +650,29 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }
 
         // Precondition: iter is dereferencable.
-        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
+        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T>*) const
         {
             DFG_UNUSED(nCol);
             return iter->first;
         }
 
-        // Functor is given two parameters: row index and null terminated string for cell in (row, nCol).
-        template <class Func_T>
-        void forEachFwdRowInColumn(const Index_T nCol, Func_T&& func)
+        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T>*) const
         {
-            if (!isValidIndex(m_colToRows, nCol))
-                return;
+            return m_colToRows[nCol].iteratorToRow(iter);
+        }
 
-            const auto& rowContent = m_colToRows[nCol];
-            for (auto iter = rowContent.begin(), iterEnd = rowContent.end(); iter != iterEnd; ++iter)
-                func(rowContent.iteratorToRow(iter), privRowIteratorToContentView(nCol, iter));
+        // Precondition: iter is dereferencable.
+        // Precondition: nCol is valid.
+        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
+        {
+            return privRowIteratorToRowNumber(nCol, iter, static_cast<const RowToContentMap*>(nullptr));
         }
 
         // const-overload.
         template <class Func_T>
         void forEachFwdRowInColumn(const Index_T nCol, Func_T&& func) const
         {
-            if (!isValidIndex(m_colToRows, nCol))
-                return;
-
-            const auto& rowContent = m_colToRows[nCol];
-            for (auto iter = rowContent.begin(), iterEnd = rowContent.end(); iter != iterEnd; ++iter)
-                func(rowContent.iteratorToRow(iter), privRowIteratorToContentView(nCol, iter));
+            forEachFwdRowInColumnWhile(nCol, [](Dummy) { return true; }, std::forward<Func_T>(func));
         }
 
         // Like forEachFwdRowInColumn, but goes through column only as long as whileFunc returns true.
@@ -570,8 +685,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return;
 
             const auto& rowContent = m_colToRows[nCol];
-            for (auto iter = rowContent.begin(), iterEnd = rowContent.end(); iter != iterEnd && whileFunc(iter->first); ++iter)
-                func(rowContent.iteratorToRow(iter), privRowIteratorToContentView(nCol, iter));
+            for (auto iter = rowContent.begin(), iterEnd = rowContent.end(); iter != iterEnd && whileFunc(rowContent.iteratorToRow(iter)); ++iter)
+            {
+                if (rowContent.isExistingRow(iter))
+                    func(rowContent.iteratorToRow(iter), privRowIteratorToContentView(nCol, iter));
+            }
         }
 
         // Visits all cells that have non-null ptr in unspecified order.
@@ -610,7 +728,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return static_cast<Index_T>(m_colToRows.size());
         }
 
-        Index_T maxRowCount() const { return maxValueOfType<IndexT>(); }
+        Index_T maxRowCount() const { return RowToContentMap::maxRowCount(); }
         Index_T maxRowIndex() const { return maxRowCount() - IndexT(1); }
 
         Index_T maxColumnCount() const { return Min(maxValueOfType<IndexT>(), saturateCast<IndexT>(m_colToRows.max_size()), saturateCast<IndexT>(m_charBuffers.max_size())); }
@@ -744,7 +862,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 privSetRowContent(colItems, r0, nullptr);
             }
             else
-                std::swap(iterA->second, iterB->second);
+                colItems.swapRowContents(iterA, iterB);
         }
 
         // TODO: stable sorting.

@@ -438,9 +438,11 @@ TEST(dfgCont, TableSz_maxLimits)
     EXPECT_EQ(maxValueOfType<int16>() - 1, (TableSz<char, int16>().maxColumnIndex()));
     EXPECT_EQ(maxValueOfType<int16>(), (TableSz<char, int16>().maxRowCount()));
     EXPECT_EQ(maxValueOfType<int16>() - 1, (TableSz<char, int16>().maxRowIndex()));
-    EXPECT_EQ((TableSz<char, size_t>().m_colToRows.max_size()), (TableSz<char, size_t>().maxColumnCount()));
-    EXPECT_EQ(maxValueOfType<size_t>(), (TableSz<char, size_t>().maxRowCount()));
-    EXPECT_EQ(maxValueOfType<size_t>() - 1, (TableSz<char, size_t>().maxRowIndex()));
+
+    // These are commented out as they are not valid tests for non-AoS row storage.
+    //EXPECT_EQ((TableSz<char, size_t>().m_colToRows.max_size()), (TableSz<char, size_t>().maxColumnCount()));
+    //EXPECT_EQ(maxValueOfType<size_t>(), (TableSz<char, size_t>().maxRowCount()));
+    //EXPECT_EQ(maxValueOfType<size_t>() - 1, (TableSz<char, size_t>().maxRowIndex()));
 
     TableSz<char, int> t;
     t.setElement(t.maxRowIndex(), 0, "a");
