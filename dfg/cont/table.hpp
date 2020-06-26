@@ -204,6 +204,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             using  StringViewT = StringViewUtf8;
         };
 
+        // Row storage based on AoS map (row, pointer-to-content)
         template <class Index_T, class Char_T>
         class RowToContentMapAoS : public MapVectorAoS<Index_T, const Char_T*>
         {
@@ -216,6 +217,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             {
                 DFG_ASSERT_UB(p != nullptr);
                 DFG_ASSERT_UB(empty() || i > this->backKey());
+#ifdef _MSC_VER // Manually implement growth factor of 2 on MSVC to get more consistent performance characteristics between compilers.
+                if (this->size() == this->capacity())
+                    this->reserve(2 * this->capacity());
+#endif
+
                 this->m_storage.push_back(TrivialPair<Index_T, const Char_T*>(i, p));
             }
 
@@ -267,10 +273,34 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return iter->first;
             }
 
-            // Precondition: iter is dereferencabl
-            void setContent(typename BaseClass::iterator iter, const Char_T* p)
+            // Precondition: iter is dereferencable
+            void setContent(typename BaseClass::iterator iter, const Index_T nRow, const Char_T* p)
             {
+                DFG_UNUSED(nRow);
                 iter->second = p;
+            }
+
+            void setContent(const Index_T nRow, const Char_T* pData)
+            {
+                // If row is non-existing because it is > than any existing row, simply push_back() and return.
+                if (this->empty() || nRow > this->backKey())
+                {
+                    this->push_back(nRow, pData);
+                    return;
+                }
+
+                // Check if the given row already exists.
+                auto iterGreaterOrEqualToRow = this->findOrInsertHint(nRow);
+                if (iterGreaterOrEqualToRow != this->end() && this->iteratorToRow(iterGreaterOrEqualToRow) == nRow)
+                {
+                    // Already have given row; overwrite the pointer.
+                    setContent(iterGreaterOrEqualToRow, nRow, pData);
+                    return;
+                }
+
+                // Didn't have given row -> inserting (if there's data)
+                if (pData)
+                    this->insertNonExisting(iterGreaterOrEqualToRow, nRow, pData);
             }
 
             void swapRowContents(typename BaseClass::iterator iterA, typename BaseClass::iterator iterB)
@@ -286,10 +316,17 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Precondition: iter must be dereferencable.
             bool isExistingRow(const typename BaseClass::const_iterator) const { return true; }
 
+            typename BaseClass::iterator findOrInsertHint(const Index_T nRow)
+            {
+                return lowerBound(nRow);
+            }
+
             auto lowerBound(const Index_T nRow)       -> typename BaseClass::iterator       { return lowerBoundImpl(*this, nRow); }
             auto lowerBound(const Index_T nRow) const -> typename BaseClass::const_iterator { return lowerBoundImpl(*this, nRow); }
         }; // class RowToContentMapAoS
 
+        // Row storage based on vector of pointers-to-content. Indexes are embedded in size. i.e. size of the vector is defined by max index (size() == max index + 1)
+        // Non-existing mappings are distinguished by nullptr value.
         template <class Index_T, class Char_T>
         class RowToContentMapVector : public Vector<const Char_T*>
         {
@@ -303,6 +340,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 DFG_ASSERT_UB(p != nullptr);
                 DFG_ASSERT_UB(this->empty() || i >= this->sizeAsIndexT());
                 DFG_ASSERT_UB(i <= maxValueOfType<Index_T>() - 1);
+
+#ifdef _MSC_VER // Manually implement growth factor of 2 on MSVC to get more consistent performance characteristics between compilers.
+                if (this->size() == this->capacity())
+                    this->reserve(2 * this->capacity());
+#endif
+
                 if (i == this->size())
                     BaseClass::push_back(p);
                 else
@@ -310,6 +353,14 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                     this->resize(i + 1, nullptr);
                     this->back() = p;
                 }
+            }
+
+            void setContent(const Index_T nRow, const Char_T* pData)
+            {
+                if (nRow >= this->sizeAsIndexT())
+                    this->push_back(nRow, pData);
+                else
+                    (*this)[nRow] = pData;
             }
 
             // Precondition: !empty()
@@ -340,8 +391,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             }
 
             // Precondition: iter can be written to.
-            void setContent(typename BaseClass::iterator iter, const Char_T* p)
+            void setContent(typename BaseClass::iterator iter, const Index_T nRow, const Char_T* p)
             {
+                DFG_UNUNSED(nRow);
                 *iter = p;
             }
 
@@ -373,6 +425,16 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             bool isExistingRow(const typename BaseClass::const_iterator iter) const
             {
                 return *iter != nullptr;
+            }
+
+            typename BaseClass::iterator find(const Index_T nRow)
+            {
+                return (isValidIndex(*this, nRow)) ? this->begin() + nRow : this->end();
+            }
+
+            typename BaseClass::iterator findOrInsertHint(const Index_T nRow)
+            {
+                return this->find(nRow);
             }
 
             auto lowerBound(const Index_T nRow)       -> typename BaseClass::iterator       { return lowerBoundImpl(*this, nRow); }
@@ -512,33 +574,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }
         bool isBlockSizeFixed() const { return m_bAllowStringsLongerThanBlockSize; }
 
-        DFG_TABLESZ_INLINING void privSetRowContent(RowToContentMap& rowsInCol, Index_T nRow, const Char_T* pData)
-        {
-            // If row is non-existing because it is > than any existing row, simply push_back() and return.
-            if (rowsInCol.empty() || nRow > rowsInCol.backKey())
-            {
-#ifdef _MSC_VER // Manually implement growth factor of 2 on MSVC to get more consistent performance characteristics between compilers.
-                // TODO: use a more suitable data structure to begin with.
-                if (rowsInCol.size() == rowsInCol.capacity())
-                    rowsInCol.reserve(2 * rowsInCol.capacity());
-#endif
-                rowsInCol.push_back(nRow, pData);
-                return;
-            }
-
-            // Check if the given row already exists.
-            auto iterGreaterOrEqualToRow = rowsInCol.lowerBound(nRow);
-            if (iterGreaterOrEqualToRow != rowsInCol.end() && rowsInCol.iteratorToRow(iterGreaterOrEqualToRow) == nRow)
-            {
-                // Already have given row; overwrite the pointer.
-                rowsInCol.setContent(iterGreaterOrEqualToRow, pData);
-                return;
-            }
-
-            // Didn't have, insert it.
-            rowsInCol.insertNonExisting(iterGreaterOrEqualToRow, nRow, pData);
-        }
-
         template <class Str_T>
         DFG_TABLESZ_INLINING bool setElement(size_t nRow, size_t nCol, const Str_T& sSrc)
         {
@@ -570,7 +605,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Optimization: use shared null for empty items.
             if (nLength == 0)
             {
-                privSetRowContent(m_colToRows[nCol], nRow, &m_emptyString);
+                m_colToRows[nCol].setContent(nRow, &m_emptyString);
                 return true;
             }
 
@@ -597,7 +632,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
             const Char_T* const pData = &currentBuffer[nBeginIndex];
 
-            privSetRowContent(m_colToRows[nCol], nRow, pData);
+            m_colToRows[nCol].setContent(nRow, pData);
 
             return true;
         }
@@ -770,7 +805,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             if (nCol < 0 || nCol > nColCount)
                 nCol = nColCount;
             nInsertCount = Min(nInsertCount, maxColumnCount() - nColCount);
-            m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, RowToContentMap());
+
+            // Inserting new columns to m_colToRows. Since insert() doesn't work in case of move-only m_colToRows-items, doing it
+            // with resize() & rotate()
+            //m_colToRows.insert(m_colToRows.begin() + nCol, nInsertCount, RowToContentMap());
+            m_colToRows.resize(m_colToRows.size() + static_cast<size_t>(nInsertCount));
+            std::rotate(m_colToRows.begin() + nCol, m_colToRows.end() - nInsertCount, m_colToRows.end());
 
             // Insert new columns. Note that can't use insert(iterStart, iterEnd, val) because CharStorage() is not copy-assignable.
             m_charBuffers.reserve(m_charBuffers.size() + nInsertCount);
@@ -800,11 +840,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return SzPtrR(nullptr);
             const auto& colContent = m_colToRows[col];
             return SzPtrR(colContent.content(row, m_charBuffers));
-        }
-
-        typename RowToContentMap::const_iterator privLowerBoundInColumnConst(RowToContentMap& cont, const Index_T nRow)
-        {
-            return static_cast<const RowToContentMap&>(cont).lowerBound(nRow);
         }
 
         // Returns the number of non-empty cells in the table.
@@ -845,21 +880,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         void swapCellContentInColumn(const Index_T nCol, RowToContentMap& colItems, const Index_T r0, const Index_T r1)
         {
-            auto iterA = colItems.lowerBound(r0);
-            auto iterB = colItems.lowerBound(r1);
-            const bool br0Match = (iterA != colItems.end() && colItems.iteratorToRow(iterA) == r0);
-            const bool br1Match = (iterB != colItems.end() && colItems.iteratorToRow(iterB) == r1);
-            if (!br0Match && !br1Match) // Check whether of neither cell has content, no swapping is needed in that case.
+            auto iterA = colItems.find(r0);
+            auto iterB = colItems.find(r1);
+            const bool br0Match = (iterA != colItems.end());
+            const bool br1Match = (iterB != colItems.end());
+            if (!br0Match && !br1Match) // Checking if  neither cell has content, swapping not needed in that case.
                 return;
             if (!br0Match)
             {
-                privSetRowContent(colItems, r0, privRowIteratorToContentView(nCol, iterB)); // Note: this may invalidate iters.
-                privSetRowContent(colItems, r1, nullptr);
+                colItems.setContent(r0, privRowIteratorToContentView(nCol, iterB));
+                colItems.setContent(r1, nullptr);
             }
             else if (!br1Match)
             {
-                privSetRowContent(colItems, r1, privRowIteratorToContentView(nCol, iterA)); // Note: this may invalidate iters.
-                privSetRowContent(colItems, r0, nullptr);
+                colItems.setContent(r1, privRowIteratorToContentView(nCol, iterA));
+                colItems.setContent(r0, nullptr);
             }
             else
                 colItems.swapRowContents(iterA, iterB);
@@ -875,8 +910,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             auto& colItems = m_colToRows[nCol];
             auto indexes = DFG_MODULE_NS(alg)::computeSortIndexesBySizeAndPred(nCount, [&](const size_t a, const size_t b) -> bool
             {
-                auto iterA = privLowerBoundInColumnConst(colItems, static_cast<Index_T>(a));
-                auto iterB = privLowerBoundInColumnConst(colItems, static_cast<Index_T>(b));
+                auto iterA = colItems.find(static_cast<Index_T>(a));
+                auto iterB = colItems.find(static_cast<Index_T>(b));
                 auto pA = (iterA != colItems.end()) ? privRowIteratorToContentView(nCol, iterA) : nullptr;
                 auto pB = (iterB != colItems.end()) ? privRowIteratorToContentView(nCol, iterB) : nullptr;
                 return pred(pA, pB);
