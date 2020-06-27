@@ -27,6 +27,7 @@
 #include <dfg/os.hpp>
 #include <dfg/str/stringLiteralCharToValue.hpp>
 #include <dfg/cont/IntervalSetSerialization.hpp>
+#include <dfg/cont/detail/MapBlockIndex.hpp>
 
 #if (DFG_LANGFEAT_MUTEX_11 == 1)
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -1374,5 +1375,220 @@ TEST(dfgCont, CsvFormatDefinition_ToConfig)
         CsvConfig config;
         format.appendToConfig(config);
         EXPECT_TRUE(DFG_MODULE_NS(str)::isEmptyStr(config.value(DFG_UTF8("enclosing_char"), DFG_UTF8("a"))));
+    }
+}
+
+TEST(dfgCont, MapBlockIndex)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
+
+    {
+        const size_t nBlockSize = 16;
+        MapBlockIndex<const char*, nBlockSize> m;
+        EXPECT_TRUE(m.empty());
+        EXPECT_EQ(0, m.size());
+
+        m.set(0, "a");
+        EXPECT_FALSE(m.empty());
+        EXPECT_EQ(1, m.size());
+        EXPECT_EQ(0, m.backKey());
+
+        const uint32 nBigIndex = 10 * nBlockSize + nBlockSize / 2;
+        m.set(nBigIndex - 1, "b");
+        EXPECT_EQ(2, m.size());
+        EXPECT_FALSE(m.empty());
+        EXPECT_EQ(nBigIndex - 1, m.backKey());
+
+        m.set(nBigIndex, "b2");
+        EXPECT_EQ(3, m.size());
+        EXPECT_FALSE(m.empty());
+        EXPECT_EQ(nBigIndex, m.backKey());
+
+        EXPECT_STREQ("a", m.value(0));
+        EXPECT_EQ(nullptr, m.value(10));
+        EXPECT_EQ(nullptr, m.value(10000));
+        EXPECT_STREQ("b", m.value(nBigIndex - 1));
+        EXPECT_STREQ("b2", m.value(nBigIndex));
+        EXPECT_EQ(nullptr, m.value(nBigIndex - 2));
+        EXPECT_EQ(nullptr, m.value(nBigIndex + 1));
+
+        const uint32 nMiddleIndex = nBigIndex / 2;
+        m.set(nMiddleIndex, "c");
+        EXPECT_EQ(4, m.size());
+        EXPECT_FALSE(m.empty());
+        EXPECT_EQ(nBigIndex, m.backKey());
+
+        // Inserting
+        {
+            // Insert to end (effectively a no-op)
+            {
+                m.insertKeysByPositionAndCount(nBigIndex + nBlockSize * 2, 1000); // This is not expected to do anything
+                EXPECT_EQ(4, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_EQ(nBigIndex, m.backKey());
+            }
+
+            // Insert before last in the same block
+            {
+                m.insertKeysByPositionAndCount(nBigIndex, 1);
+                EXPECT_EQ(4, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_EQ(nBigIndex + 1, m.backKey());
+                m.insertKeysByPositionAndCount(nBigIndex, 10);
+                EXPECT_EQ(nBigIndex + 11, m.backKey());
+            }
+
+            // Insert before last in the preceeding block
+            {
+                m.insertKeysByPositionAndCount(nBigIndex - nBlockSize, 1);
+                EXPECT_EQ(4, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_EQ(nBigIndex + 12, m.backKey());
+            }
+
+            EXPECT_EQ(4, m.size());
+            EXPECT_STREQ("a", m.value(0));
+            EXPECT_STREQ("c", m.value(nMiddleIndex));
+            EXPECT_STREQ("b", m.value(nBigIndex));
+            EXPECT_STREQ("b2", m.value(nBigIndex + 12));
+
+            // Insert before nMiddleIndex
+            m.insertKeysByPositionAndCount(nMiddleIndex, 5);
+
+            EXPECT_EQ(4, m.size());
+            EXPECT_STREQ("a", m.value(0));
+            EXPECT_STREQ("c", m.value(nMiddleIndex + 5));
+            EXPECT_STREQ("b", m.value(nBigIndex + 5));
+            EXPECT_STREQ("b2", m.value(nBigIndex + 17));
+
+            // Insert before first
+            m.insertKeysByPositionAndCount(0, 7);
+
+            EXPECT_EQ(4, m.size());
+            EXPECT_STREQ("a", m.value(7));
+            EXPECT_STREQ("c", m.value(nMiddleIndex + 12));
+            EXPECT_STREQ("b", m.value(nBigIndex + 12));
+            EXPECT_STREQ("b2", m.value(nBigIndex + 24));
+        }
+
+        // Removing
+        {
+            const auto nSizeBeforeRemoves = m.size();
+            // Removing from end, expected to do nothing.
+            {
+                m.removeKeysByPositionAndCount(m.backKey() + 1, 1000);
+                m.removeKeysByPositionAndCount(m.backKey(), 0);
+                EXPECT_EQ(nSizeBeforeRemoves, m.size());
+                EXPECT_FALSE(m.empty());
+            }
+
+            // Removing non-mapped indexes from beginning
+            {
+                m.removeKeysByPositionAndCount(0, 7);
+                EXPECT_EQ(nSizeBeforeRemoves, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_STREQ("a", m.value(0));
+                EXPECT_STREQ("c", m.value(nMiddleIndex + 5));
+                EXPECT_STREQ("b", m.value(nBigIndex + 5));
+                EXPECT_STREQ("b2", m.value(nBigIndex + 17));
+            }
+
+            // Removing last
+            {
+                m.removeKeysByPositionAndCount(m.backKey(), m.maxKey() - 50); // Also a count overflow test by using large count value.
+                EXPECT_EQ(nSizeBeforeRemoves - 1, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_STREQ("a", m.value(0));
+                EXPECT_STREQ("c", m.value(nMiddleIndex + 5));
+                EXPECT_STREQ("b", m.value(nBigIndex + 5));
+            }
+
+            // Removing non-mapped indexes between first and second
+            {
+                m.removeKeysByPositionAndCount(nMiddleIndex, 5);
+                EXPECT_EQ(nSizeBeforeRemoves - 1, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_STREQ("a", m.value(0));
+                EXPECT_STREQ("c", m.value(nMiddleIndex));
+                EXPECT_STREQ("b", m.value(nBigIndex));
+            }
+
+            // Removing all but last
+            {
+                m.removeKeysByPositionAndCount(0, nBigIndex);
+                EXPECT_EQ(1, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_STREQ("b", m.value(0));
+            }
+
+            // Removing last
+            {
+                m.removeKeysByPositionAndCount(0, 1);
+                EXPECT_EQ(0, m.size());
+                EXPECT_TRUE(m.empty());
+            }
+
+            // Test block removal from middle (originally this had a bug caught by dfgTestQt test dfgQt.CsvItemModel_removeRows)
+            {
+                m.set(0, "a");
+                m.set(1, "b");
+                m.set(2, "c");
+                m.set(3, "d");
+                m.removeKeysByPositionAndCount(1, 2);
+                EXPECT_EQ(2, m.size());
+                EXPECT_FALSE(m.empty());
+                EXPECT_STREQ("a", m.value(0));
+                EXPECT_STREQ("d", m.value(1));
+            }
+        }
+    } // General tests
+
+    // Some overflow tests
+    {
+        MapBlockIndex<const char*, 1048576> m;
+        // Trying to insert more than what mapping can hold; should only insert as many as possible so that existing mappings do not fall off.
+        m.set(1, "a");
+        m.set(10, "b");
+        m.insertKeysByPositionAndCount(10, m.maxKey());
+        EXPECT_EQ(2, m.size());
+        EXPECT_FALSE(m.empty());
+        EXPECT_EQ(1, m.frontKey());
+        EXPECT_EQ(m.maxKey(), m.backKey());
+        EXPECT_STREQ("a", m.value(1));
+        EXPECT_STREQ("b", m.value(m.backKey()));
+    }
+}
+
+TEST(dfgCont, MapBlockIndex_iterators)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
+    const size_t nBlockSize = 16;
+    MapBlockIndex<const char*, nBlockSize> m;
+    EXPECT_EQ(m.begin(), m.end());
+    MapToStringViews<uint32, std::string> mExpected;
+    mExpected.insert(5, "a");
+    mExpected.insert(30, "b");
+    mExpected.insert(10, "c");
+    mExpected.insert(1, "d");
+    mExpected.insert(22, "e");
+    for (const auto& item : mExpected)
+        m.set(item.first, item.second(mExpected).c_str());
+
+    EXPECT_EQ(mExpected.size(), m.size());
+
+    EXPECT_FALSE(m.begin() == m.end());
+    auto iter = m.begin();
+    EXPECT_EQ(1, iter->first);
+    EXPECT_STREQ("d", iter->second);
+    ++iter;
+    EXPECT_EQ(5, iter->first);
+    EXPECT_STREQ("a", iter->second);
+
+    for (const auto& item : m)
+    {
+        EXPECT_EQ(mExpected[item.first], item.second);
     }
 }

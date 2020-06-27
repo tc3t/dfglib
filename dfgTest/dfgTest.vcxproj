@@ -960,6 +960,7 @@
     <ClInclude Include="..\dfg\cont\contAlg.hpp" />
     <ClInclude Include="..\dfg\cont\CsvConfig.hpp" />
     <ClInclude Include="..\dfg\cont\detail\keyContainerUtils.hpp" />
+    <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp" />
     <ClInclude Include="..\dfg\cont\elementType.hpp" />
     <ClInclude Include="..\dfg\cont\interleavedXsortedTwoChannelWrapper.hpp" />
     <ClInclude Include="..\dfg\cont\IntervalSet.hpp" />

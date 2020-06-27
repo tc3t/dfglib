@@ -65,6 +65,8 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.IntervalSet";
     //::testing::GTEST_FLAG(filter) = "dfgCont.intervalSetFromString";
     //::testing::GTEST_FLAG(filter) = "dfgCont.makeVector";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.MapBlockIndex";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.MapBlockIndex_iterators";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVectorPerformance";
@@ -80,6 +82,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertRowsAt";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_indexHandling";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_maxLimits";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSzUntypedInterface";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TrivialPair";
     //::testing::GTEST_FLAG(filter) = "dfgCont.UniqueResourceHolder";
     //::testing::GTEST_FLAG(filter) = "dfgCont.ValueArray"

@@ -669,6 +669,9 @@
     <ClInclude Include="..\dfg\cont\MapToStringViews.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

@@ -16,6 +16,7 @@
 #include "../build/languageFeatureInfo.hpp"
 #include "../build/inlineTools.hpp"
 #include "MapVector.hpp"
+#include "detail/MapBlockIndex.hpp"
 
 #ifdef _MSC_VER
     #define DFG_TABLESZ_INLINING    DFG_FORCEINLINE
@@ -205,6 +206,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         };
 
         // Row storage based on AoS map (row, pointer-to-content)
+        // -Memory usage per cell (32-bit index, 64-bit ptr): 16 bytes
+        // -Memory usage if setting one cell at row N (32-bit index, 64-bit ptr): ~16 bytes
+        // -Content access by row: O(log N)
         template <class Index_T, class Char_T>
         class RowToContentMapAoS : public MapVectorAoS<Index_T, const Char_T*>
         {
@@ -216,7 +220,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             void push_back(const Index_T i, const Char_T* p)
             {
                 DFG_ASSERT_UB(p != nullptr);
-                DFG_ASSERT_UB(empty() || i > this->backKey());
+                DFG_ASSERT_UB(this->empty() || i > this->backKey());
 #ifdef _MSC_VER // Manually implement growth factor of 2 on MSVC to get more consistent performance characteristics between compilers.
                 if (this->size() == this->capacity())
                     this->reserve(2 * this->capacity());
@@ -327,6 +331,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         // Row storage based on vector of pointers-to-content. Indexes are embedded in size. i.e. size of the vector is defined by max index (size() == max index + 1)
         // Non-existing mappings are distinguished by nullptr value.
+        // -Memory usage per cell (64-bit build): 8 bytes
+        // -Memory usage if setting one cell at row N (64-bit build): 8 * N
+        // -Content access by row: O(1)
         template <class Index_T, class Char_T>
         class RowToContentMapVector : public Vector<const Char_T*>
         {
@@ -440,6 +447,84 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             auto lowerBound(const Index_T nRow)       -> typename BaseClass::iterator       { return lowerBoundImpl(*this, nRow); }
             auto lowerBound(const Index_T nRow) const -> typename BaseClass::const_iterator { return lowerBoundImpl(*this, nRow); }
         }; // class RowToContentMapVector
+
+        // Row storage based on MapBlockIndex.
+        // -Memory usage per cell (64-bit build): ~8 bytes
+        // -Memory usage if setting one cell at row N (64-bit build): (N/4096)*16 + 8 * 4096
+        // -Content access by row: O(1)
+        template <class Index_T, class Char_T>
+        class RowToContentMapBlockIndex : public DFG_DETAIL_NS::MapBlockIndex<const char*, 4096>
+        {
+        public:
+            using BaseClass = DFG_DETAIL_NS::MapBlockIndex<const char*, 4096>;
+            using IndexT = typename BaseClass::IndexT;
+
+            // Precondition: p != nullptr
+            // Precondition: empty() || (i >= size() && i + 1 <= maxValueOfType<Index_T>()
+            void push_back(const Index_T i, const Char_T* p)
+            {
+                DFG_ASSERT_UB(p != nullptr);
+                DFG_ASSERT_UB(this->empty() || i >= this->sizeAsIndexT());
+                DFG_ASSERT_UB(i <= maxValueOfType<Index_T>() - 1);
+                this->set(i, p);
+            }
+
+            // Note: this may be relatively expensive operation.
+            Index_T sizeAsIndexT() const { return static_cast<Index_T>(this->size()); }
+
+            const Char_T* content(const Index_T nRow, Dummy) const
+            {
+                return value(static_cast<IndexT>(nRow));
+            }
+
+            // Precondition: iter is dereferencable
+            Index_T iteratorToRow(const typename BaseClass::const_iterator iter) const
+            {
+                DFG_ASSERT_UB(iter->first != invalidKey());
+                return iter->first;
+            }
+
+            void setContent(const Index_T nRow, const Char_T* p)
+            {
+                this->set(static_cast<IndexT>(nRow), p);
+            }
+
+            // Precondition: nInsertCount is valid count.
+            void insertRowsAt(const Index_T nRow, const Index_T nInsertCount)
+            {
+                this->insertKeysByPositionAndCount(nRow, nInsertCount);
+            }
+
+            // Precondition: nRemoveCount is valid count.
+            void removeRows(const Index_T nRow, const Index_T nRemoveCount)
+            {
+                this->removeKeysByPositionAndCount(nRow, nRemoveCount);
+            }
+
+            void swapRowContents(typename BaseClass::iterator iterA, typename BaseClass::iterator iterB)
+            {
+                const auto aContent = iterA->second;
+                this->set(iterA->first, iterB->second);
+                this->set(iterB->first, aContent);
+            }
+
+            static Index_T maxRowCount()
+            {
+                return saturateCast<Index_T>(BaseClass::maxKey() + 1);
+            }
+
+            // Precondition: iter must be dereferencable.
+            bool isExistingRow(const typename BaseClass::const_iterator iter) const
+            {
+                return iter->second != nullptr;
+            }
+
+            const_iterator findOrInsertHint(const Index_T nRow)
+            {
+                return this->find(nRow);
+            }
+        }; // class RowToContentMapBlockIndex
+
     } // namespace DFG_DETAIL_NS
 
     // Class for efficiently storing big table of small strings with no embedded nulls.
@@ -545,8 +630,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }; // Class CharStorageItem
 
         using IndexT = Index_T;
-        typedef DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T> RowToContentMap;
-        //typedef DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T> RowToContentMap;
+        //typedef DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T> RowToContentMap; // Map-based, good for sparse content.
+        //typedef DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T> RowToContentMap; // Vector-based, good for dense.
+        typedef DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T> RowToContentMap; // "Block-vector", dedicated structure made for TableSz
+
         typedef std::vector<RowToContentMap> TableIndexContainer;
         typedef std::vector<CharStorageItem> CharStorage;
         typedef std::vector<CharStorage> CharStorageContainer;
@@ -672,6 +759,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return *iter;
         }
 
+        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T>*) const
+        {
+            DFG_UNUSED(nCol);
+            return iter->second;
+        }
+
         // Precondition: iter must be dereferencable.
         const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter) const
         {
@@ -694,6 +787,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T>*) const
         {
             return m_colToRows[nCol].iteratorToRow(iter);
+        }
+
+        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T>*) const
+        {
+            DFG_UNUSED(nCol);
+            return iter->first;
         }
 
         // Precondition: iter is dereferencable.
