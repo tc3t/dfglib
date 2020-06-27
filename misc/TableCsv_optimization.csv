@@ -76,3 +76,19 @@
 2020-06-18,,MSVC_2017.9,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.800334,0.784898,0.799029,0.824341,0.808068,0.800334
 2020-06-18,,MSVC_2017.9,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.05194,1.08296,1.06661,1.07425,1.062,1.06661
 2020-06-18,,MSVC_2019.5,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.796071,0.761728,0.773637,0.791115,0.784011,0.784011
+2020-06-27,,MinGW_7.3.0,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.860737,0.893496,0.847775,0.857982,0.858695,0.858695
+,,,,,,,,,,,,
+2020-06-27,Row container changed to AoS-map,Commit 0e9e69108c8658ee6d2608f43581653b6141da68,,,,,,,,,,
+2020-06-27,,MSVC_2017.9,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.819505,0.833866,0.811115,0.859368,0.825396,0.825396
+2020-06-27,,MSVC_2017.9,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.06478,1.04024,1.04665,1.05479,1.03899,1.04665
+,,,,,,,,,,,,
+2020-06-27,Internal TableSz changes (no intended effect),Commit 9a0677c23907cabfaf3c3e1b4cb806bc3511b4c4,,,,,,,,,,
+2020-06-27,,MSVC_2017.9,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.816665,0.8167,0.807707,0.898365,0.843429,0.8167
+2020-06-27,,MSVC_2017.9,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",1.0993,1.09832,1.1022,1.11419,1.12465,1.1022
+,,,,,,,,,,,,
+2020-06-27,Row container changed to MapBlockIndex,Commit 807d39a97a7c6eda69c2ed3e93e371cbffa2c9df,,,,,,,,,,
+2020-06-27,,MSVC_2015_u3,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.761597,0.727401,0.750827,0.73145,0.752118,0.750827
+2020-06-27,,MSVC_2017.9,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.680876,0.663469,0.717727,0.748797,0.665016,0.680876
+2020-06-27,,MSVC_2017.9,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.702119,0.700058,0.681993,0.708112,0.774678,0.702119
+2020-06-27,,MSVC_2019.5,4,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.675514,0.673569,0.700178,0.674634,0.681161,0.675514
+2020-06-27,,MinGW_7.3.0,8,release,r4M x c7 abc content,"TableCsv<char,uint32>",0.633595,0.618955,0.646177,0.638159,0.624973,0.633595
