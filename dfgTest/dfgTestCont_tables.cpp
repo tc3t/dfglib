@@ -777,8 +777,18 @@ TEST(dfgCont, TableCsv)
             table.writeToStream(ostrm, writePolicy);
             // ...read file bytes...
             const auto fileBytes = fileToByteContainer<std::string>(s);
-            // ...and check that bytes match.
-            EXPECT_EQ(fileBytes, bytes);
+            // ...check that written bytes end with EOL...
+            {
+                const auto sEol = eolStrFromEndOfLineType(eolTypes[i]);
+                std::string sEolEncoded;
+                for (const auto& c : sEol)
+                    cpToEncoded(static_cast<uint32>(c), std::back_inserter(sEolEncoded), encodings[i]);
+                ASSERT_TRUE(bytes.size() >= sEolEncoded.size());
+                EXPECT_TRUE(std::equal(bytes.cend() - sEolEncoded.size(), bytes.cend(), sEolEncoded.cbegin()));
+            }
+            // ...and compare with the original file excluding EOL
+            const auto nEolSizeInBytes = eolStrFromEndOfLineType(eolTypes[i]).size() * baseCharacterSize(encodings[i]);
+            EXPECT_EQ(fileBytes, std::string(bytes.cbegin(), bytes.cend() - nEolSizeInBytes));
         }
 
         // Check also that saving without BOM works.
@@ -877,8 +887,8 @@ TEST(dfgCont, TableCsv)
         const size_t nExpectedCount = 2;
         // Note: EbEnclose is missing because it would have need more work to implement writing something even for non-existent cells.
         const std::array<EnclosementBehaviour, nExpectedCount> enclosementItems = { EbEncloseIfNeeded, EbEncloseIfNonEmpty };
-        const std::array<std::string, nExpectedCount> expected = {  DFG_ASCII("a,b,,\"c,d\",\"e\nf\",g\n,,r1c2,,,").c_str(),
-                                                                    DFG_ASCII("\"a\",\"b\",,\"c,d\",\"e\nf\",\"g\"\n,,\"r1c2\",,,").c_str() };
+        const std::array<std::string, nExpectedCount> expected = {  DFG_ASCII("a,b,,\"c,d\",\"e\nf\",g\n,,r1c2,,,\n").c_str(),
+                                                                    DFG_ASCII("\"a\",\"b\",,\"c,d\",\"e\nf\",\"g\"\n,,\"r1c2\",,,\n").c_str() };
         DFG_CLASS_NAME(TableCsv)<char, uint32> table;
         table.setElement(0, 0, DFG_UTF8("a"));
         table.setElement(0, 1, DFG_UTF8("b"));

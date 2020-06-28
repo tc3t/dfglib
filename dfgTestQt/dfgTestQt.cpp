@@ -60,16 +60,18 @@ TEST(dfgQt, CsvItemModel)
         const auto bSaveSuccess = model.saveToFile(sOutputPath, saveOptions);
         EXPECT_EQ(true, bSaveSuccess);
 
-        const auto inputBytes = DFG_MODULE_NS(io)::fileToVector(sInputPath.toLatin1().data());
+        auto inputBytesWithAddedEol = DFG_MODULE_NS(io)::fileToVector(sInputPath.toLatin1().data());
+        const auto sEol = ::DFG_MODULE_NS(io)::eolStrFromEndOfLineType(saveOptions.eolType());
+        inputBytesWithAddedEol.insert(inputBytesWithAddedEol.end(), sEol.cbegin(), sEol.cend());
         const auto outputBytes = DFG_MODULE_NS(io)::fileToVector(sOutputPath.toLatin1().data());
-        EXPECT_EQ(inputBytes, outputBytes);
+        EXPECT_EQ(inputBytesWithAddedEol, outputBytes);
 
         // Test in-memory saving
         {
             DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<std::vector<char>> strm;
             model.save(strm, saveOptions);
             const auto& outputBytesMc = strm.container();
-            EXPECT_EQ(inputBytes, outputBytesMc);
+            EXPECT_EQ(inputBytesWithAddedEol, outputBytesMc);
         }
     }
 }

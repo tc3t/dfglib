@@ -790,8 +790,7 @@ DFG_ROOT_NS_BEGIN{
                         if (nCol + 1 < nMaxColCount) // Write separator for all but the last column.
                             policy.writeSeparator(strm, nRow, nCol);
                     }
-                    if (!nextColItemRowIters.empty()) // Don't write eol after last line. TODO: make this customisable.
-                        policy.writeEol(strm);
+                    policy.writeEol(strm);
                 }
             }
 
