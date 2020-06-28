@@ -11,15 +11,15 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/valueArray.hpp"
 
 
-void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer> spCd)
+void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::setChartDefinitionViewer(ChartDefinitionViewer viewer)
 {
-    if (m_spChartDefinition)
+    if (!m_chartDefinitionViewer.isNull())
     {
         DFG_ASSERT_INVALID_ARGUMENT(false, "Viewer can be set only once"); // For now not supporting resetting viewer.
         return;
     }
-    m_spChartDefinition = std::move(spCd);
-    m_apChartDefinitionViewer = m_spChartDefinition.get();
+    m_chartDefinitionViewer = std::move(viewer);
+    m_apChartDefinitionViewer = &m_chartDefinitionViewer;
 }
 
 void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemSelection selection)
@@ -127,7 +127,7 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
     m_spSelectionAnalyzer = std::make_shared<SelectionAnalyzerForGraphing>();
     m_spSelectionAnalyzer->m_spTable.reset(std::make_shared<SelectionAnalyzerForGraphing::Table>());
     m_spSelectionAnalyzer->m_sSourceId = this->uniqueId();
-    m_spDataViewer = m_spSelectionAnalyzer->m_spTable.createViewer();
+    m_dataViewer = m_spSelectionAnalyzer->m_spTable.createViewer();
     DFG_QT_VERIFY_CONNECT(connect(m_spSelectionAnalyzer.get(), &CsvTableViewSelectionAnalyzer::sigAnalyzeCompleted, this, &GraphDataSource::sigChanged));
     this->m_bAreChangesSignaled = true;
     m_spView->addSelectionAnalyzer(m_spSelectionAnalyzer);
@@ -148,7 +148,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
     if (!handler || !m_spView)
         return;
 
-    auto spTableView = (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+    auto spTableView = m_dataViewer.view();
     if (!spTableView) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
         return;
     const auto& rTable = *spTableView;
@@ -253,10 +253,10 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnNames() const -> Co
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::privGetTableView() const -> std::shared_ptr<const SelectionAnalyzerForGraphing::Table>
 {
-    return (m_spDataViewer) ? m_spDataViewer->view() : nullptr;
+    return m_dataViewer.view();
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer> sp)
+void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setChartDefinitionViewer(ChartDefinitionViewer sp)
 {
     if (m_spSelectionAnalyzer)
         m_spSelectionAnalyzer->setChartDefinitionViewer(std::move(sp));

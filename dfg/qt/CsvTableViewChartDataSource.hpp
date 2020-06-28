@@ -42,11 +42,11 @@ public:
 
     void analyzeImpl(QItemSelection selection) override;
 
-    void setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer> spCd);
+    void setChartDefinitionViewer(ChartDefinitionViewer viewer);
 
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<Table> m_spTable;
     GraphDataSourceId m_sSourceId;
-    std::shared_ptr<ChartDefinitionViewer> m_spChartDefinition;
+    ChartDefinitionViewer m_chartDefinitionViewer;
     std::atomic<ChartDefinitionViewer*> m_apChartDefinitionViewer;
 };
 
@@ -86,12 +86,12 @@ public:
 
     ColumnNameMap columnNames() const override;
 
-    void setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer>) override;
+    void setChartDefinitionViewer(ChartDefinitionViewer) override;
 
     std::shared_ptr<const SelectionAnalyzerForGraphing::Table> privGetTableView() const;
 
     QPointer<CsvTableView> m_spView;
-    std::shared_ptr<::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::Table>> m_spDataViewer;
+    ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::Table> m_dataViewer;
     std::shared_ptr<SelectionAnalyzerForGraphing> m_spSelectionAnalyzer;
 }; // class CsvTableViewChartDataSource
 

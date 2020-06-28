@@ -940,7 +940,7 @@ public:
 
     ChartDefinition getChartDefinition();
 
-    std::shared_ptr<ChartDefinitionViewer> getChartDefinitionViewer();
+    ChartDefinitionViewer getChartDefinitionViewer();
 
     ChartController* getController();
 
@@ -1161,7 +1161,7 @@ auto GraphDefinitionWidget::getChartDefinition() -> ChartDefinition
     return ChartDefinition((m_spRawTextDefinition) ? m_spRawTextDefinition->toPlainText() : QString(), defaultSource);
 }
 
-auto GraphDefinitionWidget::getChartDefinitionViewer() -> std::shared_ptr<ChartDefinitionViewer>
+auto GraphDefinitionWidget::getChartDefinitionViewer() -> ChartDefinitionViewer
 {
     this->updateChartDefinitionViewable();
     return m_chartDefinitionViewable.createViewer();

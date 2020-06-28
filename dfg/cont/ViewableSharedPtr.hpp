@@ -102,29 +102,42 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     } // namespace DFG_DETAIL_NS
 
     template <class T>
-    class DFG_CLASS_NAME(ViewableSharedPtrViewer)
+    class ViewableSharedPtrViewer
     {
     public:
         typedef DFG_DETAIL_NS::ViewableSharedPtrRouterProxy<T> RouterT;
 
-        DFG_CLASS_NAME(ViewableSharedPtrViewer)(std::shared_ptr<RouterT> spRouter) :
+        ViewableSharedPtrViewer(std::shared_ptr<RouterT> spRouter = nullptr) :
             m_spRouter(std::move(spRouter))
         {
             if (m_spRouter)
                 m_spRouter->addViewer(this);
         }
 
-        ~DFG_CLASS_NAME(ViewableSharedPtrViewer)()
+        ~ViewableSharedPtrViewer()
+        {
+            reset();
+        }
+
+        // Returns true if this viewer is not attached to anything.
+        bool isNull() const
+        {
+            return m_spRouter.get() == nullptr;
+        }
+
+        // Removes association of 'this' to any data, after this isNull() returns true.
+        void reset()
         {
             if (m_spRouter)
             {
                 m_spRouter->removeResetNotifier(this);
                 m_spRouter->removeViewer(this);
+                m_spRouter.reset();
             }
         }
 
         // Returns shared_ptr to viewed object or empty.
-        std::shared_ptr<const T> view()
+        std::shared_ptr<const T> view() const
         {
             return (m_spRouter) ? m_spRouter->view() : std::shared_ptr<const T>();
         }
@@ -166,10 +179,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }
 
         // Creates viewer.
-        std::shared_ptr<DFG_CLASS_NAME(ViewableSharedPtrViewer)<T>> createViewer()
+        ViewableSharedPtrViewer<T> createViewer()
         {
-            auto spViewer = std::make_shared<DFG_CLASS_NAME(ViewableSharedPtrViewer)<T>>(m_spRouter);
-            return spViewer;
+            return ViewableSharedPtrViewer<T>(m_spRouter);
         }
 
         void reset(std::shared_ptr<T> other = std::shared_ptr<T>())
@@ -231,8 +243,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             {
                 lock.unlock(); // Since we're not editing the existing object, don't need to hold the lock anymore -> viewers will be able to obtain view to old data until reset() below.
                 auto spNew = std::make_shared<T>(); // TODO: shouldn't require default constructibility from T
-                auto spViewer = createViewer();
-                editor(*spNew, (spViewer) ? spViewer->view().get() : nullptr);
+                auto viewer = createViewer();
+                editor(*spNew, viewer.view().get());
                 reset(std::move(spNew));
             }
         }

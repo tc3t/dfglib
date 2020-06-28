@@ -106,7 +106,7 @@ public:
 
     // Sets definition viewer so that source can, if needed, know what data is needed from it.
     // Development note: for now as a quick solution interface is restricted to setting only one viewer.
-    virtual void setChartDefinitionViewer(std::shared_ptr<ChartDefinitionViewer>) {}
+    virtual void setChartDefinitionViewer(ChartDefinitionViewer) {}
 
     bool hasChangeSignaling() const { return m_bAreChangesSignaled; }
 
