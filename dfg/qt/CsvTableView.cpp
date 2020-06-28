@@ -2141,7 +2141,7 @@ namespace
             updateDynamicHelp();
         }
 
-        void setGenerateFailed(bool bFailed);
+        void setGenerateFailed(bool bFailed, const QString& sFailReason = QString());
 
         PropertyId rowToPropertyId(const int i) const
         {
@@ -2322,7 +2322,7 @@ namespace
         std::map<const void*, QObjectStorage<QCompleter>> m_completers; // Maps completer definition (e.g. integerDistributionCompleters) to completer item.
     }; // Class ContentGeneratorDialog
 
-    void ContentGeneratorDialog::setGenerateFailed(const bool bFailed)
+    void ContentGeneratorDialog::setGenerateFailed(const bool bFailed, const QString& sFailReason)
     {
         if (m_pLayout)
         {
@@ -2330,9 +2330,13 @@ namespace
             {
                 if (!m_spGenerateFailedNoteWidget)
                 {
-                    m_spGenerateFailedNoteWidget.reset(new QLabel(tr("<font color=\"#ff0000\">Note: Generating content failed; this may be caused by bad parameters</font>"), this));
+                    m_spGenerateFailedNoteWidget.reset(new QLabel(this));
                     m_pLayout->insertWidget(m_pLayout->count() - 1, m_spGenerateFailedNoteWidget.get());
                 }
+                const QString sMsg = (sFailReason.isEmpty()) ?
+                    tr("Note: Generating content failed; this may be caused by bad parameters") :
+                    tr("Note: Generating content failed with reason:<br>%1").arg(sFailReason);
+                m_spGenerateFailedNoteWidget->setText(QString("<font color=\"#ff0000\">%1</font>").arg(sMsg));
             }
             if (m_spGenerateFailedNoteWidget)
                 m_spGenerateFailedNoteWidget->setVisible(bFailed);
@@ -2442,6 +2446,14 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
         const auto rv = pGeneratorDialog->exec();
         if (rv == QDialog::Accepted && pGeneratorDialog->m_spSettingsModel)
         {
+            // Trying to lock view for write.
+            if (!m_spEditLock->tryLockForWrite())
+            {
+                pGeneratorDialog->setGenerateFailed(true, privCreateActionBlockedDueToLockedContentMessage(tr("content generation")));
+                continue;
+            }
+            auto lockCleanUp = makeScopedCaller([] {}, [&]() { m_spEditLock->unlock(); });
+
             if (generateContentImpl(*pGeneratorDialog->m_spSettingsModel))
             {
                 pGeneratorDialog->setGenerateFailed(false);
@@ -3509,10 +3521,14 @@ QItemSelection DFG_CLASS_NAME(CsvTableView)::getSelection() const
     return (pSelectionModel) ? pSelectionModel->selection() : QItemSelection();
 }
 
+QString DFG_CLASS_NAME(CsvTableView)::privCreateActionBlockedDueToLockedContentMessage(const QString& actionname)
+{
+    return tr("Executing action '%1' was blocked: table is being accessed by some other operation. Please try again later.").arg(actionname);
+}
+
 void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QString& actionname)
 {
-    const auto sMsg = tr("Executing action '%1' was blocked: table is being accessed by some other operation. Please try again later.").arg(actionname);
-    QToolTip::showText(QCursor::pos(), sMsg);
+    QToolTip::showText(QCursor::pos(), privCreateActionBlockedDueToLockedContentMessage(actionname));
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()

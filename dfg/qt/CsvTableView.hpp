@@ -252,6 +252,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openFile(const QString& sPath);
         bool openFile(const QString& sPath, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
 
+        QString privCreateActionBlockedDueToLockedContentMessage(const QString& actionname);
         void privShowExecutionBlockedNotification(const QString& actionname);
 
         QString makeClipboardStringForCopy(QChar cDelim = '\t');
