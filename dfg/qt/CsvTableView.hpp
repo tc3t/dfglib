@@ -151,6 +151,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ModelIndexTypeView    // Refers to indexes in view model (which can be the same as source-model in case there is no proxy).
         };
 
+        class LockReleaser
+        {
+        public:
+            LockReleaser(QReadWriteLock* pLock = nullptr) : m_pLock(pLock) {}
+            LockReleaser(LockReleaser&& other) : m_pLock(other.m_pLock) { other.m_pLock = nullptr; }
+            ~LockReleaser();
+            LockReleaser(const LockReleaser&) = delete;
+            LockReleaser& operator=(const LockReleaser&) = delete;
+            bool isLocked() { return m_pLock != nullptr; }
+
+            QReadWriteLock* m_pLock;
+        };
+
         DFG_CLASS_NAME(CsvTableView)(QWidget* pParent);
         ~DFG_CLASS_NAME(CsvTableView)() DFG_OVERRIDE_DESTRUCTOR;
 
@@ -259,6 +272,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Convenience function, effectively returns selectionModel()->selection();
         QItemSelection getSelection() const;
+
+        LockReleaser tryLockForEdit();
 
     private:
         template <class T, class Param0_T>

@@ -3531,6 +3531,17 @@ void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QS
     QToolTip::showText(QCursor::pos(), privCreateActionBlockedDueToLockedContentMessage(actionname));
 }
 
+auto DFG_CLASS_NAME(CsvTableView)::tryLockForEdit() -> LockReleaser
+{
+    return (m_spEditLock && m_spEditLock->tryLockForWrite()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
+}
+
+DFG_CLASS_NAME(CsvTableView)::LockReleaser::~LockReleaser()
+{
+    if (m_pLock)
+        m_pLock->unlock();
+}
+
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()
     : m_abIsEnabled(true)
     , m_bPendingCheckQueue(false)
