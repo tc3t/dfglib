@@ -755,11 +755,10 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::isVolatileCache() const
  *      -Generic dataSource does not have optimized queries for specific type of chart objects
  *          -> by fetching data once and storing it in cache in specific format allows efficient handling of similar ChartObjects.
  *
- * Current implementation in the context of dfgQtTableEditor and TableSelection source:
+ * Current implementation in the context of dfgQtTableEditor and CsvTableView selection source:
  *  1. User changes selection
- *  2. SelectionAnalyzerForGraphing notices changed selection and stores all data in the selection to it's own data table.
- *      Note that it does not know anything about ChartObject definitions so big proportions of the stored data might not be used at all in charts.
- *  3. Changed selection leads to recreation of ChartObjects:
+ *  2. SelectionAnalyzerForGraphing notices changed selection and stores selection in thread-safe manner.
+ *  3. Changed selection leads to recreation of ChartObjects due to data changed -signal:
  *      a. ChartObjects do not directly query data from data source, but instead they ask data from object of this class (ChartDataCache)
  *      b. ChartObject definition defines a cacheKey so that items with identical cacheKeys can use the same fetched cache data.
  *          -Examples:
@@ -2827,6 +2826,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         m_spCache->removeInvalidCaches();
 
     // TODO: graph filling should be done in worker thread to avoid GUI freezing.
+    //       It's worth noting though that data sources might not be thread-safe (at least CsvItemModelChartDataSource wasn't as of 2020-06-29).
+    //       Data sources should probably either guarantee thread-safety or at least be able to gracefully handle threading:
+    //       e.g. provide interface from which user of data source can check if certain operations can be done and/or data source should ignore
+    //       read requests that can't be done in safe manner.
 
     if (!m_spGraphDisplay)
     {

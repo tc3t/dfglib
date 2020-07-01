@@ -33,10 +33,10 @@ class SelectionAnalyzerForGraphing : public CsvTableViewSelectionAnalyzer
 public:
     typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<double, double> RowToValueMap;
     typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<int, RowToValueMap> ColumnToValuesMap;
-    class Table : public ColumnToValuesMap
+
+    class SelectionInfo : public QItemSelection
     {
     public:
-        GraphDataSource::ColumnDataTypeMap m_columnTypes;
         GraphDataSource::ColumnNameMap m_columnNames;
     };
 
@@ -44,7 +44,7 @@ public:
 
     void setChartDefinitionViewer(ChartDefinitionViewer viewer);
 
-    ::DFG_MODULE_NS(cont)::ViewableSharedPtr<Table> m_spTable;
+    ::DFG_MODULE_NS(cont)::ViewableSharedPtr<SelectionInfo> m_spSelectionInfo;
     GraphDataSourceId m_sSourceId;
     ChartDefinitionViewer m_chartDefinitionViewer;
     std::atomic<ChartDefinitionViewer*> m_apChartDefinitionViewer;
@@ -55,6 +55,7 @@ public:
 //
 //   CsvTableViewChartDataSource
 //
+//   Implements data source for CsvTableView selection.
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -88,11 +89,15 @@ public:
 
     void setChartDefinitionViewer(ChartDefinitionViewer) override;
 
-    std::shared_ptr<const SelectionAnalyzerForGraphing::Table> privGetTableView() const;
+    std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo> privGetSelectionViewer() const;
+
+public slots:
+    void onSelectionAnalysisCompleted();
 
     QPointer<CsvTableView> m_spView;
-    ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::Table> m_dataViewer;
+    ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::SelectionInfo> m_selectionViewer;
     std::shared_ptr<SelectionAnalyzerForGraphing> m_spSelectionAnalyzer;
+    GraphDataSource::ColumnDataTypeMap m_columnTypes;
 }; // class CsvTableViewChartDataSource
 
 } } // Module namespace
