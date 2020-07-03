@@ -348,13 +348,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
     }
 
     {
-        auto pAction = new QAction(tr("Clear selected cell(s)"), this);
-        pAction->setShortcut(tr("Del"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::clearSelected));
-        addAction(pAction);
-    }
-
-    {
         auto pAction = new QAction(tr("Insert row here"), this);
         pAction->setShortcut(tr("Ins"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowHere));
@@ -400,49 +393,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         auto pAction = new QAction(tr("Resize table"), this);
         //pAction->setShortcut(tr(""));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Generate content..."), this);
-        //pAction->setShortcut(tr(""));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::generateContent));
-        addAction(pAction);
-    }
-
-    // Insert-menu
-    {
-        auto pAction = new QAction(tr("Insert"), this);
-
-        auto pMenu = new QMenu();
-        // Schedule destruction of menu with the parent action.
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
-
-        // 'Insert Date'
-        {
-            auto pAct = new QAction(tr("Date"), this);
-            pAct->setShortcut(tr("Alt+Q"));
-            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDate));
-            pMenu->addAction(pAct);
-        }
-
-        // 'Insert Time'
-        {
-            auto pAct = new QAction(tr("Time"), this);
-            pAct->setShortcut(tr("Alt+W"));
-            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertTime));
-            pMenu->addAction(pAct);
-        }
-
-        // 'Insert Date time'
-        {
-            auto pAct = new QAction(tr("Date and time"), this);
-            pAct->setShortcut(tr("Shift+Alt+Q"));
-            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDateTime));
-            pMenu->addAction(pAct);
-        }
-
-        pAction->setMenu(pMenu); // Does not transfer ownership.
         addAction(pAction);
     }
 
@@ -529,6 +479,56 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         auto pAction = new QAction(tr("Paste"), this);
         pAction->setShortcut(tr("Ctrl+V"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::paste));
+        addAction(pAction);
+    }
+
+    {
+        auto pAction = new QAction(tr("Clear selected cell(s)"), this);
+        pAction->setShortcut(tr("Del"));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::clearSelected));
+        addAction(pAction);
+    }
+
+    {
+        auto pAction = new QAction(tr("Generate content..."), this);
+        //pAction->setShortcut(tr(""));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::generateContent));
+        addAction(pAction);
+    }
+
+    // Insert-menu
+    {
+        auto pAction = new QAction(tr("Insert"), this);
+
+        auto pMenu = new QMenu();
+        // Schedule destruction of menu with the parent action.
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+
+        // 'Insert Date'
+        {
+            auto pAct = new QAction(tr("Date"), this);
+            pAct->setShortcut(tr("Alt+Q"));
+            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDate));
+            pMenu->addAction(pAct);
+        }
+
+        // 'Insert Time'
+        {
+            auto pAct = new QAction(tr("Time"), this);
+            pAct->setShortcut(tr("Alt+W"));
+            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertTime));
+            pMenu->addAction(pAct);
+        }
+
+        // 'Insert Date time'
+        {
+            auto pAct = new QAction(tr("Date and time"), this);
+            pAct->setShortcut(tr("Shift+Alt+Q"));
+            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDateTime));
+            pMenu->addAction(pAct);
+        }
+
+        pAction->setMenu(pMenu); // Does not transfer ownership.
         addAction(pAction);
     }
 
