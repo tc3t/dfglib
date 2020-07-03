@@ -3,6 +3,7 @@
 #include "../dfgDefs.hpp"
 #include "../reflection/hasMemberFunction.hpp"
 #include <type_traits>
+#include <map>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 

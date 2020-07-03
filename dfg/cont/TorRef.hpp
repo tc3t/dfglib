@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include <dfg/baseConstructorDelegate.hpp>
+#include "../baseConstructorDelegate.hpp"
 #include <memory>
 #include <array>
 #include "../dfgAssert.hpp"
