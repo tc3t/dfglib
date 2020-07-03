@@ -448,6 +448,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void stopAnalyzerThreads();
 
         void addAllActions();
+        void addOpenSaveActions();
+        void addDimensionEditActions();
+        void addFindAndSelectionActions();
+        void addContentEditActions();
+        void addSortActions();
+        void addHeaderActions();
+        void addMiscellaneousActions();
+
+        void addSeparatorAction();
+        void addSeparatorActionTo(QWidget* pTarget);
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;

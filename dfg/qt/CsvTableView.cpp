@@ -212,9 +212,32 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent, con
     // TODO: make customisable.
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 
-    // TODO: fixedDimensionEdit should have some actions as well.
-    if (viewType == ViewType::allFeatures)
-        addAllActions();
+    switch (viewType)
+    {
+        case ViewType::allFeatures: addAllActions(); break;
+        case ViewType::fixedDimensionEdit:
+            addFindAndSelectionActions();
+                addSeparatorAction();
+            addContentEditActions();
+                addSeparatorAction();
+            addHeaderActions();
+                addSeparatorAction();
+        break;
+    }
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableView::addSeparatorAction()
+{
+    addSeparatorActionTo(this);
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableView::addSeparatorActionTo(QWidget* pTarget)
+{
+    if (!pTarget)
+        return;
+    auto pAction = new QAction(this);
+    pAction->setSeparator(true);
+    pTarget->addAction(pAction);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
@@ -227,20 +250,23 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         pHzHeader->addAction(pAction);
     }
 
-    const auto addSeparatorTo = [&](QWidget* pTarget)
-        {
-            if (!pTarget)
-                return;
-            auto pAction = new QAction(this);
-            pAction->setSeparator(true);
-            pTarget->addAction(pAction);
-        };
+    addOpenSaveActions();   
+        addSeparatorAction();
+    addDimensionEditActions();
+        addSeparatorAction();
+    addFindAndSelectionActions();
+        addSeparatorAction();
+    addContentEditActions();
+        addSeparatorAction();
+    addSortActions();
+        addSeparatorAction();
+    addHeaderActions();
+        addSeparatorAction();
+    addMiscellaneousActions();
+}
 
-    const auto addSeparator = [&]()
-        {
-            addSeparatorTo(this);
-        };
-
+void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
+{
     {
         auto pAction = new QAction(tr("New table"), this);
         pAction->setShortcut(tr("Ctrl+N"));
@@ -318,7 +344,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         // Open app-config file
         if (QFileInfo(DFG_CLASS_NAME(QtApplication)::getApplicationSettingsPath()).exists())
         {
-            addSeparatorTo(pMenu);
+            addSeparatorActionTo(pMenu);
             auto pAction = new QAction(tr("Open app config file"), this);
             DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openAppConfigFile));
             DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigOnAllowApplicationSettingsUsageChanged, pAction, &QAction::setVisible));
@@ -329,10 +355,10 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         pMenuAction->setMenu(pMenu); // Does not transfer ownership.
         addAction(pMenuAction);
     } // Config menu
+}
 
-    // -------------------------------------------------
-    addSeparator();
-
+void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
+{
     {
         auto pAction = new QAction(tr("Move first row to header"), this);
         //pAction->setShortcut(tr(""));
@@ -395,10 +421,10 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable));
         addAction(pAction);
     }
+}
 
-    // -------------------------------------------------
-    addSeparator();
-
+void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
+{
     {
         auto pAction = new QAction(tr("Invert selection"), this);
         pAction->setShortcut(tr("Ctrl+I"));
@@ -441,26 +467,10 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
             addAction(pAction);
         }
     }
+}
 
-    /* Not Implemented
-    {
-        auto pAction = new QAction(tr("Move row up"), this);
-        pAction->setShortcut(tr("Alt+Up"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowUp));
-        addAction(pAction);
-    }
-
-    {
-    auto pAction = new QAction(tr("Move row down"), this);
-    pAction->setShortcut(tr("Alt+Down"));
-    DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowDown));
-    addAction(pAction);
-    }
-    */
-
-    // -------------------------------------------------
-    addSeparator();
-
+void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
+{
     {
         auto pAction = new QAction(tr("Cut"), this);
         pAction->setShortcut(tr("Ctrl+X"));
@@ -532,11 +542,27 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         addAction(pAction);
     }
 
+    /* Not Implemented
+    {
+        auto pAction = new QAction(tr("Move row up"), this);
+        pAction->setShortcut(tr("Alt+Up"));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowUp));
+        addAction(pAction);
+    }
+
+    {
+    auto pAction = new QAction(tr("Move row down"), this);
+    pAction->setShortcut(tr("Alt+Down"));
+    DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowDown));
+    addAction(pAction);
+    }
+    */
+
     privAddUndoRedoActions();
+}
 
-    // -------------------------------------------------
-    addSeparator();
-
+void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
+{
     // Add 'sortable columns'-action
     {
         auto pAction = new QAction(tr("Sortable columns"), this);
@@ -573,20 +599,20 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
         }));
         addAction(pAction);
     }
+}
 
-    // -------------------------------------------------
-    addSeparator();
-
+void ::DFG_MODULE_NS(qt)::CsvTableView::addHeaderActions()
+{
     {
         auto pAction = new QAction(tr("Resize"), this);
         m_spResizeColumnsMenu = createResizeColumnsMenu();
         pAction->setMenu(m_spResizeColumnsMenu.get());
         addAction(pAction);
     }
+}
 
-    // -------------------------------------------------
-    addSeparator();
-
+void ::DFG_MODULE_NS(qt)::CsvTableView::addMiscellaneousActions()
+{
     {
         // Add diff-action
         {
