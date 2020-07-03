@@ -22,7 +22,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
 #include <QFileDialog>
 #include <QUndoStack>
-#include <QHeaderView>
 #include <QFormLayout>
 #include <QComboBox>
 #include <QDesktopServices>
@@ -59,6 +58,17 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../math.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
 #include "../io/DelimitedTextWriter.hpp"
+
+
+void ::DFG_MODULE_NS(qt)::TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
+{
+    if (!pEvent)
+        return;
+    QMenu menu;
+    m_nLatestContextMenuEventColumn = logicalIndexAt(pEvent->pos());
+    menu.addActions(actions());
+    menu.exec(QCursor::pos());
+}
 
 using namespace DFG_MODULE_NS(qt);
 
@@ -180,7 +190,8 @@ namespace
 
 } // unnamed namespace
 
-DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
+
+DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent, const ViewType viewType)
     : BaseClass(pParent)
     , m_matchDef(QString(), Qt::CaseInsensitive, QRegExp::Wildcard)
     , m_nFindColumnIndex(0)
@@ -188,12 +199,33 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent)
 {
     m_spEditLock.reset(new QReadWriteLock(QReadWriteLock::Recursive));
 
+    {
+        auto pHzHeader = new TableHeaderView(Qt::Horizontal, this);
+        pHzHeader->setSectionsClickable(true); // Without this clicking header didn't select column
+        this->setHorizontalHeader(pHzHeader);
+    }
+
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
         pVertHdr->setDefaultSectionSize(gnDefaultRowHeight); // TODO: make customisable
 
     // TODO: make customisable.
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+
+    // TODO: fixedDimensionEdit should have some actions as well.
+    if (viewType == ViewType::allFeatures)
+        addAllActions();
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
+{
+    auto pHzHeader = horizontalTableHeader();
+    if (pHzHeader)
+    {
+        auto pAction = new QAction(tr("Set column names"), this); // Ownership through parentship.
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &CsvTableView::setColumnNames));
+        pHzHeader->addAction(pAction);
+    }
 
     const auto addSeparatorTo = [&](QWidget* pTarget)
         {
@@ -3534,6 +3566,70 @@ void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QS
 auto DFG_CLASS_NAME(CsvTableView)::tryLockForEdit() -> LockReleaser
 {
     return (m_spEditLock && m_spEditLock->tryLockForWrite()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
+}
+
+auto ::DFG_CLASS_NAME(CsvTableView)::horizontalTableHeader() -> TableHeaderView*
+{
+    return qobject_cast<TableHeaderView*>(horizontalHeader());
+}
+
+void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
+{
+    auto pModel = this->model();
+    if (!pModel)
+        return;
+
+    QDialog dlg(this);
+    auto spLayout = std::make_unique<QVBoxLayout>(this);
+
+    // Creating model and filling existing column names to it (as rows).
+    CsvItemModel columnNameModel;
+    columnNameModel.insertColumn(0);
+    columnNameModel.setColumnName(0, tr("Column name"));
+
+    const auto nColCount = pModel->columnCount();
+    columnNameModel.insertRows(0, nColCount);
+    for (int c = 0; c < nColCount; ++c)
+        columnNameModel.setData(columnNameModel.index(c, 0), pModel->headerData(c, Qt::Horizontal).toString());
+
+    // Creating a dialog that has CsvTableView and ok & cancel buttons.
+    CsvTableView columnNameView(this, ViewType::fixedDimensionEdit);
+    columnNameView.setModel(&columnNameModel);
+    spLayout->addWidget(&columnNameView);
+
+    auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
+    connect(&rButtonBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(&rButtonBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    spLayout->addWidget(&rButtonBox);
+
+    dlg.setLayout(spLayout.release());
+    removeContextHelpButtonFromDialog(&dlg);
+
+    dlg.setMinimumHeight(350);
+    dlg.show();
+    columnNameView.onColumnResizeAction_toViewEvenly();
+
+    // Setting focus to the item on which the context menu was opened from.
+    {
+        auto pHeader = horizontalTableHeader();
+        auto pSelectionModel = columnNameView.selectionModel();
+        if (pHeader && pSelectionModel)
+            pSelectionModel->setCurrentIndex(columnNameModel.index(pHeader->m_nLatestContextMenuEventColumn, 0), QItemSelectionModel::SelectCurrent);
+    }
+
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    // Setting column names.
+    {
+        for (int c = 0, nCount = columnNameModel.rowCount(); c < nCount; ++c)
+        {
+            const auto sOldName = pModel->headerData(c, Qt::Horizontal).toString();
+            const auto sNewName = columnNameModel.data(columnNameModel.index(c, 0)).toString();
+            if (sOldName != sNewName)
+                pModel->setHeaderData(c, Qt::Horizontal, sNewName);
+        }
+    }
 }
 
 DFG_CLASS_NAME(CsvTableView)::LockReleaser::~LockReleaser()

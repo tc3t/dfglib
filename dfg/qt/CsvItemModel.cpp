@@ -1043,6 +1043,24 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setData(const QModelIndex&
      return false;
 }
 
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHeaderData(const int section, Qt::Orientation orientation, const QVariant &value, const int role)
+{
+    if (orientation == Qt::Horizontal && role == Qt::EditRole && section >= 0 && section < getColumnCount())
+    {
+        const auto sValue = value.toString();
+        if (getHeaderName(section) != sValue)
+        {
+            setColumnName(section, sValue);
+            Q_EMIT headerDataChanged(orientation, section, section);
+            return true;
+        }
+        else
+            return false;
+    }
+    else
+        return BaseClass::setHeaderData(section, orientation, value, role);
+}
+
 Qt::ItemFlags DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::flags(const QModelIndex& index) const
 {
     #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS

@@ -12,7 +12,8 @@
 #include "containerUtils.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-#include <QPointer>
+    #include <QHeaderView>
+    #include <QPointer>
 DFG_END_INCLUDE_QT_HEADERS
 
 class QUndoStack;
@@ -133,6 +134,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<QPushButton>    m_spStopButton;
     }; // class CsvTableViewBasicSelectionAnalyzerPanel
 
+    class TableHeaderView : public QHeaderView
+    {
+        Q_OBJECT
+    public:
+        using BaseClass = QHeaderView;
+        using BaseClass::BaseClass; // Inheriting constructor
+
+        // Base class overrides -->
+        void contextMenuEvent(QContextMenuEvent* pEvent) override;
+        // <-- Base class overrides
+
+        int m_nLatestContextMenuEventColumn = -1;
+    };
+
     // View for showing CsvItemModel.
     class DFG_CLASS_NAME(CsvTableView) : public DFG_CLASS_NAME(TableView)
     {
@@ -144,6 +159,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
         typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDef;
         typedef DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer) SelectionAnalyzer;
+
+        enum class ViewType
+        {
+            allFeatures,        // View that has all features enabled
+            fixedDimensionEdit  // View that has only features for editing underlying model; no ability to insert/removes rows or columns, no ability to open/save file.
+        };
 
         enum ModelIndexType
         {
@@ -164,7 +185,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             QReadWriteLock* m_pLock;
         };
 
-        DFG_CLASS_NAME(CsvTableView)(QWidget* pParent);
+        DFG_CLASS_NAME(CsvTableView)(QWidget* pParent, ViewType viewType = ViewType::allFeatures);
         ~DFG_CLASS_NAME(CsvTableView)() DFG_OVERRIDE_DESTRUCTOR;
 
         // If already present, old undo stack will be destroyed.
@@ -275,6 +296,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         LockReleaser tryLockForEdit();
 
+        TableHeaderView* horizontalTableHeader();
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -382,6 +404,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void insertTime();
         void insertDateTime();
 
+        void setColumnNames();
+
         /*
         void pasteColumn();
         void pasteColumn(const int nCol);
@@ -422,6 +446,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool getProceedConfirmationFromUserIfInModifiedState(const QString& sTranslatedActionDescription);
 
         void stopAnalyzerThreads();
+
+        void addAllActions();
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
