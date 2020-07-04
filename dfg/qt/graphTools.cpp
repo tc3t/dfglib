@@ -29,6 +29,8 @@
 
 #include "../chartsAll.hpp"
 
+#include "../build/compilerDetails.hpp"
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
     #include <QPlainTextEdit>
@@ -2280,10 +2282,20 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
     auto pLayout = new QGridLayout(this);
     m_spGraphDefinitionWidget.reset(new GraphDefinitionWidget(this));
 
+    // Creating console display.
     {
         auto pConsole = new ConsoleDisplay(this);
         gConsoleLogHandle.setHandler([=](const QString& s, ConsoleLogLevel logLevel) { pConsole->addEntry(s, consoleLogLevelToEntryType(logLevel)); } );
-     
+
+        // Adding action for controlling cache detail logging.
+        {
+            auto pAction = new QAction(tr("Enable cache detail logging"), this); // Deletion through parentship.
+            pAction->setCheckable(true);
+            m_bLogCacheDiagnosticsOnUpdate = (DFG_BUILD_DEBUG_RELEASE_TYPE == StringViewC("debug"));
+            pAction->setChecked(m_bLogCacheDiagnosticsOnUpdate);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, [&](const bool b) { m_bLogCacheDiagnosticsOnUpdate = b; }));
+            pConsole->addAction(pAction);
+        }
         m_spConsoleWidget.reset(pConsole);
     }
 
@@ -2945,6 +2957,19 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     const auto elapsedRepaint = timerRepaint.elapsedWallSeconds();
     const auto elapsed = timer.elapsedWallSeconds();
     DFG_QT_CHART_CONSOLE_INFO(tr("Refresh lasted %1 ms (repaint took %2 %)").arg(round<int>(1000 * elapsed)).arg(round<int>(100.0 * elapsedRepaint / elapsed)));
+
+    // Cache diagnostics
+    if (m_spCache && m_spControlPanel->m_bLogCacheDiagnosticsOnUpdate)
+    {
+        QString s;
+        for (const auto& item : m_spCache->m_tableSelectionDatas)
+        {
+            if (!s.isEmpty())
+                s += ", ";
+            s += QString("{ key: %1, column count: %2 }").arg(item.first).arg(item.second->columnCount());
+        }
+        DFG_QT_CHART_CONSOLE_INFO(QString("Cache usage: %1").arg(s));
+    }
 }
 
 namespace

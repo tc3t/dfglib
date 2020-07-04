@@ -201,6 +201,8 @@ public slots:
     void onShowControlsCheckboxToggled(bool b);
     void onShowConsoleCheckboxToggled(bool b);
 
+public:
+    bool m_bLogCacheDiagnosticsOnUpdate = false;
 private:
     QObjectStorage<QWidget> m_spGraphDefinitionWidget;
     QObjectStorage<QWidget> m_spConsoleWidget;

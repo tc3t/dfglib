@@ -73,6 +73,14 @@ void ::DFG_MODULE_NS(qt)::ConsoleDisplay::contextMenuEvent(QContextMenuEvent* pE
             pAct->setEnabled(false);
     }
 
+    // Adding additional actions (if any)
+    const auto actions = this->actions();
+    if (!actions.isEmpty())
+    {
+        spMenu->addSeparator();
+        spMenu->addActions(actions);
+    }
+
     spMenu->move(this->mapToGlobal(pEvent->pos()));
     spMenu->exec();
 }
