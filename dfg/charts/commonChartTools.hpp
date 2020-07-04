@@ -32,6 +32,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     -if adding new types or properties for existing types, update forEachUnrecognizedPropertyId()
 */
 
+inline namespace fieldsIds
+{
+
 constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
 constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for example contruction from string failed due to parse error, error message can be set to this field.
@@ -46,6 +49,7 @@ constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for e
 
     constexpr char ChartObjectChartTypeStr_globalConfig[] = "global_config";
         // global_config-type has properties: show_legend, auto_axis_labels
+        // TODO: default line/point styles, 
 
 
 // data_source: defines data source for ChartObject.
@@ -102,6 +106,8 @@ constexpr char ChartObjectPointStyleStr_basic[] = "basic";
 
 // line_colour
 constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
+
+} // namespace fieldsIds
 
 enum class ChartDataType
 {
@@ -189,6 +195,7 @@ class ChartObject
 public:
     typedef DFG_CLASS_NAME(StringUtf8) ChartObjectString;
     typedef DFG_CLASS_NAME(StringViewUtf8) ChartObjectStringView;
+    using InputSpanD = InputSpan<double>;
 
     virtual ~ChartObject() {}
 
@@ -226,7 +233,7 @@ public:
     virtual void setPointStyle(StringViewC) {}
 
     // Sets x values and y values. If given x and y ranges have different size, request is ignored.
-    virtual void setValues(InputSpan<double>, InputSpan<double>, const std::vector<bool>* pFilterFlags = nullptr) = 0;
+    virtual void setValues(InputSpanD, InputSpanD, const std::vector<bool>* pFilterFlags = nullptr) = 0;
 }; // Class XySeries
 
 
@@ -238,7 +245,7 @@ public:
     virtual ~Histogram() {}
 
     // TODO: define meaning (e.g. bin centre)
-    virtual void setValues(InputSpan<double>, InputSpan<double>) = 0;
+    virtual void setValues(InputSpanD, InputSpanD) = 0;
 }; // Class Histogram
 
 
@@ -358,6 +365,13 @@ class ChartCanvas
 protected:
     ChartCanvas() {}
 public:
+    using XySeries = ::DFG_MODULE_NS(charts)::XySeries;
+    using Histogram = ::DFG_MODULE_NS(charts)::Histogram;
+    using ChartObjectCreationParam = ::DFG_MODULE_NS(charts)::ChartObjectCreationParam;
+    using XySeriesCreationParam = ::DFG_MODULE_NS(charts)::XySeriesCreationParam;
+    using HistogramCreationParam = ::DFG_MODULE_NS(charts)::HistogramCreationParam;
+    template <class T> using ChartObjectHolder = ::DFG_MODULE_NS(charts)::ChartObjectHolder<T>;
+
     virtual ~ChartCanvas() {}
 
     virtual bool hasChartObjects() const = 0;

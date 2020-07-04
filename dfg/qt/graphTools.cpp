@@ -73,7 +73,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
-using namespace DFG_MODULE_NS(charts); // TODO: replace by something less coarse.
+using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
 {
@@ -359,7 +359,7 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: most/all of this should be in AbstractChartControlItem. For now mostly here due to the readily available json-tools in Qt.
-class GraphDefinitionEntry : public AbstractChartControlItem
+class GraphDefinitionEntry : public ::DFG_MODULE_NS(charts)::AbstractChartControlItem
 {
 public:
     using StringViewOrOwner = ::DFG_ROOT_NS::StringViewOrOwner<StringViewSzC, std::string>;
@@ -776,6 +776,7 @@ public:
     // Cached types
     using TableSelectionOptional = std::shared_ptr<TableSelectionCacheItem>;
     using SingleColumnDoubleValuesOptional = GraphDataSource::SingleColumnDoubleValuesOptional;
+    using AbstractChartControlItem = ::DFG_MODULE_NS(charts)::AbstractChartControlItem;
 
     // Maps
     using CacheKeyToTableSelectionaMap = std::map<CacheEntryKey, TableSelectionOptional>;
@@ -1180,7 +1181,7 @@ ChartController* GraphDefinitionWidget::getController()
 
 // Implementations for Qt Charts
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-class XySeriesQtChart : public XySeries
+class XySeriesQtChart : public ::DFG_MODULE_NS(charts)::XySeries
 {
 public:
     XySeriesQtChart(QAbstractSeries* xySeries)
@@ -1248,7 +1249,7 @@ public:
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
 // Defines custom implementation for ChartObject. This is used to avoid repeating virtual overrides in ChartObjects.
-class ChartObjectQCustomPlot : public ChartObject
+class ChartObjectQCustomPlot : public ::DFG_MODULE_NS(charts)::ChartObject
 {
 public:
     ChartObjectQCustomPlot(QCPAbstractPlottable* pPlottable)
@@ -1284,7 +1285,7 @@ void ChartObjectQCustomPlot::setLineColourImpl(ChartObjectStringView svLineColou
         DFG_QT_CHART_CONSOLE_WARNING(m_spPlottable->tr("Unable to parse colour with definition %1").arg(viewToQString(svLineColour)));
 }
 
-class XySeriesQCustomPlot : public XySeries
+class XySeriesQCustomPlot : public ::DFG_MODULE_NS(charts)::XySeries
 {
 public:
     XySeriesQCustomPlot(QCPGraph* xySeries);
@@ -1347,7 +1348,7 @@ public:
         return qobject_cast<QCPGraph*>(m_spXySeries.data());
     }
 
-    void setValues(InputSpan<double> xVals, InputSpan<double> yVals, const std::vector<bool>* pFilterFlags) override
+    void setValues(InputSpanD xVals, InputSpanD yVals, const std::vector<bool>* pFilterFlags) override
     {
         auto xySeries = getXySeriesImpl();
         if (!xySeries || xVals.size() != yVals.size())
@@ -1436,13 +1437,13 @@ void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
 }
 
 
-class HistogramQCustomPlot : public Histogram
+class HistogramQCustomPlot : public ::DFG_MODULE_NS(charts)::Histogram
 {
 public:
     HistogramQCustomPlot(QCPBars* pBars);
     ~HistogramQCustomPlot();
 
-    void setValues(InputSpan<double> xVals, InputSpan<double> yVals) override;
+    void setValues(InputSpanD xVals, InputSpanD yVals) override;
 
     QPointer<QCPBars> m_spBars; // QCPBars is owned by QCustomPlot, not by *this.
 }; // Class HistogramQCustomPlot
@@ -1459,7 +1460,7 @@ HistogramQCustomPlot::~HistogramQCustomPlot()
 {
 }
 
-void HistogramQCustomPlot::setValues(InputSpan<double> xVals, InputSpan<double> yVals)
+void HistogramQCustomPlot::setValues(InputSpanD xVals, InputSpanD yVals)
 {
     if (!m_spBars)
         return;
@@ -1563,7 +1564,6 @@ public:
 class ChartCanvasQCustomPlot : public DFG_MODULE_NS(charts)::ChartCanvas, QObject
 {
 public:
-
     ChartCanvasQCustomPlot(QWidget* pParent = nullptr)
     {
         m_spChartView.reset(new QCustomPlot(pParent));
@@ -2832,6 +2832,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::clearCachesImpl()
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
+    using namespace ::DFG_MODULE_NS(charts);
     DFG_MODULE_NS(time)::TimerCpu timer;
 
     if (m_spCache)
@@ -3091,6 +3092,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
 {
+    using namespace ::DFG_MODULE_NS(charts);
     if (!m_spCache)
         m_spCache.reset(new ChartDataCache);
 
@@ -3201,6 +3203,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
 {
+    using namespace ::DFG_MODULE_NS(charts);
     const auto nColumnCount = source.columnCount();
     if (nColumnCount < 1)
         return;
