@@ -2439,14 +2439,13 @@ namespace
         QPointer<QCustomPlot> m_spCustomPlot;
         ::DFG_MODULE_NS(qt)::QObjectStorage<::DFG_MODULE_NS(qt)::JsonListWidget> m_spDefinitionEdit;
         ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spMessageConsole; // Guaranteed non-null between constructor and destructor.
-
-        template <class T> T propertyValueAs(const PropertyMap&, const char*);
-        template <> bool    propertyValueAs<bool>(const PropertyMap& obj, const char* psz)    { return obj.value(psz).toVariant().toBool(); }
-        template <> int     propertyValueAs<int>(const PropertyMap& obj, const char* psz)     { return obj.value(psz).toVariant().toInt(); }
-        template <> double  propertyValueAs<double>(const PropertyMap& obj, const char* psz)  { return obj.value(psz).toVariant().toDouble(); }
-        template <> QString propertyValueAs<QString>(const PropertyMap& obj, const char* psz) { return obj.value(psz).toVariant().toString(); }
-
     }; // class GraphDisplayImageExportDialog
+
+    template <class T> T propertyValueAs(const QJsonObject&, const char*);
+    template <> bool    propertyValueAs<bool>(const QJsonObject& obj, const char* psz)    { return obj.value(psz).toVariant().toBool(); }
+    template <> int     propertyValueAs<int>(const QJsonObject& obj, const char* psz)     { return obj.value(psz).toVariant().toInt(); }
+    template <> double  propertyValueAs<double>(const QJsonObject& obj, const char* psz)  { return obj.value(psz).toVariant().toDouble(); }
+    template <> QString propertyValueAs<QString>(const QJsonObject& obj, const char* psz) { return obj.value(psz).toVariant().toString(); }
 
     GraphDisplayImageExportDialog::GraphDisplayImageExportDialog(QCustomPlot* pCustomPlot) :
         m_spCustomPlot(pCustomPlot)
