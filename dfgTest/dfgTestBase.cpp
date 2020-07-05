@@ -616,6 +616,25 @@ TEST(dfg, saturateCast)
     testSaturatedNegative<int32, int64>();
 }
 
+TEST(dfg, isValidIndex)
+{
+    using namespace DFG_ROOT_NS;
+    int arr[10];
+    std::array<int, 10> arr2;
+    EXPECT_TRUE(isValidIndex(arr, 0));
+    EXPECT_TRUE(isValidIndex(arr2, 0));
+    EXPECT_TRUE(isValidIndex(arr, 9));
+    EXPECT_TRUE(isValidIndex(arr2, 9));
+    EXPECT_FALSE(isValidIndex(arr, 10));
+    EXPECT_FALSE(isValidIndex(arr2, 10));
+    EXPECT_FALSE(isValidIndex(arr, -1));
+    EXPECT_FALSE(isValidIndex(arr2, -1));
+    EXPECT_FALSE(isValidIndex(arr, uint32_max + int64(1)));
+    EXPECT_FALSE(isValidIndex(arr2, uint32_max + int64(1)));
+    EXPECT_FALSE(isValidIndex(arr, uint32_max + uint64(1)));
+    EXPECT_FALSE(isValidIndex(arr2, uint32_max + uint64(1)));
+}
+
 TEST(dfgTypeTraits, IsTrueTrait)
 {
     using namespace DFG_ROOT_NS;

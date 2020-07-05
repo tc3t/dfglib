@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dfgDefs.hpp"
+#include "numericTypeTools.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
@@ -13,12 +14,16 @@ DFG_ROOT_NS_BEGIN
     //	isValidIndex(v, 3) == false
     template <class ContT, class IndexT> bool isValidIndex(const ContT& cont, const IndexT index)
     {
-        return (index >= 0 && static_cast<size_t>(index) < static_cast<size_t>(cont.size()));
+        constexpr auto nWidestSize = (sizeof(IndexT) >= sizeof(decltype(cont.size()))) ? sizeof(IndexT) : sizeof(decltype(cont.size()));
+        using WidestUnsigned = typename IntegerTypeBySizeAndSign<nWidestSize, false>::type;
+        return (index >= 0 && static_cast<WidestUnsigned>(index) < static_cast<WidestUnsigned>(cont.size()));
     }
 
     // Overload of IsValidIndex for array.
     template <class DataT, size_t N, class IndexT> bool isValidIndex(const DataT(&)[N], const IndexT index)
     {
-        return (index >= 0 && index < N);
+        constexpr auto nWidestSize = (sizeof(IndexT) >= sizeof(size_t)) ? sizeof(IndexT) : sizeof(size_t);
+        using WidestUnsigned = typename IntegerTypeBySizeAndSign<nWidestSize, false>::type;
+        return (index >= 0 && static_cast<WidestUnsigned>(index) < static_cast<WidestUnsigned>(N));
     }
 } // namespace

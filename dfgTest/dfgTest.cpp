@@ -54,6 +54,7 @@ int main(int argc, char **argv)
 
     //::testing::GTEST_FLAG(filter) = "dfg.saturateCast";
     //::testing::GTEST_FLAG(filter) = "dfg.isEmpty";
+    //::testing::GTEST_FLAG(filter) = "dfg.isValidIndex";
     //::testing::GTEST_FLAG(filter) = "dfg.ScopedCaller";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.arrayCopy";
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg";
