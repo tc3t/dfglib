@@ -46,7 +46,7 @@ public:
     DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(QObjectStorage);
 public:
 #endif
-    QObjectStorage(QObjectStorage&& other)
+    QObjectStorage(QObjectStorage&& other) noexcept
     {
         *this = std::move(other);
     }
@@ -97,7 +97,7 @@ public:
         return m_spData.data() != nullptr;
     }
 
-    QObjectStorage& operator=(QObjectStorage&& other)
+    QObjectStorage& operator=(QObjectStorage&& other) noexcept
     {
         reset(other.release());
         return *this;

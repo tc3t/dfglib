@@ -600,7 +600,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnR
         m_spTableView->horizontalHeader()->setDefaultSectionSize(sectionSize);
     }
     else
+    {
         DFG_TABLEEDITOR_LOG_WARNING(QString("Requested resizeColumnsToView with unknown style '%1'").arg(static_cast<int>(style)));
+    }
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setAllowApplicationSettingsUsage(const bool b)

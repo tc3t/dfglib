@@ -772,14 +772,14 @@ void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
             // Add Clear undo buffer -action
             {
                 auto pActionClearUndoBuffer = new QAction(tr(gszMenuText_clearUndoBuffer), this);
-                connect(pActionClearUndoBuffer, &QAction::triggered, this, &ThisClass::clearUndoStack);
+                DFG_QT_VERIFY_CONNECT(connect(pActionClearUndoBuffer, &QAction::triggered, this, &ThisClass::clearUndoStack));
                 pMenu->addAction(pActionClearUndoBuffer);
             }
 
             // Add show undo window -action
             {
                 auto pActionUndoWindow = new QAction(tr(gszMenuText_showUndoWindow), this);
-                connect(pActionUndoWindow, &QAction::triggered, this, &ThisClass::showUndoWindow);
+                DFG_QT_VERIFY_CONNECT(connect(pActionUndoWindow, &QAction::triggered, this, &ThisClass::showUndoWindow));
                 pMenu->addAction(pActionUndoWindow);
             }
 
@@ -1279,8 +1279,8 @@ public:
 
         auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
 
-        connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept()));
-        connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject()));
+        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept())));
+        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject())));
 
         spLayout->addRow(QString(), &rButtonBox);
         setLayout(spLayout.release());
@@ -2187,8 +2187,8 @@ namespace
 
             auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
 
-            connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept()));
-            connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject()));
+            DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept())));
+            DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject())));
 
             m_pLayout->addWidget(&rButtonBox);
 
@@ -3119,9 +3119,9 @@ public:
                                                                          QString sLabel,
                                                                          const QString& sLineEditPlaceholder = QString());
 
-    QHBoxLayout* m_pLayout;
-    QWidget* m_pFirst;
-    QWidget* m_pSecond;
+    QHBoxLayout* m_pLayout = nullptr;
+    QWidget* m_pFirst = nullptr;
+    QWidget* m_pSecond = nullptr;
 }; // class WidgetPair
 
 WidgetPair::WidgetPair(QWidget* pParent) :
@@ -3624,8 +3624,8 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
     spLayout->addWidget(&columnNameView);
 
     auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
-    connect(&rButtonBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(&rButtonBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept));
+    DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject));
     spLayout->addWidget(&rButtonBox);
 
     dlg.setLayout(spLayout.release());

@@ -135,7 +135,7 @@ TEST(dfgMath, pow2ToX)
 
 #ifdef _WIN64
     EXPECT_EQ(pow2ToX(32), 4294967296);
-    EXPECT_EQ(pow2ToX(63), 9223372036854775808);
+    EXPECT_EQ(pow2ToX(63), 9223372036854775808ull);
 #endif
 }
 

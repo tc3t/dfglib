@@ -13,10 +13,6 @@
 #include <vector>
 #include <type_traits>
 
-DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
-    #include <strstream>
-DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
-
 #include "io/BasicImStream.hpp"
 #include "dfgBase.hpp"
 #include "io/fileToByteContainer.hpp"
@@ -34,8 +30,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     // Note: These are placeholder interfaces and are not guaranteed to be equal to base classes
     // (e.g. availability of freeze()-function for strstream)
     // TODO: make a proper implementations and move to separate files.
-    typedef std::istrstream DFG_CLASS_NAME(IStrStream);
-    typedef std::ostrstream DFG_CLASS_NAME(OStrStream);
     typedef std::istringstream DFG_CLASS_NAME(IStringStream);
     typedef std::ostringstream DFG_CLASS_NAME(OStringStream);
     typedef std::ifstream DFG_CLASS_NAME(IfStream);

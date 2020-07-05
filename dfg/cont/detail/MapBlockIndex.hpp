@@ -100,6 +100,7 @@ public:
         // Returns true iff m_spStorage can be accessed with m_spStorage[nIndex].
         bool isValidIndex(const IndexT nIndex) const
         {
+            DFG_ASSERT(nIndex >= m_nEffectiveBlockSize || m_spStorage != nullptr);
             return nIndex < m_nEffectiveBlockSize;
         }
 

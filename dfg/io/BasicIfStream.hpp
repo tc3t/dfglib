@@ -47,7 +47,7 @@ public:
 #endif
     }
 
-    DFG_CLASS_NAME(BasicIfStream)(DFG_CLASS_NAME(BasicIfStream)&& other) :
+    DFG_CLASS_NAME(BasicIfStream)(DFG_CLASS_NAME(BasicIfStream)&& other) noexcept :
         m_pFile(other.m_pFile)
     {
         other.m_pFile = nullptr;

@@ -29,7 +29,7 @@ public:
         m_pEnd(pData + nCharCount)
     {}
 
-    DFG_CLASS_NAME(BasicStreamBuffer_T)(DFG_CLASS_NAME(BasicStreamBuffer_T)&& other) :
+    DFG_CLASS_NAME(BasicStreamBuffer_T)(DFG_CLASS_NAME(BasicStreamBuffer_T)&& other) noexcept :
         m_pBegin(other.m_pBegin),
         m_pCurrent(other.m_pCurrent),
         m_pEnd(other.m_pEnd)

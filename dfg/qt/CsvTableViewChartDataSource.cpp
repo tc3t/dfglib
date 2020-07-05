@@ -62,7 +62,7 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
                 for (const auto& item : rSelectionInfo)
                 {
                     for (int i = item.left(), right = item.right(); i <= right; ++i)
-                        rSelectionInfo.m_columnNames[i] = pModel->getHeaderName(i);
+                        rSelectionInfo.m_columnNames[static_cast<DataSourceIndex>(i)] = pModel->getHeaderName(i);
                 }
             }
         }
@@ -99,7 +99,7 @@ QObject* ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::underlyingSource()
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(DataSourceIndex nColRaw, ForEachElementByColumHandler handler)
 {
-    if (!handler || !m_spView || !m_spView)
+    if (!handler || !m_spView)
         return;
 
     auto pModel = m_spView->model();

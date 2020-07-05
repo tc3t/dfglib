@@ -10,8 +10,9 @@
 	#include <Shlwapi.h>
 	#include <io.h>
 	#include <direct.h> // _getcwd, _chdir
-
-	#pragma comment(lib, "shlwapi")
+    #if defined(_MSC_VER)
+        #pragma comment(lib, "shlwapi")
+    #endif // _MSC_VER
 #else
 	#include <unistd.h> // For getcdw
 #endif // _WIN32

@@ -66,7 +66,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
     using ValueVector = ::DFG_MODULE_NS(cont)::ValueVector<double>;
     ValueVector rows;
     ValueVector vals;
-    const auto nBlockSize = Min(1024, rTable.rowCountByMaxRowIndex());
+    const auto nBlockSize = static_cast<size_t>(Min(1024, rTable.rowCountByMaxRowIndex()));
     rows.reserve(nBlockSize);
     vals.reserve(nBlockSize);
     rTable.forEachFwdRowInColumn(static_cast<int>(c), [&](const int r, const SzPtrUtf8R psz)

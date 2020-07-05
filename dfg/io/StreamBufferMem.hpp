@@ -183,7 +183,7 @@ public:
             // Uneven input, modify end to point to last whole element
             end -= remainder;
         }
-        if (end - iter < sizeof(Elem_T)) // Don't have a whole element?
+        if (static_cast<size_t>(end - iter) < sizeof(Elem_T)) // Don't have a whole element?
         {
             iter = paramEnd;
             return eofValue();

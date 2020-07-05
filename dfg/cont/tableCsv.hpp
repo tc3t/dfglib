@@ -369,8 +369,8 @@ DFG_ROOT_NS_BEGIN{
                     finishRow(rTable, m_nBufferInputRow + 1, m_nBufferTargetRow + 1);
                 }
 
-                IndexT m_nFilterCol = anyColumn<IndexT>();
                 StringMatcher_T m_stringMatcher;
+                IndexT m_nFilterCol = anyColumn<IndexT>();
                 RowFilterStatus m_rowFilterStatus = RowFilterStatus::unresolved;
                 RowBuffer m_rowBuffer;
                 MapVectorSoA<IndexT, IndexT> m_mapInputColumnToTargetColumn;

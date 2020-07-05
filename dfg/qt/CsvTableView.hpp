@@ -176,7 +176,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {
         public:
             LockReleaser(QReadWriteLock* pLock = nullptr) : m_pLock(pLock) {}
-            LockReleaser(LockReleaser&& other) : m_pLock(other.m_pLock) { other.m_pLock = nullptr; }
+            LockReleaser(LockReleaser&& other) noexcept : m_pLock(other.m_pLock) { other.m_pLock = nullptr; }
             ~LockReleaser();
             LockReleaser(const LockReleaser&) = delete;
             LockReleaser& operator=(const LockReleaser&) = delete;

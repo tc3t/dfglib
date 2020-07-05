@@ -134,7 +134,6 @@ void IntervalSet<T>::insertClosed(const T& left, const T& right)
     if (right < left)
         return;
     const auto keys = m_intervals.keyRange();
-    auto values = m_intervals.valueRange();
     auto iterLb = std::lower_bound(keys.cbegin(), keys.cend(), left); // iterLb points to first element >= 'left'
     if (iterLb == keys.cend())
     {

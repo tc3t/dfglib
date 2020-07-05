@@ -228,7 +228,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<int> m_vecIndexes;
         std::vector<QString> m_vecData;
         DFG_DETAIL_NS::CellMemory m_cellMemory; // Used in cell mode to store cell texts.
-        int m_nFirstItemRow;
+        int m_nFirstItemRow = -1;
         bool m_bRowMode;
     };
 

@@ -88,9 +88,12 @@ public:
 
     virtual QObject* underlyingSource() = 0;
 
+    // Calls handler for every element in given column. The order of rows in which data is given to handler is unspecified.
     virtual void forEachElement_byColumn(DataSourceIndex, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
 
+    // Returns double values from given column by offset from first. The order of values with respect to rows is unspecified.
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex /*offsetFromFirst*/) { return SingleColumnDoubleValuesOptional(); }
+    // Returns double values from given column by column index. The order of values with respect to rows is unspecified.
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }
 
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }

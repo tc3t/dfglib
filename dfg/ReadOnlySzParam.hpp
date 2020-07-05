@@ -706,7 +706,7 @@ public:
 
     // Move constructor is needed because with default implementation view in 'this' could be pointing to
     // SSO buffer of moved from -object.
-    StringViewOrOwner(StringViewOrOwner&& other)
+    StringViewOrOwner(StringViewOrOwner&& other) noexcept
         : BaseClass(std::move(other)) // Note: this moves only the view-part.
     {
         const bool bLocal = (other.m_owned.data() == this->data());

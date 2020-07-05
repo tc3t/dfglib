@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include <strstream>
 #include "StreamBufferMem.hpp"
 #include "textEncodingTypes.hpp"
 #include "../build/languageFeatureInfo.hpp"
