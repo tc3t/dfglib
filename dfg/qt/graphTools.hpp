@@ -247,7 +247,7 @@ private:
     void refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
     void handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry);
 
-    void setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, const DefaultNameCreator& defaultNameCreator);
+    void setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator);
 
     GraphDefinitionWidget* getDefinitionWidget();
 

@@ -48,8 +48,7 @@ constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for e
         // panel_config-type has properties: panel_id, title, x_label, y_label
 
     constexpr char ChartObjectChartTypeStr_globalConfig[] = "global_config";
-        // global_config-type has properties: show_legend, auto_axis_labels
-        // TODO: default line/point styles, 
+        // global_config-type has properties: show_legend, auto_axis_labels, line_style, point_style, line_colour
 
 
 // data_source: defines data source for ChartObject.
@@ -230,7 +229,9 @@ public:
     virtual void resize(const size_t) = 0;
 
     virtual void setLineStyle(StringViewC) {}
+    void setLineStyle(StringViewUtf8 sv)  { setLineStyle(StringViewC(sv.beginRaw(), sv.endRaw())); }
     virtual void setPointStyle(StringViewC) {}
+    void setPointStyle(StringViewUtf8 sv) { setPointStyle(StringViewC(sv.beginRaw(), sv.endRaw())); }
 
     // Sets x values and y values. If given x and y ranges have different size, request is ignored.
     virtual void setValues(InputSpanD, InputSpanD, const std::vector<bool>* pFilterFlags = nullptr) = 0;
@@ -256,6 +257,8 @@ class ChartConfigParam
 {
 public:
     using FieldIdStrViewInputParam = AbstractChartControlItem::FieldIdStrViewInputParam;
+    using String                   = AbstractChartControlItem::String;
+    using StringView               = AbstractChartControlItem::StringView;
 
     ChartConfigParam(const AbstractChartControlItem* pPrimary = nullptr, const AbstractChartControlItem* pSecondary = nullptr)
     {
@@ -265,6 +268,8 @@ public:
 
     template <class T>
     T value(FieldIdStrViewInputParam id, T defaultVal = T()) const;
+
+    String valueStr(FieldIdStrViewInputParam id, const StringView& svDefaultVal = StringView()) const;
 
     // In order of use, most specific at index 0. The idea is to support setting hierarchy: e.g. first use value from panel settings, if not found, use global settings.
     // For now restricted to two levels without particular reason (i.e. can be increased).
@@ -285,6 +290,21 @@ T ChartConfigParam::value(FieldIdStrViewInputParam fieldId, T defaultVal) const
             return rv;
     }
     return defaultVal;
+}
+
+inline auto ChartConfigParam::valueStr(FieldIdStrViewInputParam fieldId, const StringView& svDefaultVal) const -> String
+{
+    // Returning setting from most specific item that has requested ID
+    for (auto pItem : m_configs)
+    {
+        if (!pItem)
+            continue;
+        bool bExists = true;
+        auto rv = pItem->fieldValueStr(fieldId, [&]() { bExists = false; return StringUtf8(); });
+        if (bExists)
+            return rv;
+    }
+    return svDefaultVal.toString();
 }
 
 class ChartObjectCreationParam
@@ -470,6 +490,9 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_enabled,
             ChartObjectFieldIdStr_showLegend,
             ChartObjectFieldIdStr_autoAxisLabels,
+            ChartObjectFieldIdStr_lineStyle,
+            ChartObjectFieldIdStr_pointStyle,
+            ChartObjectFieldIdStr_lineColour
             });
     }
     else

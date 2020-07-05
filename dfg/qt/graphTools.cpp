@@ -1131,10 +1131,11 @@ QString GraphDefinitionWidget::getGuideString()
 <h2>Fields for type <i>global_config</i></h2>
     <ul>
         <li><i>show_legend</i>: {true, <b>false</b>}. Enables or disables showing legends, sets default behaviour for all panels.</li>
-        <li><i>auto_axis_labels</i>: {<b>true</b>, false}. Enables or disables auto axis labels, sets default behaviour for all panels.
-        <ul>
-            <li><b>Note:</b> affects only graphs created after global_config -item.</li>
-        </ul>
+        <li><i>auto_axis_labels</i>: {<b>true</b>, false}. Enables or disables auto axis labels, sets default behaviour for all panels.</li>
+        <li><i>line_style</i>: Sets global default for line_style, see line style documentation for details.</li>
+        <li><i>point_style</i>: Sets global default for point_style, see point style documentation for details.</li>
+        <li><i>line_colour</i>: Sets global default for line_colour, see line colour documentation for details.</li>
+        <li><b>Note:</b> Chart object properties affect only objects defined after the global_config entry.</li>
     </ul>
 )ENDTAG");
 }
@@ -1255,7 +1256,7 @@ public:
     ChartObjectQCustomPlot(QCPAbstractPlottable* pPlottable)
         : m_spPlottable(pPlottable)
     {}
-    virtual ~ChartObjectQCustomPlot() {}
+    virtual ~ChartObjectQCustomPlot() override {}
 
 private:
     void setNameImpl(const ChartObjectStringView s) const override
@@ -1441,7 +1442,7 @@ class HistogramQCustomPlot : public ::DFG_MODULE_NS(charts)::Histogram
 {
 public:
     HistogramQCustomPlot(QCPBars* pBars);
-    ~HistogramQCustomPlot();
+    ~HistogramQCustomPlot() override;
 
     void setValues(InputSpanD xVals, InputSpanD yVals) override;
 
@@ -3187,14 +3188,22 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     rSeries.resize(nGraphSize); // Removing excess points (if any)
 
     // Setting line style
-    rSeries.setLineStyle(ChartObjectLineStyleStr_basic); // Default value
-    defEntry.doForLineStyleIfPresent([&](const char* psz) { rSeries.setLineStyle(psz); });
+    {
+        bool bFound = false;
+        defEntry.doForLineStyleIfPresent([&](const char* psz) { bFound = true; rSeries.setLineStyle(psz); });
+        if (!bFound) // If not found, setting value from default config or if not present there either, using basic-style
+            rSeries.setLineStyle(configParamCreator().valueStr(ChartObjectFieldIdStr_lineStyle, SzPtrUtf8(ChartObjectLineStyleStr_basic)));
+    }
 
     // Setting point style
-    rSeries.setPointStyle(ChartObjectPointStyleStr_none); // Default value
-    defEntry.doForPointStyleIfPresent([&](const char* psz) { rSeries.setPointStyle(psz); });
+    {
+        bool bFound = false;
+        defEntry.doForPointStyleIfPresent([&](const char* psz) { bFound = true; rSeries.setPointStyle(psz); });
+        if (!bFound) // If not found, setting value from default config or if not present there either, using basic-style
+            rSeries.setPointStyle(configParamCreator().valueStr(ChartObjectFieldIdStr_pointStyle, SzPtrUtf8(ChartObjectPointStyleStr_basic)));
+    }
 
-    setCommonChartObjectProperties(rSeries, defEntry, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname));
+    setCommonChartObjectProperties(rSeries, defEntry, configParamCreator, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname));
 
     // Rescaling axis.
     rChart.setAxisForSeries(&rSeries, minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
@@ -3233,13 +3242,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     if (!spHistogram)
         return;
     ++nHistogramCounter;
-    setCommonChartObjectProperties(*spHistogram, defEntry, DefaultNameCreator("Histogram", nHistogramCounter));
+    setCommonChartObjectProperties(*spHistogram, defEntry, configParamCreator, DefaultNameCreator("Histogram", nHistogramCounter));
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, const DefaultNameCreator& defaultNameCreator)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator)
 {
     rObject.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, defaultNameCreator));
-    rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour));
+    rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_lineColour); }));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry)
