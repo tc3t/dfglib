@@ -110,8 +110,8 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
     if (!spSelectionViewer) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
         return;
 
-    auto editLockReleaser = m_spView->tryLockForEdit();
-    if (!editLockReleaser.isLocked())
+    auto readLockReleaser = m_spView->tryLockForRead();
+    if (!readLockReleaser.isLocked())
         return;
 
     const QItemSelection& selection  = *spSelectionViewer;

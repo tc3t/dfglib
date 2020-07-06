@@ -3594,6 +3594,11 @@ auto DFG_CLASS_NAME(CsvTableView)::tryLockForEdit() -> LockReleaser
     return (m_spEditLock && m_spEditLock->tryLockForWrite()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
 }
 
+auto DFG_CLASS_NAME(CsvTableView)::tryLockForRead() -> LockReleaser
+{
+    return (m_spEditLock && m_spEditLock->tryLockForRead()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
+}
+
 auto ::DFG_CLASS_NAME(CsvTableView)::horizontalTableHeader() -> TableHeaderView*
 {
     return qobject_cast<TableHeaderView*>(horizontalHeader());
