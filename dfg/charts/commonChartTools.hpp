@@ -114,6 +114,7 @@ enum class ChartDataType
     dayTime,
     dayTimeMillisecond,
     dateOnly,
+    dateOnlyYearMonth,
     dateAndTime,
     dateAndTimeMillisecond
 };

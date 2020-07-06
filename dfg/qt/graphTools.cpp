@@ -315,6 +315,14 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s
             return std::numeric_limits<double>::quiet_NaN();
         }
     }
+
+    // yyyy-mm
+    if (s.size() == 7 && s[4] == '-')
+    {
+        setColumnDataType(ChartDataType::dateOnlyYearMonth);
+        return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM")));
+    }
+
     // [d]d.[m]m.yyyy
     QRegExp regExp(R"((?:^|^\w\w )(\d{1,2})(?:\.)(\d{1,2})(?:\.)(\d\d\d\d)$)");
     if (regExp.exactMatch(s) && regExp.captureCount() == 3)
@@ -1898,6 +1906,8 @@ namespace
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd hh:mm:ss"));
         else if (type == ChartDataType::dateOnly)
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd"));
+        else if (type == ChartDataType::dateOnlyYearMonth)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM"));
         else if (type == ChartDataType::dayTimeMillisecond)
             createDateTimeTicker(rAxis, QLatin1String("hh:mm:ss.zzz"));
         else if (type == ChartDataType::dayTime)
