@@ -15,3 +15,13 @@
 #else
     #define DFG_FORCEINLINE    inline // TODO: implement
 #endif
+
+// DFG_NOINLINE: request to not inline a function.
+//      Usage example: DFG_NOINLINE int func() 
+#if defined(_MSC_VER)
+    #define DFG_NOINLINE    __declspec(noinline)
+#elif defined(__GNUC__)
+    #define DFG_NOINLINE    __attribute__((noinline))
+#else
+    #define DFG_NOINLINE
+#endif
