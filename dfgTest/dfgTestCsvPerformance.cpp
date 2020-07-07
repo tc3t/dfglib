@@ -147,9 +147,9 @@ namespace
     template <> std::string prettierTypeName<std::string>() { return "std::string"; }
     
 
-    void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sReader, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& formatDefinition, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sProcessingType, const std::string& sStreamType)
+    DFG_NOINLINE void PrintTestCaseRow(std::ostream& output, const std::string& sFilePath, const std::vector<double>& runtimes, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sReader, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& formatDefinition, const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sProcessingType, const std::string& sStreamType)
     {
-        output  << DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_C() << ",," << DFG_COMPILER_NAME_SIMPLE << ',' << sizeof(void*) << ','
+        output  << DFG_MODULE_NS(time)::localDate_yyyy_mm_dd_hh_mm_ss_C() << ",," << DFG_COMPILER_NAME_SIMPLE << ',' << sizeof(void*) << ','
                 << DFG_BUILD_DEBUG_RELEASE_TYPE << ',' << sFilePath << "," << sReader << "," << formatDefinition << "," << sProcessingType << "," << sStreamType << ",";
         std::for_each(runtimes.begin(), runtimes.end(), [&](const double val) {output << val << ','; });
         output  << DFG_MODULE_NS(numeric)::average(runtimes) << ","
@@ -201,7 +201,7 @@ namespace
     typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DefaultBufferType;
     
     template <class IStrm_T, class CharAppender_T, class Buffer_T, class IStrmInit_T, class ReaderImplementationOption_T, class FormatDefTag_T>
-    void ExecuteTestCaseDelimitedTextReader(std::ostream& output,
+    DFG_NOINLINE void ExecuteTestCaseDelimitedTextReader(std::ostream& output,
                                             IStrmInit_T streamInitFunc,
                                             ReaderImplementationOption_T readerOption,
                                             const FormatDefTag_T formatDefTag,
@@ -242,7 +242,7 @@ namespace
 
             // Note: with CharAppenderNone nothing gets added to the read buffer so the cell handler does not get called.
             //EXPECT_TRUE(nCounter > 0);
-            //EXPECT_TRUE(i == 0 || nCounter == nPreviousCounter);
+            EXPECT_TRUE(i == 0 || nCounter == nPreviousCounter);
             nPreviousCounter = nCounter;
 
             runtimes.push_back(elapsedTime);
@@ -253,7 +253,7 @@ namespace
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_NoCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool bBasicReader = false)
+    DFG_NOINLINE void ExecuteTestCase_DelimitedTextReader_NoCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool bBasicReader = false)
     {
         if (bBasicReader)
             ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderNone, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderNone");
@@ -262,7 +262,7 @@ namespace
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_DefaultCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef = true)
+    DFG_NOINLINE void ExecuteTestCase_DelimitedTextReader_DefaultCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef = true)
     {
         if (compiletimeFormatDef)
             ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
@@ -271,7 +271,7 @@ namespace
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_basicReader(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef)
+    DFG_NOINLINE void ExecuteTestCase_DelimitedTextReader_basicReader(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef)
     {
         if (compiletimeFormatDef)
             ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_basic(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader_basic", "CharAppenderDefault");
@@ -280,7 +280,7 @@ namespace
     }
 
     template <class IStrm_T, class IStrmInit_T>
-    void ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer(std::ostream& output,
+    DFG_NOINLINE void ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer(std::ostream& output,
                                                                           IStrmInit_T streamInitFunc,
                                                                           const std::string& sFilePath,
                                                                           const size_t nCount,
@@ -302,7 +302,7 @@ namespace
 
 #if ENABLE_FAST_CPP_CSV_PARSER
     template <class Read_T>
-    void ExecuteTestCase_FastCppCsvParser(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    DFG_NOINLINE void ExecuteTestCase_FastCppCsvParser(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
         std::vector<double> runtimes;
         size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
@@ -355,7 +355,7 @@ namespace
     };
 
     template <class CommentsChar_T, class Quote_T, class Separator_T>
-    void ExecuteTestCase_cppCsvImpl(std::ostream& output,
+    DFG_NOINLINE void ExecuteTestCase_cppCsvImpl(std::ostream& output,
                                     const std::string& sFilePath,
                                     const size_t nCount,
                                     const Quote_T quote,
@@ -387,7 +387,7 @@ namespace
         PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2018-03-21", pszFormatDef, pszParseStyle, "Contiguous memory");
     }
 
-    void ExecuteTestCase_cppCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    DFG_NOINLINE void ExecuteTestCase_cppCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
         // Generic configuration
         ExecuteTestCase_cppCsvImpl<char>(output, sFilePath, nCount, '\0', ',', "runtime", "Parse only (cell counter)");
@@ -454,7 +454,7 @@ namespace
     }
 
     template <class IStrm_T, class IStrmInit_T, class GetThrough_T>
-    void ExecuteTestCase_GetThrough(std::ostream& output, IStrmInit_T streamInitFunc, GetThrough_T getThroughFunc, const std::string& sFilePath, const size_t nCount, const std::string additionalDesc = std::string())
+    DFG_NOINLINE void ExecuteTestCase_GetThrough(std::ostream& output, IStrmInit_T streamInitFunc, GetThrough_T getThroughFunc, const std::string& sFilePath, const size_t nCount, const std::string additionalDesc = std::string())
     {
         using namespace DFG_MODULE_NS(io);
 
@@ -487,18 +487,23 @@ namespace
 
 TEST(dfgPerformance, CsvReadPerformance)
 {
-    std::ofstream ostrmTestResults("testfiles/generated/csvPerformanceResults.csv");
+    const char szOutputPath[] = "testfiles/generated/csvPerformanceResults.csv";
+    const auto nOldOutputSize = ::DFG_MODULE_NS(os)::fileSize(szOutputPath);
+    std::ofstream ostrmTestResults(szOutputPath, std::ios::app);
 
     const auto nRunCount = gnRunCount;
 
-    // TODO: add compiler name & version, build config (debug/release)
-    ostrmTestResults << "Date,Test machine,Compiler,Pointer size,Build type,File,Reader,Format definition,Processing type,Stream type";
-    for (size_t i = 0; i < nRunCount; ++i)
+    // Printing header only if output file has no existing content
+    if (nOldOutputSize == 0)
     {
-        ostrmTestResults << ",time#" << i + 1;
+        ostrmTestResults << "Date,Test machine,Compiler,Pointer size,Build type,File,Reader,Format definition,Processing type,Stream type";
+        for (size_t i = 0; i < nRunCount; ++i)
+        {
+            ostrmTestResults << ",time#" << i + 1;
+        }
+        if (nRunCount > 0)
+            ostrmTestResults << ",time_avg,time_median,time_sum\n";
     }
-    if (nRunCount > 0)
-        ostrmTestResults  << ",time_avg,time_median,time_sum\n";
 
     const auto sFilePath = GenerateTestFile(gnRowCount, gnColCount);
 
