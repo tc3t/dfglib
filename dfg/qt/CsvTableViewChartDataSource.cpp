@@ -125,8 +125,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
         for (int r = item.top(), rBottom = item.bottom(); r <= rBottom; ++r)
         {
             auto data = pModel->data(pModel->index(r, c));
-            if (data.isNull())
-                return;
             auto sVal = data.toString();
             // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
             const double x = CsvItemModel::internalRowIndexToVisible(r);
