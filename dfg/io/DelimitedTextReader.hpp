@@ -775,14 +775,16 @@ public:
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
-            const auto iterToEndingEolItem = buffer.iteratorToEndingEolItem();
-            if (rs != rsInEnclosedCell && iterToEndingEolItem != buffer.cend())
+            if (rs != rsInEnclosedCell && bufferCharToInternal(buffer.back()) == buffer.getFormatDefInfo().getEol())
             {
-                buffer.setBufferEnd(iterToEndingEolItem);
+                buffer.popLastChar();
+                if (buffer.getFormatDefInfo().getEol() == '\n' && buffer.getFormatDefInfo().isRnTranslationEnabled() && buffer.isLastChar('\r'))
+                    buffer.popLastChar();
                 rs = rsEndOfLineEncountered;
                 return true;
             }
-            return false;
+            else
+                return false;
         }
 
         template <class TempBufferType_T, class CharReader_T, class IsStreamGood_T>

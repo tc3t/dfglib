@@ -50,3 +50,5 @@
 ,,,,,,,,,,,,,,,,,
 2020-07-09,separatorChecker tweaks,,,,,,,,,,,,,,,,
 2020-07-09,,MSVC_2015_u3,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.48579,1.45902,1.46171,1.4662,1.47105,1.46875,1.4662,7.34377
+2020-07-09,eolChecker tweaks,,,,,,,,,,,,,,,,
+2020-07-09 19:39:11,,MSVC_2015_u3,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.40731,1.43125,1.40217,1.39113,1.38998,1.40437,1.40217,7.02184
