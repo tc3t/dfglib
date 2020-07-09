@@ -438,8 +438,6 @@ public:
         //       that the defined type has size equal to original size.
         static_assert(sizeof(BufferChar) == sizeof(UnsignedBufferChar), "Unexpected UnsignedChar-size");
 
-        // Defines max char for codecvt-template.
-
         CellData(const FormatDef& formatDef) :
             m_formatDef(formatDef),
             m_status(cellHrvContinue)
@@ -501,6 +499,12 @@ public:
         {
             DFG_ASSERT_UB(!m_buffer.empty());
             DFG_MODULE_NS(cont)::popFront(m_buffer);
+        }
+
+        BufferChar back() const
+        {
+            DFG_ASSERT_UB(!empty());
+            return m_buffer.back();
         }
 
         // Implementation for default buffer type
@@ -759,10 +763,9 @@ public:
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
-            const auto iterToEndingSeparatorItem = buffer.iteratorToEndingSeparatorItem();
-            if (rs != rsInEnclosedCell && iterToEndingSeparatorItem != buffer.cend())
+            if (rs != rsInEnclosedCell && bufferCharToInternal(buffer.back()) == buffer.getFormatDefInfo().getSep())
             {
-                buffer.setBufferEnd(iterToEndingSeparatorItem);
+                buffer.popLastChar();
                 rs = rsSeparatorEncountered;
                 return true;
             }

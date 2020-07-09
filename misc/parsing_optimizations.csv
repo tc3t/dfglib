@@ -44,3 +44,9 @@
 2019-08-04,,MSVC_2019.2,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader_basic,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),0.31706,0.319428,0.314635,0.31919,0.3169,0.317443,0.31706,1.58721
 2019-08-04,,MinGW_4.8.0,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.04372,1.05581,1.04619,1.05904,1.04905,1.05076,1.04905,5.25381
 2019-08-04,,MinGW_4.8.0,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader_basic,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),0.431621,0.427933,0.42863,0.426288,0.431246,0.429144,0.42863,2.14572
+,,,,,,,,,,,,,,,,,
+2020-07-09,Reference run,,,,,,,,,,,,,,,,
+2020-07-09,,MSVC_2015_u3,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.60079,1.61181,1.6283,1.60944,1.59931,1.60993,1.60944,8.04965
+,,,,,,,,,,,,,,,,,
+2020-07-09,separatorChecker tweaks,,,,,,,,,,,,,,,,
+2020-07-09,,MSVC_2015_u3,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.48579,1.45902,1.46171,1.4662,1.47105,1.46875,1.4662,7.34377
