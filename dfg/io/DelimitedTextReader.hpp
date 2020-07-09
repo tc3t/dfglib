@@ -1078,7 +1078,7 @@ public:
 
         // readChar implementation for case when reading bytes from BasicImStream (contiguous memory).
         template <class Buffer_T>
-        bool readCharImpl(Buffer_T& buffer, const ReadState rs, std::true_type)
+        DFG_DELIMITED_TEXT_READER_INLINING bool readCharImpl(Buffer_T& buffer, const ReadState rs, std::true_type)
         {
             auto& strm = static_cast<DFG_CLASS_NAME(BasicImStream)&>(getStream());
             if (!strm.m_streamBuffer.isAtEnd())
@@ -1094,7 +1094,7 @@ public:
 
         // readChar implementation for default case.
         template <class BufferT>
-        bool readCharImpl(BufferT& buffer, const ReadState rs, std::false_type)
+        DFG_DELIMITED_TEXT_READER_INLINING bool readCharImpl(BufferT& buffer, const ReadState rs, std::false_type)
         {
             // Note: When stream has current codecvt-facet, get() will read one
             // character which may be less or more that sizeof(ch)-bytes. The result may also
@@ -1113,19 +1113,19 @@ public:
         // Note that return value does not tell whether read char was successfully stored
         // in buffer, but returned 'true' guarantees that buffer.appendChar() was called.
         template <class Buffer_T>
-        bool readChar(Buffer_T& buffer, const ReadState rs)
+        DFG_DELIMITED_TEXT_READER_INLINING bool readChar(Buffer_T& buffer, const ReadState rs)
         {
             return readCharImpl(buffer, rs, std::integral_constant<bool, DFG_DETAIL_NS::IsStreamStringViewCCompatible<StreamT>::value>());
         }
 
         // Reads char using given buffer and current read state.
         template <class BufferT>
-        bool readChar(BufferT& buffer)
+        DFG_DELIMITED_TEXT_READER_INLINING bool readChar(BufferT& buffer)
         {
             return readChar(buffer, m_readState);
         }
 
-        bool readChar()
+        DFG_DELIMITED_TEXT_READER_INLINING bool readChar()
         {
             return readChar(getCellBuffer());
         }
