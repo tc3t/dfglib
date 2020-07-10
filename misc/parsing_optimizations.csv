@@ -54,3 +54,5 @@
 2020-07-09,,MSVC_2015_u3,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.40731,1.43125,1.40217,1.39113,1.38998,1.40437,1.40217,7.02184
 2020-07-09,Added some forceinlines on MSVC,,,,,,,,,,,,,,,,
 2020-07-09,,MSVC_2015_u3,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),1.12747,1.1207,1.1129,1.11816,1.10787,1.11742,1.11816,5.5871
+2020-07-10,readCell() revamp,,,,,,,,,,,,,,,,
+2020-07-10,,MSVC_2015_u3,4,release,testfiles/generated/generatedCsv_r4000000_c7_constant_content_abc_test.csv,DelimitedTextReader,runtime,CharAppenderDefault,dfg::io::BasicImStream (memory mapped),0.935881,0.918046,0.919965,0.924336,0.923375,0.924321,0.923375,4.6216

@@ -705,12 +705,34 @@ public:
         CharAppender m_charAppender;
     }; // Class CellData
 
+    enum class CellType
+    {
+        naked,
+        enclosed
+    };
+
     template <class Buffer_T>
     class GenericParsingImplementations
     {
     public:
         typedef Buffer_T CellBuffer;
         typedef typename CellBuffer::FormatDef FormatDef;
+
+
+        static constexpr bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer&, std::true_type)
+        {
+            return false;
+        }
+
+        static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer& buffer, std::false_type)
+        {
+            return buffer.empty();
+        }
+
+        static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer& buffer)
+        {
+            return isEmptyGivenSuccessfulReadCharCall(buffer, std::integral_constant<bool, CellBuffer::CharAppender::s_isAppendOperatorGuaranteedToIncrementSize>());
+        }
 
         static DFG_FORCEINLINE void separatorAutoDetection(const ReadState, FormatDef&, CellBuffer&, std::true_type)
         {
@@ -739,11 +761,11 @@ public:
             separatorAutoDetection(rs, formatDef, buffer, std::integral_constant<bool, FormatDef::s_hasCompileTimeSeparatorChar>());
         }
 
-        // Returns true if caller should invoke 'continue', false otherwise.
-        static DFG_FORCEINLINE bool prePostTrimmer(const ReadState rs, const FormatDef& formatDef, CellBuffer& buffer)
+        // Returns true if read char got trimmed, false otherwise.
+        static DFG_FORCEINLINE bool preTrimmer(const ReadState /*rs*/, const FormatDef& formatDef, CellBuffer& buffer)
         {
             // Check for skippable chars such as whitespace before any cell data or whitespace after enclosed cell.
-            if ((rs == rsLookingForNewData && formatDef.testFlag(rfSkipLeadingWhitespaces)) || rs == rsPastEnclosedCell)
+            if (formatDef.testFlag(rfSkipLeadingWhitespaces))
             {
                 if (buffer.isLastCharacterWhitespace())
                 {
@@ -754,118 +776,40 @@ public:
             return false;
         }
 
-        static DFG_FORCEINLINE void nakedCellStateHandler(ReadState& rs, CellBuffer& buffer)
+        static DFG_FORCEINLINE CellType detectCellTypeByStart(CellBuffer& buffer)
         {
-            if (rs == rsLookingForNewData && buffer.sizeInChars() >= 1)
-                rs = rsInNakedCell;
+            return (!isEmptyGivenSuccessfulReadCharCall(buffer) && bufferCharToInternal(buffer.back()) == buffer.getFormatDefInfo().getEnc()) ? CellType::enclosed : CellType::naked;
         }
 
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
-            if (rs != rsInEnclosedCell && bufferCharToInternal(buffer.back()) == buffer.getFormatDefInfo().getSep())
+            if (isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.back()) != buffer.getFormatDefInfo().getSep())
+                return false;
+            else
             {
                 buffer.popLastChar();
                 rs = rsSeparatorEncountered;
                 return true;
             }
-            return false;
         }
 
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
-            if (rs != rsInEnclosedCell && bufferCharToInternal(buffer.back()) == buffer.getFormatDefInfo().getEol())
+            if (isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.back()) != buffer.getFormatDefInfo().getEol())
+                return false;
+            else
             {
                 buffer.popLastChar();
+                // \r\n handling.
                 if (buffer.getFormatDefInfo().getEol() == '\n' && buffer.getFormatDefInfo().isRnTranslationEnabled() && buffer.isLastChar('\r'))
                     buffer.popLastChar();
                 rs = rsEndOfLineEncountered;
                 return true;
             }
-            else
-                return false;
         }
 
-        template <class TempBufferType_T, class CharReader_T, class IsStreamGood_T>
-        static DFG_FORCEINLINE void enclosedCellReader(ReadState& rs, CellBuffer& buffer, CharReader_T charReader, IsStreamGood_T isStreamGood)
-        {
-            // Check for characters after enclosing item. Simply ignore them.
-            if (rs == rsPastEnclosedCell)
-            {
-                if (!buffer.empty()) // Revise: This check might be redundant.
-                    buffer.popLastChar();
-                return;
-            }
-
-            const auto nEncLength = buffer.getFormatDefInfo().getEnclosingMarkerLengthInChars();
-            const bool bFirstEncCharChance = (rs != rsInEnclosedCell && buffer.sizeInChars() == nEncLength);
-
-            // Check for opening enclosing item.
-            if (bFirstEncCharChance && buffer.iteratorToEndingEnclosingItem() != buffer.cend())
-            {
-                rs = rsInEnclosedCell;
-                buffer.clear();
-                return; // To prevent beginning enclosing item from being part of double enclosing test.
-            }
-
-            // If in enclosed cell, check for double enclosing items within cell text.
-            // Note: if reading naked cell that has enclosing items within the text,
-            // the enclosing items are treated as normal chars.
-            if (rs == rsInEnclosedCell)
-            {
-                const auto iterToEndingEnclosingItem = buffer.iteratorToEndingEnclosingItem();
-                if (iterToEndingEnclosingItem != buffer.cend())
-                {
-                    // TODO: makes redundant memory allocation in practically all cases; could use
-                    //       static buffer.
-                    TempBufferType_T tempBuffer(buffer);
-                    tempBuffer.clear();
-
-                    const auto rsBefore = rs;
-                    for (size_t i = 0; i<nEncLength && isStreamGood(); ++i)
-                    {
-                        // Read char using explicitly set read state in order to avoid automatic separator detection being ignored due to rsInEnclosedCell-state.
-                        const auto bGoodRead = charReader(tempBuffer, rsLookingForNewData);
-
-                        if (!bGoodRead) // Not a good read => didn't find double enclosing item.
-                        {
-                            buffer.setBufferEnd(iterToEndingEnclosingItem);
-                            rs = rsEndOfStream;
-                            break;
-                        }
-                        else if (tempBuffer.isBufferSeparatorItem()) // Found separator after enclosing item.
-                        {
-                            buffer.setBufferEnd(iterToEndingEnclosingItem);
-                            buffer.getFormatDefInfo().copySepatorCharFrom(tempBuffer.getFormatDefInfo()); // This is needed in case that separator auto-detection is triggered for the temp buffer.
-                            rs = rsSeparatorEncountered;
-                            break;
-                        }
-                        else if (tempBuffer.doesBufferEndWithEndOfLineItem()) // Found EOL after enclosing item.
-                        {
-                            buffer.setBufferEnd(iterToEndingEnclosingItem);
-                            rs = rsEndOfLineEncountered;
-                            break;
-                        }
-                        else if (tempBuffer.isLastCharacterWhitespace()) // Note: Assumption made: enclosing item must not contain whitespace char.
-                        {
-                            buffer.setBufferEnd(iterToEndingEnclosingItem);
-                            rs = rsPastEnclosedCell;
-                            break;
-                        }
-                    }
-
-                    // Check whether the item after enclosing item is neither enclosing item nor separator.
-                    // This is not expected.
-                    if (rs == rsBefore && !tempBuffer.doesBufferEndWithEnclosingItem())
-                    {
-                        buffer.setBufferEnd(iterToEndingEnclosingItem);
-                        rs = rsPastEnclosedCell;
-                        //reader.onSyntaxError();
-                    }
-                }
-            }
-        }
 
         template <class Reader_T>
         static DFG_FORCEINLINE void returnValueHandler(Reader_T& reader)
@@ -918,19 +862,9 @@ public:
         typedef Buffer_T CellBuffer;
         typedef typename CellBuffer::FormatDef FormatDef;
 
-        static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer&, std::true_type)
-        {
-            return false;
-        }
-
-        static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer& buffer, std::false_type)
-        {
-            return buffer.empty();
-        }
-
         static DFG_FORCEINLINE bool isEmptyGivenSuccessfulReadCharCall(const CellBuffer& buffer)
         {
-            return isEmptyGivenSuccessfulReadCharCall(buffer, std::integral_constant<bool, CellBuffer::CharAppender::s_isAppendOperatorGuaranteedToIncrementSize>());
+            return GenericParsingImplementations<Buffer_T>::isEmptyGivenSuccessfulReadCharCall(buffer);
         }
 
         static DFG_FORCEINLINE void separatorAutoDetection(const ReadState, const FormatDef&, CellBuffer&)
@@ -938,50 +872,27 @@ public:
             // Auto detection is not supported in bare-bones parsing.
         }
 
-        // Returns true if caller should invoke 'continue', false otherwise.
-        static DFG_FORCEINLINE bool prePostTrimmer(const ReadState, const FormatDef&, CellBuffer&)
+        // Returns true if read char got trimmed ignored, false otherwise.
+        static constexpr bool preTrimmer(const ReadState, const FormatDef&, CellBuffer&)
         {
             return false;
         }
 
-        static DFG_FORCEINLINE void nakedCellStateHandler(ReadState&, CellBuffer&)
+        static constexpr CellType detectCellTypeByStart(CellBuffer&)
         {
+            return CellType::naked;
         }
 
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
-            if (isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.getBuffer().back()) != buffer.getFormatDefInfo().getSep())
-                return false;
-            else
-            {
-                buffer.popLastChar();
-                rs = rsSeparatorEncountered;
-                return true;
-            }
+            return GenericParsingImplementations<Buffer_T>::separatorChecker(rs, buffer);
         }
 
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
-            if (isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.getBuffer().back()) != buffer.getFormatDefInfo().getEol())
-                return false;
-            else
-            {
-                buffer.popLastChar();
-
-                // \r\n handling.
-                if (buffer.getFormatDefInfo().getEol() == '\n' && buffer.getFormatDefInfo().isRnTranslationEnabled() && !buffer.empty() && buffer.getBuffer().back() == '\r')
-                    buffer.popLastChar();
-
-                rs = rsEndOfLineEncountered;
-                return true;
-            }
-        }
-
-        template <class TempBufferType_T, class CharReader_T, class IsStreamGood_T>
-        static DFG_FORCEINLINE void enclosedCellReader(ReadState&, CellBuffer&, CharReader_T, IsStreamGood_T)
-        {
+            return GenericParsingImplementations<Buffer_T>::eolChecker(rs, buffer);
         }
 
         template <class Reader_T>
@@ -1183,29 +1094,85 @@ public:
 
         reader.getCellBuffer().onCellReadBegin(reader);
 
-        while(!reader.isReadStateEndOfCell() && reader.readChar())
+        // Pre-trimming
+        bool bGoodRead = false;
+        for (bGoodRead = reader.readChar(); bGoodRead && ParsingImplementations::preTrimmer(reader.m_readState, reader.getFormatDefInfo(), reader.getCellBuffer());)
         {
-            // prePostTrimmer: Possible check for skippable chars such as whitespace before any cell data or whitespace after enclosed cell.
-            if (ParsingImplementations::prePostTrimmer(reader.m_readState, reader.getFormatDefInfo(), reader.getCellBuffer()))
-                continue;
-
-            // Set naked cell state if needed.
-            ParsingImplementations::nakedCellStateHandler(reader.m_readState, reader.getCellBuffer());
-
-            // Check for separator. Calling separatorChecker() is guaranteed to be done after successful reader.readChar() call. 
-            if (ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()))
+            if (reader.isReadStateEndOfCell())
                 break;
+            bGoodRead = reader.readChar();
+        }
 
-            // Check for end of line. Calling eolChecker() is guaranteed to be done after successful reader.readChar() call.
-            if (ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
-                break;
-
-            // Enclosed cell parsing
-            typedef decltype(reader.getCellBufferCopy()) TempBufferT;
-            ParsingImplementations::template enclosedCellReader<TempBufferT>(reader.m_readState,
-                                                                             reader.getCellBuffer(),
-                                                                             [&](TempBufferT& buffer, const ReadState rs) { return reader.readChar(buffer, rs); },
-                                                                             [&]() { return reader.isStreamGood(); } );
+        if (bGoodRead)
+        {
+            const auto cellType = ParsingImplementations::detectCellTypeByStart(reader.getCellBuffer());
+            if (cellType == CellType::naked)
+            {
+                if (!ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()) &&
+                    !ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
+                {
+                    while (!reader.isReadStateEndOfCell() &&
+                        reader.readChar() &&
+                        !ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()) && // separatorChecker() call is guaranteed to be done after successful reader.readChar() call. 
+                        !ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer())) // eolChecker() call is guaranteed to be done after successful reader.readChar() call. 
+                    {
+                    }
+                }
+            }
+            else // case: in enclosed cell.
+            {
+                auto& buffer = reader.getCellBuffer();
+                auto& rs = reader.m_readState;
+                buffer.popLastChar(); // Removing starting enclosing item.
+                rs = rsInEnclosedCell;
+                while (!reader.isReadStateEndOfCell() && reader.readChar())
+                {
+                    // Check for characters after enclosing item. Simply ignore all but sep/eol.
+                    if (rs == rsPastEnclosedCell)
+                    {
+                        if (ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()) ||
+                            ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
+                            break;
+                        else
+                        {
+                            buffer.popLastChar();
+                            continue;
+                        }
+                    }
+                    
+                    if (ParsingImplementations::isEmptyGivenSuccessfulReadCharCall(buffer) || buffer.back() != buffer.getFormatDefInfo().getEnc())
+                        continue;
+                    // Found enclosing char; reading next char to determine if it was ending one.
+                    if (!reader.readChar(buffer, rsLookingForNewData)) // Using explicitly set read state to avoid separator auto detection being ignored in case of separator following ending enclosing (test cases in DelimitedTextReader_autoDetectCsvSeparator)
+                    {
+                        // Couldn't read char after enclosing item -> read enclosing char looks like ending one.
+                        buffer.popLastChar();
+                        reader.m_readState |= rsEndOfStream;
+                        break;
+                    }
+                    if (buffer.back() == buffer.getFormatDefInfo().getEnc())
+                    {
+                        // Found double enclosing, pop the recent and continue reading the cell.
+                        buffer.popLastChar();
+                    }
+                    else // case: found something else than enclosing item after first one.
+                    {
+                        if (!ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()) &&
+                            !ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
+                        {
+                            rs = rsPastEnclosedCell;
+                            buffer.popLastChar(); // Pop whatever came after
+                            buffer.popLastChar(); // Pop ending enclosing
+                        }
+                        else
+                        {
+                            // Note: separatorChecker() and eolChecker() pop sep/eol if found.
+                            buffer.popLastChar(); // Pop ending enclosing
+                            break;
+                        }
+                    }
+                }
+            } // Enclosed cell parsing
         }
 
         reader.getCellBuffer().onCellRead();

@@ -667,7 +667,7 @@ TEST(DfgIo, DelimitedTextReader_readSkipRestOfRowOnLastEmptyItem)
     });
 
     EXPECT_EQ(9, nHandlerCallCount);
-    EXPECT_EQ(contExpected.size(), contReadValues.size());
+    ASSERT_EQ(contExpected.size(), contReadValues.size());
     for(size_t i = 0; i<contReadValues.size(); ++i)
         EXPECT_EQ(contExpected[i], contReadValues[i]);
 }
