@@ -2006,6 +2006,7 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         }
 
         spHistogram->setValues(makeRange(xVals), makeRange(yVals));
+        pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
     }
     catch (const std::exception& e)
     {
