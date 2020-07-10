@@ -69,7 +69,7 @@ public:
     };
 
     enum {rsLookingForNewData         = 0x1,
-          rsInNakedCell               = 0x2,
+          //rsInNakedCell               = 0x2,
           rsInEnclosedCell            = 0x4,
           rsPastEnclosedCell          = 0x8,
           rsSeparatorEncountered      = 0x10,
@@ -639,62 +639,9 @@ public:
             m_status = newStatus;
         }
 
-        template <class Iteratable>
-        typename Iteratable::const_iterator iteratorToEndingEolItem(const Iteratable& buffer) const
-        {
-            const auto nBufSize = buffer.size();
-            if (nBufSize > 0 && (buffer.isLastChar(m_formatDef.getEol())))
-            {
-                if (m_formatDef.getEol() == '\n' && m_formatDef.isRnTranslationEnabled() && nBufSize >= 2 && buffer.isOneBeforeLast('\r')) // Case: \r\n
-                    return buffer.cend() - 2;
-                else
-                    return buffer.cend() - 1;
-            }
-            return buffer.cend();
-        }
-
-        const_iterator iteratorToEndingEolItem() const
-        {
-            return iteratorToEndingEolItem(*this);
-        }
-
-        const_iterator iteratorToEndingEnclosingItem() const
-        {
-            auto iter = iteratorToLastChar();
-            if (iter == m_buffer.end() || !isCharAt(iter, m_formatDef.getEnc()))
-                return m_buffer.end();
-            else
-                return iter;
-        }
-
-        bool doesBufferEndWithEnclosingItem() const
-        {
-            return isLastChar(m_formatDef.getEnc());
-        }
-
-        const_iterator iteratorToEndingSeparatorItem() const
-        {
-            auto iter = iteratorToLastChar();
-            if (iter == getBuffer().cend() || !isCharAt(iter, m_formatDef.getSep()))
-                return getBuffer().cend();
-            else
-                return iter;
-        }
-
-        bool isBufferSeparatorItem() const
-        {
-            return isEqual(m_formatDef.getSep());
-        }
-
         bool doesBufferEndWithEndOfLineItem() const
         {
             return isLastChar(m_formatDef.getEol());
-        }
-
-        void setBufferEnd(const_iterator endIter)
-        {
-            auto& buffer = getBuffer();
-            DFG_MODULE_NS(cont)::cutTail(buffer, endIter);
         }
 
         Buffer m_buffer;
@@ -762,7 +709,7 @@ public:
         }
 
         // Returns true if read char got trimmed, false otherwise.
-        static DFG_FORCEINLINE bool preTrimmer(const ReadState /*rs*/, const FormatDef& formatDef, CellBuffer& buffer)
+        static DFG_FORCEINLINE bool preTrimmer(const FormatDef& formatDef, CellBuffer& buffer)
         {
             // Check for skippable chars such as whitespace before any cell data or whitespace after enclosed cell.
             if (formatDef.testFlag(rfSkipLeadingWhitespaces))
@@ -873,7 +820,7 @@ public:
         }
 
         // Returns true if read char got trimmed ignored, false otherwise.
-        static constexpr bool preTrimmer(const ReadState, const FormatDef&, CellBuffer&)
+        static constexpr bool preTrimmer(const FormatDef&, CellBuffer&)
         {
             return false;
         }
@@ -1096,7 +1043,7 @@ public:
 
         // Pre-trimming
         bool bGoodRead = false;
-        for (bGoodRead = reader.readChar(); bGoodRead && ParsingImplementations::preTrimmer(reader.m_readState, reader.getFormatDefInfo(), reader.getCellBuffer());)
+        for (bGoodRead = reader.readChar(); bGoodRead && ParsingImplementations::preTrimmer(reader.getFormatDefInfo(), reader.getCellBuffer());)
         {
             if (reader.isReadStateEndOfCell())
                 break;
