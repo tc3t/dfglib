@@ -1991,7 +1991,11 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
 
     try
     {
-        auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(nBinCount, *minMaxPair.first, *minMaxPair.second, "x"));
+        // Creating histogram points using boost::histogram.
+        // Adding small adjustment to upper boundary so that items identical to max value won't get excluded from histogram.
+        const auto binWidth = (*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount);
+        const auto edgeAdjustment = 0.001 * binWidth;
+        auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(nBinCount, *minMaxPair.first, *minMaxPair.second + edgeAdjustment, "x"));
         std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
 
         QVector<double> xVals;
