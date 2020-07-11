@@ -20,6 +20,7 @@
 #include "../math.hpp"
 #include "../scopedCaller.hpp"
 #include "../str/strTo.hpp"
+#include "../numeric/algNumeric.hpp"
 
 #include "../time/timerCpu.hpp"
 
@@ -1972,8 +1973,11 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
 
     const auto valueRange = param.valueRange;
 
-    auto minMaxPair = std::minmax_element(valueRange.cbegin(), valueRange.cend());
-    if (*minMaxPair.first >= *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
+    if (valueRange.empty())
+        return nullptr;
+
+    auto minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(valueRange);
+    if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
         return nullptr;
 
     auto pXaxis = getXAxis(param);
@@ -1987,13 +1991,15 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
 
     auto spHistogram = std::make_shared<HistogramQCustomPlot>(new QCPBars(pXaxis, pYaxis)); // Note: QCPBars is owned by QCustomPlot-object.
 
-    const auto nBinCount = param.definitionEntry().fieldValue<unsigned int>(ChartObjectFieldIdStr_binCount, 100);
+    const bool bOnlySingleValue = (*minMaxPair.first == *minMaxPair.second);
+
+    const auto nBinCount = (!bOnlySingleValue) ? param.definitionEntry().fieldValue<unsigned int>(ChartObjectFieldIdStr_binCount, 100) : 1;
 
     try
     {
         // Creating histogram points using boost::histogram.
         // Adding small adjustment to upper boundary so that items identical to max value won't get excluded from histogram.
-        const auto binWidth = (*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount);
+        const auto binWidth = (!bOnlySingleValue) ? ((*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount)) : 1.0;
         const auto edgeAdjustment = 0.001 * binWidth;
         auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(nBinCount, *minMaxPair.first, *minMaxPair.second + edgeAdjustment, "x"));
         std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
@@ -3247,7 +3253,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         return;
 
     const auto valueRange = pSingleColumn->valueRange();
-    if (valueRange.size() < 2)
+    if (valueRange.size() < 1)
     {
         DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(valueRange.size()));
         return;
