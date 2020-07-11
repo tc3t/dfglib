@@ -1428,3 +1428,58 @@ TEST(dfgNumeric, trimByPercentileRange)
     EXPECT_EQ(expected, vals);
     EXPECT_EQ(valsSorted, vals);
 }
+
+TEST(dfgNumeric, minmaxElement_withNanHandling)
+{
+    using namespace DFG_ROOT_NS;;
+    using namespace ::DFG_MODULE_NS(numeric);
+
+    const auto dNan = std::numeric_limits<double>::quiet_NaN();
+
+    {
+        const std::vector<float> vecEmpty;
+        double arr[2] = { 4, 5 };
+        const auto rvVecEmpty = minmaxElement_withNanHandling(vecEmpty);
+        const auto rvArrEmpty = minmaxElement_withNanHandling(makeRange(arr, arr));
+        EXPECT_EQ(rvVecEmpty.first, rvVecEmpty.second);
+        EXPECT_EQ(rvArrEmpty.first, rvArrEmpty.second);
+        EXPECT_EQ(4, *minmaxElement_withNanHandling(arr).first);
+        EXPECT_EQ(5, *minmaxElement_withNanHandling(arr).second);
+    }
+
+    // only NaN's
+    {
+        std::array<double, 3> arr = { dNan, dNan, dNan };
+        const auto rv = minmaxElement_withNanHandling(arr);
+        EXPECT_EQ(arr.begin(), rv.first);
+        EXPECT_EQ(rv.first, rv.second);
+    }
+
+    // Leading NaN's
+    {
+        std::array<double, 5> arr = { dNan, dNan, 6, 3, dNan };
+        const auto rv = minmaxElement_withNanHandling(arr);
+        EXPECT_EQ(3, *rv.first);
+        EXPECT_EQ(6, *rv.second);
+    }
+
+    // Only leading value
+    {
+        std::array<double, 3> arr = { 4, dNan, dNan };
+        const auto rv = minmaxElement_withNanHandling(arr);
+        EXPECT_EQ(4, *rv.first);
+        EXPECT_EQ(rv.first, rv.second);
+    }
+
+    // Value-equality with std::minmax_element
+    {
+        auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
+        auto distrEng = ::DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, -1000, 1000);
+        std::array<double, 100> arr;
+        std::generate(arr.begin(), arr.end(), [&]() { return distrEng(); });
+        auto rvStd = std::minmax_element(arr.begin(), arr.end());
+        auto rvDfg = minmaxElement_withNanHandling(arr);
+        EXPECT_EQ(*rvStd.first, *rvDfg.first);
+        EXPECT_EQ(*rvStd.second, *rvDfg.second);
+    }
+}

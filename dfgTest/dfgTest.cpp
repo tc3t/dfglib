@@ -122,6 +122,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgMath.logOfBase";
     //::testing::GTEST_FLAG(filter) = "dfgMath.numericDistance";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";
+    //::testing::GTEST_FLAG(filter) = "dfgNumeric.minmaxElement_withNanHandling";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.percentileRange_and_percentile_ceilElem";
     //::testing::GTEST_FLAG(filter) = "dfgOs.OutputFile_completeOrNone";
     //::testing::GTEST_FLAG(filter) = "dfgOs.TemporaryFile";

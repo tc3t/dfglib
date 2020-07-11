@@ -7,6 +7,9 @@
 #include "average.hpp"
 #include "vectorizingLoop.hpp"
 #include "rescale.hpp"
+#include <cmath>
+#include <iterator>
+#include "../math.hpp"
 
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
@@ -148,4 +151,33 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 		transformMultiply(ptrToContiguousMemory(source0), count(source0), ptrToContiguousMemory(source1), count(source1), dest);
 	}
 
+    // Similar to std::minmax_element, but ignores NaN's.
+    //     -In case of multiple equal min/max elements, unspecified which is returned.
+    template<class Range_T>
+    auto minmaxElement_withNanHandling(Range_T&& range) -> std::pair<decltype(std::begin(range)), decltype(std::begin(range))>
+    {
+        using namespace ::DFG_MODULE_NS(math);
+        const auto iterBegin = std::begin(range);
+        const auto iterEnd = std::end(range);
+        auto iter = iterBegin;
+        if (iter == iterEnd) // Empty range?
+            return std::make_pair(iter, iter);
+        // Finding first non-nan
+        for (; iter != iterEnd && isNan(*iter); ++iter)
+            {}
+        if (iter == iterEnd)
+            return std::make_pair(iterBegin, iterBegin);
+        // Getting here means that there is at least one non-nan in the range and 'iter' points to such.
+        auto iterMin = iter;
+        auto iterMax = iter;
+        for (++iter; iter != iterEnd; ++iter)
+        {
+            if (std::fmin(*iter, *iterMin) < *iterMin)
+                iterMin = iter;
+            else if (std::fmax(*iter, *iterMax) > * iterMax)
+                iterMax = iter;
+        }
+        DFG_ASSERT_CORRECTNESS(!isNan(*iterMin) && !isNan(*iterMax) && *iterMin <= *iterMax);
+        return std::make_pair(iterMin, iterMax);
+    }
 } }
