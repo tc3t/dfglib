@@ -60,6 +60,9 @@ constexpr char ChartObjectFieldIdStr_name[] = "name";
 // bin_count
 constexpr char ChartObjectFieldIdStr_binCount[] = "bin_count";
 
+// bar_width_factor
+constexpr char ChartObjectFieldIdStr_barWidthFactor[] = "bar_width_factor";
+
 // title
 constexpr char ChartObjectFieldIdStr_title[] = "title";
 
@@ -469,6 +472,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_enabled,
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_binCount,
+            ChartObjectFieldIdStr_barWidthFactor,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,

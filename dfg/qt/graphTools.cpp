@@ -1128,6 +1128,7 @@ QString GraphDefinitionWidget::getGuideString()
 <h2>Fields for type <i>histogram</i></h2>
     <ul>
         <li><i>bin_count</i>: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
+        <li><i>bar_width_factor</i>: Defines visual spacing between bars as ratio how wide visual bar is compared to bin: value 1 means that bars are as wide as bins and there's no empty space between adjacent bars. With value 0 bars are sharp peaks. Default value is 1. Note that value can also be > 1.</li>
         <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
     </ul>
@@ -1455,6 +1456,8 @@ public:
 
     void setValues(InputSpanD xVals, InputSpanD yVals) override;
 
+    double setBarWidthFactor(double widthFactor);
+
     QPointer<QCPBars> m_spBars; // QCPBars is owned by QCustomPlot, not by *this.
 }; // Class HistogramQCustomPlot
 
@@ -1474,9 +1477,6 @@ void HistogramQCustomPlot::setValues(InputSpanD xVals, InputSpanD yVals)
 {
     if (!m_spBars)
         return;
-    if (xVals.size() >= 3)
-        m_spBars->setWidth(1.0 * (xVals[2] - xVals[1])); // TODO: bin width to be user controllable. Factor 1.0 means that there's no space between bars
-    m_spBars->setWidthType(QCPBars::wtPlotCoords);
     // TODO: this is vexing: QCPBars insists of having QVector's so must allocate new buffers.
     QVector<double> x(static_cast<int>(xVals.size()));
     QVector<double> y(static_cast<int>(yVals.size()));
@@ -1486,6 +1486,21 @@ void HistogramQCustomPlot::setValues(InputSpanD xVals, InputSpanD yVals)
     m_spBars->rescaleAxes(); // TODO: revise, probably not desirable when there are more than one plottable in canvas.
 }
 
+double HistogramQCustomPlot::setBarWidthFactor(double widthFactor)
+{
+    if (!m_spBars)
+        return widthFactor;
+    m_spBars->setWidthType(QCPBars::wtPlotCoords);
+    auto spData = m_spBars->data();
+    if (spData && spData->size() >= 3)
+    {
+        if (widthFactor < 0 || !::DFG_MODULE_NS(math)::isFinite(widthFactor))
+            widthFactor = 1;
+        const auto barWidth = spData->at(2)->sortKey() - spData->at(1)->sortKey();
+        m_spBars->setWidth(widthFactor * barWidth);
+    }
+    return widthFactor;
+}
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
@@ -2016,6 +2031,15 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         }
 
         spHistogram->setValues(makeRange(xVals), makeRange(yVals));
+
+        // Setting bar width factor
+        {
+            const auto barWidthFactorRequest = param.definitionEntry().fieldValue<double>(ChartObjectFieldIdStr_barWidthFactor, 1);
+            const auto actualWidthFactor = spHistogram->setBarWidthFactor(barWidthFactorRequest);
+            if (actualWidthFactor != barWidthFactorRequest)
+                DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to use requested bar width factor %1, using value %2").arg(barWidthFactorRequest).arg(actualWidthFactor));
+        }
+
         pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
     }
     catch (const std::exception& e)

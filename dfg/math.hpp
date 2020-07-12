@@ -22,6 +22,7 @@ inline bool isPowerOf2(T i)
 	return i > 0 && (i & (i - 1)) == 0;
 }
 
+// Returns true iff value is not infinite or NaN.
 template <class T>
 inline bool isFinite(const T t)
 {
