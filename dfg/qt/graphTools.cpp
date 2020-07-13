@@ -1127,8 +1127,11 @@ QString GraphDefinitionWidget::getGuideString()
     </ul>
 <h2>Fields for type <i>histogram</i></h2>
     <ul>
-        <li><i>bin_count</i>: Number of bins in histogram. (default is currently 100, but this may change so it is not to be relied on)</li>
+        <li><i>bin_count</i>: Number of bins in histogram. With value -1, every value gets it's own bin. (Default is currently 100, but this may change so it is not to be relied on)</li>
         <li><i>bar_width_factor</i>: Defines visual spacing between bars as ratio how wide visual bar is compared to bin: value 1 means that bars are as wide as bins and there's no empty space between adjacent bars. With value 0 bars are sharp peaks. Default value is 1. Note that value can also be > 1.</li>
+            <ul>
+                <li>Note: Does not work properly when combined with bin_count = -1 and data where distance between adjacent data point varies.</li>
+            </ul>
         <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
     </ul>
@@ -1456,7 +1459,8 @@ public:
 
     void setValues(InputSpanD xVals, InputSpanD yVals) override;
 
-    double setBarWidthFactor(double widthFactor);
+    // Returns effective bar width which is successful case is the same as given argument.
+    double setBarWidth(double width);
 
     QPointer<QCPBars> m_spBars; // QCPBars is owned by QCustomPlot, not by *this.
 }; // Class HistogramQCustomPlot
@@ -1486,20 +1490,13 @@ void HistogramQCustomPlot::setValues(InputSpanD xVals, InputSpanD yVals)
     m_spBars->rescaleAxes(); // TODO: revise, probably not desirable when there are more than one plottable in canvas.
 }
 
-double HistogramQCustomPlot::setBarWidthFactor(double widthFactor)
+double HistogramQCustomPlot::setBarWidth(const double width)
 {
     if (!m_spBars)
-        return widthFactor;
+        return std::numeric_limits<double>::quiet_NaN();
     m_spBars->setWidthType(QCPBars::wtPlotCoords);
-    auto spData = m_spBars->data();
-    if (spData && spData->size() >= 3)
-    {
-        if (widthFactor < 0 || !::DFG_MODULE_NS(math)::isFinite(widthFactor))
-            widthFactor = 1;
-        const auto barWidth = spData->at(2)->sortKey() - spData->at(1)->sortKey();
-        m_spBars->setWidth(widthFactor * barWidth);
-    }
-    return widthFactor;
+    m_spBars->setWidth(width);
+    return m_spBars->width();
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -2008,46 +2005,74 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
 
     const bool bOnlySingleValue = (*minMaxPair.first == *minMaxPair.second);
 
-    const auto nBinCount = (!bOnlySingleValue) ? param.definitionEntry().fieldValue<unsigned int>(ChartObjectFieldIdStr_binCount, 100) : 1;
+    const auto nBinCount = (!bOnlySingleValue) ? param.definitionEntry().fieldValue<int>(ChartObjectFieldIdStr_binCount, 100) : -1;
 
-    try
+    double binWidth = std::numeric_limits<double>::quiet_NaN();
+
+    if (nBinCount >= 0)
     {
-        // Creating histogram points using boost::histogram.
-        // Adding small adjustment to upper boundary so that items identical to max value won't get excluded from histogram.
-        const auto binWidth = (!bOnlySingleValue) ? ((*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount)) : 1.0;
-        const auto edgeAdjustment = 0.001 * binWidth;
-        auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(nBinCount, *minMaxPair.first, *minMaxPair.second + edgeAdjustment, "x"));
-        std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
-
-        QVector<double> xVals;
-        QVector<double> yVals;
-        for (auto&& x : indexed(hist, boost::histogram::coverage::all))
+        try
         {
-            const double xVal = x.bin().center();
-            if (DFG_MODULE_NS(math)::isNan(xVal) || DFG_MODULE_NS(math)::isInf(xVal))
-                continue;
-            xVals.push_back(xVal);
-            yVals.push_back(*x);
+            // Creating histogram points using boost::histogram.
+            // Adding small adjustment to upper boundary so that items identical to max value won't get excluded from histogram.
+            binWidth = (*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount);
+            const auto edgeAdjustment = 0.001 * binWidth;
+            auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(static_cast<unsigned int>(nBinCount), *minMaxPair.first, *minMaxPair.second + edgeAdjustment, "x"));
+            std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
+
+            QVector<double> xVals;
+            QVector<double> yVals;
+            for (auto&& x : indexed(hist, boost::histogram::coverage::all))
+            {
+                const double xVal = x.bin().center();
+                if (DFG_MODULE_NS(math)::isNan(xVal) || DFG_MODULE_NS(math)::isInf(xVal))
+                    continue;
+                xVals.push_back(xVal);
+                yVals.push_back(*x);
+            }
+            spHistogram->setValues(makeRange(xVals), makeRange(yVals));
         }
-
-        spHistogram->setValues(makeRange(xVals), makeRange(yVals));
-
-        // Setting bar width factor
+        catch (const std::exception& e)
         {
-            const auto barWidthFactorRequest = param.definitionEntry().fieldValue<double>(ChartObjectFieldIdStr_barWidthFactor, 1);
-            const auto actualWidthFactor = spHistogram->setBarWidthFactor(barWidthFactorRequest);
-            if (actualWidthFactor != barWidthFactorRequest)
-                DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to use requested bar width factor %1, using value %2").arg(barWidthFactorRequest).arg(actualWidthFactor));
+            // Failed to create histogram.
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to create histogram, exception message: '%1'").arg(e.what()));
+            return nullptr;
         }
-
-        pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
     }
-    catch (const std::exception& e)
+    else
     {
-        // Failed to create histogram.
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to create histogram, exception message: '%1'").arg(e.what()));
-        return nullptr;
+        ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double> countsPerValue;
+        for (const auto& val : valueRange) if (!::DFG_MODULE_NS(math)::isNan(val))
+        {
+            auto insertRv = countsPerValue.insert(val, 1);
+            if (!insertRv.second) // If already existed, adding 1 to existing count.
+                insertRv.first->second += 1;
+        }
+        const auto keyRange = countsPerValue.keyRange();
+        spHistogram->setValues(keyRange, countsPerValue.valueRange());
+        if (keyRange.size() >= 2)
+        {
+            const auto iterEnd = keyRange.cend();
+            double minDiff = std::numeric_limits<double>::infinity();
+            for (auto iter = keyRange.cbegin(), iterNext = keyRange.cbegin() + 1; iterNext != iterEnd; ++iter, ++iterNext)
+                minDiff = std::min(minDiff, *iterNext - *iter);
+            binWidth = minDiff;
+        }
+        else
+            binWidth = 1;
     }
+
+    // Setting bar width
+    {
+        const double defaultBarWidthFactor = 1;
+        const auto barWidthFactorRequest = param.definitionEntry().fieldValue<double>(ChartObjectFieldIdStr_barWidthFactor, defaultBarWidthFactor);
+        const auto barWidthRequest = binWidth * barWidthFactorRequest;
+        const auto actualBarWidth = spHistogram->setBarWidth(barWidthRequest);
+        if (actualBarWidth != barWidthRequest)
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to use requested bar width factor %1, using bar width %2").arg(barWidthFactorRequest).arg(actualBarWidth));
+    }
+
+    pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
 
     return spHistogram;
 }
