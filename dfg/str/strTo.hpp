@@ -25,6 +25,7 @@ T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
     {
         if (pSuccess)
             *pSuccess = false;
+        obj = T();
     }
     return obj;
 #else
@@ -43,6 +44,7 @@ T& strToByNoThrowLexCastImpl(const DFG_CLASS_NAME(StringView)<Char_T>& sv, T& va
     catch (const boost::bad_lexical_cast&)
     {
         bSuccess = false;
+        val = T();
     }
     if (pSuccess)
         *pSuccess = bSuccess;

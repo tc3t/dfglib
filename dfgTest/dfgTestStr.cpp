@@ -308,6 +308,14 @@ TEST(dfgStr, strToByLexCast)
 
     DFG_SUB_NS_NAME(str)::strToByNoThrowLexCast("1a0", a0, &bSuccess);
     EXPECT_FALSE(bSuccess);
+
+    // Testing that value gets initialized even when input is not convertible
+    {
+        bool b = strToByNoThrowLexCast<bool>("a");
+        int i = strToByNoThrowLexCast<int>("a");
+        EXPECT_EQ(false, b);
+        EXPECT_EQ(0, i);
+    }
 }
 
 namespace
