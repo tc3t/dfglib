@@ -30,7 +30,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return std::string();
 
         std::string s;
-        s.resize(nRequiredSize);
+        s.resize(static_cast<size_t>(nRequiredSize));
         ::WideCharToMultiByte(codePage, 0 /* flags */, sPath, nPathLength, ptrToContiguousMemory(s), static_cast<int>(s.length()), "?", &bDefaultUsed);
         if (!s.empty() && s.back() == '\0')
             s.pop_back();
