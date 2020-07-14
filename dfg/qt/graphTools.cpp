@@ -46,6 +46,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QDialog>
     #include <QTimer>
     #include <QElapsedTimer>
+    #include <QGuiApplication> 
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
     #include <QtCharts>
@@ -182,8 +183,16 @@ void ChartController::refresh()
 {
     if (m_bRefreshInProgress)
         return; // refreshImpl() already in progress; not calling it.
-    auto flagResetter = makeScopedCaller([&]() { m_bRefreshInProgress = true; }, [&]() { m_bRefreshInProgress = false; });
-    refreshImpl();
+    auto flagResetter = makeScopedCaller([&]() { m_bRefreshInProgress = true; QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
+                                         [&]() { m_bRefreshInProgress = false; QGuiApplication::restoreOverrideCursor(); });
+    try
+    {
+        refreshImpl();
+    }
+    catch (const std::bad_alloc& e)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Updating chart failed due to memory allocation failure, there may be more chart data than what can be handled. bad_alloc.what() = '%1'").arg(e.what()));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
