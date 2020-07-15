@@ -24,7 +24,9 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 // Adding link directives.
-#pragma comment(lib, "User32") // Without this MessageBoxA will cause linker error.
+#if defined(_MSC_VER)
+    #pragma comment(lib, "User32") // Without this MessageBoxA will cause linker error.
+#endif // defined(_MSC_VER)
 
 bool DFG_MODULE_NS(debug)::structuredExceptionHandling::gbAssumeStdExceptionObjectInExceptionRecordParams = true;
 

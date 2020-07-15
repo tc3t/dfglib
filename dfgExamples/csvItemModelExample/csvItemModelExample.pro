@@ -14,6 +14,7 @@ HEADERS += ../../dfg/qt/containerUtils.hpp \
     ../../dfg/qt/TableEditor.hpp
 
 SOURCES += ../../dfg/os/memoryMappedFile.cpp \
+    ../../dfg/io/widePathStrToFstreamFriendlyNonWide.cpp \
     ../../dfg/qt/CsvItemModel.cpp \
     ../../dfg/qt/CsvTableView.cpp \
     ../../dfg/qt/CsvTableViewCompleterDelegate.cpp \
