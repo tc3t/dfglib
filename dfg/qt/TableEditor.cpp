@@ -31,6 +31,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QToolBar>
 #include <QToolButton>
 #include <QSplitter>
+#include <QTimer>
 DFG_END_INCLUDE_QT_HEADERS
 
 #define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
@@ -235,6 +236,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
         Qt::CaseSensitivity getCaseSensitivity() const
         {
             return (m_pCaseSensitivityCheckBox->isChecked()) ? Qt::CaseSensitive : Qt::CaseInsensitive;
+        }
+
+        QString getPattern() const
+        {
+            return (m_pTextEdit) ? m_pTextEdit->text() : QString();
         }
 
         QRegExp::PatternSyntax getPatternSyntax() const
@@ -718,6 +724,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
     if (!pProxy || !m_spFilterPanel)
         return;
 
+    auto lockReleaser = m_spTableView->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        // Couldn't acquire lock. Scheduling a new try in 200 ms.
+        QPointer<TableEditor> thisPtr = this;
+        QTimer::singleShot(200, [=]() { if (thisPtr) thisPtr->onFilterTextChanged(thisPtr->m_spFilterPanel->getPattern()); });
+        return;
+    }
     QRegExp regExp(text, m_spFilterPanel->getCaseSensitivity(), m_spFilterPanel->getPatternSyntax());
     pProxy->setFilterRegExp(regExp);
     pProxy->setFilterKeyColumn(m_spFilterPanel->m_pColumnSelector->value());
@@ -734,7 +748,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterColumnChanged(const
 {
     DFG_UNUSED(nNewCol);
     if (m_spFilterPanel)
-        onFilterTextChanged(m_spFilterPanel->m_pTextEdit->text());
+        onFilterTextChanged(m_spFilterPanel->getPattern());
 }
 
 namespace
@@ -771,7 +785,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterCaseSensitivityChan
 {
     DFG_UNUSED(bCaseSensitive);
     if (m_spFilterPanel)
-        onFilterTextChanged(m_spFilterPanel->m_pTextEdit->text());
+        onFilterTextChanged(m_spFilterPanel->getPattern());
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::addToolBarSeparator()
