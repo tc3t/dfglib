@@ -1943,11 +1943,11 @@ namespace
         if (type == ChartDataType::dateAndTimeMillisecondTz)
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss.zzzZ")); // TODO: should show in the same timezone as input
         else if (type == ChartDataType::dateAndTimeMillisecond)
-            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd hh:mm:ss.zzz"));
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss.zzz"));
         else if (type == ChartDataType::dateAndTimeTz)
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ssZ")); // TODO: should show in the same timezone as input
         else if (type == ChartDataType::dateAndTime)
-            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd hh:mm:ss"));
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss"));
         else if (type == ChartDataType::dateOnly)
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd"));
         else if (type == ChartDataType::dateOnlyYearMonth)
