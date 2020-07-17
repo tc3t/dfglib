@@ -717,7 +717,7 @@ namespace
         using namespace DFG_ROOT_NS;
 
         const Map_T& mConst = m;
-        
+
         EXPECT_EQ(0, m.size());
         EXPECT_EQ(0, mConst.size());
         EXPECT_EQ(true, m.empty());
@@ -808,7 +808,7 @@ namespace
             mEqualityTester.erase(m.backKey());
             m.erase(m.backIter());
             verifyEqual(mEqualityTester, m);
-            
+
             mEqualityTester.erase(m.frontKey());
             m.erase(m.begin());
             verifyEqual(mEqualityTester, m);
@@ -894,16 +894,49 @@ namespace
         eraseTester(mUnsorted);
     }
 
-    template <class Map_T>
+    class CopyTracker
+    {
+    public:
+        CopyTracker(int val = 0)
+            : m_nVal(val)
+        {}
+
+        CopyTracker(const CopyTracker& other) :
+            m_nVal(other.m_nVal)
+        {
+            ++s_nCopyCount;
+        }
+
+        CopyTracker& operator=(const CopyTracker& other)
+        {
+            this->m_nVal = other.m_nVal;
+            ++s_nCopyCount;
+            return *this;
+        }
+
+        operator int() const { return m_nVal; }
+
+        int m_nVal = 0;
+        static int s_nCopyCount;
+    };
+
+    int CopyTracker::s_nCopyCount = 0;
+
+    template <class Key_T, class Value_T> using MapVectorAoSHelper = ::DFG_MODULE_NS(cont)::MapVectorAoS<Key_T, Value_T>;
+    template <class Key_T, class Value_T> using MapVectorSoAHelper = ::DFG_MODULE_NS(cont)::MapVectorSoA<Key_T, Value_T>;
+
+    template <template <class, class> class Map_T>
     void testMapKeyValueMoves()
     {
-        DFG_STATIC_ASSERT((std::is_same<typename Map_T::key_type, std::string>::value), "key_type should be std::string");
-        DFG_STATIC_ASSERT((std::is_same<typename Map_T::mapped_type, std::string>::value), "key_type should be std::string");
-        Map_T mm;
+        using MapT = Map_T<std::string, std::string>;
+        MapT mm;
         std::string s(30, 'a');
         std::string s2(30, 'b');
         std::string s3(30, 'c');
         std::string s4(30, 'd');
+        std::string s5(30, 'e');
+        std::string s6(30, 'f');
+        const std::string s7(30, 'g');
         mm[std::move(s)] = std::move(s2);
         mm.insert(std::move(s3), std::move(s4));
         EXPECT_TRUE(s.empty());
@@ -911,6 +944,49 @@ namespace
         EXPECT_TRUE(s3.empty());
         EXPECT_TRUE(s4.empty());
         EXPECT_EQ(2, mm.size());
+        // Moving key-only
+        mm.insert(std::move(s5), s6);
+        EXPECT_TRUE(s5.empty());
+        EXPECT_EQ(s6, mm[std::string(30, 'e')]);
+        // Moving value-only
+        mm.insert(s7, std::move(s6));
+        EXPECT_TRUE(s6.empty());
+        EXPECT_EQ(std::string(30, 'f'), mm[s7]);
+
+        // Testing that insert() won't copy unless needed.
+        {
+            using Map1 = Map_T<CopyTracker, CopyTracker>;
+            Map1 m;
+            m[CopyTracker(1)] = CopyTracker(2);
+            // non-movable key, movable value
+            {
+                const auto nCopyCountBefore = CopyTracker::s_nCopyCount;
+                CopyTracker ct(1);
+                m.insert(ct, CopyTracker(2));
+                EXPECT_EQ(nCopyCountBefore, CopyTracker::s_nCopyCount);
+            }
+            // movable key, non-movable value
+            {
+                const auto nCopyCountBefore = CopyTracker::s_nCopyCount;
+                CopyTracker ct(2);
+                m.insert(CopyTracker(1), ct);
+                EXPECT_EQ(nCopyCountBefore, CopyTracker::s_nCopyCount);
+            }
+            // non-movable key, non-movable value
+            {
+                const auto nCopyCountBefore = CopyTracker::s_nCopyCount;
+                CopyTracker ct0(1);
+                CopyTracker ct1(2);
+                m.insert(ct0, ct1);
+                EXPECT_EQ(nCopyCountBefore, CopyTracker::s_nCopyCount);
+            }
+            // movable key, movable value
+            {
+                const auto nCopyCountBefore = CopyTracker::s_nCopyCount;
+                m.insert(CopyTracker(1), CopyTracker(2));
+                EXPECT_EQ(nCopyCountBefore, CopyTracker::s_nCopyCount);
+            }
+        }
     }
 
 } // unnamed namespace
@@ -948,8 +1024,8 @@ TEST(dfgCont, MapVector)
         mm[size_t(3)] = 4;
     }
 
-    testMapKeyValueMoves<DFG_CLASS_NAME(MapVectorSoA)<std::string, std::string>>();
-    testMapKeyValueMoves<DFG_CLASS_NAME(MapVectorAoS)<std::string, std::string>>();
+    testMapKeyValueMoves<MapVectorAoSHelper>();
+    testMapKeyValueMoves<MapVectorSoAHelper>();
 
     verifyMapVectors(mapVectorSoaSorted, mapVectorSoaUnsorted, mStd);
     verifyMapVectors(mapVectorAosSorted, mapVectorAosUnsorted, mStd);
@@ -993,12 +1069,20 @@ TEST(dfgCont, MapVector)
         mmSoa.insert(ci, 20.0);
         mmAos.insert(i16, 30.0);
         mmSoa.insert(i16, 30.0);
+        
+        const int32 kval = 4;
+        const double dval = 40;
+        mmAos.insert(kval, dval);
+        mmSoa.insert(kval, dval);
+
         EXPECT_EQ(10, mmAos[i]);
         EXPECT_EQ(10, mmSoa[i]);
         EXPECT_EQ(20, mmAos[ci]);
         EXPECT_EQ(20, mmSoa[ci]);
         EXPECT_EQ(30, mmAos[i16]);
         EXPECT_EQ(30, mmSoa[i16]);
+        EXPECT_EQ(dval, mmAos[kval]);
+        EXPECT_EQ(dval, mmSoa[kval]);
     }
 }
 

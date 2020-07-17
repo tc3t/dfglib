@@ -260,22 +260,42 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 return insert(std::move(newVal.first), std::move(newVal.second));
             }
 
-            std::pair<iterator, bool> insert(key_type&& key, mapped_type&& val) // TODO: key-type to be a template parameter.
+            key_type&& privToInsertableKey(key_type&& k)            { return std::move(k); }
+            key_type privToInsertableKey(const key_type& k)         { return k; }
+            mapped_type&& privToInsertableValue(mapped_type&& v)    { return std::move(v); }
+            mapped_type privToInsertableValue(const mapped_type& v) { return v; }
+
+            template <class Key_T, class Val_T>
+            std::pair<iterator, bool> insertImpl(Key_T&& key, Val_T&& val)
             {
                 auto iterKey = findInsertPos(*this, key);
                 if (iterKey != endKey() && isKeyMatch(keyIterValueToKeyValue(*iterKey), key))
                     return std::pair<iterator, bool>(makeIteratorFromKeyIterator(iterKey), false); // Already present
                 else
                 {
-                    auto iter = insertNonExistingTo(std::move(key), std::move(val), iterKey);
+                    auto iter = insertNonExistingTo(privToInsertableKey(std::forward<Key_T>(key)), privToInsertableValue(std::forward<Val_T>(val)), iterKey);
                     return std::pair<iterator, bool>(iter, true);
                 }
             }
 
+            std::pair<iterator, bool> insert(key_type&& key, mapped_type&& val) // TODO: key-type to be a template parameter.
+            {
+                return insertImpl(std::move(key), std::move(val));
+            }
+
             std::pair<iterator, bool> insert(const key_type& key, mapped_type&& val)
             {
-                auto keyTemp = key;
-                return insert(std::move(keyTemp), std::move(val));
+                return insertImpl(key, std::move(val));
+            }
+
+            std::pair<iterator, bool> insert(key_type&& key, const mapped_type& val)
+            {
+                return insertImpl(std::move(key), val);
+            }
+
+            std::pair<iterator, bool> insert(const key_type& key, const mapped_type& val)
+            {
+                return insertImpl(key, val);
             }
 
             void reserve(const size_t nReserve) { static_cast<Impl_T&>(*this).reserve(nReserve); }
