@@ -111,18 +111,84 @@ constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
 
 } // namespace fieldsIds
 
-enum class ChartDataType
+// Enum-like class for defining chart data type and for related queries.
+class ChartDataType
 {
-    unknown,
-    dayTime,
-    dayTimeMillisecond,
-    dateOnly,
-    dateOnlyYearMonth,
-    dateAndTime,
-    dateAndTimeTz,
-    dateAndTimeMillisecond,
-    dateAndTimeMillisecondTz
+public:
+    enum DataType
+    {
+        unknown,
+        // dayTime-domain
+        dayTime,
+        dayTimeMillisecond,
+        firstDayTimeItem = dayTime,
+        lastDayTimeItem = dayTimeMillisecond,
+        // Date without timezone domain
+        dateOnlyYearMonth,
+        dateOnly,
+        dateAndTime,
+        dateAndTimeMillisecond,
+        firstDateNoTzItem = dateOnlyYearMonth,
+        lastDateNoTzItem = dateAndTimeMillisecond,
+        // Date with timezone domaiin
+        dateAndTimeTz,
+        dateAndTimeMillisecondTz,
+        firstDateWithTzItem = dateAndTimeTz,
+        lastDateWithTzItem = dateAndTimeMillisecondTz
+    };
+
+    ChartDataType(DataType dt = unknown) :
+        m_dataType(dt)
+    {}
+
+    operator DataType() const
+    {
+        return m_dataType;
+    }
+
+    bool isDateNoTzType() const
+    {
+        return m_dataType >= firstDateNoTzItem && m_dataType <= lastDateNoTzItem;
+    }
+
+    bool isDateWithTzType() const
+    {
+        return m_dataType >= firstDateWithTzItem && m_dataType <= lastDateWithTzItem;
+    }
+
+    bool isTimeType() const
+    {
+        return m_dataType >= firstDayTimeItem && m_dataType <= lastDayTimeItem;
+    }
+
+    // Sets new type if both are of the same domain and arg expands type in the domain; e.g. dateOnly -> dateAndTime is expanding, but not the other way around.
+    void setIfExpands(const ChartDataType other);
+
+    DataType m_dataType;
 };
+
+// Sets new type if both are of the same domain and arg expands type in the domain; e.g. dateOnly -> dateAndTime is expanding, but not the other way around.
+inline void ChartDataType::setIfExpands(const ChartDataType other)
+{
+    if (m_dataType == unknown)
+        return;
+    else if (this->isTimeType())
+    {
+        if (other.isTimeType())
+            m_dataType = Max(m_dataType, other.m_dataType);
+    }
+    else if (this->isDateNoTzType())
+    {
+        if (other.isDateNoTzType())
+            m_dataType = Max(m_dataType, other.m_dataType);
+    }
+    else if (this->isDateWithTzType())
+    {
+        if (other.isDateWithTzType())
+            m_dataType = Max(m_dataType, other.m_dataType);
+    }
+}
+
 
 // Abstract class representing an entry that defines what kind of ChartObjects to create on chart.
 class AbstractChartControlItem

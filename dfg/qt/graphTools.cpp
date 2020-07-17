@@ -291,10 +291,29 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const QString& s)
 // Return value in case of invalid input as GIGO, in most cases returns NaN. Also in case of invalid input typeMap's value at nCol is unspecified.
 double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s, const DataSourceIndex nCol, ColumnDataTypeMap& typeMap)
 {
-    const auto setColumnDataType = [&](const ChartDataType t)
+    const auto updateColumnDataType = [&](ChartDataType t)
     {
-        typeMap[nCol] = t;
+        auto insertRv = typeMap.insert(nCol, t);
+        if (!insertRv.second) // Already existed?
+            insertRv.first->second.setIfExpands(t);
     };
+    const auto dateToDoubleAndColumnTypeHandling = [&](QDateTime&& dt, ChartDataType dataTypeHint)
+    {
+        const auto& time = dt.time();
+        if (dataTypeHint.isDateNoTzType() && time.msecsSinceStartOfDay() == 0 && dataTypeHint != ChartDataType::dateOnlyYearMonth)
+            dataTypeHint = ChartDataType::dateOnly;
+        else if (time.msec() == 0)
+        {
+            if (dataTypeHint == ChartDataType::dateAndTimeMillisecond)
+                dataTypeHint = ChartDataType::dateAndTime;
+            else if (dataTypeHint == ChartDataType::dateAndTimeMillisecondTz)
+                dataTypeHint = ChartDataType::dateAndTimeTz;
+        }
+        updateColumnDataType(dataTypeHint);
+        return dateToDouble(std::move(dt));
+    };
+
+
     const auto isTzStartChar = [](const QChar& c) { return ::DFG_MODULE_NS(alg)::contains("Z+-", c.toLatin1()); };
     // TODO: add parsing for fractional part longer than 3 digits.
     if (s.size() >= 8 && s[4] == '-' && s[7] == '-') // Something starting with ????-??-?? (ISO 8601, https://en.wikipedia.org/wiki/ISO_8601)
@@ -307,70 +326,46 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s
             {
                 // Timezone specifier after milliseconds?
                 if (s.size() >= 24 && isTzStartChar(s[23]))
-                {
-                    setColumnDataType(ChartDataType::dateAndTimeMillisecondTz);
-                    return dateToDouble(QDateTime::fromString(s, Qt::ISODateWithMs));
-                }
+                    return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, Qt::ISODateWithMs), ChartDataType::dateAndTimeMillisecondTz);
                 else
-                {
-                    setColumnDataType(ChartDataType::dateAndTimeMillisecond);
-                    return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss.zzz").arg(s[10])));
-                }
+                    return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss.zzz").arg(s[10])), ChartDataType::dateAndTimeMillisecond);
             }
             else if (s.size() >= 20 && isTzStartChar(s[19]))
-            {
-                setColumnDataType(ChartDataType::dateAndTimeTz);
-                return dateToDouble(QDateTime::fromString(s, Qt::ISODate));
-            }
+                return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, Qt::ISODate), ChartDataType::dateAndTimeTz);
             else
-            {
-                setColumnDataType(ChartDataType::dateAndTime);
-                return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss").arg(s[10])));
-            }
+                return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss").arg(s[10])), ChartDataType::dateAndTime);
         }
         else if (s.size() == 13 && s[10] == ' ') // Case: "yyyy-MM-dd Wd". where Wd is two char weekday indicator.
-        {
-            setColumnDataType(ChartDataType::dateOnly);
-            return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd'%1'").arg(s.mid(10, 3))));
-        }
+            return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, QString("yyyy-MM-dd'%1'").arg(s.mid(10, 3))), ChartDataType::dateOnly);
         else if (s.size() == 10) // Case: "yyyy-MM-dd"
-        {
-            setColumnDataType(ChartDataType::dateOnly);
-            return dateToDouble(QDateTime::fromString(s, "yyyy-MM-dd"));
-        }
+            return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, "yyyy-MM-dd"), ChartDataType::dateOnly);
         else
-        {
             return std::numeric_limits<double>::quiet_NaN();
-        }
     }
 
     // yyyy-mm
     if (s.size() == 7 && s[4] == '-')
-    {
-        setColumnDataType(ChartDataType::dateOnlyYearMonth);
-        return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM")));
-    }
+        return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, "yyyy-MM"), ChartDataType::dateOnlyYearMonth);
 
     // [d]d.[m]m.yyyy
     QRegExp regExp(R"((?:^|^\w\w )(\d{1,2})(?:\.)(\d{1,2})(?:\.)(\d\d\d\d)$)");
     if (regExp.exactMatch(s) && regExp.captureCount() == 3)
     {
-        setColumnDataType(ChartDataType::dateOnly);
         const auto items = regExp.capturedTexts();
         // 0 has entire match, so actual captures start from index 1.
-        return dateToDouble(QDateTime(QDate(regExp.cap(3).toInt(), regExp.cap(2).toInt(), regExp.cap(1).toInt())));
+        return dateToDoubleAndColumnTypeHandling(QDateTime(QDate(regExp.cap(3).toInt(), regExp.cap(2).toInt(), regExp.cap(1).toInt())), ChartDataType::dateOnly);
     }
 
     if (s.size() >= 8 && s[2] == ':' && s[5] == ':')
     {
         if (s.size() >= 10 && s[8] == '.')
         {
-            setColumnDataType(ChartDataType::dayTimeMillisecond);
+            updateColumnDataType(ChartDataType::dayTimeMillisecond);
             return timeToDouble(QTime::fromString(s, "hh:mm:ss.zzz"));
         }
         else
         {
-            setColumnDataType(ChartDataType::dayTime);
+            updateColumnDataType(ChartDataType::dayTime);
             return timeToDouble(QTime::fromString(s, "hh:mm:ss"));
         }
     }
