@@ -119,7 +119,9 @@ enum class ChartDataType
     dateOnly,
     dateOnlyYearMonth,
     dateAndTime,
-    dateAndTimeMillisecond
+    dateAndTimeTz,
+    dateAndTimeMillisecond,
+    dateAndTimeMillisecondTz
 };
 
 // Abstract class representing an entry that defines what kind of ChartObjects to create on chart.

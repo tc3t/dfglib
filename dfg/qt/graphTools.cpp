@@ -267,7 +267,9 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::dateToDouble(QDateTime&& dt)
 {
     if (dt.isValid())
     {
-        dt.setTimeSpec(Qt::UTC);
+        const auto timeSpec = dt.timeSpec();
+        if (timeSpec == Qt::LocalTime)
+            dt.setTimeSpec(Qt::UTC);
         return static_cast<double>(dt.toMSecsSinceEpoch()) / 1000.0;
     }
     else
@@ -293,16 +295,32 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s
     {
         typeMap[nCol] = t;
     };
-    // TODO: add parsing for timezone specifier (e.g. 2020-04-25 12:00:00.123+0300)
+    const auto isTzStartChar = [](const QChar& c) { return ::DFG_MODULE_NS(alg)::contains("Z+-", c.toLatin1()); };
     // TODO: add parsing for fractional part longer than 3 digits.
     if (s.size() >= 8 && s[4] == '-' && s[7] == '-') // Something starting with ????-??-?? (ISO 8601, https://en.wikipedia.org/wiki/ISO_8601)
     {
-        if (s.size() >= 19 && s[13] == ':' && s[16] == ':' && ::DFG_MODULE_NS(alg)::contains("T ", s[10].toLatin1())) // Case ????-??-??[T ]hh:mm:ss[.zzz]
+        // size 19 is yyyy-MM-ddThh:mm:ss
+        if (s.size() >= 19 && s[13] == ':' && s[16] == ':' && ::DFG_MODULE_NS(alg)::contains("T ", s[10].toLatin1())) // Case ????-??-??[T ]hh:mm:ss[.zzz][Z|HH:00]
         {
+            // size 23 is yyyy-mm-ssThh:mm:ss.zzz
             if (s.size() >= 23 && s[19] == '.')
             {
-                setColumnDataType(ChartDataType::dateAndTimeMillisecond);
-                return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss.zzz").arg(s[10])));
+                // Timezone specifier after milliseconds?
+                if (s.size() >= 24 && isTzStartChar(s[23]))
+                {
+                    setColumnDataType(ChartDataType::dateAndTimeMillisecondTz);
+                    return dateToDouble(QDateTime::fromString(s, Qt::ISODateWithMs));
+                }
+                else
+                {
+                    setColumnDataType(ChartDataType::dateAndTimeMillisecond);
+                    return dateToDouble(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss.zzz").arg(s[10])));
+                }
+            }
+            else if (s.size() >= 20 && isTzStartChar(s[19]))
+            {
+                setColumnDataType(ChartDataType::dateAndTimeTz);
+                return dateToDouble(QDateTime::fromString(s, Qt::ISODate));
             }
             else
             {
@@ -1922,8 +1940,12 @@ namespace
     void setAxisTicker(QCPAxis& rAxis, const ChartDataType type)
     {
         // TODO: should use the same date format as in input data and/or have the format customisable.
-        if (type == ChartDataType::dateAndTimeMillisecond)
+        if (type == ChartDataType::dateAndTimeMillisecondTz)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss.zzzZ")); // TODO: should show in the same timezone as input
+        else if (type == ChartDataType::dateAndTimeMillisecond)
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd hh:mm:ss.zzz"));
+        else if (type == ChartDataType::dateAndTimeTz)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ssZ")); // TODO: should show in the same timezone as input
         else if (type == ChartDataType::dateAndTime)
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd hh:mm:ss"));
         else if (type == ChartDataType::dateOnly)

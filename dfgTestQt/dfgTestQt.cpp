@@ -698,6 +698,8 @@ TEST(dfgQt, CsvTableView_stringToDouble)
     using namespace ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;
     using DataType = ::DFG_MODULE_NS(qt)::ChartDataType;
 
+    // yyyy-MM
+    testDateToDouble("2020-05", DataType::dateOnlyYearMonth, 6 * (60 * 60 * 24));
     // yyyy-MM-dd
     testDateToDouble("2020-04-25", DataType::dateOnly, 0);
     //yyyy-MM-dd Wd
@@ -708,6 +710,18 @@ TEST(dfgQt, CsvTableView_stringToDouble)
     // yyyy-MM-dd[T ]hh:mm:ss.123
     testDateToDouble("2020-04-25T12:34:56.123", DataType::dateAndTimeMillisecond, 60 * (12 * 60 + 34) + 56 + 0.123);
     testDateToDouble("2020-04-25 12:34:56.123", DataType::dateAndTimeMillisecond, 60 * (12 * 60 + 34) + 56 + 0.123);
+    // yyyy-MM-dd[T ]hh:mm:ss[Z|+HH:00]
+    testDateToDouble("2020-04-25T00:00:00Z", DataType::dateAndTimeTz, 0);
+    testDateToDouble("2020-04-25T00:00:00+03", DataType::dateAndTimeTz, -3 * 60 * 60);
+    testDateToDouble("2020-04-25T00:00:00+03:00", DataType::dateAndTimeTz, -3 * 60 * 60);
+    testDateToDouble("2020-04-25T00:00:00-03", DataType::dateAndTimeTz, 3 * 60 * 60);
+    testDateToDouble("2020-04-25T00:00:00-03:00", DataType::dateAndTimeTz, 3 * 60 * 60);
+    // yyyy-MM-dd[T ]hh:mm:ss.zzz[Z|+HH:00]
+    testDateToDouble("2020-04-25T00:00:00.125Z", DataType::dateAndTimeMillisecondTz, 0.125);
+    testDateToDouble("2020-04-25T00:00:00.125+03", DataType::dateAndTimeMillisecondTz, -3 * 60 * 60 + 0.125);
+    testDateToDouble("2020-04-25T00:00:00.125+03:00", DataType::dateAndTimeMillisecondTz, -3 * 60 * 60 + 0.125);
+    testDateToDouble("2020-04-25T00:00:00.125-03", DataType::dateAndTimeMillisecondTz, 3 * 60 * 60 + 0.125);
+    testDateToDouble("2020-04-25T00:00:00.125-03:00", DataType::dateAndTimeMillisecondTz, 3 * 60 * 60 + 0.125);
 
     //dd.MM.yyyy et al.
     {
