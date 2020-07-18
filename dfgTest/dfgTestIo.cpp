@@ -779,11 +779,12 @@ TEST(dfgIo, ImcByteStream)
     using namespace DFG_MODULE_NS(io);
 
     const char buffer[] = "ImcByteStream\n\r\n";
-    char readBuffer[DFG_COUNTOF_CSL(buffer)];
+    char readBuffer[DFG_COUNTOF_SZ(buffer)];
 
-    DFG_CLASS_NAME(ImcByteStream) istrm(buffer, DFG_COUNTOF_CSL(buffer));
+    ImcByteStream istrm(buffer, DFG_COUNTOF_SZ(buffer));
     readBinary(istrm, readBuffer);
-    EXPECT_FALSE(memcmp(buffer, readBuffer, count(readBuffer)));
+    EXPECT_EQ(DFG_COUNTOF_SZ(buffer), istrm.gcount());
+    EXPECT_EQ(0, memcmp(buffer, readBuffer, count(readBuffer)));
 }
 
 TEST(dfgIo, FileMemoryMapped)

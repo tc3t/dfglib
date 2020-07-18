@@ -6,6 +6,7 @@
 #include <deque>
 #include <list>
 #include <memory>
+#include <strstream>
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/dfgBase.hpp>
 #include <dfg/ReadOnlySzParam.hpp>

@@ -1,26 +1,26 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include <strstream>
+#include "StreamBufferMem.hpp"
 
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
 
-	class DFG_CLASS_NAME(ImcByteStream) : public std::istrstream
+	class ImcByteStream : public std::istream
 	{
 	public:
-		typedef std::istrstream BaseClass;
+		typedef std::istream BaseClass;
 
-		DFG_CLASS_NAME(ImcByteStream)() :
-			BaseClass((const char*)nullptr, 0)
-		{}
+		ImcByteStream(const char* pData = nullptr, const size_t nSize = 0) :
+			BaseClass(nullptr),
+			m_streamBuf(pData, nSize)
+		{
+			set_rdbuf(&m_streamBuf);
+			this->clear();
+		}
 
-		DFG_CLASS_NAME(ImcByteStream)(const char* psz, const size_t nSize) : 
-			BaseClass(psz, nSize)
-		{}
-
+		StreamBufferMem<char> m_streamBuf;
 	}; // Class ImcByteStream
 
-
-} } // module ns
+} } // module namespace

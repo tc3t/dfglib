@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../os/memoryMappedFile.hpp"
-#include "ImcByteStream.hpp"
 #include "StreamBufferMem.hpp"
 #include "../baseConstructorDelegate.hpp"
 
