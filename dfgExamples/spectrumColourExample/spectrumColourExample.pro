@@ -9,7 +9,7 @@ HEADERS += ./spectrumColourExample.h \
     ./stdafx.h
 
 SOURCES += ./main.cpp \
-    ../../../dfg/os/memoryMappedFile.cpp \
+    ../../dfg/os/memoryMappedFile.cpp \
     ./spectrumColourExample.cpp \
     ./stdafx.cpp
 
