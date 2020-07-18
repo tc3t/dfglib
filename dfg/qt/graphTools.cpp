@@ -759,7 +759,7 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const RowToValue
 {
     const auto nCol = columnToIndex(pColumn);
     auto iter = m_columnTypes.find(nCol);
-    return (iter != m_columnTypes.end()) ? iter->second : ChartDataType::unknown;
+    return (iter != m_columnTypes.end()) ? iter->second : ChartDataType(ChartDataType::unknown);
 }
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap* pColumn) const -> QString
@@ -3211,8 +3211,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     const bool bYisRowIndex = rowFlags[1];
 
     const char szRowIndexName[] = QT_TR_NOOP("Row number");
-    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType::unknown;
-    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType::unknown;
+    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType(ChartDataType::unknown);
+    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType(ChartDataType::unknown);
     const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
     const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
     auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
