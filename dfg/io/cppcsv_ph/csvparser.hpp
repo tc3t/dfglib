@@ -21,6 +21,12 @@
 #endif
 
 namespace cppcsv {
+
+  enum AllowNullCharPolicy {
+     DontAllowNullChars = 0,
+     DoAllowNullChars = 1     // the default
+  };
+
 namespace csvFSM {
 
    // State Indexes (in the transition array)
@@ -562,10 +568,11 @@ public:
    // You can always quote the whitespace, and that will be kept
 
 // constructor that was used before
-csv_parser(CsvBuilder &out, QuoteChars qchar, Separators sep, bool trim_whitespace = false, bool collapse_separators = false)
+csv_parser(CsvBuilder &out, QuoteChars qchar, Separators sep, bool trim_whitespace = false, bool collapse_separators = false, AllowNullCharPolicy allow_null_char = DoAllowNullChars)
  : qchar(qchar), sep(sep),
    comment(),  // inits comment char to zero if char
    comments_must_be_at_start_of_line(true),
+   allow_null_char(allow_null_char),
    errmsg(NULL),
    collect_error_context(false),
    trans(out, trim_whitespace, collapse_separators)
@@ -576,10 +583,11 @@ csv_parser(CsvBuilder &out, QuoteChars qchar, Separators sep, bool trim_whitespa
 
 
 // construct for fast-path (no quotes, comments, fixed char separator
-csv_parser(CsvBuilder &out, bool trim_whitespace = false, bool collapse_separators = false)
+csv_parser(CsvBuilder &out, bool trim_whitespace = false, bool collapse_separators = false, AllowNullCharPolicy allow_null_char = DoAllowNullChars)
  : qchar(qchar), sep(sep),
    comment(),  // inits comment char to zero if char
    comments_must_be_at_start_of_line(true),
+   allow_null_char(allow_null_char),
    errmsg(NULL),
    collect_error_context(false),
    trans(out, trim_whitespace, collapse_separators)
@@ -593,9 +601,10 @@ csv_parser(CsvBuilder &out, bool trim_whitespace = false, bool collapse_separato
 
 // constructor with everything
 // note: collect_error_context adds a small amount of overhead
-csv_parser(CsvBuilder &out, QuoteChars qchar, Separators sep, bool trim_whitespace, bool collapse_separators, CommentChars comment, bool comments_must_be_at_start_of_line, bool collect_error_context = false)
+csv_parser(CsvBuilder &out, QuoteChars qchar, Separators sep, bool trim_whitespace, bool collapse_separators, CommentChars comment, bool comments_must_be_at_start_of_line, bool collect_error_context = false, AllowNullCharPolicy allow_null_char = DoAllowNullChars)
  : qchar(qchar), sep(sep), comment(comment),
    comments_must_be_at_start_of_line(comments_must_be_at_start_of_line),
+   allow_null_char(allow_null_char),
    errmsg(NULL),
    collect_error_context(collect_error_context),
    trans(out, trim_whitespace, collapse_separators)
@@ -673,11 +682,6 @@ bool process_chunk(const char *&buf, const size_t len)
 
      switch (trans.value)
      {
-        case '\0': {
-                trans.error_message = "Unexpected NULL character"; // check for NULL character
-                break;
-             }
-
         case '\r': {
                 state_idx = (state_trans[state_idx]->Edos_cr(trans));
                 break;
@@ -694,7 +698,11 @@ bool process_chunk(const char *&buf, const size_t len)
              }
 
         default: {
-                if (!FAST_commas_no_quotes_no_comments && is_quote_char(qchar)) {
+                if (allow_null_char != DoAllowNullChars && trans.value == '\0') {
+                   trans.error_message = "Unexpected NULL character"; // check for NULL character
+                }
+
+                else if (!FAST_commas_no_quotes_no_comments && is_quote_char(qchar)) {
                    state_idx = (state_trans[state_idx]->Eqchar(trans));
                 }
 
@@ -824,6 +832,7 @@ private:
   Separators sep;    // could be char or string
   CommentChars comment;   // could be char or string
   bool comments_must_be_at_start_of_line;
+  AllowNullCharPolicy allow_null_char;
   const char *errmsg;
 
   bool collect_error_context;

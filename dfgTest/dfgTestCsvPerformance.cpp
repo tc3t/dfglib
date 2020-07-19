@@ -24,6 +24,8 @@
     #define ENABLE_FAST_CPP_CSV_PARSER 0
 #endif
 
+#define ENABLE_CSV_PARSER_A      (0)
+#define ENABLE_CSV_PARSER_V   (0 && DFG_MSVC_VER > DFG_MSVC_VER_2015) // Didn't seem to build on VC2015 as of 2020-07
 
 #if ENABLE_FAST_CPP_CSV_PARSER
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -33,16 +35,25 @@
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <dfg/io/cppcsv_ph/csvparser.hpp>
+    #if (ENABLE_CSV_PARSER_A == 1)
+        #include <dfg/io/csv-parser_a/parser.hpp>
+    #endif
+    #if (ENABLE_CSV_PARSER_V == 1)
+        #include <dfg/io/csv-parser_v/csv.hpp>
+    #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 namespace
 {
     #ifndef _DEBUG
+        // Release
         const size_t gnRowCount = 4000000;
     #else
-        const size_t gnRowCount = 2000;
+        // Debug
+        const size_t gnRowCount = 1000;
     #endif
     const size_t gnColCount = 7;
+    const size_t gnExpectedCellCounterValueWithHeaderCells = (gnRowCount + 1) * gnColCount; // + 1 from header
 
     const size_t gnRunCount = 5;
 
@@ -110,6 +121,16 @@ namespace
         return std::unique_ptr<std::ifstream>(new std::ifstream(sFilePath));
     }
 
+    std::unique_ptr<::DFG_MODULE_NS(io)::BasicIfStream> InitBasicIfstream(const std::string& sFilePath, FileByteHolder&)
+    {
+        return std::unique_ptr<::DFG_MODULE_NS(io)::BasicIfStream>(new ::DFG_MODULE_NS(io)::BasicIfStream(sFilePath));
+    }
+
+    std::unique_ptr<::DFG_MODULE_NS(io)::IfStreamWithEncoding> InitIfStreamWithEncoding(const std::string& sFilePath, FileByteHolder&)
+    {
+        return std::unique_ptr<::DFG_MODULE_NS(io)::IfStreamWithEncoding>(new ::DFG_MODULE_NS(io)::IfStreamWithEncoding(sFilePath));
+    }
+
     std::unique_ptr<std::istrstream> InitIStrStream(const std::string& sFilePath, FileByteHolder& byteContainer)
     {
         readBytes(sFilePath, byteContainer);
@@ -130,7 +151,7 @@ namespace
 
     
 
-    template <class Strm_T> std::string StreamName() { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(Strm_T, "Template specialization is missing for given type."); }
+    template <class Strm_T> std::string StreamName() { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(Strm_T, "Template specialization for StreamName() is missing for given type."); }
 
     std::string fileToMemoryType()
     {
@@ -141,6 +162,9 @@ namespace
     template <> std::string StreamName<std::istrstream>() { return "std::istrstream" + fileToMemoryType(); }
     template <> std::string StreamName<std::istringstream>() { return "std::istringstream" + fileToMemoryType(); }
     template <> std::string StreamName<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>() { return "dfg::io::BasicImStream" + fileToMemoryType(); }
+    template <> std::string StreamName<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream)>() { return "dfg::io::BasicIfStream"; }
+    template <> std::string StreamName<DFG_MODULE_NS(io)::DFG_CLASS_NAME(IfStreamWithEncoding)>() { return "dfg::io::IfStreamWithEncoding"; }
+    
 
     template <class T> std::string prettierTypeName();
     template <> std::string prettierTypeName<const char*>() { return "const char*"; }
@@ -214,8 +238,6 @@ namespace
 
         std::vector<double> runtimes;
 
-        size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
-
         for (size_t i = 0; i < nCount; ++i)
         {
             TimerType timer;
@@ -241,10 +263,8 @@ namespace
             const auto elapsedTime = timer.elapsedWallSeconds();
 
             // Note: with CharAppenderNone nothing gets added to the read buffer so the cell handler does not get called.
-            //EXPECT_TRUE(nCounter > 0);
-            EXPECT_TRUE(i == 0 || nCounter == nPreviousCounter);
-            nPreviousCounter = nCounter;
-
+            const auto nExpectedCount = std::is_same<CharAppender_T, ::DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderNone>::value ? 0 : gnExpectedCellCounterValueWithHeaderCells;
+            EXPECT_EQ(nExpectedCount, nCounter);
             runtimes.push_back(elapsedTime);
         }
         const std::string sFormatDefType = formatDefTagToOutputDescription(FormatDefTag_T());
@@ -305,29 +325,25 @@ namespace
     DFG_NOINLINE void ExecuteTestCase_FastCppCsvParser(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
         std::vector<double> runtimes;
-        size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
         for (size_t i = 0; i < nCount; ++i)
         {
             DFG_STATIC_ASSERT(gnColCount == 7, "Code below assumes 7 columns.");
             ::io::CSVReader<7> fastCsvParser(sFilePath);
             fastCsvParser.read_header(io::ignore_no_column, "Column 0", "Column 1", "Column 2", "Column 3", "Column 4", "Column 5", "Column 6");
             Read_T c0, c1, c2, c3, c4, c5, c6;
-            dfg::time::TimerCpu timer1;
+            TimerType timer1;
             size_t nCounter = 0;
             while (fastCsvParser.read_row(c0, c1, c2, c3, c4, c5, c6))
             {
-                nCounter++;
+                nCounter += gnColCount;
                 //EXPECT_TRUE(std::strcmp(c0, "abc") == 0 && std::strcmp(c6, "abc") == 0);
             }
             const auto elapsed1 = timer1.elapsedWallSeconds();
-            EXPECT_TRUE(nCounter > 0);
-            EXPECT_TRUE(i == 0 || nCounter == nPreviousCounter);
-            nPreviousCounter = nCounter;
-
+            EXPECT_EQ(gnExpectedCellCounterValueWithHeaderCells, nCounter + 7);
             runtimes.push_back(elapsed1);
         }
        
-        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser 2018-09-30", "compile time", std::string("\"Parse only, read type = ") + prettierTypeName<Read_T>() + std::string("\""), "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, "fast-cpp-csv-parser 2020-05-19", "compile time", std::string("\"Parse only, read type = ") + prettierTypeName<Read_T>() + std::string("\""), "N/A");
     }
 #endif
 
@@ -364,7 +380,6 @@ namespace
                                     const char* pszParseStyle)
     {
         std::vector<double> runtimes;
-        size_t nPreviousCounter = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
         for (size_t i = 0; i < nCount; ++i)
         {
             const auto bytes = dfg::io::fileToVector(sFilePath);
@@ -372,19 +387,15 @@ namespace
             cppcsv::csv_parser<decltype(cc), Quote_T, Separator_T, CommentsChar_T> parser(cc, quote, sep, false, false);
 
             auto pData = bytes.data();
-            dfg::time::TimerCpu timer1;
+            TimerType timer1;
             parser.process(pData, bytes.size());
 
             const auto elapsed1 = timer1.elapsedWallSeconds();
 
-            std::cout << cc.m_nCellCounter << '\n';
-            EXPECT_TRUE(cc.m_nCellCounter > 0);
-            EXPECT_TRUE(i == 0 || cc.m_nCellCounter == nPreviousCounter);
-            nPreviousCounter = cc.m_nCellCounter;
-
+            EXPECT_EQ(gnExpectedCellCounterValueWithHeaderCells, cc.m_nCellCounter);
             runtimes.push_back(elapsed1);
         }
-        PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2018-03-21", pszFormatDef, pszParseStyle, "Contiguous memory");
+        PrintTestCaseRow(output, sFilePath, runtimes, "cppcsv_ph_2020-01-10", pszFormatDef, pszParseStyle, "Contiguous memory");
     }
 
     DFG_NOINLINE void ExecuteTestCase_cppCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
@@ -399,9 +410,79 @@ namespace
         ExecuteTestCase_cppCsvImpl<cppcsv::Disable>(output, sFilePath, nCount, cppcsv::Disable(), cppcsv::Separator_Comma(), "compile time", "Parse only (cell counter) + no(comments quotes) + comma only");
     }
 
-    void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+#if (ENABLE_CSV_PARSER_A == 1)
+    // TODO: revise is this a correct way to use the library in this context
+    DFG_NOINLINE void ExecuteTestCase_csvParserAria(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    {
+        std::vector<double> runtimes;
+        for (size_t i = 0; i < nCount; ++i)
+        {
+            using namespace aria::csv;
+            std::ifstream strm(sFilePath);
+
+            size_t nCounter = 0;
+            CsvParser parser(strm);
+
+            TimerType timer1;
+            for (;;)
+            {
+                auto field = parser.next_field();
+                if (field.type == FieldType::DATA)
+                    ++nCounter;
+                else if (field.type == FieldType::CSV_END)
+                    break;
+            }
+            const auto elapsed1 = timer1.elapsedWallSeconds();
+
+            EXPECT_EQ(gnExpectedCellCounterValueWithHeaderCells, nCounter);
+            runtimes.push_back(elapsed1);
+        }
+        PrintTestCaseRow(output, sFilePath, runtimes, "csv-parser_aria_2020-07-05", "runtime", "Parse only (cell counter)", "N/A");
+    }
+#endif // ENABLE_CSV_PARSER_A
+
+ #if ENABLE_CSV_PARSER_V
+    // TODO: revise is this a correct way to use the library in this context
+    DFG_NOINLINE void ExecuteTestCase_csvParserVincent(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    {
+        std::vector<double> runtimes;
+        for (size_t i = 0; i < nCount; ++i)
+        {
+            csv::CSVFormat format;
+            format.delimiter(',').quote(false);
+            csv::CSVReader reader(sFilePath, format);
+
+            TimerType timer1;
+            size_t nCounter = 0;
+#if 1
+            for (csv::CSVRow& row : reader)
+            {
+                for (csv::CSVField& field: row)
+                {
+                    DFG_UNUSED(field);
+                    ++nCounter;
+                }
+            }
+#else
+            csv::CSVRow row;
+            while (reader.read_row(row))
+            {
+                ++nCounter;
+            }
+#endif
+            const auto elapsed1 = timer1.elapsedWallSeconds();
+
+            EXPECT_EQ(gnExpectedCellCounterValueWithHeaderCells, nCounter + 7);
+            runtimes.push_back(elapsed1);
+        }
+        PrintTestCaseRow(output, sFilePath, runtimes, "csv-parser_vincent_2020-07-05", "runtime", "Parse only (cell counter)", "N/A");
+    }
+#endif // ENABLE_CSV_PARSER_V    
+
+    DFG_NOINLINE void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
     {
         using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(io);
 
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, uint32> Table;
 
@@ -411,7 +492,7 @@ namespace
         {
             TimerType timer;
             Table table;
-            table.readFromFile(sFilePath, DFG_CLASS_NAME(CsvFormatDefinition)(',', DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone, DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8));
+            table.readFromFile(sFilePath, CsvFormatDefinition(',', DelimitedTextReader::s_nMetaCharNone, EndOfLineTypeN, encodingUTF8));
             EXPECT_EQ(gnRowCount + 1, table.rowCountByMaxRowIndex());
             EXPECT_EQ(gnColCount, table.colCountByMaxColIndex());
             const auto elapsedTime = timer.elapsedWallSeconds();
@@ -501,8 +582,7 @@ TEST(dfgPerformance, CsvReadPerformance)
         {
             ostrmTestResults << ",time#" << i + 1;
         }
-        if (nRunCount > 0)
-            ostrmTestResults << ",time_avg,time_median,time_sum\n";
+        ostrmTestResults << ",time_avg,time_median,time_sum\n";
     }
 
     const auto sFilePath = GenerateTestFile(gnRowCount, gnColCount);
@@ -522,30 +602,56 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
 
-    // BasicImStream
-    ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, getThroughOriginal<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>, sFilePath, nRunCount, " with get()");
-    ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, getThroughIoGetThroughLambda<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>, sFilePath, nRunCount, " with io::getThrough() and lambda");
-    ExecuteTestCase_GetThrough<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, getThroughIoGetThroughFunctor<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>, sFilePath, nRunCount, " with io::getThrough() and functor");
-    ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
-    ExecuteTestCase_DelimitedTextReader_NoCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); //Basic reader
-    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
-    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+    // BasicIfStream (note: this could be improved significantly by implementing buffering to BasicIfStream)
+    //ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<::DFG_MODULE_NS(io)::BasicIfStream>(ostrmTestResults, InitBasicIfstream, sFilePath, nRunCount, false);
 
-    ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
-    ExecuteTestCase_DelimitedTextReader_basicReader<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+    // IfStreamWithEncoding
+    //ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<::DFG_MODULE_NS(io)::IfStreamWithEncoding>(ostrmTestResults, InitIfStreamWithEncoding, sFilePath, nRunCount, false);
 
-    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false, true); // Runtime format def
-    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true, true); // Compile time format def
-    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream)>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true, false); // Compile time format def without \r\n translation
+    using BasicImStreamT = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream);
 
-    // fast-cpp-csv-parser
+    // BasicImStream, getThrough
+    ExecuteTestCase_GetThrough<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, getThroughOriginal<BasicImStreamT>, sFilePath, nRunCount, " with get()");
+    ExecuteTestCase_GetThrough<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, getThroughIoGetThroughLambda<BasicImStreamT>, sFilePath, nRunCount, " with io::getThrough() and lambda");
+    ExecuteTestCase_GetThrough<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, getThroughIoGetThroughFunctor<BasicImStreamT>, sFilePath, nRunCount, " with io::getThrough() and functor");
+    // BasicImStream, noCharAppend
+    ExecuteTestCase_DelimitedTextReader_NoCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount);
+    ExecuteTestCase_DelimitedTextReader_NoCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); //Basic reader
+    // BasicImStream, default reader
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+    // BasicImStream, basicReader, default read buffer
+    ExecuteTestCase_DelimitedTextReader_basicReader<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_basicReader<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+    // BasicImStream, basicReader, stringViewBuffer
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false, true);  // Runtime format def , \r\n translation
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true,  true);  // Compile time format, \r\n translation
+    ExecuteTestCase_DelimitedTextReader_basicReader_stringViewBuffer<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true,  false); // Compile time format, no \r\n translation
+
+    /////////////////////////////////////////////////
+    // 3rd party libraries --->
+    {
+        // fast-cpp-csv-parser, https://github.com/ben-strasser/fast-cpp-csv-parser
 #if ENABLE_FAST_CPP_CSV_PARSER
-    ExecuteTestCase_FastCppCsvParser<const char*>(ostrmTestResults, sFilePath, nRunCount);
-    ExecuteTestCase_FastCppCsvParser<std::string>(ostrmTestResults, sFilePath, nRunCount);
+        ExecuteTestCase_FastCppCsvParser<const char*>(ostrmTestResults, sFilePath, nRunCount);
+        ExecuteTestCase_FastCppCsvParser<std::string>(ostrmTestResults, sFilePath, nRunCount);
 #endif
 
-    // cppcsv
-    ExecuteTestCase_cppCsv(ostrmTestResults, sFilePath, nRunCount);
+        // cppcsv, https://github.com/paulharris/cppcsv
+        ExecuteTestCase_cppCsv(ostrmTestResults, sFilePath, nRunCount);
+
+        // csv-parser, https://github.com/AriaFallah/csv-parser
+#if ENABLE_CSV_PARSER_A
+        ExecuteTestCase_csvParserAria(ostrmTestResults, sFilePath, nRunCount);
+#endif // ENABLE_CSV_PARSER_A
+
+        // csv-parser, https://github.com/vincentlaucsb/csv-parser
+#if ENABLE_CSV_PARSER_V
+        ExecuteTestCase_csvParserVincent(ostrmTestResults, sFilePath, nRunCount);
+#endif // ENABLE_CSV_PARSER_V
+    }
+    // <---- 3rd party libraries
+    /////////////////////////////////////////////////
 
     // TableCsv
     ExecuteTestCase_TableCsv(ostrmTestResults, sFilePath, nRunCount);
