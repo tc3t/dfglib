@@ -52,7 +52,7 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2020-02-10).
+Summary of 3rd party code in dfglib (last revised 2020-07-21).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
@@ -61,7 +61,7 @@ Summary of 3rd party code in dfglib (last revised 2020-02-10).
 | [cppcsv](https://github.com/paulharris/cppcsv) | c,t | [MIT](https://github.com/paulharris/cppcsv) | 
 | [dlib](http://dlib.net/)    | m,ti (unit-aware integration and various tests)           | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  | Can be excluded from unit tests with option DFGTEST_BUILD_OPT_USE_DLIB
 | [fast-csv-cpp-parser](https://github.com/ben-strasser/fast-cpp-csv-parser/) | c,t | [BSD-3](dfg/io/fast-cpp-csv-parser/csv.h) |
-| [fmtlib](https://github.com/fmtlib/fmt) | m (string formatting)| [BSD-2](dfg/str/fmtlib/format.h) |
+| [fmtlib](https://github.com/fmtlib/fmt) (version 4.1.0 with an adjustment related to formatting doubles as string) | m (string formatting)| [BSD-2](dfg/str/fmtlib/format.h) |
 | [Google Test](https://github.com/google/googletest) (version 1.8.1) | t | [BSD-3](externals/gtest/gtest.h) |
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) |
 | [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) |
@@ -77,29 +77,29 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status (as of 2020-02-10 commit [3d7e58c2](https://github.com/tc3t/dfglib/commit/3d7e58c27407a41692bf96999ffb92597c34ec94), with Boost 1.70.0 unless stated otherwise)
+## Build status (as of 2020-07-20 commit [b5d7fd41](https://github.com/tc3t/dfglib/commit/b5d7fd41fc55f32edc3cd019e05a4e89dedfd126), with Boost 1.70.0 unless stated otherwise)
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
 | Compiler      | Platform      | Config  | Tests (passed/all) | Comment |
 | ------------- | ------------- | -----   | ------  | ------- |
-| Clang 3.8.0   | x86           |         | 100 % (227/227) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| Clang 6.0.0   | x64           | Release | 100 % (227/227) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| GCC 5.4.0     | x86           |         | 100 % (227/227) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| GCC 7.4.0     | x64           | Release | 100 % (227/227) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| MinGW 7.3.0   | x64           | O2      | 100 % (232/232) | |
-| VC2015        | x86           | Debug   | 100 % (235/235) | |
-| VC2015        | x86           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
-| VC2015        | x64           | Debug   | 100 % (235/235) | Build with /bigobj for dfgTestCont.cpp |
-| VC2015        | x64           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x86           | Debug   | 100 % (235/235) | |
-| VC2017        | x86           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x64           | Debug   | 100 % (235/235) | Build with /bigobj for dfgTestCont.cpp |
-| VC2017        | x64           | Release | 99 % (234/235) | Numerical precision related failure in dfgNumeric.transform |
-| VC2019        | x86           | Debug   | 100 % (234/234) | std:c++17 with Conformance mode |
-| VC2019        | x86           | Release | 100 % (234/234) | std:c++17 with Conformance mode |
-| VC2019        | x64           | Debug   | 100 % (234/234) | std:c++17 with Conformance mode |
-| VC2019        | x64           | Release | 100 % (234/234) | std:c++17 with Conformance mode |
+| Clang 3.8.0   | x86           |         | 100 % (248/248) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| Clang 6.0.0   | x64           | Release | 100 % (248/248) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| GCC 5.4.0     | x86           |         | 100 % (248/248) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| GCC 7.5.0     | x64           | Release | 100 % (248/248) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| MinGW 7.3.0   | x64           | O2      | 100 % (253/253) | |
+| VC2015        | x86           | Debug   | 100 % (256/256) | |
+| VC2015        | x86           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
+| VC2015        | x64           | Debug   | 100 % (256/256) | |
+| VC2015        | x64           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x86           | Debug   | 100 % (256/256) | |
+| VC2017        | x86           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x64           | Debug   | 100 % (256/256) | |
+| VC2017        | x64           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
+| VC2019        | x86           | Debug   | 100 % (255/255) | std:c++17 with Conformance mode |
+| VC2019        | x86           | Release | 100 % (255/255) | std:c++17 with Conformance mode |
+| VC2019        | x64           | Debug   | 100 % (255/255) | std:c++17 with Conformance mode |
+| VC2019        | x64           | Release | 100 % (255/255) | std:c++17 with Conformance mode |
 ||||||
 
 ### dfglib is no longer tested with the following compilers:
