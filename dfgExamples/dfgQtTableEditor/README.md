@@ -8,6 +8,8 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 Like earlier versions with following changes:
 * Building with MSVC 2012 and 2013 is no longer supported.
+* Qt 5.6 is minimum Qt version
+* If building with QCustomPlot charting, requires Boost >= 1.70
 
 ### Version 1.1.0:
 
@@ -41,6 +43,24 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
+* 2020-07-22, 1.5.0
+    * Notable changes
+        * [new] Charting (disabled by default)
+            * xy-graphs and histograms are supported.
+            * Disabled by default due to licensing issues (GPL).
+        * [new] Filtered reading
+        * [imp] Significantly faster open times with default parser: in a test case 16 s -> 10 s (compared to 1.1.0)
+        * [imp] Much lower memory usage for dense tables: in a test case 4.2 GB -> 3.0 GB (compared to 1.1.0)
+        * [imp] Can now set column names from column header context menu ([b15d91a9](https://github.com/tc3t/dfglib/commit/b15d91a92c92fd2b06ad3ea9d8572f8db4e21cb9))
+        * [imp] 'Go to line'-operation (available from context menu and shortcut) ([70bea62d](https://github.com/tc3t/dfglib/commit/70bea62d71042e4c0dbc885f070e363f041225c3))
+        * [imp] Performance improvements to pasting and clearing cells. ([1a785bdd](https://github.com/tc3t/dfglib/commit/1a785bdd97bde745299b5649815695497c4f97db), [03484d5c](https://github.com/tc3t/dfglib/commit/03484d5cc24a5ec397e012e33b3dacee99b8c2ef))
+        * [imp] When opening file with options, default settings are now based on the file content.
+        * [mod] Saved files will now end with new line ([c714c060](https://github.com/tc3t/dfglib/commit/c714c060a9108b06eeb28e16731895e12b0b723f))
+        * [fix] Find didn't always jump to case-differing matches in case insensitive find even though the matches were highlighted in table. ([9d5d6dac](https://github.com/tc3t/dfglib/commit/9d5d6dac66b287d2a647582c11b5467d6315421d))
+        * [fix] Saving a file that was empty when opened resulted to garbage separator ([8fbc3a54](https://github.com/tc3t/dfglib/commit/8fbc3a547992f5056f5786c440d9e1a50af27574))
+        * [fix] Saving to a read-only file looked as if it worked even though nothing was saved ([3a349a49](https://github.com/tc3t/dfglib/commit/3a349a49a3b09dc32b064a9a92c82ad6c09c7fd8))
+        * [fix] Fix to crash-propensity in generate content ([973326f6](https://github.com/tc3t/dfglib/commit/973326f64f51ffc89ebadf20833b5dc5e7e7e331))
+        * [fix] fixed some crash-propensity when changing filter ([ddb3735a](https://github.com/tc3t/dfglib/commit/ddb3735a5db62ad92fd260bbbebc0879bb451d76))
 * 2020-02-11, 1.1.0
     * Notable changes
         * [new] UI-additions
@@ -64,11 +84,24 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 * Separator auto-detection: instead of e.g. relying on list separator defined in OS settings (like done by some spreadsheet applications), uses heuristics to determine separator character. Auto-detection supports comma (,), semicolon (;), tab (\t) and unit separator (\x1F).
 * Text-oriented: content is shown as read, no data type interpretations are made.
 * Easy to use basic filtering: Alt+F -> type filter string -> view shows only rows whose content (on any column) match with filter string. Matching syntax supports for example wildcard and regular expression.
+* Filtered reading: Allows parts of file to be read:
+    * Row index filtering (to read only given rows by index)
+    * Column index filtering (to read only given columns by index)
+    * Content filter: Arbitrary number of and/or combinations of text matchers similar to filter in UI.
 * Diffing using 3rd party diff tool (manual configuration).
 * Support for per-file configurations that can be used for example to define format characters and column widths in UI.
 * When saving to file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
-* Somewhat reasonable performance: opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same Windows desktop machine read took over 30 seconds.
-* No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files. Underlying data structure is optimized for in-order walk through column content.
+* Charting support using [QCustomPlot](https://www.qcustomplot.com/) (since version 1.5.0)
+    * xy-graphs and histograms are supported (as of version 1.5.0).
+    * json-based chart definition.
+    * Has been tested to work with 50 million row, single column xy-graph. In a test machine chart update times in 50M line case were 65 s in non-cached case and 6 s in cached case; corresponding numbers in case of 1M lines were 2 s and 0.2 s.
+    * Disabled by default due to licensing issues (GPL).
+* No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for some concrete examples. Underlying data structure is optimized for in-order walk through column content.
+* Somewhat reasonable performance:
+    * opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor 1.0.0 default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same machine read took over 30 seconds.
+    * Since opening huge files is not a priority, limits of opening such files hasn't been thoroughly examined, but some examples for concreteness:
+        * With version 1.5.0 and a rather ordinary Windows desktop machine (Intel i5 desktop CPU launched in 2013), opening a 1 GB file with 50 million rows and three 3 columns with content "abcdef" in every cell, lasted (in warm cache case) about 10 seconds with default options, about 6 seconds if using manual read options. When opened, application used about 3.0 GB of memory. With version 1.1.0 figures were 16s / 8s / 4.2 GB.
+        * Opening a 3 GB, 1e6 x 1024 file with content ab in each cell lasted about 105 s with peak memory consumption of 14 GB (in version 1.5.0).
 * Supported encodings:
     * Read: UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252
         * Note: when file has no BOM, reading assumes Latin-1
@@ -224,12 +257,13 @@ properties,,,
 
 ## Third party code
 
-Summary of 3rd party code in dfgQtTableEditor (last revised 2020-02-11).
+Summary of 3rd party code in dfgQtTableEditor (last revised 2020-07-22).
 
 | Library      | License  |
 | ------------- | ----- |
 | [Boost](http://www.boost.org/) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
 | [fmtlib](https://github.com/fmtlib/fmt) | [BSD-2](../../dfg/str/fmtlib/format.h) |
+| [QCustomPlot](https://www.qcustomplot.com/) (disabled by default) | [GPLv3/commercial](https://www.qcustomplot.com/) |
 | [Qt](https://www.qt.io/) | [Various](http://doc.qt.io/qt-5/licensing.html) |
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) | [Boost software license](../../dfg/utf/utf8_cpp/utf8.h) |
 
