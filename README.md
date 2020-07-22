@@ -2,12 +2,16 @@
 
 Experimental general purpose utility library for C++.
 
-Note: this is *not* a mature library and is not intended or recommended for general use. Libraries such as [Abseil](https://abseil.io/) or [Boost](https://www.boost.org/) may provide many of the features in dfglib implemented in a more clear and professional manner. For a comprehensive list of alternatives, see [A list of open source C++ libraries at cppreference.com](https://en.cppreference.com/w/cpp/links/libs) 
+Note: this is *not* a mature library and is not intended or recommended for general use. Libraries such as [Abseil](https://abseil.io/) or [Boost](https://www.boost.org/) provide many of the features in dfglib implemented in a more clear and professional manner. For a comprehensive list of alternatives, see [A list of open source C++ libraries at cppreference.com](https://en.cppreference.com/w/cpp/links/libs) 
 
 ## News
 
-* 2020-02-11: dfgQtTableEditor [version 1.1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.1.0.0)
-* 2019-09-10: dfgQtTableEditor [version 1.0.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
+* 2020-07-22: dfgQtTableEditor [version 1.5.0](https://github.com/tc3t/dfglib/tree/master/dfgExamples/dfgQtTableEditor)
+* 2020-02-11: dfglib is no longer tested with the following compilers:
+    * MSVC2010, MSVC2012, MSVC2013, MinGW 4.8.0
+    * Latest tested commit available as branch: [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013)
+* 2020-02-11: dfgQtTableEditor [version 1.1.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.1.0.0)
+* 2019-09-10: dfgQtTableEditor [version 1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
 
 ## Usage
 
