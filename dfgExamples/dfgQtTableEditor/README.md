@@ -43,7 +43,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
-* 2020-07-22, 1.5.0
+* 2020-07-22, [1.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.5.0)
     * Notable changes
         * [new] Charting (disabled by default)
             * xy-graphs and histograms are supported.
@@ -61,7 +61,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [fix] Saving to a read-only file looked as if it worked even though nothing was saved ([3a349a49](https://github.com/tc3t/dfglib/commit/3a349a49a3b09dc32b064a9a92c82ad6c09c7fd8))
         * [fix] Fix to crash-propensity in generate content ([973326f6](https://github.com/tc3t/dfglib/commit/973326f64f51ffc89ebadf20833b5dc5e7e7e331))
         * [fix] fixed some crash-propensity when changing filter ([ddb3735a](https://github.com/tc3t/dfglib/commit/ddb3735a5db62ad92fd260bbbebc0879bb451d76))
-* 2020-02-11, 1.1.0
+* 2020-02-11, [1.1.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.1.0.0)
     * Notable changes
         * [new] UI-additions
             * 'Generate content' now has lots of new distributions from which content can be generated from. Dialog now also remembers settings from previous use (not over process restart, though) ([a6170f79](https://github.com/tc3t/dfglib/commit/a6170f79f833b038e9e4d60987b4bb2f9f0d9896))
@@ -77,7 +77,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [fix] Application could crash if editing table while selection analyzer was working ([19e0e40c](https://github.com/tc3t/dfglib/commit/19e0e40c3d9936e4ce8f11b776293c404669d5cd))
         
 
-* 2019-09-05, 1.0.0
+* 2019-09-05, [1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
 
 ## Features
 
