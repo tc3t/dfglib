@@ -7,6 +7,8 @@
 #include "alg/generateAdjacent.hpp"
 #include <iterator> // std::distance
 #include "cont/elementType.hpp"
+#include "rangeIterator.hpp"
+#include "math.hpp"
 
 // TODO: Check usage of std::begin/end. Should it use dfg-defined begin/end (e.g. in case that the used environment does not provide those?)
 
@@ -263,6 +265,96 @@ void keepByFlags(Cont_T& cont, const FlagCont_T& flags)
             return false;
     });
     cont.erase(iterValidEnd, cont.end());
+}
+
+template <class Iter_T>
+class NearestRangeReturnValue
+{
+public:
+    NearestRangeReturnValue(Iter_T iterBegin, Iter_T iterEnd, Iter_T iterNearest)
+        : m_begin(iterBegin)
+        , m_end(iterEnd)
+        , m_nearest(iterNearest)
+    {}
+
+    Iter_T begin() const    { return m_begin; }
+    Iter_T end() const      { return m_end; }
+    Iter_T nearest() const  { return m_nearest; }
+    size_t size() const     { return static_cast<size_t>(std::distance(m_begin, m_end)); }
+    bool empty() const      { return begin() == end(); }
+    // Returns range that has items on left side of nearest()
+    RangeIterator_T<Iter_T> leftRange()  const { return makeRange(begin(), nearest()); }
+    // Returns range that has items on right side of nearest()
+    RangeIterator_T<Iter_T> rightRange() const { return makeRange((!empty()) ? nearest() + 1 : end(), end()); }
+    
+    Iter_T m_begin;
+    Iter_T m_end;
+    Iter_T m_nearest;
+};
+
+// Given a sorted range as expected by floatIndexInSorted(), search value, count and toSortkey-function, returns a range of nearest items and the iterator to nearest item.
+// If elements have equal distance, prefers to include left-side items.
+template <class Iterable_T, class T, class ToSortKey_T>
+auto nearestRangeInSorted(Iterable_T&& iterable, const T& val, size_t nCount, ToSortKey_T&& toSortKey) -> NearestRangeReturnValue<decltype(std::begin(iterable))>
+{
+    using IterT = decltype(std::begin(iterable));
+    using ReturnT = NearestRangeReturnValue<IterT>;
+    const auto iterBegin = std::begin(iterable);
+    const auto iterEnd = std::end(iterable);
+    if (iterBegin == iterEnd || nCount == 0 || ::DFG_MODULE_NS(math)::isNan(val))
+        return ReturnT(iterEnd, iterEnd, iterEnd);
+    const auto nRangeSize = static_cast<size_t>(std::distance(iterBegin, iterEnd));
+    if (nRangeSize == 1)
+        return ReturnT(iterBegin, iterEnd, iterBegin);
+
+    nCount = Min(nCount, nRangeSize);
+    const auto findex = floatIndexInSorted(iterable, val, toSortKey);
+    if (findex <= 0.5)
+        return ReturnT(iterBegin, iterBegin + nCount, iterBegin);
+    else if (findex >= static_cast<double>(nRangeSize - 1))
+        return ReturnT(iterEnd - nCount, iterEnd, iterEnd - 1);
+
+    // Getting here means that index if within [0.5, nRangeSize - 1]
+    const auto nNearest = ::DFG_ROOT_NS::round<size_t>(findex);
+    const auto iterNearest = iterBegin + nNearest;
+    if (nCount == 1)
+        return ReturnT(iterNearest, iterNearest + 1, iterNearest);
+
+    auto iterNearestBegin = iterNearest;
+    auto iterNearestEnd = iterNearest + 1;
+
+    for (size_t nIncludeCount = 1; nIncludeCount < nCount; ++nIncludeCount)
+    {
+        if (iterNearestBegin == iterBegin) // Nothing left on left side?
+        {
+            DFG_ASSERT_UB(std::distance(iterNearestEnd, iterEnd) >= static_cast<ptrdiff_t>((nCount - nIncludeCount)));
+            iterNearestEnd += (nCount - nIncludeCount); // Fill right items
+            break;
+        }
+        if (iterNearestEnd == iterEnd) // Nothing left on right side?
+        {
+            DFG_ASSERT_UB(std::distance(iterBegin, iterNearestBegin) >= static_cast<ptrdiff_t>((nCount - nIncludeCount)));
+            iterNearestBegin -= (nCount - nIncludeCount); // Fill left items
+            break;
+        }
+        // Getting here means that there's next item on both side. Determining which one is closer
+        const auto leftDistance = val - toSortKey(*(iterNearestBegin - 1));
+        const auto rightDistance = toSortKey(*iterNearestEnd) - val;
+        DFG_ASSERT(leftDistance >= 0); // Expecting distance to be non-negative
+        DFG_ASSERT(rightDistance >= 0); // Expecting distance to be non-negative
+        if (leftDistance <= rightDistance)
+            --iterNearestBegin;
+        else
+            ++iterNearestEnd;
+    }
+    return ReturnT(iterNearestBegin, iterNearestEnd, iterNearest);
+}
+
+template <class Iterable_T, class T>
+auto nearestRangeInSorted(Iterable_T&& iterable, const T& val, size_t nCount) -> NearestRangeReturnValue<decltype(std::begin(iterable))>
+{
+    using ValueT = typename ::DFG_MODULE_NS(cont)::ElementType<Iterable_T>::type;
+    return nearestRangeInSorted(std::forward<Iterable_T>(iterable), val, nCount, DFG_DETAIL_NS::DefaultSortKeyFunc<ValueT>());
 }
 
 
