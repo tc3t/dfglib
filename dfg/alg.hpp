@@ -12,6 +12,18 @@
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(alg) {
 
+namespace DFG_DETAIL_NS
+{
+    template <class Elem_T>
+    struct DefaultSortKeyFunc
+    {
+        const Elem_T& operator()(const Elem_T& a) const
+        {
+            return a;
+        }
+    };
+} // namespace DFG_DETAIL_NS
+
 // Returns index of item 'val' in range 'range'.
 // If not found, returns value that is not valid in index of range (can be tested e.g. with isValidIndex).
 // In case of duplicates, returns the smallest index that match.
@@ -29,14 +41,16 @@ bool contains(const Range_T& range, const T& val)
     return isValidIndex(range, indexOf(range, val));
 }
 
-// For a given range of ascending sorted values, returns interpolated floating position of 'val' in given range.
+// For a given range of ascending sorted(*) values, returns interpolated floating position of 'val' in given range.
 // If val matches any of the range elements exactly, return value is identical to indexOf.
 // If 'val' is smaller than first, it's index if extrapolated linearly from first bin width.
 // Similarly for values above last, index is extrapolated from last bin width.
+// (*) Range is expected to be sorted in the sense that range of [toSortKey(iterable[0]), ... toSortKey(iterable[last])] is sorted.
 // Examples:
-template <class Iterable_T, class T>
-double floatIndexInSorted(const Iterable_T& iterable, const T& val)
+template <class Iterable_T, class T, class ToSortKey_T>
+double floatIndexInSorted(const Iterable_T& iterable, const T& val, const ToSortKey_T& toSortKey)
 {
+    using ValueT = typename ::DFG_MODULE_NS(cont)::ElementType<Iterable_T>::type;
     const auto iterBegin = DFG_ROOT_NS::cbegin(iterable);
     const auto iterEnd = DFG_ROOT_NS::cend(iterable);
     if (iterBegin == iterEnd) // Check for empty range.
@@ -44,25 +58,27 @@ double floatIndexInSorted(const Iterable_T& iterable, const T& val)
     auto iterSecond = iterBegin;
     ++iterSecond;
     if (iterSecond == iterEnd) // Check for single item range. If val matches first, return 0, otherwise NaN.
-        return (*iterBegin == val) ? 0 : std::numeric_limits<double>::quiet_NaN();
-    DFG_ASSERT(std::is_sorted(iterBegin, iterEnd));
-    auto iter = std::lower_bound(iterBegin, iterEnd, val);
+        return (toSortKey(*iterBegin) - val == 0) ? 0 : std::numeric_limits<double>::quiet_NaN();
+    const auto sortPredSort = [&](const ValueT& a, const ValueT& b) { return toSortKey(a) < toSortKey(b); };
+    const auto sortPredLowerBound = [&](const ValueT& a, const T& b) { return toSortKey(a) < b; };
+    DFG_ASSERT(std::is_sorted(iterBegin, iterEnd, sortPredSort));
+    auto iter = std::lower_bound(iterBegin, iterEnd, val, sortPredLowerBound);
     if (iter != iterEnd)
     {
         if (iter != iterBegin)
         {
             auto prev = iter;
             --prev;
-            return static_cast<double>(std::distance(iterBegin, prev)) + (val - *prev) / (*iter - *prev);
+            return static_cast<double>(std::distance(iterBegin, prev)) + (val - toSortKey(*prev)) / (toSortKey(*iter) - toSortKey(*prev));
         }
         else // Case: iter == iterBegin which means that val is <= *iterBegin.
         {
-            if (val == *iterBegin)
+            if (toSortKey(*iterBegin) - val == 0)
                 return 0;
             else
             {
-                const auto firstBinWidth = *iterSecond - *iterBegin;
-                return 0.0 - (*iterBegin - val) / firstBinWidth;
+                const auto firstBinWidth = toSortKey(*iterSecond) - toSortKey(*iterBegin);
+                return 0.0 - (toSortKey(*iterBegin) - val) / firstBinWidth;
             }
         }
     }
@@ -72,9 +88,16 @@ double floatIndexInSorted(const Iterable_T& iterable, const T& val)
         --iterLast;
         auto iterOneBeforeLast = iterLast;
         --iterOneBeforeLast;
-        const auto lastBinWidth = *iterLast - *iterOneBeforeLast;
-        return static_cast<double>(count(iterable) - 1) + (val - *iterLast) / lastBinWidth;
+        const auto lastBinWidth = toSortKey(*iterLast) - toSortKey(*iterOneBeforeLast);
+        return static_cast<double>(count(iterable) - 1) + (val - toSortKey(*iterLast)) / lastBinWidth;
     }
+}
+
+template <class Iterable_T, class T>
+double floatIndexInSorted(const Iterable_T& iterable, const T& val)
+{
+    using ValueT = typename ::DFG_MODULE_NS(cont)::ElementType<Iterable_T>::type;
+    return floatIndexInSorted(iterable, val, DFG_DETAIL_NS::DefaultSortKeyFunc<ValueT>());
 }
 
 namespace DFG_DETAIL_NS
@@ -95,7 +118,8 @@ namespace DFG_DETAIL_NS
         for (auto iter = std::begin(range); !isAtEnd(iter, iterEnd); ++iter)
             f(*iter);
     }
-}
+
+} // namespace DFG_DETAIL_NS
 
 // Like std::for_each, but accepts ranges and explicitly guarantees in order advance.
 // Function name suffix Fwd emphasizes that the iteration will be done in order
@@ -148,6 +172,7 @@ void fill(RangeT& range, const ValueT& val)
 // DiffFunc_T shall return non-negative value.
 // DiffFunc_T takes two parameters: (ElementOfIterable, Value_T)
 // In case of multiple minimum value items, returns iterator to the first occurrence.
+// See also: floatIndexInSorted()
 template <class Iterable_T, class Value_T, class DiffFunc_T>
 auto findNearest(const Iterable_T& iterable, const Value_T& val, DiffFunc_T diffFunc) -> decltype(iterable.begin())
 {

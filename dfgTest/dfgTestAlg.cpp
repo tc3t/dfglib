@@ -324,6 +324,13 @@ TEST(dfgAlg, floatIndexInSorted)
         EXPECT_EQ(3.5, floatIndexInSorted(arr, 6));
         EXPECT_EQ(4, floatIndexInSorted(arr, 8));
     }
+
+    // Testing non-trivial element type
+    {
+        using PairT = std::pair<double, double>;
+        const PairT arr[] = { PairT(1, 1), PairT(2, 1), PairT(3, 100), PairT(4,1) };
+        EXPECT_EQ(2.25, floatIndexInSorted(arr, 3.25, [](const PairT& a) { return a.first; }));
+    }
 }
 
 namespace SortMultipleAdl
