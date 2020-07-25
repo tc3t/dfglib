@@ -74,12 +74,10 @@ namespace DFG_DETAIL_NS
                 return static_cast<UnsignedType>(-1 * (val + 1)) + 1;
         }
     }
-} // unnamed namespace
 
-
-template <class T>
-inline bool isNan(const T t)
-{
+    template <class T>
+    inline bool isNanImpl(const T t, std::true_type /*T has NaN*/)
+    {
 #if DFG_LANGFEAT_HAS_ISNAN
 	return (std::isnan(t) != 0);
 #elif defined(_MSC_VER)
@@ -87,6 +85,21 @@ inline bool isNan(const T t)
 #else
 	return (isnan(t) != 0);
 #endif
+    }
+
+    template <class T>
+    inline constexpr bool isNanImpl(const T, std::false_type /*case: T does not have NaN*/)
+    {
+        return false;
+    }
+} // DFG_DETAIL_NS namespace
+
+
+template <class T>
+inline bool isNan(const T t)
+{
+    DFG_STATIC_ASSERT(std::is_floating_point<T>::value || std::is_integral<T>::value, "isNan() expected numeric type");
+    return DFG_DETAIL_NS::isNanImpl(t, std::integral_constant<bool, std::numeric_limits<T>::has_quiet_NaN>());
 }
 
 // Returns first + (first + step) + (first + 2*step)... until first + n*step <= last

@@ -231,6 +231,8 @@ TEST(dfgMath, isNan)
 #endif
     EXPECT_EQ(isNan(std::numeric_limits<double>::infinity()), false);
     EXPECT_EQ(isNan(-1 * std::numeric_limits<double>::infinity()), false);
+
+    EXPECT_FALSE(isNan(1)); // Tests that compiles with integer type.
 }
 
 TEST(dfgMath, isFinite)
