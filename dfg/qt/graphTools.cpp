@@ -77,6 +77,28 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+DFG_ROOT_NS_BEGIN{ 
+    
+    // QCPDataContainer doesn't seem to have cbegin/cend() but have constBegin()/constEnd() so creating overloads here that are used at least by nearestRangeInSorted()
+    auto cbegin(const QCPGraphDataContainer& cont) -> decltype(cont.constBegin()) { return cont.constBegin(); }
+    auto cend(const QCPGraphDataContainer& cont)   -> decltype(cont.constEnd())   { return cont.constEnd(); }
+
+    auto cbegin(const QCPBarsDataContainer& cont) -> decltype(cont.constBegin())  { return cont.constBegin(); }
+    auto cend(const QCPBarsDataContainer& cont)   -> decltype(cont.constEnd())    { return cont.constEnd(); }
+
+    // QCPDataContainer doesn't seem to have value_type typedef, so adding specializations to ElementType<> so that QCPDataContainer works with nearestRangeInSorted()
+    DFG_SUB_NS(cont)
+    {
+        namespace DFG_DETAIL_NS
+        {
+            template <> struct ElementTypeFromConstReferenceRemoved<QCPGraphDataContainer> { typedef QCPGraphData type; };
+            template <> struct ElementTypeFromConstReferenceRemoved<QCPBarsDataContainer>  { typedef QCPBarsData type; };
+        }
+    } // module cont
+} // namespace DFG_ROOT_NS
+#endif // DFG_ALLOW_QCUSTOMPLOT
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
 {
 
@@ -1605,7 +1627,36 @@ public:
 #endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-class ChartCanvasQCustomPlot : public DFG_MODULE_NS(charts)::ChartCanvas, QObject
+
+class ChartPanel;
+
+using PointXy = ::DFG_MODULE_NS(cont)::TrivialPair<double, double>;
+
+class ToolTipTextStream
+{
+public:
+    ToolTipTextStream& operator<<(const QString& str)
+    {
+        m_sText += str;
+        return *this;
+    }
+
+    const QString& toPlainText() const
+    {
+        return m_sText;
+    }
+
+    QString numberToText(const double d) const
+    {
+        return QString::number(d);
+    }
+
+    bool isDestinationEmpty() const { return m_sText.isEmpty(); }
+
+    QString m_sText;
+}; // class ToolTipTextStream
+
+class ChartCanvasQCustomPlot : public DFG_MODULE_NS(charts)::ChartCanvas, public QObject
 {
 public:
     ChartCanvasQCustomPlot(QWidget* pParent = nullptr)
@@ -1618,6 +1669,8 @@ public:
         // iSelectPlottables: "Plottables are selectable"
         // iSelectLegend: "Legends are selectable"
         m_spChartView->setInteractions(interactions | QCP::iRangeZoom | QCP::iRangeDrag | QCP::iSelectPlottables | QCP::iSelectLegend);
+
+        DFG_QT_VERIFY_CONNECT(connect(m_spChartView.get(), &QCustomPlot::mouseMove, this, &ChartCanvasQCustomPlot::mouseMoveEvent));
     }
 
           QCustomPlot* getWidget()       { return m_spChartView.get(); }
@@ -1681,8 +1734,11 @@ public:
     void setAxisLabel(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 axisLabel) override;
 
     bool isLegendSupported() const override { return true; }
+    bool isToolTipSupported() const override { return true; }
     bool isLegendEnabled() const override;
+    bool isToolTipEnabled() const override { return m_bToolTipEnabled; }
     bool enableLegend(bool) override;
+    bool enableToolTip(bool) override;
     void createLegends() override;
 
     // Implementation details
@@ -1694,7 +1750,16 @@ public:
     QCPAxis* getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId);
     bool getGridPos(const StringViewUtf8 svPanelId, int& nRow, int& nCol);
 
+    // Returns ChartPanel on which given (mouse) cursor is.
+    ChartPanel* getChartPanel(const QPoint& pos); // pos is as available in mouseMoveEvent() pEvent->pos()
+
     void removeLegends();
+
+    void mouseMoveEvent(QMouseEvent* pEvent);
+
+    // Returns true if got non-null object.
+    static bool toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
+    static bool toolTipTextForChartObjectAsHtml(const QCPBars* pGraph, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
 
 private:
     template <class This_T, class Func_T>
@@ -1708,6 +1773,7 @@ public:
 
     QObjectStorage<QCustomPlot> m_spChartView;
     bool m_bLegendEnabled = false;
+    bool m_bToolTipEnabled = true;
     QVector<QCPLegend*> m_legends; // All but the default legend
 }; // ChartCanvasQCustomPlot
 
@@ -1716,16 +1782,35 @@ class ChartPanel : public QCPLayoutGrid
 {
     //Q_OBJECT
 public:
-    ChartPanel(QCustomPlot* pQcp);
+    using PairT = PointXy;
+    using AxisT = QCPAxis;
+    ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId);
     QCPAxisRect* axisRect();
 
     void setTitle(StringViewUtf8 svTitle);
+    QString getTitle() const;
+
+    QString getPanelId() const { return m_panelId; }
+
+    // Returns (x, y) pair from pixelToCoord() of primary axes.
+    PairT pixelToCoord_primaryAxis(const QPoint& pos);
+
+    void forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler);
+
+    AxisT* primaryXaxis();
+    AxisT* primaryYaxis();
+    AxisT* secondaryXaxis();
+    AxisT* secondaryYaxis();
+
+    AxisT* axis(AxisT::AxisType axisType);
 
     QCustomPlot* m_pQcp = nullptr;
+    QString m_panelId;
 };
 
-ChartPanel::ChartPanel(QCustomPlot* pQcp)
+ChartPanel::ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId)
     : m_pQcp(pQcp)
+    , m_panelId(QString::fromUtf8(svPanelId.beginRaw(), svPanelId.sizeAsInt()))
 {
 }
 
@@ -1735,6 +1820,38 @@ auto ChartPanel::axisRect() -> QCPAxisRect*
     if (nElemCount == 0 || (nElemCount == 1 && qobject_cast<QCPTextElement*>(this->elementAt(0)) != nullptr))
         addElement(nElemCount, 0, new QCPAxisRect(m_pQcp));
     return qobject_cast<QCPAxisRect*>(elementAt(elementCount() - 1));
+}
+
+auto ChartPanel::axis(AxisT::AxisType axisType) -> AxisT*
+{
+    auto pAxisRect = axisRect();
+    return (pAxisRect) ? pAxisRect->axis(axisType) : nullptr;
+}
+
+auto ChartPanel::primaryXaxis() -> AxisT*
+{
+    return axis(AxisT::atBottom);
+}
+
+auto ChartPanel::primaryYaxis() -> AxisT*
+{
+    return axis(AxisT::atLeft);
+}
+
+auto ChartPanel::secondaryXaxis() -> AxisT*
+{
+    return nullptr;
+}
+
+auto ChartPanel::secondaryYaxis() -> AxisT*
+{
+    return nullptr;
+}
+
+QString ChartPanel::getTitle() const
+{
+    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
+    return (pTitle) ? pTitle->text() : QString();
 }
 
 void ChartPanel::setTitle(StringViewUtf8 svTitle)
@@ -1759,6 +1876,28 @@ void ChartPanel::setTitle(StringViewUtf8 svTitle)
         }
         pTitle->setText(viewToQString(svTitle));
         pTitle->setFont(QFont("sans", 12, QFont::Bold));
+    }
+}
+
+auto ChartPanel::pixelToCoord_primaryAxis(const QPoint& pos) -> PairT
+{
+    auto pXaxis = primaryXaxis();
+    auto pYaxis = primaryYaxis();
+    const auto x = (pXaxis) ? pXaxis->pixelToCoord(pos.x()) : std::numeric_limits<double>::quiet_NaN();
+    const auto y = (pYaxis) ? pYaxis->pixelToCoord(pos.y()) : std::numeric_limits<double>::quiet_NaN();
+    return PairT(x, y);
+}
+
+void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler)
+{
+    if (!m_pQcp || !handler)
+        return;
+    const auto nCount = m_pQcp->plottableCount();
+    for (int i = 0; i < nCount; ++i)
+    {
+        auto pPlottable = m_pQcp->plottable(i);
+        if (pPlottable && pPlottable->keyAxis() == this->primaryXaxis())
+            handler(*pPlottable);
     }
 }
 
@@ -1895,7 +2034,7 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     auto pPlotLayout = p->plotLayout();
     if (pPlotLayout)
     {
-        while (pPlotLayout->elementCount() > 1 && pPlotLayout->removeAt(pPlotLayout->elementCount() - 1))
+        while (pPlotLayout->elementCount() > 0 && pPlotLayout->removeAt(pPlotLayout->elementCount() - 1))
         {
         }
         auto pFirstPanel = (pPlotLayout->elementCount() >= 1) ? dynamic_cast<ChartPanel*>(pPlotLayout->elementAt(0)) : nullptr;
@@ -2138,6 +2277,12 @@ bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
     return m_bLegendEnabled;
 }
 
+bool ChartCanvasQCustomPlot::enableToolTip(const bool b)
+{
+    m_bToolTipEnabled = b;
+    return m_bToolTipEnabled;
+}
+
 void ChartCanvasQCustomPlot::removeLegends()
 {
     // Removing legends (would get deleted automatically with AxisRect's, but doing it here expclitly to keep m_legends up-to-date.)
@@ -2173,7 +2318,7 @@ void ChartCanvasQCustomPlot::createLegends()
             break; // All plottables added to legends, nothing left to do.
 
         QCPLegend* pLegend = nullptr;
-        if (pAxisRect != p->axisRect())
+        if (pAxisRect != p->axisRect() || p->legend == nullptr)
         {
             pLegend = new QCPLegend;
             m_legends.push_back(pLegend);
@@ -2277,19 +2422,15 @@ auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCP
         DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: layout object does not exist"));
         return nullptr;
     }
-    auto pExistingAxisRect = qobject_cast<QCPAxisRect*>(pLayout->element(nRow, nCol));
-    ChartPanel* pChartPanel = nullptr;
-    if (!pExistingAxisRect)
-    {
-        pChartPanel = dynamic_cast<ChartPanel*>(pLayout->element(nRow, nCol));
-        if (pChartPanel)
-            pExistingAxisRect = pChartPanel->axisRect();
-    }
+    QCPAxisRect* pExistingAxisRect = nullptr;
+    ChartPanel* pChartPanel = dynamic_cast<ChartPanel*>(pLayout->element(nRow, nCol));
+    if (pChartPanel)
+        pExistingAxisRect = pChartPanel->axisRect();
     if (!pExistingAxisRect)
     {
         if (!pChartPanel)
         {
-            pChartPanel = new ChartPanel(p);
+            pChartPanel = new ChartPanel(p, svPanelId);
             pLayout->addElement(nRow, nCol, pChartPanel);
         }
         pExistingAxisRect = pChartPanel->axisRect();
@@ -2300,6 +2441,38 @@ auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCP
         return nullptr;
     }
     return pExistingAxisRect;
+}
+
+auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) -> ChartPanel*
+{
+    auto pCustomPlot = getWidget();
+    auto pMainLayout = (pCustomPlot) ? pCustomPlot->plotLayout() : nullptr;
+    if (!pMainLayout)
+        return nullptr;
+
+    const auto isWithinAxisRange = [](QCPAxis* pAxis, const double val)
+        {
+            return (pAxis) ? pAxis->range().contains(val) : false;
+        };
+
+    const auto nElemCount = pMainLayout->elementCount();
+    for (int i = 0; i < nElemCount; ++i)
+    {
+        auto pElement = pMainLayout->elementAt(i);
+        auto pPanel = dynamic_cast<ChartPanel*>(pElement);
+        if (!pPanel)
+            continue;
+        auto pXaxis1 = pPanel->primaryXaxis();
+        auto pYaxis1 = pPanel->primaryYaxis();
+        if (pXaxis1 && pYaxis1)
+        {
+            const auto xCoord = pXaxis1->pixelToCoord(pos.x());
+            const auto yCoord = pYaxis1->pixelToCoord(pos.y());
+            if (isWithinAxisRange(pXaxis1, xCoord) && isWithinAxisRange(pYaxis1, yCoord))
+                return pPanel;
+        }
+    }
+    return nullptr;
 }
 
 auto ChartCanvasQCustomPlot::getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId) -> QCPAxis*
@@ -2351,13 +2524,120 @@ void ChartCanvasQCustomPlot::setTitle(StringViewUtf8 svPanelId, StringViewUtf8 s
     auto pPanel = dynamic_cast<ChartPanel*>(pElement);
     if (pPanel == nullptr)
     {
-        pPanel = new ChartPanel(p);
+        pPanel = new ChartPanel(p, svTitle);
         if (pElement)
             pPanel->addElement(pElement); // This transfers existing element to new layout.
         pMainLayout->addElement(nRow, nCol, pPanel);
     }
     if (pPanel)
         pPanel->setTitle(svTitle);
+}
+
+namespace
+{
+    template <class Cont_T, class PointToText_T, class Tr_T>
+    static void createNearestPointToolTipList(Cont_T& cont, const PointXy& xy, ToolTipTextStream& toolTipStream, PointToText_T pointToText, Tr_T&& tr) // Note: QCPDataContainer doesn't seem to have const begin()/end() so must take cont by non-const reference.
+    {
+        using DataT = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
+        const auto nearestItems = ::DFG_MODULE_NS(alg)::nearestRangeInSorted(cont, xy.first, 5, [](const DataT& dp) { return dp.key; });
+        if (nearestItems.empty())
+            return;
+
+        toolTipStream << tr("<br>Nearest points by x-value:");
+        // Adding items left of nearest
+        for (const DataT& dp : nearestItems.leftRange())
+        {
+            toolTipStream << QString("<br>%1").arg(pointToText(dp));
+        }
+        // Adding nearest item in bold
+        toolTipStream << QString("<br><b>%1</b>").arg(pointToText(*nearestItems.nearest()));
+        // Adding items right of nearest
+        for (const DataT& dp : nearestItems.rightRange())
+        {
+            toolTipStream << QString("<br>%1").arg(pointToText(dp));
+        }
+    }
+
+} // unnamed namespace
+
+
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& xy, ToolTipTextStream& toolTipStream)
+{
+    if (!pGraph)
+        return false;
+
+    toolTipStream << tr("<br>Graph size: %1").arg(pGraph->dataCount());
+
+    const auto spData = pGraph->data();
+    if (!spData)
+        return true;
+
+    const auto pointToText = [](const QCPGraphData& bd)
+        {
+            return QString("(%1, %2)").arg(bd.key).arg(bd.value);
+        };
+    createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
+
+    return true;
+}
+
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& xy, ToolTipTextStream& toolTipStream)
+{
+    if (!pBars)
+        return false;
+
+    toolTipStream << tr("<br>Bin count: %1").arg(pBars->dataCount());
+
+    const auto spData = pBars->data();
+    if (!spData)
+        return true;
+
+    const auto pointToText = [](const QCPBarsData& bd)
+        {
+            return QString("(%1, %2)").arg(bd.key).arg(bd.value);
+        };
+    createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
+
+    return true;
+}
+
+void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
+{
+    if (!pEvent || !m_bToolTipEnabled)
+        return;    
+
+    const auto cursorPos = pEvent->pos();
+
+    auto pPanel = getChartPanel(cursorPos);
+
+    if (!pPanel)
+        return;
+
+    const auto xy = pPanel->pixelToCoord_primaryAxis(cursorPos);
+
+    ToolTipTextStream toolTipStream;
+    const QString sPanelId = pPanel->getPanelId();
+    const QString sPanelTitle = pPanel->getTitle();
+    if (!sPanelId.isEmpty() || !sPanelTitle.isEmpty())
+    {
+        const QString sPanelTitlePart = (!sPanelTitle.isEmpty()) ? QString(" ('%1')").arg(sPanelTitle) : QString();
+        
+        toolTipStream << tr("Panel: %1%2").arg(pPanel->getPanelId(), sPanelTitlePart).toHtmlEscaped() + "<br>";
+    }
+    toolTipStream << QString("x = %1, y = %2").arg(toolTipStream.numberToText(xy.first), toolTipStream.numberToText(xy.second));
+
+    // For each chart object in this panel
+    pPanel->forEachChartObject([&](const QCPAbstractPlottable& plottable)
+    {
+        toolTipStream << QLatin1String("<br>---------------------------");
+        // Name
+        toolTipStream << QString("<br>'%1'").arg(plottable.name().toHtmlEscaped());
+        QString sChartObjectDetails;
+        if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPGraph*>(&plottable), xy, toolTipStream)) {}
+        else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPBars*>(&plottable), xy, toolTipStream)) {}
+    });
+
+    QToolTip::showText(pEvent->globalPos(), toolTipStream.toPlainText());
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -2821,6 +3101,13 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
             auto pShowLegendAction = menu.addAction(tr("Show legend"), pParentGraphWidget, [&](bool b) { this->m_spChartCanvas->enableLegend(b); });
             pShowLegendAction->setCheckable(true);
             pShowLegendAction->setChecked(m_spChartCanvas->isLegendEnabled());
+        }
+
+        if (m_spChartCanvas->isToolTipSupported())
+        {
+            auto pToggleToolTipAction = menu.addAction(tr("Show tooltip"), pParentGraphWidget, [&](bool b) { this->m_spChartCanvas->enableToolTip(b); });
+            pToggleToolTipAction->setCheckable(true);
+            pToggleToolTipAction->setChecked(m_spChartCanvas->isToolTipEnabled());
         }
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
