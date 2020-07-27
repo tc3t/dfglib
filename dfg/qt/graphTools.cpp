@@ -1646,9 +1646,12 @@ public:
         return m_sText;
     }
 
-    QString numberToText(const double d) const
+    QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker = nullptr) const
     {
-        return QString::number(d);
+        if (!pTimeTicker || ::DFG_MODULE_NS(math)::isNan(d))
+            return QString::number(d);
+        else
+            return pTimeTicker->keyToDateTime(d).toString(pTimeTicker->dateTimeFormat());
     }
 
     bool isDestinationEmpty() const { return m_sText.isEmpty(); }
@@ -2543,7 +2546,7 @@ namespace
         if (nearestItems.empty())
             return;
 
-        toolTipStream << tr("<br>Nearest points by x-value:");
+        toolTipStream << tr("<br>Nearest by x-value:");
         // Adding items left of nearest
         for (const DataT& dp : nearestItems.leftRange())
         {
@@ -2572,9 +2575,15 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPGraph* pGr
     if (!spData)
         return true;
 
-    const auto pointToText = [](const QCPGraphData& bd)
+    const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
+    auto spXticker = axisTicker(pGraph->keyAxis());
+    auto spYticker = axisTicker(pGraph->valueAxis());
+    auto pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.get());
+    auto pYdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spYticker.get());
+
+    const auto pointToText = [&](const QCPGraphData& bd)
         {
-            return QString("(%1, %2)").arg(bd.key).arg(bd.value);
+            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pXdateTicker), toolTipStream.numberToText(bd.value, pYdateTicker));
         };
     createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
 
@@ -2587,14 +2596,15 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPBars* pBar
         return false;
 
     toolTipStream << tr("<br>Bin count: %1").arg(pBars->dataCount());
+    toolTipStream << tr("<br>Bin width: %1").arg(toolTipStream.numberToText(pBars->width())); // Note: probably fails for some pBars->widthType()'s
 
     const auto spData = pBars->data();
     if (!spData)
         return true;
 
-    const auto pointToText = [](const QCPBarsData& bd)
+    const auto pointToText = [&](const QCPBarsData& bd)
         {
-            return QString("(%1, %2)").arg(bd.key).arg(bd.value);
+            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key), toolTipStream.numberToText(bd.value));
         };
     createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
 
