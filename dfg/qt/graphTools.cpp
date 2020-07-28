@@ -1651,7 +1651,11 @@ public:
         if (!pTimeTicker || ::DFG_MODULE_NS(math)::isNan(d))
             return QString::number(d);
         else
-            return pTimeTicker->keyToDateTime(d).toString(pTimeTicker->dateTimeFormat());
+        {
+            const auto timeSpec = pTimeTicker->dateTimeSpec();
+            auto dt = pTimeTicker->keyToDateTime(d).toTimeSpec(timeSpec);
+            return dt.toString(pTimeTicker->dateTimeFormat());
+        }
     }
 
     bool isDestinationEmpty() const { return m_sText.isEmpty(); }
