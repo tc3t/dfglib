@@ -440,14 +440,16 @@ class HistogramCreationParam : public ChartObjectCreationParam
 {
 public:
     using BaseClass = ChartObjectCreationParam;
-    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double>);
+    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double>, ChartDataType argXtype);
 
     InputSpan<double> valueRange;
+    ChartDataType xType = ChartDataType::unknown;
 };
 
-inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan)
+inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan, const ChartDataType argXtype)
     : BaseClass(configParam, defEntry)
     , valueRange(inputSpan)
+    , xType(argXtype)
 {
 
 }

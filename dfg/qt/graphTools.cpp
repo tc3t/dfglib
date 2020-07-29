@@ -2211,7 +2211,7 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
             return nullptr;
         }
     }
-    else
+    else // Case: bin for every value.
     {
         ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double> countsPerValue;
         for (const auto& val : valueRange) if (!::DFG_MODULE_NS(math)::isNan(val))
@@ -2243,6 +2243,9 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         if (actualBarWidth != barWidthRequest)
             DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to use requested bar width factor %1, using bar width %2").arg(barWidthFactorRequest).arg(actualBarWidth));
     }
+
+    // Settings ticker for x-axis.
+    setAxisTicker(*pXaxis, param.xType);
 
     pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
 
@@ -2606,9 +2609,13 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPBars* pBar
     if (!spData)
         return true;
 
+    const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
+    auto spXticker = axisTicker(pBars->keyAxis());
+    auto pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.get());
+
     const auto pointToText = [&](const QCPBarsData& bd)
         {
-            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key), toolTipStream.numberToText(bd.value));
+            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pXdateTicker), toolTipStream.numberToText(bd.value));
         };
     createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
 
@@ -3635,7 +3642,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         return;
     }
 
-    auto spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange));
+    const auto xType = optTableData->columnDataType(pSingleColumn);
+    auto spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange, xType));
     if (!spHistogram)
         return;
     ++nHistogramCounter;
