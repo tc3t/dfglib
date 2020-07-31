@@ -1004,7 +1004,7 @@ public:
     void updateChartDefinitionViewable();
     void checkUpdateChartDefinitionViewableTimer();
 
-    QObjectStorage<QPlainTextEdit> m_spRawTextDefinition; // Guaranteed to be non-null between constructor and destructor.
+    QObjectStorage<JsonListWidget> m_spRawTextDefinition; // Guaranteed to be non-null between constructor and destructor.
     QObjectStorage<QWidget> m_spGuideWidget;
     QPointer<GraphControlPanel> m_spParent;
     ChartDefinitionViewable m_chartDefinitionViewable;
@@ -1022,9 +1022,9 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
 
     auto spLayout = std::make_unique<QVBoxLayout>(this);
 
-    m_spRawTextDefinition.reset(new QPlainTextEdit(this));
+    m_spRawTextDefinition.reset(new JsonListWidget(this));
     m_spRawTextDefinition->setPlainText(GraphDefinitionEntry::xyGraph(QString(), QString()).toText());
-    DFG_QT_VERIFY_CONNECT(connect(m_spRawTextDefinition.get(), &QPlainTextEdit::textChanged, this, &GraphDefinitionWidget::onTextDefinitionChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spRawTextDefinition.get(), &JsonListWidget::textChanged, this, &GraphDefinitionWidget::onTextDefinitionChanged));
 
     spLayout->addWidget(m_spRawTextDefinition.get());
 
@@ -2835,7 +2835,7 @@ namespace
         QCP::ResolutionUnit stringToResolutionUnit(const QString& s);
 
         QPointer<QCustomPlot> m_spCustomPlot;
-        ::DFG_MODULE_NS(qt)::QObjectStorage<::DFG_MODULE_NS(qt)::JsonListWidget> m_spDefinitionEdit;
+        ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spDefinitionEdit;
         ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spMessageConsole; // Guaranteed non-null between constructor and destructor.
     }; // class GraphDisplayImageExportDialog
 
@@ -2856,7 +2856,7 @@ namespace
 
         // Definition widget
         {
-            m_spDefinitionEdit.reset(new ::DFG_MODULE_NS(qt)::JsonListWidget(this));
+            m_spDefinitionEdit.reset(new QPlainTextEdit(this));
             QVariantMap keyVals;
             keyVals.insert("format", "");
             keyVals.insert("type", "png");
