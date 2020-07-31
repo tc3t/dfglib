@@ -1121,6 +1121,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 const char szContentFilterHelpText[] =
     QT_TR_NOOP("List of single line JSON-strings defining list of filters\n"
                "Example: { \"text\":\"abc\", \"apply_columns\":\"2\" }\n"
+               "Hint: filters can also be defined in .conf-file with key 'properties/readFilters'\n\n"
                "The following fields are available:\n"
                "    text: \"<filter text>\"\n"
                "        Defines actual filter text whose meaning depends on filter type\n"
@@ -1271,7 +1272,12 @@ public:
             // Content filters
             spLayout->addRow(tr("Content filters"), m_spContentFilterWidget.get());
             DFG_REQUIRE(m_spContentFilterWidget != nullptr);
+            const auto loadOptions = CsvItemModel::getLoadOptionsForFile(sFilePath);
+            const auto readFilters = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
             m_spContentFilterWidget->setPlaceholderText(tr("List of filters, see tooltip for syntax guide"));
+            if (!readFilters.empty())
+                m_spContentFilterWidget->setPlainText(QString::fromUtf8(readFilters.c_str()));
+            
             m_spContentFilterWidget->setToolTip(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::szContentFilterHelpText);
             m_spContentFilterWidget->setMaximumHeight(100);
         }
