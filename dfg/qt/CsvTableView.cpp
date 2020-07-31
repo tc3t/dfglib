@@ -1515,13 +1515,16 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openConfigFile()
         return false;
     const auto sCsvPath = pModel->getFilePath();
     if (sCsvPath.isEmpty())
+    {
+        QMessageBox::information(this, tr("No config file"), tr("Current table has no path so can't search for config file. This can happen if table is new and unsaved or if table was opened from file with filters."));
         return false;
+    }
 
     const auto sConfigPath = DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sCsvPath);
     QFileInfo fi(sConfigPath);
     if (!fi.exists())
     {
-        QMessageBox::information(this, tr("No config file"), tr("File '%1' has no config file.").arg(sCsvPath));
+        QMessageBox::information(this, tr("No config file"), tr("File\n'%1'\nhas no config file.").arg(sCsvPath));
         return false;
     }
 
