@@ -64,6 +64,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                               //                  Filters A and B should be in the same and_group that is different from and_group of C and D.
                                                                               //                  When and_group is not given for any filter, they belong to the same AND-group so the
                                                                               //                  logics is A && B && C && D.
+    const char CsvOptionProperty_chartControls[]            = "chartControls";   // Defines chartControls to use.
 
     namespace DFG_DETAIL_NS
     {
@@ -313,6 +314,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         float latestWriteTimeInSeconds() const { return m_writeTimeInSeconds; }
 
         static LoadOptions getLoadOptionsForFile(const QString& sFilePath);
+        LoadOptions getLoadOptionsFromConfFile() const; // Shortcut for CsvItemModel::getLoadOptionsForFile(this->getFilePath())
+        LoadOptions getOpenTimeLoadOptions() const { return m_loadOptionsInOpen; } // Returns LoadOptions that were used when opened from file or memory.
 
         void populateConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const;
 
@@ -399,6 +402,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         float m_readTimeInSeconds;
         float m_writeTimeInSeconds;
         std::vector<HighlightDefinition> m_highlighters;
+        LoadOptions m_loadOptionsInOpen; // Stores file options that were used when opening.
     }; // class CsvItemModel
 
     template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)

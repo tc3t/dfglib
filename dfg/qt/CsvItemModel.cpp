@@ -477,6 +477,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
     m_bModified = false;
     m_nRowCount = 0;
     m_sTitle.clear();
+    m_loadOptionsInOpen = LoadOptions();
     if (m_pUndoStack)
         m_pUndoStack->clear();
 }
@@ -564,6 +565,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     m_readTimeInSeconds = static_cast<decltype(m_readTimeInSeconds)>(readTimer.elapsedWallSeconds());
     if (m_pUndoStack)
         m_pUndoStack->clear();
+    this->m_loadOptionsInOpen = options;
     Q_EMIT sigOnNewSourceOpened();
 
     return true;
@@ -696,6 +698,11 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(cons
     LoadOptions loadOptions;
     loadOptions.fromConfig(config);
     return loadOptions;
+}
+
+auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsFromConfFile() const -> LoadOptions
+{
+    return getLoadOptionsForFile(getFilePath());
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(const QString& sDbFilePath)

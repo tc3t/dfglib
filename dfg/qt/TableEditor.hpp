@@ -131,6 +131,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QObjectStorage<QMenu> m_spResizeColumnsMenu;
         QObjectStorage<QToolBar> m_spToolBar;
         QObjectStorage<QSplitter> m_spMainSplitter;
+        QPointer<QWidget> m_spChartDisplay;
         bool m_bHandlingOnCellEditorTextChanged;
     };
 

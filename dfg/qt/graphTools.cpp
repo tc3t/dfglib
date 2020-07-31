@@ -3224,6 +3224,19 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onGraphEnableCheckboxToggl
     });
 }
 
+bool DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setChartControls(QString s)
+{
+    auto pDefWidget = getDefinitionWidget();
+    if (pDefWidget && pDefWidget->m_spRawTextDefinition)
+    {
+        pDefWidget->m_spRawTextDefinition->setPlainText(s);
+        refresh();
+        return true;
+    }
+    else
+        return false;
+}
+
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::defaultSourceIdImpl() const -> GraphDataSourceId 
 {
     return this->m_sDefaultDataSource;

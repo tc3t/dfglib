@@ -152,6 +152,7 @@ private:
     virtual void refreshImpl() = 0; // Guaranteed to not get called by refresh() while already in progress.
     virtual void clearCachesImpl() {}
     virtual GraphDataSourceId defaultSourceIdImpl() const { return GraphDataSourceId(); }
+    virtual bool setChartControls(QString s) { return false; } // Returns true is given string was taken into use, false otherwise.
 
     bool m_bRefreshInProgress = false;
 }; // Class ChartController
@@ -237,12 +238,14 @@ public slots:
     void onDataSourceDestroyed();
     void onControllerPreferredSizeChanged(QSize sizeHint);
     void onGraphEnableCheckboxToggled(bool b);
+    bool setChartControls(QString s) override;
 
     // Controller implementations
 private:
     void refreshImpl() override;
     void clearCachesImpl() override;
     GraphDataSourceId defaultSourceIdImpl() const override;
+    // setChartControls() is defined in slots-section
 
 private:
     using ConfigParamCreator = std::function<::DFG_MODULE_NS(charts)::ChartConfigParam ()>;

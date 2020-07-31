@@ -22,6 +22,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QMetaMethod>
 #include <QItemSelection>
 #include <QItemSelectionModel>
 #include <QPushButton>
@@ -516,6 +517,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
     setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
     resizeColumnsToView();
     updateWindowTitle();
+
+    if (m_spChartDisplay)
+    {
+        const auto loadOptions = model.getOpenTimeLoadOptions();
+        const auto chartControls = loadOptions.getProperty(CsvOptionProperty_chartControls, "none");
+        if (chartControls != "none")
+            DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartControls", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(QString, QString::fromUtf8(chartControls.c_str()))));
+    }
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSaveCompleted(const bool success, const double saveTimeInSeconds)
@@ -804,6 +813,6 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setGraphDisplay(QWidget* pG
     DFG_ASSERT_CORRECTNESS(m_spMainSplitter != nullptr);
     if (!pGraphDisplay || !m_spMainSplitter)
         return;
-
+    m_spChartDisplay = pGraphDisplay;
     m_spMainSplitter->addWidget(pGraphDisplay);
 }
