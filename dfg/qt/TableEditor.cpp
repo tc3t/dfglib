@@ -475,11 +475,10 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setWindowModified(bool bNew
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()
 {
-    const auto filePath = (m_spTableModel) ? m_spTableModel->getFilePath() : QString();
     // Note: [*] is a placeholder for modified-indicator (see QWidget::windowModified)
-    QString title = QString("%1 [*]").arg(!filePath.isEmpty() ? QFileInfo(filePath).fileName() : tr("Unsaved"));
+    QString sTitle = QString("%1 [*]").arg((m_spTableModel) ? m_spTableModel->getTableTitle(tr("Unsaved")) : QString());
     setWindowModified(m_spTableModel && m_spTableModel->isModified());
-    setWindowTitle(title);
+    setWindowTitle(sTitle);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSourcePathChanged()

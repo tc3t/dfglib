@@ -302,6 +302,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return m_sFilePath; 
         }
 
+        QString getTableTitle(const QString& sDefault = QString()) const;
+
         void setFilePathWithoutSignalEmit(QString);
         void setFilePathWithSignalEmit(QString);
 
@@ -391,6 +393,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<ColInfo> m_vecColInfo;
         int m_nRowCount;
         QString m_sFilePath;
+        QString m_sTitle;
         bool m_bModified;
         bool m_bResetting;
         float m_readTimeInSeconds;

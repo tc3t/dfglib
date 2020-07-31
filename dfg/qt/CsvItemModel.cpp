@@ -265,6 +265,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithSignalEmit(
     Q_EMIT sigSourcePathChanged();
 }
 
+QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getTableTitle(const QString& sDefault) const
+{
+    if (!m_sTitle.isEmpty())
+        return m_sTitle;
+    const auto sFileName = QFileInfo(m_sFilePath).fileName();
+    return (!sFileName.isEmpty()) ? sFileName : sDefault;
+}
+
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::isSupportedEncodingForSaving(const DFG_MODULE_NS(io)::TextEncoding encoding) const
 {
     return (encoding == DFG_MODULE_NS(io)::encodingUTF8) || (encoding == DFG_MODULE_NS(io)::encodingLatin1);
@@ -468,6 +476,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
     setFilePathWithSignalEmit(QString());
     m_bModified = false;
     m_nRowCount = 0;
+    m_sTitle.clear();
     if (m_pUndoStack)
         m_pUndoStack->clear();
 }
@@ -845,6 +854,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
             const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
             if (!sIncludeRows.empty() || !sIncludeColumns.empty() || !sFilterItems.empty())
             {
+                // Case: filtered read
                 using namespace ::DFG_MODULE_NS(cont);
                 if (!sFilterItems.empty())
                 {
@@ -855,7 +865,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                         filter.setIncludeColumns(intervalSetFromString<int>(sIncludeColumns));
                     m_table.readFromFile(sReadPath, loadOptions, filter);
                 }
-                else // Case: not having readFilters.
+                else // Case: not having readFilters, only row/column include sets.
                 {
                     auto filter = m_table.createFilterCellHandler();
                     if (!sIncludeRows.empty())
@@ -866,10 +876,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                         filter.setIncludeColumns(intervalSetFromString<int>(sIncludeColumns));
                     m_table.readFromFile(sReadPath, loadOptions, filter);
                 }
-                
-                
+                m_sTitle = tr("%1 (Filtered open)").arg(QFileInfo(sDbFilePath).fileName());
             }
-            else
+            else // Case: normal (non-filtered) read
             {
                 m_table.readFromFile(sReadPath, loadOptions);
                 // Note: setting file path is done only for non-filtered reads because after filtered read it makes no sense
