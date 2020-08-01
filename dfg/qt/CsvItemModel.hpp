@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../buildConfig.hpp" // To get rid of C4996 "Function call with parameters that may be unsafe" in MSVC.
 #include "qtIncludeHelpers.hpp"
 #include "qtBasic.hpp"
 #include "../cont/tableCsv.hpp"

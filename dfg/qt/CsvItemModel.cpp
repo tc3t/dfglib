@@ -1,4 +1,3 @@
-#include "../buildConfig.hpp" // To get rid of C4996 "Function call with parameters that may be unsafe" in MSVC.
 #include "CsvItemModel.hpp"
 #include "qtIncludeHelpers.hpp"
 #include "PropertyHelper.hpp"

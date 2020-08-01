@@ -4,8 +4,6 @@
 #include "dfgDefs.hpp"
 #include "dfgAssert.hpp"
 
-#include "buildConfig.hpp"
-#include <limits> // For maxValueOfType
 #include <utility> // For to_string
 #include <cstdlib> // For byte swap.
 #include <stdint.h> // For wchar_t numericTraits

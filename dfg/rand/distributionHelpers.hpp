@@ -126,7 +126,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
             // 1: maximum
             return static_cast<T>(std::get<0>(args)) < static_cast<T>(std::get<1>(args))
                 &&
-                static_cast<T>(std::get<1>(args)) - static_cast<T>(std::get<0>(args)) <= std::numeric_limits<T>::max();
+                static_cast<T>(std::get<1>(args)) - static_cast<T>(std::get<0>(args)) <= (std::numeric_limits<T>::max)();
         }
 
         template <class T, class Args_T>

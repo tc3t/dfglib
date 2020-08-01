@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../buildConfig.hpp"
 #include "../io.hpp"
 #include "../rangeIterator.hpp"
 #include "../iter/OstreamIterator.hpp"

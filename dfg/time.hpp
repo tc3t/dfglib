@@ -2,7 +2,6 @@
 #define DFG_TIME_VJYLPJBF
 
 #include "dfgDefs.hpp"
-#include "buildConfig.hpp"
 
 #include <ctime>		// For ::time
 

@@ -2,11 +2,8 @@
 #define DFG_RAND_EUBTGCDX
 
 #include "dfgBase.hpp"
-#include "buildConfig.hpp"
 #include "dfgAssert.hpp"
 #include <type_traits>
-
-#if DFG_LANGFEAT_HAVE_CPP11RAND // Not accurate: also needs C++11 type_traits
 
 #include <random>
 #include <limits>
@@ -139,8 +136,6 @@ DFG_CLASS_NAME(DistributionEngine)<RandEngine, typename DFG_CLASS_NAME(Distribut
 {
     return DFG_CLASS_NAME(DistributionEngine)<RandEngine, typename DFG_CLASS_NAME(DistributionTypeUniform)<Type>::type>(minRange, maxRange, pRe);
 }
-
-#endif // DFG_LANGFEAT_HAVE_CPP11RAND
 
 }} // module rand
 

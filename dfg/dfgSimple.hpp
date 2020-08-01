@@ -5,7 +5,6 @@
 
 #include "dfgBase.hpp"
 #include "alg.hpp"
-#include "buildConfig.hpp"
 #include "func.hpp"
 #include "iter.hpp"
 #include "math.hpp"

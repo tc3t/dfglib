@@ -20,18 +20,6 @@
 
 #endif // _MSC_VER
 
-#if DFG_MSVC_VER > 0 && DFG_MSVC_VER < DFG_MSVC_VER_2010
-	#define nullptr		0
-#endif
-
-#if DFG_MSVC_VER > 0
-	#define DFG_LANGFEAT_HAVE_DECLTYPE	(DFG_MSVC_VER >= DFG_MSVC_VER_2010)
-	#define DFG_LANGFEAT_HAVE_CPP11RAND	(DFG_MSVC_VER >= DFG_MSVC_VER_2010) // Also in VC2008 TR1
-#else
-	#define DFG_LANGFEAT_HAVE_DECLTYPE	1
-	#define DFG_LANGFEAT_HAVE_CPP11RAND	1
-#endif
-
 #if (!defined(NOMINMAX) && defined(_WIN32) && (!defined(DFG_NOWINMINMAX) || DFG_NOWINMINMAX != 0))
 	#define NOMINMAX						// Suppress inclusion of min/max macros from Windows headers.
 #endif

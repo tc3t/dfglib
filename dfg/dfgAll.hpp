@@ -5,7 +5,6 @@
 
 #include "baseConstructorDelegate.hpp"
 #include "bits.hpp"
-#include "buildConfig.hpp"
 #include "build/languageFeatureInfo.hpp"
 #include "build/utils.hpp"
 #include "colour.hpp"

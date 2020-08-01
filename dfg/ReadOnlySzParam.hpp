@@ -6,7 +6,6 @@
 #include "numericTypeTools.hpp"
 #include "str/strCmp.hpp"
 #include "str/strLen.hpp"
-#include "buildConfig.hpp"
 #include "build/utils.hpp"
 #include <string>
 #include "str/string.hpp"
