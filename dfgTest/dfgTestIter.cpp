@@ -68,6 +68,9 @@ TEST(dfgIter, RangeIterator)
         auto vecEmptyRange = DFG_ROOT_NS::makeRange(vecEmpty);
         DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptrEmptyRange(vecEmptyRange);
         EXPECT_TRUE(ptrEmptyRange.empty());
+
+        EXPECT_EQ(2, vecRange.size());
+        EXPECT_EQ(2, vecRange.sizeAsInt());
     }
 
 #if 0 // If enabled, should fail to compile - can't create T* range from non-contiguous range.

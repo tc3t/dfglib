@@ -4,6 +4,7 @@
 #include <iterator> // For std::distance
 #include "iter/IsContiguousMemoryIterator.hpp"
 #include "dfgAssert.hpp"
+#include "numericTypeTools.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
@@ -24,6 +25,7 @@ DFG_ROOT_NS_BEGIN
             iterator end()  const	{ return m_iterEnd; }
             iterator cend() const	{ return end(); }
             size_t size() const		{ return std::distance(begin(), end()); }
+            int sizeAsInt() const   { return saturateCast<int>(size()); } // Returns saturateCast<int>(size())
             bool empty() const      { return m_iterBegin == m_iterEnd; }
                   value_type& front()       { return *begin(); } // Precondition: !empty()
             const value_type& front() const { return *begin(); } // Precondition: !empty()
