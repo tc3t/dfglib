@@ -563,13 +563,17 @@ auto GraphDefinitionEntry::sourceId(const GraphDataSourceId& sDefault) const -> 
 class TableSelectionCacheItem : public QObject
 {
 public:
-    using IndexT = GraphDataSource::DataSourceIndex;
-    using RowToValueMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double>;
-    using ColumnToValuesMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
+    using IndexT  = GraphDataSource::DataSourceIndex;
+    using StringT = ::DFG_ROOT_NS::StringUtf8;
+    using RowToValueMap       = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double>;
+    using RowToStringMap      = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, StringT>;
+    using ColumnToValuesMap   = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
+    using ColumnToStringsMap  = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToStringMap>;
 
     std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
 
     const RowToValueMap* columnDataByIndex(IndexT nColumnIndex);
+    const RowToStringMap* columnStringsByIndex(IndexT nColumnIndex);
 
     IndexT columnCount() const;
 
@@ -590,13 +594,21 @@ public:
     IndexT columnToIndex(const RowToValueMap* pColumn) const;
 
     bool storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn);
+    bool storeColumnFromSource_strings(GraphDataSource& source, const DataSourceIndex nColumn);
 
     // CacheItem is volatile if it doesn't have mechanism to know when it's source has changed.
     bool isVolatileCache() const;
 
     void onDataSourceChanged();
 
+private:
+    template <class Map_T, class Inserter_T>
+    bool storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, Inserter_T inserter);
+
+public:
+
     ColumnToValuesMap m_colToValuesMap;
+    ColumnToStringsMap m_colToStringsMap;
     GraphDataSource::ColumnDataTypeMap m_columnTypes;
     GraphDataSource::ColumnNameMap m_columnNames;
     bool m_bIsValid = false;
@@ -627,6 +639,12 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataByIndex(IndexT nColum
     return (iter != m_colToValuesMap.end()) ? &iter->second : nullptr;
 }
 
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnStringsByIndex(IndexT nColumnIndex) -> const RowToStringMap*
+{
+    auto iter = m_colToStringsMap.find(nColumnIndex);
+    return (iter != m_colToStringsMap.end()) ? &iter->second : nullptr;
+}
+
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::firstColumnIndex() const -> IndexT
 {
     return (!m_colToValuesMap.empty()) ? m_colToValuesMap.frontKey() : GraphDataSource::invalidIndex();
@@ -648,19 +666,20 @@ void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged()
     this->m_bIsValid = false;
 }
 
-bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn)
+template <class Map_T, class Insert_T>
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, Insert_T inserter)
 {
     if (m_spSource && m_spSource != &source)
     {
         DFG_QT_CHART_CONSOLE_WARNING(tr("Internal error: cache item source changed, was '%1', now using '%2'").arg(m_spSource->uniqueId(), source.uniqueId()));
-        m_colToValuesMap.clear();
+        mapIndexToStorage.clear();
     }
     if (m_spSource != &source)
     {
         m_spSource = &source;
         DFG_QT_VERIFY_CONNECT(QObject::connect(&source, &GraphDataSource::sigChanged, this, &TableSelectionCacheItem::onDataSourceChanged));
     }
-    auto insertRv = m_colToValuesMap.insert(nColumn, RowToValueMap());
+    auto insertRv = mapIndexToStorage.insert(nColumn, typename Map_T::mapped_type());
     if (!insertRv.second)
         return true; // Column was already present; since currently caching stores whole column, it should already have everything ready so nothing left to do.
 
@@ -671,13 +690,43 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
         DFG_UNUSED(pVariants);
         if (!pRows || !pDoubles || nArrSize == 0)
             return;
-        destValues.pushBackToUnsorted(makeRange(pRows, pRows + nArrSize), makeRange(pDoubles, pDoubles + nArrSize));
+        inserter(destValues, pRows, pDoubles, pVariants, nArrSize);
     });
     destValues.setSorting(true);
     m_columnTypes = source.columnDataTypes();
     m_columnNames = source.columnNames();
     this->m_bIsValid = true;
     return true;
+}
+
+
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn)
+{
+    const auto inserter = [&](RowToValueMap& values, const double* pRows, const double* pDoubles, const QVariant* pVariants, const DataSourceIndex nArrSize)
+    {
+        DFG_UNUSED(pVariants);
+        values.pushBackToUnsorted(makeRange(pRows, pRows + nArrSize), makeRange(pDoubles, pDoubles + nArrSize));
+    };
+    
+    return storeColumnFromSourceImpl(m_colToValuesMap, source, nColumn, inserter);
+}
+
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource_strings(GraphDataSource& source, const DataSourceIndex nColumn)
+{
+    const auto inserter = [&](RowToStringMap& values, const double* pRows, const double* pDoubles, const QVariant* pVariants, const DataSourceIndex nArrSize)
+    {
+        if (!pDoubles)
+            return;
+        StringT s;
+        const auto pEnd = pRows + nArrSize;
+        // TODO: read strings instead of converting doubles to strings.
+        for (auto p = pRows; p != pEnd; ++p, ++pDoubles)
+        {
+            s.rawStorage().assign(QString::number(*pDoubles).toUtf8().data());
+            values.pushBackToUnsorted(makeRange(pRows, pRows + 1), makeRange(&s, &s + 1));
+        }
+    };
+    return storeColumnFromSourceImpl(m_colToStringsMap, source, nColumn, inserter);
 }
 
 namespace
@@ -899,7 +948,11 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
 
     makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
 
-    if (rCacheItem.storeColumnFromSource(source, xColumnIndex) &&
+    const auto bStringsNeeded = (!bXisRowIndex && defEntry.isType(ChartObjectChartTypeStr_bars));
+
+    const auto bXsuccess = (bStringsNeeded) ? rCacheItem.storeColumnFromSource_strings(source, xColumnIndex) : rCacheItem.storeColumnFromSource(source, xColumnIndex);
+
+    if (bXsuccess &&
         rCacheItem.storeColumnFromSource(source, yColumnIndex))
         return iter->second;
     else
@@ -1102,6 +1155,7 @@ QString GraphDefinitionWidget::getGuideString()
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
     <li>Setting panel title and axis labels: {"type":"panel_config","panel_id":"grid(1,1)","title":"Title for\npanel (1,1)","x_label":"This is x axis label","y_label":"This is y axis label"}
     <li>Histogram from source named 'table': {"type":"histogram","data_source":"table","name":"Basic histogram"}
+    <li>Basic bar chart: {"type":"bars"}
     <li>Disabling an entry by commenting: #{"type":"histogram","name":"Basic histogram"}
 </ul>
 
@@ -1115,6 +1169,7 @@ QString GraphDefinitionWidget::getGuideString()
     <ul>
         <li>xy              : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
         <li>histogram       : Histogram</li>
+        <li>bars            : Bar chart, especially for showing bars for data where one column defines labels (strings) and another column specifies values for labels.</li>
         <li>panel_config    : Defines panel items such as title and axes labels</li>
         <li>global_config   : Defines default config values for all panels.</li>
     </ul>
@@ -1177,6 +1232,10 @@ QString GraphDefinitionWidget::getGuideString()
                 <li>Note: Does not work properly when combined with bin_count = -1 and data where distance between adjacent data point varies.</li>
             </ul>
         <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
+        <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
+    </ul>
+<h2>Fields for type <i>bars</i></h2>
+    <ul>
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
     </ul>
 <h2>Fields for type <i>panel_config</i></h2>
@@ -1543,7 +1602,35 @@ double HistogramQCustomPlot::setBarWidth(const double width)
     return m_spBars->width();
 }
 
+class BarSeriesQCustomPlot : public ::DFG_MODULE_NS(charts)::BarSeries
+{
+public:
+    BarSeriesQCustomPlot(QCPBars* pBars);
+    ~BarSeriesQCustomPlot() override;
+
+    QPointer<QCPBars> m_spBars; // QCPBars is owned by QCustomPlot, not by *this.
+}; // Class HistogramQCustomPlot
+
+BarSeriesQCustomPlot::BarSeriesQCustomPlot(QCPBars* pBars)
+{
+    m_spBars = pBars;
+    if (!m_spBars)
+        return;
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spBars.data());
+}
+
+BarSeriesQCustomPlot::~BarSeriesQCustomPlot()
+{
+}
+
+
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// End of DFG_ALLOW_QCUSTOMPLOT
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
@@ -1737,6 +1824,7 @@ public:
     ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) override;
 
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
+    ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam& param) override;
 
     void setAxisLabel(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 axisLabel) override;
 
@@ -2151,10 +2239,6 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
 
 auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param) -> ChartObjectHolder<Histogram>
 {
-    auto p = getWidget();
-    if (!p)
-        return nullptr;
-
     const auto valueRange = param.valueRange;
 
     if (valueRange.empty())
@@ -2250,6 +2334,63 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
     pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
 
     return spHistogram;
+}
+
+auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param) -> ChartObjectHolder<BarSeries>
+{
+    auto pXaxis = getXAxis(param);
+    auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
+
+    if (!pXaxis || !pYaxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create histogram, no suitable target panel found'"));
+        return nullptr;
+    }
+
+    const auto labelRange = param.labelRange;
+    const auto valueRange = param.valueRange;
+
+    if (labelRange.empty() || labelRange.size() != valueRange.size())
+        return nullptr;
+
+    auto minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(valueRange);
+    if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
+        return nullptr;
+
+    // Filling x-data; ticks and labels.
+    QVector<double> ticks;
+    QVector<QString> labels;
+    labels.resize(labelRange.sizeAsInt());
+    std::transform(labelRange.begin(), labelRange.begin() + labels.size(), labels.begin(), [](const StringUtf8& s) { return QString::fromUtf8(s.c_str().c_str()); });
+    ticks.resize(labels.size());
+    ::DFG_MODULE_NS(alg)::generateAdjacent(ticks, 1, 1);
+
+    // Setting text ticker
+    {
+        QSharedPointer<QCPAxisTickerText> textTicker(new QCPAxisTickerText);
+        textTicker->addTicks(ticks, labels);
+        pXaxis->setTicker(textTicker);
+    }
+
+    // This could be used to set label text direction
+    //plot->xAxis->setTickLabelRotation(60);
+
+    //  Setting x-axis range
+    pXaxis->setRange(0, saturateCast<int>(static_cast<size_t>(ticks.size()) + 1u));
+
+    // Setting y-axis range
+    pYaxis->setRange(0, *minMaxPair.second);
+
+    // Reading y-data to QVector
+    QVector<double> yData;
+    yData.resize(valueRange.sizeAsInt());
+    std::copy(valueRange.cbegin(), valueRange.cbegin() + yData.size(), yData.begin());
+
+    auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
+    pBars->setData(ticks, yData);
+
+    auto spBarsHolder = std::make_shared<BarSeriesQCustomPlot>(pBars);
+    return spBarsHolder;
 }
 
 void ChartCanvasQCustomPlot::setAxisLabel(StringViewUtf8 svPanelId, StringViewUtf8 svAxisId, StringViewUtf8 svAxisLabel)
@@ -3287,6 +3428,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 
     int nGraphCounter = 0;
     int nHistogramCounter = 0;
+    int nBarsCounter = 0;
     GraphDefinitionEntry globalConfigEntry; // Stores global config entry if present.
     GraphDefinitionEntry* pGlobalConfigEntry = nullptr; // Set to point to global config if such exists. This and globalConfigEntry are nothing but inconvenient way to do what optional would provide.
     ::DFG_MODULE_NS(cont)::MapVectorAoS<StringUtf8, GraphDefinitionEntry> mapPanelIdToConfig;
@@ -3354,6 +3496,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 refreshXy(rChart, configParamCreator, source, defEntry, nGraphCounter);
             else if (sEntryType == ChartObjectChartTypeStr_histogram)
                 refreshHistogram(rChart, configParamCreator, source, defEntry, nHistogramCounter);
+            else if (sEntryType == ChartObjectChartTypeStr_bars)
+                refreshBars(rChart, configParamCreator, source, defEntry, nBarsCounter);
             else
             {
                 DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(sEntryType.c_str()));
@@ -3661,6 +3805,40 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         return;
     ++nHistogramCounter;
     setCommonChartObjectProperties(*spHistogram, defEntry, configParamCreator, DefaultNameCreator("Histogram", nHistogramCounter));
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nBarsCounter)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+
+    const auto nColumnCount = source.columnCount();
+    if (nColumnCount < 1)
+        return;
+
+    if (!m_spCache)
+        m_spCache.reset(new ChartDataCache);
+
+    std::array<DataSourceIndex, 2> columnIndexes;
+    std::array<bool, 2> rowFlags;
+    auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
+
+    if (!optTableData || optTableData->columnCount() < 1)
+        return;
+
+    auto pFirstCol = optTableData->columnStringsByIndex(columnIndexes[0]);
+    auto pSecondCol = optTableData->columnDataByIndex(columnIndexes[1]);
+
+    if (!pFirstCol || !pSecondCol)
+        return;
+
+    const auto firstValues = pFirstCol->valueRange();
+    const auto secondValues = pSecondCol->valueRange();
+
+    auto spBarSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, firstValues, secondValues, ChartDataType::unknown));
+    if (!spBarSeries)
+        return;
+    ++nBarsCounter;
+    setCommonChartObjectProperties(*spBarSeries, defEntry, configParamCreator, DefaultNameCreator("Bars", nBarsCounter));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator)

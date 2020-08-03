@@ -29,7 +29,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
 /* Checklist for doing changes:
     -Reflect all changes done here to documentation in qt/graphTools.cpp getGuideString() (remember also examples).
-    -if adding new types or properties for existing types, update forEachUnrecognizedPropertyId()
+    -if adding new types or new properties for existing types, update forEachUnrecognizedPropertyId()
 */
 
 inline namespace fieldsIds
@@ -39,16 +39,19 @@ constexpr char ChartObjectFieldIdStr_enabled[] = "enabled";
 constexpr char ChartObjectFieldIdStr_type[] = "type";
 constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for example contruction from string failed due to parse error, error message can be set to this field.
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
-        // xy-type has properties: line_style, point_style, x_source, y_source, x_rows, panel_id, line_colour
+        // xy-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
-        // histogram-type has properties: bin_count, x_source, panel_id, line_colour
+        // histogram-type has properties: see list defined in forEachUnrecognizedPropertyId()
+
+    constexpr char ChartObjectChartTypeStr_bars[] = "bars";
+        // bars-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
     constexpr char ChartObjectChartTypeStr_panelConfig[] = "panel_config";
-        // panel_config-type has properties: panel_id, title, x_label, y_label
+        // panel_config-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
     constexpr char ChartObjectChartTypeStr_globalConfig[] = "global_config";
-        // global_config-type has properties: show_legend, auto_axis_labels, line_style, point_style, line_colour
+        // global_config-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
 
 // data_source: defines data source for ChartObject.
@@ -321,6 +324,13 @@ public:
     virtual void setValues(InputSpanD, InputSpanD) = 0;
 }; // Class Histogram
 
+class BarSeries : public ChartObject
+{
+protected:
+    BarSeries() {}
+public:
+    virtual ~BarSeries() {}
+}; // Class BarSeries
 
 template <class T>
 using ChartObjectHolder = std::shared_ptr<T>;
@@ -454,6 +464,27 @@ inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configPar
 
 }
 
+class BarSeriesCreationParam : public ChartObjectCreationParam
+{
+public:
+    using BaseClass = ChartObjectCreationParam;
+    BarSeriesCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8>, InputSpan<double>, ChartDataType argXtype);
+
+    InputSpan<StringUtf8> labelRange;
+    InputSpan<double> valueRange;
+    ChartDataType xType = ChartDataType::unknown;
+};
+
+inline BarSeriesCreationParam::BarSeriesCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> argLabelRange, InputSpan<double> argValueRange, ChartDataType argXtype)
+    : BaseClass(configParam, defEntry)
+    , labelRange(argLabelRange)
+    , valueRange(argValueRange)
+    , xType(argXtype)
+{
+
+}
+
+
 class ChartCanvas
 {
 protected:
@@ -461,9 +492,11 @@ protected:
 public:
     using XySeries = ::DFG_MODULE_NS(charts)::XySeries;
     using Histogram = ::DFG_MODULE_NS(charts)::Histogram;
+    using BarSeries = ::DFG_MODULE_NS(charts)::BarSeries;
     using ChartObjectCreationParam = ::DFG_MODULE_NS(charts)::ChartObjectCreationParam;
     using XySeriesCreationParam = ::DFG_MODULE_NS(charts)::XySeriesCreationParam;
     using HistogramCreationParam = ::DFG_MODULE_NS(charts)::HistogramCreationParam;
+    using BarSeriesCreationParam = ::DFG_MODULE_NS(charts)::BarSeriesCreationParam;
     template <class T> using ChartObjectHolder = ::DFG_MODULE_NS(charts)::ChartObjectHolder<T>;
 
     virtual ~ChartCanvas() {}
@@ -492,6 +525,7 @@ public:
     virtual void createLegends() {}
 
     virtual ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam&) { return nullptr; }
+    virtual ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam&) { return nullptr; }
 
     virtual void setAxisLabel(StringViewUtf8 /*panelId*/, StringViewUtf8 /*axisId*/, StringViewUtf8 /*axisLabel*/) {}
 
@@ -550,6 +584,17 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_dataSource
+            });
+    }
+    else if (isType(ChartObjectChartTypeStr_bars))
+    {
+        checkForUnrecongnizedProperties(controlItem, func, {
+            ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_name,
+            ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_lineColour,
+            ChartObjectFieldIdStr_dataSource
+            // TODO: column controls, binning (i.e. summing values from rows that have identical label), text direction
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))

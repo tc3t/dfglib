@@ -152,7 +152,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(numeric) {
 	}
 
     // Similar to std::minmax_element, but ignores NaN's.
-    //     -In case of multiple equal min/max elements, unspecified which is returned.
+    //      -In case of multiple equal min/max elements, unspecified which is returned.
+    //      -If given a non-empty range, returned iterators are guaranteed to be deferencable; in case of NaN-only range, they will point to NaN-element.
     template<class Range_T>
     auto minmaxElement_withNanHandling(Range_T&& range) -> std::pair<decltype(std::begin(range)), decltype(std::begin(range))>
     {
