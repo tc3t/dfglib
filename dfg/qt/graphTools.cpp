@@ -1237,6 +1237,8 @@ QString GraphDefinitionWidget::getGuideString()
 <h2>Fields for type <i>bars</i></h2>
     <ul>
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
+        <li><i>x_source</i>: defines column from which labels are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
+        <li><i>y_source</i>: defines column from which values are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
     </ul>
 <h2>Fields for type <i>panel_config</i></h2>
     <ul>

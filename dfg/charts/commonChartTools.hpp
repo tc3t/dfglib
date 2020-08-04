@@ -593,8 +593,10 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
-            ChartObjectFieldIdStr_dataSource
-            // TODO: column controls, binning (i.e. summing values from rows that have identical label), text direction
+            ChartObjectFieldIdStr_dataSource,
+            ChartObjectFieldIdStr_xSource,
+            ChartObjectFieldIdStr_ySource
+            // TODO: binning (i.e. summing values from rows that have identical label), text direction
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))
