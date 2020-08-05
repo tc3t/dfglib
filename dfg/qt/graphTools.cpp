@@ -1363,9 +1363,21 @@ public:
 }; // Class XySeriesQtChart
 #endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
 
-
 // Implementations for QCustomPlot
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// DFG_ALLOW_QCUSTOMPLOT  --------------------->>>>
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+template <class ChartObject_T, class ValueCont_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& yVals);
+
+template <class DataType_T, class ChartObject_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>& xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>& yVals);
 
 // Defines custom implementation for ChartObject. This is used to avoid repeating virtual overrides in ChartObjects.
 class ChartObjectQCustomPlot : public ::DFG_MODULE_NS(charts)::ChartObject
@@ -1474,31 +1486,25 @@ public:
             return;
 
         auto iterY = yVals.cbegin();
-        QVector<double> xTemp;
-        QVector<double> yTemp;
-        xTemp.reserve(static_cast<int>(xVals.size()));
-        yTemp.reserve(static_cast<int>(xVals.size()));
+        QVector<QCPGraphData> data;
         if (pFilterFlags && pFilterFlags->size() == xVals.size())
         {
             auto iterFlag = pFilterFlags->begin();
             for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY, ++iterFlag)
             {
                 if (*iterFlag)
-                {
-                    xTemp.push_back(*iterX);
-                    yTemp.push_back(*iterY);
-                }
+                    data.push_back(QCPGraphData(*iterX, *iterY));
             }
         }
         else
         {
+            data.reserve(saturateCast<int>(xVals.size()));
             for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY)
             {
-                xTemp.push_back(*iterX);
-                yTemp.push_back(*iterY);
+                data.push_back(QCPGraphData(*iterX, *iterY));
             }
         }
-        xySeries->setData(xTemp, yTemp);
+        fillQcpPlottable(*xySeries, std::move(data));
     }
 
     void setLineStyle(StringViewC svStyle) override;
@@ -1586,12 +1592,8 @@ void HistogramQCustomPlot::setValues(InputSpanD xVals, InputSpanD yVals)
 {
     if (!m_spBars)
         return;
-    // TODO: this is vexing: QCPBars insists of having QVector's so must allocate new buffers.
-    QVector<double> x(static_cast<int>(xVals.size()));
-    QVector<double> y(static_cast<int>(yVals.size()));
-    std::copy(xVals.cbegin(), xVals.cend(), x.begin());
-    std::copy(yVals.cbegin(), yVals.cend(), y.begin());
-    m_spBars->setData(x, y);
+    fillQcpPlottable<QCPBarsData>(*m_spBars, xVals, yVals);
+
     m_spBars->rescaleAxes(); // TODO: revise, probably not desirable when there are more than one plottable in canvas.
 }
 
@@ -2389,7 +2391,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     std::copy(valueRange.cbegin(), valueRange.cbegin() + yData.size(), yData.begin());
 
     auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
-    pBars->setData(ticks, yData);
+    fillQcpPlottable<QCPBarsData>(*pBars, makeRange(ticks), valueRange);
 
     auto spBarsHolder = std::make_shared<BarSeriesQCustomPlot>(pBars);
     return spBarsHolder;
@@ -2802,6 +2804,31 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
     });
 
     QToolTip::showText(pEvent->globalPos(), toolTipStream.toPlainText());
+}
+
+
+template <class ChartObject_T, class ValueCont_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
+{
+    // Note the terminology (using QCPGraph as example)
+    //  QCPGraph().data() == QSharedPointer<QCPGraphDataContainer> -> DataContainer == QCPGraphDataContainer == QCPDataContainer<QCPGraphData>
+    //  QCPGraph().data()->set() takes QVector<QCPGraphData> which is the actual storage, this is ValueCont_T
+    using DataContainer = decltype(rChartObject.data())::value_type;
+    QSharedPointer<DataContainer> spData(new DataContainer);
+    std::sort(data.begin(), data.end(), qcpLessThanSortKey<typename ValueCont_T::value_type>);
+    spData->set(data, true); // Note: if data is not sorted beforehand, sorting in set() will effetively cause a redundant copy to be created.
+    rChartObject.setData(std::move(spData));
+}
+
+template <class DataType_T, class ChartObject_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>& xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>& yVals)
+{
+    QVector<DataType_T> values;
+    const auto nSize = saturateCast<int>(Min(xVals.size(), yVals.size()));
+    values.resize(nSize);
+    // Copying from [x], [y] input to [(x,y)] storage that QCPStorage uses.
+    std::transform(xVals.cbegin(), xVals.cbegin() + nSize, yVals.cbegin(), values.begin(), [](const double x, const double y) { return DataType_T(x, y); });
+    fillQcpPlottable(rChartObject, std::move(values));
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
