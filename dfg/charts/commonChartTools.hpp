@@ -81,6 +81,12 @@ constexpr char ChartObjectFieldIdStr_xLabel[] = "x_label";
 // y label
 constexpr char ChartObjectFieldIdStr_yLabel[] = "y_label";
 
+// x_tick_label_direction
+constexpr char ChartObjectFieldIdStr_xTickLabelDirection[] = "x_tick_label_direction";
+
+// y_tick_label_direction
+constexpr char ChartObjectFieldIdStr_yTickLabelDirection[] = "y_tick_label_direction";
+
 // x_rows, value is semicolon separated list defining an IntervalSet of row indexes. For example "1:4; 8; 12:13" means rows 1, 2, 3, 4, 8, 12, 13.
 constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 
@@ -529,6 +535,8 @@ public:
 
     virtual void setAxisLabel(StringViewUtf8 /*panelId*/, StringViewUtf8 /*axisId*/, StringViewUtf8 /*axisLabel*/) {}
 
+    virtual void setAxisTickLabelDirection(StringViewUtf8 /*panelId*/, StringViewUtf8 /*axisId*/, StringViewUtf8 /*value*/) {}
+
     // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
     virtual void repaintCanvas() = 0;
 
@@ -606,7 +614,9 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_title,
             ChartObjectFieldIdStr_xLabel,
-            ChartObjectFieldIdStr_yLabel
+            ChartObjectFieldIdStr_yLabel,
+            ChartObjectFieldIdStr_xTickLabelDirection,
+            ChartObjectFieldIdStr_yTickLabelDirection
             });
     }
     else if (isType(ChartObjectChartTypeStr_globalConfig))

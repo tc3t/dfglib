@@ -1245,6 +1245,8 @@ QString GraphDefinitionWidget::getGuideString()
         <li><i>title</i>: Panel title. New lines can be added with \n</li>
         <li><i>x_label</i>: Label of x-axis. New lines can be added with \n</li>
         <li><i>y_label</i>: Label of y-axis. New lines can be added with \n</li>
+        <li><i>x_tick_label_direction</i>: Direction of tick labels on x-axis by angle [-90, 90]. 0 = horizontal, positive is clockwise rotation.</li>
+        <li><i>y_tick_label_direction</i>: Like x_tick_label_direction, but for y-axis.</li>
     </ul>
 <h2>Fields for type <i>global_config</i></h2>
     <ul>
@@ -1831,6 +1833,7 @@ public:
     ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam& param) override;
 
     void setAxisLabel(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 axisLabel) override;
+    void setAxisTickLabelDirection(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 value) override;
 
     bool isLegendSupported() const override { return true; }
     bool isToolTipSupported() const override { return true; }
@@ -2402,6 +2405,21 @@ void ChartCanvasQCustomPlot::setAxisLabel(StringViewUtf8 svPanelId, StringViewUt
     auto pAxis = getAxis(svPanelId, svAxisId);
     if (pAxis)
         pAxis->setLabel(viewToQString(svAxisLabel));
+}
+
+void ChartCanvasQCustomPlot::setAxisTickLabelDirection(StringViewUtf8 svPanelId, StringViewUtf8 svAxisId, StringViewUtf8 svValue)
+{
+    auto pAxis = getAxis(svPanelId, svAxisId);
+    if (pAxis)
+    {
+        bool bOk = true;
+        const auto sValue = viewToQString(svValue);
+        const auto val = (!sValue.isEmpty()) ? sValue.toDouble(&bOk) : 0;
+        if (bOk)
+            pAxis->setTickLabelRotation(val);
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(QString("Bad tick label direction, got '%1'. Using default").arg(sValue));
+    }
 }
 
 void ChartCanvasQCustomPlot::repaintCanvas()
@@ -3883,6 +3901,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(Char
 
     rChart.setAxisLabel(sPanelId, DFG_UTF8("x"), defEntry.fieldValueStr(ChartObjectFieldIdStr_xLabel));
     rChart.setAxisLabel(sPanelId, DFG_UTF8("y"), defEntry.fieldValueStr(ChartObjectFieldIdStr_yLabel));
+
+    rChart.setAxisTickLabelDirection(sPanelId, DFG_UTF8("x"), defEntry.fieldValueStr(ChartObjectFieldIdStr_xTickLabelDirection));
+    rChart.setAxisTickLabelDirection(sPanelId, DFG_UTF8("y"), defEntry.fieldValueStr(ChartObjectFieldIdStr_yTickLabelDirection));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_ptr<GraphDataSource> spSource)
