@@ -687,7 +687,6 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
     auto& destValues = insertRv.first->second;
     source.forEachElement_byColumn(nColumn, [&](const double* pRows, const double* pDoubles, const QVariant* pVariants, const DataSourceIndex nArrSize)
     {
-        DFG_UNUSED(pVariants);
         if (!pRows || !pDoubles || nArrSize == 0)
             return;
         inserter(destValues, pRows, pDoubles, pVariants, nArrSize);
@@ -1739,16 +1738,26 @@ public:
         return m_sText;
     }
 
-    QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker = nullptr) const
+    QString numberToText(const double d) const
+    {
+        return QString::number(d);
+    }
+
+    QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker) const
     {
         if (!pTimeTicker || ::DFG_MODULE_NS(math)::isNan(d))
-            return QString::number(d);
+            return numberToText(d);
         else
         {
             const auto timeSpec = pTimeTicker->dateTimeSpec();
             auto dt = pTimeTicker->keyToDateTime(d).toTimeSpec(timeSpec);
             return dt.toString(pTimeTicker->dateTimeFormat());
         }
+    }
+
+    QString numberToText(const double d, QCPAxisTickerText* pTextTicker) const // Note: pTextTicker param is not const because QCPAxisTickerText doesn't seem to provide const-way of asking ticks.
+    {
+        return (!pTextTicker) ? numberToText(d) : pTextTicker->ticks().value(d);
     }
 
     bool isDestinationEmpty() const { return m_sText.isEmpty(); }
@@ -1859,9 +1868,9 @@ public:
 
     void mouseMoveEvent(QMouseEvent* pEvent);
 
-    // Returns true if got non-null object.
+    // Returns true if got non-null object as argument.
     static bool toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
-    static bool toolTipTextForChartObjectAsHtml(const QCPBars* pGraph, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
+    static bool toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
 
 private:
     template <class This_T, class Func_T>
@@ -2776,11 +2785,23 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPBars* pBar
     auto spXticker = axisTicker(pBars->keyAxis());
     auto pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.get());
 
-    const auto pointToText = [&](const QCPBarsData& bd)
+    if (pXdateTicker)
+    {
+        const auto pointToText = [&](const QCPBarsData& bd)
+            {
+                return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pXdateTicker), toolTipStream.numberToText(bd.value));
+            };
+        createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
+    }
+    else // case: ticker is not datetime ticker
+    {
+        auto pTextTicker = dynamic_cast<QCPAxisTickerText*>(spXticker.get());
+        const auto pointToText = [&](const QCPBarsData& bd)
         {
-            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pXdateTicker), toolTipStream.numberToText(bd.value));
+            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pTextTicker), toolTipStream.numberToText(bd.value));
         };
-    createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
+        createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
+    }
 
     return true;
 }
