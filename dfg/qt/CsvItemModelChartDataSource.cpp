@@ -51,6 +51,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
 
     const auto& rTable = *pTable;
 
+    // Peeking at the data to determine type of current column.
     bool bFound = false;
     auto whileFunc = [&](const int) { return !bFound; };
     rTable.forEachFwdRowInColumnWhile(static_cast<int>(c), whileFunc, [&](const int /*r*/, const SzPtrUtf8R psz)
@@ -69,11 +70,20 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
     const auto nBlockSize = static_cast<size_t>(Min(1024, rTable.rowCountByMaxRowIndex()));
     rows.reserve(nBlockSize);
     vals.reserve(nBlockSize);
+
+    const auto callHandler = [&]()
+    {
+        SourceDataSpan sourceData;
+        sourceData.set(rows, vals);
+        handler(sourceData);
+    };
+
+    // Calling given handler for each row in column but instead of doing it for each cell individually, gathering blocks and passing blocks to handler (performance optimization).
     rTable.forEachFwdRowInColumn(static_cast<int>(c), [&](const int r, const SzPtrUtf8R psz)
     {
         if (vals.size() >= nBlockSize)
         {
-            handler(rows.data(), vals.data(), nullptr, vals.size());
+            callHandler();
             rows.clear();
             vals.clear();
         }
@@ -84,7 +94,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
             vals.push_back(cellStringToDouble(QString::fromUtf8(psz.c_str()), c, m_columnTypes));
     });
     if (!vals.empty())
-        handler(rows.data(), vals.data(), nullptr, vals.size());
+        callHandler();
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnCount() const -> DataSourceIndex
@@ -119,15 +129,13 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) -> SingleColumnDoubleValuesOptional
 {
-    auto pCsvTable = privGetDataTable();
-    if (!pCsvTable)
-        return SingleColumnDoubleValuesOptional();
     auto rv = std::make_shared<DoubleValueVector>();
     auto& outputVec = *rv;
 
-    forEachElement_byColumn(nColIndex, [&](const double* /*pRows*/, const double* pVals, const QVariant*, DataSourceIndex nArrSize)
+    forEachElement_byColumn(nColIndex, [&](const SourceDataSpan& sourceData)
     {
-        outputVec.insert(outputVec.end(), pVals, pVals + nArrSize);
+        const auto doubleRange = sourceData.doubles();
+        outputVec.insert(outputVec.end(), doubleRange.cbegin(), doubleRange.cend());
     });
     return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator
 }

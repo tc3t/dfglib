@@ -67,6 +67,69 @@ using ChartDefinitionViewable = ::DFG_MODULE_NS(cont)::ViewableSharedPtr<ChartDe
 using ChartDefinitionViewer = ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<ChartDefinition>;
 
 
+// Provides a block of data from GraphDataSource, basically a variant of spans of different type.
+class SourceDataSpan
+{
+public:
+    template <class T> using SpanT = ::dfg::RangeIterator_T<const T*>;
+
+    void clear()
+    {
+        std::memset(this, 0, sizeof(*this));
+    }
+
+    // If rows.size() != values.size(), sets span to have Min(rows.size(), values.size()) elements
+    template <class RowIterable_T, class Iterable_T>
+    void set(const RowIterable_T& rows, const Iterable_T& values)
+    {
+        using ValueT = dfg::cont::ElementType<Iterable_T>::type;
+        clear();
+        privSetSpan(SpanT<ValueT>(dfg::makeRange(rows)), m_pRowSpan);
+        privSetSpan(SpanT<ValueT>(dfg::makeRange(values)));
+        m_nSize = Min(rows.size(), values.size());
+    }
+
+    bool empty() const
+    {
+        return size() == 0;
+    }
+
+    DataSourceIndex size() const
+    {
+        return m_nSize;
+    }
+
+    //////////////////////////////////////////////
+    // Privates
+
+    template <class T, class DestPtr_T>
+    void privSetSpan(const SpanT<T> vals, DestPtr_T& p)
+    {
+        p = vals.beginAsPointer();
+    }
+
+    void privSetSpan(const SpanT<double> doubles)       { privSetSpan(doubles, m_pDoubleSpan); }
+    void privSetSpan(const SpanT<QVariant> variants)    { privSetSpan(variants, m_pVariantSpan); }
+    void privSetSpan(const SpanT<StringViewUtf8> views) { privSetSpan(views, m_pUtf8ViewSpan); }
+
+    template <class T>
+    SpanT<T> privMakeSpan(const T* pSource) const
+    {
+        return SpanT<T>(pSource, pSource + size());
+    }
+
+    SpanT<double>         rows()        const { return privMakeSpan(m_pRowSpan); }
+    SpanT<double>         doubles()     const { return privMakeSpan(m_pDoubleSpan); }
+    SpanT<StringViewUtf8> stringViews() const { return privMakeSpan(m_pUtf8ViewSpan); }
+
+    const double*         m_pRowSpan      = nullptr;
+    const double*         m_pDoubleSpan   = nullptr;
+    const QVariant*       m_pVariantSpan  = nullptr;
+    const StringViewUtf8* m_pUtf8ViewSpan = nullptr;
+    DataSourceIndex       m_nSize = 0; // Defines the size for any non-null span.
+}; // class SourceDataSpan
+
+
 // Abstract class representing graph data source.
 class GraphDataSource : public QObject
 {
@@ -78,7 +141,7 @@ public:
     using ColumnDataTypeMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ChartDataType>;
     using ColumnNameMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, QString>;
     using IndexList = ::DFG_MODULE_NS(cont)::ValueVector<DataSourceIndex>;
-    using ForEachElementByColumHandler = std::function<void(const double*, const double*, const QVariant*, DataSourceIndex)>; // row array, value array (null if not available as doubles), value array as variant (null if not available), array size
+    using ForEachElementByColumHandler = std::function<void(const SourceDataSpan&)>;
 
     virtual ~GraphDataSource() {}
 
@@ -88,7 +151,7 @@ public:
 
     virtual QObject* underlyingSource() = 0;
 
-    // Calls handler for every element in given column. The order of rows in which data is given to handler is unspecified.
+    // Calls handler so that it receives every element in given column. The order of rows in which data is given to handler is unspecified.
     virtual void forEachElement_byColumn(DataSourceIndex, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
 
     // Returns double values from given column by offset from first. The order of values with respect to rows is unspecified.

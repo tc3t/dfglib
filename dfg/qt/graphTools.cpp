@@ -685,11 +685,11 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
 
     insertRv.first->second.setSorting(false); // Disabling sorting while adding
     auto& destValues = insertRv.first->second;
-    source.forEachElement_byColumn(nColumn, [&](const double* pRows, const double* pDoubles, const QVariant* pVariants, const DataSourceIndex nArrSize)
+    source.forEachElement_byColumn(nColumn, [&](const SourceDataSpan& sourceData)
     {
-        if (!pRows || !pDoubles || nArrSize == 0)
+        if (sourceData.empty() || sourceData.doubles().empty())
             return;
-        inserter(destValues, pRows, pDoubles, pVariants, nArrSize);
+        inserter(destValues, sourceData);
     });
     destValues.setSorting(true);
     m_columnTypes = source.columnDataTypes();
@@ -701,10 +701,9 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
 
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphDataSource& source, const DataSourceIndex nColumn)
 {
-    const auto inserter = [&](RowToValueMap& values, const double* pRows, const double* pDoubles, const QVariant* pVariants, const DataSourceIndex nArrSize)
+    const auto inserter = [&](RowToValueMap& values, const SourceDataSpan& sourceData)
     {
-        DFG_UNUSED(pVariants);
-        values.pushBackToUnsorted(makeRange(pRows, pRows + nArrSize), makeRange(pDoubles, pDoubles + nArrSize));
+        values.pushBackToUnsorted(sourceData.rows(), sourceData.doubles());
     };
     
     return storeColumnFromSourceImpl(m_colToValuesMap, source, nColumn, inserter);
@@ -712,17 +711,17 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
 
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource_strings(GraphDataSource& source, const DataSourceIndex nColumn)
 {
-    const auto inserter = [&](RowToStringMap& values, const double* pRows, const double* pDoubles, const QVariant* pVariants, const DataSourceIndex nArrSize)
+    const auto inserter = [&](RowToStringMap& values, const SourceDataSpan& sourceData)
     {
-        if (!pDoubles)
-            return;
-        StringT s;
-        const auto pEnd = pRows + nArrSize;
         // TODO: read strings instead of converting doubles to strings.
-        for (auto p = pRows; p != pEnd; ++p, ++pDoubles)
+        const auto rowRange = sourceData.rows();
+        const auto valueRange = sourceData.doubles();
+        const auto nSize = Min(rowRange.size(), valueRange.size());
+        StringT s;
+        for (size_t i = 0; i < nSize; ++i)
         {
-            s.rawStorage().assign(QString::number(*pDoubles).toUtf8().data());
-            values.pushBackToUnsorted(makeRange(pRows, pRows + 1), makeRange(&s, &s + 1));
+            s.rawStorage().assign(QString::number(valueRange[i]).toUtf8().data());
+            values.pushBackToUnsorted(makeRange(&rowRange[i], &rowRange[i] + 1), makeRange(&s, &s + 1));
         }
     };
     return storeColumnFromSourceImpl(m_colToStringsMap, source, nColumn, inserter);

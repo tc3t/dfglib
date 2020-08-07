@@ -127,9 +127,11 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
             auto data = pModel->data(pModel->index(r, c));
             auto sVal = data.toString();
             // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
-            const double x = CsvItemModel::internalRowIndexToVisible(r);
-            const double y = GraphDataSource::cellStringToDouble(sVal, c, m_columnTypes);
-            handler(&x, &y, nullptr, 1);
+            const double row = CsvItemModel::internalRowIndexToVisible(r);
+            const double val = GraphDataSource::cellStringToDouble(sVal, c, m_columnTypes);
+            SourceDataSpan dataSpan;
+            dataSpan.set(makeRange(&row, &row + 1), makeRange(&val, &val + 1));
+            handler(dataSpan);
         }
     }
 }
@@ -177,10 +179,10 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::singleColumnDoubleValues_
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) -> SingleColumnDoubleValuesOptional
 {
     auto rv = std::make_shared<DoubleValueVector>();
-    forEachElement_byColumn(nColIndex, [&](const double* pX, const double* pY, Dummy, const DataSourceIndex n)
+    forEachElement_byColumn(nColIndex, [&](const SourceDataSpan& sourceData)
     {
-        DFG_UNUSED(pX);
-        rv->insert(rv->end(), pY, pY + n);
+        const auto doubles = sourceData.doubles();
+        rv->insert(rv->end(), doubles.cbegin(), doubles.cend());
     });
     return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator   
 }
