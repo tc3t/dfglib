@@ -71,22 +71,25 @@ using ChartDefinitionViewer = ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<Cha
 class SourceDataSpan
 {
 public:
-    template <class T> using SpanT = ::dfg::RangeIterator_T<const T*>;
+    template <class T> using SpanT = RangeIterator_T<const T*>;
 
     void clear()
     {
         std::memset(this, 0, sizeof(*this));
     }
 
-    // If rows.size() != values.size(), sets span to have Min(rows.size(), values.size()) elements
-    template <class RowIterable_T, class Iterable_T>
-    void set(const RowIterable_T& rows, const Iterable_T& values)
+    template <class RowIterable_T>
+    void setRows(const RowIterable_T& rows)
     {
-        using ValueT = dfg::cont::ElementType<Iterable_T>::type;
-        clear();
-        privSetSpan(SpanT<ValueT>(dfg::makeRange(rows)), m_pRowSpan);
-        privSetSpan(SpanT<ValueT>(dfg::makeRange(values)));
-        m_nSize = Min(rows.size(), values.size());
+        privSetSpan(SpanT<double>(makeRange(rows)), m_pRowSpan);
+    }
+
+    // Sets values
+    template <class Iterable_T>
+    void set(const Iterable_T& values)
+    {
+        using ValueT = ::DFG_MODULE_NS(cont)::ElementType<Iterable_T>::type;
+        privSetSpan(SpanT<ValueT>(makeRange(values)));
     }
 
     bool empty() const
@@ -105,7 +108,9 @@ public:
     template <class T, class DestPtr_T>
     void privSetSpan(const SpanT<T> vals, DestPtr_T& p)
     {
-        p = vals.beginAsPointer();
+        p = (!vals.empty()) ? vals.beginAsPointer() : nullptr;
+        DFG_ASSERT(m_nSize == 0 || vals.size() == size());
+        m_nSize = (m_nSize == 0) ? vals.size() : Min(m_nSize, vals.size());
     }
 
     void privSetSpan(const SpanT<double> doubles)       { privSetSpan(doubles, m_pDoubleSpan); }
@@ -115,7 +120,7 @@ public:
     template <class T>
     SpanT<T> privMakeSpan(const T* pSource) const
     {
-        return SpanT<T>(pSource, pSource + size());
+        return SpanT<T>(pSource, pSource + ((pSource) ? size() : 0));
     }
 
     SpanT<double>         rows()        const { return privMakeSpan(m_pRowSpan); }
@@ -128,6 +133,32 @@ public:
     const StringViewUtf8* m_pUtf8ViewSpan = nullptr;
     DataSourceIndex       m_nSize = 0; // Defines the size for any non-null span.
 }; // class SourceDataSpan
+
+class DataQueryDetails
+{
+public:
+    using DataMaskT = int;
+
+    explicit DataQueryDetails(DataMaskT dataMask)
+        : m_dataMask(dataMask)
+    {}
+
+    enum DataMask
+    {
+        DataMaskRows     = 0x1,
+        DataMaskNumerics = 0x2,
+        DataMaskStrings  = 0x4,
+        DataMaskRowsAndNumerics = DataMaskRows | DataMaskNumerics,
+        DataMaskRowsAndStrings  = DataMaskRows | DataMaskStrings,
+        DataMaskAll             = ~0
+    };
+
+    bool areRowsRequested()    const { return (m_dataMask & DataMaskRows)     != 0; }
+    bool areNumbersRequested() const { return (m_dataMask & DataMaskNumerics) != 0; }
+    bool areStringsRequested() const { return (m_dataMask & DataMaskStrings)  != 0; }
+
+    DataMaskT m_dataMask = DataMaskRowsAndNumerics;
+};
 
 
 // Abstract class representing graph data source.
@@ -152,7 +183,7 @@ public:
     virtual QObject* underlyingSource() = 0;
 
     // Calls handler so that it receives every element in given column. The order of rows in which data is given to handler is unspecified.
-    virtual void forEachElement_byColumn(DataSourceIndex, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
+    virtual void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
 
     // Returns double values from given column by offset from first. The order of values with respect to rows is unspecified.
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex /*offsetFromFirst*/) { return SingleColumnDoubleValuesOptional(); }

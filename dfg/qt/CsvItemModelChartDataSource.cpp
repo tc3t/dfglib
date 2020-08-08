@@ -43,7 +43,7 @@ QObject* ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::underlyingSource()
     return nullptr; // modifiable ptr is not available
 }
 
-void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(const DataSourceIndex c, ForEachElementByColumHandler handler)
+void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(const DataSourceIndex c, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler)
 {
     auto pTable = (handler) ? privGetDataTable() : nullptr;
     if (!pTable)
@@ -65,35 +65,53 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
     const auto colType = m_columnTypes[c];
 
     using ValueVector = ::DFG_MODULE_NS(cont)::ValueVector<double>;
+    using StringViewVector = ::DFG_MODULE_NS(cont)::Vector<StringViewUtf8>;
     ValueVector rows;
     ValueVector vals;
+    StringViewVector stringViews;
     const auto nBlockSize = static_cast<size_t>(Min(1024, rTable.rowCountByMaxRowIndex()));
-    rows.reserve(nBlockSize);
-    vals.reserve(nBlockSize);
+    if (queryDetails.areRowsRequested())
+        rows.reserve(nBlockSize);
+    if (queryDetails.areNumbersRequested())
+        vals.reserve(nBlockSize);
+    if (queryDetails.areStringsRequested())
+        stringViews.reserve(nBlockSize);
 
     const auto callHandler = [&]()
     {
         SourceDataSpan sourceData;
-        sourceData.set(rows, vals);
+        if (!rows.empty())
+            sourceData.setRows(rows);
+        if (!vals.empty())
+            sourceData.set(vals);
+        if (!stringViews.empty())
+            sourceData.set(stringViews);
         handler(sourceData);
     };
 
     // Calling given handler for each row in column but instead of doing it for each cell individually, gathering blocks and passing blocks to handler (performance optimization).
     rTable.forEachFwdRowInColumn(static_cast<int>(c), [&](const int r, const SzPtrUtf8R psz)
     {
-        if (vals.size() >= nBlockSize)
+        if (rows.size() >= nBlockSize || vals.size() >= nBlockSize || stringViews.size() >= nBlockSize)
         {
             callHandler();
             rows.clear();
             vals.clear();
+            stringViews.clear();
         }
-        rows.push_back(static_cast<double>(r));
-        if (colType == ChartDataType::unknown && std::strchr(psz.c_str(), ',') == nullptr)
-            vals.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz));
-        else
-            vals.push_back(cellStringToDouble(QString::fromUtf8(psz.c_str()), c, m_columnTypes));
+        if (queryDetails.areRowsRequested())
+            rows.push_back(static_cast<double>(r));
+        if (queryDetails.areNumbersRequested())
+        {
+            if (colType == ChartDataType::unknown && std::strchr(psz.c_str(), ',') == nullptr)
+                vals.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz));
+            else
+                vals.push_back(cellStringToDouble(QString::fromUtf8(psz.c_str()), c, m_columnTypes));
+        }
+        if (queryDetails.areStringsRequested())
+            stringViews.push_back(psz);
     });
-    if (!vals.empty())
+    if (!rows.empty() || !vals.empty() || !stringViews.empty())
         callHandler();
 }
 
@@ -132,7 +150,7 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_
     auto rv = std::make_shared<DoubleValueVector>();
     auto& outputVec = *rv;
 
-    forEachElement_byColumn(nColIndex, [&](const SourceDataSpan& sourceData)
+    forEachElement_byColumn(nColIndex, DataQueryDetails(DataQueryDetails::DataMaskNumerics), [&](const SourceDataSpan& sourceData)
     {
         const auto doubleRange = sourceData.doubles();
         outputVec.insert(outputVec.end(), doubleRange.cbegin(), doubleRange.cend());

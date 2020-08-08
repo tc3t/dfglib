@@ -69,7 +69,7 @@ public:
 
     QObject* underlyingSource() override;
 
-    void forEachElement_byColumn(DataSourceIndex c, ForEachElementByColumHandler handler) override;
+    void forEachElement_byColumn(DataSourceIndex c, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler) override;
 
     IndexList columnIndexes() const override;
 

@@ -97,13 +97,14 @@ QObject* ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::underlyingSource()
     return m_spView;
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(DataSourceIndex nColRaw, ForEachElementByColumHandler handler)
+void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(DataSourceIndex nColRaw, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler)
 {
     if (!handler || !m_spView)
         return;
 
+    auto pCsvModel = m_spView->csvModel();
     auto pModel = m_spView->model();
-    if (!pModel)
+    if (!pCsvModel || !pModel)
         return;
 
     auto spSelectionViewer = this->privGetSelectionViewer();
@@ -118,19 +119,31 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
 
     const auto c = saturateCast<int>(nColRaw);
 
+    StringViewUtf8 sv;
     for (const auto& item : selection)
     {
         if (item.left() > c || item.right() < c)
             continue;
         for (int r = item.top(), rBottom = item.bottom(); r <= rBottom; ++r)
         {
-            auto data = pModel->data(pModel->index(r, c));
-            auto sVal = data.toString();
             // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
+            const auto sourceModelIndex = m_spView->mapToDataModel(pModel->index(r, c));
+            const auto pszData = pCsvModel->RawStringPtrAt(sourceModelIndex.row(), sourceModelIndex.column());
             const double row = CsvItemModel::internalRowIndexToVisible(r);
-            const double val = GraphDataSource::cellStringToDouble(sVal, c, m_columnTypes);
+            double val = 0;
             SourceDataSpan dataSpan;
-            dataSpan.set(makeRange(&row, &row + 1), makeRange(&val, &val + 1));
+            if (queryDetails.areRowsRequested())
+                dataSpan.setRows(makeRange(&row, &row + 1));
+            if (queryDetails.areNumbersRequested())
+            {
+                val = GraphDataSource::cellStringToDouble(viewToQString(pszData), c, m_columnTypes); // TODO: no creation of redundant QStrings
+                dataSpan.set(makeRange(&val, &val + 1));
+            }
+            if (queryDetails.areStringsRequested())
+            {
+                sv = (pszData) ? pszData : StringViewUtf8();
+                dataSpan.set(makeRange(&sv, &sv + 1));
+            }
             handler(dataSpan);
         }
     }
@@ -179,7 +192,7 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::singleColumnDoubleValues_
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) -> SingleColumnDoubleValuesOptional
 {
     auto rv = std::make_shared<DoubleValueVector>();
-    forEachElement_byColumn(nColIndex, [&](const SourceDataSpan& sourceData)
+    forEachElement_byColumn(nColIndex, DataQueryDetails(DataQueryDetails::DataMaskNumerics), [&](const SourceDataSpan& sourceData)
     {
         const auto doubles = sourceData.doubles();
         rv->insert(rv->end(), doubles.cbegin(), doubles.cend());

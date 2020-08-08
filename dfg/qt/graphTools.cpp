@@ -603,7 +603,7 @@ public:
 
 private:
     template <class Map_T, class Inserter_T>
-    bool storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, Inserter_T inserter);
+    bool storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails, Inserter_T inserter);
 
 public:
 
@@ -667,7 +667,7 @@ void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged()
 }
 
 template <class Map_T, class Insert_T>
-bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, Insert_T inserter)
+bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails, Insert_T inserter)
 {
     if (m_spSource && m_spSource != &source)
     {
@@ -685,10 +685,8 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
 
     insertRv.first->second.setSorting(false); // Disabling sorting while adding
     auto& destValues = insertRv.first->second;
-    source.forEachElement_byColumn(nColumn, [&](const SourceDataSpan& sourceData)
+    source.forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& sourceData)
     {
-        if (sourceData.empty() || sourceData.doubles().empty())
-            return;
         inserter(destValues, sourceData);
     });
     destValues.setSorting(true);
@@ -706,25 +704,40 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
         values.pushBackToUnsorted(sourceData.rows(), sourceData.doubles());
     };
     
-    return storeColumnFromSourceImpl(m_colToValuesMap, source, nColumn, inserter);
+    return storeColumnFromSourceImpl(m_colToValuesMap, source, nColumn, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics), inserter);
 }
 
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource_strings(GraphDataSource& source, const DataSourceIndex nColumn)
 {
-    const auto inserter = [&](RowToStringMap& values, const SourceDataSpan& sourceData)
+    const auto inserter = [&](RowToStringMap& rowToStringMap, const SourceDataSpan& sourceData)
     {
-        // TODO: read strings instead of converting doubles to strings.
         const auto rowRange = sourceData.rows();
-        const auto valueRange = sourceData.doubles();
-        const auto nSize = Min(rowRange.size(), valueRange.size());
-        StringT s;
-        for (size_t i = 0; i < nSize; ++i)
+        const auto stringViews = sourceData.stringViews();
+        if (!stringViews.empty())
         {
-            s.rawStorage().assign(QString::number(valueRange[i]).toUtf8().data());
-            values.pushBackToUnsorted(makeRange(&rowRange[i], &rowRange[i] + 1), makeRange(&s, &s + 1));
+            const auto nSize = Min(rowRange.size(), stringViews.size());
+            StringT s;
+            for (size_t i = 0; i < nSize; ++i)
+            {
+                const auto sv = stringViews[i];
+                s.rawStorage().assign(sv.beginRaw(), sv.endRaw());
+                rowToStringMap.pushBackToUnsorted(makeRange(&rowRange[i], &rowRange[i] + 1), makeRange(&s, &s + 1));
+            }
+            return;
+        }
+        const auto values = sourceData.doubles();
+        if (!values.empty())
+        {
+            const auto nSize = Min(rowRange.size(), values.size());
+            StringT s;
+            for (size_t i = 0; i < nSize; ++i)
+            {
+                s.rawStorage().assign(QString::number(values[i]).toUtf8().data());
+                rowToStringMap.pushBackToUnsorted(makeRange(&rowRange[i], &rowRange[i] + 1), makeRange(&s, &s + 1));
+            }
         }
     };
-    return storeColumnFromSourceImpl(m_colToStringsMap, source, nColumn, inserter);
+    return storeColumnFromSourceImpl(m_colToStringsMap, source, nColumn, DataQueryDetails(DataQueryDetails::DataMaskRowsAndStrings), inserter);
 }
 
 namespace
