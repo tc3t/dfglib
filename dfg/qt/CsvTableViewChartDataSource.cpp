@@ -136,7 +136,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
                 dataSpan.setRows(makeRange(&row, &row + 1));
             if (queryDetails.areNumbersRequested())
             {
-                val = GraphDataSource::cellStringToDouble(viewToQString(pszData), c, m_columnTypes); // TODO: no creation of redundant QStrings
+                val = GraphDataSource::cellStringToDouble(pszData, c, m_columnTypes);
                 dataSpan.set(makeRange(&val, &val + 1));
             }
             if (queryDetails.areStringsRequested())

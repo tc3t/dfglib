@@ -677,19 +677,21 @@ namespace
 
     void testDateToDouble(const char* pszDateString, ::DFG_MODULE_NS(qt)::ChartDataType dataType, const double offsetFromBase, const double baseValue = baseDateTestDoubleValue)
     {
+        using namespace  ::DFG_ROOT_NS;
         using namespace  ::DFG_MODULE_NS(qt);
         using ColumnDataTypeMap = ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap;
         ColumnDataTypeMap columnDataTypes;
-        EXPECT_EQ(baseValue + offsetFromBase, GraphDataSource::cellStringToDouble(pszDateString, 1, columnDataTypes));
+        EXPECT_EQ(baseValue + offsetFromBase, GraphDataSource::cellStringToDouble(SzPtrUtf8(pszDateString), 1, columnDataTypes));
         EXPECT_TRUE(columnDataTypes.size() == 1 && columnDataTypes.frontKey() == 1 && columnDataTypes.frontValue() == dataType);
     }
 
     void testDateToDouble_invalidDateFormat(const char* pszDateString)
     {
+        using namespace  ::DFG_ROOT_NS;
         using namespace  ::DFG_MODULE_NS(qt);
         using ColumnDataTypeMap = ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap;
         ColumnDataTypeMap columnDataTypes;
-        EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(GraphDataSource::cellStringToDouble(pszDateString, 1, columnDataTypes)));
+        EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(GraphDataSource::cellStringToDouble(SzPtrUtf8(pszDateString), 1, columnDataTypes)));
     }
 }
 

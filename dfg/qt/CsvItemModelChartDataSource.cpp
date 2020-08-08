@@ -56,7 +56,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
     auto whileFunc = [&](const int) { return !bFound; };
     rTable.forEachFwdRowInColumnWhile(static_cast<int>(c), whileFunc, [&](const int /*r*/, const SzPtrUtf8R psz)
     {
-        const auto val = GraphDataSource::cellStringToDouble(QString::fromUtf8(psz.c_str()), c, m_columnTypes);
+        const auto val = GraphDataSource::cellStringToDouble(psz, c, m_columnTypes);
         if (!::DFG_MODULE_NS(math)::isNan(val))
             bFound = true;
         // Simply taking column type from first recognized type.
@@ -106,7 +106,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
             if (colType == ChartDataType::unknown && std::strchr(psz.c_str(), ',') == nullptr)
                 vals.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz));
             else
-                vals.push_back(cellStringToDouble(QString::fromUtf8(psz.c_str()), c, m_columnTypes));
+                vals.push_back(cellStringToDouble(psz, c, m_columnTypes));
         }
         if (queryDetails.areStringsRequested())
             stringViews.push_back(psz);

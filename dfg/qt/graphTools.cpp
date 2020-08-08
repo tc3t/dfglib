@@ -32,6 +32,8 @@
 
 #include "../build/compilerDetails.hpp"
 
+#include <regex>
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
     #include <QPlainTextEdit>
@@ -310,8 +312,13 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const QString& s)
     return (b) ? v : std::numeric_limits<double>::quiet_NaN();
 }
 
+double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const StringViewSzC& sv)
+{
+    return ::DFG_MODULE_NS(str)::strTo<double>(sv);
+}
+
 // Return value in case of invalid input as GIGO, in most cases returns NaN. Also in case of invalid input typeMap's value at nCol is unspecified.
-double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s, const DataSourceIndex nCol, ColumnDataTypeMap& typeMap)
+double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringViewSzUtf8& svUtf8, const DataSourceIndex nCol, ColumnDataTypeMap& typeMap)
 {
     const auto updateColumnDataType = [&](ChartDataType t)
     {
@@ -335,47 +342,57 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s
         return dateToDouble(std::move(dt));
     };
 
+    // Raw view so that can use indexing
+    const StringViewC s(svUtf8.beginRaw(), svUtf8.endRaw());
+    //StringViewSzC s(svUtf8.beginRaw());
+
+    const auto viewToQString = [&](const StringViewC& sv) { return ::DFG_MODULE_NS(qt)::viewToQString(StringViewUtf8(SzPtrUtf8(sv.begin()), SzPtrUtf8(sv.end()))); };
 
     const auto isTzStartChar = [](const QChar& c) { return ::DFG_MODULE_NS(alg)::contains("Z+-", c.toLatin1()); };
     // TODO: add parsing for fractional part longer than 3 digits.
     if (s.size() >= 8 && s[4] == '-' && s[7] == '-') // Something starting with ????-??-?? (ISO 8601, https://en.wikipedia.org/wiki/ISO_8601)
     {
         // size 19 is yyyy-MM-ddThh:mm:ss
-        if (s.size() >= 19 && s[13] == ':' && s[16] == ':' && ::DFG_MODULE_NS(alg)::contains("T ", s[10].toLatin1())) // Case ????-??-??[T ]hh:mm:ss[.zzz][Z|HH:00]
+        if (s.size() >= 19 && s[13] == ':' && s[16] == ':' && ::DFG_MODULE_NS(alg)::contains("T ", s[10])) // Case ????-??-??[T ]hh:mm:ss[.zzz][Z|HH:00]
         {
             // size 23 is yyyy-mm-ssThh:mm:ss.zzz
             if (s.size() >= 23 && s[19] == '.')
             {
                 // Timezone specifier after milliseconds?
                 if (s.size() >= 24 && isTzStartChar(s[23]))
-                    return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, Qt::ISODateWithMs), ChartDataType::dateAndTimeMillisecondTz);
+                    return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), Qt::ISODateWithMs), ChartDataType::dateAndTimeMillisecondTz);
                 else
-                    return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss.zzz").arg(s[10])), ChartDataType::dateAndTimeMillisecond);
+                    return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), QString("yyyy-MM-dd%1hh:mm:ss.zzz").arg(s[10])), ChartDataType::dateAndTimeMillisecond);
             }
             else if (s.size() >= 20 && isTzStartChar(s[19]))
-                return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, Qt::ISODate), ChartDataType::dateAndTimeTz);
+                return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), Qt::ISODate), ChartDataType::dateAndTimeTz);
             else
-                return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, QString("yyyy-MM-dd%1hh:mm:ss").arg(s[10])), ChartDataType::dateAndTime);
+                return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), QString("yyyy-MM-dd%1hh:mm:ss").arg(s[10])), ChartDataType::dateAndTime);
         }
         else if (s.size() == 13 && s[10] == ' ') // Case: "yyyy-MM-dd Wd". where Wd is two char weekday indicator.
-            return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, QString("yyyy-MM-dd'%1'").arg(s.mid(10, 3))), ChartDataType::dateOnly);
+        {
+            auto sQstring = viewToQString(s);
+            return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(sQstring, QString("yyyy-MM-dd'%1'").arg(sQstring.mid(10, 3))), ChartDataType::dateOnly);
+        }
         else if (s.size() == 10) // Case: "yyyy-MM-dd"
-            return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, "yyyy-MM-dd"), ChartDataType::dateOnly);
+            return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), "yyyy-MM-dd"), ChartDataType::dateOnly);
         else
             return std::numeric_limits<double>::quiet_NaN();
     }
 
     // yyyy-mm
     if (s.size() == 7 && s[4] == '-')
-        return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(s, "yyyy-MM"), ChartDataType::dateOnlyYearMonth);
+        return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), "yyyy-MM"), ChartDataType::dateOnlyYearMonth);
 
     // [d]d.[m]m.yyyy
-    QRegExp regExp(R"((?:^|^\w\w )(\d{1,2})(?:\.)(\d{1,2})(?:\.)(\d\d\d\d)$)");
-    if (regExp.exactMatch(s) && regExp.captureCount() == 3)
+    std::regex regex(R"((?:^|^\w\w )(\d{1,2})(?:\.)(\d{1,2})(?:\.)(\d\d\d\d)$)");
+    std::cmatch baseMatch;
+    if (std::regex_match(svUtf8.beginRaw(), baseMatch, regex) && baseMatch.size() == 4)
     {
-        const auto items = regExp.capturedTexts();
+        const auto asInt = [](const std::csub_match& subMatch) { return ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(subMatch.first, subMatch.second)); };
         // 0 has entire match, so actual captures start from index 1.
-        return dateToDoubleAndColumnTypeHandling(QDateTime(QDate(regExp.cap(3).toInt(), regExp.cap(2).toInt(), regExp.cap(1).toInt())), ChartDataType::dateOnly);
+        return dateToDoubleAndColumnTypeHandling(QDateTime(QDate(asInt(baseMatch[3]), asInt(baseMatch[2]), asInt(baseMatch[1]))), ChartDataType::dateOnly);
+
     }
 
     if (s.size() >= 8 && s[2] == ':' && s[5] == ':')
@@ -383,21 +400,21 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const QString& s
         if (s.size() >= 10 && s[8] == '.')
         {
             updateColumnDataType(ChartDataType::dayTimeMillisecond);
-            return timeToDouble(QTime::fromString(s, "hh:mm:ss.zzz"));
+            return timeToDouble(QTime::fromString(viewToQString(s), "hh:mm:ss.zzz"));
         }
         else
         {
             updateColumnDataType(ChartDataType::dayTime);
-            return timeToDouble(QTime::fromString(s, "hh:mm:ss"));
+            return timeToDouble(QTime::fromString(viewToQString(s), "hh:mm:ss"));
         }
     }
     if (std::count(s.begin(), s.end(), '-') >= 2 || std::count(s.begin(), s.end(), '.') >= 2 || std::count(s.begin(), s.end(), ':') >= 2)
         return std::numeric_limits<double>::quiet_NaN();
-    if (s.indexOf(',') < 0)
-        return stringToDouble(s);
+    if (std::find(s.begin(), s.end(), ',') == s.end())
+        return stringToDouble(StringViewSzC(svUtf8.beginRaw())); // Not using s directly because at the time of writing it caused redundant string-object to be created due to shortcomings in strTo().
     else
     {
-        auto s2 = s;
+        auto s2 = viewToQString(s);
         s2.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
         return stringToDouble(s2);
     }
@@ -713,28 +730,21 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource_strings(G
     {
         const auto rowRange = sourceData.rows();
         const auto stringViews = sourceData.stringViews();
+        const auto rowIdentityFunc = [](const double row) { return row; };
         if (!stringViews.empty())
         {
-            const auto nSize = Min(rowRange.size(), stringViews.size());
-            StringT s;
-            for (size_t i = 0; i < nSize; ++i)
-            {
-                const auto sv = stringViews[i];
-                s.rawStorage().assign(sv.beginRaw(), sv.endRaw());
-                rowToStringMap.pushBackToUnsorted(makeRange(&rowRange[i], &rowRange[i] + 1), makeRange(&s, &s + 1));
-            }
+            rowToStringMap.pushBackToUnsorted(rowRange, rowIdentityFunc,
+                                              stringViews,
+                                              [](const StringViewUtf8& sv) { return StringUtf8::fromRawString(sv.beginRaw(), sv.endRaw()); });
             return;
         }
         const auto values = sourceData.doubles();
         if (!values.empty())
         {
-            const auto nSize = Min(rowRange.size(), values.size());
-            StringT s;
-            for (size_t i = 0; i < nSize; ++i)
-            {
-                s.rawStorage().assign(QString::number(values[i]).toUtf8().data());
-                rowToStringMap.pushBackToUnsorted(makeRange(&rowRange[i], &rowRange[i] + 1), makeRange(&s, &s + 1));
-            }
+            rowToStringMap.pushBackToUnsorted(rowRange, rowIdentityFunc,
+                                              values,
+                                              [](const double d) { return ::DFG_MODULE_NS(str)::floatingPointToStr<StringUtf8>(d); });
+            return;
         }
     };
     return storeColumnFromSourceImpl(m_colToStringsMap, source, nColumn, DataQueryDetails(DataQueryDetails::DataMaskRowsAndStrings), inserter);
