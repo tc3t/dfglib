@@ -104,7 +104,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
         if (queryDetails.areNumbersRequested())
         {
             if (colType == ChartDataType::unknown && std::strchr(psz.c_str(), ',') == nullptr)
-                vals.push_back(::DFG_MODULE_NS(str)::strTo<double>(psz));
+                vals.push_back(stringToDouble(StringViewSzC(psz.c_str())));
             else
                 vals.push_back(cellStringToDouble(psz, c, m_columnTypes));
         }

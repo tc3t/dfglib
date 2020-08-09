@@ -314,7 +314,12 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const QString& s)
 
 double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const StringViewSzC& sv)
 {
-    return ::DFG_MODULE_NS(str)::strTo<double>(sv);
+    const char* psz = sv.begin();
+    psz = ::DFG_MODULE_NS(str)::skipWhitespacesSz(psz, " \t");
+    if (*psz != '\0' && ::DFG_MODULE_NS(alg)::contains("+-.0123456789", *psz)) // If first non-empty char is any of listed, trying to convert string to double.
+        return ::DFG_MODULE_NS(str)::strTo<double>(sv);
+    else
+        return std::numeric_limits<double>::quiet_NaN();
 }
 
 // Return value in case of invalid input as GIGO, in most cases returns NaN. Also in case of invalid input typeMap's value at nCol is unspecified.
