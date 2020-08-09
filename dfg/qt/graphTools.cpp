@@ -3828,11 +3828,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
             const auto x = (bXisRowIndex) ? xRow : xIter->second;
             const auto y = (bYisRowIndex) ? yRow : yIter->second;
 
-            xValueMap.m_keyStorage[nActualSize] = x;
-            xValueMap.m_valueStorage[nActualSize] = y;
-            minMaxX(x);
-            minMaxY(y);
-            nActualSize++;
+            if (!::DFG_MODULE_NS(math)::isNan(x)) // Accepting point only if x is non-NaN
+            {
+                xValueMap.m_keyStorage[nActualSize] = x;
+                xValueMap.m_valueStorage[nActualSize] = y;
+                minMaxX(x);
+                minMaxY(y);
+                nActualSize++;
+            }
         }
         ++xIter;
         ++yIter;

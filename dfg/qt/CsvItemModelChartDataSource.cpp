@@ -53,6 +53,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
 
     // Peeking at the data to determine type of current column.
     bool bFound = false;
+    m_columnTypes.erase(c); // Erasing old type to make sure that it won't break detection.
     auto whileFunc = [&](const int) { return !bFound; };
     rTable.forEachFwdRowInColumnWhile(static_cast<int>(c), whileFunc, [&](const int /*r*/, const SzPtrUtf8R psz)
     {
