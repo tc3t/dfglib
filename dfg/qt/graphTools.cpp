@@ -974,12 +974,15 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
 
     makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
 
-    const auto bStringsNeeded = (!bXisRowIndex && defEntry.isType(ChartObjectChartTypeStr_bars));
+    const auto bStringsNeededForX = (!bXisRowIndex && (defEntry.isType(ChartObjectChartTypeStr_bars) || (defEntry.isType(ChartObjectChartTypeStr_histogram) && defEntry.fieldValueStr(ChartObjectFieldIdStr_binType) == DFG_UTF8("text"))));
+    const auto bStringsNeededForY = (!bYisRowIndex && defEntry.isType(ChartObjectChartTypeStr_histogram) && defEntry.fieldValueStr(ChartObjectFieldIdStr_binType) == DFG_UTF8("text"));
 
-    const auto bXsuccess = (bStringsNeeded) ? rCacheItem.storeColumnFromSource_strings(source, xColumnIndex) : rCacheItem.storeColumnFromSource(source, xColumnIndex);
+    const auto bXsuccess = (bStringsNeededForX) ? rCacheItem.storeColumnFromSource_strings(source, xColumnIndex) : rCacheItem.storeColumnFromSource(source, xColumnIndex);
+    bool bYsuccess = false;
+    if (bXsuccess)
+        bYsuccess = (bStringsNeededForY) ? rCacheItem.storeColumnFromSource_strings(source, yColumnIndex) : rCacheItem.storeColumnFromSource(source, yColumnIndex);
 
-    if (bXsuccess &&
-        rCacheItem.storeColumnFromSource(source, yColumnIndex))
+    if (bXsuccess && bYsuccess)
         return iter->second;
     else
         return TableSelectionOptional(); // Failed to read columns
@@ -1259,6 +1262,7 @@ QString GraphDefinitionWidget::getGuideString()
             </ul>
         <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
+        <li><i>bin_type</i>: {<b>number</b>, text}. Defines how input is interpreted; with 'text', there's one bar for each unique text and value is the number of it's occurrences.</li>
     </ul>
 <h2>Fields for type <i>bars</i></h2>
     <ul>
@@ -2281,7 +2285,18 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
 }
 
 auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param) -> ChartObjectHolder<Histogram>
-{
+{   
+    // If histogram is string-type (=bin per strings, values are number of identical strings), handling it separately. It is effectively a bar chart so only need to compute counts here.
+    if (!param.stringValueRange.empty())
+    {
+        ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, double> counts;
+        for (const auto& s : param.stringValueRange)
+            counts[s]++;
+        auto spSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), counts.keyRange(), counts.valueRange(), param.xType));
+        auto spImpl = dynamic_cast<BarSeriesQCustomPlot*>(spSeries.get());
+        return std::make_shared<HistogramQCustomPlot>(spImpl->m_spBars.data());
+    }
+
     const auto valueRange = param.valueRange;
 
     if (valueRange.empty())
@@ -3878,27 +3893,54 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     if (!m_spCache)
         m_spCache.reset(new ChartDataCache);
 
+    const auto sBinType = defEntry.fieldValueStr(ChartObjectFieldIdStr_binType, [] { return StringUtf8(DFG_UTF8("number")); });
+
+    if (sBinType != DFG_UTF8("number") && sBinType != DFG_UTF8("text"))
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(QString(tr("Unrecognined bin_type '%1', using default").arg(sBinType.c_str().c_str())));
+    }
+
+    const bool bTextValued = (sBinType == DFG_UTF8("text"));
+
     std::array<DataSourceIndex, 2> columnIndexes;
     std::array<bool, 2> rowFlags;
     auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
-    if (!optTableData || optTableData->columnCount() < 1)
+    if (!optTableData)
         return;
 
-    auto pSingleColumn = optTableData->columnDataByIndex(columnIndexes[0]);
-
-    if (!pSingleColumn)
-        return;
-
-    const auto valueRange = pSingleColumn->valueRange();
-    if (valueRange.size() < 1)
+    ChartObjectHolder<Histogram> spHistogram;
+    if (!bTextValued)
     {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(valueRange.size()));
-        return;
+        if (!optTableData || optTableData->columnCount() < 1)
+            return;
+
+        auto pSingleColumn = optTableData->columnDataByIndex(columnIndexes[0]);
+
+        if (!pSingleColumn)
+            return;
+
+        const auto valueRange = pSingleColumn->valueRange();
+        if (valueRange.size() < 1)
+        {
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(valueRange.size()));
+            return;
+        }
+        const auto xType = optTableData->columnDataType(pSingleColumn);
+        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange, xType));
+
+    }
+    else // Case text valued
+    {
+        auto pStrings = optTableData->columnStringsByIndex(columnIndexes[0]);
+        if (!pStrings || pStrings->empty())
+        {
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: no data found for histogram").arg(defEntry.index()));
+            return;
+        }
+        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, pStrings->valueRange()));
     }
 
-    const auto xType = optTableData->columnDataType(pSingleColumn);
-    auto spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange, xType));
     if (!spHistogram)
         return;
     ++nHistogramCounter;

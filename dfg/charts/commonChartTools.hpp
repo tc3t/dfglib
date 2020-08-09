@@ -63,6 +63,9 @@ constexpr char ChartObjectFieldIdStr_name[] = "name";
 // bin_count
 constexpr char ChartObjectFieldIdStr_binCount[] = "bin_count";
 
+// bin_type
+constexpr char ChartObjectFieldIdStr_binType[] = "bin_type";
+
 // bar_width_factor
 constexpr char ChartObjectFieldIdStr_barWidthFactor[] = "bar_width_factor";
 
@@ -457,8 +460,10 @@ class HistogramCreationParam : public ChartObjectCreationParam
 public:
     using BaseClass = ChartObjectCreationParam;
     HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double>, ChartDataType argXtype);
+    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8>);
 
     InputSpan<double> valueRange;
+    InputSpan<StringUtf8> stringValueRange;
     ChartDataType xType = ChartDataType::unknown;
 };
 
@@ -468,6 +473,12 @@ inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configPar
     , xType(argXtype)
 {
 
+}
+
+inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> strings)
+    : BaseClass(configParam, defEntry)
+    , stringValueRange(strings)
+{
 }
 
 class BarSeriesCreationParam : public ChartObjectCreationParam
@@ -588,6 +599,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_binCount,
             ChartObjectFieldIdStr_barWidthFactor,
+            ChartObjectFieldIdStr_binType,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
