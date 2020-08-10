@@ -69,6 +69,9 @@ constexpr char ChartObjectFieldIdStr_binType[] = "bin_type";
 // bar_width_factor
 constexpr char ChartObjectFieldIdStr_barWidthFactor[] = "bar_width_factor";
 
+// merge_identical_labels
+constexpr char ChartObjectFieldIdStr_mergeIdenticalLabels[] = "merge_identical_labels";
+
 // title
 constexpr char ChartObjectFieldIdStr_title[] = "title";
 
@@ -615,8 +618,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_dataSource,
             ChartObjectFieldIdStr_xSource,
-            ChartObjectFieldIdStr_ySource
-            // TODO: binning (i.e. summing values from rows that have identical label), text direction
+            ChartObjectFieldIdStr_ySource,
+            ChartObjectFieldIdStr_mergeIdenticalLabels
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))

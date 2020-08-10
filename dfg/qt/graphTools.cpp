@@ -1269,6 +1269,7 @@ QString GraphDefinitionWidget::getGuideString()
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
         <li><i>x_source</i>: defines column from which labels are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
         <li><i>y_source</i>: defines column from which values are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
+        <li><i>merge_identical_labels</i>: {true, <b>false</b>}. If true, bars with identical labels are merged into one and bar length is the sum of lengths of merged bars.</li>
     </ul>
 <h2>Fields for type <i>panel_config</i></h2>
     <ul>
@@ -2406,7 +2407,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     }
 
     const auto labelRange = param.labelRange;
-    const auto valueRange = param.valueRange;
+    auto valueRange = param.valueRange;
 
     if (labelRange.empty() || labelRange.size() != valueRange.size())
         return nullptr;
@@ -2423,6 +2424,36 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     ticks.resize(labels.size());
     ::DFG_MODULE_NS(alg)::generateAdjacent(ticks, 1, 1);
 
+    // Buffer that is used for y-values if bars need to be merged
+    QVector<double> yAdjustedData;
+
+    // Handling bar merging if requested
+    const auto bMergeIdentical = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_mergeIdenticalLabels, false);
+    if (bMergeIdentical)
+    {
+        ::DFG_MODULE_NS(cont)::MapVectorSoA<QString, double> uniqueValues;
+        uniqueValues.setSorting(false); // Want to keep original order.
+        for (int i = 0, nCount = saturateCast<int>(valueRange.size()); i < nCount; ++i)
+            uniqueValues[labels[i]] += valueRange[i];
+        if (uniqueValues.size() != ticks.size()) // Does data have duplicate bar identifiers?
+        {
+            const auto nNewSize = saturateCast<int>(uniqueValues.size());
+            ticks.resize(nNewSize);
+            labels.resize(nNewSize);
+            yAdjustedData.resize(nNewSize);
+            int i = 0;
+            for (const auto& item : uniqueValues)
+            {
+                labels[i] = item.first;
+                yAdjustedData[i] = item.second;
+                i++;
+            }
+            // Recalculation y-range.
+            minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
+            valueRange = makeRange(yAdjustedData);
+        }
+    }
+
     // Setting text ticker
     {
         QSharedPointer<QCPAxisTickerText> textTicker(new QCPAxisTickerText);
@@ -2438,11 +2469,6 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
 
     // Setting y-axis range
     pYaxis->setRange(0, *minMaxPair.second);
-
-    // Reading y-data to QVector
-    QVector<double> yData;
-    yData.resize(valueRange.sizeAsInt());
-    std::copy(valueRange.cbegin(), valueRange.cbegin() + yData.size(), yData.begin());
 
     auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
     fillQcpPlottable<QCPBarsData>(*pBars, makeRange(ticks), valueRange);
