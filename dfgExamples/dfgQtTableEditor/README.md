@@ -235,6 +235,10 @@ Available keys:
 | bom_writing | Whether to write BOM on save | 0, 1 | |
 | properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
 | properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
+| properties/includeRows | Limits rows which are read from file by row index |  | Since 1.5.0 |
+| properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
+| properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
+| properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, syntax guide is available from UI. | Since 1.6.0 |
 
 #### Example .conf-file (might look better when opened in a csv-editor)
 <pre>
@@ -253,6 +257,10 @@ separator_char,",",,
 properties,,,
 ,completerColumns,"0,2",
 ,completerEnabledSizeLimit,10000000,
+,includeRows,100:200
+,includeColumns,0:5
+,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"
+,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}
 </pre>
 
 ## Third party code
