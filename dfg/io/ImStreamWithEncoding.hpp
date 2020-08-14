@@ -13,6 +13,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 	public:
 		typedef std::istream BaseClass;
 		typedef DFG_CLASS_NAME(ImStreamWithEncoding) ThisClass;
+		using Streambuffer = DFG_CLASS_NAME(StreamBufferMemWithEncoding);
 
 		DFG_CLASS_NAME(ImStreamWithEncoding)(const char* p, const size_t nSize, TextEncoding encoding) :
 			BaseClass(&m_streamBuf),
@@ -34,7 +35,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 		}
 #endif
 
-		DFG_CLASS_NAME(StreamBufferMemWithEncoding) m_streamBuf;
+		static constexpr int_type eofValue()
+		{
+			return Streambuffer::eofValue();
+		}
+
+		Streambuffer m_streamBuf;
 
 	};
 

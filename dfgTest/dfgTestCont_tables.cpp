@@ -716,7 +716,7 @@ TEST(dfgCont, TableCsv)
     std::vector<std::string> paths;
     std::vector<TextEncoding> encodings;
     std::vector<char> separators;
-    std::vector<::DFG_MODULE_NS(io)::EndOfLineType> eolTypes;
+    std::vector<EndOfLineType> eolTypes;
     // TODO: Read these properties from file names once "for-each-file-in-folder"-function is available.
     const TextEncoding contEncodings[] = { encodingUTF8,
                                             encodingUTF16Be,
@@ -724,8 +724,8 @@ TEST(dfgCont, TableCsv)
                                             encodingUTF32Be,
                                             encodingUTF32Le };
     const std::string contSeparators[] = { "2C", "09", "3B" }; // ',' '\t', ';'
-    const std::string contEols[] = { "n", "rn" };
-    const std::array<::DFG_MODULE_NS(io)::EndOfLineType, 2> contEolIndexToType = { ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::EndOfLineTypeRN };
+    const std::string contEols[] = { "n", "rn", "r" };
+    const std::array<EndOfLineType, 3> contEolIndexToType = { EndOfLineTypeN, EndOfLineTypeRN, EndOfLineTypeR };
     
     const std::string sPathTemplate = "testfiles/csv_testfiles/csvtest%1%_BOM_sep_%2%_eol_%3%.csv";
     for (size_t iE = 0; iE < count(contEncodings); ++iE)
@@ -739,7 +739,7 @@ TEST(dfgCont, TableCsv)
                 DFG_MODULE_NS(str)::replaceSubStrsInplace(s, "%3%", contEols[iEol]);
                 const bool bFileExists = DFG_MODULE_NS(os)::isPathFileAvailable(s.c_str(), DFG_MODULE_NS(os)::FileModeRead);
                 if (!bFileExists && iEol != 0)
-                    continue; // There are no rn-versions of all files so simply skip such.
+                    continue; // There are no rn or r -versions of all files so simply skip such.
                 EXPECT_TRUE(bFileExists);
                 paths.push_back(std::move(s));
                 encodings.push_back(contEncodings[iE]);
@@ -760,7 +760,10 @@ TEST(dfgCont, TableCsv)
         tables[i].reset(new Table);
         auto& table = *tables[i];
         // Read from file...
-        table.readFromFile(s);
+        auto readFormat = table.defaultReadFormat();
+        if (eolTypes[i] == EndOfLineTypeR) // \r is not detected automatically so setting it manually.
+            readFormat.eolType(EndOfLineTypeR);
+        table.readFromFile(s, readFormat);
         // ...check that read properties separator, separator char and encoding, matches...
         {
             EXPECT_EQ(encodings[i], table.m_readFormat.textEncoding()); // TODO: use access function for format info.
@@ -1225,9 +1228,8 @@ namespace
         const auto format = peekCsvFormatFromFile(svPath);
         EXPECT_EQ(cSep, format.separatorChar());
         DFG_UNUSED(cEnc);
-        DFG_UNUSED(eolType);
         //EXPECT_EQ(cEnc, format.enclosingChar()); Detection is not supported
-        //EXPECT_EQ(eolType, format.eolType()); Detection is not supported
+        EXPECT_EQ(eolType, format.eolType());
         EXPECT_EQ(encoding, format.textEncoding());
     }
 }
@@ -1244,7 +1246,7 @@ TEST(dfgCont, TableCsv_peekCsvFormatFromFile)
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_2C_eol_n.csv",  ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Le);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_2C_eol_rn.csv", ',',    '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF16Le);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_3B_eol_n.csv",  ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Le);
-    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_3B_eol_rn.csv", ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_3B_eol_rn.csv", ';',    '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF16Le);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_09_eol_n.csv",  '\t',   '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Be);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_2C_eol_n.csv",  ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Be);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_3B_eol_n.csv",  ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF32Be);
@@ -1258,7 +1260,13 @@ TEST(dfgCont, TableCsv_peekCsvFormatFromFile)
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_3B_eol_n.csv",     ';',    '"', EndOfLineType::EndOfLineTypeN,   encodingUTF8);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_3B_eol_rn.csv",    ';',    '"', EndOfLineType::EndOfLineTypeRN,  encodingUTF8);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_1F_eol_n.csv",     '\x1F', '"', EndOfLineType::EndOfLineTypeN,   encodingUTF8);
-    verifyFormatInFile("testfiles/csvtest_plain_ascii_3x3_sep_2C_eol_n.csv",           ',',    '"', EndOfLineType::EndOfLineTypeN,   encodingUnknown);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtest_plain_ascii_3x3_sep_2C_eol_n.csv", ',','"', EndOfLineType::EndOfLineTypeN,   encodingUnknown);
+
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF8_BOM_sep_2C_eol_r.csv",     ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF8);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16BE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF16Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF16Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF32Be);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32LE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF32Le);
 }
 
 TEST(dfgCont, CsvConfig)

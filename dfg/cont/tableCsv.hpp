@@ -19,6 +19,7 @@
 #include "IntervalSet.hpp"
 #include "MapToStringViews.hpp"
 #include "../numericTypeTools.hpp"
+#include "vectorSso.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
     
@@ -211,25 +212,45 @@ DFG_ROOT_NS_BEGIN{
     namespace DFG_DETAIL_NS
     {
         template <class Strm_T>
-        inline CsvFormatDefinition peekCsvFormat(Strm_T&& rawStrm)
+        inline CsvFormatDefinition peekCsvFormat(Strm_T&& rawStrm, const size_t nPeekLimitAsBaseChars = 512)
         {
+            // Determines csv-format by peeking at first nPeekLimit base chars from stream.
             using namespace ::DFG_MODULE_NS(io);
-            std::array<char, 200> peekBuffer; // 200 is an arbitrary limit;
+            using namespace ::DFG_MODULE_NS(cont);
+            std::vector<char> rawPeekBuffer; // Stores raw bytes from stream.
             const auto encoding = checkBOM(rawStrm);
-            const auto nRead = rawStrm.readBytes(peekBuffer.data(), peekBuffer.size());
-            ImStreamWithEncoding istrm(peekBuffer.data(), nRead, encoding);
+            const auto encodingCharSize = baseCharacterSize(encoding);
+            rawPeekBuffer.resize(nPeekLimitAsBaseChars * encodingCharSize);
+            const auto nRead = rawStrm.readBytes(rawPeekBuffer.data(), rawPeekBuffer.size());
+            ImStreamWithEncoding istrmEncoding(rawPeekBuffer.data(), nRead, encoding);
 
+            VectorSso<char, 512> charArray; // Stores plain chars where non-ascii-value have been saturateCasted (=assuming format chars to be ascii)
+            // Reading code points from encoding stream to charArray.
+            for (int i = istrmEncoding.get(); i != istrmEncoding.eofValue(); i = istrmEncoding.get())
+                charArray.push_back(saturateCast<int8>(i));
+
+            // Now parsing the charArray.
+            BasicImStream basicImStream(charArray.data(), charArray.size());
             DelimitedTextReader::CellData<char> cellData(DelimitedTextReader::s_nMetaCharAutoDetect, '"', '\n');
-            auto reader = DelimitedTextReader::createReader(istrm, cellData);
-            DelimitedTextReader::read(reader, [&](size_t, size_t, decltype(cellData)& cd)
+            auto reader = DelimitedTextReader::createReader(basicImStream, cellData);
+
+            DelimitedTextReader::readRow(reader, [&](size_t, decltype(cellData)& cd)
             {
                 // Terminating reading after first cell since separator detection is ready.
                 cd.setReadStatus(DelimitedTextReader::cellHrvTerminateRead);
             });
+
+            // Determining eol simply by looking for \r from the charArray. Note that this fails if enclosed cells have eol's different from csv-eol,
+            // e.g. "a\r\nb"\n"c" will be detected wrongly as \r\n instead of correct \n.
+            EndOfLineType eolType = EndOfLineTypeN;
+            auto iterCr = std::find(charArray.begin(), charArray.end(), '\r');
+            // If \r is found, setting eol-type either to \r\n or \r depending on whether \r is followed by \n
+            if (iterCr != charArray.end())
+                eolType = (iterCr + 1 != charArray.end() && *(iterCr + 1) == '\n') ? EndOfLineTypeRN : EndOfLineTypeR;
             const auto formatDefInfo = reader.getFormatDefInfo();
             const auto rawSep = formatDefInfo.getSep();
             const auto nEffectiveSep = (rawSep > 0 && rawSep < 128) ? static_cast<char>(rawSep) : ',';
-            return CsvFormatDefinition(nEffectiveSep, '"', EndOfLineTypeN, encoding);
+            return CsvFormatDefinition(nEffectiveSep, '"', eolType, encoding);
         }
     } // namespace DFG_DETAIL_NS
 
@@ -237,12 +258,13 @@ DFG_ROOT_NS_BEGIN{
     // Currently supports detecting:
     //      -Any of the auto-detected separators
     //      -Encoding
+    //      -End of line type
     // The following are NOT detected:
     //      -enclosing character
-    //      -End of line type
-    inline CsvFormatDefinition peekCsvFormatFromFile(const StringViewSzC& sPath)
+    // Note that separator/eol needs to be within peek limit in order to get detected.
+    inline CsvFormatDefinition peekCsvFormatFromFile(const StringViewSzC& sPath, const size_t nPeekLimitAsBaseChars = 512)
     {
-        return DFG_DETAIL_NS::peekCsvFormat(::DFG_MODULE_NS(io)::createInputStreamBinaryFile(ReadOnlySzParamC(sPath.c_str())));
+        return DFG_DETAIL_NS::peekCsvFormat(::DFG_MODULE_NS(io)::createInputStreamBinaryFile(ReadOnlySzParamC(sPath.c_str())), nPeekLimitAsBaseChars);
     }
     
     DFG_SUB_NS(cont)

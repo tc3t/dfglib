@@ -144,7 +144,7 @@ public:
         return m_encoding;
     }
 
-    static int_type eofValue()
+    static constexpr int_type eofValue()
     {
         return std::char_traits<char>::eof();
     }
