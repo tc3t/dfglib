@@ -1205,9 +1205,7 @@ public:
 
         // EOL
         m_spEolEdit->addItems(QStringList() << "\\n" << "\\r" << "\\r\\n");
-        if (isSaveDialog())
         {
-            // When populating save dialog, default-select eol that is defined in model options.
             addCurrentOptionToCombobox(*m_spEolEdit, DFG_MODULE_NS(io)::eolStrFromEndOfLineType(defaultFormatSettings.eolType()).c_str());
         }
         m_spEolEdit->setEditable(false);

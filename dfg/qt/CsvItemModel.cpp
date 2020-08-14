@@ -691,7 +691,13 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(cons
 {
     auto sConfFilePath = DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sFilePath);
     if (!QFileInfo(sConfFilePath).exists())
-        return LoadOptions();
+    {
+        LoadOptions loadOptions;
+        const auto s8bitPath = qStringToFileApi8Bit(sFilePath);
+        const auto peekedFormat = peekCsvFormatFromFile(s8bitPath, Min(1024, saturateCast<int>(::DFG_MODULE_NS(os)::fileSize(s8bitPath))));
+        loadOptions.eolType(peekedFormat.eolType());
+        return loadOptions;
+    }
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
     config.loadFromFile(qStringToFileApi8Bit(sConfFilePath));
     LoadOptions loadOptions;
