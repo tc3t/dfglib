@@ -96,7 +96,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         return encodingUnknown;
     }
 
-    inline size_t baseCharacterSize(TextEncoding encoding)
+    inline size_t baseCharacterSize(const TextEncoding encoding)
     {
         switch (encoding)
         {
@@ -108,7 +108,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             case encodingUTF32Be:
             case encodingUTF32Le:
                 return 4;
-            default: return 0;
+            default: return 1;
         }
     }
 

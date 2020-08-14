@@ -1267,6 +1267,7 @@ TEST(dfgCont, TableCsv_peekCsvFormatFromFile)
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF16LE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF16Le);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF32Be);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32LE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF32Le);
+    verifyFormatInFile("testfiles/csv_testfiles/csvtest_plain_ascii_3x3_sep_3B_eol_r.csv", ';','"', EndOfLineType::EndOfLineTypeR,   encodingUnknown);
 }
 
 TEST(dfgCont, CsvConfig)
