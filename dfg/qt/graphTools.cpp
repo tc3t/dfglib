@@ -612,6 +612,7 @@ public:
 
     ChartDataType columnDataType(const RowToValueMap* pColumn) const;
     QString columnName(const RowToValueMap* pColumn) const;
+    QString columnName(DataSourceIndex nColumn) const;
 
     IndexT columnToIndex(const RowToValueMap* pColumn) const;
 
@@ -861,7 +862,11 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const RowToValue
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap* pColumn) const -> QString
 {
-    const auto nCol = columnToIndex(pColumn);
+    return columnName(columnToIndex(pColumn));
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const DataSourceIndex nCol) const -> QString
+{
     auto iter = m_columnNames.find(nCol);
     return (iter != m_columnNames.end()) ? iter->second : QString();
 }
@@ -2293,7 +2298,7 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, double> counts;
         for (const auto& s : param.stringValueRange)
             counts[s]++;
-        auto spSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), counts.keyRange(), counts.valueRange(), param.xType));
+        auto spSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), counts.keyRange(), counts.valueRange(), param.xType, param.m_sXname, StringUtf8()));
         auto spImpl = dynamic_cast<BarSeriesQCustomPlot*>(spSeries.get());
         return std::make_shared<HistogramQCustomPlot>(spImpl->m_spBars.data());
     }
@@ -2390,6 +2395,10 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
     // Settings ticker for x-axis.
     setAxisTicker(*pXaxis, param.xType);
 
+    // Setting auto axis label for x-axis if enabled
+    if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
+        setAutoAxisLabel(*pXaxis, param.m_sXname);
+
     pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
 
     return spHistogram;
@@ -2469,6 +2478,13 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
 
     // Setting y-axis range
     pYaxis->setRange(0, *minMaxPair.second);
+
+    // Setting auto axis labels if enabled
+    if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
+    {
+        setAutoAxisLabel(*pXaxis, param.m_sXname);
+        setAutoAxisLabel(*pYaxis, param.m_sYname);
+    }
 
     auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
     fillQcpPlottable<QCPBarsData>(*pBars, makeRange(ticks), valueRange);
@@ -3953,7 +3969,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
             return;
         }
         const auto xType = optTableData->columnDataType(pSingleColumn);
-        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange, xType));
+        const auto sXaxisName = optTableData->columnName(pSingleColumn);
+        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange, xType, qStringToStringUtf8(sXaxisName)));
 
     }
     else // Case text valued
@@ -3964,7 +3981,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
             DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: no data found for histogram").arg(defEntry.index()));
             return;
         }
-        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, pStrings->valueRange()));
+        const auto sXaxisName = optTableData->columnName(columnIndexes[0]);
+        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, pStrings->valueRange(), qStringToStringUtf8(sXaxisName)));
     }
 
     if (!spHistogram)
@@ -4000,7 +4018,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& r
     const auto firstValues = pFirstCol->valueRange();
     const auto secondValues = pSecondCol->valueRange();
 
-    auto spBarSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, firstValues, secondValues, ChartDataType::unknown));
+    const auto sXaxisName = optTableData->columnName(columnIndexes[0]);
+    const auto sYaxisName = optTableData->columnName(columnIndexes[1]);
+
+    auto spBarSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, firstValues, secondValues, ChartDataType::unknown,
+                                                                     qStringToStringUtf8(sXaxisName), qStringToStringUtf8(sYaxisName)));
     if (!spBarSeries)
         return;
     ++nBarsCounter;

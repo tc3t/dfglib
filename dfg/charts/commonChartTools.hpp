@@ -462,25 +462,28 @@ class HistogramCreationParam : public ChartObjectCreationParam
 {
 public:
     using BaseClass = ChartObjectCreationParam;
-    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double>, ChartDataType argXtype);
-    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8>);
+    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double>, ChartDataType argXtype, StringUtf8 sXname);
+    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8>, StringUtf8 sXname);
 
     InputSpan<double> valueRange;
     InputSpan<StringUtf8> stringValueRange;
     ChartDataType xType = ChartDataType::unknown;
+    StringUtf8 m_sXname;
 };
 
-inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan, const ChartDataType argXtype)
+inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double> inputSpan, const ChartDataType argXtype, StringUtf8 sXname)
     : BaseClass(configParam, defEntry)
     , valueRange(inputSpan)
     , xType(argXtype)
+    , m_sXname(std::move(sXname))
 {
 
 }
 
-inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> strings)
+inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> strings, StringUtf8 sXname)
     : BaseClass(configParam, defEntry)
     , stringValueRange(strings)
+    , m_sXname(std::move(sXname))
 {
 }
 
@@ -488,18 +491,23 @@ class BarSeriesCreationParam : public ChartObjectCreationParam
 {
 public:
     using BaseClass = ChartObjectCreationParam;
-    BarSeriesCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8>, InputSpan<double>, ChartDataType argXtype);
+    BarSeriesCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8>, InputSpan<double>, ChartDataType argXtype, StringUtf8 sXname, StringUtf8 sYname);
 
     InputSpan<StringUtf8> labelRange;
     InputSpan<double> valueRange;
     ChartDataType xType = ChartDataType::unknown;
+    StringUtf8 m_sXname;
+    StringUtf8 m_sYname;
 };
 
-inline BarSeriesCreationParam::BarSeriesCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> argLabelRange, InputSpan<double> argValueRange, ChartDataType argXtype)
+inline BarSeriesCreationParam::BarSeriesCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> argLabelRange, InputSpan<double> argValueRange, ChartDataType argXtype,
+                                                      StringUtf8 sXname, StringUtf8 sYname)
     : BaseClass(configParam, defEntry)
     , labelRange(argLabelRange)
     , valueRange(argValueRange)
     , xType(argXtype)
+    , m_sXname(std::move(sXname))
+    , m_sYname(std::move(sYname))
 {
 
 }
