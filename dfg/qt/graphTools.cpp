@@ -80,15 +80,7 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-DFG_ROOT_NS_BEGIN{ 
-    
-    // QCPDataContainer doesn't seem to have cbegin/cend() but have constBegin()/constEnd() so creating overloads here that are used at least by nearestRangeInSorted()
-    auto cbegin(const QCPGraphDataContainer& cont) -> decltype(cont.constBegin()) { return cont.constBegin(); }
-    auto cend(const QCPGraphDataContainer& cont)   -> decltype(cont.constEnd())   { return cont.constEnd(); }
-
-    auto cbegin(const QCPBarsDataContainer& cont) -> decltype(cont.constBegin())  { return cont.constBegin(); }
-    auto cend(const QCPBarsDataContainer& cont)   -> decltype(cont.constEnd())    { return cont.constEnd(); }
-
+DFG_ROOT_NS_BEGIN{
     // QCPDataContainer doesn't seem to have value_type typedef, so adding specializations to ElementType<> so that QCPDataContainer works with nearestRangeInSorted()
     DFG_SUB_NS(cont)
     {
@@ -2801,11 +2793,36 @@ void ChartCanvasQCustomPlot::setTitle(StringViewUtf8 svPanelId, StringViewUtf8 s
 
 namespace
 {
+    // Wrapper to provide cbegin() et al that are missing from QCPDataContainer
+    template <class Cont_T>
+    class QCPContWrapper
+    {
+    public:
+        using value_type = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
+
+        QCPContWrapper(Cont_T& ref) : m_r(ref) {}
+
+        operator       Cont_T& ()       { return m_r; }
+        operator const Cont_T& () const { return m_r; }
+
+        auto begin()        -> typename Cont_T::iterator       { return m_r.begin(); }
+        auto begin() const  -> typename Cont_T::const_iterator { return m_r.constBegin(); }
+        auto cbegin() const -> typename Cont_T::const_iterator { return m_r.constBegin(); }
+
+        auto end()        -> typename Cont_T::iterator         { return m_r.end(); }
+        auto end() const  -> typename Cont_T::const_iterator   { return m_r.constEnd(); }
+        auto cend() const -> typename Cont_T::const_iterator   { return m_r.constEnd(); }
+
+        int size() const { return m_r.size(); }
+
+        Cont_T& m_r;
+    };
+
     template <class Cont_T, class PointToText_T, class Tr_T>
     static void createNearestPointToolTipList(Cont_T& cont, const PointXy& xy, ToolTipTextStream& toolTipStream, PointToText_T pointToText, Tr_T&& tr) // Note: QCPDataContainer doesn't seem to have const begin()/end() so must take cont by non-const reference.
     {
         using DataT = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
-        const auto nearestItems = ::DFG_MODULE_NS(alg)::nearestRangeInSorted(cont, xy.first, 5, [](const DataT& dp) { return dp.key; });
+        const auto nearestItems = ::DFG_MODULE_NS(alg)::nearestRangeInSorted(QCPContWrapper<Cont_T>(cont), xy.first, 5, [](const DataT& dp) { return dp.key; });
         if (nearestItems.empty())
             return;
 
@@ -2936,7 +2953,7 @@ static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
     // Note the terminology (using QCPGraph as example)
     //  QCPGraph().data() == QSharedPointer<QCPGraphDataContainer> -> DataContainer == QCPGraphDataContainer == QCPDataContainer<QCPGraphData>
     //  QCPGraph().data()->set() takes QVector<QCPGraphData> which is the actual storage, this is ValueCont_T
-    using DataContainer = decltype(rChartObject.data())::value_type;
+    using DataContainer = typename decltype(rChartObject.data())::value_type;
     QSharedPointer<DataContainer> spData(new DataContainer);
     std::sort(data.begin(), data.end(), qcpLessThanSortKey<typename ValueCont_T::value_type>);
     spData->set(data, true); // Note: if data is not sorted beforehand, sorting in set() will effetively cause a redundant copy to be created.
