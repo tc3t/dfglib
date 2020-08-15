@@ -57,7 +57,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
     auto whileFunc = [&](const int) { return !bFound; };
     rTable.forEachFwdRowInColumnWhile(static_cast<int>(c), whileFunc, [&](const int /*r*/, const SzPtrUtf8R psz)
     {
-        const auto val = GraphDataSource::cellStringToDouble(psz, c, m_columnTypes);
+        const auto val = (psz) ? GraphDataSource::cellStringToDouble(psz, c, m_columnTypes) : std::numeric_limits<double>::quiet_NaN();
         if (!::DFG_MODULE_NS(math)::isNan(val))
             bFound = true;
         // Simply taking column type from first recognized type.

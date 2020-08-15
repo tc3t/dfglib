@@ -136,7 +136,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
                 dataSpan.setRows(makeRange(&row, &row + 1));
             if (queryDetails.areNumbersRequested())
             {
-                val = GraphDataSource::cellStringToDouble(pszData, c, m_columnTypes);
+                val = (pszData) ? GraphDataSource::cellStringToDouble(pszData, c, m_columnTypes) : std::numeric_limits<double>::quiet_NaN();
                 dataSpan.set(makeRange(&val, &val + 1));
             }
             if (queryDetails.areStringsRequested())
