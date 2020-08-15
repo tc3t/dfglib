@@ -88,7 +88,7 @@ public:
     template <class Iterable_T>
     void set(const Iterable_T& values)
     {
-        using ValueT = ::DFG_MODULE_NS(cont)::ElementType<Iterable_T>::type;
+        using ValueT = typename ::DFG_MODULE_NS(cont)::ElementType<Iterable_T>::type;
         privSetSpan(SpanT<ValueT>(makeRange(values)));
     }
 
@@ -247,7 +247,7 @@ private:
     virtual void refreshImpl() = 0; // Guaranteed to not get called by refresh() while already in progress.
     virtual void clearCachesImpl() {}
     virtual GraphDataSourceId defaultSourceIdImpl() const { return GraphDataSourceId(); }
-    virtual bool setChartControls(QString s) { return false; } // Returns true is given string was taken into use, false otherwise.
+    virtual bool setChartControls(QString) { return false; } // Returns true is given string was taken into use, false otherwise.
 
     bool m_bRefreshInProgress = false;
 }; // Class ChartController
