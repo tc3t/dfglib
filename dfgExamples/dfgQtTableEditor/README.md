@@ -43,6 +43,17 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
+* 2020-08-16, 1.6.0
+    * [new] New chart type: bars ([#35](https://github.com/tc3t/dfglib/issues/35))
+    * [new] Charts now have tooltips that show values around cursor ([#9](https://github.com/tc3t/dfglib/issues/9)).
+    * [imp] Can now set axis tick label direction
+    * [imp] Histograms (and bars) now have auto axis labels like xy-type.
+    * [imp] Can now create histograms from text content ([#36](https://github.com/tc3t/dfglib/issues/36)).
+    * [imp] Files with \r eol should now open fine in most cases ([#40](https://github.com/tc3t/dfglib/issues/40)).
+    * [imp] Histograms from datetime values now show datetime bins instead of numeric bins.
+    * [imp] When opening file through "Open file with options", the dialog now has better default values.
+    * [imp] When opening file with filters, document title now indicates that filters were used.
+    * [imp] Chart controls can now be loaded from conf-file on open ([#32](https://github.com/tc3t/dfglib/issues/32)).
 * 2020-07-22, [1.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.5.0)
     * Notable changes
         * [new] Charting (disabled by default)
@@ -92,7 +103,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 * Support for per-file configurations that can be used for example to define format characters and column widths in UI.
 * When saving to file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
 * Charting support using [QCustomPlot](https://www.qcustomplot.com/) (since version 1.5.0)
-    * xy-graphs and histograms are supported (as of version 1.5.0).
+    * xy-graphs, histograms and bar charts are supported (as of version 1.6.0).
     * json-based chart definition.
     * Has been tested to work with 50 million row, single column xy-graph. In a test machine chart update times in 50M line case were 65 s in non-cached case and 6 s in cached case; corresponding numbers in case of 1M lines were 2 s and 0.2 s.
     * Disabled by default due to licensing issues (GPL).
