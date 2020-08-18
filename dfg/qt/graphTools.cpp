@@ -748,84 +748,6 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource_strings(G
     return storeColumnFromSourceImpl(m_colToStringsMap, source, nColumn, DataQueryDetails(DataQueryDetails::DataMaskRowsAndStrings), inserter);
 }
 
-namespace
-{
-    // Helper class for dealing with items of format key_name(comma-separated list of args with csv-quoting)
-    // Examples: 
-    //      input: 'some_id(arg one,"arg two that has , in it",arg three)' -> {key="some_id", values[3]={"arg one", "arg two that has , in it", "arg three"}
-    class ParenthesisItem
-    {
-    public:
-        using StringT = StringUtf8;
-        using StringView = StringViewUtf8;
-
-        // Given string must accessible for the lifetime of 'this'
-        ParenthesisItem(const StringT& sv);
-        ParenthesisItem(StringT&&) = delete;
-
-        // Constructs from StringView promised to outlive 'this'
-        static ParenthesisItem fromStableView(StringView sv);
-
-        StringView key() const { return m_key; }
-
-        size_t valueCount() const { return m_values.size(); }
-
-        template <class T>
-        T valueAs(const size_t nIndex) const
-        {
-            return ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex));
-        }
-
-        StringView value(const size_t nIndex) const
-        {
-            return (isValidIndex(m_values, nIndex)) ? m_values[nIndex] : StringView();
-        }
-
-    private:
-        ParenthesisItem(const StringView& sv);
-
-    public:
-        StringView m_key;
-        std::vector<StringT> m_values;
-    };
-
-    ParenthesisItem::ParenthesisItem(const StringT& s) :
-        ParenthesisItem(StringView(s))
-    {
-    }
-
-    ParenthesisItem::ParenthesisItem(const StringView& sv)
-    {
-        auto iterOpen = std::find(sv.beginRaw(), sv.endRaw(), '(');
-        if (iterOpen == sv.endRaw())
-            return; // Didn't find opening parenthesis
-        m_key = StringView(sv.data(), SzPtrUtf8(iterOpen));
-        iterOpen++; // Skipping opening parenthesis
-        auto iterEnd = sv.endRaw();
-        if (iterOpen == iterEnd)
-            return;
-        --iterEnd;
-        // Skipping trailing whitespaces
-        while (iterEnd != iterOpen && DFG_MODULE_NS(alg)::contains(" ", *iterEnd))
-            --iterEnd;
-        // Checking that items end with closing parenthesis.
-        if (*iterEnd != ')')
-            return;
-        // Parsing item inside parenthesis as standard comma-delimited item with quotes.
-        DFG_MODULE_NS(io)::BasicImStream istrm(iterOpen, iterEnd - iterOpen);
-        DFG_MODULE_NS(io)::DelimitedTextReader::read<char>(istrm, ',', '"', DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, [&](size_t, size_t, const char* p, const size_t nSize)
-        {
-            m_values.push_back(StringT(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(p + nSize)));
-        });
-    }
-
-    auto ParenthesisItem::fromStableView(StringView sv) -> ParenthesisItem
-    {
-        return ParenthesisItem(sv);
-    }
-
-} // unnamed namespace
-
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueMap* pId) -> RowToValueMap
 {
     auto iter = std::find_if(m_colToValuesMap.begin(), m_colToValuesMap.end(), [=](const auto& v)
@@ -2615,7 +2537,7 @@ void ChartCanvasQCustomPlot::createLegends()
 
 bool ChartCanvasQCustomPlot::getGridPos(const StringViewUtf8 svPanelId, int& nRow, int& nCol)
 {
-    auto panelId = ParenthesisItem::fromStableView(svPanelId);
+    auto panelId = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem::fromStableView(svPanelId);
     if (!svPanelId.empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
     {
         DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to retrieve grid panel: invalid panel definition '%1'").arg(viewToQString(svPanelId)));
@@ -3739,7 +3661,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             return defaultValue;
         if (sSource == SzPtrUtf8(ChartObjectSourceTypeStr_rowIndex))
             return defaultValue + 1;
-        const ParenthesisItem items(sSource);
+        const ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem items(sSource);
         if (items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnName))
         {
             DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unknown source type, got %2").arg(defEntry.index()).arg(viewToQString(items.key())));
