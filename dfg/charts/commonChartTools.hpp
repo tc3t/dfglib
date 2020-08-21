@@ -127,6 +127,9 @@ constexpr char ChartObjectPointStyleStr_basic[] = "basic";
 // line_colour
 constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
 
+// fill_colour
+constexpr char ChartObjectFieldIdStr_fillColour[] = "fill_colour";
+
 } // namespace fieldsIds
 
 // Enum-like class for defining chart data type and for related queries.
@@ -290,6 +293,7 @@ public:
 
     void setName(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setNameImpl(sv) : setNameImpl(sv); }
     void setLineColour(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setLineColourImpl(sv) : setLineColourImpl(sv); }
+    void setFillColour(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setFillColourImpl(sv) : setFillColourImpl(sv); }
 
 protected:
     ChartObject() {}
@@ -302,8 +306,9 @@ protected:
     }
 
 private:
-    virtual void setNameImpl(ChartObjectStringView) const {}
-    virtual void setLineColourImpl(ChartObjectStringView) const {}
+    virtual void setNameImpl(ChartObjectStringView) {}
+    virtual void setLineColourImpl(ChartObjectStringView) {}
+    virtual void setFillColourImpl(ChartObjectStringView) {}
 
     std::unique_ptr<ChartObject> m_spImplementation;
 }; // class ChartObject
@@ -617,6 +622,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
+            ChartObjectFieldIdStr_fillColour,
             ChartObjectFieldIdStr_dataSource
             });
     }
@@ -627,6 +633,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
+            ChartObjectFieldIdStr_fillColour,
             ChartObjectFieldIdStr_dataSource,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_ySource,
@@ -653,7 +660,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_autoAxisLabels,
             ChartObjectFieldIdStr_lineStyle,
             ChartObjectFieldIdStr_pointStyle,
-            ChartObjectFieldIdStr_lineColour
+            ChartObjectFieldIdStr_lineColour,
+            ChartObjectFieldIdStr_fillColour
             });
     }
     else

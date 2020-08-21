@@ -1181,11 +1181,13 @@ QString GraphDefinitionWidget::getGuideString()
             </ul>
         <li><i>x_source</i>: Defines column from which histogram is created, usage like described in xy-type. If omitted, uses first column.
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
+        <li><i>fill_colour</i>: sets bar fill colour, syntax details like for line_colour.</li>
         <li><i>bin_type</i>: {<b>number</b>, text}. Defines how input is interpreted; with 'text', there's one bar for each unique text and value is the number of it's occurrences.</li>
     </ul>
 <h2>Fields for type <i>bars</i></h2>
     <ul>
         <li><i>line_colour</i>: sets line colour, for details, see documentation in type <i>xy</i>.</li>
+        <li><i>fill_colour</i>: sets bar fill colour, syntax details like for line_colour.</li>
         <li><i>x_source</i>: defines column from which labels are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
         <li><i>y_source</i>: defines column from which values are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
         <li><i>merge_identical_labels</i>: {true, <b>false</b>}. If true, bars with identical labels are merged into one and bar length is the sum of lengths of merged bars.</li>
@@ -1205,6 +1207,7 @@ QString GraphDefinitionWidget::getGuideString()
         <li><i>line_style</i>: Sets global default for line_style, see line style documentation for details.</li>
         <li><i>point_style</i>: Sets global default for point_style, see point style documentation for details.</li>
         <li><i>line_colour</i>: Sets global default for line_colour, see line colour documentation for details.</li>
+        <li><i>fill_colour</i>: Sets global default for fill_colour, see fill colour documentation for details.</li>
         <li><b>Note:</b> Chart object properties affect only objects defined after the global_config entry.</li>
     </ul>
 )ENDTAG");
@@ -1341,31 +1344,49 @@ public:
     virtual ~ChartObjectQCustomPlot() override {}
 
 private:
-    void setNameImpl(const ChartObjectStringView s) const override
+    void setNameImpl(const ChartObjectStringView s) override
     {
         if (m_spPlottable)
             m_spPlottable->setName(viewToQString(s));
     }
 
-    void setLineColourImpl(ChartObjectStringView svLineColour) const override;
+    void setLineColourImpl(ChartObjectStringView svLineColour) override;
+
+    void setFillColourImpl(ChartObjectStringView svFillColour) override;
+
+    void setColourImpl(ChartObjectStringView svColour, std::function<void(QCPAbstractPlottable&, const QColor&)> setter);
 
     QPointer<QCPAbstractPlottable> m_spPlottable;
-};
+}; // class ChartObjectQCustomPlot
 
-void ChartObjectQCustomPlot::setLineColourImpl(ChartObjectStringView svLineColour) const
+void ChartObjectQCustomPlot::setColourImpl(ChartObjectStringView svColour, std::function<void(QCPAbstractPlottable&, const QColor&)> setter)
 {
-    if (!m_spPlottable || svLineColour.empty())
+    if (!m_spPlottable || svColour.empty())
         return;
-    const QString s = viewToQString(svLineColour);
+    const QString s = viewToQString(svColour);
     QColor color(s);
     if (color.isValid())
-    {
-        auto pen = m_spPlottable->pen();
-        pen.setColor(color);
-        m_spPlottable->setPen(pen);
-    }
+        setter(*m_spPlottable, color);
     else
-        DFG_QT_CHART_CONSOLE_WARNING(m_spPlottable->tr("Unable to parse colour with definition %1").arg(viewToQString(svLineColour)));
+        DFG_QT_CHART_CONSOLE_WARNING(m_spPlottable->tr("Unable to parse colour with definition %1").arg(s));
+}
+
+void ChartObjectQCustomPlot::setLineColourImpl(ChartObjectStringView svLineColour)
+{
+    setColourImpl(svLineColour, [](QCPAbstractPlottable& plottable, const QColor& color)
+    {
+        auto pen = plottable.pen();
+        pen.setColor(color);
+        plottable.setPen(pen);
+    });
+}
+
+void ChartObjectQCustomPlot::setFillColourImpl(ChartObjectStringView svFillColour)
+{
+    setColourImpl(svFillColour, [](QCPAbstractPlottable& plottable, const QColor& color)
+    {
+        plottable.setBrush(color);
+    });
 }
 
 class XySeriesQCustomPlot : public ::DFG_MODULE_NS(charts)::XySeries
@@ -3972,6 +3993,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProper
 {
     rObject.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, defaultNameCreator));
     rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_lineColour); }));
+    rObject.setFillColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_fillColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_fillColour); }));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry)
