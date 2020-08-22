@@ -672,6 +672,9 @@
     <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\charts\operations.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -774,6 +777,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dfgTestCont_tables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dfgTestCharts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -579,8 +579,9 @@ class TableSelectionCacheItem : public QObject
 public:
     using IndexT  = GraphDataSource::DataSourceIndex;
     using StringT = ::DFG_ROOT_NS::StringUtf8;
-    using RowToValueMap       = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double>;
-    using RowToStringMap      = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, StringT>;
+    using ValueVectorD        = ::DFG_MODULE_NS(charts)::ValueVectorD;
+    using RowToValueMap       = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double, ValueVectorD, ValueVectorD>;
+    using RowToStringMap      = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, StringT, ValueVectorD>;
     using ColumnToValuesMap   = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
     using ColumnToStringsMap  = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToStringMap>;
 

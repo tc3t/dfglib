@@ -21,6 +21,7 @@ set(SOURCE
     dfgTestAlg.cpp
     dfgTestBase.cpp
     dfgTestBits.cpp
+	dfgTestCharts.cpp
     dfgTestColour.cpp
     dfgTestCont.cpp
 	dfgTestCont_tables.cpp

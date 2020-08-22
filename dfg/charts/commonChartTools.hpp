@@ -12,6 +12,7 @@
 #include "../alg.hpp"
 #include "../io/BasicImStream.hpp"
 #include "../io/DelimitedTextReader.hpp"
+#include "../cont/valueArray.hpp"
 
 /*
 Terminology used in dfglib:
@@ -131,6 +132,9 @@ constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
 constexpr char ChartObjectFieldIdStr_fillColour[] = "fill_colour";
 
 } // namespace fieldsIds
+
+template <class T> using ValueVectorT = ::DFG_MODULE_NS(cont)::ValueVector<double>;
+using ValueVectorD = ValueVectorT<double>;
 
 // Enum-like class for defining chart data type and for related queries.
 class ChartDataType

@@ -516,6 +516,7 @@
     <ClInclude Include="..\dfg\build\utils.hpp" />
     <ClInclude Include="..\dfg\chartsAll.hpp" />
     <ClInclude Include="..\dfg\charts\commonChartTools.hpp" />
+    <ClInclude Include="..\dfg\charts\operations.hpp" />
     <ClInclude Include="..\dfg\colour.hpp" />
     <ClInclude Include="..\dfg\colour\defs.hpp" />
     <ClInclude Include="..\dfg\colour\specRendJw.hpp" />
@@ -747,6 +748,7 @@
     <ClCompile Include="dfgTestAlg.cpp" />
     <ClCompile Include="dfgTestBase.cpp" />
     <ClCompile Include="dfgTestBits.cpp" />
+    <ClCompile Include="dfgTestCharts.cpp" />
     <ClCompile Include="dfgTestColour.cpp" />
     <ClCompile Include="dfgTestCont.cpp" />
     <ClCompile Include="dfgTestContMapVectorPerformance.cpp" />
