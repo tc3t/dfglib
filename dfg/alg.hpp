@@ -252,7 +252,7 @@ Iter_T removeIf(Iter_T begin, Iter_T end, Pred_T p)
 template <class Cont_T, class FlagCont_T>
 void keepByFlags(Cont_T& cont, const FlagCont_T& flags)
 {
-    auto flagIter = cbegin(flags);
+    auto flagIter = ::DFG_ROOT_NS::cbegin(flags);
     auto iterValidEnd = removeIf(cont.begin(), cont.end(), [&](typename Cont_T::value_type&) -> bool
     {
         if (flagIter != flags.end())
