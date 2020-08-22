@@ -14,6 +14,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     {
     public:
         typedef std::vector<Value_T> BaseClass;
+        using BaseClass::BaseClass; // Inheriting constructor
         typedef typename BaseClass::iterator        iterator;
         typedef typename BaseClass::const_iterator  const_iterator;
         typedef typename BaseClass::value_type      value_type;

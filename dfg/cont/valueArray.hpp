@@ -21,6 +21,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 		DFG_BASE_CONSTRUCTOR_DELEGATE_1(DFG_CLASS_NAME(ValueArrayT), BaseClass) {}
 		DFG_BASE_CONSTRUCTOR_DELEGATE_2(DFG_CLASS_NAME(ValueArrayT), BaseClass) {}
 		DFG_BASE_CONSTRUCTOR_DELEGATE_3(DFG_CLASS_NAME(ValueArrayT), BaseClass) {}
+		using BaseClass::BaseClass; // Inheriting constructor
 
     private:
 		template <class Cont_T> static  bool emptyImpl(const Cont_T& cont)              { return cont.empty(); }
@@ -87,6 +88,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 		DFG_BASE_CONSTRUCTOR_DELEGATE_1(DFG_CLASS_NAME(ValueVector), BaseClass) {}
 		DFG_BASE_CONSTRUCTOR_DELEGATE_2(DFG_CLASS_NAME(ValueVector), BaseClass) {}
 		DFG_BASE_CONSTRUCTOR_DELEGATE_3(DFG_CLASS_NAME(ValueVector), BaseClass) {}
+		using BaseClass::BaseClass; // Inheriting constructor
 	};
 
 } } // module namespace

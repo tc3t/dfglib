@@ -172,6 +172,13 @@ TEST(dfgCont, ValueArray)
     DFG_CLASS_NAME(ValueVector)<double> valVector;
     DFG_CLASS_NAME(ValueArrayT)<std::valarray<double>> valArrayExplicit;
 
+    // Checking that ValueVector can be constructed from initializer list
+    // std::valarray -based ValueArray does not support it so there's no test for it.
+    {
+        ValueVector<double> vals = { 5.0, 6.0, 7.0 };
+        EXPECT_EQ(ValueVector<double>({ 5.0, 6.0, 7.0 }), vals);
+    }
+
     testValueArrayInterface(valArray);
     testValueArrayInterface(valVector);
     testValueArrayInterface(valArrayExplicit);
@@ -1451,15 +1458,23 @@ TEST(dfgCont, Vector)
 {
     using namespace DFG_MODULE_NS(cont);
 
-    DFG_CLASS_NAME(Vector)<int> v;
-    v.push_back(1);
-    auto v2(v);
-    auto v3(std::move(v));
-    decltype(v) v4;
-    v4 = std::move(v2);
-    EXPECT_TRUE(v.empty());
-    EXPECT_TRUE(v2.empty());
-    EXPECT_EQ(v3, v4);
+    {
+        DFG_CLASS_NAME(Vector) < int > v;
+        v.push_back(1);
+        auto v2(v);
+        auto v3(std::move(v));
+        decltype(v) v4;
+        v4 = std::move(v2);
+        EXPECT_TRUE(v.empty());
+        EXPECT_TRUE(v2.empty());
+        EXPECT_EQ(v3, v4);
+    }
+
+    // Checking that Vector can be constructed from initializer list
+    {
+        const Vector<int> v = { 1, 2, 3, 4 };
+        EXPECT_EQ(Vector<int>({1, 2, 3, 4}), v);
+    }
 }
 
 namespace
