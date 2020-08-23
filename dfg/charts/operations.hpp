@@ -349,21 +349,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         template <class Operation_T>
         bool add();
 
-        ChartEntryOperation createOperation(StringViewAscii);
+        ChartEntryOperation createOperation(StringViewUtf8);
 
         DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, CreatorFunc> m_knownOperations;
     };
-
-    inline auto ChartEntryOperationManager::createOperation(StringViewAscii svFuncAndParams) -> ChartEntryOperation
-    {
-        const StringViewUtf8 svUtf8(svFuncAndParams.begin(), svFuncAndParams.end());
-        auto item = ParenthesisItem::fromStableView(svUtf8);
-        auto iter = m_knownOperations.find(item.key());
-        if (iter != m_knownOperations.end())
-            return iter->second(item);
-        else // Case: no requested operation found.
-            return ChartEntryOperation();
-    }
 
     inline bool ChartEntryOperationManager::add(StringViewUtf8 svId, CreatorFunc creator)
     {
@@ -445,6 +434,23 @@ namespace operations
     }; // PassWindowOperation
 
 } // namespace operations
+
+inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAndParams) -> ChartEntryOperation
+{
+    auto item = ParenthesisItem::fromStableView(svFuncAndParams);
+    if (item.key().empty())
+        return ChartEntryOperation();
+    auto iter = m_knownOperations.find(item.key());
+    if (iter != m_knownOperations.end())
+        return iter->second(item);
+
+    // Wasn't found from map, checking build-in operations.
+    if (item.key() == operations::PassWindowOperation::id())
+        return operations::PassWindowOperation::create(item);
+
+    // No requested operation found.
+    return ChartEntryOperation();
+}
 
 
 }} // module namespace

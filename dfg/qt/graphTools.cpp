@@ -430,6 +430,7 @@ class GraphDefinitionEntry : public ::DFG_MODULE_NS(charts)::AbstractChartContro
 {
 public:
     using StringViewOrOwner = ::DFG_ROOT_NS::StringViewOrOwner<StringViewSzC, std::string>;
+    using Operation = ::DFG_MODULE_NS(charts)::ChartEntryOperation;
 
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
@@ -476,6 +477,8 @@ public:
 
     bool isType(FieldIdStrViewInputParam fieldId) const;
 
+    ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, Operation> m_operationMap;
+
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
 
@@ -508,6 +511,30 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
         DFG_ASSERT(!rv.m_items.isNull());
     }
     rv.m_nContainerIndex = nIndex;
+
+    // Reading operations
+    {
+        ::DFG_MODULE_NS(charts)::ChartEntryOperationManager manager;
+        rv.forEachPropertyId([&](const StringViewUtf8& svKey)
+        {
+            if (!::DFG_MODULE_NS(str)::beginsWith(svKey, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation))))
+                return;
+            const auto sOperationDef = rv.fieldValueStr(StringViewC(svKey.beginRaw(), svKey.endRaw()));
+            auto op = manager.createOperation(sOperationDef);
+            if (!op)
+            {
+                DFG_QT_CHART_CONSOLE_WARNING(QCoreApplication::tr("Unable to create '%1: %2'")
+                    .arg(viewToQString(svKey))
+                    .arg(viewToQString(sOperationDef)));
+            }
+            else
+            {
+                StringViewUtf8 svOperationOrderTag(SzPtrUtf8(svKey.beginRaw() + ::DFG_MODULE_NS(str)::strLen(ChartObjectFieldIdStr_operation)), SzPtrUtf8(svKey.endRaw()));
+                rv.m_operationMap[svOperationOrderTag.toString()] = std::move(op);
+            }
+        });
+    }
+
     return rv;
 }
 
@@ -1106,6 +1133,7 @@ QString GraphDefinitionWidget::getGuideString()
     <li>Histogram from source named 'table': {"type":"histogram","data_source":"table","name":"Basic histogram"}
     <li>Basic bar chart: {"type":"bars"}
     <li>Disabling an entry by commenting: #{"type":"histogram","name":"Basic histogram"}
+    <li>Filtering out points whose y value is not within [5, 10]: {"type":"xy","operation_a":"passWindow(y, 5, 10)"}
 </ul>
 
 <h2>Common fields</h2>
@@ -1172,6 +1200,7 @@ QString GraphDefinitionWidget::getGuideString()
                 <li><b>none</b> : No point indicator. Default value if field not present</li>
                 <li>basic: Basic indicator for every point</li>
             </ul>
+        <li>Operations, see Operations-section for details</li>
     </ul>
 <h2>Fields for type <i>histogram</i></h2>
     <ul>
@@ -1210,6 +1239,33 @@ QString GraphDefinitionWidget::getGuideString()
         <li><i>line_colour</i>: Sets global default for line_colour, see line colour documentation for details.</li>
         <li><i>fill_colour</i>: Sets global default for fill_colour, see fill colour documentation for details.</li>
         <li><b>Note:</b> Chart object properties affect only objects defined after the global_config entry.</li>
+    </ul>
+<h2>Operations</h2>
+    <ul>
+        <li>Provides a way to make tranforms to chart data (e.g. filtering).</li>
+        <li>Syntax</li>
+        <ul>
+            <li>Operations are defined with keys starting with <i>operation_</i>, for example operation_123</li>
+            <li>The part after "operation_" is order tag which defines order of operations</li>
+            <ul>
+                <li>For example { "operation_b":"someOp(1,1)", "operation_a":"anotherOp(1,2)" } defines two operations which are run in order anotherOp, someOp</li>
+                <li>Note that ordering is lexicographical (e.g. "operation_10" would be executed before "operation_9")
+            </ul>
+        </ul>
+        <li>Available operations</li>
+        <ul>
+            <li><i>passWindow</i></li>
+            <ul>
+                <li>Filters out points whose chosen coordinate value is out of range</li>
+                <li>Example: passWindow(y, 0, 10). Filters out points whose y-value is not within [0, 10]</li>
+                <li>Parameters</li>
+                <ul>
+                    <li>0: [x,y]: coordinate whose value is evaluated</li>
+                    <li>1: window lower bound (inclusive). Only plain values are supported (e.g. timestamps are not supported)
+                    <li>2: window upper bound (inclusive). Only plain values are supported (e.g. timestamps are not supported)
+                </ul>
+            </ul>
+        </ul>
     </ul>
 )ENDTAG");
 }
@@ -3803,7 +3859,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
-    DataSourceIndex nGraphSize = 0;
 
     using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
     IntervalSet xRows;
@@ -3824,7 +3879,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     const auto& yValueMap = *pYdata;
     auto xIter = xValueMap.cbegin();
     auto yIter = yValueMap.cbegin();
-    DataSourceIndex nActualSize = 0;
+    DataSourceIndex nSizeAfterRowFilter = 0;
     for (; xIter != xValueMap.cend() && yIter != yValueMap.cend();)
     {
         const auto xRow = xIter->first;
@@ -3848,21 +3903,30 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
             if (!::DFG_MODULE_NS(math)::isNan(x)) // Accepting point only if x is non-NaN
             {
-                xValueMap.m_keyStorage[nActualSize] = x;
-                xValueMap.m_valueStorage[nActualSize] = y;
+                xValueMap.m_keyStorage[nSizeAfterRowFilter] = x;
+                xValueMap.m_valueStorage[nSizeAfterRowFilter] = y;
                 minMaxX(x);
                 minMaxY(y);
-                nActualSize++;
+                nSizeAfterRowFilter++;
             }
         }
         ++xIter;
         ++yIter;
     }
-    const ptrdiff_t nSizeAsPtrdiff = static_cast<ptrdiff_t>(nActualSize);
-    rSeries.setValues(headRange(xValueMap.keyRange(), nSizeAsPtrdiff), headRange(xValueMap.valueRange(), nSizeAsPtrdiff));
-    nGraphSize = nActualSize;
 
-    rSeries.resize(nGraphSize); // Removing excess points (if any)
+    xValueMap.m_keyStorage.resize(nSizeAfterRowFilter);
+    xValueMap.m_valueStorage.resize(nSizeAfterRowFilter);
+
+    // Applying operations
+    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&xValueMap.m_keyStorage, &xValueMap.m_valueStorage);
+    for (const auto& kv : defEntry.m_operationMap)
+    {
+        auto opCopy = kv.second;
+        opCopy(operationData);
+    }
+
+    // Setting values to series.
+    rSeries.setValues(xValueMap.keyRange(), xValueMap.valueRange());
 
     // Setting line style
     {

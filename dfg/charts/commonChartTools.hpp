@@ -131,6 +131,9 @@ constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
 // fill_colour
 constexpr char ChartObjectFieldIdStr_fillColour[] = "fill_colour";
 
+// operation_
+constexpr char ChartObjectFieldIdStr_operation[] = "operation_";
+
 } // namespace fieldsIds
 
 template <class T> using ValueVectorT = ::DFG_MODULE_NS(cont)::ValueVector<double>;
@@ -578,7 +581,7 @@ public:
 
 namespace DFG_DETAIL_NS
 {
-    static inline void checkForUnrecongnizedProperties(const AbstractChartControlItem& controlItem, std::function<void(AbstractChartControlItem::StringView)> func, const std::array<const char*, 10> knownItems)
+    static inline void checkForUnrecongnizedProperties(const AbstractChartControlItem& controlItem, std::function<void(AbstractChartControlItem::StringView)> func, const std::array<const char*, 15> knownItems)
     {
         controlItem.forEachPropertyId([&](StringViewUtf8 sv)
         {
@@ -586,7 +589,10 @@ namespace DFG_DETAIL_NS
                 return;
             auto iter = std::find_if(knownItems.begin(), knownItems.end(), [&](const char* psz)
             {
-                return (psz && sv == SzPtrUtf8(psz));
+                if (!psz)
+                    return false;
+                return (sv == SzPtrUtf8(psz)
+                    || (StringViewC(ChartObjectFieldIdStr_operation) == psz && ::DFG_MODULE_NS(str)::beginsWith(sv, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation)))));
             });
             if (iter == knownItems.end())
                 func(sv);
@@ -612,7 +618,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
-            ChartObjectFieldIdStr_dataSource
+            ChartObjectFieldIdStr_dataSource,
+            ChartObjectFieldIdStr_operation
             });
     }
     else if (isType(ChartObjectChartTypeStr_histogram))
