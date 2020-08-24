@@ -319,6 +319,12 @@ public:
     {
     }
 
+    // Returns view as untyped.
+    StringView<CharT> asUntypedView() const
+    {
+        return StringView<CharT>(beginRaw(), endRaw());
+    }
+
     size_t length() const
     {
         return this->m_nSize;
@@ -393,7 +399,7 @@ public:
     // Conversion to untyped StringView.
     operator DFG_CLASS_NAME(StringView)<Char_T>() const
     {
-        return DFG_CLASS_NAME(StringView)<Char_T>(beginRaw(), this->m_nSize);
+        return asUntypedView();
     }
 
 }; // class StringView
@@ -439,6 +445,12 @@ public:
         m_nSize(nCount)
     {
         DFG_ASSERT_CORRECTNESS(toCharPtr_raw(m_psz)[nCount] == '\0');
+    }
+
+    // Returns view as untyped.
+    StringViewSz<CharT> asUntypedView() const
+    {
+        return StringViewSz<CharT>(dataRaw());
     }
 
     bool empty() const
@@ -548,7 +560,7 @@ public:
     // Conversion to untyped StringViewSz.
     operator DFG_CLASS_NAME(StringViewSz)<Char_T>() const
     {
-        return DFG_CLASS_NAME(StringViewSz)<Char_T>(toCharPtr_raw(m_psz));
+        return this->asUntypedView();
     }
 
     // Conversion to untyped StringView.

@@ -882,7 +882,7 @@ namespace
     {
         using namespace DFG_ROOT_NS;
         const Char_T szEmpty[] = { '\0' };
-        const Char_T sz[]  = { 'a', 'b', 'c', '\0' };
+        const Char_T sz[] = { 'a', 'b', 'c', '\0' };
         const Char_T sz2[] = { 'b', 'c', 'a', '\0' };
         const Str_T s(conv(sz));
 
@@ -908,15 +908,15 @@ namespace
             const auto sFromToString = view.toString();
             EXPECT_TRUE(sFromToString == view);
         }
-        
+
         EXPECT_TRUE(StringView_T(Str_T()) == StringView_T(Str_T()));
         if (bTestNonSzViews)
-        { 
+        {
             EXPECT_TRUE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 2));
             EXPECT_FALSE(StringView_T(conv(sz + 1), 2) == StringView_T(conv(sz2), 3));
             EXPECT_FALSE(StringView_T(conv(sz), 2) == StringView_T(conv(sz2), 2));
         }
-        
+
         EXPECT_TRUE(view == s);
         EXPECT_FALSE(view != s);
         EXPECT_TRUE(s == view);
@@ -945,6 +945,11 @@ namespace
         {
             EXPECT_EQ(toCharPtr_raw(view.begin()), view.beginRaw());
             EXPECT_EQ(toCharPtr_raw(view.end()), view.endRaw());
+        }
+
+        // Testing asUntypedView()
+        {
+            EXPECT_EQ(StringView<Char_T>(view.beginRaw(), view.endRaw()), view.asUntypedView());
         }
 
         //DFG_CLASS_NAME(StringViewUtf8)() == DFG_ASCII("a"); // TODO: make this work
