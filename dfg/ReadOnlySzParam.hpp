@@ -362,9 +362,14 @@ public:
         return saturateCast<int>(size());
     }
 
+    static constexpr bool isTriviallyIndexable()
+    {
+        return CharPtrTypeTraits<charPtrTypeByPtr<PtrT>()>::hasTrivialIndexing;
+    }
+
     // Returns sub string by start position and count. Available only for string types that have trivial indexing.
     template <class U = StringView>
-    EnableIfHelper<CharPtrTypeTraits<charPtrTypeByPtr<PtrT>()>::hasTrivialIndexing, U> substr_startCount(const size_t nStart, const size_t nCount) const
+    EnableIfHelper<isTriviallyIndexable(), U> substr_startCount(const size_t nStart, const size_t nCount) const
     {
         return DFG_DETAIL_NS::substr_startCount<StringView>(nStart, nCount, *this);
     }
@@ -475,6 +480,18 @@ public:
         DFG_ASSERT_CORRECTNESS(toCharPtr_raw(m_psz)[nCount] == '\0');
     }
 
+    static constexpr bool isTriviallyIndexable()
+    {
+        return StringViewT::isTriviallyIndexable();
+    }
+
+    // Note: returning StringViewT as substring can't be of type StringViewSz: only tail parts can be Sz-substrings (e.g. substring "a" from "abc" is not sz)
+    template <class U = StringViewT>
+    typename std::enable_if<isTriviallyIndexable(), U>::type substr_startCount(const size_t nStart, const size_t nCount) const
+    {
+        return toStringView().substr_startCount(nStart, nCount);
+    }
+
     // Returns view as untyped.
     StringViewSz<CharT> asUntypedView() const
     {
@@ -573,6 +590,7 @@ public:
     }
 
     StringViewT toStringView()                       { return StringViewT(m_psz, length()); }
+    StringViewT toStringView() const                 { return StringViewT(m_psz, lengthNonCaching()); }
     StringViewT toStringViewFromCachedSize() const   { return StringViewT(m_psz, m_nSize); }
 
     bool operator==(const Str_T& str)
