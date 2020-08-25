@@ -178,7 +178,7 @@ struct TypedCharPtrT
     template <CharPtrType U_T>
     typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, TypedCharPtrT>::type privOperatorPlus(const ptrdiff_t diff) const
     {
-        DFG_ASSERT(m_p != nullptr);
+        DFG_ASSERT(m_p != nullptr || diff == 0);
         return TypedCharPtrT(m_p + diff);
     }
 
@@ -208,7 +208,7 @@ struct TypedCharPtrT
     template <CharPtrType U_T>
     typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, ptrdiff_t>::type privOperatorMinusForPtrs(const TypedCharPtrT other) const
     {
-        DFG_ASSERT(m_p != nullptr && other.m_p != nullptr);
+        DFG_ASSERT((m_p != nullptr && other.m_p != nullptr) || (m_p == other.m_p));
         return m_p - other.m_p;
     }
 
@@ -242,7 +242,7 @@ struct SzPtrT : public TypedCharPtrT<Char_T, Type_T>
 
     // At moment with nothing but ASCII and it's supersets, everything can be constructed from CharPtrTypeAscii.
     template <class Char_T2>
-    SzPtrT(const SzPtrT<Char_T2, CharPtrTypeAscii>& other) : 
+    SzPtrT(const SzPtrT<Char_T2, CharPtrTypeAscii>& other) :
         BaseClass(other)
     {
     }
@@ -297,5 +297,17 @@ DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 3, "Missi
 #else
     #define DFG_U8_CHAR(x)    x
 #endif
+
+template <class Ptr_T> constexpr CharPtrType charPtrTypeByPtr();
+template <> constexpr CharPtrType charPtrTypeByPtr<char*>()               { return CharPtrTypeChar; }
+template <> constexpr CharPtrType charPtrTypeByPtr<const char*>()         { return CharPtrTypeChar; }
+template <> constexpr CharPtrType charPtrTypeByPtr<wchar_t*>()            { return CharPtrTypeChar; }
+template <> constexpr CharPtrType charPtrTypeByPtr<const wchar_t*>()      { return CharPtrTypeChar; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiR>()  { return CharPtrTypeAscii; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiW>()  { return CharPtrTypeAscii; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrLatin1R>() { return CharPtrTypeLatin1; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrLatin1W>() { return CharPtrTypeLatin1; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrUtf8R>()   { return CharPtrTypeUtf8; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrUtf8W>()   { return CharPtrTypeUtf8; }
 
 } // root namespace

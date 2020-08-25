@@ -849,8 +849,8 @@ TEST(dfgStr, String)
 
 namespace
 {
-    template <class StringView_T>
-    void TestStringViewIndexAccess(StringView_T sv, std::true_type)
+    template <class StringView_T, class RawToTypedConv_T>
+    void TestStringViewIndexAccess(StringView_T sv, RawToTypedConv_T conv, std::true_type)
     {
         // Note: Code below expects sv == "abc".
         typedef decltype(sv.front()) CodePointT;
@@ -859,6 +859,35 @@ namespace
         EXPECT_EQ(CodePointT('a'), sv.front());
         EXPECT_EQ(CodePointT('a'), sv[0]);
         EXPECT_EQ(CodePointT('c'), sv.back());
+
+        // substr tests
+        {
+            using CharT = typename StringView_T::CharT;
+            CharT szBufA[] = { 'a', '\0' };
+            CharT szBufAb[] = { 'a', 'b', '\0' };
+            CharT szBufAbc[] = { 'a', 'b', 'c', '\0' };
+            CharT szBufB[] = { 'b', '\0' };
+            CharT szBufBc[] = { 'b', 'c', '\0' };
+            CharT szBufC[] = { 'c', '\0' };
+            CharT szBufEmpty[] = { '\0' };
+
+            EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(0, 0));
+            EXPECT_EQ(conv(szBufA), sv.substr_startCount(0, 1));
+            EXPECT_EQ(conv(szBufAb), sv.substr_startCount(0, 2));
+            EXPECT_EQ(conv(szBufAbc), sv.substr_startCount(0, 3));
+            EXPECT_EQ(conv(szBufAbc), sv.substr_startCount(0, 78954));
+            EXPECT_EQ(conv(szBufB), sv.substr_startCount(1, 1));
+            EXPECT_EQ(conv(szBufBc), sv.substr_startCount(1, 2));
+            EXPECT_EQ(conv(szBufC), sv.substr_startCount(2, 1));
+            EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(1, 0));
+            EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(2, 0));
+            EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(5, 0));
+            EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(5, 10));
+
+            // Testing that empty view doesn't cause problems.
+            StringView_T().substr_startCount(0, 0); 
+            StringView_T().substr_startCount(0, 10000);
+        }
 
         sv.pop_front();
         sv.pop_back();
@@ -871,8 +900,8 @@ namespace
         EXPECT_TRUE(sv.empty());
     }
 
-    template <class StringView_T>
-    void TestStringViewIndexAccess(const StringView_T&, std::false_type)
+    template <class StringView_T, class RawToTypedConv_T>
+    void TestStringViewIndexAccess(const StringView_T&, RawToTypedConv_T, std::false_type)
     {
         // Nothing to do here.
     }
@@ -954,7 +983,7 @@ namespace
 
         //DFG_CLASS_NAME(StringViewUtf8)() == DFG_ASCII("a"); // TODO: make this work
 
-        TestStringViewIndexAccess(view, std::integral_constant<bool, TestIndexAccess>());
+        TestStringViewIndexAccess(view, conv, std::integral_constant<bool, TestIndexAccess>());
     }
 
 }

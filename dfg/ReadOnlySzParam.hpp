@@ -271,6 +271,21 @@ namespace DFG_DETAIL_NS
     template <> struct StringViewBase<DFG_CLASS_NAME(StringUtf8)>      { typedef StringViewDefaultBase<decltype(toCharPtr(DFG_CLASS_NAME(StringUtf8)().c_str()))> type; };
     DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 3, "Is a typed string view missing?");
 
+    template <class View_T, class Str_T>
+    View_T substr_startCount(size_t nStart, size_t nCount, const Str_T& str)
+    {
+        const auto iterBegin = str.begin();
+        const auto iterEnd = str.end();
+        //const auto nSize = static_cast<size_t>(std::distance(iterBegin, iterEnd));
+        const auto nSize = static_cast<size_t>(iterEnd - iterBegin);
+        if (nStart > nSize)
+            nStart = nSize;
+        if (nCount > nSize - nStart)
+            nCount = nSize - nStart;
+        const auto iterSubStart = iterBegin + nStart;
+        return View_T(iterSubStart, iterSubStart + nCount);
+    }
+
 } // namespace DFG_DETAIL_NS
 
 // Note: Unlike ReadOnlySzParam, the string view stored here can't guarantee access to null terminated string.
@@ -288,6 +303,12 @@ public:
     
     typedef PtrT const_iterator;
 
+private:
+    // Idea from https://stackoverflow.com/a/26118336
+    template <bool Cond_T, class U>
+    using EnableIfHelper = typename std::enable_if<Cond_T, U>::type;
+
+public:
     DFG_CLASS_NAME(StringView)()
     {
     }
@@ -339,6 +360,13 @@ public:
     int sizeAsInt() const
     {
         return saturateCast<int>(size());
+    }
+
+    // Returns sub string by start position and count. Available only for string types that have trivial indexing.
+    template <class U = StringView>
+    EnableIfHelper<CharPtrTypeTraits<charPtrTypeByPtr<PtrT>()>::hasTrivialIndexing, U> substr_startCount(const size_t nStart, const size_t nCount) const
+    {
+        return DFG_DETAIL_NS::substr_startCount<StringView>(nStart, nCount, *this);
     }
 
     PtrRawT dataRaw() const
