@@ -303,11 +303,6 @@ public:
     
     typedef PtrT const_iterator;
 
-private:
-    // Idea from https://stackoverflow.com/a/26118336
-    template <bool Cond_T, class U>
-    using EnableIfHelper = typename std::enable_if<Cond_T, U>::type;
-
 public:
     DFG_CLASS_NAME(StringView)()
     {
@@ -368,9 +363,9 @@ public:
     }
 
     // Returns sub string by start position and count. Available only for string types that have trivial indexing.
-    template <class U = StringView>
-    EnableIfHelper<isTriviallyIndexable(), U> substr_startCount(const size_t nStart, const size_t nCount) const
+    StringView substr_startCount(const size_t nStart, const size_t nCount) const
     {
+        DFG_STATIC_ASSERT(isTriviallyIndexable(), "substr_startCount() is available only for string types that have trivial indexing. Possible workaround: asUntypedView().substr_startCount()");
         return DFG_DETAIL_NS::substr_startCount<StringView>(nStart, nCount, *this);
     }
 
@@ -486,8 +481,7 @@ public:
     }
 
     // Note: returning StringViewT as substring can't be of type StringViewSz: only tail parts can be Sz-substrings (e.g. substring "a" from "abc" is not sz)
-    template <class U = StringViewT>
-    typename std::enable_if<isTriviallyIndexable(), U>::type substr_startCount(const size_t nStart, const size_t nCount) const
+    StringViewT substr_startCount(const size_t nStart, const size_t nCount) const
     {
         return toStringView().substr_startCount(nStart, nCount);
     }
