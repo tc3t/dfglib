@@ -597,6 +597,13 @@ public:
         return (isLengthCalculated()) ? toStringViewFromCachedSize() == tpsz : DFG_MODULE_NS(str)::strCmp(m_psz, tpsz) == 0;
     }
 
+    auto operator[](const size_t n) const -> const decltype(*PtrT(nullptr))
+    {
+        DFG_STATIC_ASSERT(isTriviallyIndexable(), "operator[] is available only for string types that have trivial indexing. Possible workaround: asUntypedView().operator[]");
+        DFG_ASSERT_UB(n < this->lengthNonCaching());
+        return *(begin() + n);
+    }
+
     // Conversion to untyped StringViewSz.
     operator DFG_CLASS_NAME(StringViewSz)<Char_T>() const
     {
@@ -799,7 +806,7 @@ private:
     {}
 
     Owned_T m_owned;
-};
+}; // StringViewOrOwner
 
 
 

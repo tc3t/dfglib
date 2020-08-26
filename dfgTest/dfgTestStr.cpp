@@ -882,6 +882,25 @@ namespace
     }
 
     template <class StringView_T, class RawToTypedConv_T>
+    void TestIndexOperator(RawToTypedConv_T conv, std::true_type)
+    {
+        using CodePointT = typename std::remove_reference<decltype(*typename StringView_T::PtrT(nullptr))>::type;
+        using CharT = typename StringView_T::CharT;
+        const CharT sz[] = { CharT('a'), CharT('b'), CharT('c'), CharT('\0') };
+        StringView_T sv(conv(sz));
+
+        ASSERT_EQ(3, sv.size());
+        EXPECT_EQ(CodePointT('a'), sv[0]);
+        EXPECT_EQ(CodePointT('b'), sv[1]);
+        EXPECT_EQ(CodePointT('c'), sv[2]);
+    }
+
+    template <class StringView_T, class RawToTypedConv_T>
+    void TestIndexOperator(RawToTypedConv_T, std::false_type)
+    {
+    }
+
+    template <class StringView_T, class RawToTypedConv_T>
     void TestStringViewIndexAccess(StringView_T sv, RawToTypedConv_T conv, std::true_type)
     {
         // Note: Code below expects sv == "abc".
@@ -991,7 +1010,9 @@ namespace
 
         //DFG_CLASS_NAME(StringViewUtf8)() == DFG_ASCII("a"); // TODO: make this work
 
-        TestStringViewSubStr(view, conv, std::integral_constant<bool, StringView_T::isTriviallyIndexable()>());
+        const auto isTriviallyIndexable = std::integral_constant<bool, StringView_T::isTriviallyIndexable()>();
+        TestStringViewSubStr(view, conv, isTriviallyIndexable);
+        TestIndexOperator<StringView_T>(conv, isTriviallyIndexable);
         TestStringViewIndexAccess(view, conv, std::integral_constant<bool, TestIndexAccess>());
     }
 
