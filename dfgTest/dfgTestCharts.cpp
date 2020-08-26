@@ -144,11 +144,31 @@ TEST(dfgCharts, operations)
 
 TEST(dfgCharts, operations_passWindow)
 {
+    using namespace ::DFG_ROOT_NS;
     using namespace ::DFG_MODULE_NS(alg);
     using namespace ::DFG_MODULE_NS(charts);
     using namespace ::DFG_MODULE_NS(cont);
+    using namespace ::DFG_MODULE_NS(str);
+
+    const auto testDateToDouble = [](const StringViewC& sv)
+    {
+        const int y = strTo<unsigned int>(sv.substr_startCount(0, 4));
+        const int m = strTo<unsigned int>(sv.substr_startCount(5, 2));
+        const int d = strTo<unsigned int>(sv.substr_startCount(8, 2));
+        return static_cast<double>((y << 16) + (m << 8) + d);
+    };
+
+    const auto stringToDoubleConverter = [&](const StringViewSzUtf8 svUtf8)
+    {
+        auto sv = svUtf8.asUntypedView();
+        if (sv.size() == 10 && sv[4] == '-')
+            return testDateToDouble(sv);
+        else
+            return strTo<double>(sv);
+    };
 
     ChartEntryOperationManager opManager;
+    opManager.setStringToDoubleConverter(stringToDoubleConverter);
     opManager.add<operations::PassWindowOperation>();
 
     // Basic x-axis passwindow
@@ -180,6 +200,19 @@ TEST(dfgCharts, operations_passWindow)
         operations.front()(arg);
         EXPECT_EQ(ValueVectorD({ 0, 3, 4 }), valsX);
         EXPECT_EQ(ValueVectorD({ 8, 5, 7 }), valsY);
+    }
+
+    // Custom string-to-double parser
+    {
+        Vector<ChartEntryOperation> operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("passWindow(y, 2020-08-25, 2020-08-27)")));
+        ValueVectorD valsY = { testDateToDouble("2020-08-24"), testDateToDouble("2020-08-25"), testDateToDouble("2020-08-26"), testDateToDouble("2020-08-28") };
+        ValueVectorD valsX(valsY.size());
+        generateAdjacent(valsX, 0, 1);
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.front()(arg);
+        EXPECT_EQ(ValueVectorD({ 1, 2 }), valsX);
+        EXPECT_EQ(ValueVectorD({ testDateToDouble("2020-08-25"), testDateToDouble("2020-08-26") }), valsY);
     }
 
     // Missing input

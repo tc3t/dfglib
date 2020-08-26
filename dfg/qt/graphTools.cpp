@@ -314,12 +314,19 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const StringViewSzC&
         return std::numeric_limits<double>::quiet_NaN();
 }
 
+double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringViewSzUtf8& sv)
+{
+    return cellStringToDouble(sv, GraphDataSource::invalidIndex(), nullptr);
+}
+
 // Return value in case of invalid input as GIGO, in most cases returns NaN. Also in case of invalid input typeMap's value at nCol is unspecified.
-double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringViewSzUtf8& svUtf8, const DataSourceIndex nCol, ColumnDataTypeMap& typeMap)
+double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringViewSzUtf8& svUtf8, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap)
 {
     const auto updateColumnDataType = [&](ChartDataType t)
     {
-        auto insertRv = typeMap.insert(nCol, t);
+        if (!pTypeMap)
+            return;
+        auto insertRv = pTypeMap->insert(nCol, t);
         if (!insertRv.second) // Already existed?
             insertRv.first->second.setIfExpands(t);
     };
@@ -515,6 +522,7 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
     // Reading operations
     {
         ::DFG_MODULE_NS(charts)::ChartEntryOperationManager manager;
+        manager.setStringToDoubleConverter([](const StringViewSzUtf8 sv) { return GraphDataSource::cellStringToDouble(sv, 0, nullptr); });
         rv.forEachPropertyId([&](const StringViewUtf8& svKey)
         {
             if (!::DFG_MODULE_NS(str)::beginsWith(svKey, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation))))
@@ -1258,11 +1266,12 @@ QString GraphDefinitionWidget::getGuideString()
             <ul>
                 <li>Filters out points whose chosen coordinate value is out of range</li>
                 <li>Example: passWindow(y, 0, 10). Filters out points whose y-value is not within [0, 10]</li>
+                <li>Example: passWindow(x, 2020-08-26 12:00:00, 2020-08-26 14:00:00). Filters out points whose x-value is not within [2020-08-26 12:00:00, 2020-08-26 14:00:00]</li>
                 <li>Parameters</li>
                 <ul>
                     <li>0: [x,y]: coordinate whose value is evaluated</li>
-                    <li>1: window lower bound (inclusive). Only plain values are supported (e.g. timestamps are not supported)
-                    <li>2: window upper bound (inclusive). Only plain values are supported (e.g. timestamps are not supported)
+                    <li>1: window lower bound (inclusive).
+                    <li>2: window upper bound (inclusive).
                 </ul>
             </ul>
         </ul>
@@ -3750,11 +3759,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unexpected value count for %2: expected 1, got %3").arg(defEntry.index()).arg(ChartObjectSourceTypeStr_columnName).arg(items.valueCount()));
             return GraphDataSource::invalidIndex();
         }
-        const auto sColumnName = items.value(0);
-        const auto columnIndex = dataSource.columnIndexByName(sColumnName);
+        const auto svColumnName = items.value(0).toStringView();
+        const auto columnIndex = dataSource.columnIndexByName(svColumnName);
         if (columnIndex == dataSource.invalidIndex())
         {
-            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(sColumnName)));
+            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(svColumnName)));
             return GraphDataSource::invalidIndex();
         }
         return columnIndex;

@@ -162,12 +162,34 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         std::copy(refs.begin(), refs.begin() + m_vectorRefs.size(), m_vectorRefs.begin());
     }
 
+    class CreateOperationArgs : public ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem
+    {
+    public:
+        using BaseClass = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
+        using StringToDoubleConverter = std::function<double(const StringViewSzUtf8&)>;
+        
+
+        CreateOperationArgs() = default;
+
+        CreateOperationArgs(const BaseClass& other) : BaseClass(other) {  }
+        CreateOperationArgs(BaseClass&& other)      : BaseClass(std::move(other)) {  }
+
+        template <class T>
+        T valueAs(const size_t nIndex) const
+        {
+            return (m_stringToDoubleConverter) ? m_stringToDoubleConverter(value(nIndex)) : ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex));
+        }
+
+        StringToDoubleConverter m_stringToDoubleConverter;
+    };
+
     // Operation object. Operations are defined by creating object of this type and passing callable to constructor.
     class ChartEntryOperation
     {
     public:
-        using CreationArgList   = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
+        using CreationArgList   = CreateOperationArgs;
         using StringView        = CreationArgList::StringView;
+        using StringViewSz      = CreationArgList::StringViewSz;
         using DefinitionArgList = std::vector<double>;
         static void defaultCall(ChartEntryOperation&, ChartOperationPipeData&);
         using OperationCall     = decltype(ChartEntryOperation::defaultCall);
@@ -215,7 +237,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         void forEachVector(ChartOperationPipeData& arg, Func_T&& func);
 
         // Helper that converts axis string representation to axis index.
-        static double axisStrToIndex(const StringView& sv);
+        static double axisStrToIndex(const StringViewSz& sv);
 
         // Filters all pipe data vectors by keep flags created by input vector 'axis' and keep predicate 'keepPred'.
         // Concrete example: filters x,y vectors by pass window applied to x-axis, where 'keepPred' is called for
@@ -316,7 +338,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         m_pCall(*this, arg);
     }
 
-    inline double ChartEntryOperation::axisStrToIndex(const StringView & sv)
+    inline double ChartEntryOperation::axisStrToIndex(const StringViewSz& sv)
     {
         if (sv == DFG_UTF8("x"))
             return axisIndex_x;
@@ -351,7 +373,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
         ChartEntryOperation createOperation(StringViewUtf8);
 
+        void setStringToDoubleConverter(CreationArgList::StringToDoubleConverter converter);
+
         DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, CreatorFunc> m_knownOperations;
+        CreationArgList::StringToDoubleConverter m_stringToDoubleConverter;
     };
 
     inline bool ChartEntryOperationManager::add(StringViewUtf8 svId, CreatorFunc creator)
@@ -399,7 +424,7 @@ namespace operations
         }
 
         // Returns PassWindowOperation or invalid operation eg. if arguments are invalid.
-        static ChartEntryOperation create(const CreationArgList& argList)
+        static ChartEntryOperation create(const CreateOperationArgs& argList)
         {
             if (argList.valueCount() != 3)
                 return privInvalidCreationArgsResult();
@@ -407,6 +432,7 @@ namespace operations
             if (axis == axisIndex_invalid)
                 return privInvalidCreationArgsResult();
             ChartEntryOperation op(&PassWindowOperation::operation);
+
             op.m_argList.resize(3);
             op.m_argList[0] = axis;
             op.m_argList[1] = argList.valueAs<double>(1);
@@ -437,20 +463,25 @@ namespace operations
 
 inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAndParams) -> ChartEntryOperation
 {
-    auto item = ParenthesisItem::fromStableView(svFuncAndParams);
-    if (item.key().empty())
+    CreateOperationArgs args = ParenthesisItem::fromStableView(svFuncAndParams);
+    if (args.key().empty())
         return ChartEntryOperation();
-    auto iter = m_knownOperations.find(item.key());
+    args.m_stringToDoubleConverter = m_stringToDoubleConverter;
+    auto iter = m_knownOperations.find(args.key());
     if (iter != m_knownOperations.end())
-        return iter->second(item);
+        return iter->second(args);
 
     // Wasn't found from map, checking build-in operations.
-    if (item.key() == operations::PassWindowOperation::id())
-        return operations::PassWindowOperation::create(item);
+    if (args.key() == operations::PassWindowOperation::id())
+        return operations::PassWindowOperation::create(args);
 
     // No requested operation found.
     return ChartEntryOperation();
 }
 
+inline void ChartEntryOperationManager::setStringToDoubleConverter(CreationArgList::StringToDoubleConverter converter)
+{
+    m_stringToDoubleConverter = converter;
+}
 
 }} // module namespace

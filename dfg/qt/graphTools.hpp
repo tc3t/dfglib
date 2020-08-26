@@ -214,7 +214,8 @@ public:
     static double timeToDouble(const QTime& t);
     static double stringToDouble(const QString& s);
     static double stringToDouble(const StringViewSzC& sv);
-    static double cellStringToDouble(const StringViewSzUtf8& sv, const DataSourceIndex nCol, ColumnDataTypeMap& typeMap);
+    static double cellStringToDouble(const StringViewSzUtf8& sv);
+    static double cellStringToDouble(const StringViewSzUtf8& sv, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap);
 
 signals:
     void sigChanged(); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.

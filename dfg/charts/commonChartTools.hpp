@@ -692,6 +692,7 @@ namespace DFG_DETAIL_NS
     public:
         using StringT = StringUtf8;
         using StringView = StringViewUtf8;
+        using StringViewSz = StringViewSzUtf8;
 
         // Given string must accessible for the lifetime of 'this'
         ParenthesisItem(const StringT& sv);
@@ -710,9 +711,9 @@ namespace DFG_DETAIL_NS
             return ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex));
         }
 
-        StringView value(const size_t nIndex) const
+        StringViewSz value(const size_t nIndex) const
         {
-            return (isValidIndex(m_values, nIndex)) ? m_values[nIndex] : StringView();
+            return (isValidIndex(m_values, nIndex)) ? m_values[nIndex] : StringViewSz(DFG_UTF8(""));
         }
 
     private:

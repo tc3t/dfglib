@@ -681,7 +681,7 @@ namespace
         using namespace  ::DFG_MODULE_NS(qt);
         using ColumnDataTypeMap = ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap;
         ColumnDataTypeMap columnDataTypes;
-        EXPECT_EQ(baseValue + offsetFromBase, GraphDataSource::cellStringToDouble(SzPtrUtf8(pszDateString), 1, columnDataTypes));
+        EXPECT_EQ(baseValue + offsetFromBase, GraphDataSource::cellStringToDouble(SzPtrUtf8(pszDateString), 1, &columnDataTypes));
         EXPECT_TRUE(columnDataTypes.size() == 1 && columnDataTypes.frontKey() == 1 && columnDataTypes.frontValue() == dataType);
     }
 
@@ -691,7 +691,7 @@ namespace
         using namespace  ::DFG_MODULE_NS(qt);
         using ColumnDataTypeMap = ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap;
         ColumnDataTypeMap columnDataTypes;
-        EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(GraphDataSource::cellStringToDouble(SzPtrUtf8(pszDateString), 1, columnDataTypes)));
+        EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(GraphDataSource::cellStringToDouble(SzPtrUtf8(pszDateString), 1, &columnDataTypes)));
     }
 }
 
