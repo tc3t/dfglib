@@ -76,7 +76,33 @@ namespace
 
         arg.setDataRefs(ChartOperationPipeData::DataVectorRef(pValues0), ChartOperationPipeData::DataVectorRef(pValues1));
     }
-}
+
+    // Transforms [x], [y] -> [x], [x+y]
+    void operation_yToXplusY(::DFG_MODULE_NS(charts)::ChartEntryOperation& op, ::DFG_MODULE_NS(charts)::ChartOperationPipeData& arg)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(charts);
+        if (arg.vectorCount() != 2)
+        {
+            op.setError(ChartEntryOperation::error_unexpectedInputVectorCount);
+            return;
+        }
+        auto pXvals = arg.constValuesByIndex(0);
+        auto pYvals = arg.valuesByIndex(1);
+        if (!pXvals || !pYvals)
+        {
+            op.setError(ChartEntryOperation::error_missingInput);
+            return;
+        }
+        if (pXvals->size() != pYvals->size())
+        {
+            op.setError(ChartEntryOperation::error_pipeDataVectorSizeMismatch);
+            return;
+        }
+        // [y] -> [x + y]
+        std::transform(pXvals->cbegin(), pXvals->cend(), pYvals->begin(), pYvals->begin(), [](const double d0, const double d1) { return d0 + d1; });
+    }
+} // unnamed namespace
 
 
 TEST(dfgCharts, operations)
@@ -139,6 +165,22 @@ TEST(dfgCharts, operations)
         ASSERT_NE(nullptr, pipeArg.valuesByIndex(1));
         EXPECT_EQ(yOrig, *pipeArg.valuesByIndex(0));
         EXPECT_EQ(xySum, *pipeArg.valuesByIndex(1));
+    }
+
+    // Testing read only input
+    {
+        const ValueVectorD x = { 1, 2, 3 };
+        const ValueVectorD y = { 4, 5, 6 };
+        ChartEntryOperation op(&operation_yToXplusY);
+        ChartOperationPipeData pipeArg(&x, &y);
+        op(pipeArg);
+        EXPECT_FALSE(op.hasErrors());
+        ASSERT_NE(nullptr, pipeArg.constValuesByIndex(0));
+        ASSERT_NE(nullptr, pipeArg.constValuesByIndex(1));
+        EXPECT_EQ(ValueVectorD({ 1, 2, 3 }), *pipeArg.constValuesByIndex(0));
+        EXPECT_EQ(&x, pipeArg.constValuesByIndex(0)); // To test that operation didn't make copies of const input that didn't need to be modified.
+        EXPECT_EQ(ValueVectorD({ 5, 7, 9 }), *pipeArg.constValuesByIndex(1));
+        EXPECT_NE(&y, pipeArg.constValuesByIndex(1)); // To test that operation made copy of const input which needed editing.
     }
 }
 
@@ -213,6 +255,52 @@ TEST(dfgCharts, operations_passWindow)
         operations.front()(arg);
         EXPECT_EQ(ValueVectorD({ 1, 2 }), valsX);
         EXPECT_EQ(ValueVectorD({ testDateToDouble("2020-08-25"), testDateToDouble("2020-08-26") }), valsY);
+    }
+
+    // [Const double], [const double] input
+    {
+        auto op = opManager.createOperation(DFG_ASCII("passWindow(x, 1.5, 2.5)"));
+        const ValueVectorD x = { 1, 2, 3 };
+        const ValueVectorD y = { 4, 5, 6 };
+        ChartOperationPipeData pipeArg(&x, &y);
+        op(pipeArg);
+        EXPECT_FALSE(op.hasErrors());
+        ASSERT_NE(nullptr, pipeArg.constValuesByIndex(0));
+        ASSERT_NE(nullptr, pipeArg.constValuesByIndex(1));
+        EXPECT_EQ(ValueVectorD({ 2 }), *pipeArg.constValuesByIndex(0));
+        EXPECT_EQ(ValueVectorD({ 5 }), *pipeArg.constValuesByIndex(1));
+    }
+
+    // [Const string], [const double] input
+    {
+        auto op = opManager.createOperation(DFG_ASCII("passWindow(y, 1.5, 2.5)"));
+        using StringVector = ChartOperationPipeData::StringVector;
+        const StringVector x = { StringUtf8(DFG_UTF8("a")), StringUtf8(DFG_UTF8("b")), StringUtf8(DFG_UTF8("c")) };
+        const ValueVectorD y = { 1, 2, 3 };
+        ChartOperationPipeData pipeArg(&x, &y);
+        op(pipeArg);
+        EXPECT_FALSE(op.hasErrors());
+        ASSERT_NE(nullptr, pipeArg.constStringsByIndex(0));
+        ASSERT_NE(nullptr, pipeArg.constValuesByIndex(1));
+        EXPECT_EQ(StringVector({ StringUtf8(DFG_UTF8("b")) }), *pipeArg.constStringsByIndex(0));
+        EXPECT_EQ(ValueVectorD({ 2 }), *pipeArg.constValuesByIndex(1));
+    }
+
+    // [string], [double] input
+    {
+        auto op = opManager.createOperation(DFG_ASCII("passWindow(y, 1.5, 2.5)"));
+        using StringVector = ChartOperationPipeData::StringVector;
+        StringVector x = { StringUtf8(DFG_UTF8("a")), StringUtf8(DFG_UTF8("b")), StringUtf8(DFG_UTF8("c")) };
+        ValueVectorD y = { 1, 2, 3 };
+        ChartOperationPipeData pipeArg(&x, &y);
+        op(pipeArg);
+        EXPECT_FALSE(op.hasErrors());
+        ASSERT_NE(nullptr, pipeArg.constStringsByIndex(0));
+        ASSERT_NE(nullptr, pipeArg.constValuesByIndex(1));
+        EXPECT_EQ(StringVector({ StringUtf8(DFG_UTF8("b")) }), *pipeArg.constStringsByIndex(0));
+        EXPECT_EQ(ValueVectorD({ 2 }), *pipeArg.constValuesByIndex(1));
+        EXPECT_EQ(&x, pipeArg.constStringsByIndex(0));
+        EXPECT_EQ(&y, pipeArg.constValuesByIndex(1));
     }
 
     // Missing input

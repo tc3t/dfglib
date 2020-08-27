@@ -1,5 +1,6 @@
 #include "../dfgDefs.hpp"
 #include "../cont/MapVector.hpp"
+#include "../cont/Vector.hpp"
 #include "../SzPtrTypes.hpp"
 #include "../str/string.hpp"
 #include "commonChartTools.hpp"
@@ -18,33 +19,50 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     class ChartOperationPipeData
     {
     public:
-        using StringVector = std::vector<StringUtf8>;
+        using StringVector = ::DFG_MODULE_NS(cont)::Vector<StringUtf8>;
 
         // Variant-like wrapper for vector data.
         class DataVectorRef
         {
         public:
+
+            DataVectorRef(std::nullptr_t)
+            {}
+
             DataVectorRef(ValueVectorD* p = nullptr) :
                 m_pValueVector(p)
             {}
+
+            DataVectorRef(const ValueVectorD* p) :
+                m_pConstValueVector(p)
+            {}
+
             DataVectorRef(StringVector* p) :
                 m_pStringVector(p)
             {}
 
+            DataVectorRef(const StringVector* p) :
+                m_pConstStringVector(p)
+            {}
+
             bool isNull() const
             {
-                return m_pValueVector == nullptr && m_pStringVector == nullptr;
+                return m_pValueVector == nullptr && m_pStringVector == nullptr && m_pConstValueVector == nullptr && m_pConstStringVector == nullptr;
             }
 
-            ValueVectorD* values() { return m_pValueVector; }
-            StringVector* strings() { return m_pStringVector; }
+                  ValueVectorD* values()             { return m_pValueVector; }
+            const ValueVectorD* constValues() const  { return (m_pConstValueVector) ? m_pConstValueVector : m_pValueVector; }
+                  StringVector* strings()            { return m_pStringVector; }
+            const StringVector* constStrings() const { return (m_pConstStringVector) ? m_pConstStringVector : m_pStringVector; }
 
-            ValueVectorD* m_pValueVector  = nullptr;
-            StringVector* m_pStringVector = nullptr;
+                  ValueVectorD* m_pValueVector       = nullptr;
+            const ValueVectorD* m_pConstValueVector  = nullptr;
+                  StringVector* m_pStringVector      = nullptr;
+            const StringVector* m_pConstStringVector = nullptr;
         };
 
-
-        ChartOperationPipeData(ValueVectorD* pXvals, ValueVectorD* pYvals);
+        template <class X_T, class Y_T>
+        ChartOperationPipeData(X_T&& xvals, Y_T&& yvals);
 
         // Creates internal string vectors.
         void createStringVectors(size_t nCount, size_t nVectorSize);
@@ -62,14 +80,28 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Sets internal string vectors as active data.
         void setStringVectorsAsData();
 
+        //template <class Return_T, class ModAccess_T, class ConstAccess_T, class EditableAccess_T>
+        //Return_T privItemsByIndex(size_t n, ModAccess_T&& modAccess, ConstAccess_T&& constAccess, EditableAccess_T&& editableAccess);
+
+        template <class Return_T, class ModAccess_T, class ConstAccess_T, class EditableAccess_T>
+        Return_T privItemsByDataVectorRef(DataVectorRef& ref, ModAccess_T&& modAccess, ConstAccess_T&& constAccess, EditableAccess_T&& editableAccess);
+
         // Returns i'th vector as ValueVectorD if i'th vector exists and is of value type.
         ValueVectorD* valuesByIndex(size_t n);
+        ValueVectorD* valuesByRef(DataVectorRef& ref);
+        // Returns i'th vector as const ValueVectorD if i'th vector exists and is of value type.
+        const ValueVectorD* constValuesByIndex(size_t n) const;
         // Returns i'th vector as StringVector if i'th vector exists and is of string type.
         StringVector* stringsByIndex(size_t n);
+        StringVector* stringsByRef(DataVectorRef& ref);
+        const StringVector* constStringsByIndex(size_t n) const;
 
         // Returns editable value vector, creates new one if such is not yet available. Returned vector might be
         // one from active data vectors
         ValueVectorD* editableValuesByIndex(size_t i);
+        ValueVectorD* editableValuesByRef(DataVectorRef& ref);
+
+        StringVector* editableStringsByRef(DataVectorRef& ref);
 
         // Sets active vectors.
         void setDataRefs(DataVectorRef ref0, DataVectorRef ref1 = DataVectorRef(), DataVectorRef ref2 = DataVectorRef());
@@ -83,9 +115,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         std::deque<StringVector> m_stringVectors;   // Temporary string buffers that can be used e.g. if operation changes data type and can't edit existing.
     };
 
-    inline ChartOperationPipeData::ChartOperationPipeData(ValueVectorD * pXvals, ValueVectorD * pYvals)
+    template <class X_T, class Y_T>
+    inline ChartOperationPipeData::ChartOperationPipeData(X_T&& xvals, Y_T&& yvals)
     {
-        setDataRefs(pXvals, pYvals);
+        setDataRefs(std::forward<X_T>(xvals), std::forward<Y_T>(yvals));
     }
 
     inline size_t ChartOperationPipeData::vectorCount() const
@@ -130,14 +163,81 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         std::transform(m_stringVectors.begin(), m_stringVectors.end(), m_vectorRefs.begin(), [](StringVector& v) { return DataVectorRef(&v); });
     }
 
+    template <class Return_T, class ModAccess_T, class ConstAccess_T, class EditableAccess_T>
+    Return_T ChartOperationPipeData::privItemsByDataVectorRef(DataVectorRef& item, ModAccess_T&& modAccess, ConstAccess_T&& constAccess, EditableAccess_T&& editableAccess)
+    {
+        if (modAccess(item))
+            return modAccess(item);
+        // Didn't have modifiable items, checking if there are const items.
+        auto pConstValues = constAccess(item);
+        if (!pConstValues)
+            return nullptr;
+        // Getting here means that there is const items. Must make a modifiable copy.
+        auto pValues = editableAccess(item);
+        if (pValues)
+        {
+            *pValues = *pConstValues;
+            item = pValues;
+        }
+        return pValues;
+    }
+
+    inline auto ChartOperationPipeData::valuesByRef(DataVectorRef& ref) -> ValueVectorD*
+    {
+        return privItemsByDataVectorRef<ValueVectorD*>(
+            ref,
+            [](DataVectorRef& ref)  { return ref.values(); },
+            [](DataVectorRef& ref)  { return ref.constValues(); },
+            [&](DataVectorRef& ref) { return editableValuesByRef(ref); });
+    }
+
+    // Returns values by index. If index has const-values, make a copy and returns reference to copied data.
     inline auto ChartOperationPipeData::valuesByIndex(size_t n) -> ValueVectorD*
     {
-        return (isValidIndex(m_vectorRefs, n)) ? m_vectorRefs[n].values() : nullptr;
+        if (isValidIndex(m_vectorRefs, n))
+            return valuesByRef(m_vectorRefs[n]);
+        else
+            return nullptr;
+    }
+
+    inline auto ChartOperationPipeData::constValuesByIndex(size_t n) const -> const ValueVectorD*
+    {
+        return (isValidIndex(m_vectorRefs, n)) ? m_vectorRefs[n].constValues() : nullptr;
+    }
+
+    inline auto ChartOperationPipeData::stringsByRef(DataVectorRef& ref) -> StringVector*
+    {
+        return privItemsByDataVectorRef<StringVector*>(
+            ref,
+            [](DataVectorRef& ref)  { return ref.strings(); },
+            [](DataVectorRef& ref)  { return ref.constStrings(); },
+            [&](DataVectorRef& ref) { return editableStringsByRef(ref); });
     }
 
     inline auto ChartOperationPipeData::stringsByIndex(size_t n) -> StringVector*
     {
-        return (isValidIndex(m_vectorRefs, n)) ? m_vectorRefs[n].strings() : nullptr;
+        if (isValidIndex(m_vectorRefs, n))
+            return stringsByRef(m_vectorRefs[n]);
+        else
+            return nullptr;
+    }
+
+    inline auto ChartOperationPipeData::constStringsByIndex(size_t n) const -> const StringVector*
+    {
+        if (isValidIndex(m_vectorRefs, n))
+            return m_vectorRefs[n].constStrings();
+        else
+            return nullptr;
+    }
+
+    inline auto ChartOperationPipeData::editableValuesByRef(DataVectorRef& ref) -> ValueVectorD*
+    {
+        const auto nIndex = static_cast<size_t>(&ref - &m_vectorRefs.front());
+        if (nIndex >= m_valueVectors.max_size())
+            return nullptr;
+        if (!isValidIndex(m_stringVectors, nIndex))
+            m_valueVectors.resize(nIndex + 1);
+        return &m_valueVectors[nIndex];
     }
 
     inline auto ChartOperationPipeData::editableValuesByIndex(size_t i) -> ValueVectorD*
@@ -147,6 +247,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         if (!isValidIndex(m_valueVectors, i))
             m_valueVectors.resize(i + 1);
         return &m_valueVectors[i];
+    }
+
+    inline auto ChartOperationPipeData::editableStringsByRef(DataVectorRef& ref) -> StringVector*
+    {
+        const auto nIndex = static_cast<size_t>(&ref - &m_vectorRefs.front());
+        if (nIndex >= m_valueVectors.max_size())
+            return nullptr;
+        if (!isValidIndex(m_stringVectors, nIndex))
+            m_stringVectors.resize(nIndex + 1);
+        return &m_stringVectors[nIndex];
     }
 
     inline void ChartOperationPipeData::setDataRefs(DataVectorRef ref0, DataVectorRef ref1, DataVectorRef ref2)
@@ -295,7 +405,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     }
 
     template <class Func_T>
-    inline void ChartEntryOperation::privFilterBySingle(ChartOperationPipeData & arg, const double axis, Func_T && func)
+    inline void ChartEntryOperation::privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T && func)
     {
         using namespace DFG_MODULE_NS(alg);
         auto pCont = privPipeVectorByAxisIndex(arg, axis);
@@ -311,14 +421,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Filtering all vectors by keep-flags.
         forEachVector(arg, [&](DataVectorRef& ref)
         {
-            if (ref.values())
-                keepByFlags(*ref.values(), keepFlags);
-            else if (ref.strings())
-                keepByFlags(*ref.strings(), keepFlags);
-            else if (!ref.isNull())
+            auto pValues = arg.valuesByRef(ref);
+            if (pValues)
             {
-                DFG_ASSERT_IMPLEMENTED(false);
+                keepByFlags(*pValues, keepFlags);
+                return;
             }
+            auto pStrings = arg.stringsByRef(ref);
+            if (pStrings)
+            {
+                keepByFlags(*pStrings, keepFlags);
+                return;
+            }
+            DFG_ASSERT_IMPLEMENTED(false);
         });
     }
 
