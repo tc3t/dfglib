@@ -278,7 +278,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         return (m_errors & err) != 0;
     }
 
-    inline auto ChartEntryOperation::privPipeVectorByAxisIndex(ChartOperationPipeData & arg, const double index) -> ValueVectorD*
+    inline auto ChartEntryOperation::privPipeVectorByAxisIndex(ChartOperationPipeData& arg, const double index) -> ValueVectorD*
     {
         if (index == axisIndex_x)
             return arg.valuesByIndex(0);
@@ -393,7 +393,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     template <class Operation_T>
     inline bool ChartEntryOperationManager::add()
     {
-        return add(typename Operation_T::id(), Operation_T::create);
+        return add(Operation_T::id(), Operation_T::create);
     }
 
 
