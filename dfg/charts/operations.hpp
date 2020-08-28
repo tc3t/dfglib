@@ -80,9 +80,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Sets internal string vectors as active data.
         void setStringVectorsAsData();
 
-        //template <class Return_T, class ModAccess_T, class ConstAccess_T, class EditableAccess_T>
-        //Return_T privItemsByIndex(size_t n, ModAccess_T&& modAccess, ConstAccess_T&& constAccess, EditableAccess_T&& editableAccess);
-
         template <class Return_T, class ModAccess_T, class ConstAccess_T, class EditableAccess_T>
         Return_T privItemsByDataVectorRef(DataVectorRef& ref, ModAccess_T&& modAccess, ConstAccess_T&& constAccess, EditableAccess_T&& editableAccess);
 
@@ -109,6 +106,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Returns the number of active vectors
         size_t vectorCount() const;
 
+        // Sets size of all active non-null vectors to zero.
+        void setVectorSizesToZero();
+
         std::vector<DataVectorRef> m_vectorRefs;    // Stores references to data vectors and defines the actual vector count that this data has.
         // Note: using deque to avoid invalidation of resize.
         std::deque<ValueVectorD> m_valueVectors;    // Temporary value buffers that can be used e.g. if operation changes data type and can't edit existing.
@@ -124,6 +124,42 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     inline size_t ChartOperationPipeData::vectorCount() const
     {
         return m_vectorRefs.size();
+    }
+
+    // Sets size of all active vectors to zero.
+    inline void ChartOperationPipeData::setVectorSizesToZero()
+    {
+        for (auto& item : m_vectorRefs)
+        {
+            if (item.isNull())
+                continue;
+            if (item.values() || item.constValues())
+            {
+                auto pValues = editableValuesByRef(item);
+                if (pValues)
+                {
+                    pValues->clear();
+                    item = DataVectorRef(pValues);
+                }
+                else
+                    item = DataVectorRef();
+            }
+            else if (item.strings() || item.constStrings())
+            {
+                auto pStrings = editableStringsByRef(item);
+                if (pStrings)
+                {
+                    pStrings->clear();
+                    item = DataVectorRef(pStrings);
+                }
+                else
+                    item = DataVectorRef();
+            }
+            else
+            {
+                DFG_ASSERT_IMPLEMENTED(false);
+            }
+        }
     }
 
     inline void ChartOperationPipeData::createStringVectors(size_t nCount, size_t nVectorSize)
@@ -232,15 +268,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
     inline auto ChartOperationPipeData::editableValuesByRef(DataVectorRef& ref) -> ValueVectorD*
     {
-        const auto nIndex = static_cast<size_t>(&ref - &m_vectorRefs.front());
-        if (nIndex >= m_valueVectors.max_size())
-            return nullptr;
-        if (!isValidIndex(m_stringVectors, nIndex))
-            m_valueVectors.resize(nIndex + 1);
-        return &m_valueVectors[nIndex];
+        return editableValuesByIndex(static_cast<size_t>(&ref - &m_vectorRefs.front()));
     }
 
-    inline auto ChartOperationPipeData::editableValuesByIndex(size_t i) -> ValueVectorD*
+    inline auto ChartOperationPipeData::editableValuesByIndex(const size_t i) -> ValueVectorD*
     {
         if (i >= m_valueVectors.max_size())
             return nullptr;
@@ -415,6 +446,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
                 setError(error_unexpectedInputVectorTypes);
             else
                 setError(error_missingInput);
+            arg.setVectorSizesToZero();
             return;
         }
         // Creating keep-flags

@@ -318,4 +318,22 @@ TEST(dfgCharts, operations_passWindow)
         EXPECT_FALSE(op); // op is expected to evalute to false since axis argument is invalid.
         EXPECT_TRUE(op.hasError(ChartEntryOperation::error_badCreationArgs));
     }
+
+    // Testing that bad filter vector results to output where all vectors are empty.
+    {
+        // Defining a passWindow for x-axis and trying to use it to string-vector.
+        auto op = opManager.createOperation(DFG_ASCII("passWindow(x, 1.5, 2.5)"));
+        using StringVector = ChartOperationPipeData::StringVector;
+        StringVector x = { StringUtf8(DFG_UTF8("a")), StringUtf8(DFG_UTF8("b")), StringUtf8(DFG_UTF8("c")) };
+        ValueVectorD y = { 1, 2, 3 };
+        ChartOperationPipeData pipeArg(&x, &y);
+        op(pipeArg);
+        EXPECT_TRUE(op.hasErrors());
+        EXPECT_TRUE(op.hasError(ChartEntryOperation::error_unexpectedInputVectorTypes));
+        EXPECT_EQ(2, pipeArg.vectorCount());
+        ASSERT_NE(nullptr, pipeArg.constStringsByIndex(0));
+        ASSERT_NE(nullptr, pipeArg.constValuesByIndex(1));
+        EXPECT_EQ(0, pipeArg.constStringsByIndex(0)->size());
+        EXPECT_EQ(0, pipeArg.constValuesByIndex(1)->size());
+    }
 }
