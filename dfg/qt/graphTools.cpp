@@ -529,7 +529,7 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
         {
             if (!::DFG_MODULE_NS(str)::beginsWith(svKey, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation))))
                 return;
-            const auto sOperationDef = rv.fieldValueStr(StringViewC(svKey.beginRaw(), svKey.endRaw()));
+            const auto sOperationDef = rv.fieldValueStr(svKey.asUntypedView());
             auto op = manager.createOperation(sOperationDef);
             if (!op)
             {
@@ -540,6 +540,7 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
             else
             {
                 StringViewUtf8 svOperationOrderTag(SzPtrUtf8(svKey.beginRaw() + ::DFG_MODULE_NS(str)::strLen(ChartObjectFieldIdStr_operation)), SzPtrUtf8(svKey.endRaw()));
+                op.m_sDefinition = sOperationDef;
                 rv.m_operationMap[svOperationOrderTag.toString()] = std::move(op);
             }
         });
@@ -604,10 +605,19 @@ auto GraphDefinitionEntry::sourceId(const GraphDataSourceId& sDefault) const -> 
 
 void GraphDefinitionEntry::applyOperations(::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData) const
 {
+    const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
     for (const auto& kv : this->m_operationMap)
     {
         auto opCopy = kv.second;
         opCopy(pipeData);
+        if (opCopy.hasErrors())
+        {
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: operation '%2' encountered errors, error mask = 0x%3")
+                .arg(this->index())
+                .arg(viewToQString(opCopy.m_sDefinition))
+                .arg(opCopy.m_errors, 0, 16)
+            );
+        }
     }
 }
 

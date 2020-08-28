@@ -300,12 +300,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         using CreationArgList   = CreateOperationArgs;
         using StringView        = CreationArgList::StringView;
         using StringViewSz      = CreationArgList::StringViewSz;
+        using StringT           = StringView::StringT;
         using DefinitionArgList = std::vector<double>;
         static void defaultCall(ChartEntryOperation&, ChartOperationPipeData&);
         using OperationCall     = decltype(ChartEntryOperation::defaultCall);
         using DataVectorRef     = ChartOperationPipeData::DataVectorRef;
 
-        // Error flags; set when errors are ncounted.
+        // Error flags; set when errors are encountered.
         using ErrorMask = int;
         enum Error
         {
@@ -348,6 +349,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
         // Helper that converts axis string representation to axis index.
         static double axisStrToIndex(const StringViewSz& sv);
+        // Converts double-valued axis index to integer valued axis index.
+        static size_t floatAxisValueToAxisIndex(double index);
 
         // Filters all pipe data vectors by keep flags created by input vector 'axis' and keep predicate 'keepPred'.
         // Concrete example: filters x,y vectors by pass window applied to x-axis, where 'keepPred' is called for
@@ -364,6 +367,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         OperationCall*    m_pCall          = &ChartEntryOperation::defaultCall;
         ErrorMask         m_errors         = 0;
         DefinitionArgList m_argList;
+        StringT           m_sDefinition;            // For (optionally) storing the text from which operation was created from.
     }; // ChartEntryOperation
 
     inline ChartEntryOperation::ChartEntryOperation(OperationCall call)
@@ -390,12 +394,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
     inline auto ChartEntryOperation::privPipeVectorByAxisIndex(ChartOperationPipeData& arg, const double index) -> ValueVectorD*
     {
-        if (index == axisIndex_x)
-            return arg.valuesByIndex(0);
-        else if (index == axisIndex_y)
-            return arg.valuesByIndex(1);
-        else
-            return nullptr;
+        return arg.valuesByIndex(floatAxisValueToAxisIndex(index));
     }
 
     template <class Func_T>
@@ -411,7 +410,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         auto pCont = privPipeVectorByAxisIndex(arg, axis);
         if (!pCont)
         {
-            setError(error_missingInput);
+            const auto nIndex = floatAxisValueToAxisIndex(axis);
+            if (isValidIndex(arg.m_vectorRefs, nIndex) && !arg.m_vectorRefs[nIndex].isNull())
+                setError(error_unexpectedInputVectorTypes);
+            else
+                setError(error_missingInput);
             return;
         }
         // Creating keep-flags
@@ -433,6 +436,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
                 keepByFlags(*pStrings, keepFlags);
                 return;
             }
+            if (!ref.isNull())
+                this->setError(error_unexpectedInputVectorTypes);
             DFG_ASSERT_IMPLEMENTED(false);
         });
     }
@@ -461,6 +466,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
             return axisIndex_y;
         else
             return axisIndex_invalid;
+    }
+
+    inline auto ChartEntryOperation::floatAxisValueToAxisIndex(double index) -> size_t
+    {
+        return (index >= 0 && index < 10000 && ::DFG_MODULE_NS(math)::isIntegerValued(index)) ? static_cast<size_t>(index) : std::numeric_limits<size_t>::max();
     }
 
     // Returns ChartEntryOperation() from case that creation args were invalid.
