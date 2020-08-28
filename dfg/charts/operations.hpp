@@ -56,7 +56,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
             const StringVector* constStrings() const { return (m_pConstStringVector) ? m_pConstStringVector : m_pStringVector; }
 
                   ValueVectorD* m_pValueVector       = nullptr;
-            const ValueVectorD* m_pConstValueVector  = nullptr;
+            const ValueVectorD* m_pConstValueVector  = nullptr; // TODO: this should be span, i.e. if referencing external data, it shouldn't need to be stored as ValueVectorD
                   StringVector* m_pStringVector      = nullptr;
             const StringVector* m_pConstStringVector = nullptr;
         };

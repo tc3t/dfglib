@@ -484,6 +484,8 @@ public:
 
     bool isType(FieldIdStrViewInputParam fieldId) const;
 
+    void applyOperations(::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData) const;
+
     ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, Operation> m_operationMap;
 
 private:
@@ -598,6 +600,15 @@ auto GraphDefinitionEntry::sourceId(const GraphDataSourceId& sDefault) const -> 
         return val.toString();
     else
         return sDefault;
+}
+
+void GraphDefinitionEntry::applyOperations(::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData) const
+{
+    for (const auto& kv : this->m_operationMap)
+    {
+        auto opCopy = kv.second;
+        opCopy(pipeData);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3841,7 +3852,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
     if (!optData || optData->columnCount() < 1)
         return;
-    
+
     auto& tableData = *optData;
 
     auto pXdata = tableData.columnDataByIndex(columnIndexes[0]);
@@ -3928,14 +3939,19 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
     // Applying operations
     ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&xValueMap.m_keyStorage, &xValueMap.m_valueStorage);
-    for (const auto& kv : defEntry.m_operationMap)
+    defEntry.applyOperations(operationData);
+
+    auto pXvalues = operationData.constValuesByIndex(0);
+    auto pYvalues = operationData.constValuesByIndex(1);
+
+    if (!pXvalues || !pYvalues)
     {
-        auto opCopy = kv.second;
-        opCopy(operationData);
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no values available after operations").arg(defEntry.index()));
+        return;
     }
 
     // Setting values to series.
-    rSeries.setValues(xValueMap.keyRange(), xValueMap.valueRange());
+    rSeries.setValues(makeRange(*pXvalues), makeRange(*pYvalues));
 
     // Setting line style
     {
@@ -3996,15 +4012,27 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         if (!pSingleColumn)
             return;
 
-        const auto valueRange = pSingleColumn->valueRange();
-        if (valueRange.size() < 1)
+        if (pSingleColumn->valueRange().size() < 1)
         {
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(valueRange.size()));
+            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(pSingleColumn->valueRange().size()));
             return;
         }
+
+        // Applying operations
+        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pSingleColumn->m_valueStorage, nullptr);
+        defEntry.applyOperations(operationData);
+
+        auto pValues = operationData.constValuesByIndex(0);
+        if (!pValues || pValues->empty())
+        {
+            if (!pValues)
+                DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no values available after operations").arg(defEntry.index()));
+            return;
+        }
+
         const auto xType = optTableData->columnDataType(pSingleColumn);
         const auto sXaxisName = optTableData->columnName(pSingleColumn);
-        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, valueRange, xType, qStringToStringUtf8(sXaxisName)));
+        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pValues), xType, qStringToStringUtf8(sXaxisName)));
 
     }
     else // Case text valued
@@ -4015,8 +4043,21 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
             DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: no data found for histogram").arg(defEntry.index()));
             return;
         }
+
+        // Applying operations
+        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pStrings->m_valueStorage, nullptr);
+        defEntry.applyOperations(operationData);
+
+        auto pFinalStrings = operationData.constStringsByIndex(0);
+        if (!pFinalStrings || pFinalStrings->empty())
+        {
+            if (!pStrings)
+                DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no values available after operations").arg(defEntry.index()));
+            return;
+        }
+
         const auto sXaxisName = optTableData->columnName(columnIndexes[0]);
-        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, pStrings->valueRange(), qStringToStringUtf8(sXaxisName)));
+        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pFinalStrings), qStringToStringUtf8(sXaxisName)));
     }
 
     if (!spHistogram)
@@ -4049,13 +4090,22 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& r
     if (!pFirstCol || !pSecondCol)
         return;
 
-    const auto firstValues = pFirstCol->valueRange();
-    const auto secondValues = pSecondCol->valueRange();
-
     const auto sXaxisName = optTableData->columnName(columnIndexes[0]);
     const auto sYaxisName = optTableData->columnName(columnIndexes[1]);
 
-    auto spBarSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, firstValues, secondValues, ChartDataType::unknown,
+    // Applying operations
+    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pFirstCol->m_valueStorage, &pSecondCol->m_valueStorage);
+    defEntry.applyOperations(operationData);
+
+    auto pStrings = operationData.constStringsByIndex(0);
+    auto pValues = operationData.constValuesByIndex(1);
+    if (!pStrings || !pValues)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no data available after operations").arg(defEntry.index()));
+        return;
+    }
+
+    auto spBarSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), makeRange(*pValues), ChartDataType::unknown,
                                                                      qStringToStringUtf8(sXaxisName), qStringToStringUtf8(sYaxisName)));
     if (!spBarSeries)
         return;

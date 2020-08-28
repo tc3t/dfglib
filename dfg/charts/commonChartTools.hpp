@@ -634,7 +634,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_fillColour,
-            ChartObjectFieldIdStr_dataSource
+            ChartObjectFieldIdStr_dataSource,
+            ChartObjectFieldIdStr_operation
             });
     }
     else if (isType(ChartObjectChartTypeStr_bars))
@@ -648,7 +649,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_dataSource,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_ySource,
-            ChartObjectFieldIdStr_mergeIdenticalLabels
+            ChartObjectFieldIdStr_mergeIdenticalLabels,
+            ChartObjectFieldIdStr_operation
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))
