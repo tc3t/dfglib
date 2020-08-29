@@ -134,22 +134,27 @@ namespace DFG_DETAIL_NS
 #endif
 
     template <class Char_T, class T>
-    inline void convertImpl(DFG_CLASS_NAME(StringView)<Char_T> sv, T& t)
+    inline void convertImpl(DFG_CLASS_NAME(StringView)<Char_T> sv, T& t, bool* pSuccess = nullptr)
     {
-        strToByNoThrowLexCast(sv, t);
+        strToByNoThrowLexCast(sv, t, pSuccess);
     }
 
-    inline void convertImpl(DFG_CLASS_NAME(StringView)<char> sv, double& t)
+    inline void convertImpl(DFG_CLASS_NAME(StringView)<char> sv, double& t, bool* pSuccess = nullptr)
     {
         // While view itself is not necessarily null-terminated, the underlying string is and since
         // trailing spaces seem to be no problem for strtod(), passing the start pointer as such.
-        t = std::strtod(sv.data(), nullptr);
+        char* pEnd;
+        t = std::strtod(sv.data(), &pEnd);
+        if (pSuccess)
+            *pSuccess = (pEnd == sv.endRaw());
     }
 
     template <class T, class Char_T>
-    T genericImpl(const Char_T* psz)
+    T genericImpl(const Char_T* psz, bool* pSuccess = nullptr)
     {
         auto t = T();
+        if (pSuccess)
+            *pSuccess = false;
         if (!psz)
             return t;
 
@@ -166,7 +171,7 @@ namespace DFG_DETAIL_NS
             --pEnd;
 
         DFG_CLASS_NAME(StringView)<Char_T> sv(psz, pEnd - psz);
-        convertImpl(sv, t);
+        convertImpl(sv, t, pSuccess);
         return t;
     }
 
@@ -177,14 +182,14 @@ namespace DFG_DETAIL_NS
         template <> inline typeName convertStrToImpl(const NonNullCStr psz) {return static_cast<typeName>(funcA(psz, param1, param2));} \
         template <> inline typeName convertStrToImpl(const NonNullCStrW psz) {return static_cast<typeName>(funcW(psz, param1, param2));}
 
-    template <class T> T convertStrToImpl(const NonNullCStr psz)
+    template <class T> T convertStrToImpl(const NonNullCStr psz, bool* pSuccess = nullptr)
     {
-        return genericImpl<T>(psz);
+        return genericImpl<T>(psz, pSuccess);
     }
 
-    template <class T> T convertStrToImpl(const NonNullCStrW psz)
+    template <class T> T convertStrToImpl(const NonNullCStrW psz, bool* pSuccess = nullptr)
     {
-        return genericImpl<T>(psz);
+        return genericImpl<T>(psz, pSuccess);
     }
 
     /*
@@ -206,49 +211,49 @@ namespace DFG_DETAIL_NS
     #undef CONVERT_STR_TO_IMPL_PARAMS
 } // detail namespace
 
-template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStr psz)
-    {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz);}
-template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStrW psz)
-    {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz);}
+template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStr psz, bool* pSuccess = nullptr)
+    {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz, pSuccess);}
+template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStrW psz, bool* pSuccess = nullptr)
+    {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz, pSuccess);}
 
 // Single parameter strTo()
-template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStr psz)
-    {return convertStrTo<T>(psz);}
+template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStr psz, bool* pSuccess = nullptr)
+    {return convertStrTo<T>(psz, pSuccess);}
 
-template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStrW psz)
-    {return convertStrTo<T>(psz);}
+template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStrW psz, bool* pSuccess = nullptr)
+    {return convertStrTo<T>(psz, pSuccess);}
 
 // Single parameter strTo()
-template <class T> inline typename std::remove_cv<T>::type strTo(const std::string& s)
+template <class T> inline typename std::remove_cv<T>::type strTo(const std::string& s, bool* pSuccess = nullptr)
 {
-    return convertStrTo<T>(s.c_str());
+    return convertStrTo<T>(s.c_str(), pSuccess);
 }
 
-template <class T> inline typename std::remove_cv<T>::type strTo(const std::wstring& s)
+template <class T> inline typename std::remove_cv<T>::type strTo(const std::wstring& s, bool* pSuccess = nullptr)
 {
-    return convertStrTo<T>(s.c_str());
+    return convertStrTo<T>(s.c_str(), pSuccess);
 }
 
 // strTo(x) for StringView
 template <class T, class Char_T, class Str_T>
-inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sv)
+inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
 {
     // TODO: convert directly from string view instead of creating redundant temporary.
-    return convertStrTo<T>(toCharPtr_raw(sv.toString().c_str()));
+    return convertStrTo<T>(toCharPtr_raw(sv.toString().c_str()), pSuccess);
 }
 
 // strTo(x) for StringViewSz
 template <class T, class Char_T, class Str_T>
-inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& sv)
+inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
 {
-    return convertStrTo<T>(toCharPtr_raw(sv.c_str()));
+    return convertStrTo<T>(toCharPtr_raw(sv.c_str()), pSuccess);
 }
 
 // strTo(x) for SzPtrT
 template <class T, class Char_T, CharPtrType Type_T>
-inline typename std::remove_cv<T>::type strTo(const SzPtrT<Char_T, Type_T>& sv)
+inline typename std::remove_cv<T>::type strTo(const SzPtrT<Char_T, Type_T>& sv, bool* pSuccess = nullptr)
 {
-    return convertStrTo<T>(toCharPtr_raw(sv.c_str()));
+    return convertStrTo<T>(toCharPtr_raw(sv.c_str()), pSuccess);
 }
 
 // Overloads that take the destination object as parameter.

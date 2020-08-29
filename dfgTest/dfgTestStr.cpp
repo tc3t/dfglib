@@ -331,6 +331,21 @@ namespace
         EXPECT_EQ(1, strTo<int>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " 1 ")));
         EXPECT_EQ(1.25, strTo<double>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " 1.25 ")));
     }
+
+    void testDoubleConversion(const char* psz, const double expectedValue, const bool bExpected)
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
+        bool bOk;
+        EXPECT_EQ(expectedValue, strTo<double>(psz, &bOk));
+        EXPECT_EQ(bExpected, bOk);
+
+        EXPECT_EQ(expectedValue, strTo<double>(StringViewSzC(psz), &bOk));
+        EXPECT_EQ(bExpected, bOk);
+
+        EXPECT_EQ(expectedValue, strTo<double>(StringViewC(psz), &bOk));
+        EXPECT_EQ(bExpected, bOk);
+    }
 } // unnamed namespace
 
 
@@ -468,6 +483,38 @@ TEST(dfgStr, strTo)
         std::cout << szBufferA << endl;
     }
     */
+
+    // Double tests
+    {
+        using namespace ::DFG_MODULE_NS(math);
+        
+        testDoubleConversion("-0.0", 0.0, true);
+        testDoubleConversion("    0.25  ", 0.25, true);
+        testDoubleConversion("    -25E-2  ", -0.25, true);
+        testDoubleConversion("1.23456789", 1.23456789, true);
+        testDoubleConversion("1e300", 1e300, true);
+        testDoubleConversion("-1e300", -1e300, true);
+        testDoubleConversion("1e-9", 1e-9, true);
+        testDoubleConversion("-1e-9", -1e-9, true);
+        testDoubleConversion("-inf", -std::numeric_limits<double>::infinity(), true);
+        testDoubleConversion("-INF", -std::numeric_limits<double>::infinity(), true);
+        testDoubleConversion("inf", std::numeric_limits<double>::infinity(), true);
+        testDoubleConversion("INF", std::numeric_limits<double>::infinity(), true);
+
+        // Testing invalid strings. Note: Expected values below are not part of interface, i.e. value in case of false conversion is not specified.
+        // Tested here just to see if implementation changes.
+        testDoubleConversion("", 0, false);
+        testDoubleConversion("-+1", 0, false);
+        testDoubleConversion("1.1.", 1.1, false);
+        testDoubleConversion("1.a", 1, false);
+        testDoubleConversion("1.a", 1, false);
+        testDoubleConversion("abc", 0, false);
+        testDoubleConversion("2020-08", 2020, false);
+
+        bool bOk = false;
+        EXPECT_TRUE(isNan(strTo<double>("nan", &bOk)));
+        EXPECT_TRUE(bOk);
+    }
 
 #undef CHECK_A_AND_W
 
