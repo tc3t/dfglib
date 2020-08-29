@@ -48,6 +48,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         spLabel->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
         pAction->setDefaultWidget(spLabel.release()); // Owned by pAction
         pMenu->addAction(pAction);
+        pMenu->addSeparator();
     }
 
     // Adds section entry to menu. Note that QMenu::addSection() doesn't seem to add any named entry at least in Windows.
