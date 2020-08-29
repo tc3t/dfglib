@@ -336,4 +336,12 @@ TEST(dfgCharts, operations_passWindow)
         EXPECT_EQ(0, pipeArg.constStringsByIndex(0)->size());
         EXPECT_EQ(0, pipeArg.constValuesByIndex(1)->size());
     }
+
+    // Testing -inf, inf handling in arguments
+    {
+        auto op = opManager.createOperation(DFG_ASCII("passWindow(x, -inf, inf)"));
+        ASSERT_EQ(3, op.m_argList.size());
+        EXPECT_EQ(-std::numeric_limits<double>::infinity(), op.m_argList[1]);
+        EXPECT_EQ(std::numeric_limits<double>::infinity(), op.m_argList[2]);
+    }
 }

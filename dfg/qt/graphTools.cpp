@@ -306,12 +306,9 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const QString& s)
 
 double ::DFG_MODULE_NS(qt)::GraphDataSource::stringToDouble(const StringViewSzC& sv)
 {
-    const char* psz = sv.begin();
-    psz = ::DFG_MODULE_NS(str)::skipWhitespacesSz(psz, " \t");
-    if (*psz != '\0' && ::DFG_MODULE_NS(alg)::contains("+-.0123456789", *psz)) // If first non-empty char is any of listed, trying to convert string to double.
-        return ::DFG_MODULE_NS(str)::strTo<double>(sv);
-    else
-        return std::numeric_limits<double>::quiet_NaN();
+    bool bOk;
+    auto rv = ::DFG_MODULE_NS(str)::strTo<double>(sv, &bOk);
+    return (bOk) ? rv : std::numeric_limits<double>::quiet_NaN();
 }
 
 double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringViewSzUtf8& sv)
@@ -412,10 +409,8 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringView
             return timeToDouble(QTime::fromString(viewToQString(s), "hh:mm:ss"));
         }
     }
-    if (std::count(s.begin(), s.end(), '-') >= 2 || std::count(s.begin(), s.end(), '.') >= 2 || std::count(s.begin(), s.end(), ':') >= 2)
-        return std::numeric_limits<double>::quiet_NaN();
-    if (std::find(s.begin(), s.end(), ',') == s.end())
-        return stringToDouble(StringViewSzC(svUtf8.beginRaw())); // Not using s directly because at the time of writing it caused redundant string-object to be created due to shortcomings in strTo().
+    if (!::DFG_MODULE_NS(alg)::contains(s, ','))
+        return stringToDouble(svUtf8.asUntypedView()); // Not using s directly because at the time of writing it caused redundant string-object to be created due to shortcomings in strTo().
     else
     {
         auto s2 = viewToQString(s);

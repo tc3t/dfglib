@@ -747,14 +747,14 @@ TEST(dfgQt, CsvTableView_stringToDouble)
         testDateToDouble_invalidDateFormat("2020-04-25la");
         testDateToDouble_invalidDateFormat("2020-04-25 abc");
         testDateToDouble_invalidDateFormat("2020-04-25a");
-        testDateToDouble_invalidDateFormat("2020-04-31"); // Invalid value
+        testDateToDouble_invalidDateFormat("2020-04-31"); // Invalid day value
         testDateToDouble_invalidDateFormat("20-04-25");
         testDateToDouble_invalidDateFormat("25-04-2020");
 
         testDateToDouble_invalidDateFormat("2020-04-25a12:34:56");
         testDateToDouble_invalidDateFormat("25-04-2020T12:34:56");
         testDateToDouble_invalidDateFormat("2020-4-25T32:34:56");
-        testDateToDouble_invalidDateFormat("2020-13-25T12:34:56"); // Invalid date value
+        testDateToDouble_invalidDateFormat("2020-13-25T12:34:56"); // Invalid month value
         testDateToDouble_invalidDateFormat("2020-04-25T32:34:56"); // Invalid time value
         testDateToDouble_invalidDateFormat("2020-04-25T12:34:56.");
         testDateToDouble_invalidDateFormat("2020-04-25T12:34:56.1");
@@ -774,6 +774,21 @@ TEST(dfgQt, CsvTableView_stringToDouble)
         testDateToDouble_invalidDateFormat("12:34:56.");
         testDateToDouble_invalidDateFormat("12:34:56.1");
         testDateToDouble_invalidDateFormat("12:34:56.12");
+    }
+
+    // double values
+    {
+        using namespace ::DFG_MODULE_NS(qt);
+        using namespace ::DFG_MODULE_NS(str);
+        EXPECT_EQ(strTo<double>("-0.0"), GraphDataSource::cellStringToDouble(DFG_UTF8("-0.0")));
+        EXPECT_EQ(0.25, GraphDataSource::cellStringToDouble(DFG_UTF8("    0.25  ")));
+        EXPECT_EQ(-0.25, GraphDataSource::cellStringToDouble(DFG_UTF8("  -25E-2  ")));
+        EXPECT_EQ(strTo<double>("1.23456789"), GraphDataSource::cellStringToDouble(DFG_UTF8("1.23456789")));
+        EXPECT_EQ(strTo<double>("1e300"), GraphDataSource::cellStringToDouble(DFG_UTF8("1e300")));
+        EXPECT_EQ(strTo<double>("1e-9"), GraphDataSource::cellStringToDouble(DFG_UTF8("1e-9")));
+        EXPECT_EQ(strTo<double>("-1e-9"), GraphDataSource::cellStringToDouble(DFG_UTF8("-1e-9")));
+        EXPECT_EQ(-std::numeric_limits<double>::infinity(), GraphDataSource::cellStringToDouble(DFG_UTF8("-inf")));
+        EXPECT_EQ(std::numeric_limits<double>::infinity(), GraphDataSource::cellStringToDouble(DFG_UTF8("inf")));
     }
 }
 
