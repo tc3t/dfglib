@@ -211,6 +211,17 @@ QString getOperationDefinitionPlaceholder(const StringViewUtf8& svOperationId)
     return QString("%1()").arg(viewToQString(svOperationId));
 }
 
+::DFG_MODULE_NS(charts)::ChartEntryOperationManager& operationManager()
+{
+    static auto operationManager = []()
+        {
+            ::DFG_MODULE_NS(charts)::ChartEntryOperationManager manager;
+            manager.setStringToDoubleConverter([](const StringViewSzUtf8 sv) { return GraphDataSource::cellStringToDouble(sv, 0, nullptr); });
+            return manager;
+        }();
+    return operationManager;
+}
+
 } // unnamed namespace
 
 #define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG, LEVEL)
@@ -543,8 +554,7 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
 
     // Reading operations
     {
-        ::DFG_MODULE_NS(charts)::ChartEntryOperationManager manager;
-        manager.setStringToDoubleConverter([](const StringViewSzUtf8 sv) { return GraphDataSource::cellStringToDouble(sv, 0, nullptr); });
+        auto& manager = operationManager();
         rv.forEachPropertyId([&](const StringViewUtf8& svKey)
         {
             if (!::DFG_MODULE_NS(str)::beginsWith(svKey, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation))))
@@ -2188,8 +2198,7 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
             auto pOperationsMenu = pSubMenu->addMenu(tr("Operations"));
             if (pOperationsMenu)
             {
-                ::DFG_MODULE_NS(charts)::ChartEntryOperationManager manager;
-                manager.forEachOperationId([&](StringUtf8 sOperationId)
+                operationManager().forEachOperationId([&](StringUtf8 sOperationId)
                 {
                     QPointer<QCPAbstractPlottable> spPlottable = pPlottable;
                     // TODO: add operation only if it accepts input type that chart object provides.
@@ -3080,7 +3089,7 @@ void ChartCanvasQCustomPlot::applyChartOperationTo(QPointer<QCPAbstractPlottable
         return;
 
     const QString sOperationId = viewToQString(svOperationId);
-    ChartEntryOperationManager manager;
+    auto& manager = operationManager();
     if (!manager.hasOperation(svOperationId))
     {
         QMessageBox::information(getWidget(), tr("Applying operation"), tr("No operation '%1' found").arg(sOperationId));
