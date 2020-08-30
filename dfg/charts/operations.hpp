@@ -521,6 +521,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         using CreatorFunc           = std::function<ChartEntryOperation(const CreationArgList&)>;
         using ParenthesisItem       = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
 
+        ChartEntryOperationManager();
+
         // Adds creator mapping, returns true if added, false otherwise (may happen e.g. if id is already present)
         bool add(StringViewUtf8 svId, CreatorFunc creator);
 
@@ -532,9 +534,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
         void setStringToDoubleConverter(CreationArgList::StringToDoubleConverter converter);
 
+        bool hasOperation(StringViewUtf8 svId) const;
+
+        template <class Func_T>
+        void forEachOperationId(Func_T&& func) const;
+
+        size_t operationCount() const { return m_knownOperations.size(); }
+
         DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, CreatorFunc> m_knownOperations;
         CreationArgList::StringToDoubleConverter m_stringToDoubleConverter;
-    };
+    }; // class ChartEntryOperationManager
 
     inline bool ChartEntryOperationManager::add(StringViewUtf8 svId, CreatorFunc creator)
     {
@@ -551,6 +560,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     inline bool ChartEntryOperationManager::add()
     {
         return add(Operation_T::id(), Operation_T::create);
+    }
+
+    inline bool ChartEntryOperationManager::hasOperation(StringViewUtf8 svId) const
+    {
+        return this->m_knownOperations.hasKey(svId);
+    }
+
+    template <class Func_T>
+    inline void ChartEntryOperationManager::forEachOperationId(Func_T&& func) const
+    {
+        for (const auto& item : this->m_knownOperations)
+        {
+            func(item.first);
+        }
     }
 
 
@@ -618,6 +641,12 @@ namespace operations
 
 } // namespace operations
 
+inline ChartEntryOperationManager::ChartEntryOperationManager()
+{
+    // Adding built-in operations.
+    add<operations::PassWindowOperation>();
+}
+
 inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAndParams) -> ChartEntryOperation
 {
     CreateOperationArgs args = ParenthesisItem::fromStableView(svFuncAndParams);
@@ -627,10 +656,6 @@ inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAnd
     auto iter = m_knownOperations.find(args.key());
     if (iter != m_knownOperations.end())
         return iter->second(args);
-
-    // Wasn't found from map, checking build-in operations.
-    if (args.key() == operations::PassWindowOperation::id())
-        return operations::PassWindowOperation::create(args);
 
     // No requested operation found.
     return ChartEntryOperation();

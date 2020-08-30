@@ -1,6 +1,7 @@
 #include <stdafx.h>
 #include <dfg/chartsAll.hpp>
 #include <dfg/cont/Vector.hpp>
+#include <dfg/cont/SetVector.hpp>
 #include <dfg/alg.hpp>
 
 namespace
@@ -344,4 +345,29 @@ TEST(dfgCharts, operations_passWindow)
         EXPECT_EQ(-std::numeric_limits<double>::infinity(), op.m_argList[1]);
         EXPECT_EQ(std::numeric_limits<double>::infinity(), op.m_argList[2]);
     }
+}
+
+TEST(dfgCharts, ChartEntryOperationManager)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(alg);
+    using namespace ::DFG_MODULE_NS(charts);
+    using namespace ::DFG_MODULE_NS(cont);
+
+    ChartEntryOperationManager opManager;
+
+    const auto pszTestOperation = DFG_UTF8("testOperation");
+    opManager.add(pszTestOperation, [](const ChartEntryOperationManager::CreationArgList&) { return ChartEntryOperation(); });
+
+    EXPECT_TRUE(opManager.hasOperation(operations::PassWindowOperation::id()));
+    EXPECT_TRUE(opManager.hasOperation(pszTestOperation));
+    EXPECT_FALSE(opManager.hasOperation(DFG_UTF8("non existent operation")));
+
+    SetVector<StringUtf8> operationSet;
+    opManager.forEachOperationId([&](const StringViewUtf8& sv)
+    {
+        operationSet.insert(sv.toString());
+    });
+    ASSERT_EQ(opManager.operationCount(), operationSet.size());
+    EXPECT_TRUE(std::equal(operationSet.cbegin(), operationSet.cend(), opManager.m_knownOperations.beginKey()));
 }

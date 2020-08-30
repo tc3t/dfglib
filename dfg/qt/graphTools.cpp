@@ -186,6 +186,31 @@ public:
 
 static ConsoleLogHandle gConsoleLogHandle;
 
+QString formatOperationErrorsForUserVisibleText(const ::DFG_MODULE_NS(charts)::ChartEntryOperation& op)
+{
+    const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
+    return tr("error mask = 0x%1").arg(op.m_errors, 0, 16);
+}
+
+QString getOperationDefinitionUsageGuide(const StringViewUtf8& svOperationId)
+{
+    using namespace ::DFG_MODULE_NS(charts)::operations;
+    const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
+    if (svOperationId == PassWindowOperation::id())
+        return tr("%1(<axis>, <lower_bound>, <upper_bound>)").arg(viewToQString(svOperationId));
+    return QString();
+}
+
+// Returns initial placeholder text for operation definition.
+QString getOperationDefinitionPlaceholder(const StringViewUtf8& svOperationId)
+{
+    using namespace ::DFG_MODULE_NS(charts)::operations;
+    const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
+    if (svOperationId == PassWindowOperation::id())
+        return tr("%1(x, 0, 1)").arg(viewToQString(svOperationId));
+    return QString("%1()").arg(viewToQString(svOperationId));
+}
+
 } // unnamed namespace
 
 #define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG, LEVEL)
@@ -607,10 +632,9 @@ void GraphDefinitionEntry::applyOperations(::DFG_MODULE_NS(charts)::ChartOperati
         opCopy(pipeData);
         if (opCopy.hasErrors())
         {
-            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: operation '%2' encountered errors, error mask = 0x%3")
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: operation '%2' encountered errors, %3")
                 .arg(this->index())
-                .arg(viewToQString(opCopy.m_sDefinition))
-                .arg(opCopy.m_errors, 0, 16)
+                .arg(viewToQString(opCopy.m_sDefinition), formatOperationErrorsForUserVisibleText(opCopy))
             );
         }
     }
@@ -1822,6 +1846,9 @@ public:
 class ChartCanvasQCustomPlot : public DFG_MODULE_NS(charts)::ChartCanvas, public QObject
 {
 public:
+
+    using ChartEntryOperation = ::DFG_MODULE_NS(charts)::ChartEntryOperation;
+
     ChartCanvasQCustomPlot(QWidget* pParent = nullptr)
     {
         m_spChartView.reset(new QCustomPlot(pParent));
@@ -1921,6 +1948,11 @@ public:
     void removeLegends();
 
     void mouseMoveEvent(QMouseEvent* pEvent);
+
+    void applyChartOperationTo(QPointer<QCPAbstractPlottable> spPlottable, const StringViewUtf8& svOperationId);
+    // Returns true if pGraph was non-null
+    bool applyChartOperationTo(QCPGraph* pGraph, ChartEntryOperation& op, bool& rbReplotNeeded);
+    bool applyChartOperationTo(QCPBars* pBars, ChartEntryOperation& op, bool& rbReplotNeeded);
 
     // Returns true if got non-null object as argument.
     static bool toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
@@ -2150,6 +2182,22 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
 
         // Adding remove-entry
         pSubMenu->addAction(tr("Remove"), [=]() { m_spChartView->removePlottable(pPlottable); repaintCanvas(); });
+
+        // Adding operations-menu
+        {
+            auto pOperationsMenu = pSubMenu->addMenu(tr("Operations"));
+            if (pOperationsMenu)
+            {
+                ::DFG_MODULE_NS(charts)::ChartEntryOperationManager manager;
+                manager.forEachOperationId([&](StringUtf8 sOperationId)
+                {
+                    QPointer<QCPAbstractPlottable> spPlottable = pPlottable;
+                    // TODO: add operation only if it accepts input type that chart object provides.
+                    pOperationsMenu->addAction(viewToQString(sOperationId), [=]() { applyChartOperationTo(spPlottable, sOperationId); });
+                });
+                
+            }
+        }
 
         auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
         if (pGraph)
@@ -2971,6 +3019,120 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
     QToolTip::showText(pEvent->globalPos(), toolTipStream.toPlainText());
 }
 
+bool ChartCanvasQCustomPlot::applyChartOperationTo(QCPGraph* pGraph, ChartEntryOperation& op, bool& rbReplotNeeded)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    const bool rv = (pGraph != nullptr);
+    rbReplotNeeded = false;
+    if (!pGraph)
+        return rv;
+    auto spData = pGraph->data();
+    if (!spData)
+        return rv;
+
+    ValueVectorD x, y;
+    for (auto xy : *spData)
+    {
+        x.push_back(xy.key);
+        y.push_back(xy.value);
+    }
+    ChartOperationPipeData pipeData(&x, &y);
+    op(pipeData);
+    if (op.hasErrors())
+        return rv;
+    fillQcpPlottable<QCPGraphData>(*pGraph, makeRange(x), makeRange(y));
+    rbReplotNeeded = true;
+    return rv;
+}
+
+bool ChartCanvasQCustomPlot::applyChartOperationTo(QCPBars* pBars, ChartEntryOperation& op, bool& rbReplotNeeded)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    const bool rv = (pBars != nullptr);
+    rbReplotNeeded = false;
+    if (!pBars)
+        return rv;
+
+    auto spData = pBars->data();
+    if (!spData)
+        return rv;
+
+    ValueVectorD x, y;
+    for (auto keyValue : *spData)
+    {
+        x.push_back(keyValue.key);
+        y.push_back(keyValue.value);
+    }
+    ChartOperationPipeData pipeData(&x, &y);
+    op(pipeData);
+    if (op.hasErrors())
+        return rv;
+    fillQcpPlottable<QCPBarsData>(*pBars, makeRange(x), makeRange(y));
+    rbReplotNeeded = true;
+    return rv;
+}
+
+void ChartCanvasQCustomPlot::applyChartOperationTo(QPointer<QCPAbstractPlottable> spPlottable, const StringViewUtf8& svOperationId)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    QCPAbstractPlottable* pPlottable = spPlottable.data();
+    if (!pPlottable)
+        return;
+
+    const QString sOperationId = viewToQString(svOperationId);
+    ChartEntryOperationManager manager;
+    if (!manager.hasOperation(svOperationId))
+    {
+        QMessageBox::information(getWidget(), tr("Applying operation"), tr("No operation '%1' found").arg(sOperationId));
+        return;
+    }
+
+    QString sOperationDefinition;
+    const QString sWindowTitle = tr("Applying operation");
+    // Asking arguments from user
+    {
+        const QString sAdditionInfo = (qobject_cast<QCPBars*>(pPlottable) != nullptr)
+            ? tr("\nNote: bar chart string labels are not passed to operation")
+            : QString();
+        sOperationDefinition = QInputDialog::getText(this->m_spChartView.data(),
+            sWindowTitle,
+            tr("Define operation\nUsage: %1%2").arg(getOperationDefinitionUsageGuide(svOperationId), sAdditionInfo),
+            QLineEdit::Normal,
+            getOperationDefinitionPlaceholder(svOperationId));
+        if (sOperationDefinition.isEmpty())
+            return;
+    }
+
+    auto op = manager.createOperation(SzPtrUtf8(sOperationDefinition.toUtf8()));
+    if (!op)
+    {
+        QMessageBox::information(getWidget(), sWindowTitle, tr("Unable to create operation from definition\n%1").arg(sOperationDefinition));
+        return;
+    }
+
+    // Applying operation
+    bool bReplotNeeded = false;
+    const bool bKnownPlottable = applyChartOperationTo(qobject_cast<QCPGraph*>(pPlottable), op, bReplotNeeded) ||
+                           applyChartOperationTo(qobject_cast<QCPBars*>(pPlottable), op, bReplotNeeded);
+    if (!bKnownPlottable)
+    {
+        QMessageBox::information(getWidget(), sWindowTitle,
+            tr("Unable to apply operation to chart object '%1': unsupported type").arg(pPlottable->name())
+        );
+        return;
+    }
+    if (op.hasErrors())
+    {
+        QMessageBox::information(getWidget(), sWindowTitle,
+            tr("Operation '%1' encountered errors\nno changes applied to '%2'\n%3").arg(sOperationDefinition, pPlottable->name(), formatOperationErrorsForUserVisibleText(op))
+        );
+        return;
+    }
+
+    // Replotting
+    if (bReplotNeeded)
+        m_spChartView->replot();
+}
 
 template <class ChartObject_T, class ValueCont_T>
 static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
