@@ -216,14 +216,14 @@ TEST(dfgCharts, operations_passWindow)
 
     // Basic x-axis passwindow
     {
-        Vector<ChartEntryOperation> operations;
+        ChartEntryOperationList operations;
         operations.push_back(opManager.createOperation(DFG_ASCII("passWindow(x, 20, 45)")));
         ValueVectorD valsX(100);
         ValueVectorD valsY(100);
         generateAdjacent(valsX, 0, 1);
         generateAdjacent(valsY, 500, 1);
         ChartOperationPipeData arg(&valsX, &valsY);
-        operations.front()(arg);
+        operations.executeAll(arg);
         EXPECT_EQ(26, valsX.size());
         EXPECT_EQ(26, valsY.size());
         EXPECT_EQ(20, valsX.front());
@@ -234,26 +234,26 @@ TEST(dfgCharts, operations_passWindow)
 
     // Basic y-axis passwindow
     {
-        Vector<ChartEntryOperation> operations;
+        ChartEntryOperationList operations;
         operations.push_back(opManager.createOperation(DFG_ASCII("passWindow(y, 5, 10)")));
         ValueVectorD valsY = { 8, -1, 12, 5, 7 };
         ValueVectorD valsX(valsY.size());
         generateAdjacent(valsX, 0, 1);
         ChartOperationPipeData arg(&valsX, &valsY);
-        operations.front()(arg);
+        operations.executeAll(arg);
         EXPECT_EQ(ValueVectorD({ 0, 3, 4 }), valsX);
         EXPECT_EQ(ValueVectorD({ 8, 5, 7 }), valsY);
     }
 
     // Custom string-to-double parser
     {
-        Vector<ChartEntryOperation> operations;
+        ChartEntryOperationList operations;
         operations.push_back(opManager.createOperation(DFG_ASCII("passWindow(y, 2020-08-25, 2020-08-27)")));
         ValueVectorD valsY = { testDateToDouble("2020-08-24"), testDateToDouble("2020-08-25"), testDateToDouble("2020-08-26"), testDateToDouble("2020-08-28") };
         ValueVectorD valsX(valsY.size());
         generateAdjacent(valsX, 0, 1);
         ChartOperationPipeData arg(&valsX, &valsY);
-        operations.front()(arg);
+        operations.executeAll(arg);
         EXPECT_EQ(ValueVectorD({ 1, 2 }), valsX);
         EXPECT_EQ(ValueVectorD({ testDateToDouble("2020-08-25"), testDateToDouble("2020-08-26") }), valsY);
     }

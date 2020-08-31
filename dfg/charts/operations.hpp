@@ -61,6 +61,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
             const StringVector* m_pConstStringVector = nullptr;
         };
 
+        ChartOperationPipeData() = default;
+
         template <class X_T, class Y_T>
         ChartOperationPipeData(X_T&& xvals, Y_T&& yvals);
 
@@ -666,4 +668,23 @@ inline void ChartEntryOperationManager::setStringToDoubleConverter(CreationArgLi
     m_stringToDoubleConverter = converter;
 }
 
+class ChartEntryOperationList : public ::DFG_MODULE_NS(cont)::Vector<ChartEntryOperation>
+{
+public:
+    using BaseClass = ::DFG_MODULE_NS(cont)::Vector<ChartEntryOperation>;
+    using BaseClass::BaseClass; // Inheriting constructor
+
+    void executeAll(ChartOperationPipeData& pipeData);
+};
+
+
+
 }} // module namespace
+
+inline void ::DFG_MODULE_NS(charts)::ChartEntryOperationList::executeAll(ChartOperationPipeData& pipeData)
+{
+    for (auto& op : (*this))
+    {
+        op(pipeData);
+    }
+}
