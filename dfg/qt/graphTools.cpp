@@ -1892,8 +1892,6 @@ public:
         m_spChartView->addGraph();
     }
 
-    void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override;
-
     void optimizeAllAxesRanges() override;
 
     void addContextMenuEntriesForChartObjects(void* pMenu) override;
@@ -2524,9 +2522,6 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         textTicker->addTicks(ticks, labels);
         pXaxis->setTicker(textTicker);
     }
-
-    // This could be used to set label text direction
-    //plot->xAxis->setTickLabelRotation(60);
 
     //  Setting x-axis range
     pXaxis->setRange(0, saturateCast<int>(static_cast<size_t>(ticks.size()) + 1u));
@@ -3183,22 +3178,22 @@ void ChartCanvasQCustomPlot::applyChartOperationsTo(QCPAbstractPlottable* pPlott
     m_spChartView->replot();
 }
 
-void ChartCanvasQCustomPlot::setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax)
-{
-    DFG_UNUSED(pSeries);
-    DFG_UNUSED(xMin);
-    DFG_UNUSED(xMax);
-    DFG_UNUSED(yMin);
-    DFG_UNUSED(yMax);
-    // TODO: fix, this rescales all axes (in all pads) instead of just for the axisRect of given xy-series.
-    optimizeAllAxesRanges();
-}
-
 void ChartCanvasQCustomPlot::optimizeAllAxesRanges()
 {
     auto pQcp = getWidget();
     if (!pQcp)
         return;
+
+    // Scaling doesn't seem to work correctly if plotting hasn't been made yet. So if that seems to be the case, replotting first.
+    bool bDoReplotFirst = false;
+    forEachAxisRect([&](QCPAxisRect& rect)
+    {
+        bDoReplotFirst = bDoReplotFirst || (rect.width() == 0);
+    });
+
+    if (bDoReplotFirst)
+        pQcp->replot();
+
     pQcp->rescaleAxes();
 
     // Adding margin to axes so that min/max point markers won't get clipped by axisRect.
@@ -3963,6 +3958,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             }
         });
     });
+    rChart.optimizeAllAxesRanges();
 
     if (ChartConfigParam(pGlobalConfigEntry).value(ChartObjectFieldIdStr_showLegend, pChart->isLegendEnabled()))
     {
@@ -4239,9 +4235,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     }
 
     setCommonChartObjectProperties(rSeries, defEntry, configParamCreator, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname));
-
-    // Rescaling axis.
-    rChart.setAxisForSeries(&rSeries, minMaxX.minValue(), minMaxX.maxValue(), minMaxY.minValue(), minMaxY.maxValue());
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
