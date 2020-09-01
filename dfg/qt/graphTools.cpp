@@ -1892,35 +1892,9 @@ public:
         m_spChartView->addGraph();
     }
 
-    void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
-    {
-        DFG_UNUSED(pSeries);
-        DFG_UNUSED(xMin);
-        DFG_UNUSED(xMax);
-        DFG_UNUSED(yMin);
-        DFG_UNUSED(yMax);
-        if (m_spChartView)
-        {
-            m_spChartView->rescaleAxes();
-            
-            // Adding margin to axes so that min/max point markers won't get clipped by axisRect.
-            const auto axisRects = m_spChartView->axisRects();
-            for (auto& pAr : axisRects)
-            {
-                if (!pAr)
-                    continue;
-                const auto axes = pAr->axes();
-                for (auto pAxis : axes)
-                {
-                    if (pAxis)
-                        pAxis->scaleRange(1.1);
-                }
-                
-            }
+    void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override;
 
-            m_spChartView->replot();
-        }
-    }
+    void optimizeAllAxesRanges() override;
 
     void addContextMenuEntriesForChartObjects(void* pMenu) override;
 
@@ -3209,6 +3183,33 @@ void ChartCanvasQCustomPlot::applyChartOperationsTo(QCPAbstractPlottable* pPlott
     m_spChartView->replot();
 }
 
+void ChartCanvasQCustomPlot::setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax)
+{
+    DFG_UNUSED(pSeries);
+    DFG_UNUSED(xMin);
+    DFG_UNUSED(xMax);
+    DFG_UNUSED(yMin);
+    DFG_UNUSED(yMax);
+    // TODO: fix, this rescales all axes (in all pads) instead of just for the axisRect of given xy-series.
+    optimizeAllAxesRanges();
+}
+
+void ChartCanvasQCustomPlot::optimizeAllAxesRanges()
+{
+    auto pQcp = getWidget();
+    if (!pQcp)
+        return;
+    pQcp->rescaleAxes();
+
+    // Adding margin to axes so that min/max point markers won't get clipped by axisRect.
+    forEachAxisRect([](QCPAxisRect& rect)
+    {
+        forEachAxis(&rect, [](QCPAxis& axis) { axis.scaleRange(1.1); });
+    });
+
+    pQcp->replot();
+}
+
 template <class ChartObject_T, class ValueCont_T>
 static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
 {
@@ -3707,8 +3708,10 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
     QMenu menu;
 
     // Global options
-    menu.addAction(tr("Refresh"), pParentGraphWidget, &GraphControlAndDisplayWidget::refresh);
     {
+        menu.addAction(tr("Refresh"), pParentGraphWidget, &GraphControlAndDisplayWidget::refresh);
+        menu.addAction(tr("Rescale all axis"), [=]() { auto pChart = this->chart(); if (pChart) pChart->optimizeAllAxesRanges(); });
+
         auto pRemoveAllAction = menu.addAction(tr("Remove all chart objects"), pParentGraphWidget, [&]() { this->m_spChartCanvas->removeAllChartObjects(); });
         if (pRemoveAllAction && !this->m_spChartCanvas->hasChartObjects())
             pRemoveAllAction->setDisabled(true);

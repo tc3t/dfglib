@@ -551,6 +551,7 @@ public:
     virtual void setTitle(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svTitle*/) {}
 
     virtual void setAxisForSeries(XySeries*, const double /*xMin*/, const double /*xMax*/, const double /*yMin*/, const double /*yMax*/) {}
+    virtual void optimizeAllAxesRanges() {}
 
     virtual void addContextMenuEntriesForChartObjects(void*) {} // TODO: no void*
 
