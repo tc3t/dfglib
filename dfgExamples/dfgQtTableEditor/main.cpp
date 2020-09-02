@@ -95,9 +95,6 @@ static void onShowAboutBox()
                  ", <a href=https://github.com/fmtlib/fmt>fmt</a>"
                  ", Qt"
                  ", <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>"
-             #if (defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1))
-                 ", Qt Charts"
-             #endif
              #if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
                  ", <a href=https://www.qcustomplot.com>QCustomPlot</a>"
              #endif
@@ -163,7 +160,7 @@ int main(int argc, char *argv[])
     tableEditor.setAllowApplicationSettingsUsage(true);
     mainWindow.setWindowIcon(QIcon(":/mainWindowIcon.png"));
 
-#if (defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)) || (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
+#if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
     dfg::qt::GraphControlAndDisplayWidget graphDisplay;
 
     // Setting data sources to chart display.

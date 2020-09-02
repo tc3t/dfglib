@@ -50,15 +50,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QElapsedTimer>
     #include <QGuiApplication> 
 
-#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-    #include <QtCharts>
-    #include <QtCharts/QChart>
-    #include <QtCharts/QChartView>
-    #include <QtCharts/QLineSeries>
-    #include <QtCharts/QDateTimeAxis>
-    #include <QtCharts/QValueAxis>
-#endif
-
     #include <QListWidget>
     #include <QJsonDocument>
     #include <QJsonObject>
@@ -1369,71 +1360,6 @@ ChartController* GraphDefinitionWidget::getController()
     return (m_spParent) ? m_spParent->getController() : nullptr;
 }
 
-// Implementations for Qt Charts
-#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-class XySeriesQtChart : public ::DFG_MODULE_NS(charts)::XySeries
-{
-public:
-    XySeriesQtChart(QAbstractSeries* xySeries)
-        : m_spXySeries(xySeries)
-    {
-
-    }
-
-    void setOrAppend(const DataSourceIndex index, const double x, const double y) override
-    {
-        auto pXySeries = getXySeriesImpl();
-        if (!pXySeries)
-            return;
-        if (index < static_cast<DataSourceIndex>(pXySeries->count()))
-            pXySeries->replace(static_cast<int>(index), x, y);
-        else
-            pXySeries->append(x, y);
-    }
-
-    void resize(const DataSourceIndex nNewSize) override
-    {
-        auto pXySeries = getXySeriesImpl();
-        if (!pXySeries || nNewSize == static_cast<DataSourceIndex>(pXySeries->count()))
-            return;
-        if (nNewSize < static_cast<DataSourceIndex>(pXySeries->count()))
-            pXySeries->removePoints(static_cast<int>(nNewSize), pXySeries->count() - static_cast<int>(nNewSize));
-        else // Case: new size is bigger than current.
-        {
-            const auto nAddCount = nNewSize - static_cast<DataSourceIndex>(pXySeries->count());
-            for (DataSourceIndex i = 0; i < nAddCount; ++i)
-                pXySeries->append(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
-        }
-    }
-
-    QXYSeries* getXySeriesImpl()
-    {
-        return qobject_cast<QXYSeries*>(m_spXySeries.data());
-    }
-
-    void setValues(InputSpan<double> xVals, InputSpan<double> yVals, const std::vector<bool>* filterFlags = nullptr) override
-    {
-        auto pXySeries = getXySeriesImpl();
-        if (!pXySeries || xVals.size() != yVals.size())
-            return;
-        pXySeries->clear();
-        QVector<QPointF> points;
-        const auto nNewCount = xVals.size();
-        points.resize(static_cast<int>(nNewCount));
-        std::transform(xVals.cbegin(), xVals.cbegin() + nNewCount,
-                       yVals.cbegin(),
-                       points.begin(),
-                       [](const double x, const double y)
-        {
-            return QPointF(x, y);
-        });
-        pXySeries->replace(points);
-    }
-
-    QPointer<QAbstractSeries> m_spXySeries;
-}; // Class XySeriesQtChart
-#endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-
 // Implementations for QCustomPlot
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
@@ -1718,98 +1644,6 @@ BarSeriesQCustomPlot::~BarSeriesQCustomPlot()
 {
 }
 
-
-#endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// End of DFG_ALLOW_QCUSTOMPLOT
-//
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-class ChartCanvasQtChart : public ChartCanvas, QObject
-{
-public:
-
-    ChartCanvasQtChart(QWidget* pParent = nullptr)
-    {
-        m_spChartView.reset(new QChartView(pParent));
-        m_spChartView->setRenderHint(QPainter::Antialiasing);
-        m_spChartView->setChart(new QChart); // ChartView takes ownership.
-    }
-
-    QWidget* getWidget()
-    {
-        return m_spChartView.get();
-    }
-
-    void setTitle(StringViewUtf8 /*svPanelId*/, StringViewUtf8 svTitle) override
-    {
-        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
-        if (pChart)
-            pChart->setTitle(QString::fromUtf8(svTitle.beginRaw(), static_cast<int>(svTitle.size())));
-    }
-
-    bool hasChartObjects() const override
-    {
-        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
-        return (pChart) ? !pChart->series().isEmpty() : false;
-    }
-
-    void addXySeries() override
-    {
-        auto pChart = (m_spChartView) ? m_spChartView->chart() : nullptr;
-        pChart->addSeries(new QLineSeries(m_spChartView.get())); // chart takes ownership
-        //pChart->addSeries(new QScatterSeries(m_spChartView.get())); // chart takes ownership
-    }
-
-    void setAxisForSeries(XySeries* pSeries, const double xMin, const double xMax, const double yMin, const double yMax) override
-    {
-        if (!pSeries || !m_spChartView)
-            return;
-
-        auto pChart = m_spChartView->chart();
-
-        if (!pChart)
-            return;
-
-        auto qtXySeries = dynamic_cast<XySeriesQtChart*>(pSeries);
-
-        if (!qtXySeries)
-            return;
-
-        auto pSeriesImpl = qtXySeries->getXySeriesImpl();
-
-        if (!pSeriesImpl)
-            return;
-
-        if (pChart->axes().isEmpty())
-            pChart->createDefaultAxes();
-
-        auto xAxes = pChart->axes(Qt::Horizontal);
-        auto yAxes = pChart->axes(Qt::Vertical);
-        if (!xAxes.isEmpty())
-            pSeriesImpl->attachAxis(xAxes.front());
-        if (!yAxes.isEmpty())
-            pSeriesImpl->attachAxis(yAxes.front());
-
-        // Setting axis ranges
-        {
-            if (!xAxes.isEmpty() && xAxes.front())
-                xAxes.front()->setRange(xMin, xMax);
-            if (!yAxes.isEmpty() && yAxes.front())
-                yAxes.front()->setRange(yMin, yMax);
-        }
-    }
-
-    QObjectStorage<QChartView> m_spChartView;
-}; // ChartCanvasQtChart
-#endif // #if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-
-#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-
 class ChartPanel;
 
 using PointXy = ::DFG_MODULE_NS(cont)::TrivialPair<double, double>;
@@ -1861,36 +1695,16 @@ public:
     using ChartEntryOperation       = ::DFG_MODULE_NS(charts)::ChartEntryOperation;
     using ChartEntryOperationList   = ::DFG_MODULE_NS(charts)::ChartEntryOperationList;
 
-    ChartCanvasQCustomPlot(QWidget* pParent = nullptr)
-    {
-        m_spChartView.reset(new QCustomPlot(pParent));
-
-        const auto interactions = m_spChartView->interactions();
-        // iRangeZoom: "Axis ranges are zoomable with the mouse wheel"
-        // iRangeDrag: Allows moving view point by dragging.
-        // iSelectPlottables: "Plottables are selectable"
-        // iSelectLegend: "Legends are selectable"
-        m_spChartView->setInteractions(interactions | QCP::iRangeZoom | QCP::iRangeDrag | QCP::iSelectPlottables | QCP::iSelectLegend);
-
-        DFG_QT_VERIFY_CONNECT(connect(m_spChartView.get(), &QCustomPlot::mouseMove, this, &ChartCanvasQCustomPlot::mouseMoveEvent));
-    }
+    ChartCanvasQCustomPlot(QWidget* pParent = nullptr);
 
           QCustomPlot* getWidget()       { return m_spChartView.get(); }
     const QCustomPlot* getWidget() const { return m_spChartView.get(); }
 
     void setTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle) override;
 
-    bool hasChartObjects() const override
-    {
-        return m_spChartView && (m_spChartView->plottableCount() > 0);
-    }
+    bool hasChartObjects() const override;
 
-    void addXySeries() override
-    {
-        if (!m_spChartView)
-            return;
-        m_spChartView->addGraph();
-    }
+    void addXySeries() override;
 
     void optimizeAllAxesRanges() override;
 
@@ -1990,7 +1804,7 @@ public:
 
     QCustomPlot* m_pQcp = nullptr;
     QString m_panelId;
-};
+}; // class ChartPanel
 
 ChartPanel::ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId)
     : m_pQcp(pQcp)
@@ -2133,6 +1947,32 @@ namespace
                 pAction->setChecked(true);
         }
     }
+}
+
+ChartCanvasQCustomPlot::ChartCanvasQCustomPlot(QWidget* pParent)
+{
+    m_spChartView.reset(new QCustomPlot(pParent));
+
+    const auto interactions = m_spChartView->interactions();
+    // iRangeZoom: "Axis ranges are zoomable with the mouse wheel"
+    // iRangeDrag: Allows moving view point by dragging.
+    // iSelectPlottables: "Plottables are selectable"
+    // iSelectLegend: "Legends are selectable"
+    m_spChartView->setInteractions(interactions | QCP::iRangeZoom | QCP::iRangeDrag | QCP::iSelectPlottables | QCP::iSelectLegend);
+
+    DFG_QT_VERIFY_CONNECT(connect(m_spChartView.get(), &QCustomPlot::mouseMove, this, &ChartCanvasQCustomPlot::mouseMoveEvent));
+}
+
+bool ChartCanvasQCustomPlot::hasChartObjects() const
+{
+    return m_spChartView && (m_spChartView->plottableCount() > 0);
+}
+
+void ChartCanvasQCustomPlot::addXySeries()
+{
+    if (!m_spChartView)
+        return;
+    m_spChartView->addGraph();
 }
 
 void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHandle)
@@ -3255,6 +3095,12 @@ void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(charts):
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// End of DFG_ALLOW_QCUSTOMPLOT
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
 }} // module namespace
 
 
@@ -3370,13 +3216,7 @@ bool DFG_MODULE_NS(qt)::GraphControlPanel::getEnabledFlag() const
 DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pParent)
 {
     auto pLayout = new QGridLayout(this);
-#if defined(DFG_ALLOW_QT_CHARTS) && (DFG_ALLOW_QT_CHARTS == 1)
-    auto pChartCanvas = new ChartCanvasQtChart(this);
-    auto pWidget = pChartCanvas->getWidget();
-    if (pWidget)
-        pLayout->addWidget(pWidget);
-    m_spChartCanvas.reset(pChartCanvas);
-#elif defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
     auto pChartCanvas = new ChartCanvasQCustomPlot(this);
     auto pWidget = pChartCanvas->getWidget();
     if (pWidget)

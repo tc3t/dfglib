@@ -18,8 +18,6 @@ message("QMAKESPEC is " $$QMAKESPEC)
 #message("QMAKE_HOST.version_string is " $$QMAKE_HOST.version_string)
 
 # Main switches for QtCharts and QCustomPlot. Value can be 1 even if not available; there's a separate availability check later.
-# Note: building with Qt charts is not maintained, might not work.
-DFG_ALLOW_QT_CHARTS = 0
 # Using QCustomPlot requires at least Qt 5.6 (this is a dfglib requirement, QCustomPlot (2.0.1) itself can be used in earlier Qt).
 DFG_ALLOW_QCUSTOMPLOT = 0
 
@@ -49,31 +47,6 @@ equals(DFG_ALLOW_QCUSTOMPLOT, "1") {
         message("QCustomPlot NOT found.")
     }
 }
-
-equals(DFG_ALLOW_QT_CHARTS, "1") {
-    qtHaveModule(charts) {
-        message("Qt Charts module found")
-        QT_CHARTS_AVAILABLE=1
-
-    } else {
-        message("Qt Charts module NOT found")
-        QT_CHARTS_AVAILABLE = 0
-    }
-}
-
-# Checking whether to use QtCharts
-equals(DFGQTE_USING_QCUSTOMPLOT, "0") {
-    equals(QT_CHARTS_AVAILABLE, "1") {
-        equals(DFG_ALLOW_QT_CHARTS, "1") {
-            message("Using Qt Charts. WARNING: using Qt Charts causes GPL infection")
-            QT       += charts
-            DEFINES += DFG_ALLOW_QT_CHARTS=1 DFGQTE_GPL_INFECTED=1
-        } else {
-            message("Qt Charts was found, but not used due to config flag")
-        }
-    }
-}
-
 
 # -------------------------------------------------------
 
