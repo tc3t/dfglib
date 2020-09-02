@@ -1882,7 +1882,7 @@ public:
 
     bool hasChartObjects() const override
     {
-        return m_spChartView && (m_spChartView->graph() != nullptr);
+        return m_spChartView && (m_spChartView->plottableCount() > 0);
     }
 
     void addXySeries() override
