@@ -347,6 +347,102 @@ TEST(dfgCharts, operations_passWindow)
     }
 }
 
+TEST(dfgCharts, operations_smoothing_indexNb)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(charts);
+
+    ChartEntryOperationManager opManager;
+
+    // Basic test with default arguments
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("smoothing_indexNb()")));
+        const ValueVectorD valsX{1, 2, 10};
+        ValueVectorD valsY{50, 60, 100};
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(ValueVectorD({55, 70, 80}), valsY);
+        EXPECT_EQ(&valsX, arg.constValuesByIndex(0)); // Testing that const input hasn't been touched
+        EXPECT_EQ(&valsY, arg.constValuesByIndex(1)); // Testing that y values were changed inplace.
+    }
+
+    // Basic test with explicitly set smoothing radius
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("smoothing_indexNb(2)")));
+        const ValueVectorD valsX{ 1, 2, 10, 15 };
+        const ValueVectorD valsY{ 50, 60, 100, 150 };
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(&valsX, arg.constValuesByIndex(0)); // Testing that const input hasn't been touched
+        EXPECT_NE(&valsY, arg.constValuesByIndex(1)); // Testing that new y container was created.
+        ASSERT_NE(nullptr, arg.constValuesByIndex(1));
+        EXPECT_EQ(ValueVectorD({ 70, 90, 90, (60.0 + 100.0 + 150.0) / 3.0 }), *arg.constValuesByIndex(1));
+    }
+
+    // Basic test with median smoothing
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("smoothing_indexNb(1, median)")));
+        const ValueVectorD valsX{ 1, 2, 10 };
+        ValueVectorD valsY{ 50, 60, 100 };
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(ValueVectorD({ 55, 60, 80 }), valsY);
+        EXPECT_EQ(&valsX, arg.constValuesByIndex(0)); // Testing that const input hasn't been touched
+        EXPECT_EQ(&valsY, arg.constValuesByIndex(1)); // Testing that y values were changed inplace.
+    }
+
+    // Basic test with median smoothing with longer radius
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("smoothing_indexNb(2, median)")));
+        const ValueVectorD valsX{ 1, 2, 10, 15 };
+        ValueVectorD valsY{ 50, 60, 100, 150 };
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(ValueVectorD({ 60, 80, 80, 100 }), valsY);
+        EXPECT_EQ(&valsX, arg.constValuesByIndex(0)); // Testing that const input hasn't been touched
+        EXPECT_EQ(&valsY, arg.constValuesByIndex(1)); // Testing that y values were changed inplace.
+    }
+
+    // Median smoothing with longer data
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("smoothing_indexNb(2, median)")));
+        const ValueVectorD valsX{ 1 ,  2, 10,  15, 20, 30, 40, 50 };
+              ValueVectorD valsY{ 50, 60, 20, 150, 10,  3, 15, 70 };
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(ValueVectorD({ 50, 55, 50, 20, 15, 15, 12.5, 15 }), valsY);
+        EXPECT_EQ(&valsX, arg.constValuesByIndex(0)); // Testing that const input hasn't been touched
+        EXPECT_EQ(&valsY, arg.constValuesByIndex(1)); // Testing that y values were changed inplace.
+    }
+
+    // Handling of empty radius
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("smoothing_indexNb(0)")));
+        const ValueVectorD valsX{ 1, 2, 10 };
+        const ValueVectorD valsY{ 50, 60, 100 };
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        // Testing that inputs hasn't been touched since with radius 0 nothing should get done.
+        EXPECT_EQ(&valsX, arg.constValuesByIndex(0));
+        EXPECT_EQ(&valsY, arg.constValuesByIndex(1));
+    }
+
+    // Testing various invalid arguments
+    {
+        EXPECT_FALSE(opManager.createOperation(DFG_ASCII("smoothing_indexNb(abc)"))); // Non-number radius
+        EXPECT_FALSE(opManager.createOperation(DFG_ASCII("smoothing_indexNb(1, invalidType)"))); // Invalid smoothing type
+        EXPECT_FALSE(opManager.createOperation(DFG_ASCII("smoothing_indexNb(1, 2, 3)"))); // Too many arguments
+        EXPECT_FALSE(opManager.createOperation(DFG_ASCII("smoothing_indexNb(-1)"))); // Negative radius
+        EXPECT_FALSE(opManager.createOperation(DFG_ASCII("smoothing_indexNb(1.25)"))); // Non-integer radius
+    }
+}
+
 TEST(dfgCharts, ChartEntryOperationManager)
 {
     using namespace ::DFG_ROOT_NS;

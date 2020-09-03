@@ -9,6 +9,8 @@
 #include <deque>
 #include <functional>
 #include <vector>
+#include "../dataAnalysis/smoothWithNeighbourAverages.hpp"
+#include "../dataAnalysis/smoothWithNeighbourMedians.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
@@ -320,7 +322,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         template <class T>
         T valueAs(const size_t nIndex) const
         {
-            return (m_stringToDoubleConverter) ? m_stringToDoubleConverter(value(nIndex)) : ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex));
+            DFG_STATIC_ASSERT(std::is_floating_point<T>::value, "Current implementation assumes floating point target");
+            if (m_stringToDoubleConverter)
+                return m_stringToDoubleConverter(value(nIndex));
+            else
+            {
+                bool bOk;
+                const auto v = ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex), &bOk);
+                return (bOk) ? v : std::numeric_limits<T>::quiet_NaN();
+            }
         }
 
         StringToDoubleConverter m_stringToDoubleConverter;
@@ -641,12 +651,104 @@ namespace operations
         }
     }; // PassWindowOperation
 
+
+ /** Implements index neighbour smoothing
+  *
+  *  Id:
+  *      smoothing_indexNb
+  *  Parameters:
+  *      -[0]: index radius for number of neighbours to include, default = 1 = one neighbour from both sides. 0 = no neighbours = does nothing
+  *      -[1]: smoothing type, default average. Possible values: average, median, default
+  *  Dependencies
+  *      -[y]
+  *  Outputs:
+  *      -[x] unmodified, [y] with smoothing applied
+  *  Details:
+  *      -If input vector count != 2, considered as error.
+  *      -If either side has less than 'radius' neighbours at some point, smoothing may be unbalanced, i.e. takes less neighbours from other size.
+  */
+    class Smoothing_indexNb : public ChartEntryOperation
+    {
+    public:
+        static SzPtrUtf8R id();
+
+        static ChartEntryOperation create(const CreationArgList& argList);
+
+        static constexpr double smoothingTypeAverage() { return 0; }
+        static constexpr double smoothingTypeMedian() { return 1; }
+
+        // Executes operation on pipe data.
+        static void operation(ChartEntryOperation& op, ChartOperationPipeData& arg);
+    }; // class Smoothing_indexNb
+
+    inline auto Smoothing_indexNb::id() -> SzPtrUtf8R
+    {
+        return DFG_UTF8("smoothing_indexNb");
+    }
+
+    inline auto Smoothing_indexNb::create(const CreationArgList& argList) -> ChartEntryOperation
+    {
+        if (argList.valueCount() >= 3)
+            return ChartEntryOperation();
+        const double arg0 = (argList.valueCount() >= 1) ? argList.valueAs<double>(0) : 1;
+        if (!::DFG_MODULE_NS(math)::isFloatConvertibleTo<uint32>(arg0))
+            return ChartEntryOperation();
+        double arg1 = smoothingTypeAverage();
+        if (argList.valueCount() >= 2)
+        {
+            const auto sArg1 = argList.value(1);
+            if (sArg1 == DFG_UTF8("median"))
+                arg1 = smoothingTypeMedian();
+            else if (sArg1 != DFG_UTF8("default") && sArg1 != DFG_UTF8("average"))
+                return ChartEntryOperation();
+        }
+        
+        ChartEntryOperation op(&Smoothing_indexNb::operation);
+        op.m_argList.resize(2);
+        op.m_argList[0] = arg0;
+        op.m_argList[1] = arg1;
+        return op;
+    }
+
+    // Executes operation on pipe data.
+    inline void Smoothing_indexNb::operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
+    {
+        const auto& argList = op.m_argList;
+        size_t nNbRadius = 0;
+        if (argList.size() < 1 || !::DFG_MODULE_NS(math)::isFloatConvertibleTo(argList[0], &nNbRadius))
+        {
+            op.setError(error_badCreationArgs);
+            return;
+        }
+        if (arg.vectorCount() != 2)
+        {
+            op.setError(error_unexpectedInputVectorCount);
+            return;
+        }
+        if (nNbRadius == 0)
+            return;
+        auto pY = arg.valuesByIndex(1);
+        if (!pY)
+        {
+            op.setError(error_unexpectedInputVectorTypes);
+            return;
+        }
+        const auto smoothingType = (argList.size() >= 2) ? argList[1] : smoothingTypeAverage();
+        if (smoothingType == smoothingTypeAverage())
+            ::DFG_MODULE_NS(dataAnalysis)::smoothWithNeighbourAverages(*pY, nNbRadius);
+        else if (smoothingType == smoothingTypeMedian())
+            ::DFG_MODULE_NS(dataAnalysis)::smoothWithNeighbourMedians(*pY, nNbRadius);
+        else
+            op.setError(error_badCreationArgs);
+    }
+
 } // namespace operations
 
 inline ChartEntryOperationManager::ChartEntryOperationManager()
 {
     // Adding built-in operations.
     add<operations::PassWindowOperation>();
+    add<operations::Smoothing_indexNb>();
 }
 
 inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAndParams) -> ChartEntryOperation
