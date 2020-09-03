@@ -171,7 +171,44 @@ namespace DFG_DETAIL_NS
         Val_T intPart;
         return std::modf(val, &intPart) == 0;
     }
-}
+
+    // Case where integer type min/max can be represented as floating point value
+    // Precondition: isIntegerValued(f) == true
+    template <class Int_T, class Float_T>
+    bool isIntegerFloatConvertibleTo(const Float_T f, Int_T* pInt, std::true_type)
+    {
+        if (f >= static_cast<Float_T>((std::numeric_limits<Int_T>::min)()) && f <= static_cast<Float_T>((std::numeric_limits<Int_T>::max)()))
+        {
+            if (pInt)
+                *pInt = static_cast<Int_T>(f);
+            DFG_ASSERT_CORRECTNESS(static_cast<Float_T>(static_cast<Int_T>(f)) == f);
+            return true;
+        }
+        else
+            return false;
+    }
+
+    // Case where integer type min/max can not be represented as floating point value
+    // Precondition: isIntegerValued(f) == true
+    template <class Int_T, class Float_T>
+    bool isIntegerFloatConvertibleTo(const Float_T f, Int_T* pInt, std::false_type)
+    {
+        int exp;
+        const auto factor = std::frexp(f, &exp); // exp is value k in f = a * 2^k, where |a| is in [0.5, 1[
+        if (factor < 0 && std::is_unsigned<Int_T>::value)
+            return false;
+        if (exp <= std::numeric_limits<Int_T>::digits)
+        {
+            if (pInt)
+                *pInt = static_cast<Int_T>(f);
+            DFG_ASSERT_CORRECTNESS(static_cast<Float_T>(static_cast<Int_T>(f)) == f);
+            return true;
+        }
+        else
+            return false;
+    }
+
+} // unnamed namespace
 
 // Returns true iff value is integer value.
 // Return values for some special floating point values:
@@ -182,6 +219,17 @@ template <class Val_T>
 inline bool isIntegerValued(const Val_T val)
 {
     return DFG_DETAIL_NS::isIntegerValuedImpl(val, std::is_integral<Val_T>());
+}
+
+// Returns true if floating point value can be represent exactly as given integer type. If pInt is given and and return value is true, it receives the integer value.
+template <class Int_T, class Float_T>
+bool isFloatConvertibleTo(const Float_T f, Int_T* pInt = nullptr)
+{
+    DFG_STATIC_ASSERT(std::is_integral<Int_T>::value, "Int_T should be integer type");
+    DFG_STATIC_ASSERT(std::numeric_limits<Float_T>::is_iec559, "isFloatConvertibleTo() probably requires IEC 559 (IEEE 754) floating points");
+    if (!isIntegerValued(f))
+        return false;
+    return DFG_DETAIL_NS::isIntegerFloatConvertibleTo(f, pInt, std::integral_constant<bool, std::numeric_limits<Float_T>::digits >= std::numeric_limits<Int_T>::digits>());
 }
 
 namespace DFG_DETAIL_NS

@@ -400,6 +400,84 @@ TEST(dfgMath, isIntegerValued)
     }
 }
 
+TEST(dfgMath, isFloatConvertibleTo)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+
+    /*
+    int8_min	= -128
+    int16_min   = -32768
+    int32_min   = -2147483648
+    int64_min   = -9223372036854775808
+
+    int8_max    = 127
+    int16_max   = 32767
+    int32_max   = 2147483647 = 2.1xxe9
+    int64_max   = 9223372036854775807 = 9.2xxxe18
+
+    uint8_max  = 255
+    uint16_max = 65535
+    uint32_max = 4294967295
+    uint64_max = 18446744073709551615 = 1.8xxe19
+    */
+
+    int16 s16;
+    uint16 u16;
+    int32 s32;
+    uint32 u32;
+    int64 s64;
+    uint64 u64;
+
+    EXPECT_TRUE(isFloatConvertibleTo<uint32>(0.0, &u32));
+    EXPECT_EQ(0, u32);
+    EXPECT_TRUE(isFloatConvertibleTo(123.0, &u32));
+    EXPECT_EQ(123, u32);
+    EXPECT_FALSE(isFloatConvertibleTo<uint32>(-123.0, &u32));
+    EXPECT_TRUE(isFloatConvertibleTo<int32>(-123.0, &s32));
+    EXPECT_EQ(-123, s32);
+    EXPECT_FALSE(isFloatConvertibleTo<uint32>(1.25));
+
+    // (u)int16 tests
+    EXPECT_FALSE(isFloatConvertibleTo(-32768.0, &u16));
+    EXPECT_TRUE(isFloatConvertibleTo(-32768.0, &s16));
+    EXPECT_EQ(int16_min, s16);
+    EXPECT_TRUE(isFloatConvertibleTo(65535.0f, &u16));
+    EXPECT_EQ(65535, u16);
+    EXPECT_TRUE(isFloatConvertibleTo(65535.0, &u16));
+    EXPECT_EQ(65535, u16);
+    EXPECT_FALSE(isFloatConvertibleTo<uint16>(65536.0));
+
+    EXPECT_TRUE(isFloatConvertibleTo(-2147483648.0, &s32));
+    EXPECT_EQ(int32_min, s32);
+    EXPECT_FALSE(isFloatConvertibleTo<int32>(-2147483649.0));
+    EXPECT_TRUE(isFloatConvertibleTo(-2147483649.0, &s64));
+    EXPECT_EQ(int64(int32_min) - 1, s64);
+
+    EXPECT_FALSE(isFloatConvertibleTo<int32>(3e9f));
+    EXPECT_FALSE(isFloatConvertibleTo<int32>(3e9));
+    EXPECT_TRUE(isFloatConvertibleTo<uint32>(3e9f));
+    EXPECT_TRUE(isFloatConvertibleTo<uint32>(3e9));
+    EXPECT_TRUE(isFloatConvertibleTo<int64>(3e9f, &s64));
+    EXPECT_EQ(3000000000, s64);
+    EXPECT_TRUE(isFloatConvertibleTo<uint64>(3e9, &u64));
+    EXPECT_EQ(3000000000, u64);
+    EXPECT_TRUE(isFloatConvertibleTo<int64>(1e15f, &s64));
+    EXPECT_EQ(999999986991104, s64); // This obviously is not 1e15, but it's not the conversion that "fails", it's that the 1e15 can't be presented exactly as float so conversion didn't get 1e15 as input.
+    EXPECT_FALSE(isFloatConvertibleTo<int64>(1e19f));
+    EXPECT_TRUE(isFloatConvertibleTo<uint64>(1e19f, &u64));
+    EXPECT_EQ(9999999980506447872ull, u64);
+    EXPECT_FALSE(isFloatConvertibleTo<uint64>(2e19));
+
+    EXPECT_TRUE(isFloatConvertibleTo<uint64>(1e15, &u64));
+    EXPECT_EQ(1000000000000000ull, u64);
+
+    EXPECT_FALSE(isFloatConvertibleTo<int32>(4294967295.0, &s32));
+    EXPECT_TRUE(isFloatConvertibleTo<uint32>(4294967295.0, &u32));
+    EXPECT_EQ(uint32_max, u32);
+    EXPECT_FALSE(isFloatConvertibleTo<uint32>(4294967296.0, &u32));
+}
+
 namespace
 {
     template <class T>
