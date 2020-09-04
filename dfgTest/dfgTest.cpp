@@ -60,6 +60,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgAlg.floatIndexInSorted";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.nearestRangeInSorted";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations";
+    //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_blockWindow";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_passWindow";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_smoothing_indexNb";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.ChartEntryOperationManager";

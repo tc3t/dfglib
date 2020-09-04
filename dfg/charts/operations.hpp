@@ -447,7 +447,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     }
 
     template <class Func_T>
-    inline void ChartEntryOperation::privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T && func)
+    inline void ChartEntryOperation::privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T&& func)
     {
         using namespace DFG_MODULE_NS(alg);
         auto pCont = privPipeVectorByAxisIndex(arg, axis);
@@ -464,7 +464,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Creating keep-flags
         std::vector<bool> keepFlags;
         keepFlags.resize(pCont->size());
-        std::transform(pCont->begin(), pCont->end(), keepFlags.begin(), [&](const double d) { return func(d); });
+        std::transform(pCont->begin(), pCont->end(), keepFlags.begin(), func);
         // Filtering all vectors by keep-flags.
         forEachVector(arg, [&](DataVectorRef& ref)
         {
@@ -591,6 +591,54 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
 namespace operations
 {
+    namespace DFG_DETAIL_NS
+    {
+        // Common crtp-base for basic filter operations, derived class should have static filter() function that
+        // takes three arguments (value, arg1, arg2) and should return true if 'value' should be kept, false if it should be removed.
+        template <class Derived_T>
+        class FilterOperation : public ChartEntryOperation
+        {
+        public:
+            // Returns filter operation whose implementation is defined by Derived_T or invalid operation eg. if arguments are invalid.
+            static ChartEntryOperation create(const CreateOperationArgs& argList);
+
+            static void operation(ChartEntryOperation& op, ChartOperationPipeData& arg);
+        }; // class FilterOperation
+
+        template <class Derived_T>
+        inline ChartEntryOperation FilterOperation<Derived_T>::create(const CreateOperationArgs& argList)
+        {
+            if (argList.valueCount() != 3)
+                return privInvalidCreationArgsResult();
+            const auto axis = axisStrToIndex(argList.value(0));
+            if (axis == axisIndex_invalid)
+                return privInvalidCreationArgsResult();
+            ChartEntryOperation op(FilterOperation::operation);
+
+            op.m_argList.resize(3);
+            op.m_argList[0] = axis;
+            op.m_argList[1] = argList.valueAs<double>(1);
+            op.m_argList[2] = argList.valueAs<double>(2);
+            return op;
+        }
+
+        // Executes operation on pipe data.
+        template <class Derived_T>
+        inline void FilterOperation<Derived_T>::operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
+        {
+            const auto& argList = op.m_argList;
+            if (argList.size() < 3)
+            {
+                op.setError(error_badCreationArgs);
+                return;
+            }
+            const auto axis = argList[0];
+            const auto arg1 = argList[1];
+            const auto arg2 = argList[2];
+            op.privFilterBySingle(arg, axis, [=](const double v) { return Derived_T::filter(v, arg1, arg2); });
+        }
+    } // namespace DFG_DETAIL_NS
+
     /** Implements pass window operation
      *      Filters out all data points (xi, yi) where chosen coordinate (x/y) is not within [a, b]
      *  Id:
@@ -606,67 +654,63 @@ namespace operations
      *  Details:
      *      -NaN handling: unspecified
      */
-    class PassWindowOperation : public ChartEntryOperation
+    class PassWindowOperation : public DFG_DETAIL_NS::FilterOperation<PassWindowOperation>
     {
     public:
+        using BaseClass = DFG_DETAIL_NS::FilterOperation<PassWindowOperation>;
+
         // Returns operation id
         static SzPtrUtf8R id()
         {
             return DFG_UTF8("passWindow");
         }
 
-        // Returns PassWindowOperation or invalid operation eg. if arguments are invalid.
-        static ChartEntryOperation create(const CreateOperationArgs& argList)
+        static bool filter(const double v, const double lowerBound, const double upperBound)
         {
-            if (argList.valueCount() != 3)
-                return privInvalidCreationArgsResult();
-            const auto axis = axisStrToIndex(argList.value(0));
-            if (axis == axisIndex_invalid)
-                return privInvalidCreationArgsResult();
-            ChartEntryOperation op(&PassWindowOperation::operation);
+            return v >= lowerBound && v <= upperBound;
+        }
+    }; // PassWindowOperation
 
-            op.m_argList.resize(3);
-            op.m_argList[0] = axis;
-            op.m_argList[1] = argList.valueAs<double>(1);
-            op.m_argList[2] = argList.valueAs<double>(2);
-            return op;
+    /** Implements block window operation
+     *      Inverse of passWindow: filters out values in given window
+     *  Id:
+     *      blockWindow
+     *  Details like for passWindow.
+     */
+    class BlockWindowOperation : public DFG_DETAIL_NS::FilterOperation<BlockWindowOperation>
+    {
+    public:
+        using BaseClass = DFG_DETAIL_NS::FilterOperation<BlockWindowOperation>;
+
+        // Returns operation id
+        static SzPtrUtf8R id()
+        {
+            return DFG_UTF8("blockWindow");
         }
 
         // Executes operation on pipe data.
-        static void operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
+        static bool filter(const double v, const double lowerBound, const double upperBound)
         {
-            const auto& argList = op.m_argList;
-            if (argList.size() < 3)
-            {
-                op.setError(error_badCreationArgs);
-                return;
-            }
-            const auto axis = argList[0];
-            const auto lowerBound = argList[1];
-            const auto upperBound = argList[2];
-            op.privFilterBySingle(arg, axis, [=](const double v)
-            {
-                return v >= lowerBound && v <= upperBound;
-            });
+            return !PassWindowOperation::filter(v, lowerBound, upperBound);
         }
     }; // PassWindowOperation
 
 
- /** Implements index neighbour smoothing
-  *
-  *  Id:
-  *      smoothing_indexNb
-  *  Parameters:
-  *      -[0]: index radius for number of neighbours to include, default = 1 = one neighbour from both sides. 0 = no neighbours = does nothing
-  *      -[1]: smoothing type, default average. Possible values: average, median, default
-  *  Dependencies
-  *      -[y]
-  *  Outputs:
-  *      -[x] unmodified, [y] with smoothing applied
-  *  Details:
-  *      -If input vector count != 2, considered as error.
-  *      -If either side has less than 'radius' neighbours at some point, smoothing may be unbalanced, i.e. takes less neighbours from other size.
-  */
+    /** Implements index neighbour smoothing
+     *
+     *  Id:
+     *      smoothing_indexNb
+     *  Parameters:
+     *      -[0]: index radius for number of neighbours to include, default = 1 = one neighbour from both sides. 0 = no neighbours = does nothing
+     *      -[1]: smoothing type, default average. Possible values: average, median, default
+     *  Dependencies
+     *      -[y]
+     *  Outputs:
+     *      -[x] unmodified, [y] with smoothing applied
+     *  Details:
+     *      -If input vector count != 2, considered as error.
+     *      -If either side has less than 'radius' neighbours at some point, smoothing may be unbalanced, i.e. takes less neighbours from other size.
+     */
     class Smoothing_indexNb : public ChartEntryOperation
     {
     public:
@@ -748,6 +792,7 @@ inline ChartEntryOperationManager::ChartEntryOperationManager()
 {
     // Adding built-in operations.
     add<operations::PassWindowOperation>();
+    add<operations::BlockWindowOperation>();
     add<operations::Smoothing_indexNb>();
 }
 

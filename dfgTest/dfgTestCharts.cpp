@@ -347,6 +347,61 @@ TEST(dfgCharts, operations_passWindow)
     }
 }
 
+TEST(dfgCharts, operations_blockWindow)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(alg);
+    using namespace ::DFG_MODULE_NS(charts);
+    using namespace ::DFG_MODULE_NS(cont);
+    using namespace ::DFG_MODULE_NS(str);
+
+    ChartEntryOperationManager opManager;
+
+    // Basic x-axis blockwindow
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("blockWindow(x, 2, 5)")));
+        ValueVectorD valsX({1, 2, 3, 4, 5, 6});
+        ValueVectorD valsY({9, 8, 7, 6, 5, 4});
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(2, valsX.size());
+        EXPECT_EQ(2, valsY.size());
+        EXPECT_EQ(ValueVectorD({1, 6}), valsX);
+        EXPECT_EQ(ValueVectorD({9, 4}), valsY);
+    }
+
+    // Basic y-axis blockwindow
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("blockWindow(y, 2, 5)")));
+        ValueVectorD valsX({ 1, 2, 3, 4, 5, 6 });
+        ValueVectorD valsY({ 9, 8, 7, 6, 5, 4 });
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(4, valsX.size());
+        EXPECT_EQ(4, valsY.size());
+        EXPECT_EQ(ValueVectorD({ 1, 2, 3, 4 }), valsX);
+        EXPECT_EQ(ValueVectorD({ 9, 8, 7, 6 }), valsY);
+    }
+
+    // Multiple blockwindows
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("blockWindow(x, 5, 6)")));
+        operations.push_back(opManager.createOperation(DFG_ASCII("blockWindow(y, 8, 9)")));
+        operations.push_back(opManager.createOperation(DFG_ASCII("blockWindow(y, 7, 7)")));
+        ValueVectorD valsX({ 1, 2, 3, 4, 5, 6 });
+        ValueVectorD valsY({ 9, 8, 7, 6, 5, 4 });
+        ChartOperationPipeData arg(&valsX, &valsY);
+        operations.executeAll(arg);
+        EXPECT_EQ(1, valsX.size());
+        EXPECT_EQ(1, valsY.size());
+        EXPECT_EQ(ValueVectorD({ 4 }), valsX);
+        EXPECT_EQ(ValueVectorD({ 6 }), valsY);
+    }
+}
+
 TEST(dfgCharts, operations_smoothing_indexNb)
 {
     using namespace ::DFG_ROOT_NS;
