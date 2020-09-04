@@ -460,6 +460,7 @@ class GraphDefinitionEntry : public ::DFG_MODULE_NS(charts)::AbstractChartContro
 public:
     using StringViewOrOwner = ::DFG_ROOT_NS::StringViewOrOwner<StringViewSzC, std::string>;
     using Operation = ::DFG_MODULE_NS(charts)::ChartEntryOperation;
+    using LogLevel = ConsoleLogLevel;
 
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
@@ -509,6 +510,12 @@ public:
     void applyOperations(::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData) const;
 
     ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, Operation> m_operationMap;
+
+    static QString tr(const char* psz);
+
+    // Implements logging of notifications related to 'this' entry.
+    static void log(LogLevel logLevel, int nIndex, const QString& sMsg);
+    void log(LogLevel logLevel, const QString& sMsg) const { log(logLevel, m_nContainerIndex, sMsg); }
 
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
@@ -570,6 +577,17 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
     return rv;
 }
 
+QString GraphDefinitionEntry::tr(const char* psz)
+{
+    return QCoreApplication::tr(psz);
+}
+
+void GraphDefinitionEntry::log(const LogLevel logLevel, const int nIndex, const QString& sMsgBody)
+{
+    QString s = tr("Entry %1: %2").arg(nIndex).arg(sMsgBody);
+    DFG_QT_CHART_CONSOLE_LOG(logLevel, s);
+}
+
 QJsonValue GraphDefinitionEntry::getField(FieldIdStrViewInputParam fieldId) const
 {
     return m_items.object().value(QLatin1String(fieldId.data(), static_cast<int>(fieldId.size())));
@@ -626,18 +644,12 @@ auto GraphDefinitionEntry::sourceId(const GraphDataSourceId& sDefault) const -> 
 
 void GraphDefinitionEntry::applyOperations(::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData) const
 {
-    const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
     for (const auto& kv : this->m_operationMap)
     {
         auto opCopy = kv.second;
         opCopy(pipeData);
         if (opCopy.hasErrors())
-        {
-            DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: operation '%2' encountered errors, %3")
-                .arg(this->index())
-                .arg(viewToQString(opCopy.m_sDefinition), formatOperationErrorsForUserVisibleText(opCopy))
-            );
-        }
+            this->log(LogLevel::warning, tr("operation '%1' encountered errors, %2").arg(viewToQString(opCopy.m_sDefinition), formatOperationErrorsForUserVisibleText(opCopy)));
     }
 }
 
@@ -956,7 +968,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
 
     if (bXisRowIndex && bYisRowIndex)
     {
-        DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Both columns are specified as row_index").arg(defEntry.index()));
+        defEntry.log(GraphDefinitionEntry::LogLevel::error, defEntry.tr("Both columns are specified as row_index"));
         return TableSelectionOptional();
     }
 
@@ -3731,7 +3743,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         const auto sErrorString = defEntry.fieldValueStr(ChartObjectFieldIdStr_errorString);
         if (!sErrorString.empty())
         {
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: %2").arg(defEntry.index()).arg(viewToQString(sErrorString)));
+            defEntry.log(GraphDefinitionEntry::LogLevel::error, viewToQString(sErrorString));
         }
 
         if (!defEntry.isEnabled())
@@ -3745,10 +3757,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             if (svId == SzPtrUtf8(ChartObjectFieldIdStr_type))
             {
                 bUnknownType = true;
-                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: unknown type '%2'").arg(defEntry.index()).arg(untypedViewToQStringAsUtf8(sEntryType)));
+                defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("unknown type '%1'").arg(untypedViewToQStringAsUtf8(sEntryType)));
             }
             else
-                DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: unknown property '%2'").arg(defEntry.index()).arg(viewToQString(svId)));
+                defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("unknown property '%1'").arg(viewToQString(svId)));
         });
         if (bUnknownType)
             return;
@@ -3781,7 +3793,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             const auto dataType = source.dataType();
             if (dataType != GraphDataSourceType_tableSelection) // Currently only one type is supported.
             {
-                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: Unknown source type").arg(defEntry.index()));
+                defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("Unknown source type"));
                 return;
             }
 
@@ -3793,7 +3805,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 refreshBars(rChart, configParamCreator, source, defEntry, nBarsCounter);
             else
             {
-                DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: missing handler for type '%2'").arg(defEntry.index()).arg(sEntryType.c_str()));
+                defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("missing handler for type '%1'").arg(sEntryType.c_str()));
                 return;
             }
         });
@@ -3867,19 +3879,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         const ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem items(sSource);
         if (items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnName))
         {
-            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unknown source type, got %2").arg(defEntry.index()).arg(viewToQString(items.key())));
+            defEntry.log(GraphDefinitionEntry::LogLevel::info, defEntry.tr("Unknown source type, got %1").arg(viewToQString(items.key())));
             return GraphDataSource::invalidIndex();
         }
         if (items.valueCount() != 1)
         {
-            DFG_QT_CHART_CONSOLE_INFO(QString("Entry %1: Unexpected value count for %2: expected 1, got %3").arg(defEntry.index()).arg(ChartObjectSourceTypeStr_columnName).arg(items.valueCount()));
+            defEntry.log(GraphDefinitionEntry::LogLevel::info, defEntry.tr("Unexpected value count for %1: expected 1, got %2").arg(ChartObjectSourceTypeStr_columnName).arg(items.valueCount()));
             return GraphDataSource::invalidIndex();
         }
         const auto svColumnName = items.value(0).toStringView();
         const auto columnIndex = dataSource.columnIndexByName(svColumnName);
         if (columnIndex == dataSource.invalidIndex())
         {
-            DFG_QT_CHART_CONSOLE_WARNING(QString("Entry %1: no column '%2' found from source").arg(defEntry.index()).arg(viewToQString(svColumnName)));
+            defEntry.log(GraphDefinitionEntry::LogLevel::warning, defEntry.tr("no column '%1' found from source").arg(viewToQString(svColumnName)));
             return GraphDataSource::invalidIndex();
         }
         return columnIndex;
@@ -3977,7 +3989,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
     if (!spSeries)
     {
-        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: couldn't create series object").arg(defEntry.index()));
+        defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("couldn't create series object"));
         return;
     }
     auto& rSeries = *spSeries;
@@ -3993,7 +4005,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     if (!xRowsStr.empty() && xRowsStr != DFG_UTF8("*"))
     {
         xRows = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(xRowsStr.rawStorage());
-        DFG_QT_CHART_CONSOLE_DEBUG(QString("Entry %1: x_rows-entry defines %2 row(s)").arg(defEntry.index()).arg(xRows.sizeOfSet()));
+        defEntry.log(GraphDefinitionEntry::LogLevel::debug, tr("x_rows-entry defines %1 row(s)").arg(xRows.sizeOfSet()));
         pxRowSet = &xRows;
     }
 
@@ -4051,7 +4063,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
 
     if (!pXvalues || !pYvalues)
     {
-        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no values available after operations").arg(defEntry.index()));
+        defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
         return;
     }
 
@@ -4090,9 +4102,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     const auto sBinType = defEntry.fieldValueStr(ChartObjectFieldIdStr_binType, [] { return StringUtf8(DFG_UTF8("number")); });
 
     if (sBinType != DFG_UTF8("number") && sBinType != DFG_UTF8("text"))
-    {
-        DFG_QT_CHART_CONSOLE_WARNING(QString(tr("Unrecognined bin_type '%1', using default").arg(sBinType.c_str().c_str())));
-    }
+        defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("Unrecognized bin_type '%1', using default").arg(sBinType.c_str().c_str()));
 
     const bool bTextValued = (sBinType == DFG_UTF8("text"));
 
@@ -4116,7 +4126,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
 
         if (pSingleColumn->valueRange().size() < 1)
         {
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: too few points (%2) for histogram").arg(defEntry.index()).arg(pSingleColumn->valueRange().size()));
+            defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("too few points (%1) for histogram").arg(pSingleColumn->valueRange().size()));
             return;
         }
 
@@ -4128,7 +4138,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         if (!pValues || pValues->empty())
         {
             if (!pValues)
-                DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no values available after operations").arg(defEntry.index()));
+                defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
             return;
         }
 
@@ -4142,7 +4152,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         auto pStrings = optTableData->columnStringsByIndex(columnIndexes[0]);
         if (!pStrings || pStrings->empty())
         {
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Entry %1: no data found for histogram").arg(defEntry.index()));
+            defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("no data found for histogram"));
             return;
         }
 
@@ -4154,7 +4164,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         if (!pFinalStrings || pFinalStrings->empty())
         {
             if (!pStrings)
-                DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no values available after operations").arg(defEntry.index()));
+                defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
             return;
         }
 
@@ -4203,7 +4213,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& r
     auto pValues = operationData.constValuesByIndex(1);
     if (!pStrings || !pValues)
     {
-        DFG_QT_CHART_CONSOLE_WARNING(tr("Entry %1: no data available after operations").arg(defEntry.index()));
+        defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no data available after operations"));
         return;
     }
 
