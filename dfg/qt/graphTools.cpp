@@ -118,14 +118,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 namespace
 {
 
-enum class ConsoleLogLevel
-{
-    debug,
-    info,
-    warning,
-    error,
-    none
-}; // ConsoleLogLevel
+using ConsoleLogLevel = ::DFG_MODULE_NS(charts)::AbstractChartControlItem::LogLevel;
 
 
 static ConsoleDisplayEntryType consoleLogLevelToEntryType(const ConsoleLogLevel logLevel)
@@ -215,7 +208,8 @@ QString getOperationDefinitionPlaceholder(const StringViewUtf8& svOperationId)
 
 } // unnamed namespace
 
-#define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL >= gConsoleLogHandle.effectiveLevel()) gConsoleLogHandle.log(MSG, LEVEL)
+#define DFG_QT_CHART_CONSOLE_LOG_NO_LEVEL_CHECK(LEVEL, MSG) gConsoleLogHandle.log(MSG, LEVEL)
+#define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL <= gConsoleLogHandle.effectiveLevel()) DFG_QT_CHART_CONSOLE_LOG_NO_LEVEL_CHECK(LEVEL, MSG)
 #define DFG_QT_CHART_CONSOLE_DEBUG(MSG)      DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::debug, MSG)
 #define DFG_QT_CHART_CONSOLE_INFO(MSG)       DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::info, MSG)
 #define DFG_QT_CHART_CONSOLE_WARNING(MSG)    DFG_QT_CHART_CONSOLE_LOG(ConsoleLogLevel::warning, MSG)
@@ -460,7 +454,6 @@ class GraphDefinitionEntry : public ::DFG_MODULE_NS(charts)::AbstractChartContro
 public:
     using StringViewOrOwner = ::DFG_ROOT_NS::StringViewOrOwner<StringViewSzC, std::string>;
     using Operation = ::DFG_MODULE_NS(charts)::ChartEntryOperation;
-    using LogLevel = ConsoleLogLevel;
 
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
     {
@@ -515,7 +508,7 @@ public:
 
     // Implements logging of notifications related to 'this' entry.
     static void log(LogLevel logLevel, int nIndex, const QString& sMsg);
-    void log(LogLevel logLevel, const QString& sMsg) const { log(logLevel, m_nContainerIndex, sMsg); }
+    void log(LogLevel logLevel, const QString& sMsg) const;
 
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
@@ -529,7 +522,6 @@ private:
 
     QJsonDocument m_items;
     int m_nContainerIndex = -1;
-
 }; // class GraphDefinitionEntry
 
 auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> GraphDefinitionEntry
@@ -549,6 +541,15 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
         DFG_ASSERT(!rv.m_items.isNull());
     }
     rv.m_nContainerIndex = nIndex;
+    bool bHasLogLevelField = false;
+    const auto sLogLevel = rv.fieldValueStr(ChartObjectFieldIdStr_logLevel, &bHasLogLevelField);
+    if (bHasLogLevelField)
+    {
+        bool bValidLogLevel = false;
+        rv.logLevel(sLogLevel, &bValidLogLevel);
+        if (!bValidLogLevel)
+            rv.log(LogLevel::error, tr("Invalid log level '%1', using default log level").arg(viewToQString(sLogLevel)));
+    }
 
     // Reading operations
     {
@@ -560,11 +561,7 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
             const auto sOperationDef = rv.fieldValueStr(svKey.asUntypedView());
             auto op = manager.createOperation(sOperationDef);
             if (!op)
-            {
-                DFG_QT_CHART_CONSOLE_WARNING(QCoreApplication::tr("Unable to create '%1: %2'")
-                    .arg(viewToQString(svKey))
-                    .arg(viewToQString(sOperationDef)));
-            }
+                rv.log(LogLevel::warning, tr("Unable to create '%1: %2'").arg(viewToQString(svKey)).arg(viewToQString(sOperationDef)));
             else
             {
                 StringViewUtf8 svOperationOrderTag(SzPtrUtf8(svKey.beginRaw() + ::DFG_MODULE_NS(str)::strLen(ChartObjectFieldIdStr_operation)), SzPtrUtf8(svKey.endRaw()));
@@ -585,7 +582,14 @@ QString GraphDefinitionEntry::tr(const char* psz)
 void GraphDefinitionEntry::log(const LogLevel logLevel, const int nIndex, const QString& sMsgBody)
 {
     QString s = tr("Entry %1: %2").arg(nIndex).arg(sMsgBody);
-    DFG_QT_CHART_CONSOLE_LOG(logLevel, s);
+    DFG_QT_CHART_CONSOLE_LOG_NO_LEVEL_CHECK(logLevel, s);
+}
+
+void GraphDefinitionEntry::log(const LogLevel logLevel, const QString& sMsgBody) const
+{
+    if (!isLoggingAllowedForLevel(logLevel))
+        return;
+    log(logLevel, this->m_nContainerIndex, sMsgBody);
 }
 
 QJsonValue GraphDefinitionEntry::getField(FieldIdStrViewInputParam fieldId) const
@@ -647,6 +651,8 @@ void GraphDefinitionEntry::applyOperations(::DFG_MODULE_NS(charts)::ChartOperati
     for (const auto& kv : this->m_operationMap)
     {
         auto opCopy = kv.second;
+        if (isLoggingAllowedForLevel(LogLevel::debug))
+            log(LogLevel::debug, tr("Running operation %1: %2").arg(viewToQString(kv.first), viewToQString(opCopy.m_sDefinition)));
         opCopy(pipeData);
         if (opCopy.hasErrors())
             this->log(LogLevel::warning, tr("operation '%1' encountered errors, %2").arg(viewToQString(opCopy.m_sDefinition), formatOperationErrorsForUserVisibleText(opCopy)));
@@ -1214,6 +1220,7 @@ QString GraphDefinitionWidget::getGuideString()
    <li><i>name</i>: name of the object, shown e.g. in legend.</li>
    <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
    <li><i>data_source</i>: Defines data source from which to fetch data. If omitted, default source is used.</li>
+   <li><i>log_level</i>: Defines log level for an entry; for example setting this to <i>debug</i> can be used to diagnose entry behaviour more closely. Possible values {debug, info, warning, error, none}. By default uses global log level.</li>
 </ul>
 
 <h2>Fields for type <i>xy</i></h2>

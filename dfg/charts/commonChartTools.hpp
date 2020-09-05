@@ -64,6 +64,9 @@ constexpr char ChartObjectFieldIdStr_dataSource[] = "data_source";
 // name: this will show e.g. in legend.
 constexpr char ChartObjectFieldIdStr_name[] = "name";
 
+// log_level: defines how verbose logging should be produced by setting the least significant level shown. Possible values: {debug, info, warning, error, none}.
+constexpr char ChartObjectFieldIdStr_logLevel[] = "log_level";
+
 // bin_count
 constexpr char ChartObjectFieldIdStr_binCount[] = "bin_count";
 
@@ -227,6 +230,16 @@ public:
     typedef StringViewC FieldIdStrView;
     typedef const StringViewC& FieldIdStrViewInputParam;
 
+    // The bigger the level, the more verbose logging is.
+    enum class LogLevel
+    {
+        none,       // 0
+        error,      // 1
+        warning,    // 2
+        info,       // 3
+        debug       // 4
+    }; // LogLevel
+
     virtual ~AbstractChartControlItem() {}
 
     // Returns value of field 'fieldId' if present, defaultValue otherwise.
@@ -241,9 +254,20 @@ public:
 
     void forEachPropertyId(std::function<void(StringView svId)>) const;
 
+    LogLevel logLevel() const { return m_logLevel; }
+
+    // Sets requested log level if given argument is valid level specifier. Returns logLevel that is in effect after this call.
+    // If pValidInput is given, it receives flag indicating whether given input was valid.
+    LogLevel logLevel(const StringView& sv, bool* pValidInput = nullptr);
+
+    bool isLoggingAllowedForLevel(LogLevel logLevel) const;
+
 private:
     virtual std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
     virtual void forEachPropertyIdImpl(std::function<void (StringView svId)>) const = 0;
+
+public:
+    LogLevel m_logLevel = LogLevel::info;
 }; // class AbstractChartControlItem
 
 
@@ -283,6 +307,30 @@ inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fie
 inline void AbstractChartControlItem::forEachPropertyId(std::function<void(StringView svId)> func) const
 {
     forEachPropertyIdImpl(func);
+}
+
+inline auto AbstractChartControlItem::logLevel(const StringView& sv, bool* pValidInput) -> LogLevel
+{
+    if (pValidInput)
+        *pValidInput = true;
+    if (sv == DFG_UTF8("debug"))
+        m_logLevel = LogLevel::debug;
+    else if (sv == DFG_UTF8("info"))
+        m_logLevel = LogLevel::info;
+    else if (sv == DFG_UTF8("warning"))
+        m_logLevel = LogLevel::warning;
+    else if (sv == DFG_UTF8("error"))
+        m_logLevel = LogLevel::error;
+    else if (sv == DFG_UTF8("none"))
+        m_logLevel = LogLevel::none;
+    else if (pValidInput)
+        *pValidInput = false;
+    return logLevel();
+}
+
+inline bool AbstractChartControlItem::isLoggingAllowedForLevel(const LogLevel logLevel) const
+{
+    return logLevel <= this->logLevel();
 }
 
 template <class T>
@@ -610,6 +658,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_logLevel,
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_lineStyle,
             ChartObjectFieldIdStr_pointStyle,
@@ -626,6 +675,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_logLevel,
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_binCount,
             ChartObjectFieldIdStr_barWidthFactor,
@@ -642,6 +692,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_logLevel,
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,

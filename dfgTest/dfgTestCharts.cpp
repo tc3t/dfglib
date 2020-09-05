@@ -522,3 +522,44 @@ TEST(dfgCharts, ChartEntryOperationManager)
     ASSERT_EQ(opManager.operationCount(), operationSet.size());
     EXPECT_TRUE(std::equal(operationSet.cbegin(), operationSet.cend(), opManager.m_knownOperations.beginKey()));
 }
+
+namespace
+{
+    class ControlItemMoc : public ::DFG_MODULE_NS(charts)::AbstractChartControlItem
+    {
+    private:
+        std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const override
+        {
+            DFG_UNUSED(fieldId);
+            return std::pair<bool, String>(false, String());
+        }
+
+        void forEachPropertyIdImpl(std::function<void(StringView svId)>) const override
+        {
+        }
+    };
+} // unnamed namespace
+
+TEST(dfgCharts, AbstractChartControlItem)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    ControlItemMoc a;
+    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel()); // Currently default log level is expected to be info.
+    bool bGoodLogLevel;
+    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8(""), &bGoodLogLevel));
+    EXPECT_FALSE(bGoodLogLevel);
+    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8("invalid"), &bGoodLogLevel));
+    EXPECT_FALSE(bGoodLogLevel);
+
+    EXPECT_EQ(ControlItemMoc::LogLevel::debug, a.logLevel(DFG_UTF8("debug"), &bGoodLogLevel));
+    EXPECT_TRUE(bGoodLogLevel);
+    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8("info"), &bGoodLogLevel));
+    EXPECT_TRUE(bGoodLogLevel);
+    EXPECT_EQ(ControlItemMoc::LogLevel::warning, a.logLevel(DFG_UTF8("warning"), &bGoodLogLevel));
+    EXPECT_TRUE(bGoodLogLevel);
+    EXPECT_EQ(ControlItemMoc::LogLevel::error, a.logLevel(DFG_UTF8("error"), &bGoodLogLevel));
+    EXPECT_TRUE(bGoodLogLevel);
+    EXPECT_EQ(ControlItemMoc::LogLevel::none, a.logLevel(DFG_UTF8("none"), &bGoodLogLevel));
+    EXPECT_TRUE(bGoodLogLevel);
+
+}
