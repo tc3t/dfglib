@@ -538,28 +538,56 @@ namespace
         {
         }
     };
+
+    class ControlItemMoc2 : public ControlItemMoc
+    {
+    private:
+        bool hasFieldImpl(FieldIdStrViewInputParam fieldId) const override
+        {
+            return fieldId == ::DFG_MODULE_NS(charts)::fieldsIds::ChartObjectFieldIdStr_binCount;
+        }
+    };
 } // unnamed namespace
 
 TEST(dfgCharts, AbstractChartControlItem)
 {
     using namespace ::DFG_MODULE_NS(charts);
-    ControlItemMoc a;
-    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel()); // Currently default log level is expected to be info.
-    bool bGoodLogLevel;
-    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8(""), &bGoodLogLevel));
-    EXPECT_FALSE(bGoodLogLevel);
-    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8("invalid"), &bGoodLogLevel));
-    EXPECT_FALSE(bGoodLogLevel);
 
-    EXPECT_EQ(ControlItemMoc::LogLevel::debug, a.logLevel(DFG_UTF8("debug"), &bGoodLogLevel));
-    EXPECT_TRUE(bGoodLogLevel);
-    EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8("info"), &bGoodLogLevel));
-    EXPECT_TRUE(bGoodLogLevel);
-    EXPECT_EQ(ControlItemMoc::LogLevel::warning, a.logLevel(DFG_UTF8("warning"), &bGoodLogLevel));
-    EXPECT_TRUE(bGoodLogLevel);
-    EXPECT_EQ(ControlItemMoc::LogLevel::error, a.logLevel(DFG_UTF8("error"), &bGoodLogLevel));
-    EXPECT_TRUE(bGoodLogLevel);
-    EXPECT_EQ(ControlItemMoc::LogLevel::none, a.logLevel(DFG_UTF8("none"), &bGoodLogLevel));
-    EXPECT_TRUE(bGoodLogLevel);
+    {
+        ControlItemMoc a;
+        EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel()); // Currently default log level is expected to be info.
+        bool bGoodLogLevel;
+        EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8(""), &bGoodLogLevel));
+        EXPECT_FALSE(bGoodLogLevel);
+        EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8("invalid"), &bGoodLogLevel));
+        EXPECT_FALSE(bGoodLogLevel);
+
+        EXPECT_EQ(ControlItemMoc::LogLevel::debug, a.logLevel(DFG_UTF8("debug"), &bGoodLogLevel));
+        EXPECT_TRUE(bGoodLogLevel);
+        EXPECT_EQ(ControlItemMoc::LogLevel::info, a.logLevel(DFG_UTF8("info"), &bGoodLogLevel));
+        EXPECT_TRUE(bGoodLogLevel);
+        EXPECT_EQ(ControlItemMoc::LogLevel::warning, a.logLevel(DFG_UTF8("warning"), &bGoodLogLevel));
+        EXPECT_TRUE(bGoodLogLevel);
+        EXPECT_EQ(ControlItemMoc::LogLevel::error, a.logLevel(DFG_UTF8("error"), &bGoodLogLevel));
+        EXPECT_TRUE(bGoodLogLevel);
+        EXPECT_EQ(ControlItemMoc::LogLevel::none, a.logLevel(DFG_UTF8("none"), &bGoodLogLevel));
+        EXPECT_TRUE(bGoodLogLevel);
+
+        EXPECT_EQ(ControlItemMoc::LogLevel::debug,   a.logLevel(ControlItemMoc::LogLevel::debug));
+        EXPECT_EQ(ControlItemMoc::LogLevel::info,    a.logLevel(ControlItemMoc::LogLevel::info));
+        EXPECT_EQ(ControlItemMoc::LogLevel::warning, a.logLevel(ControlItemMoc::LogLevel::warning));
+        EXPECT_EQ(ControlItemMoc::LogLevel::error,   a.logLevel(ControlItemMoc::LogLevel::error));
+        EXPECT_EQ(ControlItemMoc::LogLevel::none,    a.logLevel(ControlItemMoc::LogLevel::none));
+    }
+
+    // hasField()
+    {
+        ControlItemMoc a;
+        ControlItemMoc2 a2;
+        EXPECT_FALSE(a.hasField(ChartObjectFieldIdStr_name));
+        EXPECT_FALSE(a.hasField(ChartObjectFieldIdStr_binCount));
+        EXPECT_FALSE(a2.hasField(ChartObjectFieldIdStr_name));
+        EXPECT_TRUE(a2.hasField(ChartObjectFieldIdStr_binCount));
+    }
 
 }

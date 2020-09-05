@@ -143,10 +143,13 @@ public:
     void setHandler(HandlerT handler)
     {
         m_handler = std::move(handler);
-        if (m_handler)
-            m_effectiveLevel = m_desiredLevel;
-        else
-            m_effectiveLevel = ConsoleLogLevel::none;
+        privSetEffectiveLevel();
+    }
+
+    void setDesiredLevel(ConsoleLogLevel newLevel)
+    {
+        m_desiredLevel = newLevel;
+        privSetEffectiveLevel();
     }
 
     void log(const char* psz, const ConsoleLogLevel msgLogLevel)
@@ -159,6 +162,14 @@ public:
     {
         if (m_handler)
             m_handler(s.toUtf8(), msgLogLevel);
+    }
+
+    void privSetEffectiveLevel()
+    {
+        if (m_handler)
+            m_effectiveLevel = m_desiredLevel;
+        else
+            m_effectiveLevel = ConsoleLogLevel::none;
     }
 
     ConsoleLogLevel effectiveLevel() const { return m_effectiveLevel; }
@@ -549,8 +560,13 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
         bool bValidLogLevel = false;
         rv.logLevel(sLogLevel, &bValidLogLevel);
         if (!bValidLogLevel && rv.isLoggingAllowedForLevel(LogLevel::error))
+        {
             rv.log(LogLevel::error, tr("Invalid log level '%1', using default log level").arg(viewToQString(sLogLevel)));
+            rv.logLevel(gConsoleLogHandle.effectiveLevel());
+        }
     }
+    else // Case: entry does not have log_level field. Setting level to global default.
+        rv.logLevel(gConsoleLogHandle.effectiveLevel());
 
     // Reading operations
     {
@@ -3788,6 +3804,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         {
             globalConfigEntry = defEntry;
             pGlobalConfigEntry = &globalConfigEntry;
+            // If global_config entry has log_level, setting global log level.
+            if (globalConfigEntry.hasField(ChartObjectFieldIdStr_logLevel))
+            {
+                // Note: the global log level is in effect until changed, i.e. it will not reset when this entry list has been run.
+                gConsoleLogHandle.setDesiredLevel(globalConfigEntry.logLevel());
+                DFG_QT_CHART_CONSOLE_DEBUG(tr("Setting log level to %1").arg(viewToQString(globalConfigEntry.fieldValueStr(ChartObjectFieldIdStr_logLevel))));
+            }
             return;
         }
         

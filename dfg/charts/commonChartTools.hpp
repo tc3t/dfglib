@@ -252,6 +252,8 @@ public:
     // Convenience overload, returns empty string as default and sets pFieldPresent to indicate existence of requested field.
     String fieldValueStr(FieldIdStrViewInputParam fieldId, bool* pFieldPresent) const;
 
+    bool hasField(FieldIdStrViewInputParam fieldId) const { return hasFieldImpl(fieldId); }
+
     void forEachPropertyId(std::function<void(StringView svId)>) const;
 
     LogLevel logLevel() const { return m_logLevel; }
@@ -260,9 +262,12 @@ public:
     // If pValidInput is given, it receives flag indicating whether given input was valid.
     LogLevel logLevel(const StringView& sv, bool* pValidInput = nullptr);
 
+    LogLevel logLevel(LogLevel newLevel);
+
     bool isLoggingAllowedForLevel(LogLevel logLevel) const;
 
 private:
+    virtual bool hasFieldImpl(FieldIdStrViewInputParam fieldId) const;
     virtual std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
     virtual void forEachPropertyIdImpl(std::function<void (StringView svId)>) const = 0;
 
@@ -284,6 +289,14 @@ T AbstractChartControlItem::fieldValue(FieldIdStrViewInputParam fieldId, const T
     T obj{};
     ::DFG_MODULE_NS(str)::strTo(rv.second.rawStorage(), obj);
     return obj;
+}
+
+inline bool AbstractChartControlItem::hasFieldImpl(FieldIdStrViewInputParam fieldId) const
+{
+    // This default implementation is suboptimal; possibly fetches the string even though it is not needed.
+    bool bHasField;
+    fieldValueStr(fieldId, &bHasField);
+    return bHasField;
 }
 
 inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fieldId, std::function<String()> defaultValueGenerator) const -> String
@@ -314,17 +327,23 @@ inline auto AbstractChartControlItem::logLevel(const StringView& sv, bool* pVali
     if (pValidInput)
         *pValidInput = true;
     if (sv == DFG_UTF8("debug"))
-        m_logLevel = LogLevel::debug;
+        logLevel(LogLevel::debug);
     else if (sv == DFG_UTF8("info"))
-        m_logLevel = LogLevel::info;
+        logLevel(LogLevel::info);
     else if (sv == DFG_UTF8("warning"))
-        m_logLevel = LogLevel::warning;
+        logLevel(LogLevel::warning);
     else if (sv == DFG_UTF8("error"))
-        m_logLevel = LogLevel::error;
+        logLevel(LogLevel::error);
     else if (sv == DFG_UTF8("none"))
-        m_logLevel = LogLevel::none;
+        logLevel(LogLevel::none);
     else if (pValidInput)
         *pValidInput = false;
+    return logLevel();
+}
+
+inline auto AbstractChartControlItem::logLevel(const LogLevel newLevel) -> LogLevel
+{
+    m_logLevel = newLevel;
     return logLevel();
 }
 
@@ -720,6 +739,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_logLevel,
             ChartObjectFieldIdStr_showLegend,
             ChartObjectFieldIdStr_autoAxisLabels,
             ChartObjectFieldIdStr_lineStyle,
