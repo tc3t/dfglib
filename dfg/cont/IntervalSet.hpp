@@ -298,9 +298,11 @@ void IntervalSet<T>::wrapNegatives(const T nBound)
         left = Max(-nBound, left); // To make sure that nBound - left doesn't go negative
         right = Max(-nBound, right); // To make sure that nBound - right doesn't go negative
         DFG_ASSERT_CORRECTNESS(left <= right);
-        insertClosed(nBound + left, nBound + right);
+        // Note: it's important to remove old first; insert first could result to case like this:
+        //       [-3, -1] wrapped to 3 -> [-3, -1] insert (0, 2) -> [-3, 2] (insertClosed() merged because intervals are adjacent) -> erase(-9) -> empty().
         if (intervalRight < 0) // Removing old only if it was completely in negative side in case which it moves completely to positive side.
             DFG_VERIFY(m_intervals.erase(intervalLeft) == 1);
+        insertClosed(nBound + left, nBound + right);
     }
 }
 

@@ -2117,6 +2117,16 @@ TEST(dfgCont, IntervalSet_wrapNegatives)
             EXPECT_TRUE(ic.hasValue(int32_max));
         }
     }
+
+    // Test to make sure that -1, 0 boundary does not get merged.
+    {
+        IntervalSet<int32> ic;
+        ic.insertClosed(-9, -1);
+        ic.wrapNegatives(8);
+        EXPECT_EQ(8, ic.sizeOfSet());
+        EXPECT_EQ(0, ic.minElement());
+        EXPECT_EQ(7, ic.maxElement());
+    }
 }
 
 namespace
