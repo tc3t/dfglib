@@ -1260,6 +1260,7 @@ QString GraphDefinitionWidget::getGuideString()
         <li><i>x_rows</i>:</li>
             <ul>
                 <li>x_rows: List of rows to include as semicolon separated list, e.g. "1:3; 4; 7:8" means 1, 2, 3, 4, 7, 8.</li>
+                <li>Negative indexes means "from end", for example "-30:-1" means "30 last rows"</li>
                 <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
             </ul>
         <li><i>line_colour</i>:</li>
@@ -4061,6 +4062,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     // releaseOrCopy() will return either moved data or copy of it.
     auto xValueMap = (pXdata != pYdata) ? tableData.releaseOrCopy(pXdata) : *pXdata;
     xValueMap.setSorting(false);
+    if (pxRowSet && !xValueMap.empty())
+        pxRowSet->wrapNegatives(static_cast<int>(xValueMap.backKey() + 1));
     const auto& yValueMap = *pYdata;
     auto xIter = xValueMap.cbegin();
     auto yIter = yValueMap.cbegin();
