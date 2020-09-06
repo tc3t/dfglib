@@ -101,7 +101,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
             stringViews.clear();
         }
         if (queryDetails.areRowsRequested())
-            rows.push_back(static_cast<double>(r));
+            rows.push_back(static_cast<double>(CsvItemModel::internalRowIndexToVisible(r)));
         if (queryDetails.areNumbersRequested())
         {
             if (colType == ChartDataType::unknown && std::strchr(psz.c_str(), ',') == nullptr)

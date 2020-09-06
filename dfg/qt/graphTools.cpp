@@ -1259,7 +1259,7 @@ QString GraphDefinitionWidget::getGuideString()
             </ul>
         <li><i>x_rows</i>:</li>
             <ul>
-                <li>x_rows: List of rows to include as semicolon separated list, e.g. "1:3; 4; 7:8" means 1, 2, 3, 4, 7, 8.</li>
+                <li>x_rows: List of rows to include as semicolon separated, 1-based index list, e.g. "1:3; 4; 7:8" means 1 (=first), 2, 3, 4, 7, 8.</li>
                 <li>Negative indexes means "from end", for example "-30:-1" means "30 last rows"</li>
                 <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
             </ul>
