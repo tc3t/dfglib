@@ -61,6 +61,11 @@ public:
 
     static sizeType countOfElementsInIntersection(const T lower0, const T upper0, const T lower1, const T upper1);
 
+    // Wraps negative elements '-k' to Max(0, 'nBound - k'). For example wrapping {-2, -1, 3} with wrapNegatives(10) would result to {3, 8, 9}
+    // and {-10, -1, 3} with wrapNegatives(7) -> {0, 3, 6}
+    // If nBound is negative, does nothing.
+    void wrapNegatives(T nBound);
+
     void privMergeIntervalsStartingFrom(const sizeType n);
     bool privIsWithinInterval(const sizeType n, const T& item) const;
     typename IntervalCont::const_iterator privFirstIntervalWithLeftLowerOrEqualTo(const T item) const;
@@ -270,6 +275,33 @@ auto IntervalSet<T>::minElement() const->T
 {
     DFG_ASSERT(!empty());
     return (!empty()) ? m_intervals.frontKey() : maxValueOfType<T>();
+}
+
+template <class T>
+void IntervalSet<T>::wrapNegatives(const T nBound)
+{
+    if (nBound < 0)
+        return;
+    for (size_t i = 0; i < m_intervals.size();)
+    {
+        const auto intervalLeft = m_intervals.keyRange()[i];
+        const auto intervalRight = m_intervals.valueRange()[i];
+        auto left = intervalLeft;
+        if (left >= 0)
+            return; // This and remaining items are non-negative -> nothing left to do.
+        auto right = intervalRight;
+        if (right >= 0) // If interval is [-k, n >= 0], adjusting it to [0, n]
+        {
+            m_intervals.keyRange_modifiable()[i] = 0;
+            right = -1;
+        }
+        left = Max(-nBound, left); // To make sure that nBound - left doesn't go negative
+        right = Max(-nBound, right); // To make sure that nBound - right doesn't go negative
+        DFG_ASSERT_CORRECTNESS(left <= right);
+        insertClosed(nBound + left, nBound + right);
+        if (intervalRight < 0) // Removing old only if it was completely in negative side in case which it moves completely to positive side.
+            DFG_VERIFY(m_intervals.erase(intervalLeft) == 1);
+    }
 }
 
 template <class T>

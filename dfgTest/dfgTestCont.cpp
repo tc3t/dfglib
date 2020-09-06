@@ -1988,6 +1988,117 @@ TEST(dfgCont, IntervalSet)
     }
 }
 
+TEST(dfgCont, IntervalSet_wrapNegatives)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+
+    // Basic test
+    {
+        IntervalSet<int> ic;
+        ic.insertClosed(-3, -1);
+        ic.insertClosed(1, 3);
+        ic.wrapNegatives(-1); // Should do nothing
+        ic.wrapNegatives(10);
+        ASSERT_EQ(6, ic.sizeOfSet());
+        EXPECT_EQ(1, ic.minElement());
+        EXPECT_EQ(9, ic.maxElement());
+        EXPECT_TRUE(ic.hasValue(2));
+        EXPECT_TRUE(ic.hasValue(3));
+        EXPECT_TRUE(ic.hasValue(7));
+        EXPECT_TRUE(ic.hasValue(8));
+    }
+
+    // Overlapping with highest positives
+    {
+        IntervalSet<int> ic;
+        // [-4, 2], [5, 6], [20, 21]
+        ic.insertClosed(-4, 2);
+        ic.insertClosed(5, 6);
+        ic.insertClosed(20, 21);
+        ASSERT_EQ(11, ic.sizeOfSet());
+        ic.wrapNegatives(22);
+        ASSERT_EQ(9, ic.sizeOfSet());
+        EXPECT_EQ(0, ic.minElement());
+        EXPECT_EQ(21, ic.maxElement());
+        EXPECT_TRUE(ic.hasValue(1));
+        EXPECT_TRUE(ic.hasValue(2));
+        EXPECT_TRUE(ic.hasValue(5));
+        EXPECT_TRUE(ic.hasValue(6));
+        EXPECT_TRUE(ic.hasValue(18));
+        EXPECT_TRUE(ic.hasValue(19));
+        EXPECT_TRUE(ic.hasValue(20));
+    }
+
+    // Wrapping to 0
+    {
+        IntervalSet<int> ic;
+        ic.insertClosed(-20, -10);
+        ic.insertClosed(-3, -1);
+        ic.insertClosed(4, 4);
+        ic.wrapNegatives(0); // Should wrap negatives to 0
+        ASSERT_EQ(2, ic.sizeOfSet());
+        EXPECT_EQ(0, ic.minElement());
+        EXPECT_EQ(4, ic.maxElement());
+    }
+
+    // Wrapping to middle
+    {
+        IntervalSet<int> ic;
+        // [-4, 2], [5, 6], [9, 9], [20, 21]
+        ic.insertClosed(-4, 2);
+        ic.insertClosed(5, 6);
+        ic.insertClosed(9, 9);
+        ic.insertClosed(20, 21);
+        ASSERT_EQ(12, ic.sizeOfSet());
+        ic.wrapNegatives(10);
+        // Should now have [0, 2] [5, 9], [20, 21]
+        ASSERT_EQ(10, ic.sizeOfSet());
+        EXPECT_EQ(0, ic.minElement());
+        EXPECT_EQ(21, ic.maxElement());
+        EXPECT_TRUE(ic.hasValue(1));
+        EXPECT_TRUE(ic.hasValue(2));
+        EXPECT_TRUE(ic.hasValue(5));
+        EXPECT_TRUE(ic.hasValue(6));
+        EXPECT_TRUE(ic.hasValue(7));
+        EXPECT_TRUE(ic.hasValue(8));
+        EXPECT_TRUE(ic.hasValue(8));
+        EXPECT_TRUE(ic.hasValue(20));
+    }
+
+    // Testing numerical limits
+    {
+        {
+            IntervalSet<int32> ic;
+            ic.insertClosed(int32_min, int32_min + 2);
+            ic.insertClosed(10, 10);
+            ic.wrapNegatives(0);
+            ASSERT_EQ(2, ic.sizeOfSet());
+            EXPECT_EQ(0, ic.minElement());
+            EXPECT_EQ(10, ic.maxElement());
+        }
+
+        {
+            IntervalSet<int32> ic;
+            // [min, min + 2], [-1], [max - 10, max - 9], [max]
+            ic.insertClosed(int32_min, int32_min + 2);
+            ic.insert(-1);
+            ic.insertClosed(int32_max - 10, int32_max - 9);
+            ic.insert(int32_max);
+            ic.wrapNegatives(int32_max);
+            // Should now have [0, 1], [max - 10, max - 9], [max - 1, max]
+            ASSERT_EQ(6, ic.sizeOfSet());
+            EXPECT_EQ(0, ic.minElement());
+            EXPECT_EQ(int32_max, ic.maxElement());
+            EXPECT_TRUE(ic.hasValue(1));
+            EXPECT_TRUE(ic.hasValue(int32_max - 10));
+            EXPECT_TRUE(ic.hasValue(int32_max - 9));
+            EXPECT_TRUE(ic.hasValue(int32_max - 1));
+            EXPECT_TRUE(ic.hasValue(int32_max));
+        }
+    }
+}
+
 namespace
 {
     void testInt32IntervalBounds(std::true_type) // Case: 64-bit size_t
