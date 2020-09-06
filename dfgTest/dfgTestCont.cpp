@@ -1091,6 +1091,26 @@ TEST(dfgCont, MapVector)
         EXPECT_EQ(dval, mmAos[kval]);
         EXPECT_EQ(dval, mmSoa[kval]);
     }
+
+    // Testing erase
+    {
+        {
+            MapVectorSoA<int, int> mIntInt;
+            mIntInt[1] = 2;
+            // erase should return the number of elements removed.
+            EXPECT_EQ(0, mIntInt.erase(10));
+            EXPECT_EQ(1, mIntInt.erase(1));
+            EXPECT_TRUE(mIntInt.empty());
+        }
+        {
+            MapVectorAoS<int, int> mIntInt;
+            mIntInt[1] = 2;
+            // erase should return the number of elements removed.
+            EXPECT_EQ(0, mIntInt.erase(10));
+            EXPECT_EQ(1, mIntInt.erase(1));
+            EXPECT_TRUE(mIntInt.empty());
+        }
+    }
 }
 
 TEST(dfgCont, MapVector_pushBack)

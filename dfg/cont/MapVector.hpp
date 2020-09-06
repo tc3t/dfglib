@@ -197,7 +197,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             iterator    erase(iterator iterDeleteFrom)  { return (iterDeleteFrom != end()) ? erase(iterDeleteFrom, iterDeleteFrom + 1) : end(); }
             template <class T>
-            size_type   erase(const T& key)             { auto rv = erase(find(key)); return (rv != end()) ? 1 : 0; } // Returns the number of elements removed.
+            size_type   erase(const T& key)             { const auto nInitialSize = this->size(); erase(find(key)); return (nInitialSize - size()); } // Returns the number of elements removed.
             iterator    erase(iterator iterRangeFirst, const iterator iterRangeEnd)
             {
                 if (this->m_bSorted)
