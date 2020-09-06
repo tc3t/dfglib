@@ -144,7 +144,7 @@ void IntervalSet<T>::insertClosed(const T& left, const T& right)
             return;
         }
         const auto& backValue = m_intervals.backValue();
-        if (backValue < left && left - backValue > 1)
+        if (backValue < left && left > backValue + 1)
         {
             m_intervals[left] = right; // New interval
         }
@@ -157,13 +157,13 @@ void IntervalSet<T>::insertClosed(const T& left, const T& right)
     {
         // In this case *iter >= left -> new range can extend previous and merge to following, add new disjoint or merge to following.
 
-        sizeType nLeftIntervalIndex = iterLb - keys.begin();
+        sizeType nRightIntervalIndex = iterLb - keys.begin(); // Index of interval whose start value is >= to 'left' of new interval.
         sizeType nIndex = m_intervals.size();
-        if (privIsWithinInterval(nLeftIntervalIndex, left))
-            nIndex = nLeftIntervalIndex;
-        else if (nLeftIntervalIndex >= 1 && privIsWithinInterval(nLeftIntervalIndex - 1, left))
-            nIndex = nLeftIntervalIndex - 1;
-        if (nIndex < m_intervals.size())
+        if (privIsWithinInterval(nRightIntervalIndex, left)) // Is left boundary within right interval?
+            nIndex = nRightIntervalIndex;
+        else if (nRightIntervalIndex >= 1 && privIsWithinInterval(nRightIntervalIndex - 1, left)) // Is left boundary within left interval?
+            nIndex = nRightIntervalIndex - 1;
+        if (nIndex < m_intervals.size()) // Was left value within existing interval?
         {
             const auto nExistingRight = m_intervals.valueRange()[nIndex];
             m_intervals.valueRange()[nIndex] = Max(nExistingRight, right);

@@ -1972,6 +1972,20 @@ TEST(dfgCont, IntervalSet)
         is.insert(4);
         EXPECT_FALSE(is.isSingleInterval(1, 4));
     }
+
+    // Handling of numerical limits
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(cont);
+        IntervalSet<int32> ic;
+        ic.insertClosed(int32_min, int32_min + 2);
+        ic.insertClosed(10, 10);
+        EXPECT_EQ(4, ic.sizeOfSet());
+        EXPECT_TRUE(ic.hasValue(int32_min));
+        EXPECT_TRUE(ic.hasValue(int32_min + 1));
+        EXPECT_TRUE(ic.hasValue(int32_min + 2));
+        EXPECT_TRUE(ic.hasValue(10));
+    }
 }
 
 namespace
