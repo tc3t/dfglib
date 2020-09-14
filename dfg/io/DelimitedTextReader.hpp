@@ -1204,7 +1204,7 @@ public:
         }
     }
 
-    // Convenience readRow.
+    // Convenience readRow().
     // Item handler function is given three parameters:
     // column index, Pointer to beginning of buffer, buffer size.
     // For example: func(const size_t nCol, const char* const p, const size_t nSize) 
@@ -1223,6 +1223,13 @@ public:
             const auto& buffer = cellData.getBuffer();
             return ihFunc(nCol, buffer.data(), buffer.size());
         });
+    }
+
+    // Convenience readRow() taking format definition object, which is expected to have separatorChar(), enclosingChar() and eolCharFromEndOfLineType()
+    template <class Char_T, class Stream_T, class Format_T, class ItemHandlerFunc>
+    static void readRow(Stream_T& istrm, const Format_T& format, ItemHandlerFunc&& ihFunc)
+    {
+        readRow<Char_T>(istrm,  format.separatorChar(), format.enclosingChar(), format.eolCharFromEndOfLineType(), std::forward<ItemHandlerFunc>(ihFunc));
     }
 
     // TODO: test

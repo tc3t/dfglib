@@ -11,6 +11,7 @@
 #include <dfg/baseConstructorDelegate.hpp>
 #include <dfg/iter/szIterator.hpp>
 #include <dfg/time/timerCpu.hpp>
+#include <dfg/cont/tableCsv.hpp>
 
 namespace
 {
@@ -368,6 +369,7 @@ TEST(DfgIo, DelimitedTextReader_readCell)
 TEST(DfgIo, DelimitedTextReader_readRow)
 {
     using namespace DFG_ROOT_NS;
+    using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
 
 #define MAKE_VECTOR DFG_SUB_NS_NAME(cont)::makeVector<std::string>
 
@@ -375,36 +377,44 @@ TEST(DfgIo, DelimitedTextReader_readRow)
     typedef std::tuple<std::string, std::vector<std::string>> ExpectedResultsT;
     const ExpectedResultsT arrCellExpected[] =
     {
-        ExpectedResultsT("asd, asd2", MAKE_VECTOR("asd", "asd2")),
+        ExpectedResultsT("asd, asd2, \"asd\"\",3\"\nabc, def", MAKE_VECTOR("asd", "asd2", "asd\",3")),
     };
 
     for(size_t i = 0; i<count(arrCellExpected); ++i)
     {
         const auto& expected = arrCellExpected[i];
-        std::istrstream strm(std::get<0>(expected).c_str());
+        ::DFG_MODULE_NS(io)::BasicImStream strm(std::get<0>(expected).c_str(), std::get<0>(expected).size());
+        ::DFG_MODULE_NS(io)::BasicImStream strm2(std::get<0>(expected).c_str(), std::get<0>(expected).size());
+        ::DFG_MODULE_NS(io)::BasicImStream strm3(std::get<0>(expected).c_str(), std::get<0>(expected).size());
 
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(',', '"', '\n');
-        auto reader = DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
+        DelimitedTextReader::CellData<char> cellDataHandler(',', '"', '\n');
+        auto reader = DelimitedTextReader::createReader(strm, cellDataHandler);
 
         std::vector<std::string> vecStrings;
-        auto cellHandler = [&](const size_t nCol, const decltype(cellDataHandler)& cdh)
-                            {
-                                EXPECT_EQ(nCol, vecStrings.size());
-                                vecStrings.push_back(std::string(cdh.getBuffer().begin(), cdh.getBuffer().end()));
-                            };
+        auto cellHandler = [&](const size_t nCol, const char* const p, const size_t nSize)
+            {
+                EXPECT_EQ(nCol, vecStrings.size());
+                vecStrings.push_back(std::string(p, p + nSize));
+            };
+        auto cellHandler2 = [&](const size_t nCol, const decltype(cellDataHandler)& cdh) { cellHandler(nCol, cdh.getBuffer().data(), cdh.getBuffer().size()); };
 
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow(reader, cellHandler);
-
+        DelimitedTextReader::readRow(reader, cellHandler2);
+        EXPECT_EQ(std::get<1>(expected), vecStrings);
+        vecStrings.clear();
+        DelimitedTextReader::readRow<char>(strm2, ',', '"', '\n', cellHandler);
+        EXPECT_EQ(std::get<1>(expected), vecStrings);
+        vecStrings.clear();
+        DelimitedTextReader::readRow<char>(strm3, CsvFormatDefinition(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingNone), cellHandler);
         EXPECT_EQ(std::get<1>(expected), vecStrings);
     }
 
     // Test 'skip rest of row'-behaviour
     {
         const auto& expected = ExpectedResultsT("a,b,c,d,e,f", MAKE_VECTOR("c"));
-        std::istrstream strm(std::get<0>(expected).c_str());
+        ::DFG_MODULE_NS(io)::BasicImStream strm(std::get<0>(expected).c_str(), std::get<0>(expected).size());
 
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(',', '"', '\n');
-        auto reader = DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
+        DelimitedTextReader::CellData<char> cellDataHandler(',', '"', '\n');
+        auto reader = DelimitedTextReader::createReader(strm, cellDataHandler);
 
         std::vector<std::string> vecStrings;
         size_t nCellHandlerCallCount = 0;
@@ -414,12 +424,12 @@ TEST(DfgIo, DelimitedTextReader_readRow)
                                 if (nCol == 2)
                                 {
                                     vecStrings.push_back(std::string(cdh.getBuffer().begin(), cdh.getBuffer().end()));
-                                    cdh.setReadStatus(::DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::cellHrvSkipRestOfLine);
+                                    cdh.setReadStatus(DelimitedTextReader::cellHrvSkipRestOfLine);
                                 }
 
                             };
 
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow(reader, cellHandler);
+        DelimitedTextReader::readRow(reader, cellHandler);
 
         EXPECT_EQ(3, nCellHandlerCallCount);
         EXPECT_EQ(std::get<1>(expected), vecStrings);

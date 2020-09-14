@@ -109,6 +109,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_metaCharHandling";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_autoDetectCsvSeparator";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readCell";
+    //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readRow";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readRowConsecutiveSeparators";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readTableToContainer";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_rnTranslation";
