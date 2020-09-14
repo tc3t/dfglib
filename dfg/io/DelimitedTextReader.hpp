@@ -404,14 +404,24 @@ public:
         }
 #endif
 
-        operator std::basic_string<Char_T>() const
+        std::basic_string<Char_T> toStr() const
         {
             return std::basic_string<Char_T>(this->data(), this->size());
         }
 
-        operator DFG_CLASS_NAME(StringViewC)() const
+        StringView<Char_T> toView() const
         {
-            return DFG_CLASS_NAME(StringViewC)(this->data(), this->size());
+            return StringView<Char_T>(this->data(), this->size());
+        }
+
+        operator std::basic_string<Char_T>() const
+        {
+            return toStr();
+        }
+
+        operator StringView<Char_T>() const
+        {
+            return toView();
         }
     }; // Class CharBuffer
 

@@ -1,7 +1,7 @@
 #include <stdafx.h>
 #include <dfg/io/DelimitedTextReader.hpp>
 #include <dfg/alg.hpp>
-#include <boost/format.hpp>
+#include <dfg/str/format_fmt.hpp>
 #include <dfg/cont.hpp>
 #include <strstream>
 #include <dfg/io/BasicImStream.hpp>
@@ -143,7 +143,7 @@ void createTestFileCsvRandomData(const std::string& sFile)
 
 std::string createCsvTestFileName(const char* const pszId, const size_t nIndex)
 {
-    return (boost::format("testfiles/generated/csvtest%u_%s.csv") % pszId % nIndex).str();
+    return ::DFG_ROOT_NS::format_fmt("testfiles/generated/csvtest{0}_{1}.csv", pszId, nIndex);
 }
 
 } // unnamed namespace
@@ -351,7 +351,7 @@ TEST(DfgIo, DelimitedTextReader_readCell)
     for(size_t i = 0; i<count(arrCellExpected); ++i)
     {
         const auto& expected = arrCellExpected[i];
-        std::istrstream strm(std::get<0>(expected).c_str());
+        ::DFG_MODULE_NS(io)::BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
 
         DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(',', '"', '\n');
         auto reader = DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
@@ -521,7 +521,7 @@ TEST(DfgIo, DelimitedTextReader_readRowSkipWhiteSpaces)
         const auto impl = [&](const bool bSkip)
                         {
                             using namespace DFG_MODULE_NS(io);
-                            std::istrstream strm(arrSources[i]);
+                            BasicImStream strm(arrSources[i], std::strlen(arrSources[i]));
                             DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(arrSeparators[i], '"', '\n');
                             cellDataHandler.getFormatDefInfo().setFlag(DFG_CLASS_NAME(DelimitedTextReader)::rfSkipLeadingWhitespaces, bSkip);
                             auto reader = DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
@@ -552,7 +552,7 @@ TEST(DfgIo, DelimitedTextReader_readRowConsecutiveSeparators)
                                 std::vector<std::string> vecRead;
                                 std::array<std::string, 7> arrExpected = { "", "", "a", "", "", "b", "" };
                                 std::vector<std::string> vecExpected(arrExpected.begin(), arrExpected.end());
-                                std::istrstream strm(psz);
+                                BasicImStream strm(psz, std::strlen(psz));
                                 DFG_CLASS_NAME(DelimitedTextReader)::readRow<char>(strm, cDelim, '"', '\n', [&](const size_t /*nCol*/, const char* const p, const size_t nSize)
                                 {
                                     vecRead.push_back(std::string(p, nSize));
@@ -752,7 +752,7 @@ TEST(DfgIo, DelimitedTextReader_readRowMatrix)
     for(size_t i = 0; i<count(arrCellExpected); ++i)
     {
         const auto& expected = arrCellExpected[i];
-        std::istrstream strm(std::get<0>(expected).c_str());
+        ::DFG_MODULE_NS(io)::BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
 
         DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(',', '"', '\n');
         auto reader = DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
@@ -918,9 +918,9 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
         DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::read(reader, [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& rCell)
         {
             if (nRow == nCol) // Diagonal
-                diag += boost::lexical_cast<size_t>(rCell.getBuffer().data(), rCell.getBuffer().size());
+                diag += ::DFG_MODULE_NS(str)::strTo<size_t>(rCell.getBuffer().toView());
             if (nRow + nCol == matSize - 1) // Back diagonal
-                backDiag += boost::lexical_cast<size_t>(rCell.getBuffer().data(), rCell.getBuffer().size());
+                backDiag += ::DFG_MODULE_NS(str)::strTo<size_t>(rCell.getBuffer().toView());
         });
 
         if (expectedDiagSums[i] != 0)
@@ -943,7 +943,7 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestTextCells)
     auto vec = DFG_SUB_NS_NAME(io)::fileToByteContainer<std::vector<char>>(sFile,
                                                                     512);
     EXPECT_EQ(false, vec.empty());
-    std::istrstream istrm(vec.data(), static_cast<int>(vec.size()));
+    ::DFG_MODULE_NS(io)::BasicImStream istrm(vec.data(), vec.size());
 
 #ifdef _MSC_VER
     auto ostrm = DFG_SUB_NS_NAME(io)::createOutputStreamBinaryFile("testfiles/generated/read_testfile_200x200.txt");
