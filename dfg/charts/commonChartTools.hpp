@@ -13,6 +13,7 @@
 #include "../io/BasicImStream.hpp"
 #include "../io/DelimitedTextReader.hpp"
 #include "../cont/valueArray.hpp"
+#include "../cont/IntervalSetSerialization.hpp"
 
 /*
 Terminology used in dfglib:
@@ -266,6 +267,10 @@ public:
 
     bool isLoggingAllowedForLevel(LogLevel logLevel) const;
 
+    // Creates IntervalSet from x_rows-item. Returns &rInterval if x_rows was present and it was not default "include all", nullptr otherwise.
+    template <class Interval_T>
+    Interval_T* createXrowsSet(Interval_T& rInterval, const typename Interval_T::value_type nWrapAt) const;
+
 private:
     virtual bool hasFieldImpl(FieldIdStrViewInputParam fieldId) const;
     virtual std::pair<bool, String> fieldValueStrImpl(FieldIdStrViewInputParam fieldId) const = 0;
@@ -350,6 +355,20 @@ inline auto AbstractChartControlItem::logLevel(const LogLevel newLevel) -> LogLe
 inline bool AbstractChartControlItem::isLoggingAllowedForLevel(const LogLevel logLevel) const
 {
     return logLevel <= this->logLevel();
+}
+
+template <class Interval_T>
+inline Interval_T* AbstractChartControlItem::createXrowsSet(Interval_T& rInterval, const typename Interval_T::value_type nWrapAt) const
+{
+    const auto xRowsStr = this->fieldValueStr(ChartObjectFieldIdStr_xRows, []() { return String(DFG_UTF8("*")); });
+    if (!xRowsStr.empty() && xRowsStr != DFG_UTF8("*"))
+    {
+        rInterval = ::DFG_MODULE_NS(cont)::intervalSetFromString<Interval_T::value_type>(xRowsStr.rawStorage());
+        rInterval.wrapNegatives(nWrapAt);
+        return &rInterval;
+    }
+    else
+        return nullptr;
 }
 
 template <class T>
@@ -700,6 +719,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_barWidthFactor,
             ChartObjectFieldIdStr_binType,
             ChartObjectFieldIdStr_xSource,
+            ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_fillColour,
@@ -719,6 +739,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_dataSource,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_ySource,
+            ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_mergeIdenticalLabels,
             ChartObjectFieldIdStr_operation
             });

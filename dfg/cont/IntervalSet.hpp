@@ -17,6 +17,7 @@ class IntervalSet
 {
 public:
     using sizeType = ::std::size_t;
+    using value_type = T;
     using IntervalCont = MapVectorSoA<T, T>;
     using ReadOnlyInputT = typename std::conditional<std::is_integral<T>::value, T, const T&>::type;
 

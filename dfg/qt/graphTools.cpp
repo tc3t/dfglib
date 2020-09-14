@@ -1243,6 +1243,11 @@ QString GraphDefinitionWidget::getGuideString()
    <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
    <li><i>data_source</i>: Defines data source from which to fetch data. If omitted, default source is used.</li>
    <li><i>log_level</i>: Defines log level for an entry; for example setting this to <i>debug</i> can be used to diagnose entry behaviour more closely. Possible values {debug, info, warning, error, none}. By default uses global log level.</li>
+   <li><i>x_rows</i>: List of rows to include as semicolon separated, 1-based index list, e.g. "1:3; 5; 7:8" means 1 (=first), 2, 3, 5, 7, 8.</li>
+       <ul>
+           <li>Negative indexes means "from end", for example "-30:-1" means "30 last rows"</li>
+           <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
+      </ul>
 </ul>
 
 <h2>Fields for type <i>xy</i></h2>
@@ -1256,12 +1261,6 @@ QString GraphDefinitionWidget::getGuideString()
             <ul>
                 <li>column_name(name): y-values will be taken from column that has name <i>name</i>.</li>
                 <li>row_index: values will be taken from row index of x-values</li>
-            </ul>
-        <li><i>x_rows</i>:</li>
-            <ul>
-                <li>x_rows: List of rows to include as semicolon separated, 1-based index list, e.g. "1:3; 4; 7:8" means 1 (=first), 2, 3, 4, 7, 8.</li>
-                <li>Negative indexes means "from end", for example "-30:-1" means "30 last rows"</li>
-                <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
             </ul>
         <li><i>line_colour</i>:</li>
             <ul>
@@ -4045,25 +4044,20 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
 
-    using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
-    IntervalSet xRows;
-    IntervalSet* pxRowSet = nullptr;
-
-    const auto xRowsStr = defEntry.fieldValueStr(ChartObjectFieldIdStr_xRows, []() { return StringUtf8(DFG_UTF8("*")); });
-    if (!xRowsStr.empty() && xRowsStr != DFG_UTF8("*"))
-    {
-        xRows = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(xRowsStr.rawStorage());
-        if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::debug))
-            defEntry.log(GraphDefinitionEntry::LogLevel::debug, tr("x_rows-entry defines %1 row(s)").arg(xRows.sizeOfSet()));
-        pxRowSet = &xRows;
-    }
-
     // xValueMap is also used as final (x,y) table passed to series.
     // releaseOrCopy() will return either moved data or copy of it.
     auto xValueMap = (pXdata != pYdata) ? tableData.releaseOrCopy(pXdata) : *pXdata;
     xValueMap.setSorting(false);
-    if (pxRowSet && !xValueMap.empty())
-        pxRowSet->wrapNegatives(static_cast<int>(xValueMap.backKey() + 1));
+
+    using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
+    IntervalSet xRows;
+    const IntervalSet* pxRowSet = (!xValueMap.empty()) ? defEntry.createXrowsSet(xRows, static_cast<int>(xValueMap.backKey() + 1)) : nullptr;
+    if (pxRowSet)
+    {
+        if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::debug))
+            defEntry.log(GraphDefinitionEntry::LogLevel::debug, tr("x_rows-entry defines %1 row(s)").arg(xRows.sizeOfSet()));
+    }
+
     const auto& yValueMap = *pYdata;
     auto xIter = xValueMap.cbegin();
     auto yIter = yValueMap.cbegin();
@@ -4141,6 +4135,44 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     setCommonChartObjectProperties(rSeries, defEntry, configParamCreator, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname));
 }
 
+namespace
+{
+    template <class Cont_T>
+    Cont_T filterByXrows(const Cont_T& rowValueMap, const ::DFG_MODULE_NS(cont)::IntervalSet<int>& xRows)
+    {
+        Cont_T filtered;
+        for (const auto& kv : rowValueMap)
+        {
+            if (xRows.hasValue(static_cast<int>(kv.first)))
+            {
+                filtered.m_keyStorage.push_back(kv.first);
+                filtered.m_valueStorage.push_back(kv.second);
+            }
+        }
+        return filtered;
+    }
+
+    template <class Cont_T>
+    bool handleXrows(const ::DFG_MODULE_NS(qt)::GraphDefinitionEntry& defEntry, const Cont_T*& pRowToItemMap, Cont_T& rowToItemMapCopy)
+    {
+        ::DFG_MODULE_NS(cont)::IntervalSet<int> xRows;
+        using namespace ::DFG_MODULE_NS(qt);
+        if (!pRowToItemMap->empty() && defEntry.createXrowsSet(xRows, static_cast<int>(pRowToItemMap->backKey() + 1)))
+        {
+            rowToItemMapCopy = filterByXrows(*pRowToItemMap, xRows);
+            pRowToItemMap = &rowToItemMapCopy;
+        }
+
+        if (pRowToItemMap->valueRange().size() < 1 && defEntry.isType(ChartObjectChartTypeStr_histogram))
+        {
+            if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
+                defEntry.log(GraphDefinitionEntry::LogLevel::error, defEntry.tr("too few points (%1) for histogram").arg(pRowToItemMap->valueRange().size()));
+            return false;
+        }
+        return true;
+    }
+}
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
 {
     using namespace ::DFG_MODULE_NS(charts);
@@ -4174,20 +4206,19 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         if (!optTableData || optTableData->columnCount() < 1)
             return;
 
-        auto pSingleColumn = optTableData->columnDataByIndex(columnIndexes[0]);
+        auto pCacheColumn = optTableData->columnDataByIndex(columnIndexes[0]);
 
-        if (!pSingleColumn)
+        if (!pCacheColumn)
             return;
 
-        if (pSingleColumn->valueRange().size() < 1)
-        {
-            if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
-                defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("too few points (%1) for histogram").arg(pSingleColumn->valueRange().size()));
+        TableSelectionCacheItem::RowToValueMap singleColumnCopy;
+        const TableSelectionCacheItem::RowToValueMap* pRowToValues = pCacheColumn;
+
+        if (!handleXrows(defEntry, pRowToValues, singleColumnCopy))
             return;
-        }
 
         // Applying operations
-        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pSingleColumn->m_valueStorage, nullptr);
+        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pRowToValues->m_valueStorage, nullptr);
         defEntry.applyOperations(operationData);
 
         auto pValues = operationData.constValuesByIndex(0);
@@ -4198,8 +4229,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
             return;
         }
 
-        const auto xType = optTableData->columnDataType(pSingleColumn);
-        const auto sXaxisName = optTableData->columnName(pSingleColumn);
+        const auto xType = optTableData->columnDataType(pCacheColumn);
+        const auto sXaxisName = optTableData->columnName(pCacheColumn);
         spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pValues), xType, qStringToStringUtf8(sXaxisName)));
 
     }
@@ -4213,6 +4244,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
             return;
         }
 
+        TableSelectionCacheItem::RowToStringMap stringColumnCopy;
+
+        if (!handleXrows(defEntry, pStrings, stringColumnCopy))
+            return;
+        
         // Applying operations
         ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pStrings->m_valueStorage, nullptr);
         defEntry.applyOperations(operationData);
@@ -4258,6 +4294,16 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& r
 
     if (!pFirstCol || !pSecondCol)
         return;
+
+    TableSelectionCacheItem::RowToStringMap labelColumnCopy;
+    TableSelectionCacheItem::RowToValueMap valueColumnCopy;
+    // Applying x_rows filter if defined
+    {
+        if (!handleXrows(defEntry, pFirstCol, labelColumnCopy))
+            return;
+        if (!handleXrows(defEntry, pSecondCol, valueColumnCopy))
+            return;
+    }
 
     const auto sXaxisName = optTableData->columnName(columnIndexes[0]);
     const auto sYaxisName = optTableData->columnName(columnIndexes[1]);
