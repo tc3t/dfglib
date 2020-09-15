@@ -1318,6 +1318,13 @@ public:
             return readEx(ParsingDefinition<Char_T, CharAppenderDefault<CharBuffer<Char_T>, Char_T>>(), istrm, cSeparator, cEnclosing, cEndOfLine, ihFunc);
     }
 
+    // Convenience overload that takes csv format object, which is expected to have separatorChar(), enclosingChar() and eolCharFromEndOfLineType()
+    template <class Char_T, class Stream_T, class Format_T, class ItemHandlerFunc_T>
+    static auto read(Stream_T& istrm, const Format_T& format, ItemHandlerFunc_T&& ihFunc) -> FormatDefinitionSingleChars
+    {
+        return read<Char_T>(istrm, format.separatorChar(), format.enclosingChar(), format.eolCharFromEndOfLineType(), std::forward<ItemHandlerFunc_T>(ihFunc));
+    }
+
     template <class Stream_T, class CellData_T, class ReaderCreator_T, class ItemHandlerFunc_T>
     static auto readImpl(Stream_T& istrm, CellData_T& cellData, ReaderCreator_T readerCreator, ItemHandlerFunc_T&& ihFunc) -> FormatDefinitionSingleChars
     {

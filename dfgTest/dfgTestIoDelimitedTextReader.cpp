@@ -775,6 +775,7 @@ TEST(DfgIo, DelimitedTextReader_readRowMatrix)
 TEST(DfgIo, DelimitedTextReader_read)
 {
     using namespace DFG_ROOT_NS;
+    using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
 
     /*
     8925, 25460, 46586
@@ -800,24 +801,53 @@ TEST(DfgIo, DelimitedTextReader_read)
 
     int sum = 0;
 
-    DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(',', '"', '\n');
-    auto reader = DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(istrm, cellDataHandler);
+    DelimitedTextReader::CellData<char> cellDataHandler(',', '"', '\n');
+    auto reader = DelimitedTextReader::createReader(istrm, cellDataHandler);
 
-    auto cellHandler = [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& rCd)
+    auto cellHandler = [&](const size_t nRow, const size_t nCol, const char* p, const size_t nCount)
                             {
-                                int val;
-                                ::DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo(std::string(rCd.getBuffer().begin(), rCd.getBuffer().end()), val);
+                                const auto val = ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(p, nCount));
                                 readRows.push_back(nRow);
                                 readCols.push_back(nCol);
                                 readValues.push_back(val);
                                 if (nRow == nCol)
                                     sum += val;
                             };
+    auto cellHandler2 = [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& rCd) { cellHandler(nRow, nCol, rCd.getBuffer().data(), rCd.getBuffer().size()); };
 
-    DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::read(reader, cellHandler);
-    EXPECT_EQ(contExpectedValues, readValues);
-    EXPECT_EQ(contExpectedRows, readRows);
-    EXPECT_EQ(contExpectedCols, readCols);
+    // Testing reader overload
+    {
+        DelimitedTextReader::read(reader, cellHandler2);
+        EXPECT_EQ(contExpectedValues, readValues);
+        EXPECT_EQ(contExpectedRows, readRows);
+        EXPECT_EQ(contExpectedCols, readCols);
+    }
+
+    // Testing convenience overload with individual format items
+    {
+        readValues.clear();
+        readRows.clear();
+        readCols.clear();
+        istrm.seekg(decltype(istrm)::SeekOriginBegin, 0);
+        DelimitedTextReader::read<char>(istrm, ',', '"', '\n', cellHandler);
+        EXPECT_EQ(contExpectedValues, readValues);
+        EXPECT_EQ(contExpectedRows, readRows);
+        EXPECT_EQ(contExpectedCols, readCols);
+    }
+
+    // Testing convenience overload with format object
+    {
+        readValues.clear();
+        readRows.clear();
+        readCols.clear();
+        istrm.seekg(decltype(istrm)::SeekOriginBegin, 0);
+        const CsvFormatDefinition csvFormat(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingNone);
+        DelimitedTextReader::read<char>(istrm, csvFormat, cellHandler);
+        EXPECT_EQ(contExpectedValues, readValues);
+        EXPECT_EQ(contExpectedRows, readRows);
+        EXPECT_EQ(contExpectedCols, readCols);
+    }
+
     //std::cout << "sum: " << sum << std::endl;
 }
 
