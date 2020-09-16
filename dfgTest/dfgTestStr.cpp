@@ -1152,6 +1152,19 @@ namespace
             EXPECT_EQ('\0', szView2.dataRaw()[1]);
             EXPECT_EQ('b', szView2.dataRaw()[2]);
         }
+
+        // Testing that can use operator== with non-sz view and typed SzPtr
+        {
+            const StringView_T constSv(conv(sz0));
+            EXPECT_TRUE(StringView_T(conv(sz0)) == StringView_T(conv(sz0)));
+            EXPECT_TRUE(StringView_T(conv(sz0)) != StringView_T(conv(sz1)));
+            EXPECT_TRUE(StringView_T(conv(sz0)) == conv(sz0));
+            EXPECT_TRUE(conv(sz0) == StringView_T(conv(sz0)));
+            EXPECT_TRUE(constSv == conv(sz0));
+            EXPECT_TRUE(conv(sz0) == constSv);
+            EXPECT_TRUE(typename StringView_T::StringViewT(conv(sz0)) == StringView_T(conv(sz0)));
+            EXPECT_TRUE(StringView_T(conv(sz0)) == typename StringView_T::StringViewT(conv(sz0)));
+        }
     }
 }
 

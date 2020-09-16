@@ -438,6 +438,7 @@ public:
 
     bool operator==(const SzPtrT& tpsz) const
     {
+        // TODO: this is potentially suboptimal: makes redundant strlen() call due to construction of StringView.
         return operator==(DFG_CLASS_NAME(StringView)(tpsz));
     }
 
@@ -587,7 +588,18 @@ public:
 
     bool operator==(const SzPtrT& tpsz)
     {
+        const auto& rThis = *this;
+        return rThis == tpsz;
+    }
+
+    bool operator==(const SzPtrT& tpsz) const
+    {
         return (isLengthCalculated()) ? toStringViewFromCachedSize() == tpsz : DFG_MODULE_NS(str)::strCmp(SzPtrT(toCharPtr_raw(this->m_pFirst)), tpsz) == 0;
+    }
+
+    bool operator==(const StringViewT& sv) const
+    {
+        return sv == this->c_str();
     }
 
     CodePointT operator[](const size_t n) const
@@ -646,8 +658,14 @@ inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, DFG_CLASS_NAME(S
     return right == psz;
 }
 
+template <class Char_T, class Str_T>
+inline bool operator==(const StringView<Char_T, Str_T>& left, const StringViewSz<Char_T, Str_T>& right)
+{
+    return right == left;
+}
+
 template <class Char_T>
-inline bool operator==(const Char_T* psz, const DFG_CLASS_NAME(StringViewSz)<Char_T, std::basic_string<Char_T>>& right) { return right == psz; }
+inline bool operator==(const Char_T* psz, const StringViewSz<Char_T, std::basic_string<Char_T>>& right) { return right == StringViewSz<Char_T, std::basic_string<Char_T>>(psz); }
 
 template<class Char_T, class Str_T>
 inline bool operator==(const Str_T& s, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
