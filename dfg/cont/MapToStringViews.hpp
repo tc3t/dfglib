@@ -101,6 +101,12 @@ public:
         return m_keyToStringDetails.end();
     }
 
+    // Precondition: !empty()
+    const Key_T&       frontKey()   const { DFG_ASSERT_UB(!this->empty()); return this->begin()->first;             } 
+    const StringViewRv frontValue() const { DFG_ASSERT_UB(!this->empty()); return this->begin()->second(*this);     }
+    const Key_T&       backKey()    const { DFG_ASSERT_UB(!this->empty()); return (this->end() - 1)->first;         }
+    const StringViewRv backValue()  const { DFG_ASSERT_UB(!this->empty()); return (this->end() - 1)->second(*this); }
+
     // Inserts mapping key -> view. If key already exists, behaviour is unspecified. TODO: specify
     void insert(const Key_T& key, const StringView& sv)
     {

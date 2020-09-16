@@ -659,6 +659,18 @@ TEST(dfgCont, MapToStringViews)
         EXPECT_TRUE(std::equal(expectedKeys.begin(), expectedKeys.end(), keys.begin()));
         EXPECT_TRUE(std::equal(expectedValues.begin(), expectedValues.end(), values.begin()));
     }
+
+    // Testing front/back operations
+    {
+        MapToStringViews<int, std::string> m;
+        m.insert(-20, "a");
+        m.insert(5, "b");
+        m.insert(30, "c");
+        EXPECT_EQ(-20, m.frontKey());
+        EXPECT_EQ("a", m.frontValue());
+        EXPECT_EQ(30,  m.backKey());
+        EXPECT_EQ("c", m.backValue());
+    }
 }
 
 TEST(dfgCont, SortedSequence)
