@@ -639,6 +639,26 @@ TEST(dfgCont, MapToStringViews)
         }
         EXPECT_EQ("abc", s);
     }
+
+    // Testing basic iteration with types string
+    {
+        MapToStringViews<size_t, StringUtf8> m;
+        m.insert(7, DFG_UTF8("a"));
+        m.insert(9, DFG_UTF8("b"));
+        const std::array<size_t, 2> expectedKeys = {7, 9};
+        const std::array<StringUtf8, 2> expectedValues = { StringUtf8(DFG_UTF8("a")), StringUtf8(DFG_UTF8("b")) };
+        std::vector<size_t> keys;
+        std::vector<StringUtf8> values;
+        for (const auto& item : m)
+        {
+            keys.push_back(item.first);
+            values.push_back(item.second(m).toString());
+        }
+        ASSERT_EQ(expectedKeys.size(), keys.size());
+        ASSERT_EQ(expectedValues.size(), values.size());
+        EXPECT_TRUE(std::equal(expectedKeys.begin(), expectedKeys.end(), keys.begin()));
+        EXPECT_TRUE(std::equal(expectedValues.begin(), expectedValues.end(), values.begin()));
+    }
 }
 
 TEST(dfgCont, SortedSequence)

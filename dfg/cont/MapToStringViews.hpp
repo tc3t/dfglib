@@ -70,7 +70,9 @@ private:
         }
         StringViewRv toView(const DataStorage& data) const
         {
-            return StringViewRv(PtrT(data.data() + m_nStartPos), m_nEndPos - m_nStartPos);
+            // Checking that interpreting (data.data() + m_nStartPos) as SzPtrT is valid if using SzView.
+            DFG_ASSERT_UB((!std::is_same<StringViewRv, StringViewSz>::value || data[m_nEndPos] == '\0'));
+            return StringViewRv(SzPtrT(data.data() + m_nStartPos), m_nEndPos - m_nStartPos);
         }
 
         StringViewRv operator()(const MapToStringViews& cont) const
