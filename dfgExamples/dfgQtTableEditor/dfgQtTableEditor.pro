@@ -160,6 +160,7 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewChartDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvFileDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp
 
@@ -183,6 +184,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/ConsoleDisplay.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewChartDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvFileDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/operations.hpp \

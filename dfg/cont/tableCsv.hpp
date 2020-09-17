@@ -484,10 +484,18 @@ DFG_ROOT_NS_BEGIN{
             template <class StringMatcher_T> using RowContentFilter = DFG_DETAIL_NS::RowContentFilter<ThisClass, StringMatcher_T>;
 
             // RowContentFilterBuffer is a map-like structure that can be iterated with regular range-based for like described in iterating through MapToStringViews.
-            using RowContentFilterBuffer = DFG_DETAIL_NS::RowContentFilterBuffer<IndexT>; 
+            using RowContentFilterBuffer = DFG_DETAIL_NS::RowContentFilterBuffer<IndexT>;
+
+            class CellHandlerBase
+            {
+            public:
+                void onReadDone()
+                {
+                }
+            };
 
         private:
-            class DefaultCellHandler
+            class DefaultCellHandler : public CellHandlerBase
             {
             public:
                 DefaultCellHandler(TableCsv& rTable)
@@ -500,10 +508,6 @@ DFG_ROOT_NS_BEGIN{
                     // TODO: this effectively assumes that user given input is valid UTF8.
                     m_rTable.setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
                 };
-
-                void onReadDone()
-                {
-                }
 
                 TableCsv& m_rTable;
             };

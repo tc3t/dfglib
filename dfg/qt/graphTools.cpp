@@ -68,6 +68,9 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
+// Including before <boost/histogram.hpp> would cause compilation error on MSVC as this includes Shlwapi.h which for unknown reason breaks histogram
+#include "CsvFileDataSource.hpp"
+
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -4432,6 +4435,21 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::forDataSource(const GraphD
     {
         return (spDs && spDs->uniqueId() == id);
     });
+
+    // If source wasn't found, checking if it's file source and creating new source if needed.
+    if (iter == m_dataSources.m_sources.end())
+    {
+        const auto sId = qStringToStringUtf8(id);
+        ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem item(sId);
+        if (item.key() == DFG_UTF8("csv_file"))
+        {
+            auto spCsvSource = std::make_shared<CsvFileDataSource>(viewToQString(item.value(0)), id);
+            m_dataSources.m_sources.push_back(std::move(spCsvSource));
+            iter = m_dataSources.m_sources.end() - 1;
+        }
+    }
+
+
     if (iter != m_dataSources.m_sources.end())
         func(**iter);
     else

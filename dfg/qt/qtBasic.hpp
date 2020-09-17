@@ -91,6 +91,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
         return QString::fromUtf8(view.dataRaw(), static_cast<int>(view.length()));
     }
 
+    inline QString viewToQString(const StringViewSzUtf8& view)
+    {
+        return QString::fromUtf8(view.dataRaw());
+    }
+
+    inline QString viewToQString(const StringUtf8& s)
+    {
+        return viewToQString(StringViewUtf8(s));
+    }
+
+    inline QString viewToQString(const SzPtrUtf8R& tpsz)
+    {
+        return viewToQString(StringViewSzUtf8(tpsz));
+    }
+
     inline StringUtf8 qStringToStringUtf8(const QString& s)
     {
         auto bytes = s.toUtf8();

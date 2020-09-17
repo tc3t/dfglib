@@ -6,6 +6,7 @@
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/ConsoleDisplay.hpp>
 #include <dfg/qt/CsvTableViewChartDataSource.hpp>
+#include <dfg/qt/CsvFileDataSource.hpp>
 #include <dfg/qt/connectHelper.hpp>
 #include <dfg/math.hpp>
 
@@ -853,5 +854,45 @@ TEST(dfgQt, StringMatchDefinition)
         EXPECT_FALSE(StringMatchDefinition("A", Qt::CaseSensitive, QRegExp::Wildcard).isMatchWith(QString("abc")));
         EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, QRegExp::Wildcard).isMatchWith(DFG_UTF8("abc")));
         EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, QRegExp::Wildcard).isMatchWith(QString("abc")));
+    }
+}
+
+TEST(dfgQt, CsvFileDataSource)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(qt);
+    /* example_forFilterRead.csv:
+     Col0  Col1
+     ab    b
+     b     ab
+     ab    c
+    */
+
+    std::array<std::vector<double>, 2> expectedRows = { std::vector<double>({0, 1, 2, 3}), {0, 1, 2, 3} };
+    std::array<std::vector<std::string>, 2> expectedStrings = { std::vector<std::string>({"Col0", "ab", "b", "ab"}), {"Col1", "b", "ab", "c"} };
+
+    for (DataSourceIndex c = 0; c < 3; ++c)
+    {
+        std::vector<double> rows;
+        std::vector<std::string> strings;
+        CsvFileDataSource csvSource("testfiles/example_forFilterRead.csv", "csvSource");
+        csvSource.forEachElement_byColumn(c, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
+        {
+            rows.insert(rows.end(), sourceSpan.rows().begin(), sourceSpan.rows().end());
+            const auto nOldSize = static_cast<uint16>(strings.size());
+            strings.resize(nOldSize + sourceSpan.stringViews().size());
+            std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), strings.begin() + nOldSize, [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
+        });
+        if (c < expectedRows.size())
+        {
+            ASSERT_EQ(expectedRows.size(), expectedStrings.size());
+            EXPECT_EQ(expectedRows[c], rows);
+            EXPECT_EQ(expectedStrings[c], strings);
+        }
+        else
+        {
+            EXPECT_TRUE(rows.empty());
+            EXPECT_TRUE(strings.empty());
+        }
     }
 }
