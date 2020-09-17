@@ -671,6 +671,19 @@ TEST(dfgCont, MapToStringViews)
         EXPECT_EQ(30,  m.backKey());
         EXPECT_EQ("c", m.backValue());
     }
+
+    // storage size and capacity
+    {
+        MapToStringViews<int, StringUtf8> m;
+        EXPECT_EQ(1, m.contentStorageSize()); // This is implementation detail about storing null for empty string optimization, feel free to adjust if implementation changes.
+        m.contentStorageCapacity();
+        const auto nNewCapacity = m.reserveContentStorage_byBaseCharCount(1000);
+        EXPECT_LE(1000, nNewCapacity);
+        EXPECT_EQ(nNewCapacity, m.contentStorageCapacity());
+        EXPECT_EQ(nNewCapacity, m.reserveContentStorage_byBaseCharCount(3)); // Calling with smaller than capacity should do nothing.
+        m.insert(1, DFG_UTF8("abc"));
+        EXPECT_EQ(5, m.contentStorageSize()); // Involves implementation details, feel free to adjust if implementation changes.
+    }
 }
 
 TEST(dfgCont, SortedSequence)

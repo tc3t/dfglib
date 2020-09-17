@@ -166,6 +166,27 @@ public:
         m_data.push_back('\0');
     }
 
+    // Returns the number of characters stored in content storage.
+    size_t contentStorageSize() const
+    {
+        return this->m_data.size();
+    }
+
+    // Returns the number of base characters that storage can hold with current allocation(s). Note that by default some of the capacity is used for controls such as null terminators,
+    // For example if this returns 8, it doesn't by default mean that map can store "abcd" and "efgh" without content storage reallocation(s).
+    size_t contentStorageCapacity() const
+    {
+        return this->m_data.capacity();
+    }
+
+    // Tries to set content storage capacity and returns value effective after this call. Never shrinks capacity.
+    // See documentation of contentStorageCapacity() for details.
+    size_t reserveContentStorage_byBaseCharCount(const size_t nNewBaseCharCapacity)
+    {
+        this->m_data.reserve(nNewBaseCharCapacity); // Note: reserve() doesn't nothing if nNewBaseCharCapacity <= capacity()
+        return this->contentStorageCapacity();
+    }
+
 private:
     // For non-Sz view no need to add null terminator
     void handleNullTerminator(std::false_type) { }
