@@ -684,6 +684,25 @@ TEST(dfgCont, MapToStringViews)
         m.insert(1, DFG_UTF8("abc"));
         EXPECT_EQ(5, m.contentStorageSize()); // Involves implementation details, feel free to adjust if implementation changes.
     }
+
+    // keyByValue
+    {
+        MapToStringViews<int, std::string> m;
+        m.insert(-20, "a");
+        m.insert(5, "b");
+        m.insert(30, "c");
+        m.insert(40, "c");
+        EXPECT_TRUE(m.keyByValue("") == nullptr);
+        EXPECT_EQ(123, m.keyByValue("", 123));
+        ASSERT_TRUE(m.keyByValue("a") != nullptr);
+        EXPECT_EQ(-20, *m.keyByValue("a"));
+        EXPECT_EQ(-20, m.keyByValue("a", 0));
+        ASSERT_TRUE(m.keyByValue("b") != nullptr);
+        EXPECT_EQ(5, *m.keyByValue("b"));
+        EXPECT_EQ(5, m.keyByValue("b", 0));
+        ASSERT_TRUE(m.keyByValue("c") != nullptr);
+        EXPECT_EQ(30, *m.keyByValue("c")); // This is implementation detail (returned value can be either 30 or 40), feel free to adjust if implementation changes.
+    }
 }
 
 TEST(dfgCont, SortedSequence)

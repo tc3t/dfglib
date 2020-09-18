@@ -121,15 +121,9 @@ auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::columnIndexes() const -> IndexList
     return indexes;
 }
 
-// TODO: move to MapToStringViews?
 auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::columnIndexByName(const StringViewUtf8 sv) const -> DataSourceIndex
 {
-    for (const auto& item : m_columnIndexToColumnName)
-    {
-        if (item.second(m_columnIndexToColumnName) == sv)
-            return item.first;
-    }
-    return GraphDataSource::invalidIndex();
+    return m_columnIndexToColumnName.keyByValue(sv, GraphDataSource::invalidIndex());
 }
 
 void ::DFG_MODULE_NS(qt)::CsvFileDataSource::enable(bool b)

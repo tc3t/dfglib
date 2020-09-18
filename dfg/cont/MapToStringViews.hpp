@@ -187,6 +187,25 @@ public:
         return this->contentStorageCapacity();
     }
 
+    // Returns pointer to key corresponding to value 'sv', nullptr given value is not found. If there are multiple values matching to 'sv',
+    // it is unspecified which key of mathing value is returned.
+    const Key_T* keyByValue(const StringView& sv) const
+    {
+        for (const auto& item : *this)
+        {
+            if (item.second(*this) == sv)
+                return &item.first;
+        }
+        return nullptr;
+    }
+
+    // Convenience overload: if given string is present in map, returns *keyByValue(sv), otherwise returns given default value 'returnValueIfNotFound'
+    Key_T keyByValue(const StringView& sv, const Key_T& returnValueIfNotFound) const
+    {
+        auto p = keyByValue(sv);
+        return (p) ? *p : returnValueIfNotFound;
+    }
+
 private:
     // For non-Sz view no need to add null terminator
     void handleNullTerminator(std::false_type) { }
