@@ -861,33 +861,49 @@ TEST(dfgQt, CsvFileDataSource)
 {
     using namespace ::DFG_ROOT_NS;
     using namespace ::DFG_MODULE_NS(qt);
-    /* example_forFilterRead.csv:
-     Col0  Col1
-     ab    b
-     b     ab
-     ab    c
-    */
 
-    std::array<std::vector<double>, 2> expectedRows = { std::vector<double>({0, 1, 2, 3}), {0, 1, 2, 3} };
-    std::array<std::vector<std::string>, 2> expectedStrings = { std::vector<std::string>({"Col0", "ab", "b", "ab"}), {"Col1", "b", "ab", "c"} };
+    const QString sTestFilePath("testfiles/generated/CsvFileDataSourceTest.csv");
+    {
+        QFile file(sTestFilePath);
+        file.open(QIODevice::WriteOnly);
+        file.write("Col0,Col1,123.456\nab,b,18.9.2020\nb,ab,2020-09-18\nab,c,2020-09-18 12:00:00\n");
+    }
 
-    for (DataSourceIndex c = 0; c < 3; ++c)
+    const size_t nColCount = 3;
+    std::array<std::vector<double>, nColCount> expectedRows = { std::vector<double>({0, 1, 2, 3}), {0, 1, 2, 3}, {0, 1, 2, 3} };
+    std::array<std::vector<std::string>, nColCount> expectedStrings = { std::vector<std::string>(
+                                                                {"Col0", "ab", "b", "ab"}),
+                                                                {"Col1", "b", "ab", "c"},
+                                                                {"123.456", "18.9.2020", "2020-09-18", "2020-09-18 12:00:00"} };
+    std::array<std::vector<double>, nColCount> expectedValues;
+    std::transform(expectedStrings[2].begin(),
+                   expectedStrings[2].end(),
+                   std::back_inserter(expectedValues[2]), [](const std::string& s) { return GraphDataSource::cellStringToDouble(SzPtrUtf8(s.c_str())); } );
+
+    for (DataSourceIndex c = 0; c < nColCount + 1; ++c)
     {
         std::vector<double> rows;
         std::vector<std::string> strings;
-        CsvFileDataSource csvSource("testfiles/example_forFilterRead.csv", "csvSource");
+        std::vector<double> values;
+        CsvFileDataSource csvSource(sTestFilePath, "csvSource");
         csvSource.forEachElement_byColumn(c, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
         {
             rows.insert(rows.end(), sourceSpan.rows().begin(), sourceSpan.rows().end());
             const auto nOldSize = static_cast<uint16>(strings.size());
             strings.resize(nOldSize + sourceSpan.stringViews().size());
             std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), strings.begin() + nOldSize, [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
+            values.insert(values.end(), sourceSpan.doubles().begin(), sourceSpan.doubles().end());
         });
         if (c < expectedRows.size())
         {
             ASSERT_EQ(expectedRows.size(), expectedStrings.size());
             EXPECT_EQ(expectedRows[c], rows);
             EXPECT_EQ(expectedStrings[c], strings);
+            if (!expectedValues[c].empty())
+            {
+                ASSERT_EQ(expectedValues[c].size(), values.size());
+                EXPECT_TRUE(std::equal(values.begin(), values.end(), expectedValues[c].begin()));
+            }
         }
         else
         {
