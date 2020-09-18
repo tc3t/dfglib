@@ -20,12 +20,22 @@ public:
     void enable(bool b) override;
     void forEachElement_byColumn(DataSourceIndex nCol, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler) override;
     auto underlyingSource() -> QObject* override;
-    // End interface overloads <--
+private:
+    String statusDescriptionImpl() const override;
+    void refreshAvailabilityImpl() override { privUpdateStatusAndAvailability(); }
+// End interface overloads <--
+
+public:
+
+// Internals
+    // Updates status and availability and return true iff file is readable.
+    bool privUpdateStatusAndAvailability();
 
     std::string m_sPath; // File path in native 8-bit encoding.
     ::DFG_MODULE_NS(cont)::MapToStringViews<DataSourceIndex, StringUtf8> m_columnIndexToColumnName;
     ColumnDataTypeMap m_columnDataTypes;
     CsvFormatDefinition m_format;
+    String m_sStatusDescription;
 }; // class CsvFileDataSource
 
 }} // module namespace

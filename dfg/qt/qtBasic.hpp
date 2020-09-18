@@ -81,6 +81,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
         return std::string(sPath.toLocal8Bit());
     }
 
+    inline QString fileApi8BitToQString(const StringViewC& sv)
+    {
+        return QString::fromLocal8Bit(sv.data(), sv.sizeAsInt());
+    }
+
+
     inline QString untypedViewToQStringAsUtf8(const StringViewC& view)
     {
         return QString::fromUtf8(view.data(), static_cast<int>(view.length()));

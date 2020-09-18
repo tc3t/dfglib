@@ -3833,6 +3833,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 
         this->forDataSource(defEntry.sourceId(this->m_sDefaultDataSource), [&](GraphDataSource& source)
         {
+            // Checking if source is ok (e.g. if file source has readable file)
+            if (!source.refreshAvailability())
+            {
+                if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
+                    defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("Source '%1' is unavailable, source status: '%2'").arg(source.uniqueId(), source.statusDescription()));
+                return;
+            }
+
             // Checking that source type in compatible with graph type
             const auto dataType = source.dataType();
             if (dataType != GraphDataSourceType_tableSelection) // Currently only one type is supported.

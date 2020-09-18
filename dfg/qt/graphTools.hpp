@@ -167,10 +167,11 @@ class GraphDataSource : public QObject
     Q_OBJECT
 public:
     typedef ::DFG_MODULE_NS(qt)::DataSourceIndex DataSourceIndex;
+    using String = QString;
     using DoubleValueVector = DFG_MODULE_NS(cont)::ValueVector<double>;
     using SingleColumnDoubleValuesOptional = std::shared_ptr<const DoubleValueVector>;
     using ColumnDataTypeMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ChartDataType>;
-    using ColumnNameMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, QString>;
+    using ColumnNameMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, String>;
     using IndexList = ::DFG_MODULE_NS(cont)::ValueVector<DataSourceIndex>;
     using ForEachElementByColumHandler = std::function<void(const SourceDataSpan&)>;
 
@@ -179,6 +180,15 @@ public:
     GraphDataSourceId uniqueId() const { return m_uniqueId; }
 
     GraphDataSourceType dataType() const { return GraphDataSourceType_tableSelection; }
+
+    // Returns true iff reading can be attempted from this source. This can be false e.g. if source refers to file that is non-existent or unreadable.
+    bool isAvailable() const { return m_bIsAvailable; }
+
+    // Tries to refresh availability status and returns effective isAvailable()
+    bool refreshAvailability() { refreshAvailabilityImpl(); return isAvailable(); }
+
+    // Returns (human readable) description of source status, empty by default.
+    String statusDescription() const { return statusDescriptionImpl(); }
 
     virtual QObject* underlyingSource() = 0;
 
@@ -205,6 +215,7 @@ public:
     // Development note: for now as a quick solution interface is restricted to setting only one viewer.
     virtual void setChartDefinitionViewer(ChartDefinitionViewer) {}
 
+    // Returns true iff 'this' emits sigChanged() when data changes or if source data can be considered non-changing.
     bool hasChangeSignaling() const { return m_bAreChangesSignaled; }
 
     static DataSourceIndex invalidIndex() { return NumericTraits<DataSourceIndex>::maxValue; }
@@ -212,7 +223,7 @@ public:
     // Static helpers fro converting different types to double value.
     static double dateToDouble(QDateTime&& dt);
     static double timeToDouble(const QTime& t);
-    static double stringToDouble(const QString& s);
+    static double stringToDouble(const String& s);
     static double stringToDouble(const StringViewSzC& sv);
     static double cellStringToDouble(const StringViewSzUtf8& sv);
     static double cellStringToDouble(const StringViewSzUtf8& sv, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap);
@@ -220,9 +231,17 @@ public:
 signals:
     void sigChanged(); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.
 
+protected:
+    void setAvailability(const bool bAvailable) { m_bIsAvailable = bAvailable; }
+
+private:
+    virtual String statusDescriptionImpl() const { return String(); }
+    virtual void refreshAvailabilityImpl() {}
+
 public:
     GraphDataSourceId m_uniqueId; // Unique ID by which data source can be queried with.
     bool m_bAreChangesSignaled = false;
+    bool m_bIsAvailable = true;
 }; // Class GraphDataSource
 
 class DataSourceContainer

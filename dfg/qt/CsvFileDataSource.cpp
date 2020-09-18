@@ -1,19 +1,56 @@
 #include "CsvFileDataSource.hpp"
 #include "qtBasic.hpp"
+#include "../os.hpp"
 
 ::DFG_MODULE_NS(qt)::CsvFileDataSource::CsvFileDataSource(const QString& sPath, QString sId)
     : m_format(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8)
 {
-    using namespace DFG_MODULE_NS(io);
     this->m_uniqueId = std::move(sId);
     this->m_bAreChangesSignaled = true; // Changes in file content are not signaled, but interpreting source as unchanging so from user's perspective this is as good as signaling.
     m_sPath = qStringToFileApi8Bit(sPath);
-    m_format = peekCsvFormatFromFile(m_sPath, 2048);
-    auto istrm = createInputStreamBinaryFile(m_sPath);
-    DelimitedTextReader::readRow<char>(istrm, m_format, [&](const size_t nCol, const char* const p, const size_t nSize)
+
+    if (!privUpdateStatusAndAvailability())
+        return;
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvFileDataSource::privUpdateStatusAndAvailability()
+{
+    using namespace DFG_MODULE_NS(io);
+    using namespace DFG_MODULE_NS(os);
+    const auto bOldAvailability = isAvailable();
+    bool bAvailable = true;
+    if (!isPathFileAvailable(m_sPath, FileModeExists))
     {
-        m_columnIndexToColumnName.insert(saturateCast<DataSourceIndex>(nCol), StringViewUtf8(TypedCharPtrUtf8R(p), nSize));
-    });
+        m_sStatusDescription = tr("No file exists in given path '%1'").arg(fileApi8BitToQString(m_sPath));
+        bAvailable = false;
+    }
+    else if (!isPathFileAvailable(m_sPath, FileModeRead))
+    {
+        m_sStatusDescription = tr("File exists but is not readable in path '%1'").arg(fileApi8BitToQString(m_sPath));
+        bAvailable = false;
+    }
+
+    if (bAvailable)
+    {
+        if (bOldAvailability != bAvailable || m_columnIndexToColumnName.empty())
+        {
+            m_format = peekCsvFormatFromFile(m_sPath, 2048);
+            auto istrm = createInputStreamBinaryFile(m_sPath);
+            DelimitedTextReader::readRow<char>(istrm, m_format, [&](const size_t nCol, const char* const p, const size_t nSize)
+            {
+                m_columnIndexToColumnName.insert(saturateCast<DataSourceIndex>(nCol), StringViewUtf8(TypedCharPtrUtf8R(p), nSize));
+            });
+            m_sStatusDescription.clear();
+        }
+    }
+
+    setAvailability(bAvailable);
+    return true;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::statusDescriptionImpl() const -> String
+{
+    return m_sStatusDescription;
 }
 
 QObject* ::DFG_MODULE_NS(qt)::CsvFileDataSource::underlyingSource()
