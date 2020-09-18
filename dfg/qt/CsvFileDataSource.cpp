@@ -1,17 +1,25 @@
 #include "CsvFileDataSource.hpp"
 #include "qtBasic.hpp"
 #include "../os.hpp"
+#include "qtIncludeHelpers.hpp"
+#include "connectHelper.hpp"
+
+DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QFileSystemWatcher>
+DFG_END_INCLUDE_QT_HEADERS
 
 ::DFG_MODULE_NS(qt)::CsvFileDataSource::CsvFileDataSource(const QString& sPath, QString sId)
     : m_format(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8)
 {
     this->m_uniqueId = std::move(sId);
-    this->m_bAreChangesSignaled = true; // Changes in file content are not signaled, but interpreting source as unchanging so from user's perspective this is as good as signaling.
+    this->m_bAreChangesSignaled = true;
     m_sPath = qStringToFileApi8Bit(sPath);
 
     if (!privUpdateStatusAndAvailability())
         return;
 }
+
+::DFG_MODULE_NS(qt)::CsvFileDataSource::~CsvFileDataSource() = default;
 
 bool ::DFG_MODULE_NS(qt)::CsvFileDataSource::privUpdateStatusAndAvailability()
 {
@@ -22,6 +30,7 @@ bool ::DFG_MODULE_NS(qt)::CsvFileDataSource::privUpdateStatusAndAvailability()
     if (!isPathFileAvailable(m_sPath, FileModeExists))
     {
         m_sStatusDescription = tr("No file exists in given path '%1'").arg(fileApi8BitToQString(m_sPath));
+        m_spFileWatcher.reset(nullptr);
         bAvailable = false;
     }
     else if (!isPathFileAvailable(m_sPath, FileModeRead))
@@ -32,10 +41,16 @@ bool ::DFG_MODULE_NS(qt)::CsvFileDataSource::privUpdateStatusAndAvailability()
 
     if (bAvailable)
     {
+        if (!m_spFileWatcher)
+        {
+            m_spFileWatcher.reset(new QFileSystemWatcher(QStringList() << fileApi8BitToQString(m_sPath), this));
+            DFG_QT_VERIFY_CONNECT(connect(m_spFileWatcher.data(), &QFileSystemWatcher::fileChanged, this, &CsvFileDataSource::onFileChanged));
+        }
         if (bOldAvailability != bAvailable || m_columnIndexToColumnName.empty())
         {
             m_format = peekCsvFormatFromFile(m_sPath, 2048);
             auto istrm = createInputStreamBinaryFile(m_sPath);
+            m_columnIndexToColumnName.clear_noDealloc();
             DelimitedTextReader::readRow<char>(istrm, m_format, [&](const size_t nCol, const char* const p, const size_t nSize)
             {
                 m_columnIndexToColumnName.insert(saturateCast<DataSourceIndex>(nCol), StringViewUtf8(TypedCharPtrUtf8R(p), nSize));
@@ -56,6 +71,13 @@ auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::statusDescriptionImpl() const -> St
 QObject* ::DFG_MODULE_NS(qt)::CsvFileDataSource::underlyingSource()
 {
     return nullptr; // Don't have an underlying source as QObject
+}
+
+void ::DFG_MODULE_NS(qt)::CsvFileDataSource::onFileChanged()
+{
+    m_columnIndexToColumnName.clear_noDealloc();
+    privUpdateStatusAndAvailability();
+    Q_EMIT sigChanged();
 }
 
 namespace DFG_ROOT_NS { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
