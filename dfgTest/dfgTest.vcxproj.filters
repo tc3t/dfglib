@@ -782,5 +782,8 @@
     <ClCompile Include="dfgTestCharts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dfgTestCont_MapSetVector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -21,10 +21,11 @@ set(SOURCE
     dfgTestAlg.cpp
     dfgTestBase.cpp
     dfgTestBits.cpp
-	dfgTestCharts.cpp
+    dfgTestCharts.cpp
     dfgTestColour.cpp
     dfgTestCont.cpp
-	dfgTestCont_tables.cpp
+    dfgTestCont_MapSetVector.cpp
+    dfgTestCont_tables.cpp
     dfgTestContMapVectorPerformance.cpp
     dfgTestCrypt.cpp
     dfgTestCsvPerformance.cpp
