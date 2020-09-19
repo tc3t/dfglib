@@ -2249,6 +2249,57 @@ TEST(dfgCont, intervalSetFromString)
     {
         testIntIntervalSetMinus4toMinus2("-4:-2");
         testIntIntervalSetMinus4toMinus2("-4:-4; -3 : -2");
-        
+    }
+
+    // Wrapping pivot
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(cont);
+
+        // Default case: positive & negative should not be accepted.
+        {
+            const auto ic = intervalSetFromString<int32>("4:-1");
+            EXPECT_EQ(0, ic.sizeOfSet());
+        }
+
+        // Basic case: positive & negative with wrapping pivot
+        {
+            const auto ic = intervalSetFromString<int32>("4:-1", 10);
+            EXPECT_EQ(6, ic.sizeOfSet());
+            EXPECT_EQ(4, ic.minElement());
+            EXPECT_EQ(9, ic.maxElement());
+        }
+
+        // Both negative and no wrapping
+        {
+            const auto ic = intervalSetFromString<int32>("-4:-3");
+            EXPECT_EQ(2, ic.sizeOfSet());
+            EXPECT_EQ(-4, ic.minElement());
+            EXPECT_EQ(-3, ic.maxElement());
+        }
+
+        // Both negative and single item
+        {
+            const auto ic = intervalSetFromString<int32>("-4:-2; -7", 10);
+            EXPECT_EQ(4, ic.sizeOfSet());
+            EXPECT_EQ(3, ic.minElement());
+            EXPECT_TRUE(ic.hasValue(6));
+            EXPECT_TRUE(ic.hasValue(7));
+            EXPECT_EQ(8, ic.maxElement());
+        }
+
+        // positive & negative with wrapping pivot with which set becomes empty
+        {
+            const auto ic = intervalSetFromString<int32>("4:-7", 10);
+            EXPECT_EQ(0, ic.sizeOfSet());
+        }
+
+        // negative & positive 
+        {
+            const auto ic = intervalSetFromString<int32>("-3:8", 10);
+            EXPECT_EQ(2, ic.sizeOfSet());
+            EXPECT_EQ(7, ic.minElement());
+            EXPECT_EQ(8, ic.maxElement());
+        }
     }
 }

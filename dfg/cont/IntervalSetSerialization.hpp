@@ -22,7 +22,19 @@ namespace DFG_DETAIL_NS
     }
 
     template <class T>
-    void readSingleIntervalSection(IntervalSet<T>& is, const StringViewC& sv)
+    T parseIntervalValue(const StringViewC& sv, const T nonNegativeWrapPivot)
+    {
+        auto val = ::DFG_MODULE_NS(str)::strTo<T>(sv);
+        if (val < 0)
+        {
+            DFG_ASSERT_UB(nonNegativeWrapPivot >= 0);
+            val = nonNegativeWrapPivot + val;
+        }
+        return val;
+    }
+
+    template <class T>
+    void readSingleIntervalSection(IntervalSet<T>& is, const StringViewC& sv, const T nonNegativeWrapPivot)
     {
         if (sv.empty())
             return;
@@ -35,14 +47,14 @@ namespace DFG_DETAIL_NS
         {
             // Did't find ':' -> looks like single value
             // No error checking here, using GIGO.
-            is.insert(::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterStart, iterEnd)));
+            is.insert(parseIntervalValue(StringViewC(iterStart, iterEnd), nonNegativeWrapPivot));
             return;
         }
-        const auto firstVal = ::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterStart, iterSep));
+        const auto firstVal = parseIntervalValue(StringViewC(iterStart, iterSep), nonNegativeWrapPivot);
         ++iterSep;
         if (iterSep == iterEnd)
-            return; // Invalid input; nothing after dash
-        const auto secondVal = ::DFG_MODULE_NS(str)::strTo<T>(StringViewC(iterSep, iterEnd));
+            return; // Invalid input; nothing after colon
+        const auto secondVal = parseIntervalValue(StringViewC(iterSep, iterEnd), nonNegativeWrapPivot);
         if (secondVal < firstVal)
             return;
         is.insertClosed(firstVal, secondVal);
@@ -50,15 +62,19 @@ namespace DFG_DETAIL_NS
 } // DFG_DETAIL_NS namespace
 
 
+// Creates interval set from string. If nonNegativeWrapPivot is given, negative values are interpreted as relative to wrapPivot, e.g. 5:-1 with wrap pivot 10 is 5:(10-1) = 5:9
 template <class T>
-IntervalSet<T> intervalSetFromString(const StringViewC& sv)
+IntervalSet<T> intervalSetFromString(const StringViewC& sv, const T nonNegativeWrapPivot = 0)
 {
     IntervalSet<T> rv;
+    DFG_ASSERT_INVALID_ARGUMENT(nonNegativeWrapPivot >= 0, "wrap pivot should be non-negative");
+    if (nonNegativeWrapPivot < 0)
+        return rv;
     DFG_MODULE_NS(io)::BasicImStream istrm(sv.beginRaw(), sv.endRaw() - sv.beginRaw());
     const auto metaNone = DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone;
     DFG_MODULE_NS(io)::DelimitedTextReader::read<char>(istrm, ';', metaNone, metaNone, [&](size_t, size_t, const char* p, const size_t nSize)
     {
-        DFG_DETAIL_NS::readSingleIntervalSection(rv, StringViewC(p, p + nSize));
+        DFG_DETAIL_NS::readSingleIntervalSection(rv, StringViewC(p, p + nSize), nonNegativeWrapPivot);
     });
     return rv;
 }
