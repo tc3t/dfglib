@@ -22,9 +22,9 @@ namespace DFG_DETAIL_NS
     }
 
     template <class T>
-    T parseIntervalValue(const StringViewC& sv, const T nonNegativeWrapPivot)
+    T parseIntervalValue(const StringViewC& sv, const T nonNegativeWrapPivot, bool* pGoodParse)
     {
-        auto val = ::DFG_MODULE_NS(str)::strTo<T>(sv);
+        auto val = ::DFG_MODULE_NS(str)::strTo<T>(sv, pGoodParse);
         if (val < 0)
         {
             DFG_ASSERT_UB(nonNegativeWrapPivot >= 0);
@@ -43,19 +43,22 @@ namespace DFG_DETAIL_NS
         if (iterStart == iterEnd)
             return;
         auto iterSep = std::find(iterStart, sv.end(), ':');
+        bool bGoodParse = false;
         if (iterSep == iterEnd)
         {
             // Did't find ':' -> looks like single value
             // No error checking here, using GIGO.
-            is.insert(parseIntervalValue(StringViewC(iterStart, iterEnd), nonNegativeWrapPivot));
+            const auto val = parseIntervalValue(StringViewC(iterStart, iterEnd), nonNegativeWrapPivot, &bGoodParse);
+            if (bGoodParse)
+                is.insert(val);
             return;
         }
-        const auto firstVal = parseIntervalValue(StringViewC(iterStart, iterSep), nonNegativeWrapPivot);
+        const auto firstVal = parseIntervalValue(StringViewC(iterStart, iterSep), nonNegativeWrapPivot, &bGoodParse);
         ++iterSep;
-        if (iterSep == iterEnd)
-            return; // Invalid input; nothing after colon
-        const auto secondVal = parseIntervalValue(StringViewC(iterSep, iterEnd), nonNegativeWrapPivot);
-        if (secondVal < firstVal)
+        if (!bGoodParse || iterSep == iterEnd)
+            return; // Invalid input; bad first item or nothing after colon
+        const auto secondVal = parseIntervalValue(StringViewC(iterSep, iterEnd), nonNegativeWrapPivot, &bGoodParse);
+        if (!bGoodParse || secondVal < firstVal)
             return;
         is.insertClosed(firstVal, secondVal);
     }

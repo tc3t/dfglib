@@ -2245,6 +2245,17 @@ TEST(dfgCont, intervalSetFromString)
         }
     }
 
+    // Testing handling of invalid items such as too big values.
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(cont);
+        EXPECT_EQ(0, intervalSetFromString<int32>("-2147483649 : 0").sizeOfSet()); // 2147483649 == int32_min - 1
+        EXPECT_EQ(0, intervalSetFromString<int32>("0:2147483648").sizeOfSet()); // 2147483648 == int32_max + 1
+        EXPECT_EQ(0, intervalSetFromString<int32>("2147483648").sizeOfSet()); // 2147483648 == int32_max + 1
+        EXPECT_EQ(0, intervalSetFromString<int32>("0:abc").sizeOfSet());
+        EXPECT_EQ(0, intervalSetFromString<int32>("0:1.5").sizeOfSet());
+    }
+
     // Testing parsing of negative items
     {
         testIntIntervalSetMinus4toMinus2("-4:-2");
