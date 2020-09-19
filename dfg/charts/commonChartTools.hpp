@@ -363,8 +363,7 @@ inline Interval_T* AbstractChartControlItem::createXrowsSet(Interval_T& rInterva
     const auto xRowsStr = this->fieldValueStr(ChartObjectFieldIdStr_xRows, []() { return String(DFG_UTF8("*")); });
     if (!xRowsStr.empty() && xRowsStr != DFG_UTF8("*"))
     {
-        rInterval = ::DFG_MODULE_NS(cont)::intervalSetFromString<typename Interval_T::value_type>(xRowsStr.rawStorage());
-        rInterval.wrapNegatives(nWrapAt);
+        rInterval = ::DFG_MODULE_NS(cont)::intervalSetFromString<typename Interval_T::value_type>(xRowsStr.rawStorage(), nWrapAt);
         return &rInterval;
     }
     else
