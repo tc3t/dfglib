@@ -1218,6 +1218,7 @@ QString GraphDefinitionWidget::getGuideString()
 <ul>
     <li>Setting default config: {"type":"global_config","show_legend":true,"auto_axis_labels":true}</li>
     <li>Basic graph: {"type":"xy"}
+    <li>Basic graph from a csv-file: {"type":"xy", "data_source":"csv_file(C:/Users/user/Desktop/data.csv)"}
     <li>Basic graph with lines and points: {"line_style":"basic","point_style":"basic","type":"xy"}
     <li>Basic graph with most options present: {"enabled":true,"line_style":"basic","point_style":"basic","line_colour":"#7fFF00FF","type":"xy","name":"Example graph","x_source":"column_name(column 1)", "y_source":"column_name(column 3)", "x_rows":"1:3; 5; 7:8", "panel_id":"grid(2,2)"}
     <li>Basic histogram: {"type":"histogram","name":"Basic histogram"}
@@ -1245,10 +1246,23 @@ QString GraphDefinitionWidget::getGuideString()
    <li><i>name</i>: name of the object, shown e.g. in legend.</li>
    <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
    <li><i>data_source</i>: Defines data source from which to fetch data. If omitted, default source is used.</li>
+    <ul>
+        <li>To see built-in sources: adding data_source -field with bogus value should print available sources to console, for example {"type":"xy", "data_source":"invalid"}</li>
+        <li>In addition to built-in sources, the following source types can be created:</li>
+            <ul>
+                <li>csv_file(path): Source reads content from csv-file at given path</li>
+                    <ul>
+                        <li>File is monitored for changes: if it changes or gets renamed, on next chart update new values should be used automatically.
+                        <li>Header is not omitted automatically, but in practice texts typically result to NaN that get filtered out. If, however, header needs to be omitted, it can be done by filtering out row 0 with "x_rows":"1:-1"</li>
+                        <li>Example: {"type":"xy", "data_source":"csv_file(C:/Users/user/Desktop/data.csv)"}</li>
+                        <li>Note to Windows users: path separator should be either slash '/' or double backslash '\\', single backslash '\' does not work.</li>
+                    </ul>
+            </ul>
+    </ul>
    <li><i>log_level</i>: Defines log level for an entry; for example setting this to <i>debug</i> can be used to diagnose entry behaviour more closely. Possible values {debug, info, warning, error, none}. By default uses global log level.</li>
    <li><i>x_rows</i>: List of rows to include as semicolon separated, 1-based index list, e.g. "1:3; 5; 7:8" means 1 (=first), 2, 3, 5, 7, 8.</li>
        <ul>
-           <li>Negative indexes means "from end", for example "-30:-1" means "30 last rows"</li>
+           <li>Negative indexes means "from end", for example "-30:-1" means "30 last rows", "1:-1" means all from index 1 to last, i.e. all but index zero</li>
            <li>Note that in case of filtered tables, indexes refer to visible row, not the row ID shown in the row header</li>
       </ul>
 </ul>
