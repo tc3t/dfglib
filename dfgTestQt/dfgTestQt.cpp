@@ -75,6 +75,19 @@ TEST(dfgQt, CsvItemModel)
             EXPECT_EQ(inputBytesWithAddedEol, outputBytesMc);
         }
     }
+
+    // Testing insertRows/Columns
+    {
+        using namespace DFG_MODULE_NS(qt);
+        CsvItemModel model;
+        // Making sure that bad insert counts are handled correctly.
+        EXPECT_FALSE(model.insertRows(0, 0));
+        EXPECT_FALSE(model.insertColumns(0, 0));
+        EXPECT_FALSE(model.insertRows(0, -5));
+        EXPECT_FALSE(model.insertColumns(0, -5));
+        EXPECT_EQ(0, model.rowCount());
+        EXPECT_EQ(0, model.columnCount());
+    }
 }
 
 TEST(dfgQt, CsvItemModel_removeRows)

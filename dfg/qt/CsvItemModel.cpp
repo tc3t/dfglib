@@ -1114,12 +1114,12 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnCountUpperBound() 
     return NumericTraits<int>::maxValue - 1;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, const int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     const auto nOldRowCount = getRowCount();
     if (position < 0)
         position = nOldRowCount;
-    if (parent.isValid() || position < 0 || position > nOldRowCount || getRowCountUpperBound() - nOldRowCount < count)
+    if (parent.isValid() || count <= 0 || position < 0 || position > nOldRowCount || getRowCountUpperBound() - nOldRowCount < count)
         return false;
     const auto nLastNewRowIndex = position + count - 1;
     beginInsertRows(QModelIndex(), position, nLastNewRowIndex);
@@ -1163,11 +1163,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumnsImpl(int posi
     }
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position, const int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     if (position < 0)
         position = getColumnCount();
-    if (parent.isValid() || position < 0 || position > getColumnCount() || getColumnCountUpperBound() - position < count)
+    if (parent.isValid() || count <= 0 || position < 0 || position > getColumnCount() || getColumnCountUpperBound() - position < count)
         return false;
     beginInsertColumns(QModelIndex(), position, position + count - 1);
     insertColumnsImpl(position, count);
