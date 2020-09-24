@@ -206,6 +206,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openNewTable();
         bool mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other);
         bool openFile(const QString& sDbFilePath);
+        bool openFromSqlite(const QString& sDbFilePath, const QString& sQuery);
         bool openFile(QString sDbFilePath, LoadOptions loadOptions);
         bool importFiles(const QStringList& paths);
         bool openStream(QTextStream& strm);
@@ -385,6 +386,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         template <class OutFile_T, class Stream_T>
         bool saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options);
+
+        void readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery);
 
     public:
         QUndoStack* m_pUndoStack;

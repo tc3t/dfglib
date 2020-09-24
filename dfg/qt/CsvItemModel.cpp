@@ -14,6 +14,14 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QJsonParseError>
 #include <QTextStream>
 #include <QStringListModel>
+
+// SQL includes
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlRecord>
+#include <QSqlError>
+#include <QSqlField>
+
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
@@ -906,6 +914,64 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
         return false;
     }
 
+}
+
+void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery)
+{
+    if (!QFileInfo::exists(sDbFilePath))
+    {
+        // TODO: error handling: tr("File '%1' does not exist").arg(sDbFilePath);
+        return;
+    }
+    // Note: QSQLITE means "SQLite version 3 or above" at least as of Qt 5.13
+    auto database = QSqlDatabase::addDatabase("QSQLITE", sDbFilePath); // Seconds arg is connectionName
+    database.setDatabaseName(sDbFilePath);
+    if (!database.open())
+    {
+        // TODO: error handling
+        return;
+    }
+
+    QSqlQuery query(database);
+    if (!query.prepare(sQuery))
+    {
+        // TODO: error handling, "Failed to prepare query"
+        return;
+    }
+
+    const bool bExecRv = query.exec();
+    if (!bExecRv)
+    {
+        // TODO: error handling, query.lastError().text();
+        return;
+    }
+
+    const auto cellToStorage = [&](const size_t nRow, const int nCol, const QVariant& var)
+    {
+        this->m_table.setElement(nRow, saturateCast<size_t>(nCol), SzPtrUtf8(var.toString().toUtf8()));
+    };
+
+    auto rec = query.record();
+    const auto nColCount = rec.count();
+
+    // Reading column names
+    // Underlying read infrastructure expects header on row 0 so putting names there instead of filling names directly to header.
+    for (int c = 0; c < nColCount; ++c)
+        cellToStorage(0, c, rec.fieldName(c));
+
+    // Reading records and filling table.
+    for (size_t nRow = 1; query.next(); ++nRow)
+    {
+        for (int c = 0; c < nColCount; ++c)
+            cellToStorage(nRow, c, query.value(c));
+    }
+
+    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.midRef(0, Min(32, sQuery.size())));
+}
+
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
+{
+    return this->readData(LoadOptions(), [&]() { readDataFromSqlite(sDbFilePath, sQuery); });
 }
 
 //Note: When implementing a table based model, rowCount() should return 0 when the parent is valid.

@@ -73,8 +73,7 @@ using namespace DFG_MODULE_NS(qt);
 
 namespace
 {
-
-    static const char gszDefaultOpenFileFilter[] = QT_TR_NOOP("CSV files (*.csv *.tsv *.csv.conf);; All files(*.*)");
+    static const char gszDefaultOpenFileFilter[] = QT_TR_NOOP("CSV or SQLite files (*.csv *.tsv *.csv.conf *.sqlite3, *.sqlite, *.db);; CSV files (*.csv *.tsv *.csv.conf);; SQLite files (*.sqlite3, *.sqlite, *.db);; All files(*.*)");
 
     class ProgressWidget : public QProgressDialog
     {
@@ -1570,10 +1569,30 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     if (pProxyModel && pProxyModel->sourceModel() == pModel)
         pProxyModel->setSourceModel(nullptr);
 
+    const auto sPathSuffix = QFileInfo(sPath).suffix().toLower();
+    const bool bOpenAsSqlite = (sPathSuffix == QLatin1String("sqlite3") || sPathSuffix == QLatin1String("sqlite") || sPathSuffix == QLatin1String("db"));
+    QString sQuery;
+
+    if (bOpenAsSqlite)
+    {
+        bool bOk;
+        sQuery = QInputDialog::getText(this,
+                                      tr("Opening SQLite database"),
+                                      tr("Define a read query whose result is to be shown"),
+                                      QLineEdit::Normal,
+                                      QLatin1String("SELECT * FROM <table name>;"),
+                                      &bOk);
+        if (!bOk || sQuery.isEmpty())
+            return false;
+    }
+
     bool bSuccess = false;
     doModalOperation(this, tr("Reading file of size %1\n%2").arg(formattedDataSize(QFileInfo(sPath).size()), sPath), "CsvTableViewFileLoader", [&]()
         {
-            bSuccess = pModel->openFile(sPath, formatDef);
+            if (bOpenAsSqlite)
+                bSuccess = pModel->openFromSqlite(sPath, sQuery);
+            else
+                bSuccess = pModel->openFile(sPath, formatDef);
         });
 
     if (pProxyModel)
