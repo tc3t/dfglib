@@ -186,6 +186,47 @@ namespace
                                             0/*options*/);
     }
 
+    QString getSQLiteDatabaseQueryFromUser(QWidget* pParent)
+    {
+        bool bOk = true;
+        QString sQuery;
+        QDialog dlg(pParent);
+        QLineEdit lineEdit(QLatin1String("SELECT * FROM <table name>;"), &dlg);
+        QLabel errorLine;
+        QVBoxLayout layout(&dlg);
+        // Constructing dialog
+        {
+            dlg.setWindowTitle(dlg.tr("Opening SQLite database"));
+            removeContextHelpButtonFromDialog(&dlg);
+
+            layout.addWidget(new QLabel(dlg.tr("Define a select query whose result is to be shown"), &dlg));
+            layout.addWidget(&lineEdit);
+
+            auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg));
+            DFG_QT_VERIFY_CONNECT(QObject::connect(&rButtonBox, SIGNAL(accepted()), &dlg, SLOT(accept())));
+            DFG_QT_VERIFY_CONNECT(QObject::connect(&rButtonBox, SIGNAL(rejected()), &dlg, SLOT(reject())));
+            layout.addWidget(&rButtonBox);
+
+        }
+        bool bStartsWithSelect = false;
+        do
+        {
+            bOk = (dlg.exec() == QDialog::Accepted);
+            if (bOk)
+            {
+                sQuery = lineEdit.text().trimmed();
+                bStartsWithSelect = (sQuery.mid(0, 7).toLower() == QLatin1String("select "));
+                if (!bStartsWithSelect && errorLine.text().isEmpty())
+                {
+                    errorLine.setText(dlg.tr("<font color=\"#ff0000\">Query is required to start with 'select ' (case insensitive)</font>"));
+                    layout.insertWidget(layout.count() - 1, &errorLine);
+                }
+            }
+        }
+        while (bOk && !bStartsWithSelect);
+        return bOk ? sQuery : QString();
+    }
+
 } // unnamed namespace
 
 
@@ -1562,29 +1603,23 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     if (!pModel)
         return false;
 
-    // Reset models to prevent event loop from updating stuff while model is being read in another thread
-    auto pViewModel = model();
-    auto pProxyModel = getProxyModelPtr();
-    setModel(nullptr);
-    if (pProxyModel && pProxyModel->sourceModel() == pModel)
-        pProxyModel->setSourceModel(nullptr);
-
     const auto sPathSuffix = QFileInfo(sPath).suffix().toLower();
     const bool bOpenAsSqlite = (sPathSuffix == QLatin1String("sqlite3") || sPathSuffix == QLatin1String("sqlite") || sPathSuffix == QLatin1String("db"));
     QString sQuery;
 
     if (bOpenAsSqlite)
     {
-        bool bOk;
-        sQuery = QInputDialog::getText(this,
-                                      tr("Opening SQLite database"),
-                                      tr("Define a read query whose result is to be shown"),
-                                      QLineEdit::Normal,
-                                      QLatin1String("SELECT * FROM <table name>;"),
-                                      &bOk);
-        if (!bOk || sQuery.isEmpty())
+        sQuery = getSQLiteDatabaseQueryFromUser(this);
+        if (sQuery.isEmpty())
             return false;
     }
+
+    // Reset models to prevent event loop from updating stuff while model is being read in another thread
+    auto pViewModel = model();
+    auto pProxyModel = getProxyModelPtr();
+    setModel(nullptr);
+    if (pProxyModel && pProxyModel->sourceModel() == pModel)
+        pProxyModel->setSourceModel(nullptr);
 
     bool bSuccess = false;
     doModalOperation(this, tr("Reading file of size %1\n%2").arg(formattedDataSize(QFileInfo(sPath).size()), sPath), "CsvTableViewFileLoader", [&]()
