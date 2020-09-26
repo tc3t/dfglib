@@ -971,7 +971,10 @@ void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
 
 bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
 {
-    return this->readData(LoadOptions(), [&]() { readDataFromSqlite(sDbFilePath, sQuery); });
+    auto loadOptions = LoadOptions();
+    // Limiting completer usage by file size is highly coarse for databases, but at least this can prevent simple huge query cases from using completers.
+    setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(QFileInfo(sDbFilePath).size()));
+    return this->readData(loadOptions, [&]() { readDataFromSqlite(sDbFilePath, sQuery); });
 }
 
 //Note: When implementing a table based model, rowCount() should return 0 when the parent is valid.
