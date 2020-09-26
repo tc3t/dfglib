@@ -74,7 +74,7 @@ using namespace DFG_MODULE_NS(qt);
 
 namespace
 {
-    static const char gszDefaultOpenFileFilter[] = QT_TR_NOOP("CSV or SQLite files (*.csv *.tsv *.csv.conf *.sqlite3, *.sqlite, *.db);; CSV files (*.csv *.tsv *.csv.conf);; SQLite files (*.sqlite3, *.sqlite, *.db);; All files(*.*)");
+    static const char gszDefaultOpenFileFilter[] = QT_TR_NOOP("CSV or SQLite files (*.csv *.tsv *.csv.conf *.sqlite3 *.sqlite *.db);; CSV files (*.csv *.tsv *.csv.conf);; SQLite files (*.sqlite3 *.sqlite *.db);; All files(*.*)");
 
     class ProgressWidget : public QProgressDialog
     {
