@@ -16,6 +16,7 @@
 #include "../rand/distributionHelpers.hpp"
 #include "../cont/SetVector.hpp"
 #include "JsonListWidget.hpp"
+#include "sqlTools.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -176,6 +177,12 @@ namespace
         eventLoop.exec();
     }
 
+    QString getSQLiteDatabaseQueryFromUser(const QString& sFilePath, QWidget* pParent)
+    {
+        ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog dlg(sFilePath, pParent);
+        return (dlg.exec() == QDialog::Accepted) ? dlg.query() : QString();
+    }
+
     QString getOpenFileName(QWidget* pParent)
     {
         return QFileDialog::getOpenFileName(pParent,
@@ -184,47 +191,6 @@ namespace
                                             QApplication::tr(gszDefaultOpenFileFilter),
                                             nullptr/*selected filter*/,
                                             0/*options*/);
-    }
-
-    QString getSQLiteDatabaseQueryFromUser(QWidget* pParent)
-    {
-        bool bOk = true;
-        QString sQuery;
-        QDialog dlg(pParent);
-        QLineEdit lineEdit(QLatin1String("SELECT * FROM <table name>;"), &dlg);
-        QLabel errorLine;
-        QVBoxLayout layout(&dlg);
-        // Constructing dialog
-        {
-            dlg.setWindowTitle(dlg.tr("Opening SQLite database"));
-            removeContextHelpButtonFromDialog(&dlg);
-
-            layout.addWidget(new QLabel(dlg.tr("Define a select query whose result is to be shown"), &dlg));
-            layout.addWidget(&lineEdit);
-
-            auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg));
-            DFG_QT_VERIFY_CONNECT(QObject::connect(&rButtonBox, SIGNAL(accepted()), &dlg, SLOT(accept())));
-            DFG_QT_VERIFY_CONNECT(QObject::connect(&rButtonBox, SIGNAL(rejected()), &dlg, SLOT(reject())));
-            layout.addWidget(&rButtonBox);
-
-        }
-        bool bStartsWithSelect = false;
-        do
-        {
-            bOk = (dlg.exec() == QDialog::Accepted);
-            if (bOk)
-            {
-                sQuery = lineEdit.text().trimmed();
-                bStartsWithSelect = (sQuery.mid(0, 7).toLower() == QLatin1String("select "));
-                if (!bStartsWithSelect && errorLine.text().isEmpty())
-                {
-                    errorLine.setText(dlg.tr("<font color=\"#ff0000\">Query is required to start with 'select ' (case insensitive)</font>"));
-                    layout.insertWidget(layout.count() - 1, &errorLine);
-                }
-            }
-        }
-        while (bOk && !bStartsWithSelect);
-        return bOk ? sQuery : QString();
     }
 
 } // unnamed namespace
@@ -1609,7 +1575,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
 
     if (bOpenAsSqlite)
     {
-        sQuery = getSQLiteDatabaseQueryFromUser(this);
+        sQuery = getSQLiteDatabaseQueryFromUser(sPath, this);
         if (sQuery.isEmpty())
             return false;
     }

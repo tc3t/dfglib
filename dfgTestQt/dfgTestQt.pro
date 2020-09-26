@@ -43,6 +43,7 @@ SOURCES += \
     ../dfg/qt/CsvFileDataSource.cpp \
     ../dfg/qt/qxt/gui/qxtspanslider.cpp \
     ../dfg/qt/JsonListWidget.cpp \
+    ../dfg/qt/sqlTools.cpp \
     ../dfg/str/fmtlib/format.cc \
     ../externals/gtest/gtest-all.cc \
     dfgTestQt.cpp \
@@ -71,6 +72,7 @@ HEADERS += \
     ../dfg/qt/CsvTableViewChartDataSource.hpp \
     ../dfg/qt/CsvItemModelChartDataSource.hpp \
     ../dfg/qt/CsvFileDataSource.hpp \
+    ../dfg/qt/sqlTools.hpp \
     ../dfg/qt/JsonListWidget.hpp
 
 # Default rules for deployment.
