@@ -516,6 +516,34 @@ TEST(dfgStr, strTo)
         EXPECT_TRUE(bOk);
     }
 
+    // Locale handling, testing that floating point conversion uses C-locale regardless of global locale.
+    {
+        // de_DE is an arbitrary choice for locale that has comma-separator.
+        // Note that while changing separator to comma with std::locale was possible by providing a custom facet with do_decimal_point(), it didn't affect std::strtod() at least in MSVC.
+        const auto pNewLocale = std::setlocale(LC_ALL, "de_DE");
+        if (pNewLocale)
+        {
+            auto pLocaleConv = std::localeconv();
+            EXPECT_TRUE(pLocaleConv && pLocaleConv->decimal_point && pLocaleConv->decimal_point == StringViewC(",")); // Checking that decimal point actually changed to comma
+            bool bOk;
+            EXPECT_EQ(1, std::strtod("1.25", nullptr)); // Making sure that comma-locale is effective meaning that std::strtod() fails to parse dot separator.
+            EXPECT_EQ(1.25, strTo<double>("1.25", &bOk));
+            EXPECT_TRUE(bOk);
+            // Switching back to original locale.
+            std::setlocale(LC_ALL, "C");
+            // Making sure that setting back "C"-locale worked.
+            EXPECT_EQ(1.25, std::strtod("1.25", nullptr)); 
+            // Testing that conversion still works.
+            EXPECT_EQ(1.25, strTo<double>("1.25", &bOk));
+            EXPECT_TRUE(bOk);
+        }
+        else
+        {
+            DFGTEST_MESSAGE("Didn't have comma-locale, strTo<double>() localization test ignored.");
+        }
+        
+    }
+
 #undef CHECK_A_AND_W
 
 #pragma warning(pop)

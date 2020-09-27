@@ -81,6 +81,66 @@ T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlySzParamC)& s, bool* pSucces
 
 namespace DFG_DETAIL_NS
 {
+    class Locale
+    {
+    public:
+        enum LocaleCategory
+        {
+    #ifdef _WIN32
+            LocaleCategoryNumeric = LC_NUMERIC
+    #else
+            LocaleCategoryNumeric = LC_NUMERIC_MASK
+    #endif
+        };
+    #ifdef _WIN32
+        using LocaleImplT = _locale_t;
+    #else
+        using LocaleImplT = locale_t;
+    #endif
+
+        static LocaleImplT createLocaleImpl(const int category, const char* pszLocale)
+        {
+    #ifdef _WIN32
+            return _create_locale(category, pszLocale);
+    #else
+            return newlocale(category, pszLocale, nullptr);
+    #endif
+        }
+
+        static Locale createNumericClocale()
+        {
+            return Locale(LocaleCategoryNumeric, "C");
+        }
+
+        static void freeLocale(LocaleImplT locale)
+        {
+#if defined(_WIN32)
+            _free_locale(locale);
+#else
+            freelocale(locale);
+#endif
+        }
+
+        Locale(LocaleCategory category, const char* locale)
+        {
+            m_locale = createLocaleImpl(category, locale);
+        }
+
+        ~Locale()
+        {
+            freeLocale(m_locale);
+        }
+
+        LocaleImplT m_locale;
+    };
+
+    static const Locale::LocaleImplT& plainNumericLocale()
+    {
+        static Locale locale = Locale::createNumericClocale();
+        return locale.m_locale;
+    }
+
+
 #if 0
     inline int wtoiImpl(const wchar_t* psz)
     {
@@ -144,7 +204,15 @@ namespace DFG_DETAIL_NS
         // While view itself is not necessarily null-terminated, the underlying string is and since
         // trailing spaces seem to be no problem for strtod(), passing the start pointer as such.
         char* pEnd;
+        
+#if defined(_MSC_VER)
+        t = _strtod_l(sv.data(), &pEnd, plainNumericLocale());
+#elif defined(__MINGW32__)
+        // On MinGW 7.3 _strtod_l() failed to parse inf/nan, so for now just using std::strtod()
         t = std::strtod(sv.data(), &pEnd);
+#else
+        t = strtod_l(sv.data(), &pEnd, plainNumericLocale());
+#endif
         if (pSuccess)
             *pSuccess = (pEnd == sv.endRaw());
     }
