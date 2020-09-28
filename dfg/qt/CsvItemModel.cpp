@@ -16,11 +16,9 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QStringListModel>
 
 // SQL includes
-#include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlRecord>
 #include <QSqlError>
-#include <QSqlField>
 
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -41,6 +39,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/IntervalSet.hpp"
 #include "../cont/IntervalSetSerialization.hpp"
 #include "StringMatchDefinition.hpp"
+#include "sqlTools.hpp"
 
 namespace
 {
@@ -923,16 +922,14 @@ void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
         // TODO: error handling: tr("File '%1' does not exist").arg(sDbFilePath);
         return;
     }
-    // Note: QSQLITE means "SQLite version 3 or above" at least as of Qt 5.13
-    auto database = QSqlDatabase::addDatabase("QSQLITE", sDbFilePath); // Seconds arg is connectionName
-    database.setDatabaseName(sDbFilePath);
-    if (!database.open())
+    ::DFG_MODULE_NS(sql)::SQLiteDatabase database(sDbFilePath);
+    if (!database.isOpen())
     {
         // TODO: error handling
         return;
     }
 
-    QSqlQuery query(database);
+    auto query = database.createQuery();
     if (!query.prepare(sQuery))
     {
         // TODO: error handling, "Failed to prepare query"

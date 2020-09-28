@@ -15,6 +15,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 class QSqlDatabase;
+class QSqlQuery;
+class QSqlRecord;
 class QStringListModel;
 
 class QLabel;
@@ -24,15 +26,36 @@ class QVBoxLayout;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(sql) {
 
-// Opens SQLite database from given path.
-QSqlDatabase openSQLiteDatabase(const QString& sDbFilePath);
 
-// Returns table names from given SQLite file, empty if file doesn't exist or if opening database fails.
-QStringList getSQLiteFileTableNames(const QString& sDbFilePath, const QSql::TableType type = QSql::Tables);
+// RAII-wrapper for QSqlDatabase: with QSqlDatabase opening a database and destroying QSqlDatabase-object doesn't seem to close connection meaning
+// e.g. that the database file is in use by the application even if nothing actually references it. Using this class guarantees the connection
+// to database gets closed when database object is destroyed.
+class SQLiteDatabase
+{
+public:
+    SQLiteDatabase(const QString& sFilePath);
+    ~SQLiteDatabase();
 
-// Returns column names from given SQLite file and it's table, empty if failed to determine names (e.g. if file or table doesn't exist)
-QStringList getSQLiteFileTableColumnNames(const QString& sDbFilePath, const QString& sTableName);
+    // Returns name of tables in the database.
+    QStringList tableNames(const QSql::TableType type = QSql::Tables) const;
 
+    bool isOpen() const;
+
+    QSqlRecord record(const QString& sTableName) const;
+    
+    QSqlQuery createQuery();
+
+    // Opens SQLite database from given path.
+    static QSqlDatabase openSQLiteDatabase(const QString& sDbFilePath);
+
+    // Returns table names from given SQLite file, empty if file doesn't exist or if opening database fails.
+    static QStringList getSQLiteFileTableNames(const QString& sDbFilePath, const QSql::TableType type = QSql::Tables);
+
+    // Returns column names from given SQLite file and it's table, empty if failed to determine names (e.g. if file or table doesn't exist)
+    static QStringList getSQLiteFileTableColumnNames(const QString& sDbFilePath, const QString& sTableName);
+
+    std::unique_ptr<QSqlDatabase> m_spDatabase;
+};
 
 // Dialog for opening SQLite file
 class SQLiteFileOpenDialog : public QDialog

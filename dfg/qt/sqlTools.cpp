@@ -7,6 +7,7 @@
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QSqlDatabase>
+    #include <QSqlQuery>
     #include <QSqlRecord>
     #include <QStringListModel>
 
@@ -19,22 +20,56 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     
 DFG_END_INCLUDE_QT_HEADERS
 
-auto ::DFG_MODULE_NS(sql)::openSQLiteDatabase(const QString& sDbFilePath) -> QSqlDatabase
+
+
+::DFG_MODULE_NS(sql)::SQLiteDatabase::SQLiteDatabase(const QString& sFilePath)
 {
+    m_spDatabase.reset(new QSqlDatabase);
+    *m_spDatabase = openSQLiteDatabase(sFilePath);
+}
+
+::DFG_MODULE_NS(sql)::SQLiteDatabase::~SQLiteDatabase()
+{
+    if (m_spDatabase)
+        m_spDatabase->close();
+}
+
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::tableNames(const QSql::TableType type) const -> QStringList
+{
+    return (m_spDatabase) ? m_spDatabase->tables(type) : QStringList();
+}
+
+bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isOpen() const
+{
+    return (m_spDatabase) ? m_spDatabase->isOpen() : false;
+}
+
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::record(const QString& sTableName) const -> QSqlRecord
+{
+    return (m_spDatabase) ? m_spDatabase->record(sTableName) : QSqlRecord();
+}
+
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::createQuery() -> QSqlQuery
+{
+    return (m_spDatabase) ? QSqlQuery(*m_spDatabase) : QSqlQuery();
+}
+
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::openSQLiteDatabase(const QString& sDbFilePath) -> QSqlDatabase
+{
+    // Note: QSQLITE means "SQLite version 3 or above" at least as of Qt 5.13
     auto database = QSqlDatabase::addDatabase("QSQLITE", sDbFilePath); // Seconds arg is connectionName
     database.setDatabaseName(sDbFilePath);
     return (database.open()) ? database : QSqlDatabase();
 }
 
-auto ::DFG_MODULE_NS(sql)::getSQLiteFileTableNames(const QString& sDbFilePath, const QSql::TableType type) -> QStringList
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableNames(const QString& sDbFilePath, const QSql::TableType type) -> QStringList
 {
-    auto database = openSQLiteDatabase(sDbFilePath);
-    return (database.isOpen()) ? database.tables(type) : QStringList();
+    return SQLiteDatabase(sDbFilePath).tableNames(type);
 }
 
-auto ::DFG_MODULE_NS(sql)::getSQLiteFileTableColumnNames(const QString& sDbFilePath, const QString& sTableName) -> QStringList
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableColumnNames(const QString& sDbFilePath, const QString& sTableName) -> QStringList
 {
-    auto database = openSQLiteDatabase(sDbFilePath);
+    SQLiteDatabase database(sDbFilePath);
     if (!database.isOpen())
         return QStringList();
     auto record = database.record(sTableName);
@@ -57,7 +92,7 @@ auto ::DFG_MODULE_NS(sql)::getSQLiteFileTableColumnNames(const QString& sDbFileP
     m_spColumnListLabel.reset(new QLabel(this));
 
     // Getting table names from file.
-    m_tableNames = getSQLiteFileTableNames(m_sFilePath);
+    m_tableNames = SQLiteDatabase::getSQLiteFileTableNames(m_sFilePath);
 
     m_spTableNameModel.reset(new QStringListModel(m_tableNames, this));
     tableList.setModel(m_spTableNameModel.get());
@@ -125,7 +160,7 @@ void ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog::tableItemChanged()
 {
     const auto sTable = currentTable();
     if (!m_mapTableToColumnNames.contains(sTable))
-        m_mapTableToColumnNames[sTable] = getSQLiteFileTableColumnNames(m_sFilePath, sTable);
+        m_mapTableToColumnNames[sTable] = SQLiteDatabase::getSQLiteFileTableColumnNames(m_sFilePath, sTable);
 
     auto columnNames = m_mapTableToColumnNames.value(sTable);
     if (!m_spColumnNameModel)
