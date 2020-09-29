@@ -8,6 +8,20 @@
     #include "../build/utils.hpp"
 #endif
 #include "../ReadOnlySzParam.hpp"
+#include "../preprocessor/compilerInfoMsvc.hpp"
+
+// For now optionally using std::from_chars() on MSVC2017 with version >= 7 and on MSVC2019 with version >= 4
+// Note that with default build options at least MSVC2017 has _MSVC_LANG < 201703L so from_chars() won't be used by default.
+// https://docs.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=vs-2019
+// https://docs.microsoft.com/en-us/cpp/overview/cpp-conformance-improvements?view=vs-2017#improvements_157
+// Note that using _MSVC_LANG instead of __cplusplus because of reason listed here: https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+// This is coarse check that needs to be manually updated when std::from_chars() become available on other compilers.
+#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_7)) && _MSVC_LANG >= 201703L)
+    #define DFG_STRTO_USING_FROM_CHARS 1
+    #include <charconv>
+#else
+    #define DFG_STRTO_USING_FROM_CHARS 0
+#endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 
@@ -81,6 +95,7 @@ T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlySzParamC)& s, bool* pSucces
 
 namespace DFG_DETAIL_NS
 {
+#if (DFG_STRTO_USING_FROM_CHARS != 1)
     class Locale
     {
     public:
@@ -139,6 +154,7 @@ namespace DFG_DETAIL_NS
         static Locale locale = Locale::createNumericClocale();
         return locale.m_locale;
     }
+#endif // (DFG_STRTO_USING_FROM_CHARS != 1)
 
 
 #if 0
@@ -203,18 +219,25 @@ namespace DFG_DETAIL_NS
     {
         // While view itself is not necessarily null-terminated, the underlying string is and since
         // trailing spaces seem to be no problem for strtod(), passing the start pointer as such.
-        char* pEnd;
         
-#if defined(_MSC_VER)
-        t = _strtod_l(sv.data(), &pEnd, plainNumericLocale());
-#elif defined(__MINGW32__)
-        // On MinGW 7.3 _strtod_l() failed to parse inf/nan, so for now just using std::strtod()
-        t = std::strtod(sv.data(), &pEnd);
-#else
-        t = strtod_l(sv.data(), &pEnd, plainNumericLocale());
-#endif
+#if DFG_STRTO_USING_FROM_CHARS == 1
+        t = std::numeric_limits<double>::quiet_NaN();
+        const auto rv = std::from_chars(sv.data(), sv.endRaw(), t);
         if (pSuccess)
-            *pSuccess = (pEnd == sv.endRaw());
+            *pSuccess = (rv.ptr == sv.endRaw() && rv.ec == std::errc());
+#else
+        char* pEnd;
+    #if defined(_MSC_VER)
+            t = _strtod_l(sv.data(), &pEnd, plainNumericLocale());
+    #elif defined(__MINGW32__)
+            // On MinGW 7.3 _strtod_l() failed to parse inf/nan, so for now just using std::strtod()
+            t = std::strtod(sv.data(), &pEnd);
+    #else
+            t = strtod_l(sv.data(), &pEnd, plainNumericLocale());
+    #endif
+            if (pSuccess)
+                *pSuccess = (pEnd == sv.endRaw());
+#endif
     }
 
     template <class T, class Char_T>

@@ -337,14 +337,18 @@ namespace
         using namespace ::DFG_ROOT_NS;
         using namespace ::DFG_MODULE_NS(str);
         bool bOk;
-        EXPECT_EQ(expectedValue, strTo<double>(psz, &bOk));
-        EXPECT_EQ(bExpected, bOk);
-
-        EXPECT_EQ(expectedValue, strTo<double>(StringViewSzC(psz), &bOk));
-        EXPECT_EQ(bExpected, bOk);
-
-        EXPECT_EQ(expectedValue, strTo<double>(StringViewC(psz), &bOk));
-        EXPECT_EQ(bExpected, bOk);
+        const auto bExpectedIsNan = ::DFG_MODULE_NS(math)::isNan(expectedValue);
+        const auto testEqual = [&](const double val)
+        {
+            if (bExpectedIsNan)
+                EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(val));
+            else
+                EXPECT_EQ(expectedValue, val);
+            EXPECT_EQ(bExpected, bOk);
+        };
+        testEqual(strTo<double>(psz, &bOk));
+        testEqual(strTo<double>(StringViewSzC(psz), &bOk));
+        testEqual(strTo<double>(StringViewC(psz), &bOk));
     }
 } // unnamed namespace
 
@@ -503,12 +507,13 @@ TEST(dfgStr, strTo)
 
         // Testing invalid strings. Note: Expected values below are not part of interface, i.e. value in case of false conversion is not specified.
         // Tested here just to see if implementation changes.
+        const bool bUsingFromChars = (DFG_STRTO_USING_FROM_CHARS == 1);
         testDoubleConversion("", 0, false);
-        testDoubleConversion("-+1", 0, false);
+        testDoubleConversion("-+1", (bUsingFromChars) ? std::numeric_limits<double>::quiet_NaN() : 0, false);
         testDoubleConversion("1.1.", 1.1, false);
         testDoubleConversion("1.a", 1, false);
         testDoubleConversion("1.a", 1, false);
-        testDoubleConversion("abc", 0, false);
+        testDoubleConversion("abc", (bUsingFromChars) ? std::numeric_limits<double>::quiet_NaN() : 0, false);
         testDoubleConversion("2020-08", 2020, false);
 
         bool bOk = false;
