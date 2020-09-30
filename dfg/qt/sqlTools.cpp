@@ -1,11 +1,14 @@
 #include "sqlTools.hpp"
 #include "connectHelper.hpp"
 #include "../isValidIndex.hpp"
+#include "../io/fileToByteContainer.hpp"
+#include "qtBasic.hpp"
 
 // UI includes
 #include "widgetHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QFileInfo>
     #include <QSqlDatabase>
     #include <QSqlQuery>
     #include <QSqlRecord>
@@ -78,6 +81,32 @@ auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableColumnNames(const Q
         rv.push_back(record.fieldName(i));
     return rv;
 }
+
+bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFileExtension(const QString& sExtensionWithoutDot)
+{
+    return (sExtensionWithoutDot == QLatin1String("sqlite3") || sExtensionWithoutDot == QLatin1String("sqlite") || sExtensionWithoutDot == QLatin1String("db"));
+}
+
+bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(const QString& sPath, const bool bCheckExtensionOnly)
+{
+    if (bCheckExtensionOnly)
+        return isSQLiteFileExtension(QFileInfo(sPath).suffix());
+    else
+    {
+        // https://sqlite.org/fileformat.html
+        const size_t nCompareCount = 16; // strlen("SQLite format 3") + null (=15+1).
+        const char szExpected[nCompareCount] = "SQLite format 3";
+        // Reading first 16 bytes from file.
+        const auto bytes = ::DFG_MODULE_NS(io)::fileToVector(::DFG_MODULE_NS(qt)::qStringToFileApi8Bit(sPath), 0, nCompareCount);
+        return bytes.size() == nCompareCount && std::equal(bytes.begin(), bytes.end(), std::begin(szExpected));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// SQLiteFileOpenDialog
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog::SQLiteFileOpenDialog(const QString& sFilePath, QWidget* pParent)
     : BaseClass(pParent)

@@ -45,6 +45,12 @@ public:
     
     QSqlQuery createQuery();
 
+    static bool isSQLiteFileExtension(const QString& sExtensionWithoutDot);
+
+    // Returns true iff file at given path looks like SQLite file. Note that returns false if unable to check bytes.
+    // By default checks beginning bytes, optionally only checks extension.
+    static bool isSQLiteFile(const QString& sPath, bool bCheckExtensionOnly = false);
+
     // Opens SQLite database from given path.
     static QSqlDatabase openSQLiteDatabase(const QString& sDbFilePath);
 
