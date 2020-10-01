@@ -102,6 +102,11 @@ bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(const QString& sPath, co
     }
 }
 
+bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSelectQuery(const QString& sQuery)
+{
+    return sQuery.mid(0, 7).toLower() == QLatin1String("select ");
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // SQLiteFileOpenDialog
@@ -164,8 +169,8 @@ bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(const QString& sPath, co
 void ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog::accept()
 {
     const QString sQuery = query();
-    const bool bStartsWithSelect = (sQuery.mid(0, 7).toLower() == QLatin1String("select "));
-    if (!bStartsWithSelect)
+    const bool bIsSelectQuery = SQLiteDatabase::isSelectQuery(sQuery);
+    if (!bIsSelectQuery)
     {
         if (!m_spErrorLine)
         {

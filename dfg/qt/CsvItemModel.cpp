@@ -700,9 +700,12 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(cons
     if (!QFileInfo(sConfFilePath).exists())
     {
         LoadOptions loadOptions;
-        const auto s8bitPath = qStringToFileApi8Bit(sFilePath);
-        const auto peekedFormat = peekCsvFormatFromFile(s8bitPath, Min(1024, saturateCast<int>(::DFG_MODULE_NS(os)::fileSize(s8bitPath))));
-        loadOptions.eolType(peekedFormat.eolType());
+        if (!::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sFilePath))
+        {
+            const auto s8bitPath = qStringToFileApi8Bit(sFilePath);
+            const auto peekedFormat = peekCsvFormatFromFile(s8bitPath, Min(1024, saturateCast<int>(::DFG_MODULE_NS(os)::fileSize(s8bitPath))));
+            loadOptions.eolType(peekedFormat.eolType());
+        }
         return loadOptions;
     }
     DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
@@ -966,9 +969,8 @@ void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
     m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.midRef(0, Min(32, sQuery.size())));
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions loadOptions)
 {
-    auto loadOptions = LoadOptions();
     // Limiting completer usage by file size is highly coarse for databases, but at least this can prevent simple huge query cases from using completers.
     setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(QFileInfo(sDbFilePath).size()));
     return this->readData(loadOptions, [&]() { readDataFromSqlite(sDbFilePath, sQuery); });

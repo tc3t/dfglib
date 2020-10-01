@@ -1571,12 +1571,17 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
 
     const bool bOpenAsSqlite = ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sPath);
     QString sQuery;
-
     if (bOpenAsSqlite)
     {
-        sQuery = getSQLiteDatabaseQueryFromUser(sPath, this);
-        if (sQuery.isEmpty())
-            return false;
+        const bool bHasQueryInConf = formatDef.hasProperty(CsvOptionProperty_sqlQuery);
+        if (bHasQueryInConf)
+            sQuery = untypedViewToQStringAsUtf8(formatDef.getProperty(CsvOptionProperty_sqlQuery, ""));
+        if (!bHasQueryInConf || !::DFG_MODULE_NS(sql)::SQLiteDatabase::isSelectQuery(sQuery))
+        {
+            sQuery = getSQLiteDatabaseQueryFromUser(sPath, this);
+            if (sQuery.isEmpty())
+                return false;
+        }
     }
 
     // Reset models to prevent event loop from updating stuff while model is being read in another thread
@@ -1590,7 +1595,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     doModalOperation(this, tr("Reading file of size %1\n%2").arg(formattedDataSize(QFileInfo(sPath).size()), sPath), "CsvTableViewFileLoader", [&]()
         {
             if (bOpenAsSqlite)
-                bSuccess = pModel->openFromSqlite(sPath, sQuery);
+                bSuccess = pModel->openFromSqlite(sPath, sQuery, formatDef);
             else
                 bSuccess = pModel->openFile(sPath, formatDef);
         });

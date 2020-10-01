@@ -64,6 +64,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                               //                  When and_group is not given for any filter, they belong to the same AND-group so the
                                                                               //                  logics is A && B && C && D.
     const char CsvOptionProperty_chartControls[]            = "chartControls";   // Defines chartControls to use.
+    const char CsvOptionProperty_sqlQuery[]                 = "sqlQuery";        // Defines SQL-query to use when opening a SQLite file.
 
     namespace DFG_DETAIL_NS
     {
@@ -206,7 +207,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openNewTable();
         bool mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other);
         bool openFile(const QString& sDbFilePath);
-        bool openFromSqlite(const QString& sDbFilePath, const QString& sQuery);
+        bool openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions loadOptions);
         bool openFile(QString sDbFilePath, LoadOptions loadOptions);
         bool importFiles(const QStringList& paths);
         bool openStream(QTextStream& strm);

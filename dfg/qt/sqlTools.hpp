@@ -45,6 +45,10 @@ public:
     
     QSqlQuery createQuery();
 
+    // Returns true iff query looks like a select.
+    // Note: does only simple, non-robust checking.
+    static bool isSelectQuery(const QString& sQuery);
+
     static bool isSQLiteFileExtension(const QString& sExtensionWithoutDot);
 
     // Returns true iff file at given path looks like SQLite file. Note that returns false if unable to check bytes.
