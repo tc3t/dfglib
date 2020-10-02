@@ -1591,8 +1591,10 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     if (pProxyModel && pProxyModel->sourceModel() == pModel)
         pProxyModel->setSourceModel(nullptr);
 
+    const QString sAdditionalInfo = (bOpenAsSqlite) ? tr("\nQuery: %1").arg(sQuery) : QString();
+
     bool bSuccess = false;
-    doModalOperation(this, tr("Reading file of size %1\n%2").arg(formattedDataSize(QFileInfo(sPath).size()), sPath), "CsvTableViewFileLoader", [&]()
+    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), "CsvTableViewFileLoader", [&]()
         {
             if (bOpenAsSqlite)
                 bSuccess = pModel->openFromSqlite(sPath, sQuery, formatDef);
