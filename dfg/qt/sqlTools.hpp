@@ -30,10 +30,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(sql) {
 // RAII-wrapper for QSqlDatabase: with QSqlDatabase opening a database and destroying QSqlDatabase-object doesn't seem to close connection meaning
 // e.g. that the database file is in use by the application even if nothing actually references it. Using this class guarantees the connection
 // to database gets closed when database object is destroyed.
+// Note: by default database is opened in read-only mode.
 class SQLiteDatabase
 {
 public:
-    SQLiteDatabase(const QString& sFilePath);
+    SQLiteDatabase(const QString& sFilePath) : SQLiteDatabase(sFilePath, "QSQLITE_OPEN_READONLY") {}
+    SQLiteDatabase(const QString& sFilePath, const QString& sConnectOptions);
     ~SQLiteDatabase();
 
     // Returns name of tables in the database.
@@ -56,7 +58,7 @@ public:
     static bool isSQLiteFile(const QString& sPath, bool bCheckExtensionOnly = false);
 
     // Opens SQLite database from given path.
-    static QSqlDatabase openSQLiteDatabase(const QString& sDbFilePath);
+    static QSqlDatabase openSQLiteDatabase(const QString& sDbFilePath, const QString& sConnectOptions = QString());
 
     // Returns table names from given SQLite file, empty if file doesn't exist or if opening database fails.
     static QStringList getSQLiteFileTableNames(const QString& sDbFilePath, const QSql::TableType type = QSql::Tables);

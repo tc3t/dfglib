@@ -25,10 +25,10 @@ DFG_END_INCLUDE_QT_HEADERS
 
 
 
-::DFG_MODULE_NS(sql)::SQLiteDatabase::SQLiteDatabase(const QString& sFilePath)
+::DFG_MODULE_NS(sql)::SQLiteDatabase::SQLiteDatabase(const QString& sFilePath, const QString& sConnectOptions)
 {
     m_spDatabase.reset(new QSqlDatabase);
-    *m_spDatabase = openSQLiteDatabase(sFilePath);
+    *m_spDatabase = openSQLiteDatabase(sFilePath, sConnectOptions);
 }
 
 ::DFG_MODULE_NS(sql)::SQLiteDatabase::~SQLiteDatabase()
@@ -57,11 +57,12 @@ auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::createQuery() -> QSqlQuery
     return (m_spDatabase) ? QSqlQuery(*m_spDatabase) : QSqlQuery();
 }
 
-auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::openSQLiteDatabase(const QString& sDbFilePath) -> QSqlDatabase
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::openSQLiteDatabase(const QString& sDbFilePath, const QString& sConnectOptions) -> QSqlDatabase
 {
     // Note: QSQLITE means "SQLite version 3 or above" at least as of Qt 5.13
     auto database = QSqlDatabase::addDatabase("QSQLITE", sDbFilePath); // Seconds arg is connectionName
     database.setDatabaseName(sDbFilePath);
+    database.setConnectOptions(sConnectOptions);
     return (database.open()) ? database : QSqlDatabase();
 }
 
