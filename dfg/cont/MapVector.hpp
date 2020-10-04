@@ -45,6 +45,7 @@ Related reading and implementations:
 #include <utility>
 #include <vector>
 #include "../rangeIterator.hpp"
+#include "../iter/CustomAccessIterator.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -513,14 +514,14 @@ public:
     }
 #endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
-    key_iterator        makeIterator(const size_t i)            { return m_storage.begin() + i; }
-    const_key_iterator  makeIterator(const size_t i) const      { return m_storage.begin() + i; }
+    iterator           makeIterator(const size_t i)            { return m_storage.begin() + i; }
+    const_iterator     makeIterator(const size_t i) const      { return m_storage.begin() + i; }
 
-    iterator            makeKeyIterator(const size_t i)         { return makeIterator(i); }
-    const_iterator      makeKeyIterator(const size_t i) const   { return makeIterator(i); }
+    key_iterator       makeKeyIterator(const size_t i)         { return key_iterator(makeIterator(i)); }
+    const_key_iterator makeKeyIterator(const size_t i) const   { return const_key_iterator(makeIterator(i)); }
 
-    key_type&       keyIterValueToKeyValue(value_type& val)               { return val.first; }
-    const key_type& keyIterValueToKeyValue(const value_type& val) const   { return val.first; }
+    key_type&       keyIterValueToKeyValue(key_type& val)               { return val; }
+    const key_type& keyIterValueToKeyValue(const key_type& val) const   { return val; }
 
     bool    empty() const   { return m_storage.empty(); }
     size_t  size() const    { return m_storage.size(); }
@@ -528,7 +529,7 @@ public:
 
     iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& iter)
     {
-        return m_storage.insert(iter, value_type(std::move(key), std::move(value)));
+        return m_storage.insert(makeIterator(iter - this->beginKey()), value_type(std::move(key), std::move(value)));
     }
 
     void reserve(const size_t nReserve)
@@ -585,8 +586,9 @@ namespace DFG_DETAIL_NS
         typedef Value_T                                                 mapped_type;
         typedef typename Storage_T::iterator                            iterator;
         typedef typename Storage_T::const_iterator                      const_iterator;
-        typedef iterator                                                key_iterator;
-        typedef const_iterator                                          const_key_iterator;
+
+        using key_iterator       = decltype(::DFG_MODULE_NS(iter)::makeTupleElementAccessIterator<0>(iterator()));
+        using const_key_iterator = decltype(::DFG_MODULE_NS(iter)::makeTupleElementAccessIterator<0>(const_iterator()));
     };
 } // namespace DFG_DETAIL_NS
 
