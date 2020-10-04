@@ -3,6 +3,8 @@
 #include "../dfgDefs.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include "../preprocessor/compilerInfoMsvc.hpp"
+#include <type_traits>
+#include <tuple>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -70,4 +72,49 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     }
 #endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
+namespace DFG_DETAIL_NS
+{
+    template <size_t Index_T> struct TrivialPairAccessHelper;
+    template <> struct TrivialPairAccessHelper<0> { template <class Return_T, class TrivialPair_T> static auto get(TrivialPair_T&& tp) -> Return_T { return tp.first; } };
+    template <> struct TrivialPairAccessHelper<1> { template <class Return_T, class TrivialPair_T> static auto get(TrivialPair_T&& tp) -> Return_T { return tp.second; } };
+};
+
+template <size_t Index_T, class T0, class T1>
+constexpr auto get(TrivialPair<T0, T1>& tp) noexcept -> typename std::conditional<Index_T == 0, T0&, T1&>::type
+{
+    DFG_STATIC_ASSERT(Index_T < 2, "Bad index for get() with TrivialPair, must be either 0 (=first) or 1 (=second)");
+    using ReturnT = typename std::conditional<Index_T == 0, T0&, T1&>::type;
+    return DFG_DETAIL_NS::TrivialPairAccessHelper<Index_T>::template get<ReturnT>(tp);
+}
+
+// const-ref overload for get()
+template <size_t Index_T, class T0, class T1>
+constexpr auto get(const TrivialPair<T0, T1>& tp) noexcept -> typename std::conditional<Index_T == 0, const T0&, const T1&>::type
+{
+    DFG_STATIC_ASSERT(Index_T < 2, "Bad index for get() with TrivialPair, must be either 0 (=first) or 1 (=second)");
+    using ReturnT = typename std::conditional<Index_T == 0, const T0&, const T1&>::type;
+    return DFG_DETAIL_NS::TrivialPairAccessHelper<Index_T>::template get<ReturnT>(tp);
+}
+
+// rvalue overload for get()
+template <size_t Index_T, class T0, class T1>
+constexpr auto get(TrivialPair<T0, T1>&& tp) noexcept -> typename std::conditional<Index_T == 0, T0&&, T1&&>::type
+{
+    return std::move(get<Index_T>(tp));
+}
+
 } } // module namespace
+
+
+// Adding specialization of std::tuple_element for TrivialPair. https://stackoverflow.com/questions/40584368/c-can-stdtuple-size-tuple-element-be-specialized
+template<class T0, class T1>
+struct std::tuple_element<0, ::DFG_MODULE_NS(cont)::TrivialPair<T0, T1>>
+{
+    using type = T0;
+};
+
+template<class T0, class T1>
+struct std::tuple_element<1, ::DFG_MODULE_NS(cont)::TrivialPair<T0, T1>>
+{
+    using type = T1;
+};

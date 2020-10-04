@@ -860,6 +860,33 @@ TEST(dfgCont, TrivialPair)
         EXPECT_EQ("aa", tp.first);
         EXPECT_EQ("bb", tp.second);
     }
+
+    // Testing that std::tuple_element works with TrivialPair
+    {
+        DFGTEST_STATIC_TEST((std::is_same<std::string, std::tuple_element<0, TrivialPair<std::string, int>>::type>::value));
+        DFGTEST_STATIC_TEST((std::is_same<int, std::tuple_element<1, TrivialPair<std::string, int>>::type>::value));
+    }
+
+    // Testing get<>
+    {
+        TrivialPair<std::string, std::string> tp("a", "b");
+        const auto& ctp = tp;
+        EXPECT_EQ("a", get<0>(tp));
+        EXPECT_EQ("b", get<1>(tp));
+        EXPECT_EQ("a", get<0>(ctp));
+        EXPECT_EQ("b", get<1>(ctp));
+        const auto s0 = get<0>(std::move(tp));
+        const auto s1 = get<1>(std::move(tp));
+        EXPECT_EQ("a", s0);
+        EXPECT_EQ("b", s1);
+        // Testing that getting from rvalue above has cleared pair elements.
+        EXPECT_TRUE(tp.first.empty());
+        EXPECT_TRUE(tp.second.empty());
+
+        TrivialPair<std::string, int> tp2("a", 1);
+        EXPECT_EQ("a", get<0>(tp2));
+        EXPECT_EQ(1, get<1>(tp2));
+    }
 }
 
 TEST(dfgCont, Vector)
