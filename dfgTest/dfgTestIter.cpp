@@ -10,6 +10,8 @@
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/iterAll.hpp>
 #include <dfg/typeTraits.hpp>
+#include <dfg/iter/CustomAccessIterator.hpp>
+#include <dfg/cont/TrivialPair.hpp>
 
 TEST(dfgIter, RangeIterator)
 {
@@ -373,4 +375,137 @@ TEST(dfgIter, InterleavedSemiIterator)
     EXPECT_EQ(3, *iter--);
     EXPECT_EQ(1, *iter);
     EXPECT_EQ(2, iter.getChannel(1));
+}
+
+namespace
+{
+    class TestStruct
+    {
+    public:
+        double d = 1.5;
+        std::string s = "a";
+        int i = 3;
+
+        class IntAccesser
+        {
+        public:
+            int* operator()(const std::vector<TestStruct>::iterator& iter)
+            {
+                return &iter->i;
+            }
+
+        };
+
+        class StringAccesser
+        {
+        public:
+            std::string* operator()(const std::vector<TestStruct>::iterator& iter)
+            {
+                return &iter->s;
+            }
+
+        };
+    };
+
+    template <size_t Index_T, class Cont_T, class ExpectedCont_T>
+    static void testCustomAccessIterator(Cont_T& cont, const ExpectedCont_T& expected)
+    {
+        using namespace DFG_MODULE_NS(iter);
+        auto iter = makeTupleElementAccessIterator<Index_T>(cont.begin());
+
+        EXPECT_EQ(cont.begin(), iter.underlyingIterator());
+        EXPECT_EQ(expected[0], *iter);
+        EXPECT_EQ(expected[1], *(iter + 1));
+        EXPECT_EQ(expected[2], *(iter + 2));
+        EXPECT_EQ(expected[0], *iter);
+        EXPECT_EQ(expected[1], *++iter);
+        EXPECT_EQ(expected[1], *iter++);
+        EXPECT_EQ(expected[2], *iter);
+        iter += expected.size() - 2;
+        EXPECT_EQ(cont.end(), iter.underlyingIterator());
+        --iter;
+        iter -= expected.size() - 3;
+        EXPECT_EQ(expected[2], *iter);
+        EXPECT_EQ(expected[2], *iter--);
+        EXPECT_EQ(expected[1], *iter);
+        EXPECT_EQ(expected[0], *(iter - 1));
+        iter += 1;
+        EXPECT_EQ(expected[2], *iter);
+        iter -= 2;
+        EXPECT_EQ(expected[0], *iter);
+        EXPECT_EQ(0, iter - iter);
+        EXPECT_EQ(2, (iter + 2) - iter);
+    }
+}
+
+TEST(dfgIter, CustomAccessIterator)
+{
+    using namespace DFG_MODULE_NS(iter);
+
+    // Testing makeTupleElementAccessIterator()
+    {
+        std::vector<std::pair<std::string, double>> vecPairs;
+        vecPairs.push_back(std::pair<std::string, double>("a", 1.25));
+        vecPairs.push_back(std::pair<std::string, double>("b", 1.5));
+        vecPairs.push_back(std::pair<std::string, double>("c", 1.75));
+        const auto vecPairsConstRef = vecPairs;
+
+        testCustomAccessIterator<0>(vecPairs, std::array<std::string, 3>({"a", "b", "c"}));
+        testCustomAccessIterator<0>(vecPairsConstRef, std::array<std::string, 3>({ "a", "b", "c" }));
+        testCustomAccessIterator<1>(vecPairs, std::array<double, 3>({ 1.25, 1.5, 1.75 }));
+        testCustomAccessIterator<1>(vecPairsConstRef, std::array<double, 3>({ 1.25, 1.5, 1.75 }));
+
+        // Testing operator->
+        EXPECT_EQ(1, makeTupleElementAccessIterator<0>(vecPairs.begin())->length());
+
+        // Testing modification
+        {
+            auto iter0 = makeTupleElementAccessIterator<0>(vecPairs.begin());
+            auto iter1 = makeTupleElementAccessIterator<1>(vecPairs.begin());
+            *iter0 = "aa";
+            *iter1 = 2.25;
+            EXPECT_EQ("aa", vecPairs.begin()->first);
+            EXPECT_EQ(2.25, vecPairs.begin()->second);
+        }
+    }
+
+    // Testing makeTupleElementAccessIterator() with TrivialPair
+    {
+        using namespace DFG_MODULE_NS(cont);
+        std::vector<TrivialPair<std::string, double>> vecPairs;
+        vecPairs.push_back(TrivialPair<std::string, double>("a", 1.25));
+        vecPairs.push_back(TrivialPair<std::string, double>("b", 1.5));
+        auto iter0 = makeTupleElementAccessIterator<0>(vecPairs.begin());
+        auto iter1 = makeTupleElementAccessIterator<1>(vecPairs.begin());
+        EXPECT_EQ("a", *iter0++);
+        EXPECT_EQ(1.25, *iter1++);
+        EXPECT_EQ("b", *iter0++);
+        EXPECT_EQ(1.5, *iter1++);
+        EXPECT_EQ(vecPairs.end(), iter0.underlyingIterator());
+        EXPECT_EQ(vecPairs.end(), iter1.underlyingIterator());
+    }
+
+    // Testing custom access func
+    {
+        std::vector<TestStruct> cont;
+        cont.push_back(TestStruct());
+        cont.push_back(TestStruct());
+        cont.push_back(TestStruct());
+        cont.front().i = -1;
+        cont.front().s = "abc";
+        auto iterInt = CustomAccessIterator<decltype(cont.begin()), TestStruct::IntAccesser>(cont.begin());
+        auto iterString = CustomAccessIterator<decltype(cont.begin()), TestStruct::StringAccesser>(cont.begin());
+        EXPECT_EQ(-1, *iterInt);
+        EXPECT_EQ("abc", *iterString);
+        iterInt += 2;
+        iterString += 2;
+        EXPECT_EQ(3, *iterInt);
+        EXPECT_EQ("a", *iterString);
+        ++iterInt;
+        ++iterString;
+        EXPECT_EQ(cont.end(), iterInt.underlyingIterator());
+        EXPECT_EQ(cont.end(), iterString.underlyingIterator());
+    }
+
+    
 }

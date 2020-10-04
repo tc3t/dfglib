@@ -124,6 +124,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIo.ostreamPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgIo.StreamBufferMem";
     //::testing::GTEST_FLAG(filter) = "dfgIo.writeDelimited";
+    //::testing::GTEST_FLAG(filter) = "dfgIter.CustomAccessIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.RangeIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.RawStorageIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";

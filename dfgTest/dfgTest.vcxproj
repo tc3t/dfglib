@@ -603,6 +603,7 @@
     <ClInclude Include="..\dfg\iter.hpp" />
     <ClInclude Include="..\dfg\iterableForRange.hpp" />
     <ClInclude Include="..\dfg\iterAll.hpp" />
+    <ClInclude Include="..\dfg\iter\CustomAccessIterator.hpp" />
     <ClInclude Include="..\dfg\iter\interleavedIterator.hpp" />
     <ClInclude Include="..\dfg\iter\IsContiguousMemoryIterator.hpp" />
     <ClInclude Include="..\dfg\iter\iteratorTemplate.hpp" />
