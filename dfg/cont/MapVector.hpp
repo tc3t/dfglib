@@ -147,6 +147,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             typedef typename BaseClass::const_iterator                       const_iterator;
             typedef typename BaseClass::key_iterator                         key_iterator;
             typedef typename MapVectorTraits<Impl_T>::const_key_iterator     const_key_iterator;
+            typedef typename MapVectorTraits<Impl_T>::mapped_type_iterator   mapped_type_iterator;
+            typedef typename MapVectorTraits<Impl_T>::mapped_type_const_iterator mapped_type_const_iterator;
+            
             typedef typename BaseClass::key_type                             key_type;
             typedef typename MapVectorTraits<Impl_T>::mapped_type            mapped_type;
             typedef size_t                                                   size_type;
@@ -164,6 +167,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             key_iterator        makeKeyIterator(const size_t i)       { return static_cast<Impl_T&>(*this).makeKeyIterator(i); }
             const_key_iterator  makeKeyIterator(const size_t i) const { return static_cast<const Impl_T&>(*this).makeKeyIterator(i); }
 
+            mapped_type_iterator       makeValueIterator(const size_t i)       { return static_cast<Impl_T&>(*this).makeValueIterator(i); }
+            mapped_type_const_iterator makeValueIterator(const size_t i) const { return static_cast<const Impl_T&>(*this).makeValueIterator(i); }
+
             iterator            begin()             { return makeIterator(0); }
             const_iterator      begin() const       { return makeIterator(0); }
             const_iterator      cbegin() const      { return makeIterator(0); }
@@ -179,6 +185,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             key_iterator        endKey()            { return makeKeyIterator(size()); }
             const_key_iterator  endKey() const      { return makeKeyIterator(size()); }
 
+            mapped_type_iterator        beginValue()       { return makeValueIterator(0); }
+            mapped_type_const_iterator  beginValue() const { return makeValueIterator(0); }
+            mapped_type_iterator        endValue()         { return makeValueIterator(size()); }
+            mapped_type_const_iterator  endValue() const   { return makeValueIterator(size()); }
+
             key_type&           frontKey()          { return keyIterValueToKeyValue(*beginKey()); }
             const key_type&     frontKey() const    { return keyIterValueToKeyValue(*beginKey()); }
             mapped_type&        frontValue()        { return begin()->second; }
@@ -190,6 +201,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             const mapped_type&  backValue() const   { return backIter()->second; }
             key_iterator        backKeyIter()       { return endKey() - 1; }
             const_key_iterator  backKeyIter() const { return endKey() - 1; }
+
+            // Note: one must be careful when editing keys (e.g. maintaining order when isSorted() is enabled). To make accidental edits less likely,
+            //       keyRange() is always const. keyRange_modifiable() provides editable keys if needed.
+            RangeIterator_T<key_iterator>       keyRange_modifiable() { return makeRange(beginKey(), endKey()); }
+            RangeIterator_T<const_key_iterator> keyRange() const      { return makeRange(beginKey(), endKey()); }
+
+            RangeIterator_T<mapped_type_iterator>       valueRange()             { return makeRange(beginValue(), endValue()); }
+            RangeIterator_T<mapped_type_const_iterator> valueRange() const       { return valueRange_const(); }
+            RangeIterator_T<mapped_type_const_iterator> valueRange_const() const { return makeRange(beginValue(), endValue()); } // For convenience.
 
             // Precondition: iterator must be dereferenceable.
             // TODO: test
@@ -332,6 +352,8 @@ public:
     typedef typename BaseClass::const_iterator          const_iterator;
     typedef typename BaseClass::key_iterator            key_iterator;
     typedef typename BaseClass::const_key_iterator      const_key_iterator;
+    typedef typename BaseClass::mapped_type_iterator    mapped_type_iterator;
+    typedef typename BaseClass::mapped_type_const_iterator mapped_type_const_iterator;
     typedef typename BaseClass::key_type                key_type;
     typedef typename BaseClass::mapped_type             mapped_type;
     typedef typename BaseClass::size_type               size_type;
@@ -372,6 +394,9 @@ public:
 
     key_iterator        makeKeyIterator(const size_t i)                     { return m_keyStorage.begin() + i; }
     const_key_iterator  makeKeyIterator(const size_t i) const               { return m_keyStorage.begin() + i; }
+
+    mapped_type_iterator       makeValueIterator(const size_t i)            { return m_valueStorage.begin() + i; }
+    mapped_type_const_iterator makeValueIterator(const size_t i) const      { return m_valueStorage.begin() + i; }
 
     Key_T&              keyIterValueToKeyValue(Key_T& keyVal)               { return keyVal; }
     const Key_T&        keyIterValueToKeyValue(const Key_T& keyVal) const   { return keyVal; }
@@ -453,15 +478,6 @@ public:
         swap(m_valueStorage[nIndexA], m_valueStorage[nIndexB]);
     }
 
-    // Note: one must be careful when editing keys (e.g. maintaining order when isSorted() is enabled). To make accidental edits less likely,
-    //       keyRange() is always const. keyRange_modifiable() provides editable keys if needed.
-    DFG_CLASS_NAME(RangeIterator_T)<typename KeyStorage_T::iterator>       keyRange_modifiable()  { return makeRange(m_keyStorage); }
-    DFG_CLASS_NAME(RangeIterator_T)<typename KeyStorage_T::const_iterator> keyRange() const       { return makeRange(m_keyStorage); }
-
-    DFG_CLASS_NAME(RangeIterator_T)<typename ValueStorage_T::iterator>       valueRange()             { return makeRange(m_valueStorage); }
-    DFG_CLASS_NAME(RangeIterator_T)<typename ValueStorage_T::const_iterator> valueRange() const       { return valueRange_const(); }
-    DFG_CLASS_NAME(RangeIterator_T)<typename ValueStorage_T::const_iterator> valueRange_const() const { return makeRange(m_valueStorage); } // For convenience.
-
     KeyStorage_T    m_keyStorage;
     ValueStorage_T  m_valueStorage;
 }; // class MapVectorSoA
@@ -481,6 +497,8 @@ public:
     typedef typename BaseClass::const_iterator                  const_iterator;
     typedef typename BaseClass::key_iterator                    key_iterator;
     typedef typename BaseClass::const_key_iterator              const_key_iterator;
+    typedef typename BaseClass::mapped_type_iterator            mapped_type_iterator;
+    typedef typename BaseClass::mapped_type_const_iterator      mapped_type_const_iterator;
     typedef typename BaseClass::key_type                        key_type;
     typedef typename BaseClass::mapped_type                     mapped_type;
     typedef typename BaseClass::size_type                       size_type;
@@ -519,6 +537,9 @@ public:
 
     key_iterator       makeKeyIterator(const size_t i)         { return key_iterator(makeIterator(i)); }
     const_key_iterator makeKeyIterator(const size_t i) const   { return const_key_iterator(makeIterator(i)); }
+
+    mapped_type_iterator       makeValueIterator(const size_t i)       { return mapped_type_iterator(makeIterator(i)); }
+    mapped_type_const_iterator makeValueIterator(const size_t i) const { return mapped_type_const_iterator(makeIterator(i)); }
 
     key_type&       keyIterValueToKeyValue(key_type& val)               { return val; }
     const key_type& keyIterValueToKeyValue(const key_type& val) const   { return val; }
@@ -576,6 +597,8 @@ namespace DFG_DETAIL_NS
         typedef IteratorMapVectorSoa<Key_T, const Value_T, const ImplT> const_iterator;
         typedef typename KeyStorage_T::iterator                         key_iterator;
         typedef typename KeyStorage_T::const_iterator                   const_key_iterator;
+        typedef typename ValueStorage_T::iterator                       mapped_type_iterator;
+        typedef typename ValueStorage_T::const_iterator                 mapped_type_const_iterator;
     };
 
     template <class Key_T, class Value_T, class Storage_T>
@@ -589,6 +612,8 @@ namespace DFG_DETAIL_NS
 
         using key_iterator       = decltype(::DFG_MODULE_NS(iter)::makeTupleElementAccessIterator<0>(iterator()));
         using const_key_iterator = decltype(::DFG_MODULE_NS(iter)::makeTupleElementAccessIterator<0>(const_iterator()));
+        using mapped_type_iterator       = decltype(::DFG_MODULE_NS(iter)::makeTupleElementAccessIterator<1>(iterator()));
+        using mapped_type_const_iterator = decltype(::DFG_MODULE_NS(iter)::makeTupleElementAccessIterator<1>(const_iterator()));
     };
 } // namespace DFG_DETAIL_NS
 

@@ -456,6 +456,48 @@ TEST(dfgCont, MapVector_pushBack)
 
 namespace
 {
+    template <class Expected_T, class Range_T>
+    bool areRangesEqual(const Expected_T& expected, const Range_T& m)
+    {
+        return expected.size() == m.size() && std::equal(expected.begin(), expected.end(), m.begin());
+    }
+
+    template <class Cont_T>
+    static void testMapVector_keyValueRanges()
+    {
+        Cont_T m;
+        const auto& mc = m;
+        m[4] = 40;
+        m[5] = 50;
+        m[6] = 60;
+        std::array<int, 3> expectedKeys =   { 4, 5, 6 };
+        std::array<double, 3> expectedValues = { 40, 50, 60 };
+        EXPECT_TRUE(areRangesEqual(expectedKeys, m.keyRange()));
+        EXPECT_TRUE(areRangesEqual(expectedKeys, mc.keyRange()));
+        EXPECT_TRUE(areRangesEqual(expectedKeys, m.keyRange_modifiable()));
+
+        EXPECT_TRUE(areRangesEqual(expectedValues, m.valueRange()));
+        EXPECT_TRUE(areRangesEqual(expectedValues, mc.valueRange()));
+        EXPECT_TRUE(areRangesEqual(expectedValues, m.valueRange_const()));
+
+        *(m.keyRange_modifiable().begin() + 2) = 7;
+        *(m.valueRange().begin()) = 30;
+        expectedKeys[2] = 7;
+        expectedValues[0] = 30;
+        EXPECT_TRUE(areRangesEqual(expectedKeys, m.keyRange()));
+        EXPECT_TRUE(areRangesEqual(expectedValues, m.valueRange()));
+    }
+}
+
+TEST(dfgCont, MapVector_keyValueRanges)
+{
+    using namespace ::DFG_MODULE_NS(cont);
+    testMapVector_keyValueRanges<MapVectorAoS<int, double>>();
+    testMapVector_keyValueRanges<MapVectorSoA<int, double>>();
+}
+
+namespace
+{
     template <class Set_T>
     void testSetInterface(Set_T& se, const unsigned long nRandEngSeed)
     {

@@ -14,7 +14,7 @@ public:
     using iterator_category = typename std::iterator_traits<MainIterator_T>::iterator_category;
     using difference_type = typename std::iterator_traits<MainIterator_T>::difference_type;
     using pointer = decltype(Access_T()(MainIterator_T()));
-    using value_type = typename std::remove_pointer<pointer>::type;
+    using value_type = typename std::remove_const<typename std::remove_pointer<pointer>::type>::type;
     using reference = typename std::add_lvalue_reference<typename std::remove_pointer<pointer>::type>::type;
 
     CustomAccessIterator(const MainIterator_T& iter)

@@ -80,6 +80,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVectorPerformance";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector_keyValueRanges";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SetVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapToStringViews";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
