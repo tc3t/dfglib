@@ -10,13 +10,15 @@
 #include "../ReadOnlySzParam.hpp"
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
-// For now optionally using std::from_chars() on MSVC2017 with version >= 7 and on MSVC2019 with version >= 4
-// Note that with default build options at least MSVC2017 has _MSVC_LANG < 201703L so from_chars() won't be used by default.
-// https://docs.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=vs-2019
-// https://docs.microsoft.com/en-us/cpp/overview/cpp-conformance-improvements?view=vs-2017#improvements_157
-// Note that using _MSVC_LANG instead of __cplusplus because of reason listed here: https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+// For now optionally using std::from_chars() on MSVC2017 with version >= 8 and on MSVC2019 with version >= 4
+// MSVC2017 note: with default build options _MSVC_LANG < 201703L so from_chars() won't be used by default.
+// MSVC2017 references: https://devblogs.microsoft.com/cppblog/stl-features-and-fixes-in-vs-2017-15-8/, https://docs.microsoft.com/en-us/cpp/overview/cpp-conformance-improvements?view=vs-2017#improvements_157
+//      -using 2017.8 as limit due to information in the first link.
+// MSVC2019 reference: https://docs.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=vs-2019
+// Note that using _MSVC_LANG below instead of __cplusplus because of reason listed here: https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+//      -i.e getting correct __cplusplus value needs a non-default build flag.
 // This is coarse check that needs to be manually updated when std::from_chars() become available on other compilers.
-#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_7)) && _MSVC_LANG >= 201703L)
+#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L)
     #define DFG_STRTO_USING_FROM_CHARS 1
     #include <charconv>
 #else
