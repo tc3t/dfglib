@@ -220,7 +220,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // 1. Clears existing data and prepares model for table changes.
         // 2. Calls actual table filling implementation.
         // 3. Handles model-related finalization.
-        bool readData(const LoadOptions& options, std::function<void()> tableFiller);
+        bool readData(const LoadOptions& options, std::function<bool()> tableFiller);
 
         bool isModified() const { return m_bModified; }
         void setModifiedStatus(const bool bMod = true);
@@ -388,7 +388,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class OutFile_T, class Stream_T>
         bool saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options);
 
-        void readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery);
+        bool readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery);
 
     public:
         QUndoStack* m_pUndoStack;
@@ -406,6 +406,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         float m_writeTimeInSeconds;
         std::vector<HighlightDefinition> m_highlighters;
         LoadOptions m_loadOptionsInOpen; // Stores file options that were used when opening.
+        QStringList m_messagesFromLatestOpen;
     }; // class CsvItemModel
 
     template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)

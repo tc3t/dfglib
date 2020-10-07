@@ -484,6 +484,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
     m_nRowCount = 0;
     m_sTitle.clear();
     m_loadOptionsInOpen = LoadOptions();
+    m_messagesFromLatestOpen.clear();
     if (m_pUndoStack)
         m_pUndoStack->clear();
 }
@@ -505,10 +506,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char*
     return readData(loadOptions, [&]()
     {
         m_table.readFromMemory(data, nSize, loadOptions);
+        return true;
     });
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions& options, std::function<void()> tableFiller)
+bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions& options, std::function<bool()> tableFiller)
 {
     DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) readTimer;
 
@@ -516,7 +518,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     m_bResetting = true;
     clear();
 
-    tableFiller();
+    // Actual read happens here
+    const auto bTableFillerRv = tableFiller();
+
     m_nRowCount = m_table.rowCountByMaxRowIndex();
 
     const QString optionsCompleterColumns(options.getProperty(CsvOptionProperty_completerColumns, "not_given").c_str());
@@ -540,7 +544,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
                 return completerEnabledInAll || completerEnabledColumns.hasKey(nCol);
             };
 
-    // Set headers.
+    // Setting headers.
     const auto nMaxColCount = m_table.colCountByMaxColIndex();
     m_vecColInfo.reserve(static_cast<size_t>(nMaxColCount));
     for (int c = 0; c < nMaxColCount; ++c)
@@ -574,7 +578,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     this->m_loadOptionsInOpen = options;
     Q_EMIT sigOnNewSourceOpened();
 
-    return true;
+    return bTableFillerRv;
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
@@ -628,6 +632,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openNewTable()
         m_table.setElement(2, 1, DFG_UTF8(""));
         m_sFilePath.clear();
         setFilePathWithoutSignalEmit(QString());
+        return true;
     });
     m_readTimeInSeconds = -1;
     return rv;
@@ -907,6 +912,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                 //       to conveniently overwrite source file given the (possibly) lossy opening.
                 setFilePathWithoutSignalEmit(std::move(sDbFilePath));
             }
+            return true; // Currently there's no error detection so always returning true (=success)
         });
 
         return rv;
@@ -918,32 +924,33 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
 
 }
 
-void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery)
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery)
 {
     if (!QFileInfo::exists(sDbFilePath))
     {
-        // TODO: error handling: tr("File '%1' does not exist").arg(sDbFilePath);
-        return;
+        m_messagesFromLatestOpen << tr("File does not exist");
+        return false;
     }
     ::DFG_MODULE_NS(sql)::SQLiteDatabase database(sDbFilePath);
     if (!database.isOpen())
     {
-        // TODO: error handling
-        return;
+        const auto sLastError = (database.m_spDatabase) ? database.m_spDatabase->lastError().text() : QString();
+        m_messagesFromLatestOpen << tr("File exists, but can't be opened, last error = '%1'").arg(sLastError);
+        return false;
     }
 
     auto query = database.createQuery();
     if (!query.prepare(sQuery))
     {
-        // TODO: error handling, "Failed to prepare query"
-        return;
+        m_messagesFromLatestOpen << tr("Failed to prepare query, error = '%1'").arg(query.lastError().text());
+        return false;
     }
 
     const bool bExecRv = query.exec();
     if (!bExecRv)
     {
-        // TODO: error handling, query.lastError().text();
-        return;
+        m_messagesFromLatestOpen << tr("Executing query failed, error = '%1'").arg(query.lastError().text());
+        return false;
     }
 
     const auto cellToStorage = [&](const size_t nRow, const int nCol, const QVariant& var)
@@ -967,13 +974,14 @@ void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
     }
 
     m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.midRef(0, Min(32, sQuery.size())));
+    return true;
 }
 
 bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions loadOptions)
 {
     // Limiting completer usage by file size is highly coarse for databases, but at least this can prevent simple huge query cases from using completers.
     setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(QFileInfo(sDbFilePath).size()));
-    return this->readData(loadOptions, [&]() { readDataFromSqlite(sDbFilePath, sQuery); });
+    return this->readData(loadOptions, [&]() { return readDataFromSqlite(sDbFilePath, sQuery); });
 }
 
 //Note: When implementing a table based model, rowCount() should return 0 when the parent is valid.
