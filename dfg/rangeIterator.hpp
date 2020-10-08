@@ -16,6 +16,7 @@ DFG_ROOT_NS_BEGIN
         public:
             typedef Iter_T iterator;
             typedef typename std::iterator_traits<Iter_T>::value_type value_type;
+            typedef typename std::iterator_traits<Iter_T>::reference reference;
 
             RangeIteratorDefaultBase() : m_iterBegin(Iter_T()), m_iterEnd(Iter_T()) {}
             RangeIteratorDefaultBase(Iter_T iBegin, Iter_T iEnd) : m_iterBegin(iBegin), m_iterEnd(iEnd) {}
@@ -32,6 +33,8 @@ DFG_ROOT_NS_BEGIN
                   value_type& back()        { auto i = end(); --i; return *i; } // Precondition: !empty()
             const value_type& back() const  { auto i = end(); --i; return *i; } // Precondition: !empty()
 
+            reference operator[](const size_t i) const { DFG_ASSERT_UB(i < this->size()); auto iter = this->begin(); std::advance(iter, i); return *iter; }
+
             iterator m_iterBegin;
             iterator m_iterEnd;
         }; // Class RangeIteratorDefaultBase
@@ -43,13 +46,11 @@ DFG_ROOT_NS_BEGIN
         public:
             typedef RangeIteratorDefaultBase<Iter_T> BaseClass;
             typedef typename std::iterator_traits<Iter_T>::pointer pointer;
-            typedef typename std::iterator_traits<Iter_T>::reference reference;
+            using reference = typename BaseClass::reference;
             RangeIteratorContiguousIterBase() {}
             RangeIteratorContiguousIterBase(Iter_T iBegin, Iter_T iEnd) : BaseClass(iBegin, iEnd) {}
 
             pointer beginAsPointer() const { return (!this->empty()) ? &*this->begin() : nullptr; }
-
-            reference operator[](const size_t i) const { DFG_ASSERT_UB(i < this->size()); return *(this->begin() + i); }
 
             // Note: This is const given the const-semantics explained in comments for RangeIterator_T.
             // Note: Return value may differ from standard containers data() when range is empty.
