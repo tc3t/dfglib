@@ -184,7 +184,7 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::singleColumnDoubleValues_
     auto spSelectionViewer = privGetSelectionViewer();
     if (!spSelectionViewer) // This may happen e.g. if the selection is being updated in analyzeImpl() (in another thread). 
         return SingleColumnDoubleValuesOptional();
-    if (offsetFromFirst < 0 || offsetFromFirst >= spSelectionViewer->m_columnNames.size())
+    if (!isValidIndex(spSelectionViewer->m_columnNames, offsetFromFirst))
         return SingleColumnDoubleValuesOptional();
     return singleColumnDoubleValues_byColumnIndex((spSelectionViewer->m_columnNames.begin() + offsetFromFirst)->first);
 }

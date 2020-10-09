@@ -61,9 +61,8 @@ double floatIndexInSorted(const Iterable_T& iterable, const T& val, const ToSort
     ++iterSecond;
     if (iterSecond == iterEnd) // Check for single item range. If val matches first, return 0, otherwise NaN.
         return (toSortKey(*iterBegin) - val == 0) ? 0 : std::numeric_limits<double>::quiet_NaN();
-    const auto sortPredSort = [&](const ValueT& a, const ValueT& b) { return toSortKey(a) < toSortKey(b); };
     const auto sortPredLowerBound = [&](const ValueT& a, const T& b) { return toSortKey(a) < b; };
-    DFG_ASSERT(std::is_sorted(iterBegin, iterEnd, sortPredSort));
+    DFG_ASSERT(std::is_sorted(iterBegin, iterEnd, [&](const ValueT& a, const ValueT& b) { return toSortKey(a) < toSortKey(b); }));
     auto iter = std::lower_bound(iterBegin, iterEnd, val, sortPredLowerBound);
     if (iter != iterEnd)
     {

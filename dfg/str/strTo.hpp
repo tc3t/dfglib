@@ -97,7 +97,7 @@ T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlySzParamC)& s, bool* pSucces
 
 namespace DFG_DETAIL_NS
 {
-#if (DFG_STRTO_USING_FROM_CHARS != 1)
+#if (DFG_STRTO_USING_FROM_CHARS != 1) && !defined(__MINGW32__)
     class Locale
     {
     public:

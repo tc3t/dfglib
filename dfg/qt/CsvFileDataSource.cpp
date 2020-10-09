@@ -149,8 +149,8 @@ namespace DFG_ROOT_NS { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
         DataSourceIndex m_nColumn;
         DataQueryDetails m_queryDetails;
-        QueryCallback m_queryCallback;
         ColumnDataTypeMap* m_pColumnDataTypeMap;
+        QueryCallback m_queryCallback;
         ::DFG_MODULE_NS(cont)::MapToStringViews<DataSourceIndex, StringUtf8> m_stringBuffer;
         std::vector<double> m_rowBuffer;
         std::vector<double> m_valueBuffer;

@@ -40,7 +40,6 @@ void smoothWithNeighbourAverages(Cont_T&& cont, const size_t nWindowRadiusReques
     size_t nPrevMemoryIndex = nWindowRadius;
     cont[0] = mfAvg.average();
     size_t nPrevLeftRadius = 0;
-    size_t nPrevRightRadius = nWindowRadius;
     size_t nPrevElemsInWnd = 1 + nWindowRadius;
     
     ValueT prevAvg = cont[0];
@@ -79,7 +78,6 @@ void smoothWithNeighbourAverages(Cont_T&& cont, const size_t nWindowRadiusReques
         }
 
         nPrevLeftRadius = nLeftRadius;
-        nPrevRightRadius = nRightRadius;
         nPrevElemsInWnd = nElemsInWnd;
         
         previousVals[nNewMemoryIndex] = cont[i];

@@ -2395,7 +2395,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         uniqueValues.setSorting(false); // Want to keep original order.
         for (int i = 0, nCount = saturateCast<int>(valueRange.size()); i < nCount; ++i)
             uniqueValues[labels[i]] += valueRange[i];
-        if (uniqueValues.size() != ticks.size()) // Does data have duplicate bar identifiers?
+        if (uniqueValues.size() != static_cast<size_t>(ticks.size())) // Does data have duplicate bar identifiers?
         {
             const auto nNewSize = saturateCast<int>(uniqueValues.size());
             ticks.resize(nNewSize);
