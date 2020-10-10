@@ -264,7 +264,7 @@ void ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog::updateQuery(const QString& sTab
 {
     if (!m_spQueryLineEdit)
         return;
-    const auto sQuery = (!columns.isEmpty()) ? QString("SELECT %1 FROM %2;").arg(columns.join(", "), sTable) : tr("<No columns selected>");
+    const auto sQuery = (!columns.isEmpty()) ? QString("SELECT %1 FROM '%2';").arg(columns.join(", "), sTable) : tr("<No columns selected>");
     m_spQueryLineEdit->setText(sQuery);
 }
 
