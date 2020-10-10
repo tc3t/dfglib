@@ -1069,7 +1069,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_N
     auto sPath = QFileDialog::getSaveFileName(this,
         tr("Save file"),
         QString()/*dir*/,
-        tr("CSV files (*.csv);;All files (*.*)"),
+        tr("CSV file (*.csv);;SQLite3 file (*.sqlite3);;All files (*.*)"),
         nullptr/*selected filter*/,
         0/*options*/);
 
@@ -1091,15 +1091,31 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG
     if (!pModel)
         return false;
 
+    const bool bSaveAsSqlite = fileInfo.suffix() == QLatin1String("sqlite3");
+
+    if (bSaveAsSqlite && QMessageBox::question(this, tr("SQLite export"), tr("SQlite export is rudimentary, continue anyway?")) != QMessageBox::Yes)
+        return false;
+        
+
     bool bSuccess = false;
     doModalOperation(this, tr("Saving to file\n%1").arg(path), "CsvTableViewFileWriter", [&]()
         {
             // TODO: allow user to cancel saving (e.g. if it takes too long)
-            bSuccess = pModel->saveToFile(path, formatDef);
+            if (bSaveAsSqlite)
+                bSuccess = pModel->exportAsSQLiteFile(path, formatDef);
+            else
+                bSuccess = pModel->saveToFile(path, formatDef);
         });
 
     if (!bSuccess)
-        QMessageBox::warning(nullptr, tr("Save failed"), tr("Failed to save to path\n%1").arg(path));
+    {
+        QString sAdditionalDetails = (!pModel->m_messagesFromLatestSave.isEmpty())
+            ? QString("\n\nThe following message(s) were generated:\n%1").arg(pModel->m_messagesFromLatestSave.join('\n'))
+            : QString();
+        QMessageBox::warning(nullptr, tr("Save failed"), tr("Failed to save to path\n%1%2").arg(path, sAdditionalDetails));
+    }
+    else if (bSaveAsSqlite)
+        QMessageBox::information(this, tr("SQLite export"), tr("Successfully exported table to SQLite file\n%1").arg(path));
 
     return bSuccess;
 }

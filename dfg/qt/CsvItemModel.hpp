@@ -194,6 +194,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool saveToFile(const QString& sPath);
         bool saveToFile(const QString& sPath, const SaveOptions& options);
 
+        bool exportAsSQLiteFile(const QString& sPath, const SaveOptions& options);
+
         // Saves data to stream using default SaveOptions (in typical case means UTF-8 encoding with BOM and the same control chars as what was used in read except for EOL-char).
         // Note: Stream's write()-member must write bytes untranslated (i.e. no encoding nor eol translation)
         // TODO: Make encoding to be user definable through options.
@@ -407,6 +409,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<HighlightDefinition> m_highlighters;
         LoadOptions m_loadOptionsInOpen; // Stores file options that were used when opening.
         QStringList m_messagesFromLatestOpen;
+        QStringList m_messagesFromLatestSave;
     }; // class CsvItemModel
 
     template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)

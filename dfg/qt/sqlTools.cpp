@@ -10,6 +10,7 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QFileInfo>
     #include <QSqlDatabase>
+    #include <QSqlError>
     #include <QSqlQuery>
     #include <QSqlRecord>
     #include <QStringListModel>
@@ -33,8 +34,34 @@ DFG_END_INCLUDE_QT_HEADERS
 
 ::DFG_MODULE_NS(sql)::SQLiteDatabase::~SQLiteDatabase()
 {
+    commit();
+    close();
+}
+
+void ::DFG_MODULE_NS(sql)::SQLiteDatabase::close()
+{
     if (m_spDatabase)
         m_spDatabase->close();
+}
+
+bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::commit()
+{
+    return (m_spDatabase) ? m_spDatabase->commit() : false;
+}
+
+bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::transaction()
+{
+    return (m_spDatabase) ? m_spDatabase->transaction() : false;
+}
+
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::lastError() const -> QSqlError
+{
+    return (m_spDatabase) ? m_spDatabase->lastError() : QString();
+}
+
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::lastErrorText() const -> QString
+{
+    return lastError().text();
 }
 
 auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::tableNames(const QSql::TableType type) const -> QStringList

@@ -15,6 +15,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 class QSqlDatabase;
+class QSqlError;
 class QSqlQuery;
 class QSqlRecord;
 class QStringListModel;
@@ -34,6 +35,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(sql) {
 class SQLiteDatabase
 {
 public:
+    static QString defaultConnectOptionsForWriting() { return QString(); }
+
     SQLiteDatabase(const QString& sFilePath) : SQLiteDatabase(sFilePath, "QSQLITE_OPEN_READONLY") {}
     SQLiteDatabase(const QString& sFilePath, const QString& sConnectOptions);
     ~SQLiteDatabase();
@@ -42,6 +45,14 @@ public:
     QStringList tableNames(const QSql::TableType type = QSql::Tables) const;
 
     bool isOpen() const;
+
+    void close();
+
+    bool transaction();
+    bool commit();
+
+    QSqlError lastError() const;
+    QString lastErrorText() const;
 
     QSqlRecord record(const QString& sTableName) const;
     

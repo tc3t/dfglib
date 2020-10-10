@@ -359,6 +359,131 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
     return saveToFileImpl(sPath, outFile, outFile.intermediateFileStream(), options);
 }
 
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const QString& sPath, const SaveOptions& options)
+{
+    using SQLiteDatabase = ::DFG_MODULE_NS(sql)::SQLiteDatabase;
+    DFG_UNUSED(options);
+    m_messagesFromLatestSave.clear();
+    const auto bFileExisted = QFileInfo::exists(sPath);
+    SQLiteDatabase db(sPath, SQLiteDatabase::defaultConnectOptionsForWriting());
+    bool rv = false;
+    const auto exitHandler = makeScopedCaller([] {}, [&]()
+        {
+            // If writing fails and file didn't original exist, removing it.
+            if (!rv && !bFileExisted)
+            {
+                db.close();
+                QFile::remove(sPath);
+            }
+        });
+
+    if (!db.isOpen())
+    {
+        rv = false;
+        m_messagesFromLatestSave << tr("Unable to open database");
+        return rv;
+    }
+
+    const auto toDatabaseName = [](const QString& s, const QString& sValueIfEmpty)
+        {
+            QString sRv = s.toLatin1();
+            sRv.replace('\'', '_');
+            sRv.replace('.', '_'); // Having dot in table name seemed to cause dfg::sql::getSQLiteFileTableColumnNames() to fail retrieving column names even though reading data with "SELECT * FROM <tablename>" worked.
+            return (!sRv.isEmpty()) ? sRv : sValueIfEmpty;
+        };
+
+    auto createStatement = db.createQuery();
+    const QString sTableName = toDatabaseName(this->getTableTitle(), "table_from_csv");
+    QString sCreateStatement = QString("CREATE TABLE '%1' (").arg(sTableName);
+    QString sInsertStatement = QString("INSERT INTO '%1' VALUES (").arg(sTableName);
+    const auto nColCount = this->getColumnCount();
+    for (int c = 0; c < nColCount; ++c)
+    {
+        sCreateStatement += QString((c == 0) ? "'%1' TEXT" : ", '%1' TEXT").arg(toDatabaseName(this->getHeaderName(c), QString("Col %1").arg(c)));
+        sInsertStatement += QString((c == 0) ? "?" : ",?");
+    }
+    sCreateStatement += QLatin1String(");");
+    sInsertStatement += QLatin1String(");");
+    
+    if (!createStatement.prepare(sCreateStatement))
+    {
+        m_messagesFromLatestSave << tr("Preparing table creation statement '%1' failed with error: '%2'").arg(sCreateStatement, createStatement.lastError().text());
+        rv = false;
+        return rv;
+    }
+    if (!createStatement.exec())
+    {
+        m_messagesFromLatestSave << tr("Executing table creation statement '%1' failed with error: '%2'").arg(sCreateStatement, createStatement.lastError().text());
+        rv = false;
+        return rv;
+    }
+    const auto nRowCount = this->rowCount();
+    auto insertStatement = db.createQuery();
+    if (!insertStatement.prepare(sInsertStatement))
+    {
+        m_messagesFromLatestSave << tr("Preparing insert statement '%1' failed with error: '%2'").arg(sInsertStatement, insertStatement.lastError().text());
+        rv = false;
+        return rv;
+    }
+
+    const auto beginTransaction = [&]()
+        {
+            if (db.transaction())
+                return true;
+            else
+            {
+                m_messagesFromLatestSave << tr("Beginning transaction failed with error: '%1'").arg(db.lastErrorText());
+                rv = false;
+                return false;
+            }
+        };
+    const auto commit = [&]()
+        {
+            if (db.commit())
+                return true;
+            else
+            {
+                m_messagesFromLatestSave << tr("Committing transaction failed with error: '%1'").arg(db.lastErrorText());
+                rv = false;
+                return false;
+            }
+        };
+
+    if (!beginTransaction())
+        return rv;
+    size_t nPendingInserts = 0;
+    rv = true;
+    for (int r = 0; r < nRowCount; ++r)
+    {
+        for (int c = 0; c < nColCount; ++c)
+        {
+            auto tpsz = m_table(r, c);
+            auto sv = StringViewUtf8(tpsz);
+            insertStatement.bindValue(c, tpsz ? QVariant(viewToQString(sv)) : QVariant());
+        }
+        if (insertStatement.exec())
+            ++nPendingInserts;
+        else
+        {
+            m_messagesFromLatestSave << tr("Executing insert statement '%1' failed with error: '%2'").arg(sInsertStatement, insertStatement.lastError().text());
+            rv = false;
+            return rv;
+        }
+        if (nPendingInserts >= 100000) // Limit to avoid too big transactions, limit is chosen arbitrarily and may need adjusting.
+        {
+            if (!commit())
+                return rv;
+            if (!beginTransaction())
+                return rv;
+            nPendingInserts = 0;
+        }
+    }
+    if (nPendingInserts > 0)
+        rv = commit();
+
+    return rv;
+}
+
 auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getSaveOptions() const -> SaveOptions
 {
     return SaveOptions(this);
@@ -392,6 +517,7 @@ template <class Stream_T>
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, const SaveOptions& options)
 {
     DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) writeTimer;
+    m_messagesFromLatestSave.clear();
 
     const QChar cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
     const QChar cEnc = options.enclosingChar();
@@ -485,6 +611,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
     m_sTitle.clear();
     m_loadOptionsInOpen = LoadOptions();
     m_messagesFromLatestOpen.clear();
+    m_messagesFromLatestSave.clear();
     if (m_pUndoStack)
         m_pUndoStack->clear();
 }
