@@ -9,13 +9,18 @@
 #include <dfg/qt/CsvFileDataSource.hpp>
 #include <dfg/qt/connectHelper.hpp>
 #include <dfg/math.hpp>
+#include <dfg/qt/sqlTools.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
 #include <QDateTime>
+#include <QFile>
 #include <QFileInfo>
 #include <QDialog>
 #include <QSpinBox>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QSqlRecord>
 #include <QGridLayout>
 #include <QSortFilterProxyModel>
 #include <QThread>
@@ -924,4 +929,125 @@ TEST(dfgQt, CsvFileDataSource)
             EXPECT_TRUE(strings.empty());
         }
     }
+}
+
+TEST(dfgQt, SQLiteDatabase)
+{
+    using namespace ::DFG_MODULE_NS(sql);
+
+    EXPECT_TRUE(SQLiteDatabase::defaultConnectOptionsForWriting().isEmpty()); // Implementation detail, feel free to change is implementation changes.
+
+    const QString sTestFilePath = "testfiles/sqliteDatabase_test_file_63585.sqlite3";
+    EXPECT_TRUE(!QFile::exists(sTestFilePath) || QFile::remove(sTestFilePath));
+
+    // Testing that non-existing file flag won't be created by constructor when using read-only connect option.
+    {
+        SQLiteDatabase db(sTestFilePath);
+        EXPECT_FALSE(db.isOpen());
+    }
+
+    // Testing custom connect options
+    {
+        SQLiteDatabase db(sTestFilePath, "testing");
+        EXPECT_EQ("testing", db.connectOptions());
+    }
+
+    QMap<QString, QStringList> tableNameToColumnNames;
+    tableNameToColumnNames["first_test_table"] = QStringList() << "Column0" << "Column1";
+    tableNameToColumnNames["second_test_table"] = QStringList() << "id";
+    const int nFirstTestTableRowCount = 10;
+
+    const auto createTestContent = [](int r, int c) { return QString("%1,%2").arg(r).arg(c); };
+
+    // Creating tables to test database
+    {
+        SQLiteDatabase db(sTestFilePath, SQLiteDatabase::defaultConnectOptionsForWriting());
+        EXPECT_TRUE(db.isOpen());
+        EXPECT_EQ(SQLiteDatabase::defaultConnectOptionsForWriting(), db.connectOptions());
+
+        EXPECT_TRUE(db.transaction());
+        auto statement = db.createQuery();
+        const QString sCreateStatement = QString("CREATE TABLE %1 ('%2' TEXT, '%3' TEXT)").arg(tableNameToColumnNames.firstKey(), tableNameToColumnNames.first()[0], tableNameToColumnNames.first()[1]);
+        EXPECT_FALSE(SQLiteDatabase::isSelectQuery(sCreateStatement));
+        EXPECT_TRUE(statement.prepare(sCreateStatement));
+        EXPECT_TRUE(statement.exec());
+        EXPECT_TRUE(statement.exec(QString("CREATE TABLE %1 (id TEXT)").arg(tableNameToColumnNames.keys()[1])));
+
+        const QString sInsertStatement = QString("INSERT INTO %1 VALUES(?, ?)").arg(tableNameToColumnNames.firstKey());
+        EXPECT_TRUE(statement.prepare(sInsertStatement));
+        EXPECT_FALSE(SQLiteDatabase::isSelectQuery(sInsertStatement));
+        for (int r = 0; r < nFirstTestTableRowCount; ++r)
+        {
+            statement.addBindValue(createTestContent(r, 0));
+            statement.addBindValue(createTestContent(r, 1));
+            EXPECT_TRUE(statement.exec());
+        }
+        EXPECT_TRUE(db.commit());
+        EXPECT_TRUE(db.isOpen());
+        db.close();
+        EXPECT_FALSE(db.isOpen());
+    }
+
+    // Reading from new test database
+    {
+        SQLiteDatabase db(sTestFilePath);
+        EXPECT_TRUE(db.isOpen());
+        EXPECT_EQ("QSQLITE_OPEN_READONLY", db.connectOptions()); // Implementation detail, feel free to change is implementation changes.
+
+        EXPECT_EQ(tableNameToColumnNames.keys(), db.tableNames());
+
+        auto query = db.createQuery();
+        const QString sQuery = QString("SELECT * FROM %1;").arg(tableNameToColumnNames.firstKey());
+        EXPECT_TRUE(db.isSelectQuery(sQuery));
+        EXPECT_TRUE(query.prepare(sQuery));
+        EXPECT_TRUE(query.exec());
+
+        auto rec = query.record();
+        const auto nColCount = rec.count();
+        EXPECT_EQ(2, nColCount);
+
+        EXPECT_EQ(tableNameToColumnNames.first()[0], rec.fieldName(0));
+        EXPECT_EQ(tableNameToColumnNames.first()[1], rec.fieldName(1));
+
+        // Reading records and filling table.
+        size_t nRowCount = 0;
+        for (int r = 0; query.next(); ++r, ++nRowCount)
+        {
+            for (int c = 0; c < nColCount; ++c)
+                EXPECT_EQ(createTestContent(r, c), query.value(c).toString());
+        }
+        EXPECT_EQ(nFirstTestTableRowCount, nRowCount);
+    }
+
+    // Testing static getters
+    {
+        // isSQLiteFileExtension()
+        EXPECT_TRUE(SQLiteDatabase::isSQLiteFileExtension("db"));
+        EXPECT_TRUE(SQLiteDatabase::isSQLiteFileExtension("sqlite"));
+        EXPECT_TRUE(SQLiteDatabase::isSQLiteFileExtension("sqlite3"));
+        EXPECT_FALSE(SQLiteDatabase::isSQLiteFileExtension("sqlitee"));
+
+        // isSQLiteFile()
+        {
+            const QString sCustomExtensionPath = sTestFilePath + "custom_ext";
+            EXPECT_TRUE(QFile::copy(sTestFilePath, sCustomExtensionPath));
+            EXPECT_TRUE(QFileInfo::exists(sCustomExtensionPath));
+            EXPECT_TRUE(SQLiteDatabase::isSQLiteFile(sTestFilePath));
+            EXPECT_TRUE(SQLiteDatabase::isSQLiteFile(sCustomExtensionPath));
+            EXPECT_FALSE(SQLiteDatabase::isSQLiteFile(sCustomExtensionPath, true));
+            EXPECT_FALSE(SQLiteDatabase::isSQLiteFile("testfiles/test_5x5_sep1F_content_row_comma_column.csv"));
+            EXPECT_FALSE(SQLiteDatabase::isSQLiteFile("testfiles/test_5x5_sep1F_content_row_comma_column.csv", true));
+            EXPECT_TRUE(QFile::remove(sCustomExtensionPath));
+        }
+
+        // getSQLiteFileTableNames()
+        EXPECT_EQ(tableNameToColumnNames.keys(), SQLiteDatabase::getSQLiteFileTableNames(sTestFilePath));
+        EXPECT_TRUE(SQLiteDatabase::getSQLiteFileTableNames("testfiles/test_5x5_sep1F_content_row_comma_column.csv").isEmpty());
+
+        // getSQLiteFileTableColumnNames
+        EXPECT_EQ(tableNameToColumnNames.values()[0], SQLiteDatabase::getSQLiteFileTableColumnNames(sTestFilePath, tableNameToColumnNames.keys()[0]));
+        EXPECT_EQ(tableNameToColumnNames.values()[1], SQLiteDatabase::getSQLiteFileTableColumnNames(sTestFilePath, tableNameToColumnNames.keys()[1]));
+    }
+
+    EXPECT_TRUE(QFile::remove(sTestFilePath));
 }
