@@ -616,6 +616,51 @@ TEST(dfgQt, CsvItemModel_readFormatUsageOnWrite)
 #undef DFG_TEMP_BOM
 }
 
+// Tests for SQLite handling (open, save)
+TEST(dfgQt, CsvItemModel_SQLite)
+{
+    // Testing that csv -> SQLite -> csv roundtrip is non-modifying given that sqlite -> csv is done with correct save options.
+    using namespace DFG_MODULE_NS(qt);
+    const char szFilePath[] = "testfiles/example3.csv";
+    const QString sSqlitePath = QString("testfiles/generated/csvItemModel_sqliteTest.sqlite3");
+    const QString sCsvFromSqlitePath = QString("testfiles/generated/csvItemModel_sqliteTest.csv");
+    const auto initialBytes = ::DFG_MODULE_NS(io)::fileToByteContainer<std::string>(szFilePath) + "\r\n";
+    QStringList columnNamesInCsv;
+    auto originalSaveOptions = CsvItemModel().getSaveOptions();
+
+    // Removing existing temp files
+    {
+        QFile::remove(sSqlitePath);
+        QFile::remove(sCsvFromSqlitePath);
+    }
+
+    // Reading from csv and exporting as SQLite
+    {
+        CsvItemModel model;
+        EXPECT_TRUE(model.openFile(szFilePath));
+        columnNamesInCsv = model.getColumnNames();
+        originalSaveOptions = model.getSaveOptions();
+        EXPECT_TRUE(model.exportAsSQLiteFile(sSqlitePath));
+    }
+
+    // Reading from SQLite and writing as csv
+    {
+        CsvItemModel model;
+        const auto tableNames = ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableNames(sSqlitePath);
+        ASSERT_EQ(1, tableNames.size());
+        const auto columnNames = ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableColumnNames(sSqlitePath, tableNames.front());
+        EXPECT_EQ(columnNamesInCsv, columnNames);
+        EXPECT_TRUE(model.openFromSqlite(sSqlitePath, QString("SELECT * FROM '%1';").arg(tableNames.front())));
+        EXPECT_TRUE(model.saveToFile(sCsvFromSqlitePath, originalSaveOptions));
+    }
+
+    const auto finalBytes = ::DFG_MODULE_NS(io)::fileToByteContainer<std::string>(qStringToFileApi8Bit(sCsvFromSqlitePath));
+    EXPECT_EQ(initialBytes, finalBytes);
+
+    EXPECT_TRUE(QFile::remove(sSqlitePath));
+    EXPECT_TRUE(QFile::remove(sCsvFromSqlitePath));
+}
+
 TEST(dfgQt, SpanSlider)
 {
     // Simply test that this compiles and links.
@@ -937,7 +982,7 @@ TEST(dfgQt, SQLiteDatabase)
 
     EXPECT_TRUE(SQLiteDatabase::defaultConnectOptionsForWriting().isEmpty()); // Implementation detail, feel free to change is implementation changes.
 
-    const QString sTestFilePath = "testfiles/sqliteDatabase_test_file_63585.sqlite3";
+    const QString sTestFilePath = "testfiles/generated/sqliteDatabase_test_file_63585.sqlite3";
     EXPECT_TRUE(!QFile::exists(sTestFilePath) || QFile::remove(sTestFilePath));
 
     // Testing that non-existing file flag won't be created by constructor when using read-only connect option.
