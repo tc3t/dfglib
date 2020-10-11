@@ -48,14 +48,18 @@ public:
 
     void close();
 
+    // Begins transaction. Note from Qt 5.13 documentation: "When using transactions, you must start the transaction before you create your query"
     bool transaction();
     bool commit();
 
     QSqlError lastError() const;
     QString lastErrorText() const;
 
+    QString connectOptions() const;
+
     QSqlRecord record(const QString& sTableName) const;
     
+    // Note: if using transaction, see comment in transaction().
     QSqlQuery createQuery();
 
     // Returns true iff query looks like a select.

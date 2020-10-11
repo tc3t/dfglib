@@ -29,6 +29,9 @@ DFG_END_INCLUDE_QT_HEADERS
 ::DFG_MODULE_NS(sql)::SQLiteDatabase::SQLiteDatabase(const QString& sFilePath, const QString& sConnectOptions)
 {
     m_spDatabase.reset(new QSqlDatabase);
+    // If file doesn't exist and having read-only connect option, not creating the file.
+    if (!QFileInfo::exists(sFilePath) && sConnectOptions.contains("QSQLITE_OPEN_READONLY"))
+        return;
     *m_spDatabase = openSQLiteDatabase(sFilePath, sConnectOptions);
 }
 
@@ -41,7 +44,12 @@ DFG_END_INCLUDE_QT_HEADERS
 void ::DFG_MODULE_NS(sql)::SQLiteDatabase::close()
 {
     if (m_spDatabase)
+    {
+        const auto sConnectionName = m_spDatabase->connectionName();
         m_spDatabase->close();
+        *m_spDatabase = QSqlDatabase();
+        QSqlDatabase::removeDatabase(sConnectionName);
+    }
 }
 
 bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::commit()
@@ -72,6 +80,11 @@ auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::tableNames(const QSql::TableType type
 bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isOpen() const
 {
     return (m_spDatabase) ? m_spDatabase->isOpen() : false;
+}
+
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::connectOptions() const -> QString
+{
+    return (m_spDatabase) ? m_spDatabase->connectOptions() : QString();
 }
 
 auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::record(const QString& sTableName) const -> QSqlRecord
