@@ -418,13 +418,6 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const
         return rv;
     }
     const auto nRowCount = this->rowCount();
-    auto insertStatement = db.createQuery();
-    if (!insertStatement.prepare(sInsertStatement))
-    {
-        m_messagesFromLatestSave << tr("Preparing insert statement '%1' failed with error: '%2'").arg(sInsertStatement, insertStatement.lastError().text());
-        rv = false;
-        return rv;
-    }
 
     const auto beginTransaction = [&]()
         {
@@ -451,6 +444,14 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const
 
     if (!beginTransaction())
         return rv;
+    auto insertStatement = db.createQuery();
+    if (!insertStatement.prepare(sInsertStatement))
+    {
+        m_messagesFromLatestSave << tr("Preparing insert statement '%1' failed with error: '%2'").arg(sInsertStatement, insertStatement.lastError().text());
+        rv = false;
+        return rv;
+    }
+
     size_t nPendingInserts = 0;
     rv = true;
     for (int r = 0; r < nRowCount; ++r)
