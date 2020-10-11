@@ -359,6 +359,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
     return saveToFileImpl(sPath, outFile, outFile.intermediateFileStream(), options);
 }
 
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const QString& sPath)
+{
+    return exportAsSQLiteFile(sPath, defaultSaveOptions(this));
+}
+
 bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const QString& sPath, const SaveOptions& options)
 {
     using SQLiteDatabase = ::DFG_MODULE_NS(sql)::SQLiteDatabase;
@@ -1105,6 +1110,11 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
     return true;
 }
 
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
+{
+    return openFromSqlite(sDbFilePath, sQuery, getLoadOptionsForFile(sDbFilePath));
+}
+
 bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions loadOptions)
 {
     // Limiting completer usage by file size is highly coarse for databases, but at least this can prevent simple huge query cases from using completers.
@@ -1122,6 +1132,18 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowCount(const QModelIndex&
 int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnCount(const QModelIndex& parent /*= QModelIndex()*/) const
 {
     return (!parent.isValid()) ? getColumnCount() : 0;
+}
+
+auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnNames() const -> QStringList
+{
+    const auto nCount = columnCount();
+    QStringList names;
+    names.reserve(nCount);
+    for(int c = 0; c < nCount; ++c)
+    {
+        names.push_back(this->getHeaderName(c));
+    }
+    return names;
 }
 
 auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::RawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R

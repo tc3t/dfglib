@@ -194,6 +194,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool saveToFile(const QString& sPath);
         bool saveToFile(const QString& sPath, const SaveOptions& options);
 
+        bool exportAsSQLiteFile(const QString& sPath);
         bool exportAsSQLiteFile(const QString& sPath, const SaveOptions& options);
 
         // Saves data to stream using default SaveOptions (in typical case means UTF-8 encoding with BOM and the same control chars as what was used in read except for EOL-char).
@@ -209,6 +210,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openNewTable();
         bool mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other);
         bool openFile(const QString& sDbFilePath);
+        bool openFromSqlite(const QString& sDbFilePath, const QString& sQuery);
         bool openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions loadOptions);
         bool openFile(QString sDbFilePath, LoadOptions loadOptions);
         bool importFiles(const QStringList& paths);
@@ -238,6 +240,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int getRowCountUpperBound() const; // Returns upper bound for row count (note that effective maximum can be much less)
         int getColumnCountUpperBound() const; // Returns upper bound for column count (note that effective maximum can be much less)
 
+        QStringList getColumnNames() const;
         const QString& getHeaderName(const int nCol) const { return (isValidColumn(nCol)) ? m_vecColInfo[nCol].m_name : s_sEmpty; }
 
         ColType getColType(const int nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_type : ColTypeText); }
