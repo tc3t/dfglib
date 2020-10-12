@@ -222,14 +222,18 @@ CsvTableView_dateFormat=yyyy-MM-dd
 CsvTableView_dateTimeFormat=yyyy-MM-dd hh:mm:ss.zzz
 </pre>
 
-### csv-file -specific configuration
+### File specific configuration
 
-File-specific configuration can be used for example to
-* Read the file correctly (e.g. in case of less common format)
+File specific configuration can be used for example to:
+* Read the file correctly (e.g. in case of less common csv format)
 * Optimize the read speed by disabling unneeded parsing features
 * Set UI column widths so that content shows in preferred way.
+* Define charts that get shown automatically after opening
+* Define read filters
 
-Configuration is defined through a .conf file in path \<csv-file path\>.conf. File can be generated from table view context menu from "Config" -> "Save config file...". The .conf file is a key-value map encoded into a csv-file:
+Note that while most of the settings are csv-file specific, configuration file can also be used with SQLite-file.
+
+Configuration is defined through a .conf file in path \<file path\>.conf. File can be generated from table view context menu from "Config" -> "Save config file...". The .conf file is a key-value map encoded into a csv-file:
 
 * Supports URI-like lookup, where depth is implemented by increasing column index for key-item.
 * Key is the combination of first item in a row and if not on the first column, prepended by most recent key in preceding column.
@@ -250,8 +254,9 @@ Available keys:
 | properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
 | properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
 | properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, syntax guide is available from UI. | Since 1.6.0 |
+| properties/sqlQuery | For SQLite files, defines the query whose result is populated to table. | Valid SQLite query | Since 1.6.1 (commit [24c1ad78](https://github.com/tc3t/dfglib/commit/24c1ad78eac2a6f74b6ee1be0dede0d5645fef07)) |
 
-#### Example .conf-file (might look better when opened in a csv-editor)
+#### Example .conf-file for csv-file (might look better when opened in a csv-editor)
 <pre>
 bom_writing,1,,
 columnsByIndex,,,
@@ -271,7 +276,14 @@ properties,,,
 ,includeRows,100:200
 ,includeColumns,0:5
 ,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"
-,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}
+,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
+</pre>
+
+#### Example .conf-file for SQLite-file (might look better when opened in a csv-editor)
+<pre>
+properties,,,
+,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
+,sqlQuery,SELECT * FROM some_table LIMIT 1000;,
 </pre>
 
 ## Third party code
