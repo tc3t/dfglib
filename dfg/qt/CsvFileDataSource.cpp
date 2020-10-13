@@ -9,75 +9,31 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 ::DFG_MODULE_NS(qt)::CsvFileDataSource::CsvFileDataSource(const QString& sPath, QString sId)
-    : m_format(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8)
+    : FileDataSource(sPath, sId)
+    , m_format(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8)
 {
-    this->m_uniqueId = std::move(sId);
-    this->m_bAreChangesSignaled = true;
-    m_sPath = qStringToFileApi8Bit(sPath);
-
     if (!privUpdateStatusAndAvailability())
         return;
 }
 
 ::DFG_MODULE_NS(qt)::CsvFileDataSource::~CsvFileDataSource() = default;
 
-bool ::DFG_MODULE_NS(qt)::CsvFileDataSource::privUpdateStatusAndAvailability()
+void ::DFG_MODULE_NS(qt)::CsvFileDataSource::updateColumnInfoImpl()
 {
     using namespace DFG_MODULE_NS(io);
-    using namespace DFG_MODULE_NS(os);
-    const auto bOldAvailability = isAvailable();
-    bool bAvailable = true;
-    if (!isPathFileAvailable(m_sPath, FileModeExists))
-    {
-        m_sStatusDescription = tr("No file exists in given path '%1'").arg(fileApi8BitToQString(m_sPath));
-        m_spFileWatcher.reset(nullptr);
-        bAvailable = false;
-    }
-    else if (!isPathFileAvailable(m_sPath, FileModeRead))
-    {
-        m_sStatusDescription = tr("File exists but is not readable in path '%1'").arg(fileApi8BitToQString(m_sPath));
-        bAvailable = false;
-    }
 
-    if (bAvailable)
+    m_format = peekCsvFormatFromFile(m_sPath, 2048);
+    auto istrm = createInputStreamBinaryFile(m_sPath);
+    m_columnIndexToColumnName.clear_noDealloc();
+    DelimitedTextReader::readRow<char>(istrm, m_format, [&](const size_t nCol, const char* const p, const size_t nSize)
     {
-        if (!m_spFileWatcher)
-        {
-            m_spFileWatcher.reset(new QFileSystemWatcher(QStringList() << fileApi8BitToQString(m_sPath), this));
-            DFG_QT_VERIFY_CONNECT(connect(m_spFileWatcher.data(), &QFileSystemWatcher::fileChanged, this, &CsvFileDataSource::onFileChanged));
-        }
-        if (bOldAvailability != bAvailable || m_columnIndexToColumnName.empty())
-        {
-            m_format = peekCsvFormatFromFile(m_sPath, 2048);
-            auto istrm = createInputStreamBinaryFile(m_sPath);
-            m_columnIndexToColumnName.clear_noDealloc();
-            DelimitedTextReader::readRow<char>(istrm, m_format, [&](const size_t nCol, const char* const p, const size_t nSize)
-            {
-                m_columnIndexToColumnName.insert(saturateCast<DataSourceIndex>(nCol), StringViewUtf8(TypedCharPtrUtf8R(p), nSize));
-            });
-            m_sStatusDescription.clear();
-        }
-    }
-
-    setAvailability(bAvailable);
-    return true;
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::statusDescriptionImpl() const -> String
-{
-    return m_sStatusDescription;
+        m_columnIndexToColumnName.insert(saturateCast<DataSourceIndex>(nCol), StringViewUtf8(TypedCharPtrUtf8R(p), nSize));
+    });
 }
 
 QObject* ::DFG_MODULE_NS(qt)::CsvFileDataSource::underlyingSource()
 {
     return nullptr; // Don't have an underlying source as QObject
-}
-
-void ::DFG_MODULE_NS(qt)::CsvFileDataSource::onFileChanged()
-{
-    m_columnIndexToColumnName.clear_noDealloc();
-    privUpdateStatusAndAvailability();
-    Q_EMIT sigChanged();
 }
 
 namespace DFG_ROOT_NS { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
@@ -163,44 +119,4 @@ void ::DFG_MODULE_NS(qt)::CsvFileDataSource::forEachElement_byColumn(DataSourceI
 {
     ::DFG_MODULE_NS(cont)::TableCsv<char, uint32> table;
     table.readFromFile(m_sPath, m_format, DFG_DETAIL_NS::CsvCellHandler(nCol, queryDetails, &m_columnDataTypes, handler));
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::columnCount() const -> DataSourceIndex
-{
-    return (!m_columnIndexToColumnName.empty()) ? m_columnIndexToColumnName.backKey() + 1 : 0;
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::columnIndexes() const -> IndexList
-{
-    IndexList indexes;
-    for (const auto& item : m_columnIndexToColumnName)
-    {
-        indexes.push_back(item.first);
-    }
-    return indexes;
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::columnIndexByName(const StringViewUtf8 sv) const -> DataSourceIndex
-{
-    return m_columnIndexToColumnName.keyByValue(sv, GraphDataSource::invalidIndex());
-}
-
-void ::DFG_MODULE_NS(qt)::CsvFileDataSource::enable(bool b)
-{
-    DFG_UNUSED(b);
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::columnDataTypes() const -> ColumnDataTypeMap
-{
-    return m_columnDataTypes;
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvFileDataSource::columnNames() const -> ColumnNameMap
-{
-    ColumnNameMap rv;
-    for (const auto& item : m_columnIndexToColumnName)
-    {
-        rv[item.first] = QString::fromUtf8(item.second(m_columnIndexToColumnName).c_str().c_str());
-    }
-    return rv;
 }
