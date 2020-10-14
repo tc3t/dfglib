@@ -13,6 +13,7 @@
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
@@ -974,6 +975,40 @@ TEST(dfgQt, CsvFileDataSource)
             EXPECT_TRUE(strings.empty());
         }
     }
+
+    // Testing that change signaling works
+    {
+        CsvFileDataSource csvSource(sTestFilePath, "csvSource");
+        bool bChangeNotificationReceived = false;
+        DFG_QT_VERIFY_CONNECT(QObject::connect(&csvSource, &CsvFileDataSource::sigChanged, [&]() { bChangeNotificationReceived = true;}));
+        QFile file(sTestFilePath);
+        file.open(QIODevice::WriteOnly | QIODevice::Truncate);
+        file.write("a,b\n1,2");
+        file.close();
+
+        for (int i = 0; i < 10 && !bChangeNotificationReceived; ++i)
+        {
+            QCoreApplication::processEvents();
+            QThread::msleep(10);
+        }
+        // Checking that change notification was received and that new columns are effective.
+        EXPECT_TRUE(bChangeNotificationReceived);
+        ASSERT_EQ(2, csvSource.columnNames().size());
+        EXPECT_EQ("a", csvSource.columnNames()[0]);
+        EXPECT_EQ("b", csvSource.columnNames()[1]);
+        std::vector<std::string> elems;
+        csvSource.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
+        {
+            std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), std::back_inserter(elems), [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
+        });
+        csvSource.forEachElement_byColumn(1, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
+        {
+            std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), std::back_inserter(elems), [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
+        });
+        EXPECT_EQ(std::vector<std::string>({"a", "1", "b", "2"}), elems);
+    }
+
+    QFile::remove(sTestFilePath);
 }
 
 TEST(dfgQt, SQLiteDatabase)
