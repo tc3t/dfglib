@@ -921,16 +921,24 @@ TEST(dfgQt, StringMatchDefinition)
     }
 }
 
-TEST(dfgQt, CsvFileDataSource)
+namespace
+{
+template <class Source_T>
+static void testFileDataSource(const QString& sExtension,
+                               std::function<std::unique_ptr<Source_T> (QString, QString)> sourceCreator,
+                               std::function<bool (QString, ::DFG_MODULE_NS(qt)::CsvItemModel&)> fileCreator,
+                               std::function<bool (QString, ::DFG_MODULE_NS(qt)::CsvItemModel&)> editer)
 {
     using namespace ::DFG_ROOT_NS;
     using namespace ::DFG_MODULE_NS(qt);
 
-    const QString sTestFilePath("testfiles/generated/CsvFileDataSourceTest.csv");
+    const QString sTestFilePath("testfiles/generated/tempFileDataSourceTest." + sExtension);
+    QFile::remove(sTestFilePath);
+
     {
-        QFile file(sTestFilePath);
-        file.open(QIODevice::WriteOnly);
-        file.write("Col0,Col1,123.456\nab,b,18.9.2020\nb,ab,2020-09-18\nab,c,2020-09-18 12:00:00\n");
+        CsvItemModel model;
+        model.openString("Col0,Col1,123.456\nab,b,18.9.2020\nb,ab,2020-09-18\nab,c,2020-09-18 12:00:00\n");
+        ASSERT_TRUE(fileCreator(sTestFilePath, model));
     }
 
     const size_t nColCount = 3;
@@ -949,8 +957,9 @@ TEST(dfgQt, CsvFileDataSource)
         std::vector<double> rows;
         std::vector<std::string> strings;
         std::vector<double> values;
-        CsvFileDataSource csvSource(sTestFilePath, "csvSource");
-        csvSource.forEachElement_byColumn(c, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
+        auto spSource = sourceCreator(sTestFilePath, "csvSource");
+        auto& source = *spSource;
+        source.forEachElement_byColumn(c, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
         {
             rows.insert(rows.end(), sourceSpan.rows().begin(), sourceSpan.rows().end());
             const auto nOldSize = static_cast<uint16>(strings.size());
@@ -978,13 +987,15 @@ TEST(dfgQt, CsvFileDataSource)
 
     // Testing that change signaling works
     {
-        CsvFileDataSource csvSource(sTestFilePath, "csvSource");
+        auto spSource = sourceCreator(sTestFilePath, "csvSource");
+        auto& source = *spSource;
         bool bChangeNotificationReceived = false;
-        DFG_QT_VERIFY_CONNECT(QObject::connect(&csvSource, &CsvFileDataSource::sigChanged, [&]() { bChangeNotificationReceived = true;}));
-        QFile file(sTestFilePath);
-        file.open(QIODevice::WriteOnly | QIODevice::Truncate);
-        file.write("a,b\n1,2");
-        file.close();
+        DFG_QT_VERIFY_CONNECT(QObject::connect(&source, &CsvFileDataSource::sigChanged, [&]() { bChangeNotificationReceived = true;}));
+        {
+            CsvItemModel model;
+            model.openString("a,b\n1,2");
+            EXPECT_TRUE(editer(sTestFilePath, model));
+        }
 
         for (int i = 0; i < 10 && !bChangeNotificationReceived; ++i)
         {
@@ -993,15 +1004,15 @@ TEST(dfgQt, CsvFileDataSource)
         }
         // Checking that change notification was received and that new columns are effective.
         EXPECT_TRUE(bChangeNotificationReceived);
-        ASSERT_EQ(2, csvSource.columnNames().size());
-        EXPECT_EQ("a", csvSource.columnNames()[0]);
-        EXPECT_EQ("b", csvSource.columnNames()[1]);
+        ASSERT_EQ(2, source.columnNames().size());
+        EXPECT_EQ("a", source.columnNames()[0]);
+        EXPECT_EQ("b", source.columnNames()[1]);
         std::vector<std::string> elems;
-        csvSource.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
+        source.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
         {
             std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), std::back_inserter(elems), [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
         });
-        csvSource.forEachElement_byColumn(1, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
+        source.forEachElement_byColumn(1, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
         {
             std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), std::back_inserter(elems), [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
         });
@@ -1009,6 +1020,15 @@ TEST(dfgQt, CsvFileDataSource)
     }
 
     QFile::remove(sTestFilePath);
+}
+}
+
+TEST(dfgQt, CsvFileDataSource)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    auto sourceCreator = [](const QString& sPath, const QString& sId) { return std::unique_ptr<CsvFileDataSource>(new CsvFileDataSource(sPath, sId)); };
+    auto fileCreator = [](QString sPath, CsvItemModel& model) { return model.saveToFile(sPath); };
+    testFileDataSource<CsvFileDataSource>("csv", sourceCreator, fileCreator, fileCreator);
 }
 
 TEST(dfgQt, SQLiteDatabase)
