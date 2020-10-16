@@ -81,6 +81,8 @@ public:
     // Returns column names from given SQLite file and it's table, empty if failed to determine names (e.g. if file or table doesn't exist)
     static QStringList getSQLiteFileTableColumnNames(const QString& sDbFilePath, const QString& sTableName);
 
+    static QStringList getSQLiteFileTableColumnNames(const QSqlRecord& record);
+
     std::unique_ptr<QSqlDatabase> m_spDatabase;
 };
 

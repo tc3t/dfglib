@@ -111,16 +111,20 @@ auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableNames(const QString
     return SQLiteDatabase(sDbFilePath).tableNames(type);
 }
 
+auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableColumnNames(const QSqlRecord& record) -> QStringList
+{
+    QStringList rv;
+    for (int i = 0, nCount = record.count(); i < nCount; ++i)
+        rv.push_back(record.fieldName(i));
+    return rv;
+}
+
 auto ::DFG_MODULE_NS(sql)::SQLiteDatabase::getSQLiteFileTableColumnNames(const QString& sDbFilePath, const QString& sTableName) -> QStringList
 {
     SQLiteDatabase database(sDbFilePath);
     if (!database.isOpen())
         return QStringList();
-    auto record = database.record(sTableName);
-    QStringList rv;
-    for (int i = 0, nCount = record.count(); i < nCount; ++i)
-        rv.push_back(record.fieldName(i));
-    return rv;
+    return getSQLiteFileTableColumnNames(database.record(sTableName));
 }
 
 bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFileExtension(const QString& sExtensionWithoutDot)
