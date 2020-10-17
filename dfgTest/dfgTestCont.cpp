@@ -703,6 +703,28 @@ TEST(dfgCont, MapToStringViews)
         ASSERT_TRUE(m.keyByValue("c") != nullptr);
         EXPECT_EQ(30, *m.keyByValue("c")); // This is implementation detail (returned value can be either 30 or 40), feel free to adjust if implementation changes.
     }
+
+    // find
+    {
+        MapToStringViews<int, std::string> m;
+        m.insert(-20, "a");
+        m.insert(40, "abc");
+        EXPECT_EQ(m.end(), m.find(0));
+        auto iterM20 = m.find(-20);
+        EXPECT_NE(m.end(), iterM20);
+        if (iterM20 != m.end())
+        {
+            EXPECT_EQ(-20, iterM20->first);
+            EXPECT_EQ("a", iterM20->second(m));
+        }
+        auto iter40 = m.find(40);
+        EXPECT_NE(m.end(), iter40);
+        if (iter40 != m.end())
+        {
+            EXPECT_EQ(40, iter40->first);
+            EXPECT_EQ("abc", iter40->second(m));
+        }
+    }
 }
 
 TEST(dfgCont, SortedSequence)

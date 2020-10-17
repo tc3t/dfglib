@@ -102,6 +102,12 @@ public:
         return m_keyToStringDetails.end();
     }
 
+    template <class T>
+    const_iterator find(const T& key) const
+    {
+        return m_keyToStringDetails.find(key);
+    }
+
     // Precondition: !empty()
     const Key_T&       frontKey()   const { DFG_ASSERT_UB(!this->empty()); return this->begin()->first;             } 
     const StringViewRv frontValue() const { DFG_ASSERT_UB(!this->empty()); return this->begin()->second(*this);     }
