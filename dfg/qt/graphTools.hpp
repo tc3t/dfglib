@@ -4,6 +4,7 @@
 #include "qtIncludeHelpers.hpp"
 #include "containerUtils.hpp"
 #include "../dfgAssert.hpp"
+#include "../cont/MapToStringViews.hpp"
 #include "../cont/MapVector.hpp"
 #include "../cont/valueArray.hpp"
 #include "../cont/ViewableSharedPtr.hpp"
@@ -384,5 +385,43 @@ public:
     bool m_bRefreshPending = false; // Set to true if refresh has been scheduled so new refresh requests can be ignored.
 
 }; // Class GraphControlAndDisplayWidget
+
+
+namespace DFG_DETAIL_NS
+{
+    // Helper class that can be used for feching data from source to a temporary buffer and feeding it to data requester in 
+    // batches.
+    class SourceSpanBuffer
+    {
+    public:
+        using QueryCallback = GraphDataSource::ForEachElementByColumHandler;
+        using ColumnDataTypeMap = GraphDataSource::ColumnDataTypeMap;
+
+        SourceSpanBuffer(DataSourceIndex nCol, const DataQueryDetails& queryDetails, ColumnDataTypeMap* pColumnDataTypeMap, QueryCallback func);
+        ~SourceSpanBuffer();
+
+        // Stores string data from source to temporary buffer and if buffer size get above threashold, calls submitData()
+        void storeToBuffer(const DataSourceIndex nRow, const StringViewUtf8& sv);
+
+        void storeToBuffer(const DataSourceIndex nRow, const QVariant& var);
+
+        // Submits buffered data to QueryCallback
+        void submitData();
+
+        static constexpr size_t contentBlockSize()
+        {
+            return 50000; // Arbitrarily chosen
+        }
+
+        DataSourceIndex m_nColumn;
+        DataQueryDetails m_queryDetails;
+        ColumnDataTypeMap* m_pColumnDataTypeMap;
+        QueryCallback m_queryCallback;
+        ::DFG_MODULE_NS(cont)::MapToStringViews<DataSourceIndex, StringUtf8> m_stringBuffer;
+        std::vector<double> m_rowBuffer;
+        std::vector<double> m_valueBuffer;
+        std::vector<StringViewUtf8> m_stringViewBuffer;
+    }; // class SourceSpanBuffer
+}
 
 } } // module namespace

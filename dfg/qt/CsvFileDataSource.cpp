@@ -46,12 +46,9 @@ namespace DFG_ROOT_NS { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
         CsvCellHandler(DataSourceIndex nCol, const DataQueryDetails& queryDetails, ColumnDataTypeMap* pColumnDataTypeMap, QueryCallback func)
             : m_nColumn(nCol)
-            , m_queryDetails(queryDetails)
-            , m_pColumnDataTypeMap(pColumnDataTypeMap)
-            , m_queryCallback(func)
+            , m_sourceSpanBuffer(nCol, queryDetails, pColumnDataTypeMap, func)
         {
-            DFG_REQUIRE(m_queryCallback.operator bool());
-            m_stringBuffer.reserveContentStorage_byBaseCharCount(contentBlockSize() + 500);
+            DFG_REQUIRE(func.operator bool());
         }
 
         static constexpr size_t contentBlockSize()
@@ -66,9 +63,7 @@ namespace DFG_ROOT_NS { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
                 return;
             // Collecting strings to a separate buffer and sending data to query callback in batches.
             // If optimization is needed, note that in optimal case where non-enclosed UTF8 input is read from memory mapped file, pData is stable so could probably avoid the need for m_stringBuffer completely.
-            m_stringBuffer.insert(nRow, StringViewUtf8(TypedCharPtrUtf8R(pData), nCount));
-            if (m_stringBuffer.contentStorageSize() > contentBlockSize())
-                callQueryCallback();
+            m_sourceSpanBuffer.storeToBuffer(nRow, StringViewUtf8(TypedCharPtrUtf8R(pData), nCount));
         }
 
         void onReadDone()
@@ -78,39 +73,11 @@ namespace DFG_ROOT_NS { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
         void callQueryCallback()
         {
-            if (m_stringBuffer.empty())
-                return;
-            // Note: queryMask is ignored for now; simply passing everything regardless of the actual request.
-            const auto nCount = m_stringBuffer.size();
-            m_rowBuffer.resize(nCount);
-            m_valueBuffer.resize(nCount);
-            m_stringViewBuffer.resize(nCount);
-            auto iterRow = m_rowBuffer.begin();
-            auto iterValue = m_valueBuffer.begin();
-            auto iterViewBuffer = m_stringViewBuffer.begin();
-            for (const auto& item : m_stringBuffer)
-            {
-                *iterRow++ = static_cast<double>(item.first);
-                const auto view = item.second(m_stringBuffer);
-                *iterValue++ = GraphDataSource::cellStringToDouble(view, m_nColumn, m_pColumnDataTypeMap);
-                *iterViewBuffer++ = view.toStringView();
-            }
-            SourceDataSpan dataSpan;
-            dataSpan.setRows(m_rowBuffer);
-            dataSpan.set(m_valueBuffer);
-            dataSpan.set(m_stringViewBuffer);
-            m_queryCallback(dataSpan);
-            m_stringBuffer.clear_noDealloc();
+            m_sourceSpanBuffer.submitData();
         }
 
         DataSourceIndex m_nColumn;
-        DataQueryDetails m_queryDetails;
-        ColumnDataTypeMap* m_pColumnDataTypeMap;
-        QueryCallback m_queryCallback;
-        ::DFG_MODULE_NS(cont)::MapToStringViews<DataSourceIndex, StringUtf8> m_stringBuffer;
-        std::vector<double> m_rowBuffer;
-        std::vector<double> m_valueBuffer;
-        std::vector<StringViewUtf8> m_stringViewBuffer;
+        ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer m_sourceSpanBuffer;
     }; // class CsvCellHandler
 
 }}}

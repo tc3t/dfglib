@@ -4489,3 +4489,54 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::privForEachDataSource(std:
             func(*sp);
     });
 }
+
+::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::SourceSpanBuffer(DataSourceIndex nCol, const DataQueryDetails& queryDetails, ColumnDataTypeMap* pColumnDataTypeMap, QueryCallback func)
+    : m_nColumn(nCol)
+    , m_queryDetails(queryDetails)
+    , m_pColumnDataTypeMap(pColumnDataTypeMap)
+    , m_queryCallback(func)
+{
+    m_stringBuffer.reserveContentStorage_byBaseCharCount(contentBlockSize() + 500);
+}
+
+::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::~SourceSpanBuffer() = default;
+
+void ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::storeToBuffer(const DataSourceIndex nRow, const StringViewUtf8& sv)
+{
+    m_stringBuffer.insert(nRow, sv);
+    if (m_stringBuffer.contentStorageSize() > contentBlockSize())
+        submitData();
+}
+
+void ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::storeToBuffer(const DataSourceIndex nRow, const QVariant& var)
+{
+    // TODO: avoid QVariant -> QString -> StringUtf8 overhead.
+    storeToBuffer(nRow, qStringToStringUtf8(var.toString()));
+}
+
+void ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::submitData()
+{
+    if (m_stringBuffer.empty())
+        return;
+    // Note: queryMask is ignored for now; simply passing everything regardless of the actual request.
+    const auto nCount = m_stringBuffer.size();
+    m_rowBuffer.resize(nCount);
+    m_valueBuffer.resize(nCount);
+    m_stringViewBuffer.resize(nCount);
+    auto iterRow = m_rowBuffer.begin();
+    auto iterValue = m_valueBuffer.begin();
+    auto iterViewBuffer = m_stringViewBuffer.begin();
+    for (const auto& item : m_stringBuffer)
+    {
+        *iterRow++ = static_cast<double>(item.first);
+        const auto view = item.second(m_stringBuffer);
+        *iterValue++ = GraphDataSource::cellStringToDouble(view, m_nColumn, m_pColumnDataTypeMap);
+        *iterViewBuffer++ = view.toStringView();
+    }
+    SourceDataSpan dataSpan;
+    dataSpan.setRows(m_rowBuffer);
+    dataSpan.set(m_valueBuffer);
+    dataSpan.set(m_stringViewBuffer);
+    m_queryCallback(dataSpan);
+    m_stringBuffer.clear_noDealloc();
+}
