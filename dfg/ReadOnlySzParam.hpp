@@ -535,10 +535,13 @@ public:
         return m_nSize;
     }
 
-    size_t size()
+    size_t length() const
     {
-        return length();
+        return (isLengthCalculated()) ? m_nSize : computeLength();
     }
+
+    size_t size()       { return length(); }
+    size_t size() const { return length(); }
 
     SzPtrT c_str() const { return SzPtrT(toCharPtr_raw(this->m_pFirst)); }
 
