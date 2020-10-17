@@ -13,6 +13,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
 class FileDataSource : public GraphDataSource
 {
 public:
+    using BaseClass = GraphDataSource;
+
     FileDataSource(const QString& sPath, QString sId);
     ~FileDataSource() override;
 
@@ -23,6 +25,7 @@ public:
     auto columnNames() const -> ColumnNameMap override;
     void enable(bool b) override;
     auto columnDataTypes() const -> ColumnDataTypeMap override;
+    auto columnDataType(DataSourceIndex nCol) const -> ChartDataType override;
 private:
     String statusDescriptionImpl() const override;
     void refreshAvailabilityImpl() override { privUpdateStatusAndAvailability(); }

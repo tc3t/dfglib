@@ -947,6 +947,8 @@ static void testFileDataSource(const QString& sExtension,
                                                                 {"Col0", "ab", "b", "ab"}),
                                                                 {"Col1", "b", "ab", "c"},
                                                                 {"123.456", "18.9.2020", "2020-09-18", "2020-09-18 12:00:00"} };
+
+    const std::array<ChartDataType, nColCount> expectedColumnDataTypes = {ChartDataType::unknown, ChartDataType::unknown, ChartDataType::dateAndTime };
     std::array<std::vector<double>, nColCount> expectedValues;
     std::transform(expectedStrings[2].begin(),
                    expectedStrings[2].end(),
@@ -974,8 +976,9 @@ static void testFileDataSource(const QString& sExtension,
             EXPECT_EQ(expectedStrings[c], strings);
             if (!expectedValues[c].empty())
             {
-                ASSERT_EQ(expectedValues[c].size(), values.size());
-                EXPECT_TRUE(std::equal(values.begin(), values.end(), expectedValues[c].begin()));
+                EXPECT_EQ(expectedValues[c].size(), values.size());
+                if (expectedValues[c].size() == values.size())
+                    EXPECT_TRUE(std::equal(values.begin(), values.end(), expectedValues[c].begin()));
             }
         }
         else
@@ -983,6 +986,8 @@ static void testFileDataSource(const QString& sExtension,
             EXPECT_TRUE(rows.empty());
             EXPECT_TRUE(strings.empty());
         }
+        if (isValidIndex(expectedColumnDataTypes, c))
+            EXPECT_EQ(expectedColumnDataTypes[c], source.columnDataType(c));
     }
 
     // Testing that change signaling works

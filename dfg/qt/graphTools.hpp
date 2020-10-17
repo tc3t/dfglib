@@ -202,6 +202,7 @@ public:
     virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }
 
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
+    virtual ChartDataType     columnDataType(DataSourceIndex) const;
     virtual ColumnNameMap     columnNames()     const { return ColumnNameMap(); }
 
     virtual IndexList       columnIndexes() const                         { return IndexList(); }

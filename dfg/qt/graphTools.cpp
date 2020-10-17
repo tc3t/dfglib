@@ -454,6 +454,13 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringView
     }
 }
 
+auto ::DFG_MODULE_NS(qt)::GraphDataSource::columnDataType(const DataSourceIndex nCol) const -> ChartDataType
+{
+    const auto colTypes = columnDataTypes();
+    auto iter = colTypes.find(nCol);
+    return (iter != colTypes.end()) ? iter->second : ChartDataType();
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //

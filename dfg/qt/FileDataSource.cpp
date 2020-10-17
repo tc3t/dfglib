@@ -104,3 +104,9 @@ auto ::DFG_MODULE_NS(qt)::FileDataSource::columnDataTypes() const -> ColumnDataT
 {
     return m_columnDataTypes;
 }
+
+auto ::DFG_MODULE_NS(qt)::FileDataSource::columnDataType(const DataSourceIndex nCol) const -> ChartDataType
+{
+    auto iter = m_columnDataTypes.find(nCol);
+    return (iter != m_columnDataTypes.end()) ? iter->second : ChartDataType();
+}
