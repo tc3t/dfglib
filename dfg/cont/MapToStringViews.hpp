@@ -21,8 +21,9 @@ enum class StringStorageType
 
 // Owning container for Key_T -> string view map.
 // Strings are not stored as list of individual string objects but as char array(s) to which views point to.
-// StringStorageType_T determines .string storage type
+// StringStorageType_T determines string storage type
 // About iterators: to access string view from iterator, call second-item's operator()() with this class as argument.
+// Note: operator[] works differently from std::map: inserts can't be done with syntax m[key] = value;
 template <class Key_T, class String_T, StringStorageType StringStorageType_T = StringStorageType::sizeAndNullTerminated, class SizeType_T = std::size_t>
 class MapToStringViews
 {
@@ -137,8 +138,9 @@ public:
     }
 
     // Returns view at i or empty view. Note that insert() or other operation may render view invalid.
+    // Note: Does not return a reference so can't be used for inserts, i.e. m[1] = "abc"; can't be used.
     // Dev note: could also optionally provide stable views based on 'this' and index to m_data, such would not invalidate e.g. on reallocations.
-    StringViewRv operator[](const Key_T& i) const
+    const StringViewRv operator[](const Key_T& i) const
     {
         DFG_ASSERT_UB(!m_data.empty() && m_data.front() == '\0');
         auto iter = m_keyToStringDetails.find(i);
