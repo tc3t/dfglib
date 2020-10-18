@@ -162,6 +162,7 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/FileDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvFileDataSource.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp
@@ -188,6 +189,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/FileDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvFileDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \

@@ -70,6 +70,7 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 // Including before <boost/histogram.hpp> would cause compilation error on MSVC as this includes Shlwapi.h which for unknown reason breaks histogram
 #include "CsvFileDataSource.hpp"
+#include "SQLiteFileDataSource.hpp"
 
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
@@ -1262,6 +1263,15 @@ QString GraphDefinitionWidget::getGuideString()
                         <li>File is monitored for changes: if it changes or gets renamed, on next chart update new values should be used automatically.
                         <li>Header is not omitted automatically, but in practice texts typically result to NaN that get filtered out. If, however, header needs to be omitted, it can be done by filtering out row 0 with "x_rows":"1:-1"</li>
                         <li>Example: {"type":"xy", "data_source":"csv_file(C:/Users/user/Desktop/data.csv)"}</li>
+                        <li>Note to Windows users: path separator should be either slash '/' or double backslash '\\', single backslash '\' does not work.</li>
+                    </ul>
+            </ul>
+            <ul>
+                <li>sqlite_file(path, query): Source reads content from SQLite3-file at given path using given query</li>
+                    <ul>
+                        <li>File is monitored for changes: if it changes or gets renamed, on next chart update new values should be used automatically.
+                        <li>Example: {"type":"xy", "data_source":"sqlite_file(C:/Users/user/Desktop/data.sqlite3, SELECT * FROM example_table)"}</li>
+                        <li>Example: {"type":"xy", "data_source":"sqlite_file(C:/Users/user/Desktop/data.sqlite3, \"SELECT some_column, another_column FROM example_table\""}</li>
                         <li>Note to Windows users: path separator should be either slash '/' or double backslash '\\', single backslash '\' does not work.</li>
                     </ul>
             </ul>
@@ -4476,8 +4486,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::forDataSource(const GraphD
             m_dataSources.m_sources.push_back(std::move(spCsvSource));
             iter = m_dataSources.m_sources.end() - 1;
         }
+        else if (item.key() == DFG_UTF8("sqlite_file"))
+        {
+            auto spSqliteSource = std::make_shared<SQLiteFileDataSource>(viewToQString(item.value(1)), viewToQString(item.value(0)), id);
+            m_dataSources.m_sources.push_back(std::move(spSqliteSource));
+            iter = m_dataSources.m_sources.end() - 1;
+        }
     }
-
 
     if (iter != m_dataSources.m_sources.end())
         func(**iter);
