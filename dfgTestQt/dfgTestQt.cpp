@@ -7,6 +7,7 @@
 #include <dfg/qt/ConsoleDisplay.hpp>
 #include <dfg/qt/CsvTableViewChartDataSource.hpp>
 #include <dfg/qt/CsvFileDataSource.hpp>
+#include <dfg/qt/SQLiteFileDataSource.hpp>
 #include <dfg/qt/connectHelper.hpp>
 #include <dfg/math.hpp>
 #include <dfg/qt/sqlTools.hpp>
@@ -948,6 +949,14 @@ static void testFileDataSource(const QString& sExtension,
                                                                 {"Col1", "b", "ab", "c"},
                                                                 {"123.456", "18.9.2020", "2020-09-18", "2020-09-18 12:00:00"} };
 
+    // csv source includes header on row 0, SQLiteSource doesn't.
+    const bool bIncludeHeaderInComparisons = (sExtension == "csv");
+    
+    if (!bIncludeHeaderInComparisons)
+    {
+        ::DFG_MODULE_NS(alg)::forEachFwd(expectedRows,    [](std::vector<double>& v)      { v.erase(v.begin()); });
+        ::DFG_MODULE_NS(alg)::forEachFwd(expectedStrings, [](std::vector<std::string>& v) { v.erase(v.begin()); });
+    }
     const std::array<ChartDataType, nColCount> expectedColumnDataTypes = {ChartDataType::unknown, ChartDataType::unknown, ChartDataType::dateAndTime };
     std::array<std::vector<double>, nColCount> expectedValues;
     std::transform(expectedStrings[2].begin(),
@@ -1021,7 +1030,10 @@ static void testFileDataSource(const QString& sExtension,
         {
             std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), std::back_inserter(elems), [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
         });
-        EXPECT_EQ(std::vector<std::string>({"a", "1", "b", "2"}), elems);
+        if (bIncludeHeaderInComparisons)
+            EXPECT_EQ(std::vector<std::string>({"a", "1", "b", "2"}), elems);
+        else
+            EXPECT_EQ(std::vector<std::string>({ "1", "2" }), elems);
     }
 
     QFile::remove(sTestFilePath);
@@ -1034,6 +1046,14 @@ TEST(dfgQt, CsvFileDataSource)
     auto sourceCreator = [](const QString& sPath, const QString& sId) { return std::unique_ptr<CsvFileDataSource>(new CsvFileDataSource(sPath, sId)); };
     auto fileCreator = [](QString sPath, CsvItemModel& model) { return model.saveToFile(sPath); };
     testFileDataSource<CsvFileDataSource>("csv", sourceCreator, fileCreator, fileCreator);
+}
+
+TEST(dfgQt, SQLiteFileDataSource)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    auto sourceCreator = [](const QString& sPath, const QString& sId) { return std::unique_ptr<SQLiteFileDataSource>(new SQLiteFileDataSource("SELECT * FROM table_from_csv", sPath, sId)); };
+    auto fileCreator = [](QString sPath, CsvItemModel& model) { QFile::remove(sPath); return model.exportAsSQLiteFile(sPath); };
+    testFileDataSource<SQLiteFileDataSource>("sqlite3", sourceCreator, fileCreator, fileCreator);
 }
 
 TEST(dfgQt, SQLiteDatabase)

@@ -42,6 +42,7 @@ SOURCES += \
     ../dfg/qt/CsvItemModelChartDataSource.cpp \
     ../dfg/qt/FileDataSource.cpp \
     ../dfg/qt/CsvFileDataSource.cpp \
+    ../dfg/qt/SQLiteFileDataSource.cpp \
     ../dfg/qt/qxt/gui/qxtspanslider.cpp \
     ../dfg/qt/JsonListWidget.cpp \
     ../dfg/qt/sqlTools.cpp \
@@ -74,6 +75,7 @@ HEADERS += \
     ../dfg/qt/CsvItemModelChartDataSource.hpp \
     ../dfg/qt/FileDataSource.hpp \
     ../dfg/qt/CsvFileDataSource.hpp \
+    ../dfg/qt/SQLiteFileDataSource.hpp \
     ../dfg/qt/sqlTools.hpp \
     ../dfg/qt/JsonListWidget.hpp
 
