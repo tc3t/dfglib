@@ -44,8 +44,9 @@ bool ::DFG_MODULE_NS(qt)::FileDataSource::privUpdateStatusAndAvailability()
         }
         if (bOldAvailability != bAvailable || m_columnIndexToColumnName.empty())
         {
-            updateColumnInfoImpl();
-            m_sStatusDescription.clear();
+            bAvailable = updateColumnInfoImpl();
+            if (bAvailable)
+                m_sStatusDescription.clear();
         }
     }
 

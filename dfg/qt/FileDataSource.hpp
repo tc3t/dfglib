@@ -35,10 +35,10 @@ public slots:
     void onFileChanged();
 
 public:
-    void updateColumnInfo() { updateColumnInfoImpl(); }
+    bool updateColumnInfo() { return updateColumnInfoImpl(); }
 
 private:
-    virtual void updateColumnInfoImpl() = 0;
+    virtual bool updateColumnInfoImpl() = 0;
 
 public:
 

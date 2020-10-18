@@ -21,7 +21,7 @@ private:
 
 // Begin: FileDataSource overloads -->
 private:
-    void updateColumnInfoImpl() override;
+    bool updateColumnInfoImpl() override;
 // End: FileDataSource overloads -->
 
 public:

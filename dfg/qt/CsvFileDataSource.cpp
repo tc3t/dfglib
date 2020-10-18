@@ -18,7 +18,7 @@ DFG_END_INCLUDE_QT_HEADERS
 
 ::DFG_MODULE_NS(qt)::CsvFileDataSource::~CsvFileDataSource() = default;
 
-void ::DFG_MODULE_NS(qt)::CsvFileDataSource::updateColumnInfoImpl()
+bool ::DFG_MODULE_NS(qt)::CsvFileDataSource::updateColumnInfoImpl()
 {
     using namespace DFG_MODULE_NS(io);
 
@@ -29,6 +29,7 @@ void ::DFG_MODULE_NS(qt)::CsvFileDataSource::updateColumnInfoImpl()
     {
         m_columnIndexToColumnName.insert(saturateCast<DataSourceIndex>(nCol), StringViewUtf8(TypedCharPtrUtf8R(p), nSize));
     });
+    return true;
 }
 
 QObject* ::DFG_MODULE_NS(qt)::CsvFileDataSource::underlyingSource()

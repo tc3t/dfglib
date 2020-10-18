@@ -6,6 +6,7 @@
 #include "../alg.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QSqlError>
     #include <QSqlQuery>
     #include <QSqlRecord>
 DFG_END_INCLUDE_QT_HEADERS
@@ -21,22 +22,24 @@ DFG_END_INCLUDE_QT_HEADERS
 
 ::DFG_MODULE_NS(qt)::SQLiteFileDataSource::~SQLiteFileDataSource() = default;
 
-void ::DFG_MODULE_NS(qt)::SQLiteFileDataSource::updateColumnInfoImpl()
+bool ::DFG_MODULE_NS(qt)::SQLiteFileDataSource::updateColumnInfoImpl()
 {
     using DataBase = ::DFG_MODULE_NS(sql)::SQLiteDatabase;
     DataBase db(QString::fromLocal8Bit(this->m_sPath.c_str()));
     m_columnDataTypes.clear();
     m_columnIndexToColumnName.clear_noDealloc();
     auto query = db.createQuery();
-    if (!query.prepare(m_sQuery))
-        return;
-    if (!query.exec())
-        return;
+    if (!query.prepare(m_sQuery) || !query.exec())
+    {
+        m_sStatusDescription = tr("Failed to execute query, error = %1").arg(query.lastError().text());
+        return false;
+    }
     auto columns = DataBase::getSQLiteFileTableColumnNames(query.record());
     ::DFG_MODULE_NS(alg)::forEachFwdWithIndexT<DataSourceIndex>(columns, [&](const QString& s, const DataSourceIndex i)
     {
         m_columnIndexToColumnName.insert(i, qStringToStringUtf8(s));
     });
+    return true;
 }
 
 QObject* ::DFG_MODULE_NS(qt)::SQLiteFileDataSource::underlyingSource()
