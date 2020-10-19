@@ -6,6 +6,7 @@
 #include "../ReadOnlySzParam.hpp"
 #include "MapVector.hpp"
 
+#include <iterator>
 #include <type_traits>
 #include <vector>
 
@@ -86,6 +87,7 @@ public:
     using StringDetail   = typename std::conditional<StringStorageType_T == StringStorageType::szSized, StringDetailSzSized, StringDetailSizedView>::type;
     using KeyStorage     = MapVectorAoS<Key_T, StringDetail>;
     using const_iterator = typename KeyStorage::const_iterator;
+    using InsertIterator = std::back_insert_iterator<DataStorage>;
 
     MapToStringViews()
     {
@@ -114,6 +116,11 @@ public:
     const Key_T&       backKey()    const { DFG_ASSERT_UB(!this->empty()); return (this->end() - 1)->first;         }
     const StringViewRv backValue()  const { DFG_ASSERT_UB(!this->empty()); return (this->end() - 1)->second(*this); }
 
+    bool privDoesSizeTypeAllowInserting(const size_t nInsertCount) const
+    {
+        return (nInsertCount <= static_cast<size_type>(NumericTraits<size_type>::maxValue - static_cast<size_type>(m_data.size())));
+    }
+
     // Inserts mapping key -> view. If key already exists, behaviour is unspecified. TODO: specify
     void insert(const Key_T& key, const StringView& sv)
     {
@@ -134,13 +141,55 @@ public:
         else
         {
             // Checking that size_type won't overflow in m_data if adding (i.e. that there would be indexes > maximum of size_type)
-            if (nInsertCount > static_cast<size_type>(NumericTraits<size_type>::maxValue - static_cast<size_type>(nStartPos)))
+            if (!privDoesSizeTypeAllowInserting(nInsertCount))
                 return;
             m_data.insert(m_data.end(), sv.beginRaw(), sv.endRaw());
             nEndPos = m_data.size();
             handleNullTerminator(std::integral_constant<bool, StringStorageType_T != StringStorageType::sizeOnly>());
         }
         m_keyToStringDetails[key] = StringDetail(static_cast<size_type>(nStartPos), static_cast<size_type>(nEndPos));
+    }
+
+    // Low level access that provides ability to write directly through InsertIterator
+    //      key             : key which maps to inserted value
+    //      inserter        : function object that receives InsertIterator and returns true if value was successfully added, false otherwise. If false, changes are rolled back.
+    //      nInsertCountHint: Hint how many characters are to be added (currently not used)
+    //      Return: true if mapping was added, false otherwise.
+    // Note: it is caller responsibility to make sure that inserted content if combatible with internal encoding.
+    // Example: 
+    //      std::string s = "abc";
+    //      MapToStringViews<int, std::string> m;
+    //      m.insertRaw(1, [&](decltype(m)::InsertIterator iter){ std::copy(s.begin(), s.end(), iter); return true; })); // Does effectively the same as m.insert(1, "abc");
+    template <class Inserter_T>
+    bool insertRaw(const Key_T& key, Inserter_T&& inserter, const size_type nInsertCountHint = 0)
+    {
+        DFG_UNUSED(nInsertCountHint);
+        auto nStartPos = m_data.size();
+        if (!inserter(std::back_inserter(m_data))) // inserter requested rollback?
+        {
+            m_data.resize(nStartPos);
+            return false;
+        }
+        auto nEndPos = m_data.size();
+        // Empty string optimization.
+        if (nStartPos == nEndPos)
+        {
+            nStartPos = 0;
+            nEndPos = 0;
+        }
+        else
+        {
+            if (nEndPos > NumericTraits<size_type>::maxValue) // Would insert overflow size_type?
+            {
+                // Rolling back
+                m_data.resize(nStartPos);
+                return false;
+            }
+            handleNullTerminator(std::integral_constant<bool, StringStorageType_T != StringStorageType::sizeOnly>());
+        }
+        
+        m_keyToStringDetails[key] = StringDetail(static_cast<size_type>(nStartPos), static_cast<size_type>(nEndPos));
+        return true;
     }
 
     // Returns view at i or empty view. Note that insert() or other operation may render view invalid.

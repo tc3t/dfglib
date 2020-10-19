@@ -725,6 +725,48 @@ TEST(dfgCont, MapToStringViews)
             EXPECT_EQ("abc", iter40->second(m));
         }
     }
+
+    // insertRaw
+    {
+        using namespace ::DFG_MODULE_NS(utf);
+        {
+            MapToStringViews<int, StringUtf8> m;
+            std::vector<uint16> codePoints;
+            for (uint16 i = 32; i < 260; ++i)
+                codePoints.push_back(i);
+            codePoints.push_back(0x20AC); // Euro-sign
+            std::string s8;
+            utf16To8(codePoints, std::back_inserter(s8));
+            // Inserting from utf16 to map
+            m.insertRaw(1, [&](decltype(m)::InsertIterator iter) { utf16To8(codePoints, iter); return true; });
+            // Verifying that content in m[1] is identical to utf16to8()
+            EXPECT_EQ(s8, m[1].asUntypedView());
+
+            // Testing that return value of inserter is taken into account, i.e. if inserter returns false, map should rollback changes that inserter did.
+            EXPECT_FALSE(m.insertRaw(2, [&](decltype(m)::InsertIterator iter) { utf16To8(codePoints, iter); return false; }));
+            EXPECT_EQ(1, m.size());
+
+            // Testing empty insert
+            {
+                const auto nContentSizeBefore = m.contentStorageSize();
+                EXPECT_TRUE(m.insertRaw(3, [&](decltype(m)::InsertIterator) { return true; })); // Inserting empty
+                EXPECT_EQ(2, m.size());
+                EXPECT_EQ(nContentSizeBefore, m.contentStorageSize()); // Making sure that shared null is used for empty.
+            }
+        }
+        // Testing that raw insert won't overflow size_type
+        {
+            std::vector<char> codePoints;
+            for (char i = 0; i < 127; ++i)
+                codePoints.push_back(i);
+            MapToStringViews<int, StringUtf8, StringStorageType::sizeAndNullTerminated, uint8> m;
+            m.insert(1, DFG_UTF8("1234567890"));
+            EXPECT_TRUE(m.insertRaw(2, [&](decltype(m)::InsertIterator iter) { std::copy(codePoints.begin(), codePoints.end(), iter); return true; }));
+            const auto nContentSizeAfterFirst = m.contentStorageSize();
+            EXPECT_FALSE(m.insertRaw(3, [&](decltype(m)::InsertIterator iter) { std::copy(codePoints.begin(), codePoints.end(), iter); return true; }));
+            EXPECT_EQ(nContentSizeAfterFirst, m.contentStorageSize());
+        }
+    }
 }
 
 TEST(dfgCont, SortedSequence)
