@@ -1203,6 +1203,16 @@ namespace
             EXPECT_TRUE(typename StringView_T::StringViewT(conv(sz0)) == StringView_T(conv(sz0)));
             EXPECT_TRUE(StringView_T(conv(sz0)) == typename StringView_T::StringViewT(conv(sz0)));
         }
+
+        // Testing that asUntypedView() handles length() correctly; i.e. that untypedView has length iff source view has length calculated.
+        {
+            StringView_T viewSz(conv(sz0));
+            EXPECT_FALSE(viewSz.asUntypedView().isLengthCalculated());
+            EXPECT_EQ(3, viewSz.asUntypedView().length());
+            EXPECT_EQ(3, viewSz.length());
+            EXPECT_TRUE(viewSz.asUntypedView().isLengthCalculated());
+            EXPECT_EQ(3, viewSz.asUntypedView().length());
+        }
     }
 }
 

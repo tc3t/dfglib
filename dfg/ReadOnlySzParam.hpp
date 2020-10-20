@@ -485,12 +485,14 @@ public:
         DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
     }
 
-    // Careful with this: this must be null terminated view (i.e. is not enough that psz is null terminated).
+    // Constructs StringViewSz and optionally sets size requiring psz[nCount] == '\0'.
+    // Precondition: psz != nullptr && (nCount == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || psz[nCount] == '\0')
     DFG_CLASS_NAME(StringViewSz)(SzPtrT psz, const size_t nCount) :
         BaseClass(psz),
         m_nSize(nCount)
     {
-        DFG_ASSERT_CORRECTNESS(toCharPtr_raw(this->m_pFirst)[nCount] == '\0');
+        DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
+        DFG_ASSERT_CORRECTNESS(m_nSize == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || toCharPtr_raw(this->m_pFirst)[nCount] == '\0');
     }
 
     // Note: returning StringViewT as substring can't be of type StringViewSz: only tail parts can be Sz-substrings (e.g. substring "a" from "abc" is not sz)
@@ -502,7 +504,7 @@ public:
     // Returns view as untyped.
     StringViewSz<CharT> asUntypedView() const
     {
-        return StringViewSz<CharT>(this->dataRaw());
+        return StringViewSz<CharT>(this->dataRaw(), this->m_nSize);
     }
 
     bool empty() const
