@@ -302,7 +302,7 @@ void cpToEncoded(const uint32 cp, IterUtf_T result, DFG_MODULE_NS(io)::TextEncod
 
 
 template <typename u16bit_iterator, typename BswapFunc>
-uint32_t readUtf16CharAndAdvance(u16bit_iterator& start, u16bit_iterator end, BswapFunc bswap)
+uint32_t readUtf16CharAndAdvance(u16bit_iterator& start, const u16bit_iterator end, BswapFunc bswap)
 {
     if (start == end)
         return INVALID_CODE_POINT;
@@ -462,7 +462,7 @@ void utf16To8(const IterableUtf16_T& source, IterOutUtf8_T dest, ByteOrder boSou
     auto iter = std::begin(source);
     const auto iterEnd = std::end(source);
     const auto bs = [&](uint16 cp) {return byteSwap(cp, boSource, ByteOrderHost); };
-    for (; iter != iterEnd; )
+    for (; !isAtEnd(iter, iterEnd); )
     {
         const auto cp = readUtf16CharAndAdvance(iter, iterEnd, bs);
         ::utf8::unchecked::append(cp, dest);

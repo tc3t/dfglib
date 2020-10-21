@@ -4,6 +4,8 @@
 #include "qtIncludeHelpers.hpp"
 #include "../str/string.hpp"
 #include "../ReadOnlySzParam.hpp"
+#include "../utf.hpp"
+#include "../iter/szIterator.hpp"
 #include <string>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
@@ -89,12 +91,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 
     inline QString untypedViewToQStringAsUtf8(const StringViewC& view)
     {
-        return QString::fromUtf8(view.data(), static_cast<int>(view.length()));
+        return QString::fromUtf8(view.data(), saturateCast<int>(view.length()));
     }
 
     inline QString viewToQString(const StringViewUtf8& view)
     {
-        return QString::fromUtf8(view.dataRaw(), static_cast<int>(view.length()));
+        return QString::fromUtf8(view.dataRaw(), saturateCast<int>(view.length()));
     }
 
     inline QString viewToQString(const StringViewSzUtf8& view)
@@ -114,8 +116,16 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 
     inline StringUtf8 qStringToStringUtf8(const QString& s)
     {
-        auto bytes = s.toUtf8();
-        return StringUtf8(SzPtrUtf8(bytes.begin()), SzPtrUtf8(bytes.end()));
+        StringUtf8 s8;
+        auto& rawStorage = s8.rawStorage();
+        rawStorage.reserve(s.size()); // This is too little if there are any non-ascii chars
+        auto psz16 = s.utf16();
+        auto utf16Range = makeSzRange(psz16);
+        ::DFG_MODULE_NS(utf)::utf16To8(utf16Range, std::back_inserter(rawStorage));
+        return s8;
+        // Alternative implementation using QByteArray temporary.
+        //auto bytes = s.toUtf8();
+        //return StringUtf8(SzPtrUtf8(bytes.begin()), SzPtrUtf8(bytes.end()));
     }
 
 } } // Module qt

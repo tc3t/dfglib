@@ -1176,3 +1176,16 @@ TEST(dfgQt, SQLiteDatabase)
 
     EXPECT_TRUE(QFile::remove(sTestFilePath));
 }
+
+TEST(dfgQt, qStringToStringUtf8)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+    QString s;
+    for (uint16 i = 32; i < 260; ++i)
+        s.push_back(QChar(i));
+    s.push_back(QChar(0x20AC)); // Euro-sign
+    const auto s8 = qStringToStringUtf8(s);
+    const QString sRoundTrip = QString::fromUtf8(s8.beginRaw(), saturateCast<int>(s8.sizeInRawUnits()));
+    EXPECT_EQ(s, sRoundTrip);
+}
