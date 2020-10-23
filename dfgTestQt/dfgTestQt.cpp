@@ -938,7 +938,7 @@ static void testFileDataSource(const QString& sExtension,
 
     {
         CsvItemModel model;
-        model.openString("Col0,Col1,123.456\nab,b,18.9.2020\nb,ab,2020-09-18\nab,c,2020-09-18 12:00:00\n");
+        model.openString("Col0,Col1,123.456\nab,b,18.9.2020\nb,a\xE2\x82\xAC" "b,2020-09-18\nab,c,2020-09-18 12:00:00\n");
         ASSERT_TRUE(fileCreator(sTestFilePath, model));
     }
 
@@ -946,7 +946,7 @@ static void testFileDataSource(const QString& sExtension,
     std::array<std::vector<double>, nColCount> expectedRows = { std::vector<double>({0, 1, 2, 3}), {0, 1, 2, 3}, {0, 1, 2, 3} };
     std::array<std::vector<std::string>, nColCount> expectedStrings = { std::vector<std::string>(
                                                                 {"Col0", "ab", "b", "ab"}),
-                                                                {"Col1", "b", "ab", "c"},
+                                                                {"Col1", "b", "a\xE2\x82\xAC" "b", "c"}, // \xE2\x82\xAC is eurosign in UTF-8
                                                                 {"123.456", "18.9.2020", "2020-09-18", "2020-09-18 12:00:00"} };
 
     // csv source includes header on row 0, SQLiteSource doesn't.
@@ -1185,6 +1185,8 @@ TEST(dfgQt, qStringToStringUtf8)
     for (uint16 i = 32; i < 260; ++i)
         s.push_back(QChar(i));
     s.push_back(QChar(0x20AC)); // Euro-sign
+    const uint32 u32 = 123456; // Arbitrary codepoint that requires surrogates.
+    s.append(QString::fromUcs4(&u32, 1));
     const auto s8 = qStringToStringUtf8(s);
     const QString sRoundTrip = QString::fromUtf8(s8.beginRaw(), saturateCast<int>(s8.sizeInRawUnits()));
     EXPECT_EQ(s, sRoundTrip);

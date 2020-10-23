@@ -4532,8 +4532,11 @@ void ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::storeToBuffer(const D
 
 void ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::storeToBuffer(const DataSourceIndex nRow, const QVariant& var)
 {
-    // TODO: avoid QVariant -> QString -> StringUtf8 overhead.
-    storeToBuffer(nRow, qStringToStringUtf8(var.toString()));
+    const auto s = var.toString();
+    auto utfRange = makeSzRange(s.utf16());
+    m_stringBuffer.insertRaw(nRow, [&](decltype(m_stringBuffer)::InsertIterator iter) { ::DFG_MODULE_NS(utf)::utf16To8(utfRange, iter); return true; });
+    if (m_stringBuffer.contentStorageSize() > contentBlockSize())
+        submitData();
 }
 
 void ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::submitData()
