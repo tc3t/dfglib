@@ -999,6 +999,40 @@ static void testFileDataSource(const QString& sExtension,
             EXPECT_EQ(expectedColumnDataTypes[c], source.columnDataType(c));
     }
 
+    // Testing that data mask is taken into account
+    const DataQueryDetails::DataMask masks[] = { DataQueryDetails::DataMaskRows, DataQueryDetails::DataMaskNumerics, DataQueryDetails::DataMaskStrings, DataQueryDetails::DataMaskRowsAndNumerics, DataQueryDetails::DataMaskRowsAndStrings };
+    for (const auto& mask : masks)
+    {
+        const DataSourceIndex nCol = 2;
+        std::vector<double> rows;
+        std::vector<std::string> strings;
+        std::vector<double> values;
+        auto spSource = sourceCreator(sTestFilePath, "csvSource");
+        auto& source = *spSource;
+        source.forEachElement_byColumn(nCol, DataQueryDetails(mask), [&](const SourceDataSpan& sourceSpan)
+        {
+            rows.insert(rows.end(), sourceSpan.rows().begin(), sourceSpan.rows().end());
+            const auto nOldSize = static_cast<uint16>(strings.size());
+            strings.resize(nOldSize + sourceSpan.stringViews().size());
+            std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), strings.begin() + nOldSize, [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
+            values.insert(values.end(), sourceSpan.doubles().begin(), sourceSpan.doubles().end());
+        });
+        if (mask & DataQueryDetails::DataMaskRows)
+            EXPECT_EQ(expectedRows[nCol], rows);
+        else
+            EXPECT_TRUE(rows.empty());
+
+        if (mask & DataQueryDetails::DataMaskNumerics)
+            EXPECT_EQ(expectedValues[nCol], values);
+        else
+            EXPECT_TRUE(values.empty());
+
+        if (mask & DataQueryDetails::DataMaskStrings)
+            EXPECT_EQ(expectedStrings[nCol], strings);
+        else
+            EXPECT_TRUE(strings.empty());
+    }
+
     // Testing that change signaling works
     {
         auto spSource = sourceCreator(sTestFilePath, "csvSource");

@@ -4543,25 +4543,37 @@ void ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer::submitData()
 {
     if (m_stringBuffer.empty())
         return;
-    // Note: queryMask is ignored for now; simply passing everything regardless of the actual request.
+    const bool bAreRowsNeeded = m_queryDetails.areRowsRequested();
+    const bool bAreNumbersNeeded = m_queryDetails.areNumbersRequested();
+    const bool bAreStringsNeeded = m_queryDetails.areStringsRequested();
     const auto nCount = m_stringBuffer.size();
-    m_rowBuffer.resize(nCount);
-    m_valueBuffer.resize(nCount);
-    m_stringViewBuffer.resize(nCount);
+    if (bAreRowsNeeded)
+        m_rowBuffer.resize(nCount);
+    if (bAreNumbersNeeded)
+        m_valueBuffer.resize(nCount);
+    if (bAreStringsNeeded)
+        m_stringViewBuffer.resize(nCount);
+
     auto iterRow = m_rowBuffer.begin();
     auto iterValue = m_valueBuffer.begin();
     auto iterViewBuffer = m_stringViewBuffer.begin();
     for (const auto& item : m_stringBuffer)
     {
-        *iterRow++ = static_cast<double>(item.first);
-        const auto view = item.second(m_stringBuffer);
-        *iterValue++ = GraphDataSource::cellStringToDouble(view, m_nColumn, m_pColumnDataTypeMap);
-        *iterViewBuffer++ = view.toStringView();
+        if (bAreRowsNeeded)
+            *iterRow++ = static_cast<double>(item.first);
+        const auto sv = item.second(m_stringBuffer);
+        if (bAreNumbersNeeded)
+            *iterValue++ = GraphDataSource::cellStringToDouble(sv, m_nColumn, m_pColumnDataTypeMap);
+        if (bAreStringsNeeded)
+            *iterViewBuffer++ = sv.toStringView();
     }
     SourceDataSpan dataSpan;
-    dataSpan.setRows(m_rowBuffer);
-    dataSpan.set(m_valueBuffer);
-    dataSpan.set(m_stringViewBuffer);
+    if (bAreRowsNeeded)
+        dataSpan.setRows(m_rowBuffer);
+    if (bAreNumbersNeeded)
+        dataSpan.set(m_valueBuffer);
+    if (bAreStringsNeeded)
+        dataSpan.set(m_stringViewBuffer);
     m_queryCallback(dataSpan);
     m_stringBuffer.clear_noDealloc();
 }
