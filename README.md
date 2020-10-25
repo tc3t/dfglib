@@ -68,6 +68,7 @@ Summary of 3rd party code in dfglib (last revised 2020-07-21).
 | [fmtlib](https://github.com/fmtlib/fmt) (version 4.1.0 with an adjustment related to formatting doubles as string) | m (string formatting)| [BSD-2](dfg/str/fmtlib/format.h) |
 | [Google Test](https://github.com/google/googletest) (version 1.8.1) | t | [BSD-3](externals/gtest/gtest.h) |
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) |
+| [muparser](https://github.com/beltoforion/muparser) (version 2.3.2) | c | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser
 | [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) |
 | [Qt 5](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) |
 | [Qt Charts](https://doc.qt.io/qt-5/qtcharts-index.html) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://doc.qt.io/qt-5/qtcharts-index.html) |
