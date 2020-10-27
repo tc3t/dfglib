@@ -345,6 +345,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         using StringViewSz      = CreationArgList::StringViewSz;
         using StringT           = StringView::StringT;
         using DefinitionArgList = std::vector<double>;
+        using DefinitionArgStrList = std::vector<StringT>;
         static void defaultCall(ChartEntryOperation&, ChartOperationPipeData&);
         using OperationCall     = decltype(ChartEntryOperation::defaultCall);
         using DataVectorRef     = ChartOperationPipeData::DataVectorRef;
@@ -407,9 +408,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Returns ChartEntryOperation() from case that creation args were invalid.
         static ChartEntryOperation privInvalidCreationArgsResult();
 
+        size_t argCount() const { return Max(m_argList.size(), m_argStrList.size()); }
+
+        double     argAsDouble(const size_t nIndex) const;
+        StringView argAsString(const size_t nIndex) const;
+
+        void storeArg(size_t nIndex, double);
+        void storeArg(size_t nIndex, const StringView&);
+        void storeArg(size_t nIndex, const StringViewSz& sv) { storeArg(nIndex, sv.toStringView()); }
+
+        template <class Cont_T, class T>
+        void privStoreArg(Cont_T& cont, size_t nIndex, T&& item);
+
         OperationCall*    m_pCall          = &ChartEntryOperation::defaultCall;
         ErrorMask         m_errors         = 0;
-        DefinitionArgList m_argList;
+        DefinitionArgList    m_argList;
+        DefinitionArgStrList m_argStrList; // TODO: unify arglist to single variant list.
         StringT           m_sDefinition;            // For (optionally) storing the text from which operation was created from.
     }; // ChartEntryOperation
 
@@ -433,6 +447,36 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     inline bool ChartEntryOperation::hasError(Error err) const
     {
         return (m_errors & err) != 0;
+    }
+
+    inline double ChartEntryOperation::argAsDouble(const size_t nIndex) const
+    {
+        return isValidIndex(this->m_argList, nIndex) ? this->m_argList[nIndex] : std::numeric_limits<double>::quiet_NaN();
+    }
+
+    inline auto ChartEntryOperation::argAsString(const size_t nIndex) const -> StringView
+    {
+        return isValidIndex(this->m_argStrList, nIndex) ? StringView(this->m_argStrList[nIndex]) : StringView();
+    }
+
+    template <class Cont_T, class T>
+    inline void ChartEntryOperation::privStoreArg(Cont_T& cont, const size_t nIndex, T&& item)
+    {
+        if (nIndex >= cont.max_size())
+            return;
+        if (!isValidIndex(cont, nIndex))
+            cont.resize(nIndex + 1);
+        cont[nIndex] = std::move(item);
+    }
+
+    inline void ChartEntryOperation::storeArg(const size_t nIndex, double val)
+    {
+        privStoreArg(m_argList, nIndex, std::move(val));
+    }
+
+    inline void ChartEntryOperation::storeArg(const size_t nIndex, const StringView& sv)
+    {
+        privStoreArg(m_argStrList, nIndex, sv.toString());
     }
 
     inline auto ChartEntryOperation::privPipeVectorByAxisIndex(ChartOperationPipeData& arg, const double index) -> ValueVectorD*
@@ -615,10 +659,9 @@ namespace operations
                 return privInvalidCreationArgsResult();
             ChartEntryOperation op(FilterOperation::operation);
 
-            op.m_argList.resize(3);
-            op.m_argList[0] = axis;
-            op.m_argList[1] = argList.valueAs<double>(1);
-            op.m_argList[2] = argList.valueAs<double>(2);
+            op.storeArg(0, axis);
+            op.storeArg(1, argList.valueAs<double>(1));
+            op.storeArg(2, argList.valueAs<double>(2));
             return op;
         }
 
@@ -626,15 +669,14 @@ namespace operations
         template <class Derived_T>
         inline void FilterOperation<Derived_T>::operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
         {
-            const auto& argList = op.m_argList;
-            if (argList.size() < 3)
+            if (op.argCount() < 3)
             {
                 op.setError(error_badCreationArgs);
                 return;
             }
-            const auto axis = argList[0];
-            const auto arg1 = argList[1];
-            const auto arg2 = argList[2];
+            const auto axis = op.argAsDouble(0);
+            const auto arg1 = op.argAsDouble(1);
+            const auto arg2 = op.argAsDouble(2);
             op.privFilterBySingle(arg, axis, [=](const double v) { return Derived_T::filter(v, arg1, arg2); });
         }
     } // namespace DFG_DETAIL_NS
@@ -748,18 +790,16 @@ namespace operations
         }
         
         ChartEntryOperation op(&Smoothing_indexNb::operation);
-        op.m_argList.resize(2);
-        op.m_argList[0] = arg0;
-        op.m_argList[1] = arg1;
+        op.storeArg(0, arg0);
+        op.storeArg(1, arg1);
         return op;
     }
 
     // Executes operation on pipe data.
     inline void Smoothing_indexNb::operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
     {
-        const auto& argList = op.m_argList;
         size_t nNbRadius = 0;
-        if (argList.size() < 1 || !::DFG_MODULE_NS(math)::isFloatConvertibleTo(argList[0], &nNbRadius))
+        if (op.argCount() < 1 || !::DFG_MODULE_NS(math)::isFloatConvertibleTo(op.argAsDouble(0), &nNbRadius))
         {
             op.setError(error_badCreationArgs);
             return;
@@ -777,7 +817,7 @@ namespace operations
             op.setError(error_unexpectedInputVectorTypes);
             return;
         }
-        const auto smoothingType = (argList.size() >= 2) ? argList[1] : smoothingTypeAverage();
+        const auto smoothingType = (op.argCount() >= 2) ? op.argAsDouble(1) : smoothingTypeAverage();
         if (smoothingType == smoothingTypeAverage())
             ::DFG_MODULE_NS(dataAnalysis)::smoothWithNeighbourAverages(*pY, nNbRadius);
         else if (smoothingType == smoothingTypeMedian())

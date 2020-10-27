@@ -341,9 +341,9 @@ TEST(dfgCharts, operations_passWindow)
     // Testing -inf, inf handling in arguments
     {
         auto op = opManager.createOperation(DFG_ASCII("passWindow(x, -inf, inf)"));
-        ASSERT_EQ(3, op.m_argList.size());
-        EXPECT_EQ(-std::numeric_limits<double>::infinity(), op.m_argList[1]);
-        EXPECT_EQ(std::numeric_limits<double>::infinity(), op.m_argList[2]);
+        ASSERT_EQ(3, op.argCount());
+        EXPECT_EQ(-std::numeric_limits<double>::infinity(), op.argAsDouble(1));
+        EXPECT_EQ(std::numeric_limits<double>::infinity(), op.argAsDouble(2));
     }
 }
 
