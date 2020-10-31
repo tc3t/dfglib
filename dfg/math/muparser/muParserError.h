@@ -40,6 +40,12 @@
 
 #include "muParserDef.h"
 
+#if defined(_MSC_VER)
+	#pragma warning(push)
+	#pragma warning(disable : 4251)  // ...needs to have dll-interface to be used by clients of class ...
+#endif
+
+
 /** \file
 	\brief This file defines the error class used by the parser.
 */
@@ -106,6 +112,10 @@ namespace dfg_mu
 	};
 
 } // namespace dfg_mu
+
+#if defined(_MSC_VER)
+	#pragma warning(pop)
+#endif
 
 #endif
 

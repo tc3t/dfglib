@@ -34,7 +34,7 @@
 
 #if defined(_MSC_VER)
 	#pragma warning(push)
-	#pragma warning(disable : 26812) // What the fuck is the point of this warning?
+	#pragma warning(disable : 26812) // MSVC wants to force me te use enum classes or bother me with pointless warnings
 #endif
 
 namespace dfg_mu

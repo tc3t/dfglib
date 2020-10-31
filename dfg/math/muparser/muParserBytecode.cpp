@@ -42,6 +42,10 @@
 #include "muParserToken.h"
 #include "muParserTemplateMagic.h"
 
+#if defined(_MSC_VER)
+	#pragma warning(push)
+	#pragma warning(disable : 26812) 
+#endif
 
 namespace dfg_mu
 {
@@ -633,3 +637,7 @@ namespace dfg_mu
 		dfg_mu::console() << _T("END") << std::endl;
 	}
 } // namespace dfg_mu
+
+#if defined(_MSC_VER)
+	#pragma warning(pop)
+#endif

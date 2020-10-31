@@ -44,7 +44,9 @@
 #include <cctype>
 
 #ifdef MUP_USE_OPENMP
+
 #include <omp.h>
+
 #endif
 
 #if defined(_MSC_VER)
@@ -385,13 +387,11 @@ namespace dfg_mu
 		}
 	}
 
-	//---------------------------------------------------------------------------
-	/** \brief Check if a name contains invalid characters.
 
+	/** \brief Check if a name contains invalid characters.
 		\throw ParserException if the name contains invalid characters.
 	*/
-	void ParserBase::CheckName(const string_type& a_sName,
-		const string_type& a_szCharSet) const
+	void ParserBase::CheckName(const string_type& a_sName, const string_type& a_szCharSet) const
 	{
 		if (!a_sName.length() ||
 			(a_sName.find_first_not_of(a_szCharSet) != string_type::npos) ||
@@ -401,7 +401,6 @@ namespace dfg_mu
 		}
 	}
 
-	//---------------------------------------------------------------------------
 	/** \brief Set the formula.
 		\param a_strFormula Formula as string_type
 		\throw ParserException in case of syntax errors.
@@ -411,11 +410,6 @@ namespace dfg_mu
 	*/
 	void ParserBase::SetExpr(const string_type& a_sExpr)
 	{
-		if (std::all_of(a_sExpr.begin(), a_sExpr.end(), [](char c) { return !std::isgraph(c); }))
-		{
-			Error(ecINVALID_CHARACTERS_FOUND);
-		}
-
 		// Check locale compatibility
 		if (m_pTokenReader->GetArgSep() == std::use_facet<numpunct<char_type> >(s_locale).decimal_point())
 			Error(ecLOCALE);
@@ -652,11 +646,11 @@ namespace dfg_mu
 		case cmDIV:      return  prMUL_DIV;
 		case cmPOW:      return  prPOW;
 
-			// user defined binary operators
+		// user defined binary operators
 		case cmOPRT_INFIX:
 		case cmOPRT_BIN: return a_Tok.GetPri();
-		default:  Error(ecINTERNAL_ERROR, 5);
-			return 999;
+		default:  
+			throw exception_type(ecINTERNAL_ERROR, 5, _T(""));
 		}
 	}
 
@@ -891,18 +885,24 @@ namespace dfg_mu
 		while (a_stOpt.size() && a_stOpt.top().GetCode() == cmELSE)
 		{
 			MUP_ASSERT(!a_stOpt.empty())
-				token_type opElse = a_stOpt.top();
+			token_type opElse = a_stOpt.top();
 			a_stOpt.pop();
 
 			// Take the value associated with the else branch from the value stack
 			MUP_ASSERT(!a_stVal.empty());
 			token_type vVal2 = a_stVal.top();
+			if (vVal2.GetType() != tpDBL)
+				Error(ecUNEXPECTED_STR, m_pTokenReader->GetPos());
+			
 			a_stVal.pop();
 
 			// it then else is a ternary operator Pop all three values from the value s
 			// tack and just return the right value
 			MUP_ASSERT(!a_stVal.empty());
 			token_type vVal1 = a_stVal.top();
+			if (vVal1.GetType() != tpDBL)
+				Error(ecUNEXPECTED_STR, m_pTokenReader->GetPos());
+
 			a_stVal.pop();
 
 			MUP_ASSERT(!a_stVal.empty());
@@ -1177,10 +1177,15 @@ namespace dfg_mu
 
 					sidx -= -iArgCount - 1;
 
-					// <ibg 2020-06-08/> From oss-fuzz. Happend when Multiarg functions and if-then-else are used incorrectly "sum(0?1,2,3,4,5:6)"
+					// <ibg 2020-06-08> From oss-fuzz. Happend when Multiarg functions and if-then-else are used incorrectly.
+					// Expressions where this was observed:
+					//		sum(0?1,2,3,4,5:6)			-> fixed
+					//		avg(0>3?4:(""),0^3?4:(""))
+					//
 					// The final result normally lieas at position 1. If sixd is smaller there is something wrong.
 					if (sidx <= 0)
 						Error(ecINTERNAL_ERROR, -1);
+					// </ibg>
 
 					Stack[sidx] = (*(multfun_type)pTok->Fun.ptr)(&Stack[sidx], -iArgCount);
 					continue;
@@ -1228,14 +1233,12 @@ namespace dfg_mu
 				case 9: sidx -= 8; Stack[sidx] = (*(bulkfun_type9)pTok->Fun.ptr)(nOffset, nThreadID, Stack[sidx], Stack[sidx + 1], Stack[sidx + 2], Stack[sidx + 3], Stack[sidx + 4], Stack[sidx + 5], Stack[sidx + 6], Stack[sidx + 7], Stack[sidx + 8]); continue;
 				case 10:sidx -= 9; Stack[sidx] = (*(bulkfun_type10)pTok->Fun.ptr)(nOffset, nThreadID, Stack[sidx], Stack[sidx + 1], Stack[sidx + 2], Stack[sidx + 3], Stack[sidx + 4], Stack[sidx + 5], Stack[sidx + 6], Stack[sidx + 7], Stack[sidx + 8], Stack[sidx + 9]); continue;
 				default:
-					Error(ecINTERNAL_ERROR, 2);
-					continue;
+					throw exception_type(ecINTERNAL_ERROR, 2, _T(""));
 				}
 			}
 
 			default:
-				Error(ecINTERNAL_ERROR, 3);
-				return 0;
+				throw exception_type(ecINTERNAL_ERROR, 3, _T(""));
 			} // switch CmdCode
 		} // for all bytecode tokens
 
@@ -1487,8 +1490,16 @@ namespace dfg_mu
 		if (stVal.size() == 0)
 			Error(ecEMPTY_EXPRESSION);
 
-		if (stVal.top().GetType() != tpDBL)
-			Error(ecSTR_RESULT);
+		// 2020-09-17; fix for https://oss-fuzz.com/testcase-detail/5758791700971520
+		// I don't need the value stack any more. Destructively check if all values in the value 
+		// stack represent floating point values
+		while (stVal.size())
+		{
+			if (stVal.top().GetType() != tpDBL)
+				Error(ecSTR_RESULT);
+
+			stVal.pop();
+		}
 
 		m_vStackBuffer.resize(m_vRPN.GetMaxStackSize() * s_MaxNumOpenMPThreads);
 	}

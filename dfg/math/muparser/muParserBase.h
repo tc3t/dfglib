@@ -47,6 +47,10 @@
 #include "muParserBytecode.h"
 #include "muParserError.h"
 
+#if defined(_MSC_VER)
+	#pragma warning(push)
+	#pragma warning(disable : 4251)  // ...needs to have dll-interface to be used by clients of class ...
+#endif
 
 namespace dfg_mu
 {
@@ -177,7 +181,7 @@ namespace dfg_mu
 	protected:
 
 		void Init();
-		void Error(EErrorCodes a_iErrc, int a_iPos = (int)dfg_mu::string_type::npos, const string_type& a_strTok = string_type()) const;
+		void Error(EErrorCodes a_iErrc, int a_iPos = static_cast<int>(dfg_mu::string_type::npos), const string_type& a_strTok = string_type()) const;
 
 		virtual void InitCharSets() = 0;
 		virtual void InitFun() = 0;
