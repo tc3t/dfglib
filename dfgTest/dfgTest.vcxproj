@@ -614,6 +614,7 @@
     <ClInclude Include="..\dfg\mathAll.hpp" />
     <ClInclude Include="..\dfg\math\constants.hpp" />
     <ClInclude Include="..\dfg\math\evalPolynomial.hpp" />
+    <ClInclude Include="..\dfg\math\FormulaParser.hpp" />
     <ClInclude Include="..\dfg\math\interpolationLinear.hpp" />
     <ClInclude Include="..\dfg\math\interval.hpp" />
     <ClInclude Include="..\dfg\math\pdf.hpp" />

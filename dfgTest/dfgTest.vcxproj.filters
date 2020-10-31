@@ -678,6 +678,9 @@
     <ClInclude Include="..\dfg\iter\CustomAccessIterator.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\math\FormulaParser.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

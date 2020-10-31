@@ -6,6 +6,7 @@
 #include <dfg/math/interval.hpp>
 #include <dfg/math/evalPolynomial.hpp>
 #include <dfg/math/interpolationLinear.hpp>
+#include <dfg/math/FormulaParser.hpp>
 #include <dfg/cont.hpp>
 #include <dfg/alg.hpp>
 
@@ -518,4 +519,24 @@ TEST(dfgMath, numericDistance)
     EXPECT_EQ(uint8(10), numericDistance(int8(12), int8(2)));
     EXPECT_EQ(uint8(127), numericDistance(int8(127), int8(0)));
     EXPECT_EQ(uint8(127), numericDistance(int8(-128), int8(-1)));
+}
+
+TEST(dfgMath, FormulaParser)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+
+    {
+        FormulaParser parser;
+        double x = 1;
+        EXPECT_TRUE(parser.defineVariable("x", &x));
+        EXPECT_TRUE(parser.setFormula("x+2*3"));
+        EXPECT_EQ(7, parser.evaluateFormulaAsDouble());
+        EXPECT_EQ(7, FormulaParser::evaluateFormulaAsDouble("1+2*3"));
+
+        EXPECT_FALSE(parser.defineVariable("", &x)); // Invalid variable symbol
+        EXPECT_FALSE(parser.defineVariable("y", nullptr)); // Invalid variable pointer
+        EXPECT_TRUE(isNan(FormulaParser::evaluateFormulaAsDouble("2+-*/6")));
+
+    }
 }

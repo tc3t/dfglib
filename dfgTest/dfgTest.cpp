@@ -131,6 +131,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator_operatorLt";
     //::testing::GTEST_FLAG(filter) = "dfgMath.absAsUnsigned";
+    //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser";
     //::testing::GTEST_FLAG(filter) = "dfgMath.isFloatConvertibleTo";
     //::testing::GTEST_FLAG(filter) = "dfgMath.isIntegerValued";
     //::testing::GTEST_FLAG(filter) = "dfgMath.logOfBase";
