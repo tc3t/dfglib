@@ -106,7 +106,7 @@ namespace dfg_mu
 	void ParserByteCode::AddVar(value_type* a_pVar)
 	{
 		++m_iStackPos;
-		m_iMaxStackSize = std::max(m_iMaxStackSize, (size_t)m_iStackPos);
+		m_iMaxStackSize = (std::max)(m_iMaxStackSize, (size_t)m_iStackPos);
 
 		// optimization does not apply
 		SToken tok;
@@ -133,7 +133,7 @@ namespace dfg_mu
 	void ParserByteCode::AddVal(value_type a_fVal)
 	{
 		++m_iStackPos;
-		m_iMaxStackSize = std::max(m_iMaxStackSize, (size_t)m_iStackPos);
+		m_iMaxStackSize = (std::max)(m_iMaxStackSize, (size_t)m_iStackPos);
 
 		// If optimization does not apply
 		SToken tok;
@@ -433,7 +433,7 @@ namespace dfg_mu
 		}
 
 		m_iStackPos = m_iStackPos - std::abs(a_iArgc) + 1;
-		m_iMaxStackSize = std::max(m_iMaxStackSize, (size_t)m_iStackPos);
+		m_iMaxStackSize = (std::max)(m_iMaxStackSize, (size_t)m_iStackPos);
 
 	}
 
@@ -446,7 +446,7 @@ namespace dfg_mu
 	void ParserByteCode::AddBulkFun(generic_fun_type a_pFun, int a_iArgc)
 	{
 		m_iStackPos = m_iStackPos - a_iArgc + 1;
-		m_iMaxStackSize = std::max(m_iMaxStackSize, (size_t)m_iStackPos);
+		m_iMaxStackSize = (std::max)(m_iMaxStackSize, (size_t)m_iStackPos);
 
 		SToken tok;
 		tok.Cmd = cmFUNC_BULK;
@@ -474,7 +474,7 @@ namespace dfg_mu
 		tok.Fun.ptr = a_pFun;
 		m_vRPN.push_back(tok);
 
-		m_iMaxStackSize = std::max(m_iMaxStackSize, (size_t)m_iStackPos);
+		m_iMaxStackSize = (std::max)(m_iMaxStackSize, (size_t)m_iStackPos);
 	}
 
 

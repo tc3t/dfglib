@@ -169,7 +169,7 @@ namespace dfg_mu
 
 			T fRes = a_afArg[0];
 			for (int i = 0; i < a_iArgc; ++i)
-				fRes = std::min(fRes, a_afArg[i]);
+				fRes = (std::min)(fRes, a_afArg[i]);
 
 			return fRes;
 		}
@@ -180,7 +180,7 @@ namespace dfg_mu
 				throw ParserError(_T("too few arguments for function min."));
 
 			T fRes = a_afArg[0];
-			for (int i = 0; i < a_iArgc; ++i) fRes = std::max(fRes, a_afArg[i]);
+			for (int i = 0; i < a_iArgc; ++i) fRes = (std::max)(fRes, a_afArg[i]);
 
 			return fRes;
 		}
