@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -40,7 +43,7 @@
 #include "muParserTemplateMagic.h"
 
 
-namespace mu
+namespace dfg_mu
 {
 	/** \brief Bytecode default constructor. */
 	ParserByteCode::ParserByteCode()
@@ -544,89 +547,89 @@ namespace mu
 	{
 		if (!m_vRPN.size())
 		{
-			mu::console() << _T("No bytecode available\n");
+			dfg_mu::console() << _T("No bytecode available\n");
 			return;
 		}
 
-		mu::console() << _T("Number of RPN tokens:") << (int)m_vRPN.size() << _T("\n");
+		dfg_mu::console() << _T("Number of RPN tokens:") << (int)m_vRPN.size() << _T("\n");
 		for (std::size_t i = 0; i < m_vRPN.size() && m_vRPN[i].Cmd != cmEND; ++i)
 		{
-			mu::console() << std::dec << i << _T(" : \t");
+			dfg_mu::console() << std::dec << i << _T(" : \t");
 			switch (m_vRPN[i].Cmd)
 			{
-			case cmVAL:   mu::console() << _T("VAL \t");
-				mu::console() << _T("[") << m_vRPN[i].Val.data2 << _T("]\n");
+			case cmVAL:   dfg_mu::console() << _T("VAL \t");
+				dfg_mu::console() << _T("[") << m_vRPN[i].Val.data2 << _T("]\n");
 				break;
 
-			case cmVAR:   mu::console() << _T("VAR \t");
-				mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
+			case cmVAR:   dfg_mu::console() << _T("VAR \t");
+				dfg_mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
 				break;
 
-			case cmVARPOW2: mu::console() << _T("VARPOW2 \t");
-				mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
+			case cmVARPOW2: dfg_mu::console() << _T("VARPOW2 \t");
+				dfg_mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
 				break;
 
-			case cmVARPOW3: mu::console() << _T("VARPOW3 \t");
-				mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
+			case cmVARPOW3: dfg_mu::console() << _T("VARPOW3 \t");
+				dfg_mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
 				break;
 
-			case cmVARPOW4: mu::console() << _T("VARPOW4 \t");
-				mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
+			case cmVARPOW4: dfg_mu::console() << _T("VARPOW4 \t");
+				dfg_mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]\n");
 				break;
 
-			case cmVARMUL:  mu::console() << _T("VARMUL \t");
-				mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]");
-				mu::console() << _T(" * [") << m_vRPN[i].Val.data << _T("]");
-				mu::console() << _T(" + [") << m_vRPN[i].Val.data2 << _T("]\n");
+			case cmVARMUL:  dfg_mu::console() << _T("VARMUL \t");
+				dfg_mu::console() << _T("[ADDR: 0x") << std::hex << m_vRPN[i].Val.ptr << _T("]");
+				dfg_mu::console() << _T(" * [") << m_vRPN[i].Val.data << _T("]");
+				dfg_mu::console() << _T(" + [") << m_vRPN[i].Val.data2 << _T("]\n");
 				break;
 
-			case cmFUNC:  mu::console() << _T("CALL\t");
-				mu::console() << _T("[ARG:") << std::dec << m_vRPN[i].Fun.argc << _T("]");
-				mu::console() << _T("[ADDR: 0x") << std::hex << reinterpret_cast<void*>(m_vRPN[i].Fun.ptr) << _T("]");
-				mu::console() << _T("\n");
+			case cmFUNC:  dfg_mu::console() << _T("CALL\t");
+				dfg_mu::console() << _T("[ARG:") << std::dec << m_vRPN[i].Fun.argc << _T("]");
+				dfg_mu::console() << _T("[ADDR: 0x") << std::hex << reinterpret_cast<void*>(m_vRPN[i].Fun.ptr) << _T("]");
+				dfg_mu::console() << _T("\n");
 				break;
 
 			case cmFUNC_STR:
-				mu::console() << _T("CALL STRFUNC\t");
-				mu::console() << _T("[ARG:") << std::dec << m_vRPN[i].Fun.argc << _T("]");
-				mu::console() << _T("[IDX:") << std::dec << m_vRPN[i].Fun.idx << _T("]");
-				mu::console() << _T("[ADDR: 0x") << reinterpret_cast<void*>(m_vRPN[i].Fun.ptr) << _T("]\n");
+				dfg_mu::console() << _T("CALL STRFUNC\t");
+				dfg_mu::console() << _T("[ARG:") << std::dec << m_vRPN[i].Fun.argc << _T("]");
+				dfg_mu::console() << _T("[IDX:") << std::dec << m_vRPN[i].Fun.idx << _T("]");
+				dfg_mu::console() << _T("[ADDR: 0x") << reinterpret_cast<void*>(m_vRPN[i].Fun.ptr) << _T("]\n");
 				break;
 
-			case cmLT:    mu::console() << _T("LT\n");  break;
-			case cmGT:    mu::console() << _T("GT\n");  break;
-			case cmLE:    mu::console() << _T("LE\n");  break;
-			case cmGE:    mu::console() << _T("GE\n");  break;
-			case cmEQ:    mu::console() << _T("EQ\n");  break;
-			case cmNEQ:   mu::console() << _T("NEQ\n"); break;
-			case cmADD:   mu::console() << _T("ADD\n"); break;
-			case cmLAND:  mu::console() << _T("&&\n"); break;
-			case cmLOR:   mu::console() << _T("||\n"); break;
-			case cmSUB:   mu::console() << _T("SUB\n"); break;
-			case cmMUL:   mu::console() << _T("MUL\n"); break;
-			case cmDIV:   mu::console() << _T("DIV\n"); break;
-			case cmPOW:   mu::console() << _T("POW\n"); break;
+			case cmLT:    dfg_mu::console() << _T("LT\n");  break;
+			case cmGT:    dfg_mu::console() << _T("GT\n");  break;
+			case cmLE:    dfg_mu::console() << _T("LE\n");  break;
+			case cmGE:    dfg_mu::console() << _T("GE\n");  break;
+			case cmEQ:    dfg_mu::console() << _T("EQ\n");  break;
+			case cmNEQ:   dfg_mu::console() << _T("NEQ\n"); break;
+			case cmADD:   dfg_mu::console() << _T("ADD\n"); break;
+			case cmLAND:  dfg_mu::console() << _T("&&\n"); break;
+			case cmLOR:   dfg_mu::console() << _T("||\n"); break;
+			case cmSUB:   dfg_mu::console() << _T("SUB\n"); break;
+			case cmMUL:   dfg_mu::console() << _T("MUL\n"); break;
+			case cmDIV:   dfg_mu::console() << _T("DIV\n"); break;
+			case cmPOW:   dfg_mu::console() << _T("POW\n"); break;
 
-			case cmIF:    mu::console() << _T("IF\t");
-				mu::console() << _T("[OFFSET:") << std::dec << m_vRPN[i].Oprt.offset << _T("]\n");
+			case cmIF:    dfg_mu::console() << _T("IF\t");
+				dfg_mu::console() << _T("[OFFSET:") << std::dec << m_vRPN[i].Oprt.offset << _T("]\n");
 				break;
 
-			case cmELSE:  mu::console() << _T("ELSE\t");
-				mu::console() << _T("[OFFSET:") << std::dec << m_vRPN[i].Oprt.offset << _T("]\n");
+			case cmELSE:  dfg_mu::console() << _T("ELSE\t");
+				dfg_mu::console() << _T("[OFFSET:") << std::dec << m_vRPN[i].Oprt.offset << _T("]\n");
 				break;
 
-			case cmENDIF: mu::console() << _T("ENDIF\n"); break;
+			case cmENDIF: dfg_mu::console() << _T("ENDIF\n"); break;
 
 			case cmASSIGN:
-				mu::console() << _T("ASSIGN\t");
-				mu::console() << _T("[ADDR: 0x") << m_vRPN[i].Oprt.ptr << _T("]\n");
+				dfg_mu::console() << _T("ASSIGN\t");
+				dfg_mu::console() << _T("[ADDR: 0x") << m_vRPN[i].Oprt.ptr << _T("]\n");
 				break;
 
-			default:      mu::console() << _T("(unknown code: ") << m_vRPN[i].Cmd << _T(")\n");
+			default:      dfg_mu::console() << _T("(unknown code: ") << m_vRPN[i].Cmd << _T(")\n");
 				break;
 			} // switch cmdCode
 		} // while bytecode
 
-		mu::console() << _T("END") << std::endl;
+		dfg_mu::console() << _T("END") << std::endl;
 	}
-} // namespace mu
+} // namespace dfg_mu

@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -40,7 +43,7 @@
 	\brief Definition of the standard floating point parser.
 */
 
-namespace mu
+namespace dfg_mu
 {
 	/** \brief Mathematical expressions parser.
 
@@ -65,7 +68,7 @@ namespace mu
 
 		static int IsVal(const char_type* a_szExpr, int* a_iPos, value_type* a_fVal);
 	};
-} // namespace mu
+} // namespace dfg_mu
 
 #endif
 

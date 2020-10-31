@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -45,7 +48,7 @@
 */
 
 
-namespace mu
+namespace dfg_mu
 {
 
 	// Forward declaration
@@ -986,7 +989,7 @@ namespace mu
 	{
 		return m_cArgSep;
 	}
-} // namespace mu
+} // namespace dfg_mu
 
 #if defined(_MSC_VER)
 	#pragma warning(pop)

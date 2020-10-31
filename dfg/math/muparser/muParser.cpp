@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -43,7 +46,7 @@ using namespace std;
 
 
 /** \brief Namespace for mathematical applications. */
-namespace mu
+namespace dfg_mu
 {
 	//---------------------------------------------------------------------------
 	/** \brief Default value recognition callback.
@@ -105,7 +108,7 @@ namespace mu
 	/** \brief Initialize the default functions. */
 	void Parser::InitFun()
 	{
-		if (mu::TypeInfo<mu::value_type>::IsInteger())
+		if (dfg_mu::TypeInfo<dfg_mu::value_type>::IsInteger())
 		{
 			// When setting MUP_BASETYPE to an integer type
 			// Place functions for dealing with integer values here
@@ -230,4 +233,4 @@ namespace mu
 		fRes = (-f[0] + 8 * f[1] - 8 * f[2] + f[3]) / (12 * fEpsilon);
 		return fRes;
 	}
-} // namespace mu
+} // namespace dfg_mu

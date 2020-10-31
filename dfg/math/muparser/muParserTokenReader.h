@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -45,7 +48,7 @@
 */
 
 
-namespace mu
+namespace dfg_mu
 {
 	// Forward declaration
 	class ParserBase;
@@ -153,7 +156,7 @@ namespace mu
 		token_type m_lastTok;
 		char_type m_cArgSep;     ///< The character used for separating function arguments
 	};
-} // namespace mu
+} // namespace dfg_mu
 
 #endif
 

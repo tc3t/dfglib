@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -61,7 +64,8 @@
 	MUPARSER_LOCAL is used for non-api symbols.
 */
 
-#ifndef MUPARSER_STATIC /* defined if muParser is compiled as a DLL */
+//#ifndef MUPARSER_STATIC /* defined if muParser is compiled as a DLL */
+#if 0
 
 	#ifdef MUPARSERLIB_EXPORTS /* defined if we are building the muParser DLL (instead of using it) */
 		#define API_EXPORT_CXX MUPARSER_HELPER_DLL_EXPORT

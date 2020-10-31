@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -45,7 +48,7 @@
 #include "muParserError.h"
 
 
-namespace mu
+namespace dfg_mu
 {
 	/** \file
 		\brief This file contains the class definition of the muparser engine.
@@ -124,7 +127,7 @@ namespace mu
 		bool HasBuiltInOprt() const;
 		void AddValIdent(identfun_type a_pCallback);
 
-		/** \fn void mu::ParserBase::DefineFun(const string_type &a_strName, fun_type0 a_pFun, bool a_bAllowOpt = true)
+		/** \fn void dfg_mu::ParserBase::DefineFun(const string_type &a_strName, fun_type0 a_pFun, bool a_bAllowOpt = true)
 			\brief Define a parser function without arguments.
 			\param a_strName Name of the function
 			\param a_pFun Pointer to the callback function
@@ -174,7 +177,7 @@ namespace mu
 	protected:
 
 		void Init();
-		void Error(EErrorCodes a_iErrc, int a_iPos = (int)mu::string_type::npos, const string_type& a_strTok = string_type()) const;
+		void Error(EErrorCodes a_iErrc, int a_iPos = (int)dfg_mu::string_type::npos, const string_type& a_strTok = string_type()) const;
 
 		virtual void InitCharSets() = 0;
 		virtual void InitFun() = 0;
@@ -289,6 +292,6 @@ namespace mu
 		mutable int m_nFinalResultIdx;
 	};
 
-} // namespace mu
+} // namespace dfg_mu
 
 #endif

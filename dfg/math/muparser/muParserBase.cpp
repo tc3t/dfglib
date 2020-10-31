@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -55,7 +58,7 @@ using namespace std;
 	\brief This file contains the basic implementation of the muparser engine.
 */
 
-namespace mu
+namespace dfg_mu
 {
 	std::locale ParserBase::s_locale = std::locale(std::locale::classic(), new change_dec_sep<char_type>('.'));
 
@@ -1702,24 +1705,24 @@ namespace mu
 		std::stack<token_type> stOprt(a_stOprt);
 		std::stack<token_type> stVal(a_stVal);
 
-		mu::console() << _T("\nValue stack:\n");
+		dfg_mu::console() << _T("\nValue stack:\n");
 		while (!stVal.empty())
 		{
 			token_type val = stVal.top();
 			stVal.pop();
 
 			if (val.GetType() == tpSTR)
-				mu::console() << _T(" \"") << val.GetAsString() << _T("\" ");
+				dfg_mu::console() << _T(" \"") << val.GetAsString() << _T("\" ");
 			else
-				mu::console() << _T(" ") << val.GetVal() << _T(" ");
+				dfg_mu::console() << _T(" ") << val.GetVal() << _T(" ");
 		}
-		mu::console() << "\nOperator stack:\n";
+		dfg_mu::console() << "\nOperator stack:\n";
 
 		while (!stOprt.empty())
 		{
 			if (stOprt.top().GetCode() <= cmASSIGN)
 			{
-				mu::console() << _T("OPRT_INTRNL \"")
+				dfg_mu::console() << _T("OPRT_INTRNL \"")
 					<< ParserBase::c_DefaultOprt[stOprt.top().GetCode()]
 					<< _T("\" \n");
 			}
@@ -1727,49 +1730,49 @@ namespace mu
 			{
 				switch (stOprt.top().GetCode())
 				{
-				case cmVAR:   mu::console() << _T("VAR\n");  break;
-				case cmVAL:   mu::console() << _T("VAL\n");  break;
+				case cmVAR:   dfg_mu::console() << _T("VAR\n");  break;
+				case cmVAL:   dfg_mu::console() << _T("VAL\n");  break;
 				case cmFUNC:
-					mu::console()
+					dfg_mu::console()
 						<< _T("FUNC \"")
 						<< stOprt.top().GetAsString()
 						<< _T("\"\n");
 					break;
 
 				case cmFUNC_BULK:
-					mu::console()
+					dfg_mu::console()
 						<< _T("FUNC_BULK \"")
 						<< stOprt.top().GetAsString()
 						<< _T("\"\n");
 					break;
 
 				case cmOPRT_INFIX:
-					mu::console() << _T("OPRT_INFIX \"")
+					dfg_mu::console() << _T("OPRT_INFIX \"")
 						<< stOprt.top().GetAsString()
 						<< _T("\"\n");
 					break;
 
 				case cmOPRT_BIN:
-					mu::console() << _T("OPRT_BIN \"")
+					dfg_mu::console() << _T("OPRT_BIN \"")
 						<< stOprt.top().GetAsString()
 						<< _T("\"\n");
 					break;
 
-				case cmFUNC_STR: mu::console() << _T("FUNC_STR\n");       break;
-				case cmEND:      mu::console() << _T("END\n");            break;
-				case cmUNKNOWN:  mu::console() << _T("UNKNOWN\n");        break;
-				case cmBO:       mu::console() << _T("BRACKET \"(\"\n");  break;
-				case cmBC:       mu::console() << _T("BRACKET \")\"\n");  break;
-				case cmIF:       mu::console() << _T("IF\n");  break;
-				case cmELSE:     mu::console() << _T("ELSE\n");  break;
-				case cmENDIF:    mu::console() << _T("ENDIF\n");  break;
-				default:         mu::console() << stOprt.top().GetCode() << _T(" ");  break;
+				case cmFUNC_STR: dfg_mu::console() << _T("FUNC_STR\n");       break;
+				case cmEND:      dfg_mu::console() << _T("END\n");            break;
+				case cmUNKNOWN:  dfg_mu::console() << _T("UNKNOWN\n");        break;
+				case cmBO:       dfg_mu::console() << _T("BRACKET \"(\"\n");  break;
+				case cmBC:       dfg_mu::console() << _T("BRACKET \")\"\n");  break;
+				case cmIF:       dfg_mu::console() << _T("IF\n");  break;
+				case cmELSE:     dfg_mu::console() << _T("ELSE\n");  break;
+				case cmENDIF:    dfg_mu::console() << _T("ENDIF\n");  break;
+				default:         dfg_mu::console() << stOprt.top().GetCode() << _T(" ");  break;
 				}
 			}
 			stOprt.pop();
 		}
 
-		mu::console() << dec << endl;
+		dfg_mu::console() << dec << endl;
 	}
 
 	/** \brief Calculate the result.
@@ -1888,7 +1891,7 @@ namespace mu
 #endif
 
 	}
-} // namespace mu
+} // namespace dfg_mu
 
 #if defined(_MSC_VER)
 	#pragma warning(pop)

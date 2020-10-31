@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -34,7 +37,7 @@
 	#pragma warning(disable : 26812) // What the fuck is the point of this warning?
 #endif
 
-namespace mu
+namespace dfg_mu
 {
 	//------------------------------------------------------------------------------
 	const ParserErrorMsg& ParserErrorMsg::Instance()
@@ -328,7 +331,7 @@ namespace mu
 	{
 		return m_iErrc;
 	}
-} // namespace mu
+} // namespace dfg_mu
 
 #if defined(_MSC_VER)
 	#pragma warning(pop)

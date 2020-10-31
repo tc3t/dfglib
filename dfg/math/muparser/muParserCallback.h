@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -36,7 +39,7 @@
 	\brief Definition of the parser callback class.
 */
 
-namespace mu
+namespace dfg_mu
 {
 
 	/** \brief Encapsulation of prototypes for a numerical parser function.
@@ -117,7 +120,7 @@ namespace mu
 	/** \brief Container for Callback objects. */
 	typedef std::map<string_type, ParserCallback> funmap_type;
 
-} // namespace mu
+} // namespace dfg_mu
 
 #endif
 

@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -41,7 +44,7 @@
 	\brief This file defines the error class used by the parser.
 */
 
-namespace mu
+namespace dfg_mu
 {
 	/** \brief A class that handles the error messages.	*/
 	class ParserErrorMsg final
@@ -102,7 +105,7 @@ namespace mu
 		const ParserErrorMsg& m_ErrMsg;
 	};
 
-} // namespace mu
+} // namespace dfg_mu
 
 #endif
 

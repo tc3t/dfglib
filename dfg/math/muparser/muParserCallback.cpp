@@ -1,5 +1,8 @@
 /*
 
+	NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE whose copyright notice is below.
+
+
 	 _____  __ _____________ _______  ______ ___________
 	/     \|  |  \____ \__  \\_  __ \/  ___// __ \_  __ \
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
@@ -38,7 +41,7 @@
 */
 
 
-namespace mu
+namespace dfg_mu
 {
 	ParserCallback::ParserCallback(fun_type0 a_pFun, bool a_bAllowOpti)
 		:m_pFun((void*)a_pFun)
@@ -491,7 +494,7 @@ namespace mu
 	{
 		return m_iArgc;
 	}
-} // namespace mu
+} // namespace dfg_mu
 
 #if defined(_MSC_VER)
 	#pragma warning(pop)
