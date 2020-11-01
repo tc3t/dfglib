@@ -62,6 +62,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCharts.AbstractChartControlItem";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_blockWindow";
+    //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_formula";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_passWindow";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_smoothing_indexNb";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.ChartEntryOperationManager";

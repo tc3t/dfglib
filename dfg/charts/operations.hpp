@@ -11,6 +11,7 @@
 #include <vector>
 #include "../dataAnalysis/smoothWithNeighbourAverages.hpp"
 #include "../dataAnalysis/smoothWithNeighbourMedians.hpp"
+#include "../math/FormulaParser.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
@@ -826,6 +827,120 @@ namespace operations
             op.setError(error_badCreationArgs);
     }
 
+
+    /** Implements element-wise operation by given formula to data
+    *  Id:
+    *       formula
+    *  Parameters:
+    *       -[0]: axis to which value is formula is assigned to, either x or y.
+    *       -[1]: formula. 
+    *  Dependencies
+    *       -Argument 0 defines one dependency, but formula definition may define others.
+    *  Outputs:
+    *       -Same data structure as inputs; element values may have changed only on axis specified by first argument.
+    *  Details:
+    *       -The following variables are available in formula (if they are available in input): x (value of x[i]), y (value of y[i])
+    *  Examples:
+    *       -formula("x", "y + 10"): for each element i, x[i] = y[i] + 10
+    */
+    class Formula : public ChartEntryOperation
+    {
+    public:
+        static SzPtrUtf8R id();
+
+        static ChartEntryOperation create(const CreationArgList& argList);
+
+        static void operation(ChartEntryOperation& op, ChartOperationPipeData& arg);
+    }; // class Formula
+
+    inline auto Formula::id() -> SzPtrUtf8R
+    {
+        return DFG_UTF8("formula");
+    }
+
+    inline auto Formula::create(const CreationArgList& argList) -> ChartEntryOperation
+    {
+        if (argList.valueCount() < 2)
+            return ChartEntryOperation();
+
+        const auto axis = axisStrToIndex(argList.value(0));
+        if (axis == axisIndex_invalid)
+            return ChartEntryOperation();
+
+        ChartEntryOperation op(&Formula::operation);
+
+        op.storeArg(0, axis);;
+        op.storeArg(1, argList.value(1));
+        return op;
+    }
+
+    // Executes operation on pipe data.
+    inline void Formula::operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
+    {
+        if (op.argCount() < 2)
+        {
+            op.setError(error_badCreationArgs);
+            return;
+        }
+        const auto axis = op.argAsDouble(0);
+        const auto svFormula = op.argAsString(1);
+        if (svFormula.empty())
+            return;
+ 
+        ::DFG_MODULE_NS(math)::FormulaParser parser;
+        double x = std::numeric_limits<double>::quiet_NaN();
+        double y = std::numeric_limits<double>::quiet_NaN();
+
+        if (!parser.setFormula(svFormula))
+        {
+            op.setError(error_badCreationArgs);
+            return;
+        }
+
+        const auto pValuesX = arg.constValuesByIndex(0);
+        const auto pValuesY = arg.constValuesByIndex(1);
+
+        if (!pValuesX && !pValuesY)
+        {
+            op.setError(error_missingInput);
+            return;
+        }
+            
+        auto pOutput = op.privPipeVectorByAxisIndex(arg, axis);
+
+        if (!pOutput)
+        {
+            op.setError(error_unableToCreateDataVectors);
+            return;
+        }
+
+        if (pValuesX)
+            parser.defineVariable("x", &x);
+        if (pValuesY)
+            parser.defineVariable("y", &y);
+
+        const auto nSize = (pValuesX) ? pValuesX->size() : pValuesY->size();
+        if (pValuesX && pValuesY && pValuesX->size() != pValuesY->size())
+        {
+            op.setError(error_pipeDataVectorSizeMismatch);
+            return;
+        }
+        if (pOutput->size() != nSize)
+        {
+            op.setError(error_pipeDataVectorSizeMismatch);
+            return;
+        }
+        for (size_t i = 0; i < nSize; ++i)
+        {
+            if (pValuesX)
+                x = (*pValuesX)[i];
+            if (pValuesY)
+                y = (*pValuesY)[i];
+            const auto val = parser.evaluateFormulaAsDouble();
+            (*pOutput)[i] = val;
+        }
+    }
+
 } // namespace operations
 
 inline ChartEntryOperationManager::ChartEntryOperationManager()
@@ -834,6 +949,7 @@ inline ChartEntryOperationManager::ChartEntryOperationManager()
     add<operations::PassWindowOperation>();
     add<operations::BlockWindowOperation>();
     add<operations::Smoothing_indexNb>();
+    add<operations::Formula>();
 }
 
 inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAndParams) -> ChartEntryOperation

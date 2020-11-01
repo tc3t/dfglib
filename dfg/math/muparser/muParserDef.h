@@ -60,7 +60,7 @@
 */
 //#define MUP_USE_OPENMP
 
-#if defined(_UNICODE)
+#if 0 //defined(_UNICODE)
 	/** \brief Definition of the basic parser string type. */
 	#define MUP_STRING_TYPE std::wstring
 
@@ -422,6 +422,14 @@ namespace dfg_mu
 	static const string_type ParserVersion = string_type(_T("2.3.3 (Unstable Development Build!)"));
 	static const string_type ParserVersionDate = string_type(_T("20200917"));
 } // end of namespace
+
+#if defined(_UNICODE)
+    // console is not used in dfg_mu so this is just a placeholder to get dfg_mu compiled when _UNICODE is defined.
+    std::wostream& operator<<(std::wostream& wostrm, const std::string&)
+    {
+        return wostrm;
+    }
+#endif
 
 #if defined(_MSC_VER)
 	#pragma warning(pop)

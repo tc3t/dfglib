@@ -498,6 +498,142 @@ TEST(dfgCharts, operations_smoothing_indexNb)
     }
 }
 
+
+TEST(dfgCharts, operations_formula)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(charts);
+
+    ChartEntryOperationManager opManager;
+
+    const ValueVectorD defaultValsX{ 1 ,  2, 10,  15 };
+    const ValueVectorD defaultValsY{ 50, 60, 20, 150 };
+    const auto formulaXedit0 = DFG_ASCII("formula(x, x + 2)");
+    const auto formulaYedit0 = DFG_ASCII("formula(y, x + y + abs(-2))");
+    const ValueVectorD xValsAfterFormulaXedits0{ 3, 4, 12, 17 };
+    const ValueVectorD yValsAfterFormulaYEdits0{ 53, 64, 32, 167 };
+
+    // Basic tests with modifiable inputs
+    {
+        // Editing x
+        {
+            auto xVals = defaultValsX;
+            auto yVals = defaultValsY;
+            ChartOperationPipeData arg(&xVals, &yVals);
+            opManager.createOperation(formulaXedit0)(arg);
+            EXPECT_EQ(&xVals, arg.constValuesByIndex(0));
+            EXPECT_EQ(&yVals, arg.constValuesByIndex(1));
+            EXPECT_EQ(xValsAfterFormulaXedits0, xVals);
+            EXPECT_EQ(defaultValsY, yVals);
+        }
+
+        // Editing y
+        {
+            auto xVals = defaultValsX;
+            auto yVals = defaultValsY;
+            ChartOperationPipeData arg(&xVals, &yVals);
+            opManager.createOperation(formulaYedit0)(arg);
+            EXPECT_EQ(&xVals, arg.constValuesByIndex(0));
+            EXPECT_EQ(&yVals, arg.constValuesByIndex(1));
+            EXPECT_EQ(defaultValsX, xVals);
+            EXPECT_EQ(yValsAfterFormulaYEdits0, yVals);
+        }
+    }
+
+    // Basic test with const inputs
+    {
+        // Editing x
+        {
+            ChartOperationPipeData arg(&defaultValsX, &defaultValsY);
+            opManager.createOperation(formulaXedit0)(arg);
+            ASSERT_TRUE(arg.constValuesByIndex(0) != nullptr && arg.constValuesByIndex(1) != nullptr);
+            EXPECT_NE(&defaultValsX, arg.constValuesByIndex(0));
+            EXPECT_EQ(&defaultValsY, arg.constValuesByIndex(1));
+            EXPECT_EQ(xValsAfterFormulaXedits0, *arg.constValuesByIndex(0));
+            EXPECT_EQ(defaultValsY, *arg.constValuesByIndex(1));
+        }
+
+        // Editing y
+        {
+            ChartOperationPipeData arg(&defaultValsX, &defaultValsY);
+            opManager.createOperation(formulaYedit0)(arg);
+            ASSERT_TRUE(arg.constValuesByIndex(0) != nullptr && arg.constValuesByIndex(1) != nullptr);
+            EXPECT_EQ(&defaultValsX, arg.constValuesByIndex(0));
+            EXPECT_NE(&defaultValsY, arg.constValuesByIndex(1));
+            EXPECT_EQ(defaultValsX, *arg.constValuesByIndex(0));
+            EXPECT_EQ(yValsAfterFormulaYEdits0, *arg.constValuesByIndex(1));
+        }
+    }
+
+    // modifiable x input, but not modified
+    {
+        auto xVals = defaultValsX;
+        ChartOperationPipeData arg(&xVals, &defaultValsY);
+        opManager.createOperation(formulaYedit0)(arg);
+        ASSERT_TRUE(arg.constValuesByIndex(0) != nullptr && arg.constValuesByIndex(1) != nullptr);
+        EXPECT_EQ(&xVals, arg.constValuesByIndex(0));
+        EXPECT_NE(&defaultValsY, arg.constValuesByIndex(1));
+        EXPECT_EQ(defaultValsX, *arg.constValuesByIndex(0));
+        EXPECT_EQ(yValsAfterFormulaYEdits0, *arg.constValuesByIndex(1));
+    }
+
+    // modifiable y input, but not modified
+    {
+        auto yVals = defaultValsY;
+        ChartOperationPipeData arg(&defaultValsX, &yVals);
+        opManager.createOperation(formulaXedit0)(arg);
+        ASSERT_TRUE(arg.constValuesByIndex(0) != nullptr && arg.constValuesByIndex(1) != nullptr);
+        EXPECT_NE(&defaultValsX, arg.constValuesByIndex(0));
+        EXPECT_EQ(&yVals, arg.constValuesByIndex(1));
+        EXPECT_EQ(xValsAfterFormulaXedits0, *arg.constValuesByIndex(0));
+        EXPECT_EQ(defaultValsY, *arg.constValuesByIndex(1));
+    }
+
+    // Only x-input
+    {
+        ValueVectorD xVals({ 1, 2, 3 });
+        auto op = opManager.createOperation(DFG_UTF8("formula(x, 1+x)"));
+        ChartOperationPipeData arg(&xVals, nullptr);
+        op(arg);
+        EXPECT_EQ(&xVals, arg.constValuesByIndex(0));
+        EXPECT_EQ(ValueVectorD({2, 3, 4}), xVals);
+    }
+
+    // Only y-input
+    {
+        ValueVectorD yVals({ 1, 2, 3 });
+        auto op = opManager.createOperation(DFG_UTF8("formula(y, 1+y)"));
+        ChartOperationPipeData arg(nullptr, &yVals);
+        op(arg);
+        EXPECT_EQ(&yVals, arg.constValuesByIndex(1));
+        EXPECT_EQ(ValueVectorD({ 2, 3, 4 }), yVals);
+    }
+
+    // Error handling: syntax error, use of undeclared variable, use of undeclared function
+    const char* errorCases[] = {"formula(x, 1+-*/2)", "formula(x, 1+z)", "formula(x, 2 + unknownFunction(1))"};
+    for (const auto& pszFormula : errorCases)
+    {
+        ValueVectorD xVals({1, 2, 3});
+        const ValueVectorD yVals({1, 2, 3});
+        auto op = opManager.createOperation(SzPtrUtf8(pszFormula));
+        ChartOperationPipeData arg(&xVals, &yVals);
+        op(arg);
+        EXPECT_EQ(&xVals, arg.constValuesByIndex(0));
+        EXPECT_TRUE(std::all_of(xVals.begin(), xVals.begin(), [](double d) { return ::DFG_MODULE_NS(math)::isNan(d); }));
+        EXPECT_EQ(&yVals, arg.constValuesByIndex(1));
+    }
+
+
+    // Error handling: missing input
+    {
+        auto op = opManager.createOperation(SzPtrUtf8("formula(x, 1+x)"));
+        ChartOperationPipeData arg;
+        op(arg);
+        EXPECT_TRUE(op.hasErrors());
+        EXPECT_TRUE(op.hasError(ChartEntryOperation::error_missingInput));
+    }
+}
+
 TEST(dfgCharts, ChartEntryOperationManager)
 {
     using namespace ::DFG_ROOT_NS;

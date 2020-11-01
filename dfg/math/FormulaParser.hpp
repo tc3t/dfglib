@@ -16,6 +16,21 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 
+    /*
+    * Available function: (2020-11-01)
+    *   Note: these are ones that are built-in in muparser, not yet revised so to be considered as implementation details
+    *		sin, cos, tan
+			asin, acos, atan, atan2
+			sinh, cosh, tanh
+			asinh, acosh, atanh
+			log2, log10, log, ln (log == ln)
+			exp, sqrt, sign, rint, abs
+            sum, avg, min, max
+    * Available constants (2020-11-01)
+    *   Note: these are ones that are built-in in muparser, not yet revised so to be considered as implementation details
+    *       _e
+    *       _pi
+    */ 
     class FormulaParser
     {
     public:

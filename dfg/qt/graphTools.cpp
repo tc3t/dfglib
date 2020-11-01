@@ -1378,6 +1378,33 @@ QString GraphDefinitionWidget::getGuideString()
         </ul>
         <li>Available operations</li>
         <ul>
+            <li><i>formula</i></li>
+            <ul>
+                <li>Defines an expression that is applied element-wise.</li>
+                <li>Example: formula(x, x + 10). Shifts all x-values by 10, i.e. x[i] = x[i] + 10</li>
+                <li>Example: formula(y, y + abs(x+y)). Every value y[i] is replaced by y[i] + abs(x[i] + y[i])</li>
+                <li>Parameters</li>
+                <ul>
+                    <li>0: [x,y]: coordinate whose value to set by the formula</li>
+                    <li>1: Formula string. If input has x/y coordinates, values can be access through variables x and y.
+                </ul>
+                <li>Availability of axis values for different chart types:</li>
+                <ul>
+                    <li>xy: both x and y are available.</li>
+			        <li>histogram: bin position can be affected through x, variable y is not available.</li>
+			        <li>bars: Bar heights can be affected through y, variable x is not available.</li>
+                </ul>
+                <li>In addition to operators +-*/^, the following functions are available:</li>
+                <ul>
+                    <li>sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, asinh, acosh, atanh</li>
+			        <li>log, log2, log10</li>
+			        <li>abs, exp, sqrt, sign</li>
+                    <li>sum, avg, min, max</li>
+                    <ul>
+                        <li>These functions take comma-separated list as input. Note that those need to be escaped in json-definition, for example "operation_a":"formula(y, \"min(2, y)\")"
+                    </ul>
+                </ul>
+            </ul>
             <li><i>passWindow</i></li>
             <ul>
                 <li>Filters out points whose chosen coordinate value is out of range</li>

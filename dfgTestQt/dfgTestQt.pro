@@ -30,6 +30,7 @@ CONFIG += c++14 console
 
 SOURCES += \
     ../dfg/io/widePathStrToFstreamFriendlyNonWide.cpp \
+    ../dfg/math/FormulaParser.cpp \
     ../dfg/os/memoryMappedFile.cpp \
     ../dfg/qt/ConsoleDisplay.cpp \
     ../dfg/qt/CsvItemModel.cpp \

@@ -95,6 +95,7 @@ static void onShowAboutBox()
                  ", <a href=https://github.com/fmtlib/fmt>fmt</a>"
                  ", Qt"
                  ", <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>"
+                 ", <a href=https://github.com/beltoforion/muparser>muparser</a>"
              #if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
                  ", <a href=https://www.qcustomplot.com>QCustomPlot</a>"
              #endif

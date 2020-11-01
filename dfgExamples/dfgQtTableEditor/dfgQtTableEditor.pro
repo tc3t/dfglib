@@ -165,7 +165,8 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp
+        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.cpp
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
         SOURCES += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp
@@ -192,6 +193,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/operations.hpp \
         $$_PRO_FILE_PWD_/../../dfg/chartsAll.hpp
