@@ -1432,9 +1432,25 @@ void GraphDefinitionWidget::showGuideWidget()
         auto pLayout = new QHBoxLayout(m_spGuideWidget.get());
         pTextEdit->setTextInteractionFlags(Qt::TextBrowserInteraction);
         pTextEdit->setHtml(getGuideString());
+        
+        // At least on Qt 5.13 with MSVC2017 default font size was a bit small (8.25), increasing at least to 11.
+        {
+            auto font = pTextEdit->currentFont();
+            const auto oldPointSizeF = font.pointSizeF();
+            font.setPointSizeF(Max(qreal(11), oldPointSizeF));
+            pTextEdit->setFont(font);
+        }
+
         pLayout->addWidget(pTextEdit);
         removeContextHelpButtonFromDialog(m_spGuideWidget.get());
-        m_spGuideWidget->resize(600, 500);
+
+        // Resizing guide window to 75 % of mainwindow size (if mainwindow is available) or at least (600, 500)
+        {
+            auto pMainWindow = getWidgetByType<QMainWindow>(QApplication::topLevelWidgets());
+            const auto width = Max(600, (pMainWindow) ? 3 * pMainWindow->width() / 4 : 0);
+            const auto height = Max(500, (pMainWindow) ? 3 * pMainWindow->height() / 4 : 0);
+            m_spGuideWidget->resize(width, height);
+        }
     }
     m_spGuideWidget->show();
 }

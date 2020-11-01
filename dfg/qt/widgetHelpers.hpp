@@ -71,6 +71,21 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return QString("%1 B").arg(QString::number(static_cast<double>(nSizeInBytes), 'g', nPrecision));
         #endif
     }
-    
+
+    // From widget list, returns the first object that is of type T, nullptr if not found.
+    // Example:
+    //      getWidgetByType<QMainWindow>(QApplication::topLevelWidgets());
+    //          -Returns first QMainWindow from application's topLevelWidgets()
+    template <class T>
+    T* getWidgetByType(const QWidgetList& widgetList)
+    {
+        for (const auto& pWidget : widgetList)
+        {
+            auto p = qobject_cast<T*>(pWidget);
+            if (p)
+                return p;
+        }
+        return nullptr;
+    }
 
 }} // Module namespace
