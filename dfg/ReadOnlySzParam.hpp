@@ -402,7 +402,7 @@ public:
     // Returns sub string by start position and count. Available only for string types that have trivial indexing.
     StringView substr_startCount(const size_t nStart, const size_t nCount) const
     {
-        DFG_STATIC_ASSERT(this->isTriviallyIndexable(), "substr_startCount() is available only for string types that have trivial indexing. Possible workaround: asUntypedView().substr_startCount()");
+        DFG_STATIC_ASSERT(BaseClass::isTriviallyIndexable(), "substr_startCount() is available only for string types that have trivial indexing. Possible workaround: asUntypedView().substr_startCount()");
         return DFG_DETAIL_NS::substr_startCount<StringView>(nStart, nCount, *this);
     }
 
@@ -609,7 +609,7 @@ public:
 
     CodePointT operator[](const size_t n) const
     {
-        DFG_STATIC_ASSERT(this->isTriviallyIndexable(), "operator[] is available only for string types that have trivial indexing. Possible workaround: asUntypedView().operator[]");
+        DFG_STATIC_ASSERT(BaseClass::isTriviallyIndexable(), "operator[] is available only for string types that have trivial indexing. Possible workaround: asUntypedView().operator[]");
         DFG_ASSERT_UB(n < this->lengthNonCaching());
         return *(this->begin() + n);
     }

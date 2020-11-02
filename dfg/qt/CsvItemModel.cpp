@@ -1106,7 +1106,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
             cellToStorage(nRow, c, query.value(c));
     }
 
-    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.midRef(0, Min(32, sQuery.size())));
+    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.mid(0, Min(32, sQuery.size())));
     return true;
 }
 

@@ -48,7 +48,9 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QDialog>
     #include <QTimer>
     #include <QElapsedTimer>
-    #include <QGuiApplication> 
+    #include <QGuiApplication>
+    #include <QApplication>
+    #include <QMainWindow>
 
     #include <QListWidget>
     #include <QJsonDocument>
