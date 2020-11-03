@@ -1375,7 +1375,7 @@ QString GraphDefinitionWidget::getGuideString()
             <li>The part after "operation_" is order tag which defines order of operations</li>
             <ul>
                 <li>For example { "operation_b":"someOp(1,1)", "operation_a":"anotherOp(1,2)" } defines two operations which are run in order anotherOp, someOp</li>
-                <li>Note that ordering is lexicographical (e.g. "operation_10" would be executed before "operation_9")
+                <li>Note that ordering is lexicographical (e.g. "operation_10" would be executed before "operation_9")</li>
             </ul>
         </ul>
         <li>Available operations</li>
@@ -1388,7 +1388,7 @@ QString GraphDefinitionWidget::getGuideString()
                 <li>Parameters</li>
                 <ul>
                     <li>0: [x,y]: coordinate whose value to set by the formula</li>
-                    <li>1: Formula string. If input has x/y coordinates, values can be access through variables x and y.
+                    <li>1: Formula string. If input has x/y coordinates, values can be access through variables x and y.</li>
                 </ul>
                 <li>Availability of axis values for different chart types:</li>
                 <ul>
@@ -1403,20 +1403,39 @@ QString GraphDefinitionWidget::getGuideString()
 			        <li>abs, exp, sqrt, sign</li>
                     <li>sum, avg, min, max</li>
                     <ul>
-                        <li>These functions take comma-separated list as input. Note that those need to be escaped in json-definition, for example "operation_a":"formula(y, \"min(2, y)\")"
+                        <li>These functions take comma-separated list as input. Note that those need to be escaped in json-definition, for example "operation_a":"formula(y, \"min(2, y)\")"</li>
                     </ul>
                 </ul>
             </ul>
-            <li><i>passWindow</i></li>
+            <li><i>passWindow</i> and <i>blockWindow</i></li>
             <ul>
-                <li>Filters out points whose chosen coordinate value is out of range</li>
+                <li>Filters out points whose chosen coordinate value is out of given range (passWindow) or within range (blockWindow)</li>
                 <li>Example: passWindow(y, 0, 10). Filters out points whose y-value is not within [0, 10]</li>
+                <li>Example: blockWindow(y, 0, 10). Filters out points whose y-value is within [0, 10]</li>
                 <li>Example: passWindow(x, 2020-08-26 12:00:00, 2020-08-26 14:00:00). Filters out points whose x-value is not within [2020-08-26 12:00:00, 2020-08-26 14:00:00]</li>
                 <li>Parameters</li>
                 <ul>
                     <li>0: [x,y]: coordinate whose value is evaluated</li>
-                    <li>1: window lower bound (inclusive).
-                    <li>2: window upper bound (inclusive).
+                    <li>1: window lower bound (inclusive).</li>
+                    <li>2: window upper bound (inclusive).</li>
+                </ul>
+            </ul>
+
+            <li><i>smoothing_indexNb</i></li>
+            <ul>
+                <li>Smoothing by index neighbours: By default replaces y-values y[i] by average values from y[i-n],...,y[i],...,y[i+n]</li>
+                <li>Example: smoothing_indexNb(2). Every value y[i] is replaced by average of { y[i-2], y[i-1], y[i], y[i+1], y[i+2] }</li>
+                <li>Example: smoothing_indexNb(2, median). Every value y[i] is replaced by median of { y[i-2], y[i-1], y[i], y[i+1], y[i+2] }</li>
+                <li>Notes</li>
+                <ul>
+                    <li>If either side has less than 'radius' neighbours at some point, takes as many points as there are available meaning that smoothing may be unbalanced by having more points from the other side</li>
+                    <li>Since this is index-based smoothing, neighbours get the same weight regardless of their x-value: for example if x points are [(1, 10), (2, 20), (100, 30)], smoothing
+                        y value 20 takes neighbours (1, 10) and (100, 30) into account with same weights although point (1, 10) is much closer in xy-space.</li>
+                </ul>
+                <li>Parameters</li>
+                <ul>
+                    <li>0 (optional): index radius for number of neighbours to include, default = 1 = one neighbour from both sides.</li>
+                    <li>1 (optional): smoothing type, default is 'average'. Possible values: average, median, default</li>
                 </ul>
             </ul>
         </ul>
