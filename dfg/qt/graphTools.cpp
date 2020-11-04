@@ -526,8 +526,6 @@ public:
 
     void applyOperations(::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData) const;
 
-    ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, Operation> m_operationMap;
-
     static QString tr(const char* psz);
 
     // Implements logging of notifications related to 'this' entry.
@@ -544,9 +542,9 @@ private:
     template <class Func_T>
     void doForFieldIfPresent(FieldIdStrViewInputParam id, Func_T&& func) const;
 
-
-    QJsonDocument m_items;
     int m_nContainerIndex = -1;
+    QJsonDocument m_items;
+    ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, Operation> m_operationMap;
 }; // class GraphDefinitionEntry
 
 auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> GraphDefinitionEntry

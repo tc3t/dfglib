@@ -59,7 +59,6 @@ void ::DFG_MODULE_NS(qt)::SQLiteFileDataSource::forEachElement_byColumn(const Da
     auto iterCol = this->m_columnIndexToColumnName.find(nCol);
     if (iterCol == this->m_columnIndexToColumnName.end())
         return;
-    const auto svColName = iterCol->second(this->m_columnIndexToColumnName);
     auto query = db.createQuery();
 
     // In common cases where m_sQuery is simple "SELECT * FROM table" or "SELECT <list of columns> FROM table"

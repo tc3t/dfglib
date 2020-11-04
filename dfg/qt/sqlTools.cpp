@@ -267,7 +267,7 @@ void ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog::columnSelectionChanged()
     QStringList columns;
     if (rows.size() != m_spColumnNameModel->rowCount())
     {
-        for (const auto mi : rows)
+        for (const auto& mi : rows)
         {
             columns.push_back(mi.data().toString());
         }

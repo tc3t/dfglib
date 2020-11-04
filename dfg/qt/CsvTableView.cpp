@@ -190,7 +190,7 @@ namespace
                                             QString()/*dir*/,
                                             QApplication::tr(gszDefaultOpenFileFilter),
                                             nullptr/*selected filter*/,
-                                            0/*options*/);
+                                            QFileDialog::Options() /*options*/);
     }
 
 } // unnamed namespace
@@ -935,7 +935,8 @@ int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow() const
 
 std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, const QAbstractProxyModel* pProxy) const
 {
-    std::vector<int> vec(model()->rowCount());
+    auto pModel = model();
+    std::vector<int> vec(static_cast<size_t>((pModel) ? pModel->rowCount() : 0));
     if (!pProxy)
     {
         DFG_MODULE_NS(alg)::generateAdjacent(vec, 0, 1);
@@ -1071,7 +1072,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_N
         QString()/*dir*/,
         tr("CSV file (*.csv);;SQLite3 file (*.sqlite3);;All files (*.*)"),
         nullptr/*selected filter*/,
-        0/*options*/);
+        QFileDialog::Options() /*options*/);
 
     if (sPath.isEmpty())
         return false;
@@ -1335,7 +1336,7 @@ public:
 
     static void addCurrentOptionToCombobox(QComboBox& cb, const int nSelection)
     {
-        const bool bPrintable = QChar::isPrint(nSelection);
+        const bool bPrintable = QChar::isPrint(DFG_ROOT_NS::saturateCast<unsigned int>(nSelection));
         QString sSelection;
         if (bPrintable)
             sSelection = QString(QChar(nSelection));
@@ -1492,7 +1493,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::saveConfigFile()
         sPathSuggestion,
         tr("CSV Config file (*.csv.conf);;All files (*.*)"),
         nullptr/*selected filter*/,
-        0/*options*/);
+        QFileDialog::Options() /*options*/);
 
     if (sPath.isEmpty())
         return false;
@@ -1716,7 +1717,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTableFromClipboar
 
     doModalOperation(this, tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), "CsvTableViewClipboardLoader", [&]()
     {
-        bSuccess = pCsvModel->openFromMemory(sClipboardText.data(), sClipboardText.size(), loadOptions);
+        bSuccess = pCsvModel->openFromMemory(sClipboardText.data(), static_cast<size_t>(sClipboardText.size()), loadOptions);
     });
 
     if (bSuccess)
@@ -1760,7 +1761,7 @@ bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
         QString()/*dir*/,
         tr(gszDefaultOpenFileFilter),
         nullptr/*selected filter*/,
-        0/*options*/);
+        QFileDialog::Options() /*options*/);
     if (sPaths.isEmpty())
         return false;
 
@@ -2576,7 +2577,6 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
         else
             return false;
     }
-    return false;
 }
 
 template <class Generator_T>
