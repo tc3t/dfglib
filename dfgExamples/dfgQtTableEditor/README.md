@@ -1,10 +1,22 @@
 # dfgQtTableEditor
 
-Example application for viewing and editing csv-files demonstrating features in dfglib.
+Example application for viewing and editing csv-files demonstrating features in dfglib. Also includes ability to open SQLite3-files and optionally visualization.
 
 ## Building
 
-### Version > 1.1.0:
+### Versions 1.6.0 and 1.7.0:
+
+Known to build with:
+* Clang 6.0.0 with Qt 5.9.5 (Ubuntu 18.04)
+* GCC 7.4.0 with Qt 5.9.5 (Ubuntu 18.04)
+* MinGW 7.3.0 with Qt 5.13 (Windows 8.1)
+* MSVC2017, MSVC2019 with Qt >= 5.12 (Windows 8.1). Expected to build also with MSVC2015.
+
+If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out)
+
+See detailed instructions from section of Version 1.0.0
+
+### Version 1.5.0:
 
 Like earlier versions with following changes:
 * Building with MSVC 2012 and 2013 is no longer supported.
@@ -43,7 +55,24 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
-* 2020-08-16, 1.6.0
+* 2020-11-xx, 1.7.0 (in progress)
+    * General
+        * [new] Can now import data from SQLite3-files; supports both UI-based "pick table and columns" and custom query ([#31](https://github.com/tc3t/dfglib/issues/31))
+        * [new] Rudimentary SQLite export support ([8beec2ba](https://github.com/tc3t/dfglib/commit/8beec2ba19c52cb3631ed3174f80e98c5edb46f8))
+    * Charts
+        * [new] Can now use csv and sqlite3 files from file system as data source without opening them in the editor (csv: [#13](https://github.com/tc3t/dfglib/issues/13), [5be40282](https://github.com/tc3t/dfglib/commit/5be4028295b1aa6a8b074597e69ee35e828cfbde); sqlite: [#48](https://github.com/tc3t/dfglib/issues/48), [01575bc5](https://github.com/tc3t/dfglib/commit/01575bc5329595bafd94c0df427afbb967fb8050))
+        * [new] Can now add chart data tranforms through json-definition
+            * Currently available operations are: arbitrary element-wise arithmetic operation, filtering by pass/block window, basic smoothing. See Features-list for details.
+        * [imp] In x_rows-field, can now use negative values as "from end" ([#41](https://github.com/tc3t/dfglib/issues/41), [98a2846f](https://github.com/tc3t/dfglib/commit/98a2846feb21698808190122a7c852ae38c02c8d), [7b8689b2](https://github.com/tc3t/dfglib/commit/7b8689b2dec880cc4ac23fff452d4a34a969c06c))
+        * [imp] Added context menu option "Rescale all axis" ([1394fd26](https://github.com/tc3t/dfglib/commit/1394fd264a619d651fe28c44f78f89b9632ce337))
+        * [imp] Can now specify log level both globally and per entry ([416572eb](https://github.com/tc3t/dfglib/commit/416572eb936d0f122cc41822a1e2ce253f10c77f))
+        * [imp] Histogram and bars now support x_rows field ([f481f413](https://github.com/tc3t/dfglib/commit/f481f4131e6f47333debe1e6b363801fb9d36ae0))
+        * [imp] Can now define fill colour for histograms and bars ([#44](https://github.com/tc3t/dfglib/issues/44), [ef773864](https://github.com/tc3t/dfglib/commit/ef7738640fc3ae219af4b12e891c50b1fb99047c))
+        * [imp/mod] Increased font size in guide window and window size is now dependent on mainwindow size ([c997095c](https://github.com/tc3t/dfglib/commit/c997095cd68232bf4ab1e1adad77bf0434212b40))
+        * [mod] Row indexing for data source of type 'table' now starts from 1 for consistency with selection sources ([2ad5f394](https://github.com/tc3t/dfglib/commit/2ad5f3940e84b8db2aeee657c89aa28b413d3e7b))
+        * [fix] Parsing fixes, for example "-1e-9" and "inf" were parsed as nan ([14e5312e](https://github.com/tc3t/dfglib/commit/14e5312e6a27cd154ef1e2778145f48c3d9af359))
+        * [fix] "Remove all chart objects"-context menu option was disable when there were only non-xy chart objects ([211db579](https://github.com/tc3t/dfglib/commit/211db579ba8e1e5ffbafa6acb357cfff0e65bbd6))
+* 2020-08-16, [1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
     * [new] New chart type: bars ([#35](https://github.com/tc3t/dfglib/issues/35))
     * [new] Charts now have tooltips that show values around cursor ([#9](https://github.com/tc3t/dfglib/issues/9)).
     * [imp] Can now set axis tick label direction
@@ -94,25 +123,38 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 * Separator auto-detection: instead of e.g. relying on list separator defined in OS settings (like done by some spreadsheet applications), uses heuristics to determine separator character. Auto-detection supports comma (,), semicolon (;), tab (\t) and unit separator (\x1F).
 * Text-oriented: content is shown as read, no data type interpretations are made.
+* Import from SQLite3 (since version 1.7.0)
+    * Either from UI-based "pick table and columns" or custom query.
 * Easy to use basic filtering: Alt+F -> type filter string -> view shows only rows whose content (on any column) match with filter string. Matching syntax supports for example wildcard and regular expression.
-* Filtered reading: Allows parts of file to be read:
+* Filtered reading: Allows parts of csv-file to be read:
     * Row index filtering (to read only given rows by index)
     * Column index filtering (to read only given columns by index)
     * Content filter: Arbitrary number of and/or combinations of text matchers similar to filter in UI.
 * Diffing using 3rd party diff tool (manual configuration).
-* Support for per-file configurations that can be used for example to define format characters and column widths in UI.
-* When saving to file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
+* Support for per-file configurations that can be used for example to define format characters and column widths in UI. Can also be used with SQLite3 files e.g. to define query and chart entries.
+* When saving to csv-file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
+* Rudimentary SQLite3 export support (since version 1.7.0)
 * Charting support using [QCustomPlot](https://www.qcustomplot.com/) (since version 1.5.0)
-    * xy-graphs, histograms and bar charts are supported (as of version 1.6.0).
+    * xy-graphs, histograms and bar charts are supported.
     * json-based chart definition.
-    * Has been tested to work with 50 million row, single column xy-graph. In a test machine chart update times in 50M line case were 65 s in non-cached case and 6 s in cached case; corresponding numbers in case of 1M lines were 2 s and 0.2 s.
+    * Has been tested to work with 50 million row, single column xy-graph. In a test machine chart update times in 50M line case were 65 s in non-cached case (=first creation of chart) and 6 s in cached case; corresponding numbers in case of 1M lines were 2 s and 0.2 s.
+    * Multiple data source options:
+        * Selection in table editor (e.g. selecting column automatically creates visualization of the data)
+        * Table open in table editor
+        * csv-file in file system (since 1.7.0)
+        * SQLite3-file in file system using user-supplied query (since 1.7.0)
+    * Data transforms:
+        * _blockWindow_ & _passWindow_: filters out values inside/outside of given range. (since 1.7.0)
+        * _formula_: arbitrary arithmetic element-wise transform (e.g. shifts and scaling can be implemented with this) (since 1.7.0)
+        * _smoothing_indexNb_: basic smoothing (since 1.7.0)
+    * UI includes guide providing examples and detailed documentation.
     * Disabled by default due to licensing issues (GPL).
-* No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for some concrete examples. Underlying data structure is optimized for in-order walk through column content.
+* No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for concrete examples. Underlying data structure is optimized for in-order walk through column content.
 * Somewhat reasonable performance:
     * opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor 1.0.0 default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same machine read took over 30 seconds.
     * Since opening huge files is not a priority, limits of opening such files hasn't been thoroughly examined, but some examples for concreteness:
-        * With version 1.5.0 and a rather ordinary Windows desktop machine (Intel i5 desktop CPU launched in 2013), opening a 1 GB file with 50 million rows and three 3 columns with content "abcdef" in every cell, lasted (in warm cache case) about 10 seconds with default options, about 6 seconds if using manual read options. When opened, application used about 3.0 GB of memory. With version 1.1.0 figures were 16s / 8s / 4.2 GB.
-        * Opening a 3 GB, 1e6 x 1024 file with content ab in each cell lasted about 105 s with peak memory consumption of 14 GB (in version 1.5.0).
+        * With version 1.5.0 and a rather ordinary Windows desktop machine (Intel i5 desktop CPU launched in 2013), opening a 1 GB file with 50 million rows and three 3 columns with content "abcdef" in every cell, lasted (in warm cache case) about 10 seconds with default options, about 6 seconds if using manual read options. When opened, application used about 3.0 GB of memory. With earlier version 1.1.0 figures were 16s / 8s / 4.2 GB.
+        * Opening a 3 GB, 1e6 x 1024 file with content ab in each cell lasted about 105 s with peak memory consumption of 14 GB on a machine that had 32 GB of RAM (in version 1.5.0).
 * Supported encodings:
     * Read: UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252
         * Note: when file has no BOM, reading assumes Latin-1
@@ -288,12 +330,13 @@ properties,,,
 
 ## Third party code
 
-Summary of 3rd party code in dfgQtTableEditor (last revised 2020-07-22).
+Summary of 3rd party code in dfgQtTableEditor (last revised 2020-11-07).
 
 | Library      | License  |
 | ------------- | ----- |
 | [Boost](http://www.boost.org/) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
 | [fmtlib](https://github.com/fmtlib/fmt) | [BSD-2](../../dfg/str/fmtlib/format.h) |
+| [muparser](https://github.com/beltoforion/muparser) | [BSD-2](../../dfg/math/muparser/muParser.h) | 
 | [QCustomPlot](https://www.qcustomplot.com/) (disabled by default) | [GPLv3/commercial](https://www.qcustomplot.com/) |
 | [Qt](https://www.qt.io/) | [Various](http://doc.qt.io/qt-5/licensing.html) |
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) | [Boost software license](../../dfg/utf/utf8_cpp/utf8.h) |
