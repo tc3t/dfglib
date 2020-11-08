@@ -147,7 +147,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * _blockWindow_ & _passWindow_: filters out values inside/outside of given range. (since 1.7.0)
         * _formula_: arbitrary arithmetic element-wise transform (e.g. shifts and scaling can be implemented with this) (since 1.7.0)
         * _smoothing_indexNb_: basic smoothing (since 1.7.0)
-    * UI includes guide providing examples and detailed documentation.
+    * UI includes [guide](../../dfg/qt/res/chartGuide.html) providing examples and detailed documentation.
     * Disabled by default due to licensing issues (GPL).
 * No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for concrete examples. Underlying data structure is optimized for in-order walk through column content.
 * Somewhat reasonable performance:

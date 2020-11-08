@@ -80,6 +80,9 @@ HEADERS += \
     ../dfg/qt/sqlTools.hpp \
     ../dfg/qt/JsonListWidget.hpp
 
+OTHER_FILES += \
+    ../dfg/qt/res/chartGuide.html
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

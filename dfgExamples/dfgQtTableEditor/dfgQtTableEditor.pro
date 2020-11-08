@@ -221,6 +221,9 @@ win32 {
             $$_PRO_FILE_PWD_/../../dfg/io/widePathStrToFstreamFriendlyNonWide.cpp
 }
 
+OTHER_FILES += \
+    $$_PRO_FILE_PWD_/../../dfg/qt/res/chartGuide.html
+
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../
 INCLUDEPATH += $$_PRO_FILE_PWD_/../../externals/
 
