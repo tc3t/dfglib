@@ -4,15 +4,19 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QApplication>
 #include <QDateTime>
+#include <QDialog>
+#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QTimer>
 #include <QIcon>
 #include <QMainWindow>
+#include <QPlainTextEdit>
 #include <QSettings>
 #include <QStyle>
 #include <QStyleHints>
 #include <QToolButton>
+#include <QVBoxLayout>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <dfg/qt/TableEditor.hpp>
@@ -36,6 +40,40 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #include <dfg/qt/CsvItemModel.hpp>
 
 static QWidget* gpMainWindow = nullptr;
+
+// Implements handling of URL that has scheme dfgdiff;
+// in practice means that when clicking link in about box whose url
+// starts with dfgdiff, handling will happen in urlHandler() function.
+// Handler is activated in setUrlHandler()
+class DiffUrlHandler : public QObject
+{
+    Q_OBJECT
+
+public slots:
+    void urlHandler(const QUrl& url)
+    {
+        const auto sPath = url.path();
+        if (sPath == "/qmake_time_working_tree.diff")
+        {
+            QDialog dlg;
+            auto pLayout = new QVBoxLayout(&dlg);
+            auto pTextDisplay = new QPlainTextEdit(&dlg);
+            pTextDisplay->setLineWrapMode(QPlainTextEdit::NoWrap);
+            pLayout->addWidget(pTextDisplay);
+            QFile file(":/qmake_time_working_tree.diff");
+            file.open(QFile::ReadOnly);
+            const auto sDiff = QString::fromUtf8(file.readAll());
+            pTextDisplay->setPlainText(sDiff);
+            dlg.resize(800, 600);
+            dlg.exec();
+        }
+        else
+            QMessageBox::information(nullptr, tr("Unexpected url"), tr("Diff handler got unexpected URL %1").arg(url.toString()));
+
+    }
+}; // class DiffUrlHandler
+
+static DiffUrlHandler diffDisplay;
 
 
 static void onShowAboutBox()
@@ -83,10 +121,10 @@ static void onShowAboutBox()
         if (DFGQTE_GIT_WORKING_TREE_STATUS == QLatin1String("unmodified"))
             s += " (no local changes)";
         else
-            s += " (with local changes)";
-    s += "<br>";
-    #endif
-#endif
+            s += " (with local changes, <a href=dfgdiff:/qmake_time_working_tree.diff>diff</a> is included)";
+        s += "<br>";
+    #endif // DFGQTE_GIT_WORKING_TREE_STATUS
+#endif // DFGQTE_GIT_COMMIT
 
 
     s += QApplication::tr("<br>Source code: <a href=%1>%1</a>").arg("https://github.com/tc3t/dfglib");
@@ -217,6 +255,7 @@ int main(int argc, char *argv[])
 
     // Add about-button to TableEditor toolbar.
     {
+        QDesktopServices::setUrlHandler("dfgdiff", &diffDisplay, "urlHandler");
         auto button = new QToolButton(&tableEditor);
         button->setToolTip(QApplication::tr("Information about the application"));
         auto pStyle = a.style();
@@ -245,3 +284,8 @@ int main(int argc, char *argv[])
 
     return a.exec();
 }
+
+// Including main.moc to get working linking for Q_OBJECT-stuff in DiffUrlHandler.
+// https://forum.qt.io/topic/83854/class-with-q_object-macro-declared-and-defined-in-cpp
+// https://stackoverflow.com/questions/34928933/why-is-important-to-include-moc-file-at-end-of-a-qt-source-code-file
+#include "main.moc"

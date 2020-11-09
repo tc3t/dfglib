@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>mainWindowIcon.png</file>
+        <file alias="qmake_time_working_tree.diff">temp_working_tree.diff</file>
     </qresource>
 </RCC>

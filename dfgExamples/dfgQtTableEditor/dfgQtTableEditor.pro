@@ -78,18 +78,29 @@ win32 {
     # Using PowerShell to determine the time, syntax with the help of https://stackoverflow.com/a/41878110
     version_time = $$system(powershell [math]::floor(((((Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat %s) - $$version_time_epoch_start))) / $$version_time_step))
     version_time_epoch_start_readable = $$system(powershell [System.DateTimeOffset]::FromUnixTimeSeconds($$version_time_epoch_start).UtcDateTime.ToString(\\\"s\\\"))
-
+    qmake_run_time = $$system(powershell Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat %s)
+    qmake_run_time_readable = $$system(powershell [System.DateTimeOffset]::FromUnixTimeSeconds($$qmake_run_time).UtcDateTime.ToString(\\\"s\\\"))
 
 } else {
     version_time = $$system(current_time=$(date +%s); echo $((($current_time-$$version_time_epoch_start)/$$version_time_step)))
     version_time_epoch_start_readable = $$system(date -u --date='@$$version_time_epoch_start' +%Y-%m-%dT%H:%m:%S)
+    qmake_run_time = $$system(date +%s)
+    qmake_run_time_readable = $$system(date -u --date='@$$qmake_run_time' +%Y-%m-%dT%H:%m:%S)
 }
 
+message("qmake run at " $$qmake_run_time_readable)
+
+# Note: Setting git_executable_path causes various working tree information such as diff to
+#       get embedded into the binary.
 win32 {
     #git_executable_path = "C:\Program Files\Git\bin\git.exe"
 } else {
     git_executable_path = ""
 }
+
+diff_path = "temp_working_tree.diff"
+# Making sure that diff file always exists as .qrc refers to it.
+write_file($$diff_path) # Writes empty file
 
 isEmpty(git_executable_path) {
 } else {
@@ -98,6 +109,11 @@ isEmpty(git_executable_path) {
         git_branch = $$system($$system_quote($$git_executable_path) rev-parse --abbrev-ref HEAD)
         git_commit = $$system($$system_quote($$git_executable_path) rev-parse HEAD)
         git_diff_stat = $$system($$system_quote($$git_executable_path) diff --stat)
+        message("Printing diff to " $$diff_path)
+        diff_file_header = "Working tree diff at $$qmake_run_time_readable"
+        write_file($$diff_path, diff_file_header)
+        wt_diff = $$system($$system_quote($$git_executable_path) diff, "blob")
+        write_file($$diff_path, wt_diff, append)
     } else {
         message("No git-executable found, not defining git info macros")
     }
