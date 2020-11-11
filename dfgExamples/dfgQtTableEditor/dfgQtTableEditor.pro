@@ -17,7 +17,7 @@ message("QMAKESPEC is " $$QMAKESPEC)
 #message("QMAKE_HOST.version is " $$QMAKE_HOST.version)
 #message("QMAKE_HOST.version_string is " $$QMAKE_HOST.version_string)
 
-# Main switches for QtCharts and QCustomPlot. Value can be 1 even if not available; there's a separate availability check later.
+# Main switch for QCustomPlot. Value can be 1 even if not available; there's a separate availability check later.
 # Using QCustomPlot requires at least Qt 5.6 (this is a dfglib requirement, QCustomPlot (2.0.1) itself can be used in earlier Qt).
 DFG_ALLOW_QCUSTOMPLOT = 0
 

@@ -10,7 +10,7 @@ Known to build with:
 * Clang 6.0.0 with Qt 5.9.5 (Ubuntu 18.04)
 * GCC 7.4.0 with Qt 5.9.5 (Ubuntu 18.04)
 * MinGW 7.3.0 with Qt 5.13 (Windows 8.1)
-* MSVC2017, MSVC2019 with Qt >= 5.12 (Windows 8.1). Expected to build also with MSVC2015.
+* MSVC2017, MSVC2019 with Qt 5.12/5.13 (Windows 8.1). Expected to build also with MSVC2015.
 
 If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out)
 

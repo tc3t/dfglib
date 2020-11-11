@@ -6,6 +6,8 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2020-11-xx, dfgQtTableEditor version 1.7.0
+* 2020-08-16, dfgQtTableEditor [version 1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
 * 2020-07-22: dfgQtTableEditor [version 1.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.5.0)
 * 2020-02-11: dfglib is no longer tested with the following compilers:
     * MSVC2010, MSVC2012, MSVC2013, MinGW 4.8.0
@@ -56,22 +58,21 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2020-07-21).
+Summary of 3rd party code in dfglib (last revised 2020-11-10).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
 | [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.55, 1.61, 1.65.1 and 1.70.0 |
 | [Colour Rendering of Spectra](dfg/colour/specRendJw.cpp) | m (used in colour handling tools) | [Public domain](dfg/colour/specRendJw.cpp) | 
-| [cppcsv](https://github.com/paulharris/cppcsv) | c,t | [MIT](https://github.com/paulharris/cppcsv) | 
+| [cppcsv](https://github.com/paulharris/cppcsv) (commit [daa3d881](https://github.com/paulharris/cppcsv/tree/daa3d881d995b6695b84dde860126fa5f773de56/include/cppcsv), 2020-01-10) | c,t | [MIT](https://github.com/paulharris/cppcsv) | 
 | [dlib](http://dlib.net/)    | m,ti (unit-aware integration and various tests)           | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  | Can be excluded from unit tests with option DFGTEST_BUILD_OPT_USE_DLIB
-| [fast-csv-cpp-parser](https://github.com/ben-strasser/fast-cpp-csv-parser/) | c,t | [BSD-3](dfg/io/fast-cpp-csv-parser/csv.h) |
+| [fast-csv-cpp-parser](https://github.com/ben-strasser/fast-cpp-csv-parser/) (commit [66365610](https://github.com/ben-strasser/fast-cpp-csv-parser/blob/66365610817b929b451819e0cccdb702d46a605e/csv.h), 2020-05-19) | c,t | [BSD-3](dfg/io/fast-cpp-csv-parser/csv.h) |
 | [fmtlib](https://github.com/fmtlib/fmt) (version 4.1.0 with an adjustment related to formatting doubles as string) | m (string formatting)| [BSD-2](dfg/str/fmtlib/format.h) |
-| [Google Test](https://github.com/google/googletest) (version 1.8.1) | t | [BSD-3](externals/gtest/gtest.h) |
-| [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) |
-| [muparser](https://github.com/beltoforion/muparser) (development version 2.3.3 (commit 2deb86a8) with some edits) | m | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
-| [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) |
-| [Qt 5](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) |
-| [Qt Charts](https://doc.qt.io/qt-5/qtcharts-index.html) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://doc.qt.io/qt-5/qtcharts-index.html) |
+| [Google Test](https://github.com/google/googletest) (version 1.8.1) | t | [BSD-3](externals/gtest/gtest.h) | Unit tests are implemented with Google Test
+| [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) | Qt-related utilities
+| [muparser](https://github.com/beltoforion/muparser) (development version 2.3.3, commit [2deb86a8](https://github.com/beltoforion/muparser/tree/2deb86a81edc7d8e56859484524738ff766b4fdb), 2020-09-21) with some edits) | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
+| [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Version 2.0.1 is known to work.
+| [Qt 5](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, earliest version that works might be 5.6.
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:
