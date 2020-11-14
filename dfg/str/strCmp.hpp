@@ -3,6 +3,7 @@
 #include <cstring>
 #include "../dfgBaseTypedefs.hpp"
 #include "../SzPtrTypes.hpp"
+#include <cwchar> // For std::wcscmp
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
 

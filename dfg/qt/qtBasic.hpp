@@ -7,6 +7,7 @@
 #include "../utf.hpp"
 #include "../iter/szIterator.hpp"
 #include <string>
+#include <ios> // For std::streamsize
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QString>
