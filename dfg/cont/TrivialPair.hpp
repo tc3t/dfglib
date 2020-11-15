@@ -111,14 +111,17 @@ constexpr auto get(TrivialPair<T0, T1>&& tp) noexcept -> typename std::condition
 // Not workarounded as this is expected to disappear on newer versions:
 //      -"Bug 41331 - std::tuple_element should be a struct ": https://bugs.llvm.org/show_bug.cgi?id=41331
 //      -ISO C++ Standard - std discussion: "struct vs. class when specialising tuple_element / tuple_size" https://groups.google.com/a/isocpp.org/forum/#!topic/std-discussion/QC-AMb5oO1w
-template<class T0, class T1>
-struct std::tuple_element<0, ::DFG_MODULE_NS(cont)::TrivialPair<T0, T1>>
+namespace std
 {
-    using type = T0;
-};
+    template <class T0, class T1>
+    struct tuple_element<0, ::DFG_MODULE_NS(cont)::TrivialPair<T0, T1>>
+    {
+        using type = T0;
+    };
 
-template<class T0, class T1>
-struct std::tuple_element<1, ::DFG_MODULE_NS(cont)::TrivialPair<T0, T1>>
-{
-    using type = T1;
-};
+    template <class T0, class T1>
+    struct tuple_element<1, ::DFG_MODULE_NS(cont)::TrivialPair<T0, T1>>
+    {
+        using type = T1;
+    };
+}
