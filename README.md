@@ -6,7 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
-* 2020-11-xx, dfgQtTableEditor version 1.7.0
+* 2020-11-15, dfgQtTableEditor version 1.7.0
 * 2020-08-16, dfgQtTableEditor [version 1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
 * 2020-07-22: dfgQtTableEditor [version 1.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.5.0)
 * 2020-02-11: dfglib is no longer tested with the following compilers:

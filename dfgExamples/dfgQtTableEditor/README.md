@@ -4,11 +4,26 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 ## Building
 
-### Versions 1.6.0 and 1.7.0:
+### Version 1.7.0:
+
+Has been successfully build with:
+| Compiler      | Qt | OS | Boost | Charting? | Comments |
+| ------------- | ----- | ---- | -- | -- | -- |
+| Clang 6.0.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
+| Clang 10.0.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_
+| GCC 7.5.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No |  |
+| GCC 9.3.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes |
+| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes |
+| MSVC2017, MSVC2019 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes |
+| | | |
+
+Also expected to build with MSVC2015; for Qt requires at least 5.6. If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out). For concrete build steps, see section for version 1.0.0.
+
+### Version 1.6.0:
 
 Known to build with:
 * Clang 6.0.0 with Qt 5.9.5 (Ubuntu 18.04)
-* GCC 7.4.0 with Qt 5.9.5 (Ubuntu 18.04)
+* GCC 7.5.0 with Qt 5.9.5 (Ubuntu 18.04)
 * MinGW 7.3.0 with Qt 5.13 (Windows 8.1)
 * MSVC2017, MSVC2019 with Qt 5.12/5.13 (Windows 8.1). Expected to build also with MSVC2015.
 
@@ -55,7 +70,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
-* 2020-11-xx, 1.7.0 (in progress)
+* 2020-11-15, 1.7.0
     * General
         * [new] Can now import data from SQLite3-files; supports both UI-based "pick table and columns" and custom query ([#31](https://github.com/tc3t/dfglib/issues/31))
         * [new] Rudimentary SQLite export support ([8beec2ba](https://github.com/tc3t/dfglib/commit/8beec2ba19c52cb3631ed3174f80e98c5edb46f8))
@@ -71,7 +86,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [imp/mod] Increased font size in guide window and window size is now dependent on mainwindow size ([c997095c](https://github.com/tc3t/dfglib/commit/c997095cd68232bf4ab1e1adad77bf0434212b40))
         * [mod] Row indexing for data source of type 'table' now starts from 1 for consistency with selection sources ([2ad5f394](https://github.com/tc3t/dfglib/commit/2ad5f3940e84b8db2aeee657c89aa28b413d3e7b))
         * [fix] Parsing fixes, for example "-1e-9" and "inf" were parsed as nan ([14e5312e](https://github.com/tc3t/dfglib/commit/14e5312e6a27cd154ef1e2778145f48c3d9af359))
-        * [fix] "Remove all chart objects"-context menu option was disable when there were only non-xy chart objects ([211db579](https://github.com/tc3t/dfglib/commit/211db579ba8e1e5ffbafa6acb357cfff0e65bbd6))
+        * [fix] "Remove all chart objects"-context menu option was disabled when there were only non-xy chart objects ([211db579](https://github.com/tc3t/dfglib/commit/211db579ba8e1e5ffbafa6acb357cfff0e65bbd6))
 * 2020-08-16, [1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
     * [new] New chart type: bars ([#35](https://github.com/tc3t/dfglib/issues/35))
     * [new] Charts now have tooltips that show values around cursor ([#9](https://github.com/tc3t/dfglib/issues/9)).
