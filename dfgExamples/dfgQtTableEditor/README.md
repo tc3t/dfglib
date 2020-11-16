@@ -70,7 +70,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
-* 2020-11-15, 1.7.0
+* 2020-11-15, [1.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.7.0)
     * General
         * [new] Can now import data from SQLite3-files; supports both UI-based "pick table and columns" and custom query ([#31](https://github.com/tc3t/dfglib/issues/31))
         * [new] Rudimentary SQLite export support ([8beec2ba](https://github.com/tc3t/dfglib/commit/8beec2ba19c52cb3631ed3174f80e98c5edb46f8))
