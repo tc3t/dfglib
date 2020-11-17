@@ -422,7 +422,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
 
     {
         auto pAction = new QAction(tr("Resize table"), this);
-        //pAction->setShortcut(tr(""));
+        pAction->setShortcut(tr("Ctrl+R"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable));
         addAction(pAction);
     }
@@ -506,7 +506,7 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
 
     {
         auto pAction = new QAction(tr("Generate content..."), this);
-        //pAction->setShortcut(tr(""));
+        pAction->setShortcut(tr("Alt+G"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::generateContent));
         addAction(pAction);
     }
