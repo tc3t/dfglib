@@ -1097,7 +1097,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
     // Reading column names
     // Underlying read infrastructure expects header on row 0 so putting names there instead of filling names directly to header.
     for (int c = 0; c < nColCount; ++c)
-        cellToStorage(0, c, rec.fieldName(c));
+        cellToStorage(0, c, rec.fieldName(c)); // For unknown reason here QSqlRecord seems to remove quotes from column names even though SQLiteDatabase::getSQLiteFileTableColumnNames() returns them correctly.
 
     // Reading records and filling table.
     for (size_t nRow = 1; query.next(); ++nRow)

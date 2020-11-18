@@ -3,6 +3,7 @@
 #include "../isValidIndex.hpp"
 #include "../io/fileToByteContainer.hpp"
 #include "qtBasic.hpp"
+#include "../io.hpp"
 
 // UI includes
 #include "widgetHelpers.hpp"
@@ -279,9 +280,38 @@ void ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog::columnSelectionChanged()
 
 void ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog::updateQuery(const QString& sTable, const QStringList& columns)
 {
+    // https://stackoverflow.com/questions/25141090/sqlite-use-backticks-or-double-quotes-with-python/25141338#25141338
+    const auto escapedName = [](const QString& sOrig)
+        {
+            auto s = sOrig;
+            s.replace("\"", "\"\"");
+            s.prepend("\"");
+            s.append("\"");
+            return s;
+        };
+
     if (!m_spQueryLineEdit)
         return;
-    const auto sQuery = (!columns.isEmpty()) ? QString("SELECT %1 FROM '%2';").arg(columns.join(", "), sTable) : tr("<No columns selected>");
+    QString sQuery;
+    if (columns.isEmpty())
+        sQuery = tr("<No columns selected>");
+    else
+    {
+        sQuery = QLatin1String("SELECT ");
+        if (columns.size() == 1 && columns.front() == "*")
+            sQuery += "*";
+        else
+        {
+            QString sCols;
+            QTextStream colStrm(&sCols);
+            ::DFG_MODULE_NS(io)::writeDelimited(colStrm, columns, QString(", "), [&](QTextStream& strm, const QString& sCol)
+            {
+                strm << escapedName(sCol);
+            });
+            sQuery += sCols;
+        }
+        sQuery += QString(" FROM %1").arg(escapedName(sTable));
+    }
     m_spQueryLineEdit->setText(sQuery);
 }
 
