@@ -46,6 +46,7 @@ Related reading and implementations:
 #include <vector>
 #include "../rangeIterator.hpp"
 #include "../iter/CustomAccessIterator.hpp"
+#include "../numericTypeTools.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -272,9 +273,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             template <class T> bool hasKey(const T& key) const              { return find(key) != end(); }
 
             iterator insertNonExisting(const key_type& key, mapped_type&& value) { key_type k = key; return insertNonExisting(std::move(k), std::move(value)); }
-            iterator insertNonExisting(key_type&& key, mapped_type&& value)      { return static_cast<Impl_T&>(*this).insertNonExistingTo(std::move(key), std::move(value), findInsertPos(*this, key)); }
+            iterator insertNonExisting(key_type&& key, mapped_type&& value)      { return static_cast<Impl_T&>(*this).insertNonExistingToImpl(std::move(key), std::move(value), findInsertPos(*this, key)); }
 
-            iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& insertPos) { return static_cast<Impl_T&>(*this).insertNonExistingTo(std::move(key), std::move(value), insertPos); }
+            iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& insertPos) { return static_cast<Impl_T&>(*this).insertNonExistingToImpl(std::move(key), std::move(value), insertPos); }
+
+            iterator insertNonExistingTo(const key_type& key, const mapped_type& value, const key_iterator& insertPos)
+            {
+                auto newKey = key;
+                auto newMapped = value;
+                return insertNonExistingTo(std::move(newKey), std::move(newMapped), insertPos);
+            }
+
+            iterator insertNonExistingTo(const key_type& key, mapped_type&& value, const key_iterator& insertPos)
+            {
+                auto newKey = key;
+                return insertNonExistingTo(std::move(newKey), std::move(value), insertPos);
+            }
 
             std::pair<iterator, bool> insert(std::pair<key_type, mapped_type>&& newVal)
             {
@@ -334,6 +348,35 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 this->m_bSorted = bSort;
             }
 
+            // Creates map from iterable so that keys are 0-based indexes (requires key_type to be an integer type).
+            // If iterable.size() > maxValueOf<key_type>(), returns map truncated to size maxValueOf<key_type>().
+            // If bAllowMoving is true and iterable has modifiable elements, moves elements instead of copying.
+            // Dev note: moving can't be determined solely on rvalueness of iterable: it works when it is an owning container,
+            //           but not when it is an rvalue range wrapper.
+            //           Example
+            //              std::vector<std::string> strings{"abc"};
+            //              auto m = MapVectorSoa<int, std::string>::makeIndexMapped(makeRange(strings)); // iterable is rvalue, but the underlying storage is not.
+            //           Conceptually would need isOwningIterable() trait to detect this and even in that case still need control for non-owning iterables whether
+            //           to copy or move.
+            template <class Iterable_T>
+            static Impl_T makeIndexMapped(Iterable_T&& iterable, const bool bAllowMoving)
+            {
+                Impl_T rv;
+                key_type nIndex = 0;
+                const auto nMaxIndex = NumericTraits<key_type>::maxValue;
+                for (auto&& item : iterable)
+                {
+                    if (bAllowMoving)
+                        rv.insertNonExistingTo(nIndex, std::move(item), rv.endKey());
+                    else
+                        rv.insertNonExistingTo(nIndex, item, rv.endKey());
+                    if (nIndex == nMaxIndex) // Overflow guard, truncates returned map to size nMaxIndex
+                        return rv;
+                    ++nIndex;
+                }
+                return rv;
+            }
+
         }; // class MapVectorCrtp
 
         //template <class T> struct DefaultMapVectorContainerType { typedef std::vector<T> type; };
@@ -389,6 +432,10 @@ public:
     }
 #endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
+    // See MapVectorCrtp::makeIndexMapped() for documentation
+    template <class Iterable_T>
+    static MapVectorSoA makeIndexMapped(Iterable_T&& iterable, const bool bAllowMoving) { return BaseClass::makeIndexMapped(std::forward<Iterable_T>(iterable), bAllowMoving); }
+
     iterator            makeIterator(const size_t i)                        { return iterator(*this, i); }
     const_iterator      makeIterator(const size_t i) const                  { return const_iterator(*this, i); }
 
@@ -405,7 +452,7 @@ public:
     size_t  size() const    { return m_keyStorage.size(); }
     void    clear()         { m_keyStorage.clear(); m_valueStorage.clear(); }
 
-    iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& insertPos)
+    iterator insertNonExistingToImpl(key_type&& key, mapped_type&& value, const key_iterator& insertPos)
     {
         const auto nIndex = insertPos - m_keyStorage.begin();
         m_keyStorage.insert(insertPos, std::move(key));
@@ -532,6 +579,10 @@ public:
     }
 #endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
+    // See MapVectorCrtp::makeIndexMapped() for documentation
+    template <class Iterable_T>
+    static MapVectorAoS makeIndexMapped(Iterable_T&& iterable, const bool bAllowMoving) { return BaseClass::makeIndexMapped(std::forward<Iterable_T>(iterable), bAllowMoving); }
+
     iterator           makeIterator(const size_t i)            { return m_storage.begin() + i; }
     const_iterator     makeIterator(const size_t i) const      { return m_storage.begin() + i; }
 
@@ -548,7 +599,7 @@ public:
     size_t  size() const    { return m_storage.size(); }
     void    clear()         { m_storage.clear(); }
 
-    iterator insertNonExistingTo(key_type&& key, mapped_type&& value, const key_iterator& iter)
+    iterator insertNonExistingToImpl(key_type&& key, mapped_type&& value, const key_iterator& iter)
     {
         return m_storage.insert(makeIterator(iter - this->beginKey()), value_type(std::move(key), std::move(value)));
     }

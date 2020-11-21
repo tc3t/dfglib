@@ -496,6 +496,103 @@ TEST(dfgCont, MapVector_keyValueRanges)
     testMapVector_keyValueRanges<MapVectorSoA<int, double>>();
 }
 
+TEST(dfgCont, MapVector_makeIndexMapped)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+    {
+        const std::array<int, 3> indexes = { 0, 1, 2 };
+        const std::array<double, 3> values = { 10, 20.5, 3.25 };
+        const auto mvAos = MapVectorAoS<int, double>::makeIndexMapped(values, false);
+        const auto mvSoa = MapVectorSoA<int, double>::makeIndexMapped(values, false);
+        EXPECT_TRUE(isEqualContent(indexes, mvAos.keyRange()));
+        EXPECT_TRUE(isEqualContent(values, mvAos.valueRange()));
+        EXPECT_TRUE(isEqualContent(indexes, mvSoa.keyRange()));
+        EXPECT_TRUE(isEqualContent(values, mvSoa.valueRange()));
+    }
+
+    // Testing handling of index overflow
+    {
+        std::array<int, 128> indexes;
+        std::array<int, 130> values;
+        ::DFG_MODULE_NS(alg)::generateAdjacent(indexes, 0, 1);
+        ::DFG_MODULE_NS(alg)::generateAdjacent(values, 1000, 1);
+        const auto mvAos = MapVectorAoS<int8, int>::makeIndexMapped(values, false);
+        const auto mvSoa = MapVectorSoA<int8, int>::makeIndexMapped(values, false);
+        const auto expectValues = makeRange(values.begin(), values.begin() + indexes.size());
+        EXPECT_TRUE(isEqualContent(indexes, mvAos.keyRange()));
+        EXPECT_TRUE(isEqualContent(expectValues, mvAos.valueRange()));
+        EXPECT_TRUE(isEqualContent(indexes, mvSoa.keyRange()));
+        EXPECT_TRUE(isEqualContent(expectValues, mvSoa.valueRange()));
+    }
+
+    // Testing move handling
+    {
+        // Moving from rvalue-container.
+        {
+            std::array<std::string, 2> values{ "abcd", "efgh" };
+            auto m = MapVectorAoS<int, std::string>::makeIndexMapped(std::move(values), true);
+            EXPECT_TRUE(values[0].empty());
+            EXPECT_TRUE(values[1].empty());
+            EXPECT_EQ(2, m.size());
+            EXPECT_EQ("abcd", m[0]);
+            EXPECT_EQ("efgh", m[1]);
+        }
+
+        // Checking that lvalue reference doesn't get modified with disallowed moving
+        {
+            std::array<std::string, 2> values{ "abcd", "efgh" };
+            auto m = MapVectorAoS<int, std::string>::makeIndexMapped(values, false);
+            EXPECT_EQ("abcd", values[0]);
+            EXPECT_EQ("efgh", values[1]);
+            EXPECT_EQ(2, m.size());
+            EXPECT_EQ("abcd", m[0]);
+            EXPECT_EQ("efgh", m[1]);
+        }
+
+        // Handling of range passed in as rvalue referencing non-const values.
+        {
+            std::array<std::string, 2> values{ "abcd", "efgh" };
+            auto m = MapVectorAoS<int, std::string>::makeIndexMapped(makeRange(values), false);
+            EXPECT_EQ("abcd", values[0]);
+            EXPECT_EQ("efgh", values[1]);
+            EXPECT_EQ(2, m.size());
+            EXPECT_EQ("abcd", m[0]);
+            EXPECT_EQ("efgh", m[1]);
+
+            auto m2 = MapVectorAoS<int, std::string>::makeIndexMapped(makeRange(values), true);
+            EXPECT_TRUE(values[0].empty());
+            EXPECT_TRUE(values[1].empty());
+            EXPECT_EQ(2, m2.size());
+            EXPECT_EQ("abcd", m2[0]);
+            EXPECT_EQ("efgh", m2[1]);
+        }
+
+        // Handling of range passed in as rvalue referencing const values.
+        {
+            const std::array<std::string, 2> values{ "abcd", "efgh" };
+            auto m = MapVectorAoS<int, std::string>::makeIndexMapped(makeRange(values), true);
+            EXPECT_EQ("abcd", values[0]);
+            EXPECT_EQ("efgh", values[1]);
+            EXPECT_EQ(2, m.size());
+            EXPECT_EQ("abcd", m[0]);
+            EXPECT_EQ("efgh", m[1]);
+        }
+
+        // Ability to move from const reference range referencing non-const values
+        {
+            std::array<std::string, 2> values{ "abcd", "efgh" };
+            const auto range = makeRange(values);
+            auto m = MapVectorAoS<int, std::string>::makeIndexMapped(range, true);
+            EXPECT_TRUE(values[0].empty());
+            EXPECT_TRUE(values[1].empty());
+            EXPECT_EQ(2, m.size());
+            EXPECT_EQ("abcd", m[0]);
+            EXPECT_EQ("efgh", m[1]);
+        }
+    }
+}
+
 namespace
 {
     template <class Set_T>
