@@ -1069,6 +1069,36 @@ TEST(dfgCont, contAlg_eraseIf)
     EXPECT_TRUE(m.empty());
 }
 
+TEST(dfgCont, contAlg_equal)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+    {
+        const int arr0[] = { 1, 2, 3 };
+        const int arr1[] = { 2, 3, 4 };
+        const int arr2[] = { 1, 2, 3, 4 };
+        const int arr3[] = { 16, 17, 18 };
+        EXPECT_TRUE(isEqualContent(arr0, arr0));
+        EXPECT_FALSE(isEqualContent(arr0, arr1));
+        EXPECT_FALSE(isEqualContent(arr0, arr2));
+        EXPECT_TRUE(isEqualContent(arr0, std::vector<int>{1, 2, 3}));
+        EXPECT_TRUE(isEqualContent(arr0, std::array<int, 3>{1, 2, 3}));
+        EXPECT_TRUE(isEqualContent(arr0, std::deque<int>{1, 2, 3}));
+        EXPECT_TRUE(isEqualContent(arr0, std::list<int>{1, 2, 3}));
+        EXPECT_TRUE(isEqualContent(arr0, std::vector<double>{1, 2, 3}));
+        EXPECT_TRUE(isEqualContent(std::vector<double>(), std::vector<double>()));
+
+        const auto mod5 = [](const int a, const int b) { return (a % 5) == (b % 5); };
+        EXPECT_TRUE(isEqualContent(arr0, arr3, mod5));
+        EXPECT_FALSE(isEqualContent(arr0, arr1, mod5));
+
+        EXPECT_TRUE(isEqualContent(makeSzRange("abc"), makeSzRange("abc")));
+        EXPECT_FALSE(isEqualContent(makeSzRange("abc"), makeSzRange("")));
+        EXPECT_FALSE(isEqualContent(makeSzRange("abc"), makeSzRange("abcd")));
+        EXPECT_FALSE(isEqualContent(makeSzRange("abc"), makeSzRange("aqw")));
+    }
+}
+
 TEST(dfgCont, VectorSso)
 {
     using namespace DFG_ROOT_NS;

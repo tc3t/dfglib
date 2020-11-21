@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "../reflection/hasMemberFunction.hpp"
+#include "../dfgBase.hpp"
 #include <type_traits>
 #include <map>
 
@@ -91,6 +92,34 @@ void eraseIf(std::map<T0, T1>& cont, Pred_T&& pred)
         else
             ++iter;
     }
+}
+
+// Returns true iff two ranges have identical size and elements at corresponding indexes are identical in the sense of given predicate
+// If ranges are empty, returns true.
+// Note: Implementation is not optimal for ranges where size() is not O(1).
+// Related code: std::equal(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2); (C++14)
+template <class Iterable0_T, class Iterable1_T, class Pred_T>
+bool isEqualContent(const Iterable0_T& left, const Iterable1_T& right, Pred_T&& pred)
+{
+    const auto nSize = count(left);
+    const auto nSize2 = count(right);
+    if (nSize != nSize2)
+        return false;
+    const auto iterEnd = std::end(left);
+    auto iterRight = std::begin(right);
+    for (auto iter = std::begin(left); !isAtEnd(iter, iterEnd); ++iter, ++iterRight)
+    {
+        if (!pred(*iter, *iterRight))
+            return false;
+    }
+    return true;
+}
+
+// Convenience overload using == for comparison
+template <class Iterable0_T, class Iterable1_T>
+bool isEqualContent(const Iterable0_T& left, const Iterable1_T& right)
+{
+    return isEqualContent(left, right, [](const decltype(*std::begin(left))& a, const decltype(*std::begin(right))& b) { return a == b; });
 }
 
 } } // module namespace

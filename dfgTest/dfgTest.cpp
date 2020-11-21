@@ -67,6 +67,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_smoothing_indexNb";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.ChartEntryOperationManager";
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg_equal";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_saving";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_forEachStartingWith";
