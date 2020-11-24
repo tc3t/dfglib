@@ -149,6 +149,66 @@ TEST(dfgDataAnalysis, smoothWithNeighbourAverages)
 
     }
 
+    // NaN-handling
+    {
+        using namespace ::DFG_MODULE_NS(math);
+        constexpr auto nanVal = std::numeric_limits<double>::quiet_NaN();
+        // NaN as first
+        {
+            std::array<double, 3> arr = { nanVal, 1, 2 };
+            smoothWithNeighbourAverages(arr, 1);
+            EXPECT_TRUE(isNan(arr[0]));
+            EXPECT_EQ(1.5, arr[1]);
+            EXPECT_EQ(1.5, arr[2]);
+        }
+
+        // NaN in middle
+        {
+            std::array<double, 5> arr = { 1, 2, 3, nanVal, 5 };
+            smoothWithNeighbourAverages(arr, 2);
+            EXPECT_EQ(2, arr[0]);
+            EXPECT_EQ(2, arr[1]);
+            EXPECT_EQ(11.0 / 4, arr[2]);
+            EXPECT_TRUE(isNan(arr[3]));
+            EXPECT_EQ(4, arr[4]);
+        }
+
+        // NaN as last
+        {
+            std::array<double, 4> arr = { 1, 2, 3, nanVal };
+            smoothWithNeighbourAverages(arr, 2);
+            EXPECT_EQ(2, arr[0]);
+            EXPECT_EQ(2, arr[1]);
+            EXPECT_EQ(2, arr[2]);
+            EXPECT_TRUE(isNan(arr[3]));
+        }
+
+        // Severals NaNs
+        {
+            std::array<double, 9> arr = { nanVal, nanVal, 1, 2, nanVal, nanVal, 3, nanVal, nanVal };
+            smoothWithNeighbourAverages(arr, 1);
+            EXPECT_TRUE(isNan(arr[0]));
+            EXPECT_TRUE(isNan(arr[1]));
+            EXPECT_EQ(1.5, arr[2]);
+            EXPECT_EQ(1.5, arr[3]);
+            EXPECT_TRUE(isNan(arr[4]));
+            EXPECT_TRUE(isNan(arr[5]));
+            EXPECT_EQ(3, arr[6]);
+            EXPECT_TRUE(isNan(arr[7]));
+            EXPECT_TRUE(isNan(arr[8]));
+        }
+
+        // Only NaNs
+        {
+            std::array<double, 4> arr = { nanVal, nanVal, nanVal, nanVal};
+            smoothWithNeighbourAverages(arr, 2);
+            EXPECT_TRUE(isNan(arr[0]));
+            EXPECT_TRUE(isNan(arr[1]));
+            EXPECT_TRUE(isNan(arr[2]));
+            EXPECT_TRUE(isNan(arr[3]));
+        }
+    }
+
     const auto testWithRandomData = [](const size_t nWindowSize)
             {
                 using namespace DFG_ROOT_NS;
@@ -256,7 +316,66 @@ TEST(dfgDataAnalysis, smoothWithNeighbourMedians)
         smoothWithNeighbourMedians(vec8000wnd6000, 6000);
         EXPECT_EQ(6000, vec8000wnd6000[0]);
         EXPECT_NEAR(9998, lastOf(vec8000wnd6000), 1e-11);
+    }
 
+    // NaN-handling
+    {
+        using namespace ::DFG_MODULE_NS(math);
+        constexpr auto nanVal = std::numeric_limits<double>::quiet_NaN();
+        // NaN as first
+        {
+            std::array<double, 3> arr = { nanVal, 1, 2 };
+            smoothWithNeighbourMedians(arr, 1);
+            EXPECT_TRUE(isNan(arr[0]));
+            EXPECT_EQ(1.5, arr[1]);
+            EXPECT_EQ(1.5, arr[2]);
+        }
+
+        // NaN in middle
+        {
+            std::array<double, 5> arr = { 1, 2, 3, nanVal, 5 };
+            smoothWithNeighbourMedians(arr, 2);
+            EXPECT_EQ(2, arr[0]);
+            EXPECT_EQ(2, arr[1]);
+            EXPECT_EQ(2.5, arr[2]);
+            EXPECT_TRUE(isNan(arr[3]));
+            EXPECT_EQ(4, arr[4]);
+        }
+
+        // NaN as last
+        {
+            std::array<double, 4> arr = { 1, 2, 3, nanVal };
+            smoothWithNeighbourMedians(arr, 2);
+            EXPECT_EQ(2, arr[0]);
+            EXPECT_EQ(2, arr[1]);
+            EXPECT_EQ(2, arr[2]);
+            EXPECT_TRUE(isNan(arr[3]));
+        }
+
+        // Severals NaNs
+        {
+            std::array<double, 9> arr = { nanVal, nanVal, 1, 2, nanVal, nanVal, 3, nanVal, nanVal };
+            smoothWithNeighbourMedians(arr, 1);
+            EXPECT_TRUE(isNan(arr[0]));
+            EXPECT_TRUE(isNan(arr[1]));
+            EXPECT_EQ(1.5, arr[2]);
+            EXPECT_EQ(1.5, arr[3]);
+            EXPECT_TRUE(isNan(arr[4]));
+            EXPECT_TRUE(isNan(arr[5]));
+            EXPECT_EQ(3, arr[6]);
+            EXPECT_TRUE(isNan(arr[7]));
+            EXPECT_TRUE(isNan(arr[8]));
+        }
+
+        // Only NaNs
+        {
+            std::array<double, 4> arr = { nanVal, nanVal, nanVal, nanVal };
+            smoothWithNeighbourMedians(arr, 2);
+            EXPECT_TRUE(isNan(arr[0]));
+            EXPECT_TRUE(isNan(arr[1]));
+            EXPECT_TRUE(isNan(arr[2]));
+            EXPECT_TRUE(isNan(arr[3]));
+        }
     }
 
     const auto testWithRandomData = [](const size_t nWindowSize)

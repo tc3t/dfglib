@@ -105,6 +105,8 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.ViewableSharedPtr";
     //::testing::GTEST_FLAG(filter) = "dfgCont.ViewableSharedPtr_editing";
     //::testing::GTEST_FLAG(filter) = "dfgCont.ViewableSharedPtr_editingWithThreads";
+    //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourAverages";
+    //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourMedians";
     //::testing::GTEST_FLAG(filter) = "dfgDebug.SehExceptionHandler";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicImStream";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicOmcByteStream";
