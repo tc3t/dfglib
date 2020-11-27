@@ -412,7 +412,6 @@ protected:
     XySeries() {}
 public:
     virtual ~XySeries() {}
-    virtual void setOrAppend(const size_t, const double, const double) = 0;
     virtual void resize(const size_t) = 0;
 
     virtual void setLineStyle(StringViewC) {}
@@ -641,9 +640,6 @@ public:
 
     virtual void removeAllChartObjects() {}
 
-    virtual ChartObjectHolder<XySeries> getSeriesByIndex(const XySeriesCreationParam&) { return nullptr; }
-    virtual ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam&) { return nullptr; }
-
     virtual bool isLegendSupported() const { return false; }
     virtual bool isToolTipSupported() const { return false; }
     virtual bool isLegendEnabled() const { return false; }
@@ -652,6 +648,7 @@ public:
     virtual bool enableToolTip(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
     virtual void createLegends() {}
 
+    virtual ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam&)   { return nullptr; }
     virtual ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam&) { return nullptr; }
     virtual ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam&) { return nullptr; }
 

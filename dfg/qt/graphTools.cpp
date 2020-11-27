@@ -1356,29 +1356,6 @@ class XySeriesQCustomPlot : public ::DFG_MODULE_NS(charts)::XySeries
 public:
     XySeriesQCustomPlot(QCPGraph* xySeries);
 
-    void setOrAppend(const DataSourceIndex nIndex, const double x, const double y) override
-    {
-        DFG_UNUSED(nIndex);
-        DFG_UNUSED(x);
-        DFG_UNUSED(y);
-        DFG_ASSERT_IMPLEMENTED(false);
-
-#if 0 // Commented out for now: QCustomPlot seems to expect sorted data, would need to figure out where to do sorting, can't do while populating.
-        auto spData = getXySeriesData();
-        if (!spData)
-            return;
-        const auto nOldSize = static_cast<DataSourceIndex>(spData->size());
-        if (nIndex < nOldSize)
-        {
-            *(spData->begin() + nIndex) = QCPGraphData(x, y);
-        }
-        else
-        {
-            spData->add(QCPGraphData(x, y));
-        }
-#endif
-    }
-
     void resize(const DataSourceIndex nNewSize) override
     {
         auto spData = getXySeriesData();
@@ -1632,9 +1609,7 @@ public:
 
     void repaintCanvas() override;
 
-    ChartObjectHolder<XySeries> getSeriesByIndex(const XySeriesCreationParam& param) override;
-    ChartObjectHolder<XySeries> getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) override;
-
+    ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam& param)   override;
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
     ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam& param) override;
 
@@ -2014,12 +1989,6 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
     repaintCanvas();
 }
 
-auto ChartCanvasQCustomPlot::getSeriesByIndex(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
-{
-    auto p = getWidget();
-    return (p && param.nIndex >= 0 && param.nIndex < p->graphCount()) ? ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(m_spChartView->graph(param.nIndex))) : nullptr;
-}
-
 namespace
 {
     void createDateTimeTicker(QCPAxis& rAxis, const QLatin1String sFormat)
@@ -2063,7 +2032,7 @@ namespace
     }
 }
 
-auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
+auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
 {
     auto p = getWidget();
     if (!p || param.nIndex < 0)
@@ -2077,28 +2046,24 @@ auto ChartCanvasQCustomPlot::getSeriesByIndex_createIfNonExistent(const XySeries
         return nullptr;
     }
 
-    while (param.nIndex >= p->graphCount())
+    auto pQcpGraph = p->addGraph(pXaxis, pYaxis);
+    if (!pQcpGraph)
     {
-        // No graph exists at requested index -> creating new.
-        auto pQcpGraph = p->addGraph(pXaxis, pYaxis);
-        if (!pQcpGraph)
-        {
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: failed to create QCPGraph-object"));
-            return nullptr;
-        }
-
-        // Setting axis type
-        setAxisTicker(*pXaxis, param.xType);
-        setAxisTicker(*pYaxis, param.yType);
-
-        // Setting auto axis labels if enabled
-        if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
-        {
-            setAutoAxisLabel(*pXaxis, param.m_sXname);
-            setAutoAxisLabel(*pYaxis, param.m_sYname);
-        }
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: failed to create QCPGraph-object"));
+        return nullptr;
     }
-    return getSeriesByIndex(param);
+
+    // Setting axis type
+    setAxisTicker(*pXaxis, param.xType);
+    setAxisTicker(*pYaxis, param.yType);
+
+    // Setting auto axis labels if enabled
+    if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
+    {
+        setAutoAxisLabel(*pXaxis, param.m_sXname);
+        setAutoAxisLabel(*pYaxis, param.m_sYname);
+    }
+    return ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(pQcpGraph));
 }
 
 auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param) -> ChartObjectHolder<Histogram>
@@ -3917,7 +3882,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType(ChartDataType::unknown);
     const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
     const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
-    auto spSeries = rChart.getSeriesByIndex_createIfNonExistent(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
+    auto spSeries = rChart.createXySeries(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
     if (!spSeries)
     {
         if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
