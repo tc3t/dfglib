@@ -46,6 +46,9 @@ constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for e
     constexpr char ChartObjectChartTypeStr_xy[] = "xy";
         // xy-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
+    constexpr char ChartObjectChartTypeStr_txy[] = "txy";
+        // txy-type has properties: see list defined in forEachUnrecognizedPropertyId()
+
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
         // histogram-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
@@ -231,6 +234,8 @@ public:
     typedef StringViewC FieldIdStrView;
     typedef const StringViewC& FieldIdStrViewInputParam;
 
+    using StringViewOrOwner = ::DFG_ROOT_NS::StringViewOrOwner<StringViewSzC, std::string>;
+
     // The bigger the level, the more verbose logging is.
     enum class LogLevel
     {
@@ -270,6 +275,9 @@ public:
     // Creates IntervalSet from x_rows-item. Returns &rInterval if x_rows was present and it was not default "include all", nullptr otherwise.
     template <class Interval_T>
     Interval_T* createXrowsSet(Interval_T& rInterval, const typename Interval_T::value_type nWrapAt) const;
+
+    // Returns graph type as string. String view is guaranteed valid for lifetime of *this.
+    virtual StringViewOrOwner graphTypeStr() const { return StringViewOrOwner::makeOwned(std::string()); }
 
 private:
     virtual bool hasFieldImpl(FieldIdStrViewInputParam fieldId) const;
@@ -688,7 +696,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
     using namespace DFG_DETAIL_NS;
     const auto sType = controlItem.fieldValueStr(ChartObjectFieldIdStr_type);
     const auto isType = [&](const char* pszId) { return sType == SzPtrUtf8(pszId); };
-    if (isType(ChartObjectChartTypeStr_xy))
+    if (isType(ChartObjectChartTypeStr_xy) || isType(ChartObjectChartTypeStr_txy))
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,

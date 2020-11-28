@@ -84,6 +84,7 @@ DFG_ROOT_NS_BEGIN{
         namespace DFG_DETAIL_NS
         {
             template <> struct ElementTypeFromConstReferenceRemoved<QCPGraphDataContainer> { typedef QCPGraphData type; };
+            template <> struct ElementTypeFromConstReferenceRemoved<QCPCurveDataContainer> { typedef QCPCurveData type; };
             template <> struct ElementTypeFromConstReferenceRemoved<QCPBarsDataContainer>  { typedef QCPBarsData type; };
         }
     } // module cont
@@ -476,7 +477,6 @@ auto ::DFG_MODULE_NS(qt)::GraphDataSource::columnDataType(const DataSourceIndex 
 class GraphDefinitionEntry : public ::DFG_MODULE_NS(charts)::AbstractChartControlItem
 {
 public:
-    using StringViewOrOwner = ::DFG_ROOT_NS::StringViewOrOwner<StringViewSzC, std::string>;
     using Operation = ::DFG_MODULE_NS(charts)::ChartEntryOperation;
 
     static GraphDefinitionEntry xyGraph(const QString& sColumnX, const QString& sColumnY)
@@ -502,9 +502,6 @@ public:
     }
 
     bool isEnabled() const;
-
-    // Returns graph type as string. String view is guaranteed valid for lifetime of *this.
-    StringViewOrOwner graphTypeStr() const;
 
     template <class Func_T>
     void doForLineStyleIfPresent(Func_T&& func) const
@@ -532,6 +529,8 @@ public:
     // Note that log level is not checked -> every call will result to logging. Caller should use isLoggingAllowedForLevel() for filtering.
     static void log(LogLevel logLevel, int nIndex, const QString& sMsg);
     void log(LogLevel logLevel, const QString& sMsg) const;
+
+    StringViewOrOwner graphTypeStr() const override;
 
 private:
     QJsonValue getField(FieldIdStrViewInputParam fieldId) const; // fieldId must be a ChartObjectFieldIdStr_
@@ -1353,17 +1352,23 @@ void ChartObjectQCustomPlot::setFillColourImpl(ChartObjectStringView svFillColou
 
 class XySeriesQCustomPlot : public ::DFG_MODULE_NS(charts)::XySeries
 {
+private:
+    XySeriesQCustomPlot(QCPAbstractPlottable* pQcpObject);
 public:
-    XySeriesQCustomPlot(QCPGraph* xySeries);
+    XySeriesQCustomPlot(QCPGraph* pQcpGraph) : XySeriesQCustomPlot(static_cast<QCPAbstractPlottable*>(pQcpGraph)) {}
+    XySeriesQCustomPlot(QCPCurve* pQcpCurve) : XySeriesQCustomPlot(static_cast<QCPAbstractPlottable*>(pQcpCurve)) {}
 
-    void resize(const DataSourceIndex nNewSize) override
+    template <class QCPObject_T, class Constructor_T>
+    bool resizeImpl(QCPObject_T* pQcpObject, const DataSourceIndex nNewSize, Constructor_T constructor)
     {
-        auto spData = getXySeriesData();
+        if (!pQcpObject)
+            return false;
+        auto spData = pQcpObject->data();
         if (!spData)
-            return;
+            return true;
         const auto nOldSize = static_cast<DataSourceIndex>(spData->size());
         if (nOldSize == nNewSize)
-            return;
+            return true;
         if (nNewSize < nOldSize)
         {
             if (nNewSize <= 0)
@@ -1375,67 +1380,94 @@ public:
         {
             const auto nAddCount = nNewSize - nOldSize;
             for (DataSourceIndex i = 0; i < nAddCount; ++i)
-                spData->add(QCPGraphData(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+                spData->add(constructor(i, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
 
         }
+        return true;
     }
 
-    QSharedPointer<QCPGraphDataContainer> getXySeriesData()
+    void resize(const DataSourceIndex nNewSize) override
     {
-        auto pXySeries = getXySeriesImpl();
-        return (pXySeries) ? pXySeries->data() : nullptr;
+        if (!resizeImpl(getGraph(), nNewSize, [](Dummy, double x, double y) { return QCPGraphData(x, y); }))
+            resizeImpl(getCurve(), nNewSize, [](DataSourceIndex i, double x, double y) { return QCPCurveData(static_cast<double>(i), x, y); });
     }
 
-    QCPGraph* getXySeriesImpl()
+    QCPGraph* getGraph()
     {
-        return qobject_cast<QCPGraph*>(m_spXySeries.data());
+        return qobject_cast<QCPGraph*>(m_spQcpObject.data());
     }
 
-    void setValues(InputSpanD xVals, InputSpanD yVals, const std::vector<bool>* pFilterFlags) override
+    QCPCurve* getCurve()
     {
-        auto xySeries = getXySeriesImpl();
-        if (!xySeries || xVals.size() != yVals.size())
-            return;
+        return qobject_cast<QCPCurve*>(m_spQcpObject.data());
+    }
+
+    template <class DataType_T, class QcpObject_T, class DataContructor_T>
+    bool setValuesImpl(QcpObject_T* pQcpObject, InputSpanD xVals, InputSpanD yVals, const std::vector<bool>* pFilterFlags, DataContructor_T constructor)
+    {
+        if (!pQcpObject)
+            return false;
+
+        if (xVals.size() != yVals.size())
+            return true;
 
         auto iterY = yVals.cbegin();
-        QVector<QCPGraphData> data;
+        QVector<DataType_T> data;
         if (pFilterFlags && pFilterFlags->size() == xVals.size())
         {
             auto iterFlag = pFilterFlags->begin();
-            for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY, ++iterFlag)
+            size_t n = 0;
+            for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY, ++iterFlag, ++n)
             {
                 if (*iterFlag)
-                    data.push_back(QCPGraphData(*iterX, *iterY));
+                    data.push_back(constructor(n, *iterX, *iterY));
             }
         }
         else
         {
             data.reserve(saturateCast<int>(xVals.size()));
-            for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY)
+            size_t n = 0;
+            for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY, ++n)
             {
-                data.push_back(QCPGraphData(*iterX, *iterY));
+                data.push_back(constructor(n, *iterX, *iterY));
             }
         }
-        fillQcpPlottable(*xySeries, std::move(data));
+        fillQcpPlottable(*pQcpObject, std::move(data));
+        return true;
+    }
+
+    void setValues(InputSpanD xVals, InputSpanD yVals, const std::vector<bool>* pFilterFlags) override
+    {
+        if (!setValuesImpl<QCPGraphData>(getGraph(), xVals, yVals, pFilterFlags, [](Dummy, double x, double y) { return QCPGraphData(x,y); } ))
+            setValuesImpl<QCPCurveData>(getCurve(), xVals, yVals, pFilterFlags, [](size_t n, double x, double y) { return QCPCurveData(static_cast<double>(n), x, y); });
     }
 
     void setLineStyle(StringViewC svStyle) override;
 
     void setPointStyle(StringViewC svStyle) override;
 
-    QPointer<QCPGraph> m_spXySeries;
+private:
+    void setScatterStyle(const QCPScatterStyle style);
+    // Unlike scatter style, graph and curve have distinct set of line styles, so handling them separately.
+    bool setLineStyle(QCPGraph* pGraph, StringViewC svStyle); // Returns true iff non-null pGraph given.
+    bool setLineStyle(QCPCurve* pCurve, StringViewC svStyle); // Returns true iff non-null pCurve given.
+
+public:
+
+    QPointer<QCPAbstractPlottable> m_spQcpObject;
 }; // Class XySeriesQCustomPlot
 
-XySeriesQCustomPlot::XySeriesQCustomPlot(QCPGraph* xySeries)
-    : m_spXySeries(xySeries)
+XySeriesQCustomPlot::XySeriesQCustomPlot(QCPAbstractPlottable* pQcpObject)
+    : m_spQcpObject(pQcpObject)
 {
-    setBaseImplementation<ChartObjectQCustomPlot>(m_spXySeries.data());
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spQcpObject.data());
 }
 
-void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
+bool XySeriesQCustomPlot::setLineStyle(QCPGraph* pGraph, StringViewC svStyle)
 {
-    if (!m_spXySeries)
-        return;
+    if (!pGraph)
+        return false;
+
     QCPGraph::LineStyle style = QCPGraph::lsNone; // Note: If changing this, reflect change to logging below.
     if (svStyle == "basic")
         style = QCPGraph::lsLine;
@@ -1452,13 +1484,49 @@ void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
         // Ending up here means that entry was unrecognized.
         DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
     }
+    pGraph->setLineStyle(style);
+    return true;
+}
 
-    m_spXySeries->setLineStyle(style);
+bool XySeriesQCustomPlot::setLineStyle(QCPCurve* pCurve, StringViewC svStyle)
+{
+    if (!pCurve)
+        return false;
+
+    QCPCurve::LineStyle style = QCPCurve::lsNone; // Note: If changing this, reflect change to logging below.
+    if (svStyle == "basic")
+        style = QCPCurve::lsLine;
+    else if (svStyle != "none")
+    {
+        // Ending up here means that entry was unrecognized.
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
+    }
+    pCurve->setLineStyle(style);
+    return true;
+}
+
+void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
+{
+    if (!setLineStyle(getGraph(), svStyle))
+        setLineStyle(getCurve(), svStyle);
+}
+
+void XySeriesQCustomPlot::setScatterStyle(const QCPScatterStyle style)
+{
+    auto pGraph = getGraph();
+    if (pGraph)
+        pGraph->setScatterStyle(style);
+    else
+    {
+        auto pCurve = getCurve();
+        if (pCurve)
+            pCurve->setScatterStyle(style);
+    }
 }
 
 void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
 {
-    if (!m_spXySeries)
+    if (!m_spQcpObject)
         return;
     QCPScatterStyle style = QCPScatterStyle::ssNone; // Note: If changing this, reflect change to logging below.
     if (svStyle == "basic")
@@ -1469,8 +1537,7 @@ void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
         DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown point style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
         
     }
-      
-    m_spXySeries->setScatterStyle(style);
+    setScatterStyle(style);
 }
 
 
@@ -1645,6 +1712,7 @@ public:
 
     // Returns true if got non-null object as argument.
     static bool toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
+    static bool toolTipTextForChartObjectAsHtml(const QCPCurve* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
     static bool toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
 
 private:
@@ -1944,13 +2012,20 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
             }
             continue;
         }
+
+        auto pCurve = qobject_cast<QCPCurve*>(pPlottable);
+        if (pCurve)
+        {
+            addSectionEntryToMenu(pSubMenu, tr("txy controls not implemented"));
+            continue;
+        }
+
         auto pBars = qobject_cast<QCPBars*>(pPlottable);
         if (pBars)
         {
-            addSectionEntryToMenu(pSubMenu, tr("Histogram controls not implemented"));
+            addSectionEntryToMenu(pSubMenu, tr("Bar controls not implemented"));
             continue;
         }
-        
     }
 }
 
@@ -2046,10 +2121,23 @@ auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) 
         return nullptr;
     }
 
-    auto pQcpGraph = p->addGraph(pXaxis, pYaxis);
-    if (!pQcpGraph)
+    const auto type = param.definitionEntry().graphTypeStr();
+
+    QCPGraph* pQcpGraph = nullptr;
+    QCPCurve* pQcpCurve = nullptr;
+    if (type == ChartObjectChartTypeStr_xy)
+        pQcpGraph = p->addGraph(pXaxis, pYaxis);
+    else if (type == ChartObjectChartTypeStr_txy)
+        pQcpCurve = new QCPCurve(pXaxis, pYaxis); // Owned by QCustomPlot
+    else
     {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: failed to create QCPGraph-object"));
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid type '%1'").arg(untypedViewToQStringAsUtf8(type.asUntypedView())));
+        return nullptr;
+    }
+
+    if (!pQcpGraph && !pQcpCurve)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: failed to create QCP-object"));
         return nullptr;
     }
 
@@ -2063,7 +2151,10 @@ auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) 
         setAutoAxisLabel(*pXaxis, param.m_sXname);
         setAutoAxisLabel(*pYaxis, param.m_sYname);
     }
-    return ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(pQcpGraph));
+    if (pQcpGraph)
+        return ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(pQcpGraph));
+    else
+        return ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(pQcpCurve));
 }
 
 auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param) -> ChartObjectHolder<Histogram>
@@ -2651,6 +2742,16 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPGraph* pGr
     return true;
 }
 
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCurve, const PointXy& /*xy*/, ToolTipTextStream& toolTipStream)
+{
+    if (!pCurve)
+        return false;
+
+    toolTipStream << tr("<br>Tooltip is not implemented for txy types");
+
+    return true;
+}
+
 bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& xy, ToolTipTextStream& toolTipStream)
 {
     if (!pBars)
@@ -2721,6 +2822,7 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
         toolTipStream << QString("<br>'%1'").arg(plottable.name().toHtmlEscaped());
         QString sChartObjectDetails;
         if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPGraph*>(&plottable), xy, toolTipStream)) {}
+        else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPCurve*>(&plottable), xy, toolTipStream)) {}
         else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPBars*>(&plottable), xy, toolTipStream)) {}
     });
 
@@ -2767,6 +2869,9 @@ auto ChartCanvasQCustomPlot::createOperationPipeData(QCPAbstractPlottable* pPlot
     auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
     if (pGraph)
         return createOperationPipeDataImpl(pGraph->data());
+    auto pCurve = qobject_cast<QCPGraph*>(pPlottable);
+    if (pCurve)
+        return createOperationPipeDataImpl(pCurve->data());
     auto pBars = qobject_cast<QCPBars*>(pPlottable);
     if (pBars)
         return createOperationPipeDataImpl(pBars->data());
@@ -3689,7 +3794,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
                 return;
             }
 
-            if (sEntryType == ChartObjectChartTypeStr_xy)
+            if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
                 refreshXy(rChart, configParamCreator, source, defEntry, nGraphCounter);
             else if (sEntryType == ChartObjectChartTypeStr_histogram)
                 refreshHistogram(rChart, configParamCreator, source, defEntry, nHistogramCounter);
