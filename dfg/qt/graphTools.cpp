@@ -1863,7 +1863,7 @@ void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottabl
 namespace
 {
     template <class Func_T>
-    void forEachQCustomPlotLineStyle(Func_T&& func)
+    void forEachQCustomPlotLineStyle(const QCPGraph*, Func_T&& func)
     {
         func(QCPGraph::lsNone,       QT_TR_NOOP("None"));
         func(QCPGraph::lsLine,       QT_TR_NOOP("Line"));
@@ -1871,6 +1871,13 @@ namespace
         func(QCPGraph::lsStepRight,  QT_TR_NOOP("Step, right-valued"));
         func(QCPGraph::lsStepCenter, QT_TR_NOOP("Step middle"));
         func(QCPGraph::lsImpulse,    QT_TR_NOOP("Impulse"));
+    }
+
+    template <class Func_T>
+    void forEachQCustomPlotLineStyle(const QCPCurve*, Func_T&& func)
+    {
+        func(QCPCurve::lsNone, QT_TR_NOOP("None"));
+        func(QCPCurve::lsLine, QT_TR_NOOP("Line"));
     }
 
     template <class Func_T>
@@ -1897,10 +1904,10 @@ namespace
 
 namespace
 {
-    template <class Style_T, class StyleSetter_T>
-    static void addGraphStyleAction(QMenu& rMenu, QCPGraph& rGraph, QCustomPlot& rCustomPlot, const Style_T currentStyle, const Style_T style, const QString& sStyleName, StyleSetter_T styleSetter)
+    template <class QCPObject_T, class Style_T, class StyleSetter_T>
+    static void addGraphStyleAction(QMenu& rMenu, QCPObject_T& rQcpObject, QCustomPlot& rCustomPlot, const Style_T currentStyle, const Style_T style, const QString& sStyleName, StyleSetter_T styleSetter)
     {
-        auto pAction = rMenu.addAction(sStyleName, [=, &rGraph, &rCustomPlot]() { (rGraph.*styleSetter)(style); rCustomPlot.replot(); });
+        auto pAction = rMenu.addAction(sStyleName, [=, &rQcpObject, &rCustomPlot]() { (rQcpObject.*styleSetter)(style); rCustomPlot.replot(); });
         if (pAction)
         {
             pAction->setCheckable(true);
@@ -1934,6 +1941,37 @@ void ChartCanvasQCustomPlot::addXySeries()
     if (!m_spChartView)
         return;
     m_spChartView->addGraph();
+}
+
+namespace
+{
+    // Returns true iff pObj was non-null
+    template<class T> 
+    static bool addContextMenuEntriesForXyType(QCustomPlot& rQcp, QMenu& rMenu, T* pObj)
+    {
+        if (!pObj)
+            return false;
+        // Adding line style entries
+        {
+            addSectionEntryToMenu(&rMenu, rMenu.tr("Line Style"));
+            const auto currentLineStyle = pObj->lineStyle();
+            forEachQCustomPlotLineStyle(pObj, [&](const T::LineStyle style, const char* pszStyleName)
+            {
+                addGraphStyleAction(rMenu, *pObj, rQcp, currentLineStyle, style, rMenu.tr(pszStyleName), &T::setLineStyle);
+            });
+        }
+
+        // Adding point style entries
+        {
+            addSectionEntryToMenu(&rMenu, rMenu.tr("Point Style"));
+            const auto currentPointStyle = pObj->scatterStyle().shape();
+            forEachQCustomPlotScatterStyle([&](const QCPScatterStyle::ScatterShape style, const char* pszStyleName)
+            {
+                addGraphStyleAction(rMenu, *pObj, rQcp, currentPointStyle, style, rMenu.tr(pszStyleName), &T::setScatterStyle);
+            });
+        }
+        return true;
+    }
 }
 
 void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHandle)
@@ -1988,37 +2026,10 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
             }
         }
 
-        auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
-        if (pGraph)
-        {
-            // Adding line style entries
-            {
-                addSectionEntryToMenu(pSubMenu, tr("Line Style"));
-                const auto currentLineStyle = pGraph->lineStyle();
-                forEachQCustomPlotLineStyle([=](const QCPGraph::LineStyle style, const char* pszStyleName)
-                {
-                    addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentLineStyle, style, tr(pszStyleName), &QCPGraph::setLineStyle);
-                });
-            }
-
-            // Adding point style entries
-            {
-                addSectionEntryToMenu(pSubMenu, tr("Point Style"));
-                const auto currentPointStyle = pGraph->scatterStyle().shape();
-                forEachQCustomPlotScatterStyle([=](const QCPScatterStyle::ScatterShape style, const char* pszStyleName)
-                {
-                    addGraphStyleAction(*pSubMenu, *pGraph, *m_spChartView, currentPointStyle, style, tr(pszStyleName), &QCPGraph::setScatterStyle);
-                });
-            }
+        if (addContextMenuEntriesForXyType(*m_spChartView, *pSubMenu, qobject_cast<QCPGraph*>(pPlottable)))
             continue;
-        }
-
-        auto pCurve = qobject_cast<QCPCurve*>(pPlottable);
-        if (pCurve)
-        {
-            addSectionEntryToMenu(pSubMenu, tr("txy controls not implemented"));
+        if (addContextMenuEntriesForXyType(*m_spChartView, *pSubMenu, qobject_cast<QCPCurve*>(pPlottable)))
             continue;
-        }
 
         auto pBars = qobject_cast<QCPBars*>(pPlottable);
         if (pBars)
@@ -2869,7 +2880,7 @@ auto ChartCanvasQCustomPlot::createOperationPipeData(QCPAbstractPlottable* pPlot
     auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
     if (pGraph)
         return createOperationPipeDataImpl(pGraph->data());
-    auto pCurve = qobject_cast<QCPGraph*>(pPlottable);
+    auto pCurve = qobject_cast<QCPCurve*>(pPlottable);
     if (pCurve)
         return createOperationPipeDataImpl(pCurve->data());
     auto pBars = qobject_cast<QCPBars*>(pPlottable);
@@ -3046,15 +3057,26 @@ static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
     rChartObject.setData(std::move(spData));
 }
 
-template <class DataType_T, class ChartObject_T>
-static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>& xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>& yVals)
+template <class DataType_T, class ChartObject_T, class Transform_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>& xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>& yVals, Transform_T transformer)
 {
     QVector<DataType_T> values;
     const auto nSize = saturateCast<int>(Min(xVals.size(), yVals.size()));
     values.resize(nSize);
     // Copying from [x], [y] input to [(x,y)] storage that QCPStorage uses.
-    std::transform(xVals.cbegin(), xVals.cbegin() + nSize, yVals.cbegin(), values.begin(), [](const double x, const double y) { return DataType_T(x, y); });
+    transformer(values, xVals, yVals);
     fillQcpPlottable(rChartObject, std::move(values));
+}
+
+template <class DataType_T, class ChartObject_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>& xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>& yVals)
+{
+    using InputT = ::DFG_MODULE_NS(charts)::InputSpan<double>;
+    const auto transformer = [](QVector<DataType_T>& dest, const InputT& xVals, const InputT& yVals) 
+        {
+            std::transform(xVals.cbegin(), xVals.cbegin() + dest.size(), yVals.cbegin(), dest.begin(), [](const double x, const double y) { return DataType_T(x, y); });
+        };
+    fillQcpPlottable<DataType_T>(rChartObject, xVals, yVals, transformer);
 }
 
 void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData)
@@ -3070,6 +3092,20 @@ void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(charts):
     if (pGraph)
     {
         fillQcpPlottable<QCPGraphData>(*pGraph, makeRange(*px), makeRange(*py));
+        return;
+    }
+    auto pCurve = qobject_cast<QCPCurve*>(pPlottable);
+    if (pCurve)
+    {
+        using InputT = ::DFG_MODULE_NS(charts)::InputSpan<double>;
+        const auto transformer = [](QVector<QCPCurveData>& dest, const InputT& xVals, const InputT& yVals)
+        {
+            for (int i = 0, nCount = dest.size(); i < nCount; ++i)
+            {
+                dest[i] = QCPCurveData(static_cast<double>(i), xVals[i], yVals[i]);
+            }
+        };
+        fillQcpPlottable<QCPCurveData>(*pCurve, makeRange(*px), makeRange(*py), transformer);
         return;
     }
     auto pBars = qobject_cast<QCPBars*>(pPlottable);
