@@ -781,9 +781,9 @@ TEST(dfgCont, SortedSequence)
     {
         const size_t nCount = 100;
 
-        DFG_CLASS_NAME(SortedSequence)<std::vector<int>> sseq;
-        DFG_CLASS_NAME(SortedSequence)<std::deque<int>> sseqDeque;
-        DFG_CLASS_NAME(SortedSequence)<std::list<int>> sseqList;
+        SortedSequence<std::vector<int>> sseq;
+        SortedSequence<std::deque<int>> sseqDeque;
+        SortedSequence<std::list<int>> sseqList;
 
         EXPECT_TRUE(sseq.empty());
         EXPECT_TRUE(sseqDeque.empty());
@@ -810,6 +810,38 @@ TEST(dfgCont, SortedSequence)
             ASSERT_TRUE(sseqList.find(val) != sseqList.end());
             EXPECT_EQ(val, *sseqList.find(val));
         }
+    }
+
+    // front(), back(), pop_back()
+    {
+        SortedSequence<std::vector<int>> sseq;
+        SortedSequence<std::deque<int>> sseqDeque;
+        SortedSequence<std::list<int>> sseqList;
+        sseq.insert(5);
+        sseqDeque.insert(5);
+        sseqList.insert(5);
+        sseq.insert(4);
+        sseqDeque.insert(4);
+        sseqList.insert(4);
+
+        EXPECT_EQ(4, sseq.front());
+        EXPECT_EQ(4, sseqDeque.front());
+        EXPECT_EQ(4, sseqList.front());
+        EXPECT_EQ(5, sseq.back());
+        EXPECT_EQ(5, sseqDeque.back());
+        EXPECT_EQ(5, sseqList.back());
+
+        sseq.pop_back();
+        sseqDeque.pop_back();
+        sseqList.pop_back();
+
+        EXPECT_EQ(4, sseq.back());
+        EXPECT_EQ(4, sseqDeque.back());
+        EXPECT_EQ(4, sseqList.back());
+
+        EXPECT_EQ(1, sseq.size());
+        EXPECT_EQ(1, sseqDeque.size());
+        EXPECT_EQ(1, sseqList.size());
     }
 }
 

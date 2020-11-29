@@ -8,10 +8,10 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
     template <class Cont_T>
-    class DFG_CLASS_NAME(SortedSequence)
+    class SortedSequence
     {
     public:
-        typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type ValueT;
+        typedef typename DFG_MODULE_NS(cont)::ElementType<Cont_T>::type ValueT;
         typedef typename Cont_T::size_type size_type;
         typedef typename Cont_T::iterator contTIterator;
         typedef typename Cont_T::const_iterator contTConstIterator;
@@ -33,6 +33,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         {
             m_cont.clear();
         }
+
+        // Precondition: !empty()
+              value_type& front()       { return m_cont.front(); }
+        const value_type& front() const { return m_cont.front(); }
+
+        // Precondition: !empty()
+              value_type& back()       { return m_cont.back(); }
+        const value_type& back() const { return m_cont.back(); }
+
+        // Precondition: !empty()
+        void pop_back() { m_cont.pop_back(); }
 
         // TODO: test
         void replace(const value_type& old, const value_type& newVal)
