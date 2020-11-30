@@ -1646,6 +1646,16 @@ public:
         return (!pTextTicker) ? numberToText(d) : pTextTicker->ticks().value(d);
     }
 
+    QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker, QCPAxisTickerText* pTextTicker) const
+    {
+        if (pTimeTicker)
+            return numberToText(d, pTimeTicker);
+        else if (pTextTicker)
+            return numberToText(d, pTextTicker);
+        else
+            return numberToText(d);
+    }
+
     bool isDestinationEmpty() const { return m_sText.isEmpty(); }
 
     QString m_sText;
@@ -2701,26 +2711,55 @@ namespace
         Cont_T& m_r;
     };
 
-    template <class Cont_T, class PointToText_T, class Tr_T>
-    static void createNearestPointToolTipList(Cont_T& cont, const PointXy& xy, ToolTipTextStream& toolTipStream, PointToText_T pointToText, Tr_T&& tr) // Note: QCPDataContainer doesn't seem to have const begin()/end() so must take cont by non-const reference.
+    template <class Data_T>
+    class PointToTextConverter
+    {
+    public:
+        PointToTextConverter(const QCPAbstractPlottable& plottable)
+        {
+            const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
+            auto spXticker = axisTicker(plottable.keyAxis());
+            auto spYticker = axisTicker(plottable.valueAxis());
+            m_pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.get());
+            m_pYdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spYticker.get());
+            m_pXtextTicker = dynamic_cast<QCPAxisTickerText*>(spXticker.get());
+        }
+
+        QString operator()(const Data_T& data, const ToolTipTextStream& toolTipStream) const
+        {
+            return QString("(%1, %2)").arg(toolTipStream.numberToText(data.key, m_pXdateTicker, m_pXtextTicker), toolTipStream.numberToText(data.value, m_pYdateTicker));
+        }
+
+        static QString tr(const char* psz)
+        {
+            return QApplication::tr(psz);
+        }
+
+        const QCPAxisTickerDateTime* m_pXdateTicker = nullptr;
+        const QCPAxisTickerDateTime* m_pYdateTicker = nullptr;
+              QCPAxisTickerText*     m_pXtextTicker = nullptr; // Not const because of reasons noted in ToolTipTextStream::numberToText()
+    };
+
+    template <class Cont_T, class PointToText_T>
+    static void createNearestPointToolTipList(Cont_T& cont, const PointXy& xy, ToolTipTextStream& toolTipStream, PointToText_T pointToText) // Note: QCPDataContainer doesn't seem to have const begin()/end() so must take cont by non-const reference.
     {
         using DataT = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
         const auto nearestItems = ::DFG_MODULE_NS(alg)::nearestRangeInSorted(QCPContWrapper<Cont_T>(cont), xy.first, 5, [](const DataT& dp) { return dp.key; });
         if (nearestItems.empty())
             return;
 
-        toolTipStream << tr("<br>Nearest by x-value:");
+        toolTipStream << pointToText.tr("<br>Nearest by x-value:");
         // Adding items left of nearest
         for (const DataT& dp : nearestItems.leftRange())
         {
-            toolTipStream << QString("<br>%1").arg(pointToText(dp));
+            toolTipStream << QString("<br>%1").arg(pointToText(dp, toolTipStream));
         }
         // Adding nearest item in bold
-        toolTipStream << QString("<br><b>%1</b>").arg(pointToText(*nearestItems.nearest()));
+        toolTipStream << QString("<br><b>%1</b>").arg(pointToText(*nearestItems.nearest(), toolTipStream));
         // Adding items right of nearest
         for (const DataT& dp : nearestItems.rightRange())
         {
-            toolTipStream << QString("<br>%1").arg(pointToText(dp));
+            toolTipStream << QString("<br>%1").arg(pointToText(dp, toolTipStream));
         }
     }
 
@@ -2738,27 +2777,64 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPGraph* pGr
     if (!spData)
         return true;
 
-    const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
-    auto spXticker = axisTicker(pGraph->keyAxis());
-    auto spYticker = axisTicker(pGraph->valueAxis());
-    auto pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.get());
-    auto pYdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spYticker.get());
-
-    const auto pointToText = [&](const QCPGraphData& bd)
-        {
-            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pXdateTicker), toolTipStream.numberToText(bd.value, pYdateTicker));
-        };
-    createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
+    createNearestPointToolTipList(*spData, xy, toolTipStream, PointToTextConverter<QCPGraphData>(*pGraph));
 
     return true;
 }
 
-bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCurve, const PointXy& /*xy*/, ToolTipTextStream& toolTipStream)
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCurve, const PointXy& cursorXy, ToolTipTextStream& toolTipStream)
 {
-    if (!pCurve)
+    const auto spPoints = (pCurve) ? pCurve->data() : nullptr;
+    if (!spPoints)
         return false;
 
-    toolTipStream << tr("<br>Tooltip is not implemented for txy types");
+    toolTipStream << tr("<br>Graph size: %1").arg(pCurve->dataCount());
+
+    // Unlike in QCPGraph, now adjacent points in index space can be arbitrarily far from each other in both x and y axis.
+    // So in practice need to go through all points to find nearest and this time showing nearest by distance between cursor and point,
+    // not just x-coordinate distance between them.
+
+    struct DistanceAndPoint
+    {
+        DistanceAndPoint(double d2, QCPCurveData curveData)
+            : distanceSquare(d2)
+            , data(curveData)
+        {}
+        bool operator<(const DistanceAndPoint& other) const { return this->distanceSquare < other.distanceSquare; }
+        double distanceSquare;
+        QCPCurveData data;
+    };
+
+    ::DFG_MODULE_NS(cont)::SortedSequence<std::vector<DistanceAndPoint>> nearest;
+
+    const auto pow2 = [](const double val) { return val * val; };
+
+    const auto distanceSquare = [&](const QCPCurveData& xy) { return pow2(xy.key - cursorXy.first) + pow2(xy.value - cursorXy.second); };
+
+    const auto nToolTipPointCount = static_cast<size_t>(Min(5, spPoints->size()));
+
+    std::for_each(spPoints->constBegin(), spPoints->constEnd(), [&](const QCPCurveData& data)
+    {
+        const auto d2 = distanceSquare(data);
+        if (nearest.size() >= nToolTipPointCount)
+        {
+            if (d2 < nearest.back().distanceSquare)
+            {
+                nearest.pop_back();
+                nearest.insert(DistanceAndPoint(d2, data));
+            }
+        }
+        else
+            nearest.insert(DistanceAndPoint(d2, data));
+    });
+
+    auto pointToText = PointToTextConverter<QCPCurveData>(*pCurve);
+
+    toolTipStream << tr("<br>Nearest points and distance to cursor:");
+    for (const auto& item : nearest)
+    {
+        toolTipStream << QString("<br>%1 (%2)").arg(pointToText(item.data, toolTipStream)).arg(std::sqrt(item.distanceSquare));
+    }
 
     return true;
 }
@@ -2775,27 +2851,8 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPBars* pBar
     if (!spData)
         return true;
 
-    const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
-    auto spXticker = axisTicker(pBars->keyAxis());
-    auto pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.get());
-
-    if (pXdateTicker)
-    {
-        const auto pointToText = [&](const QCPBarsData& bd)
-            {
-                return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pXdateTicker), toolTipStream.numberToText(bd.value));
-            };
-        createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
-    }
-    else // case: ticker is not datetime ticker
-    {
-        auto pTextTicker = dynamic_cast<QCPAxisTickerText*>(spXticker.get());
-        const auto pointToText = [&](const QCPBarsData& bd)
-        {
-            return QString("(%1, %2)").arg(toolTipStream.numberToText(bd.key, pTextTicker), toolTipStream.numberToText(bd.value));
-        };
-        createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText, [&](const char* psz) { return tr(psz); });
-    }
+    PointToTextConverter<QCPBarsData> pointToText(*pBars);
+    createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText);
 
     return true;
 }
