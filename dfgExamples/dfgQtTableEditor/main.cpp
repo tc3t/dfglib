@@ -202,6 +202,14 @@ int main(int argc, char *argv[])
 #if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
     dfg::qt::GraphControlAndDisplayWidget graphDisplay;
 
+    // Setting chart guide
+    {
+        QFile file(":/chartGuide.html");
+        file.open(QFile::ReadOnly);
+        const auto sGuide = QString::fromUtf8(file.readAll());
+        graphDisplay.setChartGuide(sGuide);
+    }
+
     // Setting data sources to chart display.
     {
         std::unique_ptr<dfg::qt::CsvTableViewChartDataSource> selectionSource(new dfg::qt::CsvTableViewChartDataSource(tableEditor.m_spTableView.get()));

@@ -350,6 +350,9 @@ public:
 
     void privForEachDataSource(std::function<void(GraphDataSource&)> func);
 
+    // Sets chart guide. Can be set only once and must to be done during initialization.
+    void setChartGuide(const QString& s);
+
 public slots:
     void onDataSourceChanged();
     void onDataSourceDestroyed();

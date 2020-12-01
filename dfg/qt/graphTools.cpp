@@ -1120,6 +1120,7 @@ public:
     void showGuideWidget();
 
     static QString getGuideString();
+    void setGuideString(const QString& s);
 
     ChartDefinition getChartDefinition();
 
@@ -1139,8 +1140,11 @@ public:
     QElapsedTimer m_timeSinceLastEdit;
     QTimer m_chartDefinitionTimer;
     const int m_nChartDefinitionUpdateMinimumIntervalInMs = 250;
+
+    static QString s_sGuideString;
 }; // Class GraphDefinitionWidget
 
+QString GraphDefinitionWidget::s_sGuideString;
 
 GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) :
     BaseClass(pNonNullParent),
@@ -1161,6 +1165,8 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
         auto spHlayout = std::make_unique<QHBoxLayout>();
         auto pApplyButton = new QPushButton(tr("Apply"), this); // Deletion through parentship.
         auto pGuideButton = new QPushButton(tr("Show guide"), this); // Deletion through parentship.
+        pGuideButton->setObjectName("guideButton");
+        pGuideButton->setHidden(true);
 
         auto pController = getController();
         if (pController)
@@ -1210,15 +1216,32 @@ void GraphDefinitionWidget::checkUpdateChartDefinitionViewableTimer()
         m_chartDefinitionTimer.start(m_nChartDefinitionUpdateMinimumIntervalInMs - static_cast<int>(elapsed));
 }
 
+void GraphDefinitionWidget::setGuideString(const QString& s)
+{
+    if (s_sGuideString.isEmpty())
+    {
+        s_sGuideString = s;
+        auto pGuideButton = this->findChild<QPushButton*>("guideButton");
+        if (pGuideButton)
+            pGuideButton->setHidden(false);
+    }
+    else
+    {
+        DFG_ASSERT_CORRECTNESS(false); // Guide string can be set only once.
+    }
+}
+
 QString GraphDefinitionWidget::getGuideString()
 {
-    // While waiting for std::embed (http://open-std.org/JTC1/SC22/WG21/docs/papers/2020/p1040r6.html),
-    // importing the actual guide from another file with #include.
-    // Note that while this is in Qt code, using qrc resources seems tricky as part of library there's no executable
-    // or compiled library to embed to without introducing additional build requirements.
-    return QString(
-#include "res/chartGuide.html"
-    );
+    // Originally guide string was embedded - while waiting for std::embed (http://open-std.org/JTC1/SC22/WG21/docs/papers/2020/p1040r6.html) -  here like this:
+    //return QString(
+    //#include "res/chartGuide.html"
+    //);
+    // The file, however, was starting to get too big (~16 kB for MSVC2017) for this pattern causing compile error.
+    // And while this is in Qt code, using qrc resources seemed tricky as being part of library, 
+    // there's no executable or compiled library to embed to without introducing additional build requirements.
+    // So the solution for now is to require the guide to be set from outside, where it hopefully is easier to embed e.g. as qrc-resource.
+    return s_sGuideString;
 }
 
 void GraphDefinitionWidget::showGuideWidget()
@@ -3711,7 +3734,13 @@ DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
 
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::~GraphControlAndDisplayWidget()
 {
+}
 
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setChartGuide(const QString& s)
+{
+    auto p = getDefinitionWidget();
+    if (p)
+        p->setGuideString(s);
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onControllerPreferredSizeChanged(const QSize sizeHint)
