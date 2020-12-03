@@ -212,7 +212,8 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/operations.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/chartsAll.hpp
+        $$_PRO_FILE_PWD_/../../dfg/chartsAll.hpp \
+        main.h
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
         HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.h

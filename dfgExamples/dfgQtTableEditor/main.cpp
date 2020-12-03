@@ -1,5 +1,6 @@
 #include <dfg/qt/qtIncludeHelpers.hpp>
 #include <dfg/qt/connectHelper.hpp>
+#include "main.h"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QApplication>
@@ -41,37 +42,28 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 static QWidget* gpMainWindow = nullptr;
 
-// Implements handling of URL that has scheme dfgdiff;
-// in practice means that when clicking link in about box whose url
-// starts with dfgdiff, handling will happen in urlHandler() function.
-// Handler is activated in setUrlHandler()
-class DiffUrlHandler : public QObject
+
+void DiffUrlHandler::urlHandler(const QUrl& url)
 {
-    Q_OBJECT
-
-public slots:
-    void urlHandler(const QUrl& url)
+    const auto sPath = url.path();
+    if (sPath == "/qmake_time_working_tree.diff")
     {
-        const auto sPath = url.path();
-        if (sPath == "/qmake_time_working_tree.diff")
-        {
-            QDialog dlg;
-            auto pLayout = new QVBoxLayout(&dlg);
-            auto pTextDisplay = new QPlainTextEdit(&dlg);
-            pTextDisplay->setLineWrapMode(QPlainTextEdit::NoWrap);
-            pLayout->addWidget(pTextDisplay);
-            QFile file(":/qmake_time_working_tree.diff");
-            file.open(QFile::ReadOnly);
-            const auto sDiff = QString::fromUtf8(file.readAll());
-            pTextDisplay->setPlainText(sDiff);
-            dlg.resize(800, 600);
-            dlg.exec();
-        }
-        else
-            QMessageBox::information(nullptr, tr("Unexpected url"), tr("Diff handler got unexpected URL %1").arg(url.toString()));
-
+        QDialog dlg;
+        auto pLayout = new QVBoxLayout(&dlg);
+        auto pTextDisplay = new QPlainTextEdit(&dlg);
+        pTextDisplay->setLineWrapMode(QPlainTextEdit::NoWrap);
+        pLayout->addWidget(pTextDisplay);
+        QFile file(":/qmake_time_working_tree.diff");
+        file.open(QFile::ReadOnly);
+        const auto sDiff = QString::fromUtf8(file.readAll());
+        pTextDisplay->setPlainText(sDiff);
+        dlg.resize(800, 600);
+        dlg.exec();
     }
-}; // class DiffUrlHandler
+    else
+        QMessageBox::information(nullptr, tr("Unexpected url"), tr("Diff handler got unexpected URL %1").arg(url.toString()));
+
+}
 
 static DiffUrlHandler diffDisplay;
 
@@ -292,8 +284,3 @@ int main(int argc, char *argv[])
 
     return a.exec();
 }
-
-// Including main.moc to get working linking for Q_OBJECT-stuff in DiffUrlHandler.
-// https://forum.qt.io/topic/83854/class-with-q_object-macro-declared-and-defined-in-cpp
-// https://stackoverflow.com/questions/34928933/why-is-important-to-include-moc-file-at-end-of-a-qt-source-code-file
-#include "main.moc"
