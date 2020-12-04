@@ -1988,7 +1988,7 @@ namespace
         {
             addSectionEntryToMenu(&rMenu, rMenu.tr("Line Style"));
             const auto currentLineStyle = pObj->lineStyle();
-            forEachQCustomPlotLineStyle(pObj, [&](const T::LineStyle style, const char* pszStyleName)
+            forEachQCustomPlotLineStyle(pObj, [&](const typename T::LineStyle style, const char* pszStyleName)
             {
                 addGraphStyleAction(rMenu, *pObj, rQcp, currentLineStyle, style, rMenu.tr(pszStyleName), &T::setLineStyle);
             });
