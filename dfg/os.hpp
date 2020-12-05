@@ -19,6 +19,8 @@
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(os) {
 
+enum FileMode { FileModeExists = 0, FileModeRead = 4, FileModeWrite = 2, FileModeReadWrite = 6 };
+
 namespace DFG_DETAIL_NS
 {
 	template <class Char_T, class Func_T>
@@ -31,6 +33,42 @@ namespace DFG_DETAIL_NS
 		free(p);
 		return std::move(s);
 	}
+
+#ifdef _WIN32
+    // On Windows _access() "does not check the filesystem security settings" so it will in practice give wrong results e.g. to FileModeRead if there's no read permission.
+    inline int access(const char* psz, const int accessMode)    { return _access(psz, accessMode); }
+    inline int access(const wchar_t* psz, const int accessMode) { return _waccess(psz, accessMode); }
+
+    inline HANDLE createFile(const char* pszFilePath, const DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES pSecurityAttributes,
+                          DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+    { 
+        return ::CreateFileA(pszFilePath, dwDesiredAccess, dwShareMode, pSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
+    inline HANDLE createFile(const wchar_t* pszFilePath, const DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES pSecurityAttributes,
+                          DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+    {
+        return ::CreateFileW(pszFilePath, dwDesiredAccess, dwShareMode, pSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
+    template <class Char_T>
+    inline bool isPathFileAvailable(const StringViewSz<Char_T>& svFilePath, const FileMode fm)
+    {
+        if (fm == FileModeExists)
+            return (DFG_DETAIL_NS::access(svFilePath.c_str(), fm) == 0);
+        DWORD accessFlags = 0;
+        if (fm & FileModeRead)
+            accessFlags |= GENERIC_READ;
+        if (fm & FileModeWrite)
+            accessFlags |= GENERIC_WRITE;
+        auto hFile = DFG_DETAIL_NS::createFile(svFilePath.c_str(), accessFlags, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
+        const auto bSucceeded = (hFile != INVALID_HANDLE_VALUE);
+        if (bSucceeded)
+            ::CloseHandle(hFile);
+        return bSucceeded;
+    }
+#endif // _WIN32
+
 } // DFG_DETAIL_NS
 
 // TODO: test
@@ -69,15 +107,14 @@ inline std::wstring getCurrentWorkingDirectoryW()
     }
 #endif //defined(_WIN32)
 
-    enum FileMode { FileModeExists = 0, FileModeRead = 4, FileModeWrite = 2, FileModeReadWrite = 6 };
 #if defined(_WIN32)
 	// Checks whether file or folder exists and whether it has the given mode.
 	// TODO: test
-	inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzC) filePath, FileMode fm) {return (_access(filePath.c_str(), fm) == 0);}
-	inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzW) filePath, FileMode fm) {return (_waccess(filePath.c_str(), fm) == 0);}
+	inline bool isPathFileAvailable(StringViewSzC filePath, FileMode fm) { return DFG_DETAIL_NS::isPathFileAvailable(filePath, fm); }
+	inline bool isPathFileAvailable(StringViewSzW filePath, FileMode fm) { return DFG_DETAIL_NS::isPathFileAvailable(filePath, fm); }
 #else
-    inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzC) filePath, FileMode fm) { return (access(filePath.c_str(), fm) == 0); }
-    inline bool isPathFileAvailable(DFG_CLASS_NAME(StringViewSzW) filePath, FileMode fm)
+    inline bool isPathFileAvailable(StringViewSzC filePath, FileMode fm) { return (access(filePath.c_str(), fm) == 0); }
+    inline bool isPathFileAvailable(StringViewSzW filePath, FileMode fm)
     {
         return isPathFileAvailable(DFG_MODULE_NS(io)::pathStrToFileApiFriendlyPath(filePath.c_str()), fm);
     }
