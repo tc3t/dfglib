@@ -30,6 +30,7 @@
    <li><i>type</i>: Defines entry type</li>
     <ul>
         <li>xy              : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
+        <li>txy             : Like xy, but does not sort x-values so can be used for arbitrary xy-curves</li>
         <li>histogram       : Histogram</li>
         <li>bars            : Bar chart, especially for showing bars for data where one column defines labels (strings) and another column specifies values for labels.</li>
         <li>panel_config    : Defines panel items such as title and axes labels</li>
@@ -68,7 +69,7 @@
       </ul>
 </ul>
 
-<h2>Fields for type <i>xy</i></h2>
+<h2>Fields for type <i>xy</i> and <i>txy</i></h2>
     <ul>
         <li><i>x_source</i>:</li>
             <ul>
@@ -94,7 +95,7 @@
                     </ul>
                 <li>example: line_colour: #7f1b2eff). Sets semi-transparent, mostly blue line.</li>
             </ul>
-        <li><i>line_style</i>:</li>
+        <li><i>line_style</i> for type <i>xy</i>:</li>
             <ul>
                 <li>none:        No line indicator</li>
                 <li><b>basic</b>:       Straight line between data points. Default value if field not present</li>
@@ -102,6 +103,10 @@
                 <li>step_right:  Horizontal line between points, y-value from right point.</li>
                 <li>step_middle: Horizontal line around point, steps at midway on both sides.</li>
                 <li>pole:        Vertical line from (x, 0) -> (x, y) for each point.</li>
+            </ul>
+        <li><i>line_style</i> for type <i>txy</i>:</li>
+            <ul>
+                <li>Like for <i>xy</i>, but only <i>none</i> and <i>basic</i> are available.</li>
             </ul>
         <li><i>point_style</i>:</li>
             <ul>
@@ -174,7 +179,7 @@
                 </ul>
                 <li>Availability of axis values for different chart types:</li>
                 <ul>
-                    <li>xy: both x and y are available.</li>
+                    <li>xy/txy: both x and y are available.</li>
 			        <li>histogram: bin position can be affected through x, variable y is not available.</li>
 			        <li>bars: Bar heights can be affected through y, variable x is not available.</li>
                 </ul>
