@@ -1672,7 +1672,10 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     if (bSuccess)
         onNewSourceOpened();
     else
-        QMessageBox::information(this, tr("Open failed"), tr("Opening file\n%1\nfailed.\nThe following message(s) were generated:\n%2").arg(sPath, pModel->m_messagesFromLatestOpen.join('\n')));
+    {
+        const QString sInfoPart = (!pModel->m_messagesFromLatestOpen.isEmpty()) ? tr("\nThe following message(s) were generated:\n %1").arg(pModel->m_messagesFromLatestOpen.join('\n')) : QString();
+        QMessageBox::information(this, tr("Open failed"), tr("Opening file\n%1\nfailed.%2.").arg(sPath, sInfoPart));
+    }
 
     return bSuccess;
 }

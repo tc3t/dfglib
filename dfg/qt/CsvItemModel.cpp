@@ -34,6 +34,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/CsvConfig.hpp"
 #include "../cont/SetVector.hpp"
 #include "../str/strTo.hpp"
+#include "../os.hpp"
 #include "../os/OutputFile.hpp"
 #include "../cont/MapVector.hpp"
 #include "../cont/IntervalSet.hpp"
@@ -1002,7 +1003,20 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
 
     const QFileInfo fileInfo(sDbFilePath);
 
-    if (fileInfo.isFile() && fileInfo.isReadable())
+    m_messagesFromLatestOpen.clear();
+
+    if (!fileInfo.isFile())
+    {
+        m_messagesFromLatestOpen << tr("Path is not a file");
+        return false;
+    }
+    // Note: not using QFileInfo::isReadable() because it doesn't check permissions on Windows.
+    //       From Qt documentation: "If the NTFS permissions check has not been enabled, the result on Windows will merely reflect whether the file exists."
+    if (!::DFG_MODULE_NS(os)::isPathFileAvailable(qStringToFileApi8Bit(sDbFilePath), DFG_MODULE_NS(os)::FileModeRead))
+    {
+        m_messagesFromLatestOpen << tr("File is not readable");
+        return false;
+    }
     {
         sDbFilePath = fileInfo.absoluteFilePath();
         setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(fileInfo.size()));
@@ -1050,11 +1064,6 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
 
         return rv;
     }
-    else
-    {
-        return false;
-    }
-
 }
 
 bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery)
@@ -1117,6 +1126,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QSt
 
 bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions loadOptions)
 {
+    m_messagesFromLatestOpen.clear();
     // Limiting completer usage by file size is highly coarse for databases, but at least this can prevent simple huge query cases from using completers.
     setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(QFileInfo(sDbFilePath).size()));
     return this->readData(loadOptions, [&]() { return readDataFromSqlite(sDbFilePath, sQuery); });
