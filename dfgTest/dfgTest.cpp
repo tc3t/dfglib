@@ -109,6 +109,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourAverages";
     //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourMedians";
     //::testing::GTEST_FLAG(filter) = "dfgDebug.SehExceptionHandler";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.BasicIfStream";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicImStream";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicOmcByteStream";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_basicReader";

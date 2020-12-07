@@ -21,7 +21,7 @@ public:
     {
     }
 
-    int_type eofVal() const {return traits_type::eof();}
+    static int_type eofVal() { return traits_type::eof(); }
 
     // Overridables
     inline int_type get();

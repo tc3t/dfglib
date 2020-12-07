@@ -193,16 +193,79 @@ TEST(dfgIo, readBytes)
     }
 }
 
-TEST(dfgIo, DFG_CLASS_NAME(BasicIfStream))
+TEST(dfgIo, BasicIfStream)
 {
+    using namespace ::DFG_ROOT_NS;
+
+    /*
+    matrix_3x3has \r\n EOL and content
+    8925, 25460, 46586
+    14510, 26690, 41354
+    17189, 42528, 49812 
+    */
+    const char szFilePath3x3[] = "testfiles/matrix_3x3.txt";
+
+    {
+        using namespace ::DFG_MODULE_NS(cont);
+        using namespace ::DFG_MODULE_NS(io);
+        BasicIfStream istrm(szFilePath3x3);
+        const size_t nBufferSize = 10;
+        EXPECT_EQ(nBufferSize, istrm.bufferSize(nBufferSize));
+        EXPECT_EQ(nBufferSize, istrm.bufferSize());
+        EXPECT_EQ(nBufferSize, istrm.bufferSize(NumericTraits<size_t>::maxValue));
+
+        std::vector<char> storage(100);
+        EXPECT_EQ('8', istrm.get());
+        EXPECT_EQ(nBufferSize - 1, istrm.bufferedByteCount());
+        EXPECT_EQ(1, istrm.tellg());
+        istrm.seekg(0);
+        EXPECT_EQ(nBufferSize, istrm.bufferSize());
+        EXPECT_EQ(0, istrm.tellg());
+        const auto nWholeRead = istrm.readBytes(storage.data(), storage.size());
+        EXPECT_EQ(62, nWholeRead);
+        storage.resize(nWholeRead);
+        EXPECT_TRUE(isEqualContent(storage, fileToVector(szFilePath3x3)));
+        EXPECT_EQ(62, istrm.tellg());
+        EXPECT_EQ(istrm.eofVal(), istrm.get());
+
+        // Seeking back to beginning
+        std::fill(storage.begin(), storage.end(), '\0');
+        istrm.seekg(BasicIfStream::SeekOriginCurrent, -62);
+        EXPECT_EQ(0, istrm.tellg());
+        EXPECT_EQ(3, istrm.readBytes(storage.data(), Min(size_t(3), storage.size())));
+        EXPECT_EQ('8', storage[0]);
+        EXPECT_EQ('9', storage[1]);
+        EXPECT_EQ('2', storage[2]);
+        EXPECT_EQ(nBufferSize - 3, istrm.bufferedByteCount());
+
+        // Skipping next
+        istrm.seekg(BasicIfStream::SeekOriginCurrent, 1);
+        EXPECT_EQ(',', istrm.get());
+        EXPECT_EQ(nBufferSize - 1, istrm.bufferedByteCount());
+    }
+
+    // Move constructor
+    {
+        using namespace ::DFG_MODULE_NS(cont);
+        using namespace ::DFG_MODULE_NS(io);
+        BasicIfStream istrm(szFilePath3x3);
+        EXPECT_EQ('8', istrm.get());
+        const auto nBufferedCount = istrm.bufferedByteCount();
+        auto istrm2 = std::move(istrm);
+        EXPECT_EQ(0, istrm.bufferedByteCount());
+        EXPECT_EQ(BasicIfStream::eofVal(), istrm.get());
+        EXPECT_EQ(nBufferedCount, istrm2.bufferedByteCount());
+        EXPECT_EQ('9', istrm2.get());
+    }
+
     const size_t nSumExpected = 12997224;
     const char szFilePath[] = "testfiles/matrix_200x200.txt";
-    typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) Timer;
+    typedef DFG_MODULE_NS(time)::TimerCpu Timer;
 
     {
     Timer timer;
     size_t sum = 0;
-    DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(BasicIfStream) istrm(szFilePath);
+    DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::BasicIfStream istrm(szFilePath);
     int ch;
     while((ch = istrm.get()) != istrm.eofVal())
         sum += ch;
@@ -246,7 +309,7 @@ TEST(dfgIo, DFG_CLASS_NAME(BasicIfStream))
     {
     Timer timer;
     size_t sum = 0;
-    DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(BasicIfStream) istrm(szFilePath);
+    DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::BasicIfStream istrm(szFilePath);
     std::vector<char> buffer(6778362);
     istrm.read(buffer.data(), buffer.size());
     DFG_ROOT_NS::DFG_SUB_NS_NAME(alg)::forEachFwd(buffer, [&](char c) {sum += c;});
