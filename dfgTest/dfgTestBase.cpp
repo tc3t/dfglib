@@ -552,8 +552,8 @@ namespace
     {
         using namespace DFG_ROOT_NS;
         EXPECT_EQ(123, saturateCast<Dst_T>(Src_T(123)));
-        EXPECT_EQ(maxValueOfType<Dst_T>(), saturateCast<Dst_T>(Src_T(NumericTraits<Dst_T>::maxValue) + 1));
-        EXPECT_EQ(maxValueOfType<Dst_T>(), saturateCast<Dst_T>(NumericTraits<Src_T>::maxValue));
+        EXPECT_EQ(maxValueOfType<Dst_T>(), saturateCast<Dst_T>(Src_T((std::numeric_limits<Dst_T>::max)()) + 1));
+        EXPECT_EQ(maxValueOfType<Dst_T>(), saturateCast<Dst_T>((std::numeric_limits<Src_T>::max)()));
     }
 
     template <class Dst_T, class Src_T>
@@ -561,8 +561,8 @@ namespace
     {
         using namespace DFG_ROOT_NS;
         EXPECT_EQ(-123, saturateCast<Dst_T>(Src_T(-123)));
-        EXPECT_EQ(minValueOfType<Dst_T>(), saturateCast<Dst_T>(Src_T(NumericTraits<Dst_T>::minValue) - 1));
-        EXPECT_EQ(minValueOfType<Dst_T>(), saturateCast<Dst_T>(NumericTraits<Src_T>::minValue));
+        EXPECT_EQ(minValueOfType<Dst_T>(), saturateCast<Dst_T>(Src_T((std::numeric_limits<Dst_T>::min)()) - 1));
+        EXPECT_EQ(minValueOfType<Dst_T>(), saturateCast<Dst_T>((std::numeric_limits<Src_T>::min)()));
     }
 }
 
@@ -577,6 +577,13 @@ TEST(dfg, saturateCast)
     testSaturatedPositive<uint16, uint64>();
     testSaturatedPositive<uint16, uint32>();
     testSaturatedPositive<uint16, int32>();
+
+    testSaturatedPositive<uint16, unsigned long>();
+    testSaturatedPositive<uint8, unsigned long long>();
+
+    // Testing that minValueOfType/maxValueOfType is constexpr.
+    DFGTEST_STATIC_TEST(minValueOfType<int16>() == (std::numeric_limits<int16>::min)());
+    DFGTEST_STATIC_TEST(maxValueOfType<int16>() == (std::numeric_limits<int16>::max)());
 
     // The same unsigned src and dst
     EXPECT_EQ(maxValueOfType<uint16>(), saturateCast<uint16>(maxValueOfType<uint16>()));
@@ -614,6 +621,12 @@ TEST(dfg, saturateCast)
     testSaturatedNegative<int16, int64>();
     testSaturatedNegative<int16, int32>();
     testSaturatedNegative<int32, int64>();
+
+    EXPECT_EQ(maxValueOfType<long>(), saturateCast<long>(maxValueOfType<int64>()));
+    EXPECT_EQ(maxValueOfType<long>(), saturateCast<long>(maxValueOfType<uint64>()));
+
+    testSaturatedNegative<int16, long>();
+    testSaturatedNegative<int32, long long>();
 }
 
 TEST(dfg, isValidIndex)

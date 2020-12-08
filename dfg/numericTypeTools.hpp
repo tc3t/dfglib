@@ -48,23 +48,23 @@ DFG_ROOT_NS_BEGIN
     template <> struct IntegerTypeBySizeAndSign<8, false>   { typedef uint64 type; };
 
     // Returns minimum value of given integer type.
-    template <class T> inline T minValueOfType()
+    template <class T> inline constexpr T minValueOfType()
     {
         DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true, "Only interger types are allowed.");
         return (std::numeric_limits<T>::min)();
     }
     // Overload to allow easy checking based on existing object:
     // minValueOfType(val); instead of minValueOfType<decltype(val)>();
-    template <class T> inline T minValueOfType(const T&) { return minValueOfType<T>(); }
+    template <class T> inline constexpr T minValueOfType(const T&) { return minValueOfType<T>(); }
 
     // Returns maximum value of given integer type.
-    template <class T> inline T maxValueOfType()
+    template <class T> inline constexpr T maxValueOfType()
     {
         DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true, "Only integer types are allowed.");
         return (std::numeric_limits<T>::max)();
     }
 
-    template <class T> inline T maxValueOfType(const T&) { return maxValueOfType<T>(); }
+    template <class T> inline constexpr T maxValueOfType(const T&) { return maxValueOfType<T>(); }
 
     template <class To_T, class From_T>
     bool isValWithinLimitsOfType(const From_T& val, const std::true_type, const std::true_type) // Both unsigned
@@ -135,9 +135,9 @@ DFG_ROOT_NS_BEGIN
         Dst_T saturateCastImpl(const Src_T val, std::true_type /*src signed*/, std::true_type /*dst signed*/, std::false_type /*sizeof(src) >= sizeof(dst)*/)
         {
             if (val >= 0)
-                return static_cast<Dst_T>(Min(val, Src_T(NumericTraits<Dst_T>::maxValue)));
+                return static_cast<Dst_T>(Min(val, Src_T((std::numeric_limits<Dst_T>::max)())));
             else
-                return static_cast<Dst_T>(Max(val, Src_T(NumericTraits<Dst_T>::minValue)));
+                return static_cast<Dst_T>(Max(val, Src_T((std::numeric_limits<Dst_T>::min)())));
         }
 
         // Smaller signed to unsigned.
@@ -165,7 +165,7 @@ DFG_ROOT_NS_BEGIN
         template <class Dst_T, class Src_T>
         Dst_T saturateCastImpl(const Src_T val, std::false_type /*src unsigned*/, std::true_type /*dst signed*/, std::false_type /*sizeof(src) >= sizeof(dst)*/)
         {
-            return static_cast<Dst_T>(Min(val, static_cast<Src_T>(NumericTraits<Dst_T>::maxValue)));
+            return static_cast<Dst_T>(Min(val, static_cast<Src_T>((std::numeric_limits<Dst_T>::max)())));
         }
 
         // Smaller unsigned to unsigned
@@ -179,7 +179,7 @@ DFG_ROOT_NS_BEGIN
         template <class Dst_T, class Src_T>
         Dst_T saturateCastImpl(const Src_T val, std::false_type /*src unsigned*/, std::false_type /*dst unsigned*/, std::false_type /*sizeof(src) >= sizeof(dst)*/)
         {
-            return static_cast<Dst_T>(Min(val, static_cast<Src_T>(NumericTraits<Dst_T>::maxValue)));
+            return static_cast<Dst_T>(Min(val, static_cast<Src_T>((std::numeric_limits<Dst_T>::max)())));
         }
     } // DFG_DETAIL_NS
 
