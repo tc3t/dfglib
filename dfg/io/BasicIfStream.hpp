@@ -12,10 +12,35 @@
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 
+// Returns zero on successful fseek, non-zero on failure.
+inline int fseek_dfg(std::FILE* pFile, const int64 offset, const int origin)
+{
+    if (!pFile)
+        return -1;
+#ifdef _WIN32
+    return _fseeki64(pFile, offset, origin);
+#else
+    return fseeko64(pFile, offset, origin);
+#endif
+}
+
+// Returns current position as offset from beginning, -1 on error.
+inline int64 ftell_dfg(std::FILE* pFile)
+{
+    if (!pFile)
+        return -1;
+#ifdef _WIN32
+    return _ftelli64(pFile);
+#else
+    return ftello64(pFile);
+#endif
+}
+
 // Basic input stream for reading data from file, currently only binary input is implemented.
-class BasicIfStream : public BasicIStreamCRTP<BasicIfStream, fpos_t>
+class BasicIfStream : public BasicIStreamCRTP<BasicIfStream, int64>
 {
 public:
+    using OffType = int64;
     enum SeekOrigin { SeekOriginBegin, SeekOriginCurrent, SeekOriginEnd};
     enum { s_nDefaultBufferSize = 4096 };
 
@@ -65,7 +90,7 @@ public:
         {
             if (m_streamBuffer.countInBytesRemaining() > 0)
                 return storageCapacity();
-            if (nSizeRequest > Min(m_storage.max_size(), size_t(NumericTraits<int32>::maxValue)))
+            if (nSizeRequest > Min(m_storage.max_size(), saturateCast<size_t>(maxValueOfType<OffType>())))
                 return storageCapacity();
             const auto nOldSize = m_storage.size();
             try
@@ -137,7 +162,7 @@ public:
 
     // Returns total buffer size in bytes.
     inline size_t bufferSize() const;
-    // Tries to set new buffer size and returns value effective after this call. This may differ from requested. Maximum value is maxValue of int32.
+    // Tries to set new buffer size and returns value effective after this call. This may differ from requested.
     // Buffer size can be changed only if there are no buffered bytes.
     inline size_t bufferSize(size_t nSizeRequest);
 
@@ -154,16 +179,17 @@ public:
     // Returns read position
     inline PosType tellg() const;
 
-    // Sets read position
-    inline void seekg(const PosType& pos);
-    inline void seekg(SeekOrigin seekOrigin, long offset);
+    // Returns true on successful seek, false on failure.
+    inline bool seekg(SeekOrigin seekOrigin, OffType offset);
+    // Sets read position as absolute value, effectively identical to seekg(SeekOriginBegin, pos);
+    inline bool seekg(const PosType& pos);
 
     inline bool good() const;
 
     // Fills buffer from current file pos.
     inline void privFillBuffer();
 
-    FILE* m_pFile;
+    std::FILE* m_pFile;
     Buffer m_buffer;
 };
 
@@ -251,31 +277,31 @@ inline auto BasicIfStream::tellg() const -> PosType
     PosType pos = PosType();
     if (m_pFile)
     {
-        std::fgetpos(m_pFile, &pos);
-        pos -= bufferedByteCount();
+        pos = ftell_dfg(m_pFile);
+        DFG_ASSERT_CORRECTNESS(bufferedByteCount() <= static_cast<uint64>(pos));
+        pos -= static_cast<decltype(pos)>(bufferedByteCount());
     }
     return pos;
 }
 
-inline void BasicIfStream::seekg(const PosType& pos)
+inline bool BasicIfStream::seekg(const PosType& pos)
 {
-    if (m_pFile)
-    {
-        m_buffer.clearBufferView(); // For now just bluntly clearing the whole buffer; in many cases it would be possible to adjust it.
-        fsetpos(m_pFile, &pos);
-    }
+    return seekg(SeekOriginBegin, pos);
 }
 
-inline void BasicIfStream::seekg(const SeekOrigin seekOrigin, long offset)
+inline bool BasicIfStream::seekg(const SeekOrigin seekOrigin, OffType offset)
 {
     DFG_STATIC_ASSERT(SeekOriginBegin == SEEK_SET && SeekOriginCurrent == SEEK_CUR && SeekOriginEnd == SEEK_END, "Check SeekOriginEnums; with current implementation should match with fseek() macros");
-    if (m_pFile)
+    if (!m_pFile)
+        return false;
+    if (seekOrigin == SeekOriginCurrent)
     {
-        if (seekOrigin == SeekOriginCurrent)
-            offset -= static_cast<long>(bufferedByteCount());
-        std::fseek(m_pFile, offset, seekOrigin);
-        m_buffer.clearBufferView(); // For now just bluntly clearing the whole buffer; in many cases it would be possible to adjust it.
+        const OffType nShift = static_cast<OffType>(bufferedByteCount());
+        offset = Max(offset, minValueOfType(offset) + nShift); // overflow guard
+        offset -= nShift;
     }
+    m_buffer.clearBufferView(); // For now just bluntly clearing the whole buffer; in many cases it would be possible to adjust it.
+    return (fseek_dfg(m_pFile, offset, seekOrigin) == 0);
 }
 
 inline size_t readBytes(BasicIfStream& istrm, char* pDest, const size_t nMaxReadSize)

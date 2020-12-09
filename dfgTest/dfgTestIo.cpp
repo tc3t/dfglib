@@ -218,7 +218,7 @@ TEST(dfgIo, BasicIfStream)
         EXPECT_EQ('8', istrm.get());
         EXPECT_EQ(nBufferSize - 1, istrm.bufferedByteCount());
         EXPECT_EQ(1, istrm.tellg());
-        istrm.seekg(0);
+        EXPECT_TRUE(istrm.seekg(0));
         EXPECT_EQ(nBufferSize, istrm.bufferSize());
         EXPECT_EQ(0, istrm.tellg());
         const auto nWholeRead = istrm.readBytes(storage.data(), storage.size());
@@ -230,7 +230,7 @@ TEST(dfgIo, BasicIfStream)
 
         // Seeking back to beginning
         std::fill(storage.begin(), storage.end(), '\0');
-        istrm.seekg(BasicIfStream::SeekOriginCurrent, -62);
+        EXPECT_TRUE(istrm.seekg(BasicIfStream::SeekOriginCurrent, -62));
         EXPECT_EQ(0, istrm.tellg());
         EXPECT_EQ(3, istrm.readBytes(storage.data(), Min(size_t(3), storage.size())));
         EXPECT_EQ('8', storage[0]);
@@ -239,9 +239,31 @@ TEST(dfgIo, BasicIfStream)
         EXPECT_EQ(nBufferSize - 3, istrm.bufferedByteCount());
 
         // Skipping next
-        istrm.seekg(BasicIfStream::SeekOriginCurrent, 1);
+        EXPECT_TRUE(istrm.seekg(BasicIfStream::SeekOriginCurrent, 1));
         EXPECT_EQ(',', istrm.get());
         EXPECT_EQ(nBufferSize - 1, istrm.bufferedByteCount());
+
+        // seekg/tellg tests
+        {
+            EXPECT_TRUE(istrm.seekg(BasicIfStream::SeekOriginEnd, 0));
+            const auto nPosAtEnd = istrm.tellg();
+            EXPECT_TRUE(istrm.seekg(BasicIfStream::SeekOriginBegin, 10));
+            EXPECT_EQ(10, istrm.tellg());
+            EXPECT_TRUE(istrm.seekg(BasicIfStream::SeekOriginEnd, -nPosAtEnd + 10));
+            EXPECT_EQ(10, istrm.tellg());
+            EXPECT_TRUE(istrm.seekg(BasicIfStream::SeekOriginBegin, 10));
+            EXPECT_EQ(10, istrm.tellg());
+        }
+    }
+
+    // seekg() overflow test
+    {
+        using namespace ::DFG_MODULE_NS(cont);
+        using namespace ::DFG_MODULE_NS(io);
+        BasicIfStream istrm(szFilePath3x3);
+        char buffer[5];
+        istrm.readBytes(buffer, sizeof(buffer));
+        EXPECT_FALSE(istrm.seekg(BasicIfStream::SeekOriginCurrent, minValueOfType<BasicIfStream::OffType>()));
     }
 
     // Move constructor
