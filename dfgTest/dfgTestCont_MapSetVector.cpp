@@ -198,7 +198,11 @@ namespace
             auto mSortedFromUnsorted = mUnsorted;
             mSortedFromUnsorted.setSorting(true);
 
-            EXPECT_TRUE(std::equal(mSorted.begin(), mSorted.end(), mSortedFromUnsorted.begin()));
+            EXPECT_TRUE(::DFG_MODULE_NS(cont)::isEqualContent(mSorted, mSortedFromUnsorted));
+
+            // Code below compiled fine in MSVC2019.7.x and earlier, but no longer compiled on MSVC2019.8.3 (16.8.3)
+            // Caused errors like: "error C2070: '_Elem1': illegal sizeof operand"
+            //EXPECT_TRUE(std::equal(mSorted.begin(), mSorted.end(), mSortedFromUnsorted.begin()));
         }
 
         eraseTester(mSorted);
