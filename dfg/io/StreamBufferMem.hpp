@@ -7,6 +7,7 @@
 #include "textEncodingTypes.hpp"
 #include "checkBom.hpp"
 #include "../iter/RawStorageIterator.hpp"
+#include "../numericTypeTools.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -64,11 +65,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             }
             else if (dir == std::ios_base::cur)
             {
-                return seekpos(currentPos() + off, om);
+                return seekpos(saturateAdd<off_type>(currentPos(), off), om);
             }
             else if (dir == std::ios_base::end)
             {
-                return seekpos(sizeInBytes() + off, om);
+                return seekpos(saturateAdd<off_type>(sizeInBytes(), off), om);
             }
             else
                 return std::streampos(-1);
