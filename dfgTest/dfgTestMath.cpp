@@ -282,7 +282,7 @@ namespace
     template <class Int_T>
     void signedUnsignedTests(std::true_type)
     {
-        EXPECT_EQ(1, DFG_MODULE_NS(math)::absAsUnsigned(Int_T(-1)));
+        EXPECT_EQ(1, ::DFG_ROOT_NS::absAsUnsigned(Int_T(-1)));
     }
 
     template <class Int_T>

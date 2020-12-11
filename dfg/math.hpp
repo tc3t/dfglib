@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 #include "build/languageFeatureInfo.hpp"
+#include "numericTypeTools.hpp"
 
 #if !DFG_LANGFEAT_HAS_ISNAN && _MSC_VER
 	#include <float.h>
@@ -52,28 +53,6 @@ namespace DFG_DETAIL_NS
     inline bool IsNanMsvc(double t)            { return _isnan(t) != 0; }
     inline bool IsNanMsvc(long double t)       { return IsNanMsvc(static_cast<double>(t)); } // _isnan() does not have long double overload causing 'conversion from 'const long double' to 'double', possible loss of data' warnings.
 #endif // _MSC_VER
-
-    template <class Int_T>
-    inline auto absAsUnsigned(const Int_T val, std::true_type) -> typename std::make_unsigned<Int_T>::type
-    {
-        DFG_STATIC_ASSERT(std::is_unsigned<Int_T>::value, "absAsUnsigned: usage error - unsigned version called for signed ");
-        return val;
-    }
-
-    template <class Int_T>
-    inline auto absAsUnsigned(const Int_T val, std::false_type) -> typename std::make_unsigned<Int_T>::type
-    {
-        typedef typename std::make_unsigned<Int_T>::type UnsignedType;
-        if (val >= 0)
-            return static_cast<UnsignedType>(val);
-        else
-        {
-            if (val != NumericTraits<Int_T>::minValue)
-                return static_cast<UnsignedType>(-1 * val);
-            else
-                return static_cast<UnsignedType>(-1 * (val + 1)) + 1;
-        }
-    }
 
     template <class T>
     inline bool isNanImpl(const T t, std::true_type /*T has NaN*/)
@@ -121,15 +100,6 @@ inline size_t factorialInt(const size_t n) { return (n > 1) ? n * factorialInt(n
 template <uint64 N> struct DFG_CLASS_NAME(Factorial_T) { static const uint64 value = N * DFG_CLASS_NAME(Factorial_T)<N - 1>::value; };
 template <> struct DFG_CLASS_NAME(Factorial_T)<0> {static const uint64 value = 1; };
 
-
-// For given integer value, returns it's absolute value as unsigned type. The essential differences to std::abs() are:
-//      -Return value is unsigned type
-//      -Return value is mathematically correct even when called with value std::numeric_limits<Int_T>::min();
-template <class Int_T>
-auto absAsUnsigned(const Int_T val) -> typename std::make_unsigned<Int_T>::type
-{
-    return DFG_DETAIL_NS::absAsUnsigned(val, typename std::is_unsigned<Int_T>::type());
-}
 
 namespace DFG_DETAIL_NS
 {
@@ -245,7 +215,7 @@ namespace DFG_DETAIL_NS
             return UnsignedT(greater - lesser);
         }
         else
-            return UnsignedT(greater) + ::DFG_MODULE_NS(math)::absAsUnsigned(lesser); // Different signs, adding as unsigned.
+            return UnsignedT(greater) + ::DFG_ROOT_NS::absAsUnsigned(lesser); // Different signs, adding as unsigned.
     }
 
     template <class T>

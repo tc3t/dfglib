@@ -629,6 +629,56 @@ TEST(dfg, saturateCast)
     testSaturatedNegative<int32, long long>();
 }
 
+TEST(dfg, saturateAdd)
+{
+    using namespace DFG_ROOT_NS;
+
+    // Both non-negative
+    {
+        EXPECT_EQ(3, saturateAdd<int32>(1, 2));
+        EXPECT_EQ(3, saturateAdd<int32>(int8(3), 0));
+        EXPECT_EQ(int32_max, saturateAdd<int32>(int32_max, int32_max));
+        EXPECT_EQ(int32_max, saturateAdd<int32>(int32_max - 1, int32_max - 1));
+        EXPECT_EQ(int32_max, saturateAdd<int32>(1, int32_max));
+        EXPECT_EQ(int32_max, saturateAdd<int32>(int32_max, 1));
+        EXPECT_EQ(uint32(int32_max) + 1, saturateAdd<uint32>(int32_max, 1));
+
+        EXPECT_EQ(300, saturateAdd<int16>(100, 200));
+        EXPECT_EQ(300, saturateAdd<int16>(100u, 200u));
+        EXPECT_EQ(int16_max, saturateAdd<int16>(32102, 646546));
+        EXPECT_EQ(int64(int32_max) + int32_max, saturateAdd<int64>(int32_max, int32_max));
+        EXPECT_EQ(uint64(int32_max) + uint64(int32_max), saturateAdd<uint64>(int32_max, int32_max));
+    }
+
+    // Both non-positive
+    {
+        EXPECT_EQ(-3, saturateAdd<int32>(-1, -2));
+        EXPECT_EQ(-3, saturateAdd<int32>(int8(-3), 0));
+        EXPECT_EQ(int32_min, saturateAdd<int32>(int32_min, int32_min));
+        EXPECT_EQ(int32_min, saturateAdd<int32>(-1, int32_min));
+        EXPECT_EQ(int32_min, saturateAdd<int32>(int32_min, -1));
+
+        EXPECT_EQ(-300, saturateAdd<int16>(-100, -200));
+        EXPECT_EQ(int16_min, saturateAdd<int16>(-32102, -646546));
+        EXPECT_EQ(int64(int32_min) + int32_min, saturateAdd<int64>(int32_min, int32_min));
+    }
+
+    // Negative and positive
+    {
+        EXPECT_EQ(1, saturateAdd<int32>(2, -1));
+        EXPECT_EQ(int16_min + int8_max, saturateAdd<int32>(int16_min, int8_max));
+        EXPECT_EQ(1, saturateAdd<int32>(int64_min + 2, int64_max));
+        EXPECT_EQ(int32_max, saturateAdd<int32>(uint32_max, int32_min));
+        EXPECT_EQ(uint32(int32_max), saturateAdd<uint32>(uint32_max, int32_min));
+        EXPECT_EQ(-1, saturateAdd<int32>(uint64(int32_max), int32_min));
+        EXPECT_EQ(-1, saturateAdd<int32>(int32_min, int32_max));
+        EXPECT_EQ(0, saturateAdd<uint32>(int32_min, int32_max));
+        EXPECT_EQ(int32_min, saturateAdd<int32>(2, int64_min));
+        EXPECT_EQ(int32_max, saturateAdd<int32>(-2, int64_max));
+        EXPECT_EQ(int32_max, saturateAdd<int32>(int16(-6152), int64_max));
+    }
+}
+
 TEST(dfg, isValidIndex)
 {
     using namespace DFG_ROOT_NS;

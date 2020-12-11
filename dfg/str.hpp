@@ -247,7 +247,7 @@ inline ItoaReturnValue intToRadixRepresentation(const Int_T value, const size_t 
     auto p = outBegin;
     int rv = 0;
     typedef typename std::make_unsigned<Int_T>::type UnsignedType;
-    UnsignedType uvalue = DFG_MODULE_NS(math)::absAsUnsigned(value);
+    UnsignedType uvalue = ::DFG_ROOT_NS::absAsUnsigned(value);
     while (uvalue != 0)
     {
         if (isAtEnd(p, outEnd))

@@ -5,6 +5,7 @@
 #include <limits>
 #include <type_traits>
 #include <algorithm> // for std::max
+#include "dfgAssert.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
@@ -118,6 +119,40 @@ DFG_ROOT_NS_BEGIN
     template <class T> inline const T& Max(const T& v1, const T& v2, const T& v3) { return Max(Max(v1, v2), v3); }
     template <class T> inline const T& Max(const T& v1, const T& v2, const T& v3, const T& v4) { return Max(Max(v1, v2, v3), v4); }
 
+    namespace DFG_DETAIL_NS
+    {
+        template <class Int_T>
+        inline auto absAsUnsigned(const Int_T val, std::true_type) -> typename std::make_unsigned<Int_T>::type
+        {
+            DFG_STATIC_ASSERT(std::is_unsigned<Int_T>::value, "absAsUnsigned: usage error - unsigned version called for signed ");
+            return val;
+        }
+
+        template <class Int_T>
+        inline auto absAsUnsigned(const Int_T val, std::false_type) -> typename std::make_unsigned<Int_T>::type
+        {
+            typedef typename std::make_unsigned<Int_T>::type UnsignedType;
+            if (val >= 0)
+                return static_cast<UnsignedType>(val);
+            else
+            {
+                if (val != NumericTraits<Int_T>::minValue)
+                    return static_cast<UnsignedType>(-1 * val);
+                else
+                    return static_cast<UnsignedType>(-1 * (val + 1)) + 1;
+            }
+        }
+    } // DFG_DETAIL_NS
+
+    // For given integer value, returns it's absolute value as unsigned type. The essential differences to std::abs() are:
+    //      -Return value is unsigned type
+    //      -Return value is mathematically correct even when called with value std::numeric_limits<Int_T>::min();
+    template <class Int_T>
+    auto absAsUnsigned(const Int_T val) -> typename std::make_unsigned<Int_T>::type
+    {
+        return DFG_DETAIL_NS::absAsUnsigned(val, typename std::is_unsigned<Int_T>::type());
+    }
+
     template <class Dst_T, class Src_T>
     Dst_T saturateCast(const Src_T val);
 
@@ -188,6 +223,85 @@ DFG_ROOT_NS_BEGIN
     Dst_T saturateCast(const Src_T val)
     {
         return DFG_DETAIL_NS::saturateCastImpl<Dst_T, Src_T>(val, std::is_signed<Src_T>(), std::is_signed<Dst_T>(), std::integral_constant<bool, sizeof(Src_T) < sizeof(Dst_T)>());
+    }
+
+    namespace DFG_DETAIL_NS
+    {
+        template <class Ret_T, class T1, class T2>
+        Ret_T saturateAddNonNegative(const T1 a, const T2 b)
+        {
+            DFG_ASSERT_UB(a >= 0 && b >= 0);
+            constexpr auto maxRv = maxValueOfType<Ret_T>();
+            if (a >= maxRv || b >= maxRv)
+                return maxRv;
+            Ret_T rv = static_cast<Ret_T>(a);
+            return rv + Min(static_cast<Ret_T>(b), static_cast<Ret_T>(maxRv - rv));
+        }
+
+        template <class Ret_T, class T1, class T2>
+        Ret_T saturateAddNonPositive(const T1 a, const T2 b)
+        {
+            DFG_ASSERT_UB(a <= 0 && b <= 0);
+            constexpr auto minRv = minValueOfType<Ret_T>();
+            if (a <= minRv || b <= minRv)
+                return minRv;
+            Ret_T rv = static_cast<Ret_T>(a);
+            return rv + Max(static_cast<Ret_T>(b), static_cast<Ret_T>(minRv - rv));
+        }
+
+        template <class Ret_T, class T> Ret_T negateOrZero(const T, std::true_type)      { return 0; }
+        template <class Ret_T, class T> Ret_T negateOrZero(const T val, std::false_type) { return -static_cast<Ret_T>(val); }
+
+        template <class Ret_T, class Pos_T, class Neg_T>
+        Ret_T saturateAddMixedImpl(const Pos_T pos, const Neg_T neg)
+        {
+            DFG_ASSERT_UB(pos > 0 && neg < 0);
+            constexpr auto nBiggerArgSize = (sizeof(Pos_T) >= sizeof(Neg_T)) ? sizeof(Pos_T) : sizeof(Neg_T);
+            using UArg = typename IntegerTypeBySizeAndSign<nBiggerArgSize, false>::type;
+            const auto negAbs = ::DFG_ROOT_NS::absAsUnsigned(neg);
+            if (static_cast<UArg>(pos) >= negAbs) // Result non-negative?
+                return saturateCast<Ret_T>(static_cast<UArg>(pos) - negAbs);
+            else // Case: result negative
+            {
+                const auto rvAbs = static_cast<UArg>(negAbs) - static_cast<UArg>(pos);
+                return (static_cast<UArg>(rvAbs) <= ::DFG_ROOT_NS::absAsUnsigned(minValueOfType<Ret_T>())) ? negateOrZero<Ret_T>(rvAbs, std::is_unsigned<Ret_T>()) : minValueOfType<Ret_T>();
+            }
+        }
+
+        template <class Ret_T, class T1, class T2>
+        Ret_T saturateAddMixed(const T1 a, const T2 b)
+        {
+            if (a < 0)
+                return saturateAddMixedImpl<Ret_T>(b, a);
+            else
+                return saturateAddMixedImpl<Ret_T>(a, b);
+        }
+
+        template <class Ret_T, class T1, class T2>
+        Ret_T saturateAddImpl(const T1 a, const T2 b, std::true_type, std::true_type)
+        {
+            return DFG_DETAIL_NS::saturateAddNonNegative<Ret_T>(a, b);
+        }
+
+        template <class Ret_T, class T1, class T2, class IsUnsigned_T1, class IsUnsigned_T2>
+        Ret_T saturateAddImpl(const T1 a, const T2 b, IsUnsigned_T1, IsUnsigned_T2)
+        {
+            DFG_STATIC_ASSERT(IsUnsigned_T1::value == false || IsUnsigned_T2::value == false, "saturateAddImpl(): This version should not get called when both args are unsigned.");
+            if (a >= 0 && b >= 0)
+                return DFG_DETAIL_NS::saturateAddNonNegative<Ret_T>(a, b);
+            else if (a <= 0 && b <= 0)
+                return DFG_DETAIL_NS::saturateAddNonPositive<Ret_T>(a, b);
+            else // a and c have different signs
+                return DFG_DETAIL_NS::saturateAddMixed<Ret_T>(a, b);
+        }
+    } // DFG_DETAIL_NS
+
+    // Conceptually returns saturateCast<Ret_T>(a + b) taking care that a + b doesn't wrap or overflow but instead results to minimum/maximum value of Ret_T.
+    template <class Ret_T, class T1, class T2>
+    Ret_T saturateAdd(const T1 a, const T2 b)
+    {
+        DFG_STATIC_ASSERT((std::is_integral<Ret_T>::value && std::is_integral<T1>::value && std::is_integral<T2>::value), "saturateAdd: types must be integers");
+        return DFG_DETAIL_NS::saturateAddImpl<Ret_T>(a, b, typename std::is_unsigned<T1>::type(), typename std::is_unsigned<T2>::type());
     }
 
 } // namespace
