@@ -1029,7 +1029,7 @@ TEST(dfgIo, IfStreamWithEncodingReadOnlyFile)
     EXPECT_EQ(szText, s);
 }
 
-TEST(DfgIo, IfStreamWithEncoding_rawByteReading)
+TEST(dfgIo, IfStreamWithEncoding_rawByteReading)
 {
     // Test to verify that it is possible to easily read plain bytes from UTF8-data with IfStreamWithEncoding.
 

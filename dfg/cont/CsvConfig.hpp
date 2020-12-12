@@ -92,7 +92,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             const size_t notFoundCol = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
             size_t nFirstNonEmptyCol = notFoundCol;
             bool bMostRecentRowHadKeyButNoValue = false;
-            DelimReader::readFromFile(ReadOnlySzParamC(svConfFilePath.c_str()), cd, [&](const size_t /*nRow*/, const size_t nCol, decltype(cd)& cellData)
+            DelimReader::readFromFile(svConfFilePath, cd, [&](const size_t /*nRow*/, const size_t nCol, decltype(cd)& cellData)
             {
                 typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StorageStringT StorageStringT_vc2010_workaround;
                 if (nCol == 0)

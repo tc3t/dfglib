@@ -1387,9 +1387,9 @@ public:
     // This function will automatically detect BOM-identified UTF-8 and UFT-16(LE and BE)
     // files and create streams that will internally handle decoding.
     template <class CellHandler, class CellDataT>
-    static void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, CellDataT& cd, CellHandler&& cellHandler, const TextEncoding encoding = encodingUnknown)
+    static void readFromFile(const StringViewSzC& sPath, CellDataT& cd, CellHandler&& cellHandler, const TextEncoding encoding = encodingUnknown)
     {
-        DFG_CLASS_NAME(IfStreamWithEncoding) istrm(sPath, encoding);
+        IfStreamWithEncoding istrm(sPath, encoding);
         CellReader<CellDataT, std::istream> reader(istrm, cd);
         return read(reader, cellHandler);
     }

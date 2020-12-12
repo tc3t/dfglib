@@ -32,6 +32,9 @@ template <> inline ConstCharPtr readOnlySzParamConverter<char, std::string>(cons
 template <> inline ConstWCharPtr readOnlySzParamConverter<wchar_t, std::wstring>(const std::wstring& s) { return s.c_str(); }
 
 /*
+ 
+NOTE: ReadOnlySzParam is deprecated; StringView and StringViewSz are alternatives.
+ 
 Class to be used as a convenient replacement of any concrete string type
 in such function parameter that is essentially a c-string compatible, read only string parameter.
 
@@ -624,6 +627,12 @@ public:
     operator DFG_CLASS_NAME(StringView)<Char_T>() const
     {
         return DFG_CLASS_NAME(StringView)<Char_T>(toCharPtr_raw(this->m_pFirst));
+    }
+
+    // Conversion to ReadOnlySzParam for compatibility.
+    operator ReadOnlySzParam<Char_T>() const
+    {
+        return ReadOnlySzParam<Char_T>(toCharPtr_raw(this->m_pFirst));
     }
 
 //protected:

@@ -602,7 +602,7 @@ DFG_ROOT_NS_BEGIN{
                 if (!bRead)
                 {
                     DFG_MODULE_NS(io)::DFG_CLASS_NAME(IfStreamWithEncoding) istrm;
-                    istrm.open(sPath);
+                    istrm.open(StringViewSz<Char_T1>(sPath.c_str()));
                     read(istrm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
                     m_readFormat.textEncoding(istrm.encoding());
                     m_saveFormat = m_readFormat;

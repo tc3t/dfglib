@@ -12,7 +12,7 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
     // TODO: wchar_t overloads for open.
-    class DFG_CLASS_NAME(IfStreamBufferWithEncoding) : public std::basic_streambuf<char>
+    class IfStreamBufferWithEncoding : public std::basic_streambuf<char>
     //==============================================
     {
     public:
@@ -20,29 +20,32 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         typedef BaseClass::int_type int_type;
         typedef BaseClass::off_type off_type;
         typedef BaseClass::pos_type pos_type;
+        using StreamBufferMem = StreamBufferMemWithEncoding;
 
-        DFG_CLASS_NAME(IfStreamBufferWithEncoding)()
+        IfStreamBufferWithEncoding()
         {
         }
 
-        DFG_CLASS_NAME(IfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding)
-        {
-            open(sPath, encoding);
-        }
-
-        DFG_CLASS_NAME(IfStreamBufferWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding)
+        IfStreamBufferWithEncoding(const StringViewSzC& sPath, TextEncoding encoding)
         {
             open(sPath, encoding);
         }
 
+        IfStreamBufferWithEncoding(const StringViewSzW& sPath, TextEncoding encoding)
+        {
+            open(sPath, encoding);
+        }
+
+        // "reads characters from the associated input sequence to the get area" (cppreference.com)
         int_type underflow() override
         {
-            return (m_spStreamBufferCont) ? m_spStreamBufferCont->underflow() : EOF;
+            return (m_spStreamBufferCont) ? m_spStreamBufferCont->underflow() : traits_type::eof();
         }
 
+        // Like underflow, but additionally "... advances the next pointer " (cppreference.com)
         int_type uflow() override
         {
-            return (m_spStreamBufferCont) ? m_spStreamBufferCont->uflow() : EOF;
+            return (m_spStreamBufferCont) ? m_spStreamBufferCont->uflow() : traits_type::eof();
         }
 
         std::streampos seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode om) override
@@ -68,15 +71,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
 
         template <class Char_T>
-        void openT(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> & sPath, DFG_MODULE_NS(io)::TextEncoding encoding)
+        void openT(const StringViewSz<Char_T> & sPath, DFG_MODULE_NS(io)::TextEncoding encoding)
         {
             close();
             // Hack: for now just read it all and use in-memory parsing classes.
             bool bRetry = true;
             try // open will throw e.g. if file is not found.
             {
-                m_memoryMappedFile.open(sPath);
-                m_spStreamBufferCont.reset(new DFG_CLASS_NAME(StreamBufferMemWithEncoding)(m_memoryMappedFile.data(), m_memoryMappedFile.size(), encoding));
+                m_memoryMappedFile.open(sPath.c_str());
+                m_spStreamBufferCont.reset(new StreamBufferMem(m_memoryMappedFile.data(), m_memoryMappedFile.size(), encoding));
                 bRetry = false;
             }
             catch (std::exception&)
@@ -86,16 +89,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             {
                 m_fallback = fileToVector(sPath);
                 if (!m_fallback.empty())
-                    m_spStreamBufferCont.reset(new DFG_CLASS_NAME(StreamBufferMemWithEncoding)(m_fallback.data(), m_fallback.size(), encoding));
+                    m_spStreamBufferCont.reset(new StreamBufferMem(m_fallback.data(), m_fallback.size(), encoding));
             }
         }
 
-        void open(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding)
+        void open(const StringViewSzC& sPath, TextEncoding encoding)
         {
             openT(sPath, encoding);
         }
 
-        void open(const DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding)
+        void open(const StringViewSzW& sPath, TextEncoding encoding)
         {
             // m_memoryMappedFile doesn't like wchar_t, so convert it to char-version.
             openT<char>(widePathStrToFstreamFriendlyNonWide(sPath), encoding);
@@ -112,25 +115,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
                 m_spStreamBufferCont->setReaderByEncoding(encoding);
         }
 
-        DFG_CLASS_NAME(FileMemoryMapped) m_memoryMappedFile;
+        FileMemoryMapped m_memoryMappedFile;
         std::vector<char> m_fallback; // Hack: Temporary solution for m_memoryMappedFile not being able to open if file is in use but readable. In this case read the file to a vector.
 
         // TODO: This member doesn't need to be heap allocated. Currently done like this to avoid need for reinitialization
         // of stream buffer.
-        std::unique_ptr<DFG_CLASS_NAME(StreamBufferMemWithEncoding)> m_spStreamBufferCont;
+        std::unique_ptr<StreamBufferMem> m_spStreamBufferCont;
     }; // class IfStreamBufferWithEncoding
 
-    class DFG_CLASS_NAME(IfStreamWithEncoding) : public std::istream
+    class IfStreamWithEncoding : public std::istream
     //========================================
     {
         typedef std::istream BaseClass;
 
     public:
-        DFG_CLASS_NAME(IfStreamWithEncoding)() :
+        IfStreamWithEncoding() :
             BaseClass(&m_strmBuffer)
         {}
 
-        DFG_CLASS_NAME(IfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding = encodingUnknown) :
+        IfStreamWithEncoding(const StringViewSzC& sPath, TextEncoding encoding = encodingUnknown) :
             BaseClass(&m_strmBuffer),
             m_strmBuffer(sPath, encoding)
         {
@@ -138,7 +141,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
                 setstate(std::ios::failbit);
         }
 
-        DFG_CLASS_NAME(IfStreamWithEncoding)(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, TextEncoding encoding = encodingUnknown) :
+        IfStreamWithEncoding(const StringViewSzW& sPath, TextEncoding encoding = encodingUnknown) :
             BaseClass(&m_strmBuffer),
             m_strmBuffer(sPath, encoding)
         {
@@ -156,7 +159,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             m_strmBuffer.close();
         }
 
-        void open(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, TextEncoding encoding = encodingUnknown)
+        void open(const StringViewSzC& sPath, TextEncoding encoding = encodingUnknown)
         {
             m_strmBuffer.open(sPath, encoding);
         }
@@ -171,7 +174,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             m_strmBuffer.setEncoding(encoding);
         }
 
-        DFG_CLASS_NAME(IfStreamBufferWithEncoding) m_strmBuffer;
+        IfStreamBufferWithEncoding m_strmBuffer;
     };
 
 } } // module namespace
