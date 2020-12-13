@@ -976,7 +976,6 @@ TEST(dfgIo, IfStreamBufferWithEncoding)
 
 }
 
-#ifndef __MINGW32__ // IfStreamWithEncoding crashes in line m_memoryMappedFile.open(sPath); with MinGW for unknown reason.
 TEST(dfgIo, IfStreamWithEncoding)
 {
     using namespace DFG_ROOT_NS;
@@ -1100,7 +1099,6 @@ TEST(dfgIo, IfStreamWithEncoding_rawByteReading)
 
     EXPECT_EQ(bytes0, bytes1);
 }
-#endif // __MINGW32__
 
 TEST(dfgIo, OfStreamWithEncoding)
 {
