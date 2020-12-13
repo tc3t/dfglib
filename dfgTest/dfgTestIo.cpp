@@ -986,25 +986,73 @@ TEST(dfgIo, IfStreamWithEncoding)
 
     // Test handling of non-existent path.
     {
-        DFG_CLASS_NAME(IfStreamWithEncoding) strm(szNonExistentPath);
+        IfStreamWithEncoding strm(szNonExistentPath);
         std::ifstream strmStd(szNonExistentPath);
         EXPECT_EQ(strmStd.rdstate(), strm.rdstate());
         EXPECT_EQ(strmStd.good(), strm.good());
+
+        IfStreamWithEncoding strm2;
+        strm2.open(szNonExistentPath);
+        EXPECT_EQ(strmStd.rdstate(), strm2.rdstate());
+        EXPECT_EQ(strmStd.good(), strm2.good());
     }
 
-    // Test seeking
+    // Testing seeking
     {
-        DFG_CLASS_NAME(IfStreamWithEncoding) istrm("testfiles/matrix_3x3.txt");
-        char bytes[3];
-        EXPECT_TRUE(istrm.good());
-        readBytes(istrm, bytes, 3);
-        EXPECT_TRUE(istrm.good());
-        istrm.seekg(-3, std::ios_base::cur);
-        EXPECT_EQ(bytes[0], istrm.get());
-        EXPECT_TRUE(istrm.good());
-        istrm.seekg(1, std::ios_base::cur);
-        EXPECT_EQ(bytes[2], istrm.get());
-        EXPECT_TRUE(istrm.good());
+        const auto testSeek = [](const FileReadOpenModeRequest openMode)
+        {
+            IfStreamWithEncoding istrm("testfiles/matrix_3x3.txt", encodingUnknown, FileReadOpenRequestArgs(openMode, 4));
+            char bytes[3];
+            EXPECT_TRUE(istrm.good());
+            readBytes(istrm, bytes, 3);
+            EXPECT_TRUE(istrm.good());
+            istrm.seekg(-3, std::ios_base::cur);
+            EXPECT_EQ(bytes[0], istrm.get());
+            EXPECT_TRUE(istrm.good());
+            istrm.seekg(1, std::ios_base::cur);
+            EXPECT_EQ(bytes[2], istrm.get());
+            istrm.seekg(0);
+            EXPECT_EQ(bytes[0], istrm.get());
+            EXPECT_TRUE(istrm.good());
+        };
+        testSeek(FileReadOpenModeRequest::memoryMap);
+        testSeek(FileReadOpenModeRequest::file);
+    }
+
+    // Testing read results from memory and file reads with UTF-encoded file.
+    {
+        const char szFilePath[] = "testfiles/utf8_with_BOM.txt";
+
+        const auto computeGetSum = [&](const FileReadOpenModeRequest openMode)
+            {
+                IfStreamWithEncoding strm;
+                strm.open(szFilePath, encodingUnknown, openMode);
+                int c = 0;
+                uint64 nSum = 0;
+                while ((c = strm.get()) != strm.eofValue())
+                    nSum += static_cast<uint64>(c);
+                return nSum;
+            };
+
+        EXPECT_EQ(computeGetSum(FileReadOpenModeRequest::memoryMap), computeGetSum(FileReadOpenModeRequest::file));
+    }
+
+    // Testing that reading ascii-file results to identical results with IfStreamWithEncoding() and BasicIfStream
+    {
+        const char szFilePath[] = "testfiles/matrix_3x3.txt";
+        std::string bytesBasic, bytesEncMem, bytesEncFile;
+
+        bytesBasic = fileToByteContainer<decltype(bytesBasic)>(szFilePath);
+        {
+            IfStreamWithEncoding istrm(szFilePath, encodingUnknown, FileReadOpenModeRequest::memoryMap);
+            bytesEncMem = readAllFromStream<decltype(bytesEncMem)>(istrm);
+        }
+        {
+            IfStreamWithEncoding istrm(szFilePath, encodingUnknown, FileReadOpenRequestArgs(FileReadOpenModeRequest::file, 4));
+            bytesEncFile = readAllFromStream<decltype(bytesEncMem)>(istrm);
+        }
+        EXPECT_EQ(bytesBasic, bytesEncMem);
+        EXPECT_EQ(bytesBasic, bytesEncFile);
     }
 }
 
@@ -1020,7 +1068,7 @@ TEST(dfgIo, IfStreamWithEncodingReadOnlyFile)
     ostrm << SzPtrUtf8(szText);
     ostrm.flush(); // Note: this also tests OfStreamWithEncoding::flush().
 
-    DFG_CLASS_NAME(IfStreamWithEncoding) strm(szPath);
+    IfStreamWithEncoding strm(szPath);
     std::ifstream strmStd(szPath);
     EXPECT_EQ(strmStd.is_open(), strm.is_open());
     EXPECT_EQ(strmStd.good(), strm.good());
@@ -1042,7 +1090,7 @@ TEST(dfgIo, IfStreamWithEncoding_rawByteReading)
     ASSERT_TRUE(bytes0.size() > 3);
     bytes0.erase(bytes0.begin(), bytes0.begin() + 3); // Erase BOM.
 
-    DFG_CLASS_NAME(IfStreamWithEncoding) istrm;
+    IfStreamWithEncoding istrm;
     istrm.open("testfiles/utf8_with_BOM.txt");
 
     EXPECT_EQ(encodingUTF8, istrm.encoding());
