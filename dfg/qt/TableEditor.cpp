@@ -15,8 +15,9 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QLineEdit>
 #include <QStatusBar>
 #include <QApplication>
+#include <QGuiApplication>
 #include <QCloseEvent>
-#include <QDesktopWidget>
+#include <QScreen>
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QLabel>
@@ -436,10 +437,10 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
 
     // Set default window size.
     {
-        auto desktop = QApplication::desktop();
-        if (desktop)
+        auto pPrimaryScreen = QGuiApplication::primaryScreen();
+        if (pPrimaryScreen)
         {
-            const auto screenRect = desktop->screenGeometry(this); // Returns screen geometry of the screen that contains 'this' widget.
+            const auto screenRect = pPrimaryScreen->geometry();
             resize(screenRect.size() * 0.75); // Fill 0.75 of the whole screen in both directions (arbitrary default value)
         }
     }
