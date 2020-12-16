@@ -34,6 +34,12 @@ Large proportion of features are 'header only' and can be used simply by includi
 
 For a list of supported compilers, see "Build status"-section in this document.
 
+### Building and running unit tests for Qt-components (dfgTestQt)
+
+* Open dfgTestQt/dfgTestQt.pro in Qt Creator
+* Choose suitable Qt kit and compiler to use
+* Build and run
+
 ## Features
 
 The library consists of miscellaneous features such as algorithms, containers, math/numerics, streams, typed string and UTF-handling. Below are some notable features:
