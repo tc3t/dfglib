@@ -526,8 +526,8 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, c
     DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) writeTimer;
     m_messagesFromLatestSave.clear();
 
-    const QChar cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? ',' : options.separatorChar();
-    const QChar cEnc = options.enclosingChar();
+    const QChar cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? QChar(',') : QChar(options.separatorChar());
+    const QChar cEnc(options.enclosingChar());
     const QChar cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
     const auto sEol = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
 
@@ -1115,7 +1115,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
             cellToStorage(nRow, c, query.value(c));
     }
 
-    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.mid(0, Min(32, sQuery.size())));
+    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.mid(0, Min(32, saturateCast<int>(sQuery.size()))));
     return true;
 }
 

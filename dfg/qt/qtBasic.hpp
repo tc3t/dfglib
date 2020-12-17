@@ -10,6 +10,7 @@
 #include <ios> // For std::streamsize
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
+#include <QIODevice>
 #include <QString>
 #include <QTextStream>
 DFG_END_INCLUDE_QT_HEADERS

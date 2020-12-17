@@ -22,7 +22,7 @@ void ::DFG_MODULE_NS(qt)::ConsoleDisplay::addEntry(const QString& s)
 void ::DFG_MODULE_NS(qt)::ConsoleDisplay::addEntry(const QString& sMsg, const ConsoleDisplayEntryType entryType)
 {
     const QString sTimeStamp = QTime::currentTime().toString("hh:mm:ss.zzz");
-    const QString sSeparator = QLatin1Literal(": ");
+    const QString sSeparator(": ");
     m_nLengthCounter += static_cast<size_t>(sTimeStamp.length() + sSeparator.length()) + static_cast<size_t>(sMsg.length());
     if (entryType == ConsoleDisplayEntryType::error)
         appendHtml(QString(R"(<span style="background: #ffaaaa">%1</span>%2%3)").arg(sTimeStamp.toHtmlEscaped(), sSeparator.toHtmlEscaped(), sMsg.toHtmlEscaped()));

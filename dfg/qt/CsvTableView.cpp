@@ -2654,7 +2654,7 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
 namespace
 {
     // TODO: test
-    bool isValidFloatPrefix(const QStringRef& sPrefix)
+    bool isValidFloatPrefix(const QString& sPrefix)
     {
         return (sPrefix.isEmpty() ||
             sPrefix == "l" ||
@@ -2662,7 +2662,7 @@ namespace
     }
 
     // TODO: test
-    bool isValidIntegerPrefix(const QStringRef& sPrefix)
+    bool isValidIntegerPrefix(const QString& sPrefix)
     {
         return (sPrefix.isEmpty() ||
             sPrefix == "I" ||
@@ -2688,7 +2688,7 @@ namespace
         const bool bIsIntergerType = (!bIsFloatType && std::strchr(gszIntegerTypes, cLast) != nullptr);
         if (!bIsFloatType && !bIsIntergerType)
             return false;
-        const auto sPrefix = s.midRef(0, s.size() - 1);
+        const auto sPrefix = s.mid(0, s.size() - 1);
         return ((bIsFloatType && isValidFloatPrefix(sPrefix)) ||
                 (bIsIntergerType && isValidIntegerPrefix(sPrefix)));
     }
@@ -3229,7 +3229,7 @@ DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::DFG_CLASS_NAME(CsvTable
     BaseClass(pParent)
 {
     auto layout = new QGridLayout(this);
-    layout->setMargin(0);
+    layout->setContentsMargins(0, 0, 0, 0);
 
     int column = 0;
 

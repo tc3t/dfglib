@@ -431,7 +431,7 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringView
     {
         const auto asInt = [](const std::csub_match& subMatch) { return ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(subMatch.first, subMatch.second)); };
         // 0 has entire match, so actual captures start from index 1.
-        return dateToDoubleAndColumnTypeHandling(QDateTime(QDate(asInt(baseMatch[3]), asInt(baseMatch[2]), asInt(baseMatch[1]))), ChartDataType::dateOnly);
+        return dateToDoubleAndColumnTypeHandling(QDateTime(QDate(asInt(baseMatch[3]), asInt(baseMatch[2]), asInt(baseMatch[1])), QTime(0, 0)), ChartDataType::dateOnly);
 
     }
 
