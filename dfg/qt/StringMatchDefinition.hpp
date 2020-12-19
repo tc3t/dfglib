@@ -8,12 +8,12 @@
 #include <algorithm>
 
 #include "qtIncludeHelpers.hpp"
+#include "PatternMatcher.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
-#include <QRegExp>
 #include <QString>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -26,7 +26,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         explicit StringMatchDefinition(QString matchString,
                                        Qt::CaseSensitivity caseSensitivity,
-                                       QRegExp::PatternSyntax patternSyntax)
+                                       PatternMatcher::PatternSyntax patternSyntax)
           : m_matchString(std::move(matchString))
           , m_caseSensitivity(caseSensitivity)
           , m_patternSyntax(patternSyntax)
@@ -72,7 +72,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool isMatchWith(const QString& s) const
         {
-            return !m_matchString.isEmpty() && s.contains(m_regExp);
+            return !m_matchString.isEmpty() && m_regExp.isMatchingWith(s);
         }
 
         bool isMatchWith(const DFG_CLASS_NAME(StringViewUtf8) sv) const
@@ -100,7 +100,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return m_caseSensitivity;
         }
 
-        QRegExp::PatternSyntax patternSyntax() const
+        PatternMatcher::PatternSyntax patternSyntax() const
         {
             return m_patternSyntax;
         }
@@ -108,15 +108,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     private:
         void initCache()
         {
-            m_regExp = QRegExp(m_matchString, m_caseSensitivity, m_patternSyntax);
+            m_regExp = PatternMatcher(m_matchString, m_caseSensitivity, m_patternSyntax);
 
             const auto isSpecialWildcardChar = [](const QChar& c) { return c == '*' || c == '?' || c == '[' || c == ']'; };
 
             // TODO: handle other pattern syntaxes as well (e.g. RegExp without special characters could be done with substring matching).
             const bool bCanDoSubStringMatching = m_caseSensitivity == Qt::CaseSensitive &&
-                                        ((m_patternSyntax == QRegExp::FixedString)
+                                        ((m_patternSyntax == PatternMatcher::FixedString)
                                         ||
-                                        (m_patternSyntax == QRegExp::Wildcard &&
+                                        (m_patternSyntax == PatternMatcher::Wildcard &&
                                          !std::any_of(m_matchString.cbegin(), m_matchString.cend(), isSpecialWildcardChar)));
             if (bCanDoSubStringMatching)
             {
@@ -130,8 +130,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     private:
         QString m_matchString;
         Qt::CaseSensitivity m_caseSensitivity;
-        QRegExp::PatternSyntax m_patternSyntax;
-        QRegExp m_regExp;
+        PatternMatcher::PatternSyntax m_patternSyntax;
+        PatternMatcher m_regExp;
         Utf8String m_sSimpleSubStringMatch; // Stores the utf8-encoded substring to search if applicable. This is an optimization to avoid creating redundant QString-objects.
     }; // class StringMatchDefinition
 
@@ -150,7 +150,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
 inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::makeMatchEverythingMatcher() -> StringMatchDefinition
 {
-    return StringMatchDefinition("*", Qt::CaseInsensitive, QRegExp::Wildcard);
+    return StringMatchDefinition("*", Qt::CaseInsensitive, PatternMatcher::Wildcard);
 }
 
 
@@ -169,23 +169,23 @@ inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::fromJson(const QJsonObje
     const auto bCase = jsonObject.value(QLatin1String(StringMatchDefinitionField_case)).toBool(false);
     const auto sText = jsonObject.value(QLatin1String(StringMatchDefinitionField_text)).toString();
 
-    QRegExp::PatternSyntax patternSyntax = QRegExp::Wildcard;
+    auto patternSyntax = PatternMatcher::Wildcard;
 
     // Setting pattern syntax
     if (!sType.isEmpty())
     {
         if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_wildcard))
-            patternSyntax = QRegExp::Wildcard;
+            patternSyntax = PatternMatcher::Wildcard;
         else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_wildcardUnix))
-            patternSyntax = QRegExp::WildcardUnix;
+            patternSyntax = PatternMatcher::WildcardUnix;
         else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_fixed))
-            patternSyntax = QRegExp::FixedString;
+            patternSyntax = PatternMatcher::FixedString;
         else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_regExp))
-            patternSyntax = QRegExp::RegExp;
+            patternSyntax = PatternMatcher::RegExp;
         else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_regExp2))
-            patternSyntax = QRegExp::RegExp2;
+            patternSyntax = PatternMatcher::RegExp2;
         else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_regExpW3C))
-            patternSyntax = QRegExp::W3CXmlSchema11;
+            patternSyntax = PatternMatcher::W3CXmlSchema11;
         else
         {
             // Unknown type

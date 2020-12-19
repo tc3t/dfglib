@@ -198,7 +198,7 @@ namespace
 
 DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent, const ViewType viewType)
     : BaseClass(pParent)
-    , m_matchDef(QString(), Qt::CaseInsensitive, QRegExp::Wildcard)
+    , m_matchDef(QString(), Qt::CaseInsensitive, PatternMatcher::Wildcard)
     , m_nFindColumnIndex(0)
     , m_bUndoEnabled(true)
 {

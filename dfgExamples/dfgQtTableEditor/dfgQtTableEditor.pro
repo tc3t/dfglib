@@ -209,6 +209,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/PatternMatcher.hpp \
         $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/operations.hpp \
