@@ -2,10 +2,11 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../dfgAssert.hpp"
 #include <functional>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-    #include <QRegExp>
+    #include <QRegularExpression>
     #include <QSortFilterProxyModel>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -19,13 +20,10 @@ public:
     enum PatternSyntax
     {
         Wildcard,
-        WildcardUnix,
         FixedString,
         RegExp,
-        RegExp2,
-        W3CXmlSchema11,
         PatternSyntaxFirst = Wildcard,
-        PatternSyntaxFLast = W3CXmlSchema11
+        PatternSyntaxLast = RegExp
     };
 
     PatternMatcher() = default;
@@ -43,27 +41,88 @@ public:
 
     static void forEachPatternSyntax(std::function<void(int, PatternSyntax)> handler);
 
-    QRegExp m_regExp;
+    static bool isSpecialRegularExpressionCharacter(const QChar& c);
+    static bool isSpecialWildcardCharacter(const QChar& c);
 
+    static bool hasSpecialRegularExpressionCharacters(const QString& s);
+    static bool hasSpecialWildcardCharacters(const QString& s);
+
+private:
+    template <size_t N>
+    static bool isAnyOf(const QChar& c, const char (&szCharList)[N]);
+
+public:
+
+    QRegularExpression m_regExp;
 }; // class PatternMatcher
 
-
-inline PatternMatcher::PatternMatcher(const QString& s, Qt::CaseSensitivity caseSensitivity, PatternSyntax patternSyntax)
+template <size_t N>
+inline bool PatternMatcher::isAnyOf(const QChar& c, const char(&szCharList)[N])
 {
-    m_regExp.setPattern(s);
-    m_regExp.setCaseSensitivity(caseSensitivity);
+    return std::find(szCharList, szCharList + N - 1, c.toLatin1()) != (szCharList + N - 1);
+}
 
-    QRegExp::PatternSyntax regExpPs = QRegExp::Wildcard;
+inline bool PatternMatcher::isSpecialRegularExpressionCharacter(const QChar& c)
+{
+    // From documentation of QRegExp::escape(): "The special characters are $, (,), *, +, ., ?, [, ,], ^, {, | and }."
+    return isAnyOf(c, "$()*+.?[]^{|}");
+}
+
+inline bool PatternMatcher::isSpecialWildcardCharacter(const QChar& c)
+{
+    return isAnyOf(c, "?*[]");
+}
+
+inline bool PatternMatcher::hasSpecialRegularExpressionCharacters(const QString& s)
+{
+    return std::any_of(s.begin(), s.end(), &PatternMatcher::isSpecialRegularExpressionCharacter);
+}
+
+inline bool PatternMatcher::hasSpecialWildcardCharacters(const QString& s)
+{
+    return std::any_of(s.begin(), s.end(), &PatternMatcher::isSpecialWildcardCharacter);
+}
+
+inline PatternMatcher::PatternMatcher(const QString& s, const Qt::CaseSensitivity caseSensitivity, PatternSyntax patternSyntax)
+{
     switch (patternSyntax)
     {
-    case Wildcard: regExpPs = QRegExp::Wildcard; break;
-    case WildcardUnix: regExpPs = QRegExp::WildcardUnix; break;
-    case FixedString: regExpPs = QRegExp::FixedString; break;
-    case RegExp: regExpPs = QRegExp::RegExp; break;
-    case RegExp2: regExpPs = QRegExp::RegExp2; break;
-    case W3CXmlSchema11: regExpPs = QRegExp::W3CXmlSchema11; break;
+        case Wildcard:
+            {
+                if (!hasSpecialWildcardCharacters(s))
+                    m_regExp.setPattern(QRegularExpression::escape(s));
+                else
+                {
+                    // Not using QRegularExpression::wildcardToRegularExpression() as it is available only since 5.12 and
+                    // it didn't produce expected results in this context: for example QRegularExpression::wildcardToRegularExpression("a").pattern() returned \A(?:a)\z
+                    QString sW;
+                    for (const auto& c : s)
+                    {
+                        if (c == '*')
+                            sW.push_back(".*");
+                        else if (c == '?')
+                            sW.push_back(".");
+                        else if (!isSpecialRegularExpressionCharacter(c) || c == '[' || c == ']')
+                            sW.push_back(c);
+                        else
+                            sW.push_back(QRegularExpression::escape(QString(c)));
+                    }
+                    m_regExp.setPattern(sW);
+                }
+            }
+            break;
+        case FixedString:
+            m_regExp.setPattern(QRegularExpression::escape(s));
+            break;
+        case RegExp:
+            m_regExp.setPattern(s);
+            break;
+        default:
+            DFG_ASSERT_IMPLEMENTED(false);
+            break;
     }
-    m_regExp.setPatternSyntax(regExpPs);
+    if (caseSensitivity == Qt::CaseInsensitive)
+        m_regExp.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
 }
 
 // Returns true if successfully set, false otherwise
@@ -71,7 +130,7 @@ inline bool PatternMatcher::setToProxyModel(QSortFilterProxyModel* pProxy)
 {
     if (!pProxy)
         return false;
-    pProxy->setFilterRegExp(this->m_regExp);
+    pProxy->setFilterRegularExpression(this->m_regExp);
     return true;
 }
 
@@ -85,11 +144,8 @@ inline const char* PatternMatcher::patternSyntaxName_untranslated(const PatternS
     switch (patternSyntax)
     {
     case Wildcard:       return "Wildcard";
-    case WildcardUnix:   return "Wildcard(Unix Shell)";
     case FixedString:    return "Simple string";
     case RegExp:         return "Regular expression";
-    case RegExp2:        return "Regular expression 2";
-    case W3CXmlSchema11: return "Regular expression (W3C XML Schema 1.1)";
     default:             return "";
     }
 }
@@ -100,8 +156,7 @@ inline const char* PatternMatcher::shortDescriptionForPatternSyntax_untranslated
     {
     case Wildcard:       return "? Matches single character, the same as . in regexp.\n"
         "* Matches zero or more characters, the same as .* in regexp.\n"
-        "[...] Set of character similar to regexp.";;
-    case WildcardUnix:   return "Like Wildcard, but wildcard characters can be escaped with \\";
+        "[...] Set of character similar to regexp.";
     case FixedString:    return "Plain search string, no need to worry about special characters";
     case RegExp:         return "Regular expression\n\n"
         ". Matches any single character\n"
@@ -110,8 +165,6 @@ inline const char* PatternMatcher::shortDescriptionForPatternSyntax_untranslated
         "| Match expression before or after\n"
         "^ Beginning of line\n"
         "$ End of line\n";
-    case RegExp2:        return "Regular expression with greedy quantifiers";
-    case W3CXmlSchema11: return "Regular expression (W3C XML Schema 1.1)";
     default:             return "";
     }
 }
@@ -119,8 +172,8 @@ inline const char* PatternMatcher::shortDescriptionForPatternSyntax_untranslated
 inline void PatternMatcher::forEachPatternSyntax(std::function<void(int, PatternSyntax)> handler)
 {
     const auto nFirst = static_cast<int>(PatternSyntaxFirst);
-    const auto nLast = static_cast<int>(PatternSyntaxFLast);
-    for (int i = nFirst; i < nLast; ++i)
+    const auto nLast = static_cast<int>(PatternSyntaxLast);
+    for (int i = nFirst; i <= nLast; ++i)
     {
         handler(i - nFirst, static_cast<PatternSyntax>(i));
     }

@@ -906,20 +906,37 @@ TEST(dfgQt, StringMatchDefinition)
     DFGTEST_TEMP_VERIFY(R"( { "text": "abc" } )", "abc", Qt::CaseInsensitive, PatternMatcher::Wildcard);
     DFGTEST_TEMP_VERIFY(R"( { "case_sensitive": true } )", "", Qt::CaseSensitive, PatternMatcher::Wildcard);
     DFGTEST_TEMP_VERIFY(R"( { "type": "wildcard" } )", "", Qt::CaseInsensitive, PatternMatcher::Wildcard);
-    DFGTEST_TEMP_VERIFY(R"( { "type": "wildcard_unix" } )", "", Qt::CaseInsensitive, PatternMatcher::WildcardUnix);
     DFGTEST_TEMP_VERIFY(R"( { "type": "fixed" } )", "", Qt::CaseInsensitive, PatternMatcher::FixedString);
     DFGTEST_TEMP_VERIFY(R"( { "type": "reg_exp" } )", "", Qt::CaseInsensitive, PatternMatcher::RegExp);
-    DFGTEST_TEMP_VERIFY(R"( { "type": "reg_exp2" } )", "", Qt::CaseInsensitive, PatternMatcher::RegExp2);
-    DFGTEST_TEMP_VERIFY(R"( { "type": "reg_exp_w3c_xml_schema_11" } )", "", Qt::CaseInsensitive, PatternMatcher::W3CXmlSchema11);
     DFGTEST_TEMP_VERIFY(R"( { "text": "a|B", "case_sensitive":true, "type": "reg_exp" } )", "a|B", Qt::CaseSensitive, PatternMatcher::RegExp);
 
 #undef DFGTEST_TEMP_VERIFY
 
+    // Tests with Wildcard
     {
         EXPECT_FALSE(StringMatchDefinition("A", Qt::CaseSensitive, PatternMatcher::Wildcard).isMatchWith(DFG_UTF8("abc")));
         EXPECT_FALSE(StringMatchDefinition("A", Qt::CaseSensitive, PatternMatcher::Wildcard).isMatchWith(QString("abc")));
         EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, PatternMatcher::Wildcard).isMatchWith(DFG_UTF8("abc")));
         EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, PatternMatcher::Wildcard).isMatchWith(QString("abc")));
+
+        // Testing that characters that are special in regular expression but not in wildcard are handled correctly.
+        EXPECT_TRUE(StringMatchDefinition("+{()}", Qt::CaseInsensitive, PatternMatcher::Wildcard).isMatchWith(QString("a+{()}b")));
+        EXPECT_FALSE(StringMatchDefinition("+{()}", Qt::CaseInsensitive, PatternMatcher::Wildcard).isMatchWith(QString("a+{(}b")));
+
+        EXPECT_TRUE(StringMatchDefinition("a*b[cde]f?g", Qt::CaseInsensitive, PatternMatcher::Wildcard).isMatchWith(QString("a1234qwbef+ghi")));
+        EXPECT_FALSE(StringMatchDefinition("a*b[cde]f?g", Qt::CaseInsensitive, PatternMatcher::Wildcard).isMatchWith(QString("a1234qwbff+ghi")));
+    }
+
+    // Tests with FixedString
+    {
+        EXPECT_FALSE(StringMatchDefinition("A", Qt::CaseSensitive, PatternMatcher::FixedString).isMatchWith(DFG_UTF8("abc")));
+        EXPECT_FALSE(StringMatchDefinition("A", Qt::CaseSensitive, PatternMatcher::FixedString).isMatchWith(QString("abc")));
+        EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, PatternMatcher::FixedString).isMatchWith(DFG_UTF8("abc")));
+        EXPECT_TRUE(StringMatchDefinition("A", Qt::CaseInsensitive, PatternMatcher::FixedString).isMatchWith(QString("abc")));
+
+        // Testing that characters that are special in wildcard and regular expression are handled correctly.
+        EXPECT_TRUE(StringMatchDefinition("*", Qt::CaseInsensitive, PatternMatcher::FixedString).isMatchWith(QString("a?*b")));
+        EXPECT_FALSE(StringMatchDefinition("*", Qt::CaseInsensitive, PatternMatcher::FixedString).isMatchWith(QString("a?b")));
     }
 }
 

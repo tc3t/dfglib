@@ -138,11 +138,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     constexpr char StringMatchDefinitionField_type[]    = "type";
         constexpr char StringMatchDefinitionFieldValue_type_wildcard[]     = "wildcard";
-        constexpr char StringMatchDefinitionFieldValue_type_wildcardUnix[] = "wildcard_unix";
         constexpr char StringMatchDefinitionFieldValue_type_fixed[]        = "fixed";
         constexpr char StringMatchDefinitionFieldValue_type_regExp[]       = "reg_exp";
-        constexpr char StringMatchDefinitionFieldValue_type_regExp2[]      = "reg_exp2";
-        constexpr char StringMatchDefinitionFieldValue_type_regExpW3C[]    = "reg_exp_w3c_xml_schema_11";
     constexpr char StringMatchDefinitionField_case[]    = "case_sensitive";
     constexpr char StringMatchDefinitionField_text[]    = "text";
 
@@ -176,16 +173,10 @@ inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::fromJson(const QJsonObje
     {
         if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_wildcard))
             patternSyntax = PatternMatcher::Wildcard;
-        else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_wildcardUnix))
-            patternSyntax = PatternMatcher::WildcardUnix;
         else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_fixed))
             patternSyntax = PatternMatcher::FixedString;
         else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_regExp))
             patternSyntax = PatternMatcher::RegExp;
-        else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_regExp2))
-            patternSyntax = PatternMatcher::RegExp2;
-        else if (sType == QLatin1String(StringMatchDefinitionFieldValue_type_regExpW3C))
-            patternSyntax = PatternMatcher::W3CXmlSchema11;
         else
         {
             // Unknown type
