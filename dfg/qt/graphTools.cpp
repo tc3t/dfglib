@@ -2261,7 +2261,7 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
                 xVals.push_back(xVal);
                 yVals.push_back(*x);
             }
-            spHistogram->setValues(makeRange(xVals), makeRange(yVals));
+            spHistogram->setValues(xVals, yVals);
         }
         catch (const std::exception& e)
         {
@@ -2370,7 +2370,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
             }
             // Recalculation y-range.
             minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
-            valueRange = makeRange(yAdjustedData);
+            valueRange = yAdjustedData;
         }
     }
 
@@ -2395,7 +2395,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     }
 
     auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
-    fillQcpPlottable<QCPBarsData>(*pBars, makeRange(ticks), valueRange);
+    fillQcpPlottable<QCPBarsData>(*pBars, ticks, valueRange);
 
     auto spBarsHolder = std::make_shared<BarSeriesQCustomPlot>(pBars);
     return spBarsHolder;

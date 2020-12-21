@@ -48,10 +48,14 @@ TEST(dfgIter, RangeIterator)
         DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptrRange(vecRange);
         //DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<int*> ptr2Range(vecConstRange); // This should fail to compile
         DFG_ROOT_NS::DFG_CLASS_NAME(RangeIterator_T)<const int*> cptrRange(vecRange);
+        auto dataRange = ::DFG_ROOT_NS::makeRange_data(vec);
 
         EXPECT_EQ(vecRange.size(), vecConstRange.size());
         EXPECT_EQ(vecRange.size(), ptrRange.size());
         EXPECT_EQ(vecRange.size(), cptrRange.size());
+
+        EXPECT_EQ(dataRange.begin(), cptrRange.begin());
+        EXPECT_EQ(dataRange.end(), cptrRange.end());
 
         EXPECT_EQ(vec[0], *vecRange.begin());
         EXPECT_EQ(vec[0], *vecConstRange.begin());
@@ -112,6 +116,22 @@ TEST(dfgIter, RangeIterator)
         std::list<int> list({2, 3});
         EXPECT_EQ(2, DFG_ROOT_NS::makeRange(list)[0]);
         EXPECT_EQ(3, DFG_ROOT_NS::makeRange(list)[1]);
+    }
+
+    // Testing construction from containers
+    {
+        using namespace ::DFG_ROOT_NS;
+        const auto func = [](RangeIterator_T<int*> arg) { return arg; };
+        const auto func2 = [](RangeIterator_T<std::list<int>::iterator> arg) { return arg; };
+        std::vector<int> vec{ 1,2,3 };
+        const std::vector<int> vecC{ 1,2,3 };
+        auto r0 = func(vec);
+        EXPECT_EQ(vec.data(), r0.begin());
+        EXPECT_EQ(vec.data() + vec.size(), r0.end());
+        std::list<int> lst = { 4, 5, 6 };
+        auto r1 = func2(lst);
+        EXPECT_EQ(lst.begin(), r1.begin());
+        EXPECT_EQ(lst.end(), r1.end());
     }
 }
 

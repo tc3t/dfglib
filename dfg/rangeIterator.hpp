@@ -105,36 +105,70 @@ DFG_ROOT_NS_BEGIN
     //       e.g. begin() iterator even through const range.
     // Remarks: For more robust implementation, see Boost.Range
     template <class Iter_T>
-    class DFG_CLASS_NAME(RangeIterator_T) : public std::conditional<IsContiguousMemoryIterator<Iter_T>::value, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorContiguousIterBase<Iter_T>, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorDefaultBase<Iter_T>>::type
+    class RangeIterator_T : public std::conditional<IsContiguousMemoryIterator<Iter_T>::value, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorContiguousIterBase<Iter_T>, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorDefaultBase<Iter_T>>::type
     {
     public:
         typedef typename std::conditional<IsContiguousMemoryIterator<Iter_T>::value, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorContiguousIterBase<Iter_T>, ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorDefaultBase<Iter_T>>::type BaseClass;
-        DFG_CLASS_NAME(RangeIterator_T)() {}
-        DFG_CLASS_NAME(RangeIterator_T)(Iter_T iBegin, Iter_T iEnd) : BaseClass(iBegin, iEnd) {}
+        RangeIterator_T() {}
+        RangeIterator_T(Iter_T iBegin, Iter_T iEnd) : BaseClass(iBegin, iEnd) {}
+
+        template <class Iterable_T>
+        RangeIterator_T(Iterable_T&& iterable) :
+            RangeIterator_T(std::begin(iterable), std::end(iterable))
+        {}
 
         template <class OtherIter_T>
-        DFG_CLASS_NAME(RangeIterator_T)(const DFG_CLASS_NAME(RangeIterator_T)<OtherIter_T>& other)
+        RangeIterator_T(const RangeIterator_T<OtherIter_T>& other)
             : BaseClass(::DFG_ROOT_NS::DFG_DETAIL_NS::makeBeginIterator<Iter_T>(other.begin(), other.end()), ::DFG_ROOT_NS::DFG_DETAIL_NS::makeEndIterator<Iter_T>(other.begin(), other.end()))
         {
         }
     };
 
-    template <class Iter_T>
-    DFG_CLASS_NAME(RangeIterator_T)<Iter_T> makeRange(Iter_T iBegin, Iter_T iEnd)
+    // Specialization for pointer types
+    template <class T>
+    class RangeIterator_T<T*> : public ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorContiguousIterBase<T*>
     {
-        return DFG_CLASS_NAME(RangeIterator_T)<Iter_T>(iBegin, iEnd);
+    public:
+        using BaseClass = ::DFG_ROOT_NS::DFG_DETAIL_NS::RangeIteratorContiguousIterBase<T*>;
+        RangeIterator_T() {}
+        RangeIterator_T(T* pBegin, T* pEnd) : BaseClass(pBegin, pEnd) {}
+
+        template <class Iterable_T>
+        RangeIterator_T(Iterable_T&& iterable) :
+            RangeIterator_T(iterable.data(), iterable.data() + iterable.size())
+        {}
+
+        template <class OtherIter_T>
+        RangeIterator_T(const RangeIterator_T<OtherIter_T>& other)
+            : BaseClass(::DFG_ROOT_NS::DFG_DETAIL_NS::makeBeginIterator<T*>(other.begin(), other.end()), ::DFG_ROOT_NS::DFG_DETAIL_NS::makeEndIterator<T*>(other.begin(), other.end()))
+        {
+        }
+    };
+
+    template <class Iter_T>
+    RangeIterator_T<Iter_T> makeRange(Iter_T iBegin, Iter_T iEnd)
+    {
+        return RangeIterator_T<Iter_T>(iBegin, iEnd);
     }
 
     template <class T, size_t N>
-    DFG_CLASS_NAME(RangeIterator_T)<T*> makeRange(T(&arr)[N])
+    RangeIterator_T<T*> makeRange(T(&arr)[N])
     {
         return makeRange(std::begin(arr), std::end(arr));
     }
 
     template <class BeginEndInterface_T>
-    auto makeRange(BeginEndInterface_T& bei) -> DFG_CLASS_NAME(RangeIterator_T)<decltype(std::begin(bei))>
+    auto makeRange(BeginEndInterface_T& bei) -> RangeIterator_T<decltype(std::begin(bei))>
     {
         return makeRange(std::begin(bei), std::end(bei));
+    }
+
+    // Convenience method for creating range from data() guaranteeing that resulting range
+    // is pointer-based.
+    template <class Iterable_T>
+    auto makeRange_data(Iterable_T&& iterable) -> RangeIterator_T<decltype(iterable.data())>
+    {
+        return makeRange(iterable.data(), iterable.data() + iterable.size());
     }
 
     // Returns head range, i.e. range [begin(), begin() + nCount] from given iterable.
