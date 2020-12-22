@@ -389,6 +389,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         m_spFindPanel.reset(new DFG_DETAIL_NS::FindPanelWidget(tr("Find")));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onHighlightTextChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFindColumnChanged));
+        DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pMatchSyntaxCombobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ThisClass::onFindColumnChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->getCaseSensivitivyCheckBox(), &QCheckBox::stateChanged, this, &ThisClass::onHighlightTextCaseSensitivityChanged));
         spLayout->addWidget(m_spFindPanel.get(), row++, 0);
 
@@ -397,6 +398,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
             m_spFilterPanel.reset(new DFG_DETAIL_NS::FilterPanelWidget);
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onFilterTextChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFilterColumnChanged));
+            DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pMatchSyntaxCombobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ThisClass::onFilterColumnChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->getCaseSensivitivyCheckBox(), &QCheckBox::stateChanged, this, &ThisClass::onFilterCaseSensitivityChanged));
             spLayout->addWidget(m_spFilterPanel.get(), row++, 0);
         }
@@ -731,6 +733,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindColumnChanged(const int newCol)
 {
+    // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(newCol);
 	if (m_spFindPanel)
     	onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
@@ -738,6 +741,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindColumnChanged(const i
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterColumnChanged(const int nNewCol)
 {
+    // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(nNewCol);
     if (m_spFilterPanel)
         onFilterTextChanged(m_spFilterPanel->getPattern());
