@@ -1709,6 +1709,11 @@ public:
 
     void repaintCanvas() override;
 
+    int width() const override;
+    int height() const override;
+
+    void setBackground(const StringViewUtf8&) override;
+
     ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam& param)   override;
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
     ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam& param) override;
@@ -2428,6 +2433,77 @@ void ChartCanvasQCustomPlot::repaintCanvas()
     auto p = getWidget();
     if (p)
         p->replot();
+}
+
+int ChartCanvasQCustomPlot::width() const
+{
+    auto pCustomPlot = getWidget();
+    return (pCustomPlot) ? pCustomPlot->width() : 0;
+}
+
+int ChartCanvasQCustomPlot::height() const
+{
+    auto pCustomPlot = getWidget();
+    return (pCustomPlot) ? pCustomPlot->height() : 0;
+}
+
+void ChartCanvasQCustomPlot::setBackground(const StringViewUtf8& sv)
+{
+    auto pCustomPlot = getWidget();
+    if (!pCustomPlot)
+        return;
+
+    bool bSetDefault = true;
+    auto defaultBackgroundSetter = makeScopedCaller([] {}, [&]() { if (bSetDefault) pCustomPlot->setBackground(QBrush(Qt::white, Qt::SolidPattern)); });
+
+    if (sv.empty())
+        return;
+
+    auto args = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem::fromStableView(sv);
+
+    if (args.key() != DFG_UTF8("gradient_linear"))
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Unrecognized background definition '%1'").arg(viewToQString(args.key())));
+        return;
+    }
+
+    // gradient_linear expects: gradient_linear(direction, linear position1, color1, [linear position 2, color2...])
+    if (args.valueCount() < 3)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Too few points for gradient_linear background: expected at least 3, got %1").arg(args.valueCount()));
+        return;
+    }
+    
+    const auto svDirection = args.value(0);
+    if (svDirection != DFG_UTF8("vertical") && svDirection != DFG_UTF8("default")) // Currently only vertical and default are supported, to support horizontal and numeric angle.
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Unsupported gradient direction '%1'").arg(viewToQString(svDirection)));
+        return;
+    }
+
+    const auto nEffectiveArgCount = args.valueCount() - (1 - args.valueCount() % 2);
+    if (args.valueCount() % 2 == 0)
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Uneven argument count for gradient_linear, last item ignored"));
+
+    QLinearGradient gradient(0, 0, 0, this->height());
+    for (int i = 1; i < nEffectiveArgCount; i += 2)
+    {
+        const auto linearPos = args.valueAs<double>(i);
+        if (::DFG_MODULE_NS(math)::isNan(linearPos) || linearPos < 0 || linearPos > 1)
+        {
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Expected linear gradient position [0, 1], got '%1', item ignored").arg(viewToQString(args.value(i))));
+            continue;
+        }
+        const QColor colour(viewToQString(args.value(i + 1)));
+        if (!colour.isValid())
+        {
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to parse colour '%1', linear gradient item ignored").arg(viewToQString(args.value(i + 1))));
+            continue;
+        }
+        gradient.setColorAt(linearPos, colour);
+    }
+    bSetDefault = false;
+    pCustomPlot->setBackground(QBrush(gradient));
 }
 
 bool ChartCanvasQCustomPlot::isLegendEnabled() const
@@ -3932,6 +4008,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     });
     rChart.optimizeAllAxesRanges();
 
+    // Legend handling
     if (ChartConfigParam(pGlobalConfigEntry).value(ChartObjectFieldIdStr_showLegend, pChart->isLegendEnabled()))
     {
         pChart->enableLegend(true);
@@ -3939,6 +4016,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     }
     else
         pChart->enableLegend(false);
+
+    // Background handling
+    pChart->setBackground(ChartConfigParam(pGlobalConfigEntry).valueStr(ChartObjectFieldIdStr_background));
 
     DFG_MODULE_NS(time)::TimerCpu timerRepaint;
     rChart.repaintCanvas();

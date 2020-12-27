@@ -19,6 +19,7 @@
     <li>Basic bar chart: {"type":"bars"}
     <li>Disabling an entry by commenting: #{"type":"histogram","name":"Basic histogram"}
     <li>Filtering out points whose y value is not within [5, 10]: {"type":"xy","operation_a":"passWindow(y, 5, 10)"}
+    <li>Setting chart background with linear gradient: {"type":"global_config","background":"gradient_linear(vertical, 0, #888888, 0.5, #bbbbbb, 1.0, #eeeeee)"}</li>
 </ul>
 
 <h2>Common fields</h2>
@@ -151,6 +152,16 @@
         <li><i>point_style</i>: Sets global default for point_style, see point style documentation for details.</li>
         <li><i>line_colour</i>: Sets global default for line_colour, see line colour documentation for details.</li>
         <li><i>fill_colour</i>: Sets global default for fill_colour, see fill colour documentation for details.</li>
+        <li><i>background</i>: Sets global canvas background</li>
+            <ul>
+                <li>gradient_linear(direction, position 1 within [0, 1], colour 1, [position 2, colour 2...])</li>
+                <ul>
+                    <li>Supported directions: {vertical, default}</li>
+                    <li>Relative position 0 refers to top, 1 to bottom.</li>
+                    <li>Note: Relative gradient positions are not preserved if canvas gets resized (e.g. if manually changing window size).</li>
+                    <li>Example: "background":"gradient_linear(vertical, 0, #888888, 0.5, #bbbbbb, 1.0, #eeeeee)"</li>
+                </ul>
+            </ul>
         <li><b>Note:</b> Chart object properties affect only objects defined after the global_config entry.</li>
     </ul>
 <h2>Operations</h2>

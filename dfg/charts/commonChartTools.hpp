@@ -104,6 +104,9 @@ constexpr char ChartObjectFieldIdStr_xTickLabelDirection[] = "x_tick_label_direc
 // y_tick_label_direction
 constexpr char ChartObjectFieldIdStr_yTickLabelDirection[] = "y_tick_label_direction";
 
+// background
+constexpr char ChartObjectFieldIdStr_background[] = "background";
+
 // x_rows, value is semicolon separated list defining an IntervalSet of row indexes. For example "1:4; 8; 12:13" means rows 1, 2, 3, 4, 8, 12, 13.
 constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 
@@ -648,6 +651,11 @@ public:
 
     virtual void removeAllChartObjects() {}
 
+    virtual int width() const { return 0; }
+    virtual int height() const { return 0; }
+
+    virtual void setBackground(const StringViewUtf8&) {};
+
     virtual bool isLegendSupported() const { return false; }
     virtual bool isToolTipSupported() const { return false; }
     virtual bool isLegendEnabled() const { return false; }
@@ -770,7 +778,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_lineStyle,
             ChartObjectFieldIdStr_pointStyle,
             ChartObjectFieldIdStr_lineColour,
-            ChartObjectFieldIdStr_fillColour
+            ChartObjectFieldIdStr_fillColour,
+            ChartObjectFieldIdStr_background
             });
     }
     else
