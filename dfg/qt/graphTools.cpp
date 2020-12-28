@@ -1695,7 +1695,7 @@ public:
           QCustomPlot* getWidget()       { return m_spChartView.get(); }
     const QCustomPlot* getWidget() const { return m_spChartView.get(); }
 
-    void setTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle) override;
+    void setPanelTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle, StringViewUtf8 svColor) override;
 
     bool hasChartObjects() const override;
 
@@ -1713,6 +1713,13 @@ public:
     int height() const override;
 
     void setBackground(const StringViewUtf8&) override;
+
+    void setPanelAxesColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef) override;
+    static void setPanelAxisColour(QCPAxis& axis, const QColor& color);
+    static void resetPanelAxisColour(QCPAxis& axis);
+    void setPanelAxesLabelColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef) override;
+    static void setPanelAxisLabelColour(QCPAxis& axis, const QColor& color);
+    static void resetPanelAxisLabelColour(QCPAxis& axis);
 
     ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam& param)   override;
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
@@ -1740,6 +1747,7 @@ public:
 
     // Returns ChartPanel on which given (mouse) cursor is.
     ChartPanel* getChartPanel(const QPoint& pos); // pos is as available in mouseMoveEvent() pEvent->pos()
+    ChartPanel* getChartPanel(const StringViewUtf8& svPanelId);
 
     void removeLegends();
 
@@ -1753,13 +1761,13 @@ public:
     static bool toolTipTextForChartObjectAsHtml(const QCPCurve* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
     static bool toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
 
+    template <class Func_T> static void forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func);
+
 private:
     template <class This_T, class Func_T>
     static void forEachAxisRectImpl(This_T& rThis, Func_T&& func);
     template <class Func_T> void forEachAxisRect(Func_T&& func);
     template <class Func_T> void forEachAxisRect(Func_T&& func) const;
-
-    template <class Func_T> static void forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func);
 
     // Returns true if operations were successfully created from given definition list, false otherwise.
     bool applyChartOperationsTo(QCPAbstractPlottable* pPlottable, const QStringList& definitionList);
@@ -1784,7 +1792,7 @@ public:
     ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId);
     QCPAxisRect* axisRect();
 
-    void setTitle(StringViewUtf8 svTitle);
+    void setTitle(StringViewUtf8 svTitle, StringViewUtf8 svColor = StringViewUtf8());
     QString getTitle() const;
 
     QString getPanelId() const { return m_panelId; }
@@ -1800,6 +1808,8 @@ public:
     AxisT* secondaryYaxis();
 
     AxisT* axis(AxisT::AxisType axisType);
+
+    template <class Func_T> void forEachAxis(Func_T&& func);
 
     QCustomPlot* m_pQcp = nullptr;
     QString m_panelId;
@@ -1851,7 +1861,7 @@ QString ChartPanel::getTitle() const
     return (pTitle) ? pTitle->text() : QString();
 }
 
-void ChartPanel::setTitle(StringViewUtf8 svTitle)
+void ChartPanel::setTitle(StringViewUtf8 svTitle, StringViewUtf8 svColor)
 {
     auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
     if (svTitle.empty())
@@ -1873,6 +1883,12 @@ void ChartPanel::setTitle(StringViewUtf8 svTitle)
         }
         pTitle->setText(viewToQString(svTitle));
         pTitle->setFont(QFont("sans", 12, QFont::Bold));
+        if (!svColor.empty())
+        {
+            const QColor color(viewToQString(svColor));
+            if (color.isValid())
+                pTitle->setTextColor(color);
+        }
     }
 }
 
@@ -1896,6 +1912,15 @@ void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottabl
         if (pPlottable && pPlottable->keyAxis() == this->primaryXaxis())
             handler(*pPlottable);
     }
+}
+
+template <class Func_T>
+void ChartPanel::forEachAxis(Func_T&& func)
+{
+    auto pAxisRect = this->axisRect();
+    if (!pAxisRect)
+        return;
+    ChartCanvasQCustomPlot::forEachAxis(pAxisRect, func);
 }
 
 namespace
@@ -2106,6 +2131,9 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
             forEachAxis(&axisRect, [](QCPAxis& rAxis)
             {
                 rAxis.setLabel(QString());
+                // Resetting colours
+                ChartCanvasQCustomPlot::resetPanelAxisColour(rAxis);
+                ChartCanvasQCustomPlot::resetPanelAxisLabelColour(rAxis);
             });
         });
     }
@@ -2506,6 +2534,53 @@ void ChartCanvasQCustomPlot::setBackground(const StringViewUtf8& sv)
     pCustomPlot->setBackground(QBrush(gradient));
 }
 
+void ChartCanvasQCustomPlot::setPanelAxesColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef)
+{
+    auto pPanel = getChartPanel(svPanelId);
+    if (!pPanel)
+        return;
+    const QColor color(viewToQString(svColourDef));
+    pPanel->forEachAxis([&](QCPAxis& axis)
+    {
+        setPanelAxisColour(axis, color);
+    });
+}
+
+void ChartCanvasQCustomPlot::setPanelAxisColour(QCPAxis& axis, const QColor& color)
+{
+    axis.setBasePen(QPen(color));
+    axis.setTickPen(QPen(color));
+    axis.setSubTickPen(QPen(color));
+}
+
+void ChartCanvasQCustomPlot::resetPanelAxisColour(QCPAxis& axis)
+{
+    setPanelAxisColour(axis, QColor(Qt::black));
+}
+
+void ChartCanvasQCustomPlot::setPanelAxesLabelColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef)
+{
+    auto pPanel = getChartPanel(svPanelId);
+    if (!pPanel)
+        return;
+    const QColor color(viewToQString(svColourDef));
+    pPanel->forEachAxis([&](QCPAxis& axis)
+    {
+        setPanelAxisLabelColour(axis, color);
+    });
+}
+
+void ChartCanvasQCustomPlot::setPanelAxisLabelColour(QCPAxis& axis, const QColor& color)
+{
+    axis.setTickLabelColor(color);
+    axis.setLabelColor(color);
+}
+
+void ChartCanvasQCustomPlot::resetPanelAxisLabelColour(QCPAxis& axis)
+{
+    setPanelAxisLabelColour(axis, QColor(Qt::black));
+}
+
 bool ChartCanvasQCustomPlot::isLegendEnabled() const
 {
     return m_bLegendEnabled;
@@ -2725,6 +2800,20 @@ auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) -> ChartPanel*
     return nullptr;
 }
 
+auto ChartCanvasQCustomPlot::getChartPanel(const StringViewUtf8& svPanelId) -> ChartPanel*
+{
+    auto pCustomPlot = getWidget();
+    auto pMainLayout = (pCustomPlot) ? pCustomPlot->plotLayout() : nullptr;
+    if (!pMainLayout)
+        return nullptr;
+
+    int nRow = 0;
+    int nCol = 0;
+    if (!getGridPos(svPanelId, nRow, nCol))
+        return nullptr;
+    return dynamic_cast<ChartPanel*>(pMainLayout->element(nRow, nCol));
+}
+
 auto ChartCanvasQCustomPlot::getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId) -> QCPAxis*
 {
     auto pAxisRect = getAxisRect(svPanelId);
@@ -2758,7 +2847,7 @@ auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> 
     return getAxis(param, QCPAxis::atLeft);
 }
 
-void ChartCanvasQCustomPlot::setTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle)
+void ChartCanvasQCustomPlot::setPanelTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle, StringViewUtf8 svTitleColor)
 {
     auto p = getWidget();
     auto pMainLayout = (p) ? p->plotLayout() : nullptr;
@@ -2780,7 +2869,7 @@ void ChartCanvasQCustomPlot::setTitle(StringViewUtf8 svPanelId, StringViewUtf8 s
         pMainLayout->addElement(nRow, nCol, pPanel);
     }
     if (pPanel)
-        pPanel->setTitle(svTitle);
+        pPanel->setTitle(svTitle, svTitleColor);
 }
 
 namespace
@@ -4496,13 +4585,31 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProper
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry)
 {
     const auto sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId);
-    rChart.setTitle(sPanelId, defEntry.fieldValueStr(ChartObjectFieldIdStr_title));
+
+    const auto sAxisLabelColour = defEntry.fieldValueStr(ChartObjectFieldIdStr_axisLabelColour);
+
+    rChart.setPanelTitle(sPanelId, defEntry.fieldValueStr(ChartObjectFieldIdStr_title), sAxisLabelColour);
 
     rChart.setAxisLabel(sPanelId, DFG_UTF8("x"), defEntry.fieldValueStr(ChartObjectFieldIdStr_xLabel));
     rChart.setAxisLabel(sPanelId, DFG_UTF8("y"), defEntry.fieldValueStr(ChartObjectFieldIdStr_yLabel));
 
     rChart.setAxisTickLabelDirection(sPanelId, DFG_UTF8("x"), defEntry.fieldValueStr(ChartObjectFieldIdStr_xTickLabelDirection));
     rChart.setAxisTickLabelDirection(sPanelId, DFG_UTF8("y"), defEntry.fieldValueStr(ChartObjectFieldIdStr_yTickLabelDirection));
+
+    // Axis and label colours
+    if (!sAxisLabelColour.empty())
+    {
+        const QColor colour(viewToQString(sAxisLabelColour));
+        if (colour.isValid())
+        {
+            // Axis colours
+            rChart.setPanelAxesColour(sPanelId, sAxisLabelColour);
+            // Label colours
+            rChart.setPanelAxesLabelColour(sPanelId, sAxisLabelColour);
+        }
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to parse colour '%1', colour not set for panel '%2'").arg(viewToQString(sAxisLabelColour), viewToQString(sPanelId)));
+    }
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::addDataSource(std::unique_ptr<GraphDataSource> spSource)

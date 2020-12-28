@@ -141,6 +141,9 @@ constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
 // fill_colour
 constexpr char ChartObjectFieldIdStr_fillColour[] = "fill_colour";
 
+// axis_label_colour
+constexpr char ChartObjectFieldIdStr_axisLabelColour[] = "axis_label_colour";
+
 // operation_
 constexpr char ChartObjectFieldIdStr_operation[] = "operation_";
 
@@ -643,7 +646,7 @@ public:
 
     virtual void addXySeries() = 0;
 
-    virtual void setTitle(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svTitle*/) {}
+    virtual void setPanelTitle(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svTitle*/, StringViewUtf8 /*svColor*/) {}
 
     virtual void optimizeAllAxesRanges() {}
 
@@ -655,6 +658,11 @@ public:
     virtual int height() const { return 0; }
 
     virtual void setBackground(const StringViewUtf8&) {};
+
+    // Sets colour to all axes in panel including axes ticks.
+    virtual void setPanelAxesColour(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svColourDef*/) {}
+    // Sets colour to all panel axes labels
+    virtual void setPanelAxesLabelColour(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svColourDef*/) {}
 
     virtual bool isLegendSupported() const { return false; }
     virtual bool isToolTipSupported() const { return false; }
@@ -765,7 +773,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_xLabel,
             ChartObjectFieldIdStr_yLabel,
             ChartObjectFieldIdStr_xTickLabelDirection,
-            ChartObjectFieldIdStr_yTickLabelDirection
+            ChartObjectFieldIdStr_yTickLabelDirection,
+            ChartObjectFieldIdStr_axisLabelColour
             });
     }
     else if (isType(ChartObjectChartTypeStr_globalConfig))
