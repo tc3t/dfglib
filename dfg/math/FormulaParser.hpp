@@ -12,6 +12,7 @@
 
 #include "../dfgDefs.hpp"
 #include "../ReadOnlySzParam.hpp"
+#include "../OpaquePtr.hpp"
 #include <memory>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
@@ -45,8 +46,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         // Convenience interface for evaluating simple formulas that have no variables.
         static double evaluateFormulaAsDouble(const StringViewC sv);
 
-        class Data;
-        std::unique_ptr<Data> m_spData;
+        DFG_OPAQUE_PTR_DECLARE();
     }; // class FormulaParser
 
 }} // module namespace

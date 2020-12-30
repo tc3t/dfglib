@@ -54,6 +54,7 @@ int main(int argc, char **argv)
 
     //::testing::GTEST_FLAG(filter) = "dfg.isEmpty";
     //::testing::GTEST_FLAG(filter) = "dfg.isValidIndex";
+    //::testing::GTEST_FLAG(filter) = "dfg.OpaquePtr";
     //::testing::GTEST_FLAG(filter) = "dfg.saturateAdd";
     //::testing::GTEST_FLAG(filter) = "dfg.saturateCast";
     //::testing::GTEST_FLAG(filter) = "dfg.ScopedCaller";

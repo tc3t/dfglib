@@ -14,6 +14,7 @@
 #include <dfg/typeTraits.hpp>
 #include <dfg/build/buildTimeDetails.hpp>
 #include <dfg/cont/MapVector.hpp>
+#include <dfg/OpaquePtr.hpp>
 
 std::tuple<std::string, std::string, std::string> FunctionNameTest()
 {
@@ -696,6 +697,95 @@ TEST(dfg, isValidIndex)
     EXPECT_FALSE(isValidIndex(arr2, uint32_max + int64(1)));
     EXPECT_FALSE(isValidIndex(arr, uint32_max + uint64(1)));
     EXPECT_FALSE(isValidIndex(arr2, uint32_max + uint64(1)));
+}
+
+namespace
+{
+    class OpaquePtrTestBase
+    {
+    public:
+        DFG_OPAQUE_PTR_DECLARE();
+        int value() const;
+        void value(int newVal);
+    };
+
+    DFG_OPAQUE_PTR_DEFINE(OpaquePtrTestBase)
+    {
+        int i = 1;
+    };
+
+    int OpaquePtrTestBase::value() const
+    {
+        auto p = DFG_OPAQUE_PTR();
+        return (p) ? p->i : 0;
+    }
+
+    void OpaquePtrTestBase::value(int newVal)
+    {
+        DFG_OPAQUE_REF().i = newVal;
+    }
+
+    class OpaquePtrTestDerived : public OpaquePtrTestBase
+    {
+    public:
+        DFG_OPAQUE_PTR_DECLARE();
+
+        double sum() const;
+    };
+
+    DFG_OPAQUE_PTR_DEFINE(OpaquePtrTestDerived)
+    {
+        double d = 2.0;
+        std::unique_ptr<std::string> spString = std::unique_ptr<std::string>(new std::string("000"));
+    };
+
+    double OpaquePtrTestDerived::sum() const
+    {
+        return DFG_OPAQUE_PTR()->d + OpaquePtrTestBase::m_opaqueMember.get()->i + DFG_OPAQUE_PTR()->spString->size();
+    }
+
+} // unnamed namespace
+
+TEST(dfg, OpaquePtr)
+{
+    {
+        OpaquePtrTestBase b;
+        OpaquePtrTestBase bConst;
+        EXPECT_EQ(1, b.value());
+        EXPECT_EQ(1, bConst.value());
+        auto bCopyConstructed = b;
+        b.value(2);
+        auto bMoved = std::move(b);
+        EXPECT_EQ(nullptr, b.m_opaqueMember.get());
+        EXPECT_EQ(1, bCopyConstructed.value());
+        EXPECT_EQ(2, bMoved.value());
+        b.value();
+
+        // Assignment tests.
+        OpaquePtrTestBase bAssigned;
+        bAssigned = bMoved;
+        EXPECT_EQ(2, bMoved.value());
+        EXPECT_EQ(2, bAssigned.value());
+        OpaquePtrTestBase bMoveAssigned;
+        bMoveAssigned = std::move(bMoved);
+        EXPECT_EQ(nullptr, bMoved.m_opaqueMember.get());
+        EXPECT_EQ(2, bMoveAssigned.value());
+
+        // Testing that assigning empty empties destination.
+        EXPECT_EQ(1, bCopyConstructed.value());
+        bCopyConstructed = bMoved;
+        EXPECT_EQ(nullptr, b.m_opaqueMember.get());
+
+        bMoved = bMoveAssigned;
+        EXPECT_EQ(2, bMoved.value());
+        EXPECT_EQ(2, bMoveAssigned.value());
+        EXPECT_FALSE(bMoved.m_opaqueMember.get() == bMoveAssigned.m_opaqueMember.get());
+    }
+
+    {
+        OpaquePtrTestDerived d;
+        EXPECT_EQ(6, d.sum());
+    }
 }
 
 TEST(dfgTypeTraits, IsTrueTrait)

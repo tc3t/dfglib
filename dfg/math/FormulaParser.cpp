@@ -11,25 +11,19 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include "muparser/muParserTokenReader.cpp"
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
-
-class DFG_MODULE_NS(math)::FormulaParser::Data
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 {
-public:
     dfg_mu::Parser m_parser;
 };
 
-::DFG_MODULE_NS(math)::FormulaParser::FormulaParser()
-    : m_spData(new Data)
-{
-}
-
+::DFG_MODULE_NS(math)::FormulaParser::FormulaParser() = default;
 ::DFG_MODULE_NS(math)::FormulaParser::~FormulaParser() = default;
 
 auto ::DFG_MODULE_NS(math)::FormulaParser::setFormula(const StringViewC sv) -> ReturnStatus
 {
     try
     {
-        m_spData->m_parser.SetExpr(sv.toString());
+        DFG_OPAQUE_REF().m_parser.SetExpr(sv.toString());
         return true;
     }
     catch(const dfg_mu::Parser::exception_type& /*e*/)
@@ -44,7 +38,7 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineVariable(const StringViewC sv, 
         return false;
     try
     {
-        m_spData->m_parser.DefineVar(sv.toString(), pVar);
+        DFG_OPAQUE_REF().m_parser.DefineVar(sv.toString(), pVar);
         return true;
     }
     catch (const dfg_mu::Parser::exception_type& e)
@@ -58,7 +52,7 @@ double ::DFG_MODULE_NS(math)::FormulaParser::evaluateFormulaAsDouble()
 {
     try
     {
-        const auto val = m_spData->m_parser.Eval();
+        const auto val = DFG_OPAQUE_REF().m_parser.Eval();
         return val;
     }
     catch (const dfg_mu::Parser::exception_type& e)

@@ -642,6 +642,7 @@
     <ClInclude Include="..\dfg\numeric\rescale.hpp" />
     <ClInclude Include="..\dfg\numeric\trimByPercentileRange.hpp" />
     <ClInclude Include="..\dfg\numeric\vectorizingLoop.hpp" />
+    <ClInclude Include="..\dfg\OpaquePtr.hpp" />
     <ClInclude Include="..\dfg\os.hpp" />
     <ClInclude Include="..\dfg\osAll.hpp" />
     <ClInclude Include="..\dfg\os\fileSize.hpp" />
