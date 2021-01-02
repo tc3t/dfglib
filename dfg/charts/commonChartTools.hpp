@@ -652,7 +652,7 @@ public:
 
     virtual void addContextMenuEntriesForChartObjects(void*) {} // TODO: no void*
 
-    virtual void removeAllChartObjects() {}
+    virtual void removeAllChartObjects(bool bRepaint = true) { DFG_UNUSED(bRepaint); }
 
     virtual int width() const { return 0; }
     virtual int height() const { return 0; }
@@ -671,6 +671,10 @@ public:
     virtual bool enableLegend(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
     virtual bool enableToolTip(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
     virtual void createLegends() {}
+
+    // Gives a hint to chart that it is now being updated so it can e.g. show some kind of update indicator.
+    // If concrete instance has implementation for this, it must automatically reset the state on call to repaintCanvas()
+    virtual void beginUpdateState() {};
 
     virtual ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam&)   { return nullptr; }
     virtual ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam&) { return nullptr; }

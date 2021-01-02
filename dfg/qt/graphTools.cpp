@@ -1705,7 +1705,7 @@ public:
 
     void addContextMenuEntriesForChartObjects(void* pMenu) override;
 
-    void removeAllChartObjects() override;
+    void removeAllChartObjects(bool bRepaint = true) override;
 
     void repaintCanvas() override;
 
@@ -1763,6 +1763,8 @@ public:
 
     template <class Func_T> static void forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func);
 
+    void beginUpdateState() override;
+
 private:
     template <class This_T, class Func_T>
     static void forEachAxisRectImpl(This_T& rThis, Func_T&& func);
@@ -1780,6 +1782,7 @@ public:
     bool m_bLegendEnabled = false;
     bool m_bToolTipEnabled = true;
     QVector<QCPLegend*> m_legends; // All but the default legend
+    QPointer<QCPItemText> m_spUpdateIndicator; // Note: owned by QCustomPlot-object.
 }; // ChartCanvasQCustomPlot
 
 
@@ -2103,7 +2106,7 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
     }
 }
 
-void ChartCanvasQCustomPlot::removeAllChartObjects()
+void ChartCanvasQCustomPlot::removeAllChartObjects(const bool bRepaint)
 {
     auto p = getWidget();
     if (!p)
@@ -2137,8 +2140,8 @@ void ChartCanvasQCustomPlot::removeAllChartObjects()
             });
         });
     }
-
-    repaintCanvas();
+    if (bRepaint)
+        repaintCanvas();
 }
 
 namespace
@@ -2459,8 +2462,11 @@ void ChartCanvasQCustomPlot::setAxisTickLabelDirection(StringViewUtf8 svPanelId,
 void ChartCanvasQCustomPlot::repaintCanvas()
 {
     auto p = getWidget();
-    if (p)
-        p->replot();
+    if (!p)
+        return;
+    if (m_spUpdateIndicator)
+        p->removeItem(m_spUpdateIndicator);
+    p->replot();
 }
 
 int ChartCanvasQCustomPlot::width() const
@@ -3289,6 +3295,36 @@ void ChartCanvasQCustomPlot::optimizeAllAxesRanges()
     pQcp->replot();
 }
 
+void ChartCanvasQCustomPlot::beginUpdateState()
+{
+    auto pQcp = getWidget();
+    if (!pQcp)
+        return;
+    if (m_spUpdateIndicator)
+    {
+        DFG_ASSERT_CORRECTNESS(false); // beginUpdateState() getting called twice before replot? Not a fatal error, but asserting just to make sure it get's noticed during development.
+        return;
+    }
+
+    m_spUpdateIndicator = new QCPItemText(pQcp); // QCustomPlot-object takes ownership.
+    auto pUpdateIndicator = m_spUpdateIndicator.data();
+    pUpdateIndicator->setClipToAxisRect(false); // If clipToAxisRect is true, text would show only within one axis rect; in practice means that typically works only when there's just one panel.
+    pUpdateIndicator->setText(tr("Updating..."));
+    pUpdateIndicator->setLayer("legend"); // Setting text to legend layer so that it shows above graph stuff (axes etc.).
+    // Placing text in the middle of canvas.
+    {
+        pUpdateIndicator->position->setType(QCPItemPosition::ptViewportRatio);
+        pUpdateIndicator->position->setCoords(0.5, 0.5);
+    }
+    // Increasing font size
+    pUpdateIndicator->setFont(QFont(pUpdateIndicator->font().family(), 15));
+    // Setting text background so that text shows better.
+    pUpdateIndicator->setBrush(QBrush(QColor(255, 255, 255, 200))); // Somewhat transparent white background.
+
+    pQcp->setBackground(QBrush(QColor(240, 240, 240))); // Setting light grey background during update.
+    pQcp->replot();
+}
+
 template <class ChartObject_T, class ValueCont_T>
 static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
 {
@@ -3975,6 +4011,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         DFG_ASSERT_WITH_MSG(false, "Internal error, no graph display object");
         return;
     }
+    auto pDefWidget = getDefinitionWidget();
+    if (!pDefWidget)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing control widget");
+        return;
+    }
+
     auto pChart = m_spGraphDisplay->chart();
     if (!pChart)
     {
@@ -3984,15 +4027,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 
     auto& rChart = *pChart;
 
-    // Clearing existing objects.
-    rChart.removeAllChartObjects();
+    rChart.beginUpdateState();
 
-    auto pDefWidget = getDefinitionWidget();
-    if (!pDefWidget)
-    {
-        DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing control widget");
-        return;
-    }
+    // Clearing existing objects.
+    rChart.removeAllChartObjects(false); // false = no repaint
 
     int nGraphCounter = 0;
     int nHistogramCounter = 0;
