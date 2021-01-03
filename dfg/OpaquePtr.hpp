@@ -1,3 +1,5 @@
+#pragma once
+
 #include "dfgDefs.hpp"
 #include <memory>
 
