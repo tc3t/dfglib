@@ -3909,6 +3909,34 @@ auto DFG_MODULE_NS(qt)::GraphDisplay::getController() -> ChartController*
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Opaque member definition
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget)
+{
+    ::DFG_MODULE_NS(time)::TimerCpu m_refreshTimer; // Used for measuring refresh times.
+};
+
+// ChartRefreshParam
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam)
+{
+public:
+    ChartDefinition m_chartDefinition;
+};
+
+::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::ChartRefreshParam() = default;
+::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::ChartRefreshParam(const ChartRefreshParam& other) = default;
+::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::~ChartRefreshParam() = default;
+
+void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::chartDefinition(const ChartDefinition& chartDefinition)
+{
+    DFG_OPAQUE_REF().m_chartDefinition = chartDefinition;
+}
+
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::chartDefinition() const -> const ChartDefinition&
+{
+    DFG_ASSERT_UB(DFG_OPAQUE_PTR() != nullptr);
+    return DFG_OPAQUE_PTR()->m_chartDefinition;
+}
+
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
 {
     auto pLayout = new QGridLayout(this);
@@ -3923,6 +3951,7 @@ DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
     DFG_QT_VERIFY_CONNECT(connect(m_spControlPanel.get(), &GraphControlPanel::sigPreferredSizeChanged, this, &GraphControlAndDisplayWidget::onControllerPreferredSizeChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spControlPanel.get(), &GraphControlPanel::sigGraphEnableCheckboxToggled, this, &GraphControlAndDisplayWidget::onGraphEnableCheckboxToggled));
 
+    DFG_QT_VERIFY_CONNECT(connect(this, &GraphControlAndDisplayWidget::sigFetchDataDone, this, &GraphControlAndDisplayWidget::onChartDataFetched));
 
     onControllerPreferredSizeChanged(m_spControlPanel->sizeHint());
 
@@ -3992,10 +4021,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::clearCachesImpl()
     m_spCache.reset();
 }
 
+auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::chart() -> ChartCanvas*
+{
+    return (m_spGraphDisplay) ? m_spGraphDisplay->chart() : nullptr;
+}
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 {
-    using namespace ::DFG_MODULE_NS(charts);
-    DFG_MODULE_NS(time)::TimerCpu timer;
+    DFG_OPAQUE_REF().m_refreshTimer = ::DFG_MODULE_NS(time)::TimerCpu();
 
     if (m_spCache)
         m_spCache->removeInvalidCaches();
@@ -4006,31 +4039,32 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     //       e.g. provide interface from which user of data source can check if certain operations can be done and/or data source should ignore
     //       read requests that can't be done in safe manner.
 
-    if (!m_spGraphDisplay)
-    {
-        DFG_ASSERT_WITH_MSG(false, "Internal error, no graph display object");
-        return;
-    }
-    auto pDefWidget = getDefinitionWidget();
-    if (!pDefWidget)
-    {
-        DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing control widget");
-        return;
-    }
-
-    auto pChart = m_spGraphDisplay->chart();
+    auto pChart = this->chart();
     if (!pChart)
     {
         DFG_ASSERT_WITH_MSG(false, "Internal error, no chart object available");
         return;
     }
-
     auto& rChart = *pChart;
 
     rChart.beginUpdateState();
 
     // Clearing existing objects.
     rChart.removeAllChartObjects(false); // false = no repaint
+    startChartDataFetching();
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataFetched(ChartRefreshParam param)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+
+    auto pChart = this->chart();
+    if (!pChart)
+    {
+        DFG_ASSERT_WITH_MSG(false, "Internal error, no chart object available");
+        return;
+    }
+    auto& rChart = *pChart;
 
     int nGraphCounter = 0;
     int nHistogramCounter = 0;
@@ -4039,7 +4073,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     GraphDefinitionEntry* pGlobalConfigEntry = nullptr; // Set to point to global config if such exists. This and globalConfigEntry are nothing but inconvenient way to do what optional would provide.
     ::DFG_MODULE_NS(cont)::MapVectorAoS<StringUtf8, GraphDefinitionEntry> mapPanelIdToConfig;
     // Going through every item in definition entry table and redrawing them.
-    pDefWidget->getChartDefinition().forEachEntry([&](const GraphDefinitionEntry& defEntry)
+    param.chartDefinition().forEachEntry([&](const GraphDefinitionEntry& defEntry)
     {
         const auto sErrorString = defEntry.fieldValueStr(ChartObjectFieldIdStr_errorString);
         if (!sErrorString.empty())
@@ -4085,7 +4119,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             }
             return;
         }
-        
+
         // Handling case type == panel_config
         if (sEntryType == ChartObjectChartTypeStr_panelConfig)
         {
@@ -4095,7 +4129,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         }
 
         const auto configParamCreator = [&]()
-        { 
+        {
             auto iter = mapPanelIdToConfig.find(defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId));
             return ChartConfigParam((iter != mapPanelIdToConfig.end()) ? &iter->second : nullptr, pGlobalConfigEntry);
         };
@@ -4147,6 +4181,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     // Background handling
     pChart->setBackground(ChartConfigParam(pGlobalConfigEntry).valueStr(ChartObjectFieldIdStr_background));
 
+    auto& timer = DFG_OPAQUE_REF().m_refreshTimer;
+
     DFG_MODULE_NS(time)::TimerCpu timerRepaint;
     rChart.repaintCanvas();
     const auto elapsedRepaint = timerRepaint.elapsedWallSeconds();
@@ -4165,6 +4201,21 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         }
         DFG_QT_CHART_CONSOLE_INFO(QString("Cache usage: %1").arg(s));
     }
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
+{
+    auto pDefWidget = getDefinitionWidget();
+    if (!pDefWidget)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR("Internal error: missing control widget");
+        return;
+    }
+
+    // Currently no separate fetching round is implemented so just emitting the signal.
+    ChartRefreshParam param;
+    param.chartDefinition(pDefWidget->getChartDefinition());
+    Q_EMIT sigFetchDataDone(param);
 }
 
 namespace
@@ -4311,20 +4362,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     const bool bXisRowIndex = rowFlags[0];
     const bool bYisRowIndex = rowFlags[1];
 
-    const char szRowIndexName[] = QT_TR_NOOP("Row number");
-    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType(ChartDataType::unknown);
-    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType(ChartDataType::unknown);
-    const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
-    const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
-    auto spSeries = rChart.createXySeries(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
-    if (!spSeries)
-    {
-        if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
-            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("couldn't create series object"));
-        return;
-    }
-    auto& rSeries = *spSeries;
-
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
 
@@ -4396,6 +4433,20 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
             defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
         return;
     }
+
+    const char szRowIndexName[] = QT_TR_NOOP("Row number");
+    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType(ChartDataType::unknown);
+    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType(ChartDataType::unknown);
+    const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
+    const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
+    auto spSeries = rChart.createXySeries(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
+    if (!spSeries)
+    {
+        if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
+            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("couldn't create series object"));
+        return;
+    }
+    auto& rSeries = *spSeries;
 
     // Setting values to series.
     rSeries.setValues(makeRange(*pXvalues), makeRange(*pYvalues));

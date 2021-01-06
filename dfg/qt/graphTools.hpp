@@ -9,6 +9,7 @@
 #include "../cont/valueArray.hpp"
 #include "../cont/ViewableSharedPtr.hpp"
 #include "../charts/commonChartTools.hpp"
+#include "../OpaquePtr.hpp"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -378,6 +379,27 @@ private:
 
     GraphDefinitionWidget* getDefinitionWidget();
 
+    ChartCanvas* chart();
+
+    class ChartRefreshParam
+    {
+    public:
+        ChartRefreshParam();
+        ChartRefreshParam(const ChartRefreshParam& other);
+        ~ChartRefreshParam();
+        void chartDefinition(const ChartDefinition& chartDefinition);
+        const ChartDefinition& chartDefinition() const;
+        DFG_OPAQUE_PTR_DECLARE();
+    };
+
+    // Starts fetching data for chart items and when done, emits sigFetchDataDone()
+    void startChartDataFetching();
+    // Called when chart data has been fetched and actual chart items can be created.
+    void onChartDataFetched(ChartRefreshParam);
+
+signals:
+    void sigFetchDataDone(ChartRefreshParam);
+
 public:
     QObjectStorage<QSplitter> m_spSplitter;
     QObjectStorage<GraphControlPanel> m_spControlPanel;
@@ -387,6 +409,8 @@ public:
 
     std::unique_ptr<ChartDataCache> m_spCache;
     bool m_bRefreshPending = false; // Set to true if refresh has been scheduled so new refresh requests can be ignored.
+
+    DFG_OPAQUE_PTR_DECLARE();
 
 }; // Class GraphControlAndDisplayWidget
 
