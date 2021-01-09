@@ -103,6 +103,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         ValueVectorD* editableValuesByIndex(size_t i);
         ValueVectorD* editableValuesByRef(DataVectorRef& ref);
 
+        StringVector* editableStringsByIndex(size_t i);
         StringVector* editableStringsByRef(DataVectorRef& ref);
 
         // Sets active vectors.
@@ -287,12 +288,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
     inline auto ChartOperationPipeData::editableStringsByRef(DataVectorRef& ref) -> StringVector*
     {
-        const auto nIndex = static_cast<size_t>(&ref - &m_vectorRefs.front());
-        if (nIndex >= m_valueVectors.max_size())
+        return editableStringsByIndex(static_cast<size_t>(&ref - &m_vectorRefs.front()));
+    }
+
+    inline auto ChartOperationPipeData::editableStringsByIndex(const size_t i) -> StringVector*
+    {
+        if (i >= m_valueVectors.max_size())
             return nullptr;
-        if (!isValidIndex(m_stringVectors, nIndex))
-            m_stringVectors.resize(nIndex + 1);
-        return &m_stringVectors[nIndex];
+        if (!isValidIndex(m_stringVectors, i))
+            m_stringVectors.resize(i + 1);
+        return &m_stringVectors[i];
     }
 
     inline void ChartOperationPipeData::setDataRefs(DataVectorRef ref0, DataVectorRef ref1, DataVectorRef ref2)

@@ -375,6 +375,12 @@ private:
     void refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
     void handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry);
 
+    class ChartData;
+
+    ChartData prepareDataForXy(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+    ChartData prepareDataForHistogram(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+    ChartData prepareDataForBars(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+
     void setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator);
 
     GraphDefinitionWidget* getDefinitionWidget();

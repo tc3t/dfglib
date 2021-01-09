@@ -4338,7 +4338,48 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
     }
 } } } // dfg:::qt::<unnamed>
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
+class ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData : public ::DFG_MODULE_NS(charts)::ChartOperationPipeData
+{
+public:
+    ChartDataType columnDataType(const size_t c) const
+    {
+        return isValidIndex(m_columnDataTypes, c) ? m_columnDataTypes[c] : ChartDataType();
+    }
+    QString columnName(const size_t c) const
+    {
+        return isValidIndex(m_columnNames, c) ? m_columnNames[c] : QString();
+    }
+
+    void copyOrMoveDataFrom(::DFG_MODULE_NS(charts)::ChartOperationPipeData& other)
+    {
+        this->m_vectorRefs.resize(other.vectorCount());
+        for (size_t i = 0, nCount = other.vectorCount(); i < nCount; ++i)
+        {
+            auto pValues = other.valuesByIndex(i);
+            if (pValues)
+            {
+                *this->editableValuesByIndex(i) = std::move(*pValues);
+                this->m_vectorRefs[i] = this->editableValuesByIndex(i);
+            }
+            else
+            {
+                auto pStrings = other.stringsByIndex(i);
+                if (pStrings)
+                {
+                    *this->editableStringsByIndex(i) = std::move(*pStrings);
+                    this->m_vectorRefs[i] = this->editableStringsByIndex(i);
+                }
+            }
+        }
+    }
+
+    std::vector<ChartDataType> m_columnDataTypes;
+    std::vector<QString> m_columnNames;
+    bool m_bXisRowIndex = false;
+    bool m_bYisRowIndex = false;
+};
+
+auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
 {
     using namespace ::DFG_MODULE_NS(charts);
     if (!m_spCache)
@@ -4349,7 +4390,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     auto optData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optData || optData->columnCount() < 1)
-        return;
+        return ChartData();
 
     auto& tableData = *optData;
 
@@ -4357,7 +4398,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     auto pYdata = tableData.columnDataByIndex(columnIndexes[1]);
 
     if (!pXdata || !pYdata)
-        return;
+        return ChartData();
 
     const bool bXisRowIndex = rowFlags[0];
     const bool bYisRowIndex = rowFlags[1];
@@ -4424,21 +4465,39 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&xValueMap.m_keyStorage, &xValueMap.m_valueStorage);
     defEntry.applyOperations(operationData);
 
-    auto pXvalues = operationData.constValuesByIndex(0);
-    auto pYvalues = operationData.constValuesByIndex(1);
+    ChartData rv;
+    rv.copyOrMoveDataFrom(operationData);
+    rv.m_bXisRowIndex = bXisRowIndex;
+    rv.m_bYisRowIndex = bYisRowIndex;
+    rv.m_columnDataTypes.push_back(tableData.columnDataType(pXdata));
+    rv.m_columnDataTypes.push_back(tableData.columnDataType(pYdata));
+    rv.m_columnNames.push_back(tableData.columnName(pXdata));
+    rv.m_columnNames.push_back(tableData.columnName(pYdata));
+    return rv;
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    auto rawData = prepareDataForXy(source, defEntry);
+
+    auto pXvalues = rawData.constValuesByIndex(0);
+    auto pYvalues = rawData.constValuesByIndex(1);
+    const auto bXisRowIndex = rawData.m_bXisRowIndex;
+    const auto bYisRowIndex = rawData.m_bYisRowIndex;
 
     if (!pXvalues || !pYvalues)
     {
         if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
-            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
+            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available"));
         return;
     }
 
     const char szRowIndexName[] = QT_TR_NOOP("Row number");
-    const auto xType = (!bXisRowIndex) ? tableData.columnDataType(pXdata) : ChartDataType(ChartDataType::unknown);
-    const auto yType = (!bYisRowIndex) ? tableData.columnDataType(pYdata) : ChartDataType(ChartDataType::unknown);
-    const auto sXname = (!bXisRowIndex) ? tableData.columnName(pXdata) : QString(szRowIndexName);
-    const auto sYname = (!bYisRowIndex) ? tableData.columnName(pYdata) : QString(szRowIndexName);
+    const auto xType = (!bXisRowIndex) ? rawData.columnDataType(0) : ChartDataType(ChartDataType::unknown);
+    const auto yType = (!bYisRowIndex) ? rawData.columnDataType(1) : ChartDataType(ChartDataType::unknown);
+    const auto sXname = (!bXisRowIndex) ? rawData.columnName(0) : QString(szRowIndexName);
+    const auto sYname = (!bYisRowIndex) ? rawData.columnName(1) : QString(szRowIndexName);
     auto spSeries = rChart.createXySeries(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
     if (!spSeries)
     {
@@ -4508,12 +4567,12 @@ namespace
     }
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
 {
     using namespace ::DFG_MODULE_NS(charts);
     const auto nColumnCount = source.columnCount();
     if (nColumnCount < 1)
-        return;
+        return ChartData();
 
     if (!m_spCache)
         m_spCache.reset(new ChartDataCache);
@@ -4533,24 +4592,24 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optTableData)
-        return;
+        return ChartData();
 
     ChartObjectHolder<Histogram> spHistogram;
     if (!bTextValued)
     {
         if (!optTableData || optTableData->columnCount() < 1)
-            return;
+            return ChartData();
 
         auto pCacheColumn = optTableData->columnDataByIndex(columnIndexes[0]);
 
         if (!pCacheColumn)
-            return;
+            return ChartData();
 
         TableSelectionCacheItem::RowToValueMap singleColumnCopy;
         const TableSelectionCacheItem::RowToValueMap* pRowToValues = pCacheColumn;
 
         if (!handleXrows(defEntry, pRowToValues, singleColumnCopy))
-            return;
+            return ChartData();
 
         // Applying operations
         ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pRowToValues->m_valueStorage, nullptr);
@@ -4561,12 +4620,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         {
             if (!pValues && defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
                 defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
-            return;
+            return ChartData();
         }
 
-        const auto xType = optTableData->columnDataType(pCacheColumn);
-        const auto sXaxisName = optTableData->columnName(pCacheColumn);
-        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pValues), xType, qStringToStringUtf8(sXaxisName)));
+        ChartData rv;
+        rv.copyOrMoveDataFrom(operationData);
+        rv.m_columnDataTypes.push_back(optTableData->columnDataType(pCacheColumn));
+        rv.m_columnNames.push_back(optTableData->columnName(pCacheColumn));
+        return rv;
 
     }
     else // Case text valued
@@ -4576,14 +4637,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         {
             if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
                 defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("no data found for histogram"));
-            return;
+            return ChartData();
         }
 
         TableSelectionCacheItem::RowToStringMap stringColumnCopy;
 
         if (!handleXrows(defEntry, pStrings, stringColumnCopy))
-            return;
-        
+            return ChartData();
+
         // Applying operations
         ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pStrings->m_valueStorage, nullptr);
         defEntry.applyOperations(operationData);
@@ -4593,11 +4654,37 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
         {
             if (!pStrings && defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
                 defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
-            return;
+            return ChartData();
         }
 
-        const auto sXaxisName = optTableData->columnName(columnIndexes[0]);
-        spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pFinalStrings), qStringToStringUtf8(sXaxisName)));
+        ChartData rv;
+        rv.copyOrMoveDataFrom(operationData);
+        rv.m_columnNames.push_back(optTableData->columnName(columnIndexes[0]));
+        return rv;
+    }
+
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+
+    auto rawData = prepareDataForHistogram(source, defEntry);
+
+    const auto sXaxisName = rawData.columnName(0);
+    ChartObjectHolder<Histogram> spHistogram;
+    if (rawData.stringsByIndex(0) == nullptr)
+    {
+        const auto xType = rawData.columnDataType(0);
+        auto pValues = rawData.constValuesByIndex(0);
+        if (pValues)
+            spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pValues), xType, qStringToStringUtf8(sXaxisName)));
+    }
+    else // Case text valued
+    {
+        auto pStrings = rawData.constStringsByIndex(0);
+        if (pStrings)
+            spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), qStringToStringUtf8(sXaxisName)));
     }
 
     if (!spHistogram)
@@ -4606,13 +4693,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     setCommonChartObjectProperties(*spHistogram, defEntry, configParamCreator, DefaultNameCreator("Histogram", nHistogramCounter));
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nBarsCounter)
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
 {
     using namespace ::DFG_MODULE_NS(charts);
 
     const auto nColumnCount = source.columnCount();
     if (nColumnCount < 1)
-        return;
+        return ChartData();
 
     if (!m_spCache)
         m_spCache.reset(new ChartDataCache);
@@ -4622,39 +4709,52 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& r
     auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optTableData || optTableData->columnCount() < 1)
-        return;
+        return ChartData();
 
     auto pFirstCol = optTableData->columnStringsByIndex(columnIndexes[0]);
     auto pSecondCol = optTableData->columnDataByIndex(columnIndexes[1]);
 
     if (!pFirstCol || !pSecondCol)
-        return;
+        return ChartData();
 
     TableSelectionCacheItem::RowToStringMap labelColumnCopy;
     TableSelectionCacheItem::RowToValueMap valueColumnCopy;
     // Applying x_rows filter if defined
     {
         if (!handleXrows(defEntry, pFirstCol, labelColumnCopy))
-            return;
+            return ChartData();
         if (!handleXrows(defEntry, pSecondCol, valueColumnCopy))
-            return;
+            return ChartData();
     }
-
-    const auto sXaxisName = optTableData->columnName(columnIndexes[0]);
-    const auto sYaxisName = optTableData->columnName(columnIndexes[1]);
 
     // Applying operations
     ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pFirstCol->m_valueStorage, &pSecondCol->m_valueStorage);
     defEntry.applyOperations(operationData);
 
-    auto pStrings = operationData.constStringsByIndex(0);
-    auto pValues = operationData.constValuesByIndex(1);
+    ChartData rawData;
+    rawData.copyOrMoveDataFrom(operationData);
+    rawData.m_columnNames.push_back(optTableData->columnName(columnIndexes[0]));
+    rawData.m_columnNames.push_back(optTableData->columnName(columnIndexes[1]));
+    return rawData;
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nBarsCounter)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+
+    auto rawData = prepareDataForBars(source, defEntry);
+
+    auto pStrings = rawData.constStringsByIndex(0);
+    auto pValues = rawData.constValuesByIndex(1);
     if (!pStrings || !pValues)
     {
         if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
-            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no data available after operations"));
+            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no data available"));
         return;
     }
+
+    const auto sXaxisName = rawData.columnName(0);
+    const auto sYaxisName = rawData.columnName(1);
 
     auto spBarSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), makeRange(*pValues), ChartDataType::unknown,
                                                                      qStringToStringUtf8(sXaxisName), qStringToStringUtf8(sYaxisName)));
