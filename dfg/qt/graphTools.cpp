@@ -432,15 +432,18 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringView
     if (s.size() == 7 && s[4] == '-')
         return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), "yyyy-MM"), ChartDataType::dateOnlyYearMonth);
 
-    // [d]d.[m]m.yyyy
-    std::regex regex(R"((?:^|^\w\w )(\d{1,2})(?:\.)(\d{1,2})(?:\.)(\d\d\d\d)$)");
-    std::cmatch baseMatch;
-    if (std::regex_match(svUtf8.beginRaw(), baseMatch, regex) && baseMatch.size() == 4)
+    // [ww] [d]d.[m]m.yyyy
+    if (s.length() >= 8 && s[s.length() - 5] == '.')
     {
-        const auto asInt = [](const std::csub_match& subMatch) { return ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(subMatch.first, subMatch.second)); };
-        // 0 has entire match, so actual captures start from index 1.
-        return dateToDoubleAndColumnTypeHandling(QDateTime(QDate(asInt(baseMatch[3]), asInt(baseMatch[2]), asInt(baseMatch[1])), QTime(0, 0)), ChartDataType::dateOnly);
+        std::regex regex(R"((?:^|^\w\w )(\d{1,2})(?:\.)(\d{1,2})(?:\.)(\d\d\d\d)$)");
+        std::cmatch baseMatch;
+        if (std::regex_match(svUtf8.beginRaw(), baseMatch, regex) && baseMatch.size() == 4)
+        {
+            const auto asInt = [](const std::csub_match& subMatch) { return ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(subMatch.first, subMatch.second)); };
+            // 0 has entire match, so actual captures start from index 1.
+            return dateToDoubleAndColumnTypeHandling(QDateTime(QDate(asInt(baseMatch[3]), asInt(baseMatch[2]), asInt(baseMatch[1])), QTime(0, 0)), ChartDataType::dateOnly);
 
+        }
     }
 
     if (s.size() >= 8 && s[2] == ':' && s[5] == ':')
