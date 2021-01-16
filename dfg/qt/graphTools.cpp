@@ -309,6 +309,14 @@ auto DataSourceContainer::idListAsString() const -> QString
     return s;
 }
 
+auto DataSourceContainer::findById(const GraphDataSourceId& id) -> iterator
+{
+    return std::find_if(m_sources.begin(), m_sources.end(), [&](const std::shared_ptr<GraphDataSource>& spDs)
+        {
+            return (spDs && spDs->uniqueId() == id);
+        });
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -463,6 +471,16 @@ auto ::DFG_MODULE_NS(qt)::GraphDataSource::columnDataType(const DataSourceIndex 
     const auto colTypes = columnDataTypes();
     auto iter = colTypes.find(nCol);
     return (iter != colTypes.end()) ? iter->second : ChartDataType();
+}
+
+bool ::DFG_MODULE_NS(qt)::GraphDataSource::isSafeToQueryDataFromCallingThread() const
+{
+    return isSafeToQueryDataFromThread(QThread::currentThread());
+}
+
+bool ::DFG_MODULE_NS(qt)::GraphDataSource::isSafeToQueryDataFromThreadImpl(const QThread* pThread) const
+{
+    return this->thread() == pThread;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3909,32 +3927,136 @@ auto DFG_MODULE_NS(qt)::GraphDisplay::getController() -> ChartController*
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Opaque member definition
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget)
+class ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData : public ::DFG_MODULE_NS(charts)::ChartOperationPipeData
 {
-    ::DFG_MODULE_NS(time)::TimerCpu m_refreshTimer; // Used for measuring refresh times.
-};
+public:
+    using BaseClass = ::DFG_MODULE_NS(charts)::ChartOperationPipeData;
+
+    ChartDataType columnDataType(const size_t c) const
+    {
+        return isValidIndex(m_columnDataTypes, c) ? m_columnDataTypes[c] : ChartDataType();
+    }
+    QString columnName(const size_t c) const
+    {
+        return isValidIndex(m_columnNames, c) ? m_columnNames[c] : QString();
+    }
+
+    ChartData& operator=(::DFG_MODULE_NS(charts)::ChartOperationPipeData&& other)
+    {
+        BaseClass::operator=(std::move(other));
+        return *this;
+    }
+
+    // Note: this differs from move assignment: move assignment moves internal data buffers from other to this, while
+    //       this function moves externally owned data to internal buffers.
+    void copyOrMoveDataFrom(::DFG_MODULE_NS(charts)::ChartOperationPipeData& other)
+    {
+        this->m_vectorRefs.resize(other.vectorCount());
+        std::vector<bool> stringFlags(this->m_vectorRefs.size(), false);
+        for (size_t i = 0, nCount = other.vectorCount(); i < nCount; ++i)
+        {
+            auto pValues = other.valuesByIndex(i);
+            if (pValues)
+                *this->editableValuesByIndex(i) = std::move(*pValues);
+            else
+            {
+                auto pStrings = other.stringsByIndex(i);
+                if (pStrings)
+                {
+                    *this->editableStringsByIndex(i) = std::move(*pStrings);
+                    stringFlags[i] = true;
+                }
+            }
+        }
+        // Updating references.
+        for (size_t i = 0, nCount  = stringFlags.size(); i < nCount; ++i)
+        {
+            if (stringFlags[i])
+                this->m_vectorRefs[i] = this->editableStringsByIndex(i);
+            else
+                this->m_vectorRefs[i] = this->editableValuesByIndex(i);
+        }
+    }
+
+    std::vector<ChartDataType> m_columnDataTypes;
+    std::vector<QString> m_columnNames;
+    bool m_bXisRowIndex = false;
+    bool m_bYisRowIndex = false;
+}; // class ChartData
 
 // ChartRefreshParam
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam)
 {
 public:
     ChartDefinition m_chartDefinition;
+    DataSourceContainer m_sources;
+    ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ChartData> m_preparedData; // Index refers to index in m_chartDefinition.
+    std::shared_ptr<ChartDataCache> m_spCache;
+};
+
+void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::prepareData(ChartRefreshParamPtr spParam)
+{
+    if (spParam)
+    {
+        const auto& chartDefinition = spParam->chartDefinition();
+        const auto pCurrentThread = QThread::currentThread();
+        chartDefinition.forEachEntry([&](const GraphDefinitionEntry& entry)
+        {
+            auto& sources = spParam->dataSources();
+            const auto sSourceId = entry.sourceId(chartDefinition.m_defaultSourceId);
+            auto iterSource = sources.findById(sSourceId);
+            if (iterSource != sources.end() && sources.iterToRef(iterSource).isSafeToQueryDataFromThread(pCurrentThread))
+                spParam->storePreparedData(entry, GraphControlAndDisplayWidget::prepareData(spParam->cache(), sources.iterToRef(iterSource), entry));
+        });
+    }
+    Q_EMIT sigPreparationFinished(std::move(spParam));
+}
+
+// Opaque member definition
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget)
+{
+    ::DFG_MODULE_NS(time)::TimerCpu m_refreshTimer; // Used for measuring refresh times.
+    QThread m_threadDataPreparation;
+    ChartDataPreparator m_chartPreparator;
 };
 
 ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::ChartRefreshParam() = default;
 ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::ChartRefreshParam(const ChartRefreshParam& other) = default;
 ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::~ChartRefreshParam() = default;
 
-void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::chartDefinition(const ChartDefinition& chartDefinition)
+::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::ChartRefreshParam(const ChartDefinition& chartDefinition, DataSourceContainer sources, std::shared_ptr<ChartDataCache> spCache)
 {
     DFG_OPAQUE_REF().m_chartDefinition = chartDefinition;
+    DFG_OPAQUE_REF().m_sources = std::move(sources);
+    DFG_OPAQUE_REF().m_spCache = std::move(spCache);
 }
 
 auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::chartDefinition() const -> const ChartDefinition&
 {
     DFG_ASSERT_UB(DFG_OPAQUE_PTR() != nullptr);
     return DFG_OPAQUE_PTR()->m_chartDefinition;
+}
+
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::dataSources() -> DataSourceContainer&
+{
+    return DFG_OPAQUE_REF().m_sources;
+}
+
+void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::storePreparedData(const GraphDefinitionEntry& defEntry, ChartData chartData)
+{
+    DFG_OPAQUE_REF().m_preparedData.insert(defEntry.index(), std::move(chartData));
+    DFG_ASSERT(chartData.m_valueVectors.empty() && chartData.m_stringVectors.empty()); // Verifying that didn't make redundant copies.
+}
+
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::preparedDataForEntry(const GraphDefinitionEntry& defEntry) -> ChartData*
+{
+    auto iter = DFG_OPAQUE_REF().m_preparedData.find(defEntry.index());
+    return  (iter != DFG_OPAQUE_REF().m_preparedData.end()) ? &iter->second : nullptr;
+}
+
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::cache() -> std::shared_ptr<ChartDataCache>&
+{
+    return DFG_OPAQUE_REF().m_spCache;
 }
 
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
@@ -3951,8 +4073,6 @@ DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
     DFG_QT_VERIFY_CONNECT(connect(m_spControlPanel.get(), &GraphControlPanel::sigPreferredSizeChanged, this, &GraphControlAndDisplayWidget::onControllerPreferredSizeChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spControlPanel.get(), &GraphControlPanel::sigGraphEnableCheckboxToggled, this, &GraphControlAndDisplayWidget::onGraphEnableCheckboxToggled));
 
-    DFG_QT_VERIFY_CONNECT(connect(this, &GraphControlAndDisplayWidget::sigFetchDataDone, this, &GraphControlAndDisplayWidget::onChartDataFetched));
-
     onControllerPreferredSizeChanged(m_spControlPanel->sizeHint());
 
     const auto nCurrentHeight = this->height();
@@ -3964,6 +4084,8 @@ DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
 
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::~GraphControlAndDisplayWidget()
 {
+    // Stopping preparation thread.
+    DFG_OPAQUE_REF().m_threadDataPreparation.quit();
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setChartGuide(const QString& s)
@@ -4033,12 +4155,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     if (m_spCache)
         m_spCache->removeInvalidCaches();
 
-    // TODO: graph filling should be done in worker thread to avoid GUI freezing.
-    //       It's worth noting though that data sources might not be thread-safe (at least CsvItemModelChartDataSource wasn't as of 2020-06-29).
-    //       Data sources should probably either guarantee thread-safety or at least be able to gracefully handle threading:
-    //       e.g. provide interface from which user of data source can check if certain operations can be done and/or data source should ignore
-    //       read requests that can't be done in safe manner.
-
     auto pChart = this->chart();
     if (!pChart)
     {
@@ -4054,9 +4170,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     startChartDataFetching();
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataFetched(ChartRefreshParam param)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationReady(ChartRefreshParamPtr spParam)
 {
     using namespace ::DFG_MODULE_NS(charts);
+
+    if (!spParam)
+        return;
+
+    auto& param = *spParam;
 
     auto pChart = this->chart();
     if (!pChart)
@@ -4072,6 +4193,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataFetched(ChartRe
     GraphDefinitionEntry globalConfigEntry; // Stores global config entry if present.
     GraphDefinitionEntry* pGlobalConfigEntry = nullptr; // Set to point to global config if such exists. This and globalConfigEntry are nothing but inconvenient way to do what optional would provide.
     ::DFG_MODULE_NS(cont)::MapVectorAoS<StringUtf8, GraphDefinitionEntry> mapPanelIdToConfig;
+
+    // Getting a reference to the cache object; this is important so that items that have no prepared data can use cache if available.
+    // Note that this is needed because 'this' moves out cache object to refresh param.
+    this->m_spCache = std::move(param.cache());
+
     // Going through every item in definition entry table and redrawing them.
     param.chartDefinition().forEachEntry([&](const GraphDefinitionEntry& defEntry)
     {
@@ -4153,12 +4279,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataFetched(ChartRe
                 return;
             }
 
+            // Note: there is similar selection logics in GraphControlAndDisplayWidget::prepareData() so if needing changes here, might need to be reflected there as well.
+            auto pPreparedData = param.preparedDataForEntry(defEntry);
             if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
-                refreshXy(rChart, configParamCreator, source, defEntry, nGraphCounter);
+                refreshXy(rChart, configParamCreator, source, defEntry, pPreparedData, nGraphCounter);
             else if (sEntryType == ChartObjectChartTypeStr_histogram)
-                refreshHistogram(rChart, configParamCreator, source, defEntry, nHistogramCounter);
+                refreshHistogram(rChart, configParamCreator, source, defEntry, pPreparedData, nHistogramCounter);
             else if (sEntryType == ChartObjectChartTypeStr_bars)
-                refreshBars(rChart, configParamCreator, source, defEntry, nBarsCounter);
+                refreshBars(rChart, configParamCreator, source, defEntry, pPreparedData, nBarsCounter);
             else
             {
                 if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
@@ -4167,6 +4295,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataFetched(ChartRe
             }
         });
     });
+
     rChart.optimizeAllAxesRanges();
 
     // Legend handling
@@ -4212,10 +4341,25 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
         return;
     }
 
-    // Currently no separate fetching round is implemented so just emitting the signal.
-    ChartRefreshParam param;
-    param.chartDefinition(pDefWidget->getChartDefinition());
-    Q_EMIT sigFetchDataDone(param);
+    // Creating data preparation thread if it doesn't already exist
+    if (!DFG_OPAQUE_REF().m_threadDataPreparation.isRunning())
+    {
+        static bool bIsMetaTypeRegistered = false;
+        if (!bIsMetaTypeRegistered)
+        {
+            qRegisterMetaType<ChartRefreshParamPtr>("ChartRefreshParamPtr"); // Note: format matters, e.g. may break if string has namespace qualifiers.
+            bIsMetaTypeRegistered = true;
+        }
+        auto& opaqueThis = DFG_OPAQUE_REF();
+        opaqueThis.m_threadDataPreparation.setObjectName("chartDataPreration"); // Sets thread name visible to debugger.
+        opaqueThis.m_chartPreparator.moveToThread(&opaqueThis.m_threadDataPreparation);
+        DFG_QT_VERIFY_CONNECT(connect(this, &GraphControlAndDisplayWidget::sigChartDataPreparationNeeded, &opaqueThis.m_chartPreparator, &ChartDataPreparator::prepareData));
+        DFG_QT_VERIFY_CONNECT(connect(&opaqueThis.m_chartPreparator, &GraphControlAndDisplayWidget::ChartDataPreparator::sigPreparationFinished, this, &GraphControlAndDisplayWidget::onChartDataPreparationReady));
+        opaqueThis.m_threadDataPreparation.start();
+    }
+    // Creating refresh parameter and triggering data preparation. Once preparation is done, refresh will continue in onChartDataPreparationReady()
+    ChartRefreshParamPtr spParam(new ChartRefreshParam(pDefWidget->getChartDefinition(), this->m_dataSources, std::move(m_spCache)));
+    Q_EMIT sigChartDataPreparationNeeded(std::move(spParam));
 }
 
 namespace
@@ -4338,56 +4482,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
     }
 } } } // dfg:::qt::<unnamed>
 
-class ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData : public ::DFG_MODULE_NS(charts)::ChartOperationPipeData
+
+auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareData(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
 {
-public:
-    ChartDataType columnDataType(const size_t c) const
-    {
-        return isValidIndex(m_columnDataTypes, c) ? m_columnDataTypes[c] : ChartDataType();
-    }
-    QString columnName(const size_t c) const
-    {
-        return isValidIndex(m_columnNames, c) ? m_columnNames[c] : QString();
-    }
+    const auto sEntryType = defEntry.graphTypeStr();
+    // Note: this duplicates type selection logic from onChartDataPreparationReady()
+    if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
+        return prepareDataForXy(spCache, source, defEntry);
+    else if (sEntryType == ChartObjectChartTypeStr_histogram)
+        return prepareDataForHistogram(spCache, source, defEntry);
+    else if (sEntryType == ChartObjectChartTypeStr_bars)
+        return prepareDataForBars(spCache, source, defEntry);
+    else
+        return ChartData();
+}
 
-    void copyOrMoveDataFrom(::DFG_MODULE_NS(charts)::ChartOperationPipeData& other)
-    {
-        this->m_vectorRefs.resize(other.vectorCount());
-        for (size_t i = 0, nCount = other.vectorCount(); i < nCount; ++i)
-        {
-            auto pValues = other.valuesByIndex(i);
-            if (pValues)
-            {
-                *this->editableValuesByIndex(i) = std::move(*pValues);
-                this->m_vectorRefs[i] = this->editableValuesByIndex(i);
-            }
-            else
-            {
-                auto pStrings = other.stringsByIndex(i);
-                if (pStrings)
-                {
-                    *this->editableStringsByIndex(i) = std::move(*pStrings);
-                    this->m_vectorRefs[i] = this->editableStringsByIndex(i);
-                }
-            }
-        }
-    }
-
-    std::vector<ChartDataType> m_columnDataTypes;
-    std::vector<QString> m_columnNames;
-    bool m_bXisRowIndex = false;
-    bool m_bYisRowIndex = false;
-};
-
-auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
+auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
 {
     using namespace ::DFG_MODULE_NS(charts);
-    if (!m_spCache)
-        m_spCache.reset(new ChartDataCache);
+    if (!spCache)
+        spCache.reset(new ChartDataCache);
 
     std::array<DataSourceIndex, 2> columnIndexes;
     std::array<bool, 2> rowFlags;
-    auto optData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
+    auto optData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optData || optData->columnCount() < 1)
         return ChartData();
@@ -4476,10 +4594,10 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(GraphData
     return rv;
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nGraphCounter)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nGraphCounter)
 {
     using namespace ::DFG_MODULE_NS(charts);
-    auto rawData = prepareDataForXy(source, defEntry);
+    auto rawData = (pPreparedData) ? std::move(*pPreparedData) : prepareDataForXy(m_spCache, source, defEntry);
 
     auto pXvalues = rawData.constValuesByIndex(0);
     auto pYvalues = rawData.constValuesByIndex(1);
@@ -4567,15 +4685,15 @@ namespace
     }
 }
 
-auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
 {
     using namespace ::DFG_MODULE_NS(charts);
     const auto nColumnCount = source.columnCount();
     if (nColumnCount < 1)
         return ChartData();
 
-    if (!m_spCache)
-        m_spCache.reset(new ChartDataCache);
+    if (!spCache)
+        spCache.reset(new ChartDataCache);
 
     const auto sBinType = defEntry.fieldValueStr(ChartObjectFieldIdStr_binType, [] { return StringUtf8(DFG_UTF8("number")); });
 
@@ -4589,7 +4707,7 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
 
     std::array<DataSourceIndex, 2> columnIndexes;
     std::array<bool, 2> rowFlags;
-    auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
+    auto optTableData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optTableData)
         return ChartData();
@@ -4665,11 +4783,11 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
 
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nHistogramCounter)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nHistogramCounter)
 {
     using namespace ::DFG_MODULE_NS(charts);
 
-    auto rawData = prepareDataForHistogram(source, defEntry);
+    auto rawData = (pPreparedData) ? std::move(*pPreparedData) : prepareDataForHistogram(m_spCache, source, defEntry);
 
     const auto sXaxisName = rawData.columnName(0);
     ChartObjectHolder<Histogram> spHistogram;
@@ -4693,7 +4811,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
     setCommonChartObjectProperties(*spHistogram, defEntry, configParamCreator, DefaultNameCreator("Histogram", nHistogramCounter));
 }
 
-auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
 {
     using namespace ::DFG_MODULE_NS(charts);
 
@@ -4701,12 +4819,12 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(Graph
     if (nColumnCount < 1)
         return ChartData();
 
-    if (!m_spCache)
-        m_spCache.reset(new ChartDataCache);
+    if (!spCache)
+        spCache.reset(new ChartDataCache);
 
     std::array<DataSourceIndex, 2> columnIndexes;
     std::array<bool, 2> rowFlags;
-    auto optTableData = m_spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
+    auto optTableData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optTableData || optTableData->columnCount() < 1)
         return ChartData();
@@ -4738,11 +4856,11 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(Graph
     return rawData;
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nBarsCounter)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nBarsCounter)
 {
     using namespace ::DFG_MODULE_NS(charts);
 
-    auto rawData = prepareDataForBars(source, defEntry);
+    auto rawData = (pPreparedData) ? std::move(*pPreparedData) : prepareDataForBars(m_spCache, source, defEntry);
 
     auto pStrings = rawData.constStringsByIndex(0);
     auto pValues = rawData.constValuesByIndex(1);
@@ -4881,10 +4999,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceDestroyed()
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::forDataSource(const GraphDataSourceId& id, std::function<void (GraphDataSource&)> func)
 {
-    auto iter = std::find_if(m_dataSources.m_sources.begin(), m_dataSources.m_sources.end(), [&](const std::shared_ptr<GraphDataSource>& spDs)
-    {
-        return (spDs && spDs->uniqueId() == id);
-    });
+    auto iter = m_dataSources.findById(id);
 
     // If source wasn't found, checking if it's file source and creating new source if needed.
     if (iter == m_dataSources.m_sources.end())

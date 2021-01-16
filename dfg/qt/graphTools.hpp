@@ -221,6 +221,14 @@ public:
     // Returns true iff 'this' emits sigChanged() when data changes or if source data can be considered non-changing.
     bool hasChangeSignaling() const { return m_bAreChangesSignaled; }
 
+    // Returns true iff data can be safely queried from given thread.
+    // Thread safety: this function is thread safe.
+    bool isSafeToQueryDataFromThread(const QThread* pThread) const { return isSafeToQueryDataFromThreadImpl(pThread); }
+
+    // Convenience function for calling isSafeToQueryDataFromThread() with current thread.
+    // Thread safety: this function is thread safe.
+    bool isSafeToQueryDataFromCallingThread() const;
+
     static DataSourceIndex invalidIndex() { return NumericTraits<DataSourceIndex>::maxValue; }
 
     // Static helpers fro converting different types to double value.
@@ -240,6 +248,9 @@ protected:
 private:
     virtual String statusDescriptionImpl() const { return String(); }
     virtual void refreshAvailabilityImpl() {}
+    // Default implementation returns true iff given thread is the same as this->thread().
+    // Note: Implementation must be thread safe.
+    virtual bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const;
 
 public:
     GraphDataSourceId m_uniqueId; // Unique ID by which data source can be queried with.
@@ -250,10 +261,27 @@ public:
 class DataSourceContainer
 {
 public:
+    using ContainerImpl = std::vector<std::shared_ptr<GraphDataSource>>;
+    using iterator = ContainerImpl::iterator;
+    using const_iterator = ContainerImpl::const_iterator;
+
     QString idListAsString() const;
     size_t size() const { return m_sources.size(); }
 
-    std::vector<std::shared_ptr<GraphDataSource>> m_sources;
+    iterator end() { return m_sources.end(); }
+    const_iterator end() const { return m_sources.end(); }
+
+    iterator findById(const GraphDataSourceId& id);
+
+    // Returns reference to data source given a dereferencable iterator.
+    // Precondition: given iterator must be dereferencable.
+    GraphDataSource& iterToRef(iterator iter)
+    {
+        DFG_ASSERT_UB(iter != end() && *iter != nullptr);
+        return **iter;
+    }
+
+    ContainerImpl m_sources;
 }; // DataSourceContainer
 
 
@@ -368,18 +396,22 @@ private:
     GraphDataSourceId defaultSourceIdImpl() const override;
     // setChartControls() is defined in slots-section
 
+public:
+    class ChartData;
+    class ChartDataPreparator;
+
 private:
     using ConfigParamCreator = std::function<::DFG_MODULE_NS(charts)::ChartConfigParam ()>;
-    void refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
-    void refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
-    void refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, int& nCounter);
+    void refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nCounter);
+    void refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nCounter);
+    void refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nCounter);
     void handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry);
 
-    class ChartData;
-
-    ChartData prepareDataForXy(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
-    ChartData prepareDataForHistogram(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
-    ChartData prepareDataForBars(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+private:
+    static ChartData prepareData(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+    static ChartData prepareDataForXy(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+    static ChartData prepareDataForHistogram(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+    static ChartData prepareDataForBars(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry);
 
     void setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator);
 
@@ -387,24 +419,34 @@ private:
 
     ChartCanvas* chart();
 
+public:
     class ChartRefreshParam
     {
     public:
         ChartRefreshParam();
+        ChartRefreshParam(const ChartDefinition& chartDefinition, DataSourceContainer source, std::shared_ptr<ChartDataCache> spCache);
         ChartRefreshParam(const ChartRefreshParam& other);
         ~ChartRefreshParam();
-        void chartDefinition(const ChartDefinition& chartDefinition);
         const ChartDefinition& chartDefinition() const;
-        DFG_OPAQUE_PTR_DECLARE();
-    };
+        DataSourceContainer& dataSources();
 
-    // Starts fetching data for chart items and when done, emits sigFetchDataDone()
+        void storePreparedData(const GraphDefinitionEntry& defEntry, ChartData chartData);
+        ChartData* preparedDataForEntry(const GraphDefinitionEntry& defEntry);
+
+        std::shared_ptr<ChartDataCache>& cache();
+
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // class ChartRefreshParam
+
+    using ChartRefreshParamPtr = QSharedPointer<ChartRefreshParam>;
+
+    // Starts fetching data for chart items
     void startChartDataFetching();
-    // Called when chart data has been fetched and actual chart items can be created.
-    void onChartDataFetched(ChartRefreshParam);
+    // Called when chart data has been prepared and actual chart items can be created.
+    void onChartDataPreparationReady(ChartRefreshParamPtr spParam);
 
 signals:
-    void sigFetchDataDone(ChartRefreshParam);
+    void sigChartDataPreparationNeeded(ChartRefreshParamPtr);
 
 public:
     QObjectStorage<QSplitter> m_spSplitter;
@@ -413,12 +455,23 @@ public:
     DataSourceContainer m_dataSources;
     GraphDataSourceId m_sDefaultDataSource;
 
-    std::unique_ptr<ChartDataCache> m_spCache;
+    std::shared_ptr<ChartDataCache> m_spCache;
     bool m_bRefreshPending = false; // Set to true if refresh has been scheduled so new refresh requests can be ignored.
 
     DFG_OPAQUE_PTR_DECLARE();
 
 }; // Class GraphControlAndDisplayWidget
+
+
+class GraphControlAndDisplayWidget::ChartDataPreparator : public QObject
+{
+    Q_OBJECT
+public:
+    void prepareData(ChartRefreshParamPtr spParam);
+
+signals:
+    void sigPreparationFinished(ChartRefreshParamPtr spParam);
+}; // Class GraphControlAndDisplayWidget::ChartDataPreparator
 
 
 namespace DFG_DETAIL_NS
