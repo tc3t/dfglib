@@ -727,3 +727,56 @@ TEST(dfgCharts, AbstractChartControlItem)
     }
 
 }
+
+TEST(dfgCharts, ChartOperationPipeData)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(charts);
+    using namespace ::DFG_MODULE_NS(cont);
+
+    // Testing constructors and assignment. In particular testing that if data has references to it's internal structures,
+    // the references in the copied one must not be invalidated when the copied-from object is destroyed.
+    {
+        const ValueVectorD constValues = { 1 };
+        const ChartOperationPipeData::StringVector constStrings = { StringUtf8(DFG_UTF8("a")) };
+        ChartOperationPipeData dataCopied;
+        ChartOperationPipeData dataMoved;
+        {
+            ChartOperationPipeData dataTemp;
+
+            dataTemp.m_valueVectors.push_back(ValueVectorD()); // Unreferenced internal value vector
+            dataTemp.m_valueVectors.push_back(ValueVectorD(1, 2));
+            dataTemp.m_stringVectors.push_back(ChartOperationPipeData::StringVector()); // Unreferenced internal string vector
+            dataTemp.m_stringVectors.push_back(ChartOperationPipeData::StringVector(1, StringUtf8(DFG_UTF8("b"))));
+
+            dataTemp.m_vectorRefs.push_back(&constValues);
+            dataTemp.m_vectorRefs.push_back(&dataTemp.m_stringVectors[1]);
+            dataTemp.m_vectorRefs.push_back(&dataTemp.m_valueVectors[1]);
+            dataTemp.m_vectorRefs.push_back(&constStrings);
+
+            dataCopied = dataTemp;
+            dataMoved = std::move(dataTemp);
+        }
+        ASSERT_EQ(4, dataCopied.vectorCount());
+        ASSERT_EQ(4, dataMoved.vectorCount());
+
+        EXPECT_TRUE(dataCopied.m_valueVectors == dataMoved.m_valueVectors);
+        EXPECT_TRUE(dataCopied.m_stringVectors == dataMoved.m_stringVectors);
+
+        // Verifying that both copied and moved still refer to external values
+        EXPECT_EQ(&constValues, dataCopied.constValuesByIndex(0));
+        EXPECT_EQ(&constValues, dataMoved.constValuesByIndex(0));
+
+        // Verifying that internal string references refer to internal items.
+        EXPECT_EQ(dataCopied.constStringsByIndex(1), dataCopied.editableStringsByIndex(1));
+        EXPECT_EQ(dataMoved.constStringsByIndex(1), dataMoved.editableStringsByIndex(1));
+
+        // Verifying that internal value references refer to internal items.
+        EXPECT_EQ(dataCopied.constValuesByIndex(2), dataCopied.editableValuesByIndex(1));
+        EXPECT_EQ(dataMoved.constValuesByIndex(2), dataMoved.editableValuesByIndex(1));
+
+        // Verifying that both copied and moved still refer to external strings
+        EXPECT_EQ(&constStrings, dataCopied.constStringsByIndex(3));
+        EXPECT_EQ(&constStrings, dataMoved.constStringsByIndex(3));
+    }
+}

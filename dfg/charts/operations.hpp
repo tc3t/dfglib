@@ -50,8 +50,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
             bool isNull() const
             {
-                return m_pValueVector == nullptr && m_pStringVector == nullptr && m_pConstValueVector == nullptr && m_pConstStringVector == nullptr;
+                return rawPtr() == nullptr;
             }
+
+            const void*         rawPtr() const      { return (constValues() != nullptr) ? static_cast<const void*>(constValues()) : static_cast<const void*>(constStrings()); }
 
                   ValueVectorD* values()             { return m_pValueVector; }
             const ValueVectorD* constValues() const  { return (m_pConstValueVector) ? m_pConstValueVector : m_pValueVector; }
@@ -65,6 +67,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         };
 
         ChartOperationPipeData() = default;
+
+        ChartOperationPipeData(const ChartOperationPipeData& other);
+
+        ChartOperationPipeData(ChartOperationPipeData&& other) noexcept;
+
+        ChartOperationPipeData& operator=(const ChartOperationPipeData& other);
+
+        ChartOperationPipeData& operator=(ChartOperationPipeData&& other) noexcept;
 
         template <class X_T, class Y_T>
         ChartOperationPipeData(X_T&& xvals, Y_T&& yvals);
@@ -115,6 +125,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Sets size of all active non-null vectors to zero.
         void setVectorSizesToZero();
 
+     private:
+         // Implements reference replacements for copying.
+         template <class Cont_T>
+         void replaceInternalReferences(Cont_T& myData, const std::vector<DataVectorRef>& otherRefs, const Cont_T& otherData);
+
+    public:
         std::vector<DataVectorRef> m_vectorRefs;    // Stores references to data vectors and defines the actual vector count that this data has.
         // Note: using deque to avoid invalidation of resize.
         std::deque<ValueVectorD> m_valueVectors;    // Temporary value buffers that can be used e.g. if operation changes data type and can't edit existing.
@@ -125,6 +141,55 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     inline ChartOperationPipeData::ChartOperationPipeData(X_T&& xvals, Y_T&& yvals)
     {
         setDataRefs(std::forward<X_T>(xvals), std::forward<Y_T>(yvals));
+    }
+
+    inline ChartOperationPipeData::ChartOperationPipeData(const ChartOperationPipeData& other)
+    {
+        *this = other;
+    }
+
+    inline ChartOperationPipeData::ChartOperationPipeData(ChartOperationPipeData&& other) noexcept
+    {
+        *this = std::move(other);
+    }
+
+    inline auto ChartOperationPipeData::operator=(const ChartOperationPipeData& other) -> ChartOperationPipeData&
+    {
+        this->m_valueVectors = other.m_valueVectors;
+        this->m_stringVectors = other.m_stringVectors;
+        // Setting references taking care that if 'other' has reference to it's internal vectors,
+        // 'this' refers to it's own internal vectors, not those of 'other'.
+        this->m_vectorRefs = other.m_vectorRefs;
+        replaceInternalReferences(this->m_valueVectors, other.m_vectorRefs, other.m_valueVectors);
+        replaceInternalReferences(this->m_stringVectors, other.m_vectorRefs, other.m_stringVectors);
+        return *this;
+    }
+
+    inline auto ChartOperationPipeData::operator=(ChartOperationPipeData&& other) noexcept -> ChartOperationPipeData&
+    {
+        // Note: std::vector move assignment is noexcept only since C++17.
+        //       std::deque apparently does not have noexcept moving even in C++17 (https://gcc.gnu.org/legacy-ml/gcc-help/2017-08/msg00078.html)
+        // While moves below may throw, considering such conditions to be corner cases where the resulting std::terminate()
+        // that gets triggered due to this noexcept function throwing, is acceptable outcome.
+        m_vectorRefs = std::move(other.m_vectorRefs);
+        m_valueVectors = std::move(other.m_valueVectors);
+        m_stringVectors = std::move(other.m_stringVectors);
+        return *this;
+    }
+
+    template <class Cont_T>
+    inline void ChartOperationPipeData::replaceInternalReferences(Cont_T& myData, const std::vector<DataVectorRef>& otherRefs, const Cont_T& otherData)
+    {
+        DFG_ASSERT_UB(myData.size() == otherData.size());
+        DFG_ASSERT_UB(this->m_vectorRefs.size() == otherRefs.size());
+        for (size_t i = 0, nCount = otherData.size(); i < nCount; ++i)
+        {
+            auto iter = std::find_if(otherRefs.begin(), otherRefs.end(), [&](const DataVectorRef& ref) { return ref.rawPtr() == &otherData[i]; });
+            if (iter != otherRefs.end())
+            {
+                this->m_vectorRefs[iter - otherRefs.begin()] = DataVectorRef(&myData[i]);
+            }
+        }
     }
 
     inline size_t ChartOperationPipeData::vectorCount() const
