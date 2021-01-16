@@ -51,6 +51,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QGuiApplication>
     #include <QApplication>
     #include <QMainWindow>
+    #include <QThread>
 
     #include <QListWidget>
     #include <QJsonDocument>
