@@ -118,6 +118,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         return p;
     }
 
+    static auto tryCreateOnDemandDataSource(const GraphDataSourceId& id, DataSourceContainer& dataSources) -> DataSourceContainer::iterator
+    {
+        const auto sId = qStringToStringUtf8(id);
+        ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem item(sId);
+        std::shared_ptr<GraphDataSource> spNewSource;
+        if (item.key() == DFG_UTF8("csv_file"))
+            spNewSource = std::make_shared<CsvFileDataSource>(viewToQString(item.value(0)), id);
+        else if (item.key() == DFG_UTF8("sqlite_file"))
+            spNewSource = std::make_shared<SQLiteFileDataSource>(viewToQString(item.value(1)), viewToQString(item.value(0)), id);
+
+        if (spNewSource)
+        {
+            dataSources.m_sources.push_back(std::move(spNewSource));
+            return dataSources.end() - 1;
+        }
+        else
+            return dataSources.end();
+    }
+
 } } } // dfg:::qt::<unnamed>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
@@ -4009,6 +4028,8 @@ void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::pre
             auto& sources = spParam->dataSources();
             const auto sSourceId = entry.sourceId(chartDefinition.m_defaultSourceId);
             auto iterSource = sources.findById(sSourceId);
+            if (iterSource == sources.end())
+                iterSource = tryCreateOnDemandDataSource(sSourceId, sources);
             if (iterSource != sources.end() && sources.iterToRef(iterSource).isSafeToQueryDataFromThread(pCurrentThread))
                 spParam->storePreparedData(entry, GraphControlAndDisplayWidget::prepareData(spParam->cache(), sources.iterToRef(iterSource), entry));
         });
@@ -4201,6 +4222,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
     // Getting a reference to the cache object; this is important so that items that have no prepared data can use cache if available.
     // Note that this is needed because 'this' moves out cache object to refresh param.
     this->m_spCache = std::move(param.cache());
+
+    // Preparation might have added on-demand sources so copying them back.
+    this->m_dataSources = std::move(param.dataSources());
 
     // Going through every item in definition entry table and redrawing them.
     param.chartDefinition().forEachEntry([&](const GraphDefinitionEntry& defEntry)
@@ -5006,25 +5030,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::forDataSource(const GraphD
     auto iter = m_dataSources.findById(id);
 
     // If source wasn't found, checking if it's file source and creating new source if needed.
-    if (iter == m_dataSources.m_sources.end())
+    if (iter == m_dataSources.end())
     {
         const auto sId = qStringToStringUtf8(id);
-        ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem item(sId);
-        if (item.key() == DFG_UTF8("csv_file"))
-        {
-            auto spCsvSource = std::make_shared<CsvFileDataSource>(viewToQString(item.value(0)), id);
-            m_dataSources.m_sources.push_back(std::move(spCsvSource));
-            iter = m_dataSources.m_sources.end() - 1;
-        }
-        else if (item.key() == DFG_UTF8("sqlite_file"))
-        {
-            auto spSqliteSource = std::make_shared<SQLiteFileDataSource>(viewToQString(item.value(1)), viewToQString(item.value(0)), id);
-            m_dataSources.m_sources.push_back(std::move(spSqliteSource));
-            iter = m_dataSources.m_sources.end() - 1;
-        }
+        iter = tryCreateOnDemandDataSource(id, m_dataSources);
     }
 
-    if (iter != m_dataSources.m_sources.end())
+    if (iter != m_dataSources.end())
         func(**iter);
     else
         DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find data source '%1', available sources (%2 in total): { %3 }")
