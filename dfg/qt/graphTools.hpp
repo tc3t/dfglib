@@ -300,6 +300,7 @@ private:
     virtual GraphDataSourceId defaultSourceIdImpl() const { return GraphDataSourceId(); }
     virtual bool setChartControls(QString) { return false; } // Returns true is given string was taken into use, false otherwise.
 
+protected:
     bool m_bRefreshInProgress = false;
 }; // Class ChartController
 

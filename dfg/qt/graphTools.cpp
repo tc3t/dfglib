@@ -258,8 +258,10 @@ void ChartController::refresh()
 {
     if (m_bRefreshInProgress)
         return; // refreshImpl() already in progress; not calling it.
-    auto flagResetter = makeScopedCaller([&]() { m_bRefreshInProgress = true; QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
-                                         [&]() { m_bRefreshInProgress = false; QGuiApplication::restoreOverrideCursor(); });
+
+    // Implementation must reset this flag once refresh is done
+    m_bRefreshInProgress = true;
+
     try
     {
         refreshImpl();
@@ -4198,6 +4200,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationReady(ChartRefreshParamPtr spParam)
 {
     using namespace ::DFG_MODULE_NS(charts);
+
+    auto updateStatusResetter = makeScopedCaller([]() { QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
+                                         [&]() { m_bRefreshInProgress = false; QGuiApplication::restoreOverrideCursor(); });
 
     if (!spParam)
         return;
