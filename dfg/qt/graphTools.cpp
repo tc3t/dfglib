@@ -124,9 +124,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem item(sId);
         std::shared_ptr<GraphDataSource> spNewSource;
         if (item.key() == DFG_UTF8("csv_file"))
-            spNewSource = std::make_shared<CsvFileDataSource>(viewToQString(item.value(0)), id);
+            spNewSource = std::shared_ptr<CsvFileDataSource>(new CsvFileDataSource(viewToQString(item.value(0)), id), [](GraphDataSource* p) { if (p) p->deleteLater(); });
         else if (item.key() == DFG_UTF8("sqlite_file"))
-            spNewSource = std::make_shared<SQLiteFileDataSource>(viewToQString(item.value(1)), viewToQString(item.value(0)), id);
+            spNewSource = std::shared_ptr<SQLiteFileDataSource>(new SQLiteFileDataSource(viewToQString(item.value(1)), viewToQString(item.value(0)), id), [](GraphDataSource* p) { if (p) p->deleteLater(); });
 
         if (spNewSource)
         {
@@ -4043,8 +4043,8 @@ void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::pre
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget)
 {
     ::DFG_MODULE_NS(time)::TimerCpu m_refreshTimer; // Used for measuring refresh times.
-    QThread m_threadDataPreparation;
-    ChartDataPreparator m_chartPreparator;
+    QPointer<QThread> m_spThreadDataPreparation;
+    QPointer<ChartDataPreparator> m_spChartPreparator; // Lives in thread m_spThreadDataPreparation
 };
 
 ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::ChartRefreshParam() = default;
@@ -4111,8 +4111,19 @@ DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
 
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::~GraphControlAndDisplayWidget()
 {
+    // From Qt documentation "Threads and QObjects": "You must ensure that all objects created in a thread are deleted before you delete the QThread.This can be done easily by creating the objects on the stack in your run() implementation."
+    this->m_dataSources.m_sources.clear();
+    if (DFG_OPAQUE_REF().m_spChartPreparator)
+    {
+        DFG_OPAQUE_REF().m_spChartPreparator->deleteLater();
+        DFG_OPAQUE_REF().m_spChartPreparator = nullptr;
+    }
     // Stopping preparation thread.
-    DFG_OPAQUE_REF().m_threadDataPreparation.quit();
+    if (DFG_OPAQUE_REF().m_spThreadDataPreparation)
+    {
+        DFG_OPAQUE_REF().m_spThreadDataPreparation->quit();
+        DFG_OPAQUE_REF().m_spThreadDataPreparation->deleteLater();
+    }
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setChartGuide(const QString& s)
@@ -4375,7 +4386,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
     }
 
     // Creating data preparation thread if it doesn't already exist
-    if (!DFG_OPAQUE_REF().m_threadDataPreparation.isRunning())
+    if (!DFG_OPAQUE_REF().m_spThreadDataPreparation)
     {
         static bool bIsMetaTypeRegistered = false;
         if (!bIsMetaTypeRegistered)
@@ -4384,11 +4395,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
             bIsMetaTypeRegistered = true;
         }
         auto& opaqueThis = DFG_OPAQUE_REF();
-        opaqueThis.m_threadDataPreparation.setObjectName("chartDataPreration"); // Sets thread name visible to debugger.
-        opaqueThis.m_chartPreparator.moveToThread(&opaqueThis.m_threadDataPreparation);
-        DFG_QT_VERIFY_CONNECT(connect(this, &GraphControlAndDisplayWidget::sigChartDataPreparationNeeded, &opaqueThis.m_chartPreparator, &ChartDataPreparator::prepareData));
-        DFG_QT_VERIFY_CONNECT(connect(&opaqueThis.m_chartPreparator, &GraphControlAndDisplayWidget::ChartDataPreparator::sigPreparationFinished, this, &GraphControlAndDisplayWidget::onChartDataPreparationReady));
-        opaqueThis.m_threadDataPreparation.start();
+        opaqueThis.m_spThreadDataPreparation = new QThread; // Note: not having 'this' as parent to prevent threading issues when deleting.
+        opaqueThis.m_spThreadDataPreparation->setObjectName("chartDataPreration"); // Sets thread name visible to debugger.
+        opaqueThis.m_spChartPreparator = new ChartDataPreparator;
+        opaqueThis.m_spChartPreparator->moveToThread(opaqueThis.m_spThreadDataPreparation);
+        DFG_QT_VERIFY_CONNECT(connect(this, &GraphControlAndDisplayWidget::sigChartDataPreparationNeeded, opaqueThis.m_spChartPreparator.data(), &ChartDataPreparator::prepareData));
+        DFG_QT_VERIFY_CONNECT(connect(opaqueThis.m_spChartPreparator.data(), &GraphControlAndDisplayWidget::ChartDataPreparator::sigPreparationFinished, this, &GraphControlAndDisplayWidget::onChartDataPreparationReady));
+        opaqueThis.m_spThreadDataPreparation->start();
     }
     // Creating refresh parameter and triggering data preparation. Once preparation is done, refresh will continue in onChartDataPreparationReady()
     ChartRefreshParamPtr spParam(new ChartRefreshParam(pDefWidget->getChartDefinition(), this->m_dataSources, std::move(m_spCache)));
