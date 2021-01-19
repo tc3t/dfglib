@@ -3103,6 +3103,15 @@ void DFG_CLASS_NAME(CsvTableView)::onFindPrevious()
 
 void DFG_CLASS_NAME(CsvTableView)::setFindText(const StringMatchDef matchDef, const int nCol)
 {
+    auto lockReleaser = this->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        // Couldn't acquire lock. Scheduling a new try in 200 ms.
+        QPointer<CsvTableView> thisPtr = this;
+        QTimer::singleShot(200, [=]() { if (thisPtr) thisPtr->setFindText(matchDef, nCol); });
+        return;
+    }
+
     m_matchDef = matchDef;
     m_nFindColumnIndex = nCol;
     auto pBaseModel = csvModel();
