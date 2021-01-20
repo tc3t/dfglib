@@ -1,4 +1,5 @@
 #include "ConsoleDisplay.hpp"
+#include "connectHelper.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QTime>
@@ -8,6 +9,8 @@ DFG_END_INCLUDE_QT_HEADERS
     : BaseClass(pParent)
 {
     setReadOnly(true);
+    qRegisterMetaType<ConsoleDisplayEntryType>("ConsoleDisplayEntryType");
+    DFG_QT_VERIFY_CONNECT(connect(this, &ConsoleDisplay::sigAddEntry, this, &ConsoleDisplay::addEntryDirect));
 }
 
 ::DFG_MODULE_NS(qt)::ConsoleDisplay::~ConsoleDisplay()
@@ -21,6 +24,11 @@ void ::DFG_MODULE_NS(qt)::ConsoleDisplay::addEntry(const QString& s)
 
 void ::DFG_MODULE_NS(qt)::ConsoleDisplay::addEntry(const QString& sMsg, const ConsoleDisplayEntryType entryType)
 {
+    Q_EMIT sigAddEntry(sMsg, entryType); // Using emit for thread safety; addEntryDirect() will get executed in this->thread() regardless of the thread where this call was made.
+}
+
+void ::DFG_MODULE_NS(qt)::ConsoleDisplay::addEntryDirect(const QString& sMsg, const ConsoleDisplayEntryType entryType)
+{
     const QString sTimeStamp = QTime::currentTime().toString("hh:mm:ss.zzz");
     const QString sSeparator(": ");
     m_nLengthCounter += static_cast<size_t>(sTimeStamp.length() + sSeparator.length()) + static_cast<size_t>(sMsg.length());
@@ -31,7 +39,7 @@ void ::DFG_MODULE_NS(qt)::ConsoleDisplay::addEntry(const QString& sMsg, const Co
     else
         appendPlainText(sTimeStamp + sSeparator + sMsg);
 
-    // Checking length are limiting if necessary.
+    // Checking length and limiting if necessary.
     if (lengthInCharacters() > lengthInCharactersLimit())
     {
         auto sNew = this->toPlainText();

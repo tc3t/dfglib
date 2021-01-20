@@ -20,6 +20,7 @@ enum class ConsoleDisplayEntryType
 // Widget for displaying console-like messages.
 class ConsoleDisplay : public QPlainTextEdit
 {
+    Q_OBJECT
 public:
     using BaseClass = QPlainTextEdit;
 
@@ -33,11 +34,20 @@ public:
     void lengthInCharactersLimit(const size_t nNewLimit) { m_nLengthLimit = nNewLimit; }
 
     // Adds new entry. If after adding total content length is longer than lengthInCharactersLimit(), oldest content will be dropped.
-    void addEntry(const QString& s);
-
+    // This function is thread safe
     void addEntry(const QString& s, ConsoleDisplayEntryType entryType);
 
+    // Convenience overload using entry type 'generic'.
+    // This function is thread safe
+    void addEntry(const QString& s);
+
     void clear();
+
+signals:
+    void sigAddEntry(const QString& s, ConsoleDisplayEntryType entryType);
+
+public slots:
+    void addEntryDirect(const QString& s, ConsoleDisplayEntryType entryType);
 
 protected:
     void contextMenuEvent(QContextMenuEvent* pEvent) override;
