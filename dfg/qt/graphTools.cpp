@@ -262,14 +262,7 @@ void ChartController::refresh()
     // Implementation must reset this flag once refresh is done
     m_bRefreshInProgress = true;
 
-    try
-    {
-        refreshImpl();
-    }
-    catch (const std::bad_alloc& e)
-    {
-        DFG_QT_CHART_CONSOLE_ERROR(tr("Updating chart failed due to memory allocation failure, there may be more chart data than what can be handled. bad_alloc.what() = '%1'").arg(e.what()));
-    }
+    refreshImpl();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4325,17 +4318,24 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
 
             // Note: there is similar selection logics in GraphControlAndDisplayWidget::prepareData() so if needing changes here, might need to be reflected there as well.
             auto pPreparedData = param.preparedDataForEntry(defEntry);
-            if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
-                refreshXy(rChart, configParamCreator, source, defEntry, pPreparedData, nGraphCounter);
-            else if (sEntryType == ChartObjectChartTypeStr_histogram)
-                refreshHistogram(rChart, configParamCreator, source, defEntry, pPreparedData, nHistogramCounter);
-            else if (sEntryType == ChartObjectChartTypeStr_bars)
-                refreshBars(rChart, configParamCreator, source, defEntry, pPreparedData, nBarsCounter);
-            else
+            try
             {
-                if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
-                    defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("missing handler for type '%1'").arg(sEntryType.c_str()));
-                return;
+                if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
+                    refreshXy(rChart, configParamCreator, source, defEntry, pPreparedData, nGraphCounter);
+                else if (sEntryType == ChartObjectChartTypeStr_histogram)
+                    refreshHistogram(rChart, configParamCreator, source, defEntry, pPreparedData, nHistogramCounter);
+                else if (sEntryType == ChartObjectChartTypeStr_bars)
+                    refreshBars(rChart, configParamCreator, source, defEntry, pPreparedData, nBarsCounter);
+                else
+                {
+                    if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
+                        defEntry.log(GraphDefinitionEntry::LogLevel::error, tr("missing handler for type '%1'").arg(sEntryType.c_str()));
+                    return;
+                }
+            }
+            catch (const std::bad_alloc& e)
+            {
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Creating chart object for entry '%1' failed due to memory allocation failure, there may be more chart data than what can be handled. bad_alloc.what() = '%2'").arg(defEntry.index()).arg(e.what()));
             }
         });
     });
@@ -4533,14 +4533,22 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareData(std::shared_pt
 {
     const auto sEntryType = defEntry.graphTypeStr();
     // Note: this duplicates type selection logic from onChartDataPreparationReady()
-    if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
-        return prepareDataForXy(spCache, source, defEntry);
-    else if (sEntryType == ChartObjectChartTypeStr_histogram)
-        return prepareDataForHistogram(spCache, source, defEntry);
-    else if (sEntryType == ChartObjectChartTypeStr_bars)
-        return prepareDataForBars(spCache, source, defEntry);
-    else
+    try
+    {
+        if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
+            return prepareDataForXy(spCache, source, defEntry);
+        else if (sEntryType == ChartObjectChartTypeStr_histogram)
+            return prepareDataForHistogram(spCache, source, defEntry);
+        else if (sEntryType == ChartObjectChartTypeStr_bars)
+            return prepareDataForBars(spCache, source, defEntry);
+        else
+            return ChartData();
+    }
+    catch (const std::bad_alloc& e)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Preparing data for entry '%1' failed due to memory allocation failure, there may be more chart data than what can be handled. bad_alloc.what() = '%2'").arg(defEntry.index()).arg(e.what()));
         return ChartData();
+    }
 }
 
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
