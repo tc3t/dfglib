@@ -32,6 +32,7 @@
 
 #include "../build/compilerDetails.hpp"
 
+#include <atomic>
 #include <regex>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
@@ -201,10 +202,10 @@ public:
 
     ConsoleLogLevel effectiveLevel() const { return m_effectiveLevel; }
 
-    ConsoleLogLevel m_effectiveLevel = ConsoleLogLevel::none;
+    std::atomic<ConsoleLogLevel> m_effectiveLevel = ConsoleLogLevel::none;
     ConsoleLogLevel m_desiredLevel = ConsoleLogLevel::info;
     HandlerT m_handler = nullptr;
-};
+}; // class ConsoleLogHandle
 
 static ConsoleLogHandle gConsoleLogHandle;
 
