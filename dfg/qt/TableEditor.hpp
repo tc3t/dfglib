@@ -4,6 +4,7 @@
 #include "../baseConstructorDelegate.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include <memory>
+#include "../OpaquePtr.hpp"
 
 #include "qtIncludeHelpers.hpp"
 #include "containerUtils.hpp"
@@ -107,6 +108,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onSaveCompleted(bool, double);
         void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& edited);
         void onCellEditorTextChanged();
+        void handlePendingEdits();
         void onHighlightTextChanged(const QString& text);
         void onFilterTextChanged(const QString& text);
         void onFindColumnChanged(int newCol);
@@ -133,6 +135,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QObjectStorage<QSplitter> m_spMainSplitter;
         QPointer<QWidget> m_spChartDisplay;
         bool m_bHandlingOnCellEditorTextChanged;
+
+        DFG_OPAQUE_PTR_DECLARE();
     };
 
 } } // module namespace

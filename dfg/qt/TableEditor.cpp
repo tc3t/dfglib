@@ -22,6 +22,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QLabel>
+#include <QMap>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMetaMethod>
@@ -251,6 +252,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
         }
     };
 }}} // dfg::qt::DFG_DETAILS_NS -namespace
+
+DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::TableEditor)
+{
+    QMap<QModelIndex, QString> m_pendingEdits;
+};
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::CellEditor::setFontPointSizeF(const qreal pointSize)
 {
@@ -677,6 +683,29 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* eve
         event->ignore();
 }
 
+void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::handlePendingEdits()
+{
+    if (!m_spTableView || !this->m_spTableModel)
+        return;
+    auto lockReleaser = m_spTableView->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        // Couldn't acquire lock. Scheduling a new try in 100 ms.
+        QPointer<TableEditor> thisPtr = this;
+        QTimer::singleShot(100, [=]() { if (thisPtr) thisPtr->handlePendingEdits(); });
+        return;
+    }
+    auto& edits = DFG_OPAQUE_REF().m_pendingEdits;
+    while (!edits.empty())
+    {
+        // Note: trusting that there has been no structural edits (remove rows/columns) since the original cell edit; those could make the row/column index mapping go wrong.
+        //       i.e. setData() below could edit a different cell than what was originally intended.
+        auto index = edits.firstKey();
+        auto sText = edits.take(index);
+        this->m_spTableModel->setData(index, sText);
+    }
+}
+
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onCellEditorTextChanged()
 {
     if (!m_spTableView)
@@ -684,9 +713,21 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onCellEditorTextChanged()
     const auto& indexes = (m_spTableView->getSelectedItemCount() == 1) ? m_spTableView->getSelectedItemIndexes_dataModel() : QModelIndexList();
     if (m_spTableModel && m_spCellEditor && indexes.size() == 1)
     {
+        auto lockReleaser = m_spTableView->tryLockForEdit();
+        QString sNewText = m_spCellEditor->toPlainText();
+        if (!lockReleaser.isLocked())
+        {
+            // Couldn't acquire lock. Scheduling a new try in 100 ms.
+            QPointer<TableEditor> thisPtr = this;
+            DFG_OPAQUE_REF().m_pendingEdits[indexes.front()] = std::move(sNewText);
+            QTimer::singleShot(100, [=]() { if (thisPtr) thisPtr->handlePendingEdits(); });
+            return;
+        }
+
         const auto oldFlag = m_bHandlingOnCellEditorTextChanged;
         auto flagHandler = makeScopedCaller([&] { m_bHandlingOnCellEditorTextChanged = true ;}, [=] { m_bHandlingOnCellEditorTextChanged = oldFlag; });
-        this->m_spTableModel->setData(indexes.front(), m_spCellEditor->toPlainText());
+        DFG_OPAQUE_REF().m_pendingEdits.remove(indexes.front()); // Removing any pending edits for this index if any.
+        this->m_spTableModel->setData(indexes.front(), sNewText);
     }
 }
 
