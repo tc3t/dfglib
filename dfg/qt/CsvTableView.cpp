@@ -203,6 +203,7 @@ DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent, con
     , m_bUndoEnabled(true)
 {
     m_spEditLock.reset(new QReadWriteLock(QReadWriteLock::Recursive));
+    this->setItemDelegate(new CsvTableViewDelegate(this));
 
     {
         auto pHzHeader = new TableHeaderView(Qt::Horizontal, this);
@@ -586,7 +587,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
             if (pProxy)
                 pProxy->setSortCaseSensitivity((bCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
             else
-                QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case senstitivity: no suitable proxy model found"));
+                QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case sensitivity: no suitable proxy model found"));
         }));
         addAction(pAction);
     }
@@ -2339,7 +2340,7 @@ namespace
                     spCompleter->setModel(new QStringListModel(completerItems, spCompleter.data())); // Model is owned by completer object.
                 }
                 if (!m_spCompleterDelegateForDistributionParams)
-                    m_spCompleterDelegateForDistributionParams.reset(new DFG_CLASS_NAME(CsvTableViewCompleterDelegate)(this, spCompleter.get()));
+                    m_spCompleterDelegateForDistributionParams.reset(new CsvTableViewCompleterDelegate(this, spCompleter.get()));
                 m_spCompleterDelegateForDistributionParams->m_spCompleter = spCompleter.get();
                 // Settings delegate for the row in order to enable completer. Note that delegate should not be set for first column, but done here since there seems to be no easy way to set it only
                 // for the second cell in row.
