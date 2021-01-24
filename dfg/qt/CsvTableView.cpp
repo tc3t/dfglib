@@ -3653,7 +3653,21 @@ QString DFG_CLASS_NAME(CsvTableView)::privCreateActionBlockedDueToLockedContentM
 
 void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QString& actionname)
 {
-    QToolTip::showText(QCursor::pos(), privCreateActionBlockedDueToLockedContentMessage(actionname));
+    // Showing a note to user that execution was blocked. Not using QToolTip as it is a bit brittle in this use case:
+    // it may disappear too quickly and disappear triggers are difficult to control in general.
+
+    // This was the original tooltip version which worked ok with most notifications, but e.g. with
+    // blocked edits in CsvTableViewDelegate was not shown at all.
+    //QToolTip::showText(QCursor::pos(), privCreateActionBlockedDueToLockedContentMessage(actionname));
+
+    // Using tooltip-like QLabel as discussed here: https://forum.qt.io/topic/67240/constantly-updating-tooltip-text/6
+    auto pToolTip = new QLabel(this, Qt::ToolTip);
+    pToolTip->setText(privCreateActionBlockedDueToLockedContentMessage(actionname));
+    pToolTip->setFont(QFont(this->font().family(), 12)); // Increasing font size, default is a bit small.
+    pToolTip->move(QCursor::pos());
+    pToolTip->show();
+    // Scheduling self-destruction after 5 seconds.
+    QTimer::singleShot(5000, pToolTip, &QWidget::deleteLater);
 }
 
 auto DFG_CLASS_NAME(CsvTableView)::tryLockForEdit() -> LockReleaser
