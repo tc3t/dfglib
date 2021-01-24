@@ -91,6 +91,9 @@ public:
 
     std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo> privGetSelectionViewer() const;
 
+private:
+    bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const override;
+
 public slots:
     void onSelectionAnalysisCompleted();
 

@@ -240,3 +240,8 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::onSelectionAnalysisComple
     m_columnTypes.clear();
     Q_EMIT sigChanged();
 }
+
+bool ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::isSafeToQueryDataFromThreadImpl(const QThread*) const
+{
+    return true;
+}
