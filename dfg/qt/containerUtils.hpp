@@ -7,6 +7,7 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QObject>
 #include <QPointer>
+#include <QReadWriteLock>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <memory>
@@ -110,7 +111,27 @@ public:
     }
 
     QPointer<T> m_spData;
-};
+}; // class QObjectStorage
+
+
+class LockReleaser
+{
+public:
+    LockReleaser(QReadWriteLock* pLock = nullptr) : m_pLock(pLock) {}
+    LockReleaser(LockReleaser&& other) noexcept : m_pLock(other.m_pLock) { other.m_pLock = nullptr; }
+    ~LockReleaser();
+    LockReleaser(const LockReleaser&) = delete;
+    LockReleaser& operator=(const LockReleaser&) = delete;
+    bool isLocked() { return m_pLock != nullptr; }
+
+    QReadWriteLock* m_pLock;
+}; // class LockReleaser
+
+inline LockReleaser::~LockReleaser()
+{
+    if (m_pLock)
+        m_pLock->unlock();
+}
 
 
 }} // Module namespace

@@ -269,8 +269,8 @@ TEST(dfgQt, CsvItemModel_filteredRead)
 
 TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
 {
-    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) model;
-    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView) view(nullptr);
+    ::DFG_MODULE_NS(qt)::CsvItemModel model;
+    ::DFG_MODULE_NS(qt)::CsvTableView view(nullptr, nullptr);
     view.setModel(&model);
 
     view.insertRowHere();
@@ -331,8 +331,8 @@ TEST(dfgQt, CsvTableView_copyToClipboard)
 {
     // Note: this tests only that the created strings, which would be copied clipboard, are well formed, clipboard is not changed.
 
-    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) csvModel;
-    ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView) view(nullptr);
+    ::DFG_MODULE_NS(qt)::CsvItemModel csvModel;
+    ::DFG_MODULE_NS(qt)::CsvTableView view(nullptr, nullptr);
     QSortFilterProxyModel viewModel;
     viewModel.setSourceModel(&csvModel);
     viewModel.setDynamicSortFilter(true);
@@ -471,7 +471,7 @@ TEST(dfgQt, CsvTableView_paste)
 {
     using namespace ::DFG_MODULE_NS(qt);
     CsvItemModel csvModel;
-    CsvTableView view(nullptr);
+    CsvTableView view(nullptr, nullptr);
     QSortFilterProxyModel viewModel;
     viewModel.setSourceModel(&csvModel);
     //viewModel.setDynamicSortFilter(true);
@@ -545,7 +545,7 @@ TEST(dfgQt, CsvTableView_clear)
 {
     using namespace ::DFG_MODULE_NS(qt);
     CsvItemModel csvModel;
-    CsvTableView view(nullptr);
+    CsvTableView view(nullptr, nullptr);
     QSortFilterProxyModel viewModel;
     viewModel.setSourceModel(&csvModel);
     view.setModel(&viewModel);
@@ -863,7 +863,7 @@ TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);
     CsvItemModel csvModel;
-    CsvTableView view(nullptr);
+    CsvTableView view(nullptr, nullptr);
     view.setModel(&csvModel);
     csvModel.insertRows(0, 4);
     csvModel.insertColumns(0, 4);

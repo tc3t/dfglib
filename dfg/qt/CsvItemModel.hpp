@@ -8,6 +8,8 @@
 #include "StringMatchDefinition.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include "../cont/arrayWrapper.hpp"
+#include "../OpaquePtr.hpp"
+#include "containerUtils.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -37,6 +39,7 @@ class QUndoStack;
 class QCompleter;
 class QFile;
 class QTextStream;
+class QReadWriteLock;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -253,6 +256,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Appends data model row to string.
         void rowToString(const int nRow, QString& str, const QChar cDelim, const IndexSet* pSetIgnoreColumns = nullptr) const;
 
+        std::shared_ptr<QReadWriteLock> getReadWriteLock();
+        LockReleaser tryLockForEdit();
+        LockReleaser tryLockForRead() const;
+
         QString rowToString(const int nRow, const QChar cDelim = '\t') const
         {
             QString str;
@@ -413,6 +420,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         LoadOptions m_loadOptionsInOpen; // Stores file options that were used when opening.
         QStringList m_messagesFromLatestOpen;
         QStringList m_messagesFromLatestSave;
+        DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvItemModel
 
     template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)

@@ -196,13 +196,15 @@ namespace
 } // unnamed namespace
 
 
-DFG_CLASS_NAME(CsvTableView)::DFG_CLASS_NAME(CsvTableView)(QWidget* pParent, const ViewType viewType)
+CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
     : BaseClass(pParent)
     , m_matchDef(QString(), Qt::CaseInsensitive, PatternMatcher::Wildcard)
     , m_nFindColumnIndex(0)
     , m_bUndoEnabled(true)
 {
-    m_spEditLock.reset(new QReadWriteLock(QReadWriteLock::Recursive));
+    m_spEditLock = std::move(spReadWriteLock);
+    if (!m_spEditLock)
+        m_spEditLock = std::make_shared<QReadWriteLock>(QReadWriteLock::Recursive);
     this->setItemDelegate(new CsvTableViewDelegate(this));
 
     {
@@ -2204,8 +2206,8 @@ namespace
             m_pGeneratorControlsLayout(nullptr),
             m_nLatestComboBoxItemIndex(-1)
         {
-            m_spSettingsTable.reset(new DFG_CLASS_NAME(CsvTableView(this)));
-            m_spSettingsModel.reset(new DFG_CLASS_NAME(CsvItemModel));
+            m_spSettingsTable.reset(new CsvTableView(nullptr, this));
+            m_spSettingsModel.reset(new CsvItemModel);
             m_spDynamicHelpWidget.reset(new QLabel(this));
             m_spDynamicHelpWidget->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
             m_spSettingsTable->setModel(m_spSettingsModel.get());
@@ -3705,7 +3707,7 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
         columnNameModel.setData(columnNameModel.index(c, 0), pModel->headerData(c, Qt::Horizontal).toString());
 
     // Creating a dialog that has CsvTableView and ok & cancel buttons.
-    CsvTableView columnNameView(this, ViewType::fixedDimensionEdit);
+    CsvTableView columnNameView(nullptr, this, ViewType::fixedDimensionEdit);
     columnNameView.setModel(&columnNameModel);
     spLayout->addWidget(&columnNameView);
 
@@ -3742,12 +3744,6 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
                 pModel->setHeaderData(c, Qt::Horizontal, sNewName);
         }
     }
-}
-
-DFG_CLASS_NAME(CsvTableView)::LockReleaser::~LockReleaser()
-{
-    if (m_pLock)
-        m_pLock->unlock();
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()

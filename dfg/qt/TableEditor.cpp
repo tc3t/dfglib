@@ -287,7 +287,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     m_spProxyModel->setDynamicSortFilter(true);
 
     // View
-    m_spTableView.reset(new ViewClass(this));
+    m_spTableView.reset(new ViewClass(m_spTableModel->getReadWriteLock(), this));
     m_spTableView->setModel(m_spProxyModel.get());
     std::unique_ptr<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> spAnalyzerPanel(new DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(this));
     m_spTableView->addSelectionAnalyzer(std::make_shared<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)>(spAnalyzerPanel.get()));

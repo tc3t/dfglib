@@ -30,17 +30,17 @@ class QReadWriteLock;
 
 namespace DFG_ROOT_NS
 {
-    class DFG_CLASS_NAME(CsvFormatDefinition);
+    class CsvFormatDefinition;
 }
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
-    class DFG_CLASS_NAME(CsvItemModel);
+    class CsvItemModel;
 
-    class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel);
+    class CsvTableViewBasicSelectionAnalyzerPanel;
 
     // Analyzes item selection
-    class DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer) : public QObject
+    class CsvTableViewSelectionAnalyzer : public QObject
     {
         Q_OBJECT
     public:
@@ -54,9 +54,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             CompletionStatus_terminatedByDisabling
         };
 
-        DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)();
+        CsvTableViewSelectionAnalyzer();
 
-        virtual ~DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)();
+        virtual ~CsvTableViewSelectionAnalyzer();
 
         // Adds given selection to analyzation queue. Analyzer may decide how to handle queue: it can e.g. terminate current analysis and schelude a new one with given selection.
         // Note: this interface is thread safe.
@@ -86,25 +86,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         virtual void analyzeImpl(QItemSelection selection) = 0;
     }; // CsvTableViewSelectionAnalyzer
 
-    class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer) : public DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)
+    class CsvTableViewBasicSelectionAnalyzer : public CsvTableViewSelectionAnalyzer
     {
         Q_OBJECT
     public:
-        typedef DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) PanelT;
+        typedef CsvTableViewBasicSelectionAnalyzerPanel PanelT;
 
-        DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel);
-        ~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)() DFG_OVERRIDE_DESTRUCTOR;
+        CsvTableViewBasicSelectionAnalyzer(PanelT* uiPanel);
+        ~CsvTableViewBasicSelectionAnalyzer() DFG_OVERRIDE_DESTRUCTOR;
 
-        QPointer<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> m_spUiPanel;
+        QPointer<CsvTableViewBasicSelectionAnalyzerPanel> m_spUiPanel;
     private:
         void analyzeImpl(QItemSelection selection) override;
     }; // Class CsvTableViewBasicSelectionAnalyzer
 
-    class DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) : public QWidget
+    class CsvTableViewBasicSelectionAnalyzerPanel : public QWidget
     {
         Q_OBJECT
     public:
-        typedef DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel) ThisClass;
+        typedef CsvTableViewBasicSelectionAnalyzerPanel ThisClass;
         typedef QWidget BaseClass;
         CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent = nullptr);
         virtual ~CsvTableViewBasicSelectionAnalyzerPanel();
@@ -112,7 +112,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setValueDisplayString(const QString& s);
 
         void onEvaluationStarting(bool bEnabled);
-        void onEvaluationEnded(const double timeInSeconds, DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus);
+        void onEvaluationEnded(const double timeInSeconds, CsvTableViewSelectionAnalyzer::CompletionStatus completionStatus);
 
         double getMaxTimeInSeconds() const;
         bool isStopRequested() const;
@@ -149,16 +149,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     };
 
     // View for showing CsvItemModel.
-    class DFG_CLASS_NAME(CsvTableView) : public DFG_CLASS_NAME(TableView)
+    class CsvTableView : public TableView
     {
         Q_OBJECT
 
     public:
-        typedef DFG_CLASS_NAME(TableView) BaseClass;
-        typedef DFG_CLASS_NAME(CsvTableView) ThisClass;
-        typedef DFG_CLASS_NAME(CsvItemModel) CsvModel;
-        typedef DFG_CLASS_NAME(StringMatchDefinition) StringMatchDef;
-        typedef DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer) SelectionAnalyzer;
+        typedef TableView BaseClass;
+        typedef CsvTableView ThisClass;
+        typedef CsvItemModel CsvModel;
+        typedef StringMatchDefinition StringMatchDef;
+        typedef CsvTableViewSelectionAnalyzer SelectionAnalyzer;
 
         enum class ViewType
         {
@@ -172,21 +172,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ModelIndexTypeView    // Refers to indexes in view model (which can be the same as source-model in case there is no proxy).
         };
 
-        class LockReleaser
-        {
-        public:
-            LockReleaser(QReadWriteLock* pLock = nullptr) : m_pLock(pLock) {}
-            LockReleaser(LockReleaser&& other) noexcept : m_pLock(other.m_pLock) { other.m_pLock = nullptr; }
-            ~LockReleaser();
-            LockReleaser(const LockReleaser&) = delete;
-            LockReleaser& operator=(const LockReleaser&) = delete;
-            bool isLocked() { return m_pLock != nullptr; }
-
-            QReadWriteLock* m_pLock;
-        };
-
-        DFG_CLASS_NAME(CsvTableView)(QWidget* pParent, ViewType viewType = ViewType::allFeatures);
-        ~DFG_CLASS_NAME(CsvTableView)() DFG_OVERRIDE_DESTRUCTOR;
+        CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, ViewType viewType = ViewType::allFeatures);
+        ~CsvTableView() DFG_OVERRIDE_DESTRUCTOR;
 
         // If already present, old undo stack will be destroyed.
         void createUndoStack();
@@ -237,8 +224,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QAbstractProxyModel* getProxyModelPtr();
         const QAbstractProxyModel* getProxyModelPtr() const;
 
-        bool saveToFileImpl(const QString& path, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
-        bool saveToFileImpl(const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
+        bool saveToFileImpl(const QString& path, const CsvFormatDefinition& formatDef);
+        bool saveToFileImpl(const CsvFormatDefinition& formatDef);
 
         void privAddUndoRedoActions(QAction* pAddBefore = nullptr);
 
@@ -284,7 +271,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static QModelIndex mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, int r, int c);
 
         bool openFile(const QString& sPath);
-        bool openFile(const QString& sPath, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef);
+        bool openFile(const QString& sPath, const CsvFormatDefinition& formatDef);
 
         QString privCreateActionBlockedDueToLockedContentMessage(const QString& actionname);
         void privShowExecutionBlockedNotification(const QString& actionname);
@@ -461,7 +448,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void addSeparatorActionTo(QWidget* pTarget);
 
     public:
-        std::unique_ptr<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>> m_spUndoStack;
+        std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;
         QStringList m_tempFilePathsToRemoveOnExit;
         QModelIndex m_latestFoundIndex; // Index from underlying model. Invalid if doing first find.
         StringMatchDef m_matchDef;
@@ -470,41 +457,41 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bUndoEnabled;
         std::vector<QObjectStorage<QThread>> m_analyzerThreads;
-        std::unique_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited. Guaranteed to be non-null after construction.
+        std::shared_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited.
     };
 
     template <class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelection(Func_T func)
+    void CsvTableView::forEachCsvModelIndexInSelection(Func_T func)
     {
         forEachCsvModelIndexInSelection(*this, std::forward<Func_T>(func));
     }
 
     template <class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelection(Func_T func) const
+    void CsvTableView::forEachCsvModelIndexInSelection(Func_T func) const
     {
        forEachCsvModelIndexInSelection(*this, std::forward<Func_T>(func));
     }
 
     template <class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func)
+    void CsvTableView::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func)
     {
         forEachCsvModelIndexInSelectionRange(*this, sr, std::forward<Func_T>(func));
     }
 
     template <class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) const
+    void CsvTableView::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) const
     {
         forEachCsvModelIndexInSelectionRange(*this, sr, std::forward<Func_T>(func));
     }
 
     template <class This_T, class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelection(This_T& thisItem, Func_T func)
+    void CsvTableView::forEachCsvModelIndexInSelection(This_T& thisItem, Func_T func)
     {
         forEachIndexInSelection(thisItem, ModelIndexTypeSource, std::forward<Func_T>(func));
     }
 
     template <class This_T, class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelection(This_T& thisItem, const QItemSelection& selection, const ModelIndexType indexType, Func_T&& func)
+    void CsvTableView::forEachIndexInSelection(This_T& thisItem, const QItemSelection& selection, const ModelIndexType indexType, Func_T&& func)
     {
         for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
@@ -513,7 +500,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }
 
     template <class This_T, class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelection(This_T& thisItem, const ModelIndexType indexType, Func_T&& func)
+    void CsvTableView::forEachIndexInSelection(This_T& thisItem, const ModelIndexType indexType, Func_T&& func)
     {
         const auto sm = thisItem.selectionModel();
         const auto selection = (sm) ? sm->selection() : QItemSelection();
@@ -521,13 +508,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }
 
     template <class This_T, class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func)
+    void CsvTableView::forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func)
     {
         forEachIndexInSelectionRange(thisItem, sr, ModelIndexTypeSource, std::forward<Func_T>(func));
     }
 
     template <class This_T, class Func_T>
-    void DFG_CLASS_NAME(CsvTableView)::forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, const ModelIndexType indexType, Func_T func)
+    void CsvTableView::forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, const ModelIndexType indexType, Func_T func)
     {
         auto pProxy = (indexType == ModelIndexTypeSource) ? thisItem.getProxyModelPtr() : nullptr;
         auto pModel = thisItem.model();

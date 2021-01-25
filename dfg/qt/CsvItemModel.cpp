@@ -12,6 +12,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QReadWriteLock>
 #include <QTextStream>
 #include <QStringListModel>
 
@@ -247,6 +248,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::CompleterDeleter:
         p->deleteLater(); // Can't delete directly due to thread affinity (i.e. might get deleted from wrong thread triggering Qt asserts).
 }
 
+DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvItemModel)
+{
+    std::shared_ptr<QReadWriteLock> m_spReadWriteLock;
+};
+
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
     m_pUndoStack(nullptr),
     m_nRowCount(0),
@@ -255,10 +261,31 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
     m_readTimeInSeconds(-1),
     m_writeTimeInSeconds(-1)
 {
+    DFG_OPAQUE_REF().m_spReadWriteLock = std::make_shared<QReadWriteLock>(QReadWriteLock::Recursive);
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::~DFG_CLASS_NAME(CsvItemModel)()
 {
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvItemModel::getReadWriteLock() -> std::shared_ptr<QReadWriteLock>
+{
+    return DFG_OPAQUE_REF().m_spReadWriteLock;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvItemModel::tryLockForEdit() -> LockReleaser
+{
+    auto& spLock = DFG_OPAQUE_REF().m_spReadWriteLock;
+    return (spLock && spLock->tryLockForWrite()) ? LockReleaser(spLock.get()) : LockReleaser();
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvItemModel::tryLockForRead() const -> LockReleaser
+{
+    auto pOpaque = DFG_OPAQUE_PTR();
+    if (!pOpaque)
+        return LockReleaser();
+    auto& spLock = pOpaque->m_spReadWriteLock;
+    return (spLock && spLock->tryLockForRead()) ? LockReleaser(spLock.get()) : LockReleaser();
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithoutSignalEmit(QString s)
