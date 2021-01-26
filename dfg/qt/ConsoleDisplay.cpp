@@ -1,7 +1,11 @@
 #include "ConsoleDisplay.hpp"
 #include "connectHelper.hpp"
+#include <memory>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QAction>
+    #include <QContextMenuEvent>
+    #include <QMenu>
     #include <QTime>
 DFG_END_INCLUDE_QT_HEADERS
 
