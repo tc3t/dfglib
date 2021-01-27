@@ -339,11 +339,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             void sort()                         { static_cast<Impl_T&>(*this).sort(); }
 
-            void setSorting(const bool bSort)
+            void setSorting(const bool bSort, const bool bAssumeSorted = false)
             {
                 if (bSort == this->m_bSorted)
                     return;
-                if (bSort)
+                if (bSort && !bAssumeSorted)
                     sort();
                 this->m_bSorted = bSort;
             }

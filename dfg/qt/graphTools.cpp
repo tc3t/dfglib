@@ -867,7 +867,7 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
     {
         inserter(destValues, sourceData);
     });
-    destValues.setSorting(true);
+    destValues.setSorting(true, std::is_sorted(destValues.beginKey(), destValues.endKey()));
     m_columnTypes = source.columnDataTypes();
     m_columnNames = source.columnNames();
     this->m_bIsValid = true;
