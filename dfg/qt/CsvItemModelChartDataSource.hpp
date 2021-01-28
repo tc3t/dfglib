@@ -14,6 +14,8 @@ class QVariant;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
+class LockReleaser;
+
 namespace DFG_DETAIL_NS
 {
 } // namespace DFG_DETAIL_NS
@@ -25,8 +27,6 @@ namespace DFG_DETAIL_NS
 //   CsvItemModelDataSource
 //
 //   DataSource for reading from CsvItemModel.
-//
-//   NOTE: current implementation is not thread safe with respect to model edits
 //
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,11 +54,15 @@ public:
     ColumnNameMap columnNames() const override;
     // End interface overloads <--
 
-    const CsvItemModel* privGetCsvModel() const;
-    const CsvItemModel::DataTable* privGetDataTable() const;
+    std::pair<const CsvItemModel*, LockReleaser> privGetCsvModel() const;
+    std::pair<const CsvItemModel::DataTable*, LockReleaser> privGetDataTable() const;
 
     void setChangeSignaling(bool bEnable);
 
+private:
+    bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const override;
+
+public:
     QPointer<const CsvItemModel> m_spModel;
     ColumnDataTypeMap m_columnTypes;
 }; // class CsvItemModelChartDataSource

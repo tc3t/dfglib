@@ -45,11 +45,14 @@ QObject* ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::underlyingSource()
 
 void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(const DataSourceIndex c, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler)
 {
-    auto pTable = (handler) ? privGetDataTable() : nullptr;
-    if (!pTable)
+    if (!handler)
         return;
 
-    const auto& rTable = *pTable;
+    auto tablePtrAndLockReleaser = privGetDataTable();
+    if (!tablePtrAndLockReleaser.first)
+        return;
+
+    const auto& rTable = *tablePtrAndLockReleaser.first;
 
     // Peeking at the data to determine type of current column.
     bool bFound = false;
@@ -118,16 +121,16 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnCount() const -> DataSourceIndex
 {
-    auto pModel = privGetCsvModel();
-    return (pModel) ? static_cast<DataSourceIndex>(pModel->columnCount()) : 0;
+    auto modelPtrAndLockReleaser = privGetCsvModel();
+    return (modelPtrAndLockReleaser.first) ? static_cast<DataSourceIndex>(modelPtrAndLockReleaser.first->columnCount()) : 0;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexes() const -> IndexList
 {
-    auto pModel = privGetCsvModel();
-    if (pModel)
+    auto modelPtrAndLockReleaser = privGetCsvModel();
+    if (modelPtrAndLockReleaser.first)
     {
-        IndexList indexList(pModel->columnCount());
+        IndexList indexList(modelPtrAndLockReleaser.first->columnCount());
         ::DFG_MODULE_NS(alg)::generateAdjacent(indexList, 0, 1);
         return indexList;
     }
@@ -137,7 +140,8 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexes() const -> 
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexByName(const StringViewUtf8 sv) const -> DataSourceIndex
 {
-    auto rv = m_spModel->findColumnIndexByName(viewToQString(sv), -1);
+    auto modelPtrAndLockReleaser = privGetCsvModel();
+    const auto rv =  (modelPtrAndLockReleaser.first) ? modelPtrAndLockReleaser.first->findColumnIndexByName(viewToQString(sv), -1) : -1;
     return (rv != -1) ? static_cast<DataSourceIndex>(rv) : invalidIndex();
 }
 
@@ -172,21 +176,30 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnDataTypes() const -
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnNames() const -> ColumnNameMap
 {
     ColumnNameMap rv;
-    auto pModel = privGetCsvModel();
-    if (!pModel)
+    auto modelPtrAndLockReleaser = privGetCsvModel();
+    if (!modelPtrAndLockReleaser.first)
         return rv;
-    for (int i = 0, nColCount = pModel->columnCount(); i < nColCount; ++i)
-        rv[DataSourceIndex(i)] = pModel->getHeaderName(i);
+    auto& rModel = *modelPtrAndLockReleaser.first;
+    for (int i = 0, nColCount = rModel.columnCount(); i < nColCount; ++i)
+        rv[DataSourceIndex(i)] = rModel.getHeaderName(i);
     return rv;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::privGetCsvModel() const -> const CsvItemModel*
+auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::privGetCsvModel() const -> std::pair<const CsvItemModel*, LockReleaser>
 {
-    return m_spModel.data();
+    auto pModel = m_spModel.data();
+    auto lockReleaser = (pModel) ? pModel->tryLockForRead() : LockReleaser();
+    return std::pair<const CsvItemModel*, LockReleaser>(lockReleaser.isLocked() ? pModel : nullptr, std::move(lockReleaser));
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::privGetDataTable() const -> const CsvItemModel::DataTable*
+auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::privGetDataTable() const -> std::pair<const CsvItemModel::DataTable*, LockReleaser>
 {
-    auto pModel = privGetCsvModel();
-    return (pModel) ? &pModel->m_table : nullptr;
+    auto modelLockReleaserPair = privGetCsvModel();
+    const CsvItemModel::DataTable* pTable = (modelLockReleaserPair.first) ? &modelLockReleaserPair.first->m_table : nullptr;
+    return std::pair<const CsvItemModel::DataTable*, LockReleaser>(pTable, std::move(modelLockReleaserPair.second));
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::isSafeToQueryDataFromThreadImpl(const QThread*) const
+{
+    return true;
 }
