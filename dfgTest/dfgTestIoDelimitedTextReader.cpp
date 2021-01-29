@@ -1284,18 +1284,19 @@ namespace
 
         // Default reader
         {
-            auto cellData = DelimReader::CellData<char>(',', DelimReader::s_nMetaCharNone, '\n');
+            DelimReader::CellData<char> cellData(',', DelimReader::s_nMetaCharNone, '\n');
             cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
             DelimitedTextReaderBasicTests<Strm_T>([&](Strm_T& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
         }
 
         // Default reader with compile time format definition.
         {
-            auto cellData = DelimReader::CellData<char,
+            using CellData = DelimReader::CellData<char,
                 char,
                 DelimReader::CharBuffer<char>,
                 DelimReader::CharAppenderDefault<DelimReader::CharBuffer<char>, char>,
-                CompileTimeFormatDef>(CompileTimeFormatDef());
+                CompileTimeFormatDef>;
+            CellData cellData{ CompileTimeFormatDef() };
             cellData.getFormatDefInfo().setFlag(DelimReader::rfSkipLeadingWhitespaces, false);
             DelimitedTextReaderBasicTests<Strm_T>([&](Strm_T& strm) { return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellData); });
         }

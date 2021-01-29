@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
-#include "../alg/arrayCopy.hpp"
 #include "../cont/contAlg.hpp"
 #include <type_traits>
 
@@ -14,22 +13,26 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 //    -LLVM_SmallVector
 //    -QVarLengthArray
 template <class T, size_t StaticSize_T>
-class DFG_CLASS_NAME(VectorSso)
+class VectorSso
 {
 public:
     typedef T*          iterator;
     typedef const T*    const_iterator;
     typedef T           value_type;
     typedef const T&    const_reference;
-    DFG_STATIC_ASSERT(std::is_pod<T>::value, "Currently VectorSso has very basic implementation and supports only POD's");
 
     enum { s_ssoBufferSize = StaticSize_T };
 
-    DFG_CLASS_NAME(VectorSso)() :
-    m_pData(m_ssoStorage),
-    m_nSize(0)
+    VectorSso()
+        : m_pData(m_ssoStorage)
+        , m_nSize(0)
     {
     }
+
+    VectorSso(const VectorSso&)            = delete;
+    VectorSso(VectorSso&&)                 = delete;
+    VectorSso& operator=(const VectorSso&) = delete;
+    VectorSso& operator=(VectorSso&&)      = delete;
 
     bool isSsoStorageInUse() const
     {
@@ -47,7 +50,8 @@ public:
             {
                 bUseLargeStorage = true;
                 m_largeStorage.reserve(m_nSize + 1);
-                m_largeStorage.assign(begin(), end());
+                m_largeStorage.resize(m_nSize);
+                std::move(begin(), end(), m_largeStorage.begin());
             }
         }
         else
@@ -103,7 +107,11 @@ public:
     {
         DFG_ASSERT_UB(!empty());
         if (isSsoStorageInUse())
-            std::memmove(begin() + 1, begin(), --m_nSize);
+        {
+            DFG_STATIC_ASSERT(std::is_trivially_destructible<T>::value, "VectorSso: Implementation assumes trivially destructible types");
+            std::move(begin() + 1, end(), begin()); // Moving left is ok.
+            --m_nSize;
+        }
         else
         {
             popFront(m_largeStorage);
@@ -116,6 +124,7 @@ public:
     void pop_back()
     {
         DFG_ASSERT_UB(!empty());
+        DFG_STATIC_ASSERT(std::is_trivially_destructible<T>::value, "VectorSso: Implementation assumes trivially destructible types");
         m_nSize--;
         if (!isSsoStorageInUse())
         {
@@ -127,7 +136,10 @@ public:
     void cutTail(const_iterator iter)
     {
         if (isSsoStorageInUse())
+        {
+            DFG_STATIC_ASSERT(std::is_trivially_destructible<T>::value, "VectorSso: Implementation assumes trivially destructible types");
             m_nSize = iter - begin();
+        }
         else
         {
             DFG_MODULE_NS(cont)::cutTail(m_largeStorage, m_largeStorage.begin() + (iter - m_pData));

@@ -1365,7 +1365,7 @@ public:
 
         // TODO: in case of autodetect-controls, peek input to determine actual chars.
 
-        auto cellData = CellData<Char, Char, typename Appender::BufferType, Appender>(cSeparator, cEnclosing, cEndOfLine);
+        CellData<Char, Char, typename Appender::BufferType, Appender> cellData(cSeparator, cEnclosing, cEndOfLine);
         if (cEnclosing == s_nMetaCharNone && cSeparator != s_nMetaCharAutoDetect && cEndOfLine != s_nMetaCharAutoDetect)
             return readImpl(typename FormatDefinition_T::IsBasicReaderPossibleType(), istrm, cellData, std::forward<ItemHandlerFunc>(ihFunc));
         else

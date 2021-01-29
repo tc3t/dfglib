@@ -1138,7 +1138,7 @@ TEST(dfgCont, VectorSso)
 
     const size_t nTotalSize = 10;
 
-    DFG_CLASS_NAME(VectorSso)<size_t, nTotalSize-2> v;
+    VectorSso<size_t, nTotalSize-2> v;
 
     DFGTEST_STATIC(v.s_ssoBufferSize == nTotalSize - 2);
 
@@ -1192,6 +1192,41 @@ TEST(dfgCont, VectorSso)
     v.clear();
     EXPECT_TRUE(v.empty());
     EXPECT_TRUE(v.isSsoStorageInUse());
+
+    // Testing using with non-pod
+    {
+        class TestInt
+        {
+        public:
+            TestInt(int arg = 0) : a(arg) {}
+            ~TestInt() {}
+            int a;
+        };
+        VectorSso<TestInt, 2> vTestInt;
+        vTestInt.push_back(TestInt(1));
+        vTestInt.push_back(TestInt(2));
+        EXPECT_TRUE(vTestInt.isSsoStorageInUse());
+        vTestInt.push_back(TestInt(3));
+        EXPECT_FALSE(vTestInt.isSsoStorageInUse());
+        EXPECT_EQ(1, vTestInt[0].a);
+        EXPECT_EQ(2, vTestInt[1].a);
+        EXPECT_EQ(3, vTestInt[2].a);
+    }
+
+#if 0
+    // Copy assignment test, disabled while copy assignment is not supported.
+    {
+        VectorSso<int, 1> a;
+        {
+            VectorSso<int, 1> b;
+            b.push_back(1);
+            b.push_back(2);
+            a = b;
+        }
+        EXPECT_EQ(1, a[0]);
+        EXPECT_EQ(2, a[1]);
+    }
+#endif
 }
 
 namespace
