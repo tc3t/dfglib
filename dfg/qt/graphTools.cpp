@@ -1364,6 +1364,9 @@ public:
     {}
     virtual ~ChartObjectQCustomPlot() override {}
 
+    QCPAbstractPlottable*       qcpPlottable()       { return m_spPlottable.data(); }
+    const QCPAbstractPlottable* qcpPlottable() const { return m_spPlottable.data(); }
+
 private:
     void setNameImpl(const ChartObjectStringView s) override
     {
@@ -1726,6 +1729,7 @@ class ChartCanvasQCustomPlot : public DFG_MODULE_NS(charts)::ChartCanvas, public
 public:
     using ChartEntryOperation       = ::DFG_MODULE_NS(charts)::ChartEntryOperation;
     using ChartEntryOperationList   = ::DFG_MODULE_NS(charts)::ChartEntryOperationList;
+    using ChartObject               = ::DFG_MODULE_NS(charts)::ChartObject;
 
     ChartCanvasQCustomPlot(QWidget* pParent = nullptr);
 
@@ -1735,8 +1739,6 @@ public:
     void setPanelTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle, StringViewUtf8 svColor) override;
 
     bool hasChartObjects() const override;
-
-    void addXySeries() override;
 
     void optimizeAllAxesRanges() override;
 
@@ -1757,6 +1759,8 @@ public:
     void setPanelAxesLabelColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef) override;
     static void setPanelAxisLabelColour(QCPAxis& axis, const QColor& color);
     static void resetPanelAxisLabelColour(QCPAxis& axis);
+
+    static void setTypeToQcpObjectProperty(QCPAbstractPlottable* pPlottable, const StringViewC& type);
 
     ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam& param)   override;
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
@@ -1785,6 +1789,7 @@ public:
     // Returns ChartPanel on which given (mouse) cursor is.
     ChartPanel* getChartPanel(const QPoint& pos); // pos is as available in mouseMoveEvent() pEvent->pos()
     ChartPanel* getChartPanel(const StringViewUtf8& svPanelId);
+    ChartPanel* getChartPanelByAxis(const QCPAxis* pAxis); // Returns chart panel that has given axis, nullptr if not found.
 
     void removeLegends();
 
@@ -1802,11 +1807,15 @@ public:
 
     void beginUpdateState() override;
 
+    ::DFG_MODULE_NS(charts)::ChartPanel* findPanelOfChartObject(const ChartObject*) override;
+
 private:
     template <class This_T, class Func_T>
     static void forEachAxisRectImpl(This_T& rThis, Func_T&& func);
     template <class Func_T> void forEachAxisRect(Func_T&& func);
     template <class Func_T> void forEachAxisRect(Func_T&& func) const;
+
+    template <class Func_T> void forEachChartPanelUntil(Func_T&& func); // Func shall return true to continue loop, false to break.
 
     // Returns true if operations were successfully created from given definition list, false otherwise.
     bool applyChartOperationsTo(QCPAbstractPlottable* pPlottable, const QStringList& definitionList);
@@ -1823,14 +1832,15 @@ public:
 }; // ChartCanvasQCustomPlot
 
 
-class ChartPanel : public QCPLayoutGrid
+class ChartPanel : public ::DFG_MODULE_NS(charts)::ChartPanel, public QCPLayoutGrid
 {
     //Q_OBJECT
 public:
     using PairT = PointXy;
     using AxisT = QCPAxis;
     ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId);
-    QCPAxisRect* axisRect();
+          QCPAxisRect* axisRect();
+    const QCPAxisRect* axisRect() const;
 
     void setTitle(StringViewUtf8 svTitle, StringViewUtf8 svColor = StringViewUtf8());
     QString getTitle() const;
@@ -1842,15 +1852,26 @@ public:
 
     void forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler);
 
-    AxisT* primaryXaxis();
+          AxisT* primaryXaxis();
+    const AxisT* primaryXaxis() const;
     AxisT* primaryYaxis();
     AxisT* secondaryXaxis();
     AxisT* secondaryYaxis();
 
-    AxisT* axis(AxisT::AxisType axisType);
+    AxisT*       axis(AxisT::AxisType axisType);
+    const AxisT* axis(AxisT::AxisType axisType) const;
+
+    bool hasAxis(const QCPAxis* pAxis);
 
     template <class Func_T> void forEachAxis(Func_T&& func);
 
+    uint32 countOf(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const override;
+
+private:
+    template <class This_T>
+    static auto axisImpl(This_T& rThis, AxisT::AxisType axisType) -> decltype(rThis.axis(axisType));
+
+public:
     QCustomPlot* m_pQcp = nullptr;
     QString m_panelId;
 }; // class ChartPanel
@@ -1869,16 +1890,24 @@ auto ChartPanel::axisRect() -> QCPAxisRect*
     return qobject_cast<QCPAxisRect*>(elementAt(elementCount() - 1));
 }
 
-auto ChartPanel::axis(AxisT::AxisType axisType) -> AxisT*
+auto ChartPanel::axisRect() const -> const QCPAxisRect*
 {
-    auto pAxisRect = axisRect();
+    const auto nElemCount = elementCount();
+    return (nElemCount > 0) ? qobject_cast<QCPAxisRect*>(elementAt(nElemCount - 1)) : nullptr;
+}
+
+template <class This_T>
+auto ChartPanel::axisImpl(This_T& rThis, AxisT::AxisType axisType) -> decltype(rThis.axis(axisType))
+{
+    auto pAxisRect = rThis.axisRect();
     return (pAxisRect) ? pAxisRect->axis(axisType) : nullptr;
 }
 
-auto ChartPanel::primaryXaxis() -> AxisT*
-{
-    return axis(AxisT::atBottom);
-}
+auto ChartPanel::axis(AxisT::AxisType axisType)       -> AxisT*       { return ChartPanel::axisImpl(*this, axisType); }
+auto ChartPanel::axis(AxisT::AxisType axisType) const -> const AxisT* { return ChartPanel::axisImpl(*this, axisType); }
+
+auto ChartPanel::primaryXaxis()       -> AxisT*       { return axis(AxisT::atBottom); }
+auto ChartPanel::primaryXaxis() const -> const AxisT* { return axis(AxisT::atBottom); }
 
 auto ChartPanel::primaryYaxis() -> AxisT*
 {
@@ -1893,6 +1922,11 @@ auto ChartPanel::secondaryXaxis() -> AxisT*
 auto ChartPanel::secondaryYaxis() -> AxisT*
 {
     return nullptr;
+}
+
+bool ChartPanel::hasAxis(const QCPAxis* pAxis)
+{
+    return pAxis == primaryXaxis() || pAxis == primaryYaxis() || pAxis == secondaryXaxis() || pAxis == secondaryYaxis();
 }
 
 QString ChartPanel::getTitle() const
@@ -1963,6 +1997,23 @@ void ChartPanel::forEachAxis(Func_T&& func)
     ChartCanvasQCustomPlot::forEachAxis(pAxisRect, func);
 }
 
+auto ChartPanel::countOf(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const -> uint32
+{
+    auto pPrimaryX = primaryXaxis();
+    if (!pPrimaryX)
+        return 0;
+    uint32 nCount = 0;
+    const auto plottables = pPrimaryX->plottables();
+    const auto sQstringType = QString::fromUtf8(type.data(), type.sizeAsInt());
+    for (const auto& pPlottable : plottables)
+    {
+        if (!pPlottable)
+            continue;
+        nCount += pPlottable->property("chartEntryType").toString() == sQstringType;
+    }
+    return nCount;
+}
+
 namespace
 {
     template <class Func_T>
@@ -2003,7 +2054,7 @@ namespace
         func(QCPScatterStyle::ssPlusCircle,        QT_TR_NOOP("PlusCircle"));
         func(QCPScatterStyle::ssPeace,             QT_TR_NOOP("Peace"));
     }
-}
+} // unnamed namespace
 
 namespace
 {
@@ -2018,7 +2069,7 @@ namespace
                 pAction->setChecked(true);
         }
     }
-}
+} // unnamed namespace
 
 ChartCanvasQCustomPlot::ChartCanvasQCustomPlot(QWidget* pParent)
 {
@@ -2037,13 +2088,6 @@ ChartCanvasQCustomPlot::ChartCanvasQCustomPlot(QWidget* pParent)
 bool ChartCanvasQCustomPlot::hasChartObjects() const
 {
     return m_spChartView && (m_spChartView->plottableCount() > 0);
-}
-
-void ChartCanvasQCustomPlot::addXySeries()
-{
-    if (!m_spChartView)
-        return;
-    m_spChartView->addGraph();
 }
 
 namespace
@@ -2224,10 +2268,16 @@ namespace
     }
 }
 
+void ChartCanvasQCustomPlot::setTypeToQcpObjectProperty(QCPAbstractPlottable* pPlottable, const StringViewC& type)
+{
+    if (pPlottable)
+        pPlottable->setProperty("chartEntryType", untypedViewToQStringAsUtf8(type));
+}
+
 auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
 {
     auto p = getWidget();
-    if (!p || param.nIndex < 0)
+    if (!p)
         return nullptr;
 
     auto pXaxis = getXAxis(param);
@@ -2243,9 +2293,15 @@ auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) 
     QCPGraph* pQcpGraph = nullptr;
     QCPCurve* pQcpCurve = nullptr;
     if (type == ChartObjectChartTypeStr_xy)
+    {
         pQcpGraph = p->addGraph(pXaxis, pYaxis);
+        setTypeToQcpObjectProperty(pQcpGraph, type);
+    }
     else if (type == ChartObjectChartTypeStr_txy)
+    {
         pQcpCurve = new QCPCurve(pXaxis, pYaxis); // Owned by QCustomPlot
+        setTypeToQcpObjectProperty(pQcpCurve, type);
+    }
     else
     {
         DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid type '%1'").arg(untypedViewToQStringAsUtf8(type.asUntypedView())));
@@ -2305,7 +2361,10 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         return nullptr;
     }
 
-    auto spHistogram = std::make_shared<HistogramQCustomPlot>(new QCPBars(pXaxis, pYaxis)); // Note: QCPBars is owned by QCustomPlot-object.
+    auto pQCPBars = new QCPBars(pXaxis, pYaxis);
+    setTypeToQcpObjectProperty(pQCPBars, ChartObjectChartTypeStr_histogram);
+    auto spHistogram = std::make_shared<HistogramQCustomPlot>(pQCPBars); // Note: QCPBars is owned by QCustomPlot-object.
+    pQCPBars = nullptr;
 
     const bool bOnlySingleValue = (*minMaxPair.first == *minMaxPair.second);
 
@@ -2468,6 +2527,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     }
 
     auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
+    setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
     fillQcpPlottable<QCPBarsData>(*pBars, ticks, valueRange);
 
     auto spBarsHolder = std::make_shared<BarSeriesQCustomPlot>(pBars);
@@ -2773,6 +2833,24 @@ void ChartCanvasQCustomPlot::forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func)
     }
 }
 
+template <class Func_T>
+void ChartCanvasQCustomPlot::forEachChartPanelUntil(Func_T&& func)
+{
+    auto pCustomPlot = getWidget();
+    auto pMainLayout = (pCustomPlot) ? pCustomPlot->plotLayout() : nullptr;
+    if (!pMainLayout)
+        return;
+    const auto nElemCount = pMainLayout->elementCount();
+    for (int i = 0; i < nElemCount; ++i)
+    {
+        auto pElement = pMainLayout->elementAt(i);
+        auto pPanel = dynamic_cast<ChartPanel*>(pElement);
+        if (pPanel)
+            if (!func(*pPanel))
+                break;
+    }
+}
+
 auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCPAxisRect*
 {
     int nRow = 0;
@@ -2813,34 +2891,26 @@ auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCP
 
 auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) -> ChartPanel*
 {
-    auto pCustomPlot = getWidget();
-    auto pMainLayout = (pCustomPlot) ? pCustomPlot->plotLayout() : nullptr;
-    if (!pMainLayout)
-        return nullptr;
-
     const auto isWithinAxisRange = [](QCPAxis* pAxis, const double val)
         {
             return (pAxis) ? pAxis->range().contains(val) : false;
         };
 
-    const auto nElemCount = pMainLayout->elementCount();
-    for (int i = 0; i < nElemCount; ++i)
+    ChartPanel* pPanel = nullptr;
+    forEachChartPanelUntil([&](ChartPanel& panel)
     {
-        auto pElement = pMainLayout->elementAt(i);
-        auto pPanel = dynamic_cast<ChartPanel*>(pElement);
-        if (!pPanel)
-            continue;
-        auto pXaxis1 = pPanel->primaryXaxis();
-        auto pYaxis1 = pPanel->primaryYaxis();
+        auto pXaxis1 = panel.primaryXaxis();
+        auto pYaxis1 = panel.primaryYaxis();
         if (pXaxis1 && pYaxis1)
         {
             const auto xCoord = pXaxis1->pixelToCoord(pos.x());
             const auto yCoord = pYaxis1->pixelToCoord(pos.y());
             if (isWithinAxisRange(pXaxis1, xCoord) && isWithinAxisRange(pYaxis1, yCoord))
-                return pPanel;
+                pPanel = &panel;
         }
-    }
-    return nullptr;
+        return pPanel == nullptr;
+    });
+    return pPanel;
 }
 
 auto ChartCanvasQCustomPlot::getChartPanel(const StringViewUtf8& svPanelId) -> ChartPanel*
@@ -2855,6 +2925,18 @@ auto ChartCanvasQCustomPlot::getChartPanel(const StringViewUtf8& svPanelId) -> C
     if (!getGridPos(svPanelId, nRow, nCol))
         return nullptr;
     return dynamic_cast<ChartPanel*>(pMainLayout->element(nRow, nCol));
+}
+
+auto ChartCanvasQCustomPlot::getChartPanelByAxis(const QCPAxis* pAxis) -> ChartPanel*
+{
+    ChartPanel* pPanel = nullptr;
+    forEachChartPanelUntil([&](ChartPanel& rPanel)
+    {
+        if (rPanel.hasAxis(pAxis))
+            pPanel = &rPanel;
+        return pPanel == nullptr;
+    });
+    return pPanel;
 }
 
 auto ChartCanvasQCustomPlot::getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId) -> QCPAxis*
@@ -3362,6 +3444,21 @@ void ChartCanvasQCustomPlot::beginUpdateState()
     pQcp->replot();
 }
 
+auto ChartCanvasQCustomPlot::findPanelOfChartObject(const ChartObject* pObj) -> ::DFG_MODULE_NS(charts)::ChartPanel*
+{
+    auto* pObject = (pObj) ? dynamic_cast<const ChartObjectQCustomPlot*>(pObj->implementationObject()) : nullptr;
+    if (!pObject)
+        return nullptr;
+    auto pQcpPlottable = pObject->qcpPlottable();
+    if (!pQcpPlottable)
+        return nullptr;
+    auto pQcp = getWidget();
+    if (!pQcp)
+        return nullptr;
+
+    return getChartPanelByAxis(pQcpPlottable->keyAxis());
+}
+
 template <class ChartObject_T, class ValueCont_T>
 static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
 {
@@ -3397,7 +3494,7 @@ static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(
     fillQcpPlottable<DataType_T>(rChartObject, xVals, yVals, transformer);
 }
 
-void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData)
+static void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData)
 {
     using namespace ::DFG_MODULE_NS(charts);
     if (!pPlottable)
@@ -3946,6 +4043,11 @@ auto DFG_MODULE_NS(qt)::GraphDisplay::getController() -> ChartController*
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+class ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::RefreshContext
+{
+public:
+};
+
 class ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData : public ::DFG_MODULE_NS(charts)::ChartOperationPipeData
 {
 public:
@@ -4222,12 +4324,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
     }
     auto& rChart = *pChart;
 
-    int nGraphCounter = 0;
-    int nHistogramCounter = 0;
-    int nBarsCounter = 0;
     GraphDefinitionEntry globalConfigEntry; // Stores global config entry if present.
     GraphDefinitionEntry* pGlobalConfigEntry = nullptr; // Set to point to global config if such exists. This and globalConfigEntry are nothing but inconvenient way to do what optional would provide.
     ::DFG_MODULE_NS(cont)::MapVectorAoS<StringUtf8, GraphDefinitionEntry> mapPanelIdToConfig;
+    RefreshContext context;
 
     // Getting a reference to the cache object; this is important so that items that have no prepared data can use cache if available.
     // Note that this is needed because 'this' moves out cache object to refresh param.
@@ -4322,11 +4422,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
             try
             {
                 if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
-                    refreshXy(rChart, configParamCreator, source, defEntry, pPreparedData, nGraphCounter);
+                    refreshXy(context, rChart, configParamCreator, source, defEntry, pPreparedData);
                 else if (sEntryType == ChartObjectChartTypeStr_histogram)
-                    refreshHistogram(rChart, configParamCreator, source, defEntry, pPreparedData, nHistogramCounter);
+                    refreshHistogram(context, rChart, configParamCreator, source, defEntry, pPreparedData);
                 else if (sEntryType == ChartObjectChartTypeStr_bars)
-                    refreshBars(rChart, configParamCreator, source, defEntry, pPreparedData, nBarsCounter);
+                    refreshBars(context, rChart, configParamCreator, source, defEntry, pPreparedData);
                 else
                 {
                     if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
@@ -4649,7 +4749,22 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
     return rv;
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nGraphCounter)
+namespace
+{
+    static DFG_ROOT_NS::uint32 getRunningIndexFor(::DFG_MODULE_NS(charts)::ChartCanvas& rChart, ::DFG_MODULE_NS(charts)::ChartObject& rObject, const ::DFG_MODULE_NS(qt)::GraphDefinitionEntry& defEntry)
+    {
+        auto pPanel = rChart.findPanelOfChartObject(&rObject);
+        return (pPanel) ? pPanel->countOf(defEntry.graphTypeStr()) : 0;
+    }
+
+    template <class Cont_T>
+    static auto elementByModuloIndex(Cont_T& cont, const size_t i) -> decltype(cont[0])
+    {
+        return cont[i % DFG_ROOT_NS::count(cont)];
+    }
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(RefreshContext& context, ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData)
 {
     using namespace ::DFG_MODULE_NS(charts);
     auto rawData = (pPreparedData) ? std::move(*pPreparedData) : prepareDataForXy(m_spCache, source, defEntry);
@@ -4671,7 +4786,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
     const auto yType = (!bYisRowIndex) ? rawData.columnDataType(1) : ChartDataType(ChartDataType::unknown);
     const auto sXname = (!bXisRowIndex) ? rawData.columnName(0) : QString(szRowIndexName);
     const auto sYname = (!bYisRowIndex) ? rawData.columnName(1) : QString(szRowIndexName);
-    auto spSeries = rChart.createXySeries(XySeriesCreationParam(nGraphCounter++, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
+    auto spSeries = rChart.createXySeries(XySeriesCreationParam(-1, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
     if (!spSeries)
     {
         if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
@@ -4699,7 +4814,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(ChartCanvas& rCh
             rSeries.setPointStyle(configParamCreator().valueStr(ChartObjectFieldIdStr_pointStyle, SzPtrUtf8(ChartObjectPointStyleStr_basic)));
     }
 
-    setCommonChartObjectProperties(rSeries, defEntry, configParamCreator, DefaultNameCreator("Graph", nGraphCounter, sXname, sYname));
+    setCommonChartObjectProperties(context, rSeries, defEntry, configParamCreator, DefaultNameCreator("Graph", getRunningIndexFor(rChart, rSeries, defEntry), sXname, sYname));
 }
 
 namespace
@@ -4838,7 +4953,7 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
 
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nHistogramCounter)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(RefreshContext& context, ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData)
 {
     using namespace ::DFG_MODULE_NS(charts);
 
@@ -4862,8 +4977,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(ChartCanv
 
     if (!spHistogram)
         return;
-    ++nHistogramCounter;
-    setCommonChartObjectProperties(*spHistogram, defEntry, configParamCreator, DefaultNameCreator("Histogram", nHistogramCounter));
+    setCommonChartObjectProperties(context, *spHistogram, defEntry, configParamCreator, DefaultNameCreator("Histogram", getRunningIndexFor(rChart, *spHistogram, defEntry)));
 }
 
 auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(std::shared_ptr<ChartDataCache>& spCache, GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> ChartData
@@ -4911,7 +5025,7 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(std::
     return rawData;
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData, int& nBarsCounter)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(RefreshContext& context, ChartCanvas& rChart, ConfigParamCreator configParamCreator, GraphDataSource& source, const GraphDefinitionEntry& defEntry, ChartData* pPreparedData)
 {
     using namespace ::DFG_MODULE_NS(charts);
 
@@ -4933,14 +5047,17 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(ChartCanvas& r
                                                                      qStringToStringUtf8(sXaxisName), qStringToStringUtf8(sYaxisName)));
     if (!spBarSeries)
         return;
-    ++nBarsCounter;
-    setCommonChartObjectProperties(*spBarSeries, defEntry, configParamCreator, DefaultNameCreator("Bars", nBarsCounter));
+    setCommonChartObjectProperties(context, *spBarSeries, defEntry, configParamCreator, DefaultNameCreator("Bars", getRunningIndexFor(rChart, *spBarSeries, defEntry)));
 }
 
-void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator)
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(RefreshContext& context, ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator)
 {
+    DFG_UNUSED(context);
+
+    const char* defaultColours[] = { "red", "blue", "black", "cyan", "magenta", "green", "orange" };
     rObject.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, defaultNameCreator));
-    rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_lineColour); }));
+    const auto defaultColour = SzPtrUtf8(elementByModuloIndex(defaultColours, defaultNameCreator.m_nIndex));
+    rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_lineColour, defaultColour); }));
     rObject.setFillColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_fillColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_fillColour); }));
 }
 

@@ -401,6 +401,9 @@ public:
     void setLineColour(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setLineColourImpl(sv) : setLineColourImpl(sv); }
     void setFillColour(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setFillColourImpl(sv) : setFillColourImpl(sv); }
 
+          ChartObject* implementationObject()       { return (m_spImplementation) ? m_spImplementation.get() : this; }
+    const ChartObject* implementationObject() const { return (m_spImplementation) ? m_spImplementation.get() : this; }
+
 protected:
     ChartObject() {}
 
@@ -625,6 +628,15 @@ inline BarSeriesCreationParam::BarSeriesCreationParam(ChartConfigParam configPar
 
 }
 
+class ChartPanel
+{
+public:
+    ~ChartPanel() {}
+
+    static constexpr uint32 unknownCount() { return (std::numeric_limits<uint32>::max)(); }
+
+    virtual uint32 countOf(AbstractChartControlItem::FieldIdStrViewInputParam) const { return unknownCount(); }
+};
 
 class ChartCanvas
 {
@@ -643,8 +655,6 @@ public:
     virtual ~ChartCanvas() {}
 
     virtual bool hasChartObjects() const = 0;
-
-    virtual void addXySeries() = 0;
 
     virtual void setPanelTitle(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svTitle*/, StringViewUtf8 /*svColor*/) {}
 
@@ -671,6 +681,7 @@ public:
     virtual bool enableLegend(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
     virtual bool enableToolTip(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
     virtual void createLegends() {}
+    virtual ChartPanel* findPanelOfChartObject(const ChartObject*) { return nullptr; }
 
     // Gives a hint to chart that it is now being updated so it can e.g. show some kind of update indicator.
     // If concrete instance has implementation for this, it must automatically reset the state on call to repaintCanvas()
