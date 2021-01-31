@@ -2591,6 +2591,8 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
             }
             auto lockCleanUp = makeScopedCaller([] {}, [&]() { m_spEditLock->unlock(); });
 
+            const auto waitCursor = makeScopedCaller([]() { QApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
+                                                     []() { QApplication::restoreOverrideCursor(); });
             if (generateContentImpl(*pGeneratorDialog->m_spSettingsModel))
             {
                 pGeneratorDialog->setGenerateFailed(false);
