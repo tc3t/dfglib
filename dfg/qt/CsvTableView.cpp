@@ -2899,12 +2899,12 @@ bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
         char buffer[32] = "";
         double tr = std::numeric_limits<double>::quiet_NaN();
         double tc = std::numeric_limits<double>::quiet_NaN();
-        double rowCount = rModel.rowCount();
-        double colCount = rModel.columnCount();
+        const double rowCount = rModel.rowCount();
+        const double colCount = rModel.columnCount();
         parser.defineVariable("trow", &tr);
         parser.defineVariable("tcol", &tc);
-        parser.defineVariable("rowcount", &rowCount);
-        parser.defineVariable("colcount", &colCount);
+        parser.defineConstant("rowcount", rowCount);
+        parser.defineConstant("colcount", colCount);
         const auto generator = [&](CsvItemModel::DataTable& table, const int r, const int c, size_t)
         {
             tr = CsvItemModel::internalRowIndexToVisible(r);

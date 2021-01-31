@@ -40,7 +40,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         using ReturnStatus = bool;
 
         ReturnStatus setFormula(const StringViewC sv); // Returns ReturnStatus that evaluates to true iff successful.
-        ReturnStatus defineVariable(const StringViewC sv, double* pVar); // Returns ReturnStatus that evaluates to true iff successful.
+        // Returns ReturnStatus that evaluates to true iff successful.
+        // If variable of given identifier already exists, old variable definition is replaced.
+        // If a constant of given identifier already exists, operation fails.
+        ReturnStatus defineVariable(const StringViewC sv, double* pVar);
+        // Returns ReturnStatus that evaluates to true iff successful.
+        // If const of given identifier already exists, old const definition is replaced.
+        // If a variable of given identifier already exists, operation fails.
+        ReturnStatus defineConstant(const StringViewC sv, double val); 
         double       evaluateFormulaAsDouble(); // If unable to evaluate, returns NaN
 
         // Convenience interface for evaluating simple formulas that have no variables.

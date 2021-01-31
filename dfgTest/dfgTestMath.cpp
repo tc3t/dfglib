@@ -529,14 +529,22 @@ TEST(dfgMath, FormulaParser)
     {
         FormulaParser parser;
         double x = 1;
-        EXPECT_TRUE(parser.defineVariable("x", &x));
+        double dummy = std::numeric_limits<double>::quiet_NaN();
+        EXPECT_TRUE(parser.defineVariable("x", &dummy));
+        EXPECT_TRUE(parser.defineVariable("x", &x)); // Redefining should simply overwrite existing.
         EXPECT_TRUE(parser.setFormula("x+2*3"));
         EXPECT_EQ(7, parser.evaluateFormulaAsDouble());
         EXPECT_EQ(7, FormulaParser::evaluateFormulaAsDouble("1+2*3"));
 
+        EXPECT_TRUE(parser.defineConstant("constVal", 20));
+        EXPECT_TRUE(parser.defineConstant("constVal", 10)); // Redefining should simply overwrite existing.
+        parser.setFormula("1 + constVal + 2*constVal + x");
+        EXPECT_EQ(32, parser.evaluateFormulaAsDouble());
+        EXPECT_FALSE(parser.defineConstant("x", 30)); // Trying to define a constant when there's already a variable with the same identifier should fail.
+
+        EXPECT_FALSE(parser.defineVariable("constVal", &x)); // Should fail as a constant with the same identifier already exists.
         EXPECT_FALSE(parser.defineVariable("", &x)); // Invalid variable symbol
         EXPECT_FALSE(parser.defineVariable("y", nullptr)); // Invalid variable pointer
         EXPECT_TRUE(isNan(FormulaParser::evaluateFormulaAsDouble("2+-*/6")));
-
     }
 }

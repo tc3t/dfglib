@@ -48,6 +48,23 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineVariable(const StringViewC sv, 
     }
 }
 
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineConstant(const StringViewC sv, const double val) -> ReturnStatus
+{
+    const auto sIdentifier = sv.toString();
+    if (DFG_OPAQUE_REF().m_parser.GetVar().find(sIdentifier) != DFG_OPAQUE_REF().m_parser.GetVar().end())
+        return false;
+    try
+    {
+        DFG_OPAQUE_REF().m_parser.DefineConst(sIdentifier, val);
+        return true;
+    }
+    catch (const dfg_mu::Parser::exception_type& e)
+    {
+        DFG_UNUSED(e);
+        return false;
+    }
+}
+
 double ::DFG_MODULE_NS(math)::FormulaParser::evaluateFormulaAsDouble()
 {
     try
