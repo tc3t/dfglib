@@ -17,6 +17,7 @@
 #include "../cont/SetVector.hpp"
 #include "JsonListWidget.hpp"
 #include "sqlTools.hpp"
+#include "../math/FormulaParser.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -2053,7 +2054,8 @@ namespace
         GeneratorTypeRandomIntegers,
         GeneratorTypeRandomDoubles,
         GeneratorTypeFill,
-        GeneratorType_last = GeneratorTypeFill
+        GeneratorTypeFormula,
+        GeneratorType_last = GeneratorTypeFormula
     };
 
     enum TargetType
@@ -2112,18 +2114,18 @@ namespace
         nullptr // End-of-list marker
     };
 
+    // In syntax |x;y;z... items x,y,z define the indexes in table below that are parameters for given item.
+    const char szGenerators[] = "Random integers|9,Random doubles|10;6;7,Fill|8,Formula|2;6;7";
+
     // Note: this is a POD-table (for notes about initialization of PODs, see
     //    -http://stackoverflow.com/questions/2960307/pod-global-object-initialization
     //    -http://stackoverflow.com/questions/15212261/default-initialization-of-pod-types-in-c
     const PropertyDefinition arrPropDefs[] =
     {
-        // Key name       Value type         Value items (if key type is list)           Default value
-        //                                   In syntax |x;y;z... items x,y,z define
-        //                                   the indexes in this table that are
-        //                                   parameters for given item.
+        // Key name               Value type           Value items (if key type is list)                      Default value
         { "Target"              , ValueTypeKeyList  , "Selection,Whole table"                               , "Selection"      , nullptr }, // 0
-        { "Generator"           , ValueTypeKeyList  , "Random integers|9,Random doubles|10;6;7,Fill|8"      , "Random integers", nullptr }, // 1
-        { "Unused"              , ValueTypeInteger  , ""                                                    , ""               , nullptr }, // 2
+        { "Generator"           , ValueTypeKeyList  , szGenerators                                          , "Random integers", nullptr }, // 1
+        { "Formula"             , ValueTypeCsvList  , ""                                                    , "trow + tcol"    , nullptr }, // 2
         { "Unused"              , ValueTypeInteger  , ""                                                    , ""               , nullptr }, // 3
         { "Unused"              , ValueTypeDouble   , ""                                                    , ""               , nullptr }, // 4
         { "Unused"              , ValueTypeDouble   , ""                                                    , ""               , nullptr }, // 5
@@ -2181,7 +2183,7 @@ namespace
     GeneratorType generatorType(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel)
     {
         // TODO: use more reliable detection (string comparison does not work with tr())
-        DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
+        DFG_STATIC_ASSERT(GeneratorType_last == 4, "This implementation handles only 4 generator types");
         const auto& sGenerator = csvModel.data(csvModel.index(1, 1)).toString();
         if (sGenerator == "Random integers")
             return GeneratorTypeRandomIntegers;
@@ -2189,6 +2191,8 @@ namespace
             return GeneratorTypeRandomDoubles;
         else if (sGenerator == "Fill")
             return GeneratorTypeFill;
+        else if (sGenerator == "Formula")
+            return GeneratorTypeFormula;
         else
         {
             DFG_ASSERT_IMPLEMENTED(false);
@@ -2381,6 +2385,20 @@ namespace
                     "<li><b>chi_squared, n</b>: Chi squared distribution. Requires n &gt; 0</li>"
                     "<li><b>fisher_f, a, b</b>: Fisher f distribution. Requires a &gt; 0, b &gt; 0</li>"
                     "<li><b>student_t, n</b>: Student's t distribution. Requires n &gt; 0</li>"));
+            }
+            else if (genType == GeneratorTypeFormula)
+            {
+                m_spDynamicHelpWidget->setText(tr("Generates content using given formula.<br>"
+                    "<b>Available variables</b>:"
+                    "<li><b>trow</b>: Row of cell to which content is being generated, 1-based index.</li>"
+                    "<li><b>tcol</b>: Column of cell to which content is being generated, 1-based index.</li>"
+                    "<li><b>rowcount</b>: Number of rows in table </li>"
+                    "<li><b>colcount</b>: Number of columns in table</li>"
+                    "<b>Available functions</b> (non exhaustive list): sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, asinh, acosh, atanh, log2, log10, log, exp, sqrt, sign, rint, abs<br>"
+                    "<b>Note</b>: trow and tcol are table indexes: even when generating to sorted or filtered table, these are rows/columns of the underlying table, not those of shown.<br>"
+                    "For example if a table of 5 rows is sorted so that row 5 is shown as first, trow value for that cell is 5, not 1. Currently there is no variable for accessing view rows/columns.<br>"
+                    "<b>Example</b>: rowcount - trow + 1 (this generates descending row indexes, 1-based index)"
+                ));
             }
             else
             {
@@ -2585,8 +2603,10 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
     }
 }
 
+// Calls 'generator' for each cell in target. 
+// Generator received 4 arguments: table, model row (0-based), model column (0-based), cell counter (0 for first item).
 template <class Generator_T>
-void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(CsvTableView)& view, DFG_CLASS_NAME(CsvItemModel)& rModel, Generator_T generator)
+static void generateForEachInTarget(const TargetType targetType, const CsvTableView& view, CsvItemModel& rModel, Generator_T generator)
 {
     DFG_STATIC_ASSERT(TargetType_last == 2, "This implementation handles only two target types");
 
@@ -2609,7 +2629,7 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
         if (nRows < 1 || nCols < 1) // Nothing to add?
             return;
         size_t nCounter = 0;
-        rModel.batchEditNoUndo([&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table)
+        rModel.batchEditNoUndo([&](CsvItemModel::DataTable& table)
         {
             for (int c = 0; c < nCols; ++c)
             {
@@ -2623,7 +2643,7 @@ void generateForEachInTarget(const TargetType targetType, const DFG_CLASS_NAME(C
     else if (targetType == TargetTypeSelection)
     {
         size_t nCounter = 0;
-        rModel.batchEditNoUndo([&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table)
+        rModel.batchEditNoUndo([&](CsvItemModel::DataTable& table)
         {
             view.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& bContinue)
             {
@@ -2694,6 +2714,27 @@ namespace
         const auto sPrefix = s.mid(0, s.size() - 1);
         return ((bIsFloatType && isValidFloatPrefix(sPrefix)) ||
                 (bIsIntergerType && isValidIntegerPrefix(sPrefix)));
+    }
+
+    std::string handlePrecisionParameters(const CsvItemModel& settingsModel)
+    {
+        const auto sFormatType = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 2, 1)).toString().trimmed();
+        auto sPrecision = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 3, 1)).toString();
+        bool bPrecisionIsUint;
+        const auto tr = [&](const char* psz) { return settingsModel.tr(psz); };
+        if (!sPrecision.isEmpty() && (sPrecision.toUInt(&bPrecisionIsUint) > 1000 || !bPrecisionIsUint)) // Not sure does this need to be limited; just cut it somewhere.
+        {
+            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Precision-parameter has invalid value; no content generation is done"));
+            return std::string();
+        }
+        if (!isValidFormatType(sFormatType))
+        {
+            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Format type parameter is not accepted. Note: only a subset of printf-valid items can be used."));
+            return std::string();
+        }
+        if (!sPrecision.isEmpty())
+            sPrecision.prepend('.');
+        return std::string(("%" + sPrecision + sFormatType).toLatin1());
     }
 }
 
@@ -2788,7 +2829,7 @@ namespace
     }
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvItemModel)& settingsModel)
+bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
 {
     const auto genType = generatorType(settingsModel);
     const auto target = targetType(settingsModel);
@@ -2797,7 +2838,7 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         return false;
     auto& rModel = *pModel;
 
-    DFG_STATIC_ASSERT(GeneratorType_last == 3, "This implementation handles only two generator types");
+    DFG_STATIC_ASSERT(GeneratorType_last == 4, "This implementation handles only 4 generator types");
     if (genType == GeneratorTypeRandomIntegers)
     {
         if (settingsModel.rowCount() < LastNonParamPropertyId + 2) // Not enough parameters in model?
@@ -2816,24 +2857,10 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
             return false;
         }
         auto params = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().split(',');
-        const auto sFormatType = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 2, 1)).toString().trimmed();
-        auto sPrecision = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 3, 1)).toString();
-        bool bPrecisionIsUint;
-        if (!sPrecision.isEmpty() && (sPrecision.toUInt(&bPrecisionIsUint) > 1000 || !bPrecisionIsUint)) // Not sure does this need to be limited; just cut it somewhere.
-        {
-            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Precision-parameter has invalid value; no content generation is done"));
+        const std::string sFormat = handlePrecisionParameters(settingsModel);
+        if (sFormat.empty())
             return false;
-        }
-        if (!isValidFormatType(sFormatType))
-        {
-            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Format type parameter is not accepted. Note: only a subset of printf-valid items can be used."));
-            return false;
-        }
-        if (!sPrecision.isEmpty())
-            sPrecision.prepend('.');
-        std::string sFormat(("%" + sPrecision + sFormatType).toLatin1());
         const auto pszFormat = sFormat.c_str();
-
         return generateRandomReal(target, *this, params, pszFormat);
     }
     else if (genType == GeneratorTypeFill)
@@ -2845,9 +2872,43 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContentImpl(const DFG_CLASS_NAME(CsvI
         }
         const auto sFill = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
         const auto pszFillU8 = SzPtrUtf8(sFill.data());
-        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
+        const auto generator = [&](CsvItemModel::DataTable& table, int r, int c, size_t)
         {
             table.setElement(r, c, pszFillU8);
+        };
+        generateForEachInTarget(target, *this, rModel, generator);
+        return true;
+    }
+    else if (genType == GeneratorTypeFormula)
+    {
+        if (settingsModel.rowCount() < LastNonParamPropertyId + 4) // Not enough parameters in model?
+        {
+            DFG_ASSERT(false);
+            return false;
+        }
+        const std::string sFormat = handlePrecisionParameters(settingsModel);
+        if (sFormat.empty())
+            return false;
+
+        const auto pszFormat = sFormat.c_str();
+        const auto sFormula = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
+        ::DFG_MODULE_NS(math)::FormulaParser parser;
+        parser.setFormula(sFormula.data());
+        char buffer[32] = "";
+        double tr = std::numeric_limits<double>::quiet_NaN();
+        double tc = std::numeric_limits<double>::quiet_NaN();
+        double rowCount = rModel.rowCount();
+        double colCount = rModel.columnCount();
+        parser.defineVariable("trow", &tr);
+        parser.defineVariable("tcol", &tc);
+        parser.defineVariable("rowcount", &rowCount);
+        parser.defineVariable("colcount", &colCount);
+        const auto generator = [&](CsvItemModel::DataTable& table, const int r, const int c, size_t)
+        {
+            tr = CsvItemModel::internalRowIndexToVisible(r);
+            tc = CsvItemModel::internalColumnIndexToVisible(c);
+            table.setElement(r, c, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(parser.evaluateFormulaAsDouble(), buffer, pszFormat)));
+            buffer[0] = '\0';
         };
         generateForEachInTarget(target, *this, rModel, generator);
         return true;

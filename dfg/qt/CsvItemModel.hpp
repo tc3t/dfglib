@@ -10,6 +10,7 @@
 #include "../cont/arrayWrapper.hpp"
 #include "../OpaquePtr.hpp"
 #include "containerUtils.hpp"
+#include "../numericTypeTools.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -183,8 +184,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         }; // class LoadOptions
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.
-        static int internalRowIndexToVisible(const int nRow) { return nRow + 1; }
-        static int visibleRowIndexToInternal(const int nRow) { return nRow - 1; }
+        static int internalRowIndexToVisible(const int nRow)    { return saturateAdd<int>(nRow,  1); }
+        static int visibleRowIndexToInternal(const int nRow)    { return saturateAdd<int>(nRow, -1); }
+        static int internalColumnIndexToVisible(const int nCol) { return saturateAdd<int>(nCol,  1); }
+        static int visibleColumnIndexToInternal(const int nCol) { return saturateAdd<int>(nCol, -1); }
 
         DFG_CLASS_NAME(CsvItemModel)();
         ~DFG_CLASS_NAME(CsvItemModel)();
