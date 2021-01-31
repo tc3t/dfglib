@@ -631,7 +631,7 @@ inline BarSeriesCreationParam::BarSeriesCreationParam(ChartConfigParam configPar
 class ChartPanel
 {
 public:
-    ~ChartPanel() {}
+    virtual ~ChartPanel() {}
 
     static constexpr uint32 unknownCount() { return (std::numeric_limits<uint32>::max)(); }
 
