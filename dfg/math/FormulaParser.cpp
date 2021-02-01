@@ -32,6 +32,12 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::setFormula(const StringViewC sv) -> R
     }
 }
 
+double ::DFG_MODULE_NS(math)::FormulaParser::setFormulaAndEvaluateAsDouble(const StringViewC sv)
+{
+    setFormula(sv);
+    return this->evaluateFormulaAsDouble();
+}
+
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineVariable(const StringViewC sv, double* pVar) -> ReturnStatus
 {
     if (!pVar)
@@ -51,11 +57,12 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineVariable(const StringViewC sv, 
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineConstant(const StringViewC sv, const double val) -> ReturnStatus
 {
     const auto sIdentifier = sv.toString();
-    if (DFG_OPAQUE_REF().m_parser.GetVar().find(sIdentifier) != DFG_OPAQUE_REF().m_parser.GetVar().end())
+    auto& parser = DFG_OPAQUE_REF().m_parser;
+    if (parser.GetVar().find(sIdentifier) != parser.GetVar().end())
         return false;
     try
     {
-        DFG_OPAQUE_REF().m_parser.DefineConst(sIdentifier, val);
+        parser.DefineConst(sIdentifier, val);
         return true;
     }
     catch (const dfg_mu::Parser::exception_type& e)
@@ -64,6 +71,28 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineConstant(const StringViewC sv, 
         return false;
     }
 }
+
+template <class Func_T>
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctionImpl(const StringViewC& sv, Func_T func, const bool bAllowOptimization) -> ReturnStatus
+{
+    auto& parser = DFG_OPAQUE_REF().m_parser;
+    try
+    {
+        parser.DefineFun(sv.toString(), func, bAllowOptimization);
+        return true;
+    }
+    catch (const dfg_mu::Parser::exception_type& e)
+    {
+        DFG_UNUSED(e);
+        return false;
+    }
+}
+
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv, FuncType_D_0D func, bool bAllowOptimization) -> ReturnStatus { return defineFunctionImpl(sv, func, bAllowOptimization); }
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv, FuncType_D_1D func, bool bAllowOptimization) -> ReturnStatus { return defineFunctionImpl(sv, func, bAllowOptimization); }
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv, FuncType_D_2D func, bool bAllowOptimization) -> ReturnStatus { return defineFunctionImpl(sv, func, bAllowOptimization); }
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv, FuncType_D_3D func, bool bAllowOptimization) -> ReturnStatus { return defineFunctionImpl(sv, func, bAllowOptimization); }
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv, FuncType_D_4D func, bool bAllowOptimization) -> ReturnStatus { return defineFunctionImpl(sv, func, bAllowOptimization); }
 
 double ::DFG_MODULE_NS(math)::FormulaParser::evaluateFormulaAsDouble()
 {

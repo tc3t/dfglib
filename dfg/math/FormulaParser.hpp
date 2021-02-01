@@ -39,7 +39,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         ~FormulaParser();
         using ReturnStatus = bool;
 
+        using FuncType_D_0D = double(*)();
+        using FuncType_D_1D = double(*)(double);
+        using FuncType_D_2D = double(*)(double, double);
+        using FuncType_D_3D = double(*)(double, double, double);
+        using FuncType_D_4D = double(*)(double, double, double, double);
+
         ReturnStatus setFormula(const StringViewC sv); // Returns ReturnStatus that evaluates to true iff successful.
+
+        // Calls setFormula() and returns evaluateFormulaAsDouble().
+        double setFormulaAndEvaluateAsDouble(const StringViewC sv);
+
         // Returns ReturnStatus that evaluates to true iff successful.
         // If variable of given identifier already exists, old variable definition is replaced.
         // If a constant of given identifier already exists, operation fails.
@@ -47,9 +57,28 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         // Returns ReturnStatus that evaluates to true iff successful.
         // If const of given identifier already exists, old const definition is replaced.
         // If a variable of given identifier already exists, operation fails.
-        ReturnStatus defineConstant(const StringViewC sv, double val); 
+        ReturnStatus defineConstant(const StringViewC sv, double val);
+
         double       evaluateFormulaAsDouble(); // If unable to evaluate, returns NaN
 
+        // Defines function with given identifier.
+        // 'bAllowOptimization': if true, implementation is allowed to optimize
+        //      calls so that e.g. func(1) + func(1) evaluate function only once and formula is calculated as 2*func(1).
+        //      For functions whose return value is dependent on non-argument details (e.g. rand()), the flag must be false.
+        //      If function has no arguments, flag should be true only for constant functions.
+        // 
+        // If function of given identifier already exists, old function definition is replaced.
+        ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_0D func, bool bAllowOptimization);
+        ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_1D func, bool bAllowOptimization);
+        ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_2D func, bool bAllowOptimization);
+        ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_3D func, bool bAllowOptimization);
+        ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_4D func, bool bAllowOptimization);
+
+    private:
+        template <class Func_T>
+        ReturnStatus defineFunctionImpl(const StringViewC& sv, Func_T func, bool bAllowOptimization);
+
+    public:
         // Convenience interface for evaluating simple formulas that have no variables.
         static double evaluateFormulaAsDouble(const StringViewC sv);
 

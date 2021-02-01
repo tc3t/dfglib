@@ -521,6 +521,11 @@ TEST(dfgMath, numericDistance)
     EXPECT_EQ(uint8(127), numericDistance(int8(-128), int8(-1)));
 }
 
+namespace
+{
+    static int globalValue = 0;
+}
+
 TEST(dfgMath, FormulaParser)
 {
     using namespace DFG_ROOT_NS;
@@ -546,5 +551,25 @@ TEST(dfgMath, FormulaParser)
         EXPECT_FALSE(parser.defineVariable("", &x)); // Invalid variable symbol
         EXPECT_FALSE(parser.defineVariable("y", nullptr)); // Invalid variable pointer
         EXPECT_TRUE(isNan(FormulaParser::evaluateFormulaAsDouble("2+-*/6")));
+    }
+
+    // defineFunction
+    {
+        FormulaParser parser;
+        EXPECT_TRUE(parser.defineFunction("f0", []() {return 2.0; }, true));
+        EXPECT_TRUE(parser.defineFunction("f0", []() {return 1.0; }, true)); // Redefining should simply overwrite existing.
+        EXPECT_TRUE(parser.defineFunction("f1", [](double a) {return a; }, true));
+        EXPECT_TRUE(parser.defineFunction("f2", [](double a, double b) {return a + b; }, true));
+        EXPECT_TRUE(parser.defineFunction("f3", [](double a, double b, double c) {return a + b + c; }, true));
+        EXPECT_TRUE(parser.defineFunction("f4", [](double a, double b, double c, double d) {return a + b + c + d; }, true));
+        EXPECT_TRUE(parser.defineFunction("fglobal", [](double a) -> double{ return a + globalValue++; }, false));
+
+        EXPECT_EQ(1,  parser.setFormulaAndEvaluateAsDouble("f0()"));
+        EXPECT_EQ(2,  parser.setFormulaAndEvaluateAsDouble("f1(2)"));
+        EXPECT_EQ(5,  parser.setFormulaAndEvaluateAsDouble("f2(2, 3)"));
+        EXPECT_EQ(9,  parser.setFormulaAndEvaluateAsDouble("f3(2, 3, 4)"));
+        EXPECT_EQ(14, parser.setFormulaAndEvaluateAsDouble("f4(2, 3, 4, 5)"));
+        EXPECT_EQ(1,  parser.setFormulaAndEvaluateAsDouble("fglobal(0)+fglobal(0)")); // Tests that fglobal(0) is not optimized to single call.
+        EXPECT_TRUE(isNan(parser.setFormulaAndEvaluateAsDouble("f0(2)")));
     }
 }
