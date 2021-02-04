@@ -221,35 +221,62 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
 
         namespace DFG_DETAIL_NS
         {
-            template <class Str_T, class Dest_T>
-            void assignStrToDest(const Str_T str, Dest_T& dest)
+            template <class Str_T, class Int_T>
+            void tryParseFloatAsInt(std::true_type, const Str_T& str, Int_T& rDest, bool& rbSuccess)
             {
-                if (!::DFG_MODULE_NS(str)::isEmptyStr(str))
+                bool bSuccess = false;
+                auto val = ::DFG_MODULE_NS(str)::strTo<double>(str, &bSuccess);
+                Int_T intVal = 0;
+                if (bSuccess && ::DFG_MODULE_NS(math)::isFloatConvertibleTo<Int_T>(val, &intVal))
                 {
-                    dest = ::DFG_MODULE_NS(str)::strTo<Dest_T>(str);
+                    rDest = intVal;
+                    rbSuccess = true;
                 }
             }
 
-            template <class Iterable_T, class ArgSet_T>
-            void assignValues(const Iterable_T& iterable, ArgSet_T& vals, std::integral_constant<int, 1>)
+            template <class Str_T, class Int_T>
+            void tryParseFloatAsInt(std::false_type, const Str_T, Int_T&, bool&)
             {
-                if (!isEmpty(iterable))
-                    assignStrToDest(*iterable.begin(), std::get<0>(vals));
+            }
+
+            template <class Str_T, class Dest_T>
+            bool assignStrToDest(const Str_T& str, Dest_T& dest)
+            {
+                if (!::DFG_MODULE_NS(str)::isEmptyStr(str))
+                {
+                    bool bSuccess = false;
+                    dest = ::DFG_MODULE_NS(str)::strTo<Dest_T>(str, &bSuccess);
+                    if (!bSuccess)
+                        tryParseFloatAsInt(typename std::is_integral<Dest_T>(), str, dest, bSuccess);
+                    return bSuccess;
+                }
+                else
+                    return false;
             }
 
             template <class Iterable_T, class ArgSet_T>
-            void assignValues(const Iterable_T& iterable, ArgSet_T& vals, std::integral_constant<int, 2>)
+            bool assignValues(const Iterable_T& iterable, ArgSet_T& vals, std::integral_constant<int, 1>)
             {
+                return (!isEmpty(iterable)) ? assignStrToDest(*iterable.begin(), std::get<0>(vals)) : true;
+            }
+
+            template <class Iterable_T, class ArgSet_T>
+            bool assignValues(const Iterable_T& iterable, ArgSet_T& vals, std::integral_constant<int, 2>)
+            {
+                bool bGoodAssigns = true;
                 if (!isEmpty(iterable))
-                    assignStrToDest(*std::begin(iterable), std::get<0>(vals));
+                    bGoodAssigns = assignStrToDest(*std::begin(iterable), std::get<0>(vals));
+                if (!bGoodAssigns)
+                    return false;
                 if (count(iterable) >= 2)
-                    assignStrToDest(*(std::begin(iterable) + 1), std::get<1>(vals));
+                    bGoodAssigns = assignStrToDest(*(std::begin(iterable) + 1), std::get<1>(vals));
+                return bGoodAssigns;
             }
 
             template <class Iterable_T, class ArgSet_T>
-            void assignValues(const Iterable_T& iterable, ArgSet_T& vals)
+            bool assignValues(const Iterable_T& iterable, ArgSet_T& vals)
             {
-                assignValues(iterable, vals, std::integral_constant<int, std::tuple_size<ArgSet_T>::value>());
+                return assignValues(iterable, vals, std::integral_constant<int, std::tuple_size<ArgSet_T>::value>());
             }
         } // namespace DFG_DETAIL_NS
 
@@ -288,8 +315,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         if (!ValidatorT::isAcceptableParamCount(count(iterable)))
             return ReturnType();
         ReturnType rv;
-        distributionArgValidation::DFG_DETAIL_NS::assignValues(iterable, rv.second);
-        rv.first = validateDistributionParams<Distr_T>(rv);
+        rv.first = distributionArgValidation::DFG_DETAIL_NS::assignValues(iterable, rv.second);
+        if (rv.first)
+            rv.first = validateDistributionParams<Distr_T>(rv);
         return rv;
     }
 

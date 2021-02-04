@@ -155,9 +155,11 @@ TEST(dfgRand, distributionCreation)
         typedef std::uniform_int_distribution<int> DistrT;
         testDistr<DistrT>(true,    "200",   "201", nullptr, [](const int v) { return v >= 200 && v <= 201; });
         testDistr<DistrT>(true,     "-1",     "1", nullptr, [](const int v) { return v >= -1 && v <= 1; });
+        testDistr<DistrT>(true,   "99.0",   "1e2", nullptr, [](const int v) { return v >= 99 && v <= 100; }); // Parsing integer valued floating point as integer.
         testDistr<DistrT>(false,   "200", nullptr, nullptr, returnFalse); // Too few args
         testDistr<DistrT>(false,   "201",   "200", nullptr, returnFalse); // Invalid probability value (200)
         testDistr<DistrT>(false,    "-1",     "1",     "0", returnFalse); // Too many args
+        testDistr<DistrT>(false,  "10.5",  "11.5", nullptr, returnFalse); // Non-integer args
     }
 
     // Testing that interface allows feeding non-string params directly and making validation manually.
@@ -177,7 +179,7 @@ TEST(dfgRand, distributionCreation)
     {
         typedef std::binomial_distribution<int> DistrT;
         testDistr<DistrT>(true,      "0",     "1", nullptr, [](const int v) { return v == 0; });
-        testDistr<DistrT>(true,      "5",   "0.5", nullptr, [](const int v) { return v >= 0 && v <= 5; });
+        testDistr<DistrT>(true,    "5.0",   "0.5", nullptr, [](const int v) { return v >= 0 && v <= 5; });
         testDistr<DistrT>(false,   "200",   "1.1", nullptr, returnFalse); // Invalid probability value (1.1)
         testDistr<DistrT>(false,    "-1",   "0.1", nullptr, returnFalse); // Invalid count argument (-1)
         testDistr<DistrT>(false,    "-1",     "1",     "0", returnFalse); // Invalid first arg and too many args.
@@ -214,7 +216,7 @@ TEST(dfgRand, distributionCreation)
         typedef DFG_MODULE_NS(rand)::NegativeBinomialDistribution<int> DistrT; // Note: using a wrapper because std::negative_binomial_distribution doesn't handle p == 1 correctly in any of the checked implementations (as of 2020-01)
         testDistr<DistrT>(true,      "5",   "0.5", nullptr, [](const int v) { return v >= 0; });
         testDistr<DistrT>(true,     "20",     "1", nullptr, [](const int v) { return v == 0; });
-        testDistr<DistrT>(true,     "20",  "0.99", nullptr, [](const int v) { return v >= 0; });
+        testDistr<DistrT>(true,   "20.0",  "0.99", nullptr, [](const int v) { return v >= 0; });
         testDistr<DistrT>(false,     "0",   "0.5", nullptr, returnFalse); // Invalid count (0)
         testDistr<DistrT>(false,     "1",     "0", nullptr, returnFalse); // Invalid probibility (0)
         testDistr<DistrT>(false,     "1", nullptr, nullptr, returnFalse); // Too few args
