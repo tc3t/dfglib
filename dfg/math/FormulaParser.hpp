@@ -14,6 +14,7 @@
 #include "../ReadOnlySzParam.hpp"
 #include "../OpaquePtr.hpp"
 #include <memory>
+#include <functional>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 
@@ -35,15 +36,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
     class FormulaParser
     {
     public:
+        using ReturnStatus = bool;
+
         FormulaParser();
         ~FormulaParser();
-        using ReturnStatus = bool;
 
         using FuncType_D_0D = double(*)();
         using FuncType_D_1D = double(*)(double);
         using FuncType_D_2D = double(*)(double, double);
         using FuncType_D_3D = double(*)(double, double, double);
         using FuncType_D_4D = double(*)(double, double, double, double);
+
+        static constexpr size_t maxFunctorCountPerType() { return 20; }
 
         ReturnStatus setFormula(const StringViewC sv); // Returns ReturnStatus that evaluates to true iff successful.
 
@@ -74,7 +78,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_3D func, bool bAllowOptimization);
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_4D func, bool bAllowOptimization);
 
+        // Defines function as std::function
+        // NOTE: these functions are not thread safe and have obscure global restrictions, please read notes below if intending to use.
+        //      -Underlying implementation doesn't native provide a way to define stateful function so this is 
+        //       implemented using a global list of standalone functions where each function refer to a global extra parameter.
+        //      -For each function type, there can simultaneously be at most maxFunctorCountPerType() functors defined in all FormulaParser instances.
+        //          -If having maximum count, this function returns failure.
+        //      -All FormulaParser instances that use this function, should be handled from one thread only (e.g. deleting an instance that has used
+        //       defineFunctor() from one thread while another instance in another thread calls defineFunctor() is not safe)
+        ReturnStatus defineFunctor(const StringViewC& sv, std::function<double()> func, bool bAllowOptimization);
+        ReturnStatus defineFunctor(const StringViewC& sv, std::function<double(double)> func, bool bAllowOptimization);
+        ReturnStatus defineFunctor(const StringViewC& sv, std::function<double(double, double)> func, bool bAllowOptimization);
+
     private:
+        template <class Func_T, class ExtraParam_T, class FuncType_T, size_t N>
+        ReturnStatus defineFunctorImpl(ExtraParam_T (&extraParamArr)[N], FuncType_T (&funcArr)[N], const StringViewC& sv, Func_T&& func, bool bAllowOptimization);
+
         template <class Func_T>
         ReturnStatus defineFunctionImpl(const StringViewC& sv, Func_T func, bool bAllowOptimization);
 

@@ -14,7 +14,7 @@ namespace DFG_DETAIL_NS
     template <class T> inline T initialValueForMaxImpl(std::false_type) {return std::numeric_limits<T>::lowest();}
 
     template <class T> inline T initialValueForMinImpl(std::true_type) {return std::numeric_limits<T>::infinity();}
-    template <class T> inline T initialValueForMinImpl(std::false_type) {return std::numeric_limits<T>::max();}
+    template <class T> inline T initialValueForMinImpl(std::false_type) {return (std::numeric_limits<T>::max)();}
 
     template <class T> inline T initialValueForMax()
     {

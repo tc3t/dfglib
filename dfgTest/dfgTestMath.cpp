@@ -9,6 +9,7 @@
 #include <dfg/math/FormulaParser.hpp>
 #include <dfg/cont.hpp>
 #include <dfg/alg.hpp>
+#include <dfg/str.hpp>
 
 TEST(dfgMath, roundedUpToMultiple)
 {
@@ -571,5 +572,82 @@ TEST(dfgMath, FormulaParser)
         EXPECT_EQ(14, parser.setFormulaAndEvaluateAsDouble("f4(2, 3, 4, 5)"));
         EXPECT_EQ(1,  parser.setFormulaAndEvaluateAsDouble("fglobal(0)+fglobal(0)")); // Tests that fglobal(0) is not optimized to single call.
         EXPECT_TRUE(isNan(parser.setFormulaAndEvaluateAsDouble("f0(2)")));
+    }
+}
+
+TEST(dfgMath, FormulaParser_functors)
+{
+    // 
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+    using namespace DFG_MODULE_NS(str);
+
+    const auto nMaxFunctorCount = FormulaParser::maxFunctorCountPerType();
+
+    // Basic tests
+    {
+        double a = 1, b = 2, c = 3;
+        FormulaParser parser;
+        parser.defineFunctor("f0" , [=]() { return a; }, true);
+        parser.defineFunctor("f1" , [=](double a0) { return b + a0; }, true);
+        parser.defineFunctor("f2" , [=](double a0, double a1) { return c + a0 + a1; }, true);
+        parser.defineFunctor("fr0", [&]() { return a; }, false);
+        a = 5; // This should affect fr0, but not f0.
+        EXPECT_EQ(1,   parser.setFormulaAndEvaluateAsDouble("f0()"));
+        EXPECT_EQ(12,  parser.setFormulaAndEvaluateAsDouble("f1(10)"));
+        EXPECT_EQ(323, parser.setFormulaAndEvaluateAsDouble("f2(20, 300)"));
+        EXPECT_EQ(5,   parser.setFormulaAndEvaluateAsDouble("fr0()"));
+    }
+
+    // Testing functor limits
+    {
+        FormulaParser parser;
+        for (uint32 i = 0; i < nMaxFunctorCount; ++i)
+        {
+            EXPECT_TRUE(parser.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
+            EXPECT_TRUE(parser.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
+            EXPECT_TRUE(parser.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
+        }
+        // These calls are expected to fail as max count has been added already.
+        EXPECT_FALSE(parser.defineFunctor("f0", []() { return 0.0; }, true));
+        EXPECT_FALSE(parser.defineFunctor("f1", [](double) { return 0.0; }, true));
+        EXPECT_FALSE(parser.defineFunctor("f2", [](double, double) { return 0.0; }, true));
+    }
+
+    // Testing that clean up works correctly when there are multiple parsers.
+    {
+        FormulaParser parser0;
+        {
+            FormulaParser parser1;
+            DFG_STATIC_ASSERT(nMaxFunctorCount % 2 == 0, "This test expects even max functor count");
+            for (uint32 i = 0; i < nMaxFunctorCount / 2; ++i)
+            {
+                EXPECT_TRUE(parser0.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
+                EXPECT_TRUE(parser1.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
+                EXPECT_TRUE(parser0.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
+                EXPECT_TRUE(parser1.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
+                EXPECT_TRUE(parser0.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
+                EXPECT_TRUE(parser1.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
+            }
+            EXPECT_FALSE(parser0.defineFunctor("f0", []() { return 0.0; }, true));
+            EXPECT_FALSE(parser1.defineFunctor("f0", []() { return 0.0; }, true));
+        }
+        for (uint32 i = 0; i < nMaxFunctorCount / 2; ++i)
+        {
+            EXPECT_TRUE(parser0.defineFunctor("f0_a" + toStrC(i), [=]() { return i; }, true));
+            EXPECT_TRUE(parser0.defineFunctor("f1_a" + toStrC(i), [=](double) { return i; }, true));
+            EXPECT_TRUE(parser0.defineFunctor("f2_a" + toStrC(i), [=](double, double) { return i; }, true));
+        }
+    }
+
+    // Adding max count again to make sure that destruction of previous FormulaParsers has correctly cleaned up functors.
+    {
+        FormulaParser parser;
+        for (uint32 i = 0; i < nMaxFunctorCount; ++i)
+        {
+            EXPECT_TRUE(parser.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
+            EXPECT_TRUE(parser.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
+            EXPECT_TRUE(parser.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
+        }
     }
 }
