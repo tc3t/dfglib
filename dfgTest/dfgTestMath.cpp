@@ -478,6 +478,19 @@ TEST(dfgMath, isFloatConvertibleTo)
     EXPECT_TRUE(isFloatConvertibleTo<uint32>(4294967295.0, &u32));
     EXPECT_EQ(uint32_max, u32);
     EXPECT_FALSE(isFloatConvertibleTo<uint32>(4294967296.0, &u32));
+
+    // Testing that converting to self returns true and sets right value to output arg.
+    {
+        float f = 0;
+        double d = 0;
+        long double ld = 0;
+        EXPECT_TRUE(isFloatConvertibleTo<float>(1.0f, &f));
+        EXPECT_TRUE(isFloatConvertibleTo<double>(1.0, &d));
+        EXPECT_TRUE(isFloatConvertibleTo<long double>(static_cast<long double>(1.0), &ld));
+        EXPECT_EQ(1, f);
+        EXPECT_EQ(1, d);
+        EXPECT_EQ(1, ld);
+    }
 }
 
 namespace

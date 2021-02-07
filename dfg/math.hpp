@@ -177,8 +177,7 @@ namespace DFG_DETAIL_NS
         else
             return false;
     }
-
-} // unnamed namespace
+} // namespace DFG_DETAIL_NS
 
 // Returns true iff value is integer value.
 // Return values for some special floating point values:
@@ -191,15 +190,34 @@ inline bool isIntegerValued(const Val_T val)
     return DFG_DETAIL_NS::isIntegerValuedImpl(val, std::is_integral<Val_T>());
 }
 
-// Returns true if floating point value can be represent exactly as given integer type. If pInt is given and and return value is true, it receives the integer value.
-template <class Int_T, class Float_T>
-bool isFloatConvertibleTo(const Float_T f, Int_T* pInt = nullptr)
+namespace DFG_DETAIL_NS
 {
-    DFG_STATIC_ASSERT(std::is_integral<Int_T>::value, "Int_T should be integer type");
-    DFG_STATIC_ASSERT(std::numeric_limits<Float_T>::is_iec559, "isFloatConvertibleTo() probably requires IEC 559 (IEEE 754) floating points");
-    if (!isIntegerValued(f))
-        return false;
-    return DFG_DETAIL_NS::isIntegerFloatConvertibleTo(f, pInt, std::integral_constant<bool, std::numeric_limits<Float_T>::digits >= std::numeric_limits<Int_T>::digits>());
+    template <class Val_T>
+    bool isFloatConvertibleToImpl(const Val_T f, Val_T* pDst, std::true_type)
+    {
+        if (pDst)
+            *pDst = f;
+        return true;
+    }
+
+    template <class Int_T, class Float_T>
+    bool isFloatConvertibleToImpl(const Float_T f, Int_T* pInt, std::false_type)
+    {
+        DFG_STATIC_ASSERT(!(std::is_same<Int_T, Float_T>::value), "This overload should get called only for non-identical types");
+        DFG_STATIC_ASSERT(std::is_integral<Int_T>::value, "Currently only integer types are supported as target types"); // TODO: implement floating point conversions (e.g. float <-> double)
+        DFG_STATIC_ASSERT(std::numeric_limits<Float_T>::is_iec559, "isFloatConvertibleTo() probably requires IEC 559 (IEEE 754) floating points");
+        if (!isIntegerValued(f))
+            return false;
+        return isIntegerFloatConvertibleTo(f, pInt, std::integral_constant<bool, std::numeric_limits<Float_T>::digits >= std::numeric_limits<Int_T>::digits>());
+    }
+} // namespace DFG_DETAIL_NS
+
+// Returns true if floating point value can be represent exactly as given type. If pTarget is given and return value is true, it receives the value as Target_T.
+// Currently Target_T must be either integer or the same as Float_T.
+template <class Target_T, class Float_T>
+bool isFloatConvertibleTo(const Float_T f, Target_T* pTarget = nullptr)
+{
+    return DFG_DETAIL_NS::isFloatConvertibleToImpl(f, pTarget, std::is_same<Target_T, Float_T>());
 }
 
 namespace DFG_DETAIL_NS
