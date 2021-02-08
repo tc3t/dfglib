@@ -4,9 +4,12 @@
 
 #include <random>
 #include <limits>
+#include "../rand.hpp"
 #include "../str/strTo.hpp"
 #include "../str.hpp"
 #include "../math.hpp"
+#include "../func.hpp"
+#include <tuple>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
 
@@ -328,5 +331,92 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         return distributionArgValidation::DistributionDetails<Distr_T>::makeUninitializedParams();
     }
 
+    // Helper functor for generating random values from given distribution.
+    // Example usage:
+    //      auto rangEng = dfg::rand::createDefaultRandEngineRandomSeeded();
+    //      DistributionFunctor<std::normal_distribution<double>> distr(&randEng);
+    //      auto val = distr(0.0, 1.0); // Note that operator() interface is picky with types, e.g. distr(0, 1) won't compile.
+    // What this class does compared to direct lambdas like [&](double a, double b) { std::normal_distribution<double>(a, b)(randEng); } is argument validation.
+    template <class Distr_T>
+    class DistributionFunctor
+    {
+    public:
+        using RandEngT = decltype(createDefaultRandEngineRandomSeeded());
+        using DistrT = Distr_T;
+        using ArgStorage_T = typename std::tuple_element<1, decltype(::DFG_MODULE_NS(rand)::makeUninitializedDistributionArgs<DistrT>())>::type;
+
+        struct InitialValueSetter
+        {
+            // Integers gets set to 0.
+            template <class T>
+            void operator()(T& a) { a = std::numeric_limits<T>::quiet_NaN(); }
+        };
+
+    public:
+
+        DistributionFunctor(RandEngT* pRandEng)
+            : m_pRandEng(pRandEng)
+        {
+            ::DFG_MODULE_NS(func)::forEachInTuple(m_argStorage, InitialValueSetter());
+        }
+
+        template <class ... Types>
+        double operator()(Types ... args)
+        {
+            const auto argTuple = std::make_tuple(args...);
+            if (!m_bGoodToGenerate || m_argStorage != argTuple)
+                initializeDistribution(argTuple);
+            return generateFromDistribution();
+        }
+
+        template <size_t N, class Args_T>
+        bool copyArgsToInternalStorage(const Args_T&, std::false_type)
+        {
+            return true;
+        }
+
+        template <size_t N, class Args_T>
+        bool copyArgsToInternalStorage(const Args_T& args, std::true_type)
+        {
+            using namespace ::DFG_MODULE_NS(math);
+            using ElementT = typename std::tuple_element<N, ArgStorage_T>::type;
+            const auto& newArg = std::get<N>(args);
+            if (!isFloatConvertibleTo<ElementT>(newArg))
+                return false;
+            std::get<N>(m_argStorage) = static_cast<ElementT>(newArg);
+            return copyArgsToInternalStorage<N + 1>(args, std::integral_constant<bool, (N + 1 < std::tuple_size<ArgStorage_T>::value)>());
+        }
+
+        template <class DoubleArgs_T>
+        void initializeDistribution(const DoubleArgs_T& args)
+        {
+            if (copyArgsToInternalStorage<0>(args, std::true_type()))
+            {
+                using namespace ::DFG_MODULE_NS(rand);
+                auto distrArgs = makeUninitializedDistributionArgs<DistrT>();
+                distrArgs.second = m_argStorage;
+                distrArgs.first = validateDistributionParams<DistrT>(distrArgs);
+                if (distrArgs.first)
+                {
+                    m_distr = makeDistribution<DistrT>(distrArgs);
+                    m_bGoodToGenerate = (m_pRandEng != nullptr);
+                }
+                else
+                    m_bGoodToGenerate = false;
+            }
+            else
+                m_bGoodToGenerate = false;
+        }
+
+        double generateFromDistribution()
+        {
+            return (m_bGoodToGenerate) ? m_distr(*m_pRandEng) : std::numeric_limits<double>::quiet_NaN();
+        }
+
+        ArgStorage_T m_argStorage;
+        DistrT m_distr;
+        bool m_bGoodToGenerate = false;
+        RandEngT* m_pRandEng = nullptr;
+    }; // class DistributionFunctor
 
 } } // module namespace

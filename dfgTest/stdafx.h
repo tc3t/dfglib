@@ -31,6 +31,17 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #define DFGTEST_STATIC(expr)        DFGTEST_STATIC_TEST(expr)  //DFG_STATIC is deprecated, use DFGTEST_STATIC_TEST
 #define DFGTEST_MESSAGE(expr)       std::cout << "    MESSAGE: " << expr << '\n';
 
+#define DFGTEST_EXPECT_WITHIN(val, lower, upper) \
+    { \
+    const auto dfgTestTemporaryValue = val; \
+    EXPECT_GE(dfgTestTemporaryValue, lower); \
+    EXPECT_LE(dfgTestTemporaryValue, upper); \
+    }
+
+// These expect that math header has been included; don't want to include in this file to avoid it getting included everywhere.
+#define DFGTEST_EXPECT_NAN(val)     EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(val))
+#define DFGTEST_EXPECT_NON_NAN(val) EXPECT_FALSE(::DFG_MODULE_NS(math)::isNan(val))
+
 #if !defined(_DEBUG) && !defined(__MINGW32__)
     #define DFGTEST_ENABLE_BENCHMARKS	0
 #else

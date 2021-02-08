@@ -342,3 +342,87 @@ TEST(dfgRand, distributionCreation)
         verifyCommonDoubleRealFailCases<DistrT>();
     }
 }
+
+TEST(dfgRand, DistributionFunctor)
+{
+    using namespace ::DFG_MODULE_NS(rand);
+    {
+        auto randEng = createDefaultRandEngineRandomSeeded();
+        // Integer valued
+        DistributionFunctor<std::uniform_int_distribution<int>> distUi(&randEng);
+        DistributionFunctor<std::binomial_distribution<int>>    distBin(&randEng);
+        DistributionFunctor<std::bernoulli_distribution>        distBer(&randEng);
+        DistributionFunctor<NegativeBinomialDistribution<int>>  distNegBin(&randEng);
+        DistributionFunctor<std::geometric_distribution<int>>   distGeo(&randEng);
+        DistributionFunctor<std::poisson_distribution<int>>     distPoi(&randEng);
+        // Real valued
+        DistributionFunctor<std::uniform_real_distribution<double>>  distUr(&randEng);
+        DistributionFunctor<std::normal_distribution<double>>        distNormal(&randEng);
+        DistributionFunctor<std::cauchy_distribution<double>>        distCauchy(&randEng);
+        DistributionFunctor<std::exponential_distribution<double>>   distExp(&randEng);
+        DistributionFunctor<std::gamma_distribution<double>>         distGamma(&randEng);
+        DistributionFunctor<std::weibull_distribution<double>>       distWei(&randEng);
+        DistributionFunctor<std::extreme_value_distribution<double>> distExt(&randEng);
+        DistributionFunctor<std::lognormal_distribution<double>>     distLog(&randEng);
+        DistributionFunctor<std::chi_squared_distribution<double>>   distChi(&randEng);
+        DistributionFunctor<std::fisher_f_distribution<double>>      distFisher(&randEng);
+        DistributionFunctor<std::student_t_distribution<double>>     distStudent(&randEng);
+
+        DFGTEST_EXPECT_WITHIN(distUi(10.0, 200.0), 10, 200);
+        DFGTEST_EXPECT_WITHIN(distUi(10.0, 200.0), 10, 200);
+        DFGTEST_EXPECT_WITHIN(distUi(5.0, 8.0)   ,  5, 8);
+        DFGTEST_EXPECT_WITHIN(distUi(5.0, 8.0)   ,  5, 8);
+        DFGTEST_EXPECT_NAN(distUi(5.5, 8.0));
+        DFGTEST_EXPECT_NAN(distUi(5.0, 8.5));
+
+        DFGTEST_EXPECT_WITHIN(distBin(10.0, 0.5), 0, 10);
+        DFGTEST_EXPECT_NAN(distBin(-1, 0.5));
+        DFGTEST_EXPECT_NAN(distBin(10, 1.01));
+
+        DFGTEST_EXPECT_WITHIN(distBer(0.5), 0, 1);
+        DFGTEST_EXPECT_NAN(distBer(1.01));
+
+        DFGTEST_EXPECT_WITHIN(distNegBin(10.0, 0.5), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_NAN(distNegBin(-1.0, 0.5));
+        DFGTEST_EXPECT_NAN(distNegBin(10, 1.01));
+
+        DFGTEST_EXPECT_WITHIN(distGeo(0.5), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_NAN(distGeo(1.01));
+
+        DFGTEST_EXPECT_WITHIN(distPoi(10.0), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_NAN(distPoi(-10.0));
+
+        DFGTEST_EXPECT_WITHIN(distUr(10.0, 200.0), 10, 200);
+        DFGTEST_EXPECT_NAN(distUr(5.0, -8.0));
+
+        DFGTEST_EXPECT_NON_NAN(distNormal(0.0, 1.0));
+        DFGTEST_EXPECT_NAN(distNormal(0.0, -1.0));
+
+        DFGTEST_EXPECT_NON_NAN(distExp(1.0));
+        DFGTEST_EXPECT_NAN(distExp(0.0));
+
+        DFGTEST_EXPECT_NON_NAN(distGamma(1.0, 2.0));
+        DFGTEST_EXPECT_NAN(distGamma(0.0, 1.0));
+
+        DFGTEST_EXPECT_NON_NAN(distWei(1.0, 2.0));
+        DFGTEST_EXPECT_NAN(distWei(0.0, 1.0));
+
+        DFGTEST_EXPECT_NON_NAN(distExt(-1.0, 2.0));
+        DFGTEST_EXPECT_NAN(distExt(-1.0, 0.0));
+
+        DFGTEST_EXPECT_NON_NAN(distLog(-1.0, 2.0));
+        DFGTEST_EXPECT_NAN(distLog(-1.0, 0.0));
+
+        DFGTEST_EXPECT_NON_NAN(distChi(1.0));
+        DFGTEST_EXPECT_NAN(distChi(0.0));
+
+        DFGTEST_EXPECT_NON_NAN(distCauchy(-1.0, 2.0));
+        DFGTEST_EXPECT_NAN(distCauchy(-1.0, 0.0));
+
+        DFGTEST_EXPECT_NON_NAN(distFisher(1.0, 2.0));
+        DFGTEST_EXPECT_NAN(distFisher(0.0, 2.0));
+
+        DFGTEST_EXPECT_NON_NAN(distStudent(1.0));
+        DFGTEST_EXPECT_NAN(distStudent(0.0));
+    }
+}
