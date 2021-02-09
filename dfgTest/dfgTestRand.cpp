@@ -4,6 +4,7 @@
 #include <ctime>
 #include <unordered_set>
 #include <dfg/rand/distributionHelpers.hpp>
+#include <bitset>
 
 TEST(dfgRand, dfgRand)
 {
@@ -425,4 +426,45 @@ TEST(dfgRand, DistributionFunctor)
         DFGTEST_EXPECT_NON_NAN(distStudent(1.0));
         DFGTEST_EXPECT_NAN(distStudent(0.0));
     }
+}
+
+namespace
+{
+    struct DistributionHandler
+    {
+        template <class T> void operator()(const std::uniform_int_distribution<T>*)                       { m_found.set(0); }
+        template <class T> void operator()(const std::binomial_distribution<T>*)                          { m_found.set(1); }
+                           void operator()(const std::bernoulli_distribution*)                            { m_found.set(2); }
+        template <class T> void operator()(const ::DFG_MODULE_NS(rand)::NegativeBinomialDistribution<T>*) { m_found.set(3); }
+        template <class T> void operator()(const std::geometric_distribution<T>*)                         { m_found.set(4); }
+        template <class T> void operator()(const std::poisson_distribution<T>*)                           { m_found.set(5); }
+        // Real valued
+        template <class T> void operator()(const std::uniform_real_distribution<T>*)                      { m_found.set(6); }
+        template <class T> void operator()(const std::normal_distribution<T>*)                            { m_found.set(7); }
+        template <class T> void operator()(const std::cauchy_distribution<T>*)                            { m_found.set(8); }
+        template <class T> void operator()(const std::exponential_distribution<T>*)                       { m_found.set(9); }
+        template <class T> void operator()(const std::gamma_distribution<T>*)                             { m_found.set(10); }
+        template <class T> void operator()(const std::weibull_distribution<T>*)                           { m_found.set(11); }
+        template <class T> void operator()(const std::extreme_value_distribution<T>*)                     { m_found.set(12); }
+        template <class T> void operator()(const std::lognormal_distribution<T>*)                         { m_found.set(13); }
+        template <class T> void operator()(const std::chi_squared_distribution<T>*)                       { m_found.set(14); }
+        template <class T> void operator()(const std::fisher_f_distribution<T>*)                          { m_found.set(15); }
+        template <class T> void operator()(const std::student_t_distribution<T>*)                         { m_found.set(16); }
+
+        template <class T> void operator()(const T*)
+        {
+            DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "Test is missing a distribution");
+        }
+
+        std::bitset<17> m_found;
+    };
+    
+}
+
+TEST(dfgRand, forEachDistributionType)
+{
+    using namespace ::DFG_MODULE_NS(rand);
+    DistributionHandler handler;
+    DFG_DETAIL_NS::forEachDistributionType(handler);
+    EXPECT_TRUE(handler.m_found.all());
 }

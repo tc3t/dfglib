@@ -158,6 +158,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgPerformance.CsvReadPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgRand.distributionCreation";
     //::testing::GTEST_FLAG(filter) = "dfgRand.DistributionFunctor";
+    //::testing::GTEST_FLAG(filter) = "dfgRand.forEachDistributionType";
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith";
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_TypedStrings";
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_StringViews";

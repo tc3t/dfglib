@@ -194,7 +194,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(::DFG_MODULE_NS(rand), NegativeBinomialDistribution,        args_0_or_1_or_2,      T, double);
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, geometric_distribution,              args_0_or_1, double);
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, poisson_distribution,                args_0_or_1, double);
-        
+
         // bernoulli_distribution does not have template parameters so not using the macro helper.
         template <> struct DistributionDetails<std::bernoulli_distribution>
         {
@@ -205,7 +205,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         };
 
         // ---------------------------------------------------------------
-        
+
         // Defining specialization for real-valued distributions
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, exponential_distribution,        args_0_or_1, T);
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, chi_squared_distribution,        args_0_or_1, T);
@@ -218,7 +218,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, extreme_value_distribution, args_0_or_1_or_2, T, T);
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, lognormal_distribution,     args_0_or_1_or_2, T, T);
         DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS(std, fisher_f_distribution,      args_0_or_1_or_2, T, T);
-        
+
 
     #undef DFG_TEMP_DEFINE_DISTRIBUTION_DETAILS
 
@@ -418,5 +418,33 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         bool m_bGoodToGenerate = false;
         RandEngT* m_pRandEng = nullptr;
     }; // class DistributionFunctor
+
+    namespace DFG_DETAIL_NS
+    {
+        // Helper for iterating through available distribution types using default template types (int/double)
+        // This is under DFG_DETAIL_NS as distribution types are not guaranteed to be stable.
+        template <class Handler_T>
+        void forEachDistributionType(Handler_T&& handler)
+        {
+            handler(static_cast<const std::uniform_int_distribution<int>*>(nullptr));
+            handler(static_cast<const std::binomial_distribution<int>*>(nullptr));
+            handler(static_cast<const std::bernoulli_distribution*>(nullptr));
+            handler(static_cast<const NegativeBinomialDistribution<int>*>(nullptr));
+            handler(static_cast<const std::geometric_distribution<int>*>(nullptr));
+            handler(static_cast<const std::poisson_distribution<int>*>(nullptr));
+            // Real valued
+            handler(static_cast<const std::uniform_real_distribution<double>*>(nullptr));
+            handler(static_cast<const std::normal_distribution<double>*>(nullptr));
+            handler(static_cast<const std::cauchy_distribution<double>*>(nullptr));
+            handler(static_cast<const std::exponential_distribution<double>*>(nullptr));
+            handler(static_cast<const std::gamma_distribution<double>*>(nullptr));
+            handler(static_cast<const std::weibull_distribution<double>*>(nullptr));
+            handler(static_cast<const std::extreme_value_distribution<double>*>(nullptr));
+            handler(static_cast<const std::lognormal_distribution<double>*>(nullptr));
+            handler(static_cast<const std::chi_squared_distribution<double>*>(nullptr));
+            handler(static_cast<const std::fisher_f_distribution<double>*>(nullptr));
+            handler(static_cast<const std::student_t_distribution<double>*>(nullptr));
+        }
+    } // namespace DFG_DETAIL_NS
 
 } } // module namespace
