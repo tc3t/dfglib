@@ -148,9 +148,13 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctorImpl(ExtraParam_T(&extra
     }
     if (i >= N)
         return false; // No free slot found
-    extraParamArr[i].m_callback = std::forward<Func_T>(func);
-    DFG_OPAQUE_REF().m_ownedParams.insert(reinterpret_cast<uintptr_t>(&extraParamArr[i]));
-    return defineFunction(sv, funcArr[i], bAllowOptimization);
+    const auto rv = defineFunction(sv, funcArr[i], bAllowOptimization);
+    if (rv)
+    {
+        extraParamArr[i].m_callback = std::forward<Func_T>(func);
+        DFG_OPAQUE_REF().m_ownedParams.insert(reinterpret_cast<uintptr_t>(&extraParamArr[i]));
+    }
+    return rv;
 }
 
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctor(const StringViewC& sv, std::function<double()> func, const bool bAllowOptimization) -> ReturnStatus

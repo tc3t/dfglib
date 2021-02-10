@@ -658,6 +658,11 @@ TEST(dfgMath, FormulaParser_functors)
         FormulaParser parser;
         for (uint32 i = 0; i < nMaxFunctorCount; ++i)
         {
+            // Trying to add some invalid functors to make sure that they don't consume resources.
+            EXPECT_FALSE(parser.defineFunctor("i + n - v * a / l ^ i + d", [=]() { return i; }, true));
+            EXPECT_FALSE(parser.defineFunctor("i + n - v * a / l ^ i + d", [=](double) { return i; }, true));
+            EXPECT_FALSE(parser.defineFunctor("i + n - v * a / l ^ i + d", [=](double, double) { return i; }, true));
+
             EXPECT_TRUE(parser.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
             EXPECT_TRUE(parser.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
             EXPECT_TRUE(parser.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
