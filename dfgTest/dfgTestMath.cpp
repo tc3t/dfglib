@@ -590,7 +590,6 @@ TEST(dfgMath, FormulaParser)
 
 TEST(dfgMath, FormulaParser_functors)
 {
-    // 
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(math);
     using namespace DFG_MODULE_NS(str);
@@ -667,5 +666,70 @@ TEST(dfgMath, FormulaParser_functors)
             EXPECT_TRUE(parser.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
             EXPECT_TRUE(parser.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
         }
+    }
+}
+
+TEST(dfgMath, FormulaParser_randomFunctions)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+    {
+        FormulaParser parser;
+        EXPECT_TRUE(parser.defineRandomFunctions());
+
+        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_uniformInt(100, 200)"), 100, 200);
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_uniformInt(100, 99)"));
+
+        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_binomial(10, 0.5)"), 0, 10);
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_binomial(10, 1.1)"));
+
+        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_bernoulli(0.5)"), 0, 1);
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_bernoulli(1.1)"));
+
+        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_negBinomial(10, 0.5)"), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_negBinomial(10, 0)"));
+
+        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_geometric(0.5)"), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_geometric(1.01)"));
+
+        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_poisson(10)"), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_poisson(-1)"));
+
+        const auto udouble0 = parser.setFormulaAndEvaluateAsDouble("rand_uniformReal(-1e300, 1e300)");
+        const auto udouble1 = parser.evaluateFormulaAsDouble();
+        DFGTEST_EXPECT_NON_NAN(udouble0);
+        DFGTEST_EXPECT_NON_NAN(udouble1);
+        EXPECT_TRUE(udouble0 != udouble1); // This is critical test: failing means that parser most likely had erroneously optimized call to constant.
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_uniformReal(1e300, -1e300)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_normal(0.0, 1.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_normal(0.0, -1.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_exponential(1.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_exponential(0.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_gamma(1.0, 2.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_gamma(0.0, 1.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_weibull(1.0, 2.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_weibull(0.0, 1.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_extremeValue(-1.0, 2.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_extremeValue(-1.0, 0.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_logNormal(-1.0, 2.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_logNormal(-1.0, 0.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_chiSquared(1.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_chiSquared(0.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_cauchy(-1.0, 2.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_cauchy(-1.0, 0.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_fisherF(1.0, 2.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_fisherF(0.0, 2.0)"));
+
+        DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_studentT(1.0)"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_studentT(0.0)"));
     }
 }

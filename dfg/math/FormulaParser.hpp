@@ -90,6 +90,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         ReturnStatus defineFunctor(const StringViewC& sv, std::function<double(double)> func, bool bAllowOptimization);
         ReturnStatus defineFunctor(const StringViewC& sv, std::function<double(double, double)> func, bool bAllowOptimization);
 
+        // Defines random functions for this parser.
+        // Note: uses defineFunctor() so it's limitations apply to this function.
+        // Note: This disables formula optimizer.
+        ReturnStatus defineRandomFunctions();
+
     private:
         template <class Func_T, class ExtraParam_T, class FuncType_T, size_t N>
         ReturnStatus defineFunctorImpl(ExtraParam_T (&extraParamArr)[N], FuncType_T (&funcArr)[N], const StringViewC& sv, Func_T&& func, bool bAllowOptimization);

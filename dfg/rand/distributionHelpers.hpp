@@ -344,6 +344,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         using RandEngT = decltype(createDefaultRandEngineRandomSeeded());
         using DistrT = Distr_T;
         using ArgStorage_T = typename std::tuple_element<1, decltype(::DFG_MODULE_NS(rand)::makeUninitializedDistributionArgs<DistrT>())>::type;
+        using StdFunction_T = typename std::conditional<std::tuple_size<ArgStorage_T>::value == 2, std::function<double(double, double)>, std::function<double(double)>>::type;
 
         struct InitialValueSetter
         {
@@ -353,6 +354,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(rand) {
         };
 
     public:
+        StdFunction_T toStdFunction() const { return StdFunction_T(*this); }
 
         DistributionFunctor(RandEngT* pRandEng)
             : m_pRandEng(pRandEng)

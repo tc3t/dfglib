@@ -1,6 +1,8 @@
 #include "FormulaParser.hpp"
 #include <limits>
 #include "../cont/SetVector.hpp"
+#include "../rand/distributionhelpers.hpp"
+#include "../rand.hpp"
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include "muparser/muParser.h"
@@ -117,8 +119,10 @@ void cleanUpFunctors(Cont_T& paramsToCleanUp, ParamArr_T(&paramArr)[N])
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 {
+    using RandEngT = decltype(::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded());
     dfg_mu::Parser m_parser;
     ::DFG_MODULE_NS(cont)::SetVector<uintptr_t> m_ownedParams;
+    std::unique_ptr<RandEngT> m_spRandEng;
 };
 
 ::DFG_MODULE_NS(math)::FormulaParser::FormulaParser() = default;
@@ -268,4 +272,67 @@ double ::DFG_MODULE_NS(math)::FormulaParser::evaluateFormulaAsDouble(const Strin
 {
     FormulaParser parser;
     return (parser.setFormula(sv)) ? parser.evaluateFormulaAsDouble() : std::numeric_limits<double>::quiet_NaN();
+}
+
+namespace
+{
+    template <class RandEng_T>
+    struct DistributionAdder
+    {
+        DistributionAdder(::DFG_MODULE_NS(math)::FormulaParser& rParser, RandEng_T& rRandEng)
+            : m_rParser(rParser)
+            , m_rRandEng(rRandEng)
+        {}
+
+        template <class Distr_T> void defineFunctor(const ::DFG_ROOT_NS::StringViewC& svName)
+        {
+            const auto rv = m_rParser.defineFunctor(svName, ::DFG_MODULE_NS(rand)::DistributionFunctor<Distr_T>(&m_rRandEng).toStdFunction(), false);
+            m_bAllGood = m_bAllGood && (rv == true);
+        }
+
+#define DFG_TEMP_DEFINE_DISTR_HANDLER(TYPE, NAME) \
+        template <class T> void operator()(const TYPE<T>*) { defineFunctor<TYPE<T>>(NAME); }
+
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::uniform_int_distribution, "rand_uniformInt");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::binomial_distribution, "rand_binomial");
+        void operator()(const std::bernoulli_distribution*) { defineFunctor<std::bernoulli_distribution>("rand_bernoulli"); }
+        DFG_TEMP_DEFINE_DISTR_HANDLER(::DFG_MODULE_NS(rand)::NegativeBinomialDistribution, "rand_negBinomial");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::geometric_distribution, "rand_geometric");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::poisson_distribution, "rand_poisson");
+        // Real valued
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::uniform_real_distribution, "rand_uniformReal");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::normal_distribution, "rand_normal");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::cauchy_distribution, "rand_cauchy");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::exponential_distribution, "rand_exponential");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::gamma_distribution, "rand_gamma");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::weibull_distribution, "rand_weibull");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::extreme_value_distribution, "rand_extremeValue");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::lognormal_distribution, "rand_logNormal");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::chi_squared_distribution, "rand_chiSquared");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::fisher_f_distribution, "rand_fisherF");
+        DFG_TEMP_DEFINE_DISTR_HANDLER(std::student_t_distribution, "rand_studentT");
+
+        template <class T> void operator()(const T*)
+        {
+            DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "There are more distributions available that what is handled above. If those are not needed, add an empty handler.");
+        }
+#undef DFG_TEMP_DEFINE_DISTR_HANDLER
+
+        ::DFG_MODULE_NS(math)::FormulaParser& m_rParser;
+        RandEng_T& m_rRandEng;
+        bool m_bAllGood = true;
+    };
+}
+
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineRandomFunctions() -> ReturnStatus
+{
+    auto& opaqueThis = DFG_OPAQUE_REF();
+    if (opaqueThis.m_spRandEng)
+        return false;
+    using RandEngT = std::remove_reference<decltype(opaqueThis)>::type::RandEngT;
+    opaqueThis.m_parser.EnableOptimizer(false); // muParser doesn't seem to respect optimize-flag (https://github.com/beltoforion/muparser/issues/93), so must turn off optimizer completely.
+    opaqueThis.m_spRandEng.reset(new RandEngT(::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded()));
+    DistributionAdder<RandEngT> adder(*this, *opaqueThis.m_spRandEng);
+    ::DFG_MODULE_NS(rand)::DFG_DETAIL_NS::forEachDistributionType(adder);
+    return adder.m_bAllGood;
 }
