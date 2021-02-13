@@ -2404,7 +2404,8 @@ namespace
                 });
                 sFuncNames.resize(sFuncNames.length() - 2); // Removing trailing ", ".
                 m_spDynamicHelpWidget->setText(tr("Generates content using given formula.<br>"
-                    "<b>Available variables</b>:"
+                    "<b>Available variables and content-related functions</b>:"
+                    "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>cellValue(row, column)</b>: Value of cell at (row, column) (1-based indexes). Content is generated from top to bottom.</li>"
                     "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>trow</b>: Row of cell to which content is being generated, 1-based index.</li>"
                     "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>tcol</b>: Column of cell to which content is being generated, 1-based index.</li>"
                     "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>rowcount</b>: Number of rows in table </li>"
@@ -2412,7 +2413,9 @@ namespace
                     "<b>Available functions:</b> %1<br>"
                     "<b>Note</b>: trow and tcol are table indexes: even when generating to sorted or filtered table, these are rows/columns of the underlying table, not those of shown.<br>"
                     "For example if a table of 5 rows is sorted so that row 5 is shown as first, trow value for that cell is 5, not 1. Currently there is no variable for accessing view rows/columns.<br>"
-                    "<b>Example</b>: rowcount - trow + 1 (this generates descending row indexes, 1-based index)"
+                    "<b>Example</b>: rowcount - trow + 1 (this generates descending row indexes, 1-based index)<br>"
+                    "<b>Example</b>: cellValue(trow, tcol - 1) + cellValue(trow, tcol + 1) (value in each cell will be the sum of left and right neighbour cells)<br>"
+                    "<b>Example</b>: cellValue(trow - 1, tcol) * 2 (value is each cell will be twice the value in cell above)"
 
                 ).arg(sFuncNames));
             }
@@ -2649,6 +2652,7 @@ static void generateForEachInTarget(const TargetType targetType, const CsvTableV
         size_t nCounter = 0;
         rModel.batchEditNoUndo([&](CsvItemModel::DataTable& table)
         {
+            // Note: top-to-bottom visit pattern is guaranteed in documentation of cellValue() parser function.
             for (int c = 0; c < nCols; ++c)
             {
                 for (int r = 0; r < nRows; ++r, ++nCounter)
@@ -2847,6 +2851,22 @@ namespace
     }
 }
 
+namespace
+{
+    double cellValueAsDouble(CsvItemModel::DataTable* pTable, const double rowDouble, const double colDouble)
+    {
+        using namespace ::DFG_MODULE_NS(math);
+        if (!pTable)
+            return std::numeric_limits<double>::quiet_NaN();
+        int r, c;
+        if (!isFloatConvertibleTo<int>(rowDouble, &r) || !isFloatConvertibleTo(colDouble, &c))
+            return std::numeric_limits<double>::quiet_NaN();
+        r = ::DFG_MODULE_NS(qt)::CsvItemModel::visibleRowIndexToInternal(r);
+        c = ::DFG_MODULE_NS(qt)::CsvItemModel::visibleRowIndexToInternal(c);
+        return ::DFG_MODULE_NS(str)::strTo<double>((*pTable)(r, c));
+    }
+};
+
 bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
 {
     const auto genType = generatorType(settingsModel);
@@ -2918,12 +2938,15 @@ bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
         double tc = std::numeric_limits<double>::quiet_NaN();
         const double rowCount = rModel.rowCount();
         const double colCount = rModel.columnCount();
+        CsvItemModel::DataTable* pTable = nullptr;
+        parser.defineFunctor("cellValue", [&](double r, double c) { return cellValueAsDouble(pTable, r, c); }, false);
         parser.defineVariable("trow", &tr);
         parser.defineVariable("tcol", &tc);
         parser.defineConstant("rowcount", rowCount);
         parser.defineConstant("colcount", colCount);
         const auto generator = [&](CsvItemModel::DataTable& table, const int r, const int c, size_t)
         {
+            pTable = &table;
             tr = CsvItemModel::internalRowIndexToVisible(r);
             tc = CsvItemModel::internalColumnIndexToVisible(c);
             table.setElement(r, c, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(parser.evaluateFormulaAsDouble(), buffer, pszFormat)));
