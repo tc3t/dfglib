@@ -2388,17 +2388,33 @@ namespace
             }
             else if (genType == GeneratorTypeFormula)
             {
+                ::DFG_MODULE_NS(math)::FormulaParser parser;
+                parser.defineRandomFunctions();
+                QString sFuncNames;
+                int nLastBrPos = 0;
+                parser.forEachDefinedFunctionNameWhile([&](const ::DFG_ROOT_NS::StringViewC& sv)
+                {
+                    sFuncNames += QString("%1, ").arg(QString::fromLatin1(sv.data(), sv.sizeAsInt()));
+                    if (sFuncNames.length() - nLastBrPos > 80)
+                    {
+                        sFuncNames += "<br>&nbsp;&nbsp;&nbsp;&nbsp;";
+                        nLastBrPos = sFuncNames.length();
+                    }
+                    return true;
+                });
+                sFuncNames.resize(sFuncNames.length() - 2); // Removing trailing ", ".
                 m_spDynamicHelpWidget->setText(tr("Generates content using given formula.<br>"
                     "<b>Available variables</b>:"
-                    "<li><b>trow</b>: Row of cell to which content is being generated, 1-based index.</li>"
-                    "<li><b>tcol</b>: Column of cell to which content is being generated, 1-based index.</li>"
-                    "<li><b>rowcount</b>: Number of rows in table </li>"
-                    "<li><b>colcount</b>: Number of columns in table</li>"
-                    "<b>Available functions</b> (non exhaustive list): sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, asinh, acosh, atanh, log2, log10, log, exp, sqrt, sign, rint, abs<br>"
+                    "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>trow</b>: Row of cell to which content is being generated, 1-based index.</li>"
+                    "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>tcol</b>: Column of cell to which content is being generated, 1-based index.</li>"
+                    "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>rowcount</b>: Number of rows in table </li>"
+                    "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>colcount</b>: Number of columns in table</li>"
+                    "<b>Available functions:</b> %1<br>"
                     "<b>Note</b>: trow and tcol are table indexes: even when generating to sorted or filtered table, these are rows/columns of the underlying table, not those of shown.<br>"
                     "For example if a table of 5 rows is sorted so that row 5 is shown as first, trow value for that cell is 5, not 1. Currently there is no variable for accessing view rows/columns.<br>"
                     "<b>Example</b>: rowcount - trow + 1 (this generates descending row indexes, 1-based index)"
-                ));
+
+                ).arg(sFuncNames));
             }
             else
             {
@@ -2895,6 +2911,7 @@ bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
         const auto pszFormat = sFormat.c_str();
         const auto sFormula = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
         ::DFG_MODULE_NS(math)::FormulaParser parser;
+        DFG_VERIFY(parser.defineRandomFunctions());
         parser.setFormula(sFormula.data());
         char buffer[32] = "";
         double tr = std::numeric_limits<double>::quiet_NaN();

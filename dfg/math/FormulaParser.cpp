@@ -336,3 +336,16 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineRandomFunctions() -> ReturnStat
     ::DFG_MODULE_NS(rand)::DFG_DETAIL_NS::forEachDistributionType(adder);
     return adder.m_bAllGood;
 }
+
+void ::DFG_MODULE_NS(math)::FormulaParser::forEachDefinedFunctionNameWhile(std::function<bool (const StringViewC&)> handler) const
+{
+    auto pOpaqueThis = DFG_OPAQUE_PTR();
+    if (!pOpaqueThis || !handler)
+        return;
+    const auto& funcDefs = pOpaqueThis->m_parser.GetFunDef();
+    for (const auto& def : funcDefs)
+    {
+        if (!handler(def.first))
+            break;
+    }
+}

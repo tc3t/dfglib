@@ -95,6 +95,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         // Note: This disables formula optimizer.
         ReturnStatus defineRandomFunctions();
 
+        // Calls given function for each defined function name, handler should return true to continue iteration, false to terminate.
+        void forEachDefinedFunctionNameWhile(std::function<bool (const StringViewC&)> handler) const;
+
     private:
         template <class Func_T, class ExtraParam_T, class FuncType_T, size_t N>
         ReturnStatus defineFunctorImpl(ExtraParam_T (&extraParamArr)[N], FuncType_T (&funcArr)[N], const StringViewC& sv, Func_T&& func, bool bAllowOptimization);

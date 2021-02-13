@@ -10,6 +10,7 @@
 #include <dfg/cont.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/str.hpp>
+#include <dfg/cont/contAlg.hpp>
 
 TEST(dfgMath, roundedUpToMultiple)
 {
@@ -731,5 +732,31 @@ TEST(dfgMath, FormulaParser_randomFunctions)
 
         DFGTEST_EXPECT_NON_NAN(parser.setFormulaAndEvaluateAsDouble("rand_studentT(1.0)"));
         DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_studentT(0.0)"));
+    }
+}
+
+TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+
+    {
+        const std::vector<const char*> expectedFunctions {
+            "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "avg",
+            "cos", "cosh", "exp", "ln", "log", "log10", "log2", "max", "min", "rand_bernoulli",
+            "rand_binomial", "rand_cauchy", "rand_chiSquared", "rand_exponential", "rand_extremeValue", "rand_fisherF",
+            "rand_gamma", "rand_geometric", "rand_logNormal", "rand_negBinomial", "rand_normal", "rand_poisson", 
+            "rand_studentT", "rand_uniformInt", "rand_uniformReal", "rand_weibull",
+            "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh"
+            };
+        std::vector<std::string> foundFunctions;
+        FormulaParser parser;
+        EXPECT_TRUE(parser.defineRandomFunctions());
+        parser.forEachDefinedFunctionNameWhile([&](const StringViewC& sv)
+        {
+            foundFunctions.push_back(sv.toString());
+            return true;
+        });
+        EXPECT_TRUE(::DFG_MODULE_NS(cont)::isEqualContent(expectedFunctions, foundFunctions));
     }
 }
