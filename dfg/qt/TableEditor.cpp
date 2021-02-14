@@ -552,7 +552,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
 
             auto colDescription = model.headerData(index.column(), Qt::Horizontal).toString();
             if (colDescription.isEmpty())
-                colDescription = QString::number(index.column());
+                colDescription = QString::number(ModelClass::internalColumnIndexToVisible(index.column()));
             const QString sAddInfo = QString(" (%1, %2)")
                                 .arg(model.headerData(index.row(), Qt::Vertical).toString())
                                 .arg(colDescription);
