@@ -77,6 +77,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_FromCsvConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_ToConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.IntervalSet";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.IntervalSet_shift_raw";
     //::testing::GTEST_FLAG(filter) = "dfgCont.IntervalSet_wrapNegatives";
     //::testing::GTEST_FLAG(filter) = "dfgCont.intervalSetFromString";
     //::testing::GTEST_FLAG(filter) = "dfgCont.makeVector";

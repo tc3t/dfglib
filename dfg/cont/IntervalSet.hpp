@@ -4,6 +4,7 @@
 #include "MapVector.hpp"
 #include "../math.hpp"
 #include "../numericTypeTools.hpp"
+#include "../numeric/algNumeric.hpp"
 
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
@@ -66,6 +67,10 @@ public:
     // and {-10, -1, 3} with wrapNegatives(7) -> {0, 3, 6}
     // If nBound is negative, does nothing.
     void wrapNegatives(T nBound);
+
+    // Shifts intervals by given offset, for example [1, 3], [10, 15] shift(1) -> [2, 4], [11, 16]
+    // Note: this is low level function that does no overflow checking; it is callers responsibility to make sure overflows won't happen.
+    IntervalSet<T>& shift_raw(T nOffset);
 
     void privMergeIntervalsStartingFrom(const sizeType n);
     bool privIsWithinInterval(const sizeType n, const T& item) const;
@@ -305,6 +310,16 @@ void IntervalSet<T>::wrapNegatives(const T nBound)
             DFG_VERIFY(m_intervals.erase(intervalLeft) == 1);
         insertClosed(nBound + left, nBound + right);
     }
+}
+
+template <class T>
+auto IntervalSet<T>::shift_raw(const T nOffset) -> IntervalSet<T>&
+{
+    auto keyRange = this->m_intervals.keyRange_modifiable();
+    auto valueRange = this->m_intervals.valueRange();
+    ::DFG_MODULE_NS(numeric)::forEachAdd(keyRange, nOffset);
+    ::DFG_MODULE_NS(numeric)::forEachAdd(valueRange, nOffset);
+    return *this;
 }
 
 template <class T>

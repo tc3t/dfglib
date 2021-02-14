@@ -1705,6 +1705,32 @@ TEST(dfgCont, IntervalSet_wrapNegatives)
     }
 }
 
+TEST(dfgCont, IntervalSet_shift_raw)
+{
+    {
+        auto is = ::DFG_MODULE_NS(cont)::intervalSetFromString<DFG_ROOT_NS::int32>("-10:-9; -3:-1; 1; 3:4").shift_raw(1);
+        EXPECT_EQ(8, is.sizeOfSet());
+        EXPECT_TRUE(is.hasValue(-9));
+        EXPECT_TRUE(is.hasValue(-8));
+        EXPECT_TRUE(is.hasValue(-2));
+        EXPECT_TRUE(is.hasValue(-1));
+        EXPECT_TRUE(is.hasValue(0));
+        EXPECT_TRUE(is.hasValue(2));
+        EXPECT_TRUE(is.hasValue(4));
+        EXPECT_TRUE(is.hasValue(5));
+        is.shift_raw(-2);
+        EXPECT_EQ(8, is.sizeOfSet());
+        EXPECT_TRUE(is.hasValue(-11));
+        EXPECT_TRUE(is.hasValue(-10));
+        EXPECT_TRUE(is.hasValue(-4));
+        EXPECT_TRUE(is.hasValue(-3));
+        EXPECT_TRUE(is.hasValue(-2));
+        EXPECT_TRUE(is.hasValue(0));
+        EXPECT_TRUE(is.hasValue(2));
+        EXPECT_TRUE(is.hasValue(3));
+    }
+}
+
 namespace
 {
     void testInt32IntervalBounds(std::true_type) // Case: 64-bit size_t
