@@ -242,10 +242,13 @@ namespace DFG_DETAIL_NS
 #endif
     }
 
+    template <class T>
+    T defaultStrToReturnValue() { return std::numeric_limits<T>::quiet_NaN(); }
+
     template <class T, class Char_T>
     T genericImpl(const Char_T* psz, bool* pSuccess = nullptr)
     {
-        auto t = T();
+        auto t = defaultStrToReturnValue<T>();
         if (pSuccess)
             *pSuccess = false;
         if (!psz)

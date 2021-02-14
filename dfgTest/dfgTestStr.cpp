@@ -464,14 +464,14 @@ TEST(dfgStr, strTo)
         strTo_leadingTrailingWhitespaces<wchar_t>();
     }
 
-    // Testing that invalid input won't crash etc. and returns zero initialized value.
+    // Testing that invalid input won't crash etc. and returns zero initialized value or NaN.
     {
         const char* p = nullptr;
         EXPECT_EQ(0, strTo<int>(p));
-        EXPECT_EQ(0.0, strTo<double>(p));
+        DFGTEST_EXPECT_NAN(strTo<double>(p));
         EXPECT_EQ(0, strTo<int>("abc"));
         EXPECT_EQ(0, strTo<int>(""));
-        EXPECT_EQ(0.0, strTo<double>("  "));
+        DFGTEST_EXPECT_NAN(strTo<double>("  "));
     }
 
     volatile uint32 volVal = 1;
@@ -508,7 +508,7 @@ TEST(dfgStr, strTo)
         // Testing invalid strings. Note: Expected values below are not part of interface, i.e. value in case of false conversion is not specified.
         // Tested here just to see if implementation changes.
         const bool bUsingFromChars = (DFG_STRTO_USING_FROM_CHARS == 1);
-        testDoubleConversion("", 0, false);
+        testDoubleConversion("", std::numeric_limits<double>::quiet_NaN(), false);
         testDoubleConversion("-+1", (bUsingFromChars) ? std::numeric_limits<double>::quiet_NaN() : 0, false);
         testDoubleConversion("1.1.", 1.1, false);
         testDoubleConversion("1.a", 1, false);
