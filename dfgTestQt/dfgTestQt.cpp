@@ -153,7 +153,7 @@ TEST(dfgQt, CsvItemModel_filteredRead)
     {
         auto options = model.getLoadOptionsForFile(szFilePath5x5);
         options.setProperty(CsvOptionProperty_includeRows, "0;2;4");
-        options.setProperty(CsvOptionProperty_includeColumns, "1;2;4");
+        options.setProperty(CsvOptionProperty_includeColumns, "2;3;5");
         model.openFile(szFilePath5x5, options);
         ASSERT_EQ(2, model.rowCount());
         ASSERT_EQ(3, model.columnCount());
@@ -205,7 +205,7 @@ TEST(dfgQt, CsvItemModel_filteredRead)
                                     { "text": "*,1", "and_group": "a" }
                                     { "text": "4,1", "and_group": "b"} )";
         options.setProperty(CsvOptionProperty_includeRows, "0;3;5");
-        options.setProperty(CsvOptionProperty_includeColumns, "1");
+        options.setProperty(CsvOptionProperty_includeColumns, "2");
         options.setProperty(CsvOptionProperty_readFilters, szFilters);
         model.openFile(szFilePath5x5, options);
         ASSERT_EQ(1, model.rowCount());
@@ -237,7 +237,7 @@ TEST(dfgQt, CsvItemModel_filteredRead)
     // Column apply-filters in content filter
     {
         auto options = model.getLoadOptionsForFile(szFilePathAb);
-        const char szFilters[] = R"({ "text": "a", "apply_columns": "1" } )";
+        const char szFilters[] = R"({ "text": "a", "apply_columns": "2" } )";
         options.setProperty(CsvOptionProperty_readFilters, szFilters);
         model.openFile(szFilePathAb, options);
         ASSERT_EQ(1, model.rowCount());
