@@ -52,7 +52,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_completerColumns[]          = "completerColumns";
     const char CsvOptionProperty_completerEnabledSizeLimit[] = "completerEnabledSizeLimit";
     const char CsvOptionProperty_includeRows[]               = "includeRows"; // To define rows to read from file, as IntervalSet syntax. ASCII, 0-based index
-    const char CsvOptionProperty_includeColumns[]            = "includeColumns"; // To define columns to read from file, as IntervalSet syntax. ASCII, 0-based index
+    const char CsvOptionProperty_includeColumns[]            = "includeColumns"; // To define columns to read from file, as IntervalSet syntax. ASCII, 1-based index
     const char CsvOptionProperty_readFilters[]               = "readFilters"; // Newline (\n) separated list of extended StringMatchDefinitions, UTF-8
                                                                               // Read filters can be both OR'ed and AND'ed; all AND-groups are OR'ed, i.e. if any AND-group
                                                                               // evaluates true, filter is considered matching. By default all filters are AND'ed, see and_group -property.
@@ -184,10 +184,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         }; // class LoadOptions
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.
-        static int internalRowIndexToVisible(const int nRow)    { return saturateAdd<int>(nRow,  1); }
-        static int visibleRowIndexToInternal(const int nRow)    { return saturateAdd<int>(nRow, -1); }
-        static int internalColumnIndexToVisible(const int nCol) { return saturateAdd<int>(nCol,  1); }
-        static int visibleColumnIndexToInternal(const int nCol) { return saturateAdd<int>(nCol, -1); }
+        static constexpr int internalRowToVisibleShift()        { return 1; }
+        static constexpr int internalColumnToVisibleShift()     { return 1; }
+        static int internalRowIndexToVisible(const int nRow)    { return saturateAdd<int>(nRow,  internalRowToVisibleShift()); }
+        static int visibleRowIndexToInternal(const int nRow)    { return saturateAdd<int>(nRow, -internalRowToVisibleShift()); }
+        static int internalColumnIndexToVisible(const int nCol) { return saturateAdd<int>(nCol,  internalColumnToVisibleShift()); }
+        static int visibleColumnIndexToInternal(const int nCol) { return saturateAdd<int>(nCol, -internalColumnToVisibleShift()); }
 
         DFG_CLASS_NAME(CsvItemModel)();
         ~DFG_CLASS_NAME(CsvItemModel)();

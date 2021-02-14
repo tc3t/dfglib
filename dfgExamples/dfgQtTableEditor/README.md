@@ -219,9 +219,9 @@ TableEditor_cellEditorFontPointSize=13
 ; -----------------------------------------------------------
 ; CsvItemModel
 
-; Column for which to use auto-completion feature.
+; Columns for which to use auto-completion feature.
 ; To enable for all columns, use *
-; To enable for selected columns, provide comma-separator list of column indexes
+; To enable for selected columns, provide comma-separator list of column indexes (1-based index)
 ; To disable, leave value empty
 ; Note: In many cases it probably makes more sense to define this as file-specific property.
 ; Default: empty (=completer is disabled)
@@ -299,7 +299,7 @@ Available keys:
 
 | Key (URI)      | Purpose  | Possible values | Notes |
 | -------------  | -----    | ------          | ----- |
-| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column | integer | |
+| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column (1-based index) | integer | |
 | encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |
 | enclosing_char | File is read interpreting the given character as enclosing character | ASCII-character as such or escaped format, e.g. \t or \x1f | |
 | separator_char | File is read interpreting the given character as separator character | Like for enclosing_char | |
@@ -307,7 +307,7 @@ Available keys:
 | bom_writing | Whether to write BOM on save | 0, 1 | |
 | properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
 | properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
-| properties/includeRows | Limits rows which are read from file by row index |  | Since 1.5.0 |
+| properties/includeRows | Limits rows which are read from file by row index (0-based index, typically header is on row 0) |  | Since 1.5.0 |
 | properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
 | properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
 | properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, syntax guide is available from UI. | Since 1.6.0 |
@@ -317,21 +317,21 @@ Available keys:
 <pre>
 bom_writing,1,,
 columnsByIndex,,,
-,0,,
-,,width_pixels,400
 ,1,,
-,,width_pixels,100
+,,width_pixels,400
 ,2,,
+,,width_pixels,100
+,3,,
 ,,width_pixels,200
 enclosing_char,,,
 encoding,UTF8,,
 end_of_line_type,\n,,
 separator_char,",",,
 properties,,,
-,completerColumns,"0,2",
+,completerColumns,"1,3",
 ,completerEnabledSizeLimit,10000000,
 ,includeRows,100:200
-,includeColumns,0:5
+,includeColumns,1:6
 ,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"
 ,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
 </pre>

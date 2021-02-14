@@ -696,7 +696,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
             bool ok = false;
             const auto nCol = iter->toInt(&ok);
             if (ok)
-                completerEnabledColumns.insert(nCol);
+                completerEnabledColumns.insert(visibleColumnIndexToInternal(nCol));
         }
     }
 
@@ -923,6 +923,13 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setCompleterHandlingFromIn
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
  namespace DFG_DETAIL_NS
 {
+     ::DFG_MODULE_NS(cont)::IntervalSet<int> columnIntervalSetFromText(const StringViewSzC& sv)
+     {
+         using namespace ::DFG_MODULE_NS(cont);
+         using namespace ::DFG_MODULE_NS(qt);
+         return intervalSetFromString<int>(sv, (std::numeric_limits<int>::max)()).shift_raw(-CsvItemModel::internalRowToVisibleShift());
+     }
+
     // Provides matching implementation for filter reading.
     class TextFilterMatcher
     {
@@ -951,7 +958,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
                 if (iterRows != jsonObject.end())
                     rv.first.m_rows = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(iterRows->toString().toUtf8().data());
                 if (iterColumns != jsonObject.end())
-                    rv.first.m_columns = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(iterColumns->toString().toUtf8().data());
+                    rv.first.m_columns = columnIntervalSetFromText(iterColumns->toString().toUtf8().data());
                 return rv;
             }
 
@@ -1063,7 +1070,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                     if (!sIncludeRows.empty())
                         filter.setIncludeRows(intervalSetFromString<int>(sIncludeRows));
                     if (!sIncludeColumns.empty())
-                        filter.setIncludeColumns(intervalSetFromString<int>(sIncludeColumns));
+                        filter.setIncludeColumns(DFG_DETAIL_NS::columnIntervalSetFromText(sIncludeColumns));
                     m_table.readFromFile(sReadPath, loadOptions, filter);
                 }
                 else // Case: not having readFilters, only row/column include sets.
@@ -1074,7 +1081,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                     else
                         filter.setIncludeRows(IntervalSet<int>::makeSingleInterval(0, maxValueOfType<int>()));
                     if (!sIncludeColumns.empty())
-                        filter.setIncludeColumns(intervalSetFromString<int>(sIncludeColumns));
+                        filter.setIncludeColumns(DFG_DETAIL_NS::columnIntervalSetFromText(sIncludeColumns));
                     m_table.readFromFile(sReadPath, loadOptions, filter);
                 }
                 m_sTitle = tr("%1 (Filtered open)").arg(QFileInfo(sDbFilePath).fileName());

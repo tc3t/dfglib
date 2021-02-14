@@ -1159,7 +1159,7 @@ const char szContentFilterHelpText[] =
                "        Defines whether this filter is case sensitive or not.\n"
                "        Default: false (=case insensitive)\n"
                "    apply_columns: List of columns in IntervalSet syntax\n"
-               "        Defines columns where the filter is applied, first column is 0.\n"
+               "        Defines columns where the filter is applied, first column is 1.\n"
                "        Default: Empty (=match any column)\n"
                "    apply_rows: List of rows in IntervalSet syntax\n"
                "        Defines rows on which filter is applied, header is row 0.\n"
@@ -1277,7 +1277,7 @@ public:
             spLayout->addRow(tr("Completer columns"), m_spCompleterColumns.get());
             CsvItemModel::setCompleterHandlingFromInputSize(m_loadOptions, DFG_MODULE_NS(os)::fileSize(qStringToFileApi8Bit(sFilePath)), nullptr);
             m_spCompleterColumns->setText(m_loadOptions.getProperty(CsvOptionProperty_completerColumns, "*").c_str());
-            m_spCompleterColumns->setToolTip(tr("Column indexes (starting from 0) where completion is available, use * to enable on all."));
+            m_spCompleterColumns->setToolTip(tr("Comma-separated list of column indexes (1-based index) where completion is available, use * to enable on all."));
 
             // Include rows
             spLayout->addRow(tr("Include rows"), m_spIncludeRows.get());
@@ -1291,7 +1291,7 @@ public:
             DFG_REQUIRE(m_spIncludeColumns != nullptr);
             m_spIncludeColumns->setPlaceholderText(tr("all"));
             m_spIncludeColumns->setToolTip(tr("Defines columns to include from file, all when empty.\
-                                              <br>Syntax example: to include first, second and fourth column: <i>0:1; 3</i>"));
+                                              <br>Syntax example: to include first, second and fourth column: <i>1:2; 4</i>"));
 
             // Content filters
             spLayout->addRow(tr("Content filters"), m_spContentFilterWidget.get());
@@ -1510,7 +1510,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::saveConfigFile()
     char szBuffer[64];
     for (int c = 0, nCount = pModel->columnCount(); c < nCount; ++c)
     {
-        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), "columnsByIndex/%d/width_pixels", c);
+        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), "columnsByIndex/%d/width_pixels", CsvModel::internalColumnIndexToVisible(c));
         config.setKeyValue(DFG_CLASS_NAME(StringUtf8)(SzPtrUtf8(szBuffer)), DFG_CLASS_NAME(StringUtf8)::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(c))));
     }
     
@@ -1660,7 +1660,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
                 if (pColSep == relUri.endRaw() || pColSep == relUri.beginRaw())
                     return;
                 dfg::DFG_CLASS_NAME(StringViewC) svIndex(relUri.beginRaw(), pColSep - relUri.beginRaw());
-                const auto nCol = DFG_MODULE_NS(str)::strTo<int>(svIndex);
+                const auto nCol = CsvModel::visibleColumnIndexToInternal(DFG_MODULE_NS(str)::strTo<int>(svIndex));
                 if (pModel->isValidColumn(nCol))
                 {
                     if (!(DFG_CLASS_NAME(StringViewC)(pColSep + 1, relUri.endRaw() - (pColSep + 1)) == "width_pixels"))
