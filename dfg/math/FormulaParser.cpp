@@ -1,7 +1,7 @@
 #include "FormulaParser.hpp"
 #include <limits>
 #include "../cont/SetVector.hpp"
-#include "../rand/distributionhelpers.hpp"
+#include "../rand/distributionHelpers.hpp"
 #include "../rand.hpp"
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS

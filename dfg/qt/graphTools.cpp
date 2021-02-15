@@ -202,7 +202,7 @@ public:
 
     ConsoleLogLevel effectiveLevel() const { return m_effectiveLevel; }
 
-    std::atomic<ConsoleLogLevel> m_effectiveLevel = ConsoleLogLevel::none;
+    std::atomic<ConsoleLogLevel> m_effectiveLevel{ ConsoleLogLevel::none };
     ConsoleLogLevel m_desiredLevel = ConsoleLogLevel::info;
     HandlerT m_handler = nullptr;
 }; // class ConsoleLogHandle
@@ -4043,12 +4043,12 @@ auto DFG_MODULE_NS(qt)::GraphDisplay::getController() -> ChartController*
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::RefreshContext
+class DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::RefreshContext
 {
 public:
 };
 
-class ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData : public ::DFG_MODULE_NS(charts)::ChartOperationPipeData
+class DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData : public ::DFG_MODULE_NS(charts)::ChartOperationPipeData
 {
 public:
     using BaseClass = ::DFG_MODULE_NS(charts)::ChartOperationPipeData;

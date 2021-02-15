@@ -253,7 +253,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
     };
 }}} // dfg::qt::DFG_DETAILS_NS -namespace
 
-DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::TableEditor)
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::TableEditor)
 {
     QMap<QModelIndex, QString> m_pendingEdits;
 };

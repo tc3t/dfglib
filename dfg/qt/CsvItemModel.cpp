@@ -248,7 +248,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::CompleterDeleter:
         p->deleteLater(); // Can't delete directly due to thread affinity (i.e. might get deleted from wrong thread triggering Qt asserts).
 }
 
-DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvItemModel)
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvItemModel)
 {
     std::shared_ptr<QReadWriteLock> m_spReadWriteLock;
 };
