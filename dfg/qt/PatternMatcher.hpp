@@ -130,8 +130,12 @@ inline bool PatternMatcher::setToProxyModel(QSortFilterProxyModel* pProxy)
 {
     if (!pProxy)
         return false;
-    pProxy->setFilterRegularExpression(this->m_regExp);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    pProxy->setFilterRegularExpression(this->m_regExp); // Introduced in 5.12
     return true;
+#else
+    return false;
+#endif
 }
 
 inline bool PatternMatcher::isMatchingWith(const QString& s) const

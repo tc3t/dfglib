@@ -3033,9 +3033,9 @@ namespace
             const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
             auto spXticker = axisTicker(plottable.keyAxis());
             auto spYticker = axisTicker(plottable.valueAxis());
-            m_pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.get());
-            m_pYdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spYticker.get());
-            m_pXtextTicker = dynamic_cast<QCPAxisTickerText*>(spXticker.get());
+            m_pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.data());
+            m_pYdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spYticker.data());
+            m_pXtextTicker = dynamic_cast<QCPAxisTickerText*>(spXticker.data());
         }
 
         QString operator()(const Data_T& data, const ToolTipTextStream& toolTipStream) const
@@ -3323,7 +3323,7 @@ bool ChartCanvasQCustomPlot::applyChartOperationsTo(QCPAbstractPlottable* pPlott
     QString sErrors;
     for (const auto& sItem : operationStringList)
     {
-        if (sItem.isEmpty() || sItem.front() == '#')
+        if (sItem.isEmpty() || sItem[0] == '#')
             continue;
         StringUtf8 sDef(SzPtrUtf8(sItem.toUtf8()));
         auto op = manager.createOperation(sDef);

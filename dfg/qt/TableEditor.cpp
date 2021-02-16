@@ -402,10 +402,18 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
         // Filter panel
         {
             m_spFilterPanel.reset(new DFG_DETAIL_NS::FilterPanelWidget);
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onFilterTextChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFilterColumnChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pMatchSyntaxCombobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ThisClass::onFilterColumnChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->getCaseSensivitivyCheckBox(), &QCheckBox::stateChanged, this, &ThisClass::onFilterCaseSensitivityChanged));
+        #else
+            m_spFilterPanel->m_pTextEdit->setText(tr("Not available; requires building with Qt >= 5.12"));
+            m_spFilterPanel->m_pTextEdit->setEnabled(false);
+            m_spFilterPanel->m_pCaseSensitivityCheckBox->setEnabled(false);
+            m_spFilterPanel->m_pColumnSelector->setEnabled(false);
+            m_spFilterPanel->m_pMatchSyntaxCombobox->setEnabled(false);
+        #endif
             spLayout->addWidget(m_spFilterPanel.get(), row++, 0);
         }
 
