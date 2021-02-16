@@ -12,6 +12,7 @@ HEADERS += ../../dfg/qt/containerUtils.hpp \
     ../../dfg/qt/CsvTableViewCompleterDelegate.hpp \
     ../../dfg/qt/JsonListWidget.hpp \
     ../../dfg/qt/TableEditor.hpp \
+    ../../dfg/math/FormulaParser.hpp \
     ../../dfg/qt/sqlTools.hpp
 
 SOURCES += ../../dfg/os/memoryMappedFile.cpp \
@@ -23,6 +24,7 @@ SOURCES += ../../dfg/os/memoryMappedFile.cpp \
     ../../dfg/qt/QtApplication.cpp \
     ../../dfg/qt/TableEditor.cpp \
     ../../dfg/qt/sqlTools.cpp \
+    ../../dfg/math/FormulaParser.cpp \
     ./main.cpp
 
 RESOURCES += CsvItemModelExample.qrc
