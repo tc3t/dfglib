@@ -59,8 +59,6 @@ void smoothWithNeighbourMedians(Cont_T&& cont, const size_t nWindowRadiusRequest
     for (size_t iCont = 0; iCont < nSize; ++iCont)
     {
         const auto lowerWindowItem = (iCont >= nWindowRadius) ? iCont - nWindowRadius : 0;
-        const auto endWndItem = Min(iCont + nWindowRadius + 1, nSize);
-        const auto nCurrentWindowSize = endWndItem - lowerWindowItem;
 
         if (nLastInWindow < nLastIndex) // There's new element from right?
         {

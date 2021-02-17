@@ -562,8 +562,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
             if (colDescription.isEmpty())
                 colDescription = QString::number(ModelClass::internalColumnIndexToVisible(index.column()));
             const QString sAddInfo = QString(" (%1, %2)")
-                                .arg(model.headerData(index.row(), Qt::Vertical).toString())
-                                .arg(colDescription);
+                                .arg(model.headerData(index.row(), Qt::Vertical).toString(), colDescription);
             m_spCellEditorDockWidget->setWindowTitle(tr("Cell edit") + sAddInfo);
         }
         else

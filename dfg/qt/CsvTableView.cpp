@@ -351,7 +351,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
         }
 
         // Open app-config file
-        if (QFileInfo(DFG_CLASS_NAME(QtApplication)::getApplicationSettingsPath()).exists())
+        if (QFileInfo::exists(QtApplication::getApplicationSettingsPath()))
         {
             addSeparatorActionTo(pMenu);
             auto pAction = new QAction(tr("Open app config file"), this);
@@ -1001,10 +1001,10 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbs
     QModelIndexList listSelected = (!pProxy) ? getSelectedItemIndexes_viewModel() : getSelectedItemIndexes_dataModel();
 
     ::DFG_MODULE_NS(cont)::SetVector<int> rows;
-    for (QModelIndexList::const_iterator iter = listSelected.begin(); iter != listSelected.end(); ++iter)
+    for (const auto& listIndex : listSelected)
     {
-        if (iter->isValid())
-            rows.insert(iter->row());
+        if (listIndex.isValid())
+            rows.insert(listIndex.row());
     }
     return std::move(rows.m_storage);
 }
@@ -2534,7 +2534,7 @@ namespace
             BaseClass::setEditorData(editor, index);
             return;
         }
-        const auto keyVal = pModel->data(pModel->index(index.row(), index.column() - 1));
+        //const auto keyVal = pModel->data(pModel->index(index.row(), index.column() - 1));
         const auto value = index.data(Qt::EditRole).toString();
 
         const auto& values = valueListFromProperty(rowToPropertyId(index.row()));
@@ -3892,7 +3892,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAn
             QTimer::singleShot(100, this, SLOT(onCheckAnalyzeQueue()));
             return;
         }
-        auto cleanUp = makeScopedCaller([] {}, [&]() { pView->m_spEditLock->unlock(); });
+        auto cleanUp = makeScopedCaller([] {}, [&]() { if (pView) pView->m_spEditLock->unlock(); });
 
         auto selection = m_analyzeQueue.back();
         m_abNewSelectionPending = false;

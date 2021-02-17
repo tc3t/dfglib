@@ -495,7 +495,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
         for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
-            forEachIndexInSelectionRange(thisItem, *iter, indexType, std::forward<Func_T>(func));
+            forEachIndexInSelectionRange(thisItem, *iter, indexType, func);
         }
     }
 

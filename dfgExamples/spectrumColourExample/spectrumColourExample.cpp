@@ -66,7 +66,7 @@ void spectrumColourExample::paintBlackBodySpectrum(const QWidget& widget, DFG_MO
 		
 			return DFG_MODULE_NS(physics)::planckBlackBodySpectralEnergyDensityByWaveLength_RawSi(temperatureInK, wlInNm*1e-9);
 		};
-		const auto rgbD = DFG_CLASS_NAME(SpectrumColour)::spectrumToRgbDSimpleNm(spectrumFunc, ColourSystemSMPTEsystemSrjw, bGammaCorrect);
+		const auto rgbD = DFG_CLASS_NAME(SpectrumColour)::spectrumToRgbDSimpleNm(spectrumFunc, cs, bGammaCorrect);
 		painter.setPen(QColor::fromRgbF(rgbD.r, rgbD.g, rgbD.b));
 		painter.drawLine(rect.left() + i, rect.top(), rect.left() + i, rect.bottom());
 	}

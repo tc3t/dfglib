@@ -487,7 +487,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
  
             m_sColumnNameOld = pModel->getHeaderName(nCol);
             QString sDesc;
-            sDesc = QString("Rename column %1, \"%2\" to \"%3\"").arg(m_nWhere).arg(m_sColumnNameOld).arg(m_sColumnNameNew);
+            sDesc = QString("Rename column %1, \"%2\" to \"%3\"").arg(m_nWhere).arg(m_sColumnNameOld, m_sColumnNameNew);
             setText(sDesc);
         }
 

@@ -163,7 +163,6 @@ bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSelectQuery(const QString& sQuery)
     : BaseClass(pParent)
     , m_sFilePath(sFilePath)
 {
-    QString sQuery;
     m_spLayout.reset(new QVBoxLayout(this));
     auto& layout = *m_spLayout;
     m_spTableView.reset(new QListView(this));

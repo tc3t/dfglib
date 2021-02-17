@@ -74,11 +74,10 @@ static void onShowAboutBox()
 
     QString s = QString("%1 version %2<br><br>"
                         "Example application demonstrating csv handling features in dfglib.<br><br>")
-                        .arg(QApplication::applicationName())
-                        .arg(DFG_QT_TABLE_EDITOR_VERSION_STRING);
+                        .arg(QApplication::applicationName(), DFG_QT_TABLE_EDITOR_VERSION_STRING);
 
     const auto sSettingsPath = dfg::qt::QtApplication::getApplicationSettingsPath();
-    const bool bSettingFileExists = QFileInfo(sSettingsPath).exists();
+    const bool bSettingFileExists = QFileInfo::exists(sSettingsPath);
 
     s += QString("<b>Application path</b>: <a href=%1>%2</a><br>"
          "<b>Settings file path</b>: %3<br>"
@@ -101,7 +100,7 @@ static void onShowAboutBox()
     getBuildTimeDetailStrs([&](const BuildTimeDetail detailId, const char* psz)
     {
         if (psz && psz[0] != '\0')
-            s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId)).arg(psz);
+            s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId), psz);
     });
 
 #ifdef DFGQTE_GIT_BRANCH

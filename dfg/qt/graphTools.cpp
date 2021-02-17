@@ -627,7 +627,7 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
             if (!op)
             {
                 if (rv.isLoggingAllowedForLevel(LogLevel::warning))
-                    rv.log(LogLevel::warning, tr("Unable to create '%1: %2'").arg(viewToQString(svKey)).arg(viewToQString(sOperationDef)));
+                    rv.log(LogLevel::warning, tr("Unable to create '%1: %2'").arg(viewToQString(svKey), viewToQString(sOperationDef)));
             }
             else
             {
@@ -2142,7 +2142,7 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
         auto pPlottable = m_spChartView->plottable(i);
         if (!pPlottable)
             continue;
-        const auto name = pPlottable->name();
+        //const auto name = pPlottable->name();
 
         // TODO: limit length
         // TODO: icon based on object type (xy, histogram...)
@@ -3201,7 +3201,6 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
         toolTipStream << QLatin1String("<br>---------------------------");
         // Name
         toolTipStream << QString("<br>'%1'").arg(plottable.name().toHtmlEscaped());
-        QString sChartObjectDetails;
         if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPGraph*>(&plottable), xy, toolTipStream)) {}
         else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPCurve*>(&plottable), xy, toolTipStream)) {}
         else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPBars*>(&plottable), xy, toolTipStream)) {}
@@ -3306,7 +3305,7 @@ void ChartCanvasQCustomPlot::applyChartOperationsTo(QPointer<QCPAbstractPlottabl
         bool bOk;
         sInitial = QInputDialog::getMultiLineText(this->m_spChartView.data(),
             tr("Applying operations"),
-            tr("Define operations (one per line) for '%1'\n%2").arg(pPlottable->name()).arg(sAdditionInfo),
+            tr("Define operations (one per line) for '%1'\n%2").arg(pPlottable->name(), sAdditionInfo),
             sInitial,
             &bOk);
         operationStringList = sInitial.split('\n');

@@ -863,7 +863,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::populateConfig(DFG_MODULE_
 auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
 {
     auto sConfFilePath = DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sFilePath);
-    if (!QFileInfo(sConfFilePath).exists())
+    if (!QFileInfo::exists(sConfFilePath))
     {
         LoadOptions loadOptions;
         if (!::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sFilePath))
@@ -1149,7 +1149,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
             cellToStorage(nRow, c, query.value(c));
     }
 
-    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName()).arg(sQuery.mid(0, Min(32, saturateCast<int>(sQuery.size()))));
+    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName(), sQuery.mid(0, Min(32, saturateCast<int>(sQuery.size()))));
     return true;
 }
 

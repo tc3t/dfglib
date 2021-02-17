@@ -292,6 +292,7 @@ class ChartController : public QFrame
 public slots:
     void refresh();
     void clearCaches() { clearCachesImpl(); }
+public:
     GraphDataSourceId defaultSourceId() const { return defaultSourceIdImpl(); }
 
 private:
