@@ -47,7 +47,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         }
         if (cont.size() > nMaxSize)
             cont.resize(nMaxSize);
-        return std::move(cont);
+        return cont;
     }
 
 

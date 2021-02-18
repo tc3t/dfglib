@@ -31,7 +31,7 @@ namespace DFG_DETAIL_NS
 		if (p)
 			s = p;
 		free(p);
-		return std::move(s);
+		return s;
 	}
 
 #ifdef _WIN32

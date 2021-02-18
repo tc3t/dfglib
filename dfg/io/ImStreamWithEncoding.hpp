@@ -46,17 +46,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
 #if DFG_LANGFEAT_MOVABLE_STREAMS
 	// If text encoding is given, no BOM check is made. Otherwise it is checked and consumed if found.
-	inline DFG_CLASS_NAME(ImStreamWithEncoding) createImStreamWithEncoding(const char* p, const size_t nSize, TextEncoding encoding = encodingUnknown)
+	inline ImStreamWithEncoding createImStreamWithEncoding(const char* p, const size_t nSize, TextEncoding encoding = encodingUnknown)
 	{
-		DFG_CLASS_NAME(ImStreamWithEncoding) strm(p, nSize, encoding);
-		return std::move(strm);
+		return ImStreamWithEncoding(p, nSize, encoding);
 	}
 
 	// Overload for wchar_t.
-	inline DFG_CLASS_NAME(ImStreamWithEncoding) createImStreamWithEncoding(const wchar_t* p, const size_t nCharCount)
+	inline ImStreamWithEncoding createImStreamWithEncoding(const wchar_t* p, const size_t nCharCount)
 	{
-		DFG_CLASS_NAME(ImStreamWithEncoding) strm(p, nCharCount);
-		return std::move(strm);
+		return ImStreamWithEncoding(p, nCharCount);
 	}
 #endif
 

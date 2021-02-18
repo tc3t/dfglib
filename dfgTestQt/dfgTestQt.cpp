@@ -1071,8 +1071,8 @@ static void testFileDataSource(const QString& sExtension,
         // Checking that change notification was received and that new columns are effective.
         EXPECT_TRUE(bChangeNotificationReceived);
         ASSERT_EQ(2, source.columnNames().size());
-        EXPECT_EQ("a", source.columnNames()[0]);
-        EXPECT_EQ("b", source.columnNames()[1]);
+        EXPECT_EQ("a", source.columnNames()[0u]);
+        EXPECT_EQ("b", source.columnNames()[1u]);
         std::vector<std::string> elems;
         source.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
         {
@@ -1237,7 +1237,7 @@ TEST(dfgQt, qStringToStringUtf8)
     for (uint16 i = 32; i < 260; ++i)
         s.push_back(QChar(i));
     s.push_back(QChar(0x20AC)); // Euro-sign
-    const uint32 u32 = 123456; // Arbitrary codepoint that requires surrogates.
+    const char32_t u32 = 123456; // Arbitrary codepoint that requires surrogates.
     s.append(QString::fromUcs4(&u32, 1));
     const auto s8 = qStringToStringUtf8(s);
     const QString sRoundTrip = QString::fromUtf8(s8.beginRaw(), saturateCast<int>(s8.sizeInRawUnits()));
