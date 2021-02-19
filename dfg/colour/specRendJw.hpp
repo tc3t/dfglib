@@ -51,9 +51,9 @@ namespace srjw
 
     extern const double cie_colour_match[81][3];
 
-    inline const double cieColourMatchTableStepInNm() {return 5;}
-    inline const double cieColourMatchTableMinimumInNm() {return 380;}
-    inline const double cieColourMatchTableMaximumInNm() {return 780;}
+    inline constexpr double cieColourMatchTableStepInNm()    {return 5;}
+    inline constexpr double cieColourMatchTableMinimumInNm() {return 380;}
+    inline constexpr double cieColourMatchTableMaximumInNm() {return 780;}
 
     /*  	    	    	    UPVP_TO_XY
     Given 1976 coordinates u', v', determine 1931 chromaticities x, y

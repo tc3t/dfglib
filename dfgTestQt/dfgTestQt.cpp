@@ -494,7 +494,7 @@ TEST(dfgQt, CsvTableView_paste)
     view.paste();
 
     // Making sure that got only one change notification
-    EXPECT_EQ(1, nSignalCount);
+    EXPECT_EQ(1u, nSignalCount);
 
     // Making sure that columns 0 and 1 are identical.
     view.selectColumn(1);

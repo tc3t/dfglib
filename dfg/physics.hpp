@@ -49,16 +49,19 @@ template <class FromQuantity_T, class ToUnit_T> inline InvalidType convertTo(con
 	DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(FromQuantity_T,
 												DFG_CURRENT_FUNCTION_NAME ": not implemented. Note that e.g. for temperatures "
 												"either convertToAbsolute or convertToDifference should be used.");
+	return InvalidType();
 }
 
 template <class FromQuantity_T, class ToUnit_T> inline InvalidType convertToAbsolute(const FromQuantity_T&, const ToUnit_T&)
 {
 	DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(FromQuantity_T, DFG_CURRENT_FUNCTION_NAME ": not implemented.");
+	return InvalidType();
 }
 
 template <class FromQuantity_T, class ToUnit_T> inline InvalidType convertToDifference(const FromQuantity_T&, const ToUnit_T&)
 {
 	DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(FromQuantity_T, DFG_CURRENT_FUNCTION_NAME ": not implemented.");
+	return InvalidType();
 }
 
 // Celsius -> Kelvin
