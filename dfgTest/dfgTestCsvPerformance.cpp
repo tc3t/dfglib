@@ -587,6 +587,7 @@ TEST(dfgPerformance, CsvReadPerformance)
 
     const auto sFilePath = GenerateTestFile(gnRowCount, gnColCount);
 
+#if 0 // std:: stream tests disabled by default as they have been very slow at least in MSVC
     // std::ifstream
     ExecuteTestCase_GetThrough<std::ifstream>(ostrmTestResults, InitIfstream, getThroughOriginal<std::ifstream>, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::ifstream>(ostrmTestResults, InitIfstream, sFilePath, nRunCount);
@@ -601,9 +602,10 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_GetThrough<std::istringstream>(ostrmTestResults, InitIStringStream, getThroughOriginal<std::istringstream>, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_NoCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<std::istringstream>(ostrmTestResults, InitIStringStream, sFilePath, nRunCount);
+#endif
 
-    // BasicIfStream (note: this could be improved significantly by implementing buffering to BasicIfStream)
-    //ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<::DFG_MODULE_NS(io)::BasicIfStream>(ostrmTestResults, InitBasicIfstream, sFilePath, nRunCount, false);
+    // BasicIfStream
+    ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<::DFG_MODULE_NS(io)::BasicIfStream>(ostrmTestResults, InitBasicIfstream, sFilePath, nRunCount, false);
 
     // IfStreamWithEncoding
     //ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<::DFG_MODULE_NS(io)::IfStreamWithEncoding>(ostrmTestResults, InitIfStreamWithEncoding, sFilePath, nRunCount, false);
