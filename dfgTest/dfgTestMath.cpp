@@ -678,22 +678,22 @@ TEST(dfgMath, FormulaParser_randomFunctions)
         FormulaParser parser;
         EXPECT_TRUE(parser.defineRandomFunctions());
 
-        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_uniformInt(100, 200)"), 100, 200);
+        DFGTEST_EXPECT_WITHIN_GE_LE(parser.setFormulaAndEvaluateAsDouble("rand_uniformInt(100, 200)"), 100, 200);
         DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_uniformInt(100, 99)"));
 
-        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_binomial(10, 0.5)"), 0, 10);
+        DFGTEST_EXPECT_WITHIN_GE_LE(parser.setFormulaAndEvaluateAsDouble("rand_binomial(10, 0.5)"), 0, 10);
         DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_binomial(10, 1.1)"));
 
-        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_bernoulli(0.5)"), 0, 1);
+        DFGTEST_EXPECT_WITHIN_GE_LE(parser.setFormulaAndEvaluateAsDouble("rand_bernoulli(0.5)"), 0, 1);
         DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_bernoulli(1.1)"));
 
-        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_negBinomial(10, 0.5)"), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_WITHIN_GE_LE(parser.setFormulaAndEvaluateAsDouble("rand_negBinomial(10, 0.5)"), 0, (std::numeric_limits<int>::max)());
         DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_negBinomial(10, 0)"));
 
-        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_geometric(0.5)"), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_WITHIN_GE_LE(parser.setFormulaAndEvaluateAsDouble("rand_geometric(0.5)"), 0, (std::numeric_limits<int>::max)());
         DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_geometric(1.01)"));
 
-        DFGTEST_EXPECT_WITHIN(parser.setFormulaAndEvaluateAsDouble("rand_poisson(10)"), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_WITHIN_GE_LE(parser.setFormulaAndEvaluateAsDouble("rand_poisson(10)"), 0, (std::numeric_limits<int>::max)());
         DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("rand_poisson(-1)"));
 
         const auto udouble0 = parser.setFormulaAndEvaluateAsDouble("rand_uniformReal(-1e300, 1e300)");

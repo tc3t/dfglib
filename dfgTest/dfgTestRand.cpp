@@ -369,31 +369,31 @@ TEST(dfgRand, DistributionFunctor)
         DistributionFunctor<std::fisher_f_distribution<double>>      distFisher(&randEng);
         DistributionFunctor<std::student_t_distribution<double>>     distStudent(&randEng);
 
-        DFGTEST_EXPECT_WITHIN(distUi(10.0, 200.0), 10, 200);
-        DFGTEST_EXPECT_WITHIN(distUi(10.0, 200.0), 10, 200);
-        DFGTEST_EXPECT_WITHIN(distUi(5.0, 8.0)   ,  5, 8);
-        DFGTEST_EXPECT_WITHIN(distUi(5.0, 8.0)   ,  5, 8);
+        DFGTEST_EXPECT_WITHIN_GE_LE(distUi(10.0, 200.0), 10, 200);
+        DFGTEST_EXPECT_WITHIN_GE_LE(distUi(10.0, 200.0), 10, 200);
+        DFGTEST_EXPECT_WITHIN_GE_LE(distUi(5.0, 8.0)   ,  5, 8);
+        DFGTEST_EXPECT_WITHIN_GE_LE(distUi(5.0, 8.0)   ,  5, 8);
         DFGTEST_EXPECT_NAN(distUi(5.5, 8.0));
         DFGTEST_EXPECT_NAN(distUi(5.0, 8.5));
 
-        DFGTEST_EXPECT_WITHIN(distBin(10.0, 0.5), 0, 10);
+        DFGTEST_EXPECT_WITHIN_GE_LE(distBin(10.0, 0.5), 0, 10);
         DFGTEST_EXPECT_NAN(distBin(-1, 0.5));
         DFGTEST_EXPECT_NAN(distBin(10, 1.01));
 
-        DFGTEST_EXPECT_WITHIN(distBer(0.5), 0, 1);
+        DFGTEST_EXPECT_WITHIN_GE_LE(distBer(0.5), 0, 1);
         DFGTEST_EXPECT_NAN(distBer(1.01));
 
-        DFGTEST_EXPECT_WITHIN(distNegBin(10.0, 0.5), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_WITHIN_GE_LE(distNegBin(10.0, 0.5), 0, (std::numeric_limits<int>::max)());
         DFGTEST_EXPECT_NAN(distNegBin(-1.0, 0.5));
         DFGTEST_EXPECT_NAN(distNegBin(10, 1.01));
 
-        DFGTEST_EXPECT_WITHIN(distGeo(0.5), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_WITHIN_GE_LE(distGeo(0.5), 0, (std::numeric_limits<int>::max)());
         DFGTEST_EXPECT_NAN(distGeo(1.01));
 
-        DFGTEST_EXPECT_WITHIN(distPoi(10.0), 0, (std::numeric_limits<int>::max)());
+        DFGTEST_EXPECT_WITHIN_GE_LE(distPoi(10.0), 0, (std::numeric_limits<int>::max)());
         DFGTEST_EXPECT_NAN(distPoi(-10.0));
 
-        DFGTEST_EXPECT_WITHIN(distUr(10.0, 200.0), 10, 200);
+        DFGTEST_EXPECT_WITHIN_GE_LE(distUr(10.0, 200.0), 10, 200);
         DFGTEST_EXPECT_NAN(distUr(5.0, -8.0));
 
         DFGTEST_EXPECT_NON_NAN(distNormal(0.0, 1.0));

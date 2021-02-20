@@ -31,7 +31,8 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #define DFGTEST_STATIC(expr)        DFGTEST_STATIC_TEST(expr)  //DFG_STATIC is deprecated, use DFGTEST_STATIC_TEST
 #define DFGTEST_MESSAGE(expr)       std::cout << "    MESSAGE: " << expr << '\n';
 
-#define DFGTEST_EXPECT_WITHIN(val, lower, upper) \
+// Tests whether val is within [lower, upper].
+#define DFGTEST_EXPECT_WITHIN_GE_LE(val, lower, upper) \
     { \
     const auto dfgTestTemporaryValue = val; \
     EXPECT_GE(dfgTestTemporaryValue, lower); \
