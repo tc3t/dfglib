@@ -136,7 +136,7 @@ DFG_ROOT_NS_BEGIN
                 return static_cast<UnsignedType>(val);
             else
             {
-                if (val != NumericTraits<Int_T>::minValue)
+                if (val != (std::numeric_limits<Int_T>::min)())
                     return static_cast<UnsignedType>(-1 * val);
                 else
                     return static_cast<UnsignedType>(-1 * (val + 1)) + 1;
