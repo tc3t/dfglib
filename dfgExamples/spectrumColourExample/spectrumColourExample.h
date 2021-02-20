@@ -11,7 +11,7 @@ class spectrumColourExample : public QMainWindow
 
 public:
     typedef QMainWindow BaseClass;
-    spectrumColourExample(QWidget *parent = 0, Qt::WindowFlags flags = 0);
+    spectrumColourExample(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
     ~spectrumColourExample();
 
     void setColourDisplay(double r, double g, double b);
