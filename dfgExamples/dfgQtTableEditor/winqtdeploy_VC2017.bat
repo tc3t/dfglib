@@ -9,5 +9,6 @@
 call set_deploy_env.bat
 
 set EXE_PATH=TODO_set_exe_path_here.exe
+set PDB_PATH=TODO_set_pdb_path_here.exe
 set VCINSTALLDIR=%VCINSTALLDIR_2017%
-call winqtdeploy.bat %QT_BIN_DIR% %EXE_PATH% "%MSVC_REDIST_PATH_2017%"
+call winqtdeploy.bat %QT_BIN_DIR% %EXE_PATH% %PDB_PATH% "%MSVC_REDIST_PATH_2017%"

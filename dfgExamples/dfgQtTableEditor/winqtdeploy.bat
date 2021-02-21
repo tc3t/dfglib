@@ -13,16 +13,19 @@
 
 set QT_BIN_DIR=%1
 set EXE_PATH=%2
-set MSVC_RUNTIME_REDIST_PATH=%3
+set PDB_PATH=%3
+set MSVC_RUNTIME_REDIST_PATH=%4
 
 @echo QT_BIN_DIR is "%QT_BIN_DIR%"
 @echo EXE_PATH is "%EXE_PATH%"
+@echo PDB_PATH is "%PDB_PATH%"
 @echo MSVC_RUNTIME_REDIST_PATH is %MSVC_RUNTIME_REDIST_PATH%
 
 @echo --------------------------------
 @echo Checking input parameters
 if not "%QT_BIN_DIR%" NEQ "" goto :usage
 if not "%EXE_PATH%" NEQ "" goto :usage
+if not "%PDB_PATH%" NEQ "" goto :usage
 
 set OUTPUT_WORKDIR=winqtdeploy_sandbox
 set PACKAGE_FOLDER_NAME=dfgQtTableEditor
@@ -51,6 +54,8 @@ if "%errorlevel%" NEQ "0" (
 @echo --------------------------------
 @echo Copying exe-file to output dir
 copy %EXE_PATH% %PACKAGE_OUTPUT_PATH%
+@echo Copying pdb-file to work dir (note: not to package dir as don't want to include pdb in package)
+copy %PDB_PATH% %OUTPUT_WORKDIR%
 
 @echo --------------------------------
 @echo Copying MSVC runtime DLL's
@@ -78,15 +83,18 @@ del %EXE_VERSION_FILE_PATH%
 @echo Creating .7z packages
 set PACKAGE_PATH_FULL=%OUTPUT_WORKDIR%\dfgQtTableEditor_%EXE_VERSION%_full.7z
 set PACKAGE_PATH_UDPATE=%OUTPUT_WORKDIR%\dfgQtTableEditor_%EXE_VERSION%_update.7z
+set PACKAGE_PATH_PDB=%OUTPUT_WORKDIR%\dfgQtTableEditor_%EXE_VERSION%_pdb.7z
 cd %OUTPUT_WORKDIR%
 "C:\Program Files\7-Zip\7z.exe" a -mx9 ..\%PACKAGE_PATH_FULL% %PACKAGE_FOLDER_NAME%
 cd ..
 "C:\Program Files\7-Zip\7z.exe" a -mx9 %PACKAGE_PATH_UDPATE% %EXE_PATH%
+"C:\Program Files\7-Zip\7z.exe" a -mx9 %PACKAGE_PATH_PDB% %PDB_PATH%
 
 @echo --------------------------------
 @echo Creating hash files for the packages.
 powershell "(Get-FileHash %PACKAGE_PATH_FULL%).Hash" > %PACKAGE_PATH_FULL%.sha256
 powershell "(Get-FileHash %PACKAGE_PATH_UDPATE%).Hash" > %PACKAGE_PATH_UDPATE%.sha256
+powershell "(Get-FileHash %PACKAGE_PATH_PDB%).Hash" > %PACKAGE_PATH_PDB%.sha256
 
 @echo --------------------------------
 @echo All done.
