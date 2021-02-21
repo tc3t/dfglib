@@ -4,6 +4,25 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 ## Building
 
+### Version 1.8.0:
+
+Has been successfully build with:
+| Compiler      | Qt | OS | Boost | Charting? | Comments |
+| ------------- | ----- | ---- | -- | -- | -- |
+| Clang 6.0.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
+| Clang 10.0.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_
+| GCC 7.5.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No |  |
+| GCC 9.3.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes |
+| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
+| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes |
+| MSVC2017, MSVC2019 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes |
+| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes (*) | * With adjusted version of QCustomPlot 2.0.1 to allow building with Qt 6.0
+| | | |
+
+Also expected to build with MSVC2015; might also build with Qt versions before 5.9, but not earlier than 5.6. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
+
+ If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out). For concrete build steps, see section for version 1.0.0.
+
 ### Version 1.7.0:
 
 Has been successfully build with:
@@ -16,8 +35,6 @@ Has been successfully build with:
 | MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes |
 | MSVC2017, MSVC2019 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes |
 | | | |
-
-Also expected to build with MSVC2015; for Qt requires at least 5.6. If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out). For concrete build steps, see section for version 1.0.0.
 
 ### Version 1.6.0:
 
@@ -69,6 +86,29 @@ Has been build with the following setups:
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
 ## Version history
+
+* 2021-02-21, 1.8.0
+    * General
+        * [breaking_change] Column indexing now starts from 1. This breaks existing property files etc., where column indexes was 0-based ([#64](https://github.com/tc3t/dfglib/issues/64), [9b0b3ef7](https://github.com/tc3t/dfglib/commit/9b0b3ef7242d901e8e3a032912300f7a820d4de4))
+        * [breaking_change] Table filter is no longer available when building with Qt version < 5.12 and filter types *WildcardUnix*, *RegExp2* and *W3CXmlSchema11* are no longer available. ([16b0f6bb](https://github.com/tc3t/dfglib/commit/16b0f6bbad1fdd311e9d64318e5b5362e70061f3), [f30ba001](https://github.com/tc3t/dfglib/commit/f30ba00102ec64e2afe040dda95f3ef74385283d))
+        * [new] Content generation can now be done with formula; includes ability to use values of other cells. ([#50](https://github.com/tc3t/dfglib/issues/50), [0b1302c4](https://github.com/tc3t/dfglib/commit/0b1302c4e68a3fbb370b54c0e2342a3f157fe27e))
+        * [imp] There are now shortcuts for 'Resize table' (Ctrl+R)  and 'Generate content' (Alt+G) ([e3ef65b2](https://github.com/tc3t/dfglib/commit/e3ef65b2e54781ba65dc044876a536c19c62720f))
+        * [imp] Reading files that can't be memory mapped (e.g. very big files) might now work; not expected to be fast, though. ([#37](https://github.com/tc3t/dfglib/issues/37), [aa38151b](https://github.com/tc3t/dfglib/commit/aa38151b08e8d478d397916a5da6e4e292f6fdaa))
+        * [imp] Changing pattern syntax selection from combobox now triggers filter/find update ([b980492b](https://github.com/tc3t/dfglib/commit/b980492bf23b3dbddf286793b01ca7abe73fcbe4))
+        * [imp] In content generation, previously using floating point format such as 1.0 in place where integer was expected (e.g. random distribution parameter) was interpreted as zero; now they are interpreted correctly and if they are not integer-valued, a message is shown to user ([a4b291fc](https://github.com/tc3t/dfglib/commit/a4b291fcb12ed49e6825a8324e08cfd1f21ce7ee))
+        * [fix] Changing find-text while selection analyzer was active likely resulted to crash. Also added some edit blocks to cases where editing should not be possible ([f495f234](https://github.com/tc3t/dfglib/commit/f495f234c9862dc93a5369442d16df377e9d7db3), [932cf5d6](https://github.com/tc3t/dfglib/commit/932cf5d6e3156d7beb703aff5ca4cde892e134f3), [3f1b708e](https://github.com/tc3t/dfglib/commit/3f1b708ecfd74aa85749ddde4cc3350c9e141f9a))
+        * [fix] SQLiteFileOpenDialog: Automatic query construction didn't escape column/table names correctly ([f499f6a4](https://github.com/tc3t/dfglib/commit/f499f6a41c1602610d62f650fba3680aadddd472))
+        * [fix] Failing to open file due to missing read permission wasn't detected as error ([3595f1dc](https://github.com/tc3t/dfglib/commit/3595f1dceea5bffa820b060b59ba7f7471165622))
+    * Charts
+        * [new] New chart type: *txy*. Difference to type *xy* is that this does not order by x-values so it can be used to visualize curves like circles. ([#54](https://github.com/tc3t/dfglib/issues/54))
+        * [new] Can now set background gradient for the whole chart canvas ([#45](https://github.com/tc3t/dfglib/issues/45), [83cbc5b8](https://github.com/tc3t/dfglib/commit/83cbc5b8e285a4fceb372ce8a1f984539fef8c2a)) 
+        * [imp] Chart updates now cause much less UI freezing as most of the work is done in worker thread. ([#55](https://github.com/tc3t/dfglib/issues/55))
+        * [imp] Graphs in the same panel now have different colours by default ([#26](https://github.com/tc3t/dfglib/issues/26), [894b944c](https://github.com/tc3t/dfglib/commit/894b944c65f3a0d2a05468e2852abb4d5fbfd0ac))
+        * [imp] Smoothing operations now handle NaN's ([0e83375a](https://github.com/tc3t/dfglib/commit/0e83375ab2b9ab1935423e67b74eb54e8999eb78))
+        * [imp] Can now set panel axis and label colours through panel_config ([beedf6a7](https://github.com/tc3t/dfglib/commit/beedf6a72b68aa56b63f4b2c312a4d8a9cfae12f))
+        * [imp] Chart canvas now has a visual indicator when it's being updated ([75f8c941](https://github.com/tc3t/dfglib/commit/75f8c9413970124bffd91755ffe02be35720c9e7))
+        * [imp] Optimizations to parsing values from table strings ([7c6ec3e8](https://github.com/tc3t/dfglib/commit/7c6ec3e84f3e1b07e50b0153a9e9c14fa096a740))
+        
 
 * 2020-11-15, [1.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.7.0)
     * General
