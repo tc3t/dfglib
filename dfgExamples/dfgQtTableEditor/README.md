@@ -87,7 +87,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
-* 2021-02-21, 1.8.0
+* 2021-02-21, [1.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.8.0)
     * General
         * [breaking_change] Column indexing now starts from 1. This breaks existing property files etc., where column indexes was 0-based ([#64](https://github.com/tc3t/dfglib/issues/64), [9b0b3ef7](https://github.com/tc3t/dfglib/commit/9b0b3ef7242d901e8e3a032912300f7a820d4de4))
         * [breaking_change] Table filter is no longer available when building with Qt version < 5.12 and filter types *WildcardUnix*, *RegExp2* and *W3CXmlSchema11* are no longer available. ([16b0f6bb](https://github.com/tc3t/dfglib/commit/16b0f6bbad1fdd311e9d64318e5b5362e70061f3), [f30ba001](https://github.com/tc3t/dfglib/commit/f30ba00102ec64e2afe040dda95f3ef74385283d))
