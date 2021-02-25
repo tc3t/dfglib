@@ -50,7 +50,7 @@ T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
 }
 
 template <class T, class Char_T>
-T& strToByNoThrowLexCastImpl(const DFG_CLASS_NAME(StringView)<Char_T>& sv, T& val, bool* pSuccess = nullptr)
+T& strToByNoThrowLexCastImpl(const StringView<Char_T>& sv, T& val, bool* pSuccess = nullptr)
 {
     bool bSuccess = true;
     try
@@ -68,13 +68,13 @@ T& strToByNoThrowLexCastImpl(const DFG_CLASS_NAME(StringView)<Char_T>& sv, T& va
 }
 
 template <class T>
-T& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewC)& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
+T& strToByNoThrowLexCast(const StringViewC& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
 
 template <class T>
-T& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewW)& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
+T& strToByNoThrowLexCast(const StringViewW& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
 
 template <class Char_T>
-bool& strToBoolNoThrowLexCast(const DFG_CLASS_NAME(StringView)<Char_T>& sv, bool& val, bool* pSuccess = nullptr)
+bool& strToBoolNoThrowLexCast(const StringView<Char_T>& sv, bool& val, bool* pSuccess = nullptr)
 { 
     if (sv == DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "true"))
         val = true;
@@ -85,11 +85,11 @@ bool& strToBoolNoThrowLexCast(const DFG_CLASS_NAME(StringView)<Char_T>& sv, bool
     return val;
 }
 
-template <> inline bool& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewC)& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
-template <> inline bool& strToByNoThrowLexCast(const DFG_CLASS_NAME(StringViewW)& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
+template <> inline bool& strToByNoThrowLexCast(const StringViewC& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
+template <> inline bool& strToByNoThrowLexCast(const StringViewW& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
 
 template <class T>
-T strToByNoThrowLexCast(const DFG_CLASS_NAME(ReadOnlySzParamC)& s, bool* pSuccess = nullptr)
+T strToByNoThrowLexCast(const ReadOnlySzParamC& s, bool* pSuccess = nullptr)
 {
     T val;
     return strToByNoThrowLexCast(s, val, pSuccess);
@@ -211,22 +211,68 @@ namespace DFG_DETAIL_NS
     }
 #endif
 
+#if DFG_STRTO_USING_FROM_CHARS == 1
+    template <class T>
+    inline void fromChars(StringView<char> sv, T& t, const T defaultValue, bool* pSuccess)
+    {
+        t = defaultValue;
+        const auto rv = std::from_chars(sv.data(), sv.endRaw(), t);
+        if (pSuccess)
+            *pSuccess = (rv.ptr == sv.endRaw() && rv.ec == std::errc());
+    }
+#endif
+
     template <class Char_T, class T>
-    inline void convertImpl(DFG_CLASS_NAME(StringView)<Char_T> sv, T& t, bool* pSuccess = nullptr)
+    inline void convertImpl2(StringView<Char_T> sv, T& t, bool* pSuccess, std::false_type)
     {
         strToByNoThrowLexCast(sv, t, pSuccess);
     }
 
-    inline void convertImpl(DFG_CLASS_NAME(StringView)<char> sv, double& t, bool* pSuccess = nullptr)
+    template <class Char_T, class T>
+    inline void convertImpl2(StringView<Char_T> sv, T& t, bool* pSuccess, std::true_type)
+    {
+        DFG_STATIC_ASSERT(std::is_integral<T>::value, "Internal error: integer implementation called with non-integer");
+#if DFG_STRTO_USING_FROM_CHARS == 1
+        fromChars(sv, t, T(), pSuccess);
+#else
+        convertImpl2(sv, t, pSuccess, std::false_type());
+#endif
+    }
+
+    template <class Char_T, class T>
+    inline void convertImpl(StringView<Char_T> sv, T& t, bool* pSuccess = nullptr)
+    {
+        constexpr bool isCharAndNonBoolInteger = std::is_integral<T>::value && std::is_same<Char_T, char>::value && !std::is_same<T, bool>::value;
+        convertImpl2(sv, t, pSuccess, std::integral_constant<bool, isCharAndNonBoolInteger>());
+    }
+
+    template <class T>
+    inline void convertImplFloatOrLongDouble(StringView<char> sv, T& t, bool* pSuccess)
+    {
+#if DFG_STRTO_USING_FROM_CHARS == 1
+        fromChars(sv, t, std::numeric_limits<T>::quiet_NaN(), pSuccess);
+#else
+        convertImpl2(sv, t, pSuccess, std::false_type());
+#endif
+    }
+
+    inline void convertImpl(StringView<char> sv, float& t, bool* pSuccess = nullptr)
+    {
+        convertImplFloatOrLongDouble(sv, t, pSuccess);
+    }
+
+    inline void convertImpl(StringView<char> sv, long double& t, bool* pSuccess = nullptr)
+    {
+        convertImplFloatOrLongDouble(sv, t, pSuccess);
+    }
+
+    inline void convertImpl(StringView<char> sv, double& t, bool* pSuccess = nullptr)
     {
         // While view itself is not necessarily null-terminated, the underlying string is and since
         // trailing spaces seem to be no problem for strtod(), passing the start pointer as such.
         
 #if DFG_STRTO_USING_FROM_CHARS == 1
-        t = std::numeric_limits<double>::quiet_NaN();
-        const auto rv = std::from_chars(sv.data(), sv.endRaw(), t);
-        if (pSuccess)
-            *pSuccess = (rv.ptr == sv.endRaw() && rv.ec == std::errc());
+        fromChars(sv, t, std::numeric_limits<double>::quiet_NaN(), pSuccess);
 #else
         char* pEnd;
     #if defined(_MSC_VER)
@@ -266,7 +312,7 @@ namespace DFG_DETAIL_NS
         while (*(pEnd - 1) == ' ')
             --pEnd;
 
-        DFG_CLASS_NAME(StringView)<Char_T> sv(psz, pEnd - psz);
+        StringView<Char_T> sv(psz, pEnd - psz);
         convertImpl(sv, t, pSuccess);
         return t;
     }
@@ -332,7 +378,7 @@ template <class T> inline typename std::remove_cv<T>::type strTo(const std::wstr
 
 // strTo(x) for StringView
 template <class T, class Char_T, class Str_T>
-inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
+inline typename std::remove_cv<T>::type strTo(const StringView<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
 {
     // TODO: convert directly from string view instead of creating redundant temporary.
     return convertStrTo<T>(toCharPtr_raw(sv.toString().c_str()), pSuccess);
@@ -340,7 +386,7 @@ inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringView)<C
 
 // strTo(x) for StringViewSz
 template <class T, class Char_T, class Str_T>
-inline typename std::remove_cv<T>::type strTo(const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
+inline typename std::remove_cv<T>::type strTo(const StringViewSz<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
 {
     return convertStrTo<T>(toCharPtr_raw(sv.c_str()), pSuccess);
 }

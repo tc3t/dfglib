@@ -332,13 +332,14 @@ namespace
         EXPECT_EQ(1.25, strTo<double>(DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, " 1.25 ")));
     }
 
-    void testDoubleConversion(const char* psz, const double expectedValue, const bool bExpected)
+    template <class T>
+    void testFloatingPointConversionsT(const char* psz, const T expectedValue, const bool bExpected)
     {
         using namespace ::DFG_ROOT_NS;
         using namespace ::DFG_MODULE_NS(str);
         bool bOk;
         const auto bExpectedIsNan = ::DFG_MODULE_NS(math)::isNan(expectedValue);
-        const auto testEqual = [&](const double val)
+        const auto testEqual = [&](const T val)
         {
             if (bExpectedIsNan)
                 EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(val));
@@ -346,9 +347,21 @@ namespace
                 EXPECT_EQ(expectedValue, val);
             EXPECT_EQ(bExpected, bOk);
         };
-        testEqual(strTo<double>(psz, &bOk));
-        testEqual(strTo<double>(StringViewSzC(psz), &bOk));
-        testEqual(strTo<double>(StringViewC(psz), &bOk));
+        testEqual(strTo<T>(psz, &bOk));
+        testEqual(strTo<T>(StringViewSzC(psz), &bOk));
+        testEqual(strTo<T>(StringViewC(psz), &bOk));
+    }
+
+    void testFloatingPointConversions(const char* psz, const double expectedValue, const bool bExpected)
+    {
+        testFloatingPointConversionsT(psz, static_cast<float>(expectedValue), bExpected);
+        testFloatingPointConversionsT(psz, expectedValue, bExpected);
+        testFloatingPointConversionsT(psz, static_cast<long double>(expectedValue), bExpected);
+    }
+
+    void testDoubleConversion(const char* psz, const double expectedValue, const bool bExpected)
+    {
+        testFloatingPointConversionsT<double>(psz, expectedValue, bExpected);
     }
 } // unnamed namespace
 
@@ -492,24 +505,24 @@ TEST(dfgStr, strTo)
     {
         using namespace ::DFG_MODULE_NS(math);
         
-        testDoubleConversion("-0.0", 0.0, true);
-        testDoubleConversion("    0.25  ", 0.25, true);
+        testFloatingPointConversions("-0.0", 0.0, true);
+        testFloatingPointConversions("    0.25  ", 0.25, true);
         testDoubleConversion("    -25E-2  ", -0.25, true);
         testDoubleConversion("1.23456789", 1.23456789, true);
         testDoubleConversion("1e300", 1e300, true);
         testDoubleConversion("-1e300", -1e300, true);
         testDoubleConversion("1e-9", 1e-9, true);
         testDoubleConversion("-1e-9", -1e-9, true);
-        testDoubleConversion("-inf", -std::numeric_limits<double>::infinity(), true);
-        testDoubleConversion("-INF", -std::numeric_limits<double>::infinity(), true);
-        testDoubleConversion("inf", std::numeric_limits<double>::infinity(), true);
-        testDoubleConversion("INF", std::numeric_limits<double>::infinity(), true);
+        testFloatingPointConversions("-inf", -std::numeric_limits<double>::infinity(), true);
+        testFloatingPointConversions("-INF", -std::numeric_limits<double>::infinity(), true);
+        testFloatingPointConversions("inf", std::numeric_limits<double>::infinity(), true);
+        testFloatingPointConversions("INF", std::numeric_limits<double>::infinity(), true);
 
         // Testing invalid strings. Note: Expected values below are not part of interface, i.e. value in case of false conversion is not specified.
         // Tested here just to see if implementation changes.
         const bool bUsingFromChars = (DFG_STRTO_USING_FROM_CHARS == 1);
-        testDoubleConversion("", std::numeric_limits<double>::quiet_NaN(), false);
-        testDoubleConversion("-+1", (bUsingFromChars) ? std::numeric_limits<double>::quiet_NaN() : 0, false);
+        testFloatingPointConversions("", std::numeric_limits<double>::quiet_NaN(), false);
+        testFloatingPointConversions("-+1", (bUsingFromChars) ? std::numeric_limits<double>::quiet_NaN() : 0, false);
         testDoubleConversion("1.1.", 1.1, false);
         testDoubleConversion("1.a", 1, false);
         testDoubleConversion("1.a", 1, false);
