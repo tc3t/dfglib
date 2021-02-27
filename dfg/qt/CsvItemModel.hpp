@@ -22,6 +22,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../io/DelimitedTextReader.hpp"
 #include <memory>
 #include <vector>
+#include <atomic>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
 {
@@ -112,7 +113,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
         typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(StringMatchDefinition) StringMatchDefinition;
-        
+
         enum ColType
         {
             ColTypeText,
@@ -161,26 +162,116 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             std::unique_ptr<QCompleter, CompleterDeleter> m_spCompleter;
         };
 
-        class SaveOptions : public DFG_CLASS_NAME(CsvFormatDefinition)
+        class IoOperationProgressController
         {
         public:
-            DFG_BASE_CONSTRUCTOR_DELEGATE_1(SaveOptions, DFG_CLASS_NAME(CsvFormatDefinition)) {}
-            SaveOptions(DFG_CLASS_NAME(CsvItemModel)* itemModel);
-            SaveOptions(const DFG_CLASS_NAME(CsvItemModel)* itemModel);
+            using ProgressCallback = std::function<void(uint64)>;
+
+            class CopyableAtomicBool : public std::atomic_bool
+            {
+            public:
+                using BaseClass = std::atomic_bool;
+                CopyableAtomicBool() : BaseClass(false) {}
+                CopyableAtomicBool(const CopyableAtomicBool& other)
+                {
+                    *this = other;
+                }
+                CopyableAtomicBool& operator=(const CopyableAtomicBool& other)
+                {
+                    this->store(other.load());
+                    return *this;
+                }
+            };
+
+            IoOperationProgressController() = default;
+            IoOperationProgressController(ProgressCallback callback)
+                : m_callback(std::move(callback))
+            {}
+
+            void operator()(const uint64 nProcessed)
+            {
+                if (m_callback)
+                    m_callback(nProcessed);
+            }
+
+            operator bool() const
+            {
+                return m_callback.operator bool();
+            }
+
+            bool isCancelled() const
+            {
+                return false; // Not implemented yet.
+                //return m_cancelled.load(std::memory_order_relaxed);
+            }
+
+            bool isTimeToUpdateProgress(const size_t nRow, const size_t nCol) const
+            {
+                DFG_UNUSED(nCol);
+#if defined(_MSC_VER) && defined(_DEBUG)
+                return (nRow % 1024) == 0; // Some adjustment for debug builds on MSVC
+#else
+                return (nRow % 8192) == 0; // This is a pretty coarse condition: compile-time constant not taking things like column count into account.
+#endif
+            }
+
+            ProgressCallback m_callback;
+            CopyableAtomicBool m_cancelled;
+        }; // IoOperationProgressController
+
+        class CommonOptionsBase : public CsvFormatDefinition
+        {
+        public:
+            using BaseClass = CsvFormatDefinition;
+            using BaseClass::BaseClass; // Inheriting constructor
+            using ProgressController = IoOperationProgressController;
+            CommonOptionsBase(const CsvFormatDefinition& cfd) : BaseClass(cfd) {}
+            CommonOptionsBase(CsvFormatDefinition&& cfd) : BaseClass(std::move(cfd)) {}
+
+            void setProgressController(ProgressController controller)
+            {
+                m_progressController = std::move(controller);
+            }
+
+            ProgressController m_progressController;
+
+        }; // Class CommonOptionsBase
+
+        class SaveOptions : public CommonOptionsBase
+        {
+        public:
+            using BaseClass = CommonOptionsBase;
+            DFG_BASE_CONSTRUCTOR_DELEGATE_1(SaveOptions, BaseClass) {}
+            SaveOptions(CsvItemModel* itemModel);
+            SaveOptions(const CsvItemModel* itemModel);
 
         private:
-            void initFromItemModelPtr(const DFG_CLASS_NAME(CsvItemModel)* pItemModel);
+            void initFromItemModelPtr(const CsvItemModel* pItemModel);
         }; // class SaveOptions
 
-        class LoadOptions : public DFG_CLASS_NAME(CsvFormatDefinition)
+        class LoadOptions : public CommonOptionsBase
         {
         public:
-            DFG_BASE_CONSTRUCTOR_DELEGATE_1(LoadOptions, DFG_CLASS_NAME(CsvFormatDefinition)) {}
-            LoadOptions() : DFG_CLASS_NAME(CsvFormatDefinition)(::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect,
+            using BaseClass = CommonOptionsBase;
+            DFG_BASE_CONSTRUCTOR_DELEGATE_1(LoadOptions, BaseClass) {}
+            LoadOptions() : CommonOptionsBase(::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect,
                                                                 '"',
                                                                 DFG_MODULE_NS(io)::EndOfLineTypeN, 
                                                                 DFG_MODULE_NS(io)::encodingUnknown)
             {}
+
+            bool isFilteredRead() const
+            {
+                return isFilteredRead(getProperty(CsvOptionProperty_includeRows, ""),
+                                      getProperty(CsvOptionProperty_includeColumns, ""),
+                                      getProperty(CsvOptionProperty_readFilters, ""));
+            }
+
+            bool isFilteredRead(const std::string& sIncludeRows, const std::string& sIncludeColumns, const std::string& sFilterItems) const
+            {
+                return !sIncludeRows.empty() || !sIncludeColumns.empty() || !sFilterItems.empty();
+            }
+
         }; // class LoadOptions
 
         // Maps valid internal row index [0, rowCount[ to user seen indexing, usually 1-based indexing.

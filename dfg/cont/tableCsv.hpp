@@ -494,7 +494,6 @@ DFG_ROOT_NS_BEGIN{
                 }
             };
 
-        private:
             class DefaultCellHandler : public CellHandlerBase
             {
             public:

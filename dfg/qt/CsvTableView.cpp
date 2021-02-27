@@ -18,6 +18,7 @@
 #include "JsonListWidget.hpp"
 #include "sqlTools.hpp"
 #include "../math/FormulaParser.hpp"
+#include <chrono>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -152,7 +153,7 @@ namespace
 
     }; // Class UndoViewWidget
 
-    static void doModalOperation(QWidget* pParent, const QString& sProgressDialogLabel, const QString& sThreadName, std::function<void ()> func)
+    static void doModalOperation(QWidget* pParent, const QString& sProgressDialogLabel, const QString& sThreadName, std::function<void (ProgressWidget*)> func)
     {
         QEventLoop eventLoop;
 
@@ -161,7 +162,7 @@ namespace
         pWorkerThread->setObjectName(sThreadName); // Sets thread name visible to debugger.
         QObject::connect(pWorkerThread, &QThread::started, [&]()
                 {
-                    func();
+                    func(pProgressDialog);
                     pWorkerThread->quit();
                 });
         // Connect thread finish to trigger event loop quit and closing of progress bar.
@@ -1103,7 +1104,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG
         
 
     bool bSuccess = false;
-    doModalOperation(this, tr("Saving to file\n%1").arg(path), "CsvTableViewFileWriter", [&]()
+    doModalOperation(this, tr("Saving to file\n%1").arg(path), "CsvTableViewFileWriter", [&](ProgressWidget*)
         {
             // TODO: allow user to cancel saving (e.g. if it takes too long)
             if (bSaveAsSqlite)
@@ -1577,18 +1578,20 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openConfigFile()
     return true;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath)
+bool CsvTableView::openFile(const QString& sPath)
 {
     return openFile(sPath, CsvItemModel::getLoadOptionsForFile(sPath));
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
+bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDefinition& formatDef)
 {
     if (sPath.isEmpty())
         return false;
     auto pModel = csvModel();
     if (!pModel)
         return false;
+
+    const auto fileSizeDouble = static_cast<double>(QFileInfo(sPath).size());
 
     const bool bOpenAsSqlite = ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sPath);
     QString sQuery;
@@ -1615,12 +1618,30 @@ bool DFG_CLASS_NAME(CsvTableView)::openFile(const QString& sPath, const DFG_ROOT
     const QString sAdditionalInfo = (bOpenAsSqlite) ? tr("\nQuery: %1").arg(sQuery) : QString();
 
     bool bSuccess = false;
-    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), "CsvTableViewFileLoader", [&]()
+    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
         {
+            CsvItemModel::LoadOptions loadOptions(formatDef);
+            if (!bOpenAsSqlite && !loadOptions.isFilteredRead() && pProgressWidget) // Currently progress indicator works only for non-filtered csv-files.
+                pProgressWidget->setRange(0, 100);
+            auto lastSetValue = std::chrono::steady_clock::now();
+            if (pProgressWidget)
+            {
+                loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([&](const uint64 nProcessedBytes)
+                {
+                    // Calling setValue for progressWidget; note that using invokeMethod() since progressWidget lives in another thread.
+                    // Also limiting call rate to maximum of once per 50 ms to prevent calls getting queued if callback gets called more often than what setValues can be invoked.
+                    const auto steadyNow = std::chrono::steady_clock::now();
+                    if (steadyNow - lastSetValue > std::chrono::milliseconds(50))
+                    {
+                        DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble))));
+                        lastSetValue = steadyNow;
+                    }
+                }));
+            }
             if (bOpenAsSqlite)
-                bSuccess = pModel->openFromSqlite(sPath, sQuery, formatDef);
+                bSuccess = pModel->openFromSqlite(sPath, sQuery, formatDef); // TODO: cancelling and progress indicator
             else
-                bSuccess = pModel->openFile(sPath, formatDef);
+                bSuccess = pModel->openFile(sPath, loadOptions);
         });
 
     if (pProxyModel)
@@ -1722,7 +1743,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTableFromClipboar
     loadOptions.textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
     bool bSuccess = false;
 
-    doModalOperation(this, tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), "CsvTableViewClipboardLoader", [&]()
+    doModalOperation(this, tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), "CsvTableViewClipboardLoader", [&](ProgressWidget*)
     {
         bSuccess = pCsvModel->openFromMemory(sClipboardText.data(), static_cast<size_t>(sClipboardText.size()), loadOptions);
     });
