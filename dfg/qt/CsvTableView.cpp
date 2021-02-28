@@ -82,14 +82,31 @@ namespace
     {
     public:
         typedef QProgressDialog BaseClass;
-        ProgressWidget(const QString sLabelText, QWidget* pParent)
+        enum class IsCancellable { yes, no };
+
+        ProgressWidget(const QString sLabelText, const IsCancellable isCancellable, QWidget* pParent)
             : BaseClass(sLabelText, QString(), 0, 0, pParent)
         {
             removeContextHelpButtonFromDialog(this);
             removeCloseButtonFromDialog(this);
             setWindowModality(Qt::WindowModal);
-            setCancelButton(nullptr); // Hide cancel button as there is no way to cancel the operation.
+            if (isCancellable == IsCancellable::yes)
+            {
+                auto spCancelButton = std::unique_ptr<QPushButton>(new QPushButton(tr("Cancel"), this));
+                connect(spCancelButton.get(), &QPushButton::clicked, [&]() { m_abCancelled = true; });
+                setCancelButton(spCancelButton.release()); // "The progress dialog takes ownership"
+            }
+            else
+                setCancelButton(nullptr); // Making sure that cancel button is not shown.
         }
+
+        // Thread-safe
+        bool isCancelled() const
+        {
+            return m_abCancelled.load(std::memory_order_relaxed);
+        }
+
+        std::atomic_bool m_abCancelled{ false };
     }; // Class ProgressWidget
 
     enum CsvTableViewPropertyId
@@ -153,11 +170,11 @@ namespace
 
     }; // Class UndoViewWidget
 
-    static void doModalOperation(QWidget* pParent, const QString& sProgressDialogLabel, const QString& sThreadName, std::function<void (ProgressWidget*)> func)
+    static void doModalOperation(QWidget* pParent, const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void (ProgressWidget*)> func)
     {
         QEventLoop eventLoop;
 
-        auto pProgressDialog = new ProgressWidget(sProgressDialogLabel, pParent);
+        auto pProgressDialog = new ProgressWidget(sProgressDialogLabel, isCancellable, pParent);
         auto pWorkerThread = new QThread();
         pWorkerThread->setObjectName(sThreadName); // Sets thread name visible to debugger.
         QObject::connect(pWorkerThread, &QThread::started, [&]()
@@ -1104,7 +1121,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG
         
 
     bool bSuccess = false;
-    doModalOperation(this, tr("Saving to file\n%1").arg(path), "CsvTableViewFileWriter", [&](ProgressWidget*)
+    doModalOperation(this, tr("Saving to file\n%1").arg(path), ProgressWidget::IsCancellable::no, "CsvTableViewFileWriter", [&](ProgressWidget*)
         {
             // TODO: allow user to cancel saving (e.g. if it takes too long)
             if (bSaveAsSqlite)
@@ -1618,7 +1635,8 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     const QString sAdditionalInfo = (bOpenAsSqlite) ? tr("\nQuery: %1").arg(sQuery) : QString();
 
     bool bSuccess = false;
-    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
+    const auto isCancellable = (bOpenAsSqlite) ? ProgressWidget::IsCancellable::no : ProgressWidget::IsCancellable::yes;
+    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), isCancellable, "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
         {
             CsvItemModel::LoadOptions loadOptions(formatDef);
             if (!bOpenAsSqlite && !loadOptions.isFilteredRead() && pProgressWidget) // Currently progress indicator works only for non-filtered csv-files.
@@ -1633,9 +1651,13 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                     const auto steadyNow = std::chrono::steady_clock::now();
                     if (steadyNow - lastSetValue > std::chrono::milliseconds(50))
                     {
-                        DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble))));
+                        const bool bCancelled = pProgressWidget->isCancelled();
+                        if (!bCancelled)
+                            DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble))));
                         lastSetValue = steadyNow;
+                        return !bCancelled;
                     }
+                    return true;
                 }));
             }
             if (bOpenAsSqlite)
@@ -1743,7 +1765,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTableFromClipboar
     loadOptions.textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
     bool bSuccess = false;
 
-    doModalOperation(this, tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), "CsvTableViewClipboardLoader", [&](ProgressWidget*)
+    doModalOperation(this, tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), ProgressWidget::IsCancellable::yes, "CsvTableViewClipboardLoader", [&](ProgressWidget*)
     {
         bSuccess = pCsvModel->openFromMemory(sClipboardText.data(), static_cast<size_t>(sClipboardText.size()), loadOptions);
     });

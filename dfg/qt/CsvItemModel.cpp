@@ -937,29 +937,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         using ItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
         using ProgressController = ItemModel::LoadOptions::ProgressController;
 
-        CancellableReader(ItemModel::DataTable& rTable, ProgressController progressController)
+        CancellableReader(ItemModel::DataTable& rTable, ProgressController& rProgressController)
             : BaseClass(rTable)
-            , m_progressController(std::move(progressController))
+            , m_rProgressController(rProgressController)
         {}
 
         void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
         {
             BaseClass::operator()(nRow, nCol, pData, nCount);
-            if (m_progressController)
+            if (m_rProgressController)
             {
                 m_nProcessedByteCount += nCount + 1; // +1 is for separator/single-char eol
-                if (m_progressController.isTimeToUpdateProgress(nRow, nCol))
+                if (m_rProgressController.isTimeToUpdateProgress(nRow, nCol))
                 {
-                    if (m_progressController)
-                        m_progressController(m_nProcessedByteCount);
-                    //if (m_progressController.isCancelled())
-                    //    throw TODO
+                    if (!m_rProgressController(m_nProcessedByteCount))
+                    {
+                        m_rProgressController.setCancelled(true);
+                        throw CsvItemModel::DataTable::OperationCancelledException();
+                    }
                 }
             }
         }
 
         uint64 m_nProcessedByteCount = 0; // Approximate value of processed input bytes; things like \r\n and quoting are ignored so this often undercounts.
-        ProgressController m_progressController;
+        ProgressController& m_rProgressController;
     }; // CancellableReader
 
     // Provides matching implementation for filter reading.
@@ -1123,7 +1124,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                 m_table.readFromFile(sReadPath, loadOptions, DFG_DETAIL_NS::CancellableReader(this->m_table, loadOptions.m_progressController));
                 // Note: setting file path is done only for non-filtered reads because after filtered read it makes no sense
                 //       to conveniently overwrite source file given the (possibly) lossy opening.
-                setFilePathWithoutSignalEmit(std::move(sDbFilePath));
+                const auto bWasCancelled = loadOptions.m_progressController.isCancelled();
+                if (!bWasCancelled)
+                    setFilePathWithoutSignalEmit(std::move(sDbFilePath));
+                else
+                {
+                    // When reading gets cancelled, not setting path so that saving the partly read file won't by default overwrite the original file.
+                    m_sTitle = tr("%1 (cancelled open)").arg(QFileInfo(sDbFilePath).fileName());
+                }
             }
             return true; // Currently there's no error detection so always returning true (=success)
         });

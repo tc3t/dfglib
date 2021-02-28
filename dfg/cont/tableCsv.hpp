@@ -483,6 +483,8 @@ DFG_ROOT_NS_BEGIN{
             using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
             template <class StringMatcher_T> using RowContentFilter = DFG_DETAIL_NS::RowContentFilter<ThisClass, StringMatcher_T>;
 
+            class OperationCancelledException {};
+
             // RowContentFilterBuffer is a map-like structure that can be iterated with regular range-based for like described in iterating through MapToStringViews.
             using RowContentFilterBuffer = DFG_DETAIL_NS::RowContentFilterBuffer<IndexT>;
 
@@ -679,22 +681,28 @@ DFG_ROOT_NS_BEGIN{
                 this->clear();
 
                 typedef DelimitedTextReader::ParsingDefinition<char, CharAppender_T> ParseDef;
-                const auto& readFormat = DelimitedTextReader::readEx(ParseDef(), strm, formatDef.separatorChar(), formatDef.enclosingChar(), formatDef.eolCharFromEndOfLineType(), std::forward<Reader_T>(cellHandler));
-                cellHandler.onReadDone();
+                try
+                {
+                    const auto& readFormat = DelimitedTextReader::readEx(ParseDef(), strm, formatDef.separatorChar(), formatDef.enclosingChar(), formatDef.eolCharFromEndOfLineType(), std::forward<Reader_T>(cellHandler));
+                    cellHandler.onReadDone();
 
-                m_readFormat.separatorChar(readFormat.getSep());
-                m_readFormat.enclosingChar(readFormat.getEnc());
-                if (formatDef.eolType() == DFG_MODULE_NS(io)::EndOfLineTypeRN)
-                    m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeRN);
-                else if (formatDef.eolType() == DFG_MODULE_NS(io)::EndOfLineTypeR)
-                    m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeR);
-                else
-                    m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeN);
-                //m_readFormat.endOfLineChar(readFormat.getEol());
-                //m_readFormat.textEncoding(strm.encoding()); // This is set 
-                //m_readFormat.headerWriting(); //
-                //m_readFormat.bomWriting(); // TODO: This is should be enquiried from the stream whether the stream had BOM.
-                m_saveFormat = m_readFormat;
+                    m_readFormat.separatorChar(readFormat.getSep());
+                    m_readFormat.enclosingChar(readFormat.getEnc());
+                    if (formatDef.eolType() == DFG_MODULE_NS(io)::EndOfLineTypeRN)
+                        m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeRN);
+                    else if (formatDef.eolType() == DFG_MODULE_NS(io)::EndOfLineTypeR)
+                        m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeR);
+                    else
+                        m_readFormat.eolType(DFG_MODULE_NS(io)::EndOfLineTypeN);
+                    //m_readFormat.endOfLineChar(readFormat.getEol());
+                    //m_readFormat.textEncoding(strm.encoding()); // This is set 
+                    //m_readFormat.headerWriting(); //
+                    //m_readFormat.bomWriting(); // TODO: This is should be enquiried from the stream whether the stream had BOM.
+                    m_saveFormat = m_readFormat;
+                }
+                catch (...)
+                {
+                }
             }
 
             template <class Stream_T>

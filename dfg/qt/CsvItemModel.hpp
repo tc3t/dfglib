@@ -165,7 +165,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         class IoOperationProgressController
         {
         public:
-            using ProgressCallback = std::function<void(uint64)>;
+            using ProgressCallback = std::function<bool(uint64)>; // Callback shall return true to continue reading, false to terminate.
 
             class CopyableAtomicBool : public std::atomic_bool
             {
@@ -188,10 +188,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 : m_callback(std::move(callback))
             {}
 
-            void operator()(const uint64 nProcessed)
+            bool operator()(const uint64 nProcessed)
             {
-                if (m_callback)
-                    m_callback(nProcessed);
+                return (m_callback) ? m_callback(nProcessed) : true;
             }
 
             operator bool() const
@@ -199,10 +198,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 return m_callback.operator bool();
             }
 
+            // Thread-safe
             bool isCancelled() const
             {
-                return false; // Not implemented yet.
-                //return m_cancelled.load(std::memory_order_relaxed);
+                return m_cancelled.load(std::memory_order_relaxed);
+            }
+
+            // Thread-safe
+            void setCancelled(const bool bCancelled)
+            {
+                m_cancelled.store(bCancelled);
             }
 
             bool isTimeToUpdateProgress(const size_t nRow, const size_t nCol) const
