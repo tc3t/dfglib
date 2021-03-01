@@ -1635,12 +1635,15 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     const QString sAdditionalInfo = (bOpenAsSqlite) ? tr("\nQuery: %1").arg(sQuery) : QString();
 
     bool bSuccess = false;
-    const auto isCancellable = (bOpenAsSqlite) ? ProgressWidget::IsCancellable::no : ProgressWidget::IsCancellable::yes;
-    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), isCancellable, "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
+    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), ProgressWidget::IsCancellable::yes, "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
         {
             CsvItemModel::LoadOptions loadOptions(formatDef);
+            bool bHasProgress = false;
             if (!bOpenAsSqlite && !loadOptions.isFilteredRead() && pProgressWidget) // Currently progress indicator works only for non-filtered csv-files.
+            {
                 pProgressWidget->setRange(0, 100);
+                bHasProgress = true;
+            }
             auto lastSetValue = std::chrono::steady_clock::now();
             if (pProgressWidget)
             {
@@ -1652,7 +1655,7 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                     if (steadyNow - lastSetValue > std::chrono::milliseconds(50))
                     {
                         const bool bCancelled = pProgressWidget->isCancelled();
-                        if (!bCancelled)
+                        if (bHasProgress && !bCancelled)
                             DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble))));
                         lastSetValue = steadyNow;
                         return !bCancelled;
@@ -1661,7 +1664,7 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                 }));
             }
             if (bOpenAsSqlite)
-                bSuccess = pModel->openFromSqlite(sPath, sQuery, formatDef); // TODO: cancelling and progress indicator
+                bSuccess = pModel->openFromSqlite(sPath, sQuery, loadOptions);
             else
                 bSuccess = pModel->openFile(sPath, loadOptions);
         });

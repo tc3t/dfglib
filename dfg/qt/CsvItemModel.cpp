@@ -1140,7 +1140,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
     }
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery)
+bool ::DFG_MODULE_NS(qt)::CsvItemModel::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions)
 {
     if (!QFileInfo::exists(sDbFilePath))
     {
@@ -1171,7 +1171,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
 
     const auto cellToStorage = [&](const size_t nRow, const int nCol, const QVariant& var)
     {
-        this->m_table.setElement(nRow, saturateCast<size_t>(nCol), SzPtrUtf8(var.toString().toUtf8()));
+        this->m_table.setElement(nRow, saturateCast<size_t>(nCol), SzPtrUtf8(var.toString().toUtf8())); // TODO: should allow storing utf16 directly without redundant utf8 QByteArray temporary (similar to MapToStringViews::insertRaw())
     };
 
     auto rec = query.record();
@@ -1183,27 +1183,32 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readDataFromSqlite(const
         cellToStorage(0, c, rec.fieldName(c)); // For unknown reason here QSqlRecord seems to remove quotes from column names even though SQLiteDatabase::getSQLiteFileTableColumnNames() returns them correctly.
 
     // Reading records and filling table.
-    for (size_t nRow = 1; query.next(); ++nRow)
+    bool bCancelled = false;
+    for (size_t nRow = 1; !bCancelled && query.next(); ++nRow)
     {
         for (int c = 0; c < nColCount; ++c)
             cellToStorage(nRow, c, query.value(c));
+        if (loadOptions.m_progressController.isTimeToUpdateProgress(nRow, 0))
+            bCancelled = !loadOptions.m_progressController(nRow); // In general it's hard to interpret meaning of nRow since knowing the read ratio can be difficult/slow given that query can be complex, use multiple tables etc.
     }
 
-    m_sTitle = tr("%1 (query '%2')").arg(QFileInfo(sDbFilePath).fileName(), sQuery.mid(0, Min(32, saturateCast<int>(sQuery.size()))));
+    const QString sCancelledPart = (bCancelled) ? tr("cancelled ") : QString();
+    m_sTitle = tr("%1 (%3query '%2')").arg(QFileInfo(sDbFilePath).fileName(), sQuery.mid(0, Min(32, saturateCast<int>(sQuery.size()))), sCancelledPart);
     return true;
 }
 
 bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
 {
-    return openFromSqlite(sDbFilePath, sQuery, getLoadOptionsForFile(sDbFilePath));
+    auto loadOptions = getLoadOptionsForFile(sDbFilePath);
+    return openFromSqlite(sDbFilePath, sQuery, loadOptions);
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions loadOptions)
+bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions)
 {
     m_messagesFromLatestOpen.clear();
     // Limiting completer usage by file size is highly coarse for databases, but at least this can prevent simple huge query cases from using completers.
     setCompleterHandlingFromInputSize(loadOptions, static_cast<uint64>(QFileInfo(sDbFilePath).size()));
-    return this->readData(loadOptions, [&]() { return readDataFromSqlite(sDbFilePath, sQuery); });
+    return this->readData(loadOptions, [&]() { return readDataFromSqlite(sDbFilePath, sQuery, loadOptions); });
 }
 
 //Note: When implementing a table based model, rowCount() should return 0 when the parent is valid.
