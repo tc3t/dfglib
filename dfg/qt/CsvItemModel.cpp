@@ -942,31 +942,67 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
             , m_rProgressController(rProgressController)
         {}
 
-        void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+        // Returns approximate increament in progress (in bytes).
+        static uint64 handleProgressController(ProgressController& rProcessController, const uint64 processedCount, const size_t nRow, const size_t nCol, const size_t nCount)
         {
-            BaseClass::operator()(nRow, nCol, pData, nCount);
-            if (m_rProgressController)
+            if (rProcessController)
             {
-                m_nProcessedByteCount += nCount + 1; // +1 is for separator/single-char eol
-                if (m_rProgressController.isTimeToUpdateProgress(nRow, nCol))
+                if (rProcessController.isTimeToUpdateProgress(nRow, nCol))
                 {
-                    if (!m_rProgressController(m_nProcessedByteCount))
+                    if (!rProcessController(processedCount))
                     {
-                        m_rProgressController.setCancelled(true);
+                        rProcessController.setCancelled(true);
                         throw CsvItemModel::DataTable::OperationCancelledException();
                     }
                 }
             }
+            return nCount + 1; // +1 is for separator/single-char eol
+        }
+
+        void handleProgressController(const size_t nRow, const size_t nCol, const size_t nCount)
+        {
+            m_nProcessedByteCount += handleProgressController(m_rProgressController, m_nProcessedByteCount, nRow, nCol, nCount);
+        }
+
+        void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+        {
+            BaseClass::operator()(nRow, nCol, pData, nCount);
+            handleProgressController(nRow, nCol, nCount);
         }
 
         uint64 m_nProcessedByteCount = 0; // Approximate value of processed input bytes; things like \r\n and quoting are ignored so this often undercounts.
         ProgressController& m_rProgressController;
     }; // CancellableReader
 
+    class CancellableFilterReader : public CancellableReader
+    {
+    public:
+        using BaseClass = CancellableReader;
+        using ItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
+        using DataTable = ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable;
+        using FilterCellHandler = decltype(DataTable().createFilterCellHandler());
+
+        CancellableFilterReader(ItemModel::DataTable& rTable, ProgressController& rProgressController, FilterCellHandler& rFilterCellHandler)
+            : BaseClass(rTable, rProgressController)
+            , m_rFilterCellHandler(rFilterCellHandler)
+        {}
+
+        void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+        {
+            handleProgressController(nRow, nCol, nCount);
+            m_rFilterCellHandler(nRow, nCol, pData, nCount);
+        }
+
+        FilterCellHandler& m_rFilterCellHandler;
+    }; // CancellableFilterReader
+
     // Provides matching implementation for filter reading.
     class TextFilterMatcher
     {
     public:
+        using ItemModel          = ::DFG_MODULE_NS(qt)::CsvItemModel;
+        using ProgressController = ItemModel::LoadOptions::ProgressController;
+
         // Extended StringMatchDefinition
         class MatcherDefinition : public StringMatchDefinition
         {
@@ -1014,7 +1050,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
         using MatcherStorage = ::DFG_MODULE_NS(cont)::MapVectorSoA<std::string, std::vector<MatcherDefinition>>;
 
-        TextFilterMatcher(const StringViewUtf8& sv)
+        TextFilterMatcher(const StringViewUtf8& sv, ProgressController& rProgressController)
+            : m_rProgressController(rProgressController)
         {
             using DelimitedTextReader = :: DFG_MODULE_NS(io)::DelimitedTextReader;
             const auto metaNone = DelimitedTextReader::s_nMetaCharNone;
@@ -1036,6 +1073,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
         bool isMatch(const int nInputRow, const CsvItemModel::DataTable::RowContentFilterBuffer& rowBuffer)
         {
+            CancellableReader::handleProgressController(m_rProgressController, 0, static_cast<size_t>(nInputRow), 0, 0);
             for (const auto& kv : m_matchers) // For all OR-sets
             {
                 bool bIsMatch = true;
@@ -1060,6 +1098,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         }
 
         MatcherStorage m_matchers; // Each mapped item defines a set of AND'ed items and the result is obtained by OR'ing each AND-set.
+        ProgressController& m_rProgressController;
     }; // TextFilterMatcher
 } }} // namespace dfg::qt::DFG_DETAIL_NS
 
@@ -1099,7 +1138,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                 using namespace ::DFG_MODULE_NS(cont);
                 if (!sFilterItems.empty())
                 {
-                    auto filter = m_table.createFilterCellHandler(DFG_DETAIL_NS::TextFilterMatcher(SzPtrUtf8(sFilterItems.c_str())));
+                    auto filter = m_table.createFilterCellHandler(DFG_DETAIL_NS::TextFilterMatcher(SzPtrUtf8(sFilterItems.c_str()), loadOptions.m_progressController));
                     if (!sIncludeRows.empty())
                         filter.setIncludeRows(intervalSetFromString<int>(sIncludeRows));
                     if (!sIncludeColumns.empty())
@@ -1109,13 +1148,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                 else // Case: not having readFilters, only row/column include sets.
                 {
                     auto filter = m_table.createFilterCellHandler();
+                    DFG_DETAIL_NS::CancellableFilterReader reader(this->m_table, loadOptions.m_progressController, filter);
                     if (!sIncludeRows.empty())
                         filter.setIncludeRows(intervalSetFromString<int>(sIncludeRows));
                     else
                         filter.setIncludeRows(IntervalSet<int>::makeSingleInterval(0, maxValueOfType<int>()));
                     if (!sIncludeColumns.empty())
                         filter.setIncludeColumns(DFG_DETAIL_NS::columnIntervalSetFromText(sIncludeColumns));
-                    m_table.readFromFile(sReadPath, loadOptions, filter);
+                    m_table.readFromFile(sReadPath, loadOptions, reader);
                 }
                 m_sTitle = tr("%1 (Filtered open)").arg(QFileInfo(sDbFilePath).fileName());
             }
