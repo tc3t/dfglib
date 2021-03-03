@@ -629,7 +629,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
     inline auto ChartEntryOperation::floatAxisValueToAxisIndex(double index) -> size_t
     {
-        return (index >= 0 && index < 10000 && ::DFG_MODULE_NS(math)::isIntegerValued(index)) ? static_cast<size_t>(index) : std::numeric_limits<size_t>::max();
+        return (index >= 0 && index < 10000 && ::DFG_MODULE_NS(math)::isIntegerValued(index)) ? static_cast<size_t>(index) : (std::numeric_limits<size_t>::max)();
     }
 
     // Returns ChartEntryOperation() from case that creation args were invalid.
