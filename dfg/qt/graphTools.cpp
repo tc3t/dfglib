@@ -2468,20 +2468,35 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
         return nullptr;
 
-    // Filling x-data; ticks and labels.
     QVector<double> ticks;
     QVector<QString> labels;
-    labels.resize(labelRange.sizeAsInt());
-    std::transform(labelRange.begin(), labelRange.begin() + labels.size(), labels.begin(), [](const StringUtf8& s) { return QString::fromUtf8(s.c_str().c_str()); });
+
+    // Checking if there is existing text ticker and if yes, prepending existing ticks and labels before new items.
+    auto pExistingTextTicker = dynamic_cast<QCPAxisTickerText*>(pXaxis->ticker().data()); // QCPAxisTicker is not a QObject (at least in 2.0.1) so can't use qobject_cast 
+    if (pExistingTextTicker)
+    {
+        const auto& tickerTicks = pExistingTextTicker->ticks();
+        for (auto iter = tickerTicks.cbegin(), iterEnd = tickerTicks.end(); iter != iterEnd; ++iter)
+        {
+            ticks.push_back(iter.key());
+            labels.push_back(iter.value());
+        }
+    }
+
+    // Filling x-data; ticks and labels.
+    const auto existingTickCount = labels.size();
+    labels.resize(labels.size() + labelRange.sizeAsInt());
+    std::transform(labelRange.cbegin(), labelRange.cend(), labels.begin() + existingTickCount, [](const StringUtf8& s) { return QString::fromUtf8(s.c_str().c_str()); });
     ticks.resize(labels.size());
-    ::DFG_MODULE_NS(alg)::generateAdjacent(ticks, 1, 1);
+    const auto startTickValue = (existingTickCount == 0) ? 1 : *std::max_element(ticks.cbegin(), ticks.cbegin() + existingTickCount) + 1;
+    ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(ticks.begin() + existingTickCount, ticks.end()), startTickValue, 1);
 
     // Buffer that is used for y-values if bars need to be merged
     QVector<double> yAdjustedData;
 
     // Handling bar merging if requested
     const auto bMergeIdentical = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_mergeIdenticalLabels, false);
-    if (bMergeIdentical)
+    if (bMergeIdentical && existingTickCount == 0) // Merging disabled for now when there are existing ticks; needs to be revised.
     {
         ::DFG_MODULE_NS(cont)::MapVectorSoA<QString, double> uniqueValues;
         uniqueValues.setSorting(false); // Want to keep original order.
@@ -2505,6 +2520,8 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
             valueRange = yAdjustedData;
         }
     }
+    DFG_REQUIRE(existingTickCount <= ticks.size());
+    const auto myTickRange = makeRange(ticks.begin() + existingTickCount, ticks.end());
 
     // Setting text ticker
     {
@@ -2528,7 +2545,8 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
 
     auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
     setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
-    fillQcpPlottable<QCPBarsData>(*pBars, ticks, valueRange);
+    DFG_ASSERT_CORRECTNESS(myTickRange.size() == valueRange.size());
+    fillQcpPlottable<QCPBarsData>(*pBars, myTickRange, valueRange);
 
     auto spBarsHolder = std::make_shared<BarSeriesQCustomPlot>(pBars);
     return spBarsHolder;
