@@ -2496,26 +2496,29 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
 
     // Handling bar merging if requested
     const auto bMergeIdentical = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_mergeIdenticalLabels, false);
-    if (bMergeIdentical && existingTickCount == 0) // Merging disabled for now when there are existing ticks; needs to be revised.
+    if (bMergeIdentical) // Merging disabled for now when there are existing ticks; needs to be revised.
     {
         ::DFG_MODULE_NS(cont)::MapVectorSoA<QString, double> uniqueValues;
         uniqueValues.setSorting(false); // Want to keep original order.
-        for (int i = 0, nCount = saturateCast<int>(valueRange.size()); i < nCount; ++i)
-            uniqueValues[labels[i]] += valueRange[i];
-        if (uniqueValues.size() != static_cast<size_t>(ticks.size())) // Does data have duplicate bar identifiers?
+        DFG_REQUIRE(labels.size() == existingTickCount + valueRange.sizeAsInt());
+        for (int i = 0, nCount = valueRange.sizeAsInt(); i < nCount; ++i)
+            uniqueValues[labels[existingTickCount + i]] += valueRange[i];
+        if (uniqueValues.size() != valueRange.size()) // Does data have duplicate bar identifiers?
         {
-            const auto nNewSize = saturateCast<int>(uniqueValues.size());
-            ticks.resize(nNewSize);
-            labels.resize(nNewSize);
-            yAdjustedData.resize(nNewSize);
-            int i = 0;
+            DFG_REQUIRE(valueRange.size() >= uniqueValues.size());
+            const auto nRemoveCount = valueRange.size() - uniqueValues.size();
+            const auto nNewLabelSize = saturateCast<int>(ticks.size() - nRemoveCount);
+            ticks.resize(nNewLabelSize);
+            labels.resize(nNewLabelSize);
+            yAdjustedData.resize(saturateCast<int>(uniqueValues.size()));
+            int i = existingTickCount;
             for (const auto& item : uniqueValues)
             {
                 labels[i] = item.first;
-                yAdjustedData[i] = item.second;
+                yAdjustedData[i - existingTickCount] = item.second;
                 i++;
             }
-            // Recalculation y-range.
+            // Recalculating y-range.
             minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
             valueRange = yAdjustedData;
         }
