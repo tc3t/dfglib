@@ -2458,7 +2458,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         return nullptr;
     }
 
-    const auto labelRange = param.labelRange;
+    auto labelRange = param.labelRange;
     auto valueRange = param.valueRange;
 
     if (labelRange.empty() || labelRange.size() != valueRange.size())
@@ -2467,6 +2467,37 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     auto minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(valueRange);
     if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
         return nullptr;
+
+    // Handling bar merging if requested
+    QVector<StringUtf8> adjustedLabels; // label buffer that is used for if bars need to be merged
+    QVector<double> yAdjustedData; // y value buffer that is used for if bars need to be merged
+    const auto bMergeIdentical = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_mergeIdenticalLabels, false);
+    if (bMergeIdentical)
+    {
+        ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, double> uniqueValues;
+        uniqueValues.setSorting(false); // Want to keep original order.
+        for (size_t i = 0, nCount = valueRange.size(); i < nCount; ++i)
+            uniqueValues[labelRange[i]] += valueRange[i];
+        if (uniqueValues.size() != valueRange.size()) // Does data have duplicate bar identifiers?
+        {
+            DFG_REQUIRE(valueRange.size() >= uniqueValues.size());
+            const auto nRemoveCount = valueRange.size() - uniqueValues.size();
+            const auto nNewLabelSize = saturateCast<int>(valueRange.size() - nRemoveCount);
+            adjustedLabels.resize(saturateCast<int>(nNewLabelSize));
+            yAdjustedData.resize(saturateCast<int>(uniqueValues.size()));
+            int i = 0;
+            for (const auto& item : uniqueValues)
+            {
+                adjustedLabels[i] = item.first;
+                yAdjustedData[i] = item.second;
+                i++;
+            }
+            // Recalculating y-range.
+            minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
+            labelRange = adjustedLabels;
+            valueRange = yAdjustedData;
+        }
+    }
 
     QVector<double> ticks;
     QVector<QString> labels;
@@ -2483,48 +2514,59 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         }
     }
 
-    // Filling x-data; ticks and labels.
-    const auto existingTickCount = labels.size();
-    labels.resize(labels.size() + labelRange.sizeAsInt());
-    std::transform(labelRange.cbegin(), labelRange.cend(), labels.begin() + existingTickCount, [](const StringUtf8& s) { return QString::fromUtf8(s.c_str().c_str()); });
-    ticks.resize(labels.size());
-    const auto startTickValue = (existingTickCount == 0) ? 1 : *std::max_element(ticks.cbegin(), ticks.cbegin() + existingTickCount) + 1;
-    ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(ticks.begin() + existingTickCount, ticks.end()), startTickValue, 1);
+    const bool bStackBars = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_stackOnExistingLabels, false);
+    
+    QCPBars* pStackBarsOn = nullptr;
 
-    // Buffer that is used for y-values if bars need to be merged
-    QVector<double> yAdjustedData;
-
-    // Handling bar merging if requested
-    const auto bMergeIdentical = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_mergeIdenticalLabels, false);
-    if (bMergeIdentical) // Merging disabled for now when there are existing ticks; needs to be revised.
+    if (bStackBars)
     {
-        ::DFG_MODULE_NS(cont)::MapVectorSoA<QString, double> uniqueValues;
-        uniqueValues.setSorting(false); // Want to keep original order.
-        DFG_REQUIRE(labels.size() == existingTickCount + valueRange.sizeAsInt());
-        for (int i = 0, nCount = valueRange.sizeAsInt(); i < nCount; ++i)
-            uniqueValues[labels[existingTickCount + i]] += valueRange[i];
-        if (uniqueValues.size() != valueRange.size()) // Does data have duplicate bar identifiers?
+        // If stacking is enabled, finding last existing bar chart; stacking is done on top of that.
+        const auto plottables = pXaxis->plottables();
+        for (const auto& pPlottable : plottables)
         {
-            DFG_REQUIRE(valueRange.size() >= uniqueValues.size());
-            const auto nRemoveCount = valueRange.size() - uniqueValues.size();
-            const auto nNewLabelSize = saturateCast<int>(ticks.size() - nRemoveCount);
-            ticks.resize(nNewLabelSize);
-            labels.resize(nNewLabelSize);
-            yAdjustedData.resize(saturateCast<int>(uniqueValues.size()));
-            int i = existingTickCount;
-            for (const auto& item : uniqueValues)
-            {
-                labels[i] = item.first;
-                yAdjustedData[i - existingTickCount] = item.second;
-                i++;
-            }
-            // Recalculating y-range.
-            minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
-            valueRange = yAdjustedData;
+            auto pBars = qobject_cast<QCPBars*>(pPlottable);
+            if (!pBars || pPlottable->property("chartEntryType").toString() != ChartObjectChartTypeStr_bars)
+                continue;
+            pStackBarsOn = pBars;
         }
     }
+
+    QMap<QString, double> mapExistingLabelToXcoordinate;
+
+    // If stacking is enabled, finding existing labels.
+    if (pStackBarsOn)
+    {
+        auto pTextTicker = dynamic_cast<QCPAxisTickerText*>(pXaxis->ticker().data()); // QCPAxisTicker is not a QObject (at least in 2.0.1) so can't use qobject_cast
+        if (pTextTicker)
+        {
+            const auto& tickerTicks = pTextTicker->ticks();
+            for (auto iter = tickerTicks.cbegin(), iterEnd = tickerTicks.end(); iter != iterEnd; ++iter)
+            {
+                mapExistingLabelToXcoordinate[iter.value()] = iter.key(); // Note: if there are identical labels, picks last occurence.
+            }
+        }
+    }
+
+    // Filling x-data; ticks and labels.
+    const auto existingTickCount = labels.size();
+    QVector<double> xValues;
+    for (size_t i = 0, nCount = labelRange.size(); i < nCount; ++i)
+    {
+        const auto& sNewLabel = labelRange[i];
+        auto sqNewLabel = viewToQString(sNewLabel);
+        auto iter = mapExistingLabelToXcoordinate.find(sqNewLabel);
+        if (iter == mapExistingLabelToXcoordinate.cend()) // If using stacking and label already exists, not adding label or tick; using existing instead.
+        {
+            // Existing label not found -> adding new
+            labels.push_back(std::move(sqNewLabel));
+            ticks.push_back(ticks.size() + 1);
+            xValues.push_back(ticks.back());
+        }
+        else
+            xValues.push_back(iter.value()); // Identical label already exists -> using it's x-value
+    }
+
     DFG_REQUIRE(existingTickCount <= ticks.size());
-    const auto myTickRange = makeRange(ticks.begin() + existingTickCount, ticks.end());
 
     // Setting text ticker
     {
@@ -2548,8 +2590,9 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
 
     auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
     setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
-    DFG_ASSERT_CORRECTNESS(myTickRange.size() == valueRange.size());
-    fillQcpPlottable<QCPBarsData>(*pBars, myTickRange, valueRange);
+    DFG_ASSERT_CORRECTNESS(xValues.size() == valueRange.size());
+    fillQcpPlottable<QCPBarsData>(*pBars, xValues, valueRange);
+    pBars->moveAbove(pStackBarsOn);
 
     auto spBarsHolder = std::make_shared<BarSeriesQCustomPlot>(pBars);
     return spBarsHolder;

@@ -83,6 +83,9 @@ constexpr char ChartObjectFieldIdStr_barWidthFactor[] = "bar_width_factor";
 // merge_identical_labels
 constexpr char ChartObjectFieldIdStr_mergeIdenticalLabels[] = "merge_identical_labels";
 
+// stack_on_existing_labels
+constexpr char ChartObjectFieldIdStr_stackOnExistingLabels[] = "stack_on_existing_labels";
+
 // title
 constexpr char ChartObjectFieldIdStr_title[] = "title";
 
@@ -776,6 +779,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_ySource,
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_mergeIdenticalLabels,
+            ChartObjectFieldIdStr_stackOnExistingLabels,
             ChartObjectFieldIdStr_operation
             });
     }
