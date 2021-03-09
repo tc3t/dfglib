@@ -5116,12 +5116,23 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(RefreshContext
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(RefreshContext& context, ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator)
 {
     DFG_UNUSED(context);
+    using namespace ::DFG_MODULE_NS(charts);
 
-    const char* defaultColours[] = { "red", "blue", "black", "cyan", "magenta", "green", "orange" };
+    //const char* defaultColours[] = { "red",     "blue",    "black",   "cyan",    "magenta",  "green",   "orange" };
+    const char* defaultColours[] =   { "#ff0000", "#0000ff", "#000000", "#00ffff", "#ff00ff",  "#008000", "#ffa500" };
+
     rObject.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, defaultNameCreator));
     const auto defaultColour = SzPtrUtf8(elementByModuloIndex(defaultColours, defaultNameCreator.m_nIndex));
-    rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_lineColour, defaultColour); }));
-    rObject.setFillColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_fillColour, [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_fillColour); }));
+    const auto defaultLineColour = [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_lineColour, defaultColour); };
+    rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour, defaultLineColour));
+    if (dynamic_cast<const BarSeries*>(&rObject) != nullptr || dynamic_cast<const Histogram*>(&rObject) != nullptr)
+    {
+        const auto defaultFillColour = [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_fillColour, StringUtf8::fromRawString(format_fmt("#1E{}", defaultColour.c_str() + 1))); };
+        rObject.setFillColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_fillColour, defaultFillColour));
+    }
+    else
+        rObject.setFillColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_fillColour));
+
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry)
