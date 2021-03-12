@@ -29,6 +29,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/build/buildTimeDetails.hpp>
 #include <dfg/debug/structuredExceptionHandling.h>
 #include <dfg/qt/CsvTableView.hpp>
+#include <exception>
 
 
 #include <QItemSelection>
@@ -281,5 +282,20 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    return a.exec();
+    while (true)
+    {
+        // Exceptions should not propagate this far, but better to at least catch them here instead of letting application crash 
+        try
+        {
+            return a.exec();
+        }
+        catch (const std::exception& e)
+        {
+            QMessageBox::critical(nullptr, a.tr("Error"), a.tr("An internal error occurred; application will try to continue running, but it might be in inconsistent state so restarting is recommended.\nException details:\n'%1'").arg(e.what()));
+        }
+        catch (...)
+        {
+            QMessageBox::critical(nullptr, a.tr("Error"), a.tr("An internal error occurred; application will try to continue running, but it might be in inconsistent state so restarting is recommended."));
+        }
+    }
 }
