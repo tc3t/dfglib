@@ -86,6 +86,9 @@ constexpr char ChartObjectFieldIdStr_mergeIdenticalLabels[] = "merge_identical_l
 // stack_on_existing_labels
 constexpr char ChartObjectFieldIdStr_stackOnExistingLabels[] = "stack_on_existing_labels";
 
+// bar_label
+constexpr char ChartObjectFieldIdStr_barLabel[] = "bar_label";
+
 // title
 constexpr char ChartObjectFieldIdStr_title[] = "title";
 
@@ -394,8 +397,9 @@ using InputSpan = RangeIterator_T<const T*>;
 class ChartObject
 {
 public:
-    typedef DFG_CLASS_NAME(StringUtf8) ChartObjectString;
-    typedef DFG_CLASS_NAME(StringViewUtf8) ChartObjectStringView;
+    typedef StringUtf8 ChartObjectString;
+    typedef StringViewUtf8 ChartObjectStringView;
+    using StringViewOrOwnerUtf8 = StringViewOrOwner<StringViewUtf8, StringUtf8>;
     using InputSpanD = InputSpan<double>;
 
     virtual ~ChartObject() {}
@@ -403,6 +407,8 @@ public:
     void setName(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setNameImpl(sv) : setNameImpl(sv); }
     void setLineColour(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setLineColourImpl(sv) : setLineColourImpl(sv); }
     void setFillColour(ChartObjectStringView sv) { (m_spImplementation) ? m_spImplementation->setFillColourImpl(sv) : setFillColourImpl(sv); }
+
+    StringViewOrOwnerUtf8 name() const { return (m_spImplementation) ? m_spImplementation->nameImpl() : nameImpl(); }
 
           ChartObject* implementationObject()       { return (m_spImplementation) ? m_spImplementation.get() : this; }
     const ChartObject* implementationObject() const { return (m_spImplementation) ? m_spImplementation.get() : this; }
@@ -419,6 +425,7 @@ protected:
 
 private:
     virtual void setNameImpl(ChartObjectStringView) {}
+    virtual StringViewOrOwnerUtf8 nameImpl() const { return StringViewOrOwnerUtf8::makeOwned(); }
     virtual void setLineColourImpl(ChartObjectStringView) {}
     virtual void setFillColourImpl(ChartObjectStringView) {}
 
@@ -692,7 +699,7 @@ public:
 
     virtual ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam&)   { return nullptr; }
     virtual ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam&) { return nullptr; }
-    virtual ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam&) { return nullptr; }
+    virtual std::vector<ChartObjectHolder<BarSeries>> createBarSeries(const BarSeriesCreationParam&) { return std::vector<ChartObjectHolder<BarSeries>>(); }
 
     virtual void setAxisLabel(StringViewUtf8 /*panelId*/, StringViewUtf8 /*axisId*/, StringViewUtf8 /*axisLabel*/) {}
 
@@ -780,6 +787,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_mergeIdenticalLabels,
             ChartObjectFieldIdStr_stackOnExistingLabels,
+            ChartObjectFieldIdStr_barLabel,
             ChartObjectFieldIdStr_operation
             });
     }

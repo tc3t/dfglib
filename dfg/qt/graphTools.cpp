@@ -280,14 +280,21 @@ public:
     // pszType must point to valid string for the lifetime of 'this'.
     DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname = QString(), const QString& sYname = QString());
 
+    DefaultNameCreator(StringUtf8 sName);
+
     StringUtf8 operator()() const;
 
-    const char* m_pszType;
-    const int m_nIndex;
+    StringUtf8 m_sName;
+    const char* m_pszType = nullptr;
+    int m_nIndex = -1;
     QString m_sXname;
     QString m_sYname;
 };
 
+DefaultNameCreator::DefaultNameCreator(StringUtf8 sName)
+    : m_sName(std::move(sName))
+{
+}
 
 DefaultNameCreator::DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname, const QString& sYname)
     : m_pszType(pszType)
@@ -299,6 +306,8 @@ DefaultNameCreator::DefaultNameCreator(const char* pszType, const int nIndex, co
 
 auto DefaultNameCreator::operator()() const -> StringUtf8
 {
+    if (!m_sName.empty())
+        return m_sName;
     if (!m_sXname.isEmpty() || !m_sYname.isEmpty())
         return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {} ('{}', '{}')", m_pszType, m_nIndex, m_sXname.toUtf8().data(), m_sYname.toUtf8().data()));
     else
@@ -1368,11 +1377,9 @@ public:
     const QCPAbstractPlottable* qcpPlottable() const { return m_spPlottable.data(); }
 
 private:
-    void setNameImpl(const ChartObjectStringView s) override
-    {
-        if (m_spPlottable)
-            m_spPlottable->setName(viewToQString(s));
-    }
+    void setNameImpl(const ChartObjectStringView s) override;
+
+    StringViewOrOwnerUtf8 nameImpl() const override;
 
     void setLineColourImpl(ChartObjectStringView svLineColour) override;
 
@@ -1382,6 +1389,17 @@ private:
 
     QPointer<QCPAbstractPlottable> m_spPlottable;
 }; // class ChartObjectQCustomPlot
+
+void ChartObjectQCustomPlot::setNameImpl(const ChartObjectStringView s)
+{
+    if (m_spPlottable)
+        m_spPlottable->setName(viewToQString(s));
+}
+
+auto ChartObjectQCustomPlot::nameImpl() const -> StringViewOrOwnerUtf8
+{
+    return (m_spPlottable) ? StringViewOrOwnerUtf8::makeOwned(qStringToStringUtf8(m_spPlottable->name())) : StringViewOrOwnerUtf8();
+}
 
 void ChartObjectQCustomPlot::setColourImpl(ChartObjectStringView svColour, std::function<void(QCPAbstractPlottable&, const QColor&)> setter)
 {
@@ -1764,7 +1782,7 @@ public:
 
     ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam& param)   override;
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
-    ChartObjectHolder<BarSeries> createBarSeries(const BarSeriesCreationParam& param) override;
+    std::vector<ChartObjectHolder<BarSeries>> createBarSeries(const BarSeriesCreationParam& param) override;
 
     void setAxisLabel(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 axisLabel) override;
     void setAxisTickLabelDirection(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 value) override;
@@ -2338,8 +2356,9 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, double> counts;
         for (const auto& s : param.stringValueRange)
             counts[s]++;
-        auto spSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), counts.keyRange(), counts.valueRange(), param.xType, param.m_sXname, StringUtf8()));
-        auto spImpl = dynamic_cast<BarSeriesQCustomPlot*>(spSeries.get());
+        auto barSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), counts.keyRange(), counts.valueRange(), param.xType, param.m_sXname, StringUtf8()));
+        DFG_ASSERT_CORRECTNESS(barSeries.size() <= 1);
+        auto spImpl = (!barSeries.empty()) ? dynamic_cast<BarSeriesQCustomPlot*>(barSeries[0].get()) : nullptr;
         return std::make_shared<HistogramQCustomPlot>(spImpl->m_spBars.data());
     }
 
@@ -2447,26 +2466,27 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
     return spHistogram;
 }
 
-auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param) -> ChartObjectHolder<BarSeries>
+auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param) -> std::vector<ChartObjectHolder<BarSeries>>
 {
+    using ReturnType = std::vector<ChartObjectHolder<BarSeries>>;
     auto pXaxis = getXAxis(param);
     auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
 
     if (!pXaxis || !pYaxis)
     {
         DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create histogram, no suitable target panel found'"));
-        return nullptr;
+        return ReturnType();
     }
 
     auto labelRange = param.labelRange;
     auto valueRange = param.valueRange;
 
     if (labelRange.empty() || labelRange.size() != valueRange.size())
-        return nullptr;
+        return ReturnType();
 
     auto minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(valueRange);
     if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
-        return nullptr;
+        return ReturnType();
 
     // Handling bar merging if requested
     QVector<StringUtf8> adjustedLabels; // label buffer that is used for if bars need to be merged
@@ -2512,6 +2532,17 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
             ticks.push_back(iter.key());
             labels.push_back(iter.value());
         }
+    }
+
+    ::DFG_MODULE_NS(cont)::ValueVector<double> stackedValues;
+    // Checking if bars in current data should be stacked under identical label.
+    const auto sBarLabel = param.definitionEntry().fieldValueStr(ChartObjectFieldIdStr_barLabel);
+    if (!sBarLabel.empty())
+    {
+        stackedValues.assign(valueRange);
+        adjustedLabels.clear();
+        adjustedLabels.push_back(sBarLabel);
+        labelRange = adjustedLabels;
     }
 
     const bool bStackBars = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_stackOnExistingLabels, false);
@@ -2588,14 +2619,33 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         setAutoAxisLabel(*pYaxis, param.m_sYname);
     }
 
-    auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
-    setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
-    DFG_ASSERT_CORRECTNESS(xValues.size() == valueRange.size());
-    fillQcpPlottable<QCPBarsData>(*pBars, xValues, valueRange);
-    pBars->moveAbove(pStackBarsOn);
-
-    auto spBarsHolder = std::make_shared<BarSeriesQCustomPlot>(pBars);
-    return spBarsHolder;
+    if (stackedValues.empty())
+    {
+        auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
+        setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
+        DFG_ASSERT_CORRECTNESS(xValues.size() == valueRange.size());
+        fillQcpPlottable<QCPBarsData>(*pBars, xValues, valueRange);
+        pBars->moveAbove(pStackBarsOn);
+        ReturnType rv;
+        rv.push_back(std::make_shared<BarSeriesQCustomPlot>(pBars));
+        return rv;
+    }
+    else
+    {
+        ReturnType rv;
+        size_t i = 0;
+        for (const auto val : stackedValues)
+        {
+            auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
+            pBars->setName(viewToQString(param.labelRange[i++]));
+            setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
+            fillQcpPlottable<QCPBarsData>(*pBars, xValues, makeRange(&val, &val + 1));
+            pBars->moveAbove(pStackBarsOn);
+            pStackBarsOn = pBars;
+            rv.push_back(std::make_shared<BarSeriesQCustomPlot>(pBars));
+        }
+        return rv;
+    }
 }
 
 void ChartCanvasQCustomPlot::setAxisLabel(StringViewUtf8 svPanelId, StringViewUtf8 svAxisId, StringViewUtf8 svAxisLabel)
@@ -5106,11 +5156,22 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(RefreshContext
     const auto sXaxisName = rawData.columnName(0);
     const auto sYaxisName = rawData.columnName(1);
 
-    auto spBarSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), makeRange(*pValues), ChartDataType::unknown,
+    auto barSeries = rChart.createBarSeries(BarSeriesCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), makeRange(*pValues), ChartDataType::unknown,
                                                                      qStringToStringUtf8(sXaxisName), qStringToStringUtf8(sYaxisName)));
-    if (!spBarSeries)
-        return;
-    setCommonChartObjectProperties(context, *spBarSeries, defEntry, configParamCreator, DefaultNameCreator("Bars", getRunningIndexFor(rChart, *spBarSeries, defEntry)));
+
+    const auto nFirstIndex = (!barSeries.empty() && barSeries[0] != nullptr) ? getRunningIndexFor(rChart, *barSeries[0], defEntry) - barSeries.size() : 0;
+    uint32 nIndexOffset = 0;
+    for (auto& spBarSeries : barSeries)
+    {
+        if (spBarSeries)
+        {
+            auto sName = spBarSeries->name();
+            auto defaultNameCreator = (!sName.empty()) ? DefaultNameCreator(sName.release()) : DefaultNameCreator("Bars", -1);
+            defaultNameCreator.m_nIndex = saturateCast<int>(1u + nFirstIndex + nIndexOffset);
+            setCommonChartObjectProperties(context, *spBarSeries, defEntry, configParamCreator, defaultNameCreator);
+            ++nIndexOffset;
+        }
+    }
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProperties(RefreshContext& context, ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator)
