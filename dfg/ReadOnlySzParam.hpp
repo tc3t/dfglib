@@ -187,6 +187,11 @@ namespace DFG_DETAIL_NS
         using StringT               = Str_T;
         using const_iterator        = PtrT;
 
+    protected:
+        struct NonSzConstructorTag {};
+
+    public:
+
         StringViewCommonBase(PtrT p = PtrT(nullptr)) :
             m_pFirst(p)
         {}
@@ -337,7 +342,7 @@ namespace DFG_DETAIL_NS
 // Note: Unlike ReadOnlySzParam, the string view stored here can't guarantee access to null terminated string.
 // TODO: keep compatible with std::string_view or even typedef when available.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
-class DFG_CLASS_NAME(StringView) : public DFG_DETAIL_NS::StringViewBase<Char_T, Str_T>::type
+class StringView : public DFG_DETAIL_NS::StringViewBase<Char_T, Str_T>::type
 {
 public:
     using BaseClass      = typename DFG_DETAIL_NS::StringViewBase<Char_T, Str_T>::type;
@@ -349,36 +354,44 @@ public:
     using const_iterator = typename BaseClass::const_iterator;
     
 public:
-    DFG_CLASS_NAME(StringView)()
+    StringView()
     {
     }
 
-    DFG_CLASS_NAME(StringView)(const Str_T& s) :
+    StringView(const Str_T& s) :
         BaseClass(s.c_str(), readOnlySzParamLength(s))
     {
     }
 
-    DFG_CLASS_NAME(StringView)(SzPtrT pszOrNullptr) :
+    StringView(SzPtrT pszOrNullptr) :
         BaseClass(pszOrNullptr, (pszOrNullptr) ? readOnlySzParamLength(pszOrNullptr) : 0)
     {
     }
 
     // Allows contruction from compatible typed SzPtr (e.g. construction of const StringViewUtf8& sv = SzPtrAscii("a"))
     template <class Char2_T, CharPtrType Type_T>
-    DFG_CLASS_NAME(StringView)(::DFG_ROOT_NS::SzPtrT<Char2_T, Type_T> psz) :
+    StringView(::DFG_ROOT_NS::SzPtrT<Char2_T, Type_T> psz) :
         BaseClass(psz, readOnlySzParamLength(psz))
     {
     }
 
-    DFG_CLASS_NAME(StringView)(PtrT psz, const size_t nCountOfBaseChars) :
+    StringView(PtrT psz, const size_t nCountOfBaseChars) :
         BaseClass(psz, nCountOfBaseChars)
     {
     }
 
-    DFG_CLASS_NAME(StringView)(PtrT pBegin, PtrT pEnd) :
+    StringView(PtrT pBegin, PtrT pEnd) :
         BaseClass(pBegin, toCharPtr_raw(pEnd) - toCharPtr_raw(pBegin))
     {
     }
+
+protected:
+    // For API-compatibility with StringViewSz
+    StringView(typename BaseClass::NonSzConstructorTag)
+        : StringView()
+    {}
+
+public:
 
     // Returns view as untyped.
     StringView<CharT> asUntypedView() const
@@ -429,24 +442,24 @@ public:
         return Str_T(this->cbegin(), this->cend());
     }
 
-    bool operator==(const DFG_CLASS_NAME(StringView)& other) const
+    bool operator==(const StringView& other) const
     {
         return (this->m_nSize == other.m_nSize) && std::equal(toCharPtr_raw(this->m_pFirst), toCharPtr_raw(this->m_pFirst) + this->m_nSize, toCharPtr_raw(other.m_pFirst));
     }
 
     bool operator==(const Str_T& str) const
     {
-        return operator==(DFG_CLASS_NAME(StringView)(str));
+        return operator==(StringView(str));
     }
 
     bool operator==(const SzPtrT& tpsz) const
     {
         // TODO: this is potentially suboptimal: makes redundant strlen() call due to construction of StringView.
-        return operator==(DFG_CLASS_NAME(StringView)(tpsz));
+        return operator==(StringView(tpsz));
     }
 
     // Conversion to untyped StringView.
-    operator DFG_CLASS_NAME(StringView)<Char_T>() const
+    operator StringView<Char_T>() const
     {
         return asUntypedView();
     }
@@ -461,7 +474,7 @@ namespace DFG_DETAIL_NS
 // Like StringView, but guarantees that view is null terminated.
 // Also the string length is not computed on constructor but on demand removing some of the const's.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
-class DFG_CLASS_NAME(StringViewSz) : public DFG_DETAIL_NS::StringViewCommonBase<Char_T, Str_T>
+class StringViewSz : public DFG_DETAIL_NS::StringViewCommonBase<Char_T, Str_T>
 {
 public:
     using BaseClass      = typename DFG_DETAIL_NS::StringViewCommonBase<Char_T, Str_T>;
@@ -474,14 +487,14 @@ public:
     using CodePointT     = typename BaseClass::CodePointT;
     using const_iterator = typename BaseClass::const_iterator;
     
-    DFG_CLASS_NAME(StringViewSz)(const Str_T& s) :
+    StringViewSz(const Str_T& s) :
         BaseClass(s.c_str()),
         m_nSize(readOnlySzParamLength(s))
     {
         DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
     }
 
-    DFG_CLASS_NAME(StringViewSz)(SzPtrT psz) :
+    StringViewSz(SzPtrT psz) :
         BaseClass(psz),
         m_nSize(DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated)
     {
@@ -490,13 +503,23 @@ public:
 
     // Constructs StringViewSz and optionally sets size requiring psz[nCount] == '\0'.
     // Precondition: psz != nullptr && (nCount == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || psz[nCount] == '\0')
-    DFG_CLASS_NAME(StringViewSz)(SzPtrT psz, const size_t nCount) :
+    StringViewSz(SzPtrT psz, const size_t nCount) :
         BaseClass(psz),
         m_nSize(nCount)
     {
         DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
         DFG_ASSERT_CORRECTNESS(m_nSize == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || toCharPtr_raw(this->m_pFirst)[nCount] == '\0');
     }
+
+protected:
+    // StringViewOrOwner has well defined default constructor since it can always set view to internal owned member, but it can't do it yet in baseclass constructor.
+    // This protected constructor allows creating a temporary non-sz view that the derived class will make a proper sz-view in it's own constructor.
+    StringViewSz(typename BaseClass::NonSzConstructorTag) :
+        BaseClass(nullptr),
+        m_nSize(0)
+    {}
+
+public:
 
     // Note: returning StringViewT as substring can't be of type StringViewSz: only tail parts can be Sz-substrings (e.g. substring "a" from "abc" is not sz)
     StringViewT substr_startCount(const size_t nStart, const size_t nCount) const
@@ -777,6 +800,12 @@ class StringViewOrOwner : public View_T
 public:
     typedef View_T BaseClass;
 
+    StringViewOrOwner()
+        : BaseClass(typename BaseClass::NonSzConstructorTag())
+    {
+        BaseClass::operator=(m_owned);
+    }
+
     ~StringViewOrOwner()
     {
     }
@@ -797,7 +826,7 @@ public:
             BaseClass::operator=(m_owned); // Reinitializes view to make sure that view won't point to SSO-buffer of moved from -object.
     }
 
-    static StringViewOrOwner makeOwned(Owned_T other)
+    static StringViewOrOwner makeOwned(Owned_T other = Owned_T())
     {
         auto rv = StringViewOrOwner(other);
         rv.m_owned = std::move(other);
@@ -813,7 +842,7 @@ public:
     // Sets this as empty view and returns owned resource by moving.
     Owned_T release()
     {
-        auto rv = std::move(m_owned);
+        auto rv = isOwner() ? std::move(m_owned) : this->toString();
         m_owned.clear();
         BaseClass::operator=(m_owned); // Note: setting view to owned because in case of SzView, view must be null terminated.
         return rv;

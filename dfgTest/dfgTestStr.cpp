@@ -1287,63 +1287,53 @@ TEST(dfgStr, StringView_autoConvToUntyped)
 
 namespace
 {
-    template <class View_T, class Owned_T>
-    static void testStringViewOrOwnerImpl()
-    {
-        using CharT = typename View_T::CharT;
-        {
-            auto svo = DFG_ROOT_NS::StringViewOrOwner<View_T, Owned_T>::makeView(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc"));
-            EXPECT_EQ(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc"), svo);
-            EXPECT_FALSE(svo.isOwner());
-        }
-
-        {
-            const CharT szLiteral[] = { 'a', 'b', 'c', '\0' };
-            auto svo = DFG_ROOT_NS::StringViewOrOwner<View_T, Owned_T>::makeView(szLiteral);
-            EXPECT_EQ(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc"), svo);
-            EXPECT_FALSE(svo.isOwner());
-            EXPECT_EQ(szLiteral, svo.data());
-        }
-
-        // Testing makeOwned() with both small and long string (i.e. one with expected SSO-buffer and one with allocated buffer)
-        for (int i = 0; i < 2; ++i)
-        {
-            const CharT* literals[] = { DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc"), DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "0123456789012345678901234567890123456789") };
-            const auto& pszTest = literals[i];
-            auto svo = DFG_ROOT_NS::StringViewOrOwner<View_T, Owned_T>::makeOwned(pszTest);
-            EXPECT_EQ(pszTest, svo);
-            EXPECT_TRUE(svo.isOwner());
-            auto s = svo.release();
-            EXPECT_TRUE(svo.owned().empty());
-            EXPECT_EQ(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, ""), svo);
-            EXPECT_EQ(pszTest, s);
-        }
-    }
-
     template <class View_T, class Owned_T, class RawToTypedConv_T>
     static void testStringViewOrOwnerTyped(RawToTypedConv_T conv)
     {
         using namespace DFG_ROOT_NS;
         using CharT = typename View_T::CharT;
+
+        // Testing availability of default constructor
+        {
+            StringViewOrOwner<View_T, Owned_T>();
+        }
+
+        // Basic view test.
         {
             auto svo = StringViewOrOwner<View_T, Owned_T>::makeView(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")));
             EXPECT_TRUE(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")) == svo);
             EXPECT_FALSE(svo.isOwner());
         }
 
-        // Testing makeOwned() with both small and long string (i.e. one with expected SSO-buffer and one with allocated buffer)
-        for (int i = 0; i < 2; ++i)
         {
-            using PtrT = decltype(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")));
-            const PtrT literals[] = { conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")), conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "0123456789012345678901234567890123456789")) };
+            const CharT szLiteral[] = { 'a', 'b', 'c', '\0' };
+            auto svo = DFG_ROOT_NS::StringViewOrOwner<View_T, Owned_T>::makeView(conv(szLiteral));
+            EXPECT_TRUE(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")) == svo);
+            EXPECT_FALSE(svo.isOwner());
+            EXPECT_EQ(conv(szLiteral), svo.data());
+        }
+
+        // Testing makeOwned() and release() with both small and long string (i.e. one with expected SSO-buffer and one with allocated buffer)
+        using PtrT = decltype(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")));
+        const PtrT literals[] = { conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")), conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "0123456789012345678901234567890123456789")) };
+        for (int i = 0; i < DFG_COUNTOF(literals); ++i)
+        {
             const auto& pszTest = literals[i];
             auto svo = StringViewOrOwner<View_T, Owned_T>::makeOwned(Owned_T(pszTest));
+            auto svv = StringViewOrOwner<View_T, Owned_T>::makeView(pszTest);
             EXPECT_TRUE(pszTest == svo);
             EXPECT_TRUE(svo.isOwner());
+            EXPECT_FALSE(svv.isOwner());
             auto s = svo.release();
             EXPECT_TRUE(svo.owned().empty());
             EXPECT_TRUE(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "")) == svo);
             EXPECT_TRUE(pszTest == s);
+
+            // Verifying that release() returns the viewed string even if it's not owned.
+            const auto s2 = svv.release();
+            EXPECT_TRUE(svv.owned().empty());
+            EXPECT_TRUE(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "")) == svv);
+            EXPECT_EQ(s, s2);
         }
     }
 }
@@ -1351,14 +1341,14 @@ namespace
 TEST(dfgStr, StringViewOrOwner)
 {
     using namespace DFG_ROOT_NS;
-    testStringViewOrOwnerImpl<DFG_CLASS_NAME(StringViewC), std::string>();
-    testStringViewOrOwnerImpl<DFG_CLASS_NAME(StringViewSzC), std::string>();
-    testStringViewOrOwnerImpl<DFG_CLASS_NAME(StringViewW), std::wstring>();
-    testStringViewOrOwnerImpl<DFG_CLASS_NAME(StringViewSzW), std::wstring>();
+    testStringViewOrOwnerTyped<StringViewC, std::string>([](const char* p) { return p; });
+    testStringViewOrOwnerTyped<StringViewSzC, std::string>([](const char* p) { return p; });
+    testStringViewOrOwnerTyped<StringViewW, std::wstring>([](const wchar_t* p) { return p; });
+    testStringViewOrOwnerTyped<StringViewSzW, std::wstring>([](const wchar_t* p) { return p; });
 
-    testStringViewOrOwnerTyped<DFG_CLASS_NAME(StringViewAscii), DFG_CLASS_NAME(StringAscii)>([](const char* psz) { return SzPtrAscii(psz); });
-    testStringViewOrOwnerTyped<DFG_CLASS_NAME(StringViewLatin1), DFG_CLASS_NAME(StringLatin1)>([](const char* psz) { return SzPtrLatin1(psz); });
-    testStringViewOrOwnerTyped<DFG_CLASS_NAME(StringViewUtf8), DFG_CLASS_NAME(StringUtf8)>([](const char* psz) { return SzPtrUtf8(psz); });
+    testStringViewOrOwnerTyped<StringViewAscii, StringAscii>([](const char* psz) { return SzPtrAscii(psz); });
+    testStringViewOrOwnerTyped<StringViewLatin1, StringLatin1>([](const char* psz) { return SzPtrLatin1(psz); });
+    testStringViewOrOwnerTyped<StringViewUtf8, StringUtf8>([](const char* psz) { return SzPtrUtf8(psz); });
 }
 
 TEST(dfgStr, HexStr)
