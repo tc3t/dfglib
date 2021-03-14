@@ -1368,8 +1368,11 @@ static void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(c
 class ChartObjectQCustomPlot : public ::DFG_MODULE_NS(charts)::ChartObject
 {
 public:
+    using BaseClass = ::DFG_MODULE_NS(charts)::ChartObject;
+
     ChartObjectQCustomPlot(QCPAbstractPlottable* pPlottable)
-        : m_spPlottable(pPlottable)
+        : BaseClass(::DFG_MODULE_NS(charts)::ChartObjectType::unknown)
+        , m_spPlottable(pPlottable)
     {}
     virtual ~ChartObjectQCustomPlot() override {}
 
@@ -5186,7 +5189,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProper
     const auto defaultColour = SzPtrUtf8(elementByModuloIndex(defaultColours, defaultNameCreator.m_nIndex));
     const auto defaultLineColour = [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_lineColour, defaultColour); };
     rObject.setLineColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_lineColour, defaultLineColour));
-    if (dynamic_cast<const BarSeries*>(&rObject) != nullptr || dynamic_cast<const Histogram*>(&rObject) != nullptr)
+    const auto objectType = rObject.type();
+    if (objectType == ChartObjectType::histogram || objectType == ChartObjectType::barSeries)
     {
         const auto defaultFillColour = [&] { return configParamCreator().valueStr(ChartObjectFieldIdStr_fillColour, StringUtf8::fromRawString(format_fmt("#1E{}", defaultColour.c_str() + 1))); };
         rObject.setFillColour(defEntry.fieldValueStr(ChartObjectFieldIdStr_fillColour, defaultFillColour));

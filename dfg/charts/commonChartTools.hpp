@@ -393,6 +393,14 @@ inline Interval_T* AbstractChartControlItem::createXrowsSet(Interval_T& rInterva
 template <class T>
 using InputSpan = RangeIterator_T<const T*>;
 
+enum class ChartObjectType
+{
+    unknown,
+    xySeries,
+    histogram,
+    barSeries
+};
+
 // Abstract base for items in chart.
 class ChartObject
 {
@@ -413,8 +421,12 @@ public:
           ChartObject* implementationObject()       { return (m_spImplementation) ? m_spImplementation.get() : this; }
     const ChartObject* implementationObject() const { return (m_spImplementation) ? m_spImplementation.get() : this; }
 
+    ChartObjectType type() const { return m_type; }
+
 protected:
-    ChartObject() {}
+    ChartObject(ChartObjectType type)
+        : m_type(type)
+    {}
 
     // Sets custom base to which virtual calls get passed.
     template <class T, class... ArgTypes_T>
@@ -430,13 +442,16 @@ private:
     virtual void setFillColourImpl(ChartObjectStringView) {}
 
     std::unique_ptr<ChartObject> m_spImplementation;
+    ChartObjectType m_type = ChartObjectType::unknown;
 }; // class ChartObject
 
 
 class XySeries : public ChartObject
 {
+public:
+    using BaseClass = ChartObject;
 protected:
-    XySeries() {}
+    XySeries() : BaseClass(ChartObjectType::xySeries) {}
 public:
     virtual ~XySeries() {}
     virtual void resize(const size_t) = 0;
@@ -453,8 +468,10 @@ public:
 
 class Histogram : public ChartObject
 {
+public:
+    using BaseClass = ChartObject;
 protected:
-    Histogram() {}
+    Histogram() : BaseClass(ChartObjectType::histogram) {}
 public:
     virtual ~Histogram() {}
 
@@ -464,8 +481,10 @@ public:
 
 class BarSeries : public ChartObject
 {
+public:
+    using BaseClass = ChartObject;
 protected:
-    BarSeries() {}
+    BarSeries() : BaseClass(ChartObjectType::barSeries) {}
 public:
     virtual ~BarSeries() {}
 }; // Class BarSeries
