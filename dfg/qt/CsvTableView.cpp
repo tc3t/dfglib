@@ -1562,15 +1562,16 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openConfigFile()
         return false;
     }
 
-    const auto sConfigPath = DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sCsvPath);
+    const auto sConfigPath = CsvFormatDefinition::csvFilePathToConfigFilePath(sCsvPath);
     QFileInfo fi(sConfigPath);
     if (!fi.exists())
     {
-        QMessageBox::information(this, tr("No config file"), tr("File\n'%1'\nhas no config file.").arg(sCsvPath));
-        return false;
+        const auto yesNo = QMessageBox::question(this, tr("No config file"), tr("File\n'%1'\nhas no config file.\nCreate one?").arg(sCsvPath));
+        if (yesNo != QMessageBox::Yes || !saveConfigFile())
+            return false;
     }
 
-    std::unique_ptr<DFG_CLASS_NAME(TableEditor)> spConfigWidget(new DFG_CLASS_NAME(TableEditor)());
+    std::unique_ptr<TableEditor> spConfigWidget(new TableEditor());
     spConfigWidget->setAllowApplicationSettingsUsage(getAllowApplicationSettingsUsage());
     auto bOpened = spConfigWidget->tryOpenFileFromPath(sConfigPath);
     if (!bOpened)
