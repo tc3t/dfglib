@@ -384,6 +384,8 @@ public:
     // Sets chart guide. Can be set only once and must to be done during initialization.
     void setChartGuide(const QString& s);
 
+    QString getChartDefinitionString() const;
+
 public slots:
     void onDataSourceChanged();
     void onDataSourceDestroyed();
@@ -419,6 +421,7 @@ private:
     void setCommonChartObjectProperties(RefreshContext& context, ChartObject& rObject, const GraphDefinitionEntry& defEntry, ConfigParamCreator configParamCreator, const DefaultNameCreator& defaultNameCreator);
 
     GraphDefinitionWidget* getDefinitionWidget();
+    const GraphDefinitionWidget* getDefinitionWidget() const;
 
     ChartCanvas* chart();
 

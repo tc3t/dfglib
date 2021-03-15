@@ -4345,6 +4345,12 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setChartGuide(const QStrin
         p->setGuideString(s);
 }
 
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getChartDefinitionString() const -> QString
+{
+    auto p = getDefinitionWidget();
+    return (p) ? p->getRawTextDefinition() : QString();
+}
+
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onControllerPreferredSizeChanged(const QSize sizeHint)
 {
     if (m_spSplitter)
@@ -5258,6 +5264,11 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setDefaultDataSourceId(con
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() -> GraphDefinitionWidget*
 {
     return (m_spControlPanel) ? m_spControlPanel->findChild<GraphDefinitionWidget*>() : nullptr;
+}
+
+auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() const -> const GraphDefinitionWidget*
+{
+    return (m_spControlPanel) ? m_spControlPanel->findChild<const GraphDefinitionWidget*>() : nullptr;
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()

@@ -221,6 +221,8 @@ int main(int argc, char *argv[])
         }
     }
     tableEditor.setGraphDisplay(&graphDisplay);
+    if (tableEditor.m_spTableView)
+        tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/chartControls"), graphDisplay.getChartDefinitionString()); });
 #endif
 
     mainWindow.setCentralWidget(&tableEditor);
