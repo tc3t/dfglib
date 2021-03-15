@@ -214,6 +214,11 @@ namespace
 
 } // unnamed namespace
 
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableView)
+{
+public:
+    std::vector<::DFG_MODULE_NS(qt)::CsvTableView::PropertyFetcher> m_propertyFetchers;
+};
 
 CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
     : BaseClass(pParent)
@@ -1501,14 +1506,14 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
     return saveToFileImpl(dlg.getSaveOptions());
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::saveConfigFile()
+bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFile()
 {
     auto pModel = csvModel();
     if (!pModel)
         return false;
 
     const auto sModelPath = pModel->getFilePath();
-    const auto sPathSuggestion = (sModelPath.isEmpty()) ? QString() : DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sModelPath);
+    const auto sPathSuggestion = (sModelPath.isEmpty()) ? QString() : CsvFormatDefinition::csvFilePathToConfigFilePath(sModelPath);
 
     auto sPath = QFileDialog::getSaveFileName(this,
         tr("Save config file"),
@@ -1520,7 +1525,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::saveConfigFile()
     if (sPath.isEmpty())
         return false;
 
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+    DFG_MODULE_NS(cont)::CsvConfig config;
 
     pModel->populateConfig(config);
 
@@ -1529,7 +1534,16 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::saveConfigFile()
     for (int c = 0, nCount = pModel->columnCount(); c < nCount; ++c)
     {
         DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), "columnsByIndex/%d/width_pixels", CsvModel::internalColumnIndexToVisible(c));
-        config.setKeyValue(DFG_CLASS_NAME(StringUtf8)(SzPtrUtf8(szBuffer)), DFG_CLASS_NAME(StringUtf8)::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(c))));
+        config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), StringUtf8::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(c))));
+    }
+
+    // Adding additional properties that there might be, in practice this may mean e.g. properties/chartControls
+    for (const auto& fetcher : DFG_OPAQUE_REF().m_propertyFetchers)
+    {
+        if (!fetcher)
+            continue;
+        const auto& keyValue = fetcher();
+        config.setKeyValue(qStringToStringUtf8(keyValue.first), qStringToStringUtf8(keyValue.second));
     }
     
     const auto bSuccess = config.saveToFile(qStringToFileApi8Bit(sPath));
@@ -3894,6 +3908,11 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
                 pModel->setHeaderData(c, Qt::Horizontal, sNewName);
         }
     }
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableView::addConfigSavePropertyFetcher(PropertyFetcher fetcher)
+{
+    DFG_OPAQUE_REF().m_propertyFetchers.push_back(std::move(fetcher));
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()

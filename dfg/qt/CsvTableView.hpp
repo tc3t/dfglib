@@ -6,6 +6,8 @@
 #include "StringMatchDefinition.hpp"
 #include <memory>
 #include <atomic>
+#include <functional>
+#include "../OpaquePtr.hpp"
 
 #include "qtIncludeHelpers.hpp"
 
@@ -159,6 +161,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef CsvItemModel CsvModel;
         typedef StringMatchDefinition StringMatchDef;
         typedef CsvTableViewSelectionAnalyzer SelectionAnalyzer;
+        using PropertyFetcher = std::function<std::pair<QString, QString>()>;
 
         enum class ViewType
         {
@@ -285,6 +288,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         LockReleaser tryLockForRead();
 
         TableHeaderView* horizontalTableHeader();
+
+        // Adds a callback that is called to fetch additional properties for config file when saving
+        void addConfigSavePropertyFetcher(PropertyFetcher fetcher);
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -458,6 +464,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bUndoEnabled;
         std::vector<QObjectStorage<QThread>> m_analyzerThreads;
         std::shared_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited.
+        DFG_OPAQUE_PTR_DECLARE();
     };
 
     template <class Func_T>
