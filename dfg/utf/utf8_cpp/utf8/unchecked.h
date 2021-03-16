@@ -258,13 +258,13 @@ namespace utf8
             }
             iterator& operator ++ () 
             {
-                ::std::advance(it, utf8::internal::sequence_length(it));
+                ::std::advance(it, (std::max)(ptrdiff_t(1), utf8::internal::sequence_length(it))); // DFGLIB_CHANGE: added max() to avoid iterator getting stuck in case of invalid utf.
                 return *this;
             }
             iterator operator ++ (int)
             {
                 iterator temp = *this;
-                ::std::advance(it, utf8::internal::sequence_length(it));
+                ::std::advance(it, (std::max)(ptrdiff_t(1), utf8::internal::sequence_length(it))); // DFGLIB_CHANGE: added max() to avoid iterator getting stuck in case of invalid utf.
                 return temp;
             }  
             iterator& operator -- ()

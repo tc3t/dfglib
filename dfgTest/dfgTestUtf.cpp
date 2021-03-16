@@ -302,3 +302,18 @@ TEST(DfgUtf, windows1252charToCp)
         EXPECT_EQ(DFG_MODULE_NS(utf)::windows1252charToCp(static_cast<uint8>(c)), DFG_MODULE_NS(utf)::windows1252charToCp(c));
 }
 
+TEST(DfgUtf, utfIteratorIncrement)
+{
+	// Testing that utf iterator increments even in case of invalid utf
+	using namespace DFG_ROOT_NS;
+	{
+		const char invalidUtf[] = "\xff\xff";
+		using namespace DFG_MODULE_NS(utf);
+		utf8::unchecked::iterator<const char*> iter(invalidUtf);
+		const utf8::unchecked::iterator<const char*> iterEnd(&invalidUtf[0] + DFG_COUNTOF_SZ(invalidUtf));
+		for (; !isAtEnd(iter, iterEnd); ++iter)
+		{
+		}
+		EXPECT_TRUE(true);
+	}
+}
