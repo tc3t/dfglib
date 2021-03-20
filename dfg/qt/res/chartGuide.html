@@ -92,9 +92,9 @@
                         <li>#AARRGGBB (AA is alpha channel that specifies transparency, 00 means fully transparent and ff fully opaque.)</li>
                         <li>#RRRGGGBBB</li>
                         <li>#RRRRGGGGBBBB</li>
-                        <li>Item from list of SVG color keyword names by World Wide Web Consortium, for example 'red', green', 'blue'</li>
+                        <li>Item from list of SVG color keyword names by World Wide Web Consortium, for example <i>red</i>, <i>green</i>, <i>blue</i></li>
                     </ul>
-                <li>example: line_colour: #7f1b2eff). Sets semi-transparent, mostly blue line.</li>
+                <li>example: "line_colour": "#7f1b2eff". Sets semi-transparent, mostly blue line.</li>
             </ul>
         <li><i>line_style</i> for type <i>xy</i>:</li>
             <ul>
@@ -198,14 +198,21 @@
 			        <li>histogram: bin position can be affected through x, variable y is not available.</li>
 			        <li>bars: Bar heights can be affected through y, variable x is not available.</li>
                 </ul>
-                <li>In addition to operators +-*/^, the following functions are available:</li>
+                <li>In addition to operators +-*/^, there are lots of basic functions such as sin(), cos() available and if 
+                    build with tools that support <a href="https://en.cppreference.com/w/cpp/header/cmath">C++ mathematical special functions</a>, those may also be available.</li>
                 <ul>
-                    <li>sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, asinh, acosh, atanh</li>
-			        <li>log, log2, log10</li>
-			        <li>abs, exp, sqrt, sign</li>
-                    <li>sum, avg, min, max</li>
                     <ul>
-                        <li>These functions take comma-separated list as input. Note that those need to be escaped in json-definition, for example "operation_a":"formula(y, \"min(2, y)\")"</li>
+                        <li>Non-exhaustive list</li>
+                        <ul>
+                            <li>sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, asinh, acosh, atanh</li>
+                            <li>log, log2, log10</li>
+                            <li>abs, cbrt, erf, erfc, exp, hypot, sign, sqrt, tgamma</li>
+                            <li>sum, avg, min, max</li>
+                            <li>C++17: assoc_laguerre, assoc_legendre, beta, comp_ellint_1, comp_ellint_2, comp_ellint_3, cyl_bessel_i, 
+                                       cyl_bessel_j, cyl_bessel_k, cyl_neumann, ellint_1, ellint_2, ellint_3, expint, gcd, hermite, 
+                                       laguerre, lcm, legendre, riemann_zeta, sph_bessel, sph_legendre, sph_neumann</li>
+                            <li>Note: functions that take more than one argument need to be escaped in json-definition, for example "operation_a":"formula(y, \"min(2, y)\")".</li>
+                        </ul>
                     </ul>
                 </ul>
             </ul>

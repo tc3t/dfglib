@@ -11,6 +11,7 @@
 #include <dfg/alg.hpp>
 #include <dfg/str.hpp>
 #include <dfg/cont/contAlg.hpp>
+#include <numeric>
 
 TEST(dfgMath, roundedUpToMultiple)
 {
@@ -741,14 +742,41 @@ TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
     using namespace DFG_MODULE_NS(math);
 
     {
-        const std::vector<const char*> expectedFunctions {
-            "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "avg",
-            "cos", "cosh", "exp", "ln", "log", "log10", "log2", "max", "min", "rand_bernoulli",
+        std::vector<const char*> expectedFunctions {
+            "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "avg", "cbrt",
+            "cos", "cosh", "erf", "erfc", "exp", "hypot", "ln", "log", "log10", "log2", "max", "min", "rand_bernoulli",
             "rand_binomial", "rand_cauchy", "rand_chiSquared", "rand_exponential", "rand_extremeValue", "rand_fisherF",
             "rand_gamma", "rand_geometric", "rand_logNormal", "rand_negBinomial", "rand_normal", "rand_poisson", 
             "rand_studentT", "rand_uniformInt", "rand_uniformReal", "rand_weibull",
-            "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh"
+            "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh", "tgamma"
             };
+#if defined(__cpp_lib_math_special_functions) ||  (defined(__STDCPP_MATH_SPEC_FUNCS__) && (__STDCPP_MATH_SPEC_FUNCS__ >= 201003L))
+        expectedFunctions.push_back("assoc_laguerre");
+        expectedFunctions.push_back("assoc_legendre");
+        expectedFunctions.push_back("beta");
+        expectedFunctions.push_back("comp_ellint_1");
+        expectedFunctions.push_back("comp_ellint_2");
+        expectedFunctions.push_back("comp_ellint_3");
+        expectedFunctions.push_back("cyl_bessel_i");
+        expectedFunctions.push_back("cyl_bessel_j");
+        expectedFunctions.push_back("cyl_bessel_k");
+        expectedFunctions.push_back("cyl_neumann");
+        expectedFunctions.push_back("ellint_1");
+        expectedFunctions.push_back("ellint_2");
+        expectedFunctions.push_back("ellint_3");
+        expectedFunctions.push_back("expint");
+        expectedFunctions.push_back("gcd");
+        expectedFunctions.push_back("hermite");
+        expectedFunctions.push_back("laguerre");
+        expectedFunctions.push_back("legendre");
+        expectedFunctions.push_back("lcm");
+        expectedFunctions.push_back("riemann_zeta");
+        expectedFunctions.push_back("sph_bessel");
+        expectedFunctions.push_back("sph_legendre");
+        expectedFunctions.push_back("sph_neumann");
+        std::sort(expectedFunctions.begin(), expectedFunctions.end(), [](const char* a, const char* b) { return (std::strcmp(a, b) < 0); });
+#endif
+
         std::vector<std::string> foundFunctions;
         FormulaParser parser;
         EXPECT_TRUE(parser.defineRandomFunctions());
@@ -759,4 +787,55 @@ TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
         });
         EXPECT_TRUE(::DFG_MODULE_NS(cont)::isEqualContent(expectedFunctions, foundFunctions));
     }
+}
+
+TEST(dfgMath, FormulaParser_cmath)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+    FormulaParser parser;
+
+#define DFGTEST_TEMP_TEST_VALUE1(FUNC, a)       ASSERT_DOUBLE_EQ(std::FUNC(a),       parser.setFormulaAndEvaluateAsDouble(#FUNC "(" #a ")"))
+#define DFGTEST_TEMP_TEST_VALUE2(FUNC, a, b)    ASSERT_DOUBLE_EQ(std::FUNC(a,b),     parser.setFormulaAndEvaluateAsDouble(#FUNC "(" #a ", " #b ")"))
+#define DFGTEST_TEMP_TEST_VALUE3(FUNC, a, b, c) ASSERT_DOUBLE_EQ(std::FUNC(a, b, c), parser.setFormulaAndEvaluateAsDouble(#FUNC "(" #a ", " #b ", " #c ")"))
+
+    DFGTEST_TEMP_TEST_VALUE1(cbrt, 3);
+    DFGTEST_TEMP_TEST_VALUE1(erf, 3);
+    DFGTEST_TEMP_TEST_VALUE1(erfc, 3);
+    DFGTEST_TEMP_TEST_VALUE2(hypot, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE1(tgamma, 3);
+
+#if defined(__cpp_lib_math_special_functions) ||  (defined(__STDCPP_MATH_SPEC_FUNCS__) && (__STDCPP_MATH_SPEC_FUNCS__ >= 201003L))
+    DFGTEST_TEMP_TEST_VALUE3(assoc_laguerre, 1, 2, 0.5);
+    DFGTEST_TEMP_TEST_VALUE3(assoc_legendre, 1, 2, 0.5);
+    DFGTEST_TEMP_TEST_VALUE2(beta, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE1(comp_ellint_1, 0.5);
+    DFGTEST_TEMP_TEST_VALUE1(comp_ellint_2, 0.5);
+    DFGTEST_TEMP_TEST_VALUE2(comp_ellint_3, 0.25, 0.5);
+    DFGTEST_TEMP_TEST_VALUE2(cyl_bessel_i, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(cyl_bessel_j, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(cyl_bessel_k, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(cyl_neumann, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(ellint_1, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(ellint_2, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE3(ellint_3, 0.5, 2, 3);
+    DFGTEST_TEMP_TEST_VALUE1(expint, 3);
+    DFGTEST_TEMP_TEST_VALUE2(gcd, 48564, -156165);
+    DFGTEST_TEMP_TEST_VALUE2(hermite, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(laguerre, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(legendre, 1, 0.5);
+    DFGTEST_TEMP_TEST_VALUE2(lcm, 23, -75);
+    DFGTEST_TEMP_TEST_VALUE1(riemann_zeta, 3);
+    DFGTEST_TEMP_TEST_VALUE2(sph_bessel, 1, 3);
+    DFGTEST_TEMP_TEST_VALUE3(sph_legendre, 1, 2, 3);
+    DFGTEST_TEMP_TEST_VALUE2(sph_neumann, 1, 3);
+
+    DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("assoc_laguerre(1.5, 2, 3)")); // Non-integer in place where integer is expected -> NaN expected as result
+    DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("gcd(1.5, 2)")); // Non-integer in place where integer is expected -> NaN expected as result
+#endif
+
+
+#undef DFGTEST_TEMP_TEST_VALUE1
+#undef DFGTEST_TEMP_TEST_VALUE2
+#undef DFGTEST_TEMP_TEST_VALUE3
 }

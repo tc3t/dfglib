@@ -145,6 +145,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator_operatorLt";
     //::testing::GTEST_FLAG(filter) = "dfgMath.absAsUnsigned";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser";
+    //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_cmath";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_forEachDefinedFunctionNameWhile";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_functors";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_randomFunctions";

@@ -3,6 +3,8 @@
 #include "../cont/SetVector.hpp"
 #include "../rand/distributionHelpers.hpp"
 #include "../rand.hpp"
+#include <cmath>
+#include <numeric>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include "muparser/muParser.h"
@@ -116,6 +118,122 @@ void cleanUpFunctors(Cont_T& paramsToCleanUp, ParamArr_T(&paramArr)[N])
 
 } } } // namespace dfg::math::muParserExt
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
+namespace DFG_DETAIL_NS {
+   
+class NoCallPreconditions
+{
+public:
+    template <class ... Args_T>
+    constexpr bool operator()(Args_T&& ...) const { return true; }
+};
+
+// Checks if all given arguments to operator() can be safely casted to corresponding type in Types_T...
+template <class ... Types_T>
+class TypeConvertibleChecker
+{
+public:
+    template <class TypeTuple_T, size_t N, class T, class ... Args_T>
+    static bool checkAndIterateIfNeeded(const std::integral_constant<size_t, N>, const T& val, Args_T&& ... args)
+    {
+        return (isFloatConvertibleTo<typename std::tuple_element<N, TypeTuple_T>::type>(val)
+            &&
+            checkAndIterateIfNeeded<TypeTuple_T>(std::integral_constant<size_t, N + 1>(), args...)
+            );
+    }
+
+    template <class TypeTuple_T, class ... Args_T>
+    static bool checkAndIterateIfNeeded(const std::integral_constant<size_t, sizeof...(Types_T)>, Args_T&& ... args)
+    {
+        return true;
+    }
+
+    template <class ... Args_T>
+    bool operator()(Args_T&& ... args) const
+    {
+        DFG_STATIC_ASSERT(sizeof...(Types_T) == sizeof...(Args_T), "Unexpected argument count");
+        using TypeTuple = std::tuple<Types_T...>;
+        return checkAndIterateIfNeeded<TypeTuple>(std::integral_constant<size_t, 0>(), args...);
+    }
+}; // TypeConvertibleChecker
+
+// Using typedef to avoid preprocessor comma parsing problems.
+using TccUD  = TypeConvertibleChecker<unsigned int, double>;
+using TccUUD = TypeConvertibleChecker<unsigned int, unsigned int, double>;
+using TccII  = TypeConvertibleChecker<int64, int64>;
+
+// Some macro machinery to avoid using std-functions in invalid ways, e.g. defineFunction("hypot", std::hypot, true) fails in C++17 since std::hypot has (double, double) and (double, double, double) overloads.
+#define DFG_TEMP_DEFINE_CALLABLE_1(FUNC, PRECONDITION_CHECKER, ARG_MORPHER) \
+double caller_##FUNC(double a) \
+{ \
+    return (PRECONDITION_CHECKER()(a)) ? std::FUNC(ARG_MORPHER(a)) : std::numeric_limits<double>::quiet_NaN(); \
+}
+
+#define DFG_TEMP_DEFINE_CALLABLE_2(FUNC, PRECONDITION_CHECKER, ARG_MORPHER) \
+double caller_##FUNC(double a, double b) \
+{ \
+    return (PRECONDITION_CHECKER()(a, b)) ? std::FUNC(ARG_MORPHER(a, b)) : std::numeric_limits<double>::quiet_NaN(); \
+}
+
+#define DFG_TEMP_DEFINE_CALLABLE_3(FUNC, PRECONDITION_CHECKER, ARG_MORPHER) \
+double caller_##FUNC(double a, double b, double c) \
+{ \
+    return (PRECONDITION_CHECKER()(a, b, c)) ? std::FUNC(ARG_MORPHER(a, b, c)) : std::numeric_limits<double>::quiet_NaN(); \
+}
+
+#define DFG_TEMP_ARG_MORPHER_D(X)         a
+#define DFG_TEMP_ARG_MORPHER_DD(X, Y)     a, b
+#define DFG_TEMP_ARG_MORPHER_DDD(a, b, c) a, b, c
+#define DFG_TEMP_ARG_MORPHER_UD(a,b)      static_cast<unsigned int>(a), b
+#define DFG_TEMP_ARG_MORPHER_UUD(a,b,c)   static_cast<unsigned int>(a), static_cast<unsigned int>(b), c
+#define DFG_TEMP_ARG_MORPHER_II(a,b)      static_cast<int64>(a), static_cast<int64>(b)
+
+// C++11
+DFG_TEMP_DEFINE_CALLABLE_1(cbrt,   NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D) // Cubit root
+DFG_TEMP_DEFINE_CALLABLE_1(erf,    NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
+DFG_TEMP_DEFINE_CALLABLE_1(erfc,   NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
+DFG_TEMP_DEFINE_CALLABLE_2(hypot,  NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD)
+DFG_TEMP_DEFINE_CALLABLE_1(tgamma, NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
+// C++17
+#if defined(__cpp_lib_math_special_functions) ||  (defined(__STDCPP_MATH_SPEC_FUNCS__) && (__STDCPP_MATH_SPEC_FUNCS__ >= 201003L))
+    DFG_TEMP_DEFINE_CALLABLE_3(assoc_laguerre, TccUUD,              DFG_TEMP_ARG_MORPHER_UUD) // "If n or m is greater or equal to 128, the behavior is implementation-defined." (https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_laguerre)
+    DFG_TEMP_DEFINE_CALLABLE_3(assoc_legendre, TccUUD,              DFG_TEMP_ARG_MORPHER_UUD) // "If n is greater or equal to 128, the behavior is implementation-defined." (https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_legendre)
+    DFG_TEMP_DEFINE_CALLABLE_2(beta,           NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD)
+    DFG_TEMP_DEFINE_CALLABLE_1(comp_ellint_1,  NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
+    DFG_TEMP_DEFINE_CALLABLE_1(comp_ellint_2,  NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
+    DFG_TEMP_DEFINE_CALLABLE_2(comp_ellint_3,  NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD)
+    DFG_TEMP_DEFINE_CALLABLE_2(cyl_bessel_i,   NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD) // "If v>=128, the behavior is implementation-defined " (https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_i)
+    DFG_TEMP_DEFINE_CALLABLE_2(cyl_bessel_j,   NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD) // "If v>=128, the behavior is implementation-defined " (https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_j)
+    DFG_TEMP_DEFINE_CALLABLE_2(cyl_bessel_k,   NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD) // "If v>=128, the behavior is implementation-defined " (https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_k)
+    DFG_TEMP_DEFINE_CALLABLE_2(cyl_neumann,    NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD) // "If v>=128, the behavior is implementation-defined " (https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_neumann)
+    DFG_TEMP_DEFINE_CALLABLE_2(ellint_1,       NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD)
+    DFG_TEMP_DEFINE_CALLABLE_2(ellint_2,       NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DD)
+    DFG_TEMP_DEFINE_CALLABLE_3(ellint_3,       NoCallPreconditions, DFG_TEMP_ARG_MORPHER_DDD)
+    DFG_TEMP_DEFINE_CALLABLE_1(expint,         NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
+    DFG_TEMP_DEFINE_CALLABLE_2(gcd,            TccII,               DFG_TEMP_ARG_MORPHER_II)
+    DFG_TEMP_DEFINE_CALLABLE_2(hermite,        TccUD,               DFG_TEMP_ARG_MORPHER_UD) // "If n is greater or equal than 128, the behavior is implementation-defined" (https://en.cppreference.com/w/cpp/numeric/special_functions/hermite)
+    DFG_TEMP_DEFINE_CALLABLE_2(laguerre,       TccUD,               DFG_TEMP_ARG_MORPHER_UD) // "If n is greater or equal than 128, the behavior is implementation-defined" (https://en.cppreference.com/w/cpp/numeric/special_functions/laguerre)
+    DFG_TEMP_DEFINE_CALLABLE_2(legendre,       TccUD,               DFG_TEMP_ARG_MORPHER_UD) // "If n is greater or equal than 128, the behavior is implementation-defined" (https://en.cppreference.com/w/cpp/numeric/special_functions/legendre)
+    DFG_TEMP_DEFINE_CALLABLE_2(lcm,            TccII,               DFG_TEMP_ARG_MORPHER_II)
+    DFG_TEMP_DEFINE_CALLABLE_1(riemann_zeta,   NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
+    DFG_TEMP_DEFINE_CALLABLE_2(sph_bessel,     TccUD,               DFG_TEMP_ARG_MORPHER_UD) // "If n>=128, the behavior is implementation-defined" (https://en.cppreference.com/w/cpp/numeric/special_functions/sph_bessel)
+    DFG_TEMP_DEFINE_CALLABLE_3(sph_legendre,   TccUUD,              DFG_TEMP_ARG_MORPHER_UUD) // "If l>=128, the behavior is implementation-defined" (https://en.cppreference.com/w/cpp/numeric/special_functions/sph_legendre)
+    DFG_TEMP_DEFINE_CALLABLE_2(sph_neumann,    TccUD,               DFG_TEMP_ARG_MORPHER_UD) // "f n>=128, the behavior is implementation-defined" (https://en.cppreference.com/w/cpp/numeric/special_functions/sph_neumann)
+#endif
+
+#undef DFG_TEMP_DEFINE_CALLABLE_1
+#undef DFG_TEMP_DEFINE_CALLABLE_2
+#undef DFG_TEMP_DEFINE_CALLABLE_3
+
+#undef DFG_TEMP_ARG_MORPHER_D
+#undef DFG_TEMP_ARG_MORPHER_DD
+#undef DFG_TEMP_ARG_MORPHER_DDD
+#undef DFG_TEMP_ARG_MORPHER_UD
+#undef DFG_TEMP_ARG_MORPHER_UUD
+#undef DFG_TEMP_ARG_MORPHER_II
+
+} } } // dfg:math::DFG_DETAIL_NS
+
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 {
@@ -125,7 +243,47 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
     std::unique_ptr<RandEngT> m_spRandEng;
 };
 
-::DFG_MODULE_NS(math)::FormulaParser::FormulaParser() = default;
+
+::DFG_MODULE_NS(math)::FormulaParser::FormulaParser()
+{
+#define DFG_TEMP_DEFINE_FUNC(NAME) defineFunction(#NAME, ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::caller_##NAME, true)
+
+    // C++11
+    DFG_TEMP_DEFINE_FUNC(cbrt);
+    DFG_TEMP_DEFINE_FUNC(erf);
+    DFG_TEMP_DEFINE_FUNC(erfc);
+    DFG_TEMP_DEFINE_FUNC(hypot);
+    DFG_TEMP_DEFINE_FUNC(tgamma);
+    
+    // C++17
+#if defined(__cpp_lib_math_special_functions) ||  (defined(__STDCPP_MATH_SPEC_FUNCS__) && (__STDCPP_MATH_SPEC_FUNCS__ >= 201003L))
+    DFG_TEMP_DEFINE_FUNC(assoc_laguerre);
+    DFG_TEMP_DEFINE_FUNC(assoc_legendre);
+    DFG_TEMP_DEFINE_FUNC(beta);
+    DFG_TEMP_DEFINE_FUNC(comp_ellint_1);
+    DFG_TEMP_DEFINE_FUNC(comp_ellint_2);
+    DFG_TEMP_DEFINE_FUNC(comp_ellint_3);
+    DFG_TEMP_DEFINE_FUNC(cyl_bessel_i);
+    DFG_TEMP_DEFINE_FUNC(cyl_bessel_j);
+    DFG_TEMP_DEFINE_FUNC(cyl_bessel_k);
+    DFG_TEMP_DEFINE_FUNC(cyl_neumann);
+    DFG_TEMP_DEFINE_FUNC(ellint_1);
+    DFG_TEMP_DEFINE_FUNC(ellint_2);
+    DFG_TEMP_DEFINE_FUNC(ellint_3);
+    DFG_TEMP_DEFINE_FUNC(expint);
+    DFG_TEMP_DEFINE_FUNC(gcd);
+    DFG_TEMP_DEFINE_FUNC(hermite);
+    DFG_TEMP_DEFINE_FUNC(laguerre);
+    DFG_TEMP_DEFINE_FUNC(legendre);
+    DFG_TEMP_DEFINE_FUNC(lcm);
+    DFG_TEMP_DEFINE_FUNC(riemann_zeta);
+    DFG_TEMP_DEFINE_FUNC(sph_bessel);
+    DFG_TEMP_DEFINE_FUNC(sph_legendre);
+    DFG_TEMP_DEFINE_FUNC(sph_neumann);
+#endif
+
+#undef DFG_TEMP_DEFINE_FUNC
+}
 
 ::DFG_MODULE_NS(math)::FormulaParser::~FormulaParser()
 {
