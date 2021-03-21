@@ -45,6 +45,7 @@ namespace
     enum TableEditorPropertyId
     {
         // Add properties here in the beginning (or remember to update TableEditorPropertyId_last)
+        TableEditorPropertyId_chartPanelWidth,
         TableEditorPropertyId_cellEditorFontPointSize,
         TableEditorPropertyId_cellEditorHeight,
         TableEditorPropertyId_last = TableEditorPropertyId_cellEditorHeight
@@ -57,6 +58,14 @@ namespace
         WindowExtentProperty() :
             m_val(0)
         {
+        }
+
+        static WindowExtentProperty fromPercentage(int percentage)
+        {
+            WindowExtentProperty wep;
+            DFG_ROOT_NS::limit(percentage, 0, 100);
+            wep.m_val = -1 * percentage;
+            return wep;
         }
 
         WindowExtentProperty(const QVariant& v) :
@@ -81,7 +90,7 @@ namespace
             auto strVal = v.toString().trimmed().split(',').first();
             if (strVal.isEmpty())
             {
-                auto strList = v.toStringList(); // comma-separated list can be interpreted as QStringList so check that as well.
+                auto strList = v.toStringList(); // comma-separated list can be interpreted as QStringList so checking that as well.
                 if (!strList.isEmpty())
                     strVal = strList.first();
             }
@@ -90,10 +99,7 @@ namespace
                 strVal.remove(0, 1);
                 auto pval = strVal.toInt(&ok);
                 if (ok)
-                {
-                    DFG_ROOT_NS::limit(pval, 0, 100);
-                    m_val = -1*pval;
-                }
+                    *this = fromPercentage(pval);
             }
         }
 
@@ -108,7 +114,7 @@ namespace
             }
         }
 
-        int m_val;
+        int m_val; // Positive values are pixels, negative percentage.
     };
 
     void setWidgetMaximumHeight(QWidget* pWidget, const int refHeight, const WindowExtentProperty& extent)
@@ -138,10 +144,16 @@ namespace
                                               TableEditorPropertyId_cellEditorFontPointSize,
                                               double,
                                               defaultFontPointSizeForCellEditor);
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE("TableEditor_chartPanelWidth",
+                                              TableEditor,
+                                              TableEditorPropertyId_chartPanelWidth,
+                                              WindowExtentProperty,
+                                              [] { return WindowExtentProperty::fromPercentage(35); },
+                                              WindowExtentProperty);
 
 
     template <TableEditorPropertyId ID>
-    auto getTableEditorProperty(DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)* editor) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>::PropertyType
+    auto getTableEditorProperty(DFG_MODULE_NS(qt)::TableEditor* editor) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>::PropertyType
     {
         return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>>(editor);
     }
@@ -616,13 +628,13 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnR
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setAllowApplicationSettingsUsage(const bool b)
+void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool b)
 {
     setProperty("dfglib_allow_app_settings_usage", b);
 
     // Re-apply properties that might have changed with change of this setting.
     {
-        DFG_STATIC_ASSERT(TableEditorPropertyId_last == 1, "Check whether new properties should be handled here.");
+        DFG_STATIC_ASSERT(TableEditorPropertyId_last == 2, "Check whether new properties should be handled here.");
 
         // cellEditorHeight
         setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this));
@@ -844,11 +856,22 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::addToolBarWidget(QWidget* p
         m_spToolBar->addWidget(pWidget);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setGraphDisplay(QWidget* pGraphDisplay)
+int DFG_MODULE_NS(qt)::TableEditor::setGraphDisplay(QWidget* pGraphDisplay)
 {
     DFG_ASSERT_CORRECTNESS(m_spMainSplitter != nullptr);
     if (!pGraphDisplay || !m_spMainSplitter)
-        return;
+        return 0;
     m_spChartDisplay = pGraphDisplay;
     m_spMainSplitter->addWidget(pGraphDisplay);
+
+    // Setting panel width.
+    {
+        auto chartPanelExtent = getTableEditorProperty<TableEditorPropertyId_chartPanelWidth>(this);
+        QList<int> sizes;
+        sizes.push_back(0);
+        sizes.push_back(chartPanelExtent.toAbsolute(this->width()));
+        sizes[0] = this->width() - sizes[1];
+        m_spMainSplitter->setSizes(sizes);
+        return sizes[1];
+    }
 }

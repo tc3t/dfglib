@@ -344,6 +344,7 @@ public:
     ChartController* getController();
 
     bool getEnabledFlag() const;
+    void setEnabledFlag(bool b);
 
 signals:
     void sigPreferredSizeChanged(QSize);
@@ -385,6 +386,8 @@ public:
     void setChartGuide(const QString& s);
 
     QString getChartDefinitionString() const;
+
+    GraphControlPanel* getChartControlPanel() { return m_spControlPanel.get(); }
 
 public slots:
     void onDataSourceChanged();

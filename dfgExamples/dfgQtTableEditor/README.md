@@ -256,6 +256,13 @@ TableEditor_cellEditorHeight=%20
 ; Defines font size in cell editor widget
 TableEditor_cellEditorFontPointSize=13
 
+; Defines width of chart panel either as pixel width or percentage of parent widget width.
+; Default: %35
+; Note that the value is a request that might not be fulfilled e.g. if it would result
+; to width smaller than minimum widget width.
+TableEditor_charPanelWidth = %50
+; TableEditor_chartPanelWidth = 200 ; This would set panel width to 200 pixels
+
 ; -----------------------------------------------------------
 ; CsvItemModel
 

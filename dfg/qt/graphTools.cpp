@@ -3760,6 +3760,13 @@ bool DFG_MODULE_NS(qt)::GraphControlPanel::getEnabledFlag() const
     return (pCbEnabled) ? pCbEnabled->isChecked() : true;
 }
 
+void DFG_MODULE_NS(qt)::GraphControlPanel::setEnabledFlag(const bool b)
+{
+    auto pCbEnabled = findChild<QCheckBox*>(QLatin1String("cb_enabled"));
+    if (pCbEnabled)
+        pCbEnabled->setChecked(b);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //

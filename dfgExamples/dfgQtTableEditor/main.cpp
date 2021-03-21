@@ -220,7 +220,14 @@ int main(int argc, char *argv[])
             }
         }
     }
-    tableEditor.setGraphDisplay(&graphDisplay);
+    if (tableEditor.setGraphDisplay(&graphDisplay) == 0)
+    {
+        // Getting here means that display is hidden -> disabling chart updates.
+        auto pControlPanel = graphDisplay.getChartControlPanel();
+        DFG_ASSERT_CORRECTNESS(pControlPanel != nullptr);
+        if (pControlPanel)
+            pControlPanel->setEnabledFlag(false);
+    }
     if (tableEditor.m_spTableView)
         tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/chartControls"), graphDisplay.getChartDefinitionString()); });
 #endif
