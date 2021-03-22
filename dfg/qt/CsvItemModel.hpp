@@ -69,6 +69,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                               //                  When and_group is not given for any filter, they belong to the same AND-group so the
                                                                               //                  logics is A && B && C && D.
     const char CsvOptionProperty_chartControls[]            = "chartControls";   // Defines chartControls to use.
+    const char CsvOptionProperty_chartPanelWidth[]          = "chartPanelWidth"; // Chart panel width to use with the associated document; see TableEditor_chartPanelWidth for format documentation.
     const char CsvOptionProperty_sqlQuery[]                 = "sqlQuery";        // Defines SQL-query to use when opening a SQLite file.
 
     namespace DFG_DETAIL_NS

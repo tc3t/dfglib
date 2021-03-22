@@ -168,6 +168,18 @@ namespace
         {}
     };
 
+    static int setChartPanelWidth(QSplitter* pSplitter, const int nParentWidth, const WindowExtentProperty& wep)
+    {
+        if (!pSplitter)
+            return 0;
+        QList<int> sizes;
+        sizes.push_back(0);
+        sizes.push_back(wep.toAbsolute(nParentWidth));
+        sizes[0] = nParentWidth - sizes[1];
+        pSplitter->setSizes(sizes);
+        return sizes[1];
+    }
+
 } // unnamed namespace
 
 Q_DECLARE_METATYPE(WindowExtentProperty); // Note: placing this in unnamed namespace generated a "class template specialization of 'QMetaTypeId' must occure at global scope"-message
@@ -531,6 +543,19 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
     if (m_spChartDisplay)
     {
         const auto loadOptions = model.getOpenTimeLoadOptions();
+
+        // Resizing chart panel if needed
+        if (m_spChartDisplay)
+        {
+            const auto sChartPanelWidth = loadOptions.getProperty(CsvOptionProperty_chartPanelWidth, "");
+            if (!sChartPanelWidth.empty())
+            {
+                const int nWidth = setChartPanelWidth(m_spMainSplitter.get(), this->width(), WindowExtentProperty(sChartPanelWidth.c_str()));
+                // Enabling charting if width is non-zero, disabling if zero.
+                DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartingEnabledState", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(bool, nWidth != 0)));
+            }
+        }
+
         const auto chartControls = loadOptions.getProperty(CsvOptionProperty_chartControls, "none");
         if (chartControls != "none")
             DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartControls", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(QString, QString::fromUtf8(chartControls.c_str()))));
@@ -865,13 +890,5 @@ int DFG_MODULE_NS(qt)::TableEditor::setGraphDisplay(QWidget* pGraphDisplay)
     m_spMainSplitter->addWidget(pGraphDisplay);
 
     // Setting panel width.
-    {
-        auto chartPanelExtent = getTableEditorProperty<TableEditorPropertyId_chartPanelWidth>(this);
-        QList<int> sizes;
-        sizes.push_back(0);
-        sizes.push_back(chartPanelExtent.toAbsolute(this->width()));
-        sizes[0] = this->width() - sizes[1];
-        m_spMainSplitter->setSizes(sizes);
-        return sizes[1];
-    }
+    return setChartPanelWidth(m_spMainSplitter.get(), this->width(), getTableEditorProperty<TableEditorPropertyId_chartPanelWidth>(this));
 }

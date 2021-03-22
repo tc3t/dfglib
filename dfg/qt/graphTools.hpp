@@ -395,6 +395,7 @@ public slots:
     void onControllerPreferredSizeChanged(QSize sizeHint);
     void onGraphEnableCheckboxToggled(bool b);
     bool setChartControls(QString s) override;
+    void setChartingEnabledState(bool b);
 
     // Controller implementations
 private:

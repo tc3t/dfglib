@@ -260,7 +260,7 @@ TableEditor_cellEditorFontPointSize=13
 ; Default: %35
 ; Note that the value is a request that might not be fulfilled e.g. if it would result
 ; to width smaller than minimum widget width.
-TableEditor_charPanelWidth = %50
+TableEditor_chartPanelWidth = %50
 ; TableEditor_chartPanelWidth = 200 ; This would set panel width to 200 pixels
 
 ; -----------------------------------------------------------
@@ -357,7 +357,8 @@ Available keys:
 | properties/includeRows | Limits rows which are read from file by row index (0-based index, typically header is on row 0) |  | Since 1.5.0 |
 | properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
 | properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
-| properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, syntax guide is available from UI. | Since 1.6.0 |
+| properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, see [guide](../../dfg/qt/res/chartGuide.html) for detail | Since 1.6.0 |
+| properties/chartPanelWidth | If dfgQtTableEditor is built with chart feature, defines chart panel width to be used with the associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 1.8.1 ([#60](https://github.com/tc3t/dfglib/issues/60))
 | properties/sqlQuery | For SQLite files, defines the query whose result is populated to table. | Valid SQLite query | Since 1.6.1 (commit [24c1ad78](https://github.com/tc3t/dfglib/commit/24c1ad78eac2a6f74b6ee1be0dede0d5645fef07)) |
 
 #### Example .conf-file for csv-file (might look better when opened in a csv-editor)
@@ -381,6 +382,7 @@ properties,,,
 ,includeColumns,1:6
 ,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"
 ,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
+,chartPanelWidth,%50
 </pre>
 
 #### Example .conf-file for SQLite-file (might look better when opened in a csv-editor)

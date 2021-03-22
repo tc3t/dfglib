@@ -4396,6 +4396,13 @@ bool DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setChartControls(QString s
         return false;
 }
 
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setChartingEnabledState(const bool b)
+{
+    auto pControlPanel = getChartControlPanel();
+    if (pControlPanel)
+        pControlPanel->setEnabledFlag(b);
+}
+
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::defaultSourceIdImpl() const -> GraphDataSourceId 
 {
     return this->m_sDefaultDataSource;
