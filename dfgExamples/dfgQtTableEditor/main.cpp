@@ -226,7 +226,10 @@ int main(int argc, char *argv[])
         graphDisplay.setChartingEnabledState(false);
     }
     if (tableEditor.m_spTableView)
+    {
         tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/chartControls"), graphDisplay.getChartDefinitionString()); });
+        tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/chartPanelWidth"), QString::number(graphDisplay.width())); });
+    }
 #endif
 
     mainWindow.setCentralWidget(&tableEditor);
