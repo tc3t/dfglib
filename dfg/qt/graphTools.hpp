@@ -192,7 +192,8 @@ public:
     // Returns (human readable) description of source status, empty by default.
     String statusDescription() const { return statusDescriptionImpl(); }
 
-    virtual QObject* underlyingSource() = 0;
+    // Returns underlying source object if applicable.
+    virtual QObject* underlyingSource() { return nullptr; }
 
     // Calls handler so that it receives every element in given column. The order of rows in which data is given to handler is unspecified.
     virtual void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }

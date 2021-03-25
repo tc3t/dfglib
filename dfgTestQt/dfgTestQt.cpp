@@ -8,6 +8,7 @@
 #include <dfg/qt/CsvTableViewChartDataSource.hpp>
 #include <dfg/qt/CsvFileDataSource.hpp>
 #include <dfg/qt/SQLiteFileDataSource.hpp>
+#include <dfg/qt/NumericGeneratorDataSource.hpp>
 #include <dfg/qt/connectHelper.hpp>
 #include <dfg/math.hpp>
 #include <dfg/qt/sqlTools.hpp>
@@ -1106,6 +1107,49 @@ TEST(dfgQt, SQLiteFileDataSource)
     auto sourceCreator = [](const QString& sPath, const QString& sId) { return std::unique_ptr<SQLiteFileDataSource>(new SQLiteFileDataSource("SELECT * FROM table_from_csv", sPath, sId)); };
     auto fileCreator = [](QString sPath, CsvItemModel& model) { QFile::remove(sPath); return model.exportAsSQLiteFile(sPath); };
     testFileDataSource<SQLiteFileDataSource>("sqlite3", sourceCreator, fileCreator, fileCreator);
+}
+
+TEST(dfgQt, NumericGeneratorDataSource)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    using namespace ::DFG_MODULE_NS(cont);
+
+    // Basic test
+    {
+        NumericGeneratorDataSource ds("test", 5);
+        ValueVector<double> vals;
+        ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& dataSpan)
+        {
+            EXPECT_TRUE(dataSpan.rows().empty()); // Rows are not expected to be present.
+            auto doubleSpan = dataSpan.doubles();
+            vals.insert(vals.end(), doubleSpan.begin(), doubleSpan.end());
+        });
+        EXPECT_EQ(ValueVector<double>({0, 1, 2, 3, 4}), vals);
+    }
+
+    // Testing data more than block size.
+    {
+        const DataSourceIndex nRowCount = 5;
+        NumericGeneratorDataSource ds("test", nRowCount, 3);
+        ValueVector<double> vals;
+        ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& dataSpan)
+        {
+            auto doubleSpan = dataSpan.doubles();
+            vals.insert(vals.end(), doubleSpan.begin(), doubleSpan.end());
+        });
+        EXPECT_EQ(ValueVector<double>({0, 1, 2, 3, 4}), vals);
+    }
+
+    // Testing query mask handling: handler is not expected to get called if numbers are not requested.
+    {
+        NumericGeneratorDataSource ds("test", 10);
+        bool bCallbackCalled = false;
+        ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndStrings), [&](const SourceDataSpan&)
+        {
+            bCallbackCalled = true;
+        });
+        EXPECT_FALSE(bCallbackCalled);
+    }
 }
 
 TEST(dfgQt, SQLiteDatabase)
