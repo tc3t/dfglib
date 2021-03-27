@@ -1252,6 +1252,44 @@ TEST(dfgStr, StringViewSz)
 
 namespace
 {
+
+    template <class View_T, class Conv_T>
+    void StringView_lessThanImpl(Conv_T conv)
+    {
+        using namespace DFG_ROOT_NS;
+        EXPECT_TRUE(View_T(conv("a")) < View_T(conv("b")));
+        EXPECT_TRUE(View_T(conv("a")) < View_T(conv("ab")));
+        EXPECT_FALSE(View_T(conv("a")) < View_T(conv("a")));
+        EXPECT_EQ(std::strcmp("", "a") < 0, View_T(conv("")) < View_T(conv("a")));
+        /*
+        EXPECT_TRUE(StringViewC("a") < StringViewC("b"));
+        EXPECT_TRUE(StringViewAscii(DFG_ASCII("a")) < StringViewAscii(DFG_ASCII("b")));
+        EXPECT_TRUE(StringViewUtf8(DFG_UTF8("a")) < StringViewUtf8(DFG_UTF8("b")));
+        EXPECT_FALSE(StringViewUtf8(DFG_UTF8("a")) < StringViewUtf8(DFG_UTF8("a")));
+        EXPECT_TRUE(StringViewUtf8(DFG_UTF8("a")) < StringViewUtf8(DFG_UTF8("ab")));
+        */
+    }
+}
+
+TEST(dfgStr, StringView_lessThan)
+{
+    using namespace DFG_ROOT_NS;
+    StringView_lessThanImpl<StringViewC>([](const char* p)      { return p; });
+    StringView_lessThanImpl<StringViewAscii>([](const char* p)  { return SzPtrAscii(p); });
+    StringView_lessThanImpl<StringViewLatin1>([](const char* p) { return SzPtrLatin1(p); });
+    StringView_lessThanImpl<StringViewUtf8>([](const char* p)   { return SzPtrUtf8(p); });
+
+    StringView_lessThanImpl<StringViewSzC>([](const char* p)      { return p; });
+    StringView_lessThanImpl<StringViewSzAscii>([](const char* p)  { return SzPtrAscii(p); });
+    StringView_lessThanImpl<StringViewSzLatin1>([](const char* p) { return SzPtrLatin1(p); });
+    StringView_lessThanImpl<StringViewSzUtf8>([](const char* p)   { return SzPtrUtf8(p); });
+
+    EXPECT_FALSE(StringViewC(nullptr) < StringViewC(nullptr));
+}
+
+
+namespace
+{
     template <class StringView_T, class UntypedStringView_T>
     static void StringView_autoConvToUntyped_impl(const StringView_T& sv)
     {

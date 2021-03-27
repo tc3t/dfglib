@@ -228,6 +228,7 @@ namespace DFG_DETAIL_NS
     protected:
         using BaseClass         = StringViewCommonBase<Char_T, Str_T>;
         using PtrT              = typename BaseClass::PtrT;
+        using PtrRawT           = typename BaseClass::PtrRawT;
 
         StringViewDefaultBase() :
             m_nSize(0)
@@ -243,6 +244,17 @@ namespace DFG_DETAIL_NS
         {
             return m_nSize == 0;
         }
+
+        // memcmp() causes undefined behaviour if argument is nullptr even when size argument is 0.
+        // Thus passing beginRaw() to memcmp() is not valid even if not actually comparing anything
+        // so this function is a helper that guarantees to return valid pointer even in case of empty.
+        PtrRawT privBeginRawForMemcmp() const
+        {
+            auto p = toCharPtr_raw(this->begin());
+            DFG_ASSERT_UB(p != nullptr || this->empty());
+            return (p != nullptr) ? p : reinterpret_cast<const Char_T*>(this);
+        }
+
     protected:
         size_t m_nSize;	        // Length of the string as returned by strLen().
     };
@@ -684,6 +696,16 @@ inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, S
 }
 
 template<class Char_T, class Str_T>
+inline bool operator<(const StringView<Char_T, Str_T>& left, const StringView<Char_T, Str_T>& right)
+{
+    const auto nMinSize = Min(left.size(), right.size());
+    // memcmp() need non-null arguments even if nMinSize is zero (https://stackoverflow.com/a/16363034), but views can return nullptr when empty.
+    // -> using special helper that guarantees to give non-null pointer.
+    const auto cmp = std::memcmp(left.privBeginRawForMemcmp(), right.privBeginRawForMemcmp(), nMinSize);
+    return (cmp < 0 || (cmp == 0 && left.size() < right.size()));
+}
+
+template<class Char_T, class Str_T>
 inline bool operator!=(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& left, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
 {
     return !(left == right);
@@ -735,9 +757,15 @@ inline bool operator!=(const SzPtr_T& left, DFG_CLASS_NAME(StringView)<Char_T, S
 }
 
 template<class Char_T, class Str_T>
-inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& right)
+inline bool operator<(const Str_T& s, const StringViewSz<Char_T, Str_T>& right)
 {
     return DFG_MODULE_NS(str)::strCmp(s.c_str(), right.c_str()) < 0;
+}
+
+template<class Char_T, class Str_T>
+inline bool operator<(const StringViewSz<Char_T, Str_T>& left, const StringViewSz<Char_T, Str_T> & right)
+{
+    return DFG_MODULE_NS(str)::strCmp(left.c_str(), right.c_str()) < 0;
 }
 
 template<class Char_T, class Str_T>
