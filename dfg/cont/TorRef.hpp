@@ -17,6 +17,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             bool hasItem() const { return static_cast<const Impl_T&>(*this).hasItem(); }
             void createDefaultItem() { static_cast<Impl_T&>(*this).createDefaultItem(); }
             void setItem(const T& src) { static_cast<Impl_T&>(*this).setItem(src); }
+            void setItem(T&& src) { static_cast<Impl_T&>(*this).setItem(std::move(src)); }
             T* itemPtr() const { return static_cast<const Impl_T&>(*this).itemPtr(); }
         };
 
@@ -34,6 +35,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             bool hasItem() const        { return !m_item.empty(); }
             void createDefaultItem()    { m_item[0] = T(); }
             void setItem(const T& src)  { m_item[0] = src; }
+            void setItem(T&& src)       { m_item[0] = std::move(src); }
             T*        itemPtr()         { return &m_item[0]; }
             const T*  itemPtr() const   { return &m_item[0]; }
 
@@ -55,6 +57,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             bool hasItem() const                { return m_spItem.get() != nullptr; }
             void createDefaultItem()            { m_spItem.reset(new T()); }
             void setItem(const T& src)          { if (!m_spItem) m_spItem.reset(new T(src)); else *m_spItem = src; }
+            void setItem(T&& src)               { if (!m_spItem) m_spItem.reset(new T(std::move(src))); else *m_spItem = std::move(src); }
             T* itemPtr() const                  { return m_spItem.get(); }
             const StorageType& storage() const  { return m_spItem; }
 
@@ -83,6 +86,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         {
             DFG_CLASS_NAME(TorRef) tor;
             tor.internalStorage().setItem(other);
+            return tor;
+        }
+
+        static TorRef makeInternallyOwning(T&& val)
+        {
+            TorRef tor;
+            tor.internalStorage().setItem(std::move(val));
             return tor;
         }
 

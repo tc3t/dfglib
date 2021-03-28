@@ -418,6 +418,13 @@ TEST(dfgCont, TorRef)
         EXPECT_EQ(0, ref);
     }
 
+    // Basic test with move-only type
+    {
+        auto tor = TorRef<std::unique_ptr<int>>::makeInternallyOwning(std::unique_ptr<int>(new int(5)));
+        ASSERT_TRUE(tor.item());
+        EXPECT_EQ(5, *tor.item());
+    }
+
     // Basic test with non-integral type.
     {
         std::vector<double> vec;
