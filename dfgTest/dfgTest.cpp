@@ -88,6 +88,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVectorPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector_keyValueRanges";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector_makeIndexMapped";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector_valueCopyOr";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SetVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapToStringViews";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SortedSequence";

@@ -599,6 +599,31 @@ TEST(dfgCont, MapVector_makeIndexMapped)
 
 namespace
 {
+    template <class Map_T>
+    void MapVector_valueCopyOrImpl()
+    {
+        // Basic test SoA
+        {
+            Map_T m;
+            m["a"] = 1;
+            EXPECT_EQ(1, m.valueCopyOr("a", 2));
+            EXPECT_EQ(0, m.valueCopyOr("b"));
+            EXPECT_EQ(10, m.valueCopyOr("b", 10));
+        }
+    }
+} // unnamed namespace
+
+TEST(dfgCont, MapVector_valueCopyOr)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+
+    MapVector_valueCopyOrImpl<MapVectorSoA<std::string, int>>();
+    MapVector_valueCopyOrImpl<MapVectorAoS<std::string, int>>();
+}
+
+namespace
+{
     template <class Set_T>
     void testSetInterface(Set_T& se, const unsigned long nRandEngSeed)
     {

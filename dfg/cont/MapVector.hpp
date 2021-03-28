@@ -377,6 +377,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 return rv;
             }
 
+            // Returns copy of value mapped to 'key' or if it doesn't exist, returns 'defaultValue'.
+            mapped_type valueCopyOr(const key_type& key, mapped_type defaultValue = mapped_type())
+            {
+                auto iter = find(key);
+                return (iter != end()) ? iter->second : defaultValue;
+            }
+
         }; // class MapVectorCrtp
 
         //template <class T> struct DefaultMapVectorContainerType { typedef std::vector<T> type; };
