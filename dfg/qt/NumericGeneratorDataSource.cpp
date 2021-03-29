@@ -1,12 +1,15 @@
 #include "NumericGeneratorDataSource.hpp"
 #include "../alg.hpp"
 #include "../numericTypeTools.hpp"
+#include "../math/sign.hpp"
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::NumericGeneratorDataSource)
 {
 public:
     using DataSourceIndex = ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::DataSourceIndex;
     DataSourceIndex m_nRowCount = 0;
+    double m_first = std::numeric_limits<double>::quiet_NaN();
+    double m_step = std::numeric_limits<double>::quiet_NaN();
     DataSourceIndex m_nTransferBlockSize = NumericGeneratorDataSource::defaultTransferBlockSize();
 };
 
@@ -16,14 +19,51 @@ public:
 }
 
 ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::NumericGeneratorDataSource(QString sId, const DataSourceIndex nRowCount, const DataSourceIndex transferBlockSize)
+    : NumericGeneratorDataSource(std::move(sId), nRowCount, 0, 1, transferBlockSize)
+{
+}
+
+::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::NumericGeneratorDataSource(QString sId, const DataSourceIndex nRowCount, const double first, const double step, const DataSourceIndex transferBlockSize)
 {
     this->m_uniqueId = std::move(sId);
     this->m_bAreChangesSignaled = true;
     DFG_OPAQUE_REF().m_nRowCount = Min(nRowCount, maxRowCount());
+    DFG_OPAQUE_REF().m_first = first;
+    DFG_OPAQUE_REF().m_step = step;
     DFG_OPAQUE_REF().m_nTransferBlockSize = Max(DataSourceIndex(1), Min(transferBlockSize, DFG_OPAQUE_REF().m_nRowCount));
 }
 
 ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::~NumericGeneratorDataSource() = default;
+
+auto ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::createByCountFirstStep(QString sId, DataSourceIndex nRowCount, double first, double step) -> std::unique_ptr<NumericGeneratorDataSource>
+{
+    return std::unique_ptr<NumericGeneratorDataSource>(new NumericGeneratorDataSource(std::move(sId), nRowCount, first, step, defaultTransferBlockSize()));
+}
+
+auto ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::createByCountFirstLast(QString sId, DataSourceIndex nRowCount, double first, double last) -> std::unique_ptr<NumericGeneratorDataSource>
+{
+    using namespace ::DFG_MODULE_NS(math);
+    if (nRowCount <= 0 || (nRowCount == 1 && first != last))
+        return nullptr;
+    const auto step = (nRowCount > 1) ? (last - first) / static_cast<double>(nRowCount - 1) : 0;
+    if (!isFinite(first) || !isFinite(step) || signBit(last - first) != signBit(step))
+        return nullptr;
+    return std::unique_ptr<NumericGeneratorDataSource>(new NumericGeneratorDataSource(std::move(sId), nRowCount, first, step, defaultTransferBlockSize()));
+}
+
+auto ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::createByfirstLastStep(QString sId, const double first, const double last, const double step) -> std::unique_ptr<NumericGeneratorDataSource>
+{
+    using namespace ::DFG_MODULE_NS(math);
+    if (!isFinite(first) || !isFinite(last) || !isFinite(step) || signBit(last - first) != signBit(step) || (last != first && step == 0))
+        return nullptr;
+    const double doubleStepCount = (last - first) / step;
+    const double doubleStepCountFloored = std::floor(doubleStepCount);
+    DataSourceIndex nCount = 0;
+    if (!isFloatConvertibleTo(doubleStepCountFloored, &nCount))
+        return nullptr;
+    ++nCount; // Adding first
+    return std::unique_ptr<NumericGeneratorDataSource>(new NumericGeneratorDataSource(std::move(sId), nCount, first, step, defaultTransferBlockSize()));
+}
 
 auto ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::columnCount() const -> DataSourceIndex
 {
@@ -89,12 +129,15 @@ void ::DFG_MODULE_NS(qt)::NumericGeneratorDataSource::forEachElement_byColumn(co
     const auto nTotalRowCount = this->rowCount();
     const auto nTransferBlockSize = (DFG_OPAQUE_PTR()) ? DFG_OPAQUE_PTR()->m_nTransferBlockSize : defaultTransferBlockSize();
 
+    const auto first = DFG_OPAQUE_REF().m_first;
+    const auto step = DFG_OPAQUE_REF().m_step;
+
     std::vector<double> buffer(Min(nTotalRowCount, nTransferBlockSize));
     for (DataSourceIndex i = 0; i < nTotalRowCount; i = saturateAdd<decltype(i)>(i, buffer.size()))
     {
         const auto nBufferSize = Min(nTotalRowCount - i, buffer.size());
         auto effectiveRange = makeRange(buffer.begin(), buffer.begin() + nBufferSize);
-        ::DFG_MODULE_NS(alg)::generateAdjacent(effectiveRange, i, 1);
+        ::DFG_MODULE_NS(alg)::generateAdjacent(effectiveRange, first + i * step, step);
         SourceDataSpan dataBlob;
         dataBlob.set(effectiveRange);
         handler(dataBlob);

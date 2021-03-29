@@ -1127,17 +1127,131 @@ TEST(dfgQt, NumericGeneratorDataSource)
         EXPECT_EQ(ValueVector<double>({0, 1, 2, 3, 4}), vals);
     }
 
-    // Testing data more than block size.
+    const auto storeValuesFromSource = [](NumericGeneratorDataSource& ds)
     {
-        const DataSourceIndex nRowCount = 5;
-        NumericGeneratorDataSource ds("test", nRowCount, 3);
         ValueVector<double> vals;
         ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& dataSpan)
         {
             auto doubleSpan = dataSpan.doubles();
             vals.insert(vals.end(), doubleSpan.begin(), doubleSpan.end());
         });
+        return vals;
+    };
+
+    // Testing data more than block size.
+    {
+        const DataSourceIndex nRowCount = 5;
+        NumericGeneratorDataSource ds("test", nRowCount, 3);
+        const auto vals = storeValuesFromSource(ds);
         EXPECT_EQ(ValueVector<double>({0, 1, 2, 3, 4}), vals);
+    }
+
+    // createByCountFirstStep
+    {
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstStep("test", 0, 1, 2);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_TRUE(storeValuesFromSource(*spDs).empty());
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstStep("test", 1, 3, 5);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({3}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstStep("test", 3, 10, -20);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({10, -10, -30}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstStep("test", 3, 10, 0);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({10, 10, 10}), storeValuesFromSource(*spDs));
+        }
+    }
+
+    // createByCountFirstLast
+    {
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 0, 1, 2);
+            ASSERT_TRUE(spDs == nullptr);
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 1, 3, 3);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({3}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 1, 3, 5);
+            ASSERT_TRUE(spDs == nullptr);
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 2, 3, 5);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({3, 5}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 5, 6, 8);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({6, 6.5, 7, 7.5, 8}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 5, 8, 6);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({8, 7.5, 7, 6.5, 6}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 1, 3, std::numeric_limits<double>::quiet_NaN());
+            ASSERT_TRUE(spDs == nullptr);
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByCountFirstLast("test", 1, std::numeric_limits<double>::quiet_NaN(), 3);
+            ASSERT_TRUE(spDs == nullptr);
+        }
+    }
+
+    // createByfirstLastStep
+    {
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 0, 1, 0);
+            ASSERT_TRUE(spDs == nullptr);
+        }
+
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 0, 1, 1);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({0, 1}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 1, 3, 4);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({1}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 1, 3, 0.75);
+            ASSERT_TRUE(spDs != nullptr);
+            EXPECT_EQ(ValueVector<double>({1, 1.75, 2.5}), storeValuesFromSource(*spDs));
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 1, 3, -1);
+            ASSERT_TRUE(spDs == nullptr);
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 3, 1, 1);
+            ASSERT_TRUE(spDs == nullptr);
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 1, 3, std::numeric_limits<double>::quiet_NaN());
+            ASSERT_TRUE(spDs == nullptr);
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 1, std::numeric_limits<double>::quiet_NaN(), 3);
+            ASSERT_TRUE(spDs == nullptr);
+        }
+        {
+            auto spDs = NumericGeneratorDataSource::createByfirstLastStep("test", 1, 2, std::numeric_limits<double>::quiet_NaN());
+            ASSERT_TRUE(spDs == nullptr);
+        }
     }
 
     // Testing query mask handling: handler is not expected to get called if numbers are not requested.
