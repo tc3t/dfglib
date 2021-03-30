@@ -12,6 +12,7 @@
 #include <dfg/typeTraits.hpp>
 #include <dfg/iter/CustomAccessIterator.hpp>
 #include <dfg/cont/TrivialPair.hpp>
+#include <dfg/iter/FunctionValueIterator.hpp>
 
 TEST(dfgIter, RangeIterator)
 {
@@ -525,7 +526,60 @@ TEST(dfgIter, CustomAccessIterator)
         ++iterString;
         EXPECT_EQ(cont.end(), iterInt.underlyingIterator());
         EXPECT_EQ(cont.end(), iterString.underlyingIterator());
+    }   
+}
+
+TEST(dfgIter, FunctionValueIterator)
+{
+    using namespace ::DFG_MODULE_NS(iter);
+
+    // Basic test
+    {
+        const auto func = [](size_t i) { return i; };
+        auto iter = makeFunctionValueIterator(size_t(0), func);
+        std::vector<size_t> vals;
+        std::copy(iter, iter + 5, std::back_inserter(vals));
+        EXPECT_EQ(std::vector<size_t>({0, 1, 2, 3, 4}), vals);
     }
 
-    
+    // Testing operators 
+    {
+        auto iter = makeFunctionValueIterator(size_t(0), [](size_t i) { return i * 10; });
+        EXPECT_EQ(0, *iter);
+        EXPECT_EQ(10, *(iter + 1));
+        EXPECT_EQ(20, *(iter + 2));
+        EXPECT_EQ(0, *iter);
+        EXPECT_EQ(10, *++iter);
+        EXPECT_EQ(10, *iter++);
+        EXPECT_EQ(20, *iter);
+        EXPECT_EQ(20, *iter--);
+        EXPECT_EQ(10, *iter);
+        EXPECT_EQ(0, *(iter - 1));
+        iter += 1;
+        EXPECT_EQ(20, *iter);
+        iter -= 2;
+        EXPECT_EQ(0, *iter);
+        EXPECT_EQ(0, iter - iter);
+        EXPECT_EQ(2, (iter + 2) - iter);
+    }
+
+    // Testing use of std::function
+    {
+        double val = 1;
+        const auto func = [&](size_t i) { return static_cast<double>(i) + val; };
+        auto iter = makeFunctionValueIterator(size_t(0), func);
+        EXPECT_EQ(1, *iter);
+        val = 2;
+        EXPECT_EQ(2, *iter);
+    }
+
+    // makeIndexIterator
+    {
+        auto iter = makeIndexIterator(size_t(0));
+        std::vector<size_t> vals;
+        std::copy(iter, iter + 3, std::back_inserter(vals));
+        EXPECT_EQ(std::vector<size_t>({ 0, 1, 2 }), vals);
+        std::copy(iter + 10, ((iter + 12) - 5) + 5, std::back_inserter(vals));
+        EXPECT_EQ(std::vector<size_t>({ 0, 1, 2, 10, 11 }), vals);
+    }
 }

@@ -2,6 +2,7 @@
 
 #include "iter.hpp"
 #include "iter/CustomAccessIterator.hpp"
+#include "iter/FunctionValueIterator.hpp"
 #include "iter/interleavedIterator.hpp"
 #include "iter/IsContiguousMemoryIterator.hpp"
 #include "iter/iteratorTemplate.hpp"
