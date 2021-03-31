@@ -10,23 +10,23 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
  * Data source providing generated numbers without any external dependencies to files etc.
  * Only provives data for query mask 'DataMaskNumerics'.
 */
-class NumericGeneratorDataSource : public GraphDataSource
+class NumberGeneratorDataSource : public GraphDataSource
 {
 public:
     using BaseClass = GraphDataSource;
 
-    NumericGeneratorDataSource(QString sId, DataSourceIndex nRowCount); // Creates object identical to createByCountFirstStep(sId, nRowCount, 0, 1)
-    NumericGeneratorDataSource(QString sId, DataSourceIndex nRowCount, DataSourceIndex transferBlockSize);
+    NumberGeneratorDataSource(QString sId, DataSourceIndex nRowCount); // Creates object identical to createByCountFirstStep(sId, nRowCount, 0, 1)
+    NumberGeneratorDataSource(QString sId, DataSourceIndex nRowCount, DataSourceIndex transferBlockSize);
 private:
-    NumericGeneratorDataSource(QString sId, DataSourceIndex nRowCount, double first, double step, DataSourceIndex transferBlockSize);
+    NumberGeneratorDataSource(QString sId, DataSourceIndex nRowCount, double first, double step, DataSourceIndex transferBlockSize);
 public:
-    ~NumericGeneratorDataSource() override;
+    ~NumberGeneratorDataSource() override;
 
-    static std::unique_ptr<NumericGeneratorDataSource> createByCountFirstStep(QString sId, DataSourceIndex nRowCount, double first, double step);
-    static std::unique_ptr<NumericGeneratorDataSource> createByCountFirstLast(QString sId, DataSourceIndex nRowCount, double first, double step);
+    static std::unique_ptr<NumberGeneratorDataSource> createByCountFirstStep(QString sId, DataSourceIndex nRowCount, double first, double step);
+    static std::unique_ptr<NumberGeneratorDataSource> createByCountFirstLast(QString sId, DataSourceIndex nRowCount, double first, double step);
     // Returns generator for values {first, first + step, ..., first + N*step }, where N is such that first + N*step <= last and first + (N+1)*step > last.
     // Note: 'last' is not guaranteed to appear in the sequence: this can also happen due to rounding errors.
-    static std::unique_ptr<NumericGeneratorDataSource> createByfirstLastStep(QString sId, double first, double last, double step);
+    static std::unique_ptr<NumberGeneratorDataSource> createByfirstLastStep(QString sId, double first, double last, double step);
 
 // Begin: interface overloads -->
     auto columnCount() const -> DataSourceIndex override;
@@ -47,6 +47,6 @@ public:
 
     DFG_OPAQUE_PTR_DECLARE();
 
-}; // class NumericGeneratorDataSource
+}; // class NumberGeneratorDataSource
 
 }} // module namespace

@@ -44,7 +44,7 @@ SOURCES += \
     ../dfg/qt/FileDataSource.cpp \
     ../dfg/qt/CsvFileDataSource.cpp \
     ../dfg/qt/SQLiteFileDataSource.cpp \
-    ../dfg/qt/NumericGeneratorDataSource.cpp \
+    ../dfg/qt/NumberGeneratorDataSource.cpp \
     ../dfg/qt/qxt/gui/qxtspanslider.cpp \
     ../dfg/qt/JsonListWidget.cpp \
     ../dfg/qt/sqlTools.cpp \
@@ -78,7 +78,7 @@ HEADERS += \
     ../dfg/qt/FileDataSource.hpp \
     ../dfg/qt/CsvFileDataSource.hpp \
     ../dfg/qt/SQLiteFileDataSource.hpp \
-    ../dfg/qt/NumericGeneratorDataSource.hpp \
+    ../dfg/qt/NumberGeneratorDataSource.hpp \
     ../dfg/qt/sqlTools.hpp \
     ../dfg/qt/JsonListWidget.hpp \
     ../dfg/qt/PatternMatcher.hpp
