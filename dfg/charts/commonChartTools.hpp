@@ -855,10 +855,14 @@ namespace DFG_DETAIL_NS
         using StringT = StringUtf8;
         using StringView = StringViewUtf8;
         using StringViewSz = StringViewSzUtf8;
+        using ValueContainer = std::vector<StringT>;
 
         // Given string must accessible for the lifetime of 'this'
         ParenthesisItem(const StringT& sv);
         ParenthesisItem(StringT&&) = delete;
+
+        ValueContainer::const_iterator begin() const { return m_values.cbegin(); }
+        ValueContainer::const_iterator end()   const { return m_values.cend(); }
 
         // Constructs from StringView promised to outlive 'this'
         static ParenthesisItem fromStableView(StringView sv);
@@ -868,9 +872,9 @@ namespace DFG_DETAIL_NS
         size_t valueCount() const { return m_values.size(); }
 
         template <class T>
-        T valueAs(const size_t nIndex) const
+        T valueAs(const size_t nIndex, bool* pSuccess = nullptr) const
         {
-            return ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex));
+            return ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex), pSuccess);
         }
 
         StringViewSz value(const size_t nIndex) const

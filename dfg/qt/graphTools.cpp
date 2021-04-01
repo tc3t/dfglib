@@ -32,6 +32,8 @@
 
 #include "../build/compilerDetails.hpp"
 
+#include "../iter/FunctionValueIterator.hpp"
+
 #include <atomic>
 #include <regex>
 
@@ -75,6 +77,7 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 // Including before <boost/histogram.hpp> would cause compilation error on MSVC as this includes Shlwapi.h which for unknown reason breaks histogram
 #include "CsvFileDataSource.hpp"
 #include "SQLiteFileDataSource.hpp"
+#include "NumberGeneratorDataSource.hpp"
 
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
@@ -119,15 +122,87 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
         return p;
     }
 
+    static void deleteLaterDeleter(GraphDataSource* p)
+    {
+        if (p) p->deleteLater();
+    }
+
+    static std::shared_ptr<NumberGeneratorDataSource> createNumberGeneratorSource(const GraphDataSourceId& id, const ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem& args)
+    {
+        using namespace ::DFG_MODULE_NS(math);
+        if (args.valueCount() < 1 || args.valueCount() > 3)
+            return nullptr;
+        // First checking case (count, [first], [step]).
+        {
+            std::array<double, 3> numberArgs = { std::numeric_limits<double>::quiet_NaN(), 0, 1 };
+            bool bSuccess = false;
+            for (size_t i = 0, nCount = args.valueCount(); i < nCount; ++i)
+            {
+                numberArgs[i] = args.valueAs<double>(i, &bSuccess);
+                if (!bSuccess)
+                    break;
+            }
+            DataSourceIndex nCount = 0;
+            if (isFloatConvertibleTo(numberArgs[0], &nCount) &&
+                    isFinite(numberArgs[1]) &&
+                    isFinite(numberArgs[2]))
+                return std::shared_ptr<NumberGeneratorDataSource>(NumberGeneratorDataSource::createByCountFirstStep(id, nCount, numberArgs[1], numberArgs[2]).release(), deleteLaterDeleter);
+        }
+
+        // Getting here means that wasn't number form arguments, trying named arguments.
+        using ParenthesisItem = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
+        using StringView = ParenthesisItem::StringView;
+        ::DFG_MODULE_NS(cont)::MapVectorSoA<StringView, double> argMap;
+        for (const auto& arg : args)
+        {
+            auto namedArg = ParenthesisItem::fromStableView(arg);
+            if (namedArg.key().empty() || namedArg.valueCount() != 1)
+                return nullptr; // Got unrecognized arg, considering whole arg list invalid and returning nullptr.
+            argMap[namedArg.key()] = namedArg.valueAs<double>(0);
+        }
+        /* Accepted combinations
+            count, first, step
+            count, first, last
+            first, last, step
+        */
+        DataSourceIndex nCount = 0;
+        const auto first = argMap.valueCopyOr(StringView(DFG_UTF8("first")), std::numeric_limits<double>::quiet_NaN());
+        if (!isFinite(first))
+            return nullptr;
+        if (isFloatConvertibleTo(argMap.valueCopyOr(StringView(DFG_UTF8("count")), std::numeric_limits<double>::quiet_NaN()), &nCount))
+        {
+            // Getting here means that have first and count. Expecting either step or last
+            auto step = argMap.valueCopyOr(StringView(DFG_UTF8("step")), std::numeric_limits<double>::quiet_NaN());
+            if (isFinite(step)) // Case: Have count, first and step
+                return std::shared_ptr<NumberGeneratorDataSource>(NumberGeneratorDataSource::createByCountFirstStep(id, nCount, first, step).release(), deleteLaterDeleter);
+
+            const auto last = argMap.valueCopyOr(StringView(DFG_UTF8("last")), std::numeric_limits<double>::quiet_NaN());
+            if (isFinite(last)) // Case: Have count, first and last
+                return std::shared_ptr<NumberGeneratorDataSource>(NumberGeneratorDataSource::createByCountFirstLast(id, nCount, first, last).release(), deleteLaterDeleter);
+
+            return nullptr;
+        }
+        else // Case: didn't have count, should have last and step
+        {
+            const auto step = argMap.valueCopyOr(StringView(DFG_UTF8("step")), std::numeric_limits<double>::quiet_NaN());
+            const auto last = argMap.valueCopyOr(StringView(DFG_UTF8("last")), std::numeric_limits<double>::quiet_NaN());
+            if (isFinite(step) && isFinite(last))
+                return std::shared_ptr<NumberGeneratorDataSource>(NumberGeneratorDataSource::createByfirstLastStep(id, first, last, step).release(), deleteLaterDeleter);
+            return nullptr;
+        }
+    }
+
     static auto tryCreateOnDemandDataSource(const GraphDataSourceId& id, DataSourceContainer& dataSources) -> DataSourceContainer::iterator
     {
         const auto sId = qStringToStringUtf8(id);
         ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem item(sId);
         std::shared_ptr<GraphDataSource> spNewSource;
         if (item.key() == DFG_UTF8("csv_file"))
-            spNewSource = std::shared_ptr<CsvFileDataSource>(new CsvFileDataSource(viewToQString(item.value(0)), id), [](GraphDataSource* p) { if (p) p->deleteLater(); });
+            spNewSource = std::shared_ptr<CsvFileDataSource>(new CsvFileDataSource(viewToQString(item.value(0)), id), deleteLaterDeleter);
         else if (item.key() == DFG_UTF8("sqlite_file"))
-            spNewSource = std::shared_ptr<SQLiteFileDataSource>(new SQLiteFileDataSource(viewToQString(item.value(1)), viewToQString(item.value(0)), id), [](GraphDataSource* p) { if (p) p->deleteLater(); });
+            spNewSource = std::shared_ptr<SQLiteFileDataSource>(new SQLiteFileDataSource(viewToQString(item.value(1)), viewToQString(item.value(0)), id), deleteLaterDeleter);
+        else if (item.key() == DFG_UTF8("number_generator_even_step"))
+            spNewSource = createNumberGeneratorSource(id, item);
 
         if (spNewSource)
         {
@@ -888,7 +963,15 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
 {
     const auto inserter = [&](RowToValueMap& values, const SourceDataSpan& sourceData)
     {
-        values.pushBackToUnsorted(sourceData.rows(), sourceData.doubles());
+        const auto& doubleRange = sourceData.doubles();
+        if (sourceData.rows().empty() && !doubleRange.empty())
+        {
+            // If data has doubles but not rows, generating iota rows.
+            auto iter = ::DFG_MODULE_NS(iter)::makeFunctionValueIterator(size_t(0), [](size_t i) { return i; });
+            values.pushBackToUnsorted(makeRange(iter, iter + doubleRange.size()), doubleRange);
+        }
+        else
+            values.pushBackToUnsorted(sourceData.rows(), doubleRange);
     };
     
     return storeColumnFromSourceImpl(m_colToValuesMap, source, nColumn, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics), inserter);

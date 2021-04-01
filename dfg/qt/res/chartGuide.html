@@ -61,7 +61,23 @@
                         <li>Note to Windows users: path separator should be either slash '/' or double backslash '\\', single backslash '\' does not work.</li>
                     </ul>
             </ul>
-    </ul>
+            <ul>
+               <li>number_generator_even_step(args): Generates evenly stepped values.
+               <ul>
+                    <li>Value range can be specified in various ways, simple number form is number_generator_even_step(count, [first = 0], [step = 1])</li>
+                    <li>In addition to number form, it is possible to use named arguments: count, first, last, step</li>
+                    <li>Note: when specifying values by using first, last and step, last value might not be included depending on whether first + N * step == last for some N 
+                        (note that this is subject to floating point inaccuracies so <i>last</i> might not be included even if the equation holds mathematically)</li>
+                    <li>Examples:</li>
+                    <ul>
+                        <li>number_generator_even_step(100): Generates 100 values {0, 1, ..., 99}</li>
+                        <li>number_generator_even_step(100, 10, 5): Generates 100 values {10, 15, ..., 505}</li>
+                        <li>number_generator_even_step(first(-5.5), last(4.3), count(50)): generates 50 evenly stepped values with first value -5.5 and last 4.3</li>
+                        <li>number_generator_even_step(first(-5.5), last(4.3), step(0.01)): generates evenly stepped values {-5.5, -5.5 + 0.01, -5.5 + 2*0.01, ... , min(4.3, -5.5 + N * 0.01)</li>
+                    </ul>
+                </ul>
+            </ul>
+   </ul>
    <li><i>log_level</i>: Defines log level for an entry; for example setting this to <i>debug</i> can be used to diagnose entry behaviour more closely. Possible values {debug, info, warning, error, none}. By default uses global log level.</li>
    <li><i>x_rows</i>: List of rows to include as semicolon separated, 1-based index list, e.g. "1:3; 5; 7:8" means 1 (=first), 2, 3, 5, 7, 8.</li>
        <ul>
