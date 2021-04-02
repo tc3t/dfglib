@@ -1116,16 +1116,21 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
 
     const auto nLastColumnIndex = columns.back();
     const auto nDefaultValue = nLastColumnIndex + 1;
+    const auto nRowColumnSpecifier = nLastColumnIndex + 2;
 
     auto& xColumnIndex = rColumnIndexes[0];
     auto& yColumnIndex = rColumnIndexes[1];
     xColumnIndex = getChosenColumnIndex(source, ChartObjectFieldIdStr_xSource, defEntry, nDefaultValue);
     yColumnIndex = getChosenColumnIndex(source, ChartObjectFieldIdStr_ySource, defEntry, nDefaultValue);
 
-    const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nLastColumnIndex + 2; };
+    const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nRowColumnSpecifier; };
 
     if (xColumnIndex == GraphDataSource::invalidIndex() || yColumnIndex == GraphDataSource::invalidIndex())
         return TableSelectionOptional(); // Either column was defined but not found.
+
+    // Special handling for number generator: unless specified otherwise, generated values are created as (values, rows) instead of default (rows, values)
+    if (dynamic_cast<const NumberGeneratorDataSource*>(&source) != nullptr && xColumnIndex == nDefaultValue && yColumnIndex == nDefaultValue)
+        yColumnIndex = nRowColumnSpecifier;
 
     auto& bXisRowIndex = rRowFlags[0];
     auto& bYisRowIndex = rRowFlags[1];

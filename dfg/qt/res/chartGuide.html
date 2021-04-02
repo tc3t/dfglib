@@ -64,6 +64,7 @@
             <ul>
                <li>number_generator_even_step(args): Generates evenly stepped values.
                <ul>
+                    <li>Outputs [x], [y] values, where [x] has generated values and [y] has 0-based integer indexes</li>
                     <li>Value range can be specified in various ways, simple number form is number_generator_even_step(count, [first = 0], [step = 1])</li>
                     <li>In addition to number form, it is possible to use named arguments: count, first, last, step</li>
                     <li>Note: when specifying values by using first, last and step, last value might not be included depending on whether first + N * step == last for some N 
