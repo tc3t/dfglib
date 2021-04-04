@@ -70,11 +70,11 @@ void ::DFG_MODULE_NS(qt)::SQLiteFileDataSource::forEachElement_byColumn(const Da
     if (!query.exec())
         return;
 
-    ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer m_sourceSpanBuffer(nCol, queryDetails, &this->m_columnDataTypes, handler);
+    ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::SourceSpanBuffer sourceSpanBuffer(nCol, queryDetails, &this->m_columnDataTypes, handler);
 
     // Reading values and filling table.
     const auto nColInt = saturateCast<int>(nCol);
     for (DataSourceIndex nRow = 1; query.next(); ++nRow)
-        m_sourceSpanBuffer.storeToBuffer(nRow, query.value(nColInt));
-    m_sourceSpanBuffer.submitData();
+        sourceSpanBuffer.storeToBuffer(nRow, query.value(nColInt));
+    sourceSpanBuffer.submitData();
 }

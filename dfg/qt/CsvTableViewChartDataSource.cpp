@@ -179,38 +179,21 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnIndexByName(const S
     return invalidIndex();
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) -> SingleColumnDoubleValuesOptional
-{
-    auto spSelectionViewer = privGetSelectionViewer();
-    if (!spSelectionViewer) // This may happen e.g. if the selection is being updated in analyzeImpl() (in another thread). 
-        return SingleColumnDoubleValuesOptional();
-    if (!isValidIndex(spSelectionViewer->m_columnNames, offsetFromFirst))
-        return SingleColumnDoubleValuesOptional();
-    return singleColumnDoubleValues_byColumnIndex((spSelectionViewer->m_columnNames.begin() + offsetFromFirst)->first);
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) -> SingleColumnDoubleValuesOptional
-{
-    auto rv = std::make_shared<DoubleValueVector>();
-    forEachElement_byColumn(nColIndex, DataQueryDetails(DataQueryDetails::DataMaskNumerics), [&](const SourceDataSpan& sourceData)
-    {
-        const auto doubles = sourceData.doubles();
-        rv->insert(rv->end(), doubles.cbegin(), doubles.cend());
-    });
-    return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator   
-}
-
-void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::enable(const bool b)
+bool ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::enable(const bool b)
 {
     if (!m_spView)
-        return;
+        return false;
     if (b)
     {
         m_spView->addSelectionAnalyzer(m_spSelectionAnalyzer);
         m_spSelectionAnalyzer->addSelectionToQueue(m_spView->getSelection());
+        return true;
     }
     else
+    {
         m_spView->removeSelectionAnalyzer(m_spSelectionAnalyzer.get());
+        return false;
+    }
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnDataTypes() const -> ColumnDataTypeMap

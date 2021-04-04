@@ -32,7 +32,7 @@ public:
     auto columnCount() const -> DataSourceIndex override;
     auto columnIndexes() const -> IndexList override;
     auto columnNames() const -> ColumnNameMap override;
-    void enable(bool b) override;
+    bool enable(bool b) override;
     auto columnDataTypes() const -> ColumnDataTypeMap override;
     auto columnDataType(DataSourceIndex nCol) const -> ChartDataType override;
     void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) override;

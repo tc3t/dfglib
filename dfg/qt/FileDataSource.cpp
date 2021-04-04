@@ -86,9 +86,10 @@ auto ::DFG_MODULE_NS(qt)::FileDataSource::columnIndexByName(const StringViewUtf8
     return m_columnIndexToColumnName.keyByValue(sv, GraphDataSource::invalidIndex());
 }
 
-void ::DFG_MODULE_NS(qt)::FileDataSource::enable(bool b)
+bool ::DFG_MODULE_NS(qt)::FileDataSource::enable(bool b)
 {
     DFG_UNUSED(b);
+    return true; // Disabling is not supported.
 }
 
 auto ::DFG_MODULE_NS(qt)::FileDataSource::columnNames() const -> ColumnNameMap

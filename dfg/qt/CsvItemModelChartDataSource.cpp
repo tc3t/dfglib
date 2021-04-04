@@ -145,27 +145,10 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexByName(const S
     return (rv != -1) ? static_cast<DataSourceIndex>(rv) : invalidIndex();
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_byOffsetFromFirst(const DataSourceIndex offsetFromFirst) -> SingleColumnDoubleValuesOptional
-{
-    return singleColumnDoubleValues_byColumnIndex(offsetFromFirst);
-}
-
-auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::singleColumnDoubleValues_byColumnIndex(const DataSourceIndex nColIndex) -> SingleColumnDoubleValuesOptional
-{
-    auto rv = std::make_shared<DoubleValueVector>();
-    auto& outputVec = *rv;
-
-    forEachElement_byColumn(nColIndex, DataQueryDetails(DataQueryDetails::DataMaskNumerics), [&](const SourceDataSpan& sourceData)
-    {
-        const auto doubleRange = sourceData.doubles();
-        outputVec.insert(outputVec.end(), doubleRange.cbegin(), doubleRange.cend());
-    });
-    return std::move(rv); // explicit move to avoid "call 'std::move' explicitly to avoid copying on older compilers"-warning in Qt Creator
-}
-
-void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::enable(const bool b)
+bool ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::enable(const bool b)
 {
     setChangeSignaling(b);
+    return b;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnDataTypes() const -> ColumnDataTypeMap

@@ -198,11 +198,6 @@ public:
     // Calls handler so that it receives every element in given column. The order of rows in which data is given to handler is unspecified.
     virtual void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
 
-    // Returns double values from given column by offset from first. The order of values with respect to rows is unspecified.
-    virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex /*offsetFromFirst*/) { return SingleColumnDoubleValuesOptional(); }
-    // Returns double values from given column by column index. The order of values with respect to rows is unspecified.
-    virtual SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex) { return SingleColumnDoubleValuesOptional(); }
-
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
     virtual ChartDataType     columnDataType(DataSourceIndex) const;
     virtual ColumnNameMap     columnNames()     const { return ColumnNameMap(); }
@@ -211,9 +206,10 @@ public:
     virtual DataSourceIndex columnCount()   const                         { return 0; }
     virtual DataSourceIndex columnIndexByName(const StringViewUtf8) const { return invalidIndex(); }
 
-    // Enables or disables data source. When disabled, data source may not emit sigChanged() signals or update it's internal data structures.
+    // Requests to enable or disable data source. When disabled, data source may not emit sigChanged() signals or update it's internal data structures.
     // It may, however, respond to data requests e.g. if data is readily available in it's data structures.
-    virtual void enable(bool) = 0;
+    // Function returns the value in use after this call; this may be different from requested.
+    virtual bool enable(bool) = 0;
 
     // Sets definition viewer so that source can, if needed, know what data is needed from it.
     // Development note: for now as a quick solution interface is restricted to setting only one viewer.

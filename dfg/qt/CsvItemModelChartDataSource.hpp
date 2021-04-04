@@ -47,9 +47,7 @@ public:
     DataSourceIndex columnCount() const override;
     IndexList       columnIndexes() const override;
     DataSourceIndex columnIndexByName(const StringViewUtf8 sv) const override;
-    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byOffsetFromFirst(DataSourceIndex offsetFromFirst) override;
-    SingleColumnDoubleValuesOptional singleColumnDoubleValues_byColumnIndex(DataSourceIndex nColIndex) override;
-    void enable(bool b) override;
+    bool enable(bool b) override;
     ColumnDataTypeMap columnDataTypes() const override;
     ColumnNameMap columnNames() const override;
     // End interface overloads <--

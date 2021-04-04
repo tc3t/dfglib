@@ -91,9 +91,9 @@ auto ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::columnIndexes() const -> In
     return {0};
 }
 
-void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::enable(bool b)
+bool ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::enable(bool b)
 {
-    DFG_UNUSED(b);
+    return b; // This source does not emit anything or have internal data structures to update, so enabling/disabling does not affect it; might as well tell the caller that requested mode is used.
 }
 
 auto ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::columnNames() const -> ColumnNameMap
