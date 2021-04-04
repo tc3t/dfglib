@@ -1009,8 +1009,18 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
     {
         return &v.second == pId;
     });
-    // As there's no mechanism to verify if cacheItem is to be used by someone else, always copying.
-    return (iter != m_colToValuesMap.end()) ? iter->second : RowToValueMap();
+    if (iter != m_colToValuesMap.end())
+    {
+        if (dynamic_cast<const NumberGeneratorDataSource*>(this->m_spSource.data()) == nullptr)
+            return iter->second; // As there's no mechanism to verify if cacheItem is to be used by someone else, always copying.
+        else // Case: source is number generator. Since generating is cheap, always releasing the content. This effetively means that caching is not used for NumberGenerator even though values are still fetched through cache object.
+        {
+            this->m_bIsValid = false; // Data gets moved out so marking this cache item invalid.
+            return std::move(iter->second);
+        }
+    }
+    else
+        return RowToValueMap();
 }
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnToIndex(const RowToValueMap* pColumn) const -> IndexT
@@ -1111,6 +1121,8 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
     auto iter = m_tableSelectionDatas.find(key);
     if (iter == m_tableSelectionDatas.end())
         iter = m_tableSelectionDatas.insert(std::make_pair(key, std::make_shared<TableSelectionCacheItem>())).first;
+    else if (iter->second && !iter->second->isValid())
+        iter->second = std::make_shared<TableSelectionCacheItem>(); // Cache item existed, but was invalid -> creating a new one.
 
     auto& rCacheItem = *iter->second;
 
@@ -4693,6 +4705,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
         QString s;
         for (const auto& item : m_spCache->m_tableSelectionDatas)
         {
+            if (!item.second || !item.second->isValid()) // Not printing invalid caches.
+                continue;
             if (!s.isEmpty())
                 s += ", ";
             s += QString("{ key: %1, column count: %2 }").arg(item.first).arg(item.second->columnCount());
@@ -4905,7 +4919,8 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
 
     // xValueMap is also used as final (x,y) table passed to series.
     // releaseOrCopy() will return either moved data or copy of it.
-    auto xValueMap = (pXdata != pYdata) ? tableData.releaseOrCopy(pXdata) : *pXdata;
+    // Note: if pXdata == pYdata, possible releasing of pXdata affects yData as well.
+    auto xValueMap = tableData.releaseOrCopy(pXdata);
     xValueMap.setSorting(false);
 
     using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
@@ -4917,7 +4932,7 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
             defEntry.log(GraphDefinitionEntry::LogLevel::debug, tr("x_rows-entry defines %1 row(s)").arg(xRows.sizeOfSet()));
     }
 
-    const auto& yValueMap = *pYdata;
+    const auto& yValueMap = (pXdata != pYdata) ? *pYdata : xValueMap;
     auto xIter = xValueMap.cbegin();
     auto yIter = yValueMap.cbegin();
     DataSourceIndex nSizeAfterRowFilter = 0;
