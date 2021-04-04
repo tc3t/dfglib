@@ -151,6 +151,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_forEachDefinedFunctionNameWhile";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_functors";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_randomFunctions";
+    //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_time_epochMsec";
     //::testing::GTEST_FLAG(filter) = "dfgMath.isFloatConvertibleTo";
     //::testing::GTEST_FLAG(filter) = "dfgMath.isIntegerValued";
     //::testing::GTEST_FLAG(filter) = "dfgMath.logOfBase";

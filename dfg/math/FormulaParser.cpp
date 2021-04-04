@@ -5,6 +5,7 @@
 #include "../rand.hpp"
 #include <cmath>
 #include <numeric>
+#include <chrono>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include "muparser/muParser.h"
@@ -232,6 +233,12 @@ DFG_TEMP_DEFINE_CALLABLE_1(tgamma, NoCallPreconditions, DFG_TEMP_ARG_MORPHER_D)
 #undef DFG_TEMP_ARG_MORPHER_UUD
 #undef DFG_TEMP_ARG_MORPHER_II
 
+double time_epochMsec()
+{
+    using namespace std::chrono;
+    return static_cast<double>(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
+}
+
 } } } // dfg:math::DFG_DETAIL_NS
 
 
@@ -247,6 +254,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 ::DFG_MODULE_NS(math)::FormulaParser::FormulaParser()
 {
 #define DFG_TEMP_DEFINE_FUNC(NAME) defineFunction(#NAME, ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::caller_##NAME, true)
+
+    defineFunction("time_epochMsec", ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::time_epochMsec, false);
 
     // C++11
     DFG_TEMP_DEFINE_FUNC(cbrt);

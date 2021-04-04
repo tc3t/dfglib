@@ -12,6 +12,7 @@
 #include <dfg/str.hpp>
 #include <dfg/cont/contAlg.hpp>
 #include <numeric>
+#include <thread>
 
 TEST(dfgMath, roundedUpToMultiple)
 {
@@ -748,7 +749,7 @@ TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
             "rand_binomial", "rand_cauchy", "rand_chiSquared", "rand_exponential", "rand_extremeValue", "rand_fisherF",
             "rand_gamma", "rand_geometric", "rand_logNormal", "rand_negBinomial", "rand_normal", "rand_poisson", 
             "rand_studentT", "rand_uniformInt", "rand_uniformReal", "rand_weibull",
-            "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh", "tgamma"
+            "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh", "tgamma", "time_epochMsec"
             };
 #if defined(__cpp_lib_math_special_functions) ||  (defined(__STDCPP_MATH_SPEC_FUNCS__) && (__STDCPP_MATH_SPEC_FUNCS__ >= 201003L))
         expectedFunctions.push_back("assoc_laguerre");
@@ -839,3 +840,18 @@ TEST(dfgMath, FormulaParser_cmath)
 #undef DFGTEST_TEMP_TEST_VALUE2
 #undef DFGTEST_TEMP_TEST_VALUE3
 }
+
+TEST(dfgMath, FormulaParser_time_epochMsec)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+    {
+        FormulaParser parser;
+        EXPECT_TRUE(parser.setFormula("time_epochMsec()"));
+        const auto t0 = parser.evaluateFormulaAsDouble();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        const auto t1 = parser.evaluateFormulaAsDouble();
+        EXPECT_GT(t1 - t0, 50);
+    }
+}
+

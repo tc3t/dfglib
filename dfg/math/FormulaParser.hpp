@@ -19,8 +19,12 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 
     /*
-    * Available function: (2020-11-01)
-    *   Note: these are ones that are built-in in muparser, not yet revised so to be considered as implementation details
+    * Available functions: (2021-04-04)
+    *   -C++11 cmath functions: cbrt, erf, erfc, hypot, tgamma
+    *   -If compiled with C++17: assoc_laguerre, assoc_legendre, beta, comp_ellint_1, comp_ellint_2, comp_ellint_3, cyl_bessel_i, cyl_bessel_j, cyl_bessel_k, cyl_neumann,
+    *                            ellint_1, ellint_2, ellint_3, expint, gcd, hermite, laguerre, legendre, lcm, riemann_zeta, sph_bessel, sph_legendre, sph_neumann.
+    *   -time_epochMsec: returns milliseconds since 1970-01-01, i.e. epoch time in milliseconds
+    *   -Built-in function from muparser:
     *		sin, cos, tan
 			asin, acos, atan, atan2
 			sinh, cosh, tanh
@@ -28,7 +32,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 			log2, log10, log, ln (log == ln)
 			exp, sqrt, sign, rint, abs
             sum, avg, min, max
-    * Available constants (2020-11-01)
+    * Available constants (2021-04-04)
     *   Note: these are ones that are built-in in muparser, not yet revised so to be considered as implementation details
     *       _e
     *       _pi
@@ -80,7 +84,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 
         // Defines function as std::function
         // NOTE: these functions are not thread safe and have obscure global restrictions, please read notes below if intending to use.
-        //      -Underlying implementation doesn't native provide a way to define stateful function so this is 
+        //      -Underlying implementation doesn't natively provide a way to define stateful function so this is 
         //       implemented using a global list of standalone functions where each function refer to a global extra parameter.
         //      -For each function type, there can simultaneously be at most maxFunctorCountPerType() functors defined in all FormulaParser instances.
         //          -If having maximum count, this function returns failure.
