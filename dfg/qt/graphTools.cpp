@@ -4364,6 +4364,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget)
     ::DFG_MODULE_NS(time)::TimerCpu m_refreshTimer; // Used for measuring refresh times.
     QPointer<QThread> m_spThreadDataPreparation;
     QPointer<ChartDataPreparator> m_spChartPreparator; // Lives in thread m_spThreadDataPreparation
+    size_t m_nRefreshCounter = 0; // Keeps count of refreshes.
 };
 
 ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::ChartRefreshParam() = default;
@@ -4532,6 +4533,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
         return;
     }
     auto& rChart = *pChart;
+
+    DFG_QT_CHART_CONSOLE_INFO(tr("-------- Refresh number %1 started").arg(DFG_OPAQUE_REF().m_nRefreshCounter));
+    DFG_OPAQUE_REF().m_nRefreshCounter++;
 
     rChart.beginUpdateState();
 
@@ -4951,8 +4955,9 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
             continue;
         }
         // Current xIter and yIter point to the same row ->
-        // store (x,y) values to start of xValueMap if not filtered out.
-        if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow))) // Trusting xRow to have value that can be casted to int.
+        // storing (x,y) values to start of xValueMap if not filtered out.
+        DFG_ASSERT_UB(::DFG_MODULE_NS(math)::isFloatConvertibleTo<int>(xRow));
+        if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow)))
         {
             const auto x = (bXisRowIndex) ? xRow : xIter->second;
             const auto y = (bYisRowIndex) ? yRow : yIter->second;
@@ -5450,7 +5455,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::forDataSource(const GraphD
     if (iter != m_dataSources.end())
         func(**iter);
     else
-        DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find data source '%1', available sources (%2 in total): { %3 }")
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find or couldn't create data source '%1', available sources (%2 in total): { %3 }")
             .arg(id)
             .arg(m_dataSources.size())
             .arg(m_dataSources.idListAsString()));
