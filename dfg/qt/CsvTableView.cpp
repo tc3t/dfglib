@@ -2308,7 +2308,15 @@ namespace
                 m_spSettingsModel->setData(m_spSettingsModel->index(nRow, 1), arrPropDefs[i].m_pszDefault);
             }
 
-            m_pLayout->addWidget(new QLabel(tr("Note: undo is not yet available for content generation"), this));
+            m_pLayout->addWidget(new QLabel(tr("Note: undo is not available for content generation"), this));
+            auto pStaticHelpLabel = new QLabel(tr("Available formats:\n"
+                "    Numbers: see documentation of printf\n"
+                "    Date times:\n"
+                "        date_sec_local, date_msec_local: value is interpreted as epoch time in seconds or milliseconds and converted to local time\n"
+                "        date_sec_utc, date_msec_utc: like date_sec_local, but converted to UTC time\n"
+                "        Format precision accepts formats defined for QDateTime, for example yyyy-MM-dd HH:mm:ss.zzz"), this);
+            pStaticHelpLabel->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+            m_pLayout->addWidget(pStaticHelpLabel);
             m_pLayout->addWidget(m_spDynamicHelpWidget.get());
 
             auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
@@ -2784,7 +2792,7 @@ namespace
     const char gszFloatTypes[] = "gGeEfaA";
 
     // TODO: test
-    bool isValidFormatType(const QString& s)
+    bool isValidNumberFormatType(const QString& s)
     {
         if (s.isEmpty())
             return false;
@@ -2803,6 +2811,8 @@ namespace
     {
         const auto sFormatType = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 2, 1)).toString().trimmed();
         auto sPrecision = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 3, 1)).toString();
+        if (sFormatType == "date_sec_local" || sFormatType == "date_msec_local" || sFormatType == "date_sec_utc" || sFormatType == "date_msec_utc")
+            return std::string(QString("%1:%2").arg(sFormatType, sPrecision).toLatin1());
         bool bPrecisionIsUint;
         const auto tr = [&](const char* psz) { return settingsModel.tr(psz); };
         if (!sPrecision.isEmpty() && (sPrecision.toUInt(&bPrecisionIsUint) > 1000 || !bPrecisionIsUint)) // Not sure does this need to be limited; just cut it somewhere.
@@ -2810,7 +2820,7 @@ namespace
             QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Precision-parameter has invalid value; no content generation is done"));
             return std::string();
         }
-        if (!isValidFormatType(sFormatType))
+        if (!isValidNumberFormatType(sFormatType))
         {
             QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Format type parameter is not accepted. Note: only a subset of printf-valid items can be used."));
             return std::string();
@@ -2819,11 +2829,96 @@ namespace
             sPrecision.prepend('.');
         return std::string(("%" + sPrecision + sFormatType).toLatin1());
     }
-}
+} // unnamed namespace
 
 namespace
 {
     typedef decltype(QString().split(' ')) RandQStringArgs;
+
+    enum class GeneratorFormatType
+    {
+        number,
+        dateFromSecondsLocal,
+        dateFromMilliSecondsLocal,
+        dateFromSecondsUtc,
+        dateFromMilliSecondsUtc
+    };
+
+    template <class T>
+    qint64 valToInt64(T val)
+    {
+        return val;
+    }
+
+    qint64 valToDateInt64(double val)
+    {
+        qint64 intVal;
+        return (::DFG_MODULE_NS(math)::isFloatConvertibleTo(val, &intVal)) ? intVal : -1;
+    }
+
+    template <class T, size_t N>
+    void setTableElement(CsvItemModel::DataTable& table, const int r, const int c, const T val, char(&buffer)[N], const char *pFormat, const GeneratorFormatType type)
+    {
+        if (type == GeneratorFormatType::number)
+        {
+            if (pFormat)
+                ::DFG_MODULE_NS(str)::toStr(val, buffer, pFormat);
+            else
+                ::DFG_MODULE_NS(str)::toStr(val, buffer);
+            table.setElement(r, c, DFG_ROOT_NS::SzPtrUtf8R(buffer));
+            buffer[0] = '\0';
+        }
+        else
+        {
+            const auto i64 = valToDateInt64(val);
+            if (i64 < 0 || !pFormat)
+            {
+                table.setElement(r, c, DFG_UTF8(""));
+                return;
+            }
+            if (type == GeneratorFormatType::dateFromSecondsLocal)
+                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromSecsSinceEpoch(i64, Qt::LocalTime).toString(pFormat)));
+            else if (type == GeneratorFormatType::dateFromMilliSecondsLocal)
+                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromMSecsSinceEpoch(i64, Qt::LocalTime).toString(pFormat)));
+            else if (type == GeneratorFormatType::dateFromSecondsUtc)
+                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromMSecsSinceEpoch(i64, Qt::UTC).toString(pFormat)));
+            else if (type == GeneratorFormatType::dateFromMilliSecondsUtc)
+                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromMSecsSinceEpoch(i64, Qt::UTC).toString(pFormat)));
+            else
+            {
+                DFG_ASSERT_IMPLEMENTED(false);
+            }
+        }
+    }
+
+    GeneratorFormatType adjustFormatAndGetType(const char*& pFormat)
+    {
+        using namespace ::DFG_MODULE_NS(str);
+        if (!pFormat)
+            return GeneratorFormatType::number;
+        else if (beginsWith(pFormat, "date_sec_local:"))
+        {
+            pFormat += DFG_COUNTOF_SZ("date_sec_local:");
+            return GeneratorFormatType::dateFromSecondsLocal;
+        }
+        else if (beginsWith(pFormat, "date_msec_local:"))
+        {
+            pFormat += DFG_COUNTOF_SZ("date_msec_local:");
+            return GeneratorFormatType::dateFromMilliSecondsLocal;
+        }
+        else if (beginsWith(pFormat, "date_sec_utc:"))
+        {
+            pFormat += DFG_COUNTOF_SZ("date_sec_utc:");
+            return GeneratorFormatType::dateFromSecondsUtc;
+        }
+        else if (beginsWith(pFormat, "date_msec_utc:"))
+        {
+            pFormat += DFG_COUNTOF_SZ("date_msec_utc:");
+            return GeneratorFormatType::dateFromMilliSecondsUtc;
+        }
+        else
+            return GeneratorFormatType::number;
+    }
 
     template <class Distr_T, size_t ArgCount>
     bool generateRandom(const TargetType target, DFG_CLASS_NAME(CsvTableView)& view, const RandQStringArgs& qstrArgs, const char* pFormat = nullptr)
@@ -2846,16 +2941,13 @@ namespace
 
         auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
         char szBuffer[32];
-        const auto generator = [&](DFG_CLASS_NAME(CsvItemModel)::DataTable& table, int r, int c, size_t)
+        const auto formatType = adjustFormatAndGetType(pFormat);
+        const auto generator = [&](CsvItemModel::DataTable& table, int r, int c, size_t)
             {
                 // If result type is bool, using int, otherwise the same type. This is because toStr() wouldn't compile with bool result type.
                 typedef typename std::conditional<std::is_same<decltype(distr(randEng)), bool>::value, int, decltype(distr(randEng))>::type ResultType;
                 const ResultType val = distr(randEng);
-                if (pFormat)
-                    ::DFG_MODULE_NS(str)::toStr(val, szBuffer, pFormat);
-                else
-                    ::DFG_MODULE_NS(str)::toStr(val, szBuffer);
-                table.setElement(r, c, DFG_ROOT_NS::SzPtrUtf8R(szBuffer));
+                setTableElement(table, r, c, val, szBuffer, pFormat, formatType);
             };
         generateForEachInTarget(target, view, rModel, generator);
         return true;
@@ -2989,7 +3081,7 @@ bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
         if (sFormat.empty())
             return false;
 
-        const auto pszFormat = sFormat.c_str();
+        auto pszFormat = sFormat.c_str();
         const auto sFormula = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
         ::DFG_MODULE_NS(math)::FormulaParser parser;
         DFG_VERIFY(parser.defineRandomFunctions());
@@ -3005,13 +3097,14 @@ bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
         parser.defineVariable("tcol", &tc);
         parser.defineConstant("rowcount", rowCount);
         parser.defineConstant("colcount", colCount);
+        const auto formatType = adjustFormatAndGetType(pszFormat);
         const auto generator = [&](CsvItemModel::DataTable& table, const int r, const int c, size_t)
         {
             pTable = &table;
             tr = CsvItemModel::internalRowIndexToVisible(r);
             tc = CsvItemModel::internalColumnIndexToVisible(c);
-            table.setElement(r, c, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(parser.evaluateFormulaAsDouble(), buffer, pszFormat)));
-            buffer[0] = '\0';
+            const auto val = parser.evaluateFormulaAsDouble();
+            setTableElement(table, r, c, val, buffer, pszFormat, formatType);
         };
         generateForEachInTarget(target, *this, rModel, generator);
         return true;
