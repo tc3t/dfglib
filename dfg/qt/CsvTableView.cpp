@@ -2319,6 +2319,9 @@ namespace
             m_pLayout->addWidget(pStaticHelpLabel);
             m_pLayout->addWidget(m_spDynamicHelpWidget.get());
 
+            // Adding spacer item to avoid labels expanding, which doesn't look good.
+            m_pLayout->addStretch();
+
             auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
 
             DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept())));
@@ -2331,6 +2334,7 @@ namespace
             DFG_QT_VERIFY_CONNECT(connect(m_spSettingsModel.get(), &QAbstractItemModel::dataChanged, this, &ContentGeneratorDialog::onDataChanged));
 
             updateDynamicHelp();
+            removeContextHelpButtonFromDialog(this);
         }
 
         void setGenerateFailed(bool bFailed, const QString& sFailReason = QString());
@@ -2388,6 +2392,17 @@ namespace
             {
                 createPropertyParams(rowToPropertyId(1), m_nLatestComboBoxItemIndex);
                 updateDynamicHelp();
+
+                // Resizing table so that all parameter rows show
+                if (m_spSettingsTable && m_spSettingsModel)
+                {
+                    auto pVerticalHeader = m_spSettingsTable->verticalHeader();
+                    const auto nSectionSize = (pVerticalHeader) ? pVerticalHeader->sectionSize(0) : 30;
+                    const auto nShowCount = m_spSettingsModel->rowCount() + 1; // + 1 for header
+                    const auto nSize = nSectionSize * nShowCount + 2; // +2 to avoid scroll bar appearing, size isn't exactly row heigth * row count.
+                    m_spSettingsTable->setMinimumHeight(nSize);
+                    m_spSettingsTable->setMaximumHeight(nSize);
+                }
             }
         }
 
