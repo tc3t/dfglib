@@ -589,6 +589,33 @@ TEST(dfgMath, FormulaParser)
         EXPECT_EQ(1,  parser.setFormulaAndEvaluateAsDouble("fglobal(0)+fglobal(0)")); // Tests that fglobal(0) is not optimized to single call.
         EXPECT_TRUE(isNan(parser.setFormulaAndEvaluateAsDouble("f0(2)")));
     }
+
+    // Error handling
+    {
+        FormulaParser parser;
+        FormulaParser::ReturnStatus rv;
+        parser.evaluateFormulaAsDouble(&rv);
+        EXPECT_FALSE(rv);
+        EXPECT_EQ(2, rv.errorCode()); // This is implementation detail.
+        EXPECT_FALSE(rv.errorString().empty());
+        parser.setFormula("1");
+        EXPECT_EQ(1, parser.evaluateFormulaAsDouble(&rv));
+        EXPECT_TRUE(rv);
+        EXPECT_TRUE(rv.errorString().empty());
+        rv = parser.defineVariable("x", nullptr);
+        EXPECT_FALSE(rv);
+        EXPECT_TRUE(rv.internalErrorObjectPtr() != nullptr);
+        double x;
+        rv = parser.defineVariable("x", &x);
+        EXPECT_TRUE(rv);
+        EXPECT_TRUE(rv.errorString().empty());
+        rv = parser.defineConstant("x", 1);
+        EXPECT_FALSE(rv);
+        rv = parser.defineFunction("+-*/+-1 ab < >", [](double) { return 1.0; }, false);
+        EXPECT_FALSE(rv);
+        EXPECT_EQ(18 , rv.errorCode()); // This is implementation detail.
+        EXPECT_FALSE(rv.errorString().empty());
+    }
 }
 
 TEST(dfgMath, FormulaParser_functors)

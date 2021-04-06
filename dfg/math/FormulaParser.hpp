@@ -40,7 +40,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
     class FormulaParser
     {
     public:
-        using ReturnStatus = bool;
+
+        class ReturnStatus
+        {
+        public:
+            class ErrorDetails;
+
+            ~ReturnStatus();
+
+            static ReturnStatus success() { return ReturnStatus(); }
+            static ReturnStatus failure(const ErrorDetails& errorDetails);
+            static ReturnStatus failure(const char* pszErrorMessage);
+            operator bool() const { return m_spDetails == nullptr; }
+
+            // Returns implementation specific error string.
+            StringViewC errorString() const;
+        
+            // Implementation specific error code that is meaningful only if operator bool() returns false.
+            int errorCode() const;
+
+            // Returns pointer to implementation specific error object. Object is guaranteed valid as long as no non-const methods of 'this' are called.
+            const void* internalErrorObjectPtr();
+
+            std::shared_ptr<const ErrorDetails> m_spDetails;
+        };
 
         FormulaParser();
         ~FormulaParser();
@@ -67,7 +90,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         // If a variable of given identifier already exists, operation fails.
         ReturnStatus defineConstant(const StringViewC sv, double val);
 
-        double       evaluateFormulaAsDouble(); // If unable to evaluate, returns NaN
+        double       evaluateFormulaAsDouble(ReturnStatus* pReturnStatus = nullptr); // If unable to evaluate, returns NaN
 
         // Defines function with given identifier.
         // 'bAllowOptimization': if true, implementation is allowed to optimize

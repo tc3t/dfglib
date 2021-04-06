@@ -242,6 +242,47 @@ double time_epochMsec()
 } } } // dfg:math::DFG_DETAIL_NS
 
 
+class DFG_MODULE_NS(math)::FormulaParser::ReturnStatus::ErrorDetails : public dfg_mu::ParserError
+{
+public:
+    using BaseClass = dfg_mu::ParserError;
+    ErrorDetails(const dfg_mu::ParserError& parserError)
+        : BaseClass(parserError)
+    {}
+}; // class ErrorDetails
+
+::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus::~ReturnStatus() = default;
+
+auto ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus::failure(const ErrorDetails & errorDetails) -> ReturnStatus
+{
+    ReturnStatus rv;
+    rv.m_spDetails = std::make_shared<ErrorDetails>(errorDetails);
+    return rv;
+}
+
+auto ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus::failure(const char* pszErrorMessage) -> ReturnStatus
+{
+    ReturnStatus rv;
+    dfg_mu::ParserError parserError((pszErrorMessage) ? pszErrorMessage : "<error message not available>");
+    rv.m_spDetails = std::make_shared<ErrorDetails>(std::move(parserError));
+    return rv;
+}
+
+const void* ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus::internalErrorObjectPtr()
+{
+    return (this->m_spDetails.get());
+}
+
+auto ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus::errorString() const -> StringViewC
+{
+    return (this->m_spDetails) ? this->m_spDetails->GetMsg() : StringViewC();
+}
+
+int ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus::errorCode() const
+{
+    return (this->m_spDetails) ? this->m_spDetails->GetCode() : 0;
+}
+
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 {
     using RandEngT = decltype(::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded());
@@ -318,7 +359,7 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctorImpl(ExtraParam_T(&extra
             break;
     }
     if (i >= N)
-        return false; // No free slot found
+        return ReturnStatus::failure("No free slots"); // No free slot found
     const auto rv = defineFunction(sv, funcArr[i], bAllowOptimization);
     if (rv)
     {
@@ -351,11 +392,11 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::setFormula(const StringViewC sv) -> R
     try
     {
         DFG_OPAQUE_REF().m_parser.SetExpr(sv.toString());
-        return true;
+        return ReturnStatus::success();
     }
-    catch(const dfg_mu::Parser::exception_type& /*e*/)
+    catch(const dfg_mu::Parser::exception_type& e)
     {
-        return false;
+        return ReturnStatus::failure(e);
     }
 }
 
@@ -368,16 +409,15 @@ double ::DFG_MODULE_NS(math)::FormulaParser::setFormulaAndEvaluateAsDouble(const
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineVariable(const StringViewC sv, double* pVar) -> ReturnStatus
 {
     if (!pVar)
-        return false;
+        return ReturnStatus::failure("Variable pointer is null");
     try
     {
         DFG_OPAQUE_REF().m_parser.DefineVar(sv.toString(), pVar);
-        return true;
+        return ReturnStatus::success();
     }
     catch (const dfg_mu::Parser::exception_type& e)
     {
-        DFG_UNUSED(e);
-        return false;
+        return ReturnStatus::failure(e);
     }
 }
 
@@ -386,16 +426,15 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineConstant(const StringViewC sv, 
     const auto sIdentifier = sv.toString();
     auto& parser = DFG_OPAQUE_REF().m_parser;
     if (parser.GetVar().find(sIdentifier) != parser.GetVar().end())
-        return false;
+        return ReturnStatus::failure("Identifier already exists");
     try
     {
         parser.DefineConst(sIdentifier, val);
-        return true;
+        return ReturnStatus::success();
     }
     catch (const dfg_mu::Parser::exception_type& e)
     {
-        DFG_UNUSED(e);
-        return false;
+        return ReturnStatus::failure(e);
     }
 }
 
@@ -406,12 +445,11 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctionImpl(const StringViewC&
     try
     {
         parser.DefineFun(sv.toString(), func, bAllowOptimization);
-        return true;
+        return ReturnStatus::success();
     }
     catch (const dfg_mu::Parser::exception_type& e)
     {
-        DFG_UNUSED(e);
-        return false;
+        return ReturnStatus::failure(e);
     }
 }
 
@@ -421,16 +459,19 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv,
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv, FuncType_D_3D func, bool bAllowOptimization) -> ReturnStatus { return defineFunctionImpl(sv, func, bAllowOptimization); }
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunction(const StringViewC& sv, FuncType_D_4D func, bool bAllowOptimization) -> ReturnStatus { return defineFunctionImpl(sv, func, bAllowOptimization); }
 
-double ::DFG_MODULE_NS(math)::FormulaParser::evaluateFormulaAsDouble()
+double ::DFG_MODULE_NS(math)::FormulaParser::evaluateFormulaAsDouble(ReturnStatus* pReturnStatus)
 {
     try
     {
         const auto val = DFG_OPAQUE_REF().m_parser.Eval();
+        if (pReturnStatus)
+            *pReturnStatus = ReturnStatus::success();
         return val;
     }
     catch (const dfg_mu::Parser::exception_type& e)
     {
-        DFG_UNUSED(e);
+        if (pReturnStatus)
+            *pReturnStatus = ReturnStatus::failure(e);
         return std::numeric_limits<double>::quiet_NaN();
     }
 }
@@ -495,13 +536,13 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineRandomFunctions() -> ReturnStat
 {
     auto& opaqueThis = DFG_OPAQUE_REF();
     if (opaqueThis.m_spRandEng)
-        return false;
+        return ReturnStatus::failure("Random engine not available");
     using RandEngT = std::remove_reference<decltype(opaqueThis)>::type::RandEngT;
     opaqueThis.m_parser.EnableOptimizer(false); // muParser doesn't seem to respect optimize-flag (https://github.com/beltoforion/muparser/issues/93), so must turn off optimizer completely.
     opaqueThis.m_spRandEng.reset(new RandEngT(::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded()));
     DistributionAdder<RandEngT> adder(*this, *opaqueThis.m_spRandEng);
     ::DFG_MODULE_NS(rand)::DFG_DETAIL_NS::forEachDistributionType(adder);
-    return adder.m_bAllGood;
+    return (adder.m_bAllGood) ? ReturnStatus::success() : ReturnStatus::failure("Failed to add distribution");
 }
 
 void ::DFG_MODULE_NS(math)::FormulaParser::forEachDefinedFunctionNameWhile(std::function<bool (const StringViewC&)> handler) const
