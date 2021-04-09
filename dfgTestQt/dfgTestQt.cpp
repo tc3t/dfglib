@@ -575,6 +575,44 @@ TEST(dfgQt, CsvTableView_clear)
     EXPECT_EQ(nColCount, nSignalCount);
 }
 
+TEST(dfgQt, CsvTableView_replace)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    view.setModel(&viewModel);
+
+    csvModel.insertRows(0, 2);
+    csvModel.insertColumns(0, 2);
+    csvModel.setDataNoUndo(0, 0, DFG_UTF8("a"));
+    csvModel.setDataNoUndo(0, 1, DFG_UTF8("b"));
+    csvModel.setDataNoUndo(1, 0, DFG_UTF8("1a2"));
+    csvModel.setDataNoUndo(1, 1, DFG_UTF8("d"));
+    csvModel.setModifiedStatus(false);
+
+    // This should not edit anything as nothing is selected
+    EXPECT_EQ(0, view.replace(QVariantMap({{"find", "a"}, {"replace", "c"}})));
+    EXPECT_FALSE(csvModel.isModified());
+
+    view.selectAll();
+    EXPECT_EQ(0, view.replace(QVariantMap()));
+    EXPECT_FALSE(csvModel.isModified());
+    EXPECT_EQ(0, view.replace(QVariantMap({{"find", "a"}})));
+    EXPECT_FALSE(csvModel.isModified());
+    EXPECT_EQ(0, view.replace(QVariantMap({{"find", "a3"}, {"replace", "bug"}})));
+    EXPECT_FALSE(csvModel.isModified());
+
+    EXPECT_EQ(2, view.replace(QVariantMap({{"find", "a"}, {"replace", "c"}})));
+    EXPECT_TRUE(csvModel.isModified());
+
+    EXPECT_STREQ("c", csvModel.RawStringPtrAt(0, 0).c_str());
+    EXPECT_STREQ("b", csvModel.RawStringPtrAt(0, 1).c_str());
+    EXPECT_STREQ("1c2", csvModel.RawStringPtrAt(1, 0).c_str());
+    EXPECT_STREQ("d", csvModel.RawStringPtrAt(1, 1).c_str());
+}
+
 namespace
 {
     struct CsvItemModelReadFormatTestCase

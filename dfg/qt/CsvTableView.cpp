@@ -490,6 +490,12 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
             DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindPrevious));
             addAction(pAction);
         }
+        {
+            auto pAction = new QAction(tr("Replace"), this);
+            pAction->setShortcut(tr("Ctrl+H"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onReplace));
+            addAction(pAction);
+        }
 
         // Filter
         {
@@ -1972,6 +1978,49 @@ void DFG_CLASS_NAME(CsvTableView)::redo()
         m_spUndoStack->item().redo();
 }
 
+size_t CsvTableView::replace(const QVariantMap& params)
+{
+    if (params["find"].isNull() || params["replace"].isNull())
+        return 0;
+    auto pCsvModel = csvModel();
+    if (!pCsvModel)
+        return 0;
+    const auto sFindText = params["find"].toString();
+    const auto findTextUtf8 = sFindText.toUtf8();
+    const auto sReplaceText = params["replace"].toString();
+
+    auto lockReleaser = tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        privShowExecutionBlockedNotification("Replace");
+        return 0;
+    }
+    size_t nEditCount = 0;
+    forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+    {
+        auto tpsz = pCsvModel->RawStringPtrAt(index.row(), index.column());
+        if (!tpsz || std::strstr(tpsz.c_str(), findTextUtf8.data()) == nullptr)
+            return;
+        // TODO: implement replace without QString temporaries for less overhead.
+        QString sTemp = QString::fromUtf8(tpsz.c_str());
+        sTemp.replace(sFindText, sReplaceText);
+        ++nEditCount;
+        pCsvModel->setDataNoUndo(index, sTemp);
+    });
+    QString sToolTipMsg;
+    if (nEditCount > 0)
+    {
+        clearUndoStack(); // If something was edited outside undostack, undoing previous actions might not work correctly anymore so clearing the undostack.
+        sToolTipMsg = tr("Replace edited %1 cell(s)").arg(nEditCount);
+    }
+    else
+        sToolTipMsg = tr("No cells were edited by replace");
+
+    // Triggering tooltip directly from here didn't show so using a timer.
+    QTimer::singleShot(10, [=]() { QToolTip::showText(QCursor::pos(), sToolTipMsg); } );
+    return nEditCount;
+}
+
 QString DFG_MODULE_NS(qt)::CsvTableView::makeClipboardStringForCopy(QChar cDelim)
 {
     auto pViewModel = model();
@@ -3374,6 +3423,72 @@ void DFG_CLASS_NAME(CsvTableView)::onFindNext()
 void DFG_CLASS_NAME(CsvTableView)::onFindPrevious()
 {
     onFind(false);
+}
+
+class ReplaceDialog : public QDialog
+{
+public:
+    using BaseClass = QDialog;
+
+    ReplaceDialog(CsvTableView* pParent)
+        : BaseClass(pParent)
+        , m_spTableView(pParent)
+    {
+        auto spLayout = std::unique_ptr<QFormLayout>(new QFormLayout);
+        m_spFindEdit.reset(new QLineEdit(this));
+        m_spReplaceEdit.reset(new QLineEdit(this));
+        spLayout->addRow(tr("Note:"), new QLabel(tr("Applies to selection only, is case sensitive and no undo available"), this));
+        spLayout->addRow(tr("Find"), m_spFindEdit.get());
+        spLayout->addRow(tr("Replace"), m_spReplaceEdit.get());
+
+        auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
+        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::accepted, this, &QDialog::accept));
+        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::rejected, this, &QDialog::reject));
+        spLayout->addWidget(&rButtonBox);
+
+        delete this->layout();
+        this->setLayout(spLayout.release());
+        removeContextHelpButtonFromDialog(this);
+        setWindowTitle(tr("Find & Replace"));
+    }
+
+    void accept() override
+    {
+        if (!m_spTableView)
+            return BaseClass::reject();
+        QVariantMap params;
+        params["find"] = m_spFindEdit->text();
+        params["replace"] = m_spReplaceEdit->text();
+        m_spTableView->replace(params);
+
+        BaseClass::accept();
+    }
+
+    QObjectStorage<QLineEdit> m_spFindEdit;
+    QObjectStorage<QLineEdit> m_spReplaceEdit;
+    QPointer<CsvTableView> m_spTableView;
+};
+
+bool CsvTableView::isSelectionNonEmpty() const
+{
+    bool bNonEmptySelection = false;
+    forEachCsvModelIndexInSelection([&](const QModelIndex&, bool& rbContinue) // TODO: funktioksi
+    {
+        rbContinue = false;
+        bNonEmptySelection = true;
+    });
+    return bNonEmptySelection;
+}
+
+void CsvTableView::onReplace()
+{
+    if (!isSelectionNonEmpty())
+    {
+        QToolTip::showText(QCursor::pos(), tr("Replace requires selection"));
+        return;
+    }
+    ReplaceDialog dlg(this);
+    dlg.exec();
 }
 
 void DFG_CLASS_NAME(CsvTableView)::setFindText(const StringMatchDef matchDef, const int nCol)

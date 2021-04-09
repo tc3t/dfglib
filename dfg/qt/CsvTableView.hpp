@@ -193,6 +193,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // row count if no selection exists.
         int getFirstSelectedViewRow() const;
 
+        // Returns true iff current selection is non-empty, i.e. at least one cell is selected.
+        bool isSelectionNonEmpty() const;
+
         // Returns list of row indexes of column @p nCol.
         // If proxy model is given, the returned indexes will correspond
         // to the indexes of the underlying model, otherwise they will be
@@ -351,6 +354,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool cut();
         void undo();
         void redo();
+        size_t replace(const QVariantMap& params); // Returns the number of cells edited.
 
         bool deleteCurrentColumn();
         bool deleteCurrentColumn(const int nCol);
@@ -369,6 +373,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onFindRequested();
         void onFindNext();
         void onFindPrevious();
+
+        void onReplace();
 
         void onFilterRequested();
 
