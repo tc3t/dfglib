@@ -59,8 +59,8 @@ void smoothWithNeighbourAverages(Cont_T&& cont, const size_t nWindowRadiusReques
 
     for(size_t i = 1; i<cont.size(); ++i)
     {
-        size_t nLeftRadius = Min(i, nWindowRadius);
-        size_t nRightRadius = Min(nWindowRadius, cont.size() - i - 1);
+        const size_t nLeftRadius = Min(i, nWindowRadius);
+        const size_t nRightRadius = Min(nWindowRadius, cont.size() - i - 1);
         const auto nElemsInWnd = 1 + nLeftRadius + nRightRadius;
 
         const auto nNewMemoryIndex = (nPrevMemoryIndex + 1) % previousVals.size();
@@ -89,22 +89,29 @@ void smoothWithNeighbourAverages(Cont_T&& cont, const size_t nWindowRadiusReques
                 const bool bAddedValue = !isNan(newWindowItemVal);
                 nValueCountInWindow += int(bAddedValue) - int(bPoppedValue);
                 if (bAddedValue && bPoppedValue) // case: added new, popped old.
+                {
                     // avg_new = (sum_prev + new_item - popped_item) / nValueCountInWindow
                     //         = avg_prev + (new_item - popped_item) / nValueCountInWindow
                     newAvg = prevAvg + (newWindowItemVal - dropoutItem) / nValueCountInWindow;
+                }
                 else if (bAddedValue) // case: added value, popped nan
                 {
                     // avg_new = (sum_prev + new_item) / nValueCountInWindow
                     //         = (nPrevValueCountInWnd * sum_prev / nPrevValueCountInWnd + new_item) / nValueCountInWindow
                     //         = (nPrevValueCountInWnd * avg_prev + new_item) / nValueCountInWindow
-                    newAvg = (nPrevValueCountInWnd * prevAvg + newWindowItemVal) / (static_cast<ValueT>(nValueCountInWindow));
+                    if (isNan(prevAvg)) // Making sure that won't get stuck to NaNs in case that previous window was NaN-only.
+                    {
+                        DFG_ASSERT_CORRECTNESS(nValueCountInWindow == 1);
+                        prevAvg = 0;
+                    }
+                    newAvg = (nValueCountInWindow > 0) ? (nPrevValueCountInWnd * prevAvg + newWindowItemVal) / (static_cast<ValueT>(nValueCountInWindow)) : std::numeric_limits<ValueT>::quiet_NaN();
                 }
                 else if (bPoppedValue) // case: added NaN, popped value
                 {
                     // avg_new = (sum_prev - popped_item) / nValueCountInWindow
                     //         = (nPrevValueCountInWnd * sum_prev / nPrevValueCountInWnd - popped_item) / nValueCountInWindow
                     //         = (nPrevValueCountInWnd * avg_prev - popped_item) / nValueCountInWindow
-                    newAvg = (nPrevValueCountInWnd * prevAvg - dropoutItem) / (static_cast<ValueT>(nValueCountInWindow));
+                    newAvg = (nValueCountInWindow > 0) ? (nPrevValueCountInWnd * prevAvg - dropoutItem) / (static_cast<ValueT>(nValueCountInWindow)) : std::numeric_limits<ValueT>::quiet_NaN();
                 }
                 else // case: added NaN, popped NaN
                 {
@@ -119,7 +126,8 @@ void smoothWithNeighbourAverages(Cont_T&& cont, const size_t nWindowRadiusReques
             const auto dropoutItem = previousVals[nNewMemoryIndex];
             if (!isNan(dropoutItem))
             {
-                newAvg = (prevAvg - dropoutItem / nValueCountInWindow) * ValueT(nPrevValueCountInWnd) / (nValueCountInWindow - ValueT(1));
+                const auto newValueCountInWindow = static_cast<ValueT>(nValueCountInWindow) - ValueT(1);
+                newAvg = (newValueCountInWindow > 0) ? (prevAvg - dropoutItem / nValueCountInWindow) * ValueT(nPrevValueCountInWnd) / newValueCountInWindow : std::numeric_limits<ValueT>::quiet_NaN();
                 --nValueCountInWindow;
             }
             else

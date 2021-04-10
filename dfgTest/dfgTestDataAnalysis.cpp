@@ -207,6 +207,33 @@ TEST(dfgDataAnalysis, smoothWithNeighbourAverages)
             EXPECT_TRUE(isNan(arr[2]));
             EXPECT_TRUE(isNan(arr[3]));
         }
+
+        // Leading NaNs filling whole window
+        {
+            std::array<double, 6> arr = { nanVal, nanVal, nanVal, 1, 2, 3 };
+            smoothWithNeighbourAverages(arr, 1);
+            DFGTEST_EXPECT_NAN(arr[0]);
+            DFGTEST_EXPECT_NAN(arr[1]);
+            DFGTEST_EXPECT_NAN(arr[2]);
+            EXPECT_EQ(1.5, arr[3]);
+            EXPECT_EQ(2, arr[4]);
+            EXPECT_EQ(2.5, arr[5]);
+        }
+
+        // NaNs filling whole window within data
+        {
+            // Note: using inexact values instead of simple 1 and 2 at the beginning is important to test that buffer getting empty from numbers
+            // doesn't put average to inf instead NaN due to rounding errors
+            std::array<double, 7> arr = { 1.7, 1.6, nanVal, nanVal, nanVal, 3, 4 };
+            smoothWithNeighbourAverages(arr, 1);
+            EXPECT_DOUBLE_EQ((1.7 + 1.6) / 2, arr[0]);
+            EXPECT_DOUBLE_EQ((1.7 + 1.6) / 2, arr[1]);
+            DFGTEST_EXPECT_NAN(arr[2]);
+            DFGTEST_EXPECT_NAN(arr[3]);
+            DFGTEST_EXPECT_NAN(arr[4]);
+            EXPECT_EQ(3.5, arr[5]);
+            EXPECT_EQ(3.5, arr[6]);
+        }
     }
 
     const auto testWithRandomData = [](const size_t nWindowSize)
@@ -375,6 +402,31 @@ TEST(dfgDataAnalysis, smoothWithNeighbourMedians)
             EXPECT_TRUE(isNan(arr[1]));
             EXPECT_TRUE(isNan(arr[2]));
             EXPECT_TRUE(isNan(arr[3]));
+        }
+
+        // Leading NaNs filling whole window
+        {
+            std::array<double, 6> arr = { nanVal, nanVal, nanVal, 1, 2, 5 };
+            smoothWithNeighbourMedians(arr, 1);
+            DFGTEST_EXPECT_NAN(arr[0]);
+            DFGTEST_EXPECT_NAN(arr[1]);
+            DFGTEST_EXPECT_NAN(arr[2]);
+            EXPECT_EQ(1.5, arr[3]);
+            EXPECT_EQ(2, arr[4]);
+            EXPECT_EQ(3.5, arr[5]);
+        }
+
+        // NaNs filling whole window within data
+        {
+            std::array<double, 7> arr = { 1.7, 1.6, nanVal, nanVal, nanVal, 3, 4 };
+            smoothWithNeighbourAverages(arr, 1);
+            EXPECT_DOUBLE_EQ((1.7 + 1.6) / 2, arr[0]);
+            EXPECT_DOUBLE_EQ((1.7 + 1.6) / 2, arr[1]);
+            DFGTEST_EXPECT_NAN(arr[2]);
+            DFGTEST_EXPECT_NAN(arr[3]);
+            DFGTEST_EXPECT_NAN(arr[4]);
+            EXPECT_EQ(3.5, arr[5]);
+            EXPECT_EQ(3.5, arr[6]);
         }
     }
 
