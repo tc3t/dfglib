@@ -568,6 +568,9 @@ TEST(dfgMath, FormulaParser)
         EXPECT_FALSE(parser.defineVariable("", &x)); // Invalid variable symbol
         EXPECT_FALSE(parser.defineVariable("y", nullptr)); // Invalid variable pointer
         EXPECT_TRUE(isNan(FormulaParser::evaluateFormulaAsDouble("2+-*/6")));
+
+        // Making sure that multiexpression formulas evaluate to NaN.
+        DFGTEST_EXPECT_NAN(parser.evaluateFormulaAsDouble("1,5+2"));
     }
 
     // defineFunction

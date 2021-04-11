@@ -144,7 +144,7 @@ public:
     }
 
     template <class TypeTuple_T, class ... Args_T>
-    static bool checkAndIterateIfNeeded(const std::integral_constant<size_t, sizeof...(Types_T)>, Args_T&& ... args)
+    static bool checkAndIterateIfNeeded(const std::integral_constant<size_t, sizeof...(Types_T)>, Args_T&& ...)
     {
         return true;
     }
@@ -464,6 +464,13 @@ double ::DFG_MODULE_NS(math)::FormulaParser::evaluateFormulaAsDouble(ReturnStatu
     try
     {
         const auto val = DFG_OPAQUE_REF().m_parser.Eval();
+        const auto nResultCount = DFG_OPAQUE_REF().m_parser.GetNumResults();
+        if (nResultCount != 1) // muparser supports evaluating multiple expressions, e.g. 1,1+2 -> 1, 3. FormulaParser does not support such, so considering multiresult evaluations invalid.
+        {
+            if (pReturnStatus)
+                *pReturnStatus = ReturnStatus::failure("Unexpected result count");
+            return std::numeric_limits<double>::quiet_NaN();
+        }
         if (pReturnStatus)
             *pReturnStatus = ReturnStatus::success();
         return val;
