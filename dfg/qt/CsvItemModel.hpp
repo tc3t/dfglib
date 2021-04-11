@@ -374,6 +374,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void columnToStrings(const int nCol, std::vector<QString>& vecStrings);
 
         SzPtrUtf8R RawStringPtrAt(const int nRow, const int nCol) const;
+        StringViewUtf8 RawStringViewAt(const int nRow, const int nCol) const;
+        StringViewUtf8 RawStringViewAt(const QModelIndex& index) const;
 
         // Sets cell strings in column @p nCol to those given in @p vecStrings.
         void setColumnCells(const int nCol, const std::vector<QString>& vecStrings);
@@ -466,8 +468,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const override;
         int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+        // Note: for direct access to data, use RawStringViewAt().
         QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
         QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+        // Note: for setting data without undo, use setDataNoUndo()
         bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
         bool setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role = Qt::EditRole) override;
         Qt::ItemFlags flags(const QModelIndex& index) const override;

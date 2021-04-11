@@ -613,6 +613,67 @@ TEST(dfgQt, CsvTableView_replace)
     EXPECT_STREQ("d", csvModel.RawStringPtrAt(1, 1).c_str());
 }
 
+TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    view.setModel(&viewModel);
+
+    csvModel.insertRows(0, 3);
+    csvModel.insertColumns(0, 2);
+
+    csvModel.setDataNoUndo(0, 0, DFG_UTF8("=-1.5+2"));
+    csvModel.setDataNoUndo(0, 1, DFG_UTF8("abc"));
+    csvModel.setDataNoUndo(1, 0, DFG_UTF8(""));
+    csvModel.setDataNoUndo(1, 1, DFG_UTF8("hypot(3, 4) + 10^2"));
+    csvModel.setDataNoUndo(2, 0, DFG_UTF8("1.5+2"));
+    csvModel.setDataNoUndo(2, 1, DFG_UTF8("-5+(2,5*2)"));
+
+    // Selecting first, testing evaluation and undo/redo
+    {
+        view.makeSingleCellSelection(0, 0);
+        view.evaluateSelectionAsFormula();
+        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        view.undo();
+        EXPECT_EQ("=-1.5+2", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        view.redo();
+        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        view.undo();
+        EXPECT_EQ("=-1.5+2", csvModel.RawStringViewAt(0, 0).asUntypedView());
+    }
+
+    // Selecting all, testing evaluation and undo/redo
+    {
+        view.selectAll();
+        view.evaluateSelectionAsFormula();
+        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("abc", csvModel.RawStringViewAt(0, 1).asUntypedView());
+        EXPECT_EQ("", csvModel.RawStringViewAt(1, 0).asUntypedView());
+        EXPECT_EQ("105", csvModel.RawStringViewAt(1, 1).asUntypedView());
+        EXPECT_EQ("3.5", csvModel.RawStringViewAt(2, 0).asUntypedView());
+        EXPECT_EQ("-5+(2,5*2)", csvModel.RawStringViewAt(2, 1).asUntypedView());
+
+        view.undo();
+        EXPECT_EQ("=-1.5+2", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("abc", csvModel.RawStringViewAt(0, 1).asUntypedView());
+        EXPECT_EQ("", csvModel.RawStringViewAt(1, 0).asUntypedView());
+        EXPECT_EQ("hypot(3, 4) + 10^2", csvModel.RawStringViewAt(1, 1).asUntypedView());
+        EXPECT_EQ("1.5+2", csvModel.RawStringViewAt(2, 0).asUntypedView());
+        EXPECT_EQ("-5+(2,5*2)", csvModel.RawStringViewAt(2, 1).asUntypedView());
+
+        view.redo();
+        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("abc", csvModel.RawStringViewAt(0, 1).asUntypedView());
+        EXPECT_EQ("", csvModel.RawStringViewAt(1, 0).asUntypedView());
+        EXPECT_EQ("105", csvModel.RawStringViewAt(1, 1).asUntypedView());
+        EXPECT_EQ("3.5", csvModel.RawStringViewAt(2, 0).asUntypedView());
+        EXPECT_EQ("-5+(2,5*2)", csvModel.RawStringViewAt(2, 1).asUntypedView());
+    }
+}
+
 namespace
 {
     struct CsvItemModelReadFormatTestCase

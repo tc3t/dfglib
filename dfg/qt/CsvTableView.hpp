@@ -279,6 +279,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openFile(const QString& sPath);
         bool openFile(const QString& sPath, const CsvFormatDefinition& formatDef);
 
+        // Shows QToolTip-like status info to user.
+        void showStatusInfoTip(const QString& sMsg);
+
         QString privCreateActionBlockedDueToLockedContentMessage(const QString& actionname);
         void privShowExecutionBlockedNotification(const QString& actionname);
 
@@ -366,6 +369,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool resizeTable();
 
         bool generateContent();
+
+        void evaluateSelectionAsFormula();
 
         bool diffWithUnmodified();
 

@@ -544,6 +544,13 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
         addAction(pAction);
     }
 
+    {
+        auto pAction = new QAction(tr("Evaluate selected as formula"), this);
+        pAction->setShortcut(tr("Alt+C"));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::evaluateSelectionAsFormula));
+        addAction(pAction);
+    }
+
     // Insert-menu
     {
         auto pAction = new QAction(tr("Insert"), this);
@@ -2719,6 +2726,14 @@ namespace
 
 } // unnamed namespace
 
+void CsvTableView::evaluateSelectionAsFormula()
+{
+    if (isSelectionNonEmpty())
+        executeAction<CsvTableViewActionEvaluateSelectionAsFormula>(this);
+    else
+        QToolTip::showText(QCursor::pos(), tr("Selection is empty"));
+}
+
 bool DFG_CLASS_NAME(CsvTableView)::generateContent()
 {
     auto pModel = model();
@@ -4040,6 +4055,18 @@ QString DFG_CLASS_NAME(CsvTableView)::privCreateActionBlockedDueToLockedContentM
     return tr("Executing action '%1' was blocked: table is being accessed by some other operation. Please try again later.").arg(actionname);
 }
 
+void CsvTableView::showStatusInfoTip(const QString& sMsg)
+{
+    // Using tooltip-like QLabel as discussed here: https://forum.qt.io/topic/67240/constantly-updating-tooltip-text/6
+    auto pToolTip = new QLabel(this, Qt::ToolTip);
+    pToolTip->setText(sMsg);
+    pToolTip->setFont(QFont(this->font().family(), 12)); // Increasing font size, default is a bit small.
+    pToolTip->move(QCursor::pos());
+    pToolTip->show();
+    // Scheduling self-destruction after 5 seconds.
+    QTimer::singleShot(5000, pToolTip, &QWidget::deleteLater);
+}
+
 void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QString& actionname)
 {
     // Showing a note to user that execution was blocked. Not using QToolTip as it is a bit brittle in this use case:
@@ -4049,14 +4076,7 @@ void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QS
     // blocked edits in CsvTableViewDelegate was not shown at all.
     //QToolTip::showText(QCursor::pos(), privCreateActionBlockedDueToLockedContentMessage(actionname));
 
-    // Using tooltip-like QLabel as discussed here: https://forum.qt.io/topic/67240/constantly-updating-tooltip-text/6
-    auto pToolTip = new QLabel(this, Qt::ToolTip);
-    pToolTip->setText(privCreateActionBlockedDueToLockedContentMessage(actionname));
-    pToolTip->setFont(QFont(this->font().family(), 12)); // Increasing font size, default is a bit small.
-    pToolTip->move(QCursor::pos());
-    pToolTip->show();
-    // Scheduling self-destruction after 5 seconds.
-    QTimer::singleShot(5000, pToolTip, &QWidget::deleteLater);
+    showStatusInfoTip(privCreateActionBlockedDueToLockedContentMessage(actionname));
 }
 
 auto DFG_CLASS_NAME(CsvTableView)::tryLockForEdit() -> LockReleaser

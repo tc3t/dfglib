@@ -1275,9 +1275,19 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnNames() const -> 
     return names;
 }
 
-auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::RawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
+auto DFG_MODULE_NS(qt)::CsvItemModel::RawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
 {
     return SzPtrUtf8R(m_table(nRow, nCol));
+}
+
+auto DFG_MODULE_NS(qt)::CsvItemModel::RawStringViewAt(const int nRow, const int nCol) const -> StringViewUtf8
+{
+    return StringViewUtf8(m_table(nRow, nCol));
+}
+
+auto DFG_MODULE_NS(qt)::CsvItemModel::RawStringViewAt(const QModelIndex& index) const -> StringViewUtf8
+{
+    return RawStringViewAt(index.row(), index.column());
 }
 
 QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const

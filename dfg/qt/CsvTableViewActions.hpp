@@ -18,6 +18,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "qtBasic.hpp"
 #include "tableViewUndoCommands.hpp"
 #include "../cont/table.hpp"
+#include "../math/FormulaParser.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -607,4 +608,84 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<QString> m_vecHdrStrings;
         std::vector<QString> m_vecFirstRowStrings;
     };
+
+    class CsvTableViewActionEvaluateSelectionAsFormula : public UndoCommand
+    {
+    public:
+        CsvTableViewActionEvaluateSelectionAsFormula(CsvTableView* pView)
+            : m_spView(pView)
+        {
+            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+            if (!pModel)
+                return;
+
+            auto& rView = *m_spView;
+            auto& rModel = *pModel;
+
+            size_t nCellCount = 0;
+            rView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+            {
+                m_cellMemoryUndo.setElement(index.row(), index.column(), rModel.RawStringPtrAt(index.row(), index.column()));
+                ++nCellCount;
+                m_initialSelection.push_back(index);
+            });
+
+            setText(rView.tr("Evaluate %1 cell(s) as formula").arg(nCellCount));
+        }
+
+        void undo()
+        {
+            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+            if (pModel)
+                DFG_DETAIL_NS::restoreCells(m_cellMemoryUndo, *pModel);
+        }
+
+        void redo()
+        {
+            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+            if (!pModel)
+                return;
+            auto& rView = *m_spView;
+            auto& rModel = *pModel;
+            ::DFG_MODULE_NS(math)::FormulaParser parser;
+            char szBuffer[32] = "";
+            QString sFailureMsgs;
+            size_t nFailureCount = 0;
+            const size_t nMaxFailureMessageCount = 10;
+            for (const auto& index : m_initialSelection)
+            {
+                auto sv = rModel.RawStringViewAt(index).asUntypedView();
+                if (!sv.empty() && sv.front() == '=')
+                    sv.pop_front(); // Skipping leading = if present
+                ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus evalStatus;
+                
+                const auto val = (parser.setFormula(sv)) ? parser.evaluateFormulaAsDouble(&evalStatus) : std::numeric_limits<double>::quiet_NaN();
+                if (evalStatus)
+                    rModel.setDataNoUndo(index, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(val, szBuffer)));
+                else
+                {
+                    ++nFailureCount;
+                    if (nFailureCount <= nMaxFailureMessageCount)
+                    {
+                        if (nFailureCount == 1)
+                            sFailureMsgs += rView.tr("Failed evaluations:");
+                        sFailureMsgs.push_back(rView.tr("\ncell(%1, %2): '%3'")
+                            .arg(CsvItemModel::internalRowIndexToVisible(index.row()))
+                            .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
+                            .arg(untypedViewToQStringAsUtf8(evalStatus.errorString())));
+                    }
+                    
+                }
+            }
+            if (nFailureCount > nMaxFailureMessageCount)
+                sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
+            if (!sFailureMsgs.isEmpty())
+                rView.showStatusInfoTip(sFailureMsgs);
+            rView.setSelection(m_initialSelection, [&](const QModelIndex& index) { return rView.mapToViewModel(index); } ); // Selecting the items that were edited by redo.
+        }
+    private:
+        QPointer<CsvTableView> m_spView;
+        QModelIndexList m_initialSelection; // Stores CsvModel indexes to which operation is to be done.
+        DFG_DETAIL_NS::CellMemory m_cellMemoryUndo; // Stores cell content before the operation.
+    }; // class CsvTableViewActionEvaluateSelectionAsFormula
 }}
