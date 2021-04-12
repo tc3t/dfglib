@@ -11,48 +11,54 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
-    class DFG_CLASS_NAME(UndoCommand) : public QUndoCommand
+    class UndoCommand : public QUndoCommand
     {
     public:
-        // Direct redo without need to construct the object first, which may take massive amount of resources compared to direct action.
+        // If UndoCommand has static privDirectRedo() function, calling it directly to avoid constructing the undo object,
+        // which may take massive amount of resources compared to direct action.
         // For example deleting content from a N item row:
-        //      -doing it with T(params).redo() stores old content (N strings) for undo although it will never use it.
+        //      -doing it with T(params).redo() stores old content (N strings), which are never used if undo is disabled.
         template <class Impl_T, class Param0_T>
         static void directRedo(Param0_T&& p0)
         {
             Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0));
         }
 
+        // privDirectRedo() optimization overload for 2 args.
        template <class Impl_T, class Param0_T, class Param1_T>
        static void directRedo(Param0_T&& p0, Param1_T&& p1)
        {
             Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
        }
 
+       // privDirectRedo() optimization overload for 3 args.
        template <class Impl_T, class Param0_T, class Param1_T, class Param2_T>
        static void directRedo(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
        {
             Impl_T::template privDirectRedo<Impl_T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
        }
 
+       // Default directRedo() implementation through new UndoCommand object.
         template <class Impl_T, class Param0_T>
         static void privDirectRedo(Param0_T&& p0)
         {
             Impl_T(std::forward<Param0_T>(p0)).redo();
         }
 
+        // Default directRedo() implementation overload for 2 args.
        template <class Impl_T, class Param0_T, class Param1_T>
        static void privDirectRedo(Param0_T&& p0, Param1_T&& p1)
        {
            Impl_T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1)).redo();
        }
 
+       // Default directRedo() implementation overload for 3 args.
        template <class Impl_T, class Param0_T, class Param1_T, class Param2_T>
        static void privDirectRedo(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
        {
            Impl_T(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2)).redo();
        }
-    };
+    }; // class UndoCommand
 
     DFG_SUB_NS(undoCommands)
     {

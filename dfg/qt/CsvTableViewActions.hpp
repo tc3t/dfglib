@@ -642,23 +642,47 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void redo()
         {
-            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+            privDirectRedoImpl(this->m_spView, &this->m_initialSelection, [&](std::function<void(const QModelIndex&)> indexHandler)
+            {
+                if (!indexHandler)
+                    return;
+                for (const auto& index : this->m_initialSelection)
+                    indexHandler(index);
+            });
+        }
+
+        // Optimization for undoless action.
+        template <class Impl_T>
+        static void privDirectRedo(CsvTableView* pView)
+        {
+            privDirectRedoImpl(pView, nullptr, [&](std::function<void(const QModelIndex&)> indexHandler)
+            {
+                pView->forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+                {
+                    indexHandler(index);
+                });
+            });
+        }
+
+        static void privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelectList, std::function<void (std::function<void (const QModelIndex&)>)> looper)
+        {
+            auto pModel = (pView) ? pView->csvModel() : nullptr;
             if (!pModel)
                 return;
-            auto& rView = *m_spView;
+            auto& rView = *pView;
             auto& rModel = *pModel;
             ::DFG_MODULE_NS(math)::FormulaParser parser;
             char szBuffer[32] = "";
             QString sFailureMsgs;
             size_t nFailureCount = 0;
             const size_t nMaxFailureMessageCount = 10;
-            for (const auto& index : m_initialSelection)
+            looper([&](const QModelIndex &index)
             {
                 auto sv = rModel.RawStringViewAt(index).asUntypedView();
                 if (!sv.empty() && sv.front() == '=')
                     sv.pop_front(); // Skipping leading = if present
                 ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus evalStatus;
-                
+
                 const auto val = (parser.setFormula(sv)) ? parser.evaluateFormulaAsDouble(&evalStatus) : std::numeric_limits<double>::quiet_NaN();
                 if (evalStatus)
                     rModel.setDataNoUndo(index, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(val, szBuffer)));
@@ -674,15 +698,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                             .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
                             .arg(untypedViewToQStringAsUtf8(evalStatus.errorString())));
                     }
-                    
+
                 }
-            }
+            });
             if (nFailureCount > nMaxFailureMessageCount)
                 sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
             if (!sFailureMsgs.isEmpty())
                 rView.showStatusInfoTip(sFailureMsgs);
-            rView.setSelection(m_initialSelection, [&](const QModelIndex& index) { return rView.mapToViewModel(index); } ); // Selecting the items that were edited by redo.
+            if (pSelectList)
+                rView.setSelection(*pSelectList, [&](const QModelIndex& index) { return rView.mapToViewModel(index); }); // Selecting the items that were edited by redo.
         }
+
     private:
         QPointer<CsvTableView> m_spView;
         QModelIndexList m_initialSelection; // Stores CsvModel indexes to which operation is to be done.
