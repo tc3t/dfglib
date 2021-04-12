@@ -679,6 +679,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             looper([&](const QModelIndex &index)
             {
                 auto sv = rModel.RawStringViewAt(index).asUntypedView();
+                if (sv.empty())
+                    return; // Skipping empty strings.
                 if (!sv.empty() && sv.front() == '=')
                     sv.pop_front(); // Skipping leading = if present
                 ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus evalStatus;
