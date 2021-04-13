@@ -190,6 +190,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 ostrm.write(bomBytes.data(), sizeInBytes(bomBytes));
             }
 
+            // Writing empty header.
+            ostrm << ",,,\n";
+
             DFG_CLASS_NAME(Vector)<SvC> uriStack; // Can use string views as the underlying strings in map won't get invalidated.
             for (auto iter = m_mapKeyToValue.cbegin(), iterEnd = m_mapKeyToValue.cend(); iter != iterEnd; ++iter)
             {
