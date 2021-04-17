@@ -82,6 +82,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.intervalSetFromString";
     //::testing::GTEST_FLAG(filter) = "dfgCont.makeVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapBlockIndex";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.MapBlockIndex_benchmarks";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapBlockIndex_iterators";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector";

@@ -1398,14 +1398,16 @@ TEST(dfgCont, CsvFormatDefinition_ToConfig)
     }
 }
 
-TEST(dfgCont, MapBlockIndex)
+namespace
+{
+
+template <class T, size_t N>
+static void mapBlockIndexTestImpl(::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::MapBlockIndex<T, N>&& m)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
 
     {
-        const size_t nBlockSize = 16;
-        MapBlockIndex<const char*, nBlockSize> m;
         EXPECT_TRUE(m.empty());
         EXPECT_EQ(0, m.size());
 
@@ -1414,7 +1416,7 @@ TEST(dfgCont, MapBlockIndex)
         EXPECT_EQ(1, m.size());
         EXPECT_EQ(0, m.backKey());
 
-        const uint32 nBigIndex = 10 * nBlockSize + nBlockSize / 2;
+        const uint32 nBigIndex = 10 * m.blockSize() + m.blockSize() / 2;
         m.set(nBigIndex - 1, "b");
         EXPECT_EQ(2, m.size());
         EXPECT_FALSE(m.empty());
@@ -1443,7 +1445,7 @@ TEST(dfgCont, MapBlockIndex)
         {
             // Insert to end (effectively a no-op)
             {
-                m.insertKeysByPositionAndCount(nBigIndex + nBlockSize * 2, 1000); // This is not expected to do anything
+                m.insertKeysByPositionAndCount(nBigIndex + m.blockSize() * 2, 1000); // This is not expected to do anything
                 EXPECT_EQ(4, m.size());
                 EXPECT_FALSE(m.empty());
                 EXPECT_EQ(nBigIndex, m.backKey());
@@ -1461,7 +1463,7 @@ TEST(dfgCont, MapBlockIndex)
 
             // Insert before last in the preceeding block
             {
-                m.insertKeysByPositionAndCount(nBigIndex - nBlockSize, 1);
+                m.insertKeysByPositionAndCount(nBigIndex - m.blockSize(), 1);
                 EXPECT_EQ(4, m.size());
                 EXPECT_FALSE(m.empty());
                 EXPECT_EQ(nBigIndex + 12, m.backKey());
@@ -1563,10 +1565,14 @@ TEST(dfgCont, MapBlockIndex)
             }
         }
     } // General tests
+}
 
-    // Some overflow tests
+    template <class T, size_t N>
+    static void mapBlockIndexOverflowTestImpl(::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::MapBlockIndex<T, N>&& m)
     {
-        MapBlockIndex<const char*, 1048576> m;
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
+
         // Trying to insert more than what mapping can hold; should only insert as many as possible so that existing mappings do not fall off.
         m.set(1, "a");
         m.set(10, "b");
@@ -1578,15 +1584,13 @@ TEST(dfgCont, MapBlockIndex)
         EXPECT_STREQ("a", m.value(1));
         EXPECT_STREQ("b", m.value(m.backKey()));
     }
-}
 
-TEST(dfgCont, MapBlockIndex_iterators)
+template <class T, size_t N>
+static void MapBlockIndex_iteratorsImpl(::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::MapBlockIndex<T, N>&& m)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(cont);
     using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
-    const size_t nBlockSize = 16;
-    MapBlockIndex<const char*, nBlockSize> m;
     EXPECT_EQ(m.begin(), m.end());
     MapToStringViews<uint32, std::string> mExpected;
     mExpected.insert(5, "a");
@@ -1611,4 +1615,172 @@ TEST(dfgCont, MapBlockIndex_iterators)
     {
         EXPECT_EQ(mExpected[item.first], item.second);
     }
+}
+
+} // unnamed namespace
+
+TEST(dfgCont, MapBlockIndex)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
+
+    mapBlockIndexTestImpl(MapBlockIndex<const char*, 16>());
+    mapBlockIndexTestImpl(MapBlockIndex<const char*, 0>(16));
+
+    mapBlockIndexOverflowTestImpl(MapBlockIndex<const char*, 1048576>());
+    mapBlockIndexOverflowTestImpl(MapBlockIndex<const char*, 0>(1048576));
+}
+
+TEST(dfgCont, MapBlockIndex_iterators)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
+
+    MapBlockIndex_iteratorsImpl(MapBlockIndex<const char*, 16>());
+    MapBlockIndex_iteratorsImpl(MapBlockIndex<const char*, 0>(16));
+}
+
+namespace
+{
+    template <class T, size_t N>
+    static std::tuple<double, size_t, double> mapBlockIndex_benchmarksSingleItem(::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::MapBlockIndex<T, N>&& m)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
+        using namespace DFG_MODULE_NS(time);
+        using namespace DFG_MODULE_NS(rand);
+
+        std::tuple<double, size_t, double> rv;
+
+        auto randEng = createDefaultRandEngineUnseeded();
+        randEng.seed(1234);
+        auto distrEng = makeDistributionEngineUniform(&randEng, size_t(0), size_t(100));
+
+        // Inserting
+        {
+            TimerCpu timer;
+            for (uint32 i = 0; i < 30000000; ++i)
+                m.set(i, distrEng());
+            std::get<0>(rv) = timer.elapsedWallSeconds();
+        }
+
+        // Calculating sum
+        size_t nSum = 0;
+        {
+            for (const auto& val : m)
+                nSum += val.second;
+        }
+        std::get<1>(rv) = nSum;
+
+        // Clearing
+        {
+            TimerCpu timer;
+            m.clear();
+            std::get<2>(rv) = timer.elapsedWallSeconds();
+        }
+        return rv;
+    }
+
+    template <size_t N>
+    static void mapBlockIndex_benchmarksImpl()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(func);
+        using namespace DFG_MODULE_NS(str);
+        using namespace DFG_MODULE_NS(cont)::DFG_DETAIL_NS;
+
+        MemFuncAvg<double> insertRatioAvg;
+        MemFuncAvg<double> clearRatioAvg;
+
+        char buffer[32];
+        char buffer2[32];
+        for (int i = 0; i < 3; ++i)
+        {
+            const auto staticValues = mapBlockIndex_benchmarksSingleItem(MapBlockIndex<size_t, N>());
+            const auto dynamicValues = mapBlockIndex_benchmarksSingleItem(MapBlockIndex<size_t, 0>(N));
+            EXPECT_EQ(std::get<1>(dynamicValues), std::get<1>(staticValues));
+            const auto insertRatio = std::get<0>(dynamicValues) / std::get<0>(staticValues);
+            const auto clearRatio = std::get<2>(dynamicValues) / std::get<2>(staticValues);
+            insertRatioAvg(insertRatio);
+            clearRatioAvg(clearRatio);
+            DFGTEST_MESSAGE("Block " << N << ", insert ratio: " << floatingPointToStr(insertRatio, buffer, 4) <<
+                            ", static insert time: " << floatingPointToStr(std::get<0>(staticValues), buffer, 4) <<
+                            ", clear ratio: " << floatingPointToStr(clearRatio, buffer2, 4) <<
+                            ", static clear time: " << floatingPointToStr(std::get<2>(staticValues), buffer, 4));
+        }
+        
+        DFGTEST_MESSAGE("Block " << N << ", insert ratio avg: " << floatingPointToStr(insertRatioAvg.average(), buffer, 4) << ", clear ratio avg: " << floatingPointToStr(clearRatioAvg.average(), buffer2, 4) << '\n');
+    }
+}
+
+/*
+
+Example run with VC2019 release x64 2021-04-17
+ [ RUN      ] dfgCont.MapBlockIndex_benchmarks
+    MESSAGE: Block 5, insert ratio: 1.1, static insert time: 1.813, clear ratio: 1.051, static clear time: 0.2217
+    MESSAGE: Block 5, insert ratio: 1.104, static insert time: 1.803, clear ratio: 1.031, static clear time: 0.2269
+    MESSAGE: Block 5, insert ratio: 1.12, static insert time: 1.811, clear ratio: 1.006, static clear time: 0.2295
+    MESSAGE: Block 5, insert ratio avg: 1.108, clear ratio avg: 1.03
+
+    MESSAGE: Block 1000, insert ratio: 1.117, static insert time: 1.378, clear ratio: 1.037, static clear time: 0.03073
+    MESSAGE: Block 1000, insert ratio: 1.122, static insert time: 1.371, clear ratio: 1.012, static clear time: 0.03191
+    MESSAGE: Block 1000, insert ratio: 1.135, static insert time: 1.36, clear ratio: 1.068, static clear time: 0.03206
+    MESSAGE: Block 1000, insert ratio avg: 1.125, clear ratio avg: 1.039
+
+    MESSAGE: Block 4096, insert ratio: 1.139, static insert time: 1.351, clear ratio: 0.869, static clear time: 0.03384
+    MESSAGE: Block 4096, insert ratio: 1.222, static insert time: 1.367, clear ratio: 0.7576, static clear time: 0.02905
+    MESSAGE: Block 4096, insert ratio: 1.144, static insert time: 1.419, clear ratio: 0.7525, static clear time: 0.03141
+    MESSAGE: Block 4096, insert ratio avg: 1.168, clear ratio avg: 0.793
+
+    MESSAGE: Block 32768, insert ratio: 1.141, static insert time: 1.337, clear ratio: 0.6589, static clear time: 0.02573
+    MESSAGE: Block 32768, insert ratio: 1.148, static insert time: 1.32, clear ratio: 0.9711, static clear time: 0.01505
+    MESSAGE: Block 32768, insert ratio: 1.149, static insert time: 1.314, clear ratio: 0.9274, static clear time: 0.01403
+    MESSAGE: Block 32768, insert ratio avg: 1.146, clear ratio avg: 0.8525
+
+    MESSAGE: Block 262144, insert ratio: 1.143, static insert time: 1.333, clear ratio: 0.9125, static clear time: 0.02324
+    MESSAGE: Block 262144, insert ratio: 1.133, static insert time: 1.35, clear ratio: 1.008, static clear time: 0.02331
+    MESSAGE: Block 262144, insert ratio: 1.134, static insert time: 1.346, clear ratio: 1.005, static clear time: 0.02187
+    MESSAGE: Block 262144, insert ratio avg: 1.136, clear ratio avg: 0.9753
+
+
+Example run with MinGW 7.3 O2 x64 2021-04-17
+[ RUN      ] dfgCont.MapBlockIndex_benchmarks
+    MESSAGE: Block 5, insert ratio: 1.083, static insert time: 1.159, clear ratio: 1.038, static clear time: 0.2186
+    MESSAGE: Block 5, insert ratio: 1.185, static insert time: 1.15, clear ratio: 1.008, static clear time: 0.2361
+    MESSAGE: Block 5, insert ratio: 1.045, static insert time: 1.252, clear ratio: 0.9246, static clear time: 0.2471
+    MESSAGE: Block 5, insert ratio avg: 1.104, clear ratio avg: 0.9902
+
+    MESSAGE: Block 1000, insert ratio: 1.122, static insert time: 0.814, clear ratio: 1.031, static clear time: 0.02961
+    MESSAGE: Block 1000, insert ratio: 1.102, static insert time: 0.8202, clear ratio: 1.047, static clear time: 0.03076
+    MESSAGE: Block 1000, insert ratio: 1.101, static insert time: 0.8214, clear ratio: 1.004, static clear time: 0.03187
+    MESSAGE: Block 1000, insert ratio avg: 1.108, clear ratio avg: 1.027
+
+    MESSAGE: Block 4096, insert ratio: 1.14, static insert time: 0.7868, clear ratio: 0.8714, static clear time: 0.03378
+    MESSAGE: Block 4096, insert ratio: 1.159, static insert time: 0.7849, clear ratio: 0.8289, static clear time: 0.02815
+    MESSAGE: Block 4096, insert ratio: 1.172, static insert time: 0.77, clear ratio: 0.7296, static clear time: 0.03075
+    MESSAGE: Block 4096, insert ratio avg: 1.157, clear ratio avg: 0.81
+
+    MESSAGE: Block 32768, insert ratio: 1.145, static insert time: 0.7709, clear ratio: 0.9171, static clear time: 0.01971
+    MESSAGE: Block 32768, insert ratio: 1.147, static insert time: 0.7598, clear ratio: 0.8682, static clear time: 0.01549
+    MESSAGE: Block 32768, insert ratio: 1.148, static insert time: 0.7547, clear ratio: 0.9222, static clear time: 0.01467
+    MESSAGE: Block 32768, insert ratio avg: 1.147, clear ratio avg: 0.9025
+
+    MESSAGE: Block 262144, insert ratio: 1.171, static insert time: 0.7753, clear ratio: 1.112, static clear time: 0.02049
+    MESSAGE: Block 262144, insert ratio: 1.136, static insert time: 0.7809, clear ratio: 1.057, static clear time: 0.02057
+    MESSAGE: Block 262144, insert ratio: 1.136, static insert time: 0.7792, clear ratio: 1.094, static clear time: 0.02228
+    MESSAGE: Block 262144, insert ratio avg: 1.148, clear ratio avg: 1.088
+*/
+TEST(dfgCont, MapBlockIndex_benchmarks)
+{
+#if defined(_DEBUG) || DFGTEST_ENABLE_BENCHMARKS != 1
+    DFGTEST_MESSAGE("MapBlockIndex_benchmarks skipped due to build settings");
+#else
+    {
+        mapBlockIndex_benchmarksImpl<5>();
+        mapBlockIndex_benchmarksImpl<1000>();
+        mapBlockIndex_benchmarksImpl<4096>();
+        mapBlockIndex_benchmarksImpl<32768>();
+        mapBlockIndex_benchmarksImpl<262144>();
+    }
+#endif
 }

@@ -5,25 +5,70 @@
 #include "../TrivialPair.hpp"
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) { namespace DFG_DETAIL_NS {
+
+class MapBlockIndexCommonBase
+{
+public:
+    // TODO: terminology with index/key is a bit messy.
+    using IndexT    = uint32;
+    using KeyT      = IndexT;
+    using size_type = uint32;
+};
+
+template <size_t BlockSize_T>
+class MapBlockIndexCompileTimeBase : public MapBlockIndexCommonBase
+{
+public:
+    using BaseClass = MapBlockIndexCommonBase;
+    using IndexT    = BaseClass::IndexT;
+    using KeyT      = BaseClass::KeyT;
+    using size_type = BaseClass::size_type;
+
+    static constexpr IndexT blockSize() { return BlockSize_T; }
+
+    static constexpr bool isBlockSizeCompileTimeDefined() { return true; }
+
+};
+
+class MapBlockIndexDynamicBase : public MapBlockIndexCommonBase
+{
+public:
+    using BaseClass = MapBlockIndexCommonBase;
+    using IndexT    = BaseClass::IndexT;
+    using KeyT      = BaseClass::KeyT;
+    using size_type = BaseClass::size_type;
+
+    MapBlockIndexDynamicBase(const IndexT blockSize = 4096)
+        : m_nBlockSize(Max(IndexT(1), blockSize))
+    {}
+
+    IndexT blockSize() const { return m_nBlockSize; }
+
+    static constexpr bool isBlockSizeCompileTimeDefined() { return false; }
+    
+    IndexT m_nBlockSize;
+};
 
 // A map class specifically crafted for needs of TableSz
 // -Semantically represents a map from index to data.
 // -Instead of storing (index, T) pairs, index is stored implicitly by the size of the map
 // -Compared to such implementation with std::vector, this divides indexes into blocks of given size
 //      -In plain vector implementation, adding one key with value N would need a vector of size N+1.
-//      -With MapBlockIndex, this needs N / BlockSize_T blocks and one allocated block.
-//      -Block sizes are fixed and defined as compile time constants, so indexing is O(1).
+//      -With MapBlockIndex, this needs N / blockSize() blocks and one allocated block.
+//      -Block sizes are fixed so indexing is O(1).
 // -In blocks, items with default value are considered non-existing.
 template <class T, size_t BlockSize_T>
-class MapBlockIndex
+class MapBlockIndex : public std::conditional<BlockSize_T != 0, MapBlockIndexCompileTimeBase<BlockSize_T>, MapBlockIndexDynamicBase>::type
 {
 public:
-    // TODO: terminology with index/key is a bit messy.
-    using IndexT = uint32;
-    using KeyT = IndexT;
-    using size_type = uint32;
+    using BaseClass = typename std::conditional<BlockSize_T != 0, MapBlockIndexCompileTimeBase<BlockSize_T>, MapBlockIndexDynamicBase>::type;
+    using IndexT    = typename BaseClass::IndexT;
+    using KeyT      = typename BaseClass::KeyT;
+    using size_type = typename BaseClass::size_type;
+    
 
     static T defaultValue() { return T(); }
 
@@ -65,17 +110,12 @@ public:
             return m_nEffectiveBlockSize;
         }
 
-        // Returns allocated capacity; either 0 or BlockSize_T.
-        size_type capacity() const
-        {
-            return (m_spStorage) ? BlockSize_T : 0;
-        }
-
         // Returns value at given subindex.
         // Precondition: i >= 0 && i < BlockSize_T
-        T value(const IndexT i) const
+        T value(const IndexT i, const IndexT nBlockSize) const
         {
-            DFG_ASSERT_UB(i >= 0 && i < BlockSize_T);
+            DFG_ASSERT_UB(i >= 0 && i < nBlockSize);
+            DFG_UNUSED(nBlockSize); // To avoid "unreferenced formal parameter" warning in release builds
             // Note: even if m_spStorage is allocated, can't return m_spStorage[i] directly as values >= m_nEffectiveBlockSize may be uninitialized.
             return (isValidIndex(i)) ? m_spStorage[i] : defaultValue();
         }
@@ -121,12 +161,12 @@ public:
         // Sets mapping at given subinex.
         // Precondition: nIndex >= 0 && nindex < BlockSize_T
         // Precondition: val != defaultValue()
-        void setMapping(const IndexT nIndex, const T& val)
+        void setMapping(const IndexT nIndex, const T& val, const IndexT nBlockSize)
         {
             DFG_ASSERT_CORRECTNESS(val != defaultValue());
-            DFG_ASSERT_UB(nIndex >= 0 && nIndex < BlockSize_T);
+            DFG_ASSERT_UB(nIndex >= 0 && nIndex < nBlockSize);
             if (!m_spStorage)
-                m_spStorage.reset(new T[BlockSize_T]);
+                m_spStorage.reset(new T[nBlockSize]);
             if (nIndex > m_nEffectiveBlockSize) // If new index "jumps ahead", initializing value between old backIndex() and new backIndex()
                 std::fill(begin() + m_nEffectiveBlockSize, begin() + nIndex, defaultValue());
             m_nEffectiveBlockSize = Max(m_nEffectiveBlockSize, nIndex + 1);
@@ -147,23 +187,23 @@ public:
             }
         }
 
-        // Returns first index if available, else BlockSize_T
-        IndexT firstIndex() const
+        // Returns first index if available, else nBlockSize
+        IndexT firstIndex(const IndexT nBlockSize) const
         {
             auto iter = std::find_if(cbegin(), cend(), [](const T& t) { return isExistingMapping(t); });
-            return (iter != cend()) ? static_cast<IndexT>(iter - begin()) : BlockSize_T;
+            return (iter != cend()) ? static_cast<IndexT>(iter - begin()) : nBlockSize;
         }
 
         // Returns next mapped index from given index. If such does not exist, returns BlockSize_T
-        IndexT nextIndex(IndexT nIndex) const
+        IndexT nextIndex(IndexT nIndex, const IndexT nBlockSize) const
         {
-            DFG_ASSERT_CORRECTNESS(nIndex < BlockSize_T);
+            DFG_ASSERT_CORRECTNESS(nIndex < nBlockSize);
             ++nIndex; // Jump to next
             if (nIndex >= m_nEffectiveBlockSize || !m_spStorage)
-                return BlockSize_T;
+                return nBlockSize;
             const auto iterEnd = m_spStorage.get() + m_nEffectiveBlockSize;
             auto iter = std::find_if(&m_spStorage[nIndex], iterEnd, [](const T t) { return isExistingMapping(t); });
-            return (iter != iterEnd) ? static_cast<IndexT>(iter - m_spStorage.get()) : BlockSize_T;
+            return (iter != iterEnd) ? static_cast<IndexT>(iter - m_spStorage.get()) : nBlockSize;
         }
 
         std::unique_ptr<T[]> m_spStorage;
@@ -231,9 +271,7 @@ public:
     const_iterator cbegin() const { return Iterator(*this, frontKey()); }
     const_iterator cend()   const { return Iterator(*this, invalidKey()); }
 
-    MapBlockIndex()
-    {
-    }  
+    using BaseClass::BaseClass; // Inheriting constructor
 
     bool empty() const
     {
@@ -266,14 +304,14 @@ public:
         const auto nBlockIndex = blockIndex(key);
         if (!isValidIndex(m_blocks, nBlockIndex))
             m_blocks.resize(nBlockIndex + 1);
-        m_blocks[nBlockIndex].setMapping(subIndex(key), value);
+        m_blocks[nBlockIndex].setMapping(subIndex(key), value, this->blockSize());
     }
 
     // Returns value at given key, defaultValue() if mapping at key does not exist.
     T value(const KeyT key) const
     {
         const auto nBlockIndex = blockIndex(key);
-        return (isValidIndex(m_blocks, nBlockIndex)) ? m_blocks[nBlockIndex].value(subIndex(key)) : defaultValue();
+        return (isValidIndex(m_blocks, nBlockIndex)) ? m_blocks[nBlockIndex].value(subIndex(key), this->blockSize()) : defaultValue();
     }
 
     // Returns first key if available, otherwise invalidKey()
@@ -282,7 +320,7 @@ public:
         for (const auto& block : m_blocks)
         {
             if (!block.empty())
-                return privBlockIndexToLinearIndex(&block - &m_blocks[0]) + block.firstIndex();
+                return privBlockIndexToLinearIndex(&block - &m_blocks[0]) + block.firstIndex(this->blockSize());
         }
         return invalidKey();
     }
@@ -343,14 +381,14 @@ public:
         if (nBlockIndex >= nBlockCount)
             return invalidKey();
         // First checking if the new index in the same block
-        auto newSubIndex = m_blocks[nBlockIndex].nextIndex(subIndex(key));
-        if (newSubIndex != BlockSize_T)
+        auto newSubIndex = m_blocks[nBlockIndex].nextIndex(subIndex(key), this->blockSize());
+        if (newSubIndex != this->blockSize())
             return privBlockIndexToLinearIndex(nBlockIndex) + newSubIndex;
         // New index was not in the same block; checking following blocks.
         for (++nBlockIndex; nBlockIndex < nBlockCount; ++nBlockIndex)
         {
-            newSubIndex = m_blocks[nBlockIndex].firstIndex();
-            if (newSubIndex != BlockSize_T)
+            newSubIndex = m_blocks[nBlockIndex].firstIndex(this->blockSize());
+            if (newSubIndex != this->blockSize())
                 return privBlockIndexToLinearIndex(nBlockIndex) + newSubIndex;
         }
         return invalidKey();
@@ -386,13 +424,18 @@ public:
         return (v != defaultValue()) ? Iterator(*this, key) : end();
     }
 
+    void clear()
+    {
+        m_blocks.clear();
+    }
+
  private:
-    static IndexT blockIndex(const IndexT i) { return i / BlockSize_T; }
-    static IndexT subIndex(const IndexT i) { return i % BlockSize_T; }
+    IndexT blockIndex(const IndexT i) const { return i / this->blockSize(); }
+    IndexT subIndex(const IndexT i)   const { return i % this->blockSize(); }
 
     IndexT privBlockIndexToLinearIndex(const ptrdiff_t n) const
     {
-        return static_cast<IndexT>(n * BlockSize_T);
+        return static_cast<IndexT>(n * this->blockSize());
     }
 
     // Visits each key [key, backKey()] in order from last.
