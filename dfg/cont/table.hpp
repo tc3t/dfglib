@@ -452,11 +452,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // -Memory usage per cell (64-bit build): ~8 bytes
         // -Memory usage if setting one cell at row N (64-bit build): (N/4096)*16 + 8 * 4096
         // -Content access by row: O(1)
-        template <class Index_T, class Char_T>
-        class RowToContentMapBlockIndex : public DFG_DETAIL_NS::MapBlockIndex<const char*, 4096>
+        template <class Index_T, class Char_T, size_t BlockSize_T>
+        class RowToContentMapBlockIndex : public DFG_DETAIL_NS::MapBlockIndex<const char*, BlockSize_T>
         {
         public:
-            using BaseClass = DFG_DETAIL_NS::MapBlockIndex<const char*, 4096>;
+            using BaseClass = DFG_DETAIL_NS::MapBlockIndex<const char*, BlockSize_T>;
             using IndexT = typename BaseClass::IndexT;
 
             // Precondition: p != nullptr
@@ -474,7 +474,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
             const Char_T* content(const Index_T nRow, Dummy) const
             {
-                return value(static_cast<IndexT>(nRow));
+                return this->value(static_cast<IndexT>(nRow));
             }
 
             // Precondition: iter is dereferencable
@@ -519,7 +519,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return iter->second != nullptr;
             }
 
-            const_iterator findOrInsertHint(const Index_T nRow)
+            typename BaseClass::const_iterator findOrInsertHint(const Index_T nRow)
             {
                 return this->find(nRow);
             }
@@ -632,7 +632,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         using IndexT = Index_T;
         //typedef DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T> RowToContentMap; // Map-based, good for sparse content.
         //typedef DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T> RowToContentMap; // Vector-based, good for dense.
-        typedef DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T> RowToContentMap; // "Block-vector", dedicated structure made for TableSz
+        using MapBlockIndexT = DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T, 2048>;
+        using RowToContentMap = MapBlockIndexT; // "Block-vector", dedicated structure made for TableSz
 
         typedef std::vector<RowToContentMap> TableIndexContainer;
         typedef std::vector<CharStorageItem> CharStorage;
@@ -759,7 +760,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return *iter;
         }
 
-        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T>*) const
+        const Char_T* privRowIteratorToRawContent(const Index_T nCol, typename RowToContentMap::const_iterator iter, const MapBlockIndexT*) const
         {
             DFG_UNUSED(nCol);
             return iter->second;
@@ -789,7 +790,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return m_colToRows[nCol].iteratorToRow(iter);
         }
 
-        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter, const DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T>*) const
+        Index_T privRowIteratorToRowNumber(const Index_T nCol, typename RowToContentMap::const_iterator iter, const MapBlockIndexT*) const
         {
             DFG_UNUSED(nCol);
             return iter->first;
