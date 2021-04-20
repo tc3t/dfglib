@@ -3,6 +3,7 @@
 #include "../dfgDefs.hpp"
 #include <iterator>
 #include <type_traits>
+#include <functional>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(iter) {
 
@@ -21,7 +22,7 @@ public:
 
     FunctionValueIterator(const Index_T nPos, Func_T func)
         : m_nPos(nPos)
-        , m_func(func)
+        , m_func(std::move(func))
     {}
 
     auto operator*() const -> value_type
@@ -102,9 +103,22 @@ public:
 }; // class FunctionValueIterator
 
 template <class Func_T, class Index_T>
-auto makeFunctionValueIterator(Index_T i, Func_T func) -> FunctionValueIterator<Func_T, decltype(func(Index_T())), Index_T>
+auto makeFunctionValueIterator(Index_T i, Func_T func) -> FunctionValueIterator<decltype(func(Index_T())) (*) (Index_T), decltype(func(Index_T())), Index_T>
 {
-    return FunctionValueIterator<Func_T, decltype(func(Index_T())), Index_T>(i, func);
+    using ReturnT = decltype(func(Index_T()));
+    using FuncPtrT = ReturnT (*) (Index_T);
+    DFG_STATIC_ASSERT((std::is_convertible<Func_T, FuncPtrT>::value), "Only stateless lambdas are accepted by this overload. See std::function overload of this function as alternative.");
+    FuncPtrT pFunc = func;
+    return FunctionValueIterator<FuncPtrT, decltype(func(Index_T())), Index_T>(i, pFunc);
+}
+
+// Note: when returned iterator is used in algorithms, it may get copied in arbitrary ways so given function should be compatible with such use.
+template <class Func_T, class Index_T>
+auto makeFunctionValueIterator(Index_T i, std::function<Func_T> func) -> FunctionValueIterator<std::function<Func_T>, decltype(func(Index_T())), Index_T>
+{
+    using ReturnT = decltype(func(Index_T()));
+    using Wrapper = std::function<Func_T>;
+    return FunctionValueIterator<Wrapper, ReturnT, Index_T>(i, std::move(func));
 }
 
 namespace DFG_DETAIL_NS

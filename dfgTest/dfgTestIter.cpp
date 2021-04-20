@@ -7,6 +7,7 @@
 #include <deque>
 #include <set>
 #include <array>
+#include <functional>
 #include <dfg/ptrToContiguousMemory.hpp>
 #include <dfg/iterAll.hpp>
 #include <dfg/typeTraits.hpp>
@@ -537,6 +538,8 @@ TEST(dfgIter, FunctionValueIterator)
     {
         const auto func = [](size_t i) { return i; };
         auto iter = makeFunctionValueIterator(size_t(0), func);
+        using FuncPtrT = size_t(*)(size_t);
+        DFGTEST_STATIC_TEST((std::is_same<decltype(iter), FunctionValueIterator<FuncPtrT, size_t, size_t>>::value)); // Making sure that makeFunctionValueIterator() doesn't choose std::function overload.
         std::vector<size_t> vals;
         std::copy(iter, iter + 5, std::back_inserter(vals));
         EXPECT_EQ(std::vector<size_t>({0, 1, 2, 3, 4}), vals);
@@ -567,7 +570,7 @@ TEST(dfgIter, FunctionValueIterator)
     {
         double val = 1;
         const auto func = [&](size_t i) { return static_cast<double>(i) + val; };
-        auto iter = makeFunctionValueIterator(size_t(0), func);
+        auto iter = makeFunctionValueIterator(size_t(0), std::function<double (size_t)>(func));
         EXPECT_EQ(1, *iter);
         val = 2;
         EXPECT_EQ(2, *iter);
