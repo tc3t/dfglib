@@ -383,9 +383,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
     public:
         using BaseClass = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
         using StringToDoubleConverter = std::function<double(const StringViewSzUtf8&)>;
-        
-
-        CreateOperationArgs() = default;
 
         CreateOperationArgs(const BaseClass& other) : BaseClass(other) {  }
         CreateOperationArgs(BaseClass&& other)      : BaseClass(std::move(other)) {  }

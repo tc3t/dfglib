@@ -1101,7 +1101,7 @@ TEST(dfgCont, contAlg_eraseIf)
     std::map<int, int> m;
     for (int i = 0; i < 10; ++i)
         m[i] = 0;
-    ::DFG_MODULE_NS(cont)::eraseIf(m, [](const decltype(*m.begin())& v) { return v.first % 2 == 0; });
+    ::DFG_MODULE_NS(cont)::eraseIf(m, [](decltype(*m.begin())& v) { return v.first % 2 == 0; });
     ASSERT_EQ(5, m.size());
     EXPECT_EQ(1, m.begin()->first);
     ::DFG_MODULE_NS(cont)::eraseIf(m, [](::DFG_ROOT_NS::Dummy) { return true; });

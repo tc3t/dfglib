@@ -1182,7 +1182,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
 
 void DFG_MODULE_NS(qt)::ChartDataCache::removeInvalidCaches()
 {
-    ::DFG_MODULE_NS(cont)::eraseIf(m_tableSelectionDatas, [](const decltype(*m_tableSelectionDatas.begin())& pairItem)
+    ::DFG_MODULE_NS(cont)::eraseIf(m_tableSelectionDatas, [](decltype(*m_tableSelectionDatas.begin())& pairItem)
     {
         auto& opt = pairItem.second;
         return !opt || opt->isVolatileCache() || !opt->isValid();
@@ -2834,7 +2834,7 @@ void ChartCanvasQCustomPlot::setBackground(const StringViewUtf8& sv)
         DFG_QT_CHART_CONSOLE_WARNING(tr("Uneven argument count for gradient_linear, last item ignored"));
 
     QLinearGradient gradient(0, 0, 0, this->height());
-    for (int i = 1; i < nEffectiveArgCount; i += 2)
+    for (size_t i = 1; i < nEffectiveArgCount; i += 2)
     {
         const auto linearPos = args.valueAs<double>(i);
         if (::DFG_MODULE_NS(math)::isNan(linearPos) || linearPos < 0 || linearPos > 1)
