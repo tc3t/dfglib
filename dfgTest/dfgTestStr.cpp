@@ -371,8 +371,10 @@ TEST(dfgStr, strTo)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(str);
 
-#pragma warning(push)
-#pragma warning(disable:4127) // conditional expression is constant
+#if defined(_MSC_VER)
+    #pragma warning(push)
+    #pragma warning(disable:4127) // conditional expression is constant
+#endif // defined(_MSC_VER)
 
     char szBufferA[128];
     wchar_t szBufferW[128];
@@ -564,7 +566,9 @@ TEST(dfgStr, strTo)
 
 #undef CHECK_A_AND_W
 
-#pragma warning(pop)
+#if defined(_MSC_VER)
+    #pragma warning(pop)
+#endif // defined(_MSC_VER)
 }
 
 namespace
@@ -1354,7 +1358,7 @@ namespace
         // Testing makeOwned() and release() with both small and long string (i.e. one with expected SSO-buffer and one with allocated buffer)
         using PtrT = decltype(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")));
         const PtrT literals[] = { conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "abc")), conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "0123456789012345678901234567890123456789")) };
-        for (int i = 0; i < DFG_COUNTOF(literals); ++i)
+        for (size_t i = 0; i < DFG_COUNTOF(literals); ++i)
         {
             const auto& pszTest = literals[i];
             auto svo = StringViewOrOwner<View_T, Owned_T>::makeOwned(Owned_T(pszTest));

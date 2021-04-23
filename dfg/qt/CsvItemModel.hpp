@@ -174,6 +174,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 using BaseClass = std::atomic_bool;
                 CopyableAtomicBool() : BaseClass(false) {}
                 CopyableAtomicBool(const CopyableAtomicBool& other)
+                    : BaseClass(false)
                 {
                     *this = other;
                 }

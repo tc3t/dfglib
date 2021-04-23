@@ -150,7 +150,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void makeSingleCellSelection(int r, int c);
         // Convenience method: clears existing selection and selects given indexes. If given indexes are not from this->model(),
         // indexMapper should be provided that maps indexes to that model (for example if this->model() is proxy model while given indexes are from underlying source model)
-        void setSelection(const QModelIndexList& indexes, std::function<QModelIndex(const QModelIndex&)> indexMapper);
+        void setSelectedIndexed(const QModelIndexList& indexes, std::function<QModelIndex(const QModelIndex&)> indexMapper);
 
     protected:
         QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers) override
@@ -199,10 +199,10 @@ inline void ::DFG_MODULE_NS(qt)::TableView::makeSingleCellSelection(const int r,
     if (!indexes[0].isValid())
         return;
 
-    setSelection(indexes, nullptr);
+    setSelectedIndexed(indexes, nullptr);
 }
 
-inline void ::DFG_MODULE_NS(qt)::TableView::setSelection(const QModelIndexList& indexes, std::function<QModelIndex (const QModelIndex&)> indexMapper)
+inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const QModelIndexList& indexes, std::function<QModelIndex (const QModelIndex&)> indexMapper)
 {
     QItemSelection selection;
     auto pModel = model();

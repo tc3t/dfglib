@@ -708,7 +708,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             if (!sFailureMsgs.isEmpty())
                 rView.showStatusInfoTip(sFailureMsgs);
             if (pSelectList)
-                rView.setSelection(*pSelectList, [&](const QModelIndex& index) { return rView.mapToViewModel(index); }); // Selecting the items that were edited by redo.
+                rView.setSelectedIndexed(*pSelectList, [&](const QModelIndex& index) { return rView.mapToViewModel(index); }); // Selecting the items that were edited by redo.
         }
 
     private:
