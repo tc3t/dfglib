@@ -480,7 +480,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             // Precondition: iter is dereferencable
             Index_T iteratorToRow(const typename BaseClass::const_iterator iter) const
             {
-                DFG_ASSERT_UB(iter->first != invalidKey());
+                DFG_ASSERT_UB(iter->first != this->invalidKey());
                 return iter->first;
             }
 
