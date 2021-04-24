@@ -847,9 +847,9 @@ TEST(dfgMath, FormulaParser_cmath)
     DFGTEST_TEMP_TEST_VALUE2(cyl_bessel_j, 1, 2);
     DFGTEST_TEMP_TEST_VALUE2(cyl_bessel_k, 1, 2);
     DFGTEST_TEMP_TEST_VALUE2(cyl_neumann, 1, 2);
-    DFGTEST_TEMP_TEST_VALUE2(ellint_1, 1, 2);
+    DFGTEST_TEMP_TEST_VALUE2(ellint_1, 0.5, 2);
     DFGTEST_TEMP_TEST_VALUE2(ellint_2, 1, 2);
-    DFGTEST_TEMP_TEST_VALUE3(ellint_3, 0.5, 2, 3);
+    DFGTEST_TEMP_TEST_VALUE3(ellint_3, 0.5, 0.3, 3);
     DFGTEST_TEMP_TEST_VALUE1(expint, 3);
     DFGTEST_TEMP_TEST_VALUE2(gcd, 48564, -156165);
     DFGTEST_TEMP_TEST_VALUE2(hermite, 1, 2);
