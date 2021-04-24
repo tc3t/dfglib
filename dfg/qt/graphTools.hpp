@@ -45,6 +45,9 @@ enum GraphDataSourceType
     GraphDataSourceType_tableSelection // Arbitrarily shaped selection from a table-like structure like table view.
 };
 
+// Returns identifier of chart backend in unspecified format, empty if not defined.
+QString chartBackendImplementationIdStr();
+
 // Represents an object that has all instructions needed to construct a chart and do operations on it.
 class ChartDefinition
 {

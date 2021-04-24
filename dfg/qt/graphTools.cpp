@@ -81,6 +81,15 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
+auto ::DFG_MODULE_NS(qt)::chartBackendImplementationIdStr() -> QString
+{
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+    return QString("QCustomPlot %1").arg(QCUSTOMPLOT_VERSION_STR);
+#else
+    return QString();
+#endif
+}
+
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
 DFG_ROOT_NS_BEGIN{
     // QCPDataContainer doesn't seem to have value_type typedef, so adding specializations to ElementType<> so that QCPDataContainer works with nearestRangeInSorted()

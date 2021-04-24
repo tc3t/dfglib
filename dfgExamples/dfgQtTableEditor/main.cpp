@@ -74,7 +74,7 @@ static void onShowAboutBox()
     using namespace DFG_ROOT_NS;
 
     QString s = QString("%1 version %2<br><br>"
-                        "Example application demonstrating csv handling features in dfglib.<br><br>")
+                        "csv-oriented table editor based on dfglib.<br><br>")
                         .arg(QApplication::applicationName(), DFG_QT_TABLE_EDITOR_VERSION_STRING);
 
     const auto sSettingsPath = dfg::qt::QtApplication::getApplicationSettingsPath();
@@ -101,7 +101,7 @@ static void onShowAboutBox()
     getBuildTimeDetailStrs([&](const BuildTimeDetail detailId, const char* psz)
     {
         if (psz && psz[0] != '\0')
-            s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId), psz);
+            s += QString("%1: %2<br>").arg(DFG_ROOT_NS::buildTimeDetailIdToStr(detailId), QString(psz).toHtmlEscaped());
     });
 
 #ifdef DFGQTE_GIT_BRANCH
@@ -127,7 +127,7 @@ static void onShowAboutBox()
                  ", <a href=https://github.com/nemtrif/utfcpp>UTF8-CPP</a>"
                  ", <a href=https://github.com/beltoforion/muparser>muparser</a>"
              #if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
-                 ", <a href=https://www.qcustomplot.com>QCustomPlot</a>"
+                 + QString(", <a href=https://www.qcustomplot.com>%1</a>").arg(::DFG_MODULE_NS(qt)::chartBackendImplementationIdStr().toHtmlEscaped())
              #endif
             ;
 
