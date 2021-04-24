@@ -19,6 +19,12 @@
 #include "../dfgBaseTypedefs.hpp"
 #include "compilerDetails.hpp"
 
+#if __cplusplus < 202002L // <ciso646> "header is removed in C++20. " (https://en.cppreference.com/w/cpp/header/ciso646)
+    #include <ciso646> // For detection macros, https://en.cppreference.com/w/cpp/header/ciso646
+#else
+    #include <version>
+#endif
+
 #if (DFG_BUILD_OPT_USE_BOOST == 1)
     #include <boost/version.hpp>
     #include <boost/predef.h>
@@ -32,6 +38,7 @@ enum BuildTimeDetail
     BuildTimeDetail_dateTime,                // Build time as date time in unspecified format.
     BuildTimeDetail_compilerAndShortVersion, // Compiler
     BuildTimeDetail_compilerFullVersion,     // Full compiler version
+    BuildTimeDetail_standardLibrary,         // Standard library identifier in unspecified format or empty is not available, currently MSVC, libstdc++ and libc++ are detected.
     BuildTimeDetail_buildDebugReleaseType,   // Debug/release type. TODO: more precise definition especially on Non-Windows
     BuildTimeDetail_architecture,            // Build architecture
     BuildTimeDetail_endianness,              // Architecture endianess
@@ -46,6 +53,7 @@ namespace DFG_DETAIL_NS
         "Build date",
         "Compiler",
         "Compiler (full version)",
+        "Standard library",
         "Debug/release type",
         "Architecture",
         "Endianness",
@@ -72,6 +80,30 @@ DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(boostVersion)
 {
 #ifdef BOOST_LIB_VERSION
     return BOOST_LIB_VERSION;
+#else
+    return "";
+#endif
+}
+
+DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(standardLibrary)
+{
+    // [1] https://en.cppreference.com/w/cpp/header/ciso646
+    // [2] https://stackoverflow.com/questions/31657499/how-to-detect-stdlib-libc-in-the-preprocessor
+#ifdef _LIBCPP_VERSION
+    return "libc++ ver " DFG_STRINGIZE(_LIBCPP_VERSION);
+#elif defined(__GLIBCXX__) // "Note: only version 6.1 or newer define this in ciso646" [1]
+    return "libstdc++ ver " DFG_STRINGIZE(_GLIBCXX_RELEASE);
+#elif defined(_CPPLIB_VER)
+    /*
+    Library versions in different MSVC versions:
+    MSVC2010: 520
+    MSVC2012: 540
+    MSVC2013: 610
+    MSVC2015: 650
+    MSVC2017: 650
+    MSVC2019: 650
+    */
+    return "MSVC standard library ver " DFG_STRINGIZE(_CPPLIB_VER);
 #else
     return "";
 #endif
@@ -129,6 +161,7 @@ void getBuildTimeDetailStrs(Func&& func)
     DFG_TEMP_DO_FOR_BUILD_DETAIL(dateTime);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(compilerAndShortVersion);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(compilerFullVersion);
+    DFG_TEMP_DO_FOR_BUILD_DETAIL(standardLibrary);
 #ifdef _MSC_VER
     DFG_TEMP_DO_FOR_BUILD_DETAIL(buildDebugReleaseType);
 #endif

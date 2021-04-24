@@ -15,6 +15,7 @@
 #include <dfg/build/buildTimeDetails.hpp>
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/OpaquePtr.hpp>
+#include <dfg/str.hpp>
 
 std::tuple<std::string, std::string, std::string> FunctionNameTest()
 {
@@ -815,6 +816,13 @@ TEST(dfgBuild, buildTimeDetails)
     EXPECT_STRNE("", vals[BuildTimeDetail_dateTime]);
     EXPECT_STREQ(DFG_COMPILER_NAME_SIMPLE, vals[BuildTimeDetail_compilerAndShortVersion]);
     EXPECT_STREQ(DFG_COMPILER_FULL_VERSION, vals[BuildTimeDetail_compilerFullVersion]);
+#if defined(_CPPLIB_VER)
+    EXPECT_TRUE(::DFG_MODULE_NS(str)::beginsWith(vals[BuildTimeDetail_standardLibrary], "MSVC standard library ver "));
+#elif defined(_LIBCPP_VERSION)
+    EXPECT_TRUE(::DFG_MODULE_NS(str)::beginsWith(vals[BuildTimeDetail_standardLibrary], "libc++ ver "));
+#elif defined(__GLIBCXX__)
+    EXPECT_TRUE(::DFG_MODULE_NS(str)::beginsWith(vals[BuildTimeDetail_standardLibrary], "libstdc++ ver "));
+#endif
     EXPECT_STREQ("", vals[BuildTimeDetail_qtVersion]); // Qt should not be in the build so make sure the detail is empty.
 #ifdef BOOST_LIB_VERSION
     EXPECT_STREQ(BOOST_LIB_VERSION, vals[BuildTimeDetail_boostVersion]);
