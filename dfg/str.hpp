@@ -10,6 +10,7 @@
 #include "str/strLen.hpp"
 #include "ReadOnlySzParam.hpp"
 #include "numericTypeTools.hpp"
+#include <algorithm>
 
 #if DFG_BUILD_OPT_USE_BOOST==1
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -170,7 +171,7 @@ Str_T& toStr(const T& obj, Str_T& str)
 template <class T>
 inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, const int nPrecParam = -1)
 {
-    if (nDstSize < 1)
+    if (nDstSize < 1 || !psz)
         return psz;
     if (DFG_MODULE_NS(math)::isInf(val))
         return strCpyAllThatFit(psz, nDstSize, (val > 0) ? "inf" : "-inf");
@@ -185,6 +186,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     char szFormat[8] = "";
     DFG_DETAIL_NS::sprintf_s(szFormat, sizeof(szFormat), "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
     DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val);
+    std::replace(psz, psz + std::strlen(psz), ',', '.'); // Hack: fix for locales where decimal separator is comma. TODO: use a less brittle, locale independent double-to-string conversion (to_chars()).
 
     // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
     //               std::atof(pszLonger) == std::atof(pszShorter).
