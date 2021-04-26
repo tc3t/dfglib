@@ -72,6 +72,18 @@ del %PACKAGE_OUTPUT_PATH%\imageformats\qtiff.dll
 del %PACKAGE_OUTPUT_PATH%\imageformats\qwebp.dll
 
 @echo --------------------------------
+@echo Copying examples
+mkdir %PACKAGE_OUTPUT_PATH%\examples
+copy examples\bars_example_qcp_bar_chart_demo_mimic.csv %PACKAGE_OUTPUT_PATH%\examples\
+copy examples\bars_example_qcp_bar_chart_demo_mimic.csv.conf %PACKAGE_OUTPUT_PATH%\examples\
+copy examples\number_generator_example.csv %PACKAGE_OUTPUT_PATH%\examples\
+copy examples\number_generator_example.csv.conf %PACKAGE_OUTPUT_PATH%\examples\
+
+@echo --------------------------------
+@echo Copying guide
+copy ..\..\dfg\qt\res\chartGuide.html %PACKAGE_OUTPUT_PATH%
+
+@echo --------------------------------
 @echo Extracting version info from executable
 set EXE_VERSION_FILE_PATH=%OUTPUT_WORKDIR%\exe_version.txt
 powershell "(Get-Item -path %PACKAGE_OUTPUT_PATH%\dfgQtTableEditor.exe).VersionInfo.ProductVersion" > %EXE_VERSION_FILE_PATH%
