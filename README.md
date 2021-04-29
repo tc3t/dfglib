@@ -1,11 +1,12 @@
 # dfglib
 
-Experimental general purpose utility library for C++.
+Experimental general purpose utility library for C++, which has become mostly a backbone for csv-oriented table editor, [dfgQtTableEditor](dfgExamples/dfgQtTableEditor/README.md/)
 
 Note: this is *not* a mature library and is not intended or recommended for general use. Libraries such as [Abseil](https://abseil.io/) or [Boost](https://www.boost.org/) provide many of the features in dfglib implemented in a more clear and professional manner. For a comprehensive list of alternatives, see [A list of open source C++ libraries at cppreference.com](https://en.cppreference.com/w/cpp/links/libs) 
 
 ## News
 
+* 2021-04-29, dfgQtTableEditor [version 1.9.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.9.0)
 * 2021-02-21, dfgQtTableEditor [version 1.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.8.0)
 * 2020-11-15, dfgQtTableEditor [version 1.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.7.0)
 * 2020-08-16, dfgQtTableEditor [version 1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
@@ -65,7 +66,7 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2020-11-10).
+Summary of 3rd party code in dfglib (last revised 2021-04-24).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
@@ -78,8 +79,8 @@ Summary of 3rd party code in dfglib (last revised 2020-11-10).
 | [Google Test](https://github.com/google/googletest) (version 1.8.1) | t | [BSD-3](externals/gtest/gtest.h) | Unit tests are implemented with Google Test
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) | Qt-related utilities
 | [muparser](https://github.com/beltoforion/muparser) (development version 2.3.3, commit [2deb86a8](https://github.com/beltoforion/muparser/tree/2deb86a81edc7d8e56859484524738ff766b4fdb), 2020-09-21) with some edits) | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
-| [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Version 2.0.1 is known to work.
-| [Qt 5](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, earliest version that works might be 5.6.
+| [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Versions 2.0.1 and 2.1.0 are known to work as of dfgQtTableEditor version 1.9.0.
+| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, earliest version that works might be 5.6.
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:

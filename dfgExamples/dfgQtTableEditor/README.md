@@ -4,7 +4,26 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 ## Building
 
-### Version 1.8.0:
+### __Version 1.9.0__:
+
+Has been successfully build with:
+| Compiler      | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
+| ------------- | ----- | ---- | -- | -- | -- |
+| Clang 6.0.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
+| Clang 10.0.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
+| GCC 7.5.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
+| GCC 9.3.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
+| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
+| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2017, MSVC2019 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| | | |
+
+Also expected to build directly or with little changes on MSVC2015; minimum Qt version is somewhere around 5.6 and 5.9. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
+
+ If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out). For concrete build steps, see section for version 1.0.0.
+
+### __Version 1.8.0__:
 
 Has been successfully build with:
 | Compiler      | Qt | OS | Boost | Charting? | Comments |
@@ -23,7 +42,7 @@ Also expected to build with MSVC2015; might also build with Qt versions before 5
 
  If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out). For concrete build steps, see section for version 1.0.0.
 
-### Version 1.7.0:
+### __Version 1.7.0__:
 
 Has been successfully build with:
 | Compiler      | Qt | OS | Boost | Charting? | Comments |
@@ -36,7 +55,7 @@ Has been successfully build with:
 | MSVC2017, MSVC2019 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes |
 | | | |
 
-### Version 1.6.0:
+### __Version 1.6.0__:
 
 Known to build with:
 * Clang 6.0.0 with Qt 5.9.5 (Ubuntu 18.04)
@@ -48,18 +67,18 @@ If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of b
 
 See detailed instructions from section of Version 1.0.0
 
-### Version 1.5.0:
+### __Version 1.5.0__:
 
 Like earlier versions with following changes:
 * Building with MSVC 2012 and 2013 is no longer supported.
 * Qt 5.6 is minimum Qt version
 * If building with QCustomPlot charting, requires Boost >= 1.70
 
-### Version 1.1.0:
+### __Version 1.1.0__:
 
 Like with version 1.0.0, but won't anymore build with MSVC 2010.
 
-### Version 1.0.0 or earlier:
+### __Version 1.0.0 or earlier__:
 Requires basic C++11 support (as available since VC2010), Qt 5 and Boost (in include path). Some source packages may be available in [dfglib releases](https://github.com/tc3t/dfglib/releases).
 
 To build (assuming having compatible Qt version, Qt Creator and compiler available):
@@ -87,6 +106,19 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
+* 2021-04-29, [1.9.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.9.0)
+    * General
+        * [new] Can now replace cell content by evaluated value, for example "1+2" -> "3". Available from context menu and shortcut Alt+C ([#71](https://github.com/tc3t/dfglib/issues/71), [4616e548](https://github.com/tc3t/dfglib/commit/4616e54863720319577ce11b638f1024b04763fc))
+        * [new] Rudimentary Find&Replace ([#67](https://github.com/tc3t/dfglib/issues/67), [85d87e63](https://github.com/tc3t/dfglib/commit/85d87e638c45e3e8f461423241539de37974931e))
+        * [new] Can now generate date/times ([#65](https://github.com/tc3t/dfglib/issues/65), [2e0b399b](https://github.com/tc3t/dfglib/commit/2e0b399bbf0da1685329496dd36d62b46a18bdcd))
+        * [new] Content generator of type 'formula' now has more standard C++ math functions; when compiled with C++17, also has [mathematical special functions](https://en.cppreference.com/w/cpp/numeric/special_functions) ([#56](https://github.com/tc3t/dfglib/issues/56), [07c85df4](https://github.com/tc3t/dfglib/commit/07c85df4dcec7545de7a72d866e8ad11cadf4f2d))
+        * [imp] File opening can now be cancelled. ([#21](https://github.com/tc3t/dfglib/issues/21))
+        * [imp] Clearing existing huge tables should now take less time on Windows ([#74](https://github.com/tc3t/dfglib/issues/74), [c8af1730](https://github.com/tc3t/dfglib/commit/c8af17300203c4407d8c200ee870167625358976))
+    * Charts
+        * [new] Number generator source: can now create charts without any table data input. Usage example can be found from [examples](https://github.com/tc3t/dfglib/blob/master/dfgExamples/dfgQtTableEditor/examples/number_generator_example.csv.conf) ([#61](https://github.com/tc3t/dfglib/issues/61))
+        * [new] Can now stack bars  ([#42](https://github.com/tc3t/dfglib/issues/21))
+        * [imp] Chart panel size can now be defined either globally through .ini file or per-file through .conf-file ([#60](https://github.com/tc3t/dfglib/issues/60), [1c7a662c](https://github.com/tc3t/dfglib/commit/1c7a662c3766a458891c88dabd5ff884a8899998), [d2df617c](https://github.com/tc3t/dfglib/commit/d2df617c91dac90afed2cc4462b9e7781a6181cc))
+        * [fix] NaN handling fixes to smoothing ([#70](https://github.com/tc3t/dfglib/issues/70), [633f97db](https://github.com/tc3t/dfglib/commit/633f97db22e5dcd5fa998a3b7b74727b7f545ce7))
 * 2021-02-21, [1.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.8.0)
     * General
         * [breaking_change] Column indexing now starts from 1. This breaks existing property files etc., where column indexes was 0-based ([#64](https://github.com/tc3t/dfglib/issues/64), [9b0b3ef7](https://github.com/tc3t/dfglib/commit/9b0b3ef7242d901e8e3a032912300f7a820d4de4))
@@ -394,7 +426,7 @@ properties,,,
 
 ## Third party code
 
-Summary of 3rd party code in dfgQtTableEditor (last revised 2020-11-07).
+Summary of 3rd party code in dfgQtTableEditor (last revised 2021-04-24).
 
 | Library      | License  |
 | ------------- | ----- |
