@@ -1,0 +1,12 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define DFG_ROOT_NS_BEGIN
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define DFG_SUB_NS(x) namespace DFG_SUB_NS_NAME(x)
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define DFG_MODULE_NS(MODULE) DFG_ROOT_NS::DFG_SUB_NS_NAME(MODULE)
