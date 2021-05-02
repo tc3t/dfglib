@@ -655,7 +655,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnR
 
 void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool b)
 {
-    setProperty("dfglib_allow_app_settings_usage", b);
+    setProperty(gPropertyIdAllowAppSettingsUsage, b);
 
     // Re-apply properties that might have changed with change of this setting.
     {
@@ -670,7 +670,7 @@ void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool
     }
 
     if (m_spTableModel)
-        m_spTableModel->setProperty("dfglib_allow_app_settings_usage", b);
+        m_spTableModel->setProperty(gPropertyIdAllowAppSettingsUsage, b);
     if (m_spTableView)
         m_spTableView->setAllowApplicationSettingsUsage(b);
 }

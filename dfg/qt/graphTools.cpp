@@ -5,6 +5,7 @@
 #include "ConsoleDisplay.hpp"
 #include "ConsoleDisplay.cpp"
 #include "JsonListWidget.hpp"
+#include "PropertyHelper.hpp"
 
 #include "qtBasic.hpp"
 
@@ -3661,7 +3662,7 @@ void ChartCanvasQCustomPlot::beginUpdateState()
         pUpdateIndicator->position->setCoords(0.5, 0.5);
     }
     // Increasing font size
-    pUpdateIndicator->setFont(QFont(pUpdateIndicator->font().family(), 15));
+    adjustWidgetFontProperties(pUpdateIndicator, 15);
     // Setting text background so that text shows better.
     pUpdateIndicator->setBrush(QBrush(QColor(255, 255, 255, 200))); // Somewhat transparent white background.
 
@@ -4415,8 +4416,9 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::cache
     return DFG_OPAQUE_REF().m_spCache;
 }
 
-DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget()
+DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget(const bool bAllowAppSettingUsage)
 {
+    this->setProperty(gPropertyIdAllowAppSettingsUsage, bAllowAppSettingUsage);
     auto pLayout = new QGridLayout(this);
     m_spSplitter.reset(new QSplitter(Qt::Vertical, this));
     m_spControlPanel.reset(new GraphControlPanel(this));

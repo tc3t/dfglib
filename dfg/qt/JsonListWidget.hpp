@@ -26,8 +26,10 @@ class JsonListWidget : public QPlainTextEdit
 {
 public:
     using BaseClass = QPlainTextEdit;
-    using BaseClass::BaseClass; // Inheriting constructor
     using SyntaxCheckResult = std::pair<bool, std::vector<JsonListParseError>>;
+
+    JsonListWidget(QWidget* pParent = nullptr);
+    ~JsonListWidget();
 
     // Returns entries (empty and commented out items excluded) as '\n' separated string.
     QString entriesAsNewLineSeparatedString() const;
@@ -35,8 +37,13 @@ public:
     // Returns entries (empty and commented out items excluded) as QStringList
     QStringList entriesAsStringList() const;
 
+    void setLineWrapping(bool bWrap);
+
     SyntaxCheckResult checkSyntax() const;
     static QString formatErrorMessage(const SyntaxCheckResult&);
+
+protected:
+    void contextMenuEvent(QContextMenuEvent* pEvent) override;
 
 }; // Class JsonListWidget
 

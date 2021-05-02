@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
     mainWindow.setWindowIcon(QIcon(":/mainWindowIcon.png"));
 
 #if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
-    dfg::qt::GraphControlAndDisplayWidget graphDisplay;
+    dfg::qt::GraphControlAndDisplayWidget graphDisplay(true);
 
     // Setting chart guide
     {

@@ -356,6 +356,17 @@ CsvTableView_dateFormat=yyyy-MM-dd
 ; Value is passed to QDateTime::toString() so check it's documentation for details.
 ; Default value: yyyy-MM-dd hh:mm:ss.zzz
 CsvTableView_dateTimeFormat=yyyy-MM-dd hh:mm:ss.zzz
+
+; -----------------------------------------------------------
+; JsonListWidget
+
+; Defines font point size as integer.
+; Default: 10
+JsonListWidget_fontPointSize = 12
+
+; Defines whether lines are wrapped
+; Default: 1 (true)
+JsonListWidget_lineWrapping = 0
 </pre>
 
 ### File specific configuration

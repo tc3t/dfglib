@@ -1,6 +1,11 @@
 #include "JsonListWidget.hpp"
+#include "widgetHelpers.hpp"
+#include "connectHelper.hpp"
+#include "PropertyHelper.hpp"
+#include "../dfgBase.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QInputDialog>
     #include <QJsonDocument>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -8,6 +13,94 @@ DFG_END_INCLUDE_QT_HEADERS
     : m_nRow(nRow)
     , m_parseError(std::move(jsonError))
 {
+}
+
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
+{
+    enum class JsonListWidgetPropertyId
+    {
+         // Add properties here in the beginning (or remember to update JsonListWidgetPropertyId_last)
+        lineWrapping,
+        fontPointSize,
+        last = fontPointSize
+     };
+
+    // Properties
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(JsonListWidget)
+    DFG_QT_DEFINE_OBJECT_PROPERTY("JsonListWidget_fontPointSize",
+        JsonListWidget,
+        JsonListWidgetPropertyId::fontPointSize,
+        double,
+        []() { return 10.0; } ); // Default font seemed to be 8 at least in Qt 5.13 & MSVC2017, a bit small.
+    DFG_QT_DEFINE_OBJECT_PROPERTY("JsonListWidget_lineWrapping",
+        JsonListWidget,
+        JsonListWidgetPropertyId::lineWrapping,
+        bool,
+        []() { return true; });
+
+    template <JsonListWidgetPropertyId ID>
+    auto getJsonListWidgetProperty(JsonListWidget* widget) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(JsonListWidget)<static_cast<int>(ID)> ::PropertyType
+    {
+        return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(JsonListWidget)<static_cast<int>(ID)>>(widget);
+    }
+
+}}} // namespace dfg::qt::DFG_DETAIL_NS
+
+DFG_MODULE_NS(qt)::JsonListWidget::JsonListWidget(QWidget* pParent)
+    : BaseClass(pParent)
+{
+    const double fontPointSize = DFG_DETAIL_NS::getJsonListWidgetProperty<DFG_DETAIL_NS::JsonListWidgetPropertyId::fontPointSize>(this);
+    adjustWidgetFontProperties(this, fontPointSize);
+    const auto bLineWrapping = DFG_DETAIL_NS::getJsonListWidgetProperty<DFG_DETAIL_NS::JsonListWidgetPropertyId::lineWrapping>(this);
+    this->setLineWrapping(bLineWrapping);
+}
+
+::DFG_MODULE_NS(qt)::JsonListWidget::~JsonListWidget() = default;
+
+void ::DFG_MODULE_NS(qt)::JsonListWidget::contextMenuEvent(QContextMenuEvent* pEvent)
+{
+    if (!pEvent)
+        return;
+
+    // Taking standard context menu...
+    std::unique_ptr<QMenu> spMenu(BaseClass::createStandardContextMenu(pEvent->pos())); // Not sure if pos is given in correct units (global vs widget)
+
+    // ...and adding separator before custom entries.
+    spMenu->addSeparator();
+
+    // 'Set font size'-item
+    {
+        auto pAction = spMenu->addAction(tr("Set font size"));
+        if (pAction)
+        {
+            const auto nCurrentFontPointSize = this->font().pointSize();
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, [=]()
+            {
+                const auto nNewSize = QInputDialog::getInt(this, tr("New font size"), QString(), nCurrentFontPointSize);
+                if (nNewSize != nCurrentFontPointSize && nNewSize > 0 && nNewSize < 1000)
+                    adjustWidgetFontProperties(this, nNewSize);
+            }));
+        }
+    }
+
+    // 'Line wrapping'-item
+    {
+        auto pAction = spMenu->addAction(tr("Line wrapping"));
+        if (pAction)
+        {
+            pAction->setCheckable(true);
+            pAction->setChecked(this->lineWrapMode() != QPlainTextEdit::NoWrap);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &JsonListWidget::setLineWrapping));
+        }
+    }
+
+    spMenu->move(this->mapToGlobal(pEvent->pos()));
+    spMenu->exec();
+}
+
+void ::DFG_MODULE_NS(qt)::JsonListWidget::setLineWrapping(const bool bWrap)
+{
+    this->setLineWrapMode((bWrap) ? QPlainTextEdit::WidgetWidth : QPlainTextEdit::NoWrap);
 }
 
 auto ::DFG_MODULE_NS(qt)::JsonListWidget::checkSyntax() const -> std::pair<bool, std::vector<JsonListParseError>>

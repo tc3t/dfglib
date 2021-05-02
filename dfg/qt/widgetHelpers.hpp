@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../math.hpp"
 
 #include <memory>
 
@@ -9,6 +10,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QLabel>
     #include <QMenu>
     #include <QString>
+    #include <QTimer>
     #include <QWidgetAction>
     #include <QWidget>
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
@@ -86,6 +88,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 return p;
         }
         return nullptr;
+    }
+
+    // Adjusts font of given QWidget-like object that has setFont() and font() members that behave like those of QWidget.
+    // Note: currently only integer sizes are supported; argument is rounded to closest integer.
+    template <class WidgetLike_T>
+    inline void adjustWidgetFontProperties(WidgetLike_T* pWidget, const double newPointSize, const int nWeight = -1, const bool bItalic = false)
+    {
+        if (!pWidget || !::DFG_MODULE_NS(math)::isFinite(newPointSize) || newPointSize < 0.5 || newPointSize > 1000)
+            return;
+        pWidget->setFont(QFont(pWidget->font().family(), ::DFG_ROOT_NS::round<int>(newPointSize), nWeight, bItalic));
+    }
+
+    // Informational widget intended to fill the gap between tooltip and messagebox:
+    //      -Modal messagebox is often too heavy for simple information message and tooltip too volatile (uncertain how long it shows if it shows at all)
+    inline void showInfoTip(const QString& sMsg, QWidget* pParent)
+    {
+        // Using tooltip-like QLabel as discussed here: https://forum.qt.io/topic/67240/constantly-updating-tooltip-text/6
+        auto pToolTip = new QLabel(pParent, Qt::ToolTip);
+        pToolTip->setText(sMsg);
+        adjustWidgetFontProperties(pToolTip, 12); // Increasing font size, default is a bit small.
+        pToolTip->move(QCursor::pos());
+        pToolTip->show();
+        // Scheduling self-destruction after 5 seconds.
+        QTimer::singleShot(5000, pToolTip, &QWidget::deleteLater);
     }
 
 }} // Module namespace

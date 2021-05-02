@@ -371,7 +371,7 @@ public:
     typedef ChartController BaseClass;
     using ChartObject = ::DFG_MODULE_NS(charts)::ChartObject;
 
-    GraphControlAndDisplayWidget();
+    GraphControlAndDisplayWidget(bool bAllowAppSettingUsage = false);
     ~GraphControlAndDisplayWidget() override;
 
     void addDataSource(std::unique_ptr<GraphDataSource> spSource);

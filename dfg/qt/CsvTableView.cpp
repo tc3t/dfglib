@@ -1213,11 +1213,12 @@ public:
     typedef QDialog BaseClass;
     enum DialogType { DialogTypeSave, DialogTypeLoad };
 
-    typedef DFG_CLASS_NAME(CsvItemModel)::LoadOptions LoadOptions;
-    typedef DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptions;
+    typedef CsvItemModel::LoadOptions LoadOptions;
+    typedef CsvItemModel::SaveOptions SaveOptions;
 
-    CsvFormatDefinitionDialog(const DialogType dialogType, const DFG_CLASS_NAME(CsvTableView)::CsvModel* pModel, const QString& sFilePath = QString())
-        : m_dialogType(dialogType)
+    CsvFormatDefinitionDialog(CsvTableView* pParent, const DialogType dialogType, const CsvTableView::CsvModel* pModel, const QString& sFilePath = QString())
+        : BaseClass(pParent)
+        , m_dialogType(dialogType)
         ,  m_saveOptions(pModel)
     {
         using namespace DFG_ROOT_NS;
@@ -1511,9 +1512,9 @@ public:
     QObjectStorage<JsonListWidget> m_spContentFilterWidget;
 }; // Class CsvFormatDefinitionDialog
 
-bool DFG_CLASS_NAME(CsvTableView)::saveToFileWithOptions()
+bool CsvTableView::saveToFileWithOptions()
 {
-    CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeSave, csvModel());
+    CsvFormatDefinitionDialog dlg(this, CsvFormatDefinitionDialog::DialogTypeSave, csvModel());
     if (dlg.exec() != QDialog::Accepted)
         return false;
     return saveToFileImpl(dlg.getSaveOptions());
@@ -1824,7 +1825,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
     CsvFormatDefinitionDialog::LoadOptions loadOptions;
     if (!::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sPath))
     {
-        CsvFormatDefinitionDialog dlg(CsvFormatDefinitionDialog::DialogTypeLoad, csvModel(), sPath);
+        CsvFormatDefinitionDialog dlg(this, CsvFormatDefinitionDialog::DialogTypeLoad, csvModel(), sPath);
         if (dlg.exec() != QDialog::Accepted)
             return false;
         loadOptions = dlg.getLoadOptions();
@@ -3305,14 +3306,14 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
     }
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getAllowApplicationSettingsUsage() const
+bool DFG_MODULE_NS(qt)::CsvTableView::getAllowApplicationSettingsUsage() const
 {
-    return property("dfglib_allow_app_settings_usage").toBool();
+    return property(gPropertyIdAllowAppSettingsUsage).toBool();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setAllowApplicationSettingsUsage(const bool b)
+void CsvTableView::setAllowApplicationSettingsUsage(const bool b)
 {
-    setProperty("dfglib_allow_app_settings_usage", b);
+    setProperty(gPropertyIdAllowAppSettingsUsage, b);
     Q_EMIT sigOnAllowApplicationSettingsUsageChanged(b);
 }
 
@@ -3487,7 +3488,7 @@ public:
 bool CsvTableView::isSelectionNonEmpty() const
 {
     bool bNonEmptySelection = false;
-    forEachCsvModelIndexInSelection([&](const QModelIndex&, bool& rbContinue) // TODO: funktioksi
+    forEachCsvModelIndexInSelection([&](const QModelIndex&, bool& rbContinue)
     {
         rbContinue = false;
         bNonEmptySelection = true;
@@ -4057,14 +4058,7 @@ QString DFG_CLASS_NAME(CsvTableView)::privCreateActionBlockedDueToLockedContentM
 
 void CsvTableView::showStatusInfoTip(const QString& sMsg)
 {
-    // Using tooltip-like QLabel as discussed here: https://forum.qt.io/topic/67240/constantly-updating-tooltip-text/6
-    auto pToolTip = new QLabel(this, Qt::ToolTip);
-    pToolTip->setText(sMsg);
-    pToolTip->setFont(QFont(this->font().family(), 12)); // Increasing font size, default is a bit small.
-    pToolTip->move(QCursor::pos());
-    pToolTip->show();
-    // Scheduling self-destruction after 5 seconds.
-    QTimer::singleShot(5000, pToolTip, &QWidget::deleteLater);
+    showInfoTip(sMsg, this);
 }
 
 void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QString& actionname)
