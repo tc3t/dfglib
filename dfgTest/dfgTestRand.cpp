@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include <dfg/rand.hpp>
 #include <dfg/func.hpp>
 #include <ctime>

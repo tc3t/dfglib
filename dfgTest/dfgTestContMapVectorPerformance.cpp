@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 
 // Note: this file does not use DFG_CLASS_NAME-macros on purpose.
 

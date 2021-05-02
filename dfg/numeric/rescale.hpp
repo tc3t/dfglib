@@ -42,7 +42,7 @@ void rescale(Iterable_T& iterable, const T& newLimit0, const T& newLimit1)
         return;
     const auto oldMin = *minMaxPair.first;
     typedef typename std::remove_const<decltype(oldMin)>::type ValueType;
-    DFG_STATIC_ASSERT(std::is_floating_point<ValueType>::value, "Only floating point types are supported in " DFG_CURRENT_FUNCTION_NAME);
+    DFG_STATIC_ASSERT(std::is_floating_point<ValueType>::value, "Only floating point types are supported");
     const auto oldMax = *minMaxPair.second;
     const auto oldRange = oldMax - oldMin;
     const auto minEnd = newLimit0;

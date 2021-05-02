@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include <dfg/physics.hpp>
 
 TEST(dfgPhysics, misc)

@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include <dfg/dataAnalysisAll.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/rand.hpp>

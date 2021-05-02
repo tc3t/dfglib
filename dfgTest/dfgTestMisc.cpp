@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include <dfg/staticMap.hpp>
 
 namespace

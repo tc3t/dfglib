@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include <dfg/io/DelimitedTextReader.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/str/format_fmt.hpp>

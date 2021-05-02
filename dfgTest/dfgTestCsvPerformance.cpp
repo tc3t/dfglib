@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 
 #if 0 // On/off switch for the whole performance test.
 
