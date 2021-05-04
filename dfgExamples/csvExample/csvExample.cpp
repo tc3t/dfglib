@@ -131,7 +131,7 @@ int main(int argc, const char* argv[])
     });
     tableUtf8.forEachFwdRowInColumn(2, [&](const Dummy&, const char* const psz)
     {
-        vecIntsReadUtf8.push_back(DFG_MODULE_NS(str)::strTo<size_t>(psz));
+        vecIntsReadUtf8.push_back(DFG_MODULE_NS(str)::strTo<int>(psz));
     });
     tableUtf8.forEachFwdRowInColumn(3, [&](const Dummy&, const char* const psz)
     {
@@ -148,7 +148,7 @@ int main(int argc, const char* argv[])
     });
     tableUtf32Be.forEachFwdRowInColumn(2, [&](const Dummy&, const char* const psz)
     {
-        vecIntsReadUtf32Be.push_back(DFG_MODULE_NS(str)::strTo<size_t>(psz));
+        vecIntsReadUtf32Be.push_back(DFG_MODULE_NS(str)::strTo<int>(psz));
     });
     tableUtf32Be.forEachFwdRowInColumn(3, [&](const Dummy&, const char* const psz)
     {
