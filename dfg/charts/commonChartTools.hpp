@@ -127,6 +127,11 @@ constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
 //          -grid(r, c): instructs to put chart object to position row = r, column = c on a panel grid. Indexing is 1-based. Value (1,1) means top left corner.
 constexpr char ChartObjectFieldIdStr_panelId[] = "panel_id";
 
+// y_axis_id: defines y-axis to which ChartObject is to be assigned to.
+//      Possible values:
+//          -'left', 'right'. Default value is 'left'
+constexpr char ChartObjectFieldIdStr_yAxisId[] = "y_axis_id";
+
 // Line style entries
 constexpr char ChartObjectFieldIdStr_lineStyle[] = "line_style";
     constexpr char ChartObjectLineStyleStr_none[] = "none";
@@ -768,6 +773,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_ySource,
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_yAxisId,
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_dataSource,
             ChartObjectFieldIdStr_operation
@@ -785,6 +791,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_yAxisId,
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_fillColour,
             ChartObjectFieldIdStr_dataSource,
@@ -798,6 +805,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_logLevel,
             ChartObjectFieldIdStr_name,
             ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_yAxisId,
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_fillColour,
             ChartObjectFieldIdStr_dataSource,

@@ -39,6 +39,7 @@
     </ul>
    <li><i>name</i>: name of the object, shown e.g. in legend.</li>
    <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
+   <li><i>y_axis_id</i>: Defines whether chart object uses y-axis on the left or on the right side. Possible values: {<b><i>left</i></b>, <i>right</i>}. If field is not present, <i>left</i> is used.</li>
    <li><i>data_source</i>: Defines data source from which to fetch data. If omitted, default source is used.</li>
     <ul>
         <li>To see built-in sources: adding data_source -field with bogus value should print available sources to console, for example {"type":"xy", "data_source":"invalid"}</li>

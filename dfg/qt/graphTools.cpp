@@ -3196,7 +3196,20 @@ auto ChartCanvasQCustomPlot::getXAxis(const ChartObjectCreationParam& param) -> 
 
 auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> QCPAxis*
 {
-    return getAxis(param, QCPAxis::atLeft);
+    using namespace ::DFG_MODULE_NS(charts);
+    bool bAxisIdPresent = false;
+    const auto sAxisId = param.definitionEntry().fieldValueStr(ChartObjectFieldIdStr_yAxisId, &bAxisIdPresent);
+    if (!bAxisIdPresent || sAxisId == DFG_UTF8("left"))
+        return getAxis(param, QCPAxis::atLeft);
+    else if (sAxisId == DFG_UTF8("right"))
+    {
+        auto pAxis = getAxis(param, QCPAxis::atRight);
+        if (pAxis)
+            pAxis->setVisible(true);
+        return pAxis;
+    }
+    else
+        return nullptr;
 }
 
 void ChartCanvasQCustomPlot::setPanelTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle, StringViewUtf8 svTitleColor)
