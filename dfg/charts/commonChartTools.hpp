@@ -104,6 +104,9 @@ constexpr char ChartObjectFieldIdStr_xLabel[] = "x_label";
 // y label
 constexpr char ChartObjectFieldIdStr_yLabel[] = "y_label";
 
+// y2 label
+constexpr char ChartObjectFieldIdStr_y2Label[] = "y2_label";
+
 // x_tick_label_direction
 constexpr char ChartObjectFieldIdStr_xTickLabelDirection[] = "x_tick_label_direction";
 
@@ -826,6 +829,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_title,
             ChartObjectFieldIdStr_xLabel,
             ChartObjectFieldIdStr_yLabel,
+            ChartObjectFieldIdStr_y2Label,
             ChartObjectFieldIdStr_xTickLabelDirection,
             ChartObjectFieldIdStr_yTickLabelDirection,
             ChartObjectFieldIdStr_axisLabelColour

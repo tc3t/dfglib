@@ -3173,6 +3173,8 @@ auto ChartCanvasQCustomPlot::getAxis(const StringViewUtf8& svPanelId, const Stri
         return pAxisRect->axis(QCPAxis::atBottom);
     else if (svAxisId == DFG_UTF8("y"))
         return pAxisRect->axis(QCPAxis::atLeft);
+    else if (svAxisId == DFG_UTF8("y2"))
+        return pAxisRect->axis(QCPAxis::atRight);
    
     DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find axis %1 from panel %2").arg(viewToQString(svPanelId), viewToQString(svAxisId)));
     return nullptr;
@@ -3209,7 +3211,10 @@ auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> 
         return pAxis;
     }
     else
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Invalid axis id '%1'. Expected either 'left' or 'right'").arg(viewToQString(sAxisId)));
         return nullptr;
+    }
 }
 
 void ChartCanvasQCustomPlot::setPanelTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle, StringViewUtf8 svTitleColor)
@@ -5362,6 +5367,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(Char
 
     rChart.setAxisLabel(sPanelId, DFG_UTF8("x"), defEntry.fieldValueStr(ChartObjectFieldIdStr_xLabel));
     rChart.setAxisLabel(sPanelId, DFG_UTF8("y"), defEntry.fieldValueStr(ChartObjectFieldIdStr_yLabel));
+    rChart.setAxisLabel(sPanelId, DFG_UTF8("y2"), defEntry.fieldValueStr(ChartObjectFieldIdStr_y2Label));
 
     rChart.setAxisTickLabelDirection(sPanelId, DFG_UTF8("x"), defEntry.fieldValueStr(ChartObjectFieldIdStr_xTickLabelDirection));
     rChart.setAxisTickLabelDirection(sPanelId, DFG_UTF8("y"), defEntry.fieldValueStr(ChartObjectFieldIdStr_yTickLabelDirection));
