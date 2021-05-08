@@ -132,7 +132,7 @@ constexpr char ChartObjectFieldIdStr_panelId[] = "panel_id";
 
 // y_axis_id: defines y-axis to which ChartObject is to be assigned to.
 //      Possible values:
-//          -'left', 'right'. Default value is 'left'
+//          -'y', 'y2'. Default value is 'y'
 constexpr char ChartObjectFieldIdStr_yAxisId[] = "y_axis_id";
 
 // Line style entries

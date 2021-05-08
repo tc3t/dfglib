@@ -3201,9 +3201,9 @@ auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> 
     using namespace ::DFG_MODULE_NS(charts);
     bool bAxisIdPresent = false;
     const auto sAxisId = param.definitionEntry().fieldValueStr(ChartObjectFieldIdStr_yAxisId, &bAxisIdPresent);
-    if (!bAxisIdPresent || sAxisId == DFG_UTF8("left"))
+    if (!bAxisIdPresent || sAxisId == DFG_UTF8("y"))
         return getAxis(param, QCPAxis::atLeft);
-    else if (sAxisId == DFG_UTF8("right"))
+    else if (sAxisId == DFG_UTF8("y2"))
     {
         auto pAxis = getAxis(param, QCPAxis::atRight);
         if (pAxis)
@@ -3212,7 +3212,7 @@ auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> 
     }
     else
     {
-        DFG_QT_CHART_CONSOLE_WARNING(tr("Invalid axis id '%1'. Expected either 'left' or 'right'").arg(viewToQString(sAxisId)));
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Invalid axis id '%1'. Expected either 'y' or 'y2'").arg(viewToQString(sAxisId)));
         return nullptr;
     }
 }
