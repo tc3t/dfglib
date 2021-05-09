@@ -8,6 +8,7 @@
 #include "str/strLen.hpp"
 #include "build/utils.hpp"
 #include <string>
+#include <limits>
 #include "str/string.hpp"
 #include "build/languageFeatureInfo.hpp"
 
@@ -324,7 +325,7 @@ namespace DFG_DETAIL_NS
         #endif
             this->m_nSize -= nCount;
         }
-    };
+    }; // StringViewIndexAccessBase
 
     template <class Char_T, class Str_T> struct StringViewBase;
     template <> struct StringViewBase<char,    std::string>             { typedef StringViewIndexAccessBase<char,    std::string>    type; };
@@ -434,6 +435,12 @@ public:
         return DFG_DETAIL_NS::substr_startCount<StringView>(nStart, nCount, *this);
     }
 
+    // Returns substring starting at nStart
+    StringView substr_start(const size_t nStart) const
+    {
+        return substr_startCount(nStart, (std::numeric_limits<size_t>::max)());
+    }
+
     const_iterator end() const
     {
         return PtrT(toCharPtr_raw(this->m_pFirst) + this->m_nSize);
@@ -537,6 +544,13 @@ public:
     StringViewT substr_startCount(const size_t nStart, const size_t nCount) const
     {
         return toStringView().substr_startCount(nStart, nCount);
+    }
+
+    // Returns substring starting at nStart. Note that unlike substr_startCount(), this can be guaranteed to be null-terminated so return type is StringViewSz.
+    StringViewSz substr_start(const size_t nStart) const
+    {
+        auto sv = substr_startCount(nStart, (std::numeric_limits<size_t>::max)());
+        return StringViewSz(SzPtrT(sv.beginRaw()));
     }
 
     // Returns view as untyped.

@@ -970,6 +970,10 @@ namespace
         EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(2, 0));
         EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(5, 0));
         EXPECT_EQ(conv(szBufEmpty), sv.substr_startCount(5, 10));
+
+        EXPECT_EQ(conv(szBufAbc), sv.substr_start(0));
+        EXPECT_EQ(conv(szBufBc), sv.substr_start(1));
+        EXPECT_EQ(conv(szBufEmpty), sv.substr_start(5));
     }
 
     template <class StringView_T, class RawToTypedConv_T>
@@ -1243,6 +1247,9 @@ TEST(dfgStr, StringViewSz)
     TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzAscii), char, StringAscii>([](const char* psz)      { return DFG_ROOT_NS::SzPtrAscii(psz); });
     TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzLatin1), char, StringLatin1>([](const char* psz)    { return DFG_ROOT_NS::SzPtrLatin1(psz); });
     TestStringViewSzImpl<DFG_CLASS_NAME(StringViewSzUtf8), char, StringUtf8>([](const char* psz)        { return DFG_ROOT_NS::SzPtrUtf8(psz); });
+
+    // Making sure that StringViewSzC().substr_start() returns StringViewSzC instead of StringViewC.
+    DFGTEST_STATIC_TEST((std::is_same<StringViewSzC, decltype(StringViewSzC("").substr_start(0))>::value));
 
     // Test that can compare views that have compare-compatible types.
     // TODO: make this work.
