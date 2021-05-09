@@ -712,10 +712,8 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
     // Reading operations
     {
         auto& manager = operationManager();
-        rv.forEachPropertyId([&](const StringViewUtf8& svKey)
+        rv.forEachPropertyIdStartingWith(ChartObjectFieldIdStr_operation, [&](const StringViewUtf8& svKey, const StringViewUtf8 svOperationOrderTag)
         {
-            if (!::DFG_MODULE_NS(str)::beginsWith(svKey, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation))))
-                return;
             const auto sOperationDef = rv.fieldValueStr(svKey.asUntypedView());
             auto op = manager.createOperation(sOperationDef);
             if (!op)
@@ -725,7 +723,6 @@ auto GraphDefinitionEntry::fromText(const QString& sJson, const int nIndex) -> G
             }
             else
             {
-                StringViewUtf8 svOperationOrderTag(SzPtrUtf8(svKey.beginRaw() + ::DFG_MODULE_NS(str)::strLen(ChartObjectFieldIdStr_operation)), SzPtrUtf8(svKey.endRaw()));
                 op.m_sDefinition = sOperationDef;
                 rv.m_operationMap[svOperationOrderTag.toString()] = std::move(op);
             }
@@ -1890,6 +1887,7 @@ public:
     void setPanelAxesLabelColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef) override;
     static void setPanelAxisLabelColour(QCPAxis& axis, const QColor& color);
     static void resetPanelAxisLabelColour(QCPAxis& axis);
+    void setAxisProperties(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId, const ArgList& args) override;
 
     static void setTypeToQcpObjectProperty(QCPAbstractPlottable* pPlottable, const StringViewC& type);
 
@@ -2900,6 +2898,27 @@ void ChartCanvasQCustomPlot::setPanelAxesLabelColour(StringViewUtf8 svPanelId, S
     });
 }
 
+void ChartCanvasQCustomPlot::setAxisProperties(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId, const ArgList& args)
+{
+    auto pAxis = this->getAxis(svPanelId, svAxisId);
+    if (!pAxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("No axis '%1' found from panel '%2': setting properties ignored").arg(viewToQString(svAxisId), viewToQString(svPanelId)));
+        return;
+    }
+    for (size_t i = 0, nArgCount = args.valueCount(); i < nArgCount; i += 2)
+    {
+        const auto svPropId = args.value(i);
+        const auto svPropValue = args.value(i + 1);
+        if (svPropId == DFG_UTF8("line_colour"))
+            setPanelAxisColour(*pAxis, QColor(viewToQString(svPropValue)));
+        else if (svPropId == DFG_UTF8("label_colour"))
+            setPanelAxisLabelColour(*pAxis, QColor(viewToQString(svPropValue)));
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Unrecognized axis property '%1' for axis '%2' in panel '%3'").arg(viewToQString(svPropId), viewToQString(svAxisId), viewToQString(svPanelId)));
+    }
+}
+
 void ChartCanvasQCustomPlot::setPanelAxisLabelColour(QCPAxis& axis, const QColor& color)
 {
     axis.setTickLabelColor(color);
@@ -3176,7 +3195,7 @@ auto ChartCanvasQCustomPlot::getAxis(const StringViewUtf8& svPanelId, const Stri
     else if (svAxisId == DFG_UTF8("y2"))
         return pAxisRect->axis(QCPAxis::atRight);
    
-    DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find axis %1 from panel %2").arg(viewToQString(svPanelId), viewToQString(svAxisId)));
+    DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find axis '%1' from panel '%2'").arg(viewToQString(svAxisId), viewToQString(svPanelId)));
     return nullptr;
 }
 
@@ -5360,6 +5379,12 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProper
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::handlePanelProperties(ChartCanvas& rChart, const GraphDefinitionEntry& defEntry)
 {
     const auto sPanelId = defEntry.fieldValueStr(ChartObjectFieldIdStr_panelId);
+
+    // Handling axis properties
+    defEntry.forEachPropertyIdStartingWith(ChartObjectFieldIdStr_axisProperties, [&](const StringViewUtf8& svKey, const StringViewUtf8& idPart)
+    {
+        rChart.setAxisProperties(sPanelId, idPart, ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem::fromStableView(defEntry.fieldValueStr(svKey)));
+    });
 
     const auto sAxisLabelColour = defEntry.fieldValueStr(ChartObjectFieldIdStr_axisLabelColour);
 

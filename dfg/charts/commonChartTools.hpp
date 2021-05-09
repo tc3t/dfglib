@@ -155,8 +155,16 @@ constexpr char ChartObjectFieldIdStr_lineColour[] = "line_colour";
 // fill_colour
 constexpr char ChartObjectFieldIdStr_fillColour[] = "fill_colour";
 
-// axis_label_colour
+// axis_label_colour: sets colour of labels and axis lines for all axes.
+// Note: using this together with axis_properties_ in the same entry definition is not supported.
 constexpr char ChartObjectFieldIdStr_axisLabelColour[] = "axis_label_colour";
+
+// axis_properties_: Defines axis properties as (key, value) list for axis whose id appears after underscore.
+//      Available properties:
+//          -line_colour
+//          -label_colour
+// Example: "axis_properties_y": "(line_colour, red, label_colour, green)"
+constexpr char ChartObjectFieldIdStr_axisProperties[] = "axis_properties_";
 
 // operation_
 constexpr char ChartObjectFieldIdStr_operation[] = "operation_";
@@ -244,6 +252,88 @@ inline void ChartDataType::setIfExpands(const ChartDataType other)
     }
 }
 
+namespace DFG_DETAIL_NS
+{
+    // Helper class for dealing with items of format key_name(comma-separated list of args with csv-quoting)
+    // Examples: 
+    //      input: 'some_id(arg one,"arg two that has , in it",arg three)' -> {key="some_id", values[3]={"arg one", "arg two that has , in it", "arg three"}
+    class ParenthesisItem
+    {
+    public:
+        using StringT = StringUtf8;
+        using StringView = StringViewUtf8;
+        using StringViewSz = StringViewSzUtf8;
+        using ValueContainer = std::vector<StringT>;
+
+        // Given string must accessible for the lifetime of 'this'
+        ParenthesisItem(const StringT& sv);
+        ParenthesisItem(StringT&&) = delete;
+
+        ValueContainer::const_iterator begin() const { return m_values.cbegin(); }
+        ValueContainer::const_iterator end()   const { return m_values.cend(); }
+
+        // Constructs from StringView promised to outlive 'this'
+        static ParenthesisItem fromStableView(StringView sv);
+
+        StringView key() const { return m_key; }
+
+        size_t valueCount() const { return m_values.size(); }
+
+        template <class T>
+        T valueAs(const size_t nIndex, bool* pSuccess = nullptr) const
+        {
+            return ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex), pSuccess);
+        }
+
+        StringViewSz value(const size_t nIndex) const
+        {
+            return (isValidIndex(m_values, nIndex)) ? m_values[nIndex] : StringViewSz(DFG_UTF8(""));
+        }
+
+    private:
+        ParenthesisItem(const StringView& sv);
+
+    public:
+        StringView m_key;
+        std::vector<StringT> m_values;
+    };
+
+    inline ParenthesisItem::ParenthesisItem(const StringT& s) :
+        ParenthesisItem(StringView(s))
+    {
+    }
+
+    inline ParenthesisItem::ParenthesisItem(const StringView& sv)
+    {
+        auto iterOpen = std::find(sv.beginRaw(), sv.endRaw(), '(');
+        if (iterOpen == sv.endRaw())
+            return; // Didn't find opening parenthesis
+        m_key = StringView(sv.data(), SzPtrUtf8(iterOpen));
+        iterOpen++; // Skipping opening parenthesis
+        auto iterEnd = sv.endRaw();
+        if (iterOpen == iterEnd)
+            return;
+        --iterEnd;
+        // Skipping trailing whitespaces
+        while (iterEnd != iterOpen && DFG_MODULE_NS(alg)::contains(" ", *iterEnd))
+            --iterEnd;
+        // Checking that items end with closing parenthesis.
+        if (*iterEnd != ')')
+            return;
+        // Parsing item inside parenthesis as standard comma-delimited item with quotes.
+        DFG_MODULE_NS(io)::BasicImStream istrm(iterOpen, iterEnd - iterOpen);
+        DFG_MODULE_NS(io)::DelimitedTextReader::read<char>(istrm, ',', '"', DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, [&](size_t, size_t, const char* p, const size_t nSize)
+        {
+            m_values.push_back(StringT(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(p + nSize)));
+        });
+    }
+
+    inline auto ParenthesisItem::fromStableView(StringView sv) -> ParenthesisItem
+    {
+        return ParenthesisItem(sv);
+    }
+} // namespace DFG_DETAIL_NS
+
 
 // Abstract class representing an entry that defines what kind of ChartObjects to create on chart.
 class AbstractChartControlItem
@@ -281,6 +371,7 @@ public:
     bool hasField(FieldIdStrViewInputParam fieldId) const { return hasFieldImpl(fieldId); }
 
     void forEachPropertyId(std::function<void(StringView svId)>) const;
+    void forEachPropertyIdStartingWith(FieldIdStrViewInputParam fieldId, std::function<void(StringView, StringView)>) const;
 
     LogLevel logLevel() const { return m_logLevel; }
 
@@ -353,6 +444,18 @@ inline auto AbstractChartControlItem::fieldValueStr(FieldIdStrViewInputParam fie
 inline void AbstractChartControlItem::forEachPropertyId(std::function<void(StringView svId)> func) const
 {
     forEachPropertyIdImpl(func);
+}
+
+inline void AbstractChartControlItem::forEachPropertyIdStartingWith(FieldIdStrViewInputParam fieldId, std::function<void(StringView, StringView)> func) const
+{
+    forEachPropertyId([&](StringView svId)
+    {
+        if (::DFG_MODULE_NS(str)::beginsWith(svId.asUntypedView(), fieldId))
+        {
+            const auto svPropId = svId.asUntypedView().substr_start(::DFG_MODULE_NS(str)::strLen(fieldId));
+            func(svId, StringView(TypedCharPtrUtf8R(svPropId.beginRaw()), TypedCharPtrUtf8R(svPropId.endRaw())));
+        }
+    });
 }
 
 inline auto AbstractChartControlItem::logLevel(const StringView& sv, bool* pValidInput) -> LogLevel
@@ -688,6 +791,7 @@ public:
     using HistogramCreationParam = ::DFG_MODULE_NS(charts)::HistogramCreationParam;
     using BarSeriesCreationParam = ::DFG_MODULE_NS(charts)::BarSeriesCreationParam;
     template <class T> using ChartObjectHolder = ::DFG_MODULE_NS(charts)::ChartObjectHolder<T>;
+    using ArgList = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
 
     virtual ~ChartCanvas() {}
 
@@ -710,6 +814,8 @@ public:
     virtual void setPanelAxesColour(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svColourDef*/) {}
     // Sets colour to all panel axes labels
     virtual void setPanelAxesLabelColour(StringViewUtf8 /*svPanelId*/, StringViewUtf8 /*svColourDef*/) {}
+
+    virtual void setAxisProperties(const StringViewUtf8& /*svPanelId*/, const StringViewUtf8& /*svAxisId*/, const ArgList& /*args*/) {};
 
     virtual bool isLegendSupported() const { return false; }
     virtual bool isToolTipSupported() const { return false; }
@@ -750,7 +856,9 @@ namespace DFG_DETAIL_NS
                 if (!psz)
                     return false;
                 return (sv == SzPtrUtf8(psz)
-                    || (StringViewC(ChartObjectFieldIdStr_operation) == psz && ::DFG_MODULE_NS(str)::beginsWith(sv, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation)))));
+                    || (StringViewC(ChartObjectFieldIdStr_operation) == psz && ::DFG_MODULE_NS(str)::beginsWith(sv, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_operation))))
+                    || (StringViewC(ChartObjectFieldIdStr_axisProperties) == psz && ::DFG_MODULE_NS(str)::beginsWith(sv, StringViewUtf8(SzPtrUtf8(ChartObjectFieldIdStr_axisProperties))))
+                    );
             });
             if (iter == knownItems.end())
                 func(sv);
@@ -832,7 +940,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_y2Label,
             ChartObjectFieldIdStr_xTickLabelDirection,
             ChartObjectFieldIdStr_yTickLabelDirection,
-            ChartObjectFieldIdStr_axisLabelColour
+            ChartObjectFieldIdStr_axisLabelColour,
+            ChartObjectFieldIdStr_axisProperties
             });
     }
     else if (isType(ChartObjectChartTypeStr_globalConfig))
@@ -854,89 +963,5 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
         func(SzPtrUtf8(ChartObjectFieldIdStr_type));
     }
 }
-
-
-namespace DFG_DETAIL_NS
-{
-    // Helper class for dealing with items of format key_name(comma-separated list of args with csv-quoting)
-    // Examples: 
-    //      input: 'some_id(arg one,"arg two that has , in it",arg three)' -> {key="some_id", values[3]={"arg one", "arg two that has , in it", "arg three"}
-    class ParenthesisItem
-    {
-    public:
-        using StringT = StringUtf8;
-        using StringView = StringViewUtf8;
-        using StringViewSz = StringViewSzUtf8;
-        using ValueContainer = std::vector<StringT>;
-
-        // Given string must accessible for the lifetime of 'this'
-        ParenthesisItem(const StringT& sv);
-        ParenthesisItem(StringT&&) = delete;
-
-        ValueContainer::const_iterator begin() const { return m_values.cbegin(); }
-        ValueContainer::const_iterator end()   const { return m_values.cend(); }
-
-        // Constructs from StringView promised to outlive 'this'
-        static ParenthesisItem fromStableView(StringView sv);
-
-        StringView key() const { return m_key; }
-
-        size_t valueCount() const { return m_values.size(); }
-
-        template <class T>
-        T valueAs(const size_t nIndex, bool* pSuccess = nullptr) const
-        {
-            return ::DFG_MODULE_NS(str)::strTo<T>(value(nIndex), pSuccess);
-        }
-
-        StringViewSz value(const size_t nIndex) const
-        {
-            return (isValidIndex(m_values, nIndex)) ? m_values[nIndex] : StringViewSz(DFG_UTF8(""));
-        }
-
-    private:
-        ParenthesisItem(const StringView& sv);
-
-    public:
-        StringView m_key;
-        std::vector<StringT> m_values;
-    };
-
-    inline ParenthesisItem::ParenthesisItem(const StringT& s) :
-        ParenthesisItem(StringView(s))
-    {
-    }
-
-    inline ParenthesisItem::ParenthesisItem(const StringView& sv)
-    {
-        auto iterOpen = std::find(sv.beginRaw(), sv.endRaw(), '(');
-        if (iterOpen == sv.endRaw())
-            return; // Didn't find opening parenthesis
-        m_key = StringView(sv.data(), SzPtrUtf8(iterOpen));
-        iterOpen++; // Skipping opening parenthesis
-        auto iterEnd = sv.endRaw();
-        if (iterOpen == iterEnd)
-            return;
-        --iterEnd;
-        // Skipping trailing whitespaces
-        while (iterEnd != iterOpen && DFG_MODULE_NS(alg)::contains(" ", *iterEnd))
-            --iterEnd;
-        // Checking that items end with closing parenthesis.
-        if (*iterEnd != ')')
-            return;
-        // Parsing item inside parenthesis as standard comma-delimited item with quotes.
-        DFG_MODULE_NS(io)::BasicImStream istrm(iterOpen, iterEnd - iterOpen);
-        DFG_MODULE_NS(io)::DelimitedTextReader::read<char>(istrm, ',', '"', DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, [&](size_t, size_t, const char* p, const size_t nSize)
-        {
-            m_values.push_back(StringT(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(p + nSize)));
-        });
-    }
-
-    inline auto ParenthesisItem::fromStableView(StringView sv) -> ParenthesisItem
-    {
-        return ParenthesisItem(sv);
-    }
-} // namespace 
-
 
 } } // Module namespace

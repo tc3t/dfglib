@@ -165,7 +165,14 @@
         <li><i>y2_label</i>: Like y_label, but for right y-axis.</li>
         <li><i>x_tick_label_direction</i>: Direction of tick labels on x-axis by angle [-90, 90]. 0 = horizontal, positive is clockwise rotation.</li>
         <li><i>y_tick_label_direction</i>: Like x_tick_label_direction, but for y-axis.</li>
-        <li><i>axis_label_colour</i>: Sets axis and label colour for all axes in the panel and colour for panel title.</li>
+        <li><i>axis_label_colour</i>: Sets axis and label colour for all axes in the panel and colour for panel title. Note: this setting is not compatible with axis_properties_, i.e. using both in the same panel_config is not supported</li>
+        <li><i>axis_properties_</i>: Sets properties for axis whose id follows underscore; properties are in format (key1, value1, key2, value2...).</li>
+            <ul>
+                <li>Possible axis identifiers following underscore: <i>x</i>, <i>y</i>, <i>y2</i></li>
+                <li>Properties: <i>line_colour</i>, <i>label_colour</i></li>
+                <li>Note: key, value list must be in parenthesis</li>
+                <li>Example: "axis_properties_x": "(line_colour, blue, label_colour, #112233)"</li>
+            </ul>
     </ul>
 <h2>Fields for type <i>global_config</i></h2>
     <ul>
