@@ -428,7 +428,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
             error_pipeDataVectorSizeMismatch    = 0x8,    // Input vectors have different size.
             error_unexpectedInputVectorCount    = 0x10,   // Input has unexpected vector count.
             error_unexpectedInputVectorTypes    = 0x20,   // Input has unexpected type (e.g. string instead of number)
-            error_unableToCreateDataVectors     = 0x40    // Operation failed because new data vectors couldn't be created.
+            error_unableToCreateDataVectors     = 0x40,   // Operation failed because new data vectors couldn't be created.
+            error_processingError               = 0x80    // Error occured while operating, this can happen for example if creation args are bad and/or incompatible with input.
         };
 
         // Helper enum for storing creation arg string as numeric value.
@@ -997,15 +998,35 @@ namespace operations
             op.setError(error_pipeDataVectorSizeMismatch);
             return;
         }
+        ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus evalStatus;
+        size_t nEvalErrorCount = 0;
+        bool bParseError = false;
         for (size_t i = 0; i < nSize; ++i)
         {
-            if (pValuesX)
-                x = (*pValuesX)[i];
-            if (pValuesY)
-                y = (*pValuesY)[i];
-            const auto val = parser.evaluateFormulaAsDouble();
+            double val;
+            if (!bParseError)
+            {
+                if (pValuesX)
+                    x = (*pValuesX)[i];
+                if (pValuesY)
+                    y = (*pValuesY)[i];
+                val = parser.evaluateFormulaAsDouble(&evalStatus);
+                if (!evalStatus)
+                {
+                    // Evaluation failed. Checking if it was because of certain type of syntax error where it's not reasonable to try to re-evaluate for every element.
+                    ++nEvalErrorCount;
+                    bParseError = (parser.backendType() == 1 && evalStatus.errorCode() == 0); // backendType() == 1 == muparser, 0 == ecUNEXPECTED_OPERATOR.
+                }
+            }
+            else
+            {
+                val = std::numeric_limits<double>::quiet_NaN();
+                ++nEvalErrorCount;
+            }
             (*pOutput)[i] = val;
         }
+        if (nEvalErrorCount > 0)
+            op.setError(error_processingError);
     }
 
 } // namespace operations

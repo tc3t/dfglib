@@ -391,7 +391,7 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::setFormula(const StringViewC sv) -> R
 {
     try
     {
-        DFG_OPAQUE_REF().m_parser.SetExpr(sv.toString());
+        DFG_OPAQUE_REF().m_parser.SetExpr(sv.toString()); // Note: this doesn't seem to do much validity checking meaning that this may succeed even if formula has syntax errors.
         return ReturnStatus::success();
     }
     catch(const dfg_mu::Parser::exception_type& e)

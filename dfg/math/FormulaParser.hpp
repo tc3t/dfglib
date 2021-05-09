@@ -65,6 +65,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
             std::shared_ptr<const ErrorDetails> m_spDetails;
         };
 
+        // 1 = muparser
+        static constexpr int backendType() { return 1; }
+
         FormulaParser();
         ~FormulaParser();
 
@@ -76,7 +79,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 
         static constexpr size_t maxFunctorCountPerType() { return 20; }
 
-        ReturnStatus setFormula(const StringViewC sv); // Returns ReturnStatus that evaluates to true iff successful.
+        ReturnStatus setFormula(const StringViewC sv); // Returns ReturnStatus that evaluates to true iff successful. Note: successful return value doesn't guarantee that formula is even well formed, i.e. may return true even if formula has syntax errors.
 
         // Calls setFormula() and returns evaluateFormulaAsDouble().
         double setFormulaAndEvaluateAsDouble(const StringViewC sv);
