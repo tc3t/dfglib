@@ -3459,12 +3459,28 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
     }
     toolTipStream << QString("x = %1, y = %2").arg(toolTipStream.numberToText(xy.first), toolTipStream.numberToText(xy.second));
 
+    const auto axisTypeToToolTipString = [](const QCPAxis::AxisType axisType)
+    {
+        switch (axisType)
+        {
+            case QCPAxis::atLeft:  return tr("y");
+            case QCPAxis::atRight: return tr("y2");
+            default:               return tr("Unknown");
+        }
+    };
+
     // For each chart object in this panel
     pPanel->forEachChartObject([&](const QCPAbstractPlottable& plottable)
     {
         toolTipStream << QLatin1String("<br>---------------------------");
         // Name
-        toolTipStream << QString("<br>'%1'").arg(plottable.name().toHtmlEscaped());
+        toolTipStream << QString("<br><font color=\"%2\">'%1'</font>").arg(plottable.name().toHtmlEscaped(), plottable.pen().color().name());
+        // Axis identifier
+        {
+            const auto pValueAxis = plottable.valueAxis();
+            if (pValueAxis && pValueAxis->axisType() == QCPAxis::atRight) // Printing y-axis info if using non-default.
+                toolTipStream << tr("<br>y axis: %1").arg(axisTypeToToolTipString(pValueAxis->axisType()));
+        }
         if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPGraph*>(&plottable), xy, toolTipStream)) {}
         else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPCurve*>(&plottable), xy, toolTipStream)) {}
         else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPBars*>(&plottable), xy, toolTipStream)) {}
