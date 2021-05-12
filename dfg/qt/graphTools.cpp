@@ -1404,11 +1404,11 @@ void GraphDefinitionWidget::showGuideWidget()
         m_spGuideWidget.reset(new QDialog(this));
         m_spGuideWidget->setWindowTitle(tr("Chart guide"));
         auto pTextEdit = new QTextEdit(m_spGuideWidget.get()); // Deletion through parentship.
-        auto pLayout = new QHBoxLayout(m_spGuideWidget.get());
+        auto pLayout = new QVBoxLayout(m_spGuideWidget.get());
         pTextEdit->setTextInteractionFlags(Qt::TextBrowserInteraction);
         pTextEdit->setHtml(getGuideString());
-        
-        // At least on Qt 5.13 with MSVC2017 default font size was a bit small (8.25), increasing at least to 11.
+
+        // At least on Qt 5.13 with MSVC2017 default font size was a bit small (8.25), increasing to 11.
         {
             auto font = pTextEdit->currentFont();
             const auto oldPointSizeF = font.pointSizeF();
@@ -1416,6 +1416,60 @@ void GraphDefinitionWidget::showGuideWidget()
             pTextEdit->setFont(font);
         }
 
+        // Creating edit for find text and adding it to layout
+        auto pFindEdit = new QLineEdit(m_spGuideWidget.get()); // Deletion through parentship.
+        pFindEdit->setMaxLength(1000);
+        pFindEdit->setPlaceholderText("Find... (Ctrl+F)");
+        pLayout->addWidget(pFindEdit);
+
+        // Adjusting colors in text edit so that highlighted text shows more clearly even if the text edit does not have focus.
+        {
+            QPalette pal = pTextEdit->palette();
+            pal.setColor(QPalette::Inactive, QPalette::Highlight, pal.color(QPalette::Active, QPalette::Highlight));
+            pal.setColor(QPalette::Inactive, QPalette::HighlightedText, pal.color(QPalette::Active, QPalette::HighlightedText));
+            pTextEdit->setPalette(pal);
+        }
+
+        // Adding shortcut Ctrl+F (activate find edit)
+        {
+            auto pActivateFind = new QAction(pTextEdit);
+            pActivateFind->setShortcut(QString("Ctrl+F"));
+            m_spGuideWidget->addAction(pActivateFind); // Needed in order to get shortcut trigger; parentship is not enough.
+            DFG_QT_VERIFY_CONNECT(connect(pActivateFind, &QAction::triggered, [=]() { pFindEdit->setFocus(); pFindEdit->selectAll(); }));
+        }
+
+        const auto wrapCursor = [](QTextEdit* pTextEdit, QLineEdit* pFindEdit, const QTextDocument::FindFlags findFlags, const QTextCursor::MoveOperation moveOp)
+            {
+                if (!pTextEdit || !pFindEdit)
+                    return;
+                if (!pTextEdit->find(pFindEdit->text(), findFlags)) // If didn't find, wrapping to begin/end and trying to find again.
+                {
+                    const auto initialCursor = pTextEdit->textCursor();
+                    pTextEdit->moveCursor(moveOp);
+                    if (!pTextEdit->find(pFindEdit->text(), findFlags))
+                        pTextEdit->setTextCursor(initialCursor); // Didn't find after wrapping so restoring cursor position.
+                }
+            };
+
+        // Adding shortcut F3 (find)
+        {
+            auto pActionF3 = new QAction(m_spGuideWidget.get());
+            pActionF3->setShortcut(QString("F3"));
+            m_spGuideWidget->addAction(pActionF3); // Needed in order to get shortcut trigger; parentship is not enough.
+            DFG_QT_VERIFY_CONNECT(connect(pActionF3, &QAction::triggered, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindFlags(), QTextCursor::Start); }));
+        }
+        
+        // Adding shortcut Shift+F3 (find backward)
+        {
+            auto pActionShiftF3 = new QAction(m_spGuideWidget.get());
+            pActionShiftF3->setShortcut(QString("Shift+F3"));
+            m_spGuideWidget->addAction(pActionShiftF3); // Needed in order to get shortcut trigger; parentship is not enough.
+            DFG_QT_VERIFY_CONNECT(connect(pActionShiftF3, &QAction::triggered, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindBackward, QTextCursor::End); }));
+        }
+
+        // Connecting textChanged() to trigger find.
+        DFG_QT_VERIFY_CONNECT(connect(pFindEdit, &QLineEdit::textChanged, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindFlags(), QTextCursor::Start); }));
+        
         pLayout->addWidget(pTextEdit);
         removeContextHelpButtonFromDialog(m_spGuideWidget.get());
 
