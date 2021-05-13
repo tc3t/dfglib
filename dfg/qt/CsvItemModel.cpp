@@ -531,14 +531,30 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
 namespace
 {
     template <class Strm_T>
-    class CsvWritePolicy : public ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DataTable::WritePolicySimple<Strm_T>
+    class CsvWritePolicy : public ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable::WritePolicySimple<Strm_T>
     {
     public:
-        typedef ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DataTable::WritePolicySimple<Strm_T> BaseClass;
+        typedef ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable::WritePolicySimple<Strm_T> BaseClass;
+        using CsvItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
+
         DFG_BASE_CONSTRUCTOR_DELEGATE_1(CsvWritePolicy, BaseClass)
         {
         }
-    };
+
+        void write(Strm_T& strm, const char* pData, const int nRow, const int nCol)
+        {
+            DFG_STATIC_ASSERT(CsvItemModel::internalEncoding() == ::DFG_MODULE_NS(io)::encodingUTF8, "");
+            BaseClass::write(strm, pData, nRow, nCol);
+            if (!utf8::is_valid(pData, pData + std::strlen(pData)))
+            {
+                if (!::DFG_ROOT_NS::isValidIndex(this->m_colToInvalidContentRowList, nCol))
+                    m_colToInvalidContentRowList.resize(nCol + 1);
+                m_colToInvalidContentRowList[nCol].push_back(nRow);
+            }
+        }
+
+        std::vector<std::vector<CsvItemModel::Index>> m_colToInvalidContentRowList; // m_colToInvalidContentRowList[c] is a list of rows in column c which had invalid utf and consequently written file may differ from input.
+    }; // class CsvWritePolicy
 
 }
 
@@ -548,12 +564,12 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const 
 }
 
 template <class Stream_T>
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, const SaveOptions& options)
+bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions& options)
 {
-    DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) writeTimer;
+    DFG_MODULE_NS(time)::TimerCpu writeTimer;
     m_messagesFromLatestSave.clear();
 
-    const QChar cSep = (DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(options.separatorChar())) ? QChar(',') : QChar(options.separatorChar());
+    const QChar cSep = (DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(options.separatorChar())) ? QChar(',') : QChar(options.separatorChar());
     const QChar cEnc(options.enclosingChar());
     const QChar cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
     const auto sEol = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
@@ -598,6 +614,26 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveImpl(Stream_T& strm, c
     mainTableSaveOptions.textEncoding(encoding);
     CsvWritePolicy<decltype(strm)> writePolicy(mainTableSaveOptions);
     m_table.writeToStream(strm, writePolicy);
+    if (!writePolicy.m_colToInvalidContentRowList.empty())
+    {
+        size_t nInvalidCount = 0;
+        const size_t nMaxMessageCount = 10;
+        // At least one cell had invalid utf8 and might written, formulating a message about this for user.
+        for (size_t c = 0; c < writePolicy.m_colToInvalidContentRowList.size(); ++c)
+        {
+            for (const auto r : writePolicy.m_colToInvalidContentRowList[c])
+            {
+                if (nInvalidCount < nMaxMessageCount)
+                    this->m_messagesFromLatestSave.push_back(tr("Warning: cell (%1, %2) couldn't be written correctly, cell had invalid %3")
+                        .arg(internalRowIndexToVisible(r))
+                        .arg(internalColumnIndexToVisible(static_cast<Index>(c)))
+                        .arg(::DFG_MODULE_NS(io)::encodingToStrId(internalEncoding())));
+                ++nInvalidCount;
+            }
+        }
+        if (nInvalidCount > nMaxMessageCount)
+            this->m_messagesFromLatestSave.push_back(tr("Warning: %1 more cell(s) which couldn't be written correctly, cell(s) had invalid %2.").arg(nInvalidCount - nMaxMessageCount).arg(::DFG_MODULE_NS(io)::encodingToStrId(internalEncoding())));
+    }
     m_table.saveFormat(options);
 
     m_writeTimeInSeconds = static_cast<decltype(m_writeTimeInSeconds)>(writeTimer.elapsedWallSeconds());

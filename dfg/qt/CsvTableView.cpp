@@ -1148,15 +1148,18 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG
                 bSuccess = pModel->saveToFile(path, formatDef);
         });
 
-    if (!bSuccess)
+    if (bSuccess && bSaveAsSqlite)
+        QMessageBox::information(this, tr("SQLite export"), tr("Successfully exported table to SQLite file\n%1").arg(path));
+    else
     {
         QString sAdditionalDetails = (!pModel->m_messagesFromLatestSave.isEmpty())
             ? QString("\n\nThe following message(s) were generated:\n%1").arg(pModel->m_messagesFromLatestSave.join('\n'))
             : QString();
-        QMessageBox::warning(nullptr, tr("Save failed"), tr("Failed to save to path\n%1%2").arg(path, sAdditionalDetails));
+        if (bSuccess && !sAdditionalDetails.isEmpty())
+            QMessageBox::information(nullptr, tr("Save messages"), tr("Saving to path\n%1%2").arg(path, sAdditionalDetails));
+        else if (!bSuccess)
+            QMessageBox::warning(nullptr, tr("Save failed"), tr("Failed to save to path\n%1%2").arg(path, sAdditionalDetails));
     }
-    else if (bSaveAsSqlite)
-        QMessageBox::information(this, tr("SQLite export"), tr("Successfully exported table to SQLite file\n%1").arg(path));
 
     return bSuccess;
 }

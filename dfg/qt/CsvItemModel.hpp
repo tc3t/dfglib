@@ -100,20 +100,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     } // detail-namespace
 
-    // TODO: test
-    class DFG_CLASS_NAME(CsvItemModel) : public QAbstractTableModel
+    class CsvItemModel : public QAbstractTableModel
     {
         Q_OBJECT
     public:
+        static constexpr ::DFG_MODULE_NS(io)::TextEncoding internalEncoding() { return ::DFG_MODULE_NS(io)::encodingUTF8; }
+
         static const QString s_sEmpty;
         typedef QAbstractTableModel BaseClass;
+        typedef int32 Index;
         typedef int64 LinearIndex; // LinearIndex guarantees that LinearIndex(rowCount()) * LinearIndex(columnCount()) does not overflow.
         typedef std::ostream StreamT;
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int, DFG_MODULE_NS(io)::encodingUTF8> RawDataTable;
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, int, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SortedSequence)<std::vector<int>> IndexSet;
+        typedef DFG_MODULE_NS(cont)::TableSz<char, Index, DFG_MODULE_NS(io)::encodingUTF8> RawDataTable;
+        typedef DFG_MODULE_NS(cont)::TableCsv<char, Index, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
+        typedef DFG_MODULE_NS(cont)::SortedSequence<std::vector<Index>> IndexSet;
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
-        typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(StringMatchDefinition) StringMatchDefinition;
+        typedef DFG_MODULE_NS(qt)::StringMatchDefinition StringMatchDefinition;
 
         enum ColType
         {
