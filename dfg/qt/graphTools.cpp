@@ -62,6 +62,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QJsonObject>
     #include <QVariantMap>
     #include <QTextStream>
+    #include <QLineEdit>
 
 DFG_END_INCLUDE_QT_HEADERS
 
