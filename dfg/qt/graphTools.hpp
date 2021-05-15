@@ -139,6 +139,30 @@ public:
     DataSourceIndex       m_nSize = 0; // Defines the size for any non-null span.
 }; // class SourceDataSpan
 
+// Helper abstract class making it possible for data source to fill destination buffers directly instead using temporary buffers
+class GraphDataSourceDataPipe
+{
+public:
+    virtual ~GraphDataSourceDataPipe() {}
+    // If ppRows/ppValues is non-null, it gets address of beginning of span of size nCount or nullptr if buffer is not availble.
+    virtual void getFillBuffers(const DataSourceIndex nCount, double** ppRows, double** ppValues) = 0;
+}; // class GraphDataSourceDataPipe
+
+// Concrete GraphDataSourceDataPipe for filling MapVectorSoA<double, double, ValueVector<double>, ValueVector<double>
+class GraphDataSourceDataPipe_MapVectorSoADoubleValueVector : public GraphDataSourceDataPipe
+{
+public:
+    using ValueVectorD = ::DFG_MODULE_NS(cont)::ValueVector<double>;
+    using RowToValueMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double, ValueVectorD, ValueVectorD>;
+
+    GraphDataSourceDataPipe_MapVectorSoADoubleValueVector(RowToValueMap* p);
+
+    // Note: if called with ppRows == nullptr && ppValue != nullptr, every added value has the same key.
+    void getFillBuffers(const DataSourceIndex nCount, double** ppRows, double** ppValue) override;
+
+    RowToValueMap* m_pData = nullptr;
+}; // class DataPipeForTableCache
+
 class DataQueryDetails
 {
 public:
@@ -200,6 +224,9 @@ public:
 
     // Calls handler so that it receives every element in given column. The order of rows in which data is given to handler is unspecified.
     virtual void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
+
+    // Fills destination with number data from requested column through DataPipe.
+    virtual void fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails);
 
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
     virtual ChartDataType     columnDataType(DataSourceIndex) const;

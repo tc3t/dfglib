@@ -143,3 +143,24 @@ void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::forEachElement_byColumn(con
         handler(dataBlob);
     }
 }
+
+void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nCol, const DataQueryDetails& queryDetails)
+{
+    if (nCol >= this->columnCount() || !queryDetails.areNumbersRequested())
+        return;
+
+    const auto nTotalRowCount = this->rowCount();
+
+    double* pRows = nullptr;
+    double* pValues = nullptr;
+    pipe.getFillBuffers(nTotalRowCount, (queryDetails.areRowsRequested()) ? &pRows : nullptr, &pValues);
+    if (pValues == nullptr)
+        return; // Unable to allocate storage.
+
+    const auto first = DFG_OPAQUE_REF().m_first;
+    const auto step = DFG_OPAQUE_REF().m_step;
+
+    if (pRows)
+        ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(pRows, pRows + nTotalRowCount), 0, 1);
+    ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(pValues, pValues + nTotalRowCount), first, step);
+}

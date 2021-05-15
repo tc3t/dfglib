@@ -8,7 +8,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
 
 /*
  * Data source providing generated numbers without any external dependencies to files etc.
- * Only provives data for query mask 'DataMaskNumerics'.
+ * Note: forEachElement_byColumn() only provives data for query mask 'DataMaskNumerics', fetchColumnNumberData() provides also DataMaskRows.
+ *
 */
 class NumberGeneratorDataSource : public GraphDataSource
 {
@@ -36,6 +37,7 @@ public:
     auto columnDataTypes() const -> ColumnDataTypeMap override;
     auto columnDataType(DataSourceIndex nCol) const -> ChartDataType override;
     void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) override;
+    void fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails) override;
 private:
     bool isSafeToQueryDataFromThreadImpl(const QThread*) const override { return true; }
 // End interface overloads <--

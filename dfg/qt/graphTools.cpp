@@ -597,6 +597,24 @@ bool ::DFG_MODULE_NS(qt)::GraphDataSource::isSafeToQueryDataFromThreadImpl(const
     return this->thread() == pThread;
 }
 
+void ::DFG_MODULE_NS(qt)::GraphDataSource::fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
+{
+    // Default implementation using forEachElement_byColumn()
+    forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& inputSpan)
+    {
+        double* pRows = nullptr;
+        double* pDoubles = nullptr;
+        pipe.getFillBuffers(inputSpan.size(),
+                            (!inputSpan.rows().empty()) ? &pRows : nullptr,
+                            (!inputSpan.doubles().empty()) ? &pDoubles : nullptr
+                            );
+        if (pRows)
+            std::copy(inputSpan.rows().begin(), inputSpan.rows().end(), pRows);
+        if (pDoubles)
+            std::copy(inputSpan.doubles().begin(), inputSpan.doubles().end(), pDoubles);
+    });
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -838,6 +856,7 @@ public:
     using RowToStringMap      = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, StringT, ValueVectorD>;
     using ColumnToValuesMap   = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
     using ColumnToStringsMap  = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToStringMap>;
+    using DataPipeForTableCache = GraphDataSourceDataPipe_MapVectorSoADoubleValueVector;
 
     std::vector<std::reference_wrapper<const RowToValueMap>> columnDatas() const;
 
@@ -936,6 +955,52 @@ void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged()
     this->m_bIsValid = false;
 }
 
+::DFG_MODULE_NS(qt)::GraphDataSourceDataPipe_MapVectorSoADoubleValueVector::GraphDataSourceDataPipe_MapVectorSoADoubleValueVector(TableSelectionCacheItem::RowToValueMap* p)
+    : m_pData(p)
+{}
+
+void ::DFG_MODULE_NS(qt)::GraphDataSourceDataPipe_MapVectorSoADoubleValueVector::getFillBuffers(const DataSourceIndex nCount, double** ppRows, double** ppValues)
+{
+    DFG_ASSERT_WITH_MSG(ppRows != nullptr, "Development assert: null ppRows in getFillBuffers() might not work correctly"); // There might be some unwanted consequences if all keys have value 0.
+    if (ppRows)
+        *ppRows = nullptr;
+    if (ppValues)
+        *ppValues = nullptr;
+    if (!m_pData)
+        return;
+    const auto nOldSize = m_pData->size();
+    const auto nNewSize = saturateAdd<size_t>(m_pData->size(), nCount);
+    m_pData->m_keyStorage.resize(nNewSize);
+    m_pData->m_valueStorage.resize(nNewSize);
+    
+    if (ppRows)
+        *ppRows = makeRange(m_pData->beginKey() + nOldSize, m_pData->beginKey() + nOldSize + 1).beginAsPointer(); // Using makeRange().beginAsPointer() to make sure that keys are in contiguous range.
+    if (ppValues)
+        *ppValues = makeRange(m_pData->beginValue() + nOldSize, m_pData->beginValue() + nOldSize + 1).beginAsPointer(); // Using makeRange().beginAsPointer() to make sure that values are in contiguous range.
+}
+
+namespace DFG_DETAIL_NS
+{
+    template <class T>
+    bool handleStoreColumnDirectFetch(const T&, GraphDataSource&, const DataSourceIndex, const DataQueryDetails&)
+    {
+        return false;
+    }
+
+    bool handleStoreColumnDirectFetch(TableSelectionCacheItem::RowToValueMap& destValues, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
+    {
+        if (!queryDetails.areStringsRequested())
+        {
+            DFG_ASSERT(queryDetails.areRowsRequested()); // If there are no rows, destValues.keys() are bogus and data is expected to malfunction in graphs.
+            source.fetchColumnNumberData(TableSelectionCacheItem::DataPipeForTableCache(&destValues), nColumn, queryDetails);
+            return true;
+        }
+        else
+            return false;
+    }
+} // namespace DFG_DETAIL_NS
+
+
 template <class Map_T, class Insert_T>
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails, Insert_T inserter)
 {
@@ -955,10 +1020,15 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
 
     insertRv.first->second.setSorting(false); // Disabling sorting while adding
     auto& destValues = insertRv.first->second;
-    source.forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& sourceData)
+    if (!DFG_DETAIL_NS::handleStoreColumnDirectFetch(destValues, source, nColumn, queryDetails))
     {
-        inserter(destValues, sourceData);
-    });
+        // Direct fetch failed/not avaiable, fallback to forEachElement_byColumn().
+        source.forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& sourceData)
+        {
+            inserter(destValues, sourceData);
+        });
+    }
+    
     destValues.setSorting(true, std::is_sorted(destValues.beginKey(), destValues.endKey()));
     m_columnTypes = source.columnDataTypes();
     m_columnNames = source.columnNames();

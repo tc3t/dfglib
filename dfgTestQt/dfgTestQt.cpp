@@ -13,6 +13,7 @@
 #include <dfg/math.hpp>
 #include <dfg/qt/sqlTools.hpp>
 #include <dfg/qt/PatternMatcher.hpp>
+#include <dfg/iter/FunctionValueIterator.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -1056,16 +1057,18 @@ static void testFileDataSource(const QString& sExtension,
 
     {
         CsvItemModel model;
-        model.openString("Col0,Col1,123.456\nab,b,18.9.2020\nb,a\xE2\x82\xAC" "b,2020-09-18\nab,c,2020-09-18 12:00:00\n");
+        model.openString("Col0,Col1,123.456,0.125\nab,b,18.9.2020,1.2\nb,a\xE2\x82\xAC" "b,2020-09-18,-2.25\nab,c,2020-09-18 12:00:00,3.5");
         ASSERT_TRUE(fileCreator(sTestFilePath, model));
     }
 
-    const size_t nColCount = 3;
-    std::array<std::vector<double>, nColCount> expectedRows = { std::vector<double>({0, 1, 2, 3}), {0, 1, 2, 3}, {0, 1, 2, 3} };
+    const size_t nColCount = 4;
+    std::array<std::vector<double>, nColCount> expectedRows = { std::vector<double>({0, 1, 2, 3}), {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3} };
     std::array<std::vector<std::string>, nColCount> expectedStrings = { std::vector<std::string>(
                                                                 {"Col0", "ab", "b", "ab"}),
                                                                 {"Col1", "b", "a\xE2\x82\xAC" "b", "c"}, // \xE2\x82\xAC is eurosign in UTF-8
-                                                                {"123.456", "18.9.2020", "2020-09-18", "2020-09-18 12:00:00"} };
+                                                                {"123.456", "18.9.2020", "2020-09-18", "2020-09-18 12:00:00"},
+                                                                {"0.125", "1.2", "-2.25", "3.5"}
+                                                                };
 
     // csv source includes header on row 0, SQLiteSource doesn't.
     const bool bIncludeHeaderInComparisons = (sExtension == "csv");
@@ -1149,6 +1152,27 @@ static void testFileDataSource(const QString& sExtension,
             EXPECT_EQ(expectedStrings[nCol], strings);
         else
             EXPECT_TRUE(strings.empty());
+    }
+
+    // Testing fetchColumnNumberData
+    {
+        auto spSource = sourceCreator(sTestFilePath, "csvSource");
+        using DataPipe = GraphDataSourceDataPipe_MapVectorSoADoubleValueVector;
+        DataPipe::RowToValueMap valueMapFetched;
+        DataPipe::RowToValueMap valueMapForEach;
+        valueMapForEach.setSorting(false);
+        const auto queryDetails = DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics);
+        const auto nColumn = 3;
+        spSource->fetchColumnNumberData(DataPipe(&valueMapFetched), nColumn, queryDetails);
+        spSource->forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& data)
+        {
+            valueMapForEach.pushBackToUnsorted(data.rows(), data.doubles());
+        });
+        valueMapForEach.setSorting(true);
+        EXPECT_EQ(valueMapFetched.m_keyStorage, valueMapForEach.m_keyStorage);
+        EXPECT_EQ(valueMapFetched.m_valueStorage, valueMapForEach.m_valueStorage);
+        EXPECT_TRUE(std::equal(expectedStrings[3].begin(), expectedStrings[3].end(), valueMapFetched.beginValue(),
+                               [](const std::string& s, const double d) { return ::DFG_MODULE_NS(str)::strTo<double>(s) == d; }));
     }
 
     // Testing that change signaling works
@@ -1362,6 +1386,26 @@ TEST(dfgQt, NumberGeneratorDataSource)
             bCallbackCalled = true;
         });
         EXPECT_FALSE(bCallbackCalled);
+    }
+
+    // Checking that forEachElement_byColumn() and fetchColumnNumberData() produce the same data.
+    {
+        using namespace DFG_ROOT_NS;
+        using DataPipe = GraphDataSourceDataPipe_MapVectorSoADoubleValueVector;
+        DataPipe::RowToValueMap valueMapFetch;
+        DataPipe::RowToValueMap valueMapForEach;
+        valueMapForEach.setSorting(false);
+
+        NumberGeneratorDataSource ds("test", 10, 2);
+        ds.fetchColumnNumberData(DataPipe(&valueMapFetch), 0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics));
+        ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics), [&](const SourceDataSpan& data)
+        {
+            auto iter = ::DFG_MODULE_NS(iter)::makeFunctionValueIterator(valueMapForEach.size(), [](size_t i) { return double(i); } );
+            valueMapForEach.pushBackToUnsorted(makeRange(iter, iter + data.doubles().size()), data.doubles());
+        });
+        valueMapForEach.setSorting(true);
+        valueMapFetch.sort();
+        EXPECT_EQ(valueMapFetch.m_valueStorage, valueMapForEach.m_valueStorage);
     }
 }
 
