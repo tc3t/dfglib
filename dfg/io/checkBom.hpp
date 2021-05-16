@@ -9,18 +9,11 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
-template <class Stream_T>
-inline TextEncoding checkBOM(Stream_T& istrm)
+inline TextEncoding checkBOM(const char* pData, const size_t nCount)
 {
-    const auto startPos = istrm.tellg();
-    unsigned char buf[5] = { 0, 0, 0xFD, 0xFD, 0 };
-
-    readBinary(istrm, buf, 4);
-    istrm.seekg(startPos);
-
     auto encoding = encodingUnknown;
 
-#define IS_BOM(BOM) memcmp(buf, DFG_MODULE_NS(utf)::BOM, sizeof(DFG_MODULE_NS(utf)::BOM)) == 0
+#define IS_BOM(BOM) (nCount >= sizeof(DFG_MODULE_NS(utf)::BOM) && (memcmp(pData, DFG_MODULE_NS(utf)::BOM, sizeof(DFG_MODULE_NS(utf)::BOM)) == 0))
 
     // Note: UTF32 must be checked before UTF16 because they begin with the same sequence.
     if (IS_BOM(bomUTF8))
@@ -37,6 +30,23 @@ inline TextEncoding checkBOM(Stream_T& istrm)
 #undef IS_BOM
 
     return encoding;
+}
+
+inline TextEncoding checkBOM(const unsigned char* pData, const size_t nCount)
+{
+    return checkBOM(reinterpret_cast<const char*>(pData), nCount);
+}
+
+template <class Stream_T>
+inline TextEncoding checkBOM(Stream_T& istrm)
+{
+    const auto startPos = istrm.tellg();
+    unsigned char buf[5] = { 0, 0, 0xFD, 0xFD, 0 };
+
+    readBinary(istrm, buf, 4);
+    istrm.seekg(startPos);
+
+    return checkBOM(buf, 4);
 }
 
 // Checks BOM marker from file in given path.
