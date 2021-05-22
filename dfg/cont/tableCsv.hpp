@@ -470,16 +470,16 @@ DFG_ROOT_NS_BEGIN{
 
 
         template <class Char_T, class Index_T, DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUTF8>
-        class DFG_CLASS_NAME(TableCsv) : public DFG_CLASS_NAME(TableSz)<Char_T, Index_T, InternalEncoding_T>
+        class TableCsv : public TableSz<Char_T, Index_T, InternalEncoding_T>
         {
         public:
-            using ThisClass = DFG_CLASS_NAME(TableCsv);
-            using BaseClass = DFG_CLASS_NAME(TableSz)<Char_T, Index_T, InternalEncoding_T>;
+            using ThisClass = TableCsv;
+            using BaseClass = TableSz<Char_T, Index_T, InternalEncoding_T>;
             using IndexT = typename BaseClass::IndexT;
-            typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDefinition;
-            typedef typename DFG_CLASS_NAME(TableSz)<Char_T, Index_T>::RowToContentMap RowToContentMap;
-            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<char> DelimitedTextReaderBufferTypeC;
-            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T> DelimitedTextReaderBufferTypeT;
+            typedef DFG_ROOT_NS::CsvFormatDefinition CsvFormatDefinition;
+            typedef typename TableSz<Char_T, Index_T>::RowToContentMap RowToContentMap;
+            typedef DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<char> DelimitedTextReaderBufferTypeC;
+            typedef DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<Char_T> DelimitedTextReaderBufferTypeT;
             using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
             template <class StringMatcher_T> using RowContentFilter = DFG_DETAIL_NS::RowContentFilter<ThisClass, StringMatcher_T>;
 
@@ -557,7 +557,7 @@ DFG_ROOT_NS_BEGIN{
                 const auto nCols = this->colCountByMaxColIndex();
                 if (nRows != other.rowCountByMaxRowIndex() || nCols != other.colCountByMaxColIndex())
                     return false;
-                
+
                 // TODO: optimize, this is quickly done, inefficient implementation.
                 for (Index_T r = 0; r < nRows; ++r)
                 {
@@ -565,7 +565,7 @@ DFG_ROOT_NS_BEGIN{
                     {
                         auto p0 = (*this)(r, c);
                         auto p1 = other(r, c);
-						// TODO: revise logics: implementation below treats null and empty cells as different.
+                        // TODO: revise logics: implementation below treats null and empty cells as different.
                         if ((!p0 && p1) || (p0 && !p1) || (std::strcmp(toCharPtr_raw(p0), toCharPtr_raw(p1)) != 0)) // TODO: Create comparison function instead of using strcmp().
                             return false;
                     }
@@ -573,36 +573,37 @@ DFG_ROOT_NS_BEGIN{
                 return true;
             }
 
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamW)& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
+            void readFromFile(const ReadOnlySzParamC& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
+            void readFromFile(const ReadOnlySzParamW& sPath) { readFromFileImpl(sPath, defaultReadFormat()); }
+            void readFromFile(const ReadOnlySzParamC& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
+            void readFromFile(const ReadOnlySzParamW& sPath, const CsvFormatDefinition& formatDef) { readFromFileImpl(sPath, formatDef); }
 
             template <class Reader_T>
-            void readFromFile(const DFG_CLASS_NAME(ReadOnlySzParamC)& sPath, const CsvFormatDefinition& formatDef, Reader_T&& reader) { readFromFileImpl(sPath, formatDef, std::forward<Reader_T>(reader)); }
+            void readFromFile(const ReadOnlySzParamC& sPath, const CsvFormatDefinition& formatDef, Reader_T&& reader) { readFromFileImpl(sPath, formatDef, std::forward<Reader_T>(reader)); }
 
             template <class Char_T1>
-            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T1>& sPath, const CsvFormatDefinition& formatDef)
+            void readFromFileImpl(const ReadOnlySzParam<Char_T1>& sPath, const CsvFormatDefinition& formatDef)
             {
                 readFromFileImpl(sPath, formatDef, defaultCellHandler());
             }
 
             template <class Char_T1, class Reader_T>
-            void readFromFileImpl(const DFG_CLASS_NAME(ReadOnlySzParam)<Char_T1>& sPath, const CsvFormatDefinition& formatDef, Reader_T&& reader)
+            void readFromFileImpl(const ReadOnlySzParam<Char_T1>& sPath, const CsvFormatDefinition& formatDef, Reader_T&& reader)
             {
                 bool bRead = false;
                 try
                 {
-                    auto memMappedFile = DFG_MODULE_NS(io)::DFG_CLASS_NAME(FileMemoryMapped)(sPath);
+                    auto memMappedFile = DFG_MODULE_NS(io)::FileMemoryMapped(sPath);
                     readFromMemory(memMappedFile.data(), memMappedFile.size(), formatDef, std::forward<Reader_T>(reader));
                     bRead = true;
                 }
                 catch (...)
-                {}
+                {
+                }
 
                 if (!bRead)
                 {
-                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(IfStreamWithEncoding) istrm;
+                    DFG_MODULE_NS(io)::IfStreamWithEncoding istrm;
                     istrm.open(StringViewSz<Char_T1>(sPath.c_str()));
                     read(istrm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
                     m_readFormat.textEncoding(istrm.encoding());
@@ -613,9 +614,9 @@ DFG_ROOT_NS_BEGIN{
             CsvFormatDefinition defaultReadFormat() const
             {
                 return CsvFormatDefinition(DelimitedTextReader::s_nMetaCharAutoDetect,
-                                                            '"',
-                                                            DFG_MODULE_NS(io)::EndOfLineTypeN,
-                                                            DFG_MODULE_NS(io)::encodingUnknown);
+                    '"',
+                    DFG_MODULE_NS(io)::EndOfLineTypeN,
+                    DFG_MODULE_NS(io)::encodingUnknown);
             }
 
             CsvFormatDefinition readFormat() const
@@ -643,31 +644,40 @@ DFG_ROOT_NS_BEGIN{
                 readFromMemory(pData, nSize, formatDef, defaultCellHandler());
             }
 
+            void readFromString(const StringViewC& sv)
+            {
+                readFromString(sv, this->defaultReadFormat());
+            }
+
+            void readFromString(const StringViewC& sv, const CsvFormatDefinition& formatDef)
+            {
+                readFromMemory(sv.data(), sv.size(), formatDef, this->defaultCellHandler());
+            }
+
             template <class Reader_T>
             void readFromMemory(const char* const pData, const size_t nSize, const CsvFormatDefinition& formatDef, Reader_T&& reader)
             {
-                DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strmBom(pData, nSize);
-                const auto streamBom = DFG_MODULE_NS(io)::checkBOM(strmBom);
+                const auto streamBom = DFG_MODULE_NS(io)::checkBOM(pData, nSize);
                 const auto encoding = (formatDef.textEncoding() == DFG_MODULE_NS(io)::encodingUnknown) ? streamBom : formatDef.textEncoding();
                 
                 if (encoding == DFG_MODULE_NS(io)::encodingUnknown)
                 {
                     // Encoding of source bytes is unknown -> read as Latin-1.
-                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData, nSize);
+                    DFG_MODULE_NS(io)::BasicImStream strm(pData, nSize);
                     read(strm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
                 }
                 else if (encoding == DFG_MODULE_NS(io)::encodingUTF8) // With UTF8 the data can be directly read as bytes.
                 {
                     const auto bomSkip = (streamBom == DFG_MODULE_NS(io)::encodingUTF8) ? DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8) : 0;
-                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(pData + bomSkip, nSize - bomSkip);
-                    if (formatDef.enclosingChar() == DelimitedTextReader::s_nMetaCharNone) // If there's no enclosing character, data can be read with StringViewBuffer.
+                    DFG_MODULE_NS(io)::BasicImStream strm(pData + bomSkip, nSize - bomSkip);
+                    if (formatDef.enclosingChar() == DelimitedTextReader::s_nMetaCharNone) // If there's no enclosing character, data can be read with StringViewCBuffer.
                         read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<Reader_T>(reader));
-                    else // Case: Enclosing character is defined, use default reading since parsing enclosing items may introduce translation making StringViewBuffer unsuitable.
-                        read(strm, formatDef, DelimitedTextReader::CharAppenderDefault<DelimitedTextReaderBufferTypeC, char>(), std::forward<Reader_T>(reader));
+                    else // Case: Enclosing character is defined, using CharAppenderStringViewCBufferWithEnclosedCellSupport.
+                        read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport(), std::forward<Reader_T>(reader));
                 }
                 else // Case: Known encoding, read using encoding istream.
                 {
-                    DFG_MODULE_NS(io)::DFG_CLASS_NAME(ImStreamWithEncoding) strm(pData, nSize, encoding);
+                    DFG_MODULE_NS(io)::ImStreamWithEncoding strm(pData, nSize, encoding);
                     read(strm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
                 }
                 m_readFormat.textEncoding(encoding);

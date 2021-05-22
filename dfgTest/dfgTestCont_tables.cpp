@@ -712,7 +712,7 @@ TEST(dfgCont, TableCsv)
     using namespace DFG_MODULE_NS(cont);
     using namespace DFG_MODULE_NS(io);
     using namespace DFG_MODULE_NS(utf);
-    
+
     std::vector<std::string> paths;
     std::vector<TextEncoding> encodings;
     std::vector<char> separators;
@@ -912,6 +912,23 @@ TEST(dfgCont, TableCsv)
             EXPECT_TRUE(std::equal(expected[i].cbegin(), expected[i].cend(), ostrm.container().cbegin()));
         }
 
+    }
+
+    // Correctness tests for reading UTF8 with enclosing items from memory
+    {
+        using Table = TableCsv<char, size_t>;
+        Table t;
+        t.readFromString("12,\"\"\"34\"\n\"56\",\"78\r\n\"\n\"1\"\",\n2\"\"\"\"\",\"\"\"\"\na,\"\"", CsvFormatDefinition(',', '"', dfg::io::EndOfLineTypeN, dfg::io::encodingUTF8));
+        EXPECT_EQ(4, t.rowCountByMaxRowIndex());
+        EXPECT_EQ(2, t.colCountByMaxColIndex());
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("12", t(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("\"34", t(0, 1));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("56", t(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("78\r\n", t(1, 1));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("1\",\n2\"\"", t(2, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("\"", t(2, 1));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", t(3, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", t(3, 1));
     }
 
     // TODO: test auto detection

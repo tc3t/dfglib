@@ -43,6 +43,9 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #define DFGTEST_EXPECT_NAN(val)     EXPECT_TRUE(::DFG_MODULE_NS(math)::isNan(val))
 #define DFGTEST_EXPECT_NON_NAN(val) EXPECT_FALSE(::DFG_MODULE_NS(math)::isNan(val))
 
+// For testing cases where left is string literal and rigth utf8, for example: DFGTEST_EXPECT_EQ_LITERAL_UTF8("abc", functionThatReturnsUtf8())
+#define DFGTEST_EXPECT_EQ_LITERAL_UTF8(x, y) EXPECT_EQ(x, ::DFG_ROOT_NS::StringViewUtf8(y).asUntypedView())
+
 #if !defined(_DEBUG) && !defined(__MINGW32__)
     #define DFGTEST_ENABLE_BENCHMARKS	0
 #else
