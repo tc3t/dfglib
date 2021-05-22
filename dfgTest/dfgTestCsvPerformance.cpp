@@ -285,9 +285,20 @@ namespace
     DFG_NOINLINE void ExecuteTestCase_DelimitedTextReader_DefaultCharAppend(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef = true)
     {
         if (compiletimeFormatDef)
-            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
         else
-            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_runtime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderDefault<DefaultBufferType, char>, DefaultBufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_runtime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderDefault");
+    }
+
+    template <class IStrm_T, class IStrmInit_T>
+    DFG_NOINLINE void ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport(std::ostream& output, IStrmInit_T streamInitFunc, const std::string& sFilePath, const size_t nCount, const bool compiletimeFormatDef = true)
+    {
+        typedef DFG_MODULE_NS(io)::DelimitedTextReader::StringViewCBufferWithEnclosedCellSupport BufferType;
+        typedef DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport AppenderType;
+        if (compiletimeFormatDef)
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_compileTime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderStringViewCBufferWithEnclosedCellSupport");
+        else
+            ExecuteTestCaseDelimitedTextReader<IStrm_T, AppenderType, BufferType>(output, streamInitFunc, ReaderCreation_default(), FormatDefTag_runtime(), sFilePath, nCount, "DelimitedTextReader", "CharAppenderStringViewCBufferWithEnclosedCellSupport");
     }
 
     template <class IStrm_T, class IStrmInit_T>
@@ -610,7 +621,7 @@ TEST(dfgPerformance, CsvReadPerformance)
     // IfStreamWithEncoding
     //ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<::DFG_MODULE_NS(io)::IfStreamWithEncoding>(ostrmTestResults, InitIfStreamWithEncoding, sFilePath, nRunCount, false);
 
-    using BasicImStreamT = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream);
+    using BasicImStreamT = ::DFG_MODULE_NS(io)::BasicImStream;
 
     // BasicImStream, getThrough
     ExecuteTestCase_GetThrough<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, getThroughOriginal<BasicImStreamT>, sFilePath, nRunCount, " with get()");
@@ -622,6 +633,10 @@ TEST(dfgPerformance, CsvReadPerformance)
     // BasicImStream, default reader
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+    // BasicImStream, default reader with StringViewCBufferWithEnclosedCellSupport
+    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+
     // BasicImStream, basicReader, default read buffer
     ExecuteTestCase_DelimitedTextReader_basicReader<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
     ExecuteTestCase_DelimitedTextReader_basicReader<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def

@@ -317,8 +317,47 @@ public:
         }
     }; // Class CharAppenderDefault
 
+    // Replacement for std::basic_string. Problem with populating std::string in this context is that it keeps the buffer null-terminated on every push_back.
+    // This is inefficient in this use pattern and with this custom buffer chars can be pushed back without handling the null terminator. Null terminator can be set when the
+    // the cell is read completely.
+    template <class Char_T, size_t SsoBufferSize_T = 32>
+#ifdef _MSC_VER // Using std::vector only in MSVC because in CsvReadPerformance basicReader-test slowed down 0.4 -> 0.6 in MinGW
+    class CharBuffer : public std::vector<Char_T>
+#else
+    class CharBuffer : public DFG_MODULE_NS(cont)::VectorSso<Char_T, SsoBufferSize_T>
+#endif
+    {
+    public:
+#ifdef _MSC_VER
+        CharBuffer()
+        {
+            this->reserve(SsoBufferSize_T);
+        }
+#endif
+
+        std::basic_string<Char_T> toStr() const
+        {
+            return std::basic_string<Char_T>(this->data(), this->size());
+        }
+
+        StringView<Char_T> toView() const
+        {
+            return StringView<Char_T>(this->data(), this->size());
+        }
+
+        operator std::basic_string<Char_T>() const
+        {
+            return toStr();
+        }
+
+        operator StringView<Char_T>() const
+        {
+            return toView();
+        }
+    }; // Class CharBuffer
+
     // Specialized string view buffer for case where input data is in memory and can be read untranslated -> use string view to underlying data instead of populating a separate buffer.
-    class StringViewCBuffer : public DFG_CLASS_NAME(StringViewC)
+    class StringViewCBuffer : public StringViewC
     {
     public:
         typedef char* iterator;
@@ -331,6 +370,7 @@ public:
 
         void incrementSize()
         {
+            DFG_ASSERT_UB(m_pFirst != nullptr);
             m_nSize++;
         }
     }; // StringViewCBuffer
@@ -349,6 +389,57 @@ public:
             sv.incrementSize();
         }
     }; // Class CharAppenderStringViewC
+
+    // A buffer that can be used like StringViewCBuffer, but also supporting enclosed cells.
+    // Note that the only case where StringViewCBuffer is not enough, is when there are double enclosed item in cell - otherwise everything can be done StringViewCBuffer.
+    // The logic is that when double enclosed item is found, a flag m_bNeedTemporaryBuffer is set and when read is done, cell is reparsed to temporary buffer.
+    class StringViewCBufferWithEnclosedCellSupport : public StringViewCBuffer
+    {
+    public:
+        using BaseClass = StringViewCBuffer;
+
+        void clear()
+        {
+            BaseClass::clear();
+            m_temporaryBuffer.clear();
+            m_bNeedTemporaryBuffer = false;
+        }
+
+        void onEnclosedCellRead(const int cEnc)
+        {
+            if (m_bNeedTemporaryBuffer && !this->empty())
+            {
+                m_temporaryBuffer.clear();
+                const auto pEnd = this->end();
+                for (auto p = this->begin(); p != pEnd; ++p)
+                {
+                    // Note: unless parsing is broken, enclosing chars in parsed view come in pairs.
+                    if (*p != cEnc)
+                        m_temporaryBuffer.push_back(*p);
+                    else
+                    {
+                        // Current char is enclosing; pushing it to buffer and skipping the following.
+                        m_temporaryBuffer.push_back(*p);
+                        DFG_ASSERT_CORRECTNESS(p + 1 != pEnd && *(p + 1) == cEnc);
+                        if (p + 1 != pEnd) // This should always be true
+                            ++p;
+                    }
+                }
+                this->reset(m_temporaryBuffer.data(), m_temporaryBuffer.size());
+            }
+        }
+
+        CharBuffer<char> m_temporaryBuffer;
+        bool m_bNeedTemporaryBuffer = false;
+    }; // class StringViewCBufferWithEnclosedCellSupport
+
+    // Char appender for StringViewCBufferWithEnclosedCellSupport.
+    class CharAppenderStringViewCBufferWithEnclosedCellSupport : public CharAppenderStringViewCBuffer
+    {
+    public:
+        typedef StringViewCBufferWithEnclosedCellSupport BufferType;
+        static const bool s_isAppendOperatorGuaranteedToIncrementSize = true;
+    }; // Class CharAppenderStringViewCBufferWithEnclosedCellSupport
 
     template <class Buffer_T>
     class CharAppenderUtf
@@ -385,45 +476,6 @@ public:
         {
         }
     };
-
-    // Replacement for std::basic_string. Problem with populating std::string in this context is that it keeps the buffer null-terminated on every push_back.
-    // This is inefficient in this use pattern and with this custom buffer chars can be pushed back without handling the null terminator. Null terminator can be set when the
-    // the cell is read completely.
-    template <class Char_T, size_t SsoBufferSize_T = 32>
-#ifdef _MSC_VER // Using std::vector only in MSVC because in CsvReadPerformance basicReader-test slowed down 0.4 -> 0.6 in MinGW
-    class CharBuffer : public std::vector<Char_T>
-#else
-    class CharBuffer : public DFG_MODULE_NS(cont)::DFG_CLASS_NAME(VectorSso)<Char_T, SsoBufferSize_T>
-#endif
-    {
-    public:
-#ifdef _MSC_VER
-        CharBuffer()
-        {
-            this->reserve(SsoBufferSize_T);
-        }
-#endif
-
-        std::basic_string<Char_T> toStr() const
-        {
-            return std::basic_string<Char_T>(this->data(), this->size());
-        }
-
-        StringView<Char_T> toView() const
-        {
-            return StringView<Char_T>(this->data(), this->size());
-        }
-
-        operator std::basic_string<Char_T>() const
-        {
-            return toStr();
-        }
-
-        operator StringView<Char_T>() const
-        {
-            return toView();
-        }
-    }; // Class CharBuffer
 
     /*
         -Cell content related functionality such as:
@@ -559,9 +611,15 @@ public:
         template <class Reader_T>
         void onCellReadBegin(Reader_T& reader)
         {
-            onCellReadBeginImpl(reader, std::integral_constant<bool, std::is_same<StringViewCBuffer, Buffer>::value &&
+            onCellReadBeginImpl(reader, std::integral_constant<bool, std::is_base_of<StringViewCBuffer, Buffer>::value &&
                                                                      DFG_DETAIL_NS::IsStreamStringViewCCompatible<typename Reader_T::StreamT>::value>());
             
+        }
+
+        template <class Reader_T>
+        void onEnclosedCellReadBegin(Reader_T& reader)
+        {
+            onCellReadBegin(reader);
         }
 
         size_t size() const
@@ -726,7 +784,7 @@ public:
             {
                 if (buffer.isLastCharacterWhitespace())
                 {
-                    buffer.popLastChar();
+                    buffer.clear();
                     return true;
                 }
             }
@@ -738,7 +796,20 @@ public:
             return (!isEmptyGivenSuccessfulReadCharCall(buffer) && bufferCharToInternal(buffer.back()) == buffer.getFormatDefInfo().getEnc()) ? CellType::enclosed : CellType::naked;
         }
 
-        // Returns true if caller should invoke 'break', false otherwise.
+        // Checks whether given buffer char is separator and if yes, sets readstate. Returns true if caller should invoke 'break', false otherwise.
+        template <class Char_T>
+        static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, const FormatDef& formatDef, const Char_T bufferChar)
+        {
+            if (bufferCharToInternal(bufferChar) != formatDef.getSep())
+                return false;
+            else
+            {
+                rs = rsSeparatorEncountered;
+                return true;
+            }
+        }
+
+        // Checks whether most recent item in buffer is separator and if yes, pops it and sets readstate. Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, CellBuffer& buffer)
         {
             if (isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.back()) != buffer.getFormatDefInfo().getSep())
@@ -751,6 +822,7 @@ public:
             }
         }
 
+        // Checks whether most recent item in buffer is end-of-line and if yes, pops it and sets readstate; optionally also removes \r in case of \r\n eol.
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
@@ -767,6 +839,44 @@ public:
             }
         }
 
+        // Overload for checking if given buffer char is eol.
+        template <class Char_T>
+        static DFG_FORCEINLINE bool eolChecker(ReadState& rs, const FormatDef& formatDef, const Char_T bufferChar)
+        {
+            if (bufferCharToInternal(bufferChar) != formatDef.getEol())
+                return false;
+            else
+            {
+                rs = rsEndOfLineEncountered;
+                return true;
+            }
+        }
+
+        template <class T>
+        static void onEnclosedCellRead(const T&, const int) {}
+
+        static void onEnclosedCellRead(StringViewCBufferWithEnclosedCellSupport& buffer, const int cEnc)
+        {
+            buffer.onEnclosedCellRead(cEnc);
+        }
+
+        template <class T, class T2>
+        static void onDoubleClosingItemFoundImpl(T& controller, const T2&)
+        {
+            controller.popLastChar();
+        }
+
+        template <class T>
+        static void onDoubleClosingItemFoundImpl(T&, StringViewCBufferWithEnclosedCellSupport& charBuffer)
+        {
+            charBuffer.m_bNeedTemporaryBuffer = true;
+        }
+
+        template <class T>
+        static void onDoubleClosingItemFound(T& controller)
+        {
+            onDoubleClosingItemFoundImpl(controller, controller.getBuffer());
+        }
 
         template <class Reader_T>
         static DFG_FORCEINLINE void returnValueHandler(Reader_T& reader)
@@ -846,10 +956,22 @@ public:
             return GenericParsingImplementations<Buffer_T>::separatorChecker(rs, buffer);
         }
 
+        template <class Char_T>
+        static DFG_FORCEINLINE bool separatorChecker(ReadState& rs, const FormatDef& formatDef, Char_T bufferChar)
+        {
+            return GenericParsingImplementations<Buffer_T>::separatorChecker(rs, formatDef, bufferChar);
+        }
+
         // Returns true if caller should invoke 'break', false otherwise.
         static DFG_FORCEINLINE bool eolChecker(ReadState& rs, CellBuffer& buffer)
         {
             return GenericParsingImplementations<Buffer_T>::eolChecker(rs, buffer);
+        }
+
+        template <class Char_T>
+        static DFG_FORCEINLINE bool eolChecker(ReadState& rs, const FormatDef& formatDef, Char_T bufferChar)
+        {
+            return GenericParsingImplementations<Buffer_T>::eolChecker(rs, formatDef, bufferChar);
         }
 
         template <class Reader_T>
@@ -857,6 +979,9 @@ public:
         {
             // Barebones parsing does not support return values.
         }
+
+        // Barebones parsing does not support enclosed cells so this should never get called.
+        template <class T> static DFG_FORCEINLINE void onEnclosedCellRead(const T&, const int) { DFG_ASSERT_CORRECTNESS(false); }
 
         // Specialization for whole stream reading when handling untranslated stream with StringViewCBuffer (i.e. can use StringView to source bytes).
         // TODO: test
@@ -904,6 +1029,9 @@ public:
             strm.seekToEnd();
         }
 
+        template <class T>
+        static DFG_FORCEINLINE void onDoubleClosingItemFound(const T&) { DFG_ASSERT_CORRECTNESS(false); }
+
         // Default implementation, see true_type-overload for documentation.
         template <class Reader_T, class CellHandler_T>
         static DFG_FORCEINLINE void read(Reader_T& reader, CellHandler_T&& cellHandler, std::false_type)
@@ -948,7 +1076,7 @@ public:
         template <class Buffer_T>
         DFG_DELIMITED_TEXT_READER_INLINING bool readCharImpl(Buffer_T& buffer, const ReadState rs, std::true_type)
         {
-            auto& strm = static_cast<DFG_CLASS_NAME(BasicImStream)&>(getStream());
+            auto& strm = static_cast<BasicImStream&>(getStream());
             if (!strm.m_streamBuffer.isAtEnd())
             {
                 buffer.appendChar(strm.m_streamBuffer.m_pCurrent);
@@ -996,6 +1124,17 @@ public:
         DFG_DELIMITED_TEXT_READER_INLINING bool readChar()
         {
             return readChar(getCellBuffer());
+        }
+
+        // Skips one char from stream and returns true iff read. If pChar is given, skipped char as returned from stream is stored there.
+        template <class Char_T>
+        DFG_DELIMITED_TEXT_READER_INLINING bool skipChar(Char_T* pChar)
+        {
+            auto c = readOne(getStream());
+            const bool bRead = (c != eofChar(getStream()));
+            if (pChar)
+                *pChar = c;
+            return bRead;
         }
 
         CellBuffer& getCellBuffer()				{return m_rCellBuffer;}
@@ -1055,6 +1194,7 @@ public:
         bool bGoodRead = false;
         for (bGoodRead = reader.readChar(); bGoodRead && ParsingImplementations::preTrimmer(reader.getFormatDefInfo(), reader.getCellBuffer());)
         {
+            reader.getCellBuffer().onCellReadBegin(reader);
             if (reader.isReadStateEndOfCell())
                 break;
             bGoodRead = reader.readChar();
@@ -1080,23 +1220,10 @@ public:
             {
                 auto& buffer = reader.getCellBuffer();
                 auto& rs = reader.m_readState;
-                buffer.popLastChar(); // Removing starting enclosing item.
+                reader.getCellBuffer().onEnclosedCellReadBegin(reader);
                 rs = rsInEnclosedCell;
                 while (!reader.isReadStateEndOfCell() && reader.readChar())
                 {
-                    // Check for characters after enclosing item. Simply ignore all but sep/eol.
-                    if (rs == rsPastEnclosedCell)
-                    {
-                        if (ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()) ||
-                            ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
-                            break;
-                        else
-                        {
-                            buffer.popLastChar();
-                            continue;
-                        }
-                    }
-                    
                     if (ParsingImplementations::isEmptyGivenSuccessfulReadCharCall(buffer) || buffer.back() != buffer.getFormatDefInfo().getEnc())
                         continue;
                     // Found enclosing char; reading next char to determine if it was ending one.
@@ -1109,8 +1236,8 @@ public:
                     }
                     if (buffer.back() == buffer.getFormatDefInfo().getEnc())
                     {
-                        // Found double enclosing, pop the recent and continue reading the cell.
-                        buffer.popLastChar();
+                        // Found double enclosing, handling it and continuing cell reading.
+                        ParsingImplementations::onDoubleClosingItemFound(buffer);
                     }
                     else // case: found something else than enclosing item after first one.
                     {
@@ -1118,8 +1245,20 @@ public:
                             !ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
                         {
                             rs = rsPastEnclosedCell;
-                            buffer.popLastChar(); // Pop whatever came after
+                            buffer.popLastChar(); // Pop whatever came after enclosing
                             buffer.popLastChar(); // Pop ending enclosing
+
+                            // Skipping remaining chars after ending enclosing char.
+                            decltype(readOne(reader.getStream())) c = '\0';
+                            while (!reader.isReadStateEndOfCell() && reader.skipChar(&c))
+                            {
+                                if (ParsingImplementations::separatorChecker(reader.m_readState, buffer.getFormatDefInfo(), c) ||
+                                    ParsingImplementations::eolChecker(reader.m_readState, buffer.getFormatDefInfo(), c))
+                                    break;
+                            }
+                            if (!reader.isStreamGood())
+                                reader.m_readState |= rsEndOfStream;
+                            DFG_ASSERT_CORRECTNESS(reader.isReadStateEndOfCell());
                         }
                         else
                         {
@@ -1129,6 +1268,7 @@ public:
                         }
                     }
                 }
+                ParsingImplementations::onEnclosedCellRead(buffer.getBuffer(), buffer.getFormatDefInfo().getEnc());
             } // Enclosed cell parsing
         }
 
@@ -1336,12 +1476,14 @@ public:
         return reader.getFormatDefInfo();
     }
 
+    // Implementation for case: IsBasicReaderPossibleType() == true
     template <class Stream_T, class CellData_T, class ItemHandlerFunc_T>
     static auto readImpl(std::true_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T&& ihFunc) -> FormatDefinitionSingleChars
     {
         return readImpl(istrm, cellData, &createReader_basic<Stream_T, CellData_T&>, std::forward<ItemHandlerFunc_T>(ihFunc));
     }
 
+    // Implementation for case: IsBasicReaderPossibleType() == false
     template <class Stream_T, class CellData_T, class ItemHandlerFunc_T>
     static auto readImpl(std::false_type, Stream_T& istrm, CellData_T& cellData, ItemHandlerFunc_T&& ihFunc) -> FormatDefinitionSingleChars
     {
@@ -1437,23 +1579,23 @@ public:
         return (isMetaChar(cSep)) ? s_nMetaCharNone : cSep;
     }
 
-}; // DFG_CLASS_NAME(DelimitedTextReader)
+}; // DelimitedTextReader
 
 template <class Char_T>
-std::ostream& operator<<(std::ostream& strm, const DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T>& buffer)
+std::ostream& operator<<(std::ostream& strm, const DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<Char_T>& buffer)
 {
     strm.write(buffer.data(), buffer.size());
     return strm;
 }
 
 template <class Char_T>
-bool operator==(const DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T>& left, const std::basic_string<Char_T>& right)
+bool operator==(const DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<Char_T>& left, const std::basic_string<Char_T>& right)
 {
-    return right == DFG_CLASS_NAME(StringView)<Char_T>(left.data(), left.size());
+    return right == StringView<Char_T>(left.data(), left.size());
 }
 
 template <class Char_T>
-bool operator==(const std::basic_string<Char_T>& left, const DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::CharBuffer<Char_T>& right)
+bool operator==(const std::basic_string<Char_T>& left, const DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<Char_T>& right)
 {
     return right == left;
 }

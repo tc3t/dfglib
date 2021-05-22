@@ -291,9 +291,36 @@ TEST(DfgIo, DelimitedTextReader_CharsetANSI_Read)
     const std::string sFilePath = "testfiles/csvANSI.csv";
 }
 
+namespace
+{
+    template <class CharBuffer_T, class CharAppender_T, size_t N>
+    void DelimitedTextReader_readCellImpl(const std::tuple<std::string, std::string, int> (&arrCellExpected)[N])
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(io);
+        for (size_t i = 0; i < count(arrCellExpected); ++i)
+        {
+            const auto& expected = arrCellExpected[i];
+            BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
+
+            DelimitedTextReader::CellData<char, char, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
+            auto reader = DelimitedTextReader::createReader(strm, cellDataHandler);
+
+            DelimitedTextReader::readCell(reader);
+            const auto chNext = strm.get();
+
+            std::string sDest;
+            sDest.assign(cellDataHandler.getBuffer().begin(), cellDataHandler.getBuffer().end());
+            EXPECT_EQ(std::get<1>(expected), sDest);
+            EXPECT_EQ(std::get<2>(expected), chNext);
+        }
+    }
+}
+
 TEST(DfgIo, DelimitedTextReader_readCell)
 {
     using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
 
     //CreateTestMatrixFile(3);
     //CreateTestFile(200);
@@ -328,6 +355,7 @@ TEST(DfgIo, DelimitedTextReader_readCell)
         ExpectedResultsT("  \"a b  \"   ,  c", "a b  ", ' '),
         ExpectedResultsT("  \"a,\"\",b\"   ,tc", "a,\",b", 't'),
         ExpectedResultsT("  \"a,\"\",\r,\n,\r\n,b\"   ,tc", "a,\",\r,\n,\r\n,b", 't'),
+        ExpectedResultsT("\"a \r\" \na", "a \r", 'a'), // Testing that \r\n translation doesn't get confused if last in enclosed cell is \r and there are skipped items before cell ending \n.
 
         ExpectedResultsT("abc\ndef", "abc", 'd'),
         ExpectedResultsT("abc\r\ndef", "abc", 'd'),
@@ -348,22 +376,8 @@ TEST(DfgIo, DelimitedTextReader_readCell)
         ExpectedResultsT("\"\"ab,b", "", 'b'), // Malformed cell ""ab     Simply ignore trailing chars.
     };
 
-    for(size_t i = 0; i<count(arrCellExpected); ++i)
-    {
-        const auto& expected = arrCellExpected[i];
-        ::DFG_MODULE_NS(io)::BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
-
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(',', '"', '\n');
-        auto reader = DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(strm, cellDataHandler);
-
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::readCell(reader);
-        const auto chNext = strm.get();
-
-        std::string sDest;
-        sDest = cellDataHandler.getBuffer();
-        EXPECT_EQ(std::get<1>(expected), sDest);
-        EXPECT_EQ(std::get<2>(expected), chNext);
-    }
+    DelimitedTextReader_readCellImpl<DelimitedTextReader::CharBuffer<char>, DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<char>, char>>(arrCellExpected);
+    DelimitedTextReader_readCellImpl<DelimitedTextReader::StringViewCBufferWithEnclosedCellSupport, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport>(arrCellExpected);
 }
 
 TEST(DfgIo, DelimitedTextReader_readRow)
@@ -1242,10 +1256,10 @@ namespace
     void DelimitedTextReaderBasicTests(const FormatDef_T ft)
     {
         using namespace DFG_MODULE_NS(io);
-        DFG_CLASS_NAME(DelimitedTextReader)::CellData<char, char, BufferType_T, AppenderType_T, FormatDef_T> cd(ft);
+        DelimitedTextReader::CellData<char, char, BufferType_T, AppenderType_T, FormatDef_T> cd(ft);
         DelimitedTextReaderBasicTests<Strm_T>([&](Strm_T& strm)
         {
-            return DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader_basic(strm, cd);
+            return DelimitedTextReader::createReader_basic(strm, cd);
         });
     }
 
@@ -1260,7 +1274,10 @@ namespace
     {
         typedef DelimReader::StringViewCBuffer BufferType;
         typedef DelimReader::CharAppenderStringViewCBuffer AppenderType;
+        typedef DelimReader::StringViewCBufferWithEnclosedCellSupport BufferType2;
+        typedef DelimReader::CharAppenderStringViewCBufferWithEnclosedCellSupport AppenderType2;
         DelimitedTextReaderBasicTests<DFG_MODULE_NS(io)::BasicImStream, BufferType, AppenderType>(CompileTimeFormatDef());
+        DelimitedTextReaderBasicTests<DFG_MODULE_NS(io)::BasicImStream, BufferType2, AppenderType2>(CompileTimeFormatDef());
     }
 
     template <class Strm_T>
