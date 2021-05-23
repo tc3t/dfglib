@@ -426,6 +426,7 @@ public:
                     }
                 }
                 this->reset(m_temporaryBuffer.data(), m_temporaryBuffer.size());
+                m_bNeedTemporaryBuffer = false; // Resetting flag so that following cell won't use temporary buffer unless needed.
             }
         }
 
