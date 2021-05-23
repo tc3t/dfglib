@@ -18,6 +18,7 @@
 // Note that using _MSVC_LANG below instead of __cplusplus because of reason listed here: https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
 //      -i.e getting correct __cplusplus value needs a non-default build flag.
 // This is coarse check that needs to be manually updated when std::from_chars() become available on other compilers.
+// NOTE: if changing these limits, check also related to_chars() checking in str.hpp
 #if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L)
     #define DFG_STRTO_USING_FROM_CHARS 1
     #include <charconv>

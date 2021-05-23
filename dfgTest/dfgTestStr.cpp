@@ -609,16 +609,25 @@ namespace
             EXPECT_TRUE(s == "1e-9" || s == "1e-09" || s == "1e-009");
         }
 
+        // Testing use of precision argument
+        {
+            const auto isAnyOf = [](const char* psz, const std::array<const char*, 2>& arr) { return std::find(arr.begin(), arr.end(), StringViewC(psz)) != arr.end(); };
+            char buffer[16];
+            EXPECT_TRUE(isAnyOf(floatingPointToStr(T(1234), buffer, 3), { "1.23e+03", "1.23e+003" }));
+            EXPECT_TRUE(isAnyOf(floatingPointToStr(T(1235), buffer, 3), { "1.24e+03", "1.24e+003" }));
+            EXPECT_STREQ("1234", floatingPointToStr(T(1234), buffer, 4));
+        }
+
         if (pExpectedLowest)
-            EXPECT_EQ(pExpectedLowest, DFG_SUB_NS_NAME(str)::toStrC(NumLim::lowest()));
+            EXPECT_EQ(pExpectedLowest, toStrC(NumLim::lowest()));
         if (pExpectedMax)
-            EXPECT_EQ(pExpectedMax, DFG_SUB_NS_NAME(str)::toStrC(NumLim::max()));
+            EXPECT_EQ(pExpectedMax, toStrC(NumLim::max()));
         if (pExpectedMinPositive)
-            EXPECT_EQ(pExpectedMinPositive, DFG_SUB_NS_NAME(str)::toStrC(NumLim::min()));
+            EXPECT_EQ(pExpectedMinPositive, toStrC(NumLim::min()));
 
         // +-inf
-        EXPECT_EQ("inf", DFG_SUB_NS_NAME(str)::toStrC(NumLim::infinity()));
-        EXPECT_EQ("-inf", DFG_SUB_NS_NAME(str)::toStrC(-1 * NumLim::infinity()));
+        EXPECT_EQ("inf", toStrC(NumLim::infinity()));
+        EXPECT_EQ("-inf", toStrC(-1 * NumLim::infinity()));
 
         // NaN
         EXPECT_TRUE(beginsWith(toStrC(NumLim::quiet_NaN()), "nan"));
@@ -650,7 +659,11 @@ TEST(dfgStr, toStr)
 
     // Floating point tests
     {
-#if (DFG_MSVC_VER != 0 && DFG_MSVC_VER < DFG_MSVC_VER_2015) || defined(__MINGW32__)
+#if DFG_TOSTR_USING_TO_CHARS == 1
+        const char szFloatMin[]         = "-3.4028235e+38";
+        const char szFloatMax[]         = "3.4028235e+38";
+        const char szFloatMinPositive[] = "1.1754944e-38";
+#elif (DFG_MSVC_VER != 0 && DFG_MSVC_VER < DFG_MSVC_VER_2015) || defined(__MINGW32__)
         const char szFloatMin[]         = "-3.40282347e+038";
         const char szFloatMax[]         = "3.40282347e+038";
         const char szFloatMinPositive[] = "1.17549435e-038";

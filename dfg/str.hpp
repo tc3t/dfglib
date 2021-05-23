@@ -11,6 +11,7 @@
 #include "ReadOnlySzParam.hpp"
 #include "numericTypeTools.hpp"
 #include <algorithm>
+#include "preprocessor/compilerInfoMsvc.hpp"
 
 #if DFG_BUILD_OPT_USE_BOOST==1
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -25,6 +26,14 @@
                                 // (by the programmer) to be ANSI-encoded.
 #define DFG_DEFINE_STRING_LITERAL_C(name, str) const char name[] = str;
 #define DFG_DEFINE_STRING_LITERAL_W(name, str) const wchar_t name[] = L##str;
+
+// Note: these limits have been copied from strTo.hpp
+#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L)
+    #define DFG_TOSTR_USING_TO_CHARS 1
+    #include <charconv>
+#else
+    #define DFG_TOSTR_USING_TO_CHARS 0
+#endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 
@@ -150,9 +159,11 @@ Str_T toStrT(const T& obj)
 #endif
 }
 
-template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszFormat) // TODO: test
+// Converts double to string using sprintf() and given format string and writes to result to given buffer.
+// Note: Result format is dependent on locale so the output string might not be convertible back to double with strTo().
+template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszSprintfFormat) // TODO: test
 {
-    DFG_DETAIL_NS::sprintf_s(buf, N, pszFormat, val);
+    DFG_DETAIL_NS::sprintf_s(buf, N, pszSprintfFormat, val);
     return buf;
 }
 
@@ -173,6 +184,14 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
 {
     if (nDstSize < 1 || !psz)
         return psz;
+#if DFG_TOSTR_USING_TO_CHARS == 1
+    const auto tcResult = (nPrecParam == -1) ? std::to_chars(psz, psz + nDstSize, val) : std::to_chars(psz, psz + nDstSize, val, std::chars_format::general, nPrecParam);
+    if (tcResult.ec == std::errc() && static_cast<size_t>(std::distance(psz, tcResult.ptr)) < nDstSize)
+        *tcResult.ptr = '\0';
+    else
+        *psz = '\0';
+    return psz;
+#else // Case: not using std::to_chars(), converting using brittle locale-dependent sprintf().
     if (DFG_MODULE_NS(math)::isInf(val))
         return strCpyAllThatFit(psz, nDstSize, (val > 0) ? "inf" : "-inf");
     else if (DFG_MODULE_NS(math)::isNan(val))
@@ -186,7 +205,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
     char szFormat[8] = "";
     DFG_DETAIL_NS::sprintf_s(szFormat, sizeof(szFormat), "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
     DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val);
-    std::replace(psz, psz + std::strlen(psz), ',', '.'); // Hack: fix for locales where decimal separator is comma. TODO: use a less brittle, locale independent double-to-string conversion (to_chars()).
+    std::replace(psz, psz + std::strlen(psz), ',', '.'); // Hack: fix for locales where decimal separator is comma. Locales using other than dot or comma remain broken.
 
     // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
     //               std::atof(pszLonger) == std::atof(pszShorter).
@@ -200,6 +219,7 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
         DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val); // Shorter was too short, reconvert.
     }
     return psz;
+#endif
 }
 
 template <class T, size_t N>
