@@ -618,6 +618,13 @@ namespace
             EXPECT_STREQ("1234", floatingPointToStr(T(1234), buffer, 4));
         }
 
+        // Testing that in case of too short a buffer, empty string is returned.
+        {
+            char buffer[4];
+            EXPECT_STREQ("", floatingPointToStr(T(4321), buffer));
+            EXPECT_STREQ("321", floatingPointToStr(T(321), buffer));
+        }
+
         if (pExpectedLowest)
             EXPECT_EQ(pExpectedLowest, toStrC(NumLim::lowest()));
         if (pExpectedMax)

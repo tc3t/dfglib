@@ -99,7 +99,7 @@ namespace DFG_DETAIL_NS
     template <> inline const char* floatingPointTypeToSprintfType<double>()      { return "g"; }
     template <> inline const char* floatingPointTypeToSprintfType<long double>() { return "Lg"; }
 
-    // TODO: revise behaviour differences between _WIN32 and others.
+    // Effectively the same as std::snprintf(), i.e. guarantees that buffer is null terminated (given sizeInCharacters > 0)
     inline int sprintf_s(char* buffer, size_t sizeInCharacters, const char* pszFormat, ...)
     {
         va_list args;
@@ -110,8 +110,6 @@ namespace DFG_DETAIL_NS
         // https://stackoverflow.com/questions/4089174/printf-and-long-double
         // As a workaround using special MinGW version.
         auto rv = __mingw_vsnprintf(buffer, sizeInCharacters, pszFormat, args);
-#elif defined(_WIN32)
-        auto rv = vsprintf_s(buffer, sizeInCharacters, pszFormat, args);
 #else
         auto rv = vsnprintf(buffer, sizeInCharacters, pszFormat, args);
 #endif
@@ -179,6 +177,7 @@ Str_T& toStr(const T& obj, Str_T& str)
 // for which formats such as 1000000 may be preferred to scientific format 1e6.
 // For +- infinity, return value is inf/-inf.
 // For NaN's, return value begins with "nan"
+// Note: If string representation does not fit to buffer, resulting string will be empty (given nDstSize > 0).
 template <class T>
 inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, const int nPrecParam = -1)
 {
@@ -204,7 +203,11 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
         nPrec = 999;
     char szFormat[8] = "";
     DFG_DETAIL_NS::sprintf_s(szFormat, sizeof(szFormat), "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
-    DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val);
+    if (static_cast<size_t>(DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val)) >= nDstSize)
+    {
+        psz[0] = '\0'; // Result did't fit -> returning empty string.
+        return psz;
+    }
     std::replace(psz, psz + std::strlen(psz), ',', '.'); // Hack: fix for locales where decimal separator is comma. Locales using other than dot or comma remain broken.
 
     // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
