@@ -384,6 +384,26 @@ DFG_TEMP_CREATE_INTTOSTR_IMPL(8, false, DFG_DETAIL_NS::ui64toa_s, DFG_DETAIL_NS:
 
 #undef DFG_TEMP_CREATE_INTTOSTR_IMPL
 
+// Converts an integer to string representation.
+// Note: If string representation does not fit to buffer, behaviour is undefined.
+// Base can be range [2, 36]. If wider base is needed, see intToRadixRepresentation()
+template <class T>
+inline char* integerToStr(const T val, char* pDst, const size_t nDstSize, const int nBase = 10)
+{
+    if (nDstSize < 1 || !pDst)
+        return pDst;
+#if DFG_TOSTR_USING_TO_CHARS == 1
+    const auto tcResult = std::to_chars(pDst, pDst + nDstSize, val, nBase);
+    if (tcResult.ec == std::errc() && static_cast<size_t>(std::distance(pDst, tcResult.ptr)) < nDstSize)
+        *tcResult.ptr = '\0';
+    else
+        *pDst = '\0';
+    return pDst;
+#else // Case: not using std::to_chars()
+    return DFG_DETAIL_NS::intToStr<sizeof(T), std::is_signed<T>::value>(val, pDst, nDstSize, nBase);
+#endif
+}
+
 } // namespace DFG_DETAIL_NS 
 
 #define DFG_INTERNAL_DEFINE_TOSTR(CHAR, TYPE, FUNC, PARAM) \
@@ -391,7 +411,7 @@ DFG_TEMP_CREATE_INTTOSTR_IMPL(8, false, DFG_DETAIL_NS::ui64toa_s, DFG_DETAIL_NS:
     template <size_t N> CHAR* toStr(TYPE val, CHAR (&buf)[N],                       const int param = PARAM)  { return toStr(val, buf, N, param); }
 
 #define DFG_INTERNAL_DEFINE_TOSTR_INT(TYPE) \
-    DFG_INTERNAL_DEFINE_TOSTR(char,    TYPE, (DFG_DETAIL_NS::intToStr<sizeof(TYPE), std::is_signed<TYPE>::value>), 10) \
+    DFG_INTERNAL_DEFINE_TOSTR(char,    TYPE, DFG_DETAIL_NS::integerToStr, 10) \
     DFG_INTERNAL_DEFINE_TOSTR(wchar_t, TYPE, (DFG_DETAIL_NS::intToStr<sizeof(TYPE), std::is_signed<TYPE>::value>), 10)
 
 DFG_INTERNAL_DEFINE_TOSTR_INT(short);
@@ -409,23 +429,46 @@ DFG_INTERNAL_DEFINE_TOSTR(char,     long double,        floatingPointToStr<long 
 #undef DFG_INTERNAL_DEFINE_TOSTR_INT
 #undef DFG_INTERNAL_DEFINE_TOSTR
 
-template <class T> std::string toStrCImpl(const T& d, const std::true_type) // Type is floating_point type.
-{ 
-    char sz[32] = "";
-    toStr(d, sz);
-    return sz;
-}
-
-template <class T> std::string toStrCImpl(const T& obj, const std::false_type) // Type is not floating point.
+namespace DFG_DETAIL_NS
 {
-#if DFG_BUILD_OPT_USE_BOOST==1
-    return boost::lexical_cast<std::string>(obj);
-#else
-    DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrCImpl: implementation is not available when building without Boost");
-#endif
-}
+    struct ToStrConversionClass_floatingPoint {};
+    struct ToStrConversionClass_integer {};
+    struct ToStrConversionClass_generic {};
 
-template <class T> std::string toStrC(const T& obj) { return toStrCImpl(obj, std::is_floating_point<T>()); }
+    template <class T> struct ToStrConversionClass
+    {
+        using type = typename std::conditional<
+            std::is_floating_point<T>::value,
+            ToStrConversionClass_floatingPoint,
+            typename std::conditional<std::is_integral<T>::value, ToStrConversionClass_integer, ToStrConversionClass_generic>::type
+        >::type;
+    };
+
+    template <class T> std::string toStrCImpl(const T& d, const ToStrConversionClass_floatingPoint)
+    {
+        char sz[32] = "";
+        toStr(d, sz);
+        return sz;
+    }
+
+    template <class T> std::string toStrCImpl(const T& i, const ToStrConversionClass_integer)
+    {
+        char sz[32] = "";
+        toStr(i, sz);
+        return sz;
+    }
+
+    template <class T> std::string toStrCImpl(const T& obj, const ToStrConversionClass_generic)
+    {
+#if DFG_BUILD_OPT_USE_BOOST==1
+        return boost::lexical_cast<std::string>(obj);
+#else
+        DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrCImpl: implementation is not available when building without Boost");
+#endif
+    }
+} // namespace DFG_DETAIL_NS
+
+template <class T> std::string toStrC(const T& obj) { return DFG_DETAIL_NS::toStrCImpl(obj, typename DFG_DETAIL_NS::ToStrConversionClass<T>::type()); }
 
 template <class T>
 std::wstring toStrW(const T& obj)

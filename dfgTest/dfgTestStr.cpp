@@ -644,11 +644,12 @@ namespace
     void testIntegerToStr()
     {
         using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
         char buffer[32];
-        DFG_MODULE_NS(str)::toStr((std::numeric_limits<Int_T>::max)(),  buffer);
-        EXPECT_EQ((std::numeric_limits<Int_T>::max)(), DFG_MODULE_NS(str)::strTo<Int_T>(buffer));
-        DFG_MODULE_NS(str)::toStr((std::numeric_limits<Int_T>::min)(), buffer);
-        EXPECT_EQ((std::numeric_limits<Int_T>::min)(), DFG_MODULE_NS(str)::strTo<Int_T>(buffer));
+        toStr((std::numeric_limits<Int_T>::max)(),  buffer);
+        EXPECT_EQ((std::numeric_limits<Int_T>::max)(), strTo<Int_T>(buffer));
+        toStr((std::numeric_limits<Int_T>::min)(), buffer);
+        EXPECT_EQ((std::numeric_limits<Int_T>::min)(), strTo<Int_T>(buffer));
     }
 } // unnamed namespace
 
@@ -657,12 +658,12 @@ TEST(dfgStr, toStr)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(str);
 
-    EXPECT_EQ("-1", DFG_SUB_NS_NAME(str)::toStrC(-1));
-    EXPECT_EQ("123456789", DFG_SUB_NS_NAME(str)::toStrC(123456789.0));
-    EXPECT_EQ("123456789.012345", DFG_SUB_NS_NAME(str)::toStrC(123456789.012345));
-    EXPECT_EQ("-123456789.01234567", DFG_SUB_NS_NAME(str)::toStrC(-123456789.01234567));
-    EXPECT_EQ("0.3", DFG_SUB_NS_NAME(str)::toStrC(0.3));
-    EXPECT_EQ("5896249", DFG_SUB_NS_NAME(str)::toStrC(5896249));
+    EXPECT_EQ("-1", toStrC(-1));
+    EXPECT_EQ("123456789", toStrC(123456789.0));
+    EXPECT_EQ("123456789.012345", toStrC(123456789.012345));
+    EXPECT_EQ("-123456789.01234567", toStrC(-123456789.01234567));
+    EXPECT_EQ("0.3", toStrC(0.3));
+    EXPECT_EQ("5896249", toStrC(5896249));
 
     // Floating point tests
     {
@@ -684,7 +685,11 @@ TEST(dfgStr, toStr)
         toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
     }
 
-    // Test that integer overloads work correctly
+    // bool conversions are not implemented
+    //toStrC(true);
+    //toStrC(false);
+
+    // Testing that integer overloads work correctly
     {
         testIntegerToStr<short>();
         testIntegerToStr<unsigned short>();
