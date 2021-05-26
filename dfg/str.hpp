@@ -186,16 +186,47 @@ namespace DFG_DETAIL_NS
         return psz;
     }
 
+    template <class T, class Str_T>
+    Str_T& toStrTImpl(const T& obj, Str_T& str)
+    {
+#if DFG_BUILD_OPT_USE_BOOST==1
+        str = boost::lexical_cast<Str_T>(obj);
+        return str;
+#else
+        DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrTImpl: implementation is not available when building without Boost");
+#endif
+    }
+
 } // DFG_DETAIL_NS
+
+template <class T> std::string toStrC(const T& obj);
+template <class T> std::wstring toStrW(const T& obj);
+
+template <class T, class Str_T>
+Str_T& toStr(const T& obj, Str_T& str)
+{
+    return DFG_DETAIL_NS::toStrTImpl(obj, str);
+}
+
+template <class T>
+std::string& toStr(const T& obj, std::string& s)
+{
+    s = toStrC(obj);
+    return s;
+}
+
+template <class T>
+std::wstring& toStr(const T& obj, std::wstring& s)
+{
+    s = toStrW(obj);
+    return s;
+}
 
 template <class Str_T, class T>
 Str_T toStrT(const T& obj)
 {
-#if DFG_BUILD_OPT_USE_BOOST==1
-    return boost::lexical_cast<Str_T>(obj);
-#else
-    DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrT: implementation is not available when building without Boost");
-#endif
+    Str_T str;
+    return toStrT(obj, str);
 }
 
 // Converts double to string using sprintf() and given format string and writes to result to given buffer.
@@ -204,13 +235,6 @@ template <size_t N> char* toStr(const double val, char(&buf)[N], const char* psz
 {
     DFG_DETAIL_NS::sprintf_s(buf, N, pszSprintfFormat, val);
     return buf;
-}
-
-template <class T, class Str_T>
-Str_T& toStr(const T& obj, Str_T& str)
-{
-    str = toStrT<Str_T>(obj);
-    return str;
 }
 
 // Converts a double to string so that std::atof(toStr(val,...)) == val for all non-NaN, finite numbers.
@@ -484,11 +508,8 @@ namespace DFG_DETAIL_NS
 
     template <class T> std::string toStrCImpl(const T& obj, const ToStrConversionClass_generic)
     {
-#if DFG_BUILD_OPT_USE_BOOST==1
-        return boost::lexical_cast<std::string>(obj);
-#else
-        DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrCImpl: implementation is not available when building without Boost");
-#endif
+        std::string s;
+        return DFG_DETAIL_NS::toStrTImpl(obj, s);
     }
 } // namespace DFG_DETAIL_NS
 
@@ -497,11 +518,8 @@ template <class T> std::string toStrC(const T& obj) { return DFG_DETAIL_NS::toSt
 template <class T>
 std::wstring toStrW(const T& obj)
 {
-#if DFG_BUILD_OPT_USE_BOOST==1
-    return boost::lexical_cast<std::wstring>(obj);
-#else
-    DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "toStrC: implementation is not available when building without Boost");
-#endif   
+    std::wstring s;
+    return DFG_DETAIL_NS::toStrTImpl(obj, s);
 }
 
 template <size_t N> inline char*    strCpy(char     (&dest)[N], NonNullCStr pszSrc)     { return strcpy(dest, pszSrc); }

@@ -707,6 +707,18 @@ TEST(dfgStr, toStr)
         testIntegerToStr<int64>();
         testIntegerToStr<uint64>();
     }
+
+    // toStr() with string argument
+    {
+        std::string s;
+        std::wstring ws;
+        const auto s2 = toStr(1.25, s);
+        const auto ws2 = toStr(1.25, ws);
+        EXPECT_EQ("1.25", s);
+        EXPECT_EQ(L"1.25", ws);
+        EXPECT_EQ(s, s2);
+        EXPECT_EQ(ws, ws2);
+    }
 }
 
 namespace
