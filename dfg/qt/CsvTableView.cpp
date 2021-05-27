@@ -2007,17 +2007,23 @@ size_t CsvTableView::replace(const QVariantMap& params)
         return 0;
     }
     size_t nEditCount = 0;
-    forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+    const auto selection = storeSelection();
+    pCsvModel->batchEditNoUndo([&](CsvItemModel::DataTable& table)
     {
-        auto tpsz = pCsvModel->RawStringPtrAt(index.row(), index.column());
-        if (!tpsz || std::strstr(tpsz.c_str(), findTextUtf8.data()) == nullptr)
-            return;
-        // TODO: implement replace without QString temporaries for less overhead.
-        QString sTemp = QString::fromUtf8(tpsz.c_str());
-        sTemp.replace(sFindText, sReplaceText);
-        ++nEditCount;
-        pCsvModel->setDataNoUndo(index, sTemp);
+        forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+        {
+            auto tpsz = table(index.row(), index.column());
+            if (!tpsz || std::strstr(tpsz.c_str(), findTextUtf8.data()) == nullptr)
+                return;
+            // TODO: implement replace without QString temporaries for less overhead.
+            QString sTemp = QString::fromUtf8(tpsz.c_str());
+            sTemp.replace(sFindText, sReplaceText);
+            ++nEditCount;
+            table.setElement(index.row(), index.column(), SzPtrUtf8(sTemp.toUtf8()));
+        });
     });
+    restoreSelection(selection);
+
     QString sToolTipMsg;
     if (nEditCount > 0)
     {
@@ -2738,7 +2744,7 @@ void CsvTableView::evaluateSelectionAsFormula()
         QToolTip::showText(QCursor::pos(), tr("Selection is empty"));
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::generateContent()
+bool CsvTableView::generateContent()
 {
     auto pModel = model();
     if (!pModel)
@@ -2776,6 +2782,37 @@ bool DFG_CLASS_NAME(CsvTableView)::generateContent()
     }
 }
 
+auto CsvTableView::storeSelection() const -> SelectionRangeList
+{
+    auto selection = this->getSelection();
+    SelectionRangeList list; // Stored as topRow, topCol, bottomRow, bottomCol
+    for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+    {
+        const auto& topLeft = iter->topLeft();
+        const auto& bottomRight = iter->bottomRight();
+        list.push_back(std::make_tuple(topLeft.row(), topLeft.column(), bottomRight.row(), bottomRight.column()));
+    }
+    return list;
+}
+
+void CsvTableView::restoreSelection(const SelectionRangeList& selection) const
+{
+    // Reconstructing old selection from stored indexes and setting it.
+    QItemSelection newSelection;
+    auto pViewModel = this->model();
+    if (!pViewModel)
+        return;
+    for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+    {
+        newSelection.push_back(QItemSelectionRange(pViewModel->index(std::get<0>(*iter), std::get<1>(*iter)),
+            pViewModel->index(std::get<2>(*iter), std::get<3>(*iter))));
+    }
+    // Restoring selection.
+    auto pSelectionModel = this->selectionModel();
+    if (pSelectionModel)
+        pSelectionModel->select(newSelection, QItemSelectionModel::ClearAndSelect);
+}
+
 // Calls 'generator' for each cell in target. 
 // Generator received 4 arguments: table, model row (0-based), model column (0-based), cell counter (0 for first item).
 template <class Generator_T>
@@ -2783,17 +2820,7 @@ static void generateForEachInTarget(const TargetType targetType, const CsvTableV
 {
     DFG_STATIC_ASSERT(TargetType_last == 2, "This implementation handles only two target types");
 
-    auto selectionBefore = view.getSelection();
-    std::vector<std::tuple<int, int, int, int>> preEditSelectionRanges; // Stored as topRow, topCol, bottomRow, bottomCol
-
-    // Storing selection; needed because batchEditNoUndo() resets selection. Note that can't store as QItemSelection or anything that uses model indexes
-    // as those are rendered invalid by model reset in batchEditNoUndo().
-    for (auto iter = selectionBefore.cbegin(); iter != selectionBefore.cend(); ++iter)
-    {
-        const auto& topLeft = iter->topLeft();
-        const auto& bottomRight = iter->bottomRight();
-        preEditSelectionRanges.push_back(std::make_tuple(topLeft.row(), topLeft.column(), bottomRight.row(), bottomRight.column()));
-    }
+    const auto preEditSelectionRanges = view.storeSelection();
 
     if (targetType == TargetTypeWholeTable)
     {
@@ -2831,21 +2858,8 @@ static void generateForEachInTarget(const TargetType targetType, const CsvTableV
         DFG_ASSERT_IMPLEMENTED(false);
     }
 
-    // Reconstructing old selection from stored indexes and setting it.
-    QItemSelection newSelection;
-    auto pViewModel = view.model();
-    if (pViewModel)
-    {
-        for (auto iter = preEditSelectionRanges.cbegin(); iter != preEditSelectionRanges.cend(); ++iter)
-        {
-            newSelection.push_back(QItemSelectionRange(pViewModel->index(std::get<0>(*iter), std::get<1>(*iter)),
-                                                       pViewModel->index(std::get<2>(*iter), std::get<3>(*iter))));
-        }
-        // Restoring selection.
-        auto pSelectionModel = view.selectionModel();
-        if (pSelectionModel)
-            pSelectionModel->select(newSelection, QItemSelectionModel::ClearAndSelect);
-    }
+    // Restoring old selection
+    view.restoreSelection(preEditSelectionRanges);
 }
 
 namespace

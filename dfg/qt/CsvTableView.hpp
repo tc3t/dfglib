@@ -7,6 +7,7 @@
 #include <memory>
 #include <atomic>
 #include <functional>
+#include <tuple>
 #include "../OpaquePtr.hpp"
 
 #include "qtIncludeHelpers.hpp"
@@ -297,6 +298,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Adds a callback that is called to fetch additional properties for config file when saving
         void addConfigSavePropertyFetcher(PropertyFetcher fetcher);
+
+        using SelectionRangeList = std::vector<std::tuple<int, int, int, int>>;
+
+        // Stores current selection so that it can be restored later with restoreSelection()
+        SelectionRangeList storeSelection() const;
+
+        // Restores selection created by storeSelection()
+        // Note: Only supported for case where table internals or geometry (row/column count, model object etc.) does not change between storeSelection() and restoreSelection()
+        void restoreSelection(const SelectionRangeList& selection) const;
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
