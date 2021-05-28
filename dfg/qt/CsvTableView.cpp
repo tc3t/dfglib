@@ -2008,20 +2008,30 @@ size_t CsvTableView::replace(const QVariantMap& params)
     }
     size_t nEditCount = 0;
     const auto selection = storeSelection();
-    pCsvModel->batchEditNoUndo([&](CsvItemModel::DataTable& table)
+
+    doModalOperation(this, tr("Executing Find & Replace..."), ProgressWidget::IsCancellable::yes, "find_replace", [&](ProgressWidget* pProgressDialog)
     {
-        forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+        pCsvModel->batchEditNoUndo([&](CsvItemModel::DataTable& table)
         {
-            auto tpsz = table(index.row(), index.column());
-            if (!tpsz || std::strstr(tpsz.c_str(), findTextUtf8.data()) == nullptr)
-                return;
-            // TODO: implement replace without QString temporaries for less overhead.
-            QString sTemp = QString::fromUtf8(tpsz.c_str());
-            sTemp.replace(sFindText, sReplaceText);
-            ++nEditCount;
-            table.setElement(index.row(), index.column(), SzPtrUtf8(sTemp.toUtf8()));
+            forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& rbContinue)
+            {
+                auto tpsz = table(index.row(), index.column());
+                if (!tpsz || std::strstr(tpsz.c_str(), findTextUtf8.data()) == nullptr)
+                    return;
+                if (pProgressDialog && pProgressDialog->isCancelled())
+                {
+                    rbContinue = false;
+                    return;
+                }
+                // TODO: implement replace without QString temporaries for less overhead.
+                QString sTemp = QString::fromUtf8(tpsz.c_str());
+                sTemp.replace(sFindText, sReplaceText);
+                ++nEditCount;
+                table.setElement(index.row(), index.column(), SzPtrUtf8(sTemp.toUtf8()));
+            });
         });
-    });
+    }); // Modal operation end
+
     restoreSelection(selection);
 
     QString sToolTipMsg;
