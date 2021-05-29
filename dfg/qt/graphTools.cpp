@@ -2586,13 +2586,11 @@ auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) 
 
 auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param) -> ChartObjectHolder<Histogram>
 {   
-    // If histogram is string-type (=bin per strings, values are number of identical strings), handling it separately. It is effectively a bar chart so only need to compute counts here.
+    // If histogram is string-type (=bin per strings, values are number of identical strings), handling it separately - it is effectively a bar chart.
     if (!param.stringValueRange.empty())
     {
-        ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, double> counts;
-        for (const auto& s : param.stringValueRange)
-            counts[s]++;
-        auto barSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), counts.keyRange(), counts.valueRange(), param.xType, param.m_sXname, StringUtf8()));
+        DFG_ASSERT_CORRECTNESS(param.stringValueRange.size() == param.countRange.size());
+        auto barSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), param.stringValueRange, param.countRange, param.xType, param.m_sXname, StringUtf8()));
         DFG_ASSERT_CORRECTNESS(barSeries.size() <= 1);
         auto spImpl = (!barSeries.empty()) ? dynamic_cast<BarSeriesQCustomPlot*>(barSeries[0].get()) : nullptr;
         return std::make_shared<HistogramQCustomPlot>(spImpl->m_spBars.data());
@@ -5366,8 +5364,16 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
         if (!handleXrows(defEntry, pStrings, stringColumnCopy))
             return ChartData();
 
+
+        // Creating y-values
+        ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, double, ::DFG_MODULE_NS(cont)::Vector<StringUtf8>, ::DFG_MODULE_NS(cont)::ValueVector<double>> counts;
+        {
+            for (const auto& kv : *pStrings)
+                counts[kv.second]++;
+        }
+
         // Applying operations
-        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pStrings->m_valueStorage, nullptr);
+        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&counts.m_keyStorage, &counts.m_valueStorage);
         defEntry.applyOperations(operationData);
 
         auto pFinalStrings = operationData.constStringsByIndex(0);
@@ -5404,8 +5410,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(RefreshCo
     else // Case text valued
     {
         auto pStrings = rawData.constStringsByIndex(0);
-        if (pStrings)
-            spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), qStringToStringUtf8(sXaxisName)));
+        auto pCounts = rawData.constValuesByIndex(1);
+        if (pStrings && pCounts)
+            spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), makeRange(*pCounts), qStringToStringUtf8(sXaxisName)));
     }
 
     if (!spHistogram)

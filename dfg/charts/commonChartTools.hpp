@@ -719,10 +719,11 @@ class HistogramCreationParam : public ChartObjectCreationParam
 public:
     using BaseClass = ChartObjectCreationParam;
     HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<double>, ChartDataType argXtype, StringUtf8 sXname);
-    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8>, StringUtf8 sXname);
+    HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> binNames, InputSpan<double> counts, StringUtf8 sXname);
 
     InputSpan<double> valueRange;
     InputSpan<StringUtf8> stringValueRange;
+    InputSpan<double> countRange;
     ChartDataType xType = ChartDataType::unknown;
     StringUtf8 m_sXname;
 };
@@ -736,9 +737,10 @@ inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configPar
 
 }
 
-inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> strings, StringUtf8 sXname)
+inline HistogramCreationParam::HistogramCreationParam(ChartConfigParam configParam, const AbstractChartControlItem& defEntry, InputSpan<StringUtf8> strings, InputSpan<double> counts, StringUtf8 sXname)
     : BaseClass(configParam, defEntry)
     , stringValueRange(strings)
+    , countRange(counts)
     , m_sXname(std::move(sXname))
 {
 }
