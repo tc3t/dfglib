@@ -1996,9 +1996,8 @@ size_t CsvTableView::replace(const QVariantMap& params)
     auto pCsvModel = csvModel();
     if (!pCsvModel)
         return 0;
-    const auto sFindText = params["find"].toString();
-    const auto findTextUtf8 = sFindText.toUtf8();
-    const auto sReplaceText = params["replace"].toString();
+    const auto sFindText = qStringToStringUtf8(params["find"].toString());
+    const auto sReplaceText = qStringToStringUtf8(params["replace"].toString());
 
     auto lockReleaser = tryLockForEdit();
     if (!lockReleaser.isLocked())
@@ -2013,21 +2012,21 @@ size_t CsvTableView::replace(const QVariantMap& params)
     {
         pCsvModel->batchEditNoUndo([&](CsvItemModel::DataTable& table)
         {
+            StringUtf8 sTemp;
             forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& rbContinue)
             {
                 auto tpsz = table(index.row(), index.column());
-                if (!tpsz || std::strstr(tpsz.c_str(), findTextUtf8.data()) == nullptr)
+                if (!tpsz || std::strstr(tpsz.c_str(), sFindText.c_str().c_str()) == nullptr)
                     return;
                 if (pProgressDialog && pProgressDialog->isCancelled())
                 {
                     rbContinue = false;
                     return;
                 }
-                // TODO: implement replace without QString temporaries for less overhead.
-                QString sTemp = QString::fromUtf8(tpsz.c_str());
-                sTemp.replace(sFindText, sReplaceText);
+                sTemp = tpsz;
+                ::DFG_MODULE_NS(str)::replaceSubStrsInplace(sTemp.rawStorage(), sFindText.rawStorage(), sReplaceText.rawStorage());
                 ++nEditCount;
-                table.setElement(index.row(), index.column(), SzPtrUtf8(sTemp.toUtf8()));
+                table.setElement(index.row(), index.column(), sTemp);
             });
         });
     }); // Modal operation end
