@@ -153,7 +153,9 @@
         <li><i>x_source</i>: defines column from which labels are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
         <li><i>y_source</i>: defines column from which values are taken from, see syntax from documentation of type <i>xy</i>. <i>row_index</i> specifier is not supported.</li>
         <li><i>merge_identical_labels</i>: {true, <b>false</b>}. If true, bars with identical labels are merged into one and bar length is the sum of lengths of merged bars.
-                                           This setting does not merge labels between different bar chart entries in the same panel.</li>
+                                           This setting does not merge labels between different bar chart entries in the same panel. If using operations, note that merging is applied after
+                                           operations so for example if having data (a, 3), (a, 3) which results to (a, 6) with merging, operations that access y values see two entries with
+                                           number 3 instead of one with number 6.</li>
         <li><i>stack_on_existing_labels</i>: {true, <b>false</b>}. If true, bars will be stacked on top of existing bars that have identical labels.</li>
         <li><i>bar_label</i>: If given, every (label, value) pair creates a new bar stacked on given <i>bar_label</i>.</li>
     </ul>
@@ -206,6 +208,12 @@
                 <li>Note that ordering is lexicographical (e.g. "operation_10" would be executed before "operation_9")</li>
             </ul>
         </ul>
+        <li>Input available for operations by chart type</li>
+        <ul>
+            <li><i>xy</i> and <i>txy</i>: x and y</li>
+            <li><i>histogram</i>: x and y. x is bin positions (not the raw input data), y is bar heights.</li>
+            <li><i>bars</i>: y (bar heights). Note that e.g. merge_identical_labels is done after operations.</li>
+        </ul>
         <li>Available operations</li>
         <ul>
             <li><i>formula</i></li>
@@ -217,12 +225,6 @@
                 <ul>
                     <li>0: [x,y]: coordinate whose value to set by the formula</li>
                     <li>1: Formula string. If input has x/y coordinates, values can be access through variables x and y.</li>
-                </ul>
-                <li>Availability of axis values for different chart types:</li>
-                <ul>
-                    <li>xy/txy: both x and y are available.</li>
-			        <li>histogram: bin position can be affected through x, variable y is not available.</li>
-			        <li>bars: Bar heights can be affected through y, variable x is not available.</li>
                 </ul>
                 <li>In addition to operators +-*/^, there are lots of basic functions such as sin(), cos() available and if 
                     build with tools that support <a href="https://en.cppreference.com/w/cpp/header/cmath">C++ mathematical special functions</a>, those may also be available.</li>

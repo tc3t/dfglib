@@ -2614,58 +2614,23 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         return nullptr;
     }
 
-    auto pQCPBars = new QCPBars(pXaxis, pYaxis);
-    setTypeToQcpObjectProperty(pQCPBars, ChartObjectChartTypeStr_histogram);
-    auto spHistogram = std::make_shared<HistogramQCustomPlot>(pQCPBars); // Note: QCPBars is owned by QCustomPlot-object.
-    pQCPBars = nullptr;
+    std::unique_ptr<QCPBars> spQCPBars(new QCPBars(pXaxis, pYaxis));
+    setTypeToQcpObjectProperty(spQCPBars.get(), ChartObjectChartTypeStr_histogram);
+    auto spHistogram = std::make_shared<HistogramQCustomPlot>(spQCPBars.release()); // Note: QCPBars is owned by QCustomPlot-object.
 
     const bool bOnlySingleValue = (*minMaxPair.first == *minMaxPair.second);
 
     const auto nBinCount = (!bOnlySingleValue) ? param.definitionEntry().fieldValue<int>(ChartObjectFieldIdStr_binCount, 100) : -1;
 
+    spHistogram->setValues(param.valueRange, param.countRange);
+
     double binWidth = std::numeric_limits<double>::quiet_NaN();
 
     if (nBinCount >= 0)
-    {
-        try
-        {
-            // Creating histogram points using boost::histogram.
-            // Adding small adjustment to upper boundary so that items identical to max value won't get excluded from histogram.
-            binWidth = (*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount);
-            const auto edgeAdjustment = 0.001 * binWidth;
-            auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(static_cast<unsigned int>(nBinCount), *minMaxPair.first, *minMaxPair.second + edgeAdjustment, "x"));
-            std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
-
-            QVector<double> xVals;
-            QVector<double> yVals;
-            for (auto&& x : indexed(hist, boost::histogram::coverage::all))
-            {
-                const double xVal = x.bin().center();
-                if (DFG_MODULE_NS(math)::isNan(xVal) || DFG_MODULE_NS(math)::isInf(xVal))
-                    continue;
-                xVals.push_back(xVal);
-                yVals.push_back(*x);
-            }
-            spHistogram->setValues(xVals, yVals);
-        }
-        catch (const std::exception& e)
-        {
-            // Failed to create histogram.
-            DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to create histogram, exception message: '%1'").arg(e.what()));
-            return nullptr;
-        }
-    }
+        binWidth = (*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount);
     else // Case: bin for every value.
     {
-        ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double> countsPerValue;
-        for (const auto& val : valueRange) if (!::DFG_MODULE_NS(math)::isNan(val))
-        {
-            auto insertRv = countsPerValue.insert(val, 1);
-            if (!insertRv.second) // If already existed, adding 1 to existing count.
-                insertRv.first->second += 1;
-        }
-        const auto keyRange = countsPerValue.keyRange();
-        spHistogram->setValues(keyRange, countsPerValue.valueRange());
+        const auto keyRange = makeRange(param.valueRange);
         if (keyRange.size() >= 2)
         {
             const auto iterEnd = keyRange.cend();
@@ -5330,8 +5295,66 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
         if (!handleXrows(defEntry, pRowToValues, singleColumnCopy))
             return ChartData();
 
+        ValueVectorD xVals;
+        ValueVectorD yVals;
+
+        // Creating histogram bin values
+        {
+            // Checking input value range and returning early if there is no valid range available (e.g. only NaN)
+            auto valueRange = makeRange(pRowToValues->m_valueStorage);
+            auto minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(valueRange);
+            if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
+                return ChartData();
+
+            const bool bOnlySingleValue = (*minMaxPair.first == *minMaxPair.second);
+            const auto nBinCount = (!bOnlySingleValue) ? defEntry.fieldValue<int>(ChartObjectFieldIdStr_binCount, 100) : -1;
+
+            if (nBinCount >= 0)
+            {
+                try
+                {
+                    // Creating histogram points using boost::histogram.
+                    // Adding small adjustment to upper boundary so that items identical to max value won't get excluded from histogram.
+                    const auto binWidth = (*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount);
+                    const auto edgeAdjustment = 0.001 * binWidth;
+                    auto hist = boost::histogram::make_histogram(boost::histogram::axis::regular<>(static_cast<unsigned int>(nBinCount), *minMaxPair.first, *minMaxPair.second + edgeAdjustment, "x"));
+                    std::for_each(valueRange.begin(), valueRange.end(), std::ref(hist));
+
+                    for (auto&& x : indexed(hist, boost::histogram::coverage::all))
+                    {
+                        const double xVal = x.bin().center();
+                        if (DFG_MODULE_NS(math)::isNan(xVal) || DFG_MODULE_NS(math)::isInf(xVal))
+                            continue;
+                        xVals.push_back(xVal);
+                        yVals.push_back(*x);
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    // Failed to create histogram.
+                    if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
+                        defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("Failed to create histogram, exception message: '%1'").arg(e.what()));
+                    return ChartData();
+                }
+            }
+            else // Case: bin for every value.
+            {
+                ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double> countsPerValue;
+                for (const auto& val : valueRange) if (!::DFG_MODULE_NS(math)::isNan(val))
+                {
+                    auto insertRv = countsPerValue.insert(val, 1);
+                    if (!insertRv.second) // If already existed, adding 1 to existing count.
+                        insertRv.first->second += 1;
+                }
+                xVals = std::move(countsPerValue.m_keyStorage);
+                yVals = std::move(countsPerValue.m_valueStorage);
+            }
+        } // End creating histogram bin values.
+
         // Applying operations
-        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pRowToValues->m_valueStorage, nullptr);
+        // Note: operations semantics changed from dfgQtTableEditor 1.9.0 to 2.0.0: in 1.9.0 only x was available and it referred to raw input values,
+        //       in 2.0.0 both (x, y) are available and x values are bin positions, not raw input values. y values are bar heights.
+        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&xVals, &yVals);
         defEntry.applyOperations(operationData);
 
         auto pValues = operationData.constValuesByIndex(0);
@@ -5400,17 +5423,17 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshHistogram(RefreshCo
 
     const auto sXaxisName = rawData.columnName(0);
     ChartObjectHolder<Histogram> spHistogram;
+    auto pCounts = rawData.constValuesByIndex(1);
     if (rawData.stringsByIndex(0) == nullptr)
     {
         const auto xType = rawData.columnDataType(0);
         auto pValues = rawData.constValuesByIndex(0);
-        if (pValues)
-            spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pValues), xType, qStringToStringUtf8(sXaxisName)));
+        if (pValues && pCounts)
+            spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pValues), makeRange(*pCounts), xType, qStringToStringUtf8(sXaxisName)));
     }
     else // Case text valued
     {
         auto pStrings = rawData.constStringsByIndex(0);
-        auto pCounts = rawData.constValuesByIndex(1);
         if (pStrings && pCounts)
             spHistogram = rChart.createHistogram(HistogramCreationParam(configParamCreator(), defEntry, makeRange(*pStrings), makeRange(*pCounts), qStringToStringUtf8(sXaxisName)));
     }
