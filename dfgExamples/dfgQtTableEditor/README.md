@@ -402,6 +402,10 @@ Available keys:
 | properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
 | properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, see [guide](../../dfg/qt/res/chartGuide.html) for detail | Since 1.6.0 |
 | properties/chartPanelWidth | If dfgQtTableEditor is built with chart feature, defines chart panel width to be used with the associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 1.8.1 ([#60](https://github.com/tc3t/dfglib/issues/60))
+| properties/windowHeight | Defines request for window height when opening associated document. | Height value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/windowWidth | Defines request for window width when opening associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/windowPosX | Defines request for window x position when opening associated document, only taken into account if either windowHeight or windowWidth is defined. | x pixel position of top left corner, 0 for left. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/windowPosY | Defines request for window y position when opening associated document, only taken into account if either windowHeight or windowWidth is defined. | y pixel position of top left corner, 0 for top. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
 | properties/sqlQuery | For SQLite files, defines the query whose result is populated to table. | Valid SQLite query | Since 1.6.1 (commit [24c1ad78](https://github.com/tc3t/dfglib/commit/24c1ad78eac2a6f74b6ee1be0dede0d5645fef07)) |
 
 #### Example .conf-file for csv-file (might look better when opened in a csv-editor)
@@ -426,6 +430,10 @@ properties,,,
 ,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"
 ,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
 ,chartPanelWidth,%50
+,windowHeight,%50
+,windowWidth,%100
+,windowPosX,0
+,windowPosY,500
 </pre>
 
 #### Example .conf-file for SQLite-file (might look better when opened in a csv-editor)

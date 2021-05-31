@@ -279,7 +279,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::TableEditor)
 {
-    QMap<QModelIndex, QString> m_pendingEdits;
+    QMap<QModelIndex, QString> m_pendingEdits; // Stores edits done in cell editor which couldn't be applied immediately to be tried later.
+    QPointer<QWidget> m_spResizeWindow;        // Defines widget to resize/move if document requests such.
+
 };
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::CellEditor::setFontPointSizeF(const qreal pointSize)
@@ -513,6 +515,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSourcePathChanged()
     updateWindowTitle();
 }
 
+void DFG_MODULE_NS(qt)::TableEditor::setResizeWindow(QWidget* pWindow)
+{
+    DFG_OPAQUE_REF().m_spResizeWindow = pWindow;
+}
+
 namespace
 {
     void setCellEditorToNoSelectionState(QPlainTextEdit* pEditor, QDockWidget* pDockWidget)
@@ -527,7 +534,7 @@ namespace
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
+void DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
 {
     if (!m_spTableModel)
         return;
@@ -537,13 +544,53 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onNewSourceOpened()
     if (m_spStatusBar)
         m_spStatusBar->showMessage(tr("Reading lasted %1 s").arg(model.latestReadTimeInSeconds(), 0, 'g', 4));
     setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
+
+    const auto loadOptions = model.getOpenTimeLoadOptions();
+
+    // Checking if window resize is allowed and requested; if yes, resizing and repositioning window.
+    auto pResizeWindow = DFG_OPAQUE_REF().m_spResizeWindow.data();
+    if (pResizeWindow)
+    {
+        auto pPrimaryScreen = QGuiApplication::primaryScreen();
+        if (pPrimaryScreen)
+        {
+            const auto screenRect = pPrimaryScreen->geometry();
+            const WindowExtentProperty heightRequest(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_windowHeight, "")));
+            const WindowExtentProperty widthRequest(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_windowWidth, "")));
+            const auto nMaxHeight = screenRect.height();
+            const auto nMaxWidth = screenRect.width();
+            auto nNewHeight = Min(heightRequest.toAbsolute(nMaxHeight), nMaxHeight);
+            auto nNewWidth = Min(widthRequest.toAbsolute(nMaxWidth), nMaxWidth);
+
+            if (nNewWidth > 0 || nNewHeight > 0)
+            {
+                const auto posFunc = [&](const char* pszId, const int nNewExtent, const int nWindowExtent, const int pos)
+                    {
+                        const auto sPos = loadOptions.getProperty(pszId, "");
+                        if (sPos.empty())
+                            return (nNewExtent > 0) ? (nWindowExtent - nNewExtent) / 2 : pos;
+                        else
+                            return Min(nWindowExtent, Max(0, ::DFG_MODULE_NS(str)::strTo<int>(sPos)));
+                    };
+
+                const auto xPos = posFunc(CsvOptionProperty_windowPosX, nNewWidth, screenRect.width(), pResizeWindow->pos().x());
+                const auto yPos = posFunc(CsvOptionProperty_windowPosY, nNewHeight, screenRect.height(), pResizeWindow->pos().y());
+
+                if (nNewWidth == 0)
+                    nNewWidth = pResizeWindow->width();
+                if (nNewHeight == 0)
+                    nNewHeight = pResizeWindow->height();
+                pResizeWindow->resize(nNewWidth, nNewHeight);
+                pResizeWindow->move(xPos, yPos);
+            }
+        }
+    }
+
     resizeColumnsToView();
     updateWindowTitle();
 
     if (m_spChartDisplay)
     {
-        const auto loadOptions = model.getOpenTimeLoadOptions();
-
         // Resizing chart panel if needed
         if (m_spChartDisplay)
         {

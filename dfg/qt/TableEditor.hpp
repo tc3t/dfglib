@@ -96,6 +96,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Returns size of the chart display in the (possibly) resizable direction, value 0 can be used to determine that display is hidden.
         int setGraphDisplay(QWidget* pGraphDisplayDisplay);
 
+        // Sets window to resize/move if document requests to use specific window size/position. If not set, requests are ignored.
+        void setResizeWindow(QWidget* pWindow);
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 

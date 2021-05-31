@@ -189,6 +189,7 @@ int main(int argc, char *argv[])
 
     dfg::qt::TableEditor tableEditor;
     tableEditor.setAllowApplicationSettingsUsage(true);
+    tableEditor.setResizeWindow(&mainWindow);
     mainWindow.setWindowIcon(QIcon(":/mainWindowIcon.png"));
 
 #if (defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1))
@@ -229,6 +230,12 @@ int main(int argc, char *argv[])
     {
         tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/chartControls"), graphDisplay.getChartDefinitionString()); });
         tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/chartPanelWidth"), QString::number(graphDisplay.width())); });
+
+        tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/windowWidth"), QString::number(mainWindow.width())); });
+        tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/windowHeight"), QString::number(mainWindow.height())); });
+
+        tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/windowPosX"), QString::number(mainWindow.pos().x())); });
+        tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/windowPosY"), QString::number(mainWindow.pos().y())); });
     }
 #endif
 
