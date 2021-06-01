@@ -59,16 +59,16 @@ namespace
 
     typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) TimerType;
 
-    std::string GenerateTestFile(const size_t nRowCount, const size_t nColCount)
+    std::string GenerateTestFile(const size_t nRowCount, const size_t nColCount, const bool bEnclose)
     {
         using namespace DFG_MODULE_NS(io);
         using namespace DFG_MODULE_NS(str);
 
-        std::string sFilePath = "testfiles/generated/generatedCsv_r" + toStrC(nRowCount) + "_c" + toStrC(nColCount) + "_constant_content_abc_test.csv";
+        std::string sFilePath = "testfiles/generated/generatedCsv_r" + toStrC(nRowCount) + "_c" + toStrC(nColCount) + "_constant_content_abc_test" + ((bEnclose) ? "_enclosed": "") + ".csv";
 
         TimerType timer;
 
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStream) ostrm(sFilePath);
+        DFG_MODULE_NS(io)::OfStream ostrm(sFilePath);
         if (nRowCount == 0 || nColCount == 0)
             return sFilePath;
         for (size_t c = 0; c < nColCount; ++c)
@@ -80,11 +80,11 @@ namespace
         ostrm << '\n';
         for (size_t r = 0; r < nRowCount; ++r)
         {
-            DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrm, "abc", ',', '"', '\n', EbEncloseIfNeeded);
+            DelimitedTextCellWriter::writeCellStrm(ostrm, "abc", ',', '"', '\n', (bEnclose) ? EbEnclose : EbEncloseIfNeeded);
             for (size_t c = 1; c < nColCount; ++c)
             {
 #if 1
-                ostrm << ",abc";
+                ostrm << ((bEnclose) ? ",\"abc\"" : ",abc");
 #else
                 writeBinary(ostrm, ',');
                 //DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrm, "abc", ',', '"', '\n', EbEncloseIfNeeded); // This was about 2.5 x slower than direct writing in a run instance.
@@ -596,7 +596,8 @@ TEST(dfgPerformance, CsvReadPerformance)
         ostrmTestResults << ",time_avg,time_median,time_sum\n";
     }
 
-    const auto sFilePath = GenerateTestFile(gnRowCount, gnColCount);
+    const auto sFilePath = GenerateTestFile(gnRowCount, gnColCount, false);
+    const auto sFilePathEnclosed = GenerateTestFile(gnRowCount, gnColCount, true);
 
 #if 0 // std:: stream tests disabled by default as they have been very slow at least in MSVC
     // std::ifstream
@@ -634,8 +635,10 @@ TEST(dfgPerformance, CsvReadPerformance)
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
     ExecuteTestCase_DelimitedTextReader_DefaultCharAppend<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
     // BasicImStream, default reader with StringViewCBufferWithEnclosedCellSupport
-    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
-    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, true); // Compile time format def
+    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath        , nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath        , nRunCount, true);  // Compile time format def
+    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePathEnclosed, nRunCount, false); // Runtime format def
+    ExecuteTestCase_DelimitedTextReader_StringViewCBufferWithEnclosedCellSupport<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePathEnclosed, nRunCount, true);  // Compile time format def
 
     // BasicImStream, basicReader, default read buffer
     ExecuteTestCase_DelimitedTextReader_basicReader<BasicImStreamT>(ostrmTestResults, InitIBasicImStream, sFilePath, nRunCount, false); // Runtime format def
@@ -672,6 +675,7 @@ TEST(dfgPerformance, CsvReadPerformance)
 
     // TableCsv
     ExecuteTestCase_TableCsv(ostrmTestResults, sFilePath, nRunCount);
+    ExecuteTestCase_TableCsv(ostrmTestResults, sFilePathEnclosed, nRunCount);
 
     ostrmTestResults.close();
     //std::system("testfiles\\generated\\csvPerformanceResults.csv");
