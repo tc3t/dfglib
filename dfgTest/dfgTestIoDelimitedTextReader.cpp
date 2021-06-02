@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (defined(DFGTEST_BUILD_MODULE_IO_DELIM_READER) && DFGTEST_BUILD_MODULE_IO_DELIM_READER == 1) || (!defined(DFGTEST_BUILD_MODULE_IO_DELIM_READER) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/io/DelimitedTextReader.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/str/format_fmt.hpp>
@@ -1509,3 +1512,5 @@ TEST(DfgIo, DelimitedTextReader_CharAppenderUtf)
     EXPECT_EQ(' ', buffer[2]);
     EXPECT_EQ('a', buffer[3]);
 }
+
+#endif

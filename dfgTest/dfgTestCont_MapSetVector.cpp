@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (defined(DFGTEST_BUILD_MODULE_CONT_MAPSETVECTOR) && DFGTEST_BUILD_MODULE_CONT_MAPSETVECTOR == 1) || (!defined(DFGTEST_BUILD_MODULE_CONT_MAPSETVECTOR) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/cont.hpp>
 #include <dfg/cont/table.hpp>
 #include <string>
@@ -854,3 +857,5 @@ TEST(dfgCont, SetVector)
         EXPECT_EQ(1, se.size());
     }
 }
+
+#endif

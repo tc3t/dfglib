@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/staticMap.hpp>
 
 namespace
@@ -20,3 +23,5 @@ TEST(DfgMisc, StaticMap)
 	EXPECT_EQ(names[mapToName<Twenty>::index], names[1]);
 	EXPECT_EQ(names[mapToName<FourtyFive>::index], names[2]);
 }
+
+#endif

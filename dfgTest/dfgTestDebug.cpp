@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/debugAll.hpp>
 #include <dfg/dfgAssert.hpp>
 #include <dfg/thread/setThreadName.hpp>
@@ -89,4 +92,6 @@ TEST(dfgDebug, require)
 	EXPECT_THROW(DFG_REQUIRE(++s == 2), DFG_CLASS_NAME(ExceptionRequire));
 	EXPECT_NO_THROW(DFG_REQUIRE(++s == 2));
 }
+
+#endif
 

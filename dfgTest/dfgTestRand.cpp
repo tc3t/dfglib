@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/rand.hpp>
 #include <dfg/func.hpp>
 #include <ctime>
@@ -468,3 +471,5 @@ TEST(dfgRand, forEachDistributionType)
     DFG_DETAIL_NS::forEachDistributionType(handler);
     EXPECT_TRUE(handler.m_found.all());
 }
+
+#endif

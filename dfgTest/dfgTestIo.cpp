@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/io.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/alg.hpp>
@@ -1465,4 +1468,6 @@ TEST(dfgIo, widePathStrToFstreamFriendlyNonWide)
     const wchar_t szNonConvertable[] = L"\x20AD";
     EXPECT_TRUE(DFG_MODULE_NS(io)::widePathStrToFstreamFriendlyNonWide(szNonConvertable).empty());
 }
+#endif
+
 #endif

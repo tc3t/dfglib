@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (defined(DFGTEST_BUILD_MODULE_STR) && DFGTEST_BUILD_MODULE_STR == 1) || (!defined(DFGTEST_BUILD_MODULE_STR) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/str.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/alg.hpp>
@@ -1777,3 +1780,5 @@ TEST(dfgStr, floatingPointTypeToSprintfType)
     testFloatingPointTypeToSprintfType<double>();
     testFloatingPointTypeToSprintfType<long double>();
 }
+
+#endif

@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/bits.hpp>
 
 TEST(dfgBits, BitTest)
@@ -13,3 +16,5 @@ TEST(dfgBits, BitTest)
 	EXPECT_EQ(bitTest(15, Four), false);
 	EXPECT_EQ(bitTest(~size_t(0), 31), true);
 }
+
+#endif

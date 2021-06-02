@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/utf.hpp>
 
 TEST(DfgUtf, utfGeneral)
@@ -317,3 +320,5 @@ TEST(DfgUtf, utfIteratorIncrement)
 		EXPECT_TRUE(true);
 	}
 }
+
+#endif

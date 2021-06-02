@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 // Note: this file does not use DFG_CLASS_NAME-macros on purpose.
 
 #include <dfg/typeTraits.hpp>
@@ -890,3 +892,5 @@ TEST(dfgCont, VectorInsert)
     VectorInsertImpl<std::pair<int, int>>(nCount);
     VectorInsertImpl<DFG_MODULE_NS(cont)::TrivialPair<int, int>>(nCount);
 }
+
+#endif

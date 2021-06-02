@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/rangeIterator.hpp>
 #include <dfg/func/memFunc.hpp>
 #include <dfg/alg.hpp>
@@ -586,3 +589,6 @@ TEST(dfgIter, FunctionValueIterator)
         EXPECT_EQ(std::vector<size_t>({ 0, 1, 2, 10, 11 }), vals);
     }
 }
+
+#endif
+

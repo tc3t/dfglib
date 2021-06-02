@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/dataAnalysisAll.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/rand.hpp>
@@ -466,3 +469,5 @@ TEST(dfgDataAnalysis, smoothWithNeighbourMedians)
     testWithRandomData(22000);
     testWithRandomData(NumericTraits<size_t>::maxValue);
 }
+
+#endif

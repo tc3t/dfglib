@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/buildConfig.hpp> // To get rid of C4996 "Function call with parameters that may be unsafe" in MSVC.
 #include <dfg/io/DelimitedTextWriter.hpp>
 #include <type_traits>
@@ -192,3 +195,5 @@ TEST(DfgIo, DelimitedTextCellWriterWriteLine)
 
 #undef TEST_STRING
 }
+
+#endif

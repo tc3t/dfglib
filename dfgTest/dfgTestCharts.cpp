@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/chartsAll.hpp>
 #include <dfg/cont/Vector.hpp>
 #include <dfg/cont/SetVector.hpp>
@@ -780,3 +783,5 @@ TEST(dfgCharts, ChartOperationPipeData)
         EXPECT_EQ(&constStrings, dataMoved.constStringsByIndex(3));
     }
 }
+
+#endif

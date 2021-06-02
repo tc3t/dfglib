@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/alg.hpp>
 #include <dfg/alg/arrayCopy.hpp>
 #include <dfg/alg/sortMultiple.hpp>
@@ -897,3 +900,5 @@ TEST(dfgAlg, nearestRangeInSorted)
         EXPECT_EQ(std::end(arr), rv.end());
     }
 }
+
+#endif

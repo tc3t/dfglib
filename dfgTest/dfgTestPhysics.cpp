@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/physics.hpp>
 
 TEST(dfgPhysics, misc)
@@ -34,3 +37,5 @@ TEST(dfgPhysics, convert)
 	EXPECT_EQ(-20.0 * celsius, KDiffToCDiff);
 	EXPECT_EQ(-20.0, KDiffToCDiff.value());
 }
+
+#endif

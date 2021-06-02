@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/dfgBaseTypedefs.hpp>
 #include <dfg/math.hpp>
 #include <dfg/math/pow.hpp>
@@ -884,4 +887,6 @@ TEST(dfgMath, FormulaParser_time_epochMsec)
         EXPECT_GT(t1 - t0, 50);
     }
 }
+
+#endif
 

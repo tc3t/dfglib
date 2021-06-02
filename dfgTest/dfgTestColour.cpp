@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/iterableForRange.hpp>
 #include <dfg/colour.hpp>
 #include <dfg/physics.hpp>
@@ -94,3 +96,4 @@ TEST(DfgColour, wavelengthInNmToRgbD)
 {
 }
 
+#endif

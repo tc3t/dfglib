@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if 0 // On/off switch for the whole performance test.
+#if (defined(DFGTEST_BUILD_MODULE_CSV_BENCHMARK) && DFGTEST_BUILD_MODULE_CSV_BENCHMARK == 1) || (!defined(DFGTEST_BUILD_MODULE_CSV_BENCHMARK) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/build/compilerDetails.hpp>
 #include <dfg/cont/tableCsv.hpp>

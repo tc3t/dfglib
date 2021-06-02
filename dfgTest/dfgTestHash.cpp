@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/hash.hpp>
 #include <dfg/str.hpp>
 #include <vector>
@@ -22,4 +25,6 @@ TEST(dfgHash, HashCreator)
 	EXPECT_EQ(strCmp(szHashMd5, szTest1_Md5_expected), 0);
 	EXPECT_EQ(strCmp(szHashSha1, szTest1_Sha1_expected), 0);
 }
+#endif
+
 #endif

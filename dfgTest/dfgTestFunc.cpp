@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/funcAll.hpp>
 #include <dfg/alg.hpp>
 #include <array>
@@ -185,3 +188,5 @@ TEST(dfgFunc, forEachInTuple)
         EXPECT_EQ(101, std::get<2>(intTuple));
     }
 }
+
+#endif

@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (defined(DFGTEST_BUILD_MODULE_CONT) && DFGTEST_BUILD_MODULE_CONT == 1) || (!defined(DFGTEST_BUILD_MODULE_CONT) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/cont.hpp>
 #include <dfg/cont/table.hpp>
 #include <dfg/cont/arrayWrapper.hpp>
@@ -1859,3 +1862,5 @@ TEST(dfgCont, intervalSetFromString)
         }
     }
 }
+
+#endif

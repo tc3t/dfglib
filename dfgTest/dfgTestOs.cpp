@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/os.hpp>
 #include <dfg/str.hpp>
 #include <dfg/io.hpp>
@@ -311,3 +314,5 @@ TEST(dfgOs, OutputFile_completeOrNone)
         EXPECT_STREQ(L"dfgTest.exe", DFG_MODULE_NS(os)::pathFilename(sPathW.c_str()));
     }
 #endif // _WIN32
+
+#endif

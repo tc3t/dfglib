@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/buildConfig.hpp>
 #include <dfg/dfgBase.hpp>
 #include <limits>
@@ -888,3 +891,5 @@ TEST(dfgBuild, NOEXCEPT)
 {
     DFGTEST_STATIC_TEST((std::is_same<decltype(&noExceptFunc), decltype(&noExceptFuncComparison)>::value));
 }
+
+#endif

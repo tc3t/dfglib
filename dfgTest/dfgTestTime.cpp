@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/time.hpp>
 #include <dfg/time/DateTime.hpp>
 #include <ctime>
@@ -74,3 +77,5 @@ TEST(dfgTime, DataTime_systemTime_local)
 #endif
 
 #endif // DFG_LANGFEAT_CHRONO_11
+
+#endif

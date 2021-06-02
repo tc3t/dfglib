@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+
 #include <dfg/numericAll.hpp>
 #include <dfg/math/pow.hpp>
 #include <dfg/math/constants.hpp>
@@ -1483,3 +1486,5 @@ TEST(dfgNumeric, minmaxElement_withNanHandling)
         EXPECT_EQ(*rvStd.second, *rvDfg.second);
     }
 }
+
+#endif
