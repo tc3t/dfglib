@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_BASE) && DFGTEST_BUILD_MODULE_BASE == 1) || (!defined(DFGTEST_BUILD_MODULE_BASE) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/buildConfig.hpp>
 #include <dfg/dfgBase.hpp>
@@ -791,6 +791,96 @@ TEST(dfg, OpaquePtr)
         EXPECT_EQ(6, d.sum());
     }
 }
+
+TEST(dfg, Min)
+{
+    using namespace DFG_ROOT_NS;
+    DFGTEST_STATIC_TEST(1 == Min(1, 2));
+}
+
+TEST(dfg, Max)
+{
+    using namespace DFG_ROOT_NS;
+    DFGTEST_STATIC_TEST(2 == Max(1, 2));
+}
+
+TEST(dfg, minValue)
+{
+    using namespace DFG_ROOT_NS;
+
+    EXPECT_EQ(1, minValue(1, 2));
+    EXPECT_EQ(-2, minValue(1, int8(-2)));
+    EXPECT_EQ(-500, minValue(int8(20), -500));
+    EXPECT_EQ(-500, minValue(-500, int8(20)));
+    EXPECT_EQ(1, minValue(1, int64(2)));
+    EXPECT_EQ(int64_min, minValue(int32_min, int64_min));
+    EXPECT_EQ(0, minValue(uint32_min, uint64_min));
+    EXPECT_EQ(-3, minValue(-3, uint64_max));
+    DFGTEST_STATIC_TEST((std::is_same<int8, decltype(minValue(int8(-1), uint64_max))>::value));
+    DFGTEST_STATIC_TEST((std::is_same<int8, decltype(minValue(uint64_max, int8(-1)))>::value));
+     //minValue(1, 2.0); //Does not compile (int, double)
+
+    EXPECT_EQ(-7, minValue(1.0, 2.0, -7.0));
+    EXPECT_EQ(-20, minValue(1.0, -20.0, -7.0, 8.0));
+    DFGTEST_STATIC_TEST(-3 == minValue(1, uint64(300), int8(-3)));
+    DFGTEST_STATIC_TEST(-3 == minValue(1, 2, uint64(300), int8(-3)));
+    EXPECT_EQ(-5, minValue(1.0f, 2.0f, -5.0f));
+    EXPECT_EQ(-6, minValue(1.0f, 2.0f, -5.0f, -6.0f));
+
+    // NaN handling
+    EXPECT_EQ(3, minValue(3.0, std::numeric_limits<double>::quiet_NaN()));
+    EXPECT_EQ(3, minValue(std::numeric_limits<double>::quiet_NaN(), 3.0));
+    EXPECT_EQ(-6, minValue(1.0, 2.0, std::numeric_limits<double>::quiet_NaN(), -6.0));
+    DFGTEST_EXPECT_NAN(minValue(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+
+    DFGTEST_STATIC_TEST(minValue(int8(1), -2) == -2);
+    DFGTEST_STATIC_TEST(minValue(-2, int8(1)) == -2);
+    DFGTEST_STATIC_TEST(minValue(1, 2) == 1);
+    DFGTEST_STATIC_TEST(minValue(-1, 2u) == -1);
+    DFGTEST_STATIC_TEST(minValue(2u, -1) == -1);
+    DFGTEST_STATIC_TEST(minValue(uint64(300), int8(-10)) == -10);
+    DFGTEST_STATIC_TEST(minValue(int8(10), uint64(3)) == 3);
+}
+
+TEST(dfg, maxValue)
+{
+    using namespace DFG_ROOT_NS;
+
+    EXPECT_EQ(2, maxValue(1, 2));
+    EXPECT_EQ(1, maxValue(1, int8(-2)));
+    EXPECT_EQ(20, maxValue(int8(20), -500));
+    EXPECT_EQ(500, maxValue(500, int8(20)));
+    EXPECT_EQ(2, maxValue(1, int64(2)));
+    EXPECT_EQ(int32_min, maxValue(int32_min, int64_min));
+    EXPECT_EQ(uint64_max, maxValue(uint32_min, uint64_max));
+    EXPECT_EQ(uint64_max, maxValue(-3, uint64_max));
+    DFGTEST_STATIC_TEST((std::is_same<uint64, decltype(maxValue(int8(-1), uint64_max))>::value));
+    DFGTEST_STATIC_TEST((std::is_same<uint64, decltype(maxValue(uint8(-1), uint64_max))>::value));
+    DFGTEST_STATIC_TEST((std::is_same<int32, decltype(maxValue(int32_max, int8(-1)))>::value));
+    //maxValue(1, 2.0); //Does not compile (int, double)
+
+    EXPECT_EQ(2, maxValue(1.0, 2.0, -7.0));
+    EXPECT_EQ(8, maxValue(1.0, -20.0, -7.0, 8.0));
+    DFGTEST_STATIC_TEST(300 == maxValue(1, uint64(300), int8(-3)));
+    DFGTEST_STATIC_TEST(127 == maxValue(1, 2, uint64(120), int8(127)));
+    EXPECT_EQ(2, maxValue(1.0f, 2.0f, -5.0f));
+    EXPECT_EQ(2, maxValue(1.0f, 2.0f, -5.0f, -6.0f));
+
+    // NaN handling
+    EXPECT_EQ(3, maxValue(3.0, std::numeric_limits<double>::quiet_NaN()));
+    EXPECT_EQ(3, maxValue(std::numeric_limits<double>::quiet_NaN(), 3.0));
+    EXPECT_EQ(2, maxValue(1.0, 2.0, std::numeric_limits<double>::quiet_NaN(), -6.0));
+    DFGTEST_EXPECT_NAN(maxValue(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+
+    DFGTEST_STATIC_TEST(maxValue(uint8(1), -2) == 1);
+    DFGTEST_STATIC_TEST(maxValue(-2, uint8(1)) == 1);
+    DFGTEST_STATIC_TEST(maxValue(1, 2) == 2);
+    DFGTEST_STATIC_TEST(maxValue(-1, 2u) == 2);
+    DFGTEST_STATIC_TEST(maxValue(2u, -1) == 2);
+    DFGTEST_STATIC_TEST(maxValue(uint64(300), int8(-10)) == 300);
+    DFGTEST_STATIC_TEST(maxValue(int8(10), uint64(3)) == 10);
+}
+
 
 TEST(dfgTypeTraits, IsTrueTrait)
 {
