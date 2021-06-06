@@ -26,17 +26,22 @@ enum CharPtrType
 
     // Supersets of ASCII
     CharPtrTypeLatin1,
-    CharPtrTypeUtf8,
+    CharPtrTypeUtf8, // BaseChar = char, code point = uint32
+
+    CharPtrTypeUtf16 // BaseChar = char16_t, code point = uint32
 
     // Note: if adding items:
     //  -See constructor of TypedCharPtrT.
     //  -Adjust gnNumberOfCharPtrTypes and gnNumberOfCharPtrTypesWithEncoding.
 };
 
+template <CharPtrType TypeEnum_T> struct CharPtrTypeToBaseCharType                   { using type = char; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeUtf16> { using type = char16_t; };
+
 namespace DFG_DETAIL_NS
 {
-    const auto gnNumberOfCharPtrTypes = 4;
-    const auto gnNumberOfCharPtrTypesWithEncoding = 3;
+    const auto gnNumberOfCharPtrTypes = 5;
+    const auto gnNumberOfCharPtrTypesWithEncoding = 4;
 
     template <CharPtrType PtrType, class Int_T>
     struct CodePointT
@@ -63,11 +68,12 @@ namespace DFG_DETAIL_NS
     };
 } // DFG_DETAIL_NS
 
-typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeChar, char>       CodePointChar;
-typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeAscii, char>      CodePointAscii;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeChar,   char>     CodePointChar;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeAscii,  char>     CodePointAscii;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeLatin1, uint8>    CodePointLatin1;
-typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeUtf8, uint32>     CodePointUtf8;
-DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 4, "");
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeUtf8,   uint32>   CodePointUtf8;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeUtf16,  uint32>   CodePointUtf16;
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 5, "");
 
 namespace DFG_DETAIL_NS
 {
@@ -76,7 +82,8 @@ namespace DFG_DETAIL_NS
     template <> struct TypedCharPtrDeRefType<CharPtrTypeAscii>  { typedef CodePointAscii  type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeLatin1> { typedef CodePointLatin1 type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeUtf8>   { typedef CodePointUtf8   type; };
-    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 4, "");
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeUtf16>  { typedef CodePointUtf16  type; };
+    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 5, "");
 }
 
 namespace DFG_DETAIL_NS
@@ -94,66 +101,96 @@ namespace DFG_DETAIL_NS
 } // namespace DFG_DETAIL_NS
 
 template <CharPtrType PtrType_T> struct CharPtrTypeTraits {};
-template <> struct CharPtrTypeTraits<CharPtrTypeChar>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeChar, true> {};
+template <> struct CharPtrTypeTraits<CharPtrTypeChar>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeChar,   true> {};
 template <> struct CharPtrTypeTraits<CharPtrTypeAscii>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeAscii,  true>  {};
 template <> struct CharPtrTypeTraits<CharPtrTypeLatin1> : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeLatin1, true>  {};
 template <> struct CharPtrTypeTraits<CharPtrTypeUtf8>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeUtf8,   false> {};
-DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 4, "");
+template <> struct CharPtrTypeTraits<CharPtrTypeUtf16>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeUtf16,  false> {};
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 5, "");
+
+namespace DFG_DETAIL_NS
+{
+    // Baseclass when requiring explicit construction from raw type, e.g. char* -> TypedCharPtrUtf8
+    template <class Char_T, CharPtrType Type_T>
+    class TypedCharPtrTExplicitBase
+    {
+    public:
+        explicit TypedCharPtrTExplicitBase(std::nullptr_t) :
+            m_p(nullptr)
+        {}
+
+        explicit TypedCharPtrTExplicitBase(Char_T* p) :
+            m_p(p)
+        {}
+
+        template <class Char_T2>
+        TypedCharPtrTExplicitBase(const TypedCharPtrTExplicitBase<Char_T2, CharPtrTypeAscii>& other) :
+            m_p(other.m_p)
+        {
+        }
+
+        Char_T* m_p;
+    };
+
+    // Baseclass when allowing implicit construction from raw type, e.g. char16_t* -> TypedCharPtrUtf16
+    template <class Char_T, CharPtrType Type_T>
+    class TypedCharPtrTImplicitBase
+    {
+    public:
+        explicit TypedCharPtrTImplicitBase(std::nullptr_t) :
+            m_p(nullptr)
+        {}
+
+        TypedCharPtrTImplicitBase(Char_T* p) :
+            m_p(p)
+        {}
+
+        Char_T* m_p;
+    };
+} // namespace DFG_DETAIL_NS
 
 template <class Char_T, CharPtrType Type_T>
-struct TypedCharPtrT
+struct TypedCharPtrT : public std::conditional<Type_T == CharPtrTypeUtf16, DFG_DETAIL_NS::TypedCharPtrTImplicitBase<Char_T, Type_T>, DFG_DETAIL_NS::TypedCharPtrTExplicitBase<Char_T, Type_T>>::type
 {
-    DFG_STATIC_ASSERT(sizeof(Char_T) == 1, "Char_T must be either char or const char");
+    using BaseClass = typename std::conditional<Type_T == CharPtrTypeUtf16, DFG_DETAIL_NS::TypedCharPtrTImplicitBase<Char_T, Type_T>, DFG_DETAIL_NS::TypedCharPtrTExplicitBase<Char_T, Type_T>>::type;
+    DFG_STATIC_ASSERT(sizeof(Char_T) <= 2, "Char_T must have size 1 or 2");
 
-    explicit TypedCharPtrT(std::nullptr_t) :
-        m_p(nullptr)
-    {}
-
-    explicit TypedCharPtrT(Char_T* p) :
-        m_p(p)
-    {}
-
-    // At moment with nothing but ASCII and it's supersets (and raw char ptr), everything can be constructed from CharPtrTypeAscii.
-    template <class Char_T2>
-    TypedCharPtrT(const TypedCharPtrT<Char_T2, CharPtrTypeAscii>& other) :
-        m_p(other.m_p)
-    {
-    }
+    using BaseClass::BaseClass; // Inheriting constructor
 
     // Automatic conversion from char -> const char
-    operator TypedCharPtrT<const Char_T, Type_T>() const { return TypedCharPtrT<const Char_T, Type_T>(m_p); }
+    operator TypedCharPtrT<const Char_T, Type_T>() const { return TypedCharPtrT<const Char_T, Type_T>(this->m_p); }
 
     bool operator==(const TypedCharPtrT& other) const
     {
-        return m_p == other.m_p;
+        return this->m_p == other.m_p;
     }
 
     bool operator!=(const TypedCharPtrT& other) const
     {
-        return !(m_p == other.m_p);
+        return !(this->m_p == other.m_p);
     }
 
-    bool operator==(const std::nullptr_t&) const { return m_p == nullptr; }
-    bool operator!=(const std::nullptr_t&) const { return m_p != nullptr; }
+    bool operator==(const std::nullptr_t&) const { return this->m_p == nullptr; }
+    bool operator!=(const std::nullptr_t&) const { return this->m_p != nullptr; }
 
     DFG_EXPLICIT_OPERATOR_BOOL_IF_SUPPORTED operator bool() const
     {
-        return (m_p != nullptr);
+        return (this->m_p != nullptr);
     }
 
     template <CharPtrType DeRef_T>
     typename std::enable_if<CharPtrTypeTraits<DeRef_T>::hasTrivialIndexing, typename CharPtrTypeTraits<DeRef_T>::CodePointType>::type privDeRefImpl() const
     {
         typedef typename CharPtrTypeTraits<DeRef_T>::CodePointType CodePointType;
-        DFG_ASSERT_UB(m_p != nullptr);
-        return CodePointType(*m_p);
+        DFG_ASSERT_UB(this->m_p != nullptr);
+        return CodePointType(*this->m_p);
     }
 
     template <CharPtrType U_T>
     typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, void>::type privPreIncrementImpl()
     {
-        DFG_ASSERT(m_p != nullptr);
-        ++m_p;
+        DFG_ASSERT(this->m_p != nullptr);
+        ++this->m_p;
     }
 
     // For types with trivial indexing, enable operator*.
@@ -178,8 +215,8 @@ struct TypedCharPtrT
     template <CharPtrType U_T>
     typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, TypedCharPtrT>::type privOperatorPlus(const ptrdiff_t diff) const
     {
-        DFG_ASSERT(m_p != nullptr || diff == 0);
-        return TypedCharPtrT(m_p + diff);
+        DFG_ASSERT(this->m_p != nullptr || diff == 0);
+        return TypedCharPtrT(this->m_p + diff);
     }
 
     // For types with trivial indexing, enable operator-.
@@ -193,8 +230,8 @@ struct TypedCharPtrT
     template <CharPtrType U_T>
     typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, TypedCharPtrT>::type privOperatorMinus(const ptrdiff_t diff) const
     {
-        DFG_ASSERT(m_p != nullptr);
-        return TypedCharPtrT(m_p - diff);
+        DFG_ASSERT(this->m_p != nullptr);
+        return TypedCharPtrT(this->m_p - diff);
     }
 
     // For types with trivial indexing, enable operator-.
@@ -208,8 +245,8 @@ struct TypedCharPtrT
     template <CharPtrType U_T>
     typename std::enable_if<CharPtrTypeTraits<U_T>::hasTrivialIndexing, ptrdiff_t>::type privOperatorMinusForPtrs(const TypedCharPtrT other) const
     {
-        DFG_ASSERT((m_p != nullptr && other.m_p != nullptr) || (m_p == other.m_p));
-        return m_p - other.m_p;
+        DFG_ASSERT((this->m_p != nullptr && other.m_p != nullptr) || (this->m_p == other.m_p));
+        return this->m_p - other.m_p;
     }
 
     // For types with trivial indexing, enable operator-.
@@ -222,10 +259,9 @@ struct TypedCharPtrT
 
     // Note: Char_T may be 'const char'. Allow const to return char* as constness 
     //      for this class is determined by the address pointed to, not by it's content.
-    Char_T*         rawPtr() const     { return m_p; }
+    Char_T*         rawPtr() const     { return this->m_p; }
+}; // TypedCharPtrT
 
-    Char_T* m_p;
-};
 
 template <class Char_T, CharPtrType Type_T>
 struct SzPtrT : public TypedCharPtrT<Char_T, Type_T>
@@ -263,20 +299,22 @@ function: SzPtrAsciiW SzPtrAscii(char* psz) // Convenience function for creating
 function: SzPtrAsciiR SzPtrAscii(const char* psz) // Convenience function for creating SzPtrAsciiR from const pointer.
 function: SzPtrAsciiR SzPtrAscii(std::nullptr_t psz) // Convenience function for creating SzPtrAsciiR from nullptr.
 */
+#define DFG_TEMP_MACRO_CREATE_SPECIALIZATION(RAWCHAR, TYPE) \
+    typedef TypedCharPtrT<      RAWCHAR, CharPtrType##TYPE> TypedCharPtr##TYPE##W; \
+    typedef TypedCharPtrT<const RAWCHAR, CharPtrType##TYPE> TypedCharPtr##TYPE##R; \
+    typedef SzPtrT<      RAWCHAR, CharPtrType##TYPE> SzPtr##TYPE##W; \
+    typedef SzPtrT<const RAWCHAR, CharPtrType##TYPE> SzPtr##TYPE##R; \
+    inline SzPtr##TYPE##W SzPtr##TYPE(RAWCHAR* psz)       { return SzPtrT<RAWCHAR, CharPtrType##TYPE>(psz); } \
+    inline SzPtr##TYPE##R SzPtr##TYPE(const RAWCHAR* psz) { return SzPtrT<const RAWCHAR, CharPtrType##TYPE>(psz); } \
+    inline SzPtr##TYPE##R SzPtr##TYPE(std::nullptr_t)     { return SzPtrT<const RAWCHAR, CharPtrType##TYPE>(nullptr); }
 
-#define DFG_TEMP_MACRO_CREATE_SPECIALIZATION(TYPE) \
-    typedef TypedCharPtrT<char, CharPtrType##TYPE> TypedCharPtr##TYPE##W; \
-    typedef TypedCharPtrT<const char, CharPtrType##TYPE> TypedCharPtr##TYPE##R; \
-    typedef SzPtrT<char, CharPtrType##TYPE> SzPtr##TYPE##W; \
-    typedef SzPtrT<const char, CharPtrType##TYPE> SzPtr##TYPE##R; \
-    inline SzPtrT<char, CharPtrType##TYPE> SzPtr##TYPE(char* psz) { return SzPtrT<char, CharPtrType##TYPE>(psz); } \
-    inline SzPtrT<const char, CharPtrType##TYPE> SzPtr##TYPE(const char* psz) { return SzPtrT<const char, CharPtrType##TYPE>(psz); } \
-    inline SzPtrT<const char, CharPtrType##TYPE> SzPtr##TYPE(std::nullptr_t) { return SzPtrT<const char, CharPtrType##TYPE>(nullptr); }
+DFG_TEMP_MACRO_CREATE_SPECIALIZATION(char,     Ascii);
+DFG_TEMP_MACRO_CREATE_SPECIALIZATION(char,     Latin1);
+DFG_TEMP_MACRO_CREATE_SPECIALIZATION(char,     Utf8);
+DFG_TEMP_MACRO_CREATE_SPECIALIZATION(char16_t, Utf16);
 
-DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Ascii);
-DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Latin1);
-DFG_TEMP_MACRO_CREATE_SPECIALIZATION(Utf8);
-DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 3, "Missing a specialization for char ptr type?");
+
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Missing a specialization for char ptr type?");
 
 #undef DFG_TEMP_MACRO_CREATE_SPECIALIZATION
 
@@ -287,6 +325,7 @@ DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 3, "Missi
 #if DFG_LANGFEAT_UNICODE_STRING_LITERALS
     #define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(u8##x) // TODO: verify that x is ASCII-compatible.
     #define DFG_UTF8(x)     ::DFG_ROOT_NS::SzPtrUtf8(u8##x)
+    #define DFG_UTF16(x)    ::DFG_ROOT_NS::SzPtrUtf16(u##x)
 #else
     #define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(x)   // Creates typed ascii-string literal from string literal. Usage: DFG_ASCII("abc")  (TODO: implement, currently a placeholder)
     #define DFG_UTF8(x)     ::DFG_ROOT_NS::SzPtrUtf8(x)    // Creates typed utf8-string literal from string literal. Usage: DFG_UTF8("abc")    (TODO: implement, currently a placeholder)
@@ -309,5 +348,7 @@ template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrLatin1R>() { retu
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrLatin1W>() { return CharPtrTypeLatin1; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrUtf8R>()   { return CharPtrTypeUtf8; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrUtf8W>()   { return CharPtrTypeUtf8; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrUtf16R>()  { return CharPtrTypeUtf16; }
+template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrUtf16W>()  { return CharPtrTypeUtf16; }
 
 } // root namespace

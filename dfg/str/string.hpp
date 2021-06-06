@@ -25,14 +25,14 @@ template <CharPtrType Type_T>
 class StringTyped
 {
 public:
-    using CharType = char;
+    using CharType = typename CharPtrTypeToBaseCharType<Type_T>::type;
     using value_type = CharType;
-    typedef std::basic_string<CharType>         StorageType;
-    typedef TypedCharPtrT<const char, Type_T>   TypedPtrT;
-    typedef const CharType*                     PtrRawT;
-    typedef SzPtrT<const char, Type_T>          SzPtrR;
-    typedef SzPtrT<char, Type_T>                SzPtrW;
-    typedef StorageType::size_type              size_type;
+    typedef std::basic_string<CharType>             StorageType;
+    typedef TypedCharPtrT<const CharType, Type_T>   TypedPtrT;
+    typedef const CharType*                         PtrRawT;
+    typedef SzPtrT<const CharType, Type_T>          SzPtrR;
+    typedef SzPtrT<CharType, Type_T>                SzPtrW;
+    typedef typename StorageType::size_type         size_type;
 
     StringTyped() {}
     explicit StringTyped(SzPtrR psz) : m_s(psz.c_str()) {}
@@ -184,10 +184,12 @@ inline bool operator<(const SzPtrT<const char, Type_T>& tpsz, const StringTyped<
 typedef StringTyped<CharPtrTypeAscii>    StringAscii;
 typedef StringTyped<CharPtrTypeLatin1>   StringLatin1;
 typedef StringTyped<CharPtrTypeUtf8>     StringUtf8;
+typedef StringTyped<CharPtrTypeUtf16>    StringUtf16;
 
-inline ConstCharPtr toSzPtr_raw(const StringAscii& str)    { return str.c_str().c_str(); }
-inline ConstCharPtr toSzPtr_raw(const StringLatin1& str)   { return str.c_str().c_str(); }
-inline ConstCharPtr toSzPtr_raw(const StringUtf8& str)     { return str.c_str().c_str(); }
+inline ConstCharPtr    toSzPtr_raw(const StringAscii& str)    { return str.c_str().c_str(); }
+inline ConstCharPtr    toSzPtr_raw(const StringLatin1& str)   { return str.c_str().c_str(); }
+inline ConstCharPtr    toSzPtr_raw(const StringUtf8& str)     { return str.c_str().c_str(); }
+inline auto toSzPtr_raw(const StringUtf16& str) -> decltype(str.c_str().c_str()) { return str.c_str().c_str(); }
 
 } // root namespace
 

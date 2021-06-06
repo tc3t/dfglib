@@ -333,7 +333,7 @@ namespace DFG_DETAIL_NS
     template <> struct StringViewBase<char,    StringAscii>             { typedef StringViewIndexAccessBase<char,    StringAscii>    type; };
     template <> struct StringViewBase<char,    StringLatin1>            { typedef StringViewIndexAccessBase<char,    StringLatin1>   type; };
     template <> struct StringViewBase<char,    StringUtf8>              { typedef StringViewIndexAccessBase<char,    StringUtf8>     type; };
-    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 3, "Is a typed string view missing?");
+    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Is a typed string view missing?"); // TODO: utf16
 
     template <class View_T, class Str_T>
     View_T substr_startCount(size_t nStart, size_t nCount, const Str_T& str)

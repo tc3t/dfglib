@@ -1781,4 +1781,58 @@ TEST(dfgStr, floatingPointTypeToSprintfType)
     testFloatingPointTypeToSprintfType<long double>();
 }
 
+TEST(dfgStr, utf16)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
+    // Basic typed ptr tests
+    {
+        char16_t modifiableArr[] = u"abc";
+        const char16_t constArr[] = u"def";
+
+        TypedCharPtrUtf16R typedRToModifiable(modifiableArr);
+        TypedCharPtrUtf16W typedWToModifiable(modifiableArr);
+
+        TypedCharPtrUtf16R typedRToConst(constArr);
+        //TypedCharPtrUtf16W typedWToConst(constArr); // This must fail to compile (source is const)
+
+        EXPECT_EQ(modifiableArr, typedRToModifiable.rawPtr());
+        EXPECT_EQ(typedRToModifiable, typedWToModifiable);
+        EXPECT_EQ(constArr, typedRToConst.rawPtr());
+
+        SzPtrUtf16R szPtrRToModifiable(modifiableArr);
+        SzPtrUtf16W szPtrWToModifiable(modifiableArr);
+        SzPtrUtf16R szPtrRToConst(constArr);
+        //SzPtrUtf16W szPtrWToConst = constArr; // This must fail to compile (source is const)
+
+        EXPECT_EQ(modifiableArr, typedRToModifiable.rawPtr());
+        EXPECT_EQ(typedRToModifiable, typedWToModifiable);
+        EXPECT_EQ(constArr, typedRToConst.rawPtr());
+
+        // Checking that implicit conversion from char16_t* work
+        TypedCharPtrUtf16R typedImplicit = u"abc";
+        //SzPtrUtf16R szImplicit = u"abc"; // Note: Not tested as SzPtr requires information about the actual pointed-to content so can't similarly allow implicit conversion as with TypeCharPtr.
+        DFG_UNUSED(typedImplicit);
+    }
+
+    // StringUtf16
+    {
+        const char16_t sz[] = { 'a', 'b', 0x20AC, 'c', '\0' }; // 0x20AC == euro-sign
+        StringUtf16 s(SzPtrUtf16(sz));
+        EXPECT_EQ(4, s.sizeInRawUnits());
+        EXPECT_EQ('a'      , s.rawStorage()[0]);
+        EXPECT_EQ('b'      , s.rawStorage()[1]);
+        EXPECT_EQ(u'\x20AC', s.rawStorage()[2]);
+        EXPECT_EQ('c'      , s.rawStorage()[3]);
+
+        s.append(&sz[0] + 1, &sz[0] + 3);
+        ASSERT_EQ(6, s.sizeInRawUnits());
+        EXPECT_EQ('b', s.rawStorage()[4]);
+        EXPECT_EQ(u'\x20AC', s.rawStorage()[5]);
+
+        DFGTEST_STATIC_TEST((std::is_same<const CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type*, decltype(toSzPtr_raw(s))>::value));
+    }
+}
+
 #endif
