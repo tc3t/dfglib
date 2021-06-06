@@ -16,13 +16,13 @@ typedef String_T<char>		StringA;
 typedef String_T<wchar_t>	StringW;
 */
 
-typedef std::string		DFG_CLASS_NAME(StringA);
-typedef std::wstring	DFG_CLASS_NAME(StringW);
+typedef std::string     StringA;
+typedef std::wstring    StringW;
 
 // String whose content encoding is guaranteed in compile-time type.
 // Note, though, that it is not guaranteed at runtime that the content is validly encoded (i.e. one can construct StringUtf8 that has invalid UTF8)
 template <CharPtrType Type_T>
-class DFG_CLASS_NAME(StringTyped)
+class StringTyped
 {
 public:
     using CharType = char;
@@ -34,17 +34,17 @@ public:
     typedef SzPtrT<char, Type_T>                SzPtrW;
     typedef StorageType::size_type              size_type;
 
-    DFG_CLASS_NAME(StringTyped)() {}
-    explicit DFG_CLASS_NAME(StringTyped)(SzPtrR psz) : m_s(psz.c_str()) {}
-    explicit DFG_CLASS_NAME(StringTyped)(TypedPtrT iterBegin, TypedPtrT iterEnd) : m_s(iterBegin.rawPtr(), iterEnd.rawPtr()) {}
+    StringTyped() {}
+    explicit StringTyped(SzPtrR psz) : m_s(psz.c_str()) {}
+    explicit StringTyped(TypedPtrT iterBegin, TypedPtrT iterEnd) : m_s(iterBegin.rawPtr(), iterEnd.rawPtr()) {}
 
 #if (DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0)
-    DFG_CLASS_NAME(StringTyped)(DFG_CLASS_NAME(StringTyped)&& other)
+    StringTyped(StringTyped&& other)
     {
         operator=(std::move(other));
     }
 
-    DFG_CLASS_NAME(StringTyped)& operator=(DFG_CLASS_NAME(StringTyped)&& other)
+    StringTyped& operator=(StringTyped&& other)
     {
         this->m_s = std::move(other.m_s);
         return *this;
@@ -52,15 +52,15 @@ public:
 #endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
 
     // Precondition: sRaw must be correctly encoded.
-    static DFG_CLASS_NAME(StringTyped) fromRawString(StorageType sRaw)
+    static StringTyped fromRawString(StorageType sRaw)
     {
-        DFG_CLASS_NAME(StringTyped) s;
+        StringTyped s;
         s.m_s = std::move(sRaw);
         return s;
     }
 
     // Convenience overload
-    static DFG_CLASS_NAME(StringTyped) fromRawString(const CharType* pBegin, const CharType* pEnd)
+    static StringTyped fromRawString(const CharType* pBegin, const CharType* pEnd)
     {
         return fromRawString(StorageType(pBegin, pEnd));
     }
@@ -84,7 +84,7 @@ public:
     }
 
 	// TODO: test
-	DFG_CLASS_NAME(StringTyped)& operator=(const SzPtrR& psz)
+	StringTyped& operator=(const SzPtrR& psz)
 	{
 		rawStorage() = psz.c_str();
 		return *this;
@@ -106,12 +106,12 @@ public:
     //size_t sizeInCodePoints() const { TODO: implement, perhaps through a strLenCodepoints() or similar; }
 
     // TODO: implement using StringView
-    bool operator==(const DFG_CLASS_NAME(StringTyped)& other) const
+    bool operator==(const StringTyped& other) const
     {
         return (m_s.size() == other.m_s.size()) && m_s == other.m_s;
     }
 
-    bool operator!=(const DFG_CLASS_NAME(StringTyped)& other) const
+    bool operator!=(const StringTyped& other) const
     {
         return !(*this == other);
     }
@@ -150,7 +150,7 @@ public:
 
 	// TODO: test
     // TODO: implement using StringView
-	bool operator<(const DFG_CLASS_NAME(StringTyped)& other) const
+	bool operator<(const StringTyped& other) const
 	{
 		return rawStorage() < other.rawStorage();
 	}
@@ -170,24 +170,24 @@ public:
 }; // class StringTyped
 
 template <CharPtrType Type_T>
-inline bool operator==(const SzPtrT<const char, Type_T>& psz, const DFG_CLASS_NAME(StringTyped)<Type_T>& right)
+inline bool operator==(const SzPtrT<const char, Type_T>& psz, const StringTyped<Type_T>& right)
 {
     return right == psz;
 }
 
 template <CharPtrType Type_T>
-inline bool operator<(const SzPtrT<const char, Type_T>& tpsz, const DFG_CLASS_NAME(StringTyped)<Type_T>& right)
+inline bool operator<(const SzPtrT<const char, Type_T>& tpsz, const StringTyped<Type_T>& right)
 {
     return right < tpsz;
 }
 
-typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeAscii> DFG_CLASS_NAME(StringAscii);
-typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeLatin1> DFG_CLASS_NAME(StringLatin1);
-typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeUtf8> DFG_CLASS_NAME(StringUtf8);
+typedef StringTyped<CharPtrTypeAscii>    StringAscii;
+typedef StringTyped<CharPtrTypeLatin1>   StringLatin1;
+typedef StringTyped<CharPtrTypeUtf8>     StringUtf8;
 
-inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringAscii)& str) { return str.c_str().c_str(); }
-inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringLatin1)& str) { return str.c_str().c_str(); }
-inline ConstCharPtr toSzPtr_raw(const DFG_CLASS_NAME(StringUtf8)& str) { return str.c_str().c_str(); }
+inline ConstCharPtr toSzPtr_raw(const StringAscii& str)    { return str.c_str().c_str(); }
+inline ConstCharPtr toSzPtr_raw(const StringLatin1& str)   { return str.c_str().c_str(); }
+inline ConstCharPtr toSzPtr_raw(const StringUtf8& str)     { return str.c_str().c_str(); }
 
 } // root namespace
 

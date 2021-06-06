@@ -68,24 +68,24 @@ StringRef (http://llvm.org/docs/ProgrammersManual.html#passing-strings-the-strin
 string_ref (http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3442.html)
 */
 template <class Char_T>
-class DFG_CLASS_NAME(ReadOnlySzParam)
+class ReadOnlySzParam
 {
 public:
 	typedef const Char_T* iterator;
 	typedef const Char_T* const_iterator;
 
 	template <size_t N>
-	DFG_CLASS_NAME(ReadOnlySzParam)(const Char_T(&arr)[N]) :
+	ReadOnlySzParam(const Char_T(&arr)[N]) :
 		m_pSz(arr)
 	{
 	}
 
-	DFG_CLASS_NAME(ReadOnlySzParam)(const Char_T* psz) :
+	ReadOnlySzParam(const Char_T* psz) :
 		m_pSz(psz)
 	{
 	}
 
-	DFG_CLASS_NAME(ReadOnlySzParam)(const std::basic_string<Char_T>& s) :
+	ReadOnlySzParam(const std::basic_string<Char_T>& s) :
 		m_pSz(readOnlySzParamConverter<Char_T>(s))
 	{
 	}
@@ -132,26 +132,26 @@ public:
 	const Char_T* const m_pSz; // Pointer to null terminated string.
 };
 
-// Like DFG_CLASS_NAME(ReadOnlySzParam), but also stores the size. For string classes, uses the
+// Like ReadOnlySzParam, but also stores the size. For string classes, uses the
 // size returned by related member function, not the null terminated length; these
 // may differ in case of embedded null chars.
 // Note: if null terminated string is not required, consider using StringView instead of this class.
 template <class Char_T>
-class DFG_CLASS_NAME(ReadOnlySzParamWithSize) : public DFG_CLASS_NAME(ReadOnlySzParam)<Char_T>
+class ReadOnlySzParamWithSize : public ReadOnlySzParam<Char_T>
 {
 public:
-	typedef DFG_CLASS_NAME(ReadOnlySzParam)<Char_T> BaseClass;
+	typedef ReadOnlySzParam<Char_T> BaseClass;
 	using typename BaseClass::iterator;
 	using typename BaseClass::const_iterator;
 
-	DFG_CLASS_NAME(ReadOnlySzParamWithSize)(const std::basic_string<Char_T>& s) :
+	ReadOnlySzParamWithSize(const std::basic_string<Char_T>& s) :
 		BaseClass(readOnlySzParamConverter<Char_T>(s)),
 		m_nSize(readOnlySzParamLength(s))
 	{
 
 	}
 
-	DFG_CLASS_NAME(ReadOnlySzParamWithSize)(const Char_T* psz) :
+	ReadOnlySzParamWithSize(const Char_T* psz) :
 		BaseClass(readOnlySzParamConverter<Char_T, const Char_T*>(psz)),
 		m_nSize(readOnlySzParamLength(psz))
 	{
@@ -621,17 +621,17 @@ public:
 
     Str_T toString() const
     {
-        return DFG_CLASS_NAME(StringViewSz)(*this).toStringView().toString();
+        return StringViewSz(*this).toStringView().toString();
     }
 
-    bool operator==(DFG_CLASS_NAME(StringViewSz) other)
+    bool operator==(StringViewSz other)
     {
         return toStringView() == other.toStringView();
     }
 
-    bool operator==(DFG_CLASS_NAME(StringViewSz) other) const
+    bool operator==(StringViewSz other) const
     {
-        return DFG_CLASS_NAME(StringViewSz)(*this) == other;
+        return StringViewSz(*this) == other;
     }
 
     StringViewT toStringView()                       { return StringViewT(this->m_pFirst, length()); }
@@ -667,15 +667,15 @@ public:
     }
 
     // Conversion to untyped StringViewSz.
-    operator DFG_CLASS_NAME(StringViewSz)<Char_T>() const
+    operator StringViewSz<Char_T>() const
     {
         return this->asUntypedView();
     }
 
     // Conversion to untyped StringView.
-    operator DFG_CLASS_NAME(StringView)<Char_T>() const
+    operator StringView<Char_T>() const
     {
-        return DFG_CLASS_NAME(StringView)<Char_T>(toCharPtr_raw(this->m_pFirst));
+        return StringView<Char_T>(toCharPtr_raw(this->m_pFirst));
     }
 
     // Conversion to ReadOnlySzParam for compatibility.
@@ -689,22 +689,22 @@ public:
 }; // StringViewSz
 
 template <CharPtrType Type_T, class Char_T, class Str_T>
-inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, const StringView<Char_T, Str_T>& right)
 {
     return right == psz;
 }
 
 template <class Char_T>
-inline bool operator==(const Char_T* psz, const DFG_CLASS_NAME(StringView)<Char_T, std::basic_string<Char_T>>& right) { return right == psz; }
+inline bool operator==(const Char_T* psz, const StringView<Char_T, std::basic_string<Char_T>>& right) { return right == psz; }
 
 template<class Char_T, class Str_T>
-inline bool operator==(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+inline bool operator==(const Str_T& s, const StringView<Char_T, Str_T>& right)
 {
     return right == s;
 }
 
 template<class Char_T, class Str_T>
-inline bool operator<(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+inline bool operator<(const Str_T& s, const StringView<Char_T, Str_T>& right)
 {
     return s.compare(0, s.size(), right.begin(), right.length()) < 0;
 }
@@ -720,13 +720,13 @@ inline bool operator<(const StringView<Char_T, Str_T>& left, const StringView<Ch
 }
 
 template<class Char_T, class Str_T>
-inline bool operator!=(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& left, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+inline bool operator!=(const StringView<Char_T, Str_T>& left, const StringView<Char_T, Str_T>& right)
 {
     return !(left == right);
 }
 
 template <CharPtrType Type_T, class Char_T, class Str_T>
-inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, StringViewSz<Char_T, Str_T> right)
 {
     return right == psz;
 }
@@ -741,31 +741,31 @@ template <class Char_T>
 inline bool operator==(const Char_T* psz, const StringViewSz<Char_T, std::basic_string<Char_T>>& right) { return right == StringViewSz<Char_T, std::basic_string<Char_T>>(psz); }
 
 template<class Char_T, class Str_T>
-inline bool operator==(const Str_T& s, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+inline bool operator==(const Str_T& s, StringViewSz<Char_T, Str_T> right)
 {
     return right == s;
 }
 
 template<class Char_T, class Str_T>
-inline bool operator!=(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& left, const Str_T& s)
+inline bool operator!=(const StringView<Char_T, Str_T>& left, const Str_T& s)
 {
     return !(left == s);
 }
 
 template<class Char_T, class Str_T>
-inline bool operator!=(const Str_T& s, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& right)
+inline bool operator!=(const Str_T& s, const StringView<Char_T, Str_T>& right)
 {
     return !(s == right);
 }
 
 template<class Char_T, class Str_T, class SzPtr_T>
-inline bool operator!=(DFG_CLASS_NAME(StringView)<Char_T, Str_T> left, const SzPtr_T& right)
+inline bool operator!=(StringView<Char_T, Str_T> left, const SzPtr_T& right)
 {
     return !(left == right);
 }
 
 template<class Char_T, class Str_T, class SzPtr_T>
-inline bool operator!=(const SzPtr_T& left, DFG_CLASS_NAME(StringView)<Char_T, Str_T> right)
+inline bool operator!=(const SzPtr_T& left, StringView<Char_T, Str_T> right)
 {
     return !(left == right);
 }
@@ -783,46 +783,46 @@ inline bool operator<(const StringViewSz<Char_T, Str_T>& left, const StringViewS
 }
 
 template<class Char_T, class Str_T>
-inline bool operator!=(DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> left, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+inline bool operator!=(StringViewSz<Char_T, Str_T> left, StringViewSz<Char_T, Str_T> right)
 {
     return !(left == right);
 }
 
 template<class Char_T, class Str_T, class SzPtr_T>
-inline bool operator!=(DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> left, const SzPtr_T& right)
+inline bool operator!=(StringViewSz<Char_T, Str_T> left, const SzPtr_T& right)
 {
     return !(left == right);
 }
 
 template<class Char_T, class Str_T, class SzPtr_T>
-inline bool operator!=(const SzPtr_T& left, DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T> right)
+inline bool operator!=(const SzPtr_T& left, StringViewSz<Char_T, Str_T> right)
 {
     return !(left == right);
 }
 
 template<class Char_T, class Str_T>
-inline bool operator!=(const Str_T& s, const DFG_CLASS_NAME(StringViewSz)<Char_T, Str_T>& right)
+inline bool operator!=(const Str_T& s, const StringViewSz<Char_T, Str_T>& right)
 {
     return !(s == right);
 }
 
-typedef DFG_CLASS_NAME(ReadOnlySzParam)<char>				DFG_CLASS_NAME(ReadOnlySzParamC);
-typedef DFG_CLASS_NAME(ReadOnlySzParam)<wchar_t>			DFG_CLASS_NAME(ReadOnlySzParamW);
+typedef ReadOnlySzParam<char>               ReadOnlySzParamC;
+typedef ReadOnlySzParam<wchar_t>            ReadOnlySzParamW;
 
-typedef DFG_CLASS_NAME(ReadOnlySzParamWithSize)<char>		DFG_CLASS_NAME(ReadOnlySzParamWithSizeC);
-typedef DFG_CLASS_NAME(ReadOnlySzParamWithSize)<wchar_t>	DFG_CLASS_NAME(ReadOnlySzParamWithSizeW);
+typedef ReadOnlySzParamWithSize<char>       ReadOnlySzParamWithSizeC;
+typedef ReadOnlySzParamWithSize<wchar_t>    ReadOnlySzParamWithSizeW;
 
-typedef DFG_CLASS_NAME(StringView)<char>    	                        DFG_CLASS_NAME(StringViewC);
-typedef DFG_CLASS_NAME(StringView)<wchar_t>                             DFG_CLASS_NAME(StringViewW);
-typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringAscii)>   DFG_CLASS_NAME(StringViewAscii);
-typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringLatin1)>  DFG_CLASS_NAME(StringViewLatin1);
-typedef DFG_CLASS_NAME(StringView)<char, DFG_CLASS_NAME(StringUtf8)>    DFG_CLASS_NAME(StringViewUtf8);
+typedef StringView<char>                  StringViewC;
+typedef StringView<wchar_t>               StringViewW;
+typedef StringView<char, StringAscii>     StringViewAscii;
+typedef StringView<char, StringLatin1>    StringViewLatin1;
+typedef StringView<char, StringUtf8>      StringViewUtf8;
 
-typedef DFG_CLASS_NAME(StringViewSz)<char>    	                          DFG_CLASS_NAME(StringViewSzC);
-typedef DFG_CLASS_NAME(StringViewSz)<wchar_t>                             DFG_CLASS_NAME(StringViewSzW);
-typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringAscii)>   DFG_CLASS_NAME(StringViewSzAscii);
-typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringLatin1)>  DFG_CLASS_NAME(StringViewSzLatin1);
-typedef DFG_CLASS_NAME(StringViewSz)<char, DFG_CLASS_NAME(StringUtf8)>    DFG_CLASS_NAME(StringViewSzUtf8);
+typedef StringViewSz<char>                StringViewSzC;
+typedef StringViewSz<wchar_t>             StringViewSzW;
+typedef StringViewSz<char, StringAscii>   StringViewSzAscii;
+typedef StringViewSz<char, StringLatin1>  StringViewSzLatin1;
+typedef StringViewSz<char, StringUtf8>    StringViewSzUtf8;
 
 
 // StringView wrapper that can optionally own the content. To be used e.g. in cases where return value from a function
