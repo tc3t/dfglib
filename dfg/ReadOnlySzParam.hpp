@@ -330,10 +330,12 @@ namespace DFG_DETAIL_NS
     template <class Char_T, class Str_T> struct StringViewBase;
     template <> struct StringViewBase<char,    std::string>             { typedef StringViewIndexAccessBase<char,    std::string>    type; };
     template <> struct StringViewBase<wchar_t, std::wstring>            { typedef StringViewIndexAccessBase<wchar_t, std::wstring>   type; };
+    template <> struct StringViewBase<char16_t,std::u16string>          { typedef StringViewIndexAccessBase<char,    std::u16string> type; };
     template <> struct StringViewBase<char,    StringAscii>             { typedef StringViewIndexAccessBase<char,    StringAscii>    type; };
     template <> struct StringViewBase<char,    StringLatin1>            { typedef StringViewIndexAccessBase<char,    StringLatin1>   type; };
     template <> struct StringViewBase<char,    StringUtf8>              { typedef StringViewIndexAccessBase<char,    StringUtf8>     type; };
-    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Is a typed string view missing?"); // TODO: utf16
+    template <> struct StringViewBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type,    StringUtf16> { typedef StringViewIndexAccessBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type,    StringUtf16>     type; };
+    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Is a typed string view missing?");
 
     template <class View_T, class Str_T>
     View_T substr_startCount(size_t nStart, size_t nCount, const Str_T& str)
@@ -694,8 +696,8 @@ inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, const StringView
     return right == psz;
 }
 
-template <class Char_T>
-inline bool operator==(const Char_T* psz, const StringView<Char_T, std::basic_string<Char_T>>& right) { return right == psz; }
+template <class Char_T, class Str_T>
+inline bool operator==(const Char_T* psz, const StringView<Char_T, Str_T>& right) { return right == psz; }
 
 template<class Char_T, class Str_T>
 inline bool operator==(const Str_T& s, const StringView<Char_T, Str_T>& right)
@@ -817,12 +819,14 @@ typedef StringView<wchar_t>               StringViewW;
 typedef StringView<char, StringAscii>     StringViewAscii;
 typedef StringView<char, StringLatin1>    StringViewLatin1;
 typedef StringView<char, StringUtf8>      StringViewUtf8;
+typedef StringView<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16>      StringViewUtf16;
 
 typedef StringViewSz<char>                StringViewSzC;
 typedef StringViewSz<wchar_t>             StringViewSzW;
 typedef StringViewSz<char, StringAscii>   StringViewSzAscii;
 typedef StringViewSz<char, StringLatin1>  StringViewSzLatin1;
 typedef StringViewSz<char, StringUtf8>    StringViewSzUtf8;
+typedef StringViewSz<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16>    StringViewSzUtf16;
 
 
 // StringView wrapper that can optionally own the content. To be used e.g. in cases where return value from a function

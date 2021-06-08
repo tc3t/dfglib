@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <string> // std::char_traits
 #include "../dfgBaseTypedefs.hpp"
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
@@ -14,21 +15,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 // strLen(s) and strLen(s.c_str()) may return different value.
 // Note also that complexity may be different for different types:
 // linear for null terminated strings, constant for objects that store their size like std::string.
-inline size_t strLen(NonNullCStr psz)           { return std::strlen(psz); }
-inline size_t strLen(char* psz)                 { return std::strlen(psz); }
-inline size_t strLen(NonNullCStrW psz)          { return std::wcslen(psz); }
-inline size_t strLen(wchar_t* psz)              { return std::wcslen(psz); }
+template <class T> size_t strLen(T* psz)        { return std::char_traits<T>::length(psz); } // This overload was needed on MSVC2015
+template <class T> size_t strLen(const T* psz)  { return std::char_traits<T>::length(psz); }
 
-inline size_t strLen(const SzPtrAsciiR& tpsz)   { return strLen(tpsz.c_str()); }
-inline size_t strLen(const SzPtrLatin1R& tpsz)  { return strLen(tpsz.c_str()); }
-inline size_t strLen(const SzPtrUtf8R& tpsz)    { return strLen(tpsz.c_str()); }
-
-inline size_t strLen(const SzPtrAsciiW& tpsz)   { return strLen(tpsz.c_str()); }
-inline size_t strLen(const SzPtrLatin1W& tpsz)  { return strLen(tpsz.c_str()); }
-inline size_t strLen(const SzPtrUtf8W& tpsz)    { return strLen(tpsz.c_str()); }
+template <class Char_T, CharPtrType TypeId_T>
+inline size_t strLen(const SzPtrT<Char_T, TypeId_T>& tpsz) { return strLen(tpsz.c_str()); }
 
 template <class Str_T>
 inline size_t strLen(const Str_T& str)          { return str.length(); }
-
 
 }} // module namespace

@@ -170,13 +170,13 @@ public:
 }; // class StringTyped
 
 template <CharPtrType Type_T>
-inline bool operator==(const SzPtrT<const char, Type_T>& psz, const StringTyped<Type_T>& right)
+inline bool operator==(const SzPtrT<const typename CharPtrTypeToBaseCharType<Type_T>::type, Type_T>& psz, const StringTyped<Type_T>& right)
 {
     return right == psz;
 }
 
 template <CharPtrType Type_T>
-inline bool operator<(const SzPtrT<const char, Type_T>& tpsz, const StringTyped<Type_T>& right)
+inline bool operator<(const SzPtrT<const typename CharPtrTypeToBaseCharType<Type_T>::type, Type_T>& tpsz, const StringTyped<Type_T>& right)
 {
     return right < tpsz;
 }

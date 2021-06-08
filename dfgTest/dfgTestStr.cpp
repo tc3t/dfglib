@@ -142,6 +142,16 @@ TEST(dfgStr, strCmp)
     // SzPtr
     EXPECT_EQ(0, strCmp(SzPtrUtf8("a"), SzPtrUtf8("a")));
     EXPECT_TRUE(strCmp(SzPtrUtf8("a"), SzPtrUtf8("b")) < 0);
+
+    // char16_t
+    {
+        const char16_t sz0[] = u"ab";
+        const char16_t sz1[] = u"abc";
+        EXPECT_LT(strCmp(sz0, sz1), 0);
+        EXPECT_EQ(strCmp(sz0, sz0), 0);
+        EXPECT_EQ(strCmp(u"", u""), 0);
+        EXPECT_GT(strCmp(sz1, sz0), 0);
+    }
 }
 
 TEST(dfgStr, strCat)
@@ -1832,6 +1842,39 @@ TEST(dfgStr, utf16)
         EXPECT_EQ(u'\x20AC', s.rawStorage()[5]);
 
         DFGTEST_STATIC_TEST((std::is_same<const CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type*, decltype(toSzPtr_raw(s))>::value));
+    }
+
+    // StringViewUtf16
+    {
+        const char16_t sz[] =  { 'a', 'b', 0x20AC, 'c', '\0' }; // 0x20AC == euro-sign
+        const char16_t sz2[] = { 'd', 0x20AC, 'e', 'f', '\0' }; // 0x20AC == euro-sign
+        const SzPtrUtf16R tsz(sz);
+        const SzPtrUtf16R tsz2(sz2);
+        //StringViewUtf16 svFromRaw(sz); // TODO: should compile
+        StringViewUtf16 sv(tsz);
+        StringViewUtf16 sv2(tsz2);
+        //StringViewSzUtf16 svzFromRaw(sz); // TODO: should compile
+        StringViewSzUtf16 svz(tsz);
+        StringViewSzUtf16 svz2(tsz2);
+
+        //EXPECT_TRUE(sz == sv); // TODO: should compile
+        //EXPECT_TRUE(sv == sz); // TODO: should compile
+        EXPECT_TRUE(tsz == sv);
+        EXPECT_TRUE(sv == tsz);
+        //EXPECT_TRUE(sz == svz); // TODO: should compile
+        //EXPECT_TRUE(svz == sz); // TODO: should compile
+        EXPECT_TRUE(tsz == svz);
+        EXPECT_TRUE(svz == tsz);
+
+        // View/ViewSz comparison
+        EXPECT_TRUE(sv == svz);
+        EXPECT_TRUE(svz == sv);
+
+        EXPECT_TRUE(sv != sv2);
+        //EXPECT_TRUE(sv != svz2); // TODO: should compile
+        EXPECT_FALSE(sv == sv2);
+        EXPECT_FALSE(sv == svz2);
+        
     }
 }
 
