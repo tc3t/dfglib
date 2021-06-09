@@ -269,7 +269,7 @@ namespace DFG_DETAIL_NS
         using BaseClass             = StringViewDefaultBase<Char_T, Str_T>;
         using PtrT                  = typename BaseClass::PtrT;
         using CodePointT            = typename BaseClass::CodePointT;
-        
+
         StringViewIndexAccessBase()
         {}
 
@@ -291,6 +291,7 @@ namespace DFG_DETAIL_NS
 
         CodePointT operator[](const size_t n) const
         {
+            DFG_STATIC_ASSERT(BaseClass::isTriviallyIndexable(), "operator[] is available only for string types that have trivial indexing. Possible workaround: asUntypedView().operator[]");
             DFG_ASSERT_UB(n < this->m_nSize);
             return CodePointT(*(toCharPtr_raw(this->m_pFirst) + n));
         }
@@ -333,8 +334,8 @@ namespace DFG_DETAIL_NS
     template <> struct StringViewBase<char16_t,std::u16string>          { typedef StringViewIndexAccessBase<char,    std::u16string> type; };
     template <> struct StringViewBase<char,    StringAscii>             { typedef StringViewIndexAccessBase<char,    StringAscii>    type; };
     template <> struct StringViewBase<char,    StringLatin1>            { typedef StringViewIndexAccessBase<char,    StringLatin1>   type; };
-    template <> struct StringViewBase<char,    StringUtf8>              { typedef StringViewIndexAccessBase<char,    StringUtf8>     type; };
-    template <> struct StringViewBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type,    StringUtf16> { typedef StringViewIndexAccessBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type,    StringUtf16>     type; };
+    template <> struct StringViewBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf8>::type,  StringUtf8>  { using type = StringViewDefaultBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf8>::type,  StringUtf8>; };
+    template <> struct StringViewBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16> { using type = StringViewDefaultBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16>; };
     DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Is a typed string view missing?");
 
     template <class View_T, class Str_T>
