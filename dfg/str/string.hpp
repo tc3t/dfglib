@@ -186,10 +186,8 @@ typedef StringTyped<CharPtrTypeLatin1>   StringLatin1;
 typedef StringTyped<CharPtrTypeUtf8>     StringUtf8;
 typedef StringTyped<CharPtrTypeUtf16>    StringUtf16;
 
-inline ConstCharPtr    toSzPtr_raw(const StringAscii& str)    { return str.c_str().c_str(); }
-inline ConstCharPtr    toSzPtr_raw(const StringLatin1& str)   { return str.c_str().c_str(); }
-inline ConstCharPtr    toSzPtr_raw(const StringUtf8& str)     { return str.c_str().c_str(); }
-inline auto toSzPtr_raw(const StringUtf16& str) -> decltype(str.c_str().c_str()) { return str.c_str().c_str(); }
+template <CharPtrType PtrType_T>
+inline auto toSzPtr_raw(const StringTyped<PtrType_T>& str) -> decltype(str.c_str().c_str()) { return str.c_str().c_str(); }
 
 } // root namespace
 

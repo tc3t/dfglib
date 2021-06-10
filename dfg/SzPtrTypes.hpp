@@ -155,6 +155,9 @@ struct TypedCharPtrT : public std::conditional<Type_T == CharPtrTypeUtf16, DFG_D
     using BaseClass = typename std::conditional<Type_T == CharPtrTypeUtf16, DFG_DETAIL_NS::TypedCharPtrTImplicitBase<Char_T, Type_T>, DFG_DETAIL_NS::TypedCharPtrTExplicitBase<Char_T, Type_T>>::type;
     DFG_STATIC_ASSERT(sizeof(Char_T) <= 2, "Char_T must have size 1 or 2");
 
+    // Making sure that Char_T and type defined for Type_T are the same (ignoring const difference)
+    DFG_STATIC_ASSERT((std::is_same<typename std::remove_const<Char_T>::type, typename CharPtrTypeToBaseCharType<Type_T>::type>::value), "Char_T must be compatible with given type");
+
     using BaseClass::BaseClass; // Inheriting constructor
 
     // Automatic conversion from char -> const char
