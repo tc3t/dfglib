@@ -345,6 +345,8 @@ template <> constexpr CharPtrType charPtrTypeByPtr<char*>()               { retu
 template <> constexpr CharPtrType charPtrTypeByPtr<const char*>()         { return CharPtrTypeChar; }
 template <> constexpr CharPtrType charPtrTypeByPtr<wchar_t*>()            { return CharPtrTypeChar; }
 template <> constexpr CharPtrType charPtrTypeByPtr<const wchar_t*>()      { return CharPtrTypeChar; }
+template <> constexpr CharPtrType charPtrTypeByPtr<char16_t*>()           { return CharPtrTypeChar; }
+template <> constexpr CharPtrType charPtrTypeByPtr<const char16_t*>()     { return CharPtrTypeChar; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiR>()  { return CharPtrTypeAscii; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiW>()  { return CharPtrTypeAscii; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrLatin1R>() { return CharPtrTypeLatin1; }

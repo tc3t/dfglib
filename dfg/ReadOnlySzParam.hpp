@@ -176,14 +176,16 @@ protected:
 namespace DFG_DETAIL_NS
 {
     // Base common for both both view and viewSz. Most of the the stuff in StringView and StringViewSz should be here.
-    template <class Char_T, class Str_T>
+    template <class Str_T>
     class StringViewCommonBase
     {
     public:
         using SzPtrT                = decltype(Str_T().c_str());
         using PtrT                  = decltype(toCharPtr(Str_T().c_str()));
         using PtrRawT               = decltype(toCharPtr_raw(Str_T().c_str()));
-        using CharT                 = Char_T;
+        static constexpr auto PtrType = charPtrTypeByPtr<PtrT>();
+        using PtrTypeTraits         = CharPtrTypeTraits<PtrType>;
+        using CharT                 = typename std::decay<decltype(*PtrRawT())>::type;
         using CodePointT            = decltype(*PtrT(nullptr));
         using StringT               = Str_T;
         using const_iterator        = PtrT;
@@ -199,7 +201,7 @@ namespace DFG_DETAIL_NS
 
         static constexpr bool isTriviallyIndexable()
         {
-            return CharPtrTypeTraits<charPtrTypeByPtr<PtrT>()>::hasTrivialIndexing;
+            return PtrTypeTraits::hasTrivialIndexing;
         }
 
         PtrT data() const { return m_pFirst; }
@@ -223,11 +225,11 @@ namespace DFG_DETAIL_NS
         PtrT m_pFirst;          // Pointer to first character.
     };
 
-    template <class Char_T, class Str_T>
-    class StringViewDefaultBase : public StringViewCommonBase<Char_T, Str_T>
+    template <class Str_T>
+    class StringViewDefaultBase : public StringViewCommonBase<Str_T>
     {
     protected:
-        using BaseClass         = StringViewCommonBase<Char_T, Str_T>;
+        using BaseClass         = StringViewCommonBase<Str_T>;
         using PtrT              = typename BaseClass::PtrT;
         using PtrRawT           = typename BaseClass::PtrRawT;
 
@@ -253,7 +255,7 @@ namespace DFG_DETAIL_NS
         {
             auto p = toCharPtr_raw(this->begin());
             DFG_ASSERT_UB(p != nullptr || this->empty());
-            return (p != nullptr) ? p : reinterpret_cast<const Char_T*>(this);
+            return (p != nullptr) ? p : reinterpret_cast<const typename BaseClass::CharT*>(this);
         }
 
     protected:
@@ -262,11 +264,11 @@ namespace DFG_DETAIL_NS
 
     // Base class for string views that have raw characters or for which every character can be treated as a code point.
     // -> functionality such as front(), back(), operator[] etc. are well defined.
-    template <class Char_T, class Str_T>
-    class StringViewIndexAccessBase : public StringViewDefaultBase<Char_T, Str_T>
+    template <class Str_T>
+    class StringViewIndexAccessBase : public StringViewDefaultBase<Str_T>
     {
     public:
-        using BaseClass             = StringViewDefaultBase<Char_T, Str_T>;
+        using BaseClass             = StringViewDefaultBase<Str_T>;
         using PtrT                  = typename BaseClass::PtrT;
         using CodePointT            = typename BaseClass::CodePointT;
 
@@ -328,14 +330,14 @@ namespace DFG_DETAIL_NS
         }
     }; // StringViewIndexAccessBase
 
-    template <class Char_T, class Str_T> struct StringViewBase;
-    template <> struct StringViewBase<char,    std::string>             { typedef StringViewIndexAccessBase<char,    std::string>    type; };
-    template <> struct StringViewBase<wchar_t, std::wstring>            { typedef StringViewIndexAccessBase<wchar_t, std::wstring>   type; };
-    template <> struct StringViewBase<char16_t,std::u16string>          { typedef StringViewIndexAccessBase<char,    std::u16string> type; };
-    template <> struct StringViewBase<char,    StringAscii>             { typedef StringViewIndexAccessBase<char,    StringAscii>    type; };
-    template <> struct StringViewBase<char,    StringLatin1>            { typedef StringViewIndexAccessBase<char,    StringLatin1>   type; };
-    template <> struct StringViewBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf8>::type,  StringUtf8>  { using type = StringViewDefaultBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf8>::type,  StringUtf8>; };
-    template <> struct StringViewBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16> { using type = StringViewDefaultBase<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16>; };
+    template <class Str_T> struct StringViewBase;
+    template <> struct StringViewBase<std::string>    { typedef StringViewIndexAccessBase<std::string>    type; };
+    template <> struct StringViewBase<std::wstring>   { typedef StringViewIndexAccessBase<std::wstring>   type; };
+    template <> struct StringViewBase<std::u16string> { typedef StringViewIndexAccessBase<std::u16string> type; };
+    template <> struct StringViewBase<StringAscii>    { typedef StringViewIndexAccessBase<StringAscii>    type; };
+    template <> struct StringViewBase<StringLatin1>   { typedef StringViewIndexAccessBase<StringLatin1>   type; };
+    template <> struct StringViewBase<StringUtf8>     { using type = StringViewDefaultBase<StringUtf8>; };
+    template <> struct StringViewBase<StringUtf16>    { using type = StringViewDefaultBase<StringUtf16>; };
     DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Is a typed string view missing?");
 
     template <class View_T, class Str_T>
@@ -358,14 +360,15 @@ namespace DFG_DETAIL_NS
 // Note: Unlike ReadOnlySzParam, the string view stored here can't guarantee access to null terminated string.
 // TODO: keep compatible with std::string_view or even typedef when available.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
-class StringView : public DFG_DETAIL_NS::StringViewBase<Char_T, Str_T>::type
+class StringView : public DFG_DETAIL_NS::StringViewBase<Str_T>::type
 {
 public:
-    using BaseClass      = typename DFG_DETAIL_NS::StringViewBase<Char_T, Str_T>::type;
+    using BaseClass      = typename DFG_DETAIL_NS::StringViewBase<Str_T>::type;
     using SzPtrT         = typename BaseClass::SzPtrT;
     using PtrT           = typename BaseClass::PtrT;
     using PtrRawT        = typename BaseClass::PtrRawT;
     using CharT          = typename BaseClass::CharT;
+    DFG_STATIC_ASSERT((std::is_same<Char_T, CharT>::value), "Inconsistent Char_T and Str_T");
     using StringT        = typename BaseClass::StringT;
     using const_iterator = typename BaseClass::const_iterator;
     
@@ -496,15 +499,16 @@ namespace DFG_DETAIL_NS
 // Like StringView, but guarantees that view is null terminated.
 // Also the string length is not computed on constructor but on demand removing some of the const's.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
-class StringViewSz : public DFG_DETAIL_NS::StringViewCommonBase<Char_T, Str_T>
+class StringViewSz : public DFG_DETAIL_NS::StringViewCommonBase<Str_T>
 {
 public:
-    using BaseClass      = typename DFG_DETAIL_NS::StringViewCommonBase<Char_T, Str_T>;
+    using BaseClass      = typename DFG_DETAIL_NS::StringViewCommonBase<Str_T>;
     using StringViewT    = StringView<Char_T, Str_T>;
     using SzPtrT         = typename BaseClass::SzPtrT;
     using PtrT           = typename BaseClass::PtrT;
     using PtrRawT        = typename BaseClass::PtrRawT;
     using CharT          = typename BaseClass::CharT;
+    DFG_STATIC_ASSERT((std::is_same<Char_T, CharT>::value), "Inconsistent Char_T and Str_T");
     using StringT        = typename BaseClass::StringT;
     using CodePointT     = typename BaseClass::CodePointT;
     using const_iterator = typename BaseClass::const_iterator;
@@ -820,14 +824,14 @@ typedef StringView<wchar_t>               StringViewW;
 typedef StringView<char, StringAscii>     StringViewAscii;
 typedef StringView<char, StringLatin1>    StringViewLatin1;
 typedef StringView<char, StringUtf8>      StringViewUtf8;
-typedef StringView<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16>      StringViewUtf16;
+typedef StringView<char16_t, StringUtf16> StringViewUtf16;
 
-typedef StringViewSz<char>                StringViewSzC;
-typedef StringViewSz<wchar_t>             StringViewSzW;
-typedef StringViewSz<char, StringAscii>   StringViewSzAscii;
-typedef StringViewSz<char, StringLatin1>  StringViewSzLatin1;
-typedef StringViewSz<char, StringUtf8>    StringViewSzUtf8;
-typedef StringViewSz<CharPtrTypeToBaseCharType<CharPtrTypeUtf16>::type, StringUtf16>    StringViewSzUtf16;
+typedef StringViewSz<char>                  StringViewSzC;
+typedef StringViewSz<wchar_t>               StringViewSzW;
+typedef StringViewSz<char, StringAscii>     StringViewSzAscii;
+typedef StringViewSz<char, StringLatin1>    StringViewSzLatin1;
+typedef StringViewSz<char, StringUtf8>      StringViewSzUtf8;
+typedef StringViewSz<char16_t, StringUtf16> StringViewSzUtf16;
 
 
 // StringView wrapper that can optionally own the content. To be used e.g. in cases where return value from a function
