@@ -371,7 +371,13 @@ public:
     DFG_STATIC_ASSERT((std::is_same<Char_T, CharT>::value), "Inconsistent Char_T and Str_T");
     using StringT        = typename BaseClass::StringT;
     using const_iterator = typename BaseClass::const_iterator;
-    
+
+private:
+    // When raw string type is already encoding-compatible (currently means Utf16 with raw type std::u16string), allowing construction of view
+    // directly from that as well (see constructor taking FromUntypedConstructorHelper)
+    class NotAvailableClass {};
+    using FromUntypedConstructorHelper = typename std::conditional<BaseClass::PtrType == CharPtrTypeUtf16, std::u16string, NotAvailableClass>::type;
+
 public:
     StringView()
     {
@@ -402,6 +408,15 @@ public:
     StringView(PtrT pBegin, PtrT pEnd) :
         BaseClass(pBegin, toCharPtr_raw(pEnd) - toCharPtr_raw(pBegin))
     {
+    }
+
+    // To prevent implicit contruction, i.e. that StringViewUtf16(u"abc"); won't trigger creation of std::u16string and construction through FromUntypedConstructorHelper.
+    StringView(FromUntypedConstructorHelper&& str) = delete;
+
+    // Provides construction from raw string type if supported.
+    StringView(const FromUntypedConstructorHelper& str)
+    {
+        *this = StringView(str.c_str(), str.size());
     }
 
 protected:
@@ -512,7 +527,13 @@ public:
     using StringT        = typename BaseClass::StringT;
     using CodePointT     = typename BaseClass::CodePointT;
     using const_iterator = typename BaseClass::const_iterator;
+
+private:
+    // Documentation is in StringView
+    class NotAvailableClass {};
+    using FromUntypedConstructorHelper = typename std::conditional<BaseClass::PtrType == CharPtrTypeUtf16, std::u16string, NotAvailableClass>::type;
     
+public:
     StringViewSz(const Str_T& s) :
         BaseClass(s.c_str()),
         m_nSize(readOnlySzParamLength(s))
@@ -535,6 +556,13 @@ public:
     {
         DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
         DFG_ASSERT_CORRECTNESS(m_nSize == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || toCharPtr_raw(this->m_pFirst)[nCount] == '\0');
+    }
+
+    // Documentation is in StringView
+    StringViewSz(FromUntypedConstructorHelper&& str) = delete;
+    StringViewSz(const FromUntypedConstructorHelper& str)
+    {
+        *this = StringViewSz(SzPtrT(str.c_str()), str.size());
     }
 
 protected:

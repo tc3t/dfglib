@@ -1848,23 +1848,33 @@ TEST(dfgStr, utf16)
     {
         const char16_t sz[] =  { 'a', 'b', 0x20AC, 'c', '\0' }; // 0x20AC == euro-sign
         const char16_t sz2[] = { 'd', 0x20AC, 'e', 'f', '\0' }; // 0x20AC == euro-sign
+
+        /*
+         * Note about conversion from char16_t arrays:
+         *  While StringViewC a = ""; compiles, StringViewUtf16 a = u""; does not.
+         *  This is because for typed strings implicit conversions from raw pointers are more strict:
+         *  while it would be acceptable from encoding point of view, SzPtr also requires null termination.
+        */
+
         const SzPtrUtf16R tsz(sz);
         const SzPtrUtf16R tsz2(sz2);
-        //StringViewUtf16 svFromRaw(sz); // TODO: should compile
+        //StringViewUtf16 svFromRaw(sz); // Not supported, see note above
         StringViewUtf16 sv(tsz);
         StringViewUtf16 sv2(tsz2);
-        //StringViewSzUtf16 svzFromRaw(sz); // TODO: should compile
+        //StringViewSzUtf16 svzFromRaw(sz); // Not supported, see note above.
         StringViewSzUtf16 svz(tsz);
         StringViewSzUtf16 svz2(tsz2);
 
-        //EXPECT_TRUE(sz == sv); // TODO: should compile
-        //EXPECT_TRUE(sv == sz); // TODO: should compile
+        //EXPECT_TRUE(sz == sv); // Not supported, see note above
+        //EXPECT_TRUE(sv == sz); // Not supported, see note above
         EXPECT_TRUE(tsz == sv);
         EXPECT_TRUE(sv == tsz);
-        //EXPECT_TRUE(sz == svz); // TODO: should compile
-        //EXPECT_TRUE(svz == sz); // TODO: should compile
+        //EXPECT_TRUE(sz == svz); // Not supported, see note above
+        //EXPECT_TRUE(svz == sz); // Not supported, see note above
         EXPECT_TRUE(tsz == svz);
         EXPECT_TRUE(svz == tsz);
+
+        EXPECT_TRUE(sv == StringViewUtf16(sz, sz + DFG_COUNTOF_SZ(sz)));
 
         // View/ViewSz comparison
         EXPECT_TRUE(sv == svz);
@@ -1874,7 +1884,33 @@ TEST(dfgStr, utf16)
         //EXPECT_TRUE(sv != svz2); // TODO: should compile
         EXPECT_FALSE(sv == sv2);
         EXPECT_FALSE(sv == svz2);
-        
+
+        // Testing views with string types.
+        {
+            const char16_t sz3[] = { 'a', '\0', 0x20AC, 'c', '\0' }; // 0x20AC == euro-sign
+            const std::u16string stdu16(sz3, DFG_COUNTOF_SZ(sz3));
+            const StringUtf16 sUtf16(SzPtrUtf16(sz3), &sz3[0] + DFG_COUNTOF_SZ(sz3));
+            const StringViewUtf16 svFromStdUtf16(stdu16);
+            //const StringViewUtf16 svFromRvalueStdUtf16 = std::u16string(stdu16); // This should fail to compile; creating view to std::u16string temporary is not allowed
+            const StringViewUtf16 svs16(sUtf16);
+            const StringViewSzUtf16 svzFromStdUtf16(stdu16);
+            //const StringViewSzUtf16 svzFromRvalueStdUtf16 = std::u16string(stdu16); // This should fail to compile; creating view to std::u16string temporary is not allowed
+            const StringViewSzUtf16 svzs16(sUtf16);
+            EXPECT_TRUE(svzFromStdUtf16.isLengthCalculated());
+            EXPECT_TRUE(stdu16.c_str() == svFromStdUtf16.beginRaw());
+            EXPECT_TRUE(sUtf16.c_str() == svs16.beginRaw());
+            EXPECT_TRUE(stdu16.c_str() == svzFromStdUtf16.beginRaw());
+            EXPECT_TRUE(sUtf16.c_str() == svzs16.beginRaw());
+            EXPECT_EQ(stdu16, svFromStdUtf16.toString().rawStorage());
+            EXPECT_EQ(stdu16, svs16.toString().rawStorage());
+            EXPECT_EQ(stdu16, svzFromStdUtf16.toString().rawStorage());
+            EXPECT_EQ(stdu16, svzs16.toString().rawStorage());
+            // Making sure that embedded null is counted correctly in view length.
+            EXPECT_EQ(4, svFromStdUtf16.size());
+            EXPECT_EQ(4, svs16.size());
+            EXPECT_EQ(4, svzFromStdUtf16.size());
+            EXPECT_EQ(4, svzs16.size());
+        }
     }
 }
 
