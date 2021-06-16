@@ -1765,7 +1765,7 @@ TEST(dfgStr, TypedCharPtrT)
     EXPECT_EQ('a', (*SzPtrAscii("abc")).toInt());
     EXPECT_EQ('a', (*SzPtrLatin1("abc")).toInt());
     //EXPECT_EQ('a', (*SzPtrUtf8("abc")).toInt()); // This should fail to compile.
-    TypedCharPtrT<const char, CharPtrTypeChar> typedRawCharPtr("abc");
+    TypedCharPtrT<const char, CharPtrTypeCharC> typedRawCharPtr("abc");
     EXPECT_EQ('a', (*typedRawCharPtr).toInt());
 }
 

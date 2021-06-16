@@ -5,6 +5,7 @@
 #include "build/languageFeatureInfo.hpp"
 #include <cstddef> // For std::nullptr_t
 #include <type_traits>
+#include "build/utils.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wrappers for [const] char* to aid in writing code and interfaces that actually know what the content of null terminated char* means.
@@ -18,8 +19,10 @@ DFG_ROOT_NS_BEGIN
 // TODO: investigate this further; e.g. should there be an additional type/enum that explicitly promises content to be valid?
 enum CharPtrType
 {
-    // Char ptr types without encoding. (must have value < 0)
-    CharPtrTypeChar     = -1,
+    // Char ptr types without encoding. (must have value < 0).
+    CharPtrTypeChar16   = -3,
+    CharPtrTypeCharW    = -2,
+    CharPtrTypeCharC    = -1,
     
     // Char ptr's with encoding
     CharPtrTypeAscii    = 0, // Ascii is valid UTF8 and valid Latin-1.
@@ -35,8 +38,19 @@ enum CharPtrType
     //  -Adjust gnNumberOfCharPtrTypes and gnNumberOfCharPtrTypesWithEncoding.
 };
 
-template <CharPtrType TypeEnum_T> struct CharPtrTypeToBaseCharType                   { using type = char; };
-template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeUtf16> { using type = char16_t; };
+namespace DFG_DETAIL_NS
+{
+    template <CharPtrType TypeEnum_T> using CharPtrTypeEnumType = std::integral_constant<int, TypeEnum_T>;
+}
+
+template <CharPtrType TypeEnum_T> struct CharPtrTypeToBaseCharType                    { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(DFG_DETAIL_NS::CharPtrTypeEnumType<TypeEnum_T>, "CharPtrTypeToBaseCharType specialization is missing"); };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeCharC>  { using type = char; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeCharW>  { using type = wchar_t; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeChar16> { using type = char16_t; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeAscii>  { using type = char; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeLatin1> { using type = char; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeUtf8>   { using type = char; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeUtf16>  { using type = char16_t; };
 
 namespace DFG_DETAIL_NS
 {
@@ -68,7 +82,9 @@ namespace DFG_DETAIL_NS
     };
 } // DFG_DETAIL_NS
 
-typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeChar,   char>     CodePointChar;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeCharC,  char>     CodePointCharC;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeCharW,  wchar_t>  CodePointCharW;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeChar16, char16_t> CodePointChar16;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeAscii,  char>     CodePointAscii;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeLatin1, uint8>    CodePointLatin1;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeUtf8,   uint32>   CodePointUtf8;
@@ -78,7 +94,9 @@ DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 5, "");
 namespace DFG_DETAIL_NS
 {
     template <CharPtrType PtrType> struct TypedCharPtrDeRefType;
-    template <> struct TypedCharPtrDeRefType<CharPtrTypeChar>   { typedef CodePointChar   type; };
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeCharC>  { typedef CodePointCharC  type; };
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeCharW>  { typedef CodePointCharW  type; };
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeChar16> { typedef CodePointChar16 type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeAscii>  { typedef CodePointAscii  type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeLatin1> { typedef CodePointLatin1 type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeUtf8>   { typedef CodePointUtf8   type; };
@@ -101,7 +119,9 @@ namespace DFG_DETAIL_NS
 } // namespace DFG_DETAIL_NS
 
 template <CharPtrType PtrType_T> struct CharPtrTypeTraits {};
-template <> struct CharPtrTypeTraits<CharPtrTypeChar>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeChar,   true> {};
+template <> struct CharPtrTypeTraits<CharPtrTypeCharC>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeCharC,  true> {};
+template <> struct CharPtrTypeTraits<CharPtrTypeCharW>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeCharW,  true> {};
+template <> struct CharPtrTypeTraits<CharPtrTypeChar16> : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeChar16, true> {};
 template <> struct CharPtrTypeTraits<CharPtrTypeAscii>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeAscii,  true>  {};
 template <> struct CharPtrTypeTraits<CharPtrTypeLatin1> : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeLatin1, true>  {};
 template <> struct CharPtrTypeTraits<CharPtrTypeUtf8>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeUtf8,   false> {};
@@ -341,12 +361,12 @@ DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Missi
 #endif
 
 template <class Ptr_T> constexpr CharPtrType charPtrTypeByPtr();
-template <> constexpr CharPtrType charPtrTypeByPtr<char*>()               { return CharPtrTypeChar; }
-template <> constexpr CharPtrType charPtrTypeByPtr<const char*>()         { return CharPtrTypeChar; }
-template <> constexpr CharPtrType charPtrTypeByPtr<wchar_t*>()            { return CharPtrTypeChar; }
-template <> constexpr CharPtrType charPtrTypeByPtr<const wchar_t*>()      { return CharPtrTypeChar; }
-template <> constexpr CharPtrType charPtrTypeByPtr<char16_t*>()           { return CharPtrTypeChar; }
-template <> constexpr CharPtrType charPtrTypeByPtr<const char16_t*>()     { return CharPtrTypeChar; }
+template <> constexpr CharPtrType charPtrTypeByPtr<char*>()               { return CharPtrTypeCharC; }
+template <> constexpr CharPtrType charPtrTypeByPtr<const char*>()         { return CharPtrTypeCharC; }
+template <> constexpr CharPtrType charPtrTypeByPtr<wchar_t*>()            { return CharPtrTypeCharW; }
+template <> constexpr CharPtrType charPtrTypeByPtr<const wchar_t*>()      { return CharPtrTypeCharW; }
+template <> constexpr CharPtrType charPtrTypeByPtr<char16_t*>()           { return CharPtrTypeChar16; }
+template <> constexpr CharPtrType charPtrTypeByPtr<const char16_t*>()     { return CharPtrTypeChar16; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiR>()  { return CharPtrTypeAscii; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiW>()  { return CharPtrTypeAscii; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrLatin1R>() { return CharPtrTypeLatin1; }
