@@ -165,6 +165,19 @@ namespace DFG_DETAIL_NS
             m_p(p)
         {}
 
+#if defined(_WIN32)
+        using WCharT = typename std::conditional<std::is_const<Char_T>::value, const wchar_t, wchar_t>::type;
+        DFG_STATIC_ASSERT(sizeof(Char_T) == sizeof(WCharT), "Implementation assumes Char_T and wchar_t to have the same size");
+        TypedCharPtrTImplicitBase(WCharT* p) :
+            m_p(reinterpret_cast<Char_T*>(p))
+        {}
+
+        operator WCharT* () const
+        {
+            return reinterpret_cast<WCharT*>(m_p);
+        }
+#endif
+
         Char_T* m_p;
     };
 } // namespace DFG_DETAIL_NS
@@ -299,7 +312,11 @@ struct SzPtrT : public TypedCharPtrT<Char_T, Type_T>
         BaseClass(psz)
     {}
 
-    // At moment with nothing but ASCII and it's supersets, everything can be constructed from CharPtrTypeAscii.
+    explicit SzPtrT(TypedCharPtrT<Char_T, Type_T> tpsz) :
+        BaseClass(tpsz)
+    {}
+
+    // At moment with nothing but ASCII and it's supersets for char size 1, everyone of those can be constructed from CharPtrTypeAscii.
     template <class Char_T2>
     SzPtrT(const SzPtrT<Char_T2, CharPtrTypeAscii>& other) :
         BaseClass(other)
