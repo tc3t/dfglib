@@ -67,11 +67,11 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
-    #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
-        // Note: boost/histogram was introduced in 1.70 (2019-04-12)
-        // Note: including boost/histogram here under QCustomPlot section since it is (at least for the time being) only needed when QCustomPlot is available;
-        //       don't want to require boost 1.70 unless it is actually used.
+    #include <boost/version.hpp>
+    #if (BOOST_VERSION >= 107000) // Histogram is available since 1.70 (2019-04-12)
         #include <boost/histogram.hpp>
+    #endif
+    #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
         #include "qcustomplot/qcustomplot.h"
     #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
@@ -5311,6 +5311,7 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
 
             if (nBinCount >= 0)
             {
+#if (BOOST_VERSION >= 107000) // If have boost histogram
                 try
                 {
                     // Creating histogram points using boost::histogram.
@@ -5336,6 +5337,11 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
                         defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("Failed to create histogram, exception message: '%1'").arg(e.what()));
                     return ChartData();
                 }
+#else // If not boost::histogram available
+                if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
+                    defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("Histograms are not available, requires building with Boost >= 1.70"));
+                return ChartData();
+#endif // "If have boost histogram"
             }
             else // Case: bin for every value.
             {
