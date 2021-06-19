@@ -2010,6 +2010,7 @@ size_t CsvTableView::replace(const QVariantMap& params)
 
     doModalOperation(this, tr("Executing Find & Replace..."), ProgressWidget::IsCancellable::yes, "find_replace", [&](ProgressWidget* pProgressDialog)
     {
+        const auto bOldModifiedStatus = pCsvModel->isModified();
         pCsvModel->batchEditNoUndo([&](CsvItemModel::DataTable& table)
         {
             StringUtf8 sTemp;
@@ -2029,6 +2030,7 @@ size_t CsvTableView::replace(const QVariantMap& params)
                 table.setElement(index.row(), index.column(), sTemp);
             });
         });
+        pCsvModel->setModifiedStatus(bOldModifiedStatus || nEditCount > 0);
     }); // Modal operation end
 
     restoreSelection(selection);
