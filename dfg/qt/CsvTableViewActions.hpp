@@ -646,7 +646,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
                 if (!indexHandler)
                     return;
-                for (const auto& index : this->m_initialSelection)
+                for (const auto& index : qAsConst(this->m_initialSelection))
                     indexHandler(index);
             });
         }

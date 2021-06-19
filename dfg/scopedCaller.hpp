@@ -13,10 +13,10 @@ DFG_ROOT_NS_BEGIN
 	// Related code: BOOST_SCOPE_EXIT
     // TODO: Considered implementing empty base class optimization (http://en.cppreference.com/w/cpp/language/ebo)
 	template <class ConstructorFunc_T, class DestructorFunc_T>
-	class DFG_CLASS_NAME(ScopedCaller)
+	class ScopedCaller
 	{
 	public:
-		DFG_CLASS_NAME(ScopedCaller)(	ConstructorFunc_T constructorFunc,
+		ScopedCaller(	ConstructorFunc_T constructorFunc,
 						DestructorFunc_T destructorFunc,
 						bool bActive = true) :
 			m_constructorFunc(std::forward<ConstructorFunc_T>(constructorFunc)),
@@ -27,7 +27,7 @@ DFG_ROOT_NS_BEGIN
 				m_constructorFunc();
 		}
 
-		DFG_CLASS_NAME(ScopedCaller)(DFG_CLASS_NAME(ScopedCaller)&& other) :
+		ScopedCaller(ScopedCaller&& other) noexcept :
 			m_constructorFunc(std::move(other.m_constructorFunc)),
 			m_destructorFunc(std::move(other.m_destructorFunc)),
 			m_bActive(true)
@@ -38,13 +38,13 @@ DFG_ROOT_NS_BEGIN
 			    m_constructorFunc();
 		}
 
-		~DFG_CLASS_NAME(ScopedCaller)()
+		~ScopedCaller()
 		{
 			if (m_bActive)
 				m_destructorFunc();
 		}
 
-		DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(DFG_CLASS_NAME(ScopedCaller))
+		DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(ScopedCaller)
 
 	public:
 
@@ -54,8 +54,8 @@ DFG_ROOT_NS_BEGIN
 	};
 
 	template <class ConstructorFunc_T, class DestructorFunc_T>
-	inline DFG_CLASS_NAME(ScopedCaller)<ConstructorFunc_T, DestructorFunc_T> makeScopedCaller(ConstructorFunc_T constructorFunc, DestructorFunc_T destructorFunc)
+	inline ScopedCaller<ConstructorFunc_T, DestructorFunc_T> makeScopedCaller(ConstructorFunc_T constructorFunc, DestructorFunc_T destructorFunc)
 	{
-        return DFG_CLASS_NAME(ScopedCaller)<ConstructorFunc_T, DestructorFunc_T>(std::forward<ConstructorFunc_T>(constructorFunc), std::forward<DestructorFunc_T>(destructorFunc));
+        return ScopedCaller<ConstructorFunc_T, DestructorFunc_T>(std::forward<ConstructorFunc_T>(constructorFunc), std::forward<DestructorFunc_T>(destructorFunc));
 	}
 }

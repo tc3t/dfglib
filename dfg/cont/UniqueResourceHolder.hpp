@@ -18,7 +18,7 @@ namespace DFG_DETAIL_NS
             m_deleter(std::forward<Deleter_T>(deleter))
         {}
 
-        UniqueResourceHolderBase(UniqueResourceHolderBase&& other) :
+        UniqueResourceHolderBase(UniqueResourceHolderBase&& other) noexcept :
             m_resource(std::move(other.m_resource)),
             m_deleter(std::move(other.m_deleter))
         {
@@ -69,7 +69,7 @@ public:
         m_active(true)
     {}
 
-    UniqueResourceHolder(UniqueResourceHolder&& other) :
+    UniqueResourceHolder(UniqueResourceHolder&& other) noexcept :
         BaseClass(std::move(other)),
         m_active(true)
     {

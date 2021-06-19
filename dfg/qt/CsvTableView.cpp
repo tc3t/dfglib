@@ -2445,10 +2445,10 @@ namespace
                 return rv;
             sName.remove(0, n + 1);
             const auto paramIndexes = sName.split(';');
-            for (int i = 0, nCount = paramIndexes.size(); i < nCount; ++i)
+            for (const auto& s : paramIndexes)
             {
                 bool bOk = false;
-                const auto index = paramIndexes[i].toInt(&bOk);
+                const auto index = s.toInt(&bOk);
                 if (bOk && DFG_ROOT_NS::isValidIndex(arrPropDefs, index))
                     rv.push_back(arrPropDefs[index]);
                 else
@@ -2552,7 +2552,7 @@ namespace
                 ::DFG_MODULE_NS(math)::FormulaParser parser;
                 parser.defineRandomFunctions();
                 QString sFuncNames;
-                int nLastBrPos = 0;
+                decltype(sFuncNames.length()) nLastBrPos = 0;
                 parser.forEachDefinedFunctionNameWhile([&](const ::DFG_ROOT_NS::StringViewC& sv)
                 {
                     sFuncNames += QString("%1, ").arg(QString::fromLatin1(sv.data(), sv.sizeAsInt()));

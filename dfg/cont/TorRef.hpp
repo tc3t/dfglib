@@ -51,7 +51,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             typedef std::unique_ptr<T> StorageType;
 
             TorRefInternalStorageHeap() {}
-            TorRefInternalStorageHeap(TorRefInternalStorageHeap&& other) :
+            TorRefInternalStorageHeap(TorRefInternalStorageHeap&& other) noexcept :
                 m_spItem(std::move(other.m_spItem))
             {}
             bool hasItem() const                { return m_spItem.get() != nullptr; }
@@ -69,22 +69,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     // Can be used e.g. in return values when the ownership of returned resource may vary.
     // Note: this class does not guarantee thread safety even for const accesses.
     template <class T, class InternalStorage_T = DFG_DETAIL_NS::TorRefInternalStorageHeap<typename std::remove_const<T>::type>, class Ref_T = T*>
-    class DFG_CLASS_NAME(TorRef)
+    class TorRef
     {
     public:
-        DFG_CLASS_NAME(TorRef)(Ref_T ref = Ref_T()) :
+        TorRef(Ref_T ref = Ref_T()) :
             m_ref(std::move(ref))
         {}
 
-        DFG_CLASS_NAME(TorRef)(DFG_CLASS_NAME(TorRef)&& other) :
+        TorRef(TorRef&& other) noexcept :
             m_ref(std::move(other.m_ref)),
             m_internal(std::move(other.m_internal))
 
         {}
 
-        static DFG_CLASS_NAME(TorRef) makeInternallyOwning(const T& other)
+        static TorRef makeInternallyOwning(const T& other)
         {
-            DFG_CLASS_NAME(TorRef) tor;
+            TorRef tor;
             tor.internalStorage().setItem(other);
             return tor;
         }
@@ -142,12 +142,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
     // TorRef with shared_ptr reference.
     template <class T, class InternalStorage_T = DFG_DETAIL_NS::TorRefInternalStorageHeap<typename std::remove_const<T>::type>>
-    class DFG_CLASS_NAME(TorRefShared) : public DFG_CLASS_NAME(TorRef)<T, InternalStorage_T, std::shared_ptr<T>>
+    class TorRefShared : public TorRef<T, InternalStorage_T, std::shared_ptr<T>>
     {
     public:
-        typedef DFG_CLASS_NAME(TorRef)<T, InternalStorage_T, std::shared_ptr<T>> BaseClass;
-        DFG_CLASS_NAME(TorRefShared)() {}
-        DFG_BASE_CONSTRUCTOR_DELEGATE_1(DFG_CLASS_NAME(TorRefShared), BaseClass) {}
+        typedef TorRef<T, InternalStorage_T, std::shared_ptr<T>> BaseClass;
+        TorRefShared() {}
+        DFG_BASE_CONSTRUCTOR_DELEGATE_1(TorRefShared, BaseClass) {}
     }; // class TorRefShared
 
 } }

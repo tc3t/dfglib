@@ -323,7 +323,7 @@ TEST(dfgMath, absAsUnsigned)
     absUnsignedImpl<uint16>(0);
     absUnsignedImpl<int32>(pow2ToXCt<31>::value);
     absUnsignedImpl<uint32>(0);
-    absUnsignedImpl<int64>(static_cast<uint64>(NumericTraits<int64>::maxValue) + 1);
+    absUnsignedImpl<int64>(static_cast<uint64>(NumericTraits<int64>::maxValue) + 1u);
     absUnsignedImpl<uint64>(0);
 }
 

@@ -169,7 +169,7 @@ TEST(dfgAlg, forEachFwd)
         const auto randImpl = [&]() { return DFG_MODULE_NS(rand)::rand(randEng); };
 #endif
 
-        std::array<uint32, 100000> vals;
+        std::vector<uint32> vals(100000);
         uint32 randVal = static_cast<uint32>(1 + 9 * randImpl());
         if (randVal % 2 == 0)
             randVal++; // Make uneven so that char array won't be full of null's at some point.
@@ -182,10 +182,10 @@ TEST(dfgAlg, forEachFwd)
             const size_t nLoopCount = 1 + static_cast<size_t>(3 * randImpl());
         #endif
 
-        const auto fillUint32 = [&](std::array<uint32, 100000>& cont) {std::fill(cont.begin(), cont.end(), randVal); };
+        const auto fillUint32 = [&](std::vector<uint32>& cont) {std::fill(cont.begin(), cont.end(), randVal); };
         const auto funcUint32 = [](uint32& val) { val += 2; };
         forEachFwdPerformance<std::true_type, uint32>(vals, nLoopCount, fillUint32, funcUint32);
-        std::array<uint8, 400000> chars;
+        std::vector<uint8> chars(400000);
         const auto charFiller = [&](DFG_CLASS_NAME(Dummy))
         {
             std::fill(chars.begin(), chars.end(), DFG_ROOT_NS::uint8(randVal));

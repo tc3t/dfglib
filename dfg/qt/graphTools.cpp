@@ -2593,7 +2593,7 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
         auto barSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), param.stringValueRange, param.countRange, param.xType, param.m_sXname, StringUtf8()));
         DFG_ASSERT_CORRECTNESS(barSeries.size() <= 1);
         auto spImpl = (!barSeries.empty()) ? dynamic_cast<BarSeriesQCustomPlot*>(barSeries[0].get()) : nullptr;
-        return std::make_shared<HistogramQCustomPlot>(spImpl->m_spBars.data());
+        return (spImpl) ? std::make_shared<HistogramQCustomPlot>(spImpl->m_spBars.data()) : nullptr;
     }
 
     const auto valueRange = param.valueRange;
@@ -2785,11 +2785,11 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         const auto& sNewLabel = labelRange[i];
         auto sqNewLabel = viewToQString(sNewLabel);
         auto iter = mapExistingLabelToXcoordinate.find(sqNewLabel);
-        if (iter == mapExistingLabelToXcoordinate.cend()) // If using stacking and label already exists, not adding label or tick; using existing instead.
+        if (iter == mapExistingLabelToXcoordinate.end()) // If using stacking and label already exists, not adding label or tick; using existing instead.
         {
             // Existing label not found -> adding new
             labels.push_back(std::move(sqNewLabel));
-            ticks.push_back(ticks.size() + 1);
+            ticks.push_back(static_cast<double>(ticks.size() + 1));
             xValues.push_back(ticks.back());
         }
         else
@@ -2822,7 +2822,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
     {
         auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
         setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
-        DFG_ASSERT_CORRECTNESS(xValues.size() == valueRange.size());
+        DFG_ASSERT_CORRECTNESS(static_cast<size_t>(xValues.size()) == valueRange.size());
         fillQcpPlottable<QCPBarsData>(*pBars, xValues, valueRange);
         pBars->moveAbove(pStackBarsOn);
         ReturnType rv;
@@ -3882,10 +3882,10 @@ static void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(c
         using InputT = ::DFG_MODULE_NS(charts)::InputSpan<double>;
         const auto transformer = [](QVector<QCPCurveData>& dest, const InputT& xVals, const InputT& yVals)
         {
-            for (int i = 0, nCount = dest.size(); i < nCount; ++i)
+            ::DFG_MODULE_NS(alg)::forEachFwdWithIndexT<size_t>(dest, [&](QCPCurveData& curveData, const size_t i)
             {
-                dest[i] = QCPCurveData(static_cast<double>(i), xVals[i], yVals[i]);
-            }
+                curveData = QCPCurveData(static_cast<double>(i), xVals[i], yVals[i]);
+            });
         };
         fillQcpPlottable<QCPCurveData>(*pCurve, makeRange(*px), makeRange(*py), transformer);
         return;

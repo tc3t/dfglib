@@ -45,7 +45,7 @@ DFG_ROOT_NS_BEGIN { namespace DFG_DETAIL_NS
                 this->m_spData.reset(new T(*other));
         }
 
-        OpaquePtrMember(OpaquePtrMember&& other)
+        OpaquePtrMember(OpaquePtrMember&& other) noexcept
             : m_spData(std::move(other.m_spData))
         {
         }
@@ -64,7 +64,7 @@ DFG_ROOT_NS_BEGIN { namespace DFG_DETAIL_NS
             return *this;
         }
 
-        OpaquePtrMember& operator=(OpaquePtrMember&& other)
+        OpaquePtrMember& operator=(OpaquePtrMember&& other) noexcept
         {
             this->m_spData = std::move(other.m_spData);
             return *this;

@@ -3,6 +3,7 @@
 #include "connectHelper.hpp"
 #include "PropertyHelper.hpp"
 #include "../dfgBase.hpp"
+#include "../alg.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QInputDialog>
@@ -108,9 +109,8 @@ auto ::DFG_MODULE_NS(qt)::JsonListWidget::checkSyntax() const -> std::pair<bool,
     std::pair<bool, std::vector<JsonListParseError>> rv;
     rv.first = true;
     const auto items = entriesAsStringList();
-    for (int r = 0, nCount = items.size(); r < nCount; ++r)
+    ::DFG_MODULE_NS(alg)::forEachFwdWithIndexT<int>(items, [&](const QString& sJson, const int r)
     {
-        const auto& sJson = items[r];
         QJsonParseError parseError;
         auto parsed = QJsonDocument::fromJson(sJson.toUtf8(), &parseError);
         if (parsed.isNull()) // Parsing failed?
@@ -118,7 +118,7 @@ auto ::DFG_MODULE_NS(qt)::JsonListWidget::checkSyntax() const -> std::pair<bool,
             rv.first = false;
             rv.second.emplace_back(r, std::move(parseError));
         }
-    }
+    });
     return rv;
 }
 
