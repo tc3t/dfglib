@@ -66,7 +66,7 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2021-04-24).
+Summary of 3rd party code in dfglib (last revised 2021-06-19).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
@@ -80,7 +80,7 @@ Summary of 3rd party code in dfglib (last revised 2021-04-24).
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) | Qt-related utilities
 | [muparser](https://github.com/beltoforion/muparser) (development version 2.3.3, commit [2deb86a8](https://github.com/beltoforion/muparser/tree/2deb86a81edc7d8e56859484524738ff766b4fdb), 2020-09-21) with some edits) | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
 | [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Versions 2.0.1 and 2.1.0 are known to work as of dfgQtTableEditor version 1.9.0.
-| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, earliest version that works might be 5.6.
+| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, earliest version that works might be 5.8.
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:
@@ -91,29 +91,26 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status (as of 2020-07-20 commit [b5d7fd41](https://github.com/tc3t/dfglib/commit/b5d7fd41fc55f32edc3cd019e05a4e89dedfd126), with Boost 1.70.0 unless stated otherwise)
+## Build status of general unit tests (dfgTest) (as of 2021-06-19 commit [e39f80be](https://github.com/tc3t/dfglib/tree/e39f80bed20a58e00803d1d553d6973fe9607d6b), with Boost 1.70.0 unless stated otherwise)
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
 | Compiler      | Platform      | Config  | Tests (passed/all) | Comment |
 | ------------- | ------------- | -----   | ------  | ------- |
-| Clang 3.8.0   | x86           |         | 100 % (248/248) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| Clang 6.0.0   | x64           | Release | 100 % (248/248) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| GCC 5.4.0     | x86           |         | 100 % (248/248) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| GCC 7.5.0     | x64           | Release | 100 % (248/248) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| MinGW 7.3.0   | x64           | O2      | 100 % (253/253) | |
-| VC2015        | x86           | Debug   | 100 % (256/256) | |
-| VC2015        | x86           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
-| VC2015        | x64           | Debug   | 100 % (256/256) | |
-| VC2015        | x64           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x86           | Debug   | 100 % (256/256) | |
-| VC2017        | x86           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x64           | Debug   | 100 % (256/256) | |
-| VC2017        | x64           | Release | 99 % (255/256) | Numerical precision related failure in dfgNumeric.transform |
-| VC2019        | x86           | Debug   | 100 % (255/255) | std:c++17 with Conformance mode |
-| VC2019        | x86           | Release | 100 % (255/255) | std:c++17 with Conformance mode |
-| VC2019        | x64           | Debug   | 100 % (255/255) | std:c++17 with Conformance mode |
-| VC2019        | x64           | Release | 100 % (255/255) | std:c++17 with Conformance mode |
+| Clang 3.8.0   | x86           |         | 100 % (284/284) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| Clang 6.0.0   | x64           | Release | 100 % (284/284) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| Clang 10.0.0  | x64           | Release | 100 % (284/284) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| Clang 11.0.0 (clang-cl)   | x64           | Release | 100 % (291/291) | Needed manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9)<br>Build with _/std:c++17_ |
+| GCC 5.4.0     | x86           |         | 100 % (284/284) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| GCC 7.5.0     | x64           | Release | 100 % (284/284) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| GCC 9.3.0     | x64           | Release | 100 % (284/284) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| MinGW 7.3.0   | x64           | O2      | 100 % (292/292) | |
+| VC2015        | x86           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
+| VC2015        | x64           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x86           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017        | x64           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
+| VC2019        | x86           | Release | 100 % (291/291) | std:c++17 with Conformance mode |
+| VC2019        | x64           | Release | 100 % (291/291) | std:c++17 with Conformance mode |
 ||||||
 
 ### dfglib is no longer tested with the following compilers:
