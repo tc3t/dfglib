@@ -113,6 +113,28 @@ Usage types:
 | VC2019        | x64           | Release | 100 % (291/291) | std:c++17 with Conformance mode |
 ||||||
 
+<br>
+<br>
+
+## Build status of Qt unit tests (dfgTestQt) (as of 2021-06-19 commit [e39f80be](https://github.com/tc3t/dfglib/tree/e39f80bed20a58e00803d1d553d6973fe9607d6b), with Boost 1.70.0 unless stated otherwise)
+
+| Compiler      | Qt     | Platform   | Config   | Tests (passed/all) | Comment |
+| ------------- | ------ | ---------- | -------- | ------------------ | ------- |
+| Clang 6.0.0   | 5.9    | x64        | Release  | 100 % (23/23) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| Clang 10.0.0  | 5.12   | x64        | Release | 100 % (23/23) | Boost 1.71.0, Ubuntu 64-bit 20.04, QMAKESPEC = _linux-clang_ or _linux-clang-libc++_ |
+| GCC 7.5.0     | 5.9    | x64        | Release | 100 % (23/23) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| GCC 9.3.0     | 5.12  | x64        | Release | 100 % (23/23) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| GCC 9.3.0     | 6.0   | x64        | Release | 100 % (23/23) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| MinGW 7.3.0   | 5.13  | x64        | Release | 100 % (23/23) | |
+| VC2017        | 5.9   | x64        | Release | 100 % (23/23) | |
+| VC2017        | 5.13  | x64        | Release | 100 % (23/23) | |
+| VC2019        | 6.0   | x64        | Release | 100 % (23/23) | |
+||||||
+
+Note: dfgQt.CsvTableView_paste may fail sporadically at least on Windows.
+
+<br>
+
 ### dfglib is no longer tested with the following compilers:
 
 | Compiler | Untested since | Support branch |
