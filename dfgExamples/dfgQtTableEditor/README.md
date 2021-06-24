@@ -4,6 +4,25 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 ## Building
 
+### __Version 2.0.0__:
+
+Has been successfully build with:
+| Compiler      | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
+| ------------- | ----- | ---- | -- | -- | -- |
+| Clang 6.0.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
+| Clang 10.0.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
+| GCC 7.5.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
+| GCC 9.3.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
+| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
+| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2017 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| | | |
+
+Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
+
+ If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. For concrete build steps, see section for version 1.0.0.
+
 ### __Version 1.9.0__:
 
 Has been successfully build with:
@@ -106,6 +125,20 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
+* 2021-06-24, [2.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.0.0)
+    * General
+        * [imp] Can now define window position and size from .conf-file ([#86](https://github.com/tc3t/dfglib/issues/86), [3774b26e](https://github.com/tc3t/dfglib/commit/3774b26eadf9cb7ca1c9296c6015a7eb110e3ca1))
+        * [imp] Find&replace: greatly improved performance and can now be cancelled ([#87](https://github.com/tc3t/dfglib/issues/87), [#83](https://github.com/tc3t/dfglib/issues/83))
+        * [imp] Write failures are now shown to user ([#73](https://github.com/tc3t/dfglib/issues/73), [c648414c](https://github.com/tc3t/dfglib/commit/c648414cd5af83cae63c9af6049dc65fc3a90514))
+    * Charts
+        * [new] Can now have secondary y-axis ([#17](https://github.com/tc3t/dfglib/issues/17))
+        * [imp] Chart guide window now has search functionality ([#72](https://github.com/tc3t/dfglib/issues/72), [00aa6cd0](https://github.com/tc3t/dfglib/commit/00aa6cd03b7cf05b670d7630e06672152fb71d7f))
+        * [imp] Histogram y-values can now be modified by operations ([#85](https://github.com/tc3t/dfglib/issues/85))
+        * [mod] Histogram x-values for operations has been changed from raw input values to bin positions ([#85](https://github.com/tc3t/dfglib/issues/85))
+        * [imp] Formula operations now generate console errors on invalid syntax ([#59](https://github.com/tc3t/dfglib/issues/59), [2a3da99d](https://github.com/tc3t/dfglib/commit/2a3da99de89f59b2de14305151fa5afe35b6b834))
+        * [imp] Increased font size in chart definition text field and added ability to toggle text wrapping and control font size ([#79](https://github.com/tc3t/dfglib/issues/79), [037a587b](https://github.com/tc3t/dfglib/commit/037a587b326376166a798625e72e997f40a59144))
+
+
 * 2021-04-29, [1.9.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.9.0)
     * General
         * [new] Can now replace cell content by evaluated value, for example "1+2" -> "3". Available from context menu and shortcut Alt+C ([#71](https://github.com/tc3t/dfglib/issues/71), [4616e548](https://github.com/tc3t/dfglib/commit/4616e54863720319577ce11b638f1024b04763fc))
@@ -119,6 +152,8 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [new] Can now stack bars  ([#42](https://github.com/tc3t/dfglib/issues/21))
         * [imp] Chart panel size can now be defined either globally through .ini file or per-file through .conf-file ([#60](https://github.com/tc3t/dfglib/issues/60), [1c7a662c](https://github.com/tc3t/dfglib/commit/1c7a662c3766a458891c88dabd5ff884a8899998), [d2df617c](https://github.com/tc3t/dfglib/commit/d2df617c91dac90afed2cc4462b9e7781a6181cc))
         * [fix] NaN handling fixes to smoothing ([#70](https://github.com/tc3t/dfglib/issues/70), [633f97db](https://github.com/tc3t/dfglib/commit/633f97db22e5dcd5fa998a3b7b74727b7f545ce7))
+
+
 * 2021-02-21, [1.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.8.0)
     * General
         * [breaking_change] Column indexing now starts from 1. This breaks existing property files etc., where column indexes was 0-based ([#64](https://github.com/tc3t/dfglib/issues/64), [9b0b3ef7](https://github.com/tc3t/dfglib/commit/9b0b3ef7242d901e8e3a032912300f7a820d4de4))
