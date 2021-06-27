@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "../externals/gtest/gtest.h"
 #include <dfg/os.hpp>
+#include <dfg/build/buildTimeDetails.hpp>
+#include <iostream>
 
 namespace
 {
@@ -61,6 +63,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgAlg.arrayCopy";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.floatIndexInSorted";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.nearestRangeInSorted";
+    //::testing::GTEST_FLAG(filter) = "dfgBuild.buildTimeDetails";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.AbstractChartControlItem";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.ChartOperationPipeData";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations";
@@ -189,6 +192,18 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgUtf.windows1252charToCp";
     
     auto rv = RUN_ALL_TESTS();
+    {
+        using namespace ::DFG_ROOT_NS;
+        std::cout << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
+            << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << "), "
+                    << getBuildTimeDetailStr<BuildTimeDetail_standardLibrary>() 
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_architecture>()
+#if defined(_MSC_VER)
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_buildDebugReleaseType>()
+#endif
+            << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>()
+            << "\n";
+    }
 #ifdef __MINGW32__
     // Pause with MinGW because when run from Visual Studio, without pause the console closes immediately after running tests.
     // TODO: add check to pause only if tests seems to be run from Visual Studio (=parent process is devenv.exe)

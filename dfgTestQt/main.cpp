@@ -1,10 +1,13 @@
 #include <dfg/dfgDefs.hpp>
 #include <dfg/os.hpp>
+#include <iostream>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
 #include <QApplication>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+
+#include <dfg/build/buildTimeDetails.hpp> // Note: this must be included after Qt-header in order to have BuildTimeDetail_qtVersion available.
 
 // Including .cc-file due possible Qt Creator bug (for details, see dfgQtTableEditor.pro)
 #include <dfg/str/fmtlib/format.cc>
@@ -57,5 +60,19 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";
 
-	return RUN_ALL_TESTS();
+    const auto rv = RUN_ALL_TESTS();
+    {
+        using namespace ::DFG_ROOT_NS;
+        std::cout << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
+            << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << "), "
+                    << getBuildTimeDetailStr<BuildTimeDetail_standardLibrary>()
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_architecture>()
+#if defined(_MSC_VER)
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_buildDebugReleaseType>()
+#endif
+            << ", Qt version (build time) " << getBuildTimeDetailStr<BuildTimeDetail_qtVersion>()
+            << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>()
+            << "\n";
+    }
+    return rv;
 }
