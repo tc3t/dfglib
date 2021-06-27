@@ -905,6 +905,18 @@ TEST(dfgBuild, buildTimeDetails)
     const size_t nExpectedCount = DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs) - 1;
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__)
+    EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "MSVC_")));
+#elif defined(_MSC_VER) && defined(__clang__)
+    EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "clang-cl_")));
+#elif defined(__MINGW32__)
+    EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "MinGW_")));
+#elif defined(__GNUG__)
+    EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "GCC_")));
+#elif defined(__clang__)
+    EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "Clang_")));
+#endif
+
     EXPECT_EQ(nExpectedCount, vals.size()); // If this fails, check whether getBuildTimeDetailStrs() includes all id's.
     EXPECT_STRNE("", vals[BuildTimeDetail_dateTime]);
     EXPECT_STREQ(DFG_COMPILER_NAME_SIMPLE, vals[BuildTimeDetail_compilerAndShortVersion]);
