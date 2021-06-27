@@ -48,7 +48,7 @@ enum BuildTimeDetail
 
 namespace DFG_DETAIL_NS
 {
-    const char* buildTimeDetailStrs[] =
+    const char* const buildTimeDetailStrs[] =
     {
         "Build date",
         "Compiler",
@@ -62,7 +62,7 @@ namespace DFG_DETAIL_NS
     };
 } // namespace DFG_DETAIL_NS
 
-const char* buildTimeDetailIdToStr(const BuildTimeDetail d)
+inline const char* buildTimeDetailIdToStr(const BuildTimeDetail d)
 {
     const auto i = static_cast<int>(d);
     return (i >= 0 && static_cast<size_t>(i) < DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs)) ? DFG_DETAIL_NS::buildTimeDetailStrs[i] : "";
@@ -70,7 +70,7 @@ const char* buildTimeDetailIdToStr(const BuildTimeDetail d)
 
 template <BuildTimeDetail detail> NonNullCStr getBuildTimeDetailStr();
 
-#define DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(DET) template <> NonNullCStr getBuildTimeDetailStr<BuildTimeDetail_##DET>()
+#define DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(DET) template <> inline NonNullCStr getBuildTimeDetailStr<BuildTimeDetail_##DET>()
 
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(dateTime)                { return __DATE__ " " __TIME__; }
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(compilerAndShortVersion) { return DFG_COMPILER_NAME_SIMPLE; }
@@ -155,7 +155,7 @@ DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(endianness)
 #undef DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC
 
 template <class Func>
-void getBuildTimeDetailStrs(Func&& func)
+inline void getBuildTimeDetailStrs(Func&& func)
 {
 #define DFG_TEMP_DO_FOR_BUILD_DETAIL(DET) func(BuildTimeDetail_##DET, getBuildTimeDetailStr<BuildTimeDetail_##DET>())
     DFG_TEMP_DO_FOR_BUILD_DETAIL(dateTime);
