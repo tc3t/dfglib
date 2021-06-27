@@ -125,7 +125,8 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 ## Version history
 
-* 2021-06-24, [2.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.0.0)
+### 2.0.0, 2021-06-24
+* Tag: [2.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.0.0)
     * General
         * [imp] Can now define window position and size from .conf-file ([#86](https://github.com/tc3t/dfglib/issues/86), [3774b26e](https://github.com/tc3t/dfglib/commit/3774b26eadf9cb7ca1c9296c6015a7eb110e3ca1))
         * [imp] Find&replace: greatly improved performance and can now be cancelled ([#87](https://github.com/tc3t/dfglib/issues/87), [#83](https://github.com/tc3t/dfglib/issues/83))
@@ -139,7 +140,8 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [imp] Increased font size in chart definition text field and added ability to toggle text wrapping and control font size ([#79](https://github.com/tc3t/dfglib/issues/79), [037a587b](https://github.com/tc3t/dfglib/commit/037a587b326376166a798625e72e997f40a59144))
 
 
-* 2021-04-29, [1.9.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.9.0)
+### 1.9.0, 2021-04-29
+* Tag: [1.9.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.9.0)
     * General
         * [new] Can now replace cell content by evaluated value, for example "1+2" -> "3". Available from context menu and shortcut Alt+C ([#71](https://github.com/tc3t/dfglib/issues/71), [4616e548](https://github.com/tc3t/dfglib/commit/4616e54863720319577ce11b638f1024b04763fc))
         * [new] Rudimentary Find&Replace ([#67](https://github.com/tc3t/dfglib/issues/67), [85d87e63](https://github.com/tc3t/dfglib/commit/85d87e638c45e3e8f461423241539de37974931e))
@@ -154,7 +156,8 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [fix] NaN handling fixes to smoothing ([#70](https://github.com/tc3t/dfglib/issues/70), [633f97db](https://github.com/tc3t/dfglib/commit/633f97db22e5dcd5fa998a3b7b74727b7f545ce7))
 
 
-* 2021-02-21, [1.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.8.0)
+### 1.8.0, 2021-02-21
+* Tag: [1.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.8.0)
     * General
         * [breaking_change] Column indexing now starts from 1. This breaks existing property files etc., where column indexes was 0-based ([#64](https://github.com/tc3t/dfglib/issues/64), [9b0b3ef7](https://github.com/tc3t/dfglib/commit/9b0b3ef7242d901e8e3a032912300f7a820d4de4))
         * [breaking_change] Table filter is no longer available when building with Qt version < 5.12 and filter types *WildcardUnix*, *RegExp2* and *W3CXmlSchema11* are no longer available. ([16b0f6bb](https://github.com/tc3t/dfglib/commit/16b0f6bbad1fdd311e9d64318e5b5362e70061f3), [f30ba001](https://github.com/tc3t/dfglib/commit/f30ba00102ec64e2afe040dda95f3ef74385283d))
@@ -177,7 +180,8 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [imp] Optimizations to parsing values from table strings ([7c6ec3e8](https://github.com/tc3t/dfglib/commit/7c6ec3e84f3e1b07e50b0153a9e9c14fa096a740))
         
 
-* 2020-11-15, [1.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.7.0)
+### 1.7.0, 2020-11-15
+* Tag: [1.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.7.0)
     * General
         * [new] Can now import data from SQLite3-files; supports both UI-based "pick table and columns" and custom query ([#31](https://github.com/tc3t/dfglib/issues/31))
         * [new] Rudimentary SQLite export support ([8beec2ba](https://github.com/tc3t/dfglib/commit/8beec2ba19c52cb3631ed3174f80e98c5edb46f8))
@@ -194,7 +198,9 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [mod] Row indexing for data source of type 'table' now starts from 1 for consistency with selection sources ([2ad5f394](https://github.com/tc3t/dfglib/commit/2ad5f3940e84b8db2aeee657c89aa28b413d3e7b))
         * [fix] Parsing fixes, for example "-1e-9" and "inf" were parsed as nan ([14e5312e](https://github.com/tc3t/dfglib/commit/14e5312e6a27cd154ef1e2778145f48c3d9af359))
         * [fix] "Remove all chart objects"-context menu option was disabled when there were only non-xy chart objects ([211db579](https://github.com/tc3t/dfglib/commit/211db579ba8e1e5ffbafa6acb357cfff0e65bbd6))
-* 2020-08-16, [1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
+
+### 1.6.0, 2020-08-16
+* Tag: [1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
     * [new] New chart type: bars ([#35](https://github.com/tc3t/dfglib/issues/35))
     * [new] Charts now have tooltips that show values around cursor ([#9](https://github.com/tc3t/dfglib/issues/9)).
     * [imp] Can now set axis tick label direction
@@ -205,7 +211,9 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
     * [imp] When opening file through "Open file with options", the dialog now has better default values.
     * [imp] When opening file with filters, document title now indicates that filters were used.
     * [imp] Chart controls can now be loaded from conf-file on open ([#32](https://github.com/tc3t/dfglib/issues/32)).
-* 2020-07-22, [1.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.5.0)
+
+### 1.5.0, 2020-07-22
+* Tag: [1.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.5.0)
     * Notable changes
         * [new] Charting (disabled by default)
             * xy-graphs and histograms are supported.
@@ -223,7 +231,9 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [fix] Saving to a read-only file looked as if it worked even though nothing was saved ([3a349a49](https://github.com/tc3t/dfglib/commit/3a349a49a3b09dc32b064a9a92c82ad6c09c7fd8))
         * [fix] Fix to crash-propensity in generate content ([973326f6](https://github.com/tc3t/dfglib/commit/973326f64f51ffc89ebadf20833b5dc5e7e7e331))
         * [fix] fixed some crash-propensity when changing filter ([ddb3735a](https://github.com/tc3t/dfglib/commit/ddb3735a5db62ad92fd260bbbebc0879bb451d76))
-* 2020-02-11, [1.1.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.1.0.0)
+
+### 1.1.0, 2020-02-11
+* Tag: [1.1.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.1.0.0)
     * Notable changes
         * [new] UI-additions
             * 'Generate content' now has lots of new distributions from which content can be generated from. Dialog now also remembers settings from previous use (not over process restart, though) ([a6170f79](https://github.com/tc3t/dfglib/commit/a6170f79f833b038e9e4d60987b4bb2f9f0d9896))
@@ -239,7 +249,8 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * [fix] Application could crash if editing table while selection analyzer was working ([19e0e40c](https://github.com/tc3t/dfglib/commit/19e0e40c3d9936e4ce8f11b776293c404669d5cd))
         
 
-* 2019-09-05, [1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
+### 1.0.0, 2019-09-05
+* Tag: [1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
 
 ## Features
 
@@ -248,12 +259,12 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 * Import from SQLite3 (since version 1.7.0)
     * Either from UI-based "pick table and columns" or custom query.
 * Easy to use basic filtering: Alt+F -> type filter string -> view shows only rows whose content (on any column) match with filter string. Matching syntax supports for example wildcard and regular expression.
-* Filtered reading: Allows parts of csv-file to be read:
+* Filtered reading: Allows parts of csv-file to be read (since 1.5.0)
     * Row index filtering (to read only given rows by index)
     * Column index filtering (to read only given columns by index)
     * Content filter: Arbitrary number of and/or combinations of text matchers similar to filter in UI.
 * Diffing using 3rd party diff tool (manual configuration).
-* Support for per-file configurations that can be used for example to define format characters and column widths in UI. Can also be used with SQLite3 files e.g. to define query and chart entries.
+* Support for per-file configurations that can be used for example to define format characters and column widths in UI. Can also be used with SQLite3 files e.g. to define query and chart entries. For details, see [File specific configuration](#file-specific-configuration).
 * When saving to csv-file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
 * Rudimentary SQLite3 export support (since version 1.7.0)
 * Charting support using [QCustomPlot](https://www.qcustomplot.com/) (since version 1.5.0)
@@ -265,6 +276,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
         * Table open in table editor
         * csv-file in file system (since 1.7.0)
         * SQLite3-file in file system using user-supplied query (since 1.7.0)
+        * Number generator (since 1.9.0)
     * Data transforms:
         * _blockWindow_ & _passWindow_: filters out values inside/outside of given range. (since 1.7.0)
         * _formula_: arbitrary arithmetic element-wise transform (e.g. shifts and scaling can be implemented with this) (since 1.7.0)
@@ -283,7 +295,13 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
     * Write: UTF-8, Latin-1
 * Undo & redo and detailed undo control.
 * Auto-completion (column-specific)
-* Content generation: most of C++11 defined random number distribution available (since 1.1.0)
+* Formula parser (since 1.9.0)
+    * Cell content can be evaluated as formula, replaces cell content. Available from context menu and with shortcut Alt+C.
+* Content generation
+    * Most of C++11 defined random number distribution available (since 1.1.0)
+    * Formula-based generation with ability to refer to other cells (since 1.8.0)
+        * When build with C++17 support, most of [C++17 mathematical special functions](https://en.cppreference.com/w/cpp/numeric/special_functions) can be used in formulas (since 1.9.0)
+        * Supports formatting values as dates (since 1.9.0)
 
 ## Tips
 
@@ -480,7 +498,7 @@ properties,,,
 
 ## Third party code
 
-Summary of 3rd party code in dfgQtTableEditor (last revised 2021-04-24).
+Summary of 3rd party code in dfgQtTableEditor (last revised 2021-06-27).
 
 | Library      | License  |
 | ------------- | ----- |

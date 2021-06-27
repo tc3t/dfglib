@@ -6,17 +6,17 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
-* 2021-06-24, dfgQtTableEditor [version 2.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.0.0)
-* 2021-04-29, dfgQtTableEditor [version 1.9.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.9.0)
-* 2021-02-21, dfgQtTableEditor [version 1.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.8.0)
-* 2020-11-15, dfgQtTableEditor [version 1.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.7.0)
-* 2020-08-16, dfgQtTableEditor [version 1.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.6.0)
-* 2020-07-22: dfgQtTableEditor [version 1.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.5.0)
+* 2021-06-24, dfgQtTableEditor [version 2.0.0](dfgExamples/dfgQtTableEditor/README.md/#2_0_0-2021-06-24)
+* 2021-04-29, dfgQtTableEditor [version 1.9.0](dfgExamples/dfgQtTableEditor/README.md/#1_9_0-2021-04-29)
+* 2021-02-21, dfgQtTableEditor [version 1.8.0](dfgExamples/dfgQtTableEditor/README.md/#1_8_0-2021-02-21)
+* 2020-11-15, dfgQtTableEditor [version 1.7.0](dfgExamples/dfgQtTableEditor/README.md/#1_7_0-2020-11-15)
+* 2020-08-16, dfgQtTableEditor [version 1.6.0](dfgExamples/dfgQtTableEditor/README.md/#1_6_0-2020-08-16)
+* 2020-07-22: dfgQtTableEditor [version 1.5.0](dfgExamples/dfgQtTableEditor/README.md/#1_5_0-2020-07-22)
 * 2020-02-11: dfglib is no longer tested with the following compilers:
     * MSVC2010, MSVC2012, MSVC2013, MinGW 4.8.0
     * Latest tested commit available as branch: [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013)
-* 2020-02-11: dfgQtTableEditor [version 1.1.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.1.0.0)
-* 2019-09-10: dfgQtTableEditor [version 1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
+* 2020-02-11: dfgQtTableEditor [version 1.1.0](dfgExamples/dfgQtTableEditor/README.md/#1_1_0-2020-02-11)
+* 2019-09-10: dfgQtTableEditor [version 1.0.0](dfgExamples/dfgQtTableEditor/README.md/#1_0_0-2019-09-05)
 
 ## Usage
 
