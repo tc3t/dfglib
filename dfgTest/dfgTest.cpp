@@ -132,6 +132,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_rnTranslation";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextCellWriterStr";
     //::testing::GTEST_FLAG(filter) = "dfgIo.endOfLineTypeFromStr";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.fileToByteContainer";
     //::testing::GTEST_FLAG(filter) = "dfgIo.getThrough";
     //::testing::GTEST_FLAG(filter) = "dfgIo.IfStreamWithEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgIo.IfStreamWithEncoding_rawByteReading";

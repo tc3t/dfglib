@@ -687,6 +687,9 @@
     <ClInclude Include="..\dfg\iter\FunctionValueIterator.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\stdcpp\stdversion.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

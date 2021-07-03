@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_IO) && DFGTEST_BUILD_MODULE_IO == 1) || (!defined(DFGTEST_BUILD_MODULE_IO) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/io.hpp>
 #include <dfg/rand.hpp>
@@ -24,6 +24,7 @@
 #include <dfg/str/strCat.hpp>
 #include <dfg/cont/tableCsv.hpp>
 #include <dfg/os/memoryMappedFile.hpp>
+#include <dfg/stdcpp/stdversion.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <boost/lexical_cast.hpp>
@@ -1395,14 +1396,29 @@ TEST(dfgIo, BasicOmcByteStream)
 
 TEST(dfgIo, fileToByteContainer)
 {
+    using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(io);
 
-    const char szPath[] = "testfiles/matrix_200x200.txt";
+    const char szPath[] = "testfiles/matrix_3x3.txt";
     const auto bytes = fileToVector(szPath);
-    DFG_MODULE_NS(os)::DFG_CLASS_NAME(MemoryMappedFile) mmf;
+    DFG_MODULE_NS(os)::MemoryMappedFile mmf;
     mmf.open(szPath);
     ASSERT_EQ(mmf.size(), bytes.size());
     EXPECT_TRUE(std::equal(mmf.begin(), mmf.end(), bytes.cbegin()));
+
+    // Testing that can read also as unsigned char, int8, uint8 and std::byte if available
+    {
+        const auto vecUchar = fileToByteContainer<std::vector<unsigned char>>(szPath);
+        const auto vecInt8 = fileToByteContainer<std::vector<int8>>(szPath);
+        const auto vecUint8 = fileToByteContainer<std::vector<uint8>>(szPath);
+#if defined(__cpp_lib_byte) && (__cpp_lib_byte >= 201603L)
+        const auto vecBytes = fileToByteContainer<std::vector<std::byte>>(szPath);
+        EXPECT_EQ(bytes.size(), vecBytes.size());
+#endif
+        EXPECT_EQ(bytes.size(), vecUchar.size());
+        EXPECT_EQ(bytes.size(), vecInt8.size());
+        EXPECT_EQ(bytes.size(), vecUint8.size());
+    }
 }
 
 TEST(dfgIo, ostreamPerformance)

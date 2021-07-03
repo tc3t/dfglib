@@ -6,6 +6,7 @@
 #include "BasicIfStream.hpp"
 #include "../ptrToContiguousMemory.hpp"
 #include "../os/fileSize.hpp"
+#include "../stdcpp/stdversion.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -42,7 +43,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
             const auto nOldSize = cont.size();
             cont.resize(nOldSize + nReadStepSize);
-            const auto nRead = readBytes(istrm, ptrToContiguousMemory(cont) + nOldSize, cont.size() - nOldSize);
+            using PtrT = decltype(ptrToContiguousMemory(cont));
+            constexpr bool isGoodElemType = std::is_same<char*, PtrT>::value || std::is_same<signed char*, PtrT>::value || std::is_same<unsigned char*, PtrT>::value
+#if defined(__cpp_lib_byte) && (__cpp_lib_byte >= 201603L)
+                || std::is_same<std::byte*, PtrT>::value
+#endif
+                ;
+            DFG_STATIC_ASSERT(isGoodElemType, "readAllFromStream: Destination container has unaccepted element type");
+            const auto nRead = readBytes(istrm, reinterpret_cast<char*>(ptrToContiguousMemory(cont)) + nOldSize, cont.size() - nOldSize);
             cont.resize(nOldSize + nRead);
         }
         if (cont.size() > nMaxSize)
