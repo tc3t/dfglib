@@ -22,9 +22,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         {
         public:
             template <class T> using SpanT = RangeIterator_T<const T*>;
+            using DirectStorage = std::vector<char>;
 
-            size_t size() const { return this->m_mmf.size(); }
-            bool empty() const { return this->m_mmf.size() == 0; };
+            size_t size() const { return (m_bUsingMmf) ? this->m_mmf.size() : m_helperStorage.size(); }
+            bool empty() const { return (m_bUsingMmf) ? this->m_mmf.size() == 0 : m_helperStorage.empty(); };
 
             template <class T>
             SpanT<T> asSpan() const &
@@ -37,12 +38,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             // Deleting asSpan<T>() for rvalues to avoid dangling spans, i.e. spans that would point to storage of deleted ReadOnlyByteStorage.
             template <class T> SpanT<T> asSpan() const && = delete;
 
+            bool isMemoryMapped() const { return m_bUsingMmf && m_mmf.is_open(); }
+
+            // When isMemoryMapped() == false, returns rvalue byte container, i.e. allows caller to take ownership of byte storage.
+            DirectStorage&& releaseStorage()
+            {
+                DFG_ASSERT_CORRECTNESS(m_bUsingMmf == false);
+                return std::move(m_helperStorage);
+            }
+
         private:
-            const char* data() const { return m_mmf.data(); }
+            const char* data() const { return (m_bUsingMmf) ? m_mmf.data() : m_helperStorage.data(); }
 
         public:
+            bool m_bUsingMmf = true;
             ::DFG_MODULE_NS(os)::MemoryMappedFile m_mmf;
-        };
+            DirectStorage m_helperStorage;
+        }; // ReadOnlyByteStorage
     }
     
     // Reads bytes from stream and returns the number of bytes read.
@@ -104,7 +116,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
                 nReadStepSize = nSizeHint; // To read the file in one step as we know the size beforehand.
             }
         }
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicIfStream) istrm(sFilePath);
+        DFG_MODULE_NS(io)::BasicIfStream istrm(sFilePath);
         return readAllFromStream<Cont_T>(istrm, nReadStepSize, nSizeHint, nMaxSize);
     }
 
@@ -148,18 +160,54 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         return fileToVectorImpl<wchar_t>(sFilePath, nSizeHint, nMaxSize);
     }
 
-    inline DFG_DETAIL_NS::ReadOnlyByteStorage fileToMemory_readOnly(const StringViewSzC& svFilePath)
+    struct FileToMemoryFlags
+    {
+        enum Flag
+        {
+            none = 0,
+            allowFileLocking = 0x1 // With this flag fileToMemory_readOnly() is allowed to lock file so that it can't be edited or removed while returned ReadOnlyByteStorage is alive.
+        };
+
+        FileToMemoryFlags(const uint32 mask = allowFileLocking)
+            : m_mask(mask)
+        {}
+
+        operator uint32() const { return m_mask; }
+
+        FileToMemoryFlags& removeFlag(Flag flag)
+        {
+            m_mask &= ~flag;
+            return *this;
+        }
+
+        uint32 m_mask;
+    }; // FileToMemoryFlags
+
+    inline DFG_DETAIL_NS::ReadOnlyByteStorage fileToMemory_readOnly(const StringViewSzC &svFilePath, const FileToMemoryFlags flags = FileToMemoryFlags())
     {
         DFG_DETAIL_NS::ReadOnlyByteStorage storage;
+        if (flags & FileToMemoryFlags::allowFileLocking)
+        {
+            try
+            {
+                storage.m_mmf.open(svFilePath);
+                storage.m_bUsingMmf = true;
+                return storage;
+            }
+            catch (...)
+            {
+            }
+        }
+        // Getting here means that opening memory mapped file failed or that it it may not be used.
         try
         {
-            storage.m_mmf.open(svFilePath.c_str());
-            return storage;
+            storage.m_bUsingMmf = false;
+            storage.m_helperStorage = fileToVector(svFilePath);
         }
-        catch (...)
+        catch (...) // Catching exception in case that file doesn't fit to memory.
         {
-            return DFG_DETAIL_NS::ReadOnlyByteStorage();
         }
+        return storage;
     }
 
 } } // module namespace

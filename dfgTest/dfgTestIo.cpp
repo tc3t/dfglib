@@ -1428,24 +1428,40 @@ TEST(dfgIo, fileToMemory_readOnly)
     using namespace DFG_MODULE_NS(cont);
     using namespace DFG_MODULE_NS(io);
     const char szFilePath[] = "testfiles/matrix_3x3.txt";
-    const auto bytes = fileToMemory_readOnly(szFilePath);
-    //const auto danglingSpan = fileToMemory_readOnly(szFilePath).asSpan<char>(); // This should fail to compile
-    EXPECT_FALSE(bytes.empty());
-    EXPECT_EQ(62, bytes.size());
-    const auto vecChar = fileToByteContainer<std::vector<char>>(szFilePath);
-    const auto vecUChar = fileToByteContainer<std::vector<unsigned char>>(szFilePath);
-    const auto vecInt8 = fileToByteContainer<std::vector<int8>>(szFilePath);
-    const auto vecUint8 = fileToByteContainer<std::vector<uint8>>(szFilePath);
-    const auto s = fileToByteContainer<std::string>(szFilePath);
+
+    {
+        const auto bytes = fileToMemory_readOnly(szFilePath);
+        auto bytesNoMmf = fileToMemory_readOnly(szFilePath, FileToMemoryFlags().removeFlag(FileToMemoryFlags::allowFileLocking));
+        //const auto danglingSpan = fileToMemory_readOnly(szFilePath).asSpan<char>(); // This should fail to compile
+        EXPECT_FALSE(bytes.empty());
+        EXPECT_FALSE(bytesNoMmf.empty());
+        EXPECT_TRUE(bytes.isMemoryMapped());
+        EXPECT_FALSE(bytesNoMmf.isMemoryMapped());
+        EXPECT_EQ(62, bytes.size());
+        const auto vecChar = fileToByteContainer<std::vector<char>>(szFilePath);
+        const auto vecUChar = fileToByteContainer<std::vector<unsigned char>>(szFilePath);
+        const auto vecInt8 = fileToByteContainer<std::vector<int8>>(szFilePath);
+        const auto vecUint8 = fileToByteContainer<std::vector<uint8>>(szFilePath);
+        const auto s = fileToByteContainer<std::string>(szFilePath);
 #if defined(__cpp_lib_byte) && (__cpp_lib_byte >= 201603L)
-    const auto vecBytes = fileToByteContainer<std::vector<std::byte>>(szFilePath);
-    EXPECT_TRUE(isEqualContent(vecBytes, bytes.asSpan<std::byte>()));
+        const auto vecBytes = fileToByteContainer<std::vector<std::byte>>(szFilePath);
+        EXPECT_TRUE(isEqualContent(vecBytes, bytes.asSpan<std::byte>()));
 #endif
-    EXPECT_TRUE(isEqualContent(vecChar, bytes.asSpan<char>()));
-    EXPECT_TRUE(isEqualContent(vecUChar, bytes.asSpan<unsigned char>()));
-    EXPECT_TRUE(isEqualContent(vecInt8, bytes.asSpan<int8>()));
-    EXPECT_TRUE(isEqualContent(vecUint8, bytes.asSpan<uint8>()));
-    EXPECT_TRUE(isEqualContent(s, bytes.asSpan<char>()));
+        EXPECT_TRUE(isEqualContent(vecChar, bytes.asSpan<char>()));
+        EXPECT_TRUE(isEqualContent(vecChar, bytesNoMmf.asSpan<char>()));
+        EXPECT_TRUE(isEqualContent(vecUChar, bytes.asSpan<unsigned char>()));
+        EXPECT_TRUE(isEqualContent(vecInt8, bytes.asSpan<int8>()));
+        EXPECT_TRUE(isEqualContent(vecUint8, bytes.asSpan<uint8>()));
+        EXPECT_TRUE(isEqualContent(s, bytes.asSpan<char>()));
+
+        bytesNoMmf.releaseStorage(); // Just calling this shouldn't yet clear contents
+        EXPECT_EQ(62, bytesNoMmf.size());
+        const auto bytesNoMmfSpan = bytesNoMmf.asSpan<char>();
+        const auto releasedBytes = bytesNoMmf.releaseStorage();
+        EXPECT_TRUE(bytesNoMmf.empty());
+        EXPECT_EQ(bytesNoMmfSpan.begin(), releasedBytes.data());
+        EXPECT_EQ(bytesNoMmfSpan.size(), releasedBytes.size());
+    }
 }
 
 TEST(dfgIo, ostreamPerformance)
