@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_OS) && DFGTEST_BUILD_MODULE_OS == 1) || (!defined(DFGTEST_BUILD_MODULE_OS) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/os.hpp>
 #include <dfg/str.hpp>
@@ -30,15 +30,27 @@ TEST(dfgOs, pathFindExtension)
 
 TEST(dfgOs, MemoryMappedFile)
 {
+    using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(os);
     using namespace DFG_MODULE_NS(io);
-    DFG_CLASS_NAME(MemoryMappedFile) mmf;
-    mmf.open("testfiles/matrix_3x3.txt");
-    EXPECT_TRUE(mmf.is_open());
-    EXPECT_TRUE(mmf.size() == 62);
-    std::vector<char> bytes(mmf.begin(), mmf.end());
-    const auto vec2 = fileToVector("testfiles/matrix_3x3.txt");
-    EXPECT_EQ(bytes, vec2);
+
+    const char szPath[] = "testfiles/matrix_3x3.txt";
+    {
+        MemoryMappedFile mmf;
+        mmf.open(szPath);
+        EXPECT_TRUE(mmf.is_open());
+        EXPECT_EQ(62, mmf.size());
+        std::vector<char> bytes(mmf.begin(), mmf.end());
+        const auto vec2 = fileToVector("testfiles/matrix_3x3.txt");
+        EXPECT_EQ(bytes, vec2);
+    }
+
+    // Testing that can use string view as path
+    {
+        MemoryMappedFile mmf;
+        mmf.open(StringViewC(szPath));
+        EXPECT_EQ(62, mmf.size());
+    }
 }
 
 TEST(dfgOs, TemporaryFile)
