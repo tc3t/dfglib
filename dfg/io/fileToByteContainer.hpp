@@ -6,6 +6,8 @@
 #include "BasicIfStream.hpp"
 #include "../ptrToContiguousMemory.hpp"
 #include "../os/fileSize.hpp"
+#include "../os/memoryMappedFile.hpp"
+#include "../rangeIterator.hpp"
 #include "../stdcpp/stdversion.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
@@ -15,6 +17,32 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         // Value is not really based on anything -> likely not optimal. BUFSIZ might be an option.
         // On MSVC 2017 BUFSIZ seems to be 512, on Clang 6.0.0 and GCC 7.4 8192.
         const size_t gnDefaultFileToMemReadStep = 512;
+
+        class ReadOnlyByteStorage
+        {
+        public:
+            template <class T> using SpanT = RangeIterator_T<const T*>;
+
+            size_t size() const { return this->m_mmf.size(); }
+            bool empty() const { return this->m_mmf.size() == 0; };
+
+            template <class T>
+            SpanT<T> asSpan() const &
+            {
+                DFG_STATIC_ASSERT(std::is_trivial<T>::value && sizeof(T) == 1, "asSpan(): sizeof(T) must be one");
+                const auto p = reinterpret_cast<const T*>(this->data());
+                return SpanT<T>(p, p + this->size());
+            }
+
+            // Deleting asSpan<T>() for rvalues to avoid dangling spans, i.e. spans that would point to storage of deleted ReadOnlyByteStorage.
+            template <class T> SpanT<T> asSpan() const && = delete;
+
+        private:
+            const char* data() const { return m_mmf.data(); }
+
+        public:
+            ::DFG_MODULE_NS(os)::MemoryMappedFile m_mmf;
+        };
     }
     
     // Reads bytes from stream and returns the number of bytes read.
@@ -118,6 +146,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     inline std::vector<char> fileToVector(const DFG_CLASS_NAME(ReadOnlySzParamW) sFilePath, const size_t nSizeHint = 0, const size_t nMaxSize = NumericTraits<size_t>::maxValue)
     {
         return fileToVectorImpl<wchar_t>(sFilePath, nSizeHint, nMaxSize);
+    }
+
+    inline DFG_DETAIL_NS::ReadOnlyByteStorage fileToMemory_readOnly(const StringViewSzC& svFilePath)
+    {
+        DFG_DETAIL_NS::ReadOnlyByteStorage storage;
+        try
+        {
+            storage.m_mmf.open(svFilePath.c_str());
+            return storage;
+        }
+        catch (...)
+        {
+            return DFG_DETAIL_NS::ReadOnlyByteStorage();
+        }
     }
 
 } } // module namespace

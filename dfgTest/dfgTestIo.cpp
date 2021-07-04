@@ -1201,13 +1201,13 @@ TEST(dfgIo, OfStreamWithEncoding)
 
 TEST(dfgIo, OfStreamWithEncoding_write)
 {
-    // Test that write() handles all bytes correctly.
+    // Testing that write() handles all bytes correctly.
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(io);
 
     const char szFilename[] = "testfiles/generated/OfStreamWithEncoding_writeTest.txt";
 
-    DFG_CLASS_NAME(OfStreamWithEncoding) ostrm(szFilename, encodingLatin1);
+    OfStreamWithEncoding ostrm(szFilename, encodingLatin1);
     for (int i = 0; i < 256; ++i)
     {
         auto uc = static_cast<uint8>(i);
@@ -1216,13 +1216,14 @@ TEST(dfgIo, OfStreamWithEncoding_write)
     EXPECT_TRUE(ostrm.good());
     ostrm.close();
 
-    const auto bytes = fileToVector(szFilename);
+    const auto bytes = fileToMemory_readOnly(szFilename);
     EXPECT_EQ(256, bytes.size());
     if (bytes.size() == 256)
     {
+        const auto uspan = bytes.asSpan<uint8>();
         for (int i = 0; i < 256; ++i)
         {
-            EXPECT_EQ(i, static_cast<uint8>(bytes[i]));
+            EXPECT_EQ(i, uspan[i]);
         }
     }
 }
@@ -1419,6 +1420,32 @@ TEST(dfgIo, fileToByteContainer)
         EXPECT_EQ(bytes.size(), vecInt8.size());
         EXPECT_EQ(bytes.size(), vecUint8.size());
     }
+}
+
+TEST(dfgIo, fileToMemory_readOnly)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(io);
+    const char szFilePath[] = "testfiles/matrix_3x3.txt";
+    const auto bytes = fileToMemory_readOnly(szFilePath);
+    //const auto danglingSpan = fileToMemory_readOnly(szFilePath).asSpan<char>(); // This should fail to compile
+    EXPECT_FALSE(bytes.empty());
+    EXPECT_EQ(62, bytes.size());
+    const auto vecChar = fileToByteContainer<std::vector<char>>(szFilePath);
+    const auto vecUChar = fileToByteContainer<std::vector<unsigned char>>(szFilePath);
+    const auto vecInt8 = fileToByteContainer<std::vector<int8>>(szFilePath);
+    const auto vecUint8 = fileToByteContainer<std::vector<uint8>>(szFilePath);
+    const auto s = fileToByteContainer<std::string>(szFilePath);
+#if defined(__cpp_lib_byte) && (__cpp_lib_byte >= 201603L)
+    const auto vecBytes = fileToByteContainer<std::vector<std::byte>>(szFilePath);
+    EXPECT_TRUE(isEqualContent(vecBytes, bytes.asSpan<std::byte>()));
+#endif
+    EXPECT_TRUE(isEqualContent(vecChar, bytes.asSpan<char>()));
+    EXPECT_TRUE(isEqualContent(vecUChar, bytes.asSpan<unsigned char>()));
+    EXPECT_TRUE(isEqualContent(vecInt8, bytes.asSpan<int8>()));
+    EXPECT_TRUE(isEqualContent(vecUint8, bytes.asSpan<uint8>()));
+    EXPECT_TRUE(isEqualContent(s, bytes.asSpan<char>()));
 }
 
 TEST(dfgIo, ostreamPerformance)
