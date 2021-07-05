@@ -1078,11 +1078,17 @@ void DFG_CLASS_NAME(CsvTableView)::setUndoEnabled(const bool bEnable)
     }
 }
 
-void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertGeneric(const QString& s)
+void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)
 {
     auto pModel = model();
     if (!pModel)
         return;
+    auto lockReleaser = this->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        privShowExecutionBlockedNotification(tr("Insert date/time"));
+        return;
+    }
     forEachIndexInSelection(*this, ModelIndexTypeView, [&](const QModelIndex& index, bool& bContinue)
     {
         DFG_UNUSED(bContinue);
@@ -1090,17 +1096,17 @@ void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertGeneric(const QStr
     });
 }
 
-void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertDate()
+void ::DFG_MODULE_NS(qt)::CsvTableView::insertDate()
 {
     insertGeneric(QDate::currentDate().toString(getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this)));
 }
 
-void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertTime()
+void ::DFG_MODULE_NS(qt)::CsvTableView::insertTime()
 {
     insertGeneric(QTime::currentTime().toString(getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this)));
 }
 
-void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::insertDateTime()
+void ::DFG_MODULE_NS(qt)::CsvTableView::insertDateTime()
 {
     insertGeneric(QDateTime::currentDateTime().toString(getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)));
 }
