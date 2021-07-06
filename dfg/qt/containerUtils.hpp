@@ -121,6 +121,7 @@ public:
     LockReleaser(LockReleaser&& other) noexcept : m_pLock(other.m_pLock) { other.m_pLock = nullptr; }
     ~LockReleaser();
     LockReleaser(const LockReleaser&) = delete;
+    LockReleaser& operator=(LockReleaser&& other) noexcept;
     LockReleaser& operator=(const LockReleaser&) = delete;
     bool isLocked() { return m_pLock != nullptr; }
 
@@ -133,5 +134,13 @@ inline LockReleaser::~LockReleaser()
         m_pLock->unlock();
 }
 
+inline auto LockReleaser::operator=(LockReleaser&& other) noexcept -> LockReleaser&
+{
+    if (this->m_pLock)
+        this->m_pLock->unlock();
+    this->m_pLock = other.m_pLock;
+    other.m_pLock = nullptr;
+    return *this;
+}
 
 }} // Module namespace

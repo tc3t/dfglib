@@ -212,12 +212,24 @@ namespace
                                             QFileDialog::Options() /*options*/);
     }
 
+    struct CsvTableViewFlag
+    {
+        enum
+        {
+            readOnly = 0
+        };
+    };
+
 } // unnamed namespace
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableView)
 {
 public:
     std::vector<::DFG_MODULE_NS(qt)::CsvTableView::PropertyFetcher> m_propertyFetchers;
+    std::bitset<1> m_flags;
+    QPointer<QAction> m_spActReadOnly;
+    LockReleaser m_readOnlyModeLockReleaser;
+    QAbstractItemView::EditTriggers m_editTriggers;
 };
 
 CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
@@ -509,6 +521,16 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
 
 void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
 {
+    // Adding 'Read-only'-action
+    {
+        auto pAction = new QAction(tr("Read-only (work-in-progress)"), this);
+        pAction->setCheckable(true);
+        pAction->setChecked(DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly));
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setReadOnlyMode));
+        DFG_OPAQUE_REF().m_spActReadOnly = pAction;
+        addAction(pAction);
+    }
+
     {
         auto pAction = new QAction(tr("Cut"), this);
         pAction->setShortcut(tr("Ctrl+X"));
@@ -1076,6 +1098,38 @@ void DFG_CLASS_NAME(CsvTableView)::setUndoEnabled(const bool bEnable)
     {
         pCsvModel->setUndoStack(nullptr);
     }
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
+{
+    if (DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly) == bReadOnly)
+        return; // Requested flag is effective already.
+
+    if (bReadOnly)
+    {
+        // If enabled, should hide/disable editing actions (cut, paste etc.).
+        // If read-only enabled, taking read lock to prevent editing.
+        DFG_OPAQUE_REF().m_readOnlyModeLockReleaser = this->tryLockForRead();
+        if (!DFG_OPAQUE_REF().m_readOnlyModeLockReleaser.isLocked())
+        {
+            showStatusInfoTip(tr("Unable to enable read-only mode: there seems to be pending write-operations"));
+            if (DFG_OPAQUE_REF().m_spActReadOnly)
+                DFG_OPAQUE_REF().m_spActReadOnly->setChecked(false);
+            return;
+        }
+        DFG_OPAQUE_REF().m_editTriggers = this->editTriggers();
+        this->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    }
+    else
+    {
+        // If disabled, undoing all changes that enabling read-only mode did.
+        DFG_OPAQUE_REF().m_readOnlyModeLockReleaser = LockReleaser();
+        this->setEditTriggers(DFG_OPAQUE_REF().m_editTriggers);
+    }
+
+    DFG_OPAQUE_REF().m_flags.set(CsvTableViewFlag::readOnly, bReadOnly);
+    if (DFG_OPAQUE_REF().m_spActReadOnly)
+        DFG_OPAQUE_REF().m_spActReadOnly->setChecked(bReadOnly);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)

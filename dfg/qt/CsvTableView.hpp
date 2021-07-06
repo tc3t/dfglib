@@ -414,6 +414,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setRowMode(bool);
         void setUndoEnabled(bool);
+        void setReadOnlyMode(bool);
 
         void insertGeneric(const QString& s);
         void insertDate();
