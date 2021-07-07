@@ -1100,6 +1100,11 @@ void DFG_CLASS_NAME(CsvTableView)::setUndoEnabled(const bool bEnable)
     }
 }
 
+bool ::DFG_MODULE_NS(qt)::CsvTableView::isReadOnlyMode() const
+{
+    return DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_flags.test(CsvTableViewFlag::readOnly);
+}
+
 void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
 {
     if (DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly) == bReadOnly)
@@ -4139,17 +4144,20 @@ QItemSelection DFG_CLASS_NAME(CsvTableView)::getSelection() const
     return (pSelectionModel) ? pSelectionModel->selection() : QItemSelection();
 }
 
-QString DFG_CLASS_NAME(CsvTableView)::privCreateActionBlockedDueToLockedContentMessage(const QString& actionname)
+auto ::DFG_MODULE_NS(qt)::CsvTableView::privCreateActionBlockedDueToLockedContentMessage(const QString& actionname) -> QString
 {
-    return tr("Executing action '%1' was blocked: table is being accessed by some other operation. Please try again later.").arg(actionname);
+    if (isReadOnlyMode())
+        return tr("Executing action '%1' was blocked: table is in read-only mode").arg(actionname);
+    else
+        return tr("Executing action '%1' was blocked: table is being accessed by some other operation. Please try again later.").arg(actionname);
 }
 
-void CsvTableView::showStatusInfoTip(const QString& sMsg)
+void ::DFG_MODULE_NS(qt)::CsvTableView::showStatusInfoTip(const QString& sMsg)
 {
     showInfoTip(sMsg, this);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::privShowExecutionBlockedNotification(const QString& actionname)
+void ::DFG_MODULE_NS(qt)::CsvTableView::privShowExecutionBlockedNotification(const QString& actionname)
 {
     // Showing a note to user that execution was blocked. Not using QToolTip as it is a bit brittle in this use case:
     // it may disappear too quickly and disappear triggers are difficult to control in general.

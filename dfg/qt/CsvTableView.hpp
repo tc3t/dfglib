@@ -308,6 +308,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Note: Only supported for case where table internals or geometry (row/column count, model object etc.) does not change between storeSelection() and restoreSelection()
         void restoreSelection(const SelectionRangeList& selection) const;
 
+        bool isReadOnlyMode() const;
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
