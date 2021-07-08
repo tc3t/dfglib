@@ -100,12 +100,33 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         pWidget->setFont(QFont(pWidget->font().family(), ::DFG_ROOT_NS::round<int>(newPointSize), nWeight, bItalic));
     }
 
+    namespace DFG_DETAIL_NS
+    {
+        class InfoTipWidget : public QLabel
+        {
+        public:
+            using BaseClass = QLabel;
+            
+            InfoTipWidget(QWidget* pParent)
+                : BaseClass(pParent, Qt::ToolTip)
+            {}
+
+        protected:
+            void mousePressEvent(QMouseEvent* pEvent) override
+            {
+                DFG_UNUSED(pEvent);
+                this->deleteLater(); // Delete self if clicked.
+            }
+        };
+
+    } // namespace DFG_DETAILS_NS
+
     // Informational widget intended to fill the gap between tooltip and messagebox:
     //      -Modal messagebox is often too heavy for simple information message and tooltip too volatile (uncertain how long it shows if it shows at all)
     inline void showInfoTip(const QString& sMsg, QWidget* pParent)
     {
         // Using tooltip-like QLabel as discussed here: https://forum.qt.io/topic/67240/constantly-updating-tooltip-text/6
-        auto pToolTip = new QLabel(pParent, Qt::ToolTip);
+        auto pToolTip = new DFG_DETAIL_NS::InfoTipWidget(pParent);
         pToolTip->setText(sMsg);
         adjustWidgetFontProperties(pToolTip, 12); // Increasing font size, default is a bit small.
         pToolTip->move(QCursor::pos());
