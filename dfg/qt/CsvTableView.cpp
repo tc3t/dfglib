@@ -803,7 +803,7 @@ namespace
     const char gszMenuText_showUndoWindow[] = "Show undo buffer";
 }
 
-void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
+void ::DFG_MODULE_NS(qt)::CsvTableView::privAddUndoRedoActions(QAction* pAddBefore)
 {
     if (!m_spUndoStack)
         createUndoStack();
@@ -813,10 +813,12 @@ void DFG_CLASS_NAME(CsvTableView)::privAddUndoRedoActions(QAction* pAddBefore)
         auto pActionUndo = m_spUndoStack->item().createUndoAction(this, tr("&Undo"));
         pActionUndo->setShortcuts(QKeySequence::Undo);
         insertAction(pAddBefore, pActionUndo);
+        DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigReadOnlyModeChanged, pActionUndo, &QAction::setDisabled));
 
         // Add redo-action
         auto pActionRedo = m_spUndoStack->item().createRedoAction(this, tr("&Redo"));
         pActionRedo->setShortcuts(QKeySequence::Redo);
+        DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigReadOnlyModeChanged, pActionRedo, &QAction::setDisabled));
         insertAction(pAddBefore, pActionRedo);
 
         // Undo menu
@@ -1135,6 +1137,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
     DFG_OPAQUE_REF().m_flags.set(CsvTableViewFlag::readOnly, bReadOnly);
     if (DFG_OPAQUE_REF().m_spActReadOnly)
         DFG_OPAQUE_REF().m_spActReadOnly->setChecked(bReadOnly);
+    Q_EMIT sigReadOnlyModeChanged(bReadOnly);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)
@@ -1932,9 +1935,9 @@ bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
 // TODO: not all actions go through executeAction() so this protection does not cover all cases -> take those into account as well
 //      -notably cell edits (done in CsvItemModel::setData) and CsvItemModel::batchEditNoUndo() (used e.g. by "Generate content")
 #define DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING \
-    if (!m_spEditLock->tryLockForWrite()) \
-        { privShowExecutionBlockedNotification(typeid(T).name()); return false; } \
-    auto cleanUp = makeScopedCaller([] {}, [&]() { m_spEditLock->unlock(); })
+    auto lockReleaser = tryLockForEdit(); \
+    if (!lockReleaser.isLocked()) \
+        { privShowExecutionBlockedNotification(typeid(T).name()); return false; }
 
 
 template <class T, class Param0_T>
@@ -2837,12 +2840,12 @@ bool CsvTableView::generateContent()
         if (rv == QDialog::Accepted && pGeneratorDialog->m_spSettingsModel)
         {
             // Trying to lock view for write.
-            if (!m_spEditLock->tryLockForWrite())
+            auto lockReleaser = tryLockForEdit();
+            if (!lockReleaser.isLocked())
             {
                 pGeneratorDialog->setGenerateFailed(true, privCreateActionBlockedDueToLockedContentMessage(tr("content generation")));
                 continue;
             }
-            auto lockCleanUp = makeScopedCaller([] {}, [&]() { m_spEditLock->unlock(); });
 
             const auto waitCursor = makeScopedCaller([]() { QApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
                                                      []() { QApplication::restoreOverrideCursor(); });
