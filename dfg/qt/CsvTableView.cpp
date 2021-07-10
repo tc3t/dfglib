@@ -230,6 +230,7 @@ public:
     QPointer<QAction> m_spActReadOnly;
     LockReleaser m_readOnlyModeLockReleaser;
     QAbstractItemView::EditTriggers m_editTriggers;
+    QPalette m_readWriteModePalette;
 };
 
 CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
@@ -1139,34 +1140,48 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::isReadOnlyMode() const
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
 {
-    if (DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly) == bReadOnly)
+    auto& rOpaq = DFG_OPAQUE_REF();
+    if (rOpaq.m_flags.test(CsvTableViewFlag::readOnly) == bReadOnly)
         return; // Requested flag is effective already.
 
     if (bReadOnly)
     {
         // If enabled, should hide/disable editing actions (cut, paste etc.).
         // If read-only enabled, taking read lock to prevent editing.
-        DFG_OPAQUE_REF().m_readOnlyModeLockReleaser = this->tryLockForRead();
-        if (!DFG_OPAQUE_REF().m_readOnlyModeLockReleaser.isLocked())
+        rOpaq.m_readOnlyModeLockReleaser = this->tryLockForRead();
+        if (!rOpaq.m_readOnlyModeLockReleaser.isLocked())
         {
             showStatusInfoTip(tr("Unable to enable read-only mode: there seems to be pending write-operations"));
-            if (DFG_OPAQUE_REF().m_spActReadOnly)
-                DFG_OPAQUE_REF().m_spActReadOnly->setChecked(false);
+            if (rOpaq.m_spActReadOnly)
+                rOpaq.m_spActReadOnly->setChecked(false);
             return;
         }
-        DFG_OPAQUE_REF().m_editTriggers = this->editTriggers();
+        // Storing old edit triggers and disabling all triggers.
+        rOpaq.m_editTriggers = this->editTriggers();
         this->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+        // Setting slightly gray background in read-only mode
+        {
+            auto newPalette = this->palette();
+            rOpaq.m_readWriteModePalette = newPalette;
+            newPalette.setColor(QPalette::Base, QColor(248, 248, 248));
+            //newPalette.setColor(QPalette::Window, QColor(0, 0, 255)); // This seems to affect only the space below row headers.
+            this->setPalette(newPalette);
+        }
     }
-    else
+    else // Case: setting read-write mode
     {
-        // If disabled, undoing all changes that enabling read-only mode did.
-        DFG_OPAQUE_REF().m_readOnlyModeLockReleaser = LockReleaser();
-        this->setEditTriggers(DFG_OPAQUE_REF().m_editTriggers);
+        // Releasing read lock.
+        rOpaq.m_readOnlyModeLockReleaser = LockReleaser();
+        // Restoring edit triggers.
+        this->setEditTriggers(rOpaq.m_editTriggers);
+        // Restoring old palette
+        this->setPalette(rOpaq.m_readWriteModePalette);
     }
 
-    DFG_OPAQUE_REF().m_flags.set(CsvTableViewFlag::readOnly, bReadOnly);
-    if (DFG_OPAQUE_REF().m_spActReadOnly)
-        DFG_OPAQUE_REF().m_spActReadOnly->setChecked(bReadOnly);
+    rOpaq.m_flags.set(CsvTableViewFlag::readOnly, bReadOnly);
+    if (rOpaq.m_spActReadOnly)
+        rOpaq.m_spActReadOnly->setChecked(bReadOnly);
     Q_EMIT sigReadOnlyModeChanged(bReadOnly);
 }
 
