@@ -291,7 +291,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Convenience function, effectively returns selectionModel()->selection();
         QItemSelection getSelection() const;
 
-        LockReleaser tryLockForEdit();
+        LockReleaser tryLockForEdit(); // Note: edits include both content edit and view edits such as changing filter.
         LockReleaser tryLockForRead();
 
         TableHeaderView* horizontalTableHeader();
@@ -450,6 +450,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void sigFilterActivated();
         void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedItems);
         void sigOnAllowApplicationSettingsUsageChanged(bool);
+        void sigReadOnlyModeChanged(bool);
 
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
