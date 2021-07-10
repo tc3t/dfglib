@@ -801,6 +801,19 @@ namespace
     const char gszMenuText_enableUndo[] = "Enable undo";
     const char gszMenuText_clearUndoBuffer[] = "&Clear undo buffer";
     const char gszMenuText_showUndoWindow[] = "Show undo buffer";
+
+    void setUndoRedoActionText(QAction* pAction, const QString& sCommandName, const QString& sActionName)
+    {
+        if (!pAction)
+            return;
+        if (!sActionName.isEmpty())
+            pAction->setText(QString("%1 '%2'").arg(sCommandName, sActionName));
+        else
+            pAction->setText(sCommandName);
+    }
+
+    void setUndoActionText(QAction* pAction, const QString& s) { setUndoRedoActionText(pAction, QAction::tr("&Undo"), s); }
+    void setRedoActionText(QAction* pAction, const QString& s) { setUndoRedoActionText(pAction, QAction::tr("&Redo"), s); }
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::privAddUndoRedoActions(QAction* pAddBefore)
@@ -809,17 +822,34 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::privAddUndoRedoActions(QAction* pAddBefo
         createUndoStack();
     if (m_spUndoStack)
     {
-        // Add undo-action
-        auto pActionUndo = m_spUndoStack->item().createUndoAction(this, tr("&Undo"));
-        pActionUndo->setShortcuts(QKeySequence::Undo);
-        insertAction(pAddBefore, pActionUndo);
-        DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigReadOnlyModeChanged, pActionUndo, &QAction::setDisabled));
+        QUndoStack* const undoStackPtr = &m_spUndoStack->item();
+        // Adding undo-action
+        {
+            // auto pActionUndo = m_spUndoStack->item().createUndoAction(this, tr("&Undo"));
+            auto pActionUndo = new QAction(tr("&Undo"), this);
+            QPointer<QAction> spActionUndo = pActionUndo;
+            DFG_QT_VERIFY_CONNECT(connect(pActionUndo, &QAction::triggered, this, &ThisClass::undo));
+            DFG_QT_VERIFY_CONNECT(connect(undoStackPtr, &QUndoStack::canUndoChanged, pActionUndo, &QAction::setEnabled));
+            DFG_QT_VERIFY_CONNECT(connect(undoStackPtr, &QUndoStack::undoTextChanged, [=](const QString& s) { setUndoActionText(spActionUndo.data(), s); }));
+            pActionUndo->setEnabled(undoStackPtr->canUndo());
+            pActionUndo->setShortcuts(QKeySequence::Undo);
+            DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigReadOnlyModeChanged, pActionUndo, &QAction::setDisabled));
+            insertAction(pAddBefore, pActionUndo);
+        }
 
         // Add redo-action
-        auto pActionRedo = m_spUndoStack->item().createRedoAction(this, tr("&Redo"));
-        pActionRedo->setShortcuts(QKeySequence::Redo);
-        DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigReadOnlyModeChanged, pActionRedo, &QAction::setDisabled));
-        insertAction(pAddBefore, pActionRedo);
+        {
+            //auto pActionRedo = m_spUndoStack->item().createRedoAction(this, tr("&Redo"));
+            auto pActionRedo = new QAction(tr("&Redo"), this);
+            QPointer<QAction> spActionRedo = pActionRedo;
+            DFG_QT_VERIFY_CONNECT(connect(pActionRedo, &QAction::triggered, this, &ThisClass::redo));
+            DFG_QT_VERIFY_CONNECT(connect(undoStackPtr, &QUndoStack::canRedoChanged, pActionRedo, &QAction::setEnabled));
+            DFG_QT_VERIFY_CONNECT(connect(undoStackPtr, &QUndoStack::redoTextChanged, [=](const QString& s) { setRedoActionText(spActionRedo.data(), s); }));
+            pActionRedo->setEnabled(undoStackPtr->canRedo());
+            pActionRedo->setShortcuts(QKeySequence::Redo);
+            DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigReadOnlyModeChanged, pActionRedo, &QAction::setDisabled));
+            insertAction(pAddBefore, pActionRedo);
+        }
 
         // Undo menu
         {
@@ -2045,16 +2075,30 @@ bool DFG_CLASS_NAME(CsvTableView)::cut()
     return true;
 }
 
-void DFG_CLASS_NAME(CsvTableView)::undo()
+void ::DFG_MODULE_NS(qt)::CsvTableView::undo()
 {
-    if (m_spUndoStack)
-        m_spUndoStack->item().undo();
+    if (!m_spUndoStack)
+        return;
+    auto lockReleaser = tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        privShowExecutionBlockedNotification("undo");
+        return;
+    }
+    m_spUndoStack->item().undo();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::redo()
+void ::DFG_MODULE_NS(qt)::CsvTableView::redo()
 {
-    if (m_spUndoStack)
-        m_spUndoStack->item().redo();
+    if (!m_spUndoStack)
+        return;
+    auto lockReleaser = tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        privShowExecutionBlockedNotification("redo");
+        return;
+    }
+    m_spUndoStack->item().redo();
 }
 
 size_t CsvTableView::replace(const QVariantMap& params)
