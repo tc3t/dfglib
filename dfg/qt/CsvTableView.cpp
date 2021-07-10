@@ -2497,7 +2497,7 @@ namespace
                 m_spSettingsModel->setData(m_spSettingsModel->index(nRow, 1), arrPropDefs[i].m_pszDefault);
             }
 
-            m_pLayout->addWidget(new QLabel(tr("Note: undo is not available for content generation"), this));
+            m_pLayout->addWidget(new QLabel(tr("Note: undo is not available for content generation (clears undo buffer)"), this));
             auto pStaticHelpLabel = new QLabel(tr("Available formats:\n"
                 "    Numbers: see documentation of printf\n"
                 "    Date times:\n"
@@ -2896,6 +2896,7 @@ bool CsvTableView::generateContent()
             if (generateContentImpl(*pGeneratorDialog->m_spSettingsModel))
             {
                 pGeneratorDialog->setGenerateFailed(false);
+                this->clearUndoStack();
                 return true;
             }
             pGeneratorDialog->setGenerateFailed(true);
