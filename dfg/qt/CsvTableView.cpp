@@ -1991,6 +1991,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTable()
     auto pCsvModel = csvModel();
     if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState(tr("open a new table")))
         return;
+    setReadOnlyMode(false); // Resetting read-only mode since user likely wants to edit empty table.
     pCsvModel->openNewTable();
 }
 
