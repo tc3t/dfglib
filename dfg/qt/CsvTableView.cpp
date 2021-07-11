@@ -1873,6 +1873,8 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
 
     const QString sAdditionalInfo = (bOpenAsSqlite) ? tr("\nQuery: %1").arg(sQuery) : QString();
 
+    clearUndoStack(); // Clearing undo stack before modal operation since doing it during read caused "ASSERT failure in QCoreApplication::sendEvent: "Cannot send events to objects owned by a different thread."
+
     bool bSuccess = false;
     doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), ProgressWidget::IsCancellable::yes, "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
         {
