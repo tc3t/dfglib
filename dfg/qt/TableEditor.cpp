@@ -180,6 +180,16 @@ namespace
         return sizes[1];
     }
 
+    static void setCellEditorTitle(QWidget* pWidget, const QString& sAdditionalInfo = QString(), const bool bReadOnly = false)
+    {
+        if (!pWidget)
+            return;
+        auto sTitle = pWidget->tr("Cell edit%1").arg((bReadOnly) ? pWidget->tr(" (read-only)") : "");
+        if (!sAdditionalInfo.isEmpty())
+            sTitle += sAdditionalInfo;
+        pWidget->setWindowTitle(sTitle);
+    }
+
 } // unnamed namespace
 
 Q_DECLARE_METATYPE(WindowExtentProperty); // Note: placing this in unnamed namespace generated a "class template specialization of 'QMetaTypeId' must occure at global scope"-message
@@ -321,6 +331,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigSelectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterActivated, this, &ThisClass::onFilterRequested));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigReadOnlyModeChanged, this, &ThisClass::onViewReadOnlyModeChanged));
 
     // Source path line edit
     m_spLineEditSourcePath.reset(new QLineEdit());
@@ -522,15 +533,14 @@ void DFG_MODULE_NS(qt)::TableEditor::setResizeWindow(QWidget* pWindow)
 
 namespace
 {
-    void setCellEditorToNoSelectionState(QPlainTextEdit* pEditor, QDockWidget* pDockWidget)
+    void setCellEditorToNoSelectionState(QPlainTextEdit* pEditor, QDockWidget* pDockWidget, const bool bReadOnly)
     {
         if (pEditor)
         {
-            pEditor->setPlainText("");
+            pEditor->setPlainText(QString());
             pEditor->setEnabled(false);
         }
-        if (pDockWidget)
-            pDockWidget->setWindowTitle(pDockWidget->tr("Cell edit"));
+        setCellEditorTitle(pDockWidget, QString(), bReadOnly);
     }
 }
 
@@ -543,7 +553,7 @@ void DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
         m_spLineEditSourcePath->setText(model.getFilePath());
     if (m_spStatusBar)
         m_spStatusBar->showMessage(tr("Reading lasted %1 s").arg(model.latestReadTimeInSeconds(), 0, 'g', 4));
-    setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
+    setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get(), (m_spTableView) ? m_spTableView->isReadOnlyMode() : true);
 
     const auto loadOptions = model.getOpenTimeLoadOptions();
 
@@ -647,19 +657,19 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QI
                 colDescription = QString::number(ModelClass::internalColumnIndexToVisible(index.column()));
             const QString sAddInfo = QString(" (%1, %2)")
                                 .arg(model.headerData(index.row(), Qt::Vertical).toString(), colDescription);
-            m_spCellEditorDockWidget->setWindowTitle(tr("Cell edit") + sAddInfo);
+            setCellEditorTitle(m_spCellEditorDockWidget.get(), sAddInfo, m_spTableView->isReadOnlyMode());
         }
         else
         {
             // Getting here shouldn't happen, but has happened if table view has been in a corrupted state
             // where view row count and table row count has not been the same.
             DFG_ASSERT_CORRECTNESS(false);
-            setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
+            setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get(), m_spTableView->isReadOnlyMode());
         }
     }
     else
     {
-        setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get());
+        setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get(), (m_spTableView) ? m_spTableView->isReadOnlyMode() : true);
     }
 
     // Update status bar
@@ -938,4 +948,11 @@ int DFG_MODULE_NS(qt)::TableEditor::setGraphDisplay(QWidget* pGraphDisplay)
 
     // Setting panel width.
     return setChartPanelWidth(m_spMainSplitter.get(), this->width(), getTableEditorProperty<TableEditorPropertyId_chartPanelWidth>(this));
+}
+
+void DFG_MODULE_NS(qt)::TableEditor::onViewReadOnlyModeChanged(const bool bReadOnly)
+{
+    setCellEditorTitle(m_spCellEditorDockWidget.get(), QString(), bReadOnly);
+    if (m_spCellEditor)
+        m_spCellEditor->setReadOnly(bReadOnly);
 }
