@@ -267,7 +267,6 @@ public:
     std::vector<::DFG_MODULE_NS(qt)::CsvTableView::PropertyFetcher> m_propertyFetchers;
     std::bitset<1> m_flags;
     QPointer<QAction> m_spActReadOnly;
-    LockReleaser m_readOnlyModeLockReleaser;
     QAbstractItemView::EditTriggers m_editTriggers;
     QPalette m_readWriteModePalette;
 };
@@ -1222,12 +1221,10 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
 
     if (bReadOnly)
     {
-        // If enabled, should hide/disable editing actions (cut, paste etc.).
-        // If read-only enabled, taking read lock to prevent editing.
-        rOpaq.m_readOnlyModeLockReleaser = this->tryLockForRead();
-        if (!rOpaq.m_readOnlyModeLockReleaser.isLocked())
+        auto lockReleaser = this->tryLockForEdit(); // Maybe not needed, but just to make sure that there are no ongoing operations that might not play nicely with setting read-only mode.
+        if (!lockReleaser.isLocked())
         {
-            showStatusInfoTip(tr("Unable to enable read-only mode: there seems to be pending write-operations"));
+            showStatusInfoTip(tr("Unable to enable read-only mode: there seems to be pending operations"));
             if (rOpaq.m_spActReadOnly)
                 rOpaq.m_spActReadOnly->setChecked(false);
             return;
@@ -1259,8 +1256,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
     }
     else // Case: setting read-write mode
     {
-        // Releasing read lock.
-        rOpaq.m_readOnlyModeLockReleaser = LockReleaser();
         // Restoring edit triggers.
         this->setEditTriggers(rOpaq.m_editTriggers);
         // Restoring old palette
