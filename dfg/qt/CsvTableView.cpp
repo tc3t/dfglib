@@ -1273,6 +1273,13 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
         }
     }
 
+    // Enabling/disabling undo buffer windows so that they can't be used to trigger undo
+    {
+        const auto undoWidgets = this->findChildren<UndoViewWidget*>();
+        for (auto pUndoWidget : undoWidgets) if (pUndoWidget)
+            pUndoWidget->setDisabled(bReadOnly);
+    }
+
     rOpaq.m_flags.set(CsvTableViewFlag::readOnly, bReadOnly);
     if (rOpaq.m_spActReadOnly)
         rOpaq.m_spActReadOnly->setChecked(bReadOnly);
