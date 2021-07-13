@@ -153,21 +153,47 @@ namespace
     {
     public:
         typedef QDialog BaseClass;
-        UndoViewWidget(DFG_CLASS_NAME(CsvTableView)* pParent)
+        UndoViewWidget(CsvTableView* pParent)
             : BaseClass(pParent)
+            , m_spTableView(pParent)
         {
             setAttribute(Qt::WA_DeleteOnClose, true);
             removeContextHelpButtonFromDialog(this);
             if (!pParent || !pParent->m_spUndoStack)
                 return;
             auto pLayout = new QHBoxLayout(this);
-            pLayout->addWidget(new QUndoView(&pParent->m_spUndoStack.get()->item(), this));
+            m_spUndoView.reset(new QUndoView(&pParent->m_spUndoStack.get()->item(), this));
+            const auto children = m_spUndoView->children();
+            m_spUndoView->installEventFilter(this);
+            for (auto pChild : children) if (pChild)
+                pChild->installEventFilter(this);
+            pLayout->addWidget(m_spUndoView.get());
+        }
+
+        // Hack: Because QUndoView handles undo stack directly, it will bypass CsvTableView read/edit lock when used. To prevent this,
+        //       using event filter to check if lock is available before allowing events that possibly trigger undo stack.
+        //       While hacky, this is should address at least most cases. Window will also be left in disabled state after operation ends,
+        //       but can be re-enabled simply be clicking.
+        bool eventFilter(QObject* pObj, QEvent* pEvent) override
+        {
+            const auto eventType = pEvent->type();
+            if (eventType == QEvent::KeyPress || eventType == QEvent::MouseButtonPress && (m_spTableView && pEvent && m_spUndoView))
+            {
+                auto lockReleaser = m_spTableView->tryLockForEdit();
+                const auto bEnable = lockReleaser.isLocked();
+                m_spUndoView->setEnabled(bEnable);
+                if (!bEnable)
+                    return true; // Returning true means that child doesn't get the event. 
+            }
+            return BaseClass::eventFilter(pObj, pEvent);
         }
 
         ~UndoViewWidget()
         {
         }
 
+        QPointer<CsvTableView> m_spTableView;
+        QObjectStorage<QUndoView> m_spUndoView;
     }; // Class UndoViewWidget
 
     static void doModalOperation(QWidget* pParent, const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void (ProgressWidget*)> func)
@@ -579,7 +605,7 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
 {
     // Adding 'Read-only'-action
     {
-        auto pAction = new QAction(tr("Read-only (work-in-progress)"), this);
+        auto pAction = new QAction(tr("Read-only"), this);
         pAction->setCheckable(true);
         pAction->setChecked(DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setReadOnlyMode));
@@ -4452,13 +4478,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAn
         
         // Try to lock readwrite lock, if fails, it means that someone might be editing the model so analyzers should not read the model at the same time.
         auto pView = qobject_cast<CsvTableView*>(m_spView.data());
-        if (pView && !pView->m_spEditLock->tryLockForRead())
+        auto lockReleaser = (pView) ? pView->tryLockForRead() : LockReleaser();
+        
+        if (pView && !lockReleaser.isLocked())
         {
             // Ending up here means that couldn't acquire read lock, e.g. because table is being edited. Scheduling a new try in 100 ms.
             QTimer::singleShot(100, this, SLOT(onCheckAnalyzeQueue()));
             return;
         }
-        auto cleanUp = makeScopedCaller([] {}, [&]() { if (pView) pView->m_spEditLock->unlock(); });
 
         auto selection = m_analyzeQueue.back();
         m_abNewSelectionPending = false;
