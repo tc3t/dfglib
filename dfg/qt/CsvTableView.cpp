@@ -3018,9 +3018,15 @@ bool CsvTableView::generateContent()
     if (!pModel)
         return false;
 
-    auto pGeneratorDialog = findChild<ContentGeneratorDialog*>();
+    // Note: in search below, findChild<ContentGeneratorDialog*>(); (without name specifier) would returns UndoViewWidget if had been created (in Qt 5.13.2)
+    //       According to https://stackoverflow.com/questions/35869441/why-is-qobject-findchildren-returning-children-with-a-common-base-class
+    //       this is expected to be caused by lack of Q_OBJECT in these helper dialogs.
+    auto pGeneratorDialog = findChild<ContentGeneratorDialog*>("ContentGeneratorDialog");
     if (!pGeneratorDialog)
+    {
         pGeneratorDialog = new ContentGeneratorDialog(this);
+        pGeneratorDialog->setObjectName("ContentGeneratorDialog");
+    }
 
     pGeneratorDialog->resize(350, 450);
     while (true) // Show dialog until values are accepted or cancel is selected.
