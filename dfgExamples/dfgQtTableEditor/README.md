@@ -450,6 +450,7 @@ Available keys:
 | bom_writing | Whether to write BOM on save | 0, 1 | |
 | properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
 | properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
+| properties/editMode | Defines edit mode when opened | _readOnly_, _readWrite_<br>If empty, handled as if property was not present at all. | Since 2.1.0 |
 | properties/includeRows | Limits rows which are read from file by row index (0-based index, typically header is on row 0) |  | Since 1.5.0 |
 | properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
 | properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
@@ -478,6 +479,7 @@ separator_char,",",,
 properties,,,
 ,completerColumns,"1,3",
 ,completerEnabledSizeLimit,10000000,
+,editMode,readOnly
 ,includeRows,100:200
 ,includeColumns,1:6
 ,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"

@@ -75,6 +75,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_windowPosX[]               = "windowPosX";      // Window x position to request for use with the associated document.
     const char CsvOptionProperty_windowPosY[]               = "windowPosY";      // Window y position to request for use with the associated document.
     const char CsvOptionProperty_sqlQuery[]                 = "sqlQuery";        // Defines SQL-query to use when opening a SQLite file.
+    const char CsvOptionProperty_editMode[]                 = "editMode";        // Defines edit mode (e.g. read-only) for document.
 
     namespace DFG_DETAIL_NS
     {

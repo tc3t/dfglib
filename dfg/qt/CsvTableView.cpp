@@ -1794,6 +1794,10 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFile()
         config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), StringUtf8::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(c))));
     }
 
+    // Adding read-only mode if enabled
+    if (this->isReadOnlyMode())
+        config.setKeyValue(qStringToStringUtf8(QString("properties/%1").arg(CsvOptionProperty_editMode)), StringUtf8::fromRawString("readOnly"));
+
     // Adding additional properties that there might be, in practice this may mean e.g. properties/chartControls
     for (const auto& fetcher : DFG_OPAQUE_REF().m_propertyFetchers)
     {
@@ -3838,11 +3842,12 @@ void DFG_CLASS_NAME(CsvTableView)::forEachCompleterEnabledColumnIndex(Func_T fun
     }
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
+void ::DFG_MODULE_NS(qt)::CsvTableView::CsvTableView::onNewSourceOpened()
 {
+    // Setting completer delegates to columns that have completers enabled.
     forEachCompleterEnabledColumnIndex([&](const int nCol, CsvModel::ColInfo* pColInfo)
     {
-        typedef DFG_CLASS_NAME(CsvTableViewCompleterDelegate) DelegateClass;
+        typedef CsvTableViewCompleterDelegate DelegateClass;
         if (pColInfo)
         {
             auto existingColumnDelegate = qobject_cast<DelegateClass*>(this->itemDelegateForColumn(nCol));
@@ -3852,13 +3857,25 @@ void DFG_CLASS_NAME(CsvTableView)::onNewSourceOpened()
             // will be null and the delegate fallbacks to behaviour without completer.
             if (!existingColumnDelegate)
             {
-                auto* pDelegate = new DFG_CLASS_NAME(CsvTableViewCompleterDelegate)(this, pColInfo->m_spCompleter.get());
+                auto* pDelegate = new CsvTableViewCompleterDelegate(this, pColInfo->m_spCompleter.get());
                 setItemDelegateForColumn(nCol, pDelegate); // Does not transfer ownership, delegate is parent owned by 'this'.
             }
             else // If there already is an delegate, update the completer.
                 existingColumnDelegate->m_spCompleter = pColInfo->m_spCompleter.get();
         }
     });
+
+    // Setting edit mode if present in load options.
+    auto pCsvModel = this->csvModel();
+    if (pCsvModel)
+    {
+        const auto loadOptions = pCsvModel->getOpenTimeLoadOptions();
+        const auto sEditMode = loadOptions.getProperty(CsvOptionProperty_editMode, "");
+        if (sEditMode == "readOnly")
+            this->setReadOnlyMode(true);
+        else if (sEditMode == "readWrite")
+            this->setReadOnlyMode(false);
+    }
 }
 
 namespace
