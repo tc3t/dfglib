@@ -410,6 +410,10 @@ CsvTableView_dateFormat=yyyy-MM-dd
 ; Default value: yyyy-MM-dd hh:mm:ss.zzz
 CsvTableView_dateTimeFormat=yyyy-MM-dd hh:mm:ss.zzz
 
+; Defines default edit mode after start up
+; Possible values: readOnly, readWrite
+CsvTableView_editMode=readOnly
+
 ; -----------------------------------------------------------
 ; JsonListWidget
 

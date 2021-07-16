@@ -116,19 +116,20 @@ namespace
         CsvTableViewPropertyId_minimumVisibleColumnWidth,
         CsvTableViewPropertyId_timeFormat,
         CsvTableViewPropertyId_dateFormat,
-        CsvTableViewPropertyId_dateTimeFormat
+        CsvTableViewPropertyId_dateTimeFormat,
+        CsvTableViewPropertyId_editMode
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
 
     template <CsvTableViewPropertyId ID>
-    auto getCsvTableViewProperty(DFG_CLASS_NAME(CsvTableView)* view) -> typename CsvTableViewPropertyDefinition<ID>::PropertyType
+    auto getCsvTableViewProperty(CsvTableView* view) -> typename CsvTableViewPropertyDefinition<ID>::PropertyType
     {
         return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>>(view);
     }
 
     template <CsvTableViewPropertyId ID>
-    void setCsvTableViewProperty(DFG_CLASS_NAME(CsvTableView)* view, const typename CsvTableViewPropertyDefinition<ID>::PropertyType& val)
+    void setCsvTableViewProperty(CsvTableView* view, const typename CsvTableViewPropertyDefinition<ID>::PropertyType& val)
     {
         DFG_MODULE_NS(qt)::setProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>>(view, QVariant(val));
     }
@@ -140,6 +141,7 @@ namespace
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_timeFormat", CsvTableView, CsvTableViewPropertyId_timeFormat, QString, []() { return QString("hh:mm:ss.zzz"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_dateFormat", CsvTableView, CsvTableViewPropertyId_dateFormat, QString, []() { return QString("yyyy-MM-dd"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_dateTimeFormat", CsvTableView, CsvTableViewPropertyId_dateTimeFormat, QString, []() { return QString("yyyy-MM-dd hh:mm:ss.zzz"); });
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_editMode", CsvTableView, CsvTableViewPropertyId_editMode, QString, []() { return QString(); });
 
     template <class T>
     QString floatToQString(const T val)
@@ -297,7 +299,7 @@ public:
     QPalette m_readWriteModePalette;
 };
 
-CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
+::DFG_MODULE_NS(qt)::CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
     : BaseClass(pParent)
     , m_matchDef(QString(), Qt::CaseInsensitive, PatternMatcher::Wildcard)
     , m_nFindColumnIndex(0)
@@ -1310,6 +1312,15 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
     if (rOpaq.m_spActReadOnly)
         rOpaq.m_spActReadOnly->setChecked(bReadOnly);
     Q_EMIT sigReadOnlyModeChanged(bReadOnly);
+}
+
+template <class Str_T>
+void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyModeFromProperty(const Str_T& s)
+{
+    if (s == "readOnly")
+        this->setReadOnlyMode(true);
+    else if (s == "readWrite")
+        this->setReadOnlyMode(false);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)
@@ -3610,6 +3621,7 @@ bool DFG_MODULE_NS(qt)::CsvTableView::getAllowApplicationSettingsUsage() const
 void CsvTableView::setAllowApplicationSettingsUsage(const bool b)
 {
     setProperty(gPropertyIdAllowAppSettingsUsage, b);
+    setReadOnlyModeFromProperty(getCsvTableViewProperty<CsvTableViewPropertyId_editMode>(this));
     Q_EMIT sigOnAllowApplicationSettingsUsageChanged(b);
 }
 
@@ -3870,11 +3882,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::CsvTableView::onNewSourceOpened()
     if (pCsvModel)
     {
         const auto loadOptions = pCsvModel->getOpenTimeLoadOptions();
-        const auto sEditMode = loadOptions.getProperty(CsvOptionProperty_editMode, "");
-        if (sEditMode == "readOnly")
-            this->setReadOnlyMode(true);
-        else if (sEditMode == "readWrite")
-            this->setReadOnlyMode(false);
+        setReadOnlyModeFromProperty(loadOptions.getProperty(CsvOptionProperty_editMode, ""));
     }
 }
 

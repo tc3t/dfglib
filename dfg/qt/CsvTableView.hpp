@@ -479,6 +479,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void addSeparatorAction();
         void addSeparatorActionTo(QWidget* pTarget);
 
+        template <class Str_T>
+        void setReadOnlyModeFromProperty(const Str_T& s);
+
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;
         QStringList m_tempFilePathsToRemoveOnExit;
