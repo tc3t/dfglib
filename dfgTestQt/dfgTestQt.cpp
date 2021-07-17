@@ -14,6 +14,7 @@
 #include <dfg/qt/sqlTools.hpp>
 #include <dfg/qt/PatternMatcher.hpp>
 #include <dfg/iter/FunctionValueIterator.hpp>
+#include <dfg/os/TemporaryFileStream.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -958,6 +959,45 @@ TEST(dfgQt, CsvTableView_stringToDouble)
         EXPECT_EQ(-std::numeric_limits<double>::infinity(), GraphDataSource::cellStringToDouble(DFG_UTF8("-inf")));
         EXPECT_EQ(std::numeric_limits<double>::infinity(), GraphDataSource::cellStringToDouble(DFG_UTF8("inf")));
     }
+}
+
+TEST(dfgQt, CsvTableView_saveAsShown)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    viewModel.setDynamicSortFilter(true);
+    view.setModel(&viewModel);
+
+    ASSERT_TRUE(csvModel.openString(
+    "a,4\n"
+    "bc,3\n"
+    "c,2\n"
+    "d,1\n"
+    ));
+
+    viewModel.setFilterWildcard("*c");
+    viewModel.sort(1);
+    ::DFG_MODULE_NS(os)::TemporaryFileStream tempFile;
+    tempFile.setAutoRemove(false);
+    CsvItemModel::SaveOptions saveOptions(&csvModel);
+    saveOptions.setProperty("CsvTableView_saveAsShown", "1");
+    const auto sTempPath = QString::fromStdWString(tempFile.path());
+    ASSERT_TRUE(view.saveToFileImpl(sTempPath, saveOptions));
+    tempFile.close(); // Following open seemed to fail if not closed.
+
+    view.createNewTable();
+    view.openFile(sTempPath);
+
+    EXPECT_EQ(2, viewModel.rowCount());
+    EXPECT_EQ(2, viewModel.columnCount());
+    EXPECT_EQ("c", viewModel.data(viewModel.index(0, 0)));
+    EXPECT_EQ("2", viewModel.data(viewModel.index(0, 1)));
+    EXPECT_EQ("bc", viewModel.data(viewModel.index(1, 0)));
+    EXPECT_EQ("3", viewModel.data(viewModel.index(1, 1)));
+    EXPECT_TRUE(QFile::remove(sTempPath));
 }
 
 TEST(dfgQt, TableView_makeSingleCellSelection)

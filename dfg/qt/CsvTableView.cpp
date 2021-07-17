@@ -1370,7 +1370,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_N
     return saveToFileImpl(sPath, formatDef);
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
+bool ::DFG_MODULE_NS(qt)::CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition& formatDef)
 {
     QFileInfo fileInfo(path);
     if (fileInfo.exists() && !fileInfo.isWritable())
@@ -1378,12 +1378,51 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const QString& path, const DFG
         QMessageBox::warning(nullptr, tr("Save failed"), tr("Target path has existing file that can't be written to (read-only file?)\n\n%1").arg(path));
         return false;
     }
-    auto pModel = csvModel();
 
+    auto lockReleaser = tryLockForRead();
+    if (!lockReleaser.isLocked())
+    {
+        QMessageBox::information(
+            this,
+            tr("Saving failed"),
+            tr("Couldn't save document: a write operation was in progress.")
+        );
+        return false;
+    }
+
+    const bool bSaveAsSqlite = (fileInfo.suffix() == QLatin1String("sqlite3"));
+    const bool bSaveAsShown = (formatDef.getProperty("CsvTableView_saveAsShown", "") == "1");
+
+    auto pModel = csvModel();
     if (!pModel)
         return false;
 
-    const bool bSaveAsSqlite = fileInfo.suffix() == QLatin1String("sqlite3");
+    CsvItemModel saveAsShownModel; // Temporary model used if saving as shown.
+
+    if (bSaveAsShown)
+    {
+        // Creating new CsvItemModel from shown and saving that.
+        // This wastes resources as some table content needs to be duplicated, but allows use of existing saving machinery.
+        auto pViewModel = this->model();
+        if (!pViewModel)
+            return false;
+        const auto nRowCount = pViewModel->rowCount();
+        const auto nColCount = pViewModel->columnCount();
+        saveAsShownModel.insertRows(0, nRowCount);
+        saveAsShownModel.insertColumns(0, nColCount);
+        using Index = std::remove_const<decltype(nRowCount)>::type;
+        for (Index c = 0; c < nColCount; ++c)
+        {
+            for (Index r = 0; r < nRowCount; ++r)
+            {
+                const auto viewIndex = pViewModel->index(r, c);
+                const auto sourceIndex = mapToDataModel(viewIndex);
+                const auto pStr = pModel->RawStringPtrAt(sourceIndex.row(), sourceIndex.column());
+                saveAsShownModel.setDataNoUndo(r, c, pStr);
+            }
+        }
+        pModel = &saveAsShownModel;
+    }
 
     if (bSaveAsSqlite && QMessageBox::question(this, tr("SQLite export"), tr("SQlite export is rudimentary, continue anyway?")) != QMessageBox::Yes)
         return false;
@@ -1488,6 +1527,8 @@ public:
             m_spEnclosingOptions.reset(new QComboBox(this));
             m_spSaveHeader.reset(new QCheckBox(this));
             m_spWriteBOM.reset(new QCheckBox(this));
+            m_spSaveAsShown.reset(new QCheckBox(this));
+            m_spSaveAsShown->setToolTip(tr("If selected, currently shown table is saved instead of the underlying table.\nThis can be used e.g. to save filtered and sorted snapshot of the whole table"));
         }
         else
         {
@@ -1561,6 +1602,7 @@ public:
         {
             spLayout->addRow(tr("Save header"), m_spSaveHeader.get());
             spLayout->addRow(tr("Write BOM"), m_spWriteBOM.get());
+            spLayout->addRow(tr("Save as shown"), m_spSaveAsShown.get());
         }
         else // Case: load dialog
         {
@@ -1663,7 +1705,7 @@ public:
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
-        if (isSaveDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEnclosingOptions || !m_spEolEdit || !m_spSaveHeader || !m_spWriteBOM || !m_spEncodingEdit))
+        if (isSaveDialog() && (!m_spSeparatorEdit || !m_spEnclosingEdit || !m_spEnclosingOptions || !m_spEolEdit || !m_spSaveHeader || !m_spWriteBOM || !m_spEncodingEdit || !m_spSaveAsShown))
         {
             QMessageBox::information(this, tr("CSV saving"), tr("Internal error occurred; saving failed."));
             return;
@@ -1732,6 +1774,8 @@ public:
             m_saveOptions.enclosementBehaviour((sEnc.isEmpty()) ? EbNoEnclose : static_cast<EnclosementBehaviour>(m_spEnclosingOptions->currentData().toInt()));
             m_saveOptions.headerWriting(m_spSaveHeader->isChecked());
             m_saveOptions.bomWriting(m_spWriteBOM->isChecked());
+            if (m_spSaveAsShown->isChecked())
+                m_saveOptions.setProperty("CsvTableView_saveAsShown", "1");
             m_saveOptions.textEncoding(encoding);
         }
 
@@ -1752,15 +1796,16 @@ public:
     DialogType m_dialogType;
     LoadOptions m_loadOptions;
     SaveOptions m_saveOptions;
-    std::unique_ptr<QComboBox> m_spSeparatorEdit;
-    std::unique_ptr<QComboBox> m_spEnclosingEdit;
-    std::unique_ptr<QComboBox> m_spEnclosingOptions;
-    std::unique_ptr<QComboBox> m_spEolEdit;
-    std::unique_ptr<QComboBox> m_spEncodingEdit;
-    std::unique_ptr<QCheckBox> m_spSaveHeader;
-    std::unique_ptr<QCheckBox> m_spWriteBOM;
+    QObjectStorage<QComboBox> m_spSeparatorEdit;
+    QObjectStorage<QComboBox> m_spEnclosingEdit;
+    QObjectStorage<QComboBox> m_spEnclosingOptions;
+    QObjectStorage<QComboBox> m_spEolEdit;
+    QObjectStorage<QComboBox> m_spEncodingEdit;
+    QObjectStorage<QCheckBox> m_spSaveHeader;
+    QObjectStorage<QCheckBox> m_spWriteBOM;
+    QObjectStorage<QCheckBox> m_spSaveAsShown;
     // Load-only properties
-    std::unique_ptr<QLineEdit> m_spCompleterColumns;
+    QObjectStorage<QLineEdit> m_spCompleterColumns;
     QObjectStorage<QLineEdit> m_spIncludeRows;
     QObjectStorage<QLineEdit> m_spIncludeColumns;
     QObjectStorage<JsonListWidget> m_spContentFilterWidget;
