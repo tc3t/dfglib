@@ -14,6 +14,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
     #include <QStatusBar>
     #include <QPlainTextEdit>
+    #include <QSortFilterProxyModel>
 DFG_END_INCLUDE_QT_HEADERS
 
 class QDockWidget;
@@ -21,14 +22,25 @@ class QItemSelection;
 class QLabel;
 class QLineEdit;
 class QMenu;
-class QSortFilterProxyModel;
 class QToolBar;
 class QSplitter;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
-    class DFG_CLASS_NAME(CsvTableView);
-    class DFG_CLASS_NAME(CsvItemModel);
+    class CsvTableView;
+    class CsvItemModel;
+
+    class CsvTableViewSortFilterProxyModel : public QSortFilterProxyModel
+    {
+        Q_OBJECT
+    public:
+        using BaseClass = QSortFilterProxyModel;
+        using BaseClass::BaseClass; // Inheriting constructor
+
+    protected:
+        bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
+        bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+    };
 
     namespace DFG_DETAIL_NS
     {
@@ -36,24 +48,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         class FilterPanelWidget;
     }
 
-    class DFG_CLASS_NAME(TableEditorStatusBar) : public QStatusBar
+    class TableEditorStatusBar : public QStatusBar
     {
     public:
         typedef QStatusBar BaseClass;
 
-        DFG_CLASS_NAME(TableEditorStatusBar)() {}
-        DFG_BASE_CONSTRUCTOR_DELEGATE_1(DFG_CLASS_NAME(TableEditorStatusBar), QStatusBar) {}
+        TableEditorStatusBar() {}
+        DFG_BASE_CONSTRUCTOR_DELEGATE_1(TableEditorStatusBar, QStatusBar) {}
     }; // class TableEditorStatusBar
 
-    class DFG_CLASS_NAME(TableEditor) : public QWidget
+    class TableEditor : public QWidget
     {
         Q_OBJECT
     public:
         typedef QWidget BaseClass;
-        typedef DFG_CLASS_NAME(TableEditor) ThisClass;
-        typedef DFG_CLASS_NAME(CsvItemModel) ModelClass;
-        typedef QSortFilterProxyModel ProxyModelClass;
-        typedef DFG_CLASS_NAME(CsvTableView) ViewClass;
+        typedef TableEditor ThisClass;
+        typedef CsvItemModel ModelClass;
+        typedef CsvTableViewSortFilterProxyModel ProxyModelClass;
+        typedef CsvTableView ViewClass;
 
         enum ColumnResizeStyle
         {
@@ -73,8 +85,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
            void setFontPointSizeF(qreal pointSize);
         };
 
-        DFG_CLASS_NAME(TableEditor)();
-        ~DFG_CLASS_NAME(TableEditor)() DFG_OVERRIDE_DESTRUCTOR;
+        TableEditor();
+        ~TableEditor() DFG_OVERRIDE_DESTRUCTOR;
 
         /** Returns true if opened, false otherwise. Opening will fail if TableEditor already has a file opened and it has been modified. */
         bool tryOpenFileFromPath(QString path);
@@ -128,7 +140,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QObjectStorage<ModelClass> m_spTableModel;
         QObjectStorage<ProxyModelClass> m_spProxyModel;
         QObjectStorage<QLineEdit> m_spLineEditSourcePath;
-        QObjectStorage<DFG_CLASS_NAME(TableEditorStatusBar)> m_spStatusBar;
+        QObjectStorage<TableEditorStatusBar> m_spStatusBar;
         QObjectStorage<QLabel> m_spSelectionStatusInfo;
         QObjectStorage<CellEditor> m_spCellEditor;
         QObjectStorage<QDockWidget> m_spCellEditorDockWidget;

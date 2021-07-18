@@ -29,7 +29,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QItemSelection>
 #include <QItemSelectionModel>
 #include <QPushButton>
-#include <QSortFilterProxyModel>
 #include <QSpacerItem>
 #include <QSpinBox>
 #include <QToolBar>
@@ -286,6 +285,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
         }
     };
 }}} // dfg::qt::DFG_DETAILS_NS -namespace
+
+bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
+{
+    return BaseClass::filterAcceptsColumn(sourceColumn, sourceParent);
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsRow(const int sourceRow, const QModelIndex& sourceParent) const
+{
+    return BaseClass::filterAcceptsRow(sourceRow, sourceParent);
+}
+
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::TableEditor)
 {
