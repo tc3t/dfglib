@@ -1,9 +1,9 @@
 #pragma once
 
-#pragma once
-
 #include "../dfgDefs.hpp"
 #include "../ReadOnlySzParam.hpp"
+#include "../cont/IntervalSet.hpp"
+#include "../cont/IntervalSetSerialization.hpp"
 #include "../str/string.hpp"
 #include <algorithm>
 
@@ -19,10 +19,14 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
-    class DFG_CLASS_NAME(StringMatchDefinition)
+    // Implements single json-definable string matching item supporting:
+    //      -Multiple match patterns: wildcard, fixed, reg_exp
+    //      -Case sensitivity
+    //      -Construction from json-definition
+    class StringMatchDefinition
     {
     public:
-        typedef ::DFG_ROOT_NS::DFG_CLASS_NAME(StringUtf8) Utf8String;
+        typedef ::DFG_ROOT_NS::StringUtf8 Utf8String;
 
         explicit StringMatchDefinition(QString matchString,
                                        Qt::CaseSensitivity caseSensitivity,
@@ -37,7 +41,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         /**
          * @brief Creates StringMatchDefinition from json object
          * @param jsonObject json object from which values of the following keys as read.
-         *      "type": {wildcard, wildcard_unix, fixed, reg_exp, reg_exp2, reg_exp_w3c_xml_schema_11}
+         *      "type": {wildcard, fixed, reg_exp}
          *              Defines type of this filter
          *              Default: wildcard
          *      "case_sensitive": {true, false}
@@ -75,7 +79,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return !m_matchString.isEmpty() && m_regExp.isMatchingWith(s);
         }
 
-        bool isMatchWith(const DFG_CLASS_NAME(StringViewUtf8) sv) const
+        bool isMatchWith(const StringViewUtf8 sv) const
         {
             if (!m_sSimpleSubStringMatch.empty())
             {
@@ -134,6 +138,47 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         PatternMatcher m_regExp;
         Utf8String m_sSimpleSubStringMatch; // Stores the utf8-encoded substring to search if applicable. This is an optimization to avoid creating redundant QString-objects.
     }; // class StringMatchDefinition
+
+
+    // Compared to StringMatchDefinition, this class provides "apply filter on row/column" controls and parsing of and_group.
+    class TableStringMatchDefinition : public StringMatchDefinition
+    {
+    public:
+        using BaseClass = StringMatchDefinition;
+        using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
+
+        TableStringMatchDefinition(BaseClass&& base) :
+            BaseClass(std::move(base))
+        {}
+
+        // Returns TableStringMatchDefinition and id of and_group.
+        static std::pair<TableStringMatchDefinition, std::string> fromJson(const StringViewUtf8& sv, const int nUserToInternalRowOffset, const int nUserToInternalColumnOffset)
+        {
+            QJsonParseError parseError;
+            auto doc = QJsonDocument::fromJson(QByteArray(sv.dataRaw(), sv.sizeAsInt()), &parseError);
+            if (doc.isNull())
+                return std::make_pair(TableStringMatchDefinition(StringMatchDefinition::makeMatchEverythingMatcher()), std::string());
+            const auto jsonObject = doc.object();
+            auto rv = std::pair<TableStringMatchDefinition, std::string>(BaseClass::fromJson(jsonObject), std::string(jsonObject.value("and_group").toString().toUtf8().data()));
+            const auto iterRows = jsonObject.find(QLatin1String("apply_rows"));
+            const auto iterColumns = jsonObject.find(QLatin1String("apply_columns"));
+            if (iterRows != jsonObject.end())
+                rv.first.m_rows = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(iterRows->toString().toUtf8().data()).shift_raw(nUserToInternalRowOffset);
+            if (iterColumns != jsonObject.end())
+                rv.first.m_columns = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(iterColumns->toString().toUtf8().data()).shift_raw(nUserToInternalColumnOffset);
+            return rv;
+        }
+
+        bool isMatchWith(const int nRow, const int nCol, const StringViewUtf8& sv) const
+        {
+            return !m_rows.hasValue(nRow) || !m_columns.hasValue(nCol) || BaseClass::isMatchWith(sv);
+        }
+
+        // Defines rows on which to apply filter.
+        IntervalSet m_rows = IntervalSet::makeSingleInterval(1, maxValueOfType<int>());
+        // Defines columns on which to apply filter.
+        IntervalSet m_columns = IntervalSet::makeSingleInterval(0, maxValueOfType<int>());
+    }; // class TableStringMatchDefinition
 
 
     constexpr char StringMatchDefinitionField_type[]    = "type";

@@ -963,7 +963,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
     {
         using namespace ::DFG_MODULE_NS(cont);
         using namespace ::DFG_MODULE_NS(qt);
-        return intervalSetFromString<int>(sv, (std::numeric_limits<int>::max)()).shift_raw(-CsvItemModel::internalRowToVisibleShift());
+        return intervalSetFromString<int>(sv, (std::numeric_limits<int>::max)()).shift_raw(-CsvItemModel::internalColumnToVisibleShift());
     }
 
     class CancellableReader : public DFG_MODULE_NS(qt)::CsvItemModel::DataTable::DefaultCellHandler
@@ -1039,12 +1039,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         using ItemModel          = ::DFG_MODULE_NS(qt)::CsvItemModel;
         using ProgressController = ItemModel::LoadOptions::ProgressController;
 
-        // Extended StringMatchDefinition
-        class MatcherDefinition : public StringMatchDefinition
+        // Extends TableStringMatchDefinition providing CsvItemModel-specific table row/column index shifts.
+        class MatcherDefinition : public TableStringMatchDefinition
         {
         public:
-            using BaseClass = StringMatchDefinition;
-            using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
+            using BaseClass = TableStringMatchDefinition;
 
             MatcherDefinition(BaseClass&& base) :
                 BaseClass(std::move(base))
@@ -1052,36 +1051,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
             static std::pair<MatcherDefinition, std::string> fromJson(const StringViewUtf8& sv)
             {
-                QJsonParseError parseError;
-                auto doc = QJsonDocument::fromJson(QByteArray(sv.dataRaw(), sv.sizeAsInt()), &parseError);
-                if (doc.isNull())
-                    return std::make_pair(MatcherDefinition(StringMatchDefinition::makeMatchEverythingMatcher()), std::string());
-                const auto jsonObject = doc.object();
-                auto rv = std::pair<MatcherDefinition, std::string>(BaseClass::fromJson(jsonObject), std::string(jsonObject.value("and_group").toString().toUtf8().data()));
-                const auto iterRows = jsonObject.find(QLatin1String("apply_rows"));
-                const auto iterColumns = jsonObject.find(QLatin1String("apply_columns"));
-                if (iterRows != jsonObject.end())
-                    rv.first.m_rows = ::DFG_MODULE_NS(cont)::intervalSetFromString<int>(iterRows->toString().toUtf8().data());
-                if (iterColumns != jsonObject.end())
-                    rv.first.m_columns = columnIntervalSetFromText(iterColumns->toString().toUtf8().data());
-                return rv;
-            }
-
-            bool isMatchWith(const int nRow, const int nCol, const StringViewUtf8& sv) const
-            {
-                DFG_UNUSED(nCol);
-                return !m_rows.hasValue(nRow) || BaseClass::isMatchWith(sv);
+                return BaseClass::fromJson(sv, 0, -CsvItemModel::internalColumnToVisibleShift());
             }
 
             bool isApplyColumn(const int nCol) const
             {
                 return m_columns.hasValue(nCol);
             }
-
-            // Defines rows on which to apply filter.
-            IntervalSet m_rows = IntervalSet::makeSingleInterval(1, maxValueOfType<int>());
-            // Defines columns on which to apply filter.
-            IntervalSet m_columns = IntervalSet::makeSingleInterval(0, maxValueOfType<int>());
         }; // MatcherDefinition
 
         using MatcherStorage = ::DFG_MODULE_NS(cont)::MapVectorSoA<std::string, std::vector<MatcherDefinition>>;
@@ -1100,6 +1076,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         }
 
         // This is not expected to be used, but must be defined in order to get compiled.
+        // This gets called only when m_nFilterCol != any, which in turn gets defined by call
+        // to createFilterCellHandler(), but none of the calls in this file define that.
         bool isMatch(const int nInputRow, const StringViewUtf8) const
         {
             DFG_UNUSED(nInputRow);
