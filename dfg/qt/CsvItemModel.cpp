@@ -1039,40 +1039,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         using ItemModel          = ::DFG_MODULE_NS(qt)::CsvItemModel;
         using ProgressController = ItemModel::LoadOptions::ProgressController;
 
-        // Extends TableStringMatchDefinition providing CsvItemModel-specific table row/column index shifts.
-        class MatcherDefinition : public TableStringMatchDefinition
-        {
-        public:
-            using BaseClass = TableStringMatchDefinition;
-
-            MatcherDefinition(BaseClass&& base) :
-                BaseClass(std::move(base))
-            {}
-
-            static std::pair<MatcherDefinition, std::string> fromJson(const StringViewUtf8& sv)
-            {
-                return BaseClass::fromJson(sv, 0, -CsvItemModel::internalColumnToVisibleShift());
-            }
-
-            bool isApplyColumn(const int nCol) const
-            {
-                return m_columns.hasValue(nCol);
-            }
-        }; // MatcherDefinition
-
-        using MatcherStorage = ::DFG_MODULE_NS(cont)::MapVectorSoA<std::string, std::vector<MatcherDefinition>>;
+        using MatcherDefinition = CsvItemModelStringMatcher;
+        using MultiMatchDefinition = MultiMatchDefinition<MatcherDefinition>;
 
         TextFilterMatcher(const StringViewUtf8& sv, ProgressController& rProgressController)
             : m_rProgressController(rProgressController)
         {
-            using DelimitedTextReader = :: DFG_MODULE_NS(io)::DelimitedTextReader;
-            const auto metaNone = DelimitedTextReader::s_nMetaCharNone;
-            :: DFG_MODULE_NS(io)::BasicImStream istrm(sv.dataRaw(), sv.size());
-            DelimitedTextReader::readRow<char>(istrm, '\n', metaNone, metaNone, [&](Dummy, const char* psz, const size_t nCount)
-            {
-                auto matcherAndOrGroup = MatcherDefinition::fromJson(StringViewUtf8(SzPtrUtf8(psz), nCount));
-                m_matchers[matcherAndOrGroup.second].push_back(std::move(matcherAndOrGroup.first));
-            });
+            m_multiMatcher = MultiMatchDefinition::fromJson(sv);
         }
 
         // This is not expected to be used, but must be defined in order to get compiled.
@@ -1088,30 +1061,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         bool isMatch(const int nInputRow, const CsvItemModel::DataTable::RowContentFilterBuffer& rowBuffer)
         {
             CancellableReader::handleProgressController(m_rProgressController, 0, static_cast<size_t>(nInputRow), 0, 0);
-            for (const auto& kv : m_matchers) // For all OR-sets
+            const bool bIsMatch = m_multiMatcher.isMatchByCallback([&](const MatcherDefinition& matcher)
             {
+                // Checking if current matcher matches with current buffer.
                 bool bIsMatch = true;
-                for (const auto& matcher : kv.second) // For all matchers in AND-set
+                for (const auto& colAndStr : rowBuffer) if (matcher.isApplyColumn(colAndStr.first))
                 {
-                    // Checking if finding a match from any of the columns that are within apply columns.
-                    // Note: if matcher is matching content on column C and some row happens to miss such column,
-                    //       filter-wise that gets interpreted as match. This might not be desired behaviour; to be revised if needed.
-                    for (const auto& colAndStr : rowBuffer) if (matcher.isApplyColumn(colAndStr.first))
-                    {
-                        bIsMatch = matcher.isMatchWith(nInputRow, colAndStr.first, colAndStr.second(rowBuffer));
-                        if (bIsMatch)
-                            break; // Found a match for this matcher, no need to check remaining columns.
-                    }
-                    if (!bIsMatch)
-                        break; // One item in AND-set was false; not checking the rest.
+                    bIsMatch = matcher.isMatchWith(nInputRow, colAndStr.first, colAndStr.second(rowBuffer));
+                    if (bIsMatch)
+                        break; // Some column match, don't need to check rest.
                 }
-                if (bIsMatch)
-                    return true; // One OR-item was true so return value is known..
-            }
-            return false; // None of the OR'ed items matched so returning false.
+                return bIsMatch;
+            });
+            return bIsMatch;
         }
 
-        MatcherStorage m_matchers; // Each mapped item defines a set of AND'ed items and the result is obtained by OR'ing each AND-set.
+        MultiMatchDefinition m_multiMatcher;
         ProgressController& m_rProgressController;
     }; // TextFilterMatcher
 } }} // namespace dfg::qt::DFG_DETAIL_NS

@@ -4,6 +4,7 @@
 #include "../ReadOnlySzParam.hpp"
 #include "../cont/IntervalSet.hpp"
 #include "../cont/IntervalSetSerialization.hpp"
+#include "../cont/MapVector.hpp"
 #include "../str/string.hpp"
 #include <algorithm>
 
@@ -55,7 +56,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static StringMatchDefinition fromJson(const QJsonObject& jsonObject);
 
         /** Convenience function for creating from json string, see details from other overload. In case of invalid json, returns makeMatchEverythingMatcher() */
-        static StringMatchDefinition fromJson(const StringViewUtf8& sv);
+        static std::pair<StringMatchDefinition, std::string> fromJson(const StringViewUtf8& sv);
 
         /**
          * @brief Creates StringMatchDefinition that matches everything
@@ -181,6 +182,58 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }; // class TableStringMatchDefinition
 
 
+    // Class providing and/or combination for list of matchers.
+    template <class MultiMatch_T>
+    class MultiMatchDefinition
+    {
+    public:
+        using MatchDefinition = MultiMatch_T;
+        // Map from and_group identifier (string) to match items in that and_group.
+        using MatchDefinitionStorage = ::DFG_MODULE_NS(cont)::MapVectorSoA<std::string, std::vector<MatchDefinition>>;
+
+        static MultiMatchDefinition fromJson(const StringViewUtf8& sv)
+        {
+            using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
+            const auto metaNone = DelimitedTextReader::s_nMetaCharNone;
+            ::DFG_MODULE_NS(io)::BasicImStream istrm(sv.dataRaw(), sv.size());
+            MultiMatchDefinition rv;
+            DelimitedTextReader::readRow<char>(istrm, '\n', metaNone, metaNone, [&](Dummy, const char* psz, const size_t nCount)
+            {
+                auto matcherAndOrGroup = MatchDefinition::fromJson(StringViewUtf8(SzPtrUtf8(psz), nCount));
+                rv.m_matchers[matcherAndOrGroup.second].push_back(std::move(matcherAndOrGroup.first));
+            });
+            return rv;
+        }
+
+        static MultiMatchDefinition fromJson(const QString& s)
+        {
+            return fromJson(SzPtrUtf8(s.toUtf8()));
+        }
+
+        // Checks if current matchers match with data whose details are implemented in given callback.
+        //      -Callback is given const MatchDefinition& as argument and it should return true iff content match.
+        template <class MatchFunc_T>
+        bool isMatchByCallback(MatchFunc_T&& matchFunc) const
+        {
+            for (const auto& kv : m_matchers) // For all OR-sets
+            {
+                bool bIsMatch = true;
+                for (const auto& matcher : kv.second) // For all matchers in AND-set
+                {
+                    bIsMatch = matchFunc(matcher);
+                    if (!bIsMatch)
+                        break; // One item in AND-set was false; not checking the rest.
+                }
+                if (bIsMatch)
+                    return true; // One OR-item was true so return value is known..
+            }
+            return false; // None of the OR'ed items matched so returning false.
+        }
+
+        MatchDefinitionStorage m_matchers; // Each mapped item defines a set of AND'ed items and the match result is obtained by OR'ing each AND-set.
+    }; // class TableStringMatchDefinition
+
+
     constexpr char StringMatchDefinitionField_type[]    = "type";
         constexpr char StringMatchDefinitionFieldValue_type_wildcard[]     = "wildcard";
         constexpr char StringMatchDefinitionFieldValue_type_fixed[]        = "fixed";
@@ -196,13 +249,15 @@ inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::makeMatchEverythingMatch
 }
 
 
-inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::fromJson(const StringViewUtf8& sv) -> StringMatchDefinition
+inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::fromJson(const StringViewUtf8& sv) -> std::pair<StringMatchDefinition, std::string>
 {
     QJsonParseError parseError;
     auto doc = QJsonDocument::fromJson(QByteArray(sv.dataRaw(), sv.sizeAsInt()), &parseError);
     if (doc.isNull())
-        return makeMatchEverythingMatcher();
-    return fromJson(doc.object());
+        return std::pair<StringMatchDefinition, std::string>(makeMatchEverythingMatcher(), std::string());
+    std::pair<StringMatchDefinition, std::string> rv(fromJson(doc.object()), std::string());
+    rv.second = doc.object().value("and_group").toString().toStdString();
+    return rv;
 }
 
 inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::fromJson(const QJsonObject& jsonObject) -> StringMatchDefinition

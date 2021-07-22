@@ -537,7 +537,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvItemModel
 
-    template <class Func_T> void DFG_CLASS_NAME(CsvItemModel)::batchEditNoUndo(Func_T func)
+    template <class Func_T> void CsvItemModel::batchEditNoUndo(Func_T func)
     {
         beginResetModel(); // This might be a bit coarse for smaller edits.
         m_bResetting = true;
@@ -546,5 +546,26 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         m_bResetting = false;
         setModifiedStatus(true);
     }
+
+    // Extends TableStringMatchDefinition providing CsvItemModel-specific table row/column index shifts.
+    class CsvItemModelStringMatcher : public TableStringMatchDefinition
+    {
+    public:
+        using BaseClass = TableStringMatchDefinition;
+
+        CsvItemModelStringMatcher(BaseClass&& base) :
+            BaseClass(std::move(base))
+        {}
+
+        static std::pair<CsvItemModelStringMatcher, std::string> fromJson(const StringViewUtf8& sv)
+        {
+            return BaseClass::fromJson(sv, 0, -CsvItemModel::internalColumnToVisibleShift());
+        }
+
+        bool isApplyColumn(const int nCol) const
+        {
+            return m_columns.hasValue(nCol);
+        }
+    }; // CsvItemModelStringMatcher
 
 } } // module namespace

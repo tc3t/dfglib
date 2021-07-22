@@ -1036,7 +1036,7 @@ TEST(dfgQt, StringMatchDefinition)
     using namespace DFG_MODULE_NS(qt);
 #define DFGTEST_TEMP_VERIFY(JSON_STR, EXPECTED_STR, EXPECTED_CASE, EXPECTED_SYNTAX) \
     { \
-        const auto smd = StringMatchDefinition::fromJson(DFG_UTF8(JSON_STR)); \
+        const auto smd = StringMatchDefinition::fromJson(DFG_UTF8(JSON_STR)).first; \
         EXPECT_EQ(EXPECTED_STR, smd.matchString()); \
         EXPECT_EQ(EXPECTED_CASE, smd.caseSensitivity()); \
         EXPECT_EQ(EXPECTED_SYNTAX, smd.patternSyntax()); \
