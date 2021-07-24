@@ -22,8 +22,9 @@ public:
         Wildcard,
         FixedString,
         RegExp,
+        Json,
         PatternSyntaxFirst = Wildcard,
-        PatternSyntaxLast = RegExp
+        PatternSyntaxLast = Json
     };
 
     PatternMatcher() = default;
@@ -147,9 +148,10 @@ inline const char* PatternMatcher::patternSyntaxName_untranslated(const PatternS
 {
     switch (patternSyntax)
     {
-    case Wildcard:       return "Wildcard";
-    case FixedString:    return "Simple string";
-    case RegExp:         return "Regular expression";
+    case Wildcard:       return QT_TR_NOOP("Wildcard");
+    case FixedString:    return QT_TR_NOOP("Simple string");
+    case RegExp:         return QT_TR_NOOP("Regular expression");
+    case Json:           return QT_TR_NOOP("Json");
     default:             return "";
     }
 }
@@ -169,6 +171,10 @@ inline const char* PatternMatcher::shortDescriptionForPatternSyntax_untranslated
         "| Match expression before or after\n"
         "^ Beginning of line\n"
         "$ End of line\n";
+    case Json:           return "List of space-separated json objects\n"
+                                "\n"
+                                R"(Example: {"text":"a", "apply_columns":"1", "and_group":"a"} {"text":"b", "apply_columns":"2", "and_group":"a"} {"text":"c"})"
+                                "\nThis filter keeps rows that either (have 'a' on column 1 and 'b' on column 2) or 'c' on any column";
     default:             return "";
     }
 }

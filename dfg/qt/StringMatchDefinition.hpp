@@ -230,6 +230,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return false; // None of the OR'ed items matched so returning false.
         }
 
+        template <class Func_T>
+        void forEachWhile(Func_T&& func)
+        {
+            bool bContinue = true;
+            for (auto&& kv : m_matchers)
+            {
+                if (!bContinue)
+                    break;
+                for(auto&& matcher : kv.second)
+                {
+                    bContinue = func(matcher);
+                    if (!bContinue)
+                        break;
+                }
+            }
+        }
+
+        bool empty() const { return m_matchers.empty(); }
+
         MatchDefinitionStorage m_matchers; // Each mapped item defines a set of AND'ed items and the match result is obtained by OR'ing each AND-set.
     }; // class TableStringMatchDefinition
 

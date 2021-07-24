@@ -21,6 +21,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QScreen>
 #include <QFileInfo>
 #include <QHeaderView>
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QLabel>
 #include <QMap>
 #include <QMenu>
@@ -165,6 +167,18 @@ namespace
         HighlightTextEdit(QWidget* pParent) :
             BaseClass(pParent)
         {}
+
+        QColor defaultTextColour()
+        {
+            return QLineEdit().palette().color(QPalette::WindowText);
+        }
+
+        void setTextColour(const QColor& color)
+        {
+            QPalette pal = this->palette();
+            pal.setColor(QPalette::Text, color);
+            this->setPalette(pal);
+        }
     };
 
     static int setChartPanelWidth(QSplitter* pSplitter, const int nParentWidth, const WindowExtentProperty& wep)
@@ -199,7 +213,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
     class FindPanelWidget : public QWidget
     {
     public:
-        FindPanelWidget(const QString& label)
+        FindPanelWidget(const QString& label, const bool bAllowJsonSyntax = false)
             : m_pTextEdit(nullptr)
             , m_pColumnSelector(nullptr)
             , m_pCaseSensitivityCheckBox(nullptr)
@@ -227,8 +241,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
                 PatternMatcher::forEachPatternSyntax([&](int i, const PatternMatcher::PatternSyntax syntax)
                 {
-                    m_pMatchSyntaxCombobox->insertItem(i, tr(PatternMatcher::patternSyntaxName_untranslated(syntax)), syntax);
-                    m_pMatchSyntaxCombobox->setItemData(i, tr(PatternMatcher::shortDescriptionForPatternSyntax_untranslated(syntax)), Qt::ToolTipRole);
+                    if (syntax != PatternMatcher::PatternSyntax::Json || bAllowJsonSyntax)
+                    {
+                        m_pMatchSyntaxCombobox->insertItem(i, tr(PatternMatcher::patternSyntaxName_untranslated(syntax)), syntax);
+                        m_pMatchSyntaxCombobox->setItemData(i, tr(PatternMatcher::shortDescriptionForPatternSyntax_untranslated(syntax)), Qt::ToolTipRole);
+                    }
                 });
                 m_pMatchSyntaxCombobox->setCurrentIndex(0);
 
@@ -238,14 +255,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
             // Column control
             {
-                l->addWidget(new QLabel(tr("Column"), this), 0, nColumn++);
+                m_spColumnLabel.reset(new QLabel(tr("Column"), this));
+                l->addWidget(m_spColumnLabel.get(), 0, nColumn++);
                 m_pColumnSelector = new QSpinBox(this);
                 m_pColumnSelector->setMinimum(-1);
                 m_pColumnSelector->setValue(-1);
                 l->addWidget(m_pColumnSelector, 0, nColumn++);
             }
 
-            // TODO: match type (wildcard, regexp...)
             // TODO: highlighting details (color)
             // TODO: match count
         }
@@ -266,10 +283,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
             return static_cast<PatternMatcher::PatternSyntax>(currentData.toUInt());
         }
 
+        void setSyntaxIndicator_good()
+        {
+            if (m_pTextEdit)
+                m_pTextEdit->setTextColour(m_pTextEdit->defaultTextColour());
+        }
+
+        void setSyntaxIndicator_bad()
+        {
+            if (m_pTextEdit)
+                m_pTextEdit->setTextColour(Qt::red);
+        }
+
         // Returned object is owned by 'this' and lives until the destruction of 'this'.
         QCheckBox* getCaseSensivitivyCheckBox() { return m_pCaseSensitivityCheckBox; }
 
         HighlightTextEdit* m_pTextEdit;
+        QObjectStorage<QLabel> m_spColumnLabel;
         QSpinBox* m_pColumnSelector;
         QCheckBox* m_pCaseSensitivityCheckBox;
         QComboBox* m_pMatchSyntaxCombobox;
@@ -280,11 +310,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
     public:
         typedef FindPanelWidget BaseClass;
         FilterPanelWidget()
-            : BaseClass(tr("Filter"))
+            : BaseClass(tr("Filter"), true)
         {
+            if (this->m_pMatchSyntaxCombobox)
+                DFG_QT_VERIFY_CONNECT(connect(this->m_pMatchSyntaxCombobox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &FilterPanelWidget::onSyntaxChanged));
+        }
+
+        void onSyntaxChanged(const int index)
+        {
+            const auto itemData = (m_pMatchSyntaxCombobox) ? m_pMatchSyntaxCombobox->itemData(index) : QVariant();
+            const bool bIsJson = (itemData.toInt() == PatternMatcher::Json);
+            if (m_pColumnSelector)
+                m_pColumnSelector->setHidden(bIsJson);
+            if (m_pCaseSensitivityCheckBox)
+                m_pCaseSensitivityCheckBox->setHidden(bIsJson);
+            if (m_spColumnLabel)
+                m_spColumnLabel->setHidden(bIsJson);
         }
     };
 }}} // dfg::qt::DFG_DETAILS_NS -namespace
+
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel)
+{
+    MultiMatchDefinition<CsvItemModelStringMatcher> m_matchers;
+};
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
 {
@@ -293,9 +342,38 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsRow(const int sourceRow, const QModelIndex& sourceParent) const
 {
-    return BaseClass::filterAcceptsRow(sourceRow, sourceParent);
+    auto pOpaq = DFG_OPAQUE_PTR();
+
+    const auto pSourceModel = (pOpaq && !pOpaq->m_matchers.empty()) ? qobject_cast<const CsvItemModel*>(this->sourceModel()) : nullptr;
+    if (pSourceModel)
+    {
+        const auto nColCount = pSourceModel->columnCount();
+        return pOpaq->m_matchers.isMatchByCallback([=](const CsvItemModelStringMatcher& matcher)
+        {
+            for (int c = 0; c < nColCount; ++c) if (matcher.isApplyColumn(c))
+            {
+                if (matcher.isMatchWith(sourceRow, c, pSourceModel->RawStringViewAt(sourceRow, c)))
+                    return true;
+            }
+            return false;
+        });
+    }
+    else 
+        return BaseClass::filterAcceptsRow(sourceRow, sourceParent);
 }
 
+void ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::setFilterFromJson(const QByteArray& sJson)
+{
+    DFG_OPAQUE_REF().m_matchers = MultiMatchDefinition<CsvItemModelStringMatcher>::fromJson(SzPtrUtf8(sJson.data()));
+    // In CsvItemModelStringMatcher row 1 means first non-header row, while here corresponding row is row 0 -> shifting apply rows.
+    // Column doesn't need to be adjusted since there's no header and thus no 0 index difference.
+    DFG_OPAQUE_REF().m_matchers.forEachWhile([](CsvItemModelStringMatcher& matcher)
+    {
+        matcher.m_rows.shift_raw(-CsvItemModel::internalRowToVisibleShift());
+        return true;
+    });
+    this->invalidateFilter();
+}
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::TableEditor)
 {
@@ -876,11 +954,43 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
         QTimer::singleShot(200, [=]() { if (thisPtr) thisPtr->onFilterTextChanged(thisPtr->m_spFilterPanel->getPattern()); });
         return;
     }
-    if (!PatternMatcher(text, m_spFilterPanel->getCaseSensitivity(), m_spFilterPanel->getPatternSyntax()).setToProxyModel(pProxy))
+
+    m_spFilterPanel->setSyntaxIndicator_good();
+    if (m_spFilterPanel->getPatternSyntax() == PatternMatcher::Json)
     {
-        DFG_ASSERT(false); // TODO: show information to user.
+        // Parsing all json items present in the text field; different json-objects are detected with QJsonError::GarbageAtEnd
+        int nStart = 0;
+        auto utf8 = text.toUtf8();
+        
+        while (nStart < text.size())
+        {
+            QJsonParseError parseError;
+            auto jsonDoc = QJsonDocument::fromJson(utf8.mid(nStart), &parseError);
+            if (parseError.error == QJsonParseError::GarbageAtEnd && parseError.offset != 0)
+            {
+                nStart += parseError.offset;
+                if (utf8[nStart - 1] != '}')
+                    utf8[nStart-1] = '\n'; // Separating different json-objects by new-line, which is the syntax that proxy filter expects.
+            }
+            else if (parseError.error != QJsonParseError::NoError)
+            {
+                m_spFilterPanel->setSyntaxIndicator_bad();
+                return;
+            }
+            else
+                nStart = utf8.size();
+        }
+        pProxy->setFilterFromJson(utf8);
     }
-    pProxy->setFilterKeyColumn(m_spFilterPanel->m_pColumnSelector->value());
+    else
+    {
+        pProxy->setFilterFromJson(QByteArray());
+        if (!PatternMatcher(text, m_spFilterPanel->getCaseSensitivity(), m_spFilterPanel->getPatternSyntax()).setToProxyModel(pProxy))
+        {
+            DFG_ASSERT(false); // TODO: show information to user.
+        }
+        pProxy->setFilterKeyColumn(m_spFilterPanel->m_pColumnSelector->value());
+    }
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindColumnChanged(const int newCol)

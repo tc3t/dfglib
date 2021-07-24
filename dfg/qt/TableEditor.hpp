@@ -37,9 +37,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         using BaseClass = QSortFilterProxyModel;
         using BaseClass::BaseClass; // Inheriting constructor
 
+        void setFilterFromJson(const QByteArray& sJson);
+
     protected:
         bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
         bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+
+        DFG_OPAQUE_PTR_DECLARE();
     };
 
     namespace DFG_DETAIL_NS
