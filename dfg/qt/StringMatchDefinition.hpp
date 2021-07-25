@@ -39,6 +39,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             initCache();
         }
 
+        static QString jsonExampleMinimal() { return R"({"text": "match string"})"; }
+
         /**
          * @brief Creates StringMatchDefinition from json object
          * @param jsonObject json object from which values of the following keys as read.
@@ -152,6 +154,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             BaseClass(std::move(base))
         {}
 
+        static QString jsonExampleFullSingle() { return R"({"text": "match string", "type": "reg_exp", "case_sensitive": true, "apply_rows":"1:3;5", "apply_columns":"1;4;6", "and_group":"a"})"; }
+
         // Returns TableStringMatchDefinition and id of and_group.
         static std::pair<TableStringMatchDefinition, std::string> fromJson(const StringViewUtf8& sv, const int nUserToInternalRowOffset, const int nUserToInternalColumnOffset)
         {
@@ -191,6 +195,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Map from and_group identifier (string) to match items in that and_group.
         using MatchDefinitionStorage = ::DFG_MODULE_NS(cont)::MapVectorSoA<std::string, std::vector<MatchDefinition>>;
 
+        // Constructs multi matcher from list of \n-separated single line json objects.
         static MultiMatchDefinition fromJson(const StringViewUtf8& sv)
         {
             using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;

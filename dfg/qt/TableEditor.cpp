@@ -227,6 +227,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
             m_pTextEdit = new HighlightTextEdit(this);
             l->addWidget(m_pTextEdit, 0, nColumn++);
 
+            // Insert button
+            {
+                m_spJsonInsertButton.reset(new QToolButton());
+                m_spJsonInsertButton->setHidden(true);
+                m_spJsonInsertButton->setPopupMode(QToolButton::InstantPopup);
+                m_spJsonInsertButton->setText(tr("Insert "));
+                auto pMenu = new QMenu(this); // Deletion through parentship
+
+                const auto addMenuItem = [&](const QString& sTitle, const QString& sInsertText)
+                {
+                    auto pAct = pMenu->addAction(sTitle);
+                    DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, [=]()
+                    {
+                        m_pTextEdit->setText(sInsertText);
+                    }));
+                };
+
+                addMenuItem(tr("Minimal example"), TableStringMatchDefinition::jsonExampleMinimal());
+                addMenuItem(tr("Full single object example"), TableStringMatchDefinition::jsonExampleFullSingle());
+                addMenuItem(tr("Example with and/or logics"), R"({"text":"column 1 match", "apply_columns":"1", "and_group":"a"} {"text":"column 2 match", "apply_columns":"2", "and_group":"a"} {"text":"any column match"})");
+                m_spJsonInsertButton->setMenu(pMenu); // Does not transfer ownership
+                l->addWidget(m_spJsonInsertButton.get(), 0, nColumn++);
+            }
+
             // Case-sensitivity control
             {
                 m_pCaseSensitivityCheckBox = new QCheckBox(tr("Case sensitive"), this);
@@ -285,14 +309,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
 
         void setSyntaxIndicator_good()
         {
-            if (m_pTextEdit)
-                m_pTextEdit->setTextColour(m_pTextEdit->defaultTextColour());
+            if (!m_pTextEdit)
+                return;
+            m_pTextEdit->setTextColour(m_pTextEdit->defaultTextColour());
+            m_pTextEdit->setToolTip(QString());
         }
 
-        void setSyntaxIndicator_bad()
+        void setSyntaxIndicator_bad(const QString& sErrorText)
         {
-            if (m_pTextEdit)
-                m_pTextEdit->setTextColour(Qt::red);
+            if (!m_pTextEdit)
+                return;
+            m_pTextEdit->setTextColour(Qt::red);
+            m_pTextEdit->setToolTip(sErrorText);
         }
 
         // Returned object is owned by 'this' and lives until the destruction of 'this'.
@@ -303,6 +331,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
         QSpinBox* m_pColumnSelector;
         QCheckBox* m_pCaseSensitivityCheckBox;
         QComboBox* m_pMatchSyntaxCombobox;
+        QObjectStorage<QToolButton> m_spJsonInsertButton;
     };
 
     class FilterPanelWidget : public FindPanelWidget
@@ -326,6 +355,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
                 m_pCaseSensitivityCheckBox->setHidden(bIsJson);
             if (m_spColumnLabel)
                 m_spColumnLabel->setHidden(bIsJson);
+            if (m_spJsonInsertButton)
+                m_spJsonInsertButton->setVisible(bIsJson);
         }
     };
 }}} // dfg::qt::DFG_DETAILS_NS -namespace
@@ -362,7 +393,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsRow(con
         return BaseClass::filterAcceptsRow(sourceRow, sourceParent);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::setFilterFromJson(const QByteArray& sJson)
+void ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(const QByteArray& sJson)
 {
     DFG_OPAQUE_REF().m_matchers = MultiMatchDefinition<CsvItemModelStringMatcher>::fromJson(SzPtrUtf8(sJson.data()));
     // In CsvItemModelStringMatcher row 1 means first non-header row, while here corresponding row is row 0 -> shifting apply rows.
@@ -974,17 +1005,22 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
             }
             else if (parseError.error != QJsonParseError::NoError)
             {
-                m_spFilterPanel->setSyntaxIndicator_bad();
+                const auto nUtf8Offset = nStart + parseError.offset;
+                const auto errContext = QString::fromUtf8(utf8.mid(Max(0, nUtf8Offset - 10), 21)); // May malfunction if there is non-ascii and context cuts between multibyte codepoints.
+                m_spFilterPanel->setSyntaxIndicator_bad(tr("json error: '%1'\noffset = %2 (context ... %3 ...)")
+                    .arg(parseError.errorString())
+                    .arg(nUtf8Offset)
+                    .arg(errContext));
                 return;
             }
             else
                 nStart = utf8.size();
         }
-        pProxy->setFilterFromJson(utf8);
+        pProxy->setFilterFromNewLineSeparatedJsonList(utf8);
     }
     else
     {
-        pProxy->setFilterFromJson(QByteArray());
+        pProxy->setFilterFromNewLineSeparatedJsonList(QByteArray());
         if (!PatternMatcher(text, m_spFilterPanel->getCaseSensitivity(), m_spFilterPanel->getPatternSyntax()).setToProxyModel(pProxy))
         {
             DFG_ASSERT(false); // TODO: show information to user.
