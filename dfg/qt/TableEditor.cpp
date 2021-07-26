@@ -282,8 +282,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
                 m_spColumnLabel.reset(new QLabel(tr("Column"), this));
                 l->addWidget(m_spColumnLabel.get(), 0, nColumn++);
                 m_pColumnSelector = new QSpinBox(this);
-                m_pColumnSelector->setMinimum(-1);
-                m_pColumnSelector->setValue(-1);
+                const auto nMinValue = CsvItemModel::internalColumnToVisibleShift() - 1;
+                m_pColumnSelector->setMinimum(nMinValue);
+                m_pColumnSelector->setValue(nMinValue);
+                m_pColumnSelector->setSpecialValueText(tr("Any")); // Sets text shown for minimum value.
                 l->addWidget(m_pColumnSelector, 0, nColumn++);
             }
 
@@ -957,7 +959,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(cons
         return;
 
     DFG_CLASS_NAME(StringMatchDefinition) matchDef(text, m_spFindPanel->getCaseSensitivity(), m_spFindPanel->getPatternSyntax());
-    m_spTableView->setFindText(matchDef, m_spFindPanel->m_pColumnSelector->value());
+    m_spTableView->setFindText(matchDef, CsvItemModel::visibleColumnIndexToInternal(m_spFindPanel->m_pColumnSelector->value()));
     m_spTableView->onFindNext();
 }
 
@@ -1025,24 +1027,43 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
         {
             DFG_ASSERT(false); // TODO: show information to user.
         }
-        pProxy->setFilterKeyColumn(m_spFilterPanel->m_pColumnSelector->value());
+        pProxy->setFilterKeyColumn(CsvItemModel::visibleColumnIndexToInternal(m_spFilterPanel->m_pColumnSelector->value()));
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindColumnChanged(const int newCol)
+namespace
+{
+    static void setColumnSelectorToolTip(QSpinBox* pSpinBox, const ::DFG_MODULE_NS(qt)::CsvItemModel* pModel, const int nViewCol)
+    {
+        if (!pSpinBox || !pModel)
+            return;
+        const auto nModelCol = pModel->visibleColumnIndexToInternal(nViewCol);
+        const auto sHeaderName = pModel->getHeaderName(nModelCol);
+        pSpinBox->setToolTip(sHeaderName);
+    }
+}
+
+void ::DFG_MODULE_NS(qt)::TableEditor::onFindColumnChanged(const int newCol)
 {
     // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(newCol);
-	if (m_spFindPanel)
-    	onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
+    
+    if (!m_spFindPanel)
+        return;
+    if (m_spFindPanel->m_pColumnSelector)
+        setColumnSelectorToolTip(m_spFindPanel->m_pColumnSelector, m_spTableModel.get(), m_spFindPanel->m_pColumnSelector->value());
+    onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterColumnChanged(const int nNewCol)
+void ::DFG_MODULE_NS(qt)::TableEditor::onFilterColumnChanged(const int nNewCol)
 {
     // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(nNewCol);
-    if (m_spFilterPanel)
-        onFilterTextChanged(m_spFilterPanel->getPattern());
+    if (!m_spFilterPanel)
+        return;
+    if (m_spFilterPanel->m_pColumnSelector)
+        setColumnSelectorToolTip(m_spFilterPanel->m_pColumnSelector, m_spTableModel.get(), m_spFilterPanel->m_pColumnSelector->value());
+    onFilterTextChanged(m_spFilterPanel->getPattern());
 }
 
 namespace
