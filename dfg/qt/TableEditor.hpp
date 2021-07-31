@@ -115,6 +115,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Sets window to resize/move if document requests to use specific window size/position. If not set, requests are ignored.
         void setResizeWindow(QWidget* pWindow);
 
+        void setFilterJson(const QString& sJson);
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 

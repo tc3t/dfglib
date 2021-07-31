@@ -953,7 +953,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onCellEditorTextChanged()
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(const QString& text)
+void ::DFG_MODULE_NS(qt)::TableEditor::onHighlightTextChanged(const QString& text)
 {
     if (!m_spTableView || !m_spFindPanel)
         return;
@@ -963,7 +963,17 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextChanged(cons
     m_spTableView->onFindNext();
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const QString& text)
+void ::DFG_MODULE_NS(qt)::TableEditor::setFilterJson(const QString& sJson)
+{
+    if (!m_spFilterPanel || !m_spFilterPanel->m_pTextEdit || !m_spFilterPanel->m_pMatchSyntaxCombobox)
+        return;
+    const auto nJsonIndex = m_spFilterPanel->m_pMatchSyntaxCombobox->findData(PatternMatcher::Json);
+    DFG_ASSERT_CORRECTNESS(nJsonIndex != -1);
+    m_spFilterPanel->m_pMatchSyntaxCombobox->setCurrentIndex(nJsonIndex);
+    m_spFilterPanel->m_pTextEdit->setText(sJson);
+}
+
+void ::DFG_MODULE_NS(qt)::TableEditor::onFilterTextChanged(const QString& text)
 {
     if (!m_spFilterPanel)
         return;
@@ -1020,7 +1030,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterTextChanged(const Q
         }
         pProxy->setFilterFromNewLineSeparatedJsonList(utf8);
     }
-    else
+    else if (m_spFilterPanel->m_pColumnSelector)
     {
         pProxy->setFilterFromNewLineSeparatedJsonList(QByteArray());
         if (!PatternMatcher(text, m_spFilterPanel->getCaseSensitivity(), m_spFilterPanel->getPatternSyntax()).setToProxyModel(pProxy))

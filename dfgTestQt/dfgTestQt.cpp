@@ -7,6 +7,7 @@
 #include <dfg/qt/ConsoleDisplay.hpp>
 #include <dfg/qt/CsvTableViewChartDataSource.hpp>
 #include <dfg/qt/CsvFileDataSource.hpp>
+#include <dfg/qt/TableEditor.hpp>
 #include <dfg/qt/SQLiteFileDataSource.hpp>
 #include <dfg/qt/NumberGeneratorDataSource.hpp>
 #include <dfg/qt/connectHelper.hpp>
@@ -1019,6 +1020,42 @@ TEST(dfgQt, TableView_makeSingleCellSelection)
     view.selectColumn(2);
     view.makeSingleCellSelection(0, 0);
     EXPECT_EQ(makeSingleCellIndexList(0, 0), pSelectionModel->selectedIndexes());
+}
+
+TEST(dfgQt, TableEditor_filter)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    TableEditor tableEditor;
+    ASSERT_TRUE(tableEditor.m_spTableModel != nullptr);
+    ASSERT_TRUE(tableEditor.m_spTableView != nullptr);
+
+    // Generating content
+    tableEditor.m_spTableModel->openString(R"(,
+a,b
+c,d
+e,f
+g,h
+    )");
+
+    auto& rView = *tableEditor.m_spTableView;
+    QPointer<QAbstractItemModel> spViewModel = rView.model();
+    ASSERT_TRUE(spViewModel != nullptr);
+    EXPECT_EQ(4, spViewModel->rowCount());
+    EXPECT_EQ(2, spViewModel->columnCount());
+
+    const char szFilters[] = R"({ "text": "a|c", "apply_columns":"1", "and_group": "a", "type": "reg_exp" } )"
+                             R"({ "text": "d", "apply_rows":"1:3", "and_group": "a" } )"
+                             R"({ "text": "h", "and_group": "b"})";
+    tableEditor.setFilterJson(szFilters);
+
+    ASSERT_TRUE(spViewModel != nullptr);
+    auto& rViewModel = *spViewModel;
+    EXPECT_EQ(2, rViewModel.rowCount());
+    EXPECT_EQ(2, rViewModel.columnCount());
+    EXPECT_EQ("c", rViewModel.data(rViewModel.index(0, 0)).toString());
+    EXPECT_EQ("d", rViewModel.data(rViewModel.index(0, 1)).toString());
+    EXPECT_EQ("g", rViewModel.data(rViewModel.index(1, 0)).toString());
+    EXPECT_EQ("h", rViewModel.data(rViewModel.index(1, 1)).toString());
 }
 
 TEST(dfgQt, qstringUtils)
