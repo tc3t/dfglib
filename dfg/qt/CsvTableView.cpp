@@ -19,6 +19,7 @@
 #include "sqlTools.hpp"
 #include "../math/FormulaParser.hpp"
 #include <chrono>
+#include <bitset>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -4572,22 +4573,110 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAn
     }
 }
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)(PanelT* uiPanel)
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
+{
+    const char* gBasicSelectionDetailCollectorUiNames[] =
+    {
+        // Note: order must match with BasicSelectionDetailCollector::Detail enum
+        QT_TR_NOOP("Included"),
+        QT_TR_NOOP("Excluded"),
+        QT_TR_NOOP("Sum"),
+        QT_TR_NOOP("Avg"),
+        QT_TR_NOOP("Min"),
+        QT_TR_NOOP("Max")
+    };
+
+    class BasicSelectionDetailCollector
+    {
+    public:
+        enum class Detail
+        {
+            // Note: order must match with gBasicSelectionDetailCollectorUiNames
+            cellCountIncluded,
+            cellCountExcluded,
+            sum,
+            average,
+            minimum,
+            maximum,
+            detailCount
+        }; // enum Detail
+
+        BasicSelectionDetailCollector()
+        {
+            m_enableFlags.set();
+        }
+
+        void handleCell(const QAbstractItemModel& rModel, const QModelIndex& index)
+        {
+            QString str = rModel.data(index).toString();
+            str.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
+            bool bOk;
+            const double val = str.toDouble(&bOk);
+            if (bOk)
+            {
+                m_avgMf(val);
+                m_minMaxMf(val);
+            }
+            else
+                ++m_nExcluded;
+        }
+
+        QString uiName(const int i) const
+        {
+            return (isValidIndex(gBasicSelectionDetailCollectorUiNames, i)) ? QObject::tr(gBasicSelectionDetailCollectorUiNames[i]) : QString();
+        }
+
+        QString uiValueStr(const int i) const
+        {
+            switch (i)
+            {
+                case static_cast<int>(Detail::cellCountIncluded): return QString::number(m_avgMf.callCount());
+                case static_cast<int>(Detail::cellCountExcluded): return QString::number(m_nExcluded);
+                case static_cast<int>(Detail::sum)              : return floatToQString(m_avgMf.sum());
+                case static_cast<int>(Detail::average)          : return floatToQString(m_avgMf.average());
+                case static_cast<int>(Detail::minimum)          : return floatToQString(m_minMaxMf.minValue());
+                case static_cast<int>(Detail::maximum)          : return floatToQString(m_minMaxMf.maxValue());
+                default: return QString();
+            }
+        }
+
+        QString resultString() const
+        {
+            DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
+            QString s;
+            for (int i = 0; i < DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames); ++i)
+            {
+                if (!m_enableFlags[i])
+                    continue;
+                if (!s.isEmpty())
+                    s += ", ";
+                s += QString("%1: %2").arg(uiName(i), uiValueStr(i));
+            }
+            return s;
+        }
+
+        ::DFG_MODULE_NS(func)::MemFuncMinMax<double> m_minMaxMf;
+        ::DFG_MODULE_NS(func)::MemFuncAvg<double> m_avgMf;
+        std::bitset<static_cast<size_t>(Detail::detailCount)> m_enableFlags;
+        size_t m_nExcluded = 0;
+    }; // BasicSelectionDetailCollector
+
+}}} // dfg::qt::DFG_DETAIL_NS
+
+::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::CsvTableViewBasicSelectionAnalyzer(PanelT* uiPanel)
    : m_spUiPanel(uiPanel)
 {
 }
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)()
-{
-}
+::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::~CsvTableViewBasicSelectionAnalyzer() = default;
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::analyzeImpl(const QItemSelection selection)
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const QItemSelection selection)
 {
     auto uiPanel = m_spUiPanel.data();
     if (!uiPanel)
         return;
 
-    auto pCtvView = qobject_cast<DFG_CLASS_NAME(const CsvTableView)*>(m_spView.data());
+    auto pCtvView = qobject_cast<const CsvTableView*>(m_spView.data());
     auto pModel = (pCtvView) ? pCtvView->csvModel() : nullptr;
     if (!pModel)
     {
@@ -4597,45 +4686,35 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::anal
 
     const auto maxTime = uiPanel->getMaxTimeInSeconds();
     const auto enabled = (!DFG_MODULE_NS(math)::isNan(maxTime) &&  maxTime > 0);
-    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<double> minMaxMf;
-    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<double> avgMf;
-    int nExcluded = 0;
     CompletionStatus completionStatus = CompletionStatus_started;
-    DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) operationTimer;
+    DFG_MODULE_NS(time)::TimerCpu operationTimer;
     uiPanel->onEvaluationStarting(enabled);
     if (enabled)
     {
+        ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector collector;
+        // For each selection
         for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
+            // For each cell in selection
             pCtvView->forEachCsvModelIndexInSelectionRange(*iter, [&](const QModelIndex& index, bool& rbContinue)
             {
                 const auto bHasMaxTimePassed = operationTimer.elapsedWallSeconds() >= maxTime;
                 if (bHasMaxTimePassed || uiPanel->isStopRequested() || m_abNewSelectionPending || !m_abIsEnabled.load(std::memory_order_relaxed))
                 {
                     if (bHasMaxTimePassed)
-                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByTimeLimit;
+                        completionStatus = ::DFG_MODULE_NS(qt)::CsvTableViewSelectionAnalyzer::CompletionStatus_terminatedByTimeLimit;
                     else if (m_abNewSelectionPending)
-                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByNewSelection;
+                        completionStatus = ::DFG_MODULE_NS(qt)::CsvTableViewSelectionAnalyzer::CompletionStatus_terminatedByNewSelection;
                     else if (!m_abIsEnabled)
-                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByDisabling;
+                        completionStatus = ::DFG_MODULE_NS(qt)::CsvTableViewSelectionAnalyzer::CompletionStatus_terminatedByDisabling;
                     else
-                        completionStatus = ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_terminatedByUserRequest;
+                        completionStatus = ::DFG_MODULE_NS(qt)::CsvTableViewSelectionAnalyzer::CompletionStatus_terminatedByUserRequest;
                     rbContinue = false;
                     return;
                 }
-                QString str = pModel->data(index).toString();
-                str.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
-                bool bOk;
-                const double val = str.toDouble(&bOk);
-                if (bOk)
-                {
-                    avgMf(val);
-                    minMaxMf(val);
-                }
-                else
-                    nExcluded++;
-            });
-        }
+                collector.handleCell(*pModel, index);
+            }); // For each cell in selection
+        } // For each selection
         const auto elapsedTime = operationTimer.elapsedWallSeconds();
         if (completionStatus == CompletionStatus_started)
             completionStatus = CompletionStatus_completed;
@@ -4643,13 +4722,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)::anal
 
         QString sMessage;
         if (completionStatus == CompletionStatus_completed)
-            sMessage = uiPanel->tr("Included: %1, Excluded: %2, Sum: %3, Avg: %4, Min: %5, Max: %6")
-                                                                         .arg(avgMf.callCount())
-                                                                         .arg(nExcluded)
-                                                                         .arg(floatToQString(avgMf.sum()))
-                                                                         .arg(floatToQString(avgMf.average()))
-                                                                         .arg(floatToQString(minMaxMf.minValue()))
-                                                                         .arg(floatToQString(minMaxMf.maxValue()));
+            sMessage = collector.resultString();
         else if (completionStatus == CompletionStatus_terminatedByTimeLimit)
             sMessage = uiPanel->tr("Interrupted (time limit exceeded)");
         else if (completionStatus == CompletionStatus_terminatedByUserRequest)
