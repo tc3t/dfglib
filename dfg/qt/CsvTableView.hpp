@@ -29,6 +29,7 @@ class QPushButton;
 class QThread;
 class QMutex;
 class QReadWriteLock;
+class QToolButton;
 
 
 namespace DFG_ROOT_NS
@@ -120,6 +121,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         double getMaxTimeInSeconds() const;
         bool isStopRequested() const;
 
+        // Thread-safe
+        std::bitset<32> getEnableFlags() const;
+
     signals:
         void sigEvaluationStartingHandleRequest(bool bEnabled);
         void sigEvaluationEndedHandleRequest(const double timeInSeconds, int completionStatus);
@@ -131,10 +135,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setValueDisplayString_myThread(const QString& s);
 
     private:
-        std::unique_ptr<QLineEdit>      m_spValueDisplay;
-        QPointer<QLineEdit>             m_spTimeLimitDisplay;
-        std::unique_ptr<QProgressBar>   m_spProgressBar;
-        std::unique_ptr<QPushButton>    m_spStopButton;
+        QObjectStorage<QLineEdit>      m_spValueDisplay;
+        QObjectStorage<QToolButton>    m_spDetailSelector;
+        QPointer<QLineEdit>            m_spTimeLimitDisplay;
+        QObjectStorage<QProgressBar>   m_spProgressBar;
+        QObjectStorage<QPushButton>    m_spStopButton;
+        std::atomic<unsigned long>     m_atomicFlags;
     }; // class CsvTableViewBasicSelectionAnalyzerPanel
 
     class TableHeaderView : public QHeaderView

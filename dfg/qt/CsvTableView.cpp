@@ -49,6 +49,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QThread>
 #include <QTime>
 #include <QTimer>
+#include <QToolButton>
 #include <QToolTip>
 #include <QUndoView>
 #include <QReadWriteLock>
@@ -61,6 +62,120 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../math.hpp"
 #include "../str/stringLiteralCharToValue.hpp"
 #include "../io/DelimitedTextWriter.hpp"
+
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
+{
+    template <class T>
+    QString floatToQString(const T val)
+    {
+        return QString::fromLatin1(DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::DFG_CLASS_NAME(StringAscii)>(val).c_str().c_str());
+    }
+
+    const char* gBasicSelectionDetailCollectorUiNames[] =
+    {
+        // Note: order must match with BasicSelectionDetailCollector::Detail enum
+        QT_TR_NOOP("Included"),
+        QT_TR_NOOP("Excluded"),
+        QT_TR_NOOP("Sum"),
+        QT_TR_NOOP("Avg"),
+        QT_TR_NOOP("Min"),
+        QT_TR_NOOP("Max")
+    };
+
+    class BasicSelectionDetailCollector
+    {
+    public:
+        enum class Detail
+        {
+            // Note: order must match with gBasicSelectionDetailCollectorUiNames
+            // Note: these are expected to be bit shifts
+            cellCountIncluded,
+            cellCountExcluded,
+            sum,
+            average,
+            minimum,
+            maximum,
+            detailCount
+        }; // enum Detail
+
+        using FlagContainer = std::bitset<32>;
+
+        BasicSelectionDetailCollector()
+        {
+            m_enableFlags.set();
+        }
+
+        void handleCell(const QAbstractItemModel& rModel, const QModelIndex& index)
+        {
+            QString str = rModel.data(index).toString();
+            str.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
+            bool bOk;
+            const double val = str.toDouble(&bOk);
+            if (bOk)
+            {
+                m_avgMf(val);
+                m_minMaxMf(val);
+            }
+            else
+                ++m_nExcluded;
+        }
+
+        static QString uiName(const int i)
+        {
+            return (isValidIndex(gBasicSelectionDetailCollectorUiNames, i)) ? QObject::tr(gBasicSelectionDetailCollectorUiNames[i]) : QString();
+        }
+
+        QString uiValueStr(const int i) const
+        {
+            switch (i)
+            {
+                case static_cast<int>(Detail::cellCountIncluded): return QString::number(m_avgMf.callCount());
+                case static_cast<int>(Detail::cellCountExcluded): return QString::number(m_nExcluded);
+                case static_cast<int>(Detail::sum)              : return floatToQString(m_avgMf.sum());
+                case static_cast<int>(Detail::average)          : return floatToQString(m_avgMf.average());
+                case static_cast<int>(Detail::minimum)          : return floatToQString(m_minMaxMf.minValue());
+                case static_cast<int>(Detail::maximum)          : return floatToQString(m_minMaxMf.maxValue());
+                default: return QString();
+            }
+        }
+
+        QString resultString() const
+        {
+            DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
+            QString s;
+            for (int i = 0; i < DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames); ++i)
+            {
+                if (!m_enableFlags[i])
+                    continue;
+                if (!s.isEmpty())
+                    s += ", ";
+                s += QString("%1: %2").arg(uiName(i), uiValueStr(i));
+            }
+            return s;
+        }
+
+        template <class Func_T>
+        static void forEachDetailIdWhile(Func_T&& func)
+        {
+            for (int i = 0; i < DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames); ++i)
+            {
+                if (!func(i, uiName(i)))
+                    break;
+            }
+        }
+
+        void setEnableFlags(const FlagContainer& flags)
+        {
+            m_enableFlags = flags;
+        }
+
+        ::DFG_MODULE_NS(func)::MemFuncMinMax<double> m_minMaxMf;
+        ::DFG_MODULE_NS(func)::MemFuncAvg<double> m_avgMf;
+        FlagContainer m_enableFlags;
+        size_t m_nExcluded = 0;
+    }; // BasicSelectionDetailCollector
+
+}}} // dfg::qt::DFG_DETAIL_NS
 
 
 void ::DFG_MODULE_NS(qt)::TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
@@ -135,6 +250,12 @@ namespace
         DFG_MODULE_NS(qt)::setProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>>(view, QVariant(val));
     }
 
+    template <class T>
+    QString floatToQString(const T val)
+    {
+        return ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::floatToQString(val);
+    }
+
     // Properties
     DFG_QT_DEFINE_OBJECT_PROPERTY("diffProgPath", CsvTableView, CsvTableViewPropertyId_diffProgPath, QString, PropertyType);
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_initialScrollPosition", CsvTableView, CsvTableViewPropertyId_initialScrollPosition, QString, PropertyType);
@@ -143,12 +264,6 @@ namespace
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_dateFormat", CsvTableView, CsvTableViewPropertyId_dateFormat, QString, []() { return QString("yyyy-MM-dd"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_dateTimeFormat", CsvTableView, CsvTableViewPropertyId_dateTimeFormat, QString, []() { return QString("yyyy-MM-dd hh:mm:ss.zzz"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY("CsvTableView_editMode", CsvTableView, CsvTableViewPropertyId_editMode, QString, []() { return QString(); });
-
-    template <class T>
-    QString floatToQString(const T val)
-    {
-        return QString::fromLatin1(DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::DFG_CLASS_NAME(StringAscii)>(val).c_str().c_str());
-    }
 
     const int gnDefaultRowHeight = 21; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
 
@@ -4003,11 +4118,12 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
 
 } // unnamed namespace
 
-DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(QWidget *pParent) :
+::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent) :
     BaseClass(pParent)
 {
     auto layout = new QGridLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
+    m_atomicFlags = ~(unsigned long(0));
 
     int column = 0;
 
@@ -4018,6 +4134,37 @@ DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::DFG_CLASS_NAME(CsvTable
     m_spValueDisplay.reset(new QLineEdit(this));
     m_spValueDisplay->setReadOnly(true);
     layout->addWidget(m_spValueDisplay.get(), 0, column++);
+
+    // Detail selector
+    {
+        m_spDetailSelector.reset(new QToolButton(this));
+        m_spDetailSelector->setPopupMode(QToolButton::InstantPopup);
+        m_spDetailSelector->setText(tr("Details"));
+        auto pMenu = new QMenu(this); // Deletion through parentship
+        ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::forEachDetailIdWhile([&](const int id, const QString& sName)
+        {
+            // https://stackoverflow.com/questions/2050462/prevent-a-qmenu-from-closing-when-one-of-its-qaction-is-triggered
+            auto pCheckBox = new QCheckBox(pMenu);
+            pCheckBox->setText(sName);
+            pCheckBox->setChecked(true);
+            auto pAct = new QWidgetAction(pMenu);
+            pAct->setDefaultWidget(pCheckBox);
+            
+            DFG_QT_VERIFY_CONNECT(connect(pCheckBox, &QCheckBox::toggled, [=](const bool b)
+            {
+                unsigned long val = m_atomicFlags;
+                if (b)
+                    val |= (1ul << id);
+                else
+                    val &= ~(1ul << id);
+                m_atomicFlags = val;
+            }));
+            pMenu->addAction(pAct);
+            return true;
+        });
+        m_spDetailSelector->setMenu(pMenu); // Does not transfer ownership
+        layout->addWidget(m_spDetailSelector.get(), 0, column++);
+    }
 
     // Progress bar
     m_spProgressBar.reset(new QProgressBar(this));
@@ -4051,28 +4198,25 @@ DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::DFG_CLASS_NAME(CsvTable
     DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigSetValueDisplayString, this, &ThisClass::setValueDisplayString_myThread));
 }
 
-DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::~DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)()
-{
+::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::~CsvTableViewBasicSelectionAnalyzerPanel() = default;
 
-}
-
-void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::setValueDisplayString(const QString& s)
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setValueDisplayString(const QString& s)
 {
     Q_EMIT sigSetValueDisplayString(s);
 }
 
-void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::setValueDisplayString_myThread(const QString& s)
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setValueDisplayString_myThread(const QString& s)
 {
     if (m_spValueDisplay)
         m_spValueDisplay->setText(s);
 }
 
-void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationStarting(const bool bEnabled)
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationStarting(const bool bEnabled)
 {
     Q_EMIT sigEvaluationStartingHandleRequest(bEnabled);
 }
 
-void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationStarting_myThread(const bool bEnabled)
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationStarting_myThread(const bool bEnabled)
 {
     if (bEnabled)
     {
@@ -4100,12 +4244,12 @@ void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationStarti
     }
 }
 
-void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationEnded(const double timeInSeconds, const DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus)
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded(const double timeInSeconds, const DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus)
 {
     Q_EMIT sigEvaluationEndedHandleRequest(timeInSeconds, static_cast<int>(completionStatus));
 }
 
-void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationEnded_myThread(const double timeInSeconds, const int completionStatus)
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded_myThread(const double timeInSeconds, const int completionStatus)
 {
     if (m_spProgressBar)
     {
@@ -4122,7 +4266,7 @@ void DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::onEvaluationEnded_
         m_spStopButton->setEnabled(false);
 }
 
-double DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::getMaxTimeInSeconds() const
+double ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeInSeconds() const
 {
     bool bOk = false;
     double val = 0;
@@ -4131,9 +4275,15 @@ double DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::getMaxTimeInSeco
     return (bOk) ? val : -1.0;
 }
 
-bool DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)::isStopRequested() const
+bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::isStopRequested() const
 {
     return (m_spStopButton && m_spStopButton->isChecked());
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getEnableFlags() const -> std::bitset<32>
+{
+    std::bitset<32> flags(m_atomicFlags);
+    return flags;
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected)
@@ -4573,95 +4723,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAn
     }
 }
 
-DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
-{
-    const char* gBasicSelectionDetailCollectorUiNames[] =
-    {
-        // Note: order must match with BasicSelectionDetailCollector::Detail enum
-        QT_TR_NOOP("Included"),
-        QT_TR_NOOP("Excluded"),
-        QT_TR_NOOP("Sum"),
-        QT_TR_NOOP("Avg"),
-        QT_TR_NOOP("Min"),
-        QT_TR_NOOP("Max")
-    };
 
-    class BasicSelectionDetailCollector
-    {
-    public:
-        enum class Detail
-        {
-            // Note: order must match with gBasicSelectionDetailCollectorUiNames
-            cellCountIncluded,
-            cellCountExcluded,
-            sum,
-            average,
-            minimum,
-            maximum,
-            detailCount
-        }; // enum Detail
-
-        BasicSelectionDetailCollector()
-        {
-            m_enableFlags.set();
-        }
-
-        void handleCell(const QAbstractItemModel& rModel, const QModelIndex& index)
-        {
-            QString str = rModel.data(index).toString();
-            str.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
-            bool bOk;
-            const double val = str.toDouble(&bOk);
-            if (bOk)
-            {
-                m_avgMf(val);
-                m_minMaxMf(val);
-            }
-            else
-                ++m_nExcluded;
-        }
-
-        QString uiName(const int i) const
-        {
-            return (isValidIndex(gBasicSelectionDetailCollectorUiNames, i)) ? QObject::tr(gBasicSelectionDetailCollectorUiNames[i]) : QString();
-        }
-
-        QString uiValueStr(const int i) const
-        {
-            switch (i)
-            {
-                case static_cast<int>(Detail::cellCountIncluded): return QString::number(m_avgMf.callCount());
-                case static_cast<int>(Detail::cellCountExcluded): return QString::number(m_nExcluded);
-                case static_cast<int>(Detail::sum)              : return floatToQString(m_avgMf.sum());
-                case static_cast<int>(Detail::average)          : return floatToQString(m_avgMf.average());
-                case static_cast<int>(Detail::minimum)          : return floatToQString(m_minMaxMf.minValue());
-                case static_cast<int>(Detail::maximum)          : return floatToQString(m_minMaxMf.maxValue());
-                default: return QString();
-            }
-        }
-
-        QString resultString() const
-        {
-            DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
-            QString s;
-            for (int i = 0; i < DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames); ++i)
-            {
-                if (!m_enableFlags[i])
-                    continue;
-                if (!s.isEmpty())
-                    s += ", ";
-                s += QString("%1: %2").arg(uiName(i), uiValueStr(i));
-            }
-            return s;
-        }
-
-        ::DFG_MODULE_NS(func)::MemFuncMinMax<double> m_minMaxMf;
-        ::DFG_MODULE_NS(func)::MemFuncAvg<double> m_avgMf;
-        std::bitset<static_cast<size_t>(Detail::detailCount)> m_enableFlags;
-        size_t m_nExcluded = 0;
-    }; // BasicSelectionDetailCollector
-
-}}} // dfg::qt::DFG_DETAIL_NS
 
 ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::CsvTableViewBasicSelectionAnalyzer(PanelT* uiPanel)
    : m_spUiPanel(uiPanel)
@@ -4692,6 +4754,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const 
     if (enabled)
     {
         ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector collector;
+        collector.setEnableFlags(uiPanel->getEnableFlags());
         // For each selection
         for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
