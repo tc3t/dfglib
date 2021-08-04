@@ -18,6 +18,7 @@
 #include "JsonListWidget.hpp"
 #include "sqlTools.hpp"
 #include "../math/FormulaParser.hpp"
+#include "../func/memFuncMedian.hpp"
 #include <chrono>
 #include <bitset>
 
@@ -78,6 +79,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         QT_TR_NOOP("Excluded"),
         QT_TR_NOOP("Sum"),
         QT_TR_NOOP("Avg"),
+        QT_TR_NOOP("Median"),
         QT_TR_NOOP("Min"),
         QT_TR_NOOP("Max")
     };
@@ -93,6 +95,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             cellCountExcluded,
             sum,
             average,
+            median,
             minimum,
             maximum,
             detailCount
@@ -102,7 +105,15 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 
         BasicSelectionDetailCollector()
         {
-            m_enableFlags.set();
+            m_enableFlags = defaultEnableFlags();
+        }
+
+        static FlagContainer defaultEnableFlags()
+        {
+            FlagContainer flags;
+            flags.set();
+            flags[static_cast<int>(Detail::median)] = false;
+            return flags;
         }
 
         void handleCell(const QAbstractItemModel& rModel, const QModelIndex& index)
@@ -115,6 +126,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             {
                 m_avgMf(val);
                 m_minMaxMf(val);
+                if (isEnabled(Detail::median))
+                    m_medianMf(val);
             }
             else
                 ++m_nExcluded;
@@ -133,6 +146,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 case static_cast<int>(Detail::cellCountExcluded): return QString::number(m_nExcluded);
                 case static_cast<int>(Detail::sum)              : return floatToQString(m_avgMf.sum());
                 case static_cast<int>(Detail::average)          : return floatToQString(m_avgMf.average());
+                case static_cast<int>(Detail::median)           : return floatToQString(m_medianMf.median());
                 case static_cast<int>(Detail::minimum)          : return floatToQString(m_minMaxMf.minValue());
                 case static_cast<int>(Detail::maximum)          : return floatToQString(m_minMaxMf.maxValue());
                 default: return QString();
@@ -159,9 +173,24 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         {
             for (int i = 0; i < DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames); ++i)
             {
-                if (!func(i, uiName(i)))
+                if (!func(static_cast<Detail>(i), uiName(i)))
                     break;
             }
+        }
+
+        bool isEnabled(const Detail i) const
+        {
+            return isEnabled(m_enableFlags, i);
+        }
+
+        static bool isEnabled(const FlagContainer& cont, const Detail i)
+        {
+            return cont[static_cast<int>(i)];
+        }
+
+        void setEnabled(const Detail i, const bool b)
+        {
+            m_enableFlags[static_cast<int>(i)] = b;
         }
 
         void setEnableFlags(const FlagContainer& flags)
@@ -171,6 +200,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 
         ::DFG_MODULE_NS(func)::MemFuncMinMax<double> m_minMaxMf;
         ::DFG_MODULE_NS(func)::MemFuncAvg<double> m_avgMf;
+        ::DFG_MODULE_NS(func)::MemFuncMedian<double> m_medianMf;
         FlagContainer m_enableFlags;
         size_t m_nExcluded = 0;
     }; // BasicSelectionDetailCollector
@@ -4123,7 +4153,7 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
 {
     auto layout = new QGridLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    m_atomicFlags = ~(unsigned long(0));
+    m_atomicFlags = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::defaultEnableFlags().to_ulong();
 
     int column = 0;
 
@@ -4141,12 +4171,14 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
         m_spDetailSelector->setPopupMode(QToolButton::InstantPopup);
         m_spDetailSelector->setText(tr("Details"));
         auto pMenu = new QMenu(this); // Deletion through parentship
-        ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::forEachDetailIdWhile([&](const int id, const QString& sName)
+        using DetailCollector = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector;
+        const auto defaultFlags = DetailCollector::defaultEnableFlags();
+        DetailCollector::forEachDetailIdWhile([&](const DetailCollector::Detail id, const QString& sName)
         {
             // https://stackoverflow.com/questions/2050462/prevent-a-qmenu-from-closing-when-one-of-its-qaction-is-triggered
             auto pCheckBox = new QCheckBox(pMenu);
             pCheckBox->setText(sName);
-            pCheckBox->setChecked(true);
+            pCheckBox->setChecked(DetailCollector::isEnabled(defaultFlags, id));
             auto pAct = new QWidgetAction(pMenu);
             pAct->setDefaultWidget(pCheckBox);
             
@@ -4154,9 +4186,9 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
             {
                 unsigned long val = m_atomicFlags;
                 if (b)
-                    val |= (1ul << id);
+                    val |= (1ul << static_cast<unsigned int>(id));
                 else
-                    val &= ~(1ul << id);
+                    val &= ~(1ul << static_cast<unsigned int>(id));
                 m_atomicFlags = val;
             }));
             pMenu->addAction(pAct);
