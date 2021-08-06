@@ -64,6 +64,14 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../str/stringLiteralCharToValue.hpp"
 #include "../io/DelimitedTextWriter.hpp"
 
+#if (DFG_BUILD_OPT_USE_BOOST == 1)
+    DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+        #include <boost/accumulators/framework/accumulator_set.hpp>
+        #include <boost/accumulators/statistics/variance.hpp>
+        #include <boost/accumulators/statistics/stats.hpp>
+    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+#endif // DFG_BUILD_OPT_USE_BOOST
+
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 {
     template <class T>
@@ -82,6 +90,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         QT_TR_NOOP("Median"),
         QT_TR_NOOP("Min"),
         QT_TR_NOOP("Max")
+        #if defined(BOOST_VERSION)
+            ,QT_TR_NOOP("Variance")
+        #endif // BOOST_VERSION
     };
 
     class BasicSelectionDetailCollector
@@ -98,6 +109,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             median,
             minimum,
             maximum,
+#if defined(BOOST_VERSION)
+            variance,
+#endif // BOOST_VERSION
             detailCount
         }; // enum Detail
 
@@ -113,6 +127,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             FlagContainer flags;
             flags.set();
             flags[static_cast<int>(Detail::median)] = false;
+#if defined(BOOST_VERSION)
+            flags[static_cast<int>(Detail::variance)] = false;
+#endif // BOOST_VERSION
             return flags;
         }
 
@@ -128,6 +145,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 m_minMaxMf(val);
                 if (isEnabled(Detail::median))
                     m_medianMf(val);
+#if defined(BOOST_VERSION)
+                if (isEnabled(Detail::variance))
+                    m_varianceMf(val);
+#endif // BOOST_VERSION
             }
             else
                 ++m_nExcluded;
@@ -149,6 +170,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 case static_cast<int>(Detail::median)           : return floatToQString(m_medianMf.median());
                 case static_cast<int>(Detail::minimum)          : return floatToQString(m_minMaxMf.minValue());
                 case static_cast<int>(Detail::maximum)          : return floatToQString(m_minMaxMf.maxValue());
+#if defined(BOOST_VERSION)
+                case static_cast<int>(Detail::variance)         : return floatToQString(boost::accumulators::variance(m_varianceMf));
+#endif
                 default: return QString();
             }
         }
@@ -201,6 +225,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         ::DFG_MODULE_NS(func)::MemFuncMinMax<double> m_minMaxMf;
         ::DFG_MODULE_NS(func)::MemFuncAvg<double> m_avgMf;
         ::DFG_MODULE_NS(func)::MemFuncMedian<double> m_medianMf;
+#if defined(BOOST_VERSION)
+        boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::variance(boost::accumulators::lazy)>> m_varianceMf;
+#endif
         FlagContainer m_enableFlags;
         size_t m_nExcluded = 0;
     }; // BasicSelectionDetailCollector
