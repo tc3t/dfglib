@@ -80,7 +80,24 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         return QString::fromLatin1(DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::DFG_CLASS_NAME(StringAscii)>(val).c_str().c_str());
     }
 
-    const char* gBasicSelectionDetailCollectorUiNames[] =
+    const char* gBasicSelectionDetailCollectorUiNames_long[] =
+    {
+        // Note: order must match with BasicSelectionDetailCollector::Detail enum
+        QT_TR_NOOP("Count (Included)"),
+        QT_TR_NOOP("Count (Excluded)"),
+        QT_TR_NOOP("Sum"),
+        QT_TR_NOOP("Avg"),
+        QT_TR_NOOP("Median"),
+        QT_TR_NOOP("Min"),
+        QT_TR_NOOP("Max")
+        #if defined(BOOST_VERSION)
+            ,QT_TR_NOOP("Variance")
+            ,QT_TR_NOOP("Standard deviation (population)")
+            ,QT_TR_NOOP("Standard deviation (sample)")
+        #endif // BOOST_VERSION
+    };
+
+    const char* gBasicSelectionDetailCollectorUiNames_short[] =
     {
         // Note: order must match with BasicSelectionDetailCollector::Detail enum
         QT_TR_NOOP("Included"),
@@ -92,6 +109,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         QT_TR_NOOP("Max")
         #if defined(BOOST_VERSION)
             ,QT_TR_NOOP("Variance")
+            ,QT_TR_NOOP("StdDev (pop)")
+            ,QT_TR_NOOP("StdDev (smp)")
         #endif // BOOST_VERSION
     };
 
@@ -111,6 +130,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             maximum,
 #if defined(BOOST_VERSION)
             variance,
+            stddev_population,
+            stddev_sample,
 #endif // BOOST_VERSION
             detailCount
         }; // enum Detail
@@ -129,6 +150,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             flags[static_cast<int>(Detail::median)] = false;
 #if defined(BOOST_VERSION)
             flags[static_cast<int>(Detail::variance)] = false;
+            flags[static_cast<int>(Detail::stddev_population)] = false;
+            flags[static_cast<int>(Detail::stddev_sample)] = false;
 #endif // BOOST_VERSION
             return flags;
         }
@@ -146,7 +169,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 if (isEnabled(Detail::median))
                     m_medianMf(val);
 #if defined(BOOST_VERSION)
-                if (isEnabled(Detail::variance))
+                if (isEnabled(Detail::variance) || isEnabled(Detail::stddev_population) || isEnabled(Detail::stddev_sample))
                     m_varianceMf(val);
 #endif // BOOST_VERSION
             }
@@ -154,24 +177,38 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 ++m_nExcluded;
         }
 
-        static QString uiName(const int i)
+        template <size_t N> 
+        static QString privUiName(const Detail id, const char* (&arr)[N])
         {
-            return (isValidIndex(gBasicSelectionDetailCollectorUiNames, i)) ? QObject::tr(gBasicSelectionDetailCollectorUiNames[i]) : QString();
+            const auto i = static_cast<int>(id);
+            return (isValidIndex(arr, i)) ? QObject::tr(arr[i]) : QString();
         }
 
-        QString uiValueStr(const int i) const
+        static QString uiName_long(const Detail id)
         {
-            switch (i)
+            return privUiName(id, gBasicSelectionDetailCollectorUiNames_long);
+        }
+
+        static QString uiName_short(const Detail id)
+        {
+            return privUiName(id, gBasicSelectionDetailCollectorUiNames_short);
+        }
+
+        QString uiValueStr(const Detail id) const
+        {
+            switch (id)
             {
-                case static_cast<int>(Detail::cellCountIncluded): return QString::number(m_avgMf.callCount());
-                case static_cast<int>(Detail::cellCountExcluded): return QString::number(m_nExcluded);
-                case static_cast<int>(Detail::sum)              : return floatToQString(m_avgMf.sum());
-                case static_cast<int>(Detail::average)          : return floatToQString(m_avgMf.average());
-                case static_cast<int>(Detail::median)           : return floatToQString(m_medianMf.median());
-                case static_cast<int>(Detail::minimum)          : return floatToQString(m_minMaxMf.minValue());
-                case static_cast<int>(Detail::maximum)          : return floatToQString(m_minMaxMf.maxValue());
+                case Detail::cellCountIncluded: return QString::number(m_avgMf.callCount());
+                case Detail::cellCountExcluded: return QString::number(m_nExcluded);
+                case Detail::sum              : return floatToQString(m_avgMf.sum());
+                case Detail::average          : return floatToQString(m_avgMf.average());
+                case Detail::median           : return floatToQString(m_medianMf.median());
+                case Detail::minimum          : return floatToQString(m_minMaxMf.minValue());
+                case Detail::maximum          : return floatToQString(m_minMaxMf.maxValue());
 #if defined(BOOST_VERSION)
-                case static_cast<int>(Detail::variance)         : return floatToQString(boost::accumulators::variance(m_varianceMf));
+                case Detail::variance         : return floatToQString(boost::accumulators::variance(m_varianceMf));
+                case Detail::stddev_population: return floatToQString(std::sqrt(boost::accumulators::variance(m_varianceMf)));
+                case Detail::stddev_sample    : return floatToQString(std::sqrt(double(m_avgMf.callCount()) / double(m_avgMf.callCount() - 1) * boost::accumulators::variance(m_varianceMf)));
 #endif
                 default: return QString();
             }
@@ -179,25 +216,27 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 
         QString resultString() const
         {
-            DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
+            DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames_long) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
+            DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames_short) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
             QString s;
-            for (int i = 0; i < DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames); ++i)
+            forEachDetailIdWhile([&](const Detail& id)
             {
-                if (!m_enableFlags[i])
-                    continue;
+                if (!isEnabled(id))
+                    return true;
                 if (!s.isEmpty())
                     s += ", ";
-                s += QString("%1: %2").arg(uiName(i), uiValueStr(i));
-            }
+                s += QString("%1: %2").arg(uiName_short(id), uiValueStr(id));
+                return true;
+            });
             return s;
         }
 
         template <class Func_T>
         static void forEachDetailIdWhile(Func_T&& func)
         {
-            for (int i = 0; i < DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames); ++i)
+            for (int i = 0; i < static_cast<int>(Detail::detailCount); ++i)
             {
-                if (!func(static_cast<Detail>(i), uiName(i)))
+                if (!func(static_cast<Detail>(i)))
                     break;
             }
         }
@@ -4200,11 +4239,11 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
         auto pMenu = new QMenu(this); // Deletion through parentship
         using DetailCollector = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector;
         const auto defaultFlags = DetailCollector::defaultEnableFlags();
-        DetailCollector::forEachDetailIdWhile([&](const DetailCollector::Detail id, const QString& sName)
+        DetailCollector::forEachDetailIdWhile([&](const DetailCollector::Detail id)
         {
             // https://stackoverflow.com/questions/2050462/prevent-a-qmenu-from-closing-when-one-of-its-qaction-is-triggered
             auto pCheckBox = new QCheckBox(pMenu);
-            pCheckBox->setText(sName);
+            pCheckBox->setText(DetailCollector::uiName_long(id));
             pCheckBox->setChecked(DetailCollector::isEnabled(defaultFlags, id));
             auto pAct = new QWidgetAction(pMenu);
             pAct->setDefaultWidget(pCheckBox);
