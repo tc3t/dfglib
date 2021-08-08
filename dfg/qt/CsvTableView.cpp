@@ -89,12 +89,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         QT_TR_NOOP("Avg"),
         QT_TR_NOOP("Median"),
         QT_TR_NOOP("Min"),
-        QT_TR_NOOP("Max")
+        QT_TR_NOOP("Max"),
         #if defined(BOOST_VERSION)
-            ,QT_TR_NOOP("Variance")
-            ,QT_TR_NOOP("Standard deviation (population)")
-            ,QT_TR_NOOP("Standard deviation (sample)")
+            QT_TR_NOOP("Variance"),
+            QT_TR_NOOP("Standard deviation (population)"),
+            QT_TR_NOOP("Standard deviation (sample)"),
         #endif // BOOST_VERSION
+        QT_TR_NOOP("Is sorted (numerically)")
     };
 
     const char* gBasicSelectionDetailCollectorUiNames_short[] =
@@ -106,12 +107,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         QT_TR_NOOP("Avg"),
         QT_TR_NOOP("Median"),
         QT_TR_NOOP("Min"),
-        QT_TR_NOOP("Max")
+        QT_TR_NOOP("Max"),
         #if defined(BOOST_VERSION)
-            ,QT_TR_NOOP("Variance")
-            ,QT_TR_NOOP("StdDev (pop)")
-            ,QT_TR_NOOP("StdDev (smp)")
+            QT_TR_NOOP("Variance"),
+            QT_TR_NOOP("StdDev (pop)"),
+            QT_TR_NOOP("StdDev (smp)"),
         #endif // BOOST_VERSION
+        QT_TR_NOOP("Is sorted (num)")
     };
 
     class BasicSelectionDetailCollector
@@ -133,6 +135,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             stddev_population,
             stddev_sample,
 #endif // BOOST_VERSION
+            isSortedNum,
             detailCount
         }; // enum Detail
 
@@ -153,6 +156,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             flags[static_cast<int>(Detail::stddev_population)] = false;
             flags[static_cast<int>(Detail::stddev_sample)] = false;
 #endif // BOOST_VERSION
+            flags[static_cast<int>(Detail::isSortedNum)] = false;
             return flags;
         }
 
@@ -172,12 +176,32 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 if (isEnabled(Detail::variance) || isEnabled(Detail::stddev_population) || isEnabled(Detail::stddev_sample))
                     m_varianceMf(val);
 #endif // BOOST_VERSION
+                if (isEnabled(Detail::isSortedNum) && m_nSortedUntil + 1 >= m_avgMf.callCount())
+                {
+                    if (::DFG_MODULE_NS(math)::isNan(val) ||  // Ignoring NaNs
+                        m_avgMf.callCount() == 1 ||
+                        val == m_previousNumber ||
+                        m_sortDirection == 0 ||
+                        (m_sortDirection == 1 && val >= m_previousNumber) ||
+                        (m_sortDirection == -1 && val <= m_previousNumber))
+                    {
+                        ++m_nSortedUntil;
+                        if (m_sortDirection == 0)
+                        {
+                            if (val > m_previousNumber)
+                                m_sortDirection = 1;
+                            else if (val < m_previousNumber)
+                                m_sortDirection = -1;
+                        }
+                    }
+                }
+                m_previousNumber = val;
             }
             else
                 ++m_nExcluded;
         }
 
-        template <size_t N> 
+        template <size_t N>
         static QString privUiName(const Detail id, const char* (&arr)[N])
         {
             const auto i = static_cast<int>(id);
@@ -194,7 +218,18 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             return privUiName(id, gBasicSelectionDetailCollectorUiNames_short);
         }
 
-        QString uiValueStr(const Detail id) const
+        QString privMakeIsSortedValueString(const QItemSelection& selection) const
+        {
+            if (selection.size() != 1 || m_avgMf.callCount() == 0)
+                return QObject::tr("N/A");
+            const char* pszSortDir = (m_sortDirection >= 0) ? QT_TR_NOOP("asc") : QT_TR_NOOP("desc");
+            if (m_nSortedUntil == m_avgMf.callCount())
+                return QObject::tr("yes (%1)").arg(pszSortDir);
+            else
+                return QObject::tr("no (%1 for %2 first)").arg(pszSortDir).arg(m_nSortedUntil);
+        }
+
+        QString uiValueStr(const Detail id, const QItemSelection& selection) const
         {
             switch (id)
             {
@@ -210,11 +245,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 case Detail::stddev_population: return floatToQString(std::sqrt(boost::accumulators::variance(m_varianceMf)));
                 case Detail::stddev_sample    : return floatToQString(std::sqrt(double(m_avgMf.callCount()) / double(m_avgMf.callCount() - 1) * boost::accumulators::variance(m_varianceMf)));
 #endif
-                default: return QString();
+                case Detail::isSortedNum      : return privMakeIsSortedValueString(selection);
+                default: DFG_ASSERT_IMPLEMENTED(false); return QString();
             }
         }
 
-        QString resultString() const
+        QString resultString(const QItemSelection& selection) const
         {
             DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames_long) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
             DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames_short) == static_cast<size_t>(Detail::detailCount), "Detail enum/string array count mismatch");
@@ -225,7 +261,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                     return true;
                 if (!s.isEmpty())
                     s += ", ";
-                s += QString("%1: %2").arg(uiName_short(id), uiValueStr(id));
+                s += QString("%1: %2").arg(uiName_short(id), uiValueStr(id, selection));
                 return true;
             });
             return s;
@@ -269,6 +305,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 #endif
         FlagContainer m_enableFlags;
         size_t m_nExcluded = 0;
+        double m_previousNumber = std::numeric_limits<double>::quiet_NaN();
+        int m_nSortedUntil = 0; // Stores the number of sorted cells from first.
+        int m_sortDirection = 0; // 1 = ascending, -1 = descending, 0 = either.
     }; // BasicSelectionDetailCollector
 
 }}} // dfg::qt::DFG_DETAIL_NS
@@ -4857,7 +4896,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const 
         for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
             // For each cell in selection
-            pCtvView->forEachCsvModelIndexInSelectionRange(*iter, [&](const QModelIndex& index, bool& rbContinue)
+            pCtvView->forEachCsvModelIndexInSelectionRange(*iter, CsvTableView::ForEachOrder::inOrderFirstRows, [&](const QModelIndex& index, bool& rbContinue)
             {
                 const auto bHasMaxTimePassed = operationTimer.elapsedWallSeconds() >= maxTime;
                 if (bHasMaxTimePassed || uiPanel->isStopRequested() || m_abNewSelectionPending || !m_abIsEnabled.load(std::memory_order_relaxed))
@@ -4883,7 +4922,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const 
 
         QString sMessage;
         if (completionStatus == CompletionStatus_completed)
-            sMessage = collector.resultString();
+            sMessage = collector.resultString(selection);
         else if (completionStatus == CompletionStatus_terminatedByTimeLimit)
             sMessage = uiPanel->tr("Interrupted (time limit exceeded)");
         else if (completionStatus == CompletionStatus_terminatedByUserRequest)

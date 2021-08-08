@@ -182,6 +182,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ModelIndexTypeView    // Refers to indexes in view model (which can be the same as source-model in case there is no proxy).
         };
 
+        enum class ForEachOrder
+        {
+            any,
+            inOrderFirstRows // Rows from top to bottom and then channel increment.
+        };
+
         CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, ViewType viewType = ViewType::allFeatures);
         ~CsvTableView() DFG_OVERRIDE_DESTRUCTOR;
 
@@ -274,11 +280,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class Func_T>
         void forEachCsvModelIndexInSelection(Func_T func) const;
 
+        // Calls given func for every index at given QItemSelectionRange.
+        // func gets two arguments: (const QModelIndex& index, bool& rbContinue)
         template <class Func_T>
-        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func);
+        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, ForEachOrder order, Func_T func);
+        template <class Func_T>
+        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) { forEachCsvModelIndexInSelectionRange(sr, ForEachOrder::any, std::forward<Func_T>(func)); }
 
+        // Const overload
         template <class Func_T>
-        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) const;
+        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, ForEachOrder order, Func_T func) const;
+        template <class Func_T>
+        void forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) const { forEachCsvModelIndexInSelectionRange(sr, ForEachOrder::any, std::forward<Func_T>(func)); }
 
         // Returns viewModel->index(r, c) mapped to source model, QModelIndex() if neither pModel or pProxy is available.
         static QModelIndex mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, int r, int c);
@@ -349,10 +362,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static void forEachIndexInSelection(This_T& thisItem, const QItemSelection &selection, ModelIndexType indexType, Func_T&& func);
 
         template <class This_T, class Func_T>
-        static void forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func);
+        static void forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, ForEachOrder order, Func_T func);
 
         template <class This_T, class Func_T>
-        static void forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, ModelIndexType indexType, Func_T func);
+        static void forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, ForEachOrder order, ModelIndexType indexType, Func_T func);
 
     public slots:
         void createNewTable();
@@ -515,15 +528,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }
 
     template <class Func_T>
-    void CsvTableView::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func)
+    void CsvTableView::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, ForEachOrder order, Func_T func)
     {
-        forEachCsvModelIndexInSelectionRange(*this, sr, std::forward<Func_T>(func));
+        forEachCsvModelIndexInSelectionRange(*this, sr, order, std::forward<Func_T>(func));
     }
 
     template <class Func_T>
-    void CsvTableView::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, Func_T func) const
+    void CsvTableView::forEachCsvModelIndexInSelectionRange(const QItemSelectionRange& sr, ForEachOrder order, Func_T func) const
     {
-        forEachCsvModelIndexInSelectionRange(*this, sr, std::forward<Func_T>(func));
+        forEachCsvModelIndexInSelectionRange(*this, sr, order, std::forward<Func_T>(func));
     }
 
     template <class This_T, class Func_T>
@@ -537,7 +550,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
         for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
-            forEachIndexInSelectionRange(thisItem, *iter, indexType, func);
+            forEachIndexInSelectionRange(thisItem, *iter, ForEachOrder::any, indexType, func);
         }
     }
 
@@ -550,14 +563,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }
 
     template <class This_T, class Func_T>
-    void CsvTableView::forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, Func_T func)
+    void CsvTableView::forEachCsvModelIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, ForEachOrder order, Func_T func)
     {
-        forEachIndexInSelectionRange(thisItem, sr, ModelIndexTypeSource, std::forward<Func_T>(func));
+        forEachIndexInSelectionRange(thisItem, sr, order, ModelIndexTypeSource, std::forward<Func_T>(func));
     }
 
     template <class This_T, class Func_T>
-    void CsvTableView::forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, const ModelIndexType indexType, Func_T func)
+    void CsvTableView::forEachIndexInSelectionRange(This_T& thisItem, const QItemSelectionRange& sr, const ForEachOrder order, const ModelIndexType indexType, Func_T func)
     {
+        DFG_UNUSED(order);
         auto pProxy = (indexType == ModelIndexTypeSource) ? thisItem.getProxyModelPtr() : nullptr;
         auto pModel = thisItem.model();
         if (!pModel)
