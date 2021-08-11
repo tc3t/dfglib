@@ -1,6 +1,11 @@
 #pragma once
 
-// MSVC version values:
+// MSVC version values (https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros):
+#define DFG_MSVC_VER_VC60       1200
+
+#define DFG_MSVC_VER_VC70       1300
+#define DFG_MSVC_VER_2002       DFG_MSVC_VER_VC70
+
 #define DFG_MSVC_VER_VC71       1310
 #define DFG_MSVC_VER_2003       DFG_MSVC_VER_VC71
 
@@ -67,11 +72,11 @@
 #define DFG_MSVC_VER_VC16_7     1927
 #define DFG_MSVC_VER_2019_7     DFG_MSVC_VER_VC16_7
 
-#define DFG_MSVC_VER_VC16_8     1928
-#define DFG_MSVC_VER_2019_8     DFG_MSVC_VER_VC16_8
+#define DFG_MSVC_VER_VC16_8_9   1928
+#define DFG_MSVC_VER_2019_8_9   DFG_MSVC_VER_VC16_8_9
 
-#define DFG_MSVC_VER_VC16_9     1929
-#define DFG_MSVC_VER_2019_9     DFG_MSVC_VER_VC16_9
+#define DFG_MSVC_VER_VC16_10_11 1929
+#define DFG_MSVC_VER_2019_10_11 DFG_MSVC_VER_VC16_10_11
 
 #if defined(_MSC_VER)
     #define DFG_MSVC_VER	_MSC_VER
