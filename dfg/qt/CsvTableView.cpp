@@ -4150,7 +4150,7 @@ void DFG_CLASS_NAME(CsvTableView)::forEachCompleterEnabledColumnIndex(Func_T fun
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::CsvTableView::onNewSourceOpened()
+void ::DFG_MODULE_NS(qt)::CsvTableView::onNewSourceOpened()
 {
     // Setting completer delegates to columns that have completers enabled.
     forEachCompleterEnabledColumnIndex([&](const int nCol, CsvModel::ColInfo* pColInfo)
@@ -4173,11 +4173,13 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::CsvTableView::onNewSourceOpened()
         }
     });
 
-    // Setting edit mode if present in load options.
+    // Setting view-related properties from load options.
     auto pCsvModel = this->csvModel();
     if (pCsvModel)
     {
         const auto loadOptions = pCsvModel->getOpenTimeLoadOptions();
+
+        // Setting edit mode if present in load options
         setReadOnlyModeFromProperty(loadOptions.getProperty(CsvOptionProperty_editMode, ""));
     }
 }
@@ -4253,12 +4255,17 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
 
 } // unnamed namespace
 
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel)
+{
+    std::map<::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::Detail, QObjectStorage<QCheckBox>> m_mapDetailIdToCheckBox;
+};
+
 ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent) :
     BaseClass(pParent)
 {
     auto layout = new QGridLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    m_atomicFlags = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::defaultEnableFlags().to_ulong();
+    setDefaultDetails();
 
     int column = 0;
 
@@ -4281,7 +4288,8 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
         DetailCollector::forEachDetailIdWhile([&](const DetailCollector::Detail id)
         {
             // https://stackoverflow.com/questions/2050462/prevent-a-qmenu-from-closing-when-one-of-its-qaction-is-triggered
-            auto pCheckBox = new QCheckBox(pMenu);
+            DFG_OPAQUE_REF().m_mapDetailIdToCheckBox[id].reset(new QCheckBox(pMenu));
+            QCheckBox* pCheckBox = DFG_OPAQUE_REF().m_mapDetailIdToCheckBox[id].get();
             pCheckBox->setText(DetailCollector::uiName_long(id));
             pCheckBox->setChecked(DetailCollector::isEnabled(defaultFlags, id));
             auto pAct = new QWidgetAction(pMenu);
@@ -4415,6 +4423,76 @@ double ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeI
 bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::isStopRequested() const
 {
     return (m_spStopButton && m_spStopButton->isChecked());
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::clearAllDetails()
+{
+    m_atomicFlags = 0u;
+    for (auto& kv : DFG_OPAQUE_REF().m_mapDetailIdToCheckBox)
+    {
+        if (kv.second)
+            kv.second->setChecked(false);
+    }
+}
+
+static auto selectionDetailNameToId(const QString& id) -> ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::Detail
+{
+    using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::Detail;
+    if (id == "cell_count_included")
+        return Detail::cellCountIncluded;
+    else if (id == "cellCountExcluded")
+        return Detail::cellCountExcluded;
+    else if (id == "sum")
+        return Detail::sum;
+    else if (id == "average")
+        return Detail::average;
+    else if (id == "median")
+        return Detail::median;
+    else if (id == "min")
+        return Detail::minimum;
+    else if (id == "max")
+        return Detail::maximum;
+#if defined(BOOST_VERSION)
+    else if (id == "variance")
+        return Detail::variance;
+    else if (id == "stddev_population")
+        return Detail::stddev_population;
+    else if (id == "stddev_sample")
+        return Detail::stddev_sample;
+#endif // BOOST_VERSION
+    else if (id == "isSortedNum")
+        return Detail::isSortedNum;
+    else
+        return Detail::detailCount;
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items)
+{
+    const auto id = items.value("id").toString();
+
+    unsigned int flags = m_atomicFlags;
+    using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::Detail;
+    const auto detail = selectionDetailNameToId(id);
+    if (detail != Detail::detailCount)
+    {
+        flags |= (1 << static_cast<int>(detail));
+        auto pCheckBox = DFG_OPAQUE_REF().m_mapDetailIdToCheckBox[detail].get();
+        if (pCheckBox)
+            pCheckBox->setChecked(true);
+    }
+    m_atomicFlags = flags;
+    return true;
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDetails()
+{
+    m_atomicFlags = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::defaultEnableFlags().to_ulong();
+    const std::bitset<32> flags(m_atomicFlags);
+    for (auto& kv : DFG_OPAQUE_REF().m_mapDetailIdToCheckBox)
+    {
+        if (kv.second)
+            kv.second->setChecked(flags.test(static_cast<int>(kv.first)));
+    }
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getEnableFlags() const -> std::bitset<32>

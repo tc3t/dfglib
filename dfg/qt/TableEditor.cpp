@@ -446,7 +446,7 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     // View
     m_spTableView.reset(new ViewClass(m_spTableModel->getReadWriteLock(), this));
     m_spTableView->setModel(m_spProxyModel.get());
-    std::unique_ptr<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)> spAnalyzerPanel(new DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzerPanel)(this));
+    std::unique_ptr<CsvTableViewBasicSelectionAnalyzerPanel> spAnalyzerPanel(new CsvTableViewBasicSelectionAnalyzerPanel(this));
     m_spTableView->addSelectionAnalyzer(std::make_shared<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)>(spAnalyzerPanel.get()));
     m_spSelectionAnalyzerPanel.reset(spAnalyzerPanel.release());
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigSelectionChanged, this, &ThisClass::onSelectionChanged));
@@ -737,6 +737,31 @@ void DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
         const auto chartControls = loadOptions.getProperty(CsvOptionProperty_chartControls, "none");
         if (chartControls != "none")
             DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartControls", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(QString, QString::fromUtf8(chartControls.c_str()))));
+    }
+
+    // Setting selection details
+    auto pDetailPanel = qobject_cast<CsvTableViewBasicSelectionAnalyzerPanel*>(m_spSelectionAnalyzerPanel.get());
+    if (pDetailPanel)
+    {
+        const auto sSelectionDetails = loadOptions.getProperty(CsvOptionProperty_selectionDetails, "");
+        // If document has selection details set in .conf-file, using them
+        if (!sSelectionDetails.empty())
+        {
+            pDetailPanel->clearAllDetails();
+            using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
+            const auto metaNone = DelimitedTextReader::s_nMetaCharNone;
+            ::DFG_MODULE_NS(io)::BasicImStream istrm(sSelectionDetails.data(), sSelectionDetails.size());
+            DelimitedTextReader::readRow<char>(istrm, '\n', metaNone, metaNone, [&](Dummy, const char* psz, const size_t nCount)
+            {
+                auto doc = QJsonDocument::fromJson(QByteArray::fromRawData(psz, saturateCast<int>(nCount)));
+                auto obj = doc.object();
+                pDetailPanel->addDetail(obj.toVariantMap());
+            });
+        }
+        else // ...else resetting to default selection details.
+        {
+            pDetailPanel->setDefaultDetails();
+        }
     }
 }
 

@@ -122,6 +122,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool isStopRequested() const;
 
         // Thread-safe
+        void clearAllDetails();
+
+        // Thread-safe
+        bool addDetail(const QVariantMap& items);
+
+        // Thread-safe
+        void setDefaultDetails();
+
+        // Thread-safe
         std::bitset<32> getEnableFlags() const;
 
     signals:
@@ -141,6 +150,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QObjectStorage<QProgressBar>   m_spProgressBar;
         QObjectStorage<QPushButton>    m_spStopButton;
         std::atomic<unsigned long>     m_atomicFlags;
+
+        DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewBasicSelectionAnalyzerPanel
 
     class TableHeaderView : public QHeaderView
