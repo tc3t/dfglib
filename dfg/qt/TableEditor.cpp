@@ -49,7 +49,8 @@ namespace
         TableEditorPropertyId_chartPanelWidth,
         TableEditorPropertyId_cellEditorFontPointSize,
         TableEditorPropertyId_cellEditorHeight,
-        TableEditorPropertyId_last = TableEditorPropertyId_cellEditorHeight
+        TableEditorPropertyId_selectionDetails,
+        TableEditorPropertyId_last = TableEditorPropertyId_selectionDetails
     };
 
     // Class for window extent (=one dimension of window size) either as absolute value or as percentage of some widget size
@@ -151,6 +152,11 @@ namespace
                                               WindowExtentProperty,
                                               [] { return WindowExtentProperty::fromPercentage(35); },
                                               WindowExtentProperty);
+    DFG_QT_DEFINE_OBJECT_PROPERTY("TableEditorPropertyId_selectionDetails",
+                                              TableEditor,
+                                              TableEditorPropertyId_selectionDetails,
+                                              QString,
+                                              [] { return QString(); });
 
 
     template <TableEditorPropertyId ID>
@@ -447,12 +453,14 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
     m_spTableView.reset(new ViewClass(m_spTableModel->getReadWriteLock(), this));
     m_spTableView->setModel(m_spProxyModel.get());
     std::unique_ptr<CsvTableViewBasicSelectionAnalyzerPanel> spAnalyzerPanel(new CsvTableViewBasicSelectionAnalyzerPanel(this));
-    m_spTableView->addSelectionAnalyzer(std::make_shared<DFG_CLASS_NAME(CsvTableViewBasicSelectionAnalyzer)>(spAnalyzerPanel.get()));
+    m_spTableView->addSelectionAnalyzer(std::make_shared<CsvTableViewBasicSelectionAnalyzer>(spAnalyzerPanel.get()));
     m_spSelectionAnalyzerPanel.reset(spAnalyzerPanel.release());
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigSelectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterActivated, this, &ThisClass::onFilterRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigReadOnlyModeChanged, this, &ThisClass::onViewReadOnlyModeChanged));
+    // Setting default selection details from app settings.
+    setSelectionDetailsFromIni(getTableEditorProperty<TableEditorPropertyId_selectionDetails>(this));
 
     // Source path line edit
     m_spLineEditSourcePath.reset(new QLineEdit());
@@ -665,7 +673,68 @@ namespace
     }
 }
 
-void DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
+void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetails(const StringViewC& sv)
+{
+    auto pDetailPanel = qobject_cast<CsvTableViewBasicSelectionAnalyzerPanel*>(m_spSelectionAnalyzerPanel.get());
+    if (pDetailPanel)
+    {
+        if (!sv.empty())
+        {
+            pDetailPanel->clearAllDetails();
+            using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
+            const auto metaNone = DelimitedTextReader::s_nMetaCharNone;
+            ::DFG_MODULE_NS(io)::BasicImStream istrm(sv.data(), sv.size());
+            DelimitedTextReader::readRow<char>(istrm, '\n', metaNone, metaNone, [&](Dummy, const char* psz, const size_t nCount)
+            {
+                auto doc = QJsonDocument::fromJson(QByteArray::fromRawData(psz, saturateCast<int>(nCount)));
+                auto obj = doc.object();
+                pDetailPanel->addDetail(obj.toVariantMap());
+            });
+        }
+    }
+}
+
+namespace
+{
+    static void convertSpaceSeparatedJsonListToNewLineSeparated(QByteArray& utf8, std::function<void(const QByteArray&, const QJsonParseError&, int)> parseErrorhandler)
+    {
+        // Parsing all json items present in the text field; different json-objects are detected with QJsonError::GarbageAtEnd
+        int nStart = 0;
+        while (nStart < utf8.size())
+        {
+            QJsonParseError parseError;
+            auto jsonDoc = QJsonDocument::fromJson(utf8.mid(nStart), &parseError);
+            if (parseError.error == QJsonParseError::GarbageAtEnd && parseError.offset != 0)
+            {
+                nStart += parseError.offset;
+                if (utf8[nStart - 1] != '}')
+                    utf8[nStart - 1] = '\n'; // Separating different json-objects by new-line, which is the syntax that proxy filter expects.
+            }
+            else if (parseError.error != QJsonParseError::NoError)
+            {
+                const auto nUtf8Offset = nStart + parseError.offset;
+                if (parseErrorhandler)
+                    parseErrorhandler(utf8, parseError, nUtf8Offset);
+                return;
+            }
+            else
+                nStart = utf8.size();
+        }
+    }
+}
+
+void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetailsFromIni(const QString& s)
+{
+    // Ini-property is expected to have space-separated json objects
+    if (!s.isEmpty())
+    {
+        auto utf8 = s.toUtf8();
+        convertSpaceSeparatedJsonListToNewLineSeparated(utf8, nullptr);
+        setSelectionDetails(StringViewC(utf8.data(), static_cast<size_t>(utf8.size())));
+    }
+}
+
+void ::DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
 {
     if (!m_spTableModel)
         return;
@@ -740,29 +809,7 @@ void DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
     }
 
     // Setting selection details
-    auto pDetailPanel = qobject_cast<CsvTableViewBasicSelectionAnalyzerPanel*>(m_spSelectionAnalyzerPanel.get());
-    if (pDetailPanel)
-    {
-        const auto sSelectionDetails = loadOptions.getProperty(CsvOptionProperty_selectionDetails, "");
-        // If document has selection details set in .conf-file, using them
-        if (!sSelectionDetails.empty())
-        {
-            pDetailPanel->clearAllDetails();
-            using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
-            const auto metaNone = DelimitedTextReader::s_nMetaCharNone;
-            ::DFG_MODULE_NS(io)::BasicImStream istrm(sSelectionDetails.data(), sSelectionDetails.size());
-            DelimitedTextReader::readRow<char>(istrm, '\n', metaNone, metaNone, [&](Dummy, const char* psz, const size_t nCount)
-            {
-                auto doc = QJsonDocument::fromJson(QByteArray::fromRawData(psz, saturateCast<int>(nCount)));
-                auto obj = doc.object();
-                pDetailPanel->addDetail(obj.toVariantMap());
-            });
-        }
-        else // ...else resetting to default selection details.
-        {
-            pDetailPanel->setDefaultDetails();
-        }
-    }
+    setSelectionDetails(loadOptions.getProperty(CsvOptionProperty_selectionDetails, ""));
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSaveCompleted(const bool success, const double saveTimeInSeconds)
@@ -862,7 +909,7 @@ void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool
 
     // Re-apply properties that might have changed with change of this setting.
     {
-        DFG_STATIC_ASSERT(TableEditorPropertyId_last == 2, "Check whether new properties should be handled here.");
+        DFG_STATIC_ASSERT(TableEditorPropertyId_last == 3, "Check whether new properties should be handled here.");
 
         // cellEditorHeight
         setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this));
@@ -870,6 +917,9 @@ void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool
         // cellEditorFontPointSize
         if (m_spCellEditor)
             m_spCellEditor->setFontPointSizeF(getTableEditorProperty<TableEditorPropertyId_cellEditorFontPointSize>(this));
+
+        // Setting default selection details from app settings.
+        setSelectionDetailsFromIni(getTableEditorProperty<TableEditorPropertyId_selectionDetails>(this));
     }
 
     if (m_spTableModel)
@@ -1026,33 +1076,15 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onFilterTextChanged(const QString& text)
     m_spFilterPanel->setSyntaxIndicator_good();
     if (m_spFilterPanel->getPatternSyntax() == PatternMatcher::Json)
     {
-        // Parsing all json items present in the text field; different json-objects are detected with QJsonError::GarbageAtEnd
-        int nStart = 0;
         auto utf8 = text.toUtf8();
-        
-        while (nStart < text.size())
+        convertSpaceSeparatedJsonListToNewLineSeparated(utf8, [&](const QByteArray& utf8Data, const QJsonParseError& parseError, const int nErrorOffset)
         {
-            QJsonParseError parseError;
-            auto jsonDoc = QJsonDocument::fromJson(utf8.mid(nStart), &parseError);
-            if (parseError.error == QJsonParseError::GarbageAtEnd && parseError.offset != 0)
-            {
-                nStart += parseError.offset;
-                if (utf8[nStart - 1] != '}')
-                    utf8[nStart-1] = '\n'; // Separating different json-objects by new-line, which is the syntax that proxy filter expects.
-            }
-            else if (parseError.error != QJsonParseError::NoError)
-            {
-                const auto nUtf8Offset = nStart + parseError.offset;
-                const auto errContext = QString::fromUtf8(utf8.mid(Max(0, nUtf8Offset - 10), 21)); // May malfunction if there is non-ascii and context cuts between multibyte codepoints.
-                m_spFilterPanel->setSyntaxIndicator_bad(tr("json error: '%1'\noffset = %2 (context ... %3 ...)")
-                    .arg(parseError.errorString())
-                    .arg(nUtf8Offset)
-                    .arg(errContext));
-                return;
-            }
-            else
-                nStart = utf8.size();
-        }
+            const auto errContext = QString::fromUtf8(utf8Data.mid(Max(0, nErrorOffset - 10), 21)); // May malfunction if there is non-ascii and context cuts between multibyte codepoints.
+            m_spFilterPanel->setSyntaxIndicator_bad(tr("json error: '%1'\noffset = %2 (context ... %3 ...)")
+                .arg(parseError.errorString())
+                .arg(nErrorOffset)
+                .arg(errContext));
+        });
         pProxy->setFilterFromNewLineSeparatedJsonList(utf8);
     }
     else if (m_spFilterPanel->m_pColumnSelector)

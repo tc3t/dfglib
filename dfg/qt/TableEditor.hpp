@@ -5,6 +5,7 @@
 #include "../build/languageFeatureInfo.hpp"
 #include <memory>
 #include "../OpaquePtr.hpp"
+#include "../ReadOnlySzParam.hpp"
 
 #include "qtIncludeHelpers.hpp"
 #include "containerUtils.hpp"
@@ -119,6 +120,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     protected:
         void closeEvent(QCloseEvent* event) override;
+
+    private:
+        void setSelectionDetails(const StringViewC& sv);
+        void setSelectionDetailsFromIni(const QString& sv);
 
     signals:
         void sigModifiedStatusChanged(bool);
