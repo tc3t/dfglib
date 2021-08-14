@@ -348,6 +348,10 @@ TableEditor_cellEditorFontPointSize=13
 TableEditor_chartPanelWidth = %50
 ; TableEditor_chartPanelWidth = 200 ; This would set panel width to 200 pixels
 
+; Defines application level default for selection details as a list of space-separated json-objects.
+; For details, see documentation of properties/selectionDetails in 'File specific configuration'
+TableEditorPropertyId_selectionDetails = {\"id\":\"avg\"} {\"id\":\"max\"}
+
 ; -----------------------------------------------------------
 ; CsvItemModel
 
@@ -465,6 +469,7 @@ Available keys:
 | properties/windowPosX | Defines request for window x position when opening associated document, only taken into account if either windowHeight or windowWidth is defined. | x pixel position of top left corner, 0 for left. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
 | properties/windowPosY | Defines request for window y position when opening associated document, only taken into account if either windowHeight or windowWidth is defined. | y pixel position of top left corner, 0 for top. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
 | properties/sqlQuery | For SQLite files, defines the query whose result is populated to table. | Valid SQLite query | Since 1.6.1 (commit [24c1ad78](https://github.com/tc3t/dfglib/commit/24c1ad78eac2a6f74b6ee1be0dede0d5645fef07)) |
+| properties/selectionDetails | Defines selection details which are shown for every selection; i.e. basic indicators describing a selection such minimum and maximum value. Details are defined with a list of single line json-objects, where *id* field defines the detail. | Available detail id's:<br>*average*, *cell_count_excluded*, *cell_count_included*, *is_sorted_num*, *median*, *max*, *min*, *sum*, *stddev_population*, *stddev_sample*, *variance* | Since 2.1.0 (commit [2d1c1d1b](https://github.com/tc3t/dfglib/commit/2d1c1d1b230a4d0f6dd8c18633a2af5ac20ea288)) |
 
 #### Example .conf-file for csv-file (might look better when opened in a csv-editor)
 <pre>
@@ -493,6 +498,8 @@ properties,,,
 ,windowWidth,%100
 ,windowPosX,0
 ,windowPosY,500
+,selectionDetails,"{ ""id"": ""sum"" }
+{""id"":""max""}"
 </pre>
 
 #### Example .conf-file for SQLite-file (might look better when opened in a csv-editor)
