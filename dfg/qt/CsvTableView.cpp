@@ -4440,7 +4440,7 @@ static auto selectionDetailNameToId(const QString& id) -> ::DFG_MODULE_NS(qt)::D
     using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::Detail;
     if (id == "cell_count_included")
         return Detail::cellCountIncluded;
-    else if (id == "cellCountExcluded")
+    else if (id == "cell_count_excluded")
         return Detail::cellCountExcluded;
     else if (id == "sum")
         return Detail::sum;
@@ -4460,7 +4460,7 @@ static auto selectionDetailNameToId(const QString& id) -> ::DFG_MODULE_NS(qt)::D
     else if (id == "stddev_sample")
         return Detail::stddev_sample;
 #endif // BOOST_VERSION
-    else if (id == "isSortedNum")
+    else if (id == "is_sorted_num")
         return Detail::isSortedNum;
     else
         return Detail::detailCount;
