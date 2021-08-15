@@ -192,32 +192,94 @@ inline bool isIntegerValued(const Val_T val)
 
 namespace DFG_DETAIL_NS
 {
+    // Implementation for case where source and target types are the same.
     template <class Val_T>
-    bool isFloatConvertibleToImpl(const Val_T f, Val_T* pDst, std::true_type)
+    bool isFloatConvertibleToImpl(const Val_T f, Val_T* pDst, std::true_type, Dummy)
     {
         if (pDst)
             *pDst = f;
         return true;
     }
 
+    // Implementation for case where target type is integer.
     template <class Int_T, class Float_T>
-    bool isFloatConvertibleToImpl(const Float_T f, Int_T* pInt, std::false_type)
+    bool isFloatConvertibleToImpl(const Float_T f, Int_T* pInt, std::false_type, std::true_type)
     {
         DFG_STATIC_ASSERT(!(std::is_same<Int_T, Float_T>::value), "This overload should get called only for non-identical types");
-        DFG_STATIC_ASSERT(std::is_integral<Int_T>::value, "Currently only integer types are supported as target types"); // TODO: implement floating point conversions (e.g. float <-> double)
+        DFG_STATIC_ASSERT(std::is_integral<Int_T>::value, "Currently only integer types are supported as target types");
         DFG_STATIC_ASSERT(std::numeric_limits<Float_T>::is_iec559, "isFloatConvertibleTo() probably requires IEC 559 (IEEE 754) floating points");
         if (!isIntegerValued(f))
             return false;
         return isIntegerFloatConvertibleTo(f, pInt, std::integral_constant<bool, std::numeric_limits<Float_T>::digits >= std::numeric_limits<Int_T>::digits>());
     }
+
+    // Floating point promotion
+    // https://en.cppreference.com/mwiki/index.php?title=cpp/language/implicit_conversion&oldid=131250
+    //      "Floating-point promotion
+    //      A prvalue of type float can be converted to a prvalue of type double.The value does not change."
+    template <class DstFloat_T, class SrcFloat_T>
+    bool isFloatConvertibleToFloatImpl(const SrcFloat_T f, DstFloat_T* pDst, std::true_type)
+    {
+        if (pDst)
+            *pDst = f;
+        return true;
+    }
+
+    // Floating point conversion
+    // https://en.cppreference.com/mwiki/index.php?title=cpp/language/implicit_conversion&oldid=131250
+    //      "Floating-point conversions
+    //      A prvalue of a floating-point type can be converted to a prvalue of any other floating-point type. If the conversion is listed under floating-point promotions, it is a promotion and not a conversion.
+    //
+    //      -If the source value can be represented exactly in the destination type, it does not change.
+    //      -If the source value is between two representable values of the destination type, the result is one of those two values(it is implementation-defined which one, although if IEEE arithmetic is supported, rounding defaults to nearest).
+    //      -Otherwise, the behavior is undefined."
+    //        
+    template <class DstFloat_T, class SrcFloat_T>
+    bool isFloatConvertibleToFloatImpl(const SrcFloat_T f, DstFloat_T* pDst, std::false_type)
+    {
+        if (isInf(f))
+        {
+            if (pDst)
+                *pDst = static_cast<DstFloat_T>(f);
+            return true;
+        }
+        if (f > (std::numeric_limits<DstFloat_T>::max)())
+            return false;
+        if (f < (std::numeric_limits<DstFloat_T>::lowest)())
+            return false;
+        if (std::fabs(f) < (std::numeric_limits<DstFloat_T>::min)())
+            return false;
+        const DstFloat_T dst = static_cast<DstFloat_T>(f);
+        const auto rv = (dst == f);
+        if (rv && pDst)
+            *pDst = dst;
+        return rv;
+    }
+
+    // Implementation for case where target type is floating point and types are different.
+    template <class DstFloat_T, class SrcFloat_T>
+    bool isFloatConvertibleToImpl(const SrcFloat_T f, DstFloat_T* pDst, std::false_type, std::false_type)
+    {
+        DFG_STATIC_ASSERT(!(std::is_same<SrcFloat_T, DstFloat_T>::value), "This overload should get called only for non-identical types");
+        DFG_STATIC_ASSERT(std::numeric_limits<SrcFloat_T>::is_iec559, "isFloatConvertibleTo() probably requires IEC 559 (IEEE 754) floating points");
+        DFG_STATIC_ASSERT(std::numeric_limits<DstFloat_T>::is_iec559, "isFloatConvertibleTo() probably requires IEC 559 (IEEE 754) floating points");
+
+        if (isNan(f))
+            return false;
+
+        const bool bIsPromotion = (sizeof(DstFloat_T) > sizeof(SrcFloat_T));
+        return isFloatConvertibleToFloatImpl(f, pDst, std::integral_constant<bool, bIsPromotion>());
+    }
 } // namespace DFG_DETAIL_NS
 
 // Returns true if floating point value can be represent exactly as given type. If pTarget is given and return value is true, it receives the value as Target_T.
-// Currently Target_T must be either integer or the same as Float_T.
+// Notes: 
+//      -NaN's are considered convertible to target only when both types are identical.
+//      -inf's are convertible.
 template <class Target_T, class Float_T>
 bool isFloatConvertibleTo(const Float_T f, Target_T* pTarget = nullptr)
 {
-    return DFG_DETAIL_NS::isFloatConvertibleToImpl(f, pTarget, std::is_same<Target_T, Float_T>());
+    return DFG_DETAIL_NS::isFloatConvertibleToImpl(f, pTarget, std::is_same<Target_T, Float_T>(), std::is_integral<Target_T>());
 }
 
 namespace DFG_DETAIL_NS

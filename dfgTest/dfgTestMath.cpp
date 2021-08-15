@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_MATH) && DFGTEST_BUILD_MODULE_MATH == 1) || (!defined(DFGTEST_BUILD_MODULE_MATH) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/dfgBaseTypedefs.hpp>
 #include <dfg/math.hpp>
@@ -496,6 +496,64 @@ TEST(dfgMath, isFloatConvertibleTo)
         EXPECT_EQ(1, f);
         EXPECT_EQ(1, d);
         EXPECT_EQ(1, ld);
+
+        EXPECT_TRUE(isFloatConvertibleTo<float>(std::numeric_limits<float>::quiet_NaN(), &f));
+        DFGTEST_EXPECT_NAN(f);
+        EXPECT_TRUE(isFloatConvertibleTo<double>(std::numeric_limits<double>::quiet_NaN(), &d));
+        DFGTEST_EXPECT_NAN(d);
+        EXPECT_TRUE(isFloatConvertibleTo<long double>(std::numeric_limits<long double>::quiet_NaN(), &ld));
+        DFGTEST_EXPECT_NAN(ld);
+    }
+
+    // Testing floating point conversions for different types.
+    {
+        float f = 0;
+        double d = 0;
+        long double ld = 0;
+        EXPECT_TRUE(isFloatConvertibleTo(double(1.0), &f));
+        EXPECT_EQ(1.0, f);
+
+        EXPECT_TRUE(isFloatConvertibleTo(double(1.125), &f));
+        EXPECT_EQ(1.125, f);
+
+        EXPECT_FALSE(isFloatConvertibleTo(double(1.23456789), &f));
+
+        // NaN handling: expecting false with NaN's when dealing with promotions or conversions.
+        EXPECT_FALSE(isFloatConvertibleTo(std::numeric_limits<float>::quiet_NaN(), &d));
+        EXPECT_FALSE(isFloatConvertibleTo(std::numeric_limits<double>::quiet_NaN(), &ld));
+        EXPECT_FALSE(isFloatConvertibleTo(std::numeric_limits<double>::quiet_NaN(), &f));
+
+        // Inf double -> float
+        EXPECT_TRUE(isFloatConvertibleTo(std::numeric_limits<double>::infinity(), &f));
+        EXPECT_TRUE(isInf(f));
+        f = 0;
+        EXPECT_TRUE(isFloatConvertibleTo(-1 * std::numeric_limits<double>::infinity(), &f));
+        EXPECT_EQ(-1 * std::numeric_limits<float>::infinity(), f);
+
+        // Inf float -> double
+        EXPECT_TRUE(isFloatConvertibleTo(std::numeric_limits<float>::infinity(), &d));
+        EXPECT_TRUE(isInf(d));
+
+        // Inf float -> long double
+        EXPECT_TRUE(isFloatConvertibleTo(std::numeric_limits<float>::infinity(), &ld));
+        EXPECT_TRUE(isInf(ld));
+
+        // Checking that values outside destination range are not convertible
+        EXPECT_FALSE(isFloatConvertibleTo((std::numeric_limits<double>::max)(), &f));
+        d = (std::numeric_limits<float>::max)();
+        d = std::nextafter(d, std::numeric_limits<double>::infinity());
+        EXPECT_FALSE(isFloatConvertibleTo(d, &f));
+        EXPECT_TRUE(isFloatConvertibleTo((std::numeric_limits<float>::max)(), &f));
+        EXPECT_EQ((std::numeric_limits<float>::max)(), f);
+
+        for (int8 i = 1; i >= -1; i -= 2)
+        {
+            d = i * (std::numeric_limits<float>::min)(); // Note: min() is smallest non-negative
+            EXPECT_TRUE(isFloatConvertibleTo(d, &f));
+            EXPECT_EQ(i * (std::numeric_limits<float>::min)(), f);
+            d = std::nextafter(d, 0);
+            EXPECT_FALSE(isFloatConvertibleTo(d, &f));
+        }
     }
 }
 
