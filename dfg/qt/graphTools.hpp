@@ -312,18 +312,39 @@ public:
 }; // DataSourceContainer
 
 
+class ChartDisplayState
+{
+public:
+    using Enum = int;
+    ChartDisplayState(Enum state) :
+        m_state(state)
+    {}
+    operator Enum() const { return m_state; }
+    enum
+    {
+        updating,
+        finalizing,
+        idle
+    };
+
+private:
+    int m_state = idle;
+};
+
 // Interface for controlling charts
 class ChartController : public QFrame
 {
     Q_OBJECT
 public slots:
     void refresh();
+    bool refreshTerminate(); // Returns true if terminate request was taken into consideration, false otherwise (e.g. if termination is not supported)
     void clearCaches() { clearCachesImpl(); }
 public:
     GraphDataSourceId defaultSourceId() const { return defaultSourceIdImpl(); }
 
 private:
     virtual void refreshImpl() = 0; // Guaranteed to not get called by refresh() while already in progress.
+    virtual bool refreshTerminateImpl() { return false; }
     virtual void clearCachesImpl() {}
     virtual GraphDataSourceId defaultSourceIdImpl() const { return GraphDataSourceId(); }
     virtual bool setChartControls(QString) { return false; } // Returns true is given string was taken into use, false otherwise.
@@ -380,6 +401,7 @@ signals:
 public slots:
     void onShowControlsCheckboxToggled(bool b);
     void onShowConsoleCheckboxToggled(bool b);
+    void onDisplayStateChanged(ChartDisplayState state);
 
 public:
     bool m_bLogCacheDiagnosticsOnUpdate = false;
@@ -427,6 +449,7 @@ public slots:
     // Controller implementations
 private:
     void refreshImpl() override;
+    bool refreshTerminateImpl() override;
     void clearCachesImpl() override;
     GraphDataSourceId defaultSourceIdImpl() const override;
     // setChartControls() is defined in slots-section
@@ -470,6 +493,9 @@ public:
         void storePreparedData(const GraphDefinitionEntry& defEntry, ChartData chartData);
         ChartData* preparedDataForEntry(const GraphDefinitionEntry& defEntry);
 
+        void setTerminatedFlag(bool b);
+        bool wasTerminated() const;
+
         std::shared_ptr<ChartDataCache>& cache();
 
         DFG_OPAQUE_PTR_DECLARE();
@@ -505,9 +531,13 @@ class GraphControlAndDisplayWidget::ChartDataPreparator : public QObject
     Q_OBJECT
 public:
     void prepareData(ChartRefreshParamPtr spParam);
+    void terminatePreparation(); // Request to terminate current preparation.
 
 signals:
     void sigPreparationFinished(ChartRefreshParamPtr spParam);
+
+private:
+    DFG_OPAQUE_PTR_DECLARE();
 }; // Class GraphControlAndDisplayWidget::ChartDataPreparator
 
 

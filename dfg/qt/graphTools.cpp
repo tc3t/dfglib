@@ -352,6 +352,13 @@ void ChartController::refresh()
     refreshImpl();
 }
 
+bool ChartController::refreshTerminate()
+{
+    if (!m_bRefreshInProgress)
+        return false;
+    return refreshTerminateImpl();
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -1357,8 +1364,11 @@ public:
     void updateChartDefinitionViewable();
     void checkUpdateChartDefinitionViewableTimer();
 
+    void onActionButtonClicked();
+
     QObjectStorage<JsonListWidget> m_spRawTextDefinition; // Guaranteed to be non-null between constructor and destructor.
     QObjectStorage<QWidget> m_spGuideWidget;
+    QObjectStorage<QPushButton> m_spApplyButton;
     QPointer<GraphControlPanel> m_spParent;
     ChartDefinitionViewable m_chartDefinitionViewable;
     QElapsedTimer m_timeSinceLastEdit;
@@ -1366,9 +1376,13 @@ public:
     const int m_nChartDefinitionUpdateMinimumIntervalInMs = 250;
 
     static QString s_sGuideString;
+    static const char s_szApplyText[];
+    static const char s_szTerminateText[];
 }; // Class GraphDefinitionWidget
 
 QString GraphDefinitionWidget::s_sGuideString;
+const char GraphDefinitionWidget::s_szApplyText[]     = QT_TR_NOOP("Apply");
+const char GraphDefinitionWidget::s_szTerminateText[] = QT_TR_NOOP("Terminate");
 
 GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) :
     BaseClass(pNonNullParent),
@@ -1387,17 +1401,15 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
     // Adding control buttons
     {
         auto spHlayout = std::make_unique<QHBoxLayout>();
-        auto pApplyButton = new QPushButton(tr("Apply"), this); // Deletion through parentship.
+        m_spApplyButton.reset(new QPushButton(tr(s_szApplyText), this));
         auto pGuideButton = new QPushButton(tr("Show guide"), this); // Deletion through parentship.
         pGuideButton->setObjectName("guideButton");
         pGuideButton->setHidden(true);
 
-        auto pController = getController();
-        if (pController)
-            DFG_QT_VERIFY_CONNECT(connect(pApplyButton, &QPushButton::clicked, pController, &ChartController::refresh));
+        DFG_QT_VERIFY_CONNECT(connect(m_spApplyButton.get(), &QPushButton::clicked, this, &GraphDefinitionWidget::onActionButtonClicked));
         DFG_QT_VERIFY_CONNECT(connect(pGuideButton, &QPushButton::clicked, this, &GraphDefinitionWidget::showGuideWidget));
 
-        spHlayout->addWidget(pApplyButton);
+        spHlayout->addWidget(m_spApplyButton.get());
         spHlayout->addWidget(pGuideButton);
         spLayout->addLayout(spHlayout.release()); // spHlayout is made child of spLayout.
     }
@@ -1576,6 +1588,27 @@ QString GraphDefinitionWidget::getRawTextDefinition() const
 ChartController* GraphDefinitionWidget::getController()
 {
     return (m_spParent) ? m_spParent->getController() : nullptr;
+}
+
+void GraphDefinitionWidget::onActionButtonClicked()
+{
+    auto pButton = m_spApplyButton.get();
+    if (!pButton)
+        return;
+
+    auto pController = getController();
+    if (!pController)
+        return;
+
+    const auto sButtonText = pButton->text();
+    if (sButtonText == tr(s_szApplyText))
+        pController->refresh();
+    else if (sButtonText == tr(s_szTerminateText))
+    {
+        pController->refreshTerminate();
+        pButton->setText("Terminating...");
+        pButton->setEnabled(false);
+    }
 }
 
 // Implementations for QCustomPlot
@@ -4000,6 +4033,28 @@ void DFG_MODULE_NS(qt)::GraphControlPanel::onShowConsoleCheckboxToggled(const bo
     }
 }
 
+void ::DFG_MODULE_NS(qt)::GraphControlPanel::onDisplayStateChanged(const ChartDisplayState state)
+{
+    auto pDefWidget = dynamic_cast<GraphDefinitionWidget*>(m_spGraphDefinitionWidget.get());
+    auto pButton = (pDefWidget) ? pDefWidget->m_spApplyButton.get() : nullptr;
+    if (!pButton)
+        return;
+    QString sText;
+    QString sToolTip;
+    bool bEnable = true;
+    switch (state)
+    {
+        case ChartDisplayState::idle:       sText = tr(GraphDefinitionWidget::s_szApplyText); break;
+        case ChartDisplayState::updating:   sText = tr(GraphDefinitionWidget::s_szTerminateText); sToolTip = tr("Note that currently processed chart entries are finished before terminating"); break;
+        case ChartDisplayState::finalizing: sText = tr("Finalizing..."); bEnable = false; break;
+        default: sText = tr("Bug"); break;
+    }
+    pButton->setText(sText);
+    pButton->setToolTip(sToolTip);
+    pButton->setEnabled(bEnable);
+    pButton->repaint(); // Note: must use repaint() instead of update() as some state changes may effectively freeze GUI so can't wait for update() to happen.
+}
+
 auto DFG_MODULE_NS(qt)::GraphControlPanel::getController() -> ChartController*
 {
     return getControllerFromParents(this);
@@ -4487,16 +4542,26 @@ public:
     DataSourceContainer m_sources;
     ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ChartData> m_preparedData; // Index refers to index in m_chartDefinition.
     std::shared_ptr<ChartDataCache> m_spCache;
+    bool m_bTerminated = false;
+};
+
+// Opaque member definition for GraphControlAndDisplayWidget
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator)
+{
+    std::atomic_bool m_terminateFlag;
 };
 
 void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::prepareData(ChartRefreshParamPtr spParam)
 {
+    DFG_OPAQUE_REF().m_terminateFlag = false;
     if (spParam)
     {
         const auto& chartDefinition = spParam->chartDefinition();
         const auto pCurrentThread = QThread::currentThread();
         chartDefinition.forEachEntry([&](const GraphDefinitionEntry& entry)
         {
+            if (DFG_OPAQUE_REF().m_terminateFlag)
+                return;
             auto& sources = spParam->dataSources();
             const auto sSourceId = entry.sourceId(chartDefinition.m_defaultSourceId);
             auto iterSource = sources.findById(sSourceId);
@@ -4505,16 +4570,23 @@ void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::pre
             if (iterSource != sources.end() && sources.iterToRef(iterSource).isSafeToQueryDataFromThread(pCurrentThread))
                 spParam->storePreparedData(entry, GraphControlAndDisplayWidget::prepareData(spParam->cache(), sources.iterToRef(iterSource), entry));
         });
+        if (DFG_OPAQUE_REF().m_terminateFlag)
+            spParam->setTerminatedFlag(true);
     }
     Q_EMIT sigPreparationFinished(std::move(spParam));
 }
 
-// Opaque member definition
+void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::terminatePreparation()
+{
+    DFG_OPAQUE_REF().m_terminateFlag = true;
+}
+
+// Opaque member definition for GraphControlAndDisplayWidget
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget)
 {
     ::DFG_MODULE_NS(time)::TimerCpu m_refreshTimer; // Used for measuring refresh times.
     QPointer<QThread> m_spThreadDataPreparation;
-    QPointer<ChartDataPreparator> m_spChartPreparator; // Lives in thread m_spThreadDataPreparation
+    QPointer<ChartDataPreparator> m_spChartPreparator; // Lives in thread m_spThreadDataPreparation, created on first use, deleted in destructor.
     size_t m_nRefreshCounter = 0; // Keeps count of refreshes.
 };
 
@@ -4555,6 +4627,16 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::prepa
 auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::cache() -> std::shared_ptr<ChartDataCache>&
 {
     return DFG_OPAQUE_REF().m_spCache;
+}
+
+void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::setTerminatedFlag(const bool b)
+{
+    DFG_OPAQUE_REF().m_bTerminated = b;
+}
+
+bool ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::wasTerminated() const
+{
+    return DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_bTerminated;
 }
 
 DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::GraphControlAndDisplayWidget(const bool bAllowAppSettingUsage)
@@ -4690,10 +4772,25 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     DFG_OPAQUE_REF().m_nRefreshCounter++;
 
     rChart.beginUpdateState();
+    auto pControlPanel = getChartControlPanel();
+    if (pControlPanel)
+        pControlPanel->onDisplayStateChanged(ChartDisplayState::updating);
 
     // Clearing existing objects.
     rChart.removeAllChartObjects(false); // false = no repaint
     startChartDataFetching();
+}
+
+bool ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshTerminateImpl()
+{
+    auto pPreparator = DFG_OPAQUE_REF().m_spChartPreparator.data();
+    if (pPreparator)
+    {
+        pPreparator->terminatePreparation();
+        return true;
+    }
+    else
+        return false;
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationReady(ChartRefreshParamPtr spParam)
@@ -4727,6 +4824,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
 
     // Preparation might have added on-demand sources so copying them back.
     this->m_dataSources = std::move(param.dataSources());
+
+    auto pControlPanel = getChartControlPanel();
+    if (pControlPanel)
+        pControlPanel->onDisplayStateChanged(ChartDisplayState::finalizing);
 
     // Going through every item in definition entry table and redrawing them.
     param.chartDefinition().forEachEntry([&](const GraphDefinitionEntry& defEntry)
@@ -4811,6 +4912,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
 
             // Note: there is similar selection logics in GraphControlAndDisplayWidget::prepareData() so if needing changes here, might need to be reflected there as well.
             auto pPreparedData = param.preparedDataForEntry(defEntry);
+            ChartData dummy;
+            if (param.wasTerminated() && pPreparedData == nullptr)
+                pPreparedData = &dummy; // Setting pPreparedData to dummy data to prevent refreshX calls from starting to compute data.
             try
             {
                 if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
@@ -4869,6 +4973,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
         }
         DFG_QT_CHART_CONSOLE_INFO(QString("Cache usage: %1").arg(s));
     }
+
+    pControlPanel->onDisplayStateChanged(ChartDisplayState::idle);
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
