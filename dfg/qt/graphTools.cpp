@@ -1973,12 +1973,12 @@ public:
         return m_sText;
     }
 
-    QString numberToText(const double d) const
+    static QString numberToText(const double d)
     {
         return QString::number(d);
     }
 
-    QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker) const
+    static QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker)
     {
         if (!pTimeTicker || ::DFG_MODULE_NS(math)::isNan(d))
             return numberToText(d);
@@ -1990,12 +1990,12 @@ public:
         }
     }
 
-    QString numberToText(const double d, QCPAxisTickerText* pTextTicker) const // Note: pTextTicker param is not const because QCPAxisTickerText doesn't seem to provide const-way of asking ticks.
+    static QString numberToText(const double d, QCPAxisTickerText* pTextTicker) // Note: pTextTicker param is not const because QCPAxisTickerText doesn't seem to provide const-way of asking ticks.
     {
         return (!pTextTicker) ? numberToText(d) : pTextTicker->ticks().value(d);
     }
 
-    QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker, QCPAxisTickerText* pTextTicker) const
+    static QString numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker, QCPAxisTickerText* pTextTicker)
     {
         if (pTimeTicker)
             return numberToText(d, pTimeTicker);
@@ -2093,25 +2093,82 @@ public:
         // Returns true iff this stack has given QCPBars.
         bool hasObject(const QCPBars& bars) const
         {
-            return ::DFG_MODULE_NS(alg)::contains(m_bars, &bars);
+            for (const auto& info : m_subBarInfos)
+            {
+                if (info.m_spBars.data() == &bars)
+                    return true;
+            }
+            return false;
         }
 
-        // Constructs stack from all QCPBars related to given QCPBars
-        void construct(const QCPBars& rBars)
+        static const QCPBars& findTopMostBar(const QCPBars& rBars)
         {
             auto pBars = &rBars;
             while (pBars->barAbove() != nullptr)
                 pBars = pBars->barAbove();
-            for (; pBars != nullptr; pBars = pBars->barBelow())
-                m_bars.push_back(pBars);
+            return *pBars;
         }
 
-        size_t size() const { return m_bars.size(); }
+        void append(const QCPBarsData& data, const QCPBars& rBars)
+        {
+            auto pBars = &findTopMostBar(rBars);
+            for (; pBars != nullptr; pBars = pBars->barBelow())
+            {
+                // Fetching data (=height) for current bar.
+                auto spData = pBars->data();
+                DFG_ASSERT_CORRECTNESS(spData != nullptr); // To detect if this ever happens
+                if (spData)
+                {
+                    auto iterData = spData->findBegin(data.sortKey(), false);
+                    DFG_ASSERT_CORRECTNESS(iterData != spData->end() && iterData->key == data.key);
+                    if (iterData != spData->end() && iterData->key == data.key)
+                        m_subBarInfos.push_back(SubBarInfo(*iterData, *pBars));
+                }
+            }
+            storeStackLabel(data, rBars);
+        }
+
+        const QCPAxis* valueAxis() const;
+
+        const QCustomPlot* parentPlot() const;
+
+        void storeStackLabel(const QCPBarsData& data, const QCPBars& rBars);
+        QString label() const;
+
+        // Returns pointer to arbitrary QCPBars instance within this stack.
+        const QCPBars* barsInstance() const;
+
+        using SubBarHandler = std::function<void(const QString&, const QString&, const QColor&, bool)>;
+
+        // Calls handler for every sub bar in order from top to bottom.
+        void forEachSubBar(const PointXy& pointXy, ToolTipTextStream& toolTipStream, SubBarHandler) const;
+
+        bool isXwithinStackX(const double x) const;
+
+        double barWidth() const;
+
+        size_t size() const { return m_subBarInfos.size(); }
 
         bool empty() const { return size() == 0; }
 
-        std::vector<const QCPBars*> m_bars; // 0 is topmost
-    }; // BarStack
+        class SubBarInfo
+        {
+        public:
+            SubBarInfo(const QCPBarsData& data, const QCPBars& rBars)
+            {
+                m_spBars = &rBars;
+                m_sLabel = rBars.name();
+                m_data = data;
+            }
+            QPointer<const QCPBars> m_spBars;
+            QString m_sLabel;
+            QCPBarsData m_data;
+        }; // class SubBarInfo
+
+        QString m_sLabel; // Stack label
+        double m_xValue = std::numeric_limits<double>::quiet_NaN();
+        std::vector<SubBarInfo> m_subBarInfos; // 0 is topmost
+    };
 
     // Helper class for tooltip creation
     // Stores set of BarStack objects
@@ -2119,32 +2176,41 @@ public:
     {
     public:
         // Stores stack related to given object if applicable.
-        // Note: this may invalidate pointers returned by findStack()
+        // Note: this may invalidate pointers returned by findStacks()
         void storeStack(const QCPBars* pBars)
         {
+            // Not doing anything if any of following:
+            //  -No object given
+            //  -Related stacks already stored
+            //  -Object has no below or above bar.
             if (!pBars || hasBar(*pBars) || (pBars->barAbove() == nullptr && pBars->barBelow() == nullptr))
                 return;
 
             auto spData = pBars->data();
-            if (spData && spData->size() == 1) // Only taking single bar into account for now, i.e. cases where not using 'stack_on_existing_labels'
-                m_mapPosToBarStack[spData->begin()->key].construct(*pBars);
+            if (!spData || spData->isEmpty())
+                return;
+            for (const auto& data : *spData)
+            {
+                m_mapPosToBarStack[data.key].append(data, *pBars);
+            }
         }
 
-        // Returns BarStack related to given QCPBars-object
-        const BarStack* findStack(const QCPBars& bars) const
+        // Returns BarStacks related to given QCPBars-object
+        std::vector<const BarStack*> findStacks(const QCPBars& bars) const
         {
+            std::vector<const BarStack*> stacks;
             for (const auto& stack : m_mapPosToBarStack.valueRange())
             {
                 if (stack.hasObject(bars))
-                    return &stack;
+                    stacks.push_back(&stack);
             }
-            return false;
+            return stacks;
         }
 
         // Returns true iff given QCPBars is within any stored stack.
         bool hasBar(const QCPBars& bars) const
         {
-            return findStack(bars) != nullptr;
+            return !findStacks(bars).empty();
         }
 
         ::DFG_MODULE_NS(cont)::MapVectorSoA<double, BarStack> m_mapPosToBarStack;
@@ -3491,17 +3557,18 @@ namespace
 
         QString operator()(const Data_T& data, const ToolTipTextStream& toolTipStream) const
         {
-            return QString("(%1, %2)").arg(xText(data, toolTipStream), yText(data, toolTipStream));
+            DFG_UNUSED(toolTipStream);
+            return QString("(%1, %2)").arg(xText(data), yText(data));
         }
 
-        QString xText(const Data_T& data, const ToolTipTextStream& toolTipStream) const
+        QString xText(const Data_T& data) const
         {
-            return toolTipStream.numberToText(data.key, m_pXdateTicker, m_pXtextTicker);
+            return ToolTipTextStream::numberToText(data.key, m_pXdateTicker, m_pXtextTicker);
         }
 
-        QString yText(const Data_T& data, const ToolTipTextStream& toolTipStream) const
+        QString yText(const Data_T& data) const
         {
-            return toolTipStream.numberToText(data.value, m_pYdateTicker);
+            return ToolTipTextStream::numberToText(data.value, m_pYdateTicker);
         }
 
         static QString tr(const char* psz)
@@ -3646,55 +3713,28 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const BarStack* pBa
     if (!pBarStack)
         return false;
 
-    const auto pFirstBar = (!pBarStack->empty()) ? pBarStack->m_bars.front() : nullptr;
-    const auto spFirstData = (pFirstBar) ? pFirstBar->data() : nullptr;
-    const auto sStackLabel = (spFirstData && !spFirstData->isEmpty()) ? PointToTextConverter<QCPBarsData>(*pFirstBar).xText(*spFirstData->begin(), toolTipStream) : tr("Unknown");
+    auto& rBarStack = *pBarStack;
+
+    const auto sStackLabel = rBarStack.label();
 
     // Stack label (x value label)
     toolTipStream << tr("<br>Bar stack: <b>%1</b>").arg(sStackLabel.toHtmlEscaped());
     // Axis identifier
-    if (pFirstBar)
-    {
-        const auto pValueAxis = pFirstBar->valueAxis();
-        if (pValueAxis && pValueAxis->axisType() == QCPAxis::atRight) // Printing y-axis info if using non-default.
-            toolTipStream << tr("<br>y axis: %1").arg(axisTypeToToolTipString(pValueAxis->axisType()));
-    }
+    auto pValueAxis = rBarStack.valueAxis();
+    if (pValueAxis && pValueAxis->axisType() == QCPAxis::atRight) // Printing y-axis info if using non-default.
+        toolTipStream << tr("<br>y axis: %1").arg(axisTypeToToolTipString(pValueAxis->axisType()));
 
     toolTipStream << tr("<br>Bar count: %1").arg(pBarStack->size());
 
-    const QCustomPlot* const pQcp = (pFirstBar) ? pFirstBar->parentPlot() : nullptr;
-
-    for (const auto pBar : pBarStack->m_bars)
+    rBarStack.forEachSubBar(cursorXy, toolTipStream, [&](const QString& sLabel, const QString& sValue, const QColor& color, const bool bIsCursorWithin)
     {
-        auto spData = (pBar) ? pBar->data() : nullptr;
-        if (!spData || spData->isEmpty())
-            continue;
-        const bool bBold = [&]()
-        {
-            if (pQcp)
-            {
-                auto pKeyAxis = pBar->keyAxis();
-                auto pValueAxis = pBar->valueAxis();
-                if (pKeyAxis && pValueAxis)
-                {
-                    // Testing if cursor is within given bar.
-                    const auto xPix = pKeyAxis->coordToPixel(cursorXy.first);
-                    const auto yPix = pValueAxis->coordToPixel(cursorXy.second);
-                    const double selectDistance = pBar->selectTest(QPointF(xPix, yPix), false);
-                    if (selectDistance >= 0 && selectDistance < pQcp->selectionTolerance())
-                        return true;
-                }
-            }
-            return false;
-        }();
-        
-        toolTipStream << QString("<br>%4<font color=\"%2\">'%1'</font>: %3%5")
-            .arg(pBar->name().toHtmlEscaped(),
-                pBar->pen().color().name(),
-                PointToTextConverter<QCPBarsData>(*pBar).yText(*spData->begin(), toolTipStream),
-                (bBold) ? "<b>" : "",
-                (bBold) ? "</b>" : "");
-    } // for each bar in stack
+        toolTipStream << QString("<br>%4<font color=\"%2\">'%1'</font>: %3%5").arg(
+                sLabel.toHtmlEscaped(),
+                color.name(),
+                sValue,
+                (bIsCursorWithin) ? "<b>" : "",
+                (bIsCursorWithin) ? "</b>" : "");
+    });
 
     return true;
 }
@@ -3742,14 +3782,17 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
         auto pBars = qobject_cast<const QCPBars*>(&plottable);
         if (pBars)
         {
-            auto pStack = barStacks.findStack(*pBars);
-            if (pStack)
+            auto stacks = barStacks.findStacks(*pBars);
+            if (!stacks.empty())
             {
-                if (!handledStacks.contains(pStack)) // Handling this object only if related stack not handled already.
+                for (const auto pStack : stacks)
                 {
-                    toolTipStream << szSeparator;
-                    toolTipTextForChartObjectAsHtml(pStack, xy, toolTipStream);
-                    handledStacks.insert(pStack);
+                    if (!handledStacks.contains(pStack)) // Handling this object only if related stack not handled already.
+                    {
+                        toolTipStream << szSeparator;
+                        toolTipTextForChartObjectAsHtml(pStack, xy, toolTipStream);
+                        handledStacks.insert(pStack);
+                    }
                 }
                 return;
             }
@@ -4093,6 +4136,85 @@ static void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(c
         return;
     }
     DFG_ASSERT_IMPLEMENTED(false);
+}
+
+void ChartCanvasQCustomPlot::BarStack::storeStackLabel(const QCPBarsData& data, const QCPBars& rBars)
+{
+    m_sLabel = PointToTextConverter<QCPBarsData>(rBars).xText(data);
+    m_xValue = data.key;
+}
+
+QString ChartCanvasQCustomPlot::BarStack::label() const
+{
+    return m_sLabel;
+}
+
+const QCPAxis* ChartCanvasQCustomPlot::BarStack::valueAxis() const
+{
+    auto pBars = barsInstance();
+    return (pBars) ? pBars->valueAxis() : nullptr;
+}
+
+const QCustomPlot* ChartCanvasQCustomPlot::BarStack::parentPlot() const
+{
+    auto pBars = barsInstance();
+    return (pBars) ? pBars->parentPlot() : nullptr;
+}
+
+const QCPBars* ChartCanvasQCustomPlot::BarStack::barsInstance() const
+{
+    return (!m_subBarInfos.empty()) ? m_subBarInfos.front().m_spBars.data() : nullptr;
+}
+
+double ChartCanvasQCustomPlot::BarStack::barWidth() const
+{
+    auto pBar = barsInstance();
+    return (pBar) ? pBar->width() : std::numeric_limits<double>::quiet_NaN();
+}
+
+bool ChartCanvasQCustomPlot::BarStack::isXwithinStackX(const double x) const
+{
+    const auto barHalfWidth = barWidth() / 2;
+    return x >= (this->m_xValue - barHalfWidth) && x <= (this->m_xValue + barHalfWidth);
+}
+
+void ChartCanvasQCustomPlot::BarStack::forEachSubBar(const PointXy& pointXy, ToolTipTextStream& toolTipStream, SubBarHandler handler) const
+{
+    DFG_UNUSED(toolTipStream);
+    if (!handler)
+        return;
+
+    const auto pQcp = parentPlot();
+
+    for (const auto& subBarInfo : m_subBarInfos)
+    {
+        const QCPBars* pBar = subBarInfo.m_spBars;
+        if (!pBar)
+            continue;
+        const bool bIsPointWithIn = [&]()
+        {
+            if (pQcp && isXwithinStackX(pointXy.first))
+            {
+                auto pKeyAxis = pBar->keyAxis();
+                auto pValueAxis = pBar->valueAxis();
+                if (pKeyAxis && pValueAxis)
+                {
+                    // Testing if cursor is within given bar.
+                    const auto xPix = pKeyAxis->coordToPixel(pointXy.first);
+                    const auto yPix = pValueAxis->coordToPixel(pointXy.second);
+                    const double selectDistance = pBar->selectTest(QPointF(xPix, yPix), false);
+                    if (selectDistance >= 0 && selectDistance < pQcp->selectionTolerance())
+                        return true;
+                }
+            }
+            return false;
+        }();
+
+        handler(subBarInfo.m_sLabel,
+            PointToTextConverter<QCPBarsData>(*pBar).yText(subBarInfo.m_data),
+            pBar->pen().color().name(),
+            bIsPointWithIn);
+    }
 }
 
 #endif // #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
