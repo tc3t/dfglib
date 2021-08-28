@@ -2,6 +2,6 @@
 
 #pragma once
 
-#if __cplusplus >= 201703L
+#if __cplusplus > 201703L
     #include <version>
 #endif
