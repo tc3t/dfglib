@@ -567,9 +567,12 @@ StrT replaceSubStrs(StrT str, const StrTOld& sOldSub, const StrTNew& sNewSub)
 
 // Determines whether 'pszSearchFrom' starts with 'pszSearchFor'.
 // If 'pszSearchFor' is empty, returns true.
+// Precondition: pszSearchFrom != nullptr, pszSearchFor != nullptr
 // TODO: test
 template <class Char_T> bool beginsWith(const Char_T* pszSearchFrom, const Char_T* pszSearchFor)
 {
+    DFG_ASSERT_UB(pszSearchFrom != nullptr);
+    DFG_ASSERT_UB(pszSearchFor != nullptr);
     // Note: There's no need to check whether pszSearchFrom reaches the end:
     //       If pszSearchFrom is shorter, at some point comparison (*pszSearchFrom != *pszSearchFor)
     //		 will be
@@ -583,13 +586,15 @@ template <class Char_T> bool beginsWith(const Char_T* pszSearchFrom, const Char_
     return true;
 }
 
+// Convenience overload calling template <class Char_T> bool beginsWith(const Char_T* pszSearchFrom, const Char_T* pszSearchFor)
 template <class Str0_T, class Str1_T> bool beginsWith(const Str0_T& sSearchFrom, const Str1_T& sSearchFor)
 {
     return beginsWith(toCharPtr_raw(toCstr(sSearchFrom)), toCharPtr_raw(toCstr(sSearchFor)));
 }
 
+// Returns true if 'sSearchFrom' begins with 'sSearchFor'. If 'sSearchFor' is empty, returns true.
 template <class Char_T, class Str_T>
-bool beginsWith(const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sSearchFrom, const DFG_CLASS_NAME(StringView)<Char_T, Str_T>& sSearchFor)
+bool beginsWith(const StringView<Char_T, Str_T>& sSearchFrom, const StringView<Char_T, Str_T>& sSearchFor)
 {
     auto iterForRaw = sSearchFor.beginRaw();
     auto iterEndForRaw = sSearchFor.endRaw();

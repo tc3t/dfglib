@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg_equal";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_saving";
-    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_forEachStartingWith";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_forEach";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_FromCsvConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_ToConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.IntervalSet";

@@ -18,7 +18,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         class UriHelper
         {
         public:
-            typedef DFG_CLASS_NAME(StringUtf8) StringT;
+            typedef StringUtf8 StringT;
 
             void setTop(const StringT& s, const size_t n)
             {
@@ -62,17 +62,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     } // DFG_DETAIL_NS 
 
 
-    class DFG_CLASS_NAME(CsvConfig)
+    class CsvConfig
     {
     public:
-        typedef DFG_CLASS_NAME(StringUtf8) StorageStringT;
-        typedef DFG_CLASS_NAME(StringViewUtf8) StringViewT;
+        typedef StringUtf8 StorageStringT;
+        typedef StringViewUtf8 StringViewT;
 
-        void loadFromFile(const DFG_CLASS_NAME(StringViewSzC)& svConfFilePath)
+        void loadFromFile(const StringViewSzC& svConfFilePath)
         {
             using namespace DFG_ROOT_NS;
             using namespace DFG_MODULE_NS(io);
-            typedef DFG_CLASS_NAME(DelimitedTextReader) DelimReader;
+            typedef DelimitedTextReader DelimReader;
             typedef DelimReader::CharAppenderUtf<DelimReader::CharBuffer<char>> CharAppenderUtfT;
 
             const auto nFileSize = DFG_MODULE_NS(os)::fileSize(ReadOnlySzParamC(svConfFilePath.c_str()));
@@ -94,7 +94,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             bool bMostRecentRowHadKeyButNoValue = false;
             DelimReader::readFromFile(svConfFilePath, cd, [&](const size_t /*nRow*/, const size_t nCol, decltype(cd)& cellData)
             {
-                typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StorageStringT StorageStringT_vc2010_workaround;
+                typedef DFG_MODULE_NS(cont)::CsvConfig::StorageStringT StorageStringT_vc2010_workaround;
                 if (nCol == 0)
                 {
                     if (bMostRecentRowHadKeyButNoValue)
@@ -107,7 +107,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 if (nFirstNonEmptyCol != notFoundCol && nCol == nFirstNonEmptyCol + 1)
                 {
                     bMostRecentRowHadKeyButNoValue = false;
-                    cellData.setReadStatus(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::cellHrvSkipRestOfLine);
+                    cellData.setReadStatus(DFG_MODULE_NS(io)::DelimitedTextReader::cellHrvSkipRestOfLine);
                     const auto& buffer = cellData.getBuffer();
                     m_mapKeyToValue[baseUri.str()] = StorageStringT_vc2010_workaround(SzPtrUtf8(buffer.data()), SzPtrUtf8(buffer.data() + buffer.size()));
                     return;
@@ -143,11 +143,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return m_mapKeyToValue.size();
         }
 
+        // Calls 'func' for every key starting with 'uriStart' passing two StringViewUtf8 arguments to 'func': (key excluding 'uriStart', value).
         template <class Func_T>
         void forEachStartingWith(const StringViewT& uriStart, Func_T&& func) const
         {
             auto iter = std::lower_bound(m_mapKeyToValue.beginKey(), m_mapKeyToValue.endKey(), uriStart);
-            for (; iter != m_mapKeyToValue.endKey() && DFG_MODULE_NS(str)::beginsWith(StringViewT(*iter), uriStart) ; ++iter)
+            for (; iter != m_mapKeyToValue.endKey() && DFG_MODULE_NS(str)::beginsWith(StringViewT(*iter), uriStart); ++iter)
             {
                 // Skip leading uri with raw pointer handling.
                 auto fullUri = StringViewT(*iter);
@@ -157,10 +158,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             }
         }
 
+        template <class Func_T>
+        void forEachKeyValue(Func_T&& func) const
+        {
+            forEachStartingWith(DFG_UTF8(""), std::forward<Func_T>(func));
+        }
+
         template <class Strm_T, class Item_T>
         static void privWriteCellToStream(Strm_T& strm, const Item_T& item)
         {
-            typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter) Writer;
+            typedef DFG_MODULE_NS(io)::DelimitedTextCellWriter Writer;
             Writer::writeCellStrm(strm, item, ',', '"', '\n', DFG_MODULE_NS(io)::EbEncloseIfNeeded);
         }
 
@@ -175,7 +182,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         bool saveToFile(const dfg::StringViewSzC& svPath) const
         {
-            typedef DFG_CLASS_NAME(StringViewC) SvC;
+            typedef StringViewC SvC;
 
             DFG_MODULE_NS(os)::OutputFile_completeOrNone<> outputFile(svPath.c_str());
 
@@ -193,7 +200,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             // Writing empty header.
             ostrm << ",,,\n";
 
-            DFG_CLASS_NAME(Vector)<SvC> uriStack; // Can use string views as the underlying strings in map won't get invalidated.
+            Vector<SvC> uriStack; // Can use string views as the underlying strings in map won't get invalidated.
             for (auto iter = m_mapKeyToValue.cbegin(), iterEnd = m_mapKeyToValue.cend(); iter != iterEnd; ++iter)
             {
                 const auto& uriRawStorage = iter->first.rawStorage();
@@ -247,7 +254,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }
 
         // TODO: test
-        bool operator==(const DFG_CLASS_NAME(CsvConfig)& other) const
+        bool operator==(const CsvConfig& other) const
         {
             if (m_mapKeyToValue.size() != other.m_mapKeyToValue.size())
                 return false;
@@ -262,12 +269,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return true;
         }
 
-        bool operator!=(const DFG_CLASS_NAME(CsvConfig)& other) const
+        bool operator!=(const CsvConfig& other) const
         {
             return !(*this == other);
         }
 
-        DFG_CLASS_NAME(MapVectorSoA)<StorageStringT, StorageStringT> m_mapKeyToValue;
+        MapVectorSoA<StorageStringT, StorageStringT> m_mapKeyToValue;
 
     }; // CsvConfig
     

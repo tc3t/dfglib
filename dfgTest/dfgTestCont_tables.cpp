@@ -1324,19 +1324,22 @@ TEST(dfgCont, CsvConfig)
     EXPECT_EQ(19, config.entryCount());
 }
 
-TEST(dfgCont, CsvConfig_forEachStartingWith)
+// Both forEachKeyValue and forEachStartingWith
+TEST(dfgCont, CsvConfig_forEach)
 {
-    typedef DFG_ROOT_NS::DFG_CLASS_NAME(StringUtf8) StringUTf8;
-    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) ConfigT;
-    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector) < StringUTf8 > StorageT;
+    typedef DFG_ROOT_NS::StringUtf8 StringUtf8;
+    typedef DFG_ROOT_NS::StringViewUtf8 StringViewUtf8;
+    typedef DFG_MODULE_NS(cont)::CsvConfig ConfigT;
+    typedef DFG_MODULE_NS(cont)::Vector<StringUtf8> StorageT;
+    typedef DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, StringUtf8> MapStrToStr;
     ConfigT config;
     config.loadFromFile("testfiles/csvConfigTest_0.csv");
     StorageT expectedKeys;
-    expectedKeys.push_back(StringUTf8(DFG_UTF8("property_one")));
-    expectedKeys.push_back(StringUTf8(DFG_UTF8("property_two")));
+    expectedKeys.push_back(StringUtf8(DFG_UTF8("property_one")));
+    expectedKeys.push_back(StringUtf8(DFG_UTF8("property_two")));
     StorageT expectedValues;
-    expectedValues.push_back(StringUTf8(DFG_UTF8("abc")));
-    expectedValues.push_back(StringUTf8(DFG_UTF8("def")));
+    expectedValues.push_back(StringUtf8(DFG_UTF8("abc")));
+    expectedValues.push_back(StringUtf8(DFG_UTF8("def")));
 
     StorageT actualKeys;
     StorageT actualValues;
@@ -1347,6 +1350,16 @@ TEST(dfgCont, CsvConfig_forEachStartingWith)
     });
     EXPECT_EQ(expectedKeys, actualKeys);
     EXPECT_EQ(expectedValues, actualValues);
+
+    // forEachKeyValue
+    MapStrToStr keyValues;
+    config.forEachKeyValue([&](const StringViewUtf8& svKey, const StringViewUtf8& svValue)
+    {
+        keyValues[svKey.toString()] = svValue.toString();
+    });
+    DFGTEST_EXPECT_LEFT(19, keyValues.size());
+    DFGTEST_EXPECT_LEFT(DFG_UTF8("integer"), keyValues[DFG_UTF8("channels/0/type")]);
+    DFGTEST_EXPECT_LEFT(DFG_UTF8("UTF8"), keyValues[DFG_UTF8("encoding")]);
 }
 
 TEST(dfgCont, CsvConfig_saving)
