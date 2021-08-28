@@ -641,19 +641,19 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions
     return strm.good();
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, SzPtrUtf8R psz)
+bool ::DFG_MODULE_NS(qt)::CsvItemModel::setItem(const int nRow, const int nCol, const StringViewUtf8& sv)
 {
-    const auto bRv = m_table.addString(psz, nRow, nCol);
+    const auto bRv = m_table.addString(sv, nRow, nCol);
     DFG_ASSERT(bRv); // Triggering ASSERT means that string couldn't be added to table.
     return bRv;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setItem(const int nRow, const int nCol, const QString str)
+bool ::DFG_MODULE_NS(qt)::CsvItemModel::setItem(const int nRow, const int nCol, const QString& str)
 {
     return setItem(nRow, nCol, SzPtrUtf8R(str.toUtf8()));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setRow(const int nRow, QString sLine)
+void ::DFG_MODULE_NS(qt)::CsvItemModel::setRow(const int nRow, QString sLine)
 {
     if (!this->isValidRow(nRow))
         return;
