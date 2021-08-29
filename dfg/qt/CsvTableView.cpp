@@ -704,6 +704,13 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
             pMenu->addAction(pAction);
         }
 
+        // 'Save config with options'
+        {
+            auto pAction = new QAction(tr("Save config file with options..."), this);
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveConfigFileWithOptions));
+            pMenu->addAction(pAction);
+        }
+
         // Open app-config file
         if (QFileInfo::exists(QtApplication::getApplicationSettingsPath()))
         {
@@ -2070,32 +2077,15 @@ bool CsvTableView::saveToFileWithOptions()
     return saveToFileImpl(dlg.getSaveOptions());
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFile()
+auto ::DFG_MODULE_NS(qt)::CsvTableView::populateCsvConfig(const CsvItemModel& rModel) -> CsvConfig
 {
-    auto pModel = csvModel();
-    if (!pModel)
-        return false;
+    CsvConfig config;
 
-    const auto sModelPath = pModel->getFilePath();
-    const auto sPathSuggestion = (sModelPath.isEmpty()) ? QString() : CsvFormatDefinition::csvFilePathToConfigFilePath(sModelPath);
-
-    auto sPath = QFileDialog::getSaveFileName(this,
-        tr("Save config file"),
-        sPathSuggestion,
-        tr("CSV Config file (*.csv.conf);;All files (*.*)"),
-        nullptr/*selected filter*/,
-        QFileDialog::Options() /*options*/);
-
-    if (sPath.isEmpty())
-        return false;
-
-    DFG_MODULE_NS(cont)::CsvConfig config;
-
-    pModel->populateConfig(config);
+    rModel.populateConfig(config);
 
     // Add column widths
     char szBuffer[64];
-    for (int c = 0, nCount = pModel->columnCount(); c < nCount; ++c)
+    for (int c = 0, nCount = rModel.columnCount(); c < nCount; ++c)
     {
         DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), "columnsByIndex/%d/width_pixels", CsvModel::internalColumnIndexToVisible(c));
         config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), StringUtf8::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(c))));
@@ -2113,12 +2103,93 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFile()
         const auto& keyValue = fetcher();
         config.setKeyValue(qStringToStringUtf8(keyValue.first), qStringToStringUtf8(keyValue.second));
     }
-    
+
+    return config;
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileTo(const CsvConfig& config, const QString& sPath)
+{
     const auto bSuccess = config.saveToFile(qStringToFileApi8Bit(sPath));
     if (!bSuccess)
         QMessageBox::information(this, tr("Saving failed"), tr("Saving config file to path '%1' failed").arg(sPath));
 
     return bSuccess;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvTableView::askConfigFilePath(CsvItemModel& rModel) -> QString
+{
+    const auto sModelPath = rModel.getFilePath();
+    const auto sPathSuggestion = (sModelPath.isEmpty()) ? QString() : CsvFormatDefinition::csvFilePathToConfigFilePath(sModelPath);
+
+    auto sPath = QFileDialog::getSaveFileName(this,
+        tr("Save config file"),
+        sPathSuggestion,
+        tr("CSV Config file (*.csv.conf);;All files (*.*)"),
+        nullptr/*selected filter*/,
+        QFileDialog::Options() /*options*/);
+    return sPath;
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFile()
+{
+    auto pModel = csvModel();
+    if (!pModel)
+        return false;
+
+    const auto sPath = askConfigFilePath(*pModel);
+
+    if (sPath.isEmpty())
+        return false;
+
+    const auto config = populateCsvConfig(*pModel);
+    
+    return saveConfigFileTo(config, sPath);
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileWithOptions()
+{
+    auto pModel = csvModel();
+    if (!pModel)
+        return false;
+
+    auto config = populateCsvConfig(*pModel);
+
+    CsvTableViewDlg viewDlg(nullptr, this, ViewType::fixedDimensionEdit);
+    viewDlg.addVerticalLayoutWidget(0, new QLabel(tr("To omit item from saved config, clear related text from Key-column"), &viewDlg.dialog()));
+    CsvItemModel configModel;
+
+    configModel.insertRows(0, saturateCast<int>(config.entryCount()));
+    configModel.insertColumns(0, 2);
+    configModel.setColumnName(0, tr("Key"));
+    configModel.setColumnName(1, tr("Value"));
+
+    int nRow = 0;
+    config.forEachKeyValue([&](const StringViewUtf8& svKey, const StringViewUtf8& svValue)
+    {
+        configModel.setItem(nRow, 0, svKey);
+        configModel.setItem(nRow, 1, svValue);
+        ++nRow;
+    });
+
+    viewDlg.setModel(&configModel);
+
+    viewDlg.resize(600, 500);
+    if (viewDlg.exec() != QDialog::Accepted)
+        return false;
+
+    config.clear();
+    for (int r = 0, nCount = configModel.rowCount(); r < nCount; ++r)
+    {
+        const auto svKey = configModel.RawStringViewAt(r, 0);
+        if (!svKey.empty())
+            config.setKeyValue(configModel.RawStringViewAt(r, 0).toString(), configModel.RawStringViewAt(r, 1).toString());
+    }
+
+    const auto sPath = askConfigFilePath(*pModel);
+    if (sPath.isEmpty())
+        return false;
+
+    return saveConfigFileTo(config, sPath);
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openAppConfigFile()
@@ -2281,8 +2352,8 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
 
     // Apply column width hints from config file if present
     {
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StringViewT SvT;
-        DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+        typedef CsvConfig::StringViewT SvT;
+        CsvConfig config;
         config.loadFromFile(qStringToFileApi8Bit(DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sPath)));
         if (config.entryCount() > 0 && config.valueStrOrNull(DFG_UTF8("columnsByIndex")) != nullptr)
         {
@@ -4881,6 +4952,68 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
 void ::DFG_MODULE_NS(qt)::CsvTableView::addConfigSavePropertyFetcher(PropertyFetcher fetcher)
 {
     DFG_OPAQUE_REF().m_propertyFetchers.push_back(std::move(fetcher));
+}
+
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewDlg)
+{
+public:
+    QObjectStorage<QDialog> m_spDialog;
+    QObjectStorage<CsvTableView> m_spTableView;
+};
+
+::DFG_MODULE_NS(qt)::CsvTableViewDlg::CsvTableViewDlg(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, CsvTableView::ViewType viewType)
+{
+    DFG_OPAQUE_REF().m_spDialog.reset(new QDialog(pParent));
+    DFG_OPAQUE_REF().m_spTableView.reset(new CsvTableView(std::move(spReadWriteLock), DFG_OPAQUE_REF().m_spDialog.get(), viewType));
+    auto& dlg = *DFG_OPAQUE_REF().m_spDialog;
+    auto spLayout = std::make_unique<QVBoxLayout>(nullptr);
+
+    spLayout->addWidget(DFG_OPAQUE_REF().m_spTableView.get());
+    auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
+    DFG_QT_VERIFY_CONNECT(QObject::connect(&rButtonBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept));
+    DFG_QT_VERIFY_CONNECT(QObject::connect(&rButtonBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject));
+    spLayout->addWidget(&rButtonBox);
+
+    dlg.setLayout(spLayout.release());
+    removeContextHelpButtonFromDialog(&dlg);
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewDlg::setModel(QAbstractItemModel* pModel)
+{
+    DFG_OPAQUE_REF().m_spTableView->setModel(pModel);
+}
+
+int ::DFG_MODULE_NS(qt)::CsvTableViewDlg::exec()
+{
+    DFG_OPAQUE_REF().m_spDialog->show(); // To get dimensions for column resize.
+    csvView().onColumnResizeAction_toViewContentAware();
+    return DFG_OPAQUE_REF().m_spDialog->exec();
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewDlg::resize(const int w, const int h)
+{
+    dialog().resize(w, h);
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvTableViewDlg::dialog() -> QWidget&
+{
+    DFG_REQUIRE(DFG_OPAQUE_REF().m_spDialog != nullptr);
+    return *DFG_OPAQUE_REF().m_spDialog;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvTableViewDlg::csvView() -> CsvTableView&
+{
+    DFG_REQUIRE(DFG_OPAQUE_REF().m_spTableView != nullptr);
+    return *DFG_OPAQUE_REF().m_spTableView;
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewDlg::addVerticalLayoutWidget(int nPos, QWidget* pWidget)
+{
+    auto pLayout = qobject_cast<QVBoxLayout*>(dialog().layout());
+    DFG_ASSERT_CORRECTNESS(pLayout != nullptr);
+    if (!pLayout)
+        return;
+    pLayout->insertWidget(nPos, pWidget);
 }
 
 DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()

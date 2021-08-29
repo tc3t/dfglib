@@ -37,6 +37,10 @@ namespace DFG_ROOT_NS
     class CsvFormatDefinition;
 }
 
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
+    class CsvConfig;
+} }
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
     class CsvItemModel;
@@ -180,6 +184,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef StringMatchDefinition StringMatchDef;
         typedef CsvTableViewSelectionAnalyzer SelectionAnalyzer;
         using PropertyFetcher = std::function<std::pair<QString, QString>()>;
+        using CsvConfig = ::DFG_MODULE_NS(cont)::CsvConfig;
 
         enum class ViewType
         {
@@ -340,6 +345,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool isReadOnlyMode() const;
 
+        CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -390,6 +397,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openAppConfigFile();
         bool openConfigFile();
         bool saveConfigFile();
+        bool saveConfigFileWithOptions();
         bool clearSelected();
         bool insertRowHere();
         bool insertRowAfterCurrent();
@@ -512,6 +520,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class Str_T>
         void setReadOnlyModeFromProperty(const Str_T& s);
 
+        QString askConfigFilePath(CsvItemModel& rModel);
+        bool saveConfigFileTo(const CsvConfig& config, const QString& sPath);
+
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;
         QStringList m_tempFilePathsToRemoveOnExit;
@@ -524,7 +535,28 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<QObjectStorage<QThread>> m_analyzerThreads;
         std::shared_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited.
         DFG_OPAQUE_PTR_DECLARE();
-    };
+    }; // class CsvTableView
+
+    // Helper class providing CsvTableView readily usable in a dialog
+    class CsvTableViewDlg
+    {
+    public:
+        CsvTableViewDlg(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, CsvTableView::ViewType viewType = CsvTableView::ViewType::allFeatures);
+
+        void setModel(QAbstractItemModel* pModel);
+
+        CsvTableView& csvView();
+
+        // Adds widget to layout.
+        void addVerticalLayoutWidget(int nPos, QWidget* pWidget);
+
+        QWidget& dialog();
+        void resize(const int w, const int h);
+
+        int exec();
+
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // class CSvTableViewDlg
 
     template <class Func_T>
     void CsvTableView::forEachCsvModelIndexInSelection(Func_T func)

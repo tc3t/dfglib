@@ -143,6 +143,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return m_mapKeyToValue.size();
         }
 
+        void clear()
+        {
+            m_mapKeyToValue.clear();
+        }
+
         // Calls 'func' for every key starting with 'uriStart' passing two StringViewUtf8 arguments to 'func': (key excluding 'uriStart', value).
         template <class Func_T>
         void forEachStartingWith(const StringViewT& uriStart, Func_T&& func) const
