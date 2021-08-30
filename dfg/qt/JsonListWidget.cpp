@@ -95,6 +95,12 @@ void ::DFG_MODULE_NS(qt)::JsonListWidget::contextMenuEvent(QContextMenuEvent* pE
         }
     }
 
+    // Actions from 'this'
+    {
+        spMenu->addSeparator();
+        spMenu->addActions(this->actions());
+    }
+
     spMenu->move(this->mapToGlobal(pEvent->pos()));
     spMenu->exec();
 }

@@ -1348,6 +1348,8 @@ public:
 
     QString getRawTextDefinition() const;
 
+    void addJsonWidgetContextMenuEntries(JsonListWidget& rJsonListWidget);
+
     void showGuideWidget();
 
     static QString getGuideString();
@@ -1394,6 +1396,7 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
 
     m_spRawTextDefinition.reset(new JsonListWidget(this));
     m_spRawTextDefinition->setPlainText(GraphDefinitionEntry::xyGraph(QString(), QString()).toText());
+    addJsonWidgetContextMenuEntries(*m_spRawTextDefinition);
     DFG_QT_VERIFY_CONNECT(connect(m_spRawTextDefinition.get(), &JsonListWidget::textChanged, this, &GraphDefinitionWidget::onTextDefinitionChanged));
 
     spLayout->addWidget(m_spRawTextDefinition.get());
@@ -1420,6 +1423,33 @@ GraphDefinitionWidget::GraphDefinitionWidget(GraphControlPanel *pNonNullParent) 
     {
         DFG_QT_VERIFY_CONNECT(connect(&m_chartDefinitionTimer, &QTimer::timeout, this, &GraphDefinitionWidget::checkUpdateChartDefinitionViewableTimer));
         m_chartDefinitionTimer.setSingleShot(true);
+    }
+}
+
+void GraphDefinitionWidget::addJsonWidgetContextMenuEntries(JsonListWidget& rJsonListWidget)
+{
+    // 'Insert'-items
+    auto pJsonListWidget = &rJsonListWidget;
+    {
+        const auto addInsertAction = [&](const QString& sTitle, const QString& sInsertText)
+        {
+            std::unique_ptr<QAction> spAction(new QAction(sTitle, &rJsonListWidget));
+            
+            const auto handler = [=]()
+            {
+                pJsonListWidget->insertPlainText(sInsertText);
+            };
+            DFG_QT_VERIFY_CONNECT(connect(spAction.get(), &QAction::triggered, handler));
+            rJsonListWidget.addAction(spAction.release()); // Deletion through parentship.
+        };
+        addInsertAction(tr("Insert basic 'xy'"),        R"({ "type":"xy" })");
+        addInsertAction(tr("Insert basic 'txy'"),       R"({ "type":"txy" })");
+        addInsertAction(tr("Insert basic 'bars'"),      R"({ "type":"bars" })");
+        addInsertAction(tr("Insert basic 'histogram'"), R"({ "type":"histogram" })");
+        addInsertAction(tr("Insert basic 'panel_config'"),
+            R"({"type": "panel_config", "title": "Panel title", "x_label": "x label", "y_label": "y label"})");
+        addInsertAction(tr("Insert basic 'global_config'"),
+            R"({ "type":"global_config", "show_legend":true })");
     }
 }
 
