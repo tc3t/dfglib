@@ -2646,17 +2646,16 @@ void ChartCanvasQCustomPlot::removeAllChartObjects(const bool bRepaint)
     // Removing legends
     removeLegends();
 
-    // Removing all but first panel
+    // Removing panels
     auto pPlotLayout = p->plotLayout();
     if (pPlotLayout)
     {
-        while (pPlotLayout->elementCount() > 0 && pPlotLayout->removeAt(pPlotLayout->elementCount() - 1))
-        {
-        }
+        for (int i = 0, nCount = pPlotLayout->elementCount(); i < nCount; ++i)
+            pPlotLayout->removeAt(i);
         auto pFirstPanel = (pPlotLayout->elementCount() >= 1) ? dynamic_cast<ChartPanel*>(pPlotLayout->elementAt(0)) : nullptr;
         if (pFirstPanel)
             pFirstPanel->setTitle(StringViewUtf8());
-        pPlotLayout->simplify(); // This removes the empty space that removed items free.
+        pPlotLayout->simplify(); // This removes the empty space that removed items left.
 
         // Removing axis labels
         forEachAxisRect([&](QCPAxisRect& axisRect)
