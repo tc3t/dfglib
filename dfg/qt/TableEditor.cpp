@@ -418,10 +418,10 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::TableEditor)
 {
     QMap<QModelIndex, QString> m_pendingEdits; // Stores edits done in cell editor which couldn't be applied immediately to be tried later.
     QPointer<QWidget> m_spResizeWindow;        // Defines widget to resize/move if document requests such.
-
+    bool m_bIgnoreOnSelectionChanged = false;
 };
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::CellEditor::setFontPointSizeF(const qreal pointSize)
+void DFG_MODULE_NS(qt)::TableEditor::CellEditor::setFontPointSizeF(const qreal pointSize)
 {
     if (pointSize <= 0)
     {
@@ -434,15 +434,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::CellEditor::setFontPointSiz
 }
 
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::DFG_CLASS_NAME(TableEditor)() :
-    m_bHandlingOnCellEditorTextChanged(false)
+::DFG_MODULE_NS(qt)::TableEditor::TableEditor()
 {
     // Model
-    m_spTableModel.reset(new DFG_CLASS_NAME(CsvItemModel));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigSourcePathChanged, this, &ThisClass::onSourcePathChanged));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
-    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &DFG_CLASS_NAME(CsvItemModel)::sigOnSaveToFileCompleted, this, &ThisClass::onSaveCompleted));
+    m_spTableModel.reset(new CsvItemModel);
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &CsvItemModel::sigSourcePathChanged, this, &ThisClass::onSourcePathChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &CsvItemModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &CsvItemModel::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &CsvItemModel::sigOnSaveToFileCompleted, this, &ThisClass::onSaveCompleted));
 
     // Proxy model
     m_spProxyModel.reset(new ProxyModelClass(this));
@@ -822,14 +821,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSaveCompleted(const bool 
         m_spStatusBar->showMessage(tr("Saving failed lasting %1 s").arg(saveTimeInSeconds, 0, 'g', 4));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& edited)
+void DFG_MODULE_NS(qt)::TableEditor::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& edited)
 {
     DFG_UNUSED(selected);
     DFG_UNUSED(deselected);
     DFG_UNUSED(edited);
     int selectedCount = -1;
 
-    if (m_bHandlingOnCellEditorTextChanged) // To prevent cell editor change signal triggering reloading cell editor data from model. In practice this could cause e.g. cursor jumping to beginning after entering a letter to end.
+    if (DFG_OPAQUE_REF().m_bIgnoreOnSelectionChanged) // To prevent cell editor change signal triggering reloading cell editor data from model. In practice this could cause e.g. cursor jumping to beginning after entering a letter to end.
         return;
 
     if (m_spCellEditor && m_spTableView && m_spTableModel && (selectedCount = m_spTableView->getSelectedItemCount()) == 1)
@@ -980,7 +979,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* eve
         event->ignore();
 }
 
-void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::handlePendingEdits()
+void ::DFG_MODULE_NS(qt)::TableEditor::handlePendingEdits()
 {
     if (!m_spTableView || !this->m_spTableModel)
         return;
@@ -999,11 +998,13 @@ void ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::handlePendingEdits()
         //       i.e. setData() below could edit a different cell than what was originally intended.
         auto index = edits.firstKey();
         auto sText = edits.take(index);
+        const auto oldFlag = DFG_OPAQUE_REF().m_bIgnoreOnSelectionChanged;
+        auto flagHandler = makeScopedCaller([&] { DFG_OPAQUE_REF().m_bIgnoreOnSelectionChanged = true; }, [=] { DFG_OPAQUE_REF().m_bIgnoreOnSelectionChanged = oldFlag; });
         this->m_spTableModel->setData(index, sText);
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onCellEditorTextChanged()
+void DFG_MODULE_NS(qt)::TableEditor::onCellEditorTextChanged()
 {
     if (!m_spTableView)
         return;
@@ -1021,8 +1022,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onCellEditorTextChanged()
             return;
         }
 
-        const auto oldFlag = m_bHandlingOnCellEditorTextChanged;
-        auto flagHandler = makeScopedCaller([&] { m_bHandlingOnCellEditorTextChanged = true ;}, [=] { m_bHandlingOnCellEditorTextChanged = oldFlag; });
+        const auto oldFlag = DFG_OPAQUE_REF().m_bIgnoreOnSelectionChanged;
+        auto flagHandler = makeScopedCaller([&] { DFG_OPAQUE_REF().m_bIgnoreOnSelectionChanged = true ;}, [=] { DFG_OPAQUE_REF().m_bIgnoreOnSelectionChanged = oldFlag; });
         DFG_OPAQUE_REF().m_pendingEdits.remove(indexes.front()); // Removing any pending edits for this index if any.
         this->m_spTableModel->setData(indexes.front(), sNewText);
     }

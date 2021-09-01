@@ -162,7 +162,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QObjectStorage<QToolBar> m_spToolBar;
         QObjectStorage<QSplitter> m_spMainSplitter;
         QPointer<QWidget> m_spChartDisplay;
-        bool m_bHandlingOnCellEditorTextChanged;
 
         DFG_OPAQUE_PTR_DECLARE();
     };
