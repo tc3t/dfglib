@@ -430,6 +430,9 @@ TEST(dfg, SzPtrTypes)
         TypedCharPtrAsciiR pAsciiR = pszAsciiW;
         TypedCharPtrLatin1R pLatin1R = pszAsciiW;
         TypedCharPtrUtf8R pUtf8R = pszAsciiW;
+        DFG_UNUSED(pAsciiR);
+        DFG_UNUSED(pLatin1R);
+        DFG_UNUSED(pUtf8R);
     }
 
     // Basic usage test
@@ -548,6 +551,7 @@ TEST(dfg, Dummy)
 {
     using namespace DFG_ROOT_NS;
     constexpr Dummy d0(1); // Making sure that can construct Dummy as constexpr.
+    DFG_UNUSED(d0);
 }
 
 namespace
@@ -911,10 +915,10 @@ TEST(dfgBuild, buildTimeDetails)
     EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "clang-cl_")));
 #elif defined(__MINGW32__)
     EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "MinGW_")));
-#elif defined(__GNUG__)
-    EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "GCC_")));
 #elif defined(__clang__)
     EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "Clang_")));
+#elif defined(__GNUG__)
+    EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "GCC_")));
 #endif
 
     EXPECT_EQ(nExpectedCount, vals.size()); // If this fails, check whether getBuildTimeDetailStrs() includes all id's.
