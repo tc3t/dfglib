@@ -1,4 +1,5 @@
 #include "qtIncludeHelpers.hpp"
+#include "qtBasic.hpp" // This must be included before DelimitedTextReader.hpp gets included, otherwise on some compilers there are compile errors about missing QTextStream overloads.
 #include "CsvTableView.hpp"
 #include "CsvItemModel.hpp"
 #include "CsvTableViewActions.hpp"
