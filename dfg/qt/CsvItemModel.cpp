@@ -1040,12 +1040,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         using ProgressController = ItemModel::LoadOptions::ProgressController;
 
         using MatcherDefinition = CsvItemModelStringMatcher;
-        using MultiMatchDefinition = MultiMatchDefinition<MatcherDefinition>;
+        using MultiMatchDef = MultiMatchDefinition<MatcherDefinition>;
 
         TextFilterMatcher(const StringViewUtf8& sv, ProgressController& rProgressController)
             : m_rProgressController(rProgressController)
         {
-            m_multiMatcher = MultiMatchDefinition::fromJson(sv);
+            m_multiMatcher = MultiMatchDef::fromJson(sv);
         }
 
         // This is not expected to be used, but must be defined in order to get compiled.
@@ -1076,7 +1076,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
             return bIsMatch;
         }
 
-        MultiMatchDefinition m_multiMatcher;
+        MultiMatchDef m_multiMatcher;
         ProgressController& m_rProgressController;
     }; // TextFilterMatcher
 } }} // namespace dfg::qt::DFG_DETAIL_NS
