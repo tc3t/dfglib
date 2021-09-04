@@ -2685,7 +2685,7 @@ size_t CsvTableView::replace(const QVariantMap& params)
         sToolTipMsg = tr("No cells were edited by replace");
 
     // Triggering tooltip directly from here didn't show so using a timer.
-    QTimer::singleShot(10, [=]() { QToolTip::showText(QCursor::pos(), sToolTipMsg); } );
+    QTimer::singleShot(10, this, [=]() { QToolTip::showText(QCursor::pos(), sToolTipMsg); } );
     return nEditCount;
 }
 
@@ -4183,14 +4183,14 @@ void CsvTableView::onReplace()
     dlg.exec();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setFindText(const StringMatchDef matchDef, const int nCol)
+void CsvTableView::setFindText(const StringMatchDef matchDef, const int nCol)
 {
     auto lockReleaser = this->tryLockForEdit();
     if (!lockReleaser.isLocked())
     {
         // Couldn't acquire lock. Scheduling a new try in 200 ms.
         QPointer<CsvTableView> thisPtr = this;
-        QTimer::singleShot(200, [=]() { if (thisPtr) thisPtr->setFindText(matchDef, nCol); });
+        QTimer::singleShot(200, this, [=]() { if (thisPtr) thisPtr->setFindText(matchDef, nCol); });
         return;
     }
 

@@ -990,7 +990,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::handlePendingEdits()
     {
         // Couldn't acquire lock. Scheduling a new try in 100 ms.
         QPointer<TableEditor> thisPtr = this;
-        QTimer::singleShot(100, [=]() { if (thisPtr) thisPtr->handlePendingEdits(); });
+        QTimer::singleShot(100, this, [=]() { if (thisPtr) thisPtr->handlePendingEdits(); });
         return;
     }
     auto& edits = DFG_OPAQUE_REF().m_pendingEdits;
@@ -1020,7 +1020,7 @@ void DFG_MODULE_NS(qt)::TableEditor::onCellEditorTextChanged()
             // Couldn't acquire lock. Scheduling a new try in 100 ms.
             QPointer<TableEditor> thisPtr = this;
             DFG_OPAQUE_REF().m_pendingEdits[indexes.front()] = std::move(sNewText);
-            QTimer::singleShot(100, [=]() { if (thisPtr) thisPtr->handlePendingEdits(); });
+            QTimer::singleShot(100, this, [=]() { if (thisPtr) thisPtr->handlePendingEdits(); });
             return;
         }
 
@@ -1033,10 +1033,10 @@ void DFG_MODULE_NS(qt)::TableEditor::onCellEditorTextChanged()
 
 void ::DFG_MODULE_NS(qt)::TableEditor::onHighlightTextChanged(const QString& text)
 {
-    if (!m_spTableView || !m_spFindPanel)
+    if (!m_spTableView || !m_spFindPanel || !m_spFindPanel->m_pColumnSelector)
         return;
 
-    DFG_CLASS_NAME(StringMatchDefinition) matchDef(text, m_spFindPanel->getCaseSensitivity(), m_spFindPanel->getPatternSyntax());
+    StringMatchDefinition matchDef(text, m_spFindPanel->getCaseSensitivity(), m_spFindPanel->getPatternSyntax());
     m_spTableView->setFindText(matchDef, CsvItemModel::visibleColumnIndexToInternal(m_spFindPanel->m_pColumnSelector->value()));
     m_spTableView->onFindNext();
 }
@@ -1072,7 +1072,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onFilterTextChanged(const QString& text)
     {
         // Couldn't acquire lock. Scheduling a new try in 200 ms.
         QPointer<TableEditor> thisPtr = this;
-        QTimer::singleShot(200, [=]() { if (thisPtr) thisPtr->onFilterTextChanged(thisPtr->m_spFilterPanel->getPattern()); });
+        QTimer::singleShot(200, this, [=]() { if (thisPtr) thisPtr->onFilterTextChanged(thisPtr->m_spFilterPanel->getPattern()); });
         return;
     }
 

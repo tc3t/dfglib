@@ -2603,7 +2603,7 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
         addTitleEntryToMenu(pSubMenu, pPlottable->name());
 
         // Adding remove-entry
-        pSubMenu->addAction(tr("Remove"), [=]() { m_spChartView->removePlottable(pPlottable); repaintCanvas(); });
+        pSubMenu->addAction(tr("Remove"), m_spChartView.get(), [=]() { m_spChartView->removePlottable(pPlottable); repaintCanvas(); });
 
         // Adding operations-menu
         {
@@ -2611,12 +2611,12 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
             if (pOperationsMenu)
             {
                 QPointer<QCPAbstractPlottable> spPlottable = pPlottable;
-                pOperationsMenu->addAction(tr("Apply multiple..."), [=]() { applyChartOperationsTo(spPlottable); });
+                pOperationsMenu->addAction(tr("Apply multiple..."), pPlottable, [=]() { applyChartOperationsTo(spPlottable); });
                 pOperationsMenu->addSeparator();
                 operationManager().forEachOperationId([&](StringUtf8 sOperationId)
                 {
                     // TODO: add operation only if it accepts input type that chart object provides.
-                    pOperationsMenu->addAction(viewToQString(sOperationId), [=]() { applyChartOperationTo(spPlottable, sOperationId); });
+                    pOperationsMenu->addAction(viewToQString(sOperationId), pPlottable, [=]() { applyChartOperationTo(spPlottable, sOperationId); });
                 });
                 
             }
@@ -3902,8 +3902,6 @@ void ChartCanvasQCustomPlot::applyChartOperationTo(QPointer<QCPAbstractPlottable
     if (!pPlottable)
         return;
 
-    const QString sOperationId = viewToQString(svOperationId);
-
     QString sOperationDefinition;
     // Asking arguments from user
     {
@@ -4727,7 +4725,7 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
     // Global options
     {
         menu.addAction(tr("Refresh"), pParentGraphWidget, &GraphControlAndDisplayWidget::refresh);
-        menu.addAction(tr("Rescale all axis"), [=]() { auto pChart = this->chart(); if (pChart) pChart->optimizeAllAxesRanges(); });
+        menu.addAction(tr("Rescale all axis"), this, [=]() { auto pChart = this->chart(); if (pChart) pChart->optimizeAllAxesRanges(); });
 
         auto pRemoveAllAction = menu.addAction(tr("Remove all chart objects"), pParentGraphWidget, [&]() { this->m_spChartCanvas->removeAllChartObjects(); });
         if (pRemoveAllAction && !this->m_spChartCanvas->hasChartObjects())
@@ -6087,7 +6085,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
     }
 
     m_bRefreshPending = true;
-    QTimer::singleShot(0, [&]() { refresh(); m_bRefreshPending = false; });
+    QTimer::singleShot(0, this, [&]() { refresh(); m_bRefreshPending = false; });
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceDestroyed()
