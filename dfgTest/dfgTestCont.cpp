@@ -93,17 +93,19 @@ TEST(dfgCont, ArrayWrapper)
     const std::string strConst;
 
     // Test existence of default constructor exists (doesn't compile if fails).
-    DFG_CLASS_NAME(ArrayWrapperT)<int> wrapEmpty;
+    ArrayWrapperT<int> wrapEmpty;
 
     // Test conversion from non-const to const wrapper.
-    DFG_CLASS_NAME(ArrayWrapperT)<const int> wrapEmptyConst = wrapEmpty;
+    ArrayWrapperT<const int> wrapEmptyConst = wrapEmpty;
+    DFG_UNUSED(wrapEmptyConst);
 
-    const auto wrapArr = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(arr);
-    const auto wrapVec = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(vec);
-    const auto wrapcVec = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(cvec);
-    const auto wrapStdArr = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(stdArr);
-    //const auto wrapStr = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(str); // TODO: this should work, but for now commented out as it doesn't compile.
-    const auto wrapStrConst = DFG_CLASS_NAME(ArrayWrapper)::createArrayWrapper(strConst);
+    const auto wrapArr = ArrayWrapper::createArrayWrapper(arr);
+    const auto wrapVec = ArrayWrapper::createArrayWrapper(vec);
+    const auto wrapcVec = ArrayWrapper::createArrayWrapper(cvec);
+    const auto wrapStdArr = ArrayWrapper::createArrayWrapper(stdArr);
+    //const auto wrapStr = ArrayWrapper::createArrayWrapper(str); // TODO: this should work, but for now commented out as it doesn't compile.
+    const auto wrapStrConst = ArrayWrapper::createArrayWrapper(strConst);
+    DFG_UNUSED(wrapStrConst);
     EXPECT_EQ(count(arr), wrapArr.size());
     EXPECT_EQ(count(vec), wrapVec.size());
     EXPECT_EQ(count(cvec), wrapcVec.size());

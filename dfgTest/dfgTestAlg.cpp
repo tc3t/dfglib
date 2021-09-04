@@ -244,18 +244,18 @@ TEST(dfgAlg, indexOf)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(alg);
     const std::array<double, 3> arr = { -1.5, 2.5, -5.3 };
-    EXPECT_EQ(0, indexOf(arr, -1.5));
-    EXPECT_EQ(1, indexOf(arr, 2.5));
-    EXPECT_EQ(2, indexOf(arr, -5.3));
+    EXPECT_EQ(0u, indexOf(arr, -1.5));
+    EXPECT_EQ(1u, indexOf(arr, 2.5));
+    EXPECT_EQ(2u, indexOf(arr, -5.3));
     EXPECT_FALSE(isValidIndex(arr, indexOf(arr, 1)));
 
     const std::array<int, 8> arr2 = { 0, 1, 1, 1, 1, 1, 2, 2 };
-    EXPECT_EQ(1, indexOf(arr2, 1));
-    EXPECT_EQ(6, indexOf(arr2, 2));
+    EXPECT_EQ(1u, indexOf(arr2, 1));
+    EXPECT_EQ(6u, indexOf(arr2, 2));
 
     std::list<int> list(arr2.begin(), arr2.end());
-    EXPECT_EQ(0, indexOf(list, 0));
-    EXPECT_EQ(1, indexOf(list, 1));
+    EXPECT_EQ(0u, indexOf(list, 0));
+    EXPECT_EQ(1u, indexOf(list, 1));
 }
 
 TEST(dfgAlg, contains)
@@ -501,7 +501,7 @@ TEST(dfgAlg, sortMultiple)
     // ADL-usage
     {
         std::array<int, 2> arr0 = { 1, 0 };
-        std::array<SortMultipleAdl::IntClass, 2> arr1 = { 1, 2 };
+        std::array<SortMultipleAdl::IntClass, 2> arr1 = { SortMultipleAdl::IntClass{1}, SortMultipleAdl::IntClass{2} };
         sortMultiple(arr0, arr1);
         EXPECT_EQ(0, arr0[0]);
         EXPECT_EQ(1, arr0[1]);
@@ -536,7 +536,7 @@ TEST(dfgAlg, rank)
         const std::array<double, 4> arr0 = { 2, 1, 1, 3 };
 
         const auto rankArr = rank(arr0);
-        EXPECT_EQ(4, rankArr.size());
+        EXPECT_EQ(4u, rankArr.size());
         EXPECT_EQ(2, rankArr[0]);
         EXPECT_TRUE(rankArr[1] == 0 || rankArr[1] == 1);
         EXPECT_TRUE(rankArr[2] == 0 || rankArr[2] == 1);
@@ -791,34 +791,34 @@ TEST(dfgAlg, nearestRangeInSorted)
         // Value smaller than first
         {
             const auto rv = nearestRangeInSorted(arr, 0.0, 1);
-            ASSERT_EQ(1, rv.size());
-            EXPECT_EQ(0, rv.leftRange().size());
-            EXPECT_EQ(0, rv.rightRange().size());
+            ASSERT_EQ(1u, rv.size());
+            EXPECT_EQ(0u, rv.leftRange().size());
+            EXPECT_EQ(0u, rv.rightRange().size());
             EXPECT_EQ(std::begin(arr), rv.nearest());
         }
         // Value greater than last
         {
             const auto rv = nearestRangeInSorted(arr, 10.0, 1);
-            ASSERT_EQ(1, rv.size());
-            EXPECT_EQ(0, rv.leftRange().size());
-            EXPECT_EQ(0, rv.rightRange().size());
+            ASSERT_EQ(1u, rv.size());
+            EXPECT_EQ(0u, rv.leftRange().size());
+            EXPECT_EQ(0u, rv.rightRange().size());
             EXPECT_EQ(std::end(arr) - 1, rv.nearest());
         }
         // Value smaller than first, include more than element count
         {
             const auto rv = nearestRangeInSorted(arr, 0.0, 10);
-            ASSERT_EQ(6, rv.size());
-            EXPECT_EQ(0, rv.leftRange().size());
-            EXPECT_EQ(5, rv.rightRange().size());
+            ASSERT_EQ(6u, rv.size());
+            EXPECT_EQ(0u, rv.leftRange().size());
+            EXPECT_EQ(5u, rv.rightRange().size());
             EXPECT_EQ(std::begin(arr), rv.nearest());
             EXPECT_EQ(std::end(arr), rv.end());
         }
         // Simple case
         {
             const auto rv = nearestRangeInSorted(arr, 2.8, 2);
-            ASSERT_EQ(2, rv.size());
-            EXPECT_EQ(1, rv.leftRange().size());
-            EXPECT_EQ(0, rv.rightRange().size());
+            ASSERT_EQ(2u, rv.size());
+            EXPECT_EQ(1u, rv.leftRange().size());
+            EXPECT_EQ(0u, rv.rightRange().size());
             EXPECT_EQ(std::begin(arr) + 1, rv.begin());
             EXPECT_EQ(std::begin(arr) + 2, rv.begin() + 1);
             EXPECT_EQ(std::begin(arr) + 3, rv.end());
@@ -827,9 +827,9 @@ TEST(dfgAlg, nearestRangeInSorted)
         // Even distance to second nearest
         {
             const auto rv = nearestRangeInSorted(arr, 3.0, 2);
-            ASSERT_EQ(2, rv.size());
-            EXPECT_EQ(1, rv.leftRange().size());
-            EXPECT_EQ(0, rv.rightRange().size());
+            ASSERT_EQ(2u, rv.size());
+            EXPECT_EQ(1u, rv.leftRange().size());
+            EXPECT_EQ(0u, rv.rightRange().size());
             EXPECT_EQ(std::begin(arr) + 1, rv.begin());
             EXPECT_EQ(std::begin(arr) + 2, rv.begin() + 1);
             EXPECT_EQ(std::begin(arr) + 2, rv.nearest());
@@ -838,9 +838,9 @@ TEST(dfgAlg, nearestRangeInSorted)
         // Early stop on left side
         {
             const auto rv = nearestRangeInSorted(arr, 2.0, 4);
-            ASSERT_EQ(4, rv.size());
-            EXPECT_EQ(1, rv.leftRange().size());
-            EXPECT_EQ(2, rv.rightRange().size());
+            ASSERT_EQ(4u, rv.size());
+            EXPECT_EQ(1u, rv.leftRange().size());
+            EXPECT_EQ(2u, rv.rightRange().size());
             EXPECT_EQ(std::begin(arr) + 1, rv.nearest());
             EXPECT_EQ(std::begin(arr), rv.begin());
             EXPECT_EQ(std::begin(arr) + 4, rv.end());
@@ -849,9 +849,9 @@ TEST(dfgAlg, nearestRangeInSorted)
         // Early stop on right side
         {
             const auto rv = nearestRangeInSorted(arr, 5.0, 4);
-            ASSERT_EQ(4, rv.size());
-            EXPECT_EQ(2, rv.leftRange().size());
-            EXPECT_EQ(1, rv.rightRange().size());
+            ASSERT_EQ(4u, rv.size());
+            EXPECT_EQ(2u, rv.leftRange().size());
+            EXPECT_EQ(1u, rv.rightRange().size());
             EXPECT_EQ(std::begin(arr) + 4, rv.nearest());
             EXPECT_EQ(std::begin(arr) + 2, rv.begin());
             EXPECT_EQ(std::end(arr), rv.end());
@@ -862,9 +862,9 @@ TEST(dfgAlg, nearestRangeInSorted)
     {
         const double arr[] = { 90, 95, 99, 100, 110, 115 };
         const auto rv = nearestRangeInSorted(arr, 101.0, 3);
-        ASSERT_EQ(3, rv.size());
-        EXPECT_EQ(2, rv.leftRange().size());
-        EXPECT_EQ(0, rv.rightRange().size());
+        ASSERT_EQ(3u, rv.size());
+        EXPECT_EQ(2u, rv.leftRange().size());
+        EXPECT_EQ(0u, rv.rightRange().size());
         EXPECT_EQ(std::begin(arr) + 1, rv.begin());
         EXPECT_EQ(std::begin(arr) + 2, rv.begin() + 1);
         EXPECT_EQ(std::begin(arr) + 3, rv.begin() + 2);
@@ -876,9 +876,9 @@ TEST(dfgAlg, nearestRangeInSorted)
     {
         const double arr[] = { 90, 95, 100, 101, 102, 115 };
         const auto rv = nearestRangeInSorted(arr, 99.0, 3);
-        ASSERT_EQ(3, rv.size());
-        EXPECT_EQ(0, rv.leftRange().size());
-        EXPECT_EQ(2, rv.rightRange().size());
+        ASSERT_EQ(3u, rv.size());
+        EXPECT_EQ(0u, rv.leftRange().size());
+        EXPECT_EQ(2u, rv.rightRange().size());
         EXPECT_EQ(std::begin(arr) + 2, rv.begin());
         EXPECT_EQ(std::begin(arr) + 3, rv.begin() + 1);
         EXPECT_EQ(std::begin(arr) + 4, rv.begin() + 2);
@@ -892,9 +892,9 @@ TEST(dfgAlg, nearestRangeInSorted)
         const PairT arr[] = { PairT(1, 1), PairT(2, 1), PairT(3, 100), PairT(4,1) };
         // arr is sorted with respect to first-items
         const auto rv = nearestRangeInSorted(arr, 3.2, 3, [](const PairT& a) { return a.first; });
-        ASSERT_EQ(3, rv.size());
-        EXPECT_EQ(1, rv.leftRange().size());
-        EXPECT_EQ(1, rv.rightRange().size());
+        ASSERT_EQ(3u, rv.size());
+        EXPECT_EQ(1u, rv.leftRange().size());
+        EXPECT_EQ(1u, rv.rightRange().size());
         EXPECT_EQ(std::begin(arr) + 2, rv.nearest());
         EXPECT_EQ(std::begin(arr) + 1, rv.begin());
         EXPECT_EQ(std::end(arr), rv.end());

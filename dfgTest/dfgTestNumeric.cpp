@@ -973,7 +973,6 @@ TEST(dfgNumeric, loopVectorizationSin)
         typedef double ValType;
         using namespace DFG_ROOT_NS;
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
-        auto distrEng = DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, 0, 1);
 #ifdef _DEBUG
         const auto N = 20;
 #else

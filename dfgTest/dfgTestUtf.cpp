@@ -280,6 +280,9 @@ TEST(DfgUtf, encodingToBom)
 	EXPECT_EQ(0, utf32BeBom[1]);
 	EXPECT_EQ(-2, utf32BeBom[2]);
 	EXPECT_EQ(-1, utf32BeBom[3]);
+
+	DFGTEST_EXPECT_TRUE(unknownBom.empty());
+	DFGTEST_EXPECT_TRUE(latin1Bom.empty());
 }
 
 TEST(DfgUtf, windows1252charToCp)

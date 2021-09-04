@@ -118,14 +118,14 @@ TEST(dfg, IntTypedefs)
     DFGTEST_STATIC(uint64_min == uint64(NumericTraits<uint64>::minValue));
     DFGTEST_STATIC(uint64_max == uint64(NumericTraits<uint64>::maxValue));
 
-    int8 a;
-    int16 b;
-    int32 c;
-    int64 d;
-    uint8 ua;
-    uint16 ub;
-    uint32 uc;
-    uint64 ud;
+    int8 a = 0;
+    int16 b = 0;
+    int32 c = 0;
+    int64 d = 0;
+    uint8 ua = 0;
+    uint16 ub = 0;
+    uint32 uc = 0;
+    uint64 ud = 0;
     EXPECT_EQ(maxValueOfType(a), int8_max);
     EXPECT_EQ(maxValueOfType(b), int16_max);
     EXPECT_EQ(maxValueOfType(c), int32_max);

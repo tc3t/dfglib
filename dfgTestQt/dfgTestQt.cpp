@@ -508,7 +508,7 @@ TEST(dfgQt, CsvTableView_paste)
     view.makeSingleCellSelection(0, 1);
     nSignalCount = 0;
     view.paste();
-    EXPECT_EQ(0, nSignalCount);
+    EXPECT_EQ(0u, nSignalCount);
 
     // Setting a few cells to column 1, pasting again and making sure that get expected number of change notifications.
     // Note: this is partly implementation test rather than interface test (i.e. point is not to make interface guarantees that there will be
@@ -521,7 +521,7 @@ TEST(dfgQt, CsvTableView_paste)
     view.makeSingleCellSelection(0, 1);
     nSignalCount = 0;
     view.paste();
-    EXPECT_EQ(3, nSignalCount);
+    EXPECT_EQ(3u, nSignalCount);
     view.selectColumn(1);
     EXPECT_EQ(clipboardStringCol0, view.makeClipboardStringForCopy());
 
@@ -532,7 +532,7 @@ TEST(dfgQt, CsvTableView_paste)
     view.makeSingleCellSelection(0, 0);
     nSignalCount = 0;
     view.paste();
-    EXPECT_EQ(nColCount, nSignalCount); // Having only 1 signal would be better, but as commented above, at least making sure that there's no signal per cell.
+    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount); // Having only 1 signal would be better, but as commented above, at least making sure that there's no signal per cell.
 
     // Testing signal count when pasting row
     view.selectAll();
@@ -542,7 +542,7 @@ TEST(dfgQt, CsvTableView_paste)
     view.makeSingleCellSelection(1, 0);
     nSignalCount = 0;
     view.paste();
-    EXPECT_EQ(nColCount, nSignalCount); // Having only 1 signal would be better.
+    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount); // Having only 1 signal would be better.
 }
 
 TEST(dfgQt, CsvTableView_clear)
@@ -567,15 +567,15 @@ TEST(dfgQt, CsvTableView_clear)
     nSignalCount = 0;
     view.clearSelected();
     const auto sAfterClearing = view.makeClipboardStringForCopy();
-    EXPECT_EQ(nColCount, nSignalCount); // Expecting signaling from clear to behave similarly to pasting.
+    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount); // Expecting signaling from clear to behave similarly to pasting.
     nSignalCount = 0;
     view.undo();
     EXPECT_EQ(sAfterPopulating, view.makeClipboardStringForCopy());
-    EXPECT_EQ(nColCount, nSignalCount);
+    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount);
     nSignalCount = 0;
     view.redo();
     EXPECT_EQ(sAfterClearing, view.makeClipboardStringForCopy());
-    EXPECT_EQ(nColCount, nSignalCount);
+    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount);
 }
 
 TEST(dfgQt, CsvTableView_replace)
@@ -596,18 +596,18 @@ TEST(dfgQt, CsvTableView_replace)
     csvModel.setModifiedStatus(false);
 
     // This should not edit anything as nothing is selected
-    EXPECT_EQ(0, view.replace(QVariantMap({{"find", "a"}, {"replace", "c"}})));
+    EXPECT_EQ(0u, view.replace(QVariantMap({{"find", "a"}, {"replace", "c"}})));
     EXPECT_FALSE(csvModel.isModified());
 
     view.selectAll();
-    EXPECT_EQ(0, view.replace(QVariantMap()));
+    EXPECT_EQ(0u, view.replace(QVariantMap()));
     EXPECT_FALSE(csvModel.isModified());
-    EXPECT_EQ(0, view.replace(QVariantMap({{"find", "a"}})));
+    EXPECT_EQ(0u, view.replace(QVariantMap({{"find", "a"}})));
     EXPECT_FALSE(csvModel.isModified());
-    EXPECT_EQ(0, view.replace(QVariantMap({{"find", "a3"}, {"replace", "bug"}})));
+    EXPECT_EQ(0u, view.replace(QVariantMap({{"find", "a3"}, {"replace", "bug"}})));
     EXPECT_FALSE(csvModel.isModified());
 
-    EXPECT_EQ(2, view.replace(QVariantMap({{"find", "a"}, {"replace", "c"}})));
+    EXPECT_EQ(2u, view.replace(QVariantMap({{"find", "a"}, {"replace", "c"}})));
     EXPECT_TRUE(csvModel.isModified());
 
     EXPECT_STREQ("c", csvModel.RawStringPtrAt(0, 0).c_str());
@@ -1185,7 +1185,9 @@ static void testFileDataSource(const QString& sExtension,
             {
                 EXPECT_EQ(expectedValues[c].size(), values.size());
                 if (expectedValues[c].size() == values.size())
+                {
                     EXPECT_TRUE(std::equal(values.begin(), values.end(), expectedValues[c].begin()));
+                }
             }
         }
         else
@@ -1194,7 +1196,9 @@ static void testFileDataSource(const QString& sExtension,
             EXPECT_TRUE(strings.empty());
         }
         if (isValidIndex(expectedColumnDataTypes, c))
+        {
             EXPECT_EQ(expectedColumnDataTypes[c], source.columnDataType(c));
+        }
     }
 
     // Testing that data mask is taken into account
@@ -1271,7 +1275,7 @@ static void testFileDataSource(const QString& sExtension,
         }
         // Checking that change notification was received and that new columns are effective.
         EXPECT_TRUE(bChangeNotificationReceived);
-        ASSERT_EQ(2, source.columnNames().size());
+        ASSERT_EQ(2u, source.columnNames().size());
         EXPECT_EQ("a", source.columnNames()[0u]);
         EXPECT_EQ("b", source.columnNames()[1u]);
         std::vector<std::string> elems;
@@ -1571,7 +1575,7 @@ TEST(dfgQt, SQLiteDatabase)
             for (int c = 0; c < nColCount; ++c)
                 EXPECT_EQ(createTestContent(r, c), query.value(c).toString());
         }
-        EXPECT_EQ(nFirstTestTableRowCount, nRowCount);
+        EXPECT_EQ(static_cast<size_t>(nFirstTestTableRowCount), nRowCount);
     }
 
     // Testing static getters

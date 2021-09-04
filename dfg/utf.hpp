@@ -531,7 +531,6 @@ void utf32To16(const IterableUtf32_T& source, IterOutUtf16_T dest, const ByteOrd
     auto iter = std::begin(source);
     const auto iterEnd = std::end(source);
     const auto bs = [&](uint32 cp) {return byteSwap(cp, boSource, ByteOrderHost); };
-    const auto bsDest = [&](uint16 cp) {return byteSwap(cp, ByteOrderHost, boDest); };
     for (; iter != iterEnd;)
     {
         const auto cp = readUtf32CharAndAdvance(iter, iterEnd, bs);

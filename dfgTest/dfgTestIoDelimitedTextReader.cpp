@@ -927,7 +927,7 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
 
     typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) Timer;
 
-    for(int i = 0; i<DFG_COUNTOF(matSizes); ++i)
+    for(int i = 0; i < static_cast<int>(DFG_COUNTOF(matSizes)); ++i)
     {
         if (!matActive[i])
             continue;

@@ -719,7 +719,7 @@ namespace
                 return;
             }
             else
-                nStart = utf8.size();
+                nStart = ::DFG_ROOT_NS::saturateCast<decltype(nStart)>(utf8.size());
         }
     }
 }

@@ -270,6 +270,7 @@ TEST(dfgIter, szIterator)
     const char szConst[] = "def";
     auto range = makeSzRange(sz);
     auto rangeConst = makeSzRange(szConst);
+    DFG_UNUSED(rangeConst);
 
     DFGTEST_STATIC((std::is_same<TypeIdentity<decltype(makeSzIterator(sz))>::type::pointer, char*>::value));
     DFGTEST_STATIC((std::is_same<TypeIdentity<decltype(makeSzIterator(szConst))>::type::pointer, const char*>::value));

@@ -307,7 +307,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         FlagContainer m_enableFlags;
         size_t m_nExcluded = 0;
         double m_previousNumber = std::numeric_limits<double>::quiet_NaN();
-        int m_nSortedUntil = 0; // Stores the number of sorted cells from first.
+        uint32 m_nSortedUntil = 0; // Stores the number of sorted cells from first.
         int m_sortDirection = 0; // 1 = ascending, -1 = descending, 0 = either.
     }; // BasicSelectionDetailCollector
 
@@ -426,12 +426,12 @@ namespace
 
         // Hack: Because QUndoView handles undo stack directly, it will bypass CsvTableView read/edit lock when used. To prevent this,
         //       using event filter to check if lock is available before allowing events that possibly trigger undo stack.
-        //       While hacky, this is should address at least most cases. Window will also be left in disabled state after operation ends,
+        //       While hacky, this should address at least most cases. Window will also be left in disabled state after operation ends,
         //       but can be re-enabled simply be clicking.
         bool eventFilter(QObject* pObj, QEvent* pEvent) override
         {
-            const auto eventType = pEvent->type();
-            if (eventType == QEvent::KeyPress || eventType == QEvent::MouseButtonPress && (m_spTableView && pEvent && m_spUndoView))
+            const auto eventType = (pEvent) ? pEvent->type() : QEvent::None;
+            if ((eventType == QEvent::KeyPress || eventType == QEvent::MouseButtonPress) && (m_spTableView && m_spUndoView))
             {
                 auto lockReleaser = m_spTableView->tryLockForEdit();
                 const auto bEnable = lockReleaser.isLocked();
@@ -536,7 +536,7 @@ namespace
 
     ActionFlags getActionType(QAction* pAction)
     {
-        return (pAction) ? pAction->property(gszPropertyActionFlags).toUInt() : ActionFlags::unknown;
+        return (pAction) ? ActionFlags(pAction->property(gszPropertyActionFlags).toUInt()) : ActionFlags::unknown;
     }
 
 } // unnamed namespace
