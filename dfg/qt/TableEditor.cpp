@@ -374,6 +374,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel)
     MultiMatchDefinition<CsvItemModelStringMatcher> m_matchers;
 };
 
+::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
+
 bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
 {
     return BaseClass::filterAcceptsColumn(sourceColumn, sourceParent);

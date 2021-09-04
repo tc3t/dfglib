@@ -4865,6 +4865,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData
     std::atomic_bool m_terminateFlag;
 };
 
+::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::~ChartDataPreparator() = default;
+
 void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::prepareData(ChartRefreshParamPtr spParam)
 {
     DFG_OPAQUE_REF().m_terminateFlag = false;
