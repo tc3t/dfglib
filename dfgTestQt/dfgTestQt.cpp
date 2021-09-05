@@ -1022,6 +1022,7 @@ TEST(dfgQt, TableView_makeSingleCellSelection)
     EXPECT_EQ(makeSingleCellIndexList(0, 0), pSelectionModel->selectedIndexes());
 }
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)) // Filter is available only since Qt 5.12
 TEST(dfgQt, TableEditor_filter)
 {
     using namespace ::DFG_MODULE_NS(qt);
@@ -1057,6 +1058,7 @@ g,h
     EXPECT_EQ("g", rViewModel.data(rViewModel.index(1, 0)).toString());
     EXPECT_EQ("h", rViewModel.data(rViewModel.index(1, 1)).toString());
 }
+#endif
 
 TEST(dfgQt, qstringUtils)
 {
