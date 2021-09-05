@@ -74,7 +74,7 @@ Summary of 3rd party code in dfglib (last revised 2021-06-19).
 | [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.55, 1.61, 1.65.1 and 1.70.0 |
 | [Colour Rendering of Spectra](dfg/colour/specRendJw.cpp) | m (used in colour handling tools) | [Public domain](dfg/colour/specRendJw.cpp) | 
 | [cppcsv](https://github.com/paulharris/cppcsv) (commit [daa3d881](https://github.com/paulharris/cppcsv/tree/daa3d881d995b6695b84dde860126fa5f773de56/include/cppcsv), 2020-01-10) | c,t | [MIT](https://github.com/paulharris/cppcsv) | 
-| [dlib](http://dlib.net/)    | m,ti (unit-aware integration and various tests)           | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  | Can be excluded from unit tests with option DFGTEST_BUILD_OPT_USE_DLIB
+| [dlib](http://dlib.net/)    | m (unit-aware integration) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
 | [fast-csv-cpp-parser](https://github.com/ben-strasser/fast-cpp-csv-parser/) (commit [66365610](https://github.com/ben-strasser/fast-cpp-csv-parser/blob/66365610817b929b451819e0cccdb702d46a605e/csv.h), 2020-05-19) | c,t | [BSD-3](dfg/io/fast-cpp-csv-parser/csv.h) |
 | [fmtlib](https://github.com/fmtlib/fmt) (version 4.1.0 with an adjustment related to formatting doubles as string) | m (string formatting)| [BSD-2](dfg/str/fmtlib/format.h) |
 | [Google Test](https://github.com/google/googletest) (version 1.8.1) | t | [BSD-3](externals/gtest/gtest.h) | Unit tests are implemented with Google Test

@@ -943,7 +943,6 @@
     <ClCompile Include="dfgTestStr.cpp" />
     <ClCompile Include="dfgTestTime.cpp" />
     <ClCompile Include="dfgTestUtf.cpp" />
-    <ClCompile Include="dlibSource.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2015|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2017|Win32'">Create</PrecompiledHeader>

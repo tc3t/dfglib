@@ -49,7 +49,6 @@ set(SOURCE
     dfgTestStr.cpp
     dfgTestTime.cpp
     dfgTestUtf.cpp
-    dlibSource.cpp
     stdafx.cpp
    ../externals/gtest/gtest-all.cc
 )

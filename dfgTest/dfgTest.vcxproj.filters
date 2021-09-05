@@ -770,9 +770,6 @@
     <ClCompile Include="..\dfg\dfgCppAll.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dlibSource.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="dfgTestColour.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

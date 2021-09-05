@@ -31,10 +31,6 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <boost/iostreams/device/array.hpp>
     #include <boost/iostreams/device/file.hpp>
     #include <boost/iostreams/stream.hpp>
-    #if DFGTEST_BUILD_OPT_USE_DLIB==1
-        #include <dlib/vectorstream.h>
-        #include <dlib/compress_stream.h>
-    #endif
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 #if 0
@@ -437,21 +433,6 @@ TEST(dfgIo, StdIStrStreamPerformance)
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
-
-    // dlib vectorstream
-    #if DFGTEST_BUILD_OPT_USE_DLIB==1
-    {
-    Timer timer;
-    size_t sum = 0;
-    dlib::vectorstream istrm(buffer);
-    int ch;
-    while((ch = istrm.get()) != EOF)
-        sum += ch;
-    std::cout << "dlib::vectorstream with get elapsed: " << timer.elapsedWallSeconds() << '\n';
-    strmSumPrint << "Sum: " << sum << '\n';
-    EXPECT_EQ(nSumExpected, sum);
-    }
-    #endif
 }
 
 namespace
@@ -826,39 +807,11 @@ TEST(dfgIo, IStreamWithEncoding_Windows1252)
     }
 }
 
-#if DFGTEST_BUILD_OPT_USE_DLIB==1
+#if 0
 TEST(dfgIo, OByteStream)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(io);
-
-    auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
-    auto distrEng = DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, -128, 127);
-
-    std::vector<char> bytes;
-    for (size_t i = 0; i < 200*sizeof(double); ++i)
-        bytes.push_back(static_cast<int8>(distrEng()));
-
-    dlib::compress_stream::kernel_1ea compressorEa;
-
-    DFG_CLASS_NAME(ImcByteStream) istrm(bytes.data(), bytes.size());
-    DFG_CLASS_NAME(OmcByteStream)<> ostrmCompressed;
-
-    compressorEa.compress(istrm, ostrmCompressed);
-
-    std::vector<double> doubles;
-
-#if DFG_LANGFEAT_MOVABLE_STREAMS
-    auto ostrmToDoubleArray = makeOmcByteStream(doubles);
-#else
-    DFG_CLASS_NAME(OmcByteStream)<std::vector<double>> ostrmToDoubleArray(&doubles);
-#endif
-
-    DFG_CLASS_NAME(ImcByteStream) istrm2(ostrmCompressed.data(), ostrmCompressed.size());
-    compressorEa.decompress(istrm2, ostrmToDoubleArray);
-
-    EXPECT_EQ(bytes.size(), sizeInBytes(doubles));
-    EXPECT_FALSE(std::memcmp(bytes.data(), doubles.data(), bytes.size()));
 }
 #endif
 
