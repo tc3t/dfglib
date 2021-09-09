@@ -6,6 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2021-09-09, dfgQtTableEditor [version 2.1.0](dfgExamples/dfgQtTableEditor/README.md/#210-2021-09-09) (multicolumn filtering, read-only mode...)
 * 2021-06-24, dfgQtTableEditor [version 2.0.0](dfgExamples/dfgQtTableEditor/README.md/#200-2021-06-24)
 * 2021-04-29, dfgQtTableEditor [version 1.9.0](dfgExamples/dfgQtTableEditor/README.md/#190-2021-04-29)
 * 2021-02-21, dfgQtTableEditor [version 1.8.0](dfgExamples/dfgQtTableEditor/README.md/#180-2021-02-21)

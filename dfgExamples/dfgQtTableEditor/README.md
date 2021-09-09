@@ -4,6 +4,25 @@ Example application for viewing and editing csv-files demonstrating features in 
 
 ## Building
 
+### __Version 2.1.0__:
+
+Has been successfully build with:
+| Compiler      | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
+| ------------- | ----- | ---- | -- | -- | -- |
+| Clang 6.0.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
+| Clang 10.0.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
+| GCC 7.5.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
+| GCC 9.3.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
+| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
+| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2017 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| | | |
+
+Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
+
+If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. For concrete build steps, see section for version 1.0.0.
+
 ### __Version 2.0.0__:
 
 Has been successfully build with:
@@ -124,6 +143,26 @@ Has been build with the following setups:
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
 ## Version history
+
+### 2.1.0, 2021-09-09
+* Tag: [2.1.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.1.0)
+    * General
+        * [new] Multicolumn filtering. Filter is defined by list of json-objects with the same syntax as in read filter ([#25](https://github.com/tc3t/dfglib/issues/25))
+        * [new] read-only mode ([#5](https://github.com/tc3t/dfglib/issues/5))
+        * [new] 'Save visible'-functionality, i.e. can save table as shown, which can be useful when content is filtered or sorted. Available from "Save to file with options"-menu item ([#20](https://github.com/tc3t/dfglib/issues/20), [94827592](https://github.com/tc3t/dfglib/commit/94827592ae1770ffc336eda3224e2a3b1adde611))
+        * [imp] There are now new selection details and can choose which to calculate. New details: isSorted, median, standard deviation (both population and variance), variance  ([#39](https://github.com/tc3t/dfglib/issues/39))
+        * [imp] Can now optionally choose which items to save to .conf-file ([#94](https://github.com/tc3t/dfglib/issues/94), [00a2d3db](https://github.com/tc3t/dfglib/commit/00a2d3dbbb08a6eed7ea257b0eeca9a087d26c1f))
+        * [mod/imp] Find/filter column selector index now starts from 1. 'Any column' is now shown as "Any" and tooltip shows column name. [945e86fb](https://github.com/tc3t/dfglib/commit/945e86fb2aedbe8a5e7973cfd5046e755a94854e))
+        * [fix] When editing content from 'Cell edit', cursor could sporadically reset to beginning especially when editing triggered a lengthy chart update ([#110](https://github.com/tc3t/dfglib/issues/110), [7a6aba9d](https://github.com/tc3t/dfglib/commit/7a6aba9d28644bf0a6692dc931cea921a48fa8d8))
+        * [fix] Undo/redo could crash if used while table was being accessed by some operation ([a483af44](https://github.com/tc3t/dfglib/commit/a483af4438e68868849faa0b8642c0e5f2f02257))
+        * [fix] Inserting date/time could cause a crash if used while table was being accessed by some operation ([1a9c4b3b](https://github.com/tc3t/dfglib/commit/1a9c4b3bb4201513f219aba20dc79b9bcddc64db))
+        * [fix] Various minor fixes and changes ([574d7b77](https://github.com/tc3t/dfglib/commit/574d7b772249ad1e51dd250c120244fec0383792), [df06a2df](https://github.com/tc3t/dfglib/commit/df06a2df3e04fb8baa6007c34192dc312ef98ec3), [73b953a0](https://github.com/tc3t/dfglib/commit/73b953a00f0fa9f6c831edeef2a99e97f3aa0b32), [cfe0b1e6](https://github.com/tc3t/dfglib/commit/cfe0b1e6df769e6e37e3c40af2b87216e66c0be3))
+    * Charts
+        * [imp] Improve tooltip formatting for stacked bars ([#88](https://github.com/tc3t/dfglib/issues/88))
+        * [imp] Context menu of chart definition text edit now has quick insert items ([#95](https://github.com/tc3t/dfglib/issues/95), [a1cad828](https://github.com/tc3t/dfglib/commit/a1cad828dcce6fce29c1bd0b9692ca01e78baddc))
+        * [imp] Chart preparation can now be terminated at entry boundary from 'Apply'-button. This means that ongoing preparation of an entry  can't be terminated, but preparation will stop right after it finishes. ([#80](https://github.com/tc3t/dfglib/issues/80), [98042b91](https://github.com/tc3t/dfglib/commit/98042b91c64ba95692ea59e5c0046a7572e9520f))
+        * [fix] Chart grid didn't always reset to smaller size, e.g. didn't reset to size 1x1 after being 2x2 ([#109](https://github.com/tc3t/dfglib/issues/109), [288ff796](https://github.com/tc3t/dfglib/commit/288ff79606ed50c3d25dfbb83f7d3b84865e3fdf))
+
 
 ### 2.0.0, 2021-06-24
 * Tag: [2.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.0.0)
@@ -285,6 +324,7 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
     * Disabled by default due to licensing issues (GPL).
 * No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for concrete examples. Underlying data structure is optimized for in-order walk through column content.
 * Somewhat reasonable performance:
+    * Speed of CSV parser itself depends on various details, but is reasonably fast by default, and when specifying format as unquoted UTF-8, the fastest one tested in [csvPerformanceRuns.csv](../../misc/csvPerformanceRuns.csv) as of 2021-09.
     * opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor 1.0.0 default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same machine read took over 30 seconds.
     * Since opening huge files is not a priority, limits of opening such files hasn't been thoroughly examined, but some examples for concreteness:
         * With version 1.5.0 and a rather ordinary Windows desktop machine (Intel i5 desktop CPU launched in 2013), opening a 1 GB file with 50 million rows and three 3 columns with content "abcdef" in every cell, lasted (in warm cache case) about 10 seconds with default options, about 6 seconds if using manual read options. When opened, application used about 3.0 GB of memory. With earlier version 1.1.0 figures were 16s / 8s / 4.2 GB.
