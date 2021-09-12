@@ -147,7 +147,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 #undef DFG_TEMP_IMPL_CTRL_MOVE
 
         // Convenience method: clears existing selection and selects cell at (r,c). If index (r, c) does not exist, does nothing.
-        void makeSingleCellSelection(int r, int c);
+        bool makeSingleCellSelection(int r, int c);
+
+        // Convenience method: calls makeSingleCellSelection() and scrolls to selection like selectRow()
+        void selectCell(int r, int c);
+
         // Convenience method: clears existing selection and selects given indexes. If given indexes are not from this->model(),
         // indexMapper should be provided that maps indexes to that model (for example if this->model() is proxy model while given indexes are from underlying source model)
         void setSelectedIndexed(const QModelIndexList& indexes, std::function<QModelIndex(const QModelIndex&)> indexMapper);
@@ -190,16 +194,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     }; // DFG_CLASS_NAME(TableView)
 }}
 
-inline void ::DFG_MODULE_NS(qt)::TableView::makeSingleCellSelection(const int r, const int c)
+inline bool ::DFG_MODULE_NS(qt)::TableView::makeSingleCellSelection(const int r, const int c)
 {
     auto pModel = model();
     if (!pModel)
-        return;
+        return false;
     QModelIndexList indexes{ pModel->index(r, c)};
     if (!indexes[0].isValid())
-        return;
+        return false;
 
     setSelectedIndexed(indexes, nullptr);
+    return true;
+}
+
+inline void ::DFG_MODULE_NS(qt)::TableView::selectCell(const int r, const int c)
+{
+    auto pModel = model();
+    if (pModel && makeSingleCellSelection(r, c))
+        scrollTo(pModel->index(r, c));
 }
 
 inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const QModelIndexList& indexes, std::function<QModelIndex (const QModelIndex&)> indexMapper)

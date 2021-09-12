@@ -48,6 +48,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QPushButton>
 #include <QSettings>
 #include <QSortFilterProxyModel>
+#include <QSpinBox>
 #include <QThread>
 #include <QTime>
 #include <QTimer>
@@ -819,7 +820,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
             auto pAction = new QAction(tr("Go to line"), this);
             setActionFlags(pAction, ActionFlags::viewEdit);
             pAction->setShortcut(tr("Ctrl+G"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onGoToLineTriggered));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onGoToCellTriggered));
             addAction(pAction);
         }
         {
@@ -4019,26 +4020,46 @@ void DFG_CLASS_NAME(CsvTableView)::onFilterRequested()
         QToolTip::showText(QCursor::pos(), tr("Sorry, standalone filter is not implemented."));
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onGoToLineTriggered()
+void ::DFG_MODULE_NS(qt)::CsvTableView::onGoToCellTriggered()
 {
     auto pModel = model();
     if (!pModel || pModel->rowCount() <= 0)
         return;
-    const auto nMinVal = CsvModel::internalRowIndexToVisible(0);
-    const auto nMaxVal = CsvModel::internalRowIndexToVisible(pModel->rowCount() - 1);
-    bool bOk = false;
-    const auto nUserRow = QInputDialog::getInt(this,
-                                          tr("Go To Line"),
-                                          tr("Line number (%1 - %2) (n'th line from start)\nIn case of filtered or sorted table, this may be different from shown line ID").arg(nMinVal).arg(nMaxVal),
-                                          nMinVal, // Initial value
-                                          nMinVal, // Minimum value
-                                          nMaxVal, // Maximum value
-                                          1,       // Step
-                                          &bOk);
-    if (bOk)
+    const auto nMinRowVal = CsvModel::internalRowIndexToVisible(0);
+    const auto nMaxRowVal = CsvModel::internalRowIndexToVisible(pModel->rowCount() - 1);
+    const auto nMinColumnVal = CsvModel::internalColumnIndexToVisible(0) - 1;
+    const auto nMaxColumnVal = CsvModel::internalColumnIndexToVisible(pModel->columnCount() - 1);
+
+    QDialog dlg(this);
+    auto pLayout = new QFormLayout(&dlg); // Deletion by parentship
+
+    auto pSpinBoxRow = new QSpinBox(&dlg); // Deletion by parentship
+    pSpinBoxRow->setRange(nMinRowVal, nMaxRowVal);
+    pSpinBoxRow->setValue(nMinRowVal);
+    pLayout->addRow(tr("Line number (%1 - %2) (n'th line from top)").arg(nMinRowVal).arg(nMaxRowVal), pSpinBoxRow);
+
+    auto pSpinBoxColumn = new QSpinBox(&dlg); // Deletion by parentship
+    pSpinBoxColumn->setRange(nMinColumnVal, nMaxColumnVal);
+    pSpinBoxColumn->setValue(nMinColumnVal);
+    pLayout->addRow(tr("Column number (%1 - %2)").arg(nMinColumnVal + 1).arg(nMaxColumnVal), pSpinBoxColumn);
+    pSpinBoxColumn->setSpecialValueText(tr("Not selected"));
+
+    pLayout->addRow(new QLabel("Note: In case of filtered or sorted table, indexes refer to visible table indexes", &dlg)); // Deletion by parentship
+
+    pSpinBoxRow->selectAll(); // Sets focus to row edit for expected UX: Ctrl + G -> type row number -> enter.
+
+    pLayout->addRow(addOkCancelButtonBoxToDialog(&dlg, pLayout));
+
+    removeContextHelpButtonFromDialog(&dlg);
+    const auto rv = dlg.exec();
+    if (rv == QDialog::Accepted)
     {
-        const auto nRow = CsvModel::visibleRowIndexToInternal(nUserRow);
-        selectRow(nRow); // This also scrolls to selected row.
+        const auto nRow = CsvModel::visibleRowIndexToInternal(pSpinBoxRow->value());
+        const auto nCol = CsvModel::visibleColumnIndexToInternal(pSpinBoxColumn->value());
+        if (nCol < 0)
+            selectRow(nRow);
+        else
+            selectCell(nRow, nCol);
     }
 }
 

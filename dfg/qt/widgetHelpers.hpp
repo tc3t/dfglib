@@ -2,11 +2,14 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "connectHelper.hpp"
 #include "../math.hpp"
 
 #include <memory>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QDialog>
+    #include <QDialogButtonBox>
     #include <QLabel>
     #include <QMenu>
     #include <QString>
@@ -133,6 +136,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         pToolTip->show();
         // Scheduling self-destruction after 5 seconds.
         QTimer::singleShot(5000, pToolTip, &QWidget::deleteLater);
+    }
+
+    // Adds Ok/Cancel button box to dialog and connects it to QDialog::accept/reject
+    // Returns created button box, which is child of pDlg.
+    inline QDialogButtonBox* addOkCancelButtonBoxToDialog(QDialog* pDlg, QLayout* pLayout)
+    {
+        if (!pDlg || !pLayout)
+            return nullptr;
+        auto pButtonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, pDlg);
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pButtonBox, &QDialogButtonBox::accepted, pDlg, &QDialog::accept));
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pButtonBox, &QDialogButtonBox::rejected, pDlg, &QDialog::reject));
+        return pButtonBox;
     }
 
 }} // Module namespace
