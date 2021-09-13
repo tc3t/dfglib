@@ -929,13 +929,13 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
         setActionFlags(pAction, ActionFlags::defaultContentEdit);
 
         auto pMenu = new QMenu();
-        // Schedule destruction of menu with the parent action.
+        // Scheduling destruction of menu with the parent action.
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
 
         // 'Insert Date'
         {
             auto pAct = new QAction(tr("Date"), this);
-            setActionFlags(pAction, ActionFlags::defaultContentEdit);
+            setActionFlags(pAct, ActionFlags::defaultContentEdit);
             pAct->setShortcut(tr("Alt+Q"));
             DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDate));
             pMenu->addAction(pAct);
@@ -944,7 +944,7 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
         // 'Insert Time'
         {
             auto pAct = new QAction(tr("Time"), this);
-            setActionFlags(pAction, ActionFlags::defaultContentEdit);
+            setActionFlags(pAct, ActionFlags::defaultContentEdit);
             pAct->setShortcut(tr("Alt+W"));
             DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertTime));
             pMenu->addAction(pAct);
@@ -953,7 +953,7 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
         // 'Insert Date time'
         {
             auto pAct = new QAction(tr("Date and time"), this);
-            setActionFlags(pAction, ActionFlags::defaultContentEdit);
+            setActionFlags(pAct, ActionFlags::defaultContentEdit);
             pAct->setShortcut(tr("Shift+Alt+Q"));
             DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDateTime));
             pMenu->addAction(pAct);
@@ -1501,6 +1501,28 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::isReadOnlyMode() const
     return DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_flags.test(CsvTableViewFlag::readOnly);
 }
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
+{
+    void handleActionForReadOnly(QAction* pAction, const bool bReadOnly)
+    {
+        if (!pAction)
+            return;
+        const auto type = getActionType(pAction);
+        if ((type & ActionFlags::anyContentEdit) != 0)
+        {
+            pAction->setVisible(!bReadOnly); // Note: setVisible(false) implies that action is not accesssible at all, e.g. through shortcut (i.e. action is effectively disabled)
+        }
+
+        // If action has menu, going through menu actions as well.
+        auto pMenu = pAction->menu();
+        if (pMenu)
+        {
+            for (auto pMenuAction : pMenu->actions())
+                handleActionForReadOnly(pMenuAction, bReadOnly);
+        }
+    }
+}}}
+
 void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
 {
     auto& rOpaq = DFG_OPAQUE_REF();
@@ -1534,11 +1556,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
         {
             for (const auto pAction : this->actions())
             {
-                if (!pAction)
-                    continue;
-                const auto type = getActionType(pAction);
-                if ((type & ActionFlags::anyContentEdit) != 0)
-                    pAction->setVisible(false); // Note: setVisible(false) implies that action is not accesssible at all, e.g. through shortcut (i.e. action is effectively disabled)
+                ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleActionForReadOnly(pAction, true);
             }
         }
     }
@@ -1549,15 +1567,9 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
         // Restoring old palette
         this->setPalette(rOpaq.m_readWriteModePalette);
         // Showing and enabling edit actions.
+        for (const auto pAction : this->actions())
         {
-            for (const auto pAction : this->actions())
-            {
-                if (!pAction)
-                    continue;
-                const auto type = getActionType(pAction);
-                if ((type & ActionFlags::anyContentEdit) != 0)
-                    pAction->setVisible(true);
-            }
+            ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleActionForReadOnly(pAction, false);
         }
     }
 
@@ -1589,7 +1601,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)
     if (!pModel)
         return;
     auto lockReleaser = this->tryLockForEdit();
-    if (!lockReleaser.isLocked())
+    if (!lockReleaser.isLocked() || isReadOnlyMode()) // In read-only mode, should not even end up to this function, but checking isReadOnlyMode() for robustness.
     {
         privShowExecutionBlockedNotification(tr("Insert date/time"));
         return;
