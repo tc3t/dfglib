@@ -1615,17 +1615,17 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::insertDate()
 {
-    insertGeneric(QDate::currentDate().toString(getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this)));
+    insertGeneric(dateTimeToString(QDate::currentDate(), getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this)));
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::insertTime()
 {
-    insertGeneric(QTime::currentTime().toString(getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this)));
+    insertGeneric(dateTimeToString(QTime::currentTime(), getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this)));
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::insertDateTime()
 {
-    insertGeneric(QDateTime::currentDateTime().toString(getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)));
+    insertGeneric(dateTimeToString(QDateTime::currentDateTime(), getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)));
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
@@ -3625,7 +3625,7 @@ namespace
     }
 
     template <class T, size_t N>
-    void setTableElement(CsvItemModel::DataTable& table, const int r, const int c, const T val, char(&buffer)[N], const char *pFormat, const GeneratorFormatType type)
+    void setTableElement(const ::DFG_MODULE_NS(qt)::CsvTableView& rView, CsvItemModel::DataTable& table, const int r, const int c, const T val, char(&buffer)[N], const char *pFormat, const GeneratorFormatType type)
     {
         if (type == GeneratorFormatType::number)
         {
@@ -3644,18 +3644,20 @@ namespace
                 table.setElement(r, c, DFG_UTF8(""));
                 return;
             }
+            QString sResult;
             if (type == GeneratorFormatType::dateFromSecondsLocal)
-                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromSecsSinceEpoch(i64, Qt::LocalTime).toString(pFormat)));
+                sResult = rView.dateTimeToString(QDateTime::fromSecsSinceEpoch(i64, Qt::LocalTime), pFormat);
             else if (type == GeneratorFormatType::dateFromMilliSecondsLocal)
-                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromMSecsSinceEpoch(i64, Qt::LocalTime).toString(pFormat)));
+                sResult = rView.dateTimeToString(QDateTime::fromMSecsSinceEpoch(i64, Qt::LocalTime), pFormat);
             else if (type == GeneratorFormatType::dateFromSecondsUtc)
-                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromMSecsSinceEpoch(i64, Qt::UTC).toString(pFormat)));
+                sResult = rView.dateTimeToString(QDateTime::fromSecsSinceEpoch(i64, Qt::UTC), pFormat);
             else if (type == GeneratorFormatType::dateFromMilliSecondsUtc)
-                table.setElement(r, c, qStringToStringUtf8(QDateTime::fromMSecsSinceEpoch(i64, Qt::UTC).toString(pFormat)));
+                sResult = rView.dateTimeToString(QDateTime::fromMSecsSinceEpoch(i64, Qt::UTC), pFormat);
             else
             {
                 DFG_ASSERT_IMPLEMENTED(false);
             }
+            table.setElement(r, c, qStringToStringUtf8(sResult));
         }
     }
 
@@ -3689,7 +3691,7 @@ namespace
     }
 
     template <class Distr_T, size_t ArgCount>
-    bool generateRandom(const TargetType target, DFG_CLASS_NAME(CsvTableView)& view, const RandQStringArgs& qstrArgs, const char* pFormat = nullptr)
+    bool generateRandom(const TargetType target, CsvTableView& view, const RandQStringArgs& qstrArgs, const char* pFormat = nullptr)
     {
         auto pModel = view.csvModel();
         if (!pModel)
@@ -3715,13 +3717,13 @@ namespace
                 // If result type is bool, using int, otherwise the same type. This is because toStr() wouldn't compile with bool result type.
                 typedef typename std::conditional<std::is_same<decltype(distr(randEng)), bool>::value, int, decltype(distr(randEng))>::type ResultType;
                 const ResultType val = distr(randEng);
-                setTableElement(table, r, c, val, szBuffer, pFormat, formatType);
+                setTableElement(view, table, r, c, val, szBuffer, pFormat, formatType);
             };
         generateForEachInTarget(target, view, rModel, generator);
         return true;
     }
 
-    bool generateRandomInt(const TargetType target, DFG_CLASS_NAME(CsvTableView)& view, RandQStringArgs& params)
+    bool generateRandomInt(const TargetType target, CsvTableView& view, RandQStringArgs& params)
     {
         if (params.isEmpty())
             return false;
@@ -3872,7 +3874,7 @@ bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
             tr = CsvItemModel::internalRowIndexToVisible(r);
             tc = CsvItemModel::internalColumnIndexToVisible(c);
             const auto val = parser.evaluateFormulaAsDouble();
-            setTableElement(table, r, c, val, buffer, pszFormat, formatType);
+            setTableElement(*this, table, r, c, val, buffer, pszFormat, formatType);
         };
         generateForEachInTarget(target, *this, rModel, generator);
         return true;
@@ -4986,6 +4988,24 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
 void ::DFG_MODULE_NS(qt)::CsvTableView::addConfigSavePropertyFetcher(PropertyFetcher fetcher)
 {
     DFG_OPAQUE_REF().m_propertyFetchers.push_back(std::move(fetcher));
+}
+
+
+auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const -> QString
+{
+    QString rv = dateTime.toString(sFormat);
+    return rv;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QDate& date, const QString& sFormat) const -> QString
+{
+    QString rv = date.toString(sFormat);
+    return rv;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QTime& qtime, const QString& sFormat) const -> QString
+{
+    return qtime.toString(sFormat);
 }
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewDlg)

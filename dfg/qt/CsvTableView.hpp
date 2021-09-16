@@ -21,6 +21,8 @@ DFG_END_INCLUDE_QT_HEADERS
 
 class QUndoStack;
 class QAbstractProxyModel;
+class QDate;
+class QDateTime;
 class QItemSelection;
 class QItemSelectionRange;
 class QMenu;
@@ -29,6 +31,7 @@ class QPushButton;
 class QThread;
 class QMutex;
 class QReadWriteLock;
+class QTime;
 class QToolButton;
 
 
@@ -346,6 +349,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool isReadOnlyMode() const;
 
         CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
+
+        QString dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const;
+        QString dateTimeToString(const QDate& date, const QString& sFormat) const;
+        QString dateTimeToString(const QTime& qtime, const QString& sFormat) const;
 
     private:
         template <class T, class Param0_T>
