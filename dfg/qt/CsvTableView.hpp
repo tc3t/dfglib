@@ -350,6 +350,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
 
+        QStringList weekDayNames() const;
         QString dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const;
         QString dateTimeToString(const QDate& date, const QString& sFormat) const;
         QString dateTimeToString(const QTime& qtime, const QString& sFormat) const;

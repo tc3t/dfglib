@@ -77,6 +77,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_sqlQuery[]                 = "sqlQuery";        // Defines SQL-query to use when opening a SQLite file.
     const char CsvOptionProperty_editMode[]                 = "editMode";        // Defines edit mode (e.g. read-only) for document.
     const char CsvOptionProperty_selectionDetails[]         = "selectionDetails";// Defines list of selection details to show in TableEditor
+    const char CsvOptionProperty_weekDayShortNames[]        = "weekDayShortNames"; // Defines short weekday names starting from Monday as comma-separated list.
 
     namespace DFG_DETAIL_NS
     {
