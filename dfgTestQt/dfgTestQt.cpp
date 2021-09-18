@@ -1001,6 +1001,33 @@ TEST(dfgQt, CsvTableView_saveAsShown)
     EXPECT_TRUE(QFile::remove(sTempPath));
 }
 
+TEST(dfgQt, CsvTableView_dateTimeToString)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    // Testing default names
+    EXPECT_EQ("sa 2021-09-18", view.dateTimeToString(QDate(2021, 9, 18), "WD yyyy-MM-dd"));
+    EXPECT_EQ("sa 2021-09-18 12:01:02.345", view.dateTimeToString(QDateTime(QDate(2021, 9, 18), QTime(12, 1, 2, 345)), "WD yyyy-MM-dd hh:mm:ss.zzz"));
+
+    // Testing view-specific names
+    view.setProperty("CsvTableView_weekDayNames", "a,b,c,d,e,Saturday,g");
+    EXPECT_EQ("Saturday 2021-09-18", view.dateTimeToString(QDate(2021, 9, 18), "WD yyyy-MM-dd"));
+    EXPECT_EQ("Saturday 2021-09-18 12:01:02.345", view.dateTimeToString(QDateTime(QDate(2021, 9, 18), QTime(12, 1, 2, 345)), "WD yyyy-MM-dd hh:mm:ss.zzz"));
+
+    // Testing .conf-specific names.
+    view.openFile("testfiles/example_with_conf0.csv");
+    EXPECT_EQ("sat 2021-09-18", view.dateTimeToString(QDate(2021, 9, 18), "WD yyyy-MM-dd"));
+    EXPECT_EQ("sat 2021-09-18 12:01:02.345", view.dateTimeToString(QDateTime(QDate(2021, 9, 18), QTime(12, 1, 2, 345)), "WD yyyy-MM-dd hh:mm:ss.zzz"));
+
+    // Testing that a new table doesn't use settings from previously opened table
+    view.createNewTable();
+    EXPECT_EQ("Saturday 2021-09-18", view.dateTimeToString(QDate(2021, 9, 18), "WD yyyy-MM-dd"));
+    EXPECT_EQ("Saturday 2021-09-18 12:01:02.345", view.dateTimeToString(QDateTime(QDate(2021, 9, 18), QTime(12, 1, 2, 345)), "WD yyyy-MM-dd hh:mm:ss.zzz"));
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);

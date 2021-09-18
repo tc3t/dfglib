@@ -449,6 +449,11 @@ CsvTableView_timeFormat=hh:mm:ss
 ; Default value: yyyy-MM-dd
 CsvTableView_dateFormat=yyyy-MM-dd
 
+; Defines default weekday names to use with 'WD' date format specifier.
+; For details, see documentation of properties/weekDayNames in 'File specific configuration'
+; Default value: "mo,tu,we,th,fr,sa,su"
+CsvTableView_weekDayNames=mo,tu,we,th,fr,sa,su
+
 ; Defines datetime format for datetime stamps available through insert-actions.
 ; Value is passed to QDateTime::toString() so check it's documentation for details.
 ; Default value: yyyy-MM-dd hh:mm:ss.zzz
@@ -510,6 +515,7 @@ Available keys:
 | properties/windowPosY | Defines request for window y position when opening associated document, only taken into account if either windowHeight or windowWidth is defined. | y pixel position of top left corner, 0 for top. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
 | properties/sqlQuery | For SQLite files, defines the query whose result is populated to table. | Valid SQLite query | Since 1.6.1 (commit [24c1ad78](https://github.com/tc3t/dfglib/commit/24c1ad78eac2a6f74b6ee1be0dede0d5645fef07)) |
 | properties/selectionDetails | Defines selection details which are shown for every selection; i.e. basic indicators describing a selection such minimum and maximum value. Details are defined with a list of single line json-objects, where *id* field defines the detail. | Available detail id's:<br>*average*, *cell_count_excluded*, *cell_count_included*, *is_sorted_num*, *median*, *max*, *min*, *sum*, *stddev_population*, *stddev_sample*, *variance* | Since 2.1.0 (commit [2d1c1d1b](https://github.com/tc3t/dfglib/commit/2d1c1d1b230a4d0f6dd8c18633a2af5ac20ea288)) |
+| properties/weekDayNames | Defines list of weekday names to use with weekday specifier 'WD' in date formats. | Comma-separated list starting from Monday. For example "mo,tu,we,th,fr,sa,su" | Since 2.2.0 ([#99](https://github.com/tc3t/dfglib/issues/99)) |
 
 #### Example .conf-file for csv-file (might look better when opened in a csv-editor)
 <pre>
@@ -539,6 +545,7 @@ properties,,,
 ,windowPosX,0
 ,windowPosY,500
 ,selectionDetails,"{ ""id"": ""sum"" }
+,weekDayNames,"mo,tu,we,th,fr,sa,su"
 {""id"":""max""}"
 </pre>
 

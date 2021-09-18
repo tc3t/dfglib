@@ -314,10 +314,15 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         int m_sortDirection = 0; // 1 = ascending, -1 = descending, 0 = either.
     }; // BasicSelectionDetailCollector
 
-    QString handleWeekDayFormat(QString& s, const int weekDay, const QStringList& weekdayNames)
+    template <class WeekDayListGen_T>
+    QString& handleWeekDayFormat(QString& s, const int weekDay, WeekDayListGen_T&& listGen)
     {
-        if (::DFG_ROOT_NS::isValidIndex(weekdayNames, weekDay - 1))
-            s.replace(QLatin1String("WD"), weekdayNames[weekDay - 1]);
+        const auto nIndexOfWd = s.indexOf(QLatin1String("WD"));
+        if (nIndexOfWd < 0)
+            return s;
+        const auto weekDayNames = listGen();
+        if (::DFG_ROOT_NS::isValidIndex(weekDayNames, weekDay - 1))
+            s.replace(nIndexOfWd, 2, weekDayNames[weekDay - 1]);
         return s;
     }
 
@@ -380,7 +385,7 @@ namespace
         CsvTableViewPropertyId_dateFormat,
         CsvTableViewPropertyId_dateTimeFormat,
         CsvTableViewPropertyId_editMode,
-        CsvTableViewPropertyId_weekDayShortNames
+        CsvTableViewPropertyId_weekDayNames
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
@@ -426,7 +431,7 @@ namespace
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "dateFormat", CsvTableView, CsvTableViewPropertyId_dateFormat, QString, []() { return QString("yyyy-MM-dd"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "dateTimeFormat", CsvTableView, CsvTableViewPropertyId_dateTimeFormat, QString, []() { return QString("yyyy-MM-dd hh:mm:ss.zzz"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "editMode", CsvTableView, CsvTableViewPropertyId_editMode, QString, []() { return QString(); });
-    DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "weekDayShortNames", CsvTableView, CsvTableViewPropertyId_weekDayShortNames, QString, []() { return QString("mo,tu,we,th,fr,sa,su"); });
+    DFG_QT_DEFINE_OBJECT_PROPERTY_QSTRING(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "weekDayNames", CsvTableView, CsvTableViewPropertyId_weekDayNames, QString, []() { return QString("mo,tu,we,th,fr,sa,su"); });
 
     const int gnDefaultRowHeight = 21; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
 
@@ -5018,21 +5023,21 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addConfigSavePropertyFetcher(PropertyFet
 
 auto ::DFG_MODULE_NS(qt)::CsvTableView::weekDayNames() const -> QStringList
 {
-    const auto s = getCsvModelOrViewProperty<CsvTableViewPropertyId_weekDayShortNames>(this, this->csvModel());
+    const auto s = getCsvModelOrViewProperty<CsvTableViewPropertyId_weekDayNames>(this, this->csvModel());
     return s.split(',');
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const -> QString
 {
     QString rv = dateTime.toString(sFormat);
-    ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleWeekDayFormat(rv, dateTime.date().dayOfWeek(), weekDayNames());
+    ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleWeekDayFormat(rv, dateTime.date().dayOfWeek(), [&]() { return this-> weekDayNames(); });
     return rv;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QDate& date, const QString& sFormat) const -> QString
 {
     QString rv = date.toString(sFormat);
-    ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleWeekDayFormat(rv, date.dayOfWeek(), weekDayNames());
+    ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleWeekDayFormat(rv, date.dayOfWeek(), [&]() { return this-> weekDayNames(); });
     return rv;
 }
 

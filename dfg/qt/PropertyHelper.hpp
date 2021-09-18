@@ -13,6 +13,18 @@ constexpr char gPropertyIdAllowAppSettingsUsage[] = "dfglib_allow_app_settings_u
 #define DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CLASS) \
 template <int ID_T> struct DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CLASS) {};
 
+// If comma-separated string such as "a,b" is read from ini-file through QSettings,
+// it's variant type may be QStringList and direct conversion to QString would fail.
+// This function returns QString from QVariant and in case of QStringList,
+// returns comma-joined QString from the list.
+inline QString qStringFromVariantWithQStringListHandling(const QVariant& v)
+{
+    if (v.type() == QVariant::StringList)
+        return v.value<QStringList>().join(',');
+    else
+        return v.value<QString>();
+}
+
 #define DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC, FROM_VARIANT_FUNC) \
 template <> struct CLASS##PropertyDefinition<static_cast<int>(ID)> \
 { \
@@ -25,6 +37,10 @@ template <> struct CLASS##PropertyDefinition<static_cast<int>(ID)> \
 
 #define DFG_QT_DEFINE_OBJECT_PROPERTY(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC) \
     DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC, defaultFromVariant)
+
+// Defines QString property that handles QStringList to QString conversion.
+#define DFG_QT_DEFINE_OBJECT_PROPERTY_QSTRING(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC) \
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC, qStringFromVariantWithQStringListHandling)
 
 // Returns object property. First tries object's internal property map, then from application settings.
 // Note: The way how internal properties are stored (current in properties of 'obj') is an implementation detail that may change.
