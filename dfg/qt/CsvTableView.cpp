@@ -2232,9 +2232,9 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileWithOptions()
     config.clear();
     for (int r = 0, nCount = configModel.rowCount(); r < nCount; ++r)
     {
-        const auto svKey = configModel.RawStringViewAt(r, 0);
+        const auto svKey = configModel.rawStringViewAt(r, 0);
         if (!svKey.empty())
-            config.setKeyValue(configModel.RawStringViewAt(r, 0).toString(), configModel.RawStringViewAt(r, 1).toString());
+            config.setKeyValue(configModel.rawStringViewAt(r, 0).toString(), configModel.rawStringViewAt(r, 1).toString());
     }
 
     const auto sPath = askConfigFilePath(*pModel);

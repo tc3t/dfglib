@@ -639,41 +639,41 @@ TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula)
     {
         view.makeSingleCellSelection(0, 0);
         view.evaluateSelectionAsFormula();
-        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("0.5", csvModel.rawStringViewAt(0, 0).asUntypedView());
         view.undo();
-        EXPECT_EQ("=-1.5+2", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("=-1.5+2", csvModel.rawStringViewAt(0, 0).asUntypedView());
         view.redo();
-        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("0.5", csvModel.rawStringViewAt(0, 0).asUntypedView());
         view.undo();
-        EXPECT_EQ("=-1.5+2", csvModel.RawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("=-1.5+2", csvModel.rawStringViewAt(0, 0).asUntypedView());
     }
 
     // Selecting all, testing evaluation and undo/redo
     {
         view.selectAll();
         view.evaluateSelectionAsFormula();
-        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
-        EXPECT_EQ("abc", csvModel.RawStringViewAt(0, 1).asUntypedView());
-        EXPECT_EQ("", csvModel.RawStringViewAt(1, 0).asUntypedView());
-        EXPECT_EQ("105", csvModel.RawStringViewAt(1, 1).asUntypedView());
-        EXPECT_EQ("3.5", csvModel.RawStringViewAt(2, 0).asUntypedView());
-        EXPECT_EQ("-5+(2,5*2)", csvModel.RawStringViewAt(2, 1).asUntypedView());
+        EXPECT_EQ("0.5", csvModel.rawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("abc", csvModel.rawStringViewAt(0, 1).asUntypedView());
+        EXPECT_EQ("", csvModel.rawStringViewAt(1, 0).asUntypedView());
+        EXPECT_EQ("105", csvModel.rawStringViewAt(1, 1).asUntypedView());
+        EXPECT_EQ("3.5", csvModel.rawStringViewAt(2, 0).asUntypedView());
+        EXPECT_EQ("-5+(2,5*2)", csvModel.rawStringViewAt(2, 1).asUntypedView());
 
         view.undo();
-        EXPECT_EQ("=-1.5+2", csvModel.RawStringViewAt(0, 0).asUntypedView());
-        EXPECT_EQ("abc", csvModel.RawStringViewAt(0, 1).asUntypedView());
-        EXPECT_EQ("", csvModel.RawStringViewAt(1, 0).asUntypedView());
-        EXPECT_EQ("hypot(3, 4) + 10^2", csvModel.RawStringViewAt(1, 1).asUntypedView());
-        EXPECT_EQ("1.5+2", csvModel.RawStringViewAt(2, 0).asUntypedView());
-        EXPECT_EQ("-5+(2,5*2)", csvModel.RawStringViewAt(2, 1).asUntypedView());
+        EXPECT_EQ("=-1.5+2", csvModel.rawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("abc", csvModel.rawStringViewAt(0, 1).asUntypedView());
+        EXPECT_EQ("", csvModel.rawStringViewAt(1, 0).asUntypedView());
+        EXPECT_EQ("hypot(3, 4) + 10^2", csvModel.rawStringViewAt(1, 1).asUntypedView());
+        EXPECT_EQ("1.5+2", csvModel.rawStringViewAt(2, 0).asUntypedView());
+        EXPECT_EQ("-5+(2,5*2)", csvModel.rawStringViewAt(2, 1).asUntypedView());
 
         view.redo();
-        EXPECT_EQ("0.5", csvModel.RawStringViewAt(0, 0).asUntypedView());
-        EXPECT_EQ("abc", csvModel.RawStringViewAt(0, 1).asUntypedView());
-        EXPECT_EQ("", csvModel.RawStringViewAt(1, 0).asUntypedView());
-        EXPECT_EQ("105", csvModel.RawStringViewAt(1, 1).asUntypedView());
-        EXPECT_EQ("3.5", csvModel.RawStringViewAt(2, 0).asUntypedView());
-        EXPECT_EQ("-5+(2,5*2)", csvModel.RawStringViewAt(2, 1).asUntypedView());
+        EXPECT_EQ("0.5", csvModel.rawStringViewAt(0, 0).asUntypedView());
+        EXPECT_EQ("abc", csvModel.rawStringViewAt(0, 1).asUntypedView());
+        EXPECT_EQ("", csvModel.rawStringViewAt(1, 0).asUntypedView());
+        EXPECT_EQ("105", csvModel.rawStringViewAt(1, 1).asUntypedView());
+        EXPECT_EQ("3.5", csvModel.rawStringViewAt(2, 0).asUntypedView());
+        EXPECT_EQ("-5+(2,5*2)", csvModel.rawStringViewAt(2, 1).asUntypedView());
     }
 }
 
@@ -1059,9 +1059,9 @@ TEST(dfgQt, CsvTableView_insertDateTimes)
         EXPECT_FALSE(sTime.isEmpty());
         EXPECT_FALSE(sDate.isEmpty());
         EXPECT_FALSE(sDateTime.isEmpty());
-        EXPECT_EQ(sTime, viewToQString(csvModel.RawStringViewAt(0, 0)));
-        EXPECT_EQ(sDate, viewToQString(csvModel.RawStringViewAt(1, 0)));
-        EXPECT_EQ(sDateTime, viewToQString(csvModel.RawStringViewAt(2, 0)));
+        EXPECT_EQ(sTime, viewToQString(csvModel.rawStringViewAt(0, 0)));
+        EXPECT_EQ(sDate, viewToQString(csvModel.rawStringViewAt(1, 0)));
+        EXPECT_EQ(sDateTime, viewToQString(csvModel.rawStringViewAt(2, 0)));
     };
 
     // Testing default formats

@@ -393,7 +393,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsRow(con
         {
             for (int c = 0; c < nColCount; ++c) if (matcher.isApplyColumn(c))
             {
-                if (matcher.isMatchWith(sourceRow, c, pSourceModel->RawStringViewAt(sourceRow, c)))
+                if (matcher.isMatchWith(sourceRow, c, pSourceModel->rawStringViewAt(sourceRow, c)))
                     return true;
             }
             return false;

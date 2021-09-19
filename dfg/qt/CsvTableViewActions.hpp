@@ -678,7 +678,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             const size_t nMaxFailureMessageCount = 10;
             looper([&](const QModelIndex &index)
             {
-                auto sv = rModel.RawStringViewAt(index).asUntypedView();
+                auto sv = rModel.rawStringViewAt(index).asUntypedView();
                 if (sv.empty())
                     return; // Skipping empty strings.
                 if (!sv.empty() && sv.front() == '=')
