@@ -397,8 +397,9 @@ namespace
     }
 
     template <CsvTableViewPropertyId ID>
-    QString getCsvModelOrViewProperty(const CsvTableView* pView, const CsvItemModel* pCsvModel)
+    QString getCsvModelOrViewProperty(const CsvTableView* pView)
     {
+        auto pCsvModel = pView->csvModel();
         if (pCsvModel)
         {
             const ::DFG_ROOT_NS::StringViewC svId = DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>::getStrId();
@@ -1644,19 +1645,25 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)
     });
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::insertDate()
+auto ::DFG_MODULE_NS(qt)::CsvTableView::insertDate() -> QDate
 {
-    insertGeneric(dateTimeToString(QDate::currentDate(), getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this)));
+    const auto date = QDate::currentDate();
+    insertGeneric(dateTimeToString(date, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateFormat>(this)));
+    return date;
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::insertTime()
+auto ::DFG_MODULE_NS(qt)::CsvTableView::insertTime() -> QTime
 {
-    insertGeneric(dateTimeToString(QTime::currentTime(), getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this)));
+    const auto t = QTime::currentTime();
+    insertGeneric(dateTimeToString(t, getCsvModelOrViewProperty<CsvTableViewPropertyId_timeFormat>(this)));
+    return t;
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::insertDateTime()
+auto ::DFG_MODULE_NS(qt)::CsvTableView::insertDateTime() -> QDateTime
 {
-    insertGeneric(dateTimeToString(QDateTime::currentDateTime(), getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)));
+    const auto dt = QDateTime::currentDateTime();
+    insertGeneric(dateTimeToString(dt, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)));
+    return dt;
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
@@ -5023,7 +5030,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addConfigSavePropertyFetcher(PropertyFet
 
 auto ::DFG_MODULE_NS(qt)::CsvTableView::weekDayNames() const -> QStringList
 {
-    const auto s = getCsvModelOrViewProperty<CsvTableViewPropertyId_weekDayNames>(this, this->csvModel());
+    const auto s = getCsvModelOrViewProperty<CsvTableViewPropertyId_weekDayNames>(this);
     return s.split(',');
 }
 

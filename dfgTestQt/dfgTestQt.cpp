@@ -1018,7 +1018,7 @@ TEST(dfgQt, CsvTableView_dateTimeToString)
     EXPECT_EQ("Saturday 2021-09-18 12:01:02.345", view.dateTimeToString(QDateTime(QDate(2021, 9, 18), QTime(12, 1, 2, 345)), "WD yyyy-MM-dd hh:mm:ss.zzz"));
 
     // Testing .conf-specific names.
-    view.openFile("testfiles/example_with_conf0.csv");
+    EXPECT_TRUE(view.openFile("testfiles/example_with_conf0.csv"));
     EXPECT_EQ("sat 2021-09-18", view.dateTimeToString(QDate(2021, 9, 18), "WD yyyy-MM-dd"));
     EXPECT_EQ("sat 2021-09-18 12:01:02.345", view.dateTimeToString(QDateTime(QDate(2021, 9, 18), QTime(12, 1, 2, 345)), "WD yyyy-MM-dd hh:mm:ss.zzz"));
 
@@ -1026,6 +1026,68 @@ TEST(dfgQt, CsvTableView_dateTimeToString)
     view.createNewTable();
     EXPECT_EQ("Saturday 2021-09-18", view.dateTimeToString(QDate(2021, 9, 18), "WD yyyy-MM-dd"));
     EXPECT_EQ("Saturday 2021-09-18 12:01:02.345", view.dateTimeToString(QDateTime(QDate(2021, 9, 18), QTime(12, 1, 2, 345)), "WD yyyy-MM-dd hh:mm:ss.zzz"));
+}
+
+TEST(dfgQt, CsvTableView_insertDateTimes)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    csvModel.insertRows(0, 3);
+    csvModel.insertColumns(0, 1);
+
+    QTime insertedTime;
+    QDate insertedDate;
+    QDateTime insertedDateTime;
+    const auto doInserts = [&]()
+    {
+        view.selectCell(0, 0);
+        insertedTime = view.insertTime();
+        view.selectCell(1, 0);
+        insertedDate = view.insertDate();
+        view.selectCell(2, 0);
+        insertedDateTime = view.insertDateTime();
+    };
+
+    const auto testInserts = [&](const QString sTimeFormat, const QString sDateFormat, const QString sDateTimeFormat)
+    {
+        const auto sTime = view.dateTimeToString(insertedTime, sTimeFormat);
+        const auto sDate = view.dateTimeToString(insertedDate, sDateFormat);
+        const auto sDateTime = view.dateTimeToString(insertedDateTime, sDateTimeFormat);
+        EXPECT_FALSE(sTime.isEmpty());
+        EXPECT_FALSE(sDate.isEmpty());
+        EXPECT_FALSE(sDateTime.isEmpty());
+        EXPECT_EQ(sTime, viewToQString(csvModel.RawStringViewAt(0, 0)));
+        EXPECT_EQ(sDate, viewToQString(csvModel.RawStringViewAt(1, 0)));
+        EXPECT_EQ(sDateTime, viewToQString(csvModel.RawStringViewAt(2, 0)));
+    };
+
+    // Testing default formats
+    doInserts();
+    testInserts("hh:mm:ss.zzz", "yyyy-MM-dd", "yyyy-MM-dd hh:mm:ss.zzz");
+
+    // Testing view-specific names
+    view.setProperty("CsvTableView_timeFormat", "hh:mm:ss");
+    view.setProperty("CsvTableView_dateFormat", "dd.MM.yyyy");
+    view.setProperty("CsvTableView_dateTimeFormat", "yyyy hh");
+    doInserts();
+    testInserts("hh:mm:ss", "dd.MM.yyyy", "yyyy hh");
+
+    // Testing .conf-specific names.
+    EXPECT_TRUE(view.openFile("testfiles/example_with_conf0.csv"));
+    csvModel.insertRows(0, 3);
+    doInserts();
+    testInserts("hh:mm", "WD dd", "WD dd.MM hh:mm");
+
+    // Testing that a new table doesn't use settings from previously opened table
+    csvModel.setModifiedStatus(false); // To prevent messagebox from opening.
+    view.createNewTable();
+    csvModel.insertRows(0, 3);
+    csvModel.insertColumns(0, 1);
+    doInserts();
+    testInserts("hh:mm:ss", "dd.MM.yyyy", "yyyy hh");
 }
 
 TEST(dfgQt, TableView_makeSingleCellSelection)

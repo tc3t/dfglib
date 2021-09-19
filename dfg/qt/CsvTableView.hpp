@@ -355,6 +355,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString dateTimeToString(const QDate& date, const QString& sFormat) const;
         QString dateTimeToString(const QTime& qtime, const QString& sFormat) const;
 
+        QDate insertDate(); // Returns QDate that was used for creating the inserted string.
+        QTime insertTime(); // Returns QTime that was used for creating the inserted string.
+        QDateTime insertDateTime(); // Returns QDateTime that was used for creating the inserted string.
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -465,9 +469,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setReadOnlyMode(bool);
 
         void insertGeneric(const QString& s);
-        void insertDate();
-        void insertTime();
-        void insertDateTime();
 
         void setColumnNames();
 
