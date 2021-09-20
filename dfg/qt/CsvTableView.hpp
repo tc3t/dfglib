@@ -430,6 +430,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool moveHeaderToFirstRow();
 
         bool resizeTable();
+        bool resizeTableNoUi(int r, int c);
 
         bool generateContent();
 

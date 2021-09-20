@@ -1090,6 +1090,34 @@ TEST(dfgQt, CsvTableView_insertDateTimes)
     testInserts("hh:mm:ss", "dd.MM.yyyy", "yyyy hh");
 }
 
+TEST(dfgQt, CsvTableView_resizeTableNoUi)
+{
+    using namespace DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    view.resizeTableNoUi(-1, -1);
+    EXPECT_TRUE(view.resizeTableNoUi(1, -1));
+    EXPECT_EQ(1, csvModel.rowCount());
+    EXPECT_EQ(0, csvModel.columnCount());
+    EXPECT_TRUE(view.resizeTableNoUi(-1, 1));
+    EXPECT_EQ(1, csvModel.rowCount());
+    EXPECT_EQ(1, csvModel.columnCount());
+    csvModel.setDataNoUndo(0, 0, DFG_UTF8("abc"));
+    EXPECT_TRUE(view.resizeTableNoUi(10, 500));
+    EXPECT_EQ(10, csvModel.rowCount());
+    EXPECT_EQ(500, csvModel.columnCount());
+    EXPECT_TRUE(view.resizeTableNoUi(200, 30));
+    EXPECT_EQ(200, csvModel.rowCount());
+    EXPECT_EQ(30, csvModel.columnCount());
+    EXPECT_TRUE(view.resizeTableNoUi(1, 1));
+    EXPECT_EQ("abc", csvModel.rawStringViewAt(0, 0).asUntypedView());
+    EXPECT_TRUE(view.resizeTableNoUi(0, 0));
+    EXPECT_EQ(0, csvModel.rowCount());
+    EXPECT_EQ(0, csvModel.columnCount());
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);

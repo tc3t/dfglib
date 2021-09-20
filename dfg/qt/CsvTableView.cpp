@@ -2844,7 +2844,7 @@ bool DFG_CLASS_NAME(CsvTableView)::deleteSelectedRow()
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionDelete)>(*this, getProxyModelPtr(), true /*row mode*/);
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::resizeTable()
+bool ::DFG_MODULE_NS(qt)::CsvTableView::resizeTable()
 {
     auto pModel = model();
     if (!pModel)
@@ -2857,7 +2857,12 @@ bool DFG_CLASS_NAME(CsvTableView)::resizeTable()
     const int nCols = QInputDialog::getInt(this, tr("Table resizing"), tr("New column count"), pModel->columnCount(), 0, NumericTraits<int>::maxValue, 1, &bOk);
     if (!bOk || nRows < 0 || nCols < 0)
         return false;
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionResizeTable)>(this, nRows, nCols);
+    return resizeTableNoUi(nRows, nCols);
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableView::resizeTableNoUi(const int r, const int c)
+{
+    return executeAction<CsvTableViewActionResizeTable>(this, r, c);
 }
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
