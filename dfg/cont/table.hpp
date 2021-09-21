@@ -942,6 +942,11 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return SzPtrR(colContent.content(row, m_charBuffers));
         }
 
+        StringViewT viewAt(const IndexT r, const IndexT c) const
+        {
+            return StringViewT((*this)(r, c));
+        }
+
         // Returns the number of non-empty cells in the table.
         // Note: if number does not fit to IndexT, return value is unspecified.
         Index_T cellCountNonEmpty() const
@@ -978,6 +983,29 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_colToRows.clear();
         }
 
+        // Swap strings at (r0, c0) and (r1, c1).
+        void swapCellContent(const IndexT r0, const IndexT c0, const IndexT r1, const IndexT c1)
+        {
+            if (c0 == c1 && isValidIndex(m_colToRows, c0))
+            {
+                swapCellContentInColumn(c0, m_colToRows[c0], r0, r1);
+            }
+            else
+            {
+                // Note that can't simply swap cell pointers because it would make cell to point to storage of another column,
+                // which would cause handle to go invalid if columns gets removed.
+                // If target string length larger or equal to source, it might be reasonable to just reuse the existing storage,
+                // but that would require storage to be mutable.
+                // So in effect there is not much to optimize here, simply doing a simple swap.
+                auto tpsz0 = (*this)(r0, c0);
+                auto tpsz1 = (*this)(r1, c1);
+                if (!tpsz0 && !tpsz1)
+                    return;
+                setElement(r0, c0, tpsz1);
+                setElement(r1, c1, tpsz0);
+            }
+        }
+
         void swapCellContentInColumn(const Index_T nCol, RowToContentMap& colItems, const Index_T r0, const Index_T r1)
         {
             auto iterA = colItems.find(r0);
@@ -988,12 +1016,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return;
             if (!br0Match)
             {
-                colItems.setContent(r0, privRowIteratorToContentView(nCol, iterB));
+                colItems.setContent(r0, toCharPtr_raw(privRowIteratorToContentView(nCol, iterB)));
                 colItems.setContent(r1, nullptr);
             }
             else if (!br1Match)
             {
-                colItems.setContent(r1, privRowIteratorToContentView(nCol, iterA));
+                colItems.setContent(r1, toCharPtr_raw(privRowIteratorToContentView(nCol, iterA)));
                 colItems.setContent(r0, nullptr);
             }
             else

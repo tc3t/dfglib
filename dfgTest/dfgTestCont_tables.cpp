@@ -709,6 +709,54 @@ TEST(dfgCont, TableSz_indexHandling)
     }
 }
 
+TEST(dfgCont, TableSz_swapCellContent)
+{
+    using namespace DFG_MODULE_NS(cont);
+    TableSz<char> table;
+
+    table.setElement(1, 3, "abc");
+    table.setElement(4, 2, "def");
+    DFGTEST_EXPECT_LEFT(5, table.rowCountByMaxRowIndex());
+    DFGTEST_EXPECT_LEFT(4, table.colCountByMaxColIndex());
+    DFGTEST_EXPECT_LEFT("abc", table.viewAt(1, 3));
+    DFGTEST_EXPECT_LEFT("def", table.viewAt(4, 2));
+    table.swapCellContent(50, 0, 0, 50);
+    // Making sure that swapping non-existing cells does not cause effective size to change.
+    DFGTEST_EXPECT_LEFT(5, table.rowCountByMaxRowIndex());
+    DFGTEST_EXPECT_LEFT(4, table.colCountByMaxColIndex());
+
+    table.swapCellContent(4, 2, 1, 3);
+    DFGTEST_EXPECT_LEFT("abc", table.viewAt(4, 2));
+    DFGTEST_EXPECT_LEFT("def", table.viewAt(1, 3));
+    DFGTEST_EXPECT_LEFT(5, table.rowCountByMaxRowIndex());
+    DFGTEST_EXPECT_LEFT(4, table.colCountByMaxColIndex());
+
+    table.swapCellContent(4, 2, 0, 1);
+    DFGTEST_EXPECT_LEFT("", table.viewAt(4, 2));
+    DFGTEST_EXPECT_LEFT("abc", table.viewAt(0, 1));
+    DFGTEST_EXPECT_LEFT(5, table.rowCountByMaxRowIndex());
+    DFGTEST_EXPECT_LEFT(4, table.colCountByMaxColIndex());
+
+    table.swapCellContent(0, 1, 10, 1);
+    DFGTEST_EXPECT_LEFT("", table.viewAt(0, 1));
+    DFGTEST_EXPECT_LEFT("abc", table.viewAt(10, 1));
+    DFGTEST_EXPECT_LEFT(11, table.rowCountByMaxRowIndex());
+    DFGTEST_EXPECT_LEFT(4, table.colCountByMaxColIndex());
+
+    table.swapCellContent(1, 3, 4, 1);
+    table.swapCellContent(4, 1, 10, 1);
+    DFGTEST_EXPECT_LEFT("abc", table.viewAt(4, 1));
+    DFGTEST_EXPECT_LEFT("def", table.viewAt(10, 1));
+    DFGTEST_EXPECT_LEFT(11, table.rowCountByMaxRowIndex());
+    DFGTEST_EXPECT_LEFT(4, table.colCountByMaxColIndex());
+
+    table.swapCellContent(10, 1, 2, 15);
+    DFGTEST_EXPECT_LEFT("", table.viewAt(10, 1));
+    DFGTEST_EXPECT_LEFT("def", table.viewAt(2, 15));
+    DFGTEST_EXPECT_LEFT(11, table.rowCountByMaxRowIndex());
+    DFGTEST_EXPECT_LEFT(16, table.colCountByMaxColIndex());
+}
+
 TEST(dfgCont, TableCsv)
 {
     using namespace DFG_ROOT_NS;
