@@ -767,6 +767,32 @@ TEST(dfgQt, CsvItemModel_SQLite)
     EXPECT_TRUE(QFile::remove(sCsvFromSqlitePath));
 }
 
+TEST(dfgQt, CsvItemModel_setSize)
+{
+    using namespace DFG_MODULE_NS(qt);
+    CsvItemModel model;
+    EXPECT_FALSE(model.setSize(-1, -1));
+    EXPECT_TRUE(model.setSize(1, -1));
+    EXPECT_EQ(1, model.rowCount());
+    EXPECT_EQ(0, model.columnCount());
+    EXPECT_TRUE(model.setSize(-1, 1));
+    EXPECT_EQ(1, model.rowCount());
+    EXPECT_EQ(1, model.columnCount());
+    model.setDataNoUndo(0, 0, DFG_UTF8("abc"));
+    EXPECT_TRUE(model.setSize(10, 500));
+    EXPECT_EQ(10, model.rowCount());
+    EXPECT_EQ(500, model.columnCount());
+    EXPECT_TRUE(model.setSize(200, 30));
+    EXPECT_EQ(200, model.rowCount());
+    EXPECT_EQ(30, model.columnCount());
+    EXPECT_TRUE(model.setSize(1, 1));
+    EXPECT_FALSE(model.setSize(1, 1));
+    EXPECT_EQ("abc", model.rawStringViewAt(0, 0).asUntypedView());
+    EXPECT_TRUE(model.setSize(0, 0));
+    EXPECT_EQ(0, model.rowCount());
+    EXPECT_EQ(0, model.columnCount());
+}
+
 TEST(dfgQt, SpanSlider)
 {
     // Simply test that this compiles and links.

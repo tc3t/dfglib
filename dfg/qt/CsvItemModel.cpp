@@ -1809,6 +1809,48 @@ QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findNextHighlighter
     return QModelIndex();
 }
 
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
+{
+
+bool CsvItemModel::setSize(Index nNewRowCount, Index nNewColCount)
+{
+    const auto nCurrentRowCount = rowCount();
+    const auto nCurrentColCount = columnCount();
+
+    nNewRowCount = (nNewRowCount >= 0) ? nNewRowCount : nCurrentRowCount;
+    nNewColCount = (nNewColCount >= 0) ? nNewColCount : nCurrentColCount;
+
+    bool bChanged = false;
+
+    // Changing row count
+    if (nNewRowCount != nCurrentRowCount)
+    {
+        const auto nPositiveCount = (nCurrentRowCount < nNewRowCount) ? nNewRowCount - nCurrentRowCount : nCurrentRowCount - nNewRowCount;
+        if (nCurrentRowCount < nNewRowCount)
+            this->insertRows(nCurrentRowCount, nPositiveCount);
+        else
+            this->removeRows(nCurrentRowCount - nPositiveCount, nPositiveCount);
+        bChanged = true;
+    }
+
+    // Changing column count
+    if (nNewColCount != nCurrentColCount)
+    {
+        const auto nPositiveCount = (nCurrentColCount < nNewColCount) ? nNewColCount - nCurrentColCount : nCurrentColCount - nNewColCount;
+        if (nCurrentColCount < nNewColCount)
+            this->insertColumns(nCurrentColCount, nPositiveCount);
+        else
+            this->removeColumns(nCurrentColCount - nPositiveCount, nPositiveCount);
+        bChanged = true;
+    }
+
+    return bChanged;
+}
+
+}} // namespace qt
+
+
+
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
 static const QString sMimeTypeStr = "text/csv";
 

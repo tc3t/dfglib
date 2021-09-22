@@ -478,6 +478,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static void setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes, const CsvItemModel* pModel);
         void setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes) const { setCompleterHandlingFromInputSize(loadOptions, nSizeInBytes, this); }
 
+        // Convenience function for setting table size. If count is negative, corresponding dimension is not changed.
+        // Returns true iff size was changed.
+        bool setSize(Index nRowCount, Index nColCount);
+
         // Model Overloads
         int rowCount(const QModelIndex & parent = QModelIndex()) const override;
         int columnCount(const QModelIndex& parent = QModelIndex()) const override;
