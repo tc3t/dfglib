@@ -827,11 +827,20 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
         addAction(pAction);
     }
 
+    // Resize table
     {
         auto pAction = new QAction(tr("Resize table"), this);
         setActionFlags(pAction, ActionFlags::defaultStructureEdit);
         pAction->setShortcut(tr("Ctrl+R"));
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable));
+        addAction(pAction);
+    }
+
+    // Transpose
+    {
+        auto pAction = new QAction(tr("Transpose"), this);
+        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::transpose));
         addAction(pAction);
     }
 }
@@ -2863,6 +2872,35 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::resizeTable()
 bool ::DFG_MODULE_NS(qt)::CsvTableView::resizeTableNoUi(const int r, const int c)
 {
     return executeAction<CsvTableViewActionResizeTable>(this, r, c);
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableView::transpose()
+{
+    auto pCsvModel = csvModel();
+    if (!pCsvModel)
+        return false;
+
+    const auto nNewColCount = pCsvModel->rowCount();
+    if (nNewColCount > 10000)
+    {
+        if (QMessageBox::question(this,
+                                  tr("Confirm transpose"),
+                                  tr("Transposed table would have %1 columns. Data structures are not optimized for having big number columns \
+                                     and having too many columns may take a long time or cause a crash. Proceed nevertheless?").arg(nNewColCount))
+                != QMessageBox::Yes)
+            return false;
+    }
+
+    const auto waitCursor = makeScopedCaller([]() { QApplication::setOverrideCursor(QCursor(Qt::WaitCursor)); },
+                                             []() { QApplication::restoreOverrideCursor(); });
+
+    // Note: not using doModalOperation() as it caused "ASSERT failure in QCoreApplication::sendEvent: "Cannot send events to objects owned by a different thread"
+    //       from the transpose implementation.
+    bool bSuccess = pCsvModel->transpose();
+
+    if (!bSuccess)
+        showStatusInfoTip(tr("Transpose failed"));
+    return bSuccess;
 }
 
 DFG_BEGIN_INCLUDE_QT_HEADERS

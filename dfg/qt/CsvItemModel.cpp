@@ -1847,6 +1847,41 @@ bool CsvItemModel::setSize(Index nNewRowCount, Index nNewColCount)
     return bChanged;
 }
 
+bool CsvItemModel::transpose()
+{
+    const auto nOldRowCount = rowCount();
+    const auto nOldColumnCount = columnCount();
+    const auto nNewRowCount = nOldColumnCount;
+    const auto nNewColumnCount = nOldRowCount;
+    const auto nMaxRowCount = (std::max)(nOldRowCount, nNewRowCount);
+    const auto nMaxColumnCount = nMaxRowCount; // This is equal to (std::max)(nOldColumnCount, nNewColumnCount);
+
+    m_bResetting = true;
+    beginResetModel();
+
+    insertRows(nOldRowCount, nMaxRowCount - nOldRowCount);
+    insertColumns(nOldColumnCount, nMaxColumnCount - nOldColumnCount);
+
+    for (Index r = 0; r < nOldRowCount; ++r)
+    {
+        for (Index c = r + 1; c < nMaxColumnCount; ++c)
+        {
+            this->m_table.swapCellContent(r, c, c, r);
+        }
+    }
+    removeRows(nNewRowCount, nOldRowCount - nNewRowCount);
+    removeColumns(nNewColumnCount, nOldColumnCount - nNewColumnCount);
+
+    endResetModel();
+    m_bResetting = false;
+    setModifiedStatus(true);
+
+    if (m_pUndoStack)
+        m_pUndoStack->clear();
+
+    return true;
+}
+
 }} // namespace qt
 
 

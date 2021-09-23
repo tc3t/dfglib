@@ -431,6 +431,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool resizeTable();
         bool resizeTableNoUi(int r, int c);
+        bool transpose();
 
         bool generateContent();
 

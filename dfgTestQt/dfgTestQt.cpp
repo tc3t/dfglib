@@ -1144,6 +1144,63 @@ TEST(dfgQt, CsvTableView_resizeTableNoUi)
     EXPECT_EQ(0, csvModel.columnCount());
 }
 
+TEST(dfgQt, CsvTableView_transpose)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    // Empty table (making sure it doesn't crash etc)
+    EXPECT_TRUE(view.transpose());
+
+    // Single item table
+    view.resizeTableNoUi(1, 1);
+    csvModel.setDataNoUndo(0, 0, DFG_UTF8("abc"));
+    EXPECT_TRUE(view.transpose());
+    EXPECT_EQ("abc", csvModel.rawStringViewAt(0, 0).asUntypedView());
+
+    const auto populateTable = [&](const int nRows, const int nCols)
+    {
+        view.resizeTableNoUi(nRows, nCols);
+        for (int r = 0; r < nRows; ++r)
+        {
+            for (int c = 0; c < nCols; ++c)
+            {
+                csvModel.setDataNoUndo(r, c, QString("%1,%2").arg(r).arg(c));
+            }
+        }
+    };
+
+    const auto verifyTable = [&](const int r, const int c)
+    {
+        EXPECT_EQ(r, csvModel.rowCount());
+        EXPECT_EQ(c, csvModel.columnCount());
+        for (int r = 0; r < csvModel.rowCount(); ++r)
+        {
+            for (int c = 0; c < csvModel.columnCount(); ++c)
+            {
+                EXPECT_EQ(QString("%1,%2").arg(c).arg(r), viewToQString(csvModel.rawStringViewAt(r, c)));
+            }
+        }
+    };
+
+    // Square
+    populateTable(3, 3);
+    EXPECT_TRUE(view.transpose());
+    verifyTable(3, 3);
+
+    // Wide
+    populateTable(5, 20);
+    EXPECT_TRUE(view.transpose());
+    verifyTable(20, 5);
+
+    // Tall
+    populateTable(17, 8);
+    EXPECT_TRUE(view.transpose());
+    verifyTable(8, 17);
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);
