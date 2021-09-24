@@ -779,53 +779,79 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
         addAction(pAction);
     }
 
+    // "Insert row/column"-items
     {
-        auto pAction = new QAction(tr("Insert row here"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        pAction->setShortcut(tr("Ins"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowHere));
-        addAction(pAction);
-    }
+        auto pMenuAction = new QAction(tr("Insert row/column"), this);
+        setActionFlags(pMenuAction, ActionFlags::defaultStructureEdit);
 
-    {
-        auto pAction = new QAction(tr("Insert row after current"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        pAction->setShortcut(tr("Shift+Ins"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowAfterCurrent));
-        addAction(pAction);
-    }
+        auto pMenu = new QMenu();
+        // Scheduling destruction of menu with the parent action.
+        DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
 
-    {
-        auto pAction = new QAction(tr("Insert column"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        pAction->setShortcut(tr("Ctrl+Alt+Ins"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumn));
-        addAction(pAction);
-    }
+        {
+            auto pAction = new QAction(tr("Insert row here"), this);
+            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+            pAction->setShortcut(tr("Ins"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowHere));
+            pMenu->addAction(pAction);
+        }
 
-    {
-        auto pAction = new QAction(tr("Insert column after current"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        pAction->setShortcut(tr("Ctrl+Alt+Shift+Ins"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumnAfterCurrent));
-        addAction(pAction);
-    }
+        {
+            auto pAction = new QAction(tr("Insert row after current"), this);
+            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+            pAction->setShortcut(tr("Shift+Ins"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowAfterCurrent));
+            pMenu->addAction(pAction);
+        }
 
-    {
-        auto pAction = new QAction(tr("Delete selected row(s)"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        pAction->setShortcut(tr("Shift+Del"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::deleteSelectedRow));
-        addAction(pAction);
-    }
+        {
+            auto pAction = new QAction(tr("Insert column"), this);
+            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+            pAction->setShortcut(tr("Ctrl+Alt+Ins"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumn));
+            pMenu->addAction(pAction);
+        }
 
+        {
+            auto pAction = new QAction(tr("Insert column after current"), this);
+            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+            pAction->setShortcut(tr("Ctrl+Alt+Shift+Ins"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumnAfterCurrent));
+            pMenu->addAction(pAction);
+        }
+
+        pMenuAction->setMenu(pMenu); // Does not transfer ownership.
+        addAction(pMenuAction);
+    } // End of "Insert row/column"-items
+
+    // "Delete row/column"-items
     {
-        auto pAction = new QAction(tr("Delete current column"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        pAction->setShortcut(tr("Ctrl+Del"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, SIGNAL(triggered()), this, SLOT(deleteCurrentColumn())));
-        addAction(pAction);
-    }
+        auto pMenuAction = new QAction(tr("Delete row/column"), this);
+        setActionFlags(pMenuAction, ActionFlags::defaultStructureEdit);
+
+        auto pMenu = new QMenu();
+        // Scheduling destruction of menu with the parent action.
+        DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+
+        {
+            auto pAction = new QAction(tr("Delete selected row(s)"), this);
+            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+            pAction->setShortcut(tr("Shift+Del"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::deleteSelectedRow));
+            pMenu->addAction(pAction);
+        }
+
+        {
+            auto pAction = new QAction(tr("Delete current column"), this);
+            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+            pAction->setShortcut(tr("Ctrl+Del"));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, SIGNAL(triggered()), this, SLOT(deleteCurrentColumn())));
+            pMenu->addAction(pAction);
+        }
+
+        pMenuAction->setMenu(pMenu); // Does not transfer ownership.
+        addAction(pMenuAction);
+    } // End of "Insert row/column"-items
 
     // Resize table
     {
@@ -906,16 +932,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
 
 void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
 {
-    // Adding 'Read-only'-action
-    {
-        auto pAction = new QAction(tr("Read-only"), this);
-        pAction->setCheckable(true);
-        pAction->setChecked(DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setReadOnlyMode));
-        DFG_OPAQUE_REF().m_spActReadOnly = pAction;
-        addAction(pAction);
-    }
-
     {
         auto pAction = new QAction(tr("Cut"), this);
         setActionFlags(pAction, ActionFlags::defaultContentEdit);
@@ -1025,13 +1041,20 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
 {
+    auto pMenuAction = new QAction(tr("Sorting"), this);
+    setActionFlags(pMenuAction, ActionFlags::viewEdit);
+
+    auto pMenu = new QMenu();
+    // Scheduling destruction of menu with the parent action.
+    DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+
     // Add 'sortable columns'-action
     {
         auto pAction = new QAction(tr("Sortable columns"), this);
         setActionFlags(pAction, ActionFlags::viewEdit);
         pAction->setCheckable(true);
         DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setSortingEnabled));
-        addAction(pAction);
+        pMenu->addAction(pAction);
     }
 
     // Add 'Case sensitive sorting'-action
@@ -1047,7 +1070,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
             else
                 QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case sensitivity: no suitable proxy model found"));
         }));
-        addAction(pAction);
+        pMenu->addAction(pAction);
     }
 
     // Add 'reset sorting'-action
@@ -1062,14 +1085,17 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
             else
                 QToolTip::showText(QCursor::pos(), tr("Unable to reset sorting: no proxy model found"));
         }));
-        addAction(pAction);
+        pMenu->addAction(pAction);
     }
+
+    pMenuAction->setMenu(pMenu); // Does not transfer ownership.
+    addAction(pMenuAction);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addHeaderActions()
 {
     {
-        auto pAction = new QAction(tr("Resize"), this);
+        auto pAction = new QAction(tr("Resize header"), this);
         setActionFlags(pAction, ActionFlags::readOnly);
         m_spResizeColumnsMenu = createResizeColumnsMenu();
         pAction->setMenu(m_spResizeColumnsMenu.get());
@@ -1096,6 +1122,16 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addMiscellaneousActions()
             pAction->setToolTip(tr("Selections by row instead of by cell (experimental)"));
             pAction->setCheckable(true);
             DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setRowMode));
+            addAction(pAction);
+        }
+
+        // Adding 'Read-only'-action
+        {
+            auto pAction = new QAction(tr("Read-only"), this);
+            pAction->setCheckable(true);
+            pAction->setChecked(DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setReadOnlyMode));
+            DFG_OPAQUE_REF().m_spActReadOnly = pAction;
             addAction(pAction);
         }
     }

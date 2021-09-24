@@ -19,6 +19,7 @@
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
+#include <QAction>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QFile>
@@ -1199,6 +1200,25 @@ TEST(dfgQt, CsvTableView_transpose)
     populateTable(17, 8);
     EXPECT_TRUE(view.transpose());
     verifyTable(8, 17);
+}
+
+TEST(dfgQt, CsvTableView_contextMenuSize)
+{
+    // Context menu is already big, but making sure that it is at least small enough to fit to single context menu column on some typical resolution.
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    view.setReadOnlyMode(false);
+    const auto actions = view.actions();
+    size_t nCount = 0;
+    for (auto pAct : actions)
+    {
+        if (pAct && pAct->isVisible() && !pAct->isSeparator())
+            ++nCount;
+    }
+    EXPECT_LE(nCount, 37); // A semi-arbitrary value.
 }
 
 TEST(dfgQt, TableView_makeSingleCellSelection)
