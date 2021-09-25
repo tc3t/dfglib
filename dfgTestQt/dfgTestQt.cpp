@@ -16,6 +16,7 @@
 #include <dfg/qt/PatternMatcher.hpp>
 #include <dfg/iter/FunctionValueIterator.hpp>
 #include <dfg/os/TemporaryFileStream.hpp>
+#include "../dfgTest/dfgTest.hpp"
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -1153,13 +1154,13 @@ TEST(dfgQt, CsvTableView_transpose)
     view.setModel(&csvModel);
 
     // Empty table (making sure it doesn't crash etc)
-    EXPECT_TRUE(view.transpose());
+    DFGTEST_EXPECT_TRUE(view.transpose());
 
     // Single item table
     view.resizeTableNoUi(1, 1);
     csvModel.setDataNoUndo(0, 0, DFG_UTF8("abc"));
-    EXPECT_TRUE(view.transpose());
-    EXPECT_EQ("abc", csvModel.rawStringViewAt(0, 0).asUntypedView());
+    DFGTEST_EXPECT_TRUE(view.transpose());
+    DFGTEST_EXPECT_LEFT("abc", csvModel.rawStringViewAt(0, 0).asUntypedView());
 
     const auto populateTable = [&](const int nRows, const int nCols)
     {
@@ -1175,30 +1176,30 @@ TEST(dfgQt, CsvTableView_transpose)
 
     const auto verifyTable = [&](const int r, const int c)
     {
-        EXPECT_EQ(r, csvModel.rowCount());
-        EXPECT_EQ(c, csvModel.columnCount());
+        DFGTEST_EXPECT_LEFT(r, csvModel.rowCount());
+        DFGTEST_EXPECT_LEFT(c, csvModel.columnCount());
         for (int r = 0; r < csvModel.rowCount(); ++r)
         {
             for (int c = 0; c < csvModel.columnCount(); ++c)
             {
-                EXPECT_EQ(QString("%1,%2").arg(c).arg(r), viewToQString(csvModel.rawStringViewAt(r, c)));
+                DFGTEST_EXPECT_LEFT(QString("%1,%2").arg(c).arg(r), viewToQString(csvModel.rawStringViewAt(r, c)));
             }
         }
     };
 
     // Square
     populateTable(3, 3);
-    EXPECT_TRUE(view.transpose());
+    DFGTEST_EXPECT_TRUE(view.transpose());
     verifyTable(3, 3);
 
     // Wide
     populateTable(5, 20);
-    EXPECT_TRUE(view.transpose());
+    DFGTEST_EXPECT_TRUE(view.transpose());
     verifyTable(20, 5);
 
     // Tall
     populateTable(17, 8);
-    EXPECT_TRUE(view.transpose());
+    DFGTEST_EXPECT_TRUE(view.transpose());
     verifyTable(8, 17);
 }
 

@@ -871,6 +871,7 @@
     <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\unchecked.h" />
     <ClInclude Include="..\dfg\utf\utfBom.hpp" />
     <ClInclude Include="..\externals\gtest\gtest.h" />
+    <ClInclude Include="dfgTest.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

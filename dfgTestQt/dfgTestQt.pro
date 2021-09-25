@@ -81,7 +81,8 @@ HEADERS += \
     ../dfg/qt/NumberGeneratorDataSource.hpp \
     ../dfg/qt/sqlTools.hpp \
     ../dfg/qt/JsonListWidget.hpp \
-    ../dfg/qt/PatternMatcher.hpp
+    ../dfg/qt/PatternMatcher.hpp \
+    ../dfgTest/dfgTest.hpp
 
 OTHER_FILES += \
     ../dfg/qt/res/chartGuide.html

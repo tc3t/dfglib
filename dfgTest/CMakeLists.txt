@@ -12,6 +12,7 @@ add_definitions(-std=c++11)
 
 SET(HEADERS
     stdafx.h
+    dfgTest.hpp
 )
 
 set(SOURCE
