@@ -572,6 +572,37 @@ namespace
         return (pAction) ? ActionFlags(pAction->property(gszPropertyActionFlags).toUInt()) : ActionFlags::unknown;
     }
 
+    QMenu* createActionMenu(::DFG_MODULE_NS(qt)::CsvTableView* pParent, const QString& sMenuTitle)
+    {
+        if (!pParent)
+            return nullptr;
+        auto pMenuAction = new QAction(sMenuTitle, pParent);
+        auto pMenu = new QMenu();
+        // Scheduling destruction of menu with the parent action.
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+        pMenuAction->setMenu(pMenu); // Does not transfer ownership.
+        pParent->addAction(pMenuAction);
+        return pMenu;
+    }
+
+    template <class Slot_T>
+    QAction* addViewAction(::DFG_MODULE_NS(qt)::CsvTableView& rView,
+        QWidget& rTarget,
+        const QString& sTitle,
+        const QString& sShortCut,
+        const ActionFlags actionFlags,
+        Slot_T&& slot)
+    {
+        auto pAction = new QAction(sTitle, &rView);
+        if (!sShortCut.isEmpty())
+            pAction->setShortcut(sShortCut);
+        if (actionFlags != ActionFlags::unknown)
+            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::triggered, &rView, slot));
+        rTarget.addAction(pAction);
+        return pAction;
+    }
+
 } // unnamed namespace
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableView)
@@ -663,6 +694,10 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
 {
+#define DFG_TEMP_ADD_VIEW_ACTION(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, &ThisClass::HANDLER)
+
+    const QString noShortCut;
+
     {
         auto pAction = new QAction(tr("New table"), this);
         pAction->setShortcut(tr("Ctrl+N"));
@@ -684,10 +719,14 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
         addAction(pAction);
     }
 
+    // Advanced open -menu
     {
-        auto pAction = new QAction(tr("Open file with options..."), this);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openFromFileWithOptions));
-        addAction(pAction);
+        auto pMenu = createActionMenu(this, tr("Open advanced"));
+        if (pMenu)
+        {
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Open file with options..."), noShortCut, ActionFlags::unknown, openFromFileWithOptions);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Reload from file"), noShortCut, ActionFlags::unknown, reloadFromFile);
+        }
     }
 
     {
@@ -1136,6 +1175,8 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addMiscellaneousActions()
         }
     }
 }
+
+#undef DFG_TEMP_ADD_VIEW_ACTION
 
 DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
 {
@@ -2559,6 +2600,28 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
         loadOptions.setProperty(CsvOptionProperty_completerEnabledSizeLimit, DFG_MODULE_NS(str)::toStrC(uint64(NumericTraits<uint64>::maxValue)));
     }
     return openFile(sPath, loadOptions);
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvTableView::reloadFromFile() -> bool
+{
+    auto pCsvModel = csvModel();
+    const auto sPath = (pCsvModel) ? pCsvModel->getFilePath() : QString();
+    if (sPath.isEmpty())
+    {
+        showStatusInfoTip(tr("Unable to reload; no path available")); // Note: filtered open clears path and can't be reloaded until original path is stored somewhere.
+        return false;
+    }
+
+    if (!getProceedConfirmationFromUserIfInModifiedState(tr("reload table from file")))
+        return false;
+    
+    if (!sPath.isEmpty() && openFile(sPath, pCsvModel->getOpenTimeLoadOptions()))
+        return true;
+    else
+    {
+        showStatusInfoTip(tr("Reloading failed from path '%1'").arg(sPath));
+        return false;
+    }
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()

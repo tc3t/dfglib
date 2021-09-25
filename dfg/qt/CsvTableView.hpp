@@ -402,6 +402,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool createNewTableFromClipboard();
         bool openFromFile();
         bool openFromFileWithOptions();
+        bool reloadFromFile();
         bool mergeFilesToCurrent();
         bool save();
         bool saveToFile();
