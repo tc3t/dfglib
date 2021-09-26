@@ -449,6 +449,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onFilterRequested();
 
+        void setCaseSensitiveSorting(bool bCaseSensitive);
+        void resetSorting();
+
         void setFindText(const StringMatchDef matchDef, const int nCol);
 
         void onNewSourceOpened();

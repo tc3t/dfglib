@@ -572,36 +572,47 @@ namespace
         return (pAction) ? ActionFlags(pAction->property(gszPropertyActionFlags).toUInt()) : ActionFlags::unknown;
     }
 
-    QMenu* createActionMenu(::DFG_MODULE_NS(qt)::CsvTableView* pParent, const QString& sMenuTitle)
+    QMenu* createActionMenu(::DFG_MODULE_NS(qt)::CsvTableView* pParent, const QString& sMenuTitle, const ActionFlags actionFlags, QMenu* pMenu = nullptr)
     {
         if (!pParent)
             return nullptr;
         auto pMenuAction = new QAction(sMenuTitle, pParent);
-        auto pMenu = new QMenu();
+        setActionFlags(pMenuAction, actionFlags);
+        if (!pMenu)
+            pMenu = new QMenu();
         // Scheduling destruction of menu with the parent action.
-        DFG_QT_VERIFY_CONNECT(QObject::connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pMenuAction, &QObject::destroyed, pMenu, &QObject::deleteLater));
         pMenuAction->setMenu(pMenu); // Does not transfer ownership.
         pParent->addAction(pMenuAction);
         return pMenu;
     }
 
     template <class Slot_T>
-    QAction* addViewAction(::DFG_MODULE_NS(qt)::CsvTableView& rView,
+    QAction& addViewAction(::DFG_MODULE_NS(qt)::CsvTableView& rView,
         QWidget& rTarget,
         const QString& sTitle,
         const QString& sShortCut,
         const ActionFlags actionFlags,
+        const bool bCheckable,
         Slot_T&& slot)
     {
         auto pAction = new QAction(sTitle, &rView);
         if (!sShortCut.isEmpty())
             pAction->setShortcut(sShortCut);
         if (actionFlags != ActionFlags::unknown)
-            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::triggered, &rView, slot));
+            setActionFlags(pAction, actionFlags);
+        if (bCheckable)
+        {
+            pAction->setCheckable(true);
+            DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::toggled, &rView, slot));
+        }
+        else
+            DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::triggered, &rView, slot));
         rTarget.addAction(pAction);
-        return pAction;
+        return *pAction;
     }
+
+    const char noShortCut[] = "";
 
 } // unnamed namespace
 
@@ -692,387 +703,123 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
     addMiscellaneousActions();
 }
 
+#define DFG_TEMP_ADD_VIEW_ACTION(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, false, &ThisClass::HANDLER)
+#define DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, true, &ThisClass::HANDLER)
+
 void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
 {
-#define DFG_TEMP_ADD_VIEW_ACTION(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, &ThisClass::HANDLER)
+    // New table
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("New table"),                tr("Ctrl+N"),       ActionFlags::unknown, createNewTable);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("New table from clipboard"), tr("Ctrl+Shift+N"), ActionFlags::unknown, createNewTableFromClipboard);
 
-    const QString noShortCut;
-
-    {
-        auto pAction = new QAction(tr("New table"), this);
-        pAction->setShortcut(tr("Ctrl+N"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::createNewTable));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("New table from clipboard"), this);
-        pAction->setShortcut(tr("Ctrl+Shift+N"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::createNewTableFromClipboard));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Open file..."), this);
-        pAction->setShortcut(tr("Ctrl+O"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openFromFile));
-        addAction(pAction);
-    }
-
+    // Open table
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Open file..."), tr("Ctrl+O"), ActionFlags::unknown, openFromFile);
     // Advanced open -menu
     {
-        auto pMenu = createActionMenu(this, tr("Open advanced"));
+        auto pMenu = createActionMenu(this, tr("Open advanced"), ActionFlags::unknown);
         if (pMenu)
         {
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Open file with options..."), noShortCut, ActionFlags::unknown, openFromFileWithOptions);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Reload from file"), noShortCut, ActionFlags::unknown, reloadFromFile);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Reload from file"),          noShortCut, ActionFlags::unknown, reloadFromFile);
         }
     }
 
-    {
-        auto pAction = new QAction(tr("Merge files to current..."), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::mergeFilesToCurrent));
-        addAction(pAction);
-    }
+    // Merge
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Merge files to current..."), noShortCut, ActionFlags::defaultStructureEdit, mergeFilesToCurrent);
 
-    {
-        auto pAction = new QAction(tr("Save"), this);
-        pAction->setShortcut(tr("Ctrl+S"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::save));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Save to file..."), this);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveToFile));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Save to file with options..."), this);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveToFileWithOptions));
-        addAction(pAction);
-    }
+    // Save
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Save"),                         tr("Ctrl+S"),   ActionFlags::unknown, save);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Save to file..."),              noShortCut,     ActionFlags::unknown, saveToFile);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Save to file with options..."), noShortCut,     ActionFlags::unknown, saveToFileWithOptions);
 
     // Config menu
     {
-        auto pMenuAction = new QAction(tr("Config"), this);
-        auto pMenu = new QMenu();
-        // Schedule destruction of menu with the parent action.
-        DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
-
-        // Open config file
+        auto pMenu = createActionMenu(this, tr("Config"), ActionFlags::unknown);
+        if (pMenu)
         {
-            // To improve: this entry could be disabled if there is no file open or it does not have associated config.
-            auto pAction = new QAction(tr("Open related config file..."), this);
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openConfigFile));
-            pMenu->addAction(pAction);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Open related config file..."),      noShortCut, ActionFlags::unknown, openConfigFile); // To improve: this entry could be disabled if there is no file open or it does not have associated config.
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Save config file..."),              noShortCut, ActionFlags::unknown, saveConfigFile);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Save config file with options..."), noShortCut, ActionFlags::unknown, saveConfigFileWithOptions);
+            if (QFileInfo::exists(QtApplication::getApplicationSettingsPath()))
+            {
+                addSeparatorActionTo(pMenu);
+                auto& rAction = DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Open app config file"), noShortCut, ActionFlags::unknown, openAppConfigFile);
+                DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigOnAllowApplicationSettingsUsageChanged, &rAction, &QAction::setVisible));
+                rAction.setVisible(getAllowApplicationSettingsUsage());
+            }
         }
-
-        // 'Save config'
-        {
-            auto pAction = new QAction(tr("Save config file..."), this);
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveConfigFile));
-            pMenu->addAction(pAction);
-        }
-
-        // 'Save config with options'
-        {
-            auto pAction = new QAction(tr("Save config file with options..."), this);
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::saveConfigFileWithOptions));
-            pMenu->addAction(pAction);
-        }
-
-        // Open app-config file
-        if (QFileInfo::exists(QtApplication::getApplicationSettingsPath()))
-        {
-            addSeparatorActionTo(pMenu);
-            auto pAction = new QAction(tr("Open app config file"), this);
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::openAppConfigFile));
-            DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigOnAllowApplicationSettingsUsageChanged, pAction, &QAction::setVisible));
-            pAction->setVisible(getAllowApplicationSettingsUsage());
-            pMenu->addAction(pAction);
-        }
-
-        pMenuAction->setMenu(pMenu); // Does not transfer ownership.
-        addAction(pMenuAction);
     } // Config menu
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
 {
-    {
-        auto pAction = new QAction(tr("Move first row to header"), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-        //pAction->setShortcut(tr(""));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveFirstRowToHeader));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Move header to first row"), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-        //pAction->setShortcut(tr(""));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveHeaderToFirstRow));
-        addAction(pAction);
-    }
+    // Header/first line move actions
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Move first row to header"), noShortCut, ActionFlags::defaultContentEdit, moveFirstRowToHeader);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Move header to first row"), noShortCut, ActionFlags::defaultContentEdit, moveHeaderToFirstRow);
 
     // "Insert row/column"-items
     {
-        auto pMenuAction = new QAction(tr("Insert row/column"), this);
-        setActionFlags(pMenuAction, ActionFlags::defaultStructureEdit);
-
-        auto pMenu = new QMenu();
-        // Scheduling destruction of menu with the parent action.
-        DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
-
+        auto pMenu = createActionMenu(this, tr("Insert row/column"), ActionFlags::defaultStructureEdit);
+        if (pMenu)
         {
-            auto pAction = new QAction(tr("Insert row here"), this);
-            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-            pAction->setShortcut(tr("Ins"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowHere));
-            pMenu->addAction(pAction);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert row here"),             tr("Ins"),                ActionFlags::defaultStructureEdit, insertRowHere);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert row after current"),    tr("Shift+Ins"),          ActionFlags::defaultStructureEdit, insertRowAfterCurrent);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column"),               noShortCut,               ActionFlags::defaultStructureEdit, insertColumn);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column after current"), tr("Ctrl+Alt+Shift+Ins"), ActionFlags::defaultStructureEdit, insertColumnAfterCurrent);
         }
-
-        {
-            auto pAction = new QAction(tr("Insert row after current"), this);
-            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-            pAction->setShortcut(tr("Shift+Ins"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertRowAfterCurrent));
-            pMenu->addAction(pAction);
-        }
-
-        {
-            auto pAction = new QAction(tr("Insert column"), this);
-            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-            pAction->setShortcut(tr("Ctrl+Alt+Ins"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumn));
-            pMenu->addAction(pAction);
-        }
-
-        {
-            auto pAction = new QAction(tr("Insert column after current"), this);
-            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-            pAction->setShortcut(tr("Ctrl+Alt+Shift+Ins"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::insertColumnAfterCurrent));
-            pMenu->addAction(pAction);
-        }
-
-        pMenuAction->setMenu(pMenu); // Does not transfer ownership.
-        addAction(pMenuAction);
     } // End of "Insert row/column"-items
 
     // "Delete row/column"-items
     {
-        auto pMenuAction = new QAction(tr("Delete row/column"), this);
-        setActionFlags(pMenuAction, ActionFlags::defaultStructureEdit);
-
-        auto pMenu = new QMenu();
-        // Scheduling destruction of menu with the parent action.
-        DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
-
+        auto pMenu = createActionMenu(this, tr("Delete row/column"), ActionFlags::defaultStructureEdit);
+        if (pMenu)
         {
-            auto pAction = new QAction(tr("Delete selected row(s)"), this);
-            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-            pAction->setShortcut(tr("Shift+Del"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::deleteSelectedRow));
-            pMenu->addAction(pAction);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Delete selected row(s)"), tr("Shift+Del"), ActionFlags::defaultStructureEdit, deleteSelectedRow);
+            addViewAction(*this, *pMenu,     tr("Delete current column"),  tr("Ctrl+Del"),  ActionFlags::defaultStructureEdit, false, QOverload<void>::of(&ThisClass::deleteCurrentColumn));
         }
-
-        {
-            auto pAction = new QAction(tr("Delete current column"), this);
-            setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-            pAction->setShortcut(tr("Ctrl+Del"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, SIGNAL(triggered()), this, SLOT(deleteCurrentColumn())));
-            pMenu->addAction(pAction);
-        }
-
-        pMenuAction->setMenu(pMenu); // Does not transfer ownership.
-        addAction(pMenuAction);
     } // End of "Insert row/column"-items
 
-    // Resize table
-    {
-        auto pAction = new QAction(tr("Resize table"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        pAction->setShortcut(tr("Ctrl+R"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::resizeTable));
-        addAction(pAction);
-    }
-
-    // Transpose
-    {
-        auto pAction = new QAction(tr("Transpose"), this);
-        setActionFlags(pAction, ActionFlags::defaultStructureEdit);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::transpose));
-        addAction(pAction);
-    }
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Resize table"), tr("Ctrl+R"), ActionFlags::defaultStructureEdit, resizeTable);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Transpose"),    noShortCut,   ActionFlags::defaultStructureEdit, transpose);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
 {
-    {
-        auto pAction = new QAction(tr("Invert selection"), this);
-        setActionFlags(pAction, ActionFlags::viewEdit);
-        pAction->setShortcut(tr("Ctrl+I"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::invertSelection));
-        addAction(pAction);
-    }
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Invert selection"), tr("Ctrl+I"), ActionFlags::viewEdit, invertSelection);
 
     // Find and filter actions
-    {
-        {
-            auto pAction = new QAction(tr("Go to line"), this);
-            setActionFlags(pAction, ActionFlags::viewEdit);
-            pAction->setShortcut(tr("Ctrl+G"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onGoToCellTriggered));
-            addAction(pAction);
-        }
-        {
-            auto pAction = new QAction(tr("Find"), this);
-            setActionFlags(pAction, ActionFlags::viewEdit);
-            pAction->setShortcut(tr("Ctrl+F"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindRequested));
-            addAction(pAction);
-        }
-        {
-            auto pAction = new QAction(tr("Find next"), this);
-            setActionFlags(pAction, ActionFlags::viewEdit);
-            pAction->setShortcut(tr("F3"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindNext));
-            addAction(pAction);
-        }
-        {
-            auto pAction = new QAction(tr("Find previous"), this);
-            setActionFlags(pAction, ActionFlags::viewEdit);
-            pAction->setShortcut(tr("Shift+F3"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFindPrevious));
-            addAction(pAction);
-        }
-        {
-            auto pAction = new QAction(tr("Replace"), this);
-            setActionFlags(pAction, ActionFlags::defaultContentEdit);
-            pAction->setShortcut(tr("Ctrl+H"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onReplace));
-            addAction(pAction);
-        }
-
-        // Filter
-        {
-            auto pAction = new QAction(tr("Filter"), this);
-            setActionFlags(pAction, ActionFlags::viewEdit);
-            pAction->setShortcut(tr("Alt+F"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::onFilterRequested));
-            addAction(pAction);
-        }
-    }
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Go to line"),    tr("Ctrl+G"),   ActionFlags::viewEdit,           onGoToCellTriggered);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Find"),          tr("Ctrl+F"),   ActionFlags::viewEdit,           onFindRequested);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Find next"),     tr("F3"),       ActionFlags::viewEdit,           onFindNext);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Find previous"), tr("Shift+F3"), ActionFlags::viewEdit,           onFindPrevious);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Replace"),       tr("Ctrl+H"),   ActionFlags::defaultContentEdit, onReplace);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Filter"),        tr("Alt+F"),    ActionFlags::viewEdit,           onFilterRequested);
 }
 
 void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
 {
-    {
-        auto pAction = new QAction(tr("Cut"), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-        pAction->setShortcut(tr("Ctrl+X"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::cut));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Copy"), this);
-        setActionFlags(pAction, ActionFlags::readOnly);
-        pAction->setShortcut(tr("Ctrl+C"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::copy));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Paste"), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-        pAction->setShortcut(tr("Ctrl+V"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::paste));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Clear selected cell(s)"), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-        pAction->setShortcut(tr("Del"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::clearSelected));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Generate content..."), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-        pAction->setShortcut(tr("Alt+G"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::generateContent));
-        addAction(pAction);
-    }
-
-    {
-        auto pAction = new QAction(tr("Evaluate selected as formula"), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-        pAction->setShortcut(tr("Alt+C"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::evaluateSelectionAsFormula));
-        addAction(pAction);
-    }
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Cut"),                          tr("Ctrl+X"), ActionFlags::defaultContentEdit, cut);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Copy"),                         tr("Ctrl+C"), ActionFlags::readOnly,           copy);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Paste"),                        tr("Ctrl+V"), ActionFlags::defaultContentEdit, paste);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Clear selected cell(s)"),       tr("Del"),    ActionFlags::defaultContentEdit, clearSelected);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Generate content..."),          tr("Alt+G"),  ActionFlags::defaultContentEdit, generateContent);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Evaluate selected as formula"), tr("Alt+C"),  ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
 
     // Insert-menu
     {
-        auto pAction = new QAction(tr("Insert"), this);
-        setActionFlags(pAction, ActionFlags::defaultContentEdit);
-
-        auto pMenu = new QMenu();
-        // Scheduling destruction of menu with the parent action.
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
-
-        // 'Insert Date'
+        auto pMenu = createActionMenu(this, tr("Insert"), ActionFlags::defaultContentEdit);
+        if (pMenu)
         {
-            auto pAct = new QAction(tr("Date"), this);
-            setActionFlags(pAct, ActionFlags::defaultContentEdit);
-            pAct->setShortcut(tr("Alt+Q"));
-            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDate));
-            pMenu->addAction(pAct);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date"),          tr("Alt+Q"),       ActionFlags::defaultContentEdit, insertDate);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Time"),          tr("Alt+W"),       ActionFlags::defaultContentEdit, insertTime);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date and time"), tr("Shift+Alt+Q"), ActionFlags::defaultContentEdit, insertDateTime);
+            
         }
-
-        // 'Insert Time'
-        {
-            auto pAct = new QAction(tr("Time"), this);
-            setActionFlags(pAct, ActionFlags::defaultContentEdit);
-            pAct->setShortcut(tr("Alt+W"));
-            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertTime));
-            pMenu->addAction(pAct);
-        }
-
-        // 'Insert Date time'
-        {
-            auto pAct = new QAction(tr("Date and time"), this);
-            setActionFlags(pAct, ActionFlags::defaultContentEdit);
-            pAct->setShortcut(tr("Shift+Alt+Q"));
-            DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &ThisClass::insertDateTime));
-            pMenu->addAction(pAct);
-        }
-
-        pAction->setMenu(pMenu); // Does not transfer ownership.
-        addAction(pAction);
-    }
+    } // End of "Insert row/column"-items
 
     /* Not Implemented
-    {
-        auto pAction = new QAction(tr("Move row up"), this);
-        pAction->setShortcut(tr("Alt+Up"));
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowUp));
-        addAction(pAction);
-    }
-
-    {
-    auto pAction = new QAction(tr("Move row down"), this);
-    pAction->setShortcut(tr("Alt+Down"));
-    DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::moveRowDown));
-    addAction(pAction);
-    }
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Move row up"), tr("Alt+Up"), ActionFlags::defaultContentEdit, moveRowUp);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Move row down"), tr("Alt+Up"), ActionFlags::defaultContentEdit, moveRowDown);
     */
 
     privAddUndoRedoActions();
@@ -1080,103 +827,33 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
 {
-    auto pMenuAction = new QAction(tr("Sorting"), this);
-    setActionFlags(pMenuAction, ActionFlags::viewEdit);
+    auto pMenu = createActionMenu(this, tr("Sorting"), ActionFlags::viewEdit);
+    if (!pMenu)
+        return;
 
-    auto pMenu = new QMenu();
-    // Scheduling destruction of menu with the parent action.
-    DFG_QT_VERIFY_CONNECT(connect(pMenuAction, &QObject::destroyed, pMenu, [=]() { delete pMenu; }));
+    DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Sortable columns"),       noShortCut, ActionFlags::viewEdit, setSortingEnabled);
+    DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Case sensitive sorting"), noShortCut, ActionFlags::viewEdit, setCaseSensitiveSorting);
+    DFG_TEMP_ADD_VIEW_ACTION(*pMenu,           tr("Reset sorting"),          noShortCut, ActionFlags::viewEdit, resetSorting);
 
-    // Add 'sortable columns'-action
-    {
-        auto pAction = new QAction(tr("Sortable columns"), this);
-        setActionFlags(pAction, ActionFlags::viewEdit);
-        pAction->setCheckable(true);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setSortingEnabled));
-        pMenu->addAction(pAction);
-    }
-
-    // Add 'Case sensitive sorting'-action
-    {
-        auto pAction = new QAction(tr("Case sensitive sorting"), this);
-        setActionFlags(pAction, ActionFlags::viewEdit);
-        pAction->setCheckable(true);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, [&](const bool bCaseSensitive)
-        {
-            auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
-            if (pProxy)
-                pProxy->setSortCaseSensitivity((bCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
-            else
-                QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case sensitivity: no suitable proxy model found"));
-        }));
-        pMenu->addAction(pAction);
-    }
-
-    // Add 'reset sorting'-action
-    {
-        auto pAction = new QAction(tr("Reset sorting"), this);
-        setActionFlags(pAction, ActionFlags::viewEdit);
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, [&]()
-        {
-            auto pProxy = this->getProxyModelPtr();
-            if (pProxy)
-                pProxy->sort(-1);
-            else
-                QToolTip::showText(QCursor::pos(), tr("Unable to reset sorting: no proxy model found"));
-        }));
-        pMenu->addAction(pAction);
-    }
-
-    pMenuAction->setMenu(pMenu); // Does not transfer ownership.
-    addAction(pMenuAction);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addHeaderActions()
 {
-    {
-        auto pAction = new QAction(tr("Resize header"), this);
-        setActionFlags(pAction, ActionFlags::readOnly);
-        m_spResizeColumnsMenu = createResizeColumnsMenu();
-        pAction->setMenu(m_spResizeColumnsMenu.get());
-        addAction(pAction);
-    }
+    auto spMenu = createResizeColumnsMenu();
+    if (!spMenu)
+        return;
+
+    createActionMenu(this, tr("Resize header"), ActionFlags::readOnly, spMenu.release());
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addMiscellaneousActions()
 {
-    {
-        // Add diff-action
-        {
-            auto pAction = new QAction(tr("Diff with unmodified"), this);
-            setActionFlags(pAction, ActionFlags::readOnly);
-            pAction->setShortcut(tr("Alt+D"));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &ThisClass::diffWithUnmodified));
-            addAction(pAction);
-        }
-
-        // Add row mode -control
-        {
-            auto pAction = new QAction(tr("Row mode"), this);
-            setActionFlags(pAction, ActionFlags::viewEdit);
-            pAction->setToolTip(tr("Selections by row instead of by cell (experimental)"));
-            pAction->setCheckable(true);
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setRowMode));
-            addAction(pAction);
-        }
-
-        // Adding 'Read-only'-action
-        {
-            auto pAction = new QAction(tr("Read-only"), this);
-            pAction->setCheckable(true);
-            pAction->setChecked(DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly));
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, &ThisClass::setReadOnlyMode));
-            DFG_OPAQUE_REF().m_spActReadOnly = pAction;
-            addAction(pAction);
-        }
-    }
+    DFG_TEMP_ADD_VIEW_ACTION(*this,           tr("Diff with unmodified"), tr("Alt+D"), ActionFlags::readOnly, diffWithUnmodified);
+    DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*this, tr("Row mode"),             noShortCut,  ActionFlags::viewEdit, setRowMode).setToolTip(tr("Selections by row instead of by cell (experimental)"));
+    auto& rActReadOnly = DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*this, tr("Read-only"), noShortCut, ActionFlags::readOnly, setReadOnlyMode);
+    rActReadOnly.setChecked(DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly));
+    DFG_OPAQUE_REF().m_spActReadOnly = &rActReadOnly;
 }
-
-#undef DFG_TEMP_ADD_VIEW_ACTION
 
 DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
 {
@@ -1218,42 +895,29 @@ void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzerThread(Func_T func)
     }
 }
 
-std::unique_ptr<QMenu> DFG_CLASS_NAME(CsvTableView)::createResizeColumnsMenu()
+auto ::DFG_MODULE_NS(qt)::CsvTableView::createResizeColumnsMenu() -> std::unique_ptr<QMenu>
 {
     std::unique_ptr<QMenu> spMenu(new QMenu);
 
+    // Column
+    DFG_TEMP_ADD_VIEW_ACTION(*spMenu, tr("Col: Resize to view evenly"),        noShortCut, ActionFlags::readOnly, onColumnResizeAction_toViewEvenly);
+    DFG_TEMP_ADD_VIEW_ACTION(*spMenu, tr("Col: Resize to view content aware"), noShortCut, ActionFlags::readOnly, onColumnResizeAction_toViewContentAware);
+    DFG_TEMP_ADD_VIEW_ACTION(*spMenu, tr("Col: Resize all to content"),        noShortCut, ActionFlags::readOnly, onColumnResizeAction_content);
+    DFG_TEMP_ADD_VIEW_ACTION(*spMenu, tr("Col: Set fixed size..."),            noShortCut, ActionFlags::readOnly, onColumnResizeAction_fixedSize);
+
     // Note: not using addSection() (i.e. a separator with text) as they are not shown in Windows in default style;
     // can be made visible e.g. by using "fusion" style (for more information see setStyle(), QStyleFactory::create)
-
-    // Column actions
-    {
-        auto pActViewEvenly = spMenu->addAction(tr("Col: Resize to view evenly"));
-        DFG_QT_VERIFY_CONNECT(connect(pActViewEvenly, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewEvenly));
-        DFG_ASSERT_CORRECTNESS(pActViewEvenly->parent() == spMenu.get()); // Expecting action to have the menu as parent for automatic destruction.
-
-        auto pActViewContent = spMenu->addAction(tr("Col: Resize to view content aware"));
-        DFG_QT_VERIFY_CONNECT(connect(pActViewContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_toViewContentAware));
-
-        auto pActContent = spMenu->addAction(tr("Col: Resize all to content"));
-        DFG_QT_VERIFY_CONNECT(connect(pActContent, &QAction::triggered, this, &ThisClass::onColumnResizeAction_content));
-
-        auto pActFixedSize = spMenu->addAction(tr("Col: Set fixed size..."));
-        DFG_QT_VERIFY_CONNECT(connect(pActFixedSize, &QAction::triggered, this, &ThisClass::onColumnResizeAction_fixedSize));
-    }
-
     spMenu->addSeparator();
 
-    // Row actions
-    {
-        auto pActContent = spMenu->addAction(tr("Row: Resize all to content"));
-        DFG_QT_VERIFY_CONNECT(connect(pActContent, &QAction::triggered, this, &ThisClass::onRowResizeAction_content));
-
-        auto pActFixedSize = spMenu->addAction(tr("Row: Set fixed size..."));
-        DFG_QT_VERIFY_CONNECT(connect(pActFixedSize, &QAction::triggered, this, &ThisClass::onRowResizeAction_fixedSize));
-    }
+    // Row
+    DFG_TEMP_ADD_VIEW_ACTION(*spMenu, tr("Row: Resize all to content"), noShortCut, ActionFlags::readOnly, onRowResizeAction_content);
+    DFG_TEMP_ADD_VIEW_ACTION(*spMenu, tr("Row: Set fixed size..."),     noShortCut, ActionFlags::readOnly, onRowResizeAction_fixedSize);
 
     return spMenu;
 }
+
+#undef DFG_TEMP_ADD_VIEW_ACTION
+#undef DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE
 
 void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
 {
@@ -5194,6 +4858,28 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QTime& qtime, con
 {
     return qtime.toString(sFormat);
 }
+
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
+
+void CsvTableView::setCaseSensitiveSorting(const bool bCaseSensitive)
+{
+    auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
+    if (pProxy)
+        pProxy->setSortCaseSensitivity((bCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
+    else
+        QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case sensitivity: no suitable proxy model found"));
+}
+
+void CsvTableView::resetSorting()
+{
+    auto pProxy = this->getProxyModelPtr();
+    if (pProxy)
+        pProxy->sort(-1);
+    else
+        QToolTip::showText(QCursor::pos(), tr("Unable to reset sorting: no proxy model found"));
+}
+
+} } // namespace dfg::qt
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewDlg)
 {
