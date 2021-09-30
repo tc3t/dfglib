@@ -47,6 +47,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
     class CsvItemModel;
+    class CsvTableView;
 
     class CsvTableViewBasicSelectionAnalyzerPanel;
 
@@ -166,7 +167,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         Q_OBJECT
     public:
         using BaseClass = QHeaderView;
-        using BaseClass::BaseClass; // Inheriting constructor
+
+        TableHeaderView(CsvTableView* pParent);
+
+        CsvTableView* tableView();
 
         // Base class overrides -->
         void contextMenuEvent(QContextMenuEvent* pEvent) override;

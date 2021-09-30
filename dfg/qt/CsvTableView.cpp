@@ -329,16 +329,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 }}} // dfg::qt::DFG_DETAIL_NS
 
 
-void ::DFG_MODULE_NS(qt)::TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
-{
-    if (!pEvent)
-        return;
-    QMenu menu;
-    m_nLatestContextMenuEventColumn = logicalIndexAt(pEvent->pos());
-    menu.addActions(actions());
-    menu.exec(QCursor::pos());
-}
-
 using namespace DFG_MODULE_NS(qt);
 
 namespace
@@ -637,11 +627,7 @@ public:
         m_spEditLock = std::make_shared<QReadWriteLock>(QReadWriteLock::Recursive);
     this->setItemDelegate(new CsvTableViewDelegate(this));
 
-    {
-        auto pHzHeader = new TableHeaderView(Qt::Horizontal, this);
-        pHzHeader->setSectionsClickable(true); // Without this clicking header didn't select column
-        this->setHorizontalHeader(pHzHeader);
-    }
+    this->setHorizontalHeader(new TableHeaderView(this));
 
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
@@ -680,14 +666,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addSeparatorActionTo(QWidget* pTarget)
 
 void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
 {
-    auto pHzHeader = horizontalTableHeader();
-    if (pHzHeader)
-    {
-        auto pAction = new QAction(tr("Set column names"), this); // Ownership through parentship.
-        DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &CsvTableView::setColumnNames));
-        pHzHeader->addAction(pAction);
-    }
-
     addOpenSaveActions();   
         addSeparatorAction();
     addDimensionEditActions();
@@ -4859,6 +4837,8 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QTime& qtime, con
     return qtime.toString(sFormat);
 }
 
+/////////////////////////////////
+// Start of dfg::qt namespace
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
 void CsvTableView::setCaseSensitiveSorting(const bool bCaseSensitive)
@@ -5078,3 +5058,39 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const 
 }
 
 #undef DFG_CSVTABLEVIEW_PROPERTY_PREFIX
+
+/////////////////////////////////
+// Start of dfg::qt namespace
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
+
+TableHeaderView::TableHeaderView(CsvTableView* pParent) :
+    BaseClass(Qt::Horizontal, pParent)
+{
+    setSectionsClickable(true); // Without this clicking header didn't select column
+}
+
+CsvTableView* TableHeaderView::tableView()
+{
+    return qobject_cast<CsvTableView*>(parent());
+}
+
+void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
+{
+    if (!pEvent)
+        return;
+    m_nLatestContextMenuEventColumn = logicalIndexAt(pEvent->pos());
+
+    auto pView = tableView();
+    if (!pView)
+        return;
+
+    auto& rView = *pView;
+
+    QMenu menu;
+
+    addViewAction(rView, menu, tr("Set column names"), noShortCut, ActionFlags::contentEdit, false, &CsvTableView::setColumnNames);
+
+    menu.exec(QCursor::pos());
+}
+
+} } // namespace dfg::qt
