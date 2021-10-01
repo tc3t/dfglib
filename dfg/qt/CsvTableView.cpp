@@ -1289,6 +1289,14 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
     if (rOpaq.m_flags.test(CsvTableViewFlag::readOnly) == bReadOnly)
         return; // Requested flag is effective already.
 
+    const auto handleActionList = [=](const QList<QAction*>& actions)
+    {
+        for (const auto pAction : actions)
+        {
+            ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleActionForReadOnly(pAction, bReadOnly);
+        }
+    };
+
     if (bReadOnly)
     {
         auto lockReleaser = this->tryLockForEdit(); // Maybe not needed, but just to make sure that there are no ongoing operations that might not play nicely with setting read-only mode.
@@ -1313,12 +1321,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
         }
 
         // Hiding edit actions from context menu
-        {
-            for (const auto pAction : this->actions())
-            {
-                ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleActionForReadOnly(pAction, true);
-            }
-        }
+        handleActionList(this->actions());
     }
     else // Case: setting read-write mode
     {
@@ -1327,10 +1330,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
         // Restoring old palette
         this->setPalette(rOpaq.m_readWriteModePalette);
         // Showing and enabling edit actions.
-        for (const auto pAction : this->actions())
-        {
-            ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleActionForReadOnly(pAction, false);
-        }
+        handleActionList(this->actions());
     }
 
     // Enabling/disabling undo buffer windows so that they can't be used to trigger undo
@@ -5088,9 +5088,11 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
 
     QMenu menu;
 
-    addViewAction(rView, menu, tr("Set column names"), noShortCut, ActionFlags::contentEdit, false, &CsvTableView::setColumnNames);
+    if (!rView.isReadOnlyMode())
+        addViewAction(rView, menu, tr("Set column names"), noShortCut, ActionFlags::contentEdit, false, &CsvTableView::setColumnNames);
 
-    menu.exec(QCursor::pos());
+    if (!menu.actions().isEmpty())
+        menu.exec(QCursor::pos());
 }
 
 } } // namespace dfg::qt
