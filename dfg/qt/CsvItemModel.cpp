@@ -226,22 +226,6 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
 
 } } } // dfg::qt::unnamed_namespace
 
-#if (DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0)
-    DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::ColInfo(ColInfo&& other)
-    {
-        *this = std::move(other);
-    }
-
-    auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::operator=(ColInfo&& other) -> ColInfo&
-    {
-        m_name = std::move(other.m_name);
-        m_type = std::move(other.m_type);
-        m_completerType = std::move(other.m_completerType);
-        m_spCompleter = std::move(other.m_spCompleter);
-        return *this;
-    }
-#endif // DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0
-
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::CompleterDeleter::operator()(QCompleter* p) const
 {
     if (p)
@@ -747,7 +731,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     for (int c = 0; c < nMaxColCount; ++c)
     {
         SzPtrUtf8R p = m_table(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
-        m_vecColInfo.push_back(ColInfo((p) ? QString::fromUtf8(p.c_str()) : QString()));
+        m_vecColInfo.push_back(ColInfo(this, (p) ? QString::fromUtf8(p.c_str()) : QString()));
         if (isCompleterEnabledInColumn(c))
         {
             // Note: can't set 'this' as parent for completer as this function may get called from thread different
@@ -1503,7 +1487,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumnsImpl(int posi
     m_table.insertColumnsAt(position, count);
     for(int i = position; i<position + count; ++i)
     {
-        m_vecColInfo.insert(m_vecColInfo.begin() + i, ColInfo());
+        m_vecColInfo.insert(m_vecColInfo.begin() + i, ColInfo(this));
     }
 }
 
@@ -1809,6 +1793,8 @@ QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findNextHighlighter
     return QModelIndex();
 }
 
+/////////////////////////////////
+// Start of dfg::qt namespace
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
 {
 
@@ -1882,7 +1868,73 @@ bool CsvItemModel::transpose()
     return true;
 }
 
-}} // namespace qt
+template <class This_T, class Func_T>
+void CsvItemModel::forEachColInfoWhileImpl(This_T& rThis, Func_T&& func)
+{
+    if (!func)
+        return;
+    for (auto& colInfo : rThis.m_vecColInfo)
+    {
+        if (!func(colInfo))
+            break;
+    }
+}
+
+void CsvItemModel::forEachColInfoWhile(std::function<bool(ColInfo&)> func)
+{
+    forEachColInfoWhileImpl(*this, std::move(func));
+}
+
+void CsvItemModel::forEachColInfoWhile(std::function<bool(const ColInfo&)> func) const
+{
+    forEachColInfoWhileImpl(*this, std::move(func));
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// class CsvitemModel::ColInfo
+//
+//////////////////////////////////////////////////////////////////////////
+
+CsvItemModel::ColInfo::ColInfo(CsvItemModel* pModel, QString sName, ColType type, CompleterType complType)
+    : m_spModel(pModel)
+    , m_name(sName)
+    , m_type(type)
+    , m_completerType(complType)
+{}
+
+QString CsvItemModel::ColInfo::name() const
+{
+    return this->m_name;
+}
+
+auto CsvItemModel::ColInfo::index() const -> Index
+{
+    CsvItemModel* pModel = m_spModel;
+    if (!pModel)
+        return -1;
+    auto iter = std::find_if(pModel->m_vecColInfo.begin(), pModel->m_vecColInfo.end(), [=](const ColInfo& colInfo) { return this == &colInfo; });
+    return static_cast<Index>(iter - pModel->m_vecColInfo.begin());
+}
+
+QVariant CsvItemModel::ColInfo::getProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& defaultVal) const
+{
+    auto iter = this->m_properties.find(sContextId);
+    if (iter == this->m_properties.end())
+        return defaultVal;
+    return iter->value(sPropertyId, defaultVal);
+}
+
+bool CsvItemModel::ColInfo::setProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& value)
+{
+    auto& m = this->m_properties[sContextId];
+    const bool bChanged = (!m.contains(sPropertyId) || m.value(sPropertyId) != value);
+    m[sPropertyId] = value;
+    return bChanged;
+}
+
+}} // namespace dfg::qt
+/////////////////////////////////
 
 
 

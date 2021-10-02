@@ -152,28 +152,34 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             FindAdvanceStyleRowIncrement
         };
 
-        struct ColInfo
+        class ColInfo
         {
+        public:
             struct CompleterDeleter
             {
                 void operator()(QCompleter* ptr) const;
             };
 
-            ColInfo(QString sName = "", ColType type = ColTypeText, CompleterType complType = CompleterTypeNone) :
-                m_name(sName), m_type(type), m_completerType(complType) {}
-
-#if (DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT == 0)
-            ColInfo(ColInfo&& other);
-            ColInfo& operator=(ColInfo&& other);
-#endif
+            ColInfo(CsvItemModel* pModel, QString sName = QString(), ColType type = ColTypeText, CompleterType complType = CompleterTypeNone);
 
             bool hasCompleter() const { return m_spCompleter.get() != nullptr; }
 
+            Index index() const;
+
+            QString name() const;
+
+            QVariant getProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& defaultVal = QVariant()) const;
+
+            // Returns true iff property didn't exist or it's value was changed.
+            bool setProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& value);
+
+            QPointer<CsvItemModel> m_spModel;
             QString m_name;
             ColType m_type;
             CompleterType m_completerType;
             std::unique_ptr<QCompleter, CompleterDeleter> m_spCompleter;
-        };
+            QMap<QString, QVariantMap> m_properties;
+        }; // class ColInfo
 
         class IoOperationProgressController
         {
@@ -364,7 +370,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         ColType getColType(const int nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_type : ColTypeText); }
         CompleterType getColCompleterType(const int nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_completerType : CompleterTypeNone); }
 
-        ColInfo* getColInfo(const int nCol) { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
+        ColInfo*       getColInfo(const int nCol)       { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
+        const ColInfo* getColInfo(const int nCol) const { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
+        void forEachColInfoWhile(std::function<bool(ColInfo&)>);
+        void forEachColInfoWhile(std::function<bool(const ColInfo&)>) const;
 
         SaveOptions getSaveOptions() const;
 
@@ -526,6 +535,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options);
 
         bool readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions);
+
+        template <class This_T, class Func_T>
+        static void forEachColInfoWhileImpl(This_T& rThis, Func_T&& func);
 
     public:
         QUndoStack* m_pUndoStack;
