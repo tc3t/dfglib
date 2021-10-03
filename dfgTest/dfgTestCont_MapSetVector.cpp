@@ -605,13 +605,15 @@ namespace
     template <class Map_T>
     void MapVector_valueCopyOrImpl()
     {
-        // Basic test SoA
+        using namespace DFG_ROOT_NS;
         {
             Map_T m;
-            m["a"] = 1;
-            EXPECT_EQ(1, m.valueCopyOr("a", 2));
-            EXPECT_EQ(0, m.valueCopyOr("b"));
-            EXPECT_EQ(10, m.valueCopyOr("b", 10));
+            m[DFG_UTF8("a")] = 1;
+            EXPECT_EQ(1, m.valueCopyOr(StringViewUtf8(DFG_UTF8("a")), 2));
+            EXPECT_EQ(0, m.valueCopyOr(StringViewUtf8(DFG_UTF8("b"))));
+            EXPECT_EQ(10, m.valueCopyOr(StringViewUtf8(DFG_UTF8("b")), 10));
+            auto& mConst = static_cast<const Map_T&>(m);
+            EXPECT_EQ(1, mConst.valueCopyOr(StringViewUtf8(DFG_UTF8("a")), 2));
         }
     }
 } // unnamed namespace
@@ -621,8 +623,8 @@ TEST(dfgCont, MapVector_valueCopyOr)
     using namespace ::DFG_ROOT_NS;
     using namespace ::DFG_MODULE_NS(cont);
 
-    MapVector_valueCopyOrImpl<MapVectorSoA<std::string, int>>();
-    MapVector_valueCopyOrImpl<MapVectorAoS<std::string, int>>();
+    MapVector_valueCopyOrImpl<MapVectorSoA<StringUtf8, int>>();
+    MapVector_valueCopyOrImpl<MapVectorAoS<StringUtf8, int>>();
 }
 
 namespace
