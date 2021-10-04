@@ -42,6 +42,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setFilterFromNewLineSeparatedJsonList(const QByteArray& sJson);
 
+        const CsvTableView* getTableView() const;
+
     protected:
         bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
         bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;

@@ -26,6 +26,7 @@ class QDateTime;
 class QItemSelection;
 class QItemSelectionRange;
 class QMenu;
+class QPoint;
 class QProgressBar;
 class QPushButton;
 class QThread;
@@ -170,13 +171,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         TableHeaderView(CsvTableView* pParent);
 
-        CsvTableView* tableView();
+        CsvTableView*       tableView();
+        const CsvTableView* tableView() const;
+
+        int columnIndex_dataModel(const QPoint& pos) const;
+        int columnIndex_viewModel(const QPoint& pos) const;
 
         // Base class overrides -->
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
         // <-- Base class overrides
 
-        int m_nLatestContextMenuEventColumn = -1;
+        int m_nLatestContextMenuEventColumn_dataModel = -1;
     };
 
     // View for showing CsvItemModel.
@@ -352,6 +357,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool isReadOnlyMode() const;
 
+        bool isColumnVisible(int nCol) const;
+
         CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
 
         QStringList weekDayNames() const;
@@ -362,6 +369,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QDate insertDate(); // Returns QDate that was used for creating the inserted string.
         QTime insertTime(); // Returns QTime that was used for creating the inserted string.
         QDateTime insertDateTime(); // Returns QDateTime that was used for creating the inserted string.
+
+        QVariant getColumnPropertyByDataModelIndex(int nDataModelCol, const StringViewUtf8& svKey, QVariant defaultValue = QVariant()) const;
+
+        void invalidateSortFilterProxyModel();
 
     private:
         template <class T, class Param0_T>
@@ -480,7 +491,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void insertGeneric(const QString& s);
 
+        // Column header action handlers
         void setColumnNames();
+        void setColumnVisibility(int nCol, bool bVisible);
+        void unhideAllColumns();
+        void showUnhideColumnDialog();
 
         /*
         void pasteColumn();

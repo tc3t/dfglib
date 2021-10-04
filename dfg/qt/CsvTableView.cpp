@@ -579,14 +579,14 @@ namespace
 
     template <class Slot_T>
     QAction& addViewAction(::DFG_MODULE_NS(qt)::CsvTableView& rView,
-        QWidget& rTarget,
+        QWidget& rAddActionTargetAndParent,
         const QString& sTitle,
         const QString& sShortCut,
         const ActionFlags actionFlags,
         const bool bCheckable,
         Slot_T&& slot)
     {
-        auto pAction = new QAction(sTitle, &rView);
+        auto pAction = new QAction(sTitle, &rAddActionTargetAndParent);
         if (!sShortCut.isEmpty())
             pAction->setShortcut(sShortCut);
         if (actionFlags != ActionFlags::unknown)
@@ -598,7 +598,7 @@ namespace
         }
         else
             DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::triggered, &rView, slot));
-        rTarget.addAction(pAction);
+        rAddActionTargetAndParent.addAction(pAction); // Ownership of pAction is not transferred to rAddActionTargetAndParent.
         return *pAction;
     }
 
@@ -4670,7 +4670,7 @@ DFG_ROOT_NS_BEGIN
             }
         }
     }
-}
+} // namespace dfg
 
 void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_content()
 {
@@ -4789,7 +4789,7 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
         auto pHeader = horizontalTableHeader();
         auto pSelectionModel = columnNameView.selectionModel();
         if (pHeader && pSelectionModel)
-            pSelectionModel->setCurrentIndex(columnNameModel.index(pHeader->m_nLatestContextMenuEventColumn, 0), QItemSelectionModel::SelectCurrent);
+            pSelectionModel->setCurrentIndex(columnNameModel.index(pHeader->m_nLatestContextMenuEventColumn_dataModel, 0), QItemSelectionModel::SelectCurrent);
     }
 
     if (dlg.exec() != QDialog::Accepted)
@@ -4841,6 +4841,37 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QTime& qtime, con
 // Start of dfg::qt namespace
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
+namespace
+{
+    namespace ColumnPropertyId
+    {
+        const SzPtrUtf8R visible = DFG_UTF8("visible");
+    } // namespace ColumnPropertyId
+
+    template <class View_T>
+    static auto getColInfo(View_T& rView, const int nCol) -> decltype(rView.csvModel()->getColInfo(nCol))
+    {
+        auto pCsvModel = rView.csvModel();
+        return (pCsvModel) ? pCsvModel->getColInfo(nCol) : nullptr;
+    }
+
+    uintptr_t viewPropertyContextId(const CsvTableView& view)
+    {
+        return reinterpret_cast<uintptr_t>(&view);
+    }
+
+    static QVariant getColumnProperty(const CsvTableView& rView, const CsvItemModel::ColInfo& rColInfo, const StringViewUtf8& svKey, const QVariant defaultValue)
+    {
+        return rColInfo.getProperty(viewPropertyContextId(rView), svKey, defaultValue);
+    }
+} // unnamed namespace
+
+QVariant CsvTableView::getColumnPropertyByDataModelIndex(const int nCol, const StringViewUtf8& svKey, const QVariant defaultValue) const
+{
+    auto pColInfo = getColInfo(*this, nCol);
+    return (pColInfo) ? getColumnProperty(*this, *pColInfo, svKey, defaultValue) : defaultValue;
+}
+
 void CsvTableView::setCaseSensitiveSorting(const bool bCaseSensitive)
 {
     auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
@@ -4859,7 +4890,81 @@ void CsvTableView::resetSorting()
         QToolTip::showText(QCursor::pos(), tr("Unable to reset sorting: no proxy model found"));
 }
 
+bool CsvTableView::isColumnVisible(const int nCol) const
+{
+    return getColumnPropertyByDataModelIndex(nCol, ColumnPropertyId::visible, true).toBool();
+}
+
+void CsvTableView::invalidateSortFilterProxyModel()
+{
+    auto pProxyModel = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
+    if (pProxyModel)
+        pProxyModel->invalidate();
+}
+
+void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible)
+{
+    auto pCsvModel = csvModel();
+    if (!pCsvModel)
+        return;
+
+    auto pColInfo = pCsvModel->getColInfo(nCol);
+    if (!pColInfo)
+        return;
+
+    if (pColInfo->setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, bVisible))
+        invalidateSortFilterProxyModel();
+}
+
+void CsvTableView::unhideAllColumns()
+{
+    auto pCsvModel = csvModel();
+    if (!pCsvModel)
+        return;
+
+    pCsvModel->forEachColInfoWhile([&](CsvItemModel::ColInfo& colInfo)
+    {
+        if (!colInfo.getProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, true).toBool())
+            colInfo.setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, true);
+        return true;
+    });
+
+    invalidateSortFilterProxyModel();
+}
+
+void CsvTableView::showUnhideColumnDialog()
+{
+    auto pCsvModel = this->csvModel();
+    if (!pCsvModel)
+        return;
+    QStringList hiddenColumns;
+    ::DFG_MODULE_NS(cont)::Vector<int> indexes;
+    // Finding out which columns are hidden
+    pCsvModel->forEachColInfoWhile([&](const CsvItemModel::ColInfo& colInfo)
+    {
+        if (getColumnProperty(*this, colInfo, ColumnPropertyId::visible, true).toBool())
+            return true;
+        hiddenColumns.push_back(tr("Column %1 ('%2')").arg(colInfo.index()).arg(colInfo.name()));
+        indexes.push_back(colInfo.index());
+        return true;
+    });
+    // TODO: should allow choosing multiple columns from a list, or be able to choose from a list which columns to hide and which to show.
+    const auto sChoice = QInputDialog::getItem(this,
+                            tr("Unhide column"),
+                            tr("Choose column to unhide"),
+                            hiddenColumns,
+                            0,
+                            false);
+    if (!sChoice.isEmpty())
+    {
+        const auto nChoiceIndex = hiddenColumns.indexOf(sChoice);
+        if (isValidIndex(indexes, nChoiceIndex))
+            this->setColumnVisibility(indexes[nChoiceIndex], true);
+    }
+}
+
 } } // namespace dfg::qt
+/////////////////////////////////
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewDlg)
 {
@@ -5074,11 +5179,45 @@ CsvTableView* TableHeaderView::tableView()
     return qobject_cast<CsvTableView*>(parent());
 }
 
+const CsvTableView* TableHeaderView::tableView() const
+{
+    return qobject_cast<const CsvTableView*>(parent());
+}
+
+int TableHeaderView::columnIndex_dataModel(const QPoint& pos) const
+{
+    const auto viewColumn = columnIndex_viewModel(pos);
+    if (viewColumn == -1)
+        return -1;
+
+    auto pView = tableView();
+    auto pCsvModel = (pView) ? pView->csvModel() : nullptr;
+    if (!pCsvModel)
+        return -1;
+
+    auto& rView = *pView;
+    // Not an optimal way to determine column index when there are lots of columns
+    for (int nVisibleColumn = -1, nModelColumn = 0; nModelColumn < pCsvModel->columnCount(); ++nModelColumn)
+    {
+        const auto bVisible = rView.getColumnPropertyByDataModelIndex(nModelColumn, ColumnPropertyId::visible, true).toBool();
+        if (bVisible)
+            ++nVisibleColumn;
+        if (nVisibleColumn == viewColumn)
+            return nModelColumn;
+    }
+    return -1;
+}
+
+int TableHeaderView::columnIndex_viewModel(const QPoint& pos) const
+{
+    return logicalIndexAt(pos);
+}
+
 void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
 {
     if (!pEvent)
         return;
-    m_nLatestContextMenuEventColumn = logicalIndexAt(pEvent->pos());
+    m_nLatestContextMenuEventColumn_dataModel = columnIndex_dataModel(pEvent->pos());
 
     auto pView = tableView();
     if (!pView)
@@ -5091,8 +5230,62 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
     if (!rView.isReadOnlyMode())
         addViewAction(rView, menu, tr("Set column names"), noShortCut, ActionFlags::contentEdit, false, &CsvTableView::setColumnNames);
 
+    const auto pCsvModel = rView.csvModel();
+    if (pCsvModel)
+    {
+        const auto nMaxUnhideEntryCount = 10;
+        auto nHiddenCount = 0;
+        pCsvModel->forEachColInfoWhile([&](const CsvItemModel::ColInfo& colInfo)
+        {
+            if (getColumnProperty(rView, colInfo, ColumnPropertyId::visible, true).toBool())
+                return true;
+            ++nHiddenCount;
+            if (nHiddenCount > nMaxUnhideEntryCount)
+                return true;// Only allowing at most 10 "unhide column" items to menu.
+            if (nHiddenCount == 0)
+                menu.addSeparator();
+            const auto nColIndex = colInfo.index();
+            const auto sMenuTitle = tr("Unhide column %1 ('%2')").arg(CsvItemModel::internalColumnIndexToVisible(nColIndex)).arg(colInfo.name().left(32));
+            addViewAction(rView, menu, sMenuTitle, noShortCut, ActionFlags::viewEdit, false, [=]() { pView->setColumnVisibility(nColIndex, true); });
+            return true;
+        });
+
+        // "Choose column to unhide"
+        if (nHiddenCount > nMaxUnhideEntryCount)
+            addViewAction(rView, menu, tr("Choose column to unhide..."), noShortCut, ActionFlags::viewEdit, false, &CsvTableView::showUnhideColumnDialog);
+
+        // Unhide all
+        if (nHiddenCount > 1)
+        {
+            auto pAction = menu.addAction(tr("Unhide all (%1 columns are hidden)").arg(nHiddenCount));
+            DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::triggered, this, [=]() { pView->unhideAllColumns(); }));
+        }
+
+        const auto nShownCount = pCsvModel->columnCount() - nHiddenCount;
+
+        // Column specific entries (not necessarily present e.g. if click happened outside columns)
+        if (m_nLatestContextMenuEventColumn_dataModel != -1)
+        {
+            addSectionEntryToMenu(&menu, tr("Column  %1 ('%2')")
+                .arg(CsvItemModel::internalColumnIndexToVisible(m_nLatestContextMenuEventColumn_dataModel))
+                .arg(pCsvModel->getHeaderName(m_nLatestContextMenuEventColumn_dataModel).left(32)));
+
+            const auto funcVisibleHandler = [=](const bool bVisible) { pView->setColumnVisibility(m_nLatestContextMenuEventColumn_dataModel, bVisible); };
+            const auto bIsVisible = rView.getColumnPropertyByDataModelIndex(m_nLatestContextMenuEventColumn_dataModel, ColumnPropertyId::visible, true).toBool();
+            auto& rActVisible = addViewAction(rView, menu, tr("Visible"), noShortCut, ActionFlags::viewEdit, true, funcVisibleHandler);
+            rActVisible.setChecked(bIsVisible);
+            if (bIsVisible && nShownCount == 1)
+            {
+                rActVisible.setDisabled(true); // Not letting all columns to be hidden to prevent column header from getting removed.
+                rActVisible.setToolTip(tr("Hiding disabled: hiding all columns is not supported"));
+            }
+            
+        }
+    }
+
     if (!menu.actions().isEmpty())
         menu.exec(QCursor::pos());
 }
 
 } } // namespace dfg::qt
+/////////////////////////////////

@@ -367,21 +367,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
                 m_spJsonInsertButton->setVisible(bIsJson);
         }
     };
-}}} // dfg::qt::DFG_DETAILS_NS -namespace
+} // namespace DFG_DETAILS_NS (inside namespace dfg::qt)
 
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel)
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewSortFilterProxyModel)
 {
     MultiMatchDefinition<CsvItemModelStringMatcher> m_matchers;
 };
 
-::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
+CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
 {
-    return BaseClass::filterAcceptsColumn(sourceColumn, sourceParent);
+    auto pView = getTableView();
+    if (pView)
+        return pView->isColumnVisible(sourceColumn);
+    else
+        return BaseClass::filterAcceptsColumn(sourceColumn, sourceParent);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsRow(const int sourceRow, const QModelIndex& sourceParent) const
+bool CsvTableViewSortFilterProxyModel::filterAcceptsRow(const int sourceRow, const QModelIndex& sourceParent) const
 {
     auto pOpaq = DFG_OPAQUE_PTR();
 
@@ -403,7 +407,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsRow(con
         return BaseClass::filterAcceptsRow(sourceRow, sourceParent);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(const QByteArray& sJson)
+void CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(const QByteArray& sJson)
 {
     DFG_OPAQUE_REF().m_matchers = MultiMatchDefinition<CsvItemModelStringMatcher>::fromJson(SzPtrUtf8(sJson.data()));
     // In CsvItemModelStringMatcher row 1 means first non-header row, while here corresponding row is row 0 -> shifting apply rows.
@@ -415,6 +419,15 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::setFilterFromNewLine
     });
     this->invalidateFilter();
 }
+
+const CsvTableView* CsvTableViewSortFilterProxyModel::getTableView() const
+{
+    auto pTableEditor = qobject_cast<TableEditor*>(parent());
+    return (pTableEditor) ? pTableEditor->m_spTableView.get() : nullptr;
+}
+
+}} // namespace dfg::qt
+///////////////////////
 
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::TableEditor)
 {

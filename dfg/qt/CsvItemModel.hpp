@@ -168,17 +168,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             QString name() const;
 
-            QVariant getProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& defaultVal = QVariant()) const;
+            QVariant getProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& defaultVal = QVariant()) const;
 
             // Returns true iff property didn't exist or it's value was changed.
-            bool setProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& value);
+            bool setProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& value);
 
             QPointer<CsvItemModel> m_spModel;
             QString m_name;
             ColType m_type;
             CompleterType m_completerType;
             std::unique_ptr<QCompleter, CompleterDeleter> m_spCompleter;
-            QMap<QString, QVariantMap> m_properties;
+
+            DFG_OPAQUE_PTR_DECLARE();
         }; // class ColInfo
 
         class IoOperationProgressController

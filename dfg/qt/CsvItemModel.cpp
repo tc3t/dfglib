@@ -1896,6 +1896,12 @@ void CsvItemModel::forEachColInfoWhile(std::function<bool(const ColInfo&)> func)
 //
 //////////////////////////////////////////////////////////////////////////
 
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvItemModel::ColInfo)
+{
+    template <class K_T, class V_T> using MapT = ::DFG_MODULE_NS(cont)::MapVectorSoA<K_T, V_T>;
+    MapT<uintptr_t, MapT<StringUtf8, QVariant>> m_properties;
+};
+
 CsvItemModel::ColInfo::ColInfo(CsvItemModel* pModel, QString sName, ColType type, CompleterType complType)
     : m_spModel(pModel)
     , m_name(sName)
@@ -1917,19 +1923,32 @@ auto CsvItemModel::ColInfo::index() const -> Index
     return static_cast<Index>(iter - pModel->m_vecColInfo.begin());
 }
 
-QVariant CsvItemModel::ColInfo::getProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& defaultVal) const
+QVariant CsvItemModel::ColInfo::getProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& defaultVal) const
 {
-    auto iter = this->m_properties.find(sContextId);
-    if (iter == this->m_properties.end())
+    auto pOpaq = DFG_OPAQUE_PTR();
+    if (!pOpaq)
         return defaultVal;
-    return iter->value(sPropertyId, defaultVal);
+    auto iter = pOpaq->m_properties.find(contextId);
+    if (iter == pOpaq->m_properties.end())
+        return defaultVal;
+    return iter->second.valueCopyOr(svPropertyId, defaultVal);
 }
 
-bool CsvItemModel::ColInfo::setProperty(const QString& sContextId, const QString& sPropertyId, const QVariant& value)
+bool CsvItemModel::ColInfo::setProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& value)
 {
-    auto& m = this->m_properties[sContextId];
-    const bool bChanged = (!m.contains(sPropertyId) || m.value(sPropertyId) != value);
-    m[sPropertyId] = value;
+    auto& m = DFG_OPAQUE_REF().m_properties[contextId];
+    auto iter = m.find(svPropertyId);
+    bool bChanged = false;
+    if (iter == m.end())
+    {
+        bChanged = true;
+        m[svPropertyId.toString()] = value;
+    }
+    else if (iter->second != value)
+    {
+        bChanged = true;
+        iter->second = value;
+    }
     return bChanged;
 }
 
