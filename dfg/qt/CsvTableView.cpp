@@ -4949,17 +4949,17 @@ void CsvTableView::showUnhideColumnDialog()
         return true;
     });
     // TODO: should allow choosing multiple columns from a list, or be able to choose from a list which columns to hide and which to show.
-    const auto sChoice = QInputDialog::getItem(this,
-                            tr("Unhide column"),
-                            tr("Choose column to unhide"),
-                            hiddenColumns,
-                            0,
-                            false);
-    if (!sChoice.isEmpty())
+    const auto choices = InputDialog::getItems(this,
+                            tr("Unhide columns"),
+                            tr("Choose columns to unhide"),
+                            hiddenColumns);
+    if (!choices.empty())
     {
-        const auto nChoiceIndex = hiddenColumns.indexOf(sChoice);
-        if (isValidIndex(indexes, nChoiceIndex))
-            this->setColumnVisibility(indexes[nChoiceIndex], true);
+        for (const auto index : choices)
+        {
+            if (isValidIndex(indexes, index))
+                this->setColumnVisibility(indexes[index], true);
+        }
     }
 }
 
@@ -5251,7 +5251,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
         });
 
         // "Choose column to unhide"
-        if (nHiddenCount > nMaxUnhideEntryCount)
+        if (nHiddenCount > Min(3, nMaxUnhideEntryCount))
             addViewAction(rView, menu, tr("Choose column to unhide..."), noShortCut, ActionFlags::viewEdit, false, &CsvTableView::showUnhideColumnDialog);
 
         // Unhide all
