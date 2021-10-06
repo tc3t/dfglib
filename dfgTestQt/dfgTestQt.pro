@@ -59,6 +59,7 @@ HEADERS += \
     ../dfg/qt/CsvTableView.hpp \
     ../dfg/qt/CsvTableViewActions.hpp \
     ../dfg/qt/CsvTableViewCompleterDelegate.hpp \
+    ../dfg/qt/InputDialog.hpp \
     ../dfg/qt/PropertyHelper.hpp \
     ../dfg/qt/QtApplication.hpp \
     ../dfg/qt/StringMatchDefinition.hpp \

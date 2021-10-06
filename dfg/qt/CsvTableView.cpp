@@ -20,6 +20,7 @@
 #include "sqlTools.hpp"
 #include "../math/FormulaParser.hpp"
 #include "../func/memFuncMedian.hpp"
+#include "InputDialog.hpp"
 #include <chrono>
 #include <bitset>
 
@@ -36,7 +37,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QDate>
 #include <QDateTime>
 #include <QHBoxLayout>
-#include <QInputDialog>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaMethod>
