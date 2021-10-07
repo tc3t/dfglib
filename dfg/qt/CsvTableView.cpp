@@ -742,7 +742,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
         {
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert row here"),             tr("Ins"),                ActionFlags::defaultStructureEdit, insertRowHere);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert row after current"),    tr("Shift+Ins"),          ActionFlags::defaultStructureEdit, insertRowAfterCurrent);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column"),               noShortCut,               ActionFlags::defaultStructureEdit, insertColumn);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column"),               tr("Ctrl+Alt+Ins"),       ActionFlags::defaultStructureEdit, insertColumn); 
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column after current"), tr("Ctrl+Alt+Shift+Ins"), ActionFlags::defaultStructureEdit, insertColumnAfterCurrent);
         }
     } // End of "Insert row/column"-items
