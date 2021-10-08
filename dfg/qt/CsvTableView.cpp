@@ -4904,6 +4904,13 @@ void CsvTableView::invalidateSortFilterProxyModel()
 
 void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible)
 {
+    auto lockReleaser = this->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        showStatusInfoTip(tr("Unable to unhide column: there seems to be ongoing operations"));
+        return;
+    }
+
     auto pCsvModel = csvModel();
     if (!pCsvModel)
         return;
@@ -4918,6 +4925,12 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible)
 
 void CsvTableView::unhideAllColumns()
 {
+    auto lockReleaser = this->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        showStatusInfoTip(tr("Unable to unhide columns: there seems to be ongoing operations"));
+        return;
+    }
     auto pCsvModel = csvModel();
     if (!pCsvModel)
         return;
@@ -4948,13 +4961,18 @@ void CsvTableView::showUnhideColumnDialog()
         indexes.push_back(colInfo.index());
         return true;
     });
-    // TODO: should allow choosing multiple columns from a list, or be able to choose from a list which columns to hide and which to show.
     const auto choices = InputDialog::getItems(this,
                             tr("Unhide columns"),
                             tr("Choose columns to unhide"),
                             hiddenColumns);
     if (!choices.empty())
     {
+        auto lockReleaser = this->tryLockForEdit();
+        if (!lockReleaser.isLocked())
+        {
+            showStatusInfoTip(tr("Unable to unhide selected columns: there seems to be ongoing operations"));
+            return;
+        }
         for (const auto index : choices)
         {
             if (isValidIndex(indexes, index))
