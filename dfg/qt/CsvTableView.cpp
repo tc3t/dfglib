@@ -4761,8 +4761,8 @@ auto ::DFG_CLASS_NAME(CsvTableView)::horizontalTableHeader() -> TableHeaderView*
 
 void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
 {
-    auto pModel = this->model();
-    if (!pModel)
+    auto pCsvModel = this->csvModel();
+    if (!pCsvModel)
         return;
 
     QDialog dlg(this);
@@ -4773,20 +4773,17 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
     columnNameModel.insertColumn(0);
     columnNameModel.setColumnName(0, tr("Column name"));
 
-    const auto nColCount = pModel->columnCount();
+    const auto nColCount = pCsvModel->columnCount();
     columnNameModel.insertRows(0, nColCount);
     for (int c = 0; c < nColCount; ++c)
-        columnNameModel.setData(columnNameModel.index(c, 0), pModel->headerData(c, Qt::Horizontal).toString());
+        columnNameModel.setData(columnNameModel.index(c, 0), pCsvModel->getHeaderName(c));
 
     // Creating a dialog that has CsvTableView and ok & cancel buttons.
     CsvTableView columnNameView(nullptr, this, ViewType::fixedDimensionEdit);
     columnNameView.setModel(&columnNameModel);
     spLayout->addWidget(&columnNameView);
 
-    auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
-    DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept));
-    DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject));
-    spLayout->addWidget(&rButtonBox);
+    spLayout->addWidget(addOkCancelButtonBoxToDialog(&dlg, spLayout.get()));
 
     dlg.setLayout(spLayout.release());
     removeContextHelpButtonFromDialog(&dlg);
@@ -4798,9 +4795,8 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
     // Setting focus to the item on which the context menu was opened from.
     {
         auto pHeader = horizontalTableHeader();
-        auto pSelectionModel = columnNameView.selectionModel();
-        if (pHeader && pSelectionModel)
-            pSelectionModel->setCurrentIndex(columnNameModel.index(pHeader->m_nLatestContextMenuEventColumn_dataModel, 0), QItemSelectionModel::SelectCurrent);
+        if (pHeader)
+            columnNameView.selectRow(pHeader->m_nLatestContextMenuEventColumn_dataModel);
     }
 
     if (dlg.exec() != QDialog::Accepted)
@@ -4810,10 +4806,10 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
     {
         for (int c = 0, nCount = columnNameModel.rowCount(); c < nCount; ++c)
         {
-            const auto sOldName = pModel->headerData(c, Qt::Horizontal).toString();
+            const auto sOldName = pCsvModel->getHeaderName(c);
             const auto sNewName = columnNameModel.data(columnNameModel.index(c, 0)).toString();
             if (sOldName != sNewName)
-                pModel->setHeaderData(c, Qt::Horizontal, sNewName);
+                pCsvModel->setColumnName(c, sNewName);
         }
     }
 }
