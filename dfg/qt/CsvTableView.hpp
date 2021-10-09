@@ -216,6 +216,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             inOrderFirstRows // Rows from top to bottom and then channel increment.
         };
 
+        enum class ProxyModelInvalidation
+        {
+            no,
+            ifNeeded
+        };
+
         CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, ViewType viewType = ViewType::allFeatures);
         ~CsvTableView() DFG_OVERRIDE_DESTRUCTOR;
 
@@ -493,9 +499,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Column header action handlers
         void setColumnNames();
-        void setColumnVisibility(int nCol, bool bVisible);
+        void setColumnVisibility(int nCol, bool bVisible, ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
         void unhideAllColumns();
-        void showUnhideColumnDialog();
+        void showSelectColumnVisibilityDialog();
 
         /*
         void pasteColumn();

@@ -4913,7 +4913,7 @@ void CsvTableView::invalidateSortFilterProxyModel()
         pProxyModel->invalidate();
 }
 
-void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible)
+void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible, const ProxyModelInvalidation proxyInvalidation)
 {
     auto lockReleaser = this->tryLockForEdit();
     if (!lockReleaser.isLocked())
@@ -4930,7 +4930,7 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible)
     if (!pColInfo)
         return;
 
-    if (pColInfo->setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, bVisible))
+    if (pColInfo->setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, bVisible) && proxyInvalidation == ProxyModelInvalidation::ifNeeded)
         invalidateSortFilterProxyModel();
 }
 
@@ -4956,40 +4956,55 @@ void CsvTableView::unhideAllColumns()
     invalidateSortFilterProxyModel();
 }
 
-void CsvTableView::showUnhideColumnDialog()
+void CsvTableView::showSelectColumnVisibilityDialog()
 {
     auto pCsvModel = this->csvModel();
     if (!pCsvModel)
         return;
-    QStringList hiddenColumns;
-    ::DFG_MODULE_NS(cont)::Vector<int> indexes;
-    // Finding out which columns are hidden
+    QStringList columns;
+    std::vector<bool> visibilityFlags;
     pCsvModel->forEachColInfoWhile([&](const CsvItemModel::ColInfo& colInfo)
     {
-        if (getColumnProperty(*this, colInfo, ColumnPropertyId::visible, true).toBool())
-            return true;
-        hiddenColumns.push_back(tr("Column %1 ('%2')").arg(colInfo.index()).arg(colInfo.name()));
-        indexes.push_back(colInfo.index());
+        columns.push_back(tr("Column %1 ('%2')").arg(CsvItemModel::internalColumnIndexToVisible(colInfo.index())).arg(colInfo.name()));
+        visibilityFlags.push_back(getColumnProperty(*this, colInfo, ColumnPropertyId::visible, true).toBool());
         return true;
     });
-    const auto choices = InputDialog::getItems(this,
-                            tr("Unhide columns"),
-                            tr("Choose columns to unhide"),
-                            hiddenColumns);
-    if (!choices.empty())
+    bool bOk = false;
+    while (true)
     {
-        auto lockReleaser = this->tryLockForEdit();
-        if (!lockReleaser.isLocked())
-        {
-            showStatusInfoTip(tr("Unable to unhide selected columns: there seems to be ongoing operations"));
+        const auto choices = InputDialog::getItems(this,
+                            tr("Select column visibility"),
+                            tr("Choose columns to hide"),
+                            columns,
+                            [&](const int i, const QString&) { return !visibilityFlags[i]; },
+                            &bOk);
+        if (!bOk)
             return;
-        }
-        for (const auto index : choices)
+
+        if (choices.size() == visibilityFlags.size())
         {
-            if (isValidIndex(indexes, index))
-                this->setColumnVisibility(indexes[index], true);
+            showStatusInfoTip(tr("Hiding all columns is not supported."));
+            continue;
         }
+
+        std::fill(visibilityFlags.begin(), visibilityFlags.end(), true);
+        for (const auto c : choices)
+            visibilityFlags[c] = false;
+        break;
     }
+
+    auto lockReleaser = this->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        showStatusInfoTip(tr("Unable to unhide selected columns: there seems to be ongoing operations"));
+        return;
+    }
+    // Simply just running through all columns, a more fine-grained solution would be to determine what has changed.
+    for (int c = 0; c < pCsvModel->columnCount(); ++c)
+    {
+        this->setColumnVisibility(c, visibilityFlags[c], ProxyModelInvalidation::no);
+    }
+    invalidateSortFilterProxyModel();
 }
 
 } } // namespace dfg::qt
@@ -5262,6 +5277,11 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
     const auto pCsvModel = rView.csvModel();
     if (pCsvModel)
     {
+        menu.addSeparator();
+
+        // "Select column visibility"
+        addViewAction(rView, menu, tr("Select column visibility..."), noShortCut, ActionFlags::viewEdit, false, &CsvTableView::showSelectColumnVisibilityDialog);
+
         const auto nMaxUnhideEntryCount = 10;
         auto nHiddenCount = 0;
         pCsvModel->forEachColInfoWhile([&](const CsvItemModel::ColInfo& colInfo)
@@ -5278,10 +5298,6 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
             addViewAction(rView, menu, sMenuTitle, noShortCut, ActionFlags::viewEdit, false, [=]() { pView->setColumnVisibility(nColIndex, true); });
             return true;
         });
-
-        // "Choose column to unhide"
-        if (nHiddenCount > Min(3, nMaxUnhideEntryCount))
-            addViewAction(rView, menu, tr("Choose column to unhide..."), noShortCut, ActionFlags::viewEdit, false, &CsvTableView::showUnhideColumnDialog);
 
         // Unhide all
         if (nHiddenCount > 1)
