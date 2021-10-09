@@ -577,13 +577,23 @@ namespace
         return pMenu;
     }
 
+    struct ActionCheckability
+    {
+        ActionCheckability(bool bCheckable, bool bChecked = false)
+            : m_checkable(bCheckable)
+            , m_on(bChecked)
+        {}
+        bool m_checkable;
+        bool m_on;
+    }; // ActionCheckability
+
     template <class Slot_T>
     QAction& addViewAction(::DFG_MODULE_NS(qt)::CsvTableView& rView,
         QWidget& rAddActionTargetAndParent,
         const QString& sTitle,
         const QString& sShortCut,
         const ActionFlags actionFlags,
-        const bool bCheckable,
+        const ActionCheckability checkability,
         Slot_T&& slot)
     {
         auto pAction = new QAction(sTitle, &rAddActionTargetAndParent);
@@ -591,9 +601,10 @@ namespace
             pAction->setShortcut(sShortCut);
         if (actionFlags != ActionFlags::unknown)
             setActionFlags(pAction, actionFlags);
-        if (bCheckable)
+        if (checkability.m_checkable)
         {
-            pAction->setCheckable(true);
+            pAction->setCheckable(checkability.m_checkable);
+            pAction->setChecked(checkability.m_on);
             DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::toggled, &rView, slot));
         }
         else
@@ -5290,8 +5301,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
 
             const auto funcVisibleHandler = [=](const bool bVisible) { pView->setColumnVisibility(m_nLatestContextMenuEventColumn_dataModel, bVisible); };
             const auto bIsVisible = rView.getColumnPropertyByDataModelIndex(m_nLatestContextMenuEventColumn_dataModel, ColumnPropertyId::visible, true).toBool();
-            auto& rActVisible = addViewAction(rView, menu, tr("Visible"), noShortCut, ActionFlags::viewEdit, true, funcVisibleHandler);
-            rActVisible.setChecked(bIsVisible);
+            auto& rActVisible = addViewAction(rView, menu, tr("Visible"), noShortCut, ActionFlags::viewEdit, { true, bIsVisible }, funcVisibleHandler);
             if (bIsVisible && nShownCount == 1)
             {
                 rActVisible.setDisabled(true); // Not letting all columns to be hidden to prevent column header from getting removed.
