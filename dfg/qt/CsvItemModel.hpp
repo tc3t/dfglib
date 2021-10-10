@@ -89,7 +89,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         public:
             HighlightDefinition(const QString id,
                                 const int col,
-                                DFG_CLASS_NAME(StringMatchDefinition) matcher,
+                                StringMatchDefinition matcher,
                                 QBrush highlightBrush = QBrush(Qt::green, Qt::SolidPattern)
                                 )
                 : m_id(id)
@@ -98,13 +98,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 , m_highlightBrush(highlightBrush)
             {}
 
+            bool hasMatchString() const
+            {
+                return m_matcher.hasMatchString();
+            }
+
             QVariant data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const;
 
-            const DFG_CLASS_NAME(StringMatchDefinition)& matcher() const { return m_matcher; }
+            const StringMatchDefinition& matcher() const { return m_matcher; }
 
             QString m_id;
             int m_nColumn;
-            DFG_CLASS_NAME(StringMatchDefinition) m_matcher;
+            StringMatchDefinition m_matcher;
             QBrush m_highlightBrush;
         }; // class HighlightDefinition
 

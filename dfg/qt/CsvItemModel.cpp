@@ -1660,13 +1660,17 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setUndoStack(QUndoStack* p
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHighlighter(HighlightDefinition hld)
 {
-    beginResetModel();
     auto existing = std::find_if(m_highlighters.begin(), m_highlighters.end(), [&](const HighlightDefinition& a) { return hld.m_id == a.m_id; });
+
+    const bool bResetModel = (existing == m_highlighters.end() || existing->hasMatchString() || hld.hasMatchString());
+    if (bResetModel) // Resetting model only if something relavant has changed, e.g. if there is no match text and column changes, don't want to reset model as it would cause various signals to be emitted that may trigger "something changed"-actions.
+        beginResetModel();
     if (existing != m_highlighters.end())
         *existing = hld;
     else
         m_highlighters.push_back(hld);
-    endResetModel();
+    if (bResetModel)
+        endResetModel();
 }
 
 QModelIndexList DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::match(const QModelIndex& start, int role, const QVariant& value, const int hits, const Qt::MatchFlags flags) const
