@@ -52,6 +52,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     class CsvTableViewBasicSelectionAnalyzerPanel;
 
+    // Typed column index representing index of data model
+    class ColumnIndex_data
+    {
+    public:
+        explicit ColumnIndex_data(const int nCol)
+            : m_nCol(nCol)
+        {}
+        int value() const { return m_nCol; }
+        int m_nCol;
+    };
+
     // Analyzes item selection
     class CsvTableViewSelectionAnalyzer : public QObject
     {
@@ -363,7 +374,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool isReadOnlyMode() const;
 
-        bool isColumnVisible(int nCol) const;
+        bool isColumnVisible(ColumnIndex_data nCol) const;
 
         CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
 

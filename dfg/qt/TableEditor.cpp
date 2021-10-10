@@ -380,7 +380,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(
 {
     auto pView = getTableView();
     if (pView)
-        return pView->isColumnVisible(sourceColumn);
+        return pView->isColumnVisible(ColumnIndex_data(sourceColumn));
     else
         return BaseClass::filterAcceptsColumn(sourceColumn, sourceParent);
 }
@@ -1116,13 +1116,22 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onFilterTextChanged(const QString& text)
 
 namespace
 {
-    static void setColumnSelectorToolTip(QSpinBox* pSpinBox, const ::DFG_MODULE_NS(qt)::CsvItemModel* pModel, const int nViewCol)
+    static void setColumnSelectorToolTip(const ::DFG_MODULE_NS(qt)::CsvTableView& rView, QSpinBox* pSpinBox, const ::DFG_MODULE_NS(qt)::CsvItemModel* pModel, const int nIndexShiftedDataCol)
     {
+        using namespace ::DFG_MODULE_NS(qt);
         if (!pSpinBox || !pModel)
             return;
-        const auto nModelCol = pModel->visibleColumnIndexToInternal(nViewCol);
-        const auto sHeaderName = pModel->getHeaderName(nModelCol);
-        pSpinBox->setToolTip(sHeaderName);
+        const auto nModelCol = pModel->visibleColumnIndexToInternal(nIndexShiftedDataCol);
+        QString sColumnName;
+        if (pModel->isValidColumn(nModelCol))
+        {
+            sColumnName = QObject::tr("Column '%1'").arg(pModel->getHeaderName(nModelCol).mid(0, 32));
+            if (!rView.isColumnVisible(ColumnIndex_data(nModelCol)))
+                sColumnName += QObject::tr("\n(column is hidden)");
+        }
+        else if (nModelCol >= CsvItemModel::internalColumnIndexToVisible(0))
+            sColumnName = QObject::tr("Index is beyond column count %1").arg(pModel->columnCount());
+        pSpinBox->setToolTip(sColumnName);
     }
 }
 
@@ -1130,11 +1139,11 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onFindColumnChanged(const int newCol)
 {
     // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(newCol);
-    
+
     if (!m_spFindPanel)
         return;
-    if (m_spFindPanel->m_pColumnSelector)
-        setColumnSelectorToolTip(m_spFindPanel->m_pColumnSelector, m_spTableModel.get(), m_spFindPanel->m_pColumnSelector->value());
+    if (m_spFindPanel->m_pColumnSelector && m_spTableView)
+        setColumnSelectorToolTip(*m_spTableView, m_spFindPanel->m_pColumnSelector, m_spTableModel.get(), m_spFindPanel->m_pColumnSelector->value());
     onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
 }
 
@@ -1144,8 +1153,8 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onFilterColumnChanged(const int nNewCol)
     DFG_UNUSED(nNewCol);
     if (!m_spFilterPanel)
         return;
-    if (m_spFilterPanel->m_pColumnSelector)
-        setColumnSelectorToolTip(m_spFilterPanel->m_pColumnSelector, m_spTableModel.get(), m_spFilterPanel->m_pColumnSelector->value());
+    if (m_spFilterPanel->m_pColumnSelector && m_spTableView)
+        setColumnSelectorToolTip(*m_spTableView, m_spFilterPanel->m_pColumnSelector, m_spTableModel.get(), m_spFilterPanel->m_pColumnSelector->value());
     onFilterTextChanged(m_spFilterPanel->getPattern());
 }
 

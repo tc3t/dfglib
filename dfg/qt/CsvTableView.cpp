@@ -4897,9 +4897,9 @@ void CsvTableView::resetSorting()
         QToolTip::showText(QCursor::pos(), tr("Unable to reset sorting: no proxy model found"));
 }
 
-bool CsvTableView::isColumnVisible(const int nCol) const
+bool CsvTableView::isColumnVisible(const ColumnIndex_data nCol) const
 {
-    return getColumnPropertyByDataModelIndex(nCol, ColumnPropertyId::visible, true).toBool();
+    return getColumnPropertyByDataModelIndex(nCol.value(), ColumnPropertyId::visible, true).toBool();
 }
 
 void CsvTableView::invalidateSortFilterProxyModel()
