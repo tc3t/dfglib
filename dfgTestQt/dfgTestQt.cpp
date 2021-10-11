@@ -1222,6 +1222,54 @@ TEST(dfgQt, CsvTableView_contextMenuSize)
     EXPECT_LE(nCount, 37); // A semi-arbitrary value.
 }
 
+TEST(dfgQt, CsvTableView_columnIndexMappingWithHiddenColumns)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    CsvTableViewSortFilterProxyModel viewModel(&view);
+    viewModel.setSourceModel(&csvModel);
+    view.setModel(&viewModel);
+
+    const int nTotalColumnCount = 5;
+    DFGTEST_ASSERT_TRUE(csvModel.setSize(3, nTotalColumnCount));
+
+    // Setting column names
+    for (int i = 0; i < nTotalColumnCount; ++i)
+        csvModel.setColumnName(i, QString(QChar('a' + i)));
+
+    // Hiding 2. and 3. columns
+    view.setColumnVisibility(1, false);
+    view.setColumnVisibility(2, false);
+
+    DFGTEST_ASSERT_EQ(3, view.model()->columnCount());
+
+    // Testing data-to-view-index conversions
+    DFGTEST_EXPECT_EQ(0,  view.columnIndexDataToView(ColumnIndex_data(0)).value());
+    DFGTEST_EXPECT_EQ(-1, view.columnIndexDataToView(ColumnIndex_data(1)).value());
+    DFGTEST_EXPECT_EQ(-1, view.columnIndexDataToView(ColumnIndex_data(2)).value());
+    DFGTEST_EXPECT_EQ(1,  view.columnIndexDataToView(ColumnIndex_data(3)).value());
+    DFGTEST_EXPECT_EQ(2,  view.columnIndexDataToView(ColumnIndex_data(4)).value());
+    DFGTEST_EXPECT_EQ(-1, view.columnIndexDataToView(ColumnIndex_data(5)).value());
+
+    // Testing view-to-data-index conversions
+    DFGTEST_EXPECT_EQ(0,  view.columnIndexViewToData(ColumnIndex_view(0)).value());
+    DFGTEST_EXPECT_EQ(3,  view.columnIndexViewToData(ColumnIndex_view(1)).value());
+    DFGTEST_EXPECT_EQ(4,  view.columnIndexViewToData(ColumnIndex_view(2)).value());
+    DFGTEST_EXPECT_EQ(-1, view.columnIndexViewToData(ColumnIndex_view(3)).value());
+    DFGTEST_EXPECT_EQ(-1, view.columnIndexViewToData(ColumnIndex_view(4)).value());
+
+    // Testing that column names are correct
+    {
+        for (int i = 0; i < nTotalColumnCount; ++i)
+            EXPECT_EQ(QString(QChar('a' + i)), view.getColumnName(ColumnIndex_data(i)));
+
+        EXPECT_EQ("a", view.getColumnName(ColumnIndex_view(0)));
+        EXPECT_EQ("d", view.getColumnName(ColumnIndex_view(1)));
+        EXPECT_EQ("e", view.getColumnName(ColumnIndex_view(2)));
+    }
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);

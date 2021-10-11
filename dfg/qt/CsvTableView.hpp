@@ -56,7 +56,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class ColumnIndex_data
     {
     public:
-        explicit ColumnIndex_data(const int nCol)
+        explicit ColumnIndex_data(const int nCol = -1)
+            : m_nCol(nCol)
+        {}
+        int value() const { return m_nCol; }
+        int m_nCol;
+    };
+
+    // Typed column index representing index of view model
+    class ColumnIndex_view
+    {
+    public:
+        explicit ColumnIndex_view(const int nCol = -1)
             : m_nCol(nCol)
         {}
         int value() const { return m_nCol; }
@@ -276,6 +287,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Convenience method for returning row count of visible model (i.e. the number of visible rows).
         int getRowCount_viewModel() const;
 
+        QString getColumnName(ColumnIndex_data index) const;
+        QString getColumnName(ColumnIndex_view index) const;
+
         std::vector<int> getDataModelRowsOfSelectedItems() const
         {
             return getRowsOfSelectedItems(getProxyModelPtr());
@@ -375,6 +389,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool isReadOnlyMode() const;
 
         bool isColumnVisible(ColumnIndex_data nCol) const;
+
+        ColumnIndex_view columnIndexDataToView(ColumnIndex_data) const; // Returns view column index of given data index
+        ColumnIndex_data columnIndexViewToData(ColumnIndex_view) const; // Returns data column index of given view index
 
         CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
 

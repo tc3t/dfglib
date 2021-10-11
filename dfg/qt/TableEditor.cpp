@@ -374,6 +374,12 @@ DFG_OPAQUE_PTR_DEFINE(CsvTableViewSortFilterProxyModel)
     MultiMatchDefinition<CsvItemModelStringMatcher> m_matchers;
 };
 
+CsvTableViewSortFilterProxyModel::CsvTableViewSortFilterProxyModel(QWidget* pNonNullCsvTableViewParent)
+    : BaseClass(pNonNullCsvTableViewParent)
+{
+    DFG_ASSERT_CORRECTNESS(pNonNullCsvTableViewParent != nullptr);
+}
+
 CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
@@ -422,8 +428,7 @@ void CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(con
 
 const CsvTableView* CsvTableViewSortFilterProxyModel::getTableView() const
 {
-    auto pTableEditor = qobject_cast<TableEditor*>(parent());
-    return (pTableEditor) ? pTableEditor->m_spTableView.get() : nullptr;
+    return qobject_cast<CsvTableView*>(parent());
 }
 
 }} // namespace dfg::qt
@@ -458,13 +463,14 @@ void DFG_MODULE_NS(qt)::TableEditor::CellEditor::setFontPointSizeF(const qreal p
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &CsvItemModel::sigModifiedStatusChanged, this, &ThisClass::onModifiedStatusChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableModel.get(), &CsvItemModel::sigOnSaveToFileCompleted, this, &ThisClass::onSaveCompleted));
 
-    // Proxy model
-    m_spProxyModel.reset(new ProxyModelClass(this));
-    m_spProxyModel->setSourceModel(m_spTableModel.get());
-    m_spProxyModel->setDynamicSortFilter(true);
-
     // View
     m_spTableView.reset(new ViewClass(m_spTableModel->getReadWriteLock(), this));
+    // Proxy model
+    {
+        m_spProxyModel.reset(new ProxyModelClass(m_spTableView.get()));
+        m_spProxyModel->setSourceModel(m_spTableModel.get());
+        m_spProxyModel->setDynamicSortFilter(true);
+    }
     m_spTableView->setModel(m_spProxyModel.get());
     std::unique_ptr<CsvTableViewBasicSelectionAnalyzerPanel> spAnalyzerPanel(new CsvTableViewBasicSelectionAnalyzerPanel(this));
     m_spTableView->addSelectionAnalyzer(std::make_shared<CsvTableViewBasicSelectionAnalyzer>(spAnalyzerPanel.get()));

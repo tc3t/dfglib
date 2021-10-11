@@ -36,8 +36,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         Q_OBJECT
     public:
         using BaseClass = QSortFilterProxyModel;
-        using BaseClass::BaseClass; // Inheriting constructor
 
+        CsvTableViewSortFilterProxyModel(QWidget* pNonNullCsvTableViewParent);
         ~CsvTableViewSortFilterProxyModel();
 
         void setFilterFromNewLineSeparatedJsonList(const QByteArray& sJson);

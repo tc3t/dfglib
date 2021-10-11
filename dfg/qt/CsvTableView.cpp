@@ -5003,6 +5003,41 @@ void CsvTableView::showSelectColumnVisibilityDialog()
     invalidateSortFilterProxyModel();
 }
 
+auto CsvTableView::columnIndexDataToView(const ColumnIndex_data dataIndex) const -> ColumnIndex_view
+{
+    auto pProxy = getProxyModelPtr();
+    if (!pProxy)
+        return ColumnIndex_view(dataIndex.value());
+
+    auto pCsvModel = csvModel();
+    if (!pCsvModel)
+        return ColumnIndex_view();
+
+    const auto mapped = pProxy->mapFromSource(pCsvModel->index(1, dataIndex.value()));
+    return ColumnIndex_view(mapped.column());
+}
+
+auto CsvTableView::columnIndexViewToData(const ColumnIndex_view viewIndex) const -> ColumnIndex_data
+{
+    auto pProxy = getProxyModelPtr();
+    if (!pProxy)
+        return ColumnIndex_data(viewIndex.value());
+
+    const auto mapped = pProxy->mapToSource(pProxy->index(1, viewIndex.value()));
+    return (mapped.column() >= 0) ? ColumnIndex_data(mapped.column()) : ColumnIndex_data();
+}
+
+QString CsvTableView::getColumnName(const ColumnIndex_data dataIndex) const
+{
+    auto pCsvModel = csvModel();
+    return (pCsvModel) ? pCsvModel->getHeaderName(dataIndex.value()) : QString();
+}
+
+QString CsvTableView::getColumnName(const ColumnIndex_view viewIndex) const
+{
+    return getColumnName(columnIndexViewToData(viewIndex));
+}
+
 } } // namespace dfg::qt
 /////////////////////////////////
 
