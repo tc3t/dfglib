@@ -1868,18 +1868,32 @@ bool CsvTableView::saveToFileWithOptions()
     return saveToFileImpl(dlg.getSaveOptions());
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::populateCsvConfig(const CsvItemModel& rModel) -> CsvConfig
+auto ::DFG_MODULE_NS(qt)::CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) -> CsvConfig
 {
     CsvConfig config;
 
-    rModel.populateConfig(config);
+    rDataModel.populateConfig(config);
 
-    // Add column widths
-    char szBuffer[64];
-    for (int c = 0, nCount = rModel.columnCount(); c < nCount; ++c)
+    // Adding column widths and visibility
     {
-        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), "columnsByIndex/%d/width_pixels", CsvModel::internalColumnIndexToVisible(c));
-        config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), StringUtf8::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(c))));
+        char szBuffer[64];
+        const auto formatToBuffer = [&](const char* pszFormat, const int nCol) { ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), pszFormat, nCol); };
+        for (int c = 0, nCount = rDataModel.columnCount(); c < nCount; ++c)
+        {
+            const auto typedColumn = ColumnIndex_data(c);
+            const auto viewIndex = columnIndexDataToView(typedColumn);
+            const auto nVisibleColumnIndex = CsvModel::internalColumnIndexToVisible(c);
+            if (isColumnVisible(typedColumn))
+            {
+                formatToBuffer("columnsByIndex/%d/width_pixels", nVisibleColumnIndex);
+                config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), StringUtf8::fromRawString(DFG_MODULE_NS(str)::toStrC(columnWidth(viewIndex.value()))));
+            }
+            else // case: column is hidden, storing only visibility flag.
+            {
+                formatToBuffer("columnsByIndex/%d/visible", nVisibleColumnIndex);
+                config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), StringUtf8(DFG_UTF8("0")));
+            }
+        }
     }
 
     // Adding read-only mode if enabled
@@ -2145,22 +2159,26 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     {
         typedef CsvConfig::StringViewT SvT;
         CsvConfig config;
-        config.loadFromFile(qStringToFileApi8Bit(DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sPath)));
+        config.loadFromFile(qStringToFileApi8Bit(CsvFormatDefinition::csvFilePathToConfigFilePath(sPath)));
         if (config.entryCount() > 0 && config.valueStrOrNull(DFG_UTF8("columnsByIndex")) != nullptr)
         {
             config.forEachStartingWith(DFG_UTF8("columnsByIndex/"), [&](const SvT& relUri, const SvT& value) {
                 auto pColSep = std::find(relUri.beginRaw(), relUri.endRaw(), '/');
                 if (pColSep == relUri.endRaw() || pColSep == relUri.beginRaw())
                     return;
-                dfg::DFG_CLASS_NAME(StringViewC) svIndex(relUri.beginRaw(), pColSep - relUri.beginRaw());
+                StringViewC svIndex(relUri.beginRaw(), pColSep - relUri.beginRaw());
                 const auto nCol = CsvModel::visibleColumnIndexToInternal(DFG_MODULE_NS(str)::strTo<int>(svIndex));
                 if (pModel->isValidColumn(nCol))
                 {
-                    if (!(DFG_CLASS_NAME(StringViewC)(pColSep + 1, relUri.endRaw() - (pColSep + 1)) == "width_pixels"))
-                        return; // Remaining URI is unknown, skip.
-                    const auto confWidth = DFG_MODULE_NS(str)::strTo<int>(value);
-                    if (confWidth >= 0)
-                        setColumnWidth(nCol, confWidth);
+                    const auto svId = StringViewC(pColSep + 1, relUri.endRaw() - (pColSep + 1));
+                    if (svId == "width_pixels")
+                    {
+                        const auto confWidth = ::DFG_MODULE_NS(str)::strTo<int>(value);
+                        if (confWidth >= 0)
+                            setColumnWidth(nCol, confWidth);
+                    }
+                    else if (svId == "visible" && ::DFG_MODULE_NS(str)::strTo<int>(value) == 0)
+                        setColumnVisibility(nCol, false);
                 }
             });
         }
@@ -5013,7 +5031,7 @@ auto CsvTableView::columnIndexDataToView(const ColumnIndex_data dataIndex) const
     if (!pCsvModel)
         return ColumnIndex_view();
 
-    const auto mapped = pProxy->mapFromSource(pCsvModel->index(1, dataIndex.value()));
+    const auto mapped = pProxy->mapFromSource(pCsvModel->index(0, dataIndex.value()));
     return ColumnIndex_view(mapped.column());
 }
 

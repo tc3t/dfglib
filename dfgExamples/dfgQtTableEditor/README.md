@@ -495,7 +495,8 @@ Available keys:
 
 | Key (URI)      | Purpose  | Possible values | Notes |
 | -------------  | -----    | ------          | ----- |
-| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column (1-based index) | integer | |
+| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column (1-based column index) | integer | |
+| columnsByIndex/ColumnIndexHere/visible | Defines whether column is visible (1-based column index) | 0 or 1, default is 1 | Since 2.2.0 |
 | encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |
 | enclosing_char | File is read interpreting the given character as enclosing character | ASCII-character as such or escaped format, e.g. \t or \x1f | |
 | separator_char | File is read interpreting the given character as separator character | Like for enclosing_char | |
@@ -527,7 +528,7 @@ columnsByIndex,,,
 ,1,,
 ,,width_pixels,400
 ,2,,
-,,width_pixels,100
+,,visible,0
 ,3,,
 ,,width_pixels,200
 enclosing_char,,,

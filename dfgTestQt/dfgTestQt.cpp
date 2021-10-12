@@ -1270,6 +1270,19 @@ TEST(dfgQt, CsvTableView_columnIndexMappingWithHiddenColumns)
     }
 }
 
+TEST(dfgQt, CsvTableView_columnVisibilityConfPropertyHandling)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    EXPECT_TRUE(view.openFile("testfiles/example_with_conf0.csv"));
+    DFGTEST_EXPECT_TRUE(view.isColumnVisible(ColumnIndex_data(0)));
+    DFGTEST_EXPECT_FALSE(view.isColumnVisible(ColumnIndex_data(1)));
+    DFGTEST_EXPECT_TRUE(view.isColumnVisible(ColumnIndex_data(2)));
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);
