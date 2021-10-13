@@ -50,6 +50,8 @@ SOURCES += \
     ../dfg/qt/sqlTools.cpp \
     ../dfg/str/fmtlib/format.cc \
     ../externals/gtest/gtest-all.cc \
+    dfgTestCsvItemModel.cpp \
+    dfgTestCsvTableView.cpp \
     dfgTestQt.cpp \
     main.cpp
 
