@@ -21,6 +21,7 @@ message("QMAKESPEC is " $$QMAKESPEC)
 # Using QCustomPlot requires at least Qt 5.6 (this is a dfglib requirement, QCustomPlot (2.0.1) itself can be used in earlier Qt).
 DFG_ALLOW_QCUSTOMPLOT = 0
 
+DFGQTE_USING_PCH = 1
 
 # -------------------------------------------------------
 # Setting modules
@@ -221,6 +222,11 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
         HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.h
+}
+
+equals(DFGQTE_USING_PCH, "1") {
+    PRECOMPILED_HEADER = pch.hpp
+    message("Using precompiled header $$PRECOMPILED_HEADER")
 }
 
 win32 {
