@@ -21,6 +21,7 @@ DFG_END_INCLUDE_QT_HEADERS
 
 class QUndoStack;
 class QAbstractProxyModel;
+class QCheckBox;
 class QDate;
 class QDateTime;
 class QItemSelection;
@@ -72,6 +73,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {}
         int value() const { return m_nCol; }
         int m_nCol;
+    };
+
+    class SelectionDetailCollector
+    {
+    public:
+        SelectionDetailCollector(std::string sId);
+        virtual ~SelectionDetailCollector();
+
+        void enable(bool b);
+
+        std::string m_id;
+        std::atomic<bool> m_abEnabled = true;
+        QObjectStorage<QCheckBox> m_spCheckBox;
+    };
+
+    class SelectionDetailCollectorContainer : public std::vector<std::shared_ptr<SelectionDetailCollector>>
+    {
+    public:
+        auto find(const StringViewC& id) -> SelectionDetailCollector*;
     };
 
     // Analyzes item selection
@@ -141,6 +161,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
         typedef CsvTableViewBasicSelectionAnalyzerPanel ThisClass;
         typedef QWidget BaseClass;
+        using CollectorContainerPtr = std::shared_ptr<SelectionDetailCollectorContainer>;
+
         CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent = nullptr);
         virtual ~CsvTableViewBasicSelectionAnalyzerPanel();
 
@@ -162,7 +184,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setDefaultDetails();
 
         // Thread-safe
-        std::bitset<32> getEnableFlags() const;
+        CollectorContainerPtr collectors() const;
 
     signals:
         void sigEvaluationStartingHandleRequest(bool bEnabled);
