@@ -78,20 +78,32 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class SelectionDetailCollector
     {
     public:
-        SelectionDetailCollector(std::string sId);
+        SelectionDetailCollector(StringUtf8 sId);
+        SelectionDetailCollector(const QString& sId);
         virtual ~SelectionDetailCollector();
 
-        void enable(bool b);
+        void enable(bool b, bool bUpdateCheckBox = true);
+        bool isEnabled() const;
 
-        std::string m_id;
-        std::atomic<bool> m_abEnabled = true;
-        QObjectStorage<QCheckBox> m_spCheckBox;
+        void setProperty(const QString& sKey, const QVariant value);
+        QVariant getProperty(const QString& sKey, const QVariant defaultValue = QVariant()) const;
+
+        QString getUiName_long() const;
+        QString getUiName_short() const;
+
+        QCheckBox* createCheckBox(QMenu* pParent);
+        QCheckBox* getCheckBoxPtr();
+
+        StringViewUtf8 id() const;
+
+        DFG_OPAQUE_PTR_DECLARE();
     };
 
     class SelectionDetailCollectorContainer : public std::vector<std::shared_ptr<SelectionDetailCollector>>
     {
     public:
-        auto find(const StringViewC& id) -> SelectionDetailCollector*;
+        auto find(const StringViewUtf8& id) -> SelectionDetailCollector*;
+        auto find(const QString& id) -> SelectionDetailCollector*;
     };
 
     // Analyzes item selection

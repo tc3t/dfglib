@@ -4238,24 +4238,46 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
 DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel)
 {
     CsvTableViewBasicSelectionAnalyzerPanel::CollectorContainerPtr m_spCollectors;
+
+    static void addDetailMenuEntry(SelectionDetailCollector& rCollector, QMenu& rMenu)
+    {
+        auto pCheckBox = rCollector.createCheckBox(&rMenu);
+        if (pCheckBox)
+        {
+            pCheckBox->setText(rCollector.getUiName_long());
+            pCheckBox->setChecked(rCollector.isEnabled());
+            auto pCollector = &rCollector;
+            DFG_QT_VERIFY_CONNECT(connect(pCheckBox, &QCheckBox::toggled, pCheckBox, [=](const bool b)
+            {
+                // Since CheckBox is owned by pCollector, this handler should never get called if pCollector has been deleted.
+                pCollector->enable(b, false);
+            }));
+            const auto sToolTip = rCollector.getProperty("tooltip").toString();
+            if (!sToolTip.isEmpty())
+                pCheckBox->setToolTip(sToolTip);
+        }
+
+        auto pAct = new QWidgetAction(&rMenu);
+        pAct->setDefaultWidget(rCollector.getCheckBoxPtr());
+        rMenu.addAction(pAct);
+    }
 }; // CsvTableViewBasicSelectionAnalyzerPanel opaque class 
 
-static auto builtInDetailToStrId(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail detail) -> ::DFG_ROOT_NS::StringViewC
+static auto builtInDetailToStrId(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail detail) -> ::DFG_ROOT_NS::StringViewUtf8
 {
     using namespace DFG_ROOT_NS;
     using namespace ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;
     const auto i = static_cast<int>(detail);
-    return (isValidIndex(gBasicSelectionDetailCollectorStrIds, i)) ? gBasicSelectionDetailCollectorStrIds[i] : StringViewC();
+    return (isValidIndex(gBasicSelectionDetailCollectorStrIds, i)) ? StringViewUtf8(SzPtrUtf8(gBasicSelectionDetailCollectorStrIds[i])) : StringViewUtf8();
 }
 
-static auto selectionDetailNameToId(const QString& id) -> ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail
+static auto selectionDetailNameToId(const ::DFG_ROOT_NS::StringViewUtf8& svId) -> ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail
 {
     using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail;
-    const std::string sIdUtf8(id.toUtf8());
     for (size_t i = 0; i < static_cast<size_t>(Detail::detailCount); ++i)
     {
         const auto detailId = static_cast<Detail>(i);
-        if (sIdUtf8 == builtInDetailToStrId(detailId))
+        if (svId == builtInDetailToStrId(detailId))
             return detailId;
     }
     return Detail::detailCount;
@@ -4293,22 +4315,11 @@ static auto selectionDetailNameToId(const QString& id) -> ::DFG_MODULE_NS(qt)::D
             DFG_OPAQUE_REF().m_spCollectors->push_back(std::make_shared<SelectionDetailCollector>(builtInDetailToStrId(id).toString()));
 
             auto pCollector = DFG_OPAQUE_REF().m_spCollectors->back().get();
-            pCollector->m_spCheckBox.reset(new QCheckBox(pMenu));
-            QCheckBox* pCheckBox = pCollector->m_spCheckBox.get();
-            pCheckBox->setText(DetailCollector::uiName_long(id));
-            
             const auto bEnabled = DetailCollector::isEnabled(defaultFlags, id);
             pCollector->enable(bEnabled);
+            pCollector->setProperty("ui_name_long", DetailCollector::uiName_long(id));
 
-            auto pAct = new QWidgetAction(pMenu);
-            pAct->setDefaultWidget(pCheckBox);
-            
-            DFG_QT_VERIFY_CONNECT(connect(pCheckBox, &QCheckBox::toggled, pCheckBox, [=](const bool b)
-            {
-                // Since CheckBox is owned by pCollector, this handler should never get called if pCollector has been deleted.
-                pCollector->m_abEnabled = b;
-            }));
-            pMenu->addAction(pAct);
+            DFG_OPAQUE_REF().addDetailMenuEntry(*pCollector, *pMenu);
             return true;
         }); // For each built-in detail ID
 
@@ -4445,7 +4456,13 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::clearAllDetai
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items)
 {
-    const auto id = items.value("id").toString();
+    if (!DFG_OPAQUE_REF().m_spCollectors)
+        return false;
+
+    auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
+
+    const auto idQString = items.value("id").toString();
+    const auto id = qStringToStringUtf8(idQString);
     using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail;
     const auto type = items.value("type").toString();
     if (type.isEmpty())
@@ -4454,10 +4471,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
         if (detail == Detail::detailCount)
             return false;
 
-        if (!DFG_OPAQUE_REF().m_spCollectors)
-            return false;
-        auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
-        auto pExisting = collectors.find(id.toStdString());
+        auto pExisting = collectors.find(id);
         if (!pExisting)
             return false; // Built-in details should already be created.
         pExisting->enable(true);
@@ -4477,7 +4491,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDet
     {
         if (!spItem)
             continue;
-        const auto builtInDetailId = selectionDetailNameToId(QString::fromUtf8(spItem->m_id.c_str()));
+        const auto builtInDetailId = selectionDetailNameToId(spItem->id());
         if (builtInDetailId == ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail::detailCount)
             continue;
         spItem->enable(defaultFlags.test(static_cast<size_t>(builtInDetailId)));
@@ -5423,34 +5437,99 @@ namespace DFG_DETAIL_NS
         {
             if (!spItem)
                 continue;
-            const auto builtInDetail = selectionDetailNameToId(QString::fromUtf8(spItem->m_id.c_str()));
-            const bool bEnabled = spItem->m_abEnabled;
+            const auto builtInDetail = selectionDetailNameToId(spItem->id());
+            const bool bEnabled = spItem->isEnabled();
             if (builtInDetail != BuiltInDetail::detailCount) // Built-in detail?
                 m_enableFlags.set(static_cast<size_t>(builtInDetail), bEnabled);
         }
     }
 } // namespace DFG_DETAIL_NS inside dfg::qt
 
+DFG_OPAQUE_PTR_DEFINE(SelectionDetailCollector)
+{
+public:
+    StringUtf8 m_id;
+    std::atomic<bool> m_abEnabled = true;
+    QObjectStorage<QCheckBox> m_spCheckBox;
+    QVariantMap m_properties;
+};
 
-SelectionDetailCollector::SelectionDetailCollector(std::string sId) : m_id(std::move(sId)) {}
+SelectionDetailCollector::SelectionDetailCollector(StringUtf8 sId) { DFG_OPAQUE_REF().m_id = std::move(sId); }
+SelectionDetailCollector::SelectionDetailCollector(const QString& sId) : SelectionDetailCollector(qStringToStringUtf8(sId)) {}
 SelectionDetailCollector::~SelectionDetailCollector() = default;
 
-void SelectionDetailCollector::enable(const bool b)
+auto SelectionDetailCollector::id() const -> StringViewUtf8
 {
-    this->m_abEnabled = b;
-    if (this->m_spCheckBox)
-        this->m_spCheckBox->setChecked(b);
+    auto pOpaq = DFG_OPAQUE_PTR();
+    return (pOpaq) ? pOpaq->m_id : StringViewUtf8();
 }
 
-auto SelectionDetailCollectorContainer::find(const StringViewC& id) -> SelectionDetailCollector*
+bool SelectionDetailCollector::isEnabled() const
+{
+    auto pOpaq = DFG_OPAQUE_PTR();
+    return (pOpaq) ? pOpaq->m_abEnabled.load() : false;
+}
+
+void SelectionDetailCollector::enable(const bool b, const bool bUpdateCheckBox)
+{
+    DFG_OPAQUE_REF().m_abEnabled = b;
+    if (bUpdateCheckBox && DFG_OPAQUE_REF().m_spCheckBox)
+        DFG_OPAQUE_REF().m_spCheckBox->setChecked(b);
+}
+
+void SelectionDetailCollector::setProperty(const QString& sKey, const QVariant value)
+{
+    DFG_OPAQUE_REF().m_properties[sKey] = value;
+}
+
+QVariant SelectionDetailCollector::getProperty(const QString& sKey, const QVariant defaultValue) const
+{
+    auto pOpaq = DFG_OPAQUE_PTR();
+    return (pOpaq) ? pOpaq->m_properties.value(sKey, defaultValue) : defaultValue;
+}
+
+QString SelectionDetailCollector::getUiName_long() const
+{
+    auto s = getProperty("ui_name_long").toString();
+    if (s.isEmpty())
+        s = getUiName_short();
+    if (s.isEmpty())
+        s = viewToQString(id());
+    return s;
+}
+
+QString SelectionDetailCollector::getUiName_short() const
+{
+    auto s = getProperty("ui_name_short").toString();
+    if (s.isEmpty())
+        s = viewToQString(id());
+    return s;
+}
+
+QCheckBox* SelectionDetailCollector::createCheckBox(QMenu* pParent)
+{
+    DFG_OPAQUE_REF().m_spCheckBox.reset(new QCheckBox(pParent));
+    return DFG_OPAQUE_REF().m_spCheckBox.get();
+}
+
+QCheckBox* SelectionDetailCollector::getCheckBoxPtr()
+{
+    return DFG_OPAQUE_REF().m_spCheckBox.get();
+}
+
+auto SelectionDetailCollectorContainer::find(const StringViewUtf8& id) -> SelectionDetailCollector*
 {
     auto iter = std::find_if(this->begin(), this->end(), [&](const std::shared_ptr<SelectionDetailCollector>& sp)
     {
-        return sp && sp->m_id == id;
+        return sp && sp->id() == id;
     });
     return (iter != this->end()) ? iter->get() : nullptr;
 }
 
+auto SelectionDetailCollectorContainer::find(const QString& id) -> SelectionDetailCollector*
+{
+    return find(StringViewUtf8(SzPtrUtf8(id.toUtf8())));
+}
 
 } } // namespace dfg::qt
 /////////////////////////////////
