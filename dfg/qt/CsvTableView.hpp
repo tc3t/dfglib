@@ -46,6 +46,10 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
     class CsvConfig;
 } }
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
+    class FormulaParser;
+} }
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
     class CsvItemModel;
@@ -75,12 +79,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int m_nCol;
     };
 
+    // Baseclass of selection detail collectors
     class SelectionDetailCollector
     {
     public:
         SelectionDetailCollector(StringUtf8 sId);
         SelectionDetailCollector(const QString& sId);
         virtual ~SelectionDetailCollector();
+
+        StringViewUtf8 id() const;
 
         void enable(bool b, bool bUpdateCheckBox = true);
         bool isEnabled() const;
@@ -94,17 +101,47 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QCheckBox* createCheckBox(QMenu* pParent);
         QCheckBox* getCheckBoxPtr();
 
-        StringViewUtf8 id() const;
+        double value() const { return (m_bNeedsUpdate) ? valueImpl() : std::numeric_limits<double>::quiet_NaN(); }
+        void update(const double val) { if (m_bNeedsUpdate) updateImpl(val); }
+
+        // Resets collector clearing memory from previous collection around.
+        void reset() { if (m_bNeedsUpdate) resetImpl(); }
+
+    private:
+        virtual double valueImpl() const { return std::numeric_limits<double>::quiet_NaN(); }
+        virtual void updateImpl(double val) { DFG_UNUSED(val); }
+        virtual void resetImpl() {}
+
+    protected:
+        bool m_bNeedsUpdate = false;
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // class SelectionDetailCollector
+
+    // Selection detail collector using formula parser.
+    class SelectionDetailCollector_formula : public SelectionDetailCollector
+    {
+    public:
+        using BaseClass = SelectionDetailCollector;
+        using FormulaParser = ::DFG_MODULE_NS(math)::FormulaParser;
+
+        SelectionDetailCollector_formula(StringUtf8 sId, StringViewUtf8 svFormula, double initialValue);
+        ~SelectionDetailCollector_formula();
+
+    private:
+        double valueImpl() const override;
+        void updateImpl(double val) override;
+        void resetImpl() override;
 
         DFG_OPAQUE_PTR_DECLARE();
-    };
+    }; // Class SelectionDetailCollector_formula
 
+    // Stores SelectionDetailCollectors
     class SelectionDetailCollectorContainer : public std::vector<std::shared_ptr<SelectionDetailCollector>>
     {
     public:
         auto find(const StringViewUtf8& id) -> SelectionDetailCollector*;
         auto find(const QString& id) -> SelectionDetailCollector*;
-    };
+    }; // class SelectionDetailCollectorContainer
 
     // Analyzes item selection
     class CsvTableViewSelectionAnalyzer : public QObject
