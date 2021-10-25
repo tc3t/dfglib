@@ -151,7 +151,7 @@ namespace
         typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptionsT;
         if (!pItemModel)
             return SaveOptionsT(pItemModel);
-        SaveOptionsT rv = pItemModel->m_table.saveFormat();
+        SaveOptionsT rv = pItemModel->table().saveFormat();
         rv.separatorChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatSeparator>(pItemModel));
         rv.enclosingChar(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEnclosingChar>(pItemModel));
         rv.eolType(DFG_MODULE_NS(io)::endOfLineTypeFromStr(getCsvItemModelProperty<CsvItemModelPropertyId_defaultFormatEndOfLine>(pItemModel).toStdString()));
@@ -164,7 +164,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::initFromItemM
     if (pItemModel)
     {
         // If model seems to have been opened from existing input (file/memory), use format of m_table, otherwise use save format from settings.
-        *this = (pItemModel->latestReadTimeInSeconds() >= 0) ? pItemModel->m_table.saveFormat() : defaultSaveOptions(pItemModel);
+        *this = (pItemModel->latestReadTimeInSeconds() >= 0) ? pItemModel->table().saveFormat() : defaultSaveOptions(pItemModel);
         if (::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(this->separatorChar()))
             this->separatorChar(defaultSaveOptions(pItemModel).separatorChar());
         if (!pItemModel->isSupportedEncodingForSaving(textEncoding()))
@@ -323,13 +323,13 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFileImpl(const QStri
 
 auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getOutputFileSizeEstimate() const -> uint64
 {
-    const uint64 nRows = static_cast<uint64>(m_table.rowCountByMaxRowIndex());
+    const uint64 nRows = static_cast<uint64>(table().rowCountByMaxRowIndex());
     const int nColCount = getColumnCount();
     uint64 nBytes = 0;
     for (int i = 0; i < nColCount; ++i)
         nBytes += static_cast<uint32>(getHeaderName(i).size()); // Underestimates if header name has non-ascii.
     nBytes += nRows * static_cast<uint64>(nColCount); // Separators and eol (assuming single-char eol)
-    return 5 * (nBytes + m_table.contentStorageSizeInBytes()) / 4; // Put a little extra for enclosing chars etc.
+    return 5 * (nBytes + table().contentStorageSizeInBytes()) / 4; // Put a little extra for enclosing chars etc.
 }
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath, const SaveOptions& options)
@@ -475,7 +475,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const
     {
         for (int c = 0; c < nColCount; ++c)
         {
-            auto tpsz = m_table(r, c);
+            auto tpsz = table()(r, c);
             auto sv = StringViewUtf8(tpsz);
             insertStatement.bindValue(c, tpsz ? QVariant(viewToQString(sv)) : QVariant());
         }
@@ -597,7 +597,7 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions
     mainTableSaveOptions.bomWriting(false); // BOM has already been handled.
     mainTableSaveOptions.textEncoding(encoding);
     CsvWritePolicy<decltype(strm)> writePolicy(mainTableSaveOptions);
-    m_table.writeToStream(strm, writePolicy);
+    table().writeToStream(strm, writePolicy);
     if (!writePolicy.m_colToInvalidContentRowList.empty())
     {
         size_t nInvalidCount = 0;
@@ -618,7 +618,7 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions
         if (nInvalidCount > nMaxMessageCount)
             this->m_messagesFromLatestSave.push_back(tr("Warning: %1 more cell(s) which couldn't be written correctly, cell(s) had invalid %2.").arg(nInvalidCount - nMaxMessageCount).arg(::DFG_MODULE_NS(io)::encodingToStrId(internalEncoding())));
     }
-    m_table.saveFormat(options);
+    table().saveFormat(options);
 
     m_writeTimeInSeconds = static_cast<decltype(m_writeTimeInSeconds)>(writeTimer.elapsedWallSeconds());
 
@@ -627,7 +627,7 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions
 
 bool ::DFG_MODULE_NS(qt)::CsvItemModel::setItem(const int nRow, const int nCol, const StringViewUtf8& sv)
 {
-    const auto bRv = m_table.addString(sv, nRow, nCol);
+    const auto bRv = table().addString(sv, nRow, nCol);
     DFG_ASSERT(bRv); // Triggering ASSERT means that string couldn't be added to table.
     return bRv;
 }
@@ -657,7 +657,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModel::setRow(const int nRow, QString sLine)
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
 {
-    m_table.clear();
+    table().clear();
     m_vecColInfo.clear();
     setFilePathWithSignalEmit(QString());
     m_bModified = false;
@@ -686,7 +686,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char*
     setCompleterHandlingFromInputSize(loadOptions, nSize);
     return readData(loadOptions, [&]()
     {
-        m_table.readFromMemory(data, nSize, loadOptions);
+        table().readFromMemory(data, nSize, loadOptions);
         return true;
     });
 }
@@ -702,7 +702,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     // Actual read happens here
     const auto bTableFillerRv = tableFiller();
 
-    m_nRowCount = m_table.rowCountByMaxRowIndex();
+    m_nRowCount = table().rowCountByMaxRowIndex();
 
     const QString optionsCompleterColumns(options.getProperty(CsvOptionProperty_completerColumns, "not_given").c_str());
     const auto completerEnabledColumnsStrItems = optionsCompleterColumns != "not_given" ? optionsCompleterColumns.split(',') : getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledColumnIndexes>(this);
@@ -726,11 +726,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
             };
 
     // Setting headers.
-    const auto nMaxColCount = m_table.colCountByMaxColIndex();
+    const auto nMaxColCount = table().colCountByMaxColIndex();
     m_vecColInfo.reserve(static_cast<size_t>(nMaxColCount));
     for (int c = 0; c < nMaxColCount; ++c)
     {
-        SzPtrUtf8R p = m_table(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
+        SzPtrUtf8R p = table()(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
         m_vecColInfo.push_back(ColInfo(this, (p) ? QString::fromUtf8(p.c_str()) : QString()));
         if (isCompleterEnabledInColumn(c))
         {
@@ -743,7 +743,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
         }
     }
     // Since the header is stored separately in this model, remove it from the table.
-    m_table.removeRows(0, 1);
+    table().removeRows(0, 1);
     if (m_nRowCount >= 1)
         m_nRowCount--;
 
@@ -766,7 +766,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
 {
     std::vector<std::set<QString>> vecCompletionSet;
 
-    m_table.forEachFwdColumnIndex([&](const int nCol)
+    table().forEachFwdColumnIndex([&](const int nCol)
     {
         auto pColInfo = getColInfo(nCol);
         if (!pColInfo || !pColInfo->hasCompleter())
@@ -774,7 +774,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
         if (!isValidIndex(vecCompletionSet, nCol))
             vecCompletionSet.resize(static_cast<size_t>(nCol) + 1);
         auto& completionSetForCurrentCol = vecCompletionSet[nCol];
-        m_table.forEachFwdRowInColumn(nCol, [&](const int /*nRow*/, const SzPtrUtf8R pData)
+        table().forEachFwdRowInColumn(nCol, [&](const int /*nRow*/, const SzPtrUtf8R pData)
         {
             if (pData)
                 completionSetForCurrentCol.insert(QString::fromUtf8(pData.c_str()));
@@ -807,10 +807,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openNewTable()
     {
         // Create 2x2 table by default, seems to be a better choice than completely empty.
         // Note that row 0 is omitted as it is interpreted as header by readData()
-        m_table.setElement(1, 0, DFG_UTF8(""));
-        m_table.setElement(1, 1, DFG_UTF8(""));
-        m_table.setElement(2, 0, DFG_UTF8(""));
-        m_table.setElement(2, 1, DFG_UTF8(""));
+        table().setElement(1, 0, DFG_UTF8(""));
+        table().setElement(1, 1, DFG_UTF8(""));
+        table().setElement(2, 0, DFG_UTF8(""));
+        table().setElement(2, 1, DFG_UTF8(""));
         m_sFilePath.clear();
         setFilePathWithoutSignalEmit(QString());
         return true;
@@ -848,9 +848,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(co
     //       copies data one-by-one while m_table could probably do it more efficiently by directly copying the string storage. In case of modifiable 'other',
     //       this.m_table could adopt the string storage.
     beginInsertRows(QModelIndex(), nThisOriginalRowCount, nNewRowCount - 1);
-    other.m_table.forEachNonNullCell([&](const int r, const int c, SzPtrUtf8R s)
+    other.table().forEachNonNullCell([&](const int r, const int c, SzPtrUtf8R s)
     {
-        m_table.setElement(nThisOriginalRowCount + r, mapOtherColumnIndexToMerged[c], s);
+        table().setElement(nThisOriginalRowCount + r, mapOtherColumnIndexToMerged[c], s);
     });
     m_nRowCount = nNewRowCount;
     endInsertRows();
@@ -877,7 +877,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& 
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::populateConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const
 {
-    m_table.m_readFormat.appendToConfig(config);
+    table().m_readFormat.appendToConfig(config);
 }
 
 auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
@@ -1101,30 +1101,30 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
                 using namespace ::DFG_MODULE_NS(cont);
                 if (!sFilterItems.empty())
                 {
-                    auto filter = m_table.createFilterCellHandler(DFG_DETAIL_NS::TextFilterMatcher(SzPtrUtf8(sFilterItems.c_str()), loadOptions.m_progressController));
+                    auto filter = table().createFilterCellHandler(DFG_DETAIL_NS::TextFilterMatcher(SzPtrUtf8(sFilterItems.c_str()), loadOptions.m_progressController));
                     if (!sIncludeRows.empty())
                         filter.setIncludeRows(intervalSetFromString<int>(sIncludeRows));
                     if (!sIncludeColumns.empty())
                         filter.setIncludeColumns(DFG_DETAIL_NS::columnIntervalSetFromText(sIncludeColumns));
-                    m_table.readFromFile(sReadPath, loadOptions, filter);
+                    table().readFromFile(sReadPath, loadOptions, filter);
                 }
                 else // Case: not having readFilters, only row/column include sets.
                 {
-                    auto filter = m_table.createFilterCellHandler();
-                    DFG_DETAIL_NS::CancellableFilterReader reader(this->m_table, loadOptions.m_progressController, filter);
+                    auto filter = table().createFilterCellHandler();
+                    DFG_DETAIL_NS::CancellableFilterReader reader(this->table(), loadOptions.m_progressController, filter);
                     if (!sIncludeRows.empty())
                         filter.setIncludeRows(intervalSetFromString<int>(sIncludeRows));
                     else
                         filter.setIncludeRows(IntervalSet<int>::makeSingleInterval(0, maxValueOfType<int>()));
                     if (!sIncludeColumns.empty())
                         filter.setIncludeColumns(DFG_DETAIL_NS::columnIntervalSetFromText(sIncludeColumns));
-                    m_table.readFromFile(sReadPath, loadOptions, reader);
+                    table().readFromFile(sReadPath, loadOptions, reader);
                 }
                 m_sTitle = tr("%1 (Filtered open)").arg(QFileInfo(sDbFilePath).fileName());
             }
             else // Case: normal (non-filtered) read
             {
-                m_table.readFromFile(sReadPath, loadOptions, DFG_DETAIL_NS::CancellableReader(this->m_table, loadOptions.m_progressController));
+                table().readFromFile(sReadPath, loadOptions, DFG_DETAIL_NS::CancellableReader(this->table(), loadOptions.m_progressController));
                 // Note: setting file path is done only for non-filtered reads because after filtered read it makes no sense
                 //       to conveniently overwrite source file given the (possibly) lossy opening.
                 const auto bWasCancelled = loadOptions.m_progressController.isCancelled();
@@ -1174,7 +1174,7 @@ bool ::DFG_MODULE_NS(qt)::CsvItemModel::readDataFromSqlite(const QString& sDbFil
 
     const auto cellToStorage = [&](const size_t nRow, const int nCol, const QVariant& var)
     {
-        this->m_table.setElement(nRow, saturateCast<size_t>(nCol), SzPtrUtf8(var.toString().toUtf8())); // TODO: should allow storing utf16 directly without redundant utf8 QByteArray temporary (similar to MapToStringViews::insertRaw())
+        this->table().setElement(nRow, saturateCast<size_t>(nCol), SzPtrUtf8(var.toString().toUtf8())); // TODO: should allow storing utf16 directly without redundant utf8 QByteArray temporary (similar to MapToStringViews::insertRaw())
     };
 
     auto rec = query.record();
@@ -1240,12 +1240,12 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnNames() const -> 
 
 auto DFG_MODULE_NS(qt)::CsvItemModel::RawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
 {
-    return SzPtrUtf8R(m_table(nRow, nCol));
+    return SzPtrUtf8R(table()(nRow, nCol));
 }
 
 auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringViewAt(const int nRow, const int nCol) const -> StringViewUtf8
 {
-    return StringViewUtf8(m_table(nRow, nCol));
+    return StringViewUtf8(table()(nRow, nCol));
 }
 
 auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringViewAt(const QModelIndex& index) const -> StringViewUtf8
@@ -1265,7 +1265,7 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
 
     if ((role == Qt::DisplayRole || role == Qt::EditRole || role == Qt::ToolTipRole))
     {
-        const SzPtrUtf8R p = m_table(nRow, nCol);
+        const SzPtrUtf8R p = table()(nRow, nCol);
         // Note: also checking for empty string as fromUtf8() does allocation if given an empty string (at least 5.13.1 and earlier).
         // Note: At least ctrl+arrow behaviour in TableView is dependent on the distinction between returning QString("") and QVariant().
         //       As of 2019-12-08, implementation requires empty cells to be QVariant() instead of QVariant(QString(""))
@@ -1340,7 +1340,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::privSetDataToTable(const i
     }
 
     // Check whether the new value is different from old to avoid setting modified even if nothing changes.
-    const SzPtrUtf8R pExisting = m_table(nRow, nCol);
+    const SzPtrUtf8R pExisting = table()(nRow, nCol);
     if (pExisting && std::strlen(pszU8.c_str()) <= std::strlen(pExisting.c_str()))
     {
         if (std::strcmp(pExisting.c_str(), pszU8.c_str()) == 0) // Identical item? If yes, skip rest to avoid setting modified.
@@ -1451,7 +1451,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, c
         return false;
     const auto nLastNewRowIndex = position + count - 1;
     beginInsertRows(QModelIndex(), position, nLastNewRowIndex);
-    m_table.insertRowsAt(position, count);
+    table().insertRowsAt(position, count);
     m_nRowCount += count;
     endInsertRows();
     setModifiedStatus(true);
@@ -1467,7 +1467,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
 
     beginRemoveRows(QModelIndex(), position, position + count - 1);
 
-    m_table.removeRows(position, count);
+    table().removeRows(position, count);
     m_nRowCount -= count;
 
     endRemoveRows();
@@ -1484,7 +1484,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumnsImpl(int position, int count)
 {
-    m_table.insertColumnsAt(position, count);
+    table().insertColumnsAt(position, count);
     for(int i = position; i<position + count; ++i)
     {
         m_vecColInfo.insert(m_vecColInfo.begin() + i, ColInfo(this));
@@ -1511,7 +1511,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeColumns(int position
         return false;
     beginRemoveColumns(QModelIndex(), position, position + count - 1);
 
-    m_table.eraseColumnsByPosAndCount(position, count);
+    table().eraseColumnsByPosAndCount(position, count);
     m_vecColInfo.erase(m_vecColInfo.begin() + position, m_vecColInfo.begin() + nLast + 1);
 
     endRemoveColumns();
@@ -1582,7 +1582,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnToStrings(const int 
     if (!isValidColumn(nCol))
         return;
     vecStrings.reserve(static_cast<size_t>(getColumnCount()));
-    m_table.forEachFwdRowInColumn(nCol, [&](const int /*row*/, const SzPtrUtf8R tpsz)
+    table().forEachFwdRowInColumn(nCol, [&](const int /*row*/, const SzPtrUtf8R tpsz)
     {
         vecStrings.push_back(QString::fromUtf8(tpsz.c_str()));
 
@@ -1646,7 +1646,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow
         if (!bFirstItem) // To make sure that there won't be a delim in front of first item.
             str.push_back(cDelim);
         bFirstItem = false;
-        SzPtrUtf8R p = m_table(nRow, nCol);
+        SzPtrUtf8R p = table()(nRow, nCol);
         if (!p)
             continue;
         dataCellToString(QString::fromUtf8(p.c_str()), str, cDelim);
@@ -1774,11 +1774,9 @@ QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findNextHighlighter
 
     auto searchIndex = nextCellByFinderAdvance(seedIndex, direction, advanceStyle);
 
-    const auto& table = m_table;
-
     const auto isMatchWith = [&](const QModelIndex& index)
     {
-        return matcher.isMatchWith(table(index.row(), index.column()));
+        return matcher.isMatchWith(table()(index.row(), index.column()));
     };
 
    if (searchIndex == seedIndex)
@@ -1856,7 +1854,7 @@ bool CsvItemModel::transpose()
     {
         for (Index c = r + 1; c < nMaxColumnCount; ++c)
         {
-            this->m_table.swapCellContent(r, c, c, r);
+            this->table().swapCellContent(r, c, c, r);
         }
     }
     removeRows(nNewRowCount, nOldRowCount - nNewRowCount);

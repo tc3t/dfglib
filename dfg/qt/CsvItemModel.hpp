@@ -520,6 +520,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent);
 #endif
 
+              DataTable& table()       { return m_table; }
+        const DataTable& table() const { return m_table; }
+
     signals:
         void sigModifiedStatusChanged(bool bNewStatus);
         void sigOnNewSourceOpened();
@@ -570,7 +573,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
         beginResetModel(); // This might be a bit coarse for smaller edits.
         m_bResetting = true;
-        func(m_table);
+        func(table());
         endResetModel();
         m_bResetting = false;
         setModifiedStatus(true);
