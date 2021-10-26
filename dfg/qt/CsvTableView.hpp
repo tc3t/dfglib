@@ -244,6 +244,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onEvaluationStarting_myThread(bool bEnabled);
         void onEvaluationEnded_myThread(const double timeInSeconds, int completionStatus);
         void setValueDisplayString_myThread(const QString& s);
+        void onAddCustomCollector();
 
     private:
         QObjectStorage<QLineEdit>      m_spValueDisplay;

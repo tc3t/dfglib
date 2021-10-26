@@ -37,6 +37,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QDate>
 #include <QDateTime>
 #include <QHBoxLayout>
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaMethod>
@@ -4291,7 +4293,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
                 // Since CheckBox is owned by pCollector, this handler should never get called if pCollector has been deleted.
                 pCollector->enable(b, false);
             }));
-            const auto sToolTip = rCollector.getProperty("tooltip").toString();
+            const auto sToolTip = rCollector.getProperty("description").toString();
             if (!sToolTip.isEmpty())
                 pCheckBox->setToolTip(sToolTip);
         }
@@ -4327,6 +4329,9 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
         using DetailCollector = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector;
         const auto defaultFlags = DetailCollector::defaultEnableFlags();
         DFG_OPAQUE_REF().m_spCollectors = std::make_shared<SelectionDetailCollectorContainer>();
+
+        addSectionEntryToMenu(pMenu, "Built-in");
+
         DetailCollector::forEachBuiltInDetailIdWhile([&](const DetailCollector::BuiltInDetail id)
         {
             // https://stackoverflow.com/questions/2050462/prevent-a-qmenu-from-closing-when-one-of-its-qaction-is-triggered
@@ -4341,6 +4346,14 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
             DFG_OPAQUE_REF().addDetailMenuEntry(*pCollector, *pMenu);
             return true;
         }); // For each built-in detail ID
+
+        addSectionEntryToMenu(pMenu, "Custom");
+
+        // Adding "Add..." action
+        {
+            auto pActCustom = pMenu->addAction(tr("Add..."));
+            DFG_QT_VERIFY_CONNECT(connect(pActCustom, &QAction::triggered, this, &CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCollector));
+        }
 
         m_spDetailSelector->setMenu(pMenu); // Does not transfer ownership
         layout->addWidget(m_spDetailSelector.get(), 0, column++);
@@ -4446,6 +4459,61 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationE
         m_spStopButton->setEnabled(false);
 }
 
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCollector()
+{
+    const auto sLabel = tr("Adding new selection detail. Description of fields:"
+                           "<ul>"
+                           "<li><b>formula:</b> Formula used to calculate the value, predefined variables 'acc' and 'value' are available : 'acc' is current accumulant value and 'value' is current cell value</li>"
+                           "<li><b>initial_value:</b> Initial value of the accumulant, for example when defining a sum accumulant, initial value is typically 0.</li>"
+                           "<li><b>ui_name_short:</b> Short name version to show in UI.</li>"
+                           "<li><b>ui_name_long:</b> Long name version to show in UI.</li>"
+                           "<li><b>description:</b> A more detailed description of the new detail.</li>"
+                           "</ul>"
+                           R"(Example: { "formula": "acc + value^2", "initial_value": "0", "description": "Calculates sum of squares" } )");
+
+    QString sJson = tr("{\n  \"formula\": \"\",\n  \"initial_value\": \"\",\n  \"ui_name_long\": \"\",\n  \"ui_name_short\": \"\",\n  \"description\": \"\"\n}");
+    QJsonDocument jsonDoc;
+    while (true) // Asking definition until getting valid json or cancel.
+    {
+        sJson = InputDialog::getMultiLineText(
+            this,
+            tr("New selection detail"),
+            sLabel,
+            sJson
+        );
+
+        if (sJson.isEmpty())
+            return;
+
+        QJsonParseError parseError;
+        jsonDoc = QJsonDocument::fromJson(sJson.toUtf8(), &parseError);
+        if (jsonDoc.isNull()) // Parsing failed?
+        {
+            QMessageBox::information(this, tr("Invalid json format"), tr("Parsing json failed with error: '%1'").arg(parseError.errorString()));
+            continue;
+        }
+        break;
+    }
+
+    auto inputs = jsonDoc.toVariant().toMap();
+
+    inputs["id"] = []() // Generating random 4 character alphabetical id
+        {
+            using namespace ::DFG_MODULE_NS(rand);
+            QString s(4, '\0');
+            auto randEng = createDefaultRandEngineRandomSeeded();
+            auto distrEng = makeDistributionEngineUniform(&randEng, int('a'), int('z'));
+            std::generate(s.begin(), s.end(), distrEng);
+            return s;
+        }();
+    inputs["type"] = QString("accumulator");
+
+    if (!addDetail(inputs))
+    {
+        QMessageBox::warning(this, tr("Adding failed"), tr("Adding new detail failed"));
+    }
+}
+
 double ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeInSeconds() const
 {
     bool bOk = false;
@@ -4484,8 +4552,8 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
     //                          -Needed by: accumulator. Formula has variables "acc" (=accumulator value) and "value" (=value of new cell):
     //      [ui_name_short]: Short UI name for the detail
     //      [ui_name_long] : Long UI name for the detail
-    //      [tooltip]      : Tooltip shown for the detail
-    // Example : { "id": "square_sum", "type": "accumulator", "initial_value": "0", "formula": "acc + value^2", "ui_name_short": "Sum^2", "ui_name_long": "Sum of squares", "tooltip": "This detail shows the sum of squared values" }
+    //      [description]  : Longer description of the detail, shown as tooltip.
+    // Example : { "id": "square_sum", "type": "accumulator", "initial_value": "0", "formula": "acc + value^2", "ui_name_short": "Sum^2", "ui_name_long": "Sum of squares", "description": "This detail shows the sum of squared values" }
 
     if (!DFG_OPAQUE_REF().m_spCollectors)
         return false;
@@ -4527,12 +4595,12 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
             return false;
 
         const auto sFormula = qStringToStringUtf8(items.value("formula").toString());
-        const auto sToolTip = items.value("tooltip").toString();
+        const auto sDescription = items.value("description").toString();
         const auto sUiNameShort = items.value("ui_name_short").toString();
         const auto sUiNameLong = items.value("ui_name_long").toString();
 
         auto spNewCollector = std::make_shared<SelectionDetailCollector_formula>(id, sFormula, initialValue);
-        spNewCollector->setProperty("tooltip", sToolTip);
+        spNewCollector->setProperty("description", sDescription);
         spNewCollector->setProperty("ui_name_short", sUiNameShort);
         spNewCollector->setProperty("ui_name_long", sUiNameLong);
 
