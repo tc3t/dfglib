@@ -4610,7 +4610,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
 
         auto spNewCollectorSet = std::make_shared<SelectionDetailCollectorContainer>(collectors);
         spNewCollectorSet->push_back(std::move(spNewCollector));
-        std::swap(DFG_OPAQUE_REF().m_spCollectors, spNewCollectorSet);
+        std::atomic_store(&DFG_OPAQUE_REF().m_spCollectors, std::move(spNewCollectorSet));
     }
     else
         return false;
@@ -4636,9 +4636,10 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDet
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::collectors() const -> CollectorContainerPtr
 {
-    // TODO: make thread-safe
     auto pOpaq = DFG_OPAQUE_PTR();
-    return (pOpaq) ? pOpaq->m_spCollectors : nullptr;
+    if (!pOpaq)
+        return nullptr;
+    return std::atomic_load(&pOpaq->m_spCollectors);
 }
 
 void DFG_CLASS_NAME(CsvTableView)::onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected)
