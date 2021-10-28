@@ -100,12 +100,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         QCheckBox* createCheckBox(QMenu* pParent);
         QCheckBox* getCheckBoxPtr();
+        QAction* getCheckBoxAction();
+
+        bool isBuiltIn() const;
 
         double value() const { return (m_bNeedsUpdate) ? valueImpl() : std::numeric_limits<double>::quiet_NaN(); }
         void update(const double val) { if (m_bNeedsUpdate) updateImpl(val); }
 
         // Resets collector clearing memory from previous collection around.
         void reset() { if (m_bNeedsUpdate) resetImpl(); }
+
+        QString exportDefinitionToJson() const;
 
     private:
         virtual double valueImpl() const { return std::numeric_limits<double>::quiet_NaN(); }
@@ -139,8 +144,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class SelectionDetailCollectorContainer : public std::vector<std::shared_ptr<SelectionDetailCollector>>
     {
     public:
+        using BaseClass = std::vector<std::shared_ptr<SelectionDetailCollector>>;
+        using Container = BaseClass;
+
         auto find(const StringViewUtf8& id) -> SelectionDetailCollector*;
         auto find(const QString& id) -> SelectionDetailCollector*;
+
+        bool erase(const StringViewUtf8& id);
+
+    private:
+        auto findIter(const StringViewUtf8& id) -> Container::iterator;
     }; // class SelectionDetailCollectorContainer
 
     // Analyzes item selection
@@ -230,6 +243,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool addDetail(const QVariantMap& items);
 
         // Thread-safe
+        bool deleteDetail(const StringViewUtf8& id);
+
+        // Thread-safe
         void setDefaultDetails();
 
         // Thread-safe
@@ -245,6 +261,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onEvaluationEnded_myThread(const double timeInSeconds, int completionStatus);
         void setValueDisplayString_myThread(const QString& s);
         void onAddCustomCollector();
+        void onEnableAllDetails();
+        void onDisableAllDetails();
+
+    private:
+        void setEnableStatusForAll(bool b);
 
     private:
         QObjectStorage<QLineEdit>      m_spValueDisplay;
@@ -252,7 +273,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QPointer<QLineEdit>            m_spTimeLimitDisplay;
         QObjectStorage<QProgressBar>   m_spProgressBar;
         QObjectStorage<QPushButton>    m_spStopButton;
-        std::atomic<unsigned long>     m_atomicFlags;
 
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewBasicSelectionAnalyzerPanel

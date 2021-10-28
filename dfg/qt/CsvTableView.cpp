@@ -4280,7 +4280,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
 {
     CsvTableViewBasicSelectionAnalyzerPanel::CollectorContainerPtr m_spCollectors;
 
-    static void addDetailMenuEntry(SelectionDetailCollector& rCollector, QMenu& rMenu)
+    static void addDetailMenuEntry(CsvTableViewBasicSelectionAnalyzerPanel& rPanel, SelectionDetailCollector& rCollector, QMenu& rMenu)
     {
         auto pCheckBox = rCollector.createCheckBox(&rMenu);
         if (pCheckBox)
@@ -4293,14 +4293,51 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
                 // Since CheckBox is owned by pCollector, this handler should never get called if pCollector has been deleted.
                 pCollector->enable(b, false);
             }));
-            const auto sToolTip = rCollector.getProperty("description").toString();
-            if (!sToolTip.isEmpty())
-                pCheckBox->setToolTip(sToolTip);
-        }
 
-        auto pAct = new QWidgetAction(&rMenu);
-        pAct->setDefaultWidget(rCollector.getCheckBoxPtr());
-        rMenu.addAction(pAct);
+            // Creating tooltip text
+            {
+                const auto sDescription = rCollector.getProperty("description").toString();
+                auto sType = rCollector.getProperty("type").toString();
+                if (rCollector.isBuiltIn())
+                    sType = tr("Built-in");
+                auto sFormula = rCollector.getProperty("formula").toString();
+                if (!sFormula.isEmpty())
+                    sFormula = tr("<li>Formula: %1</li>").arg(sFormula);
+                const QString sToolTip = tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3</ul>").arg(sType, rCollector.getUiName_short(), sFormula);
+                pCheckBox->setToolTip(sToolTip);
+            }
+
+            // Adding context menu actions
+            if (!rCollector.isBuiltIn())
+            {
+                const auto sId = rCollector.id().toString();
+                QPointer<CsvTableViewBasicSelectionAnalyzerPanel> spPanel = &rPanel;
+
+                const auto addAction = [&](const QString& s, std::function<void ()> slotHandler)
+                {
+                    auto pAct = new QAction(s, &rMenu); // Deletion through parentship
+                    DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, pCheckBox, slotHandler));
+                    pCheckBox->addAction(pAct);
+                };
+
+                // Delete action
+                addAction(tr("Delete"), [=]() { if (spPanel) spPanel->deleteDetail(sId); });
+                // Export to clipboard
+                addAction(tr("Export definition to clipboard"), [=]()
+                    { 
+                        auto pClipboard = QApplication::clipboard();
+                        if (pClipboard)
+                            pClipboard->setText(pCollector->exportDefinitionToJson());
+                    });
+                pCheckBox->setContextMenuPolicy(Qt::ActionsContextMenu);
+            }
+        }
+        rMenu.addAction(rCollector.getCheckBoxAction());
+    }
+
+    static void removeDetailMenuEntry(SelectionDetailCollector& rCollector, QMenu& rMenu)
+    {
+        rMenu.removeAction(rCollector.getCheckBoxAction());
     }
 }; // CsvTableViewBasicSelectionAnalyzerPanel opaque class 
 
@@ -4330,6 +4367,18 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
         const auto defaultFlags = DetailCollector::defaultEnableFlags();
         DFG_OPAQUE_REF().m_spCollectors = std::make_shared<SelectionDetailCollectorContainer>();
 
+        // Enable/disable all items
+        {
+            {
+                auto pAct = pMenu->addAction(tr("Enable all"));
+                DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &CsvTableViewBasicSelectionAnalyzerPanel::onEnableAllDetails));
+            }
+            {
+                auto pAct = pMenu->addAction(tr("Disable all"));
+                DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &CsvTableViewBasicSelectionAnalyzerPanel::onDisableAllDetails));
+            }
+        }
+
         addSectionEntryToMenu(pMenu, "Built-in");
 
         DetailCollector::forEachBuiltInDetailIdWhile([&](const DetailCollector::BuiltInDetail id)
@@ -4341,9 +4390,10 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
             auto pCollector = DFG_OPAQUE_REF().m_spCollectors->back().get();
             const auto bEnabled = DetailCollector::isEnabled(defaultFlags, id);
             pCollector->enable(bEnabled);
+            pCollector->setProperty("ui_name_short", DetailCollector::uiName_short(id));
             pCollector->setProperty("ui_name_long", DetailCollector::uiName_long(id));
 
-            DFG_OPAQUE_REF().addDetailMenuEntry(*pCollector, *pMenu);
+            DFG_OPAQUE_REF().addDetailMenuEntry(*this, *pCollector, *pMenu);
             return true;
         }); // For each built-in detail ID
 
@@ -4514,6 +4564,29 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
     }
 }
 
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setEnableStatusForAll(const bool b)
+{
+    if (!DFG_OPAQUE_REF().m_spCollectors)
+        return;
+
+    auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
+    for (auto& spCollector : collectors)
+    {
+        if (spCollector)
+            spCollector->enable(b);
+    }
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEnableAllDetails()
+{
+    setEnableStatusForAll(true);
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onDisableAllDetails()
+{
+    setEnableStatusForAll(false);
+}
+
 double ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeInSeconds() const
 {
     bool bOk = false;
@@ -4566,8 +4639,8 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
     const auto id = qStringToStringUtf8(idQString);
     const bool bEnabled = items.value("enabled", true).toBool();
     using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail;
-    const auto type = items.value("type").toString();
-    if (type.isEmpty())
+    const auto sType = items.value("type").toString();
+    if (sType.isEmpty())
     {
         const auto detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::selectionDetailNameToId(id);
         if (detail == Detail::detailCount)
@@ -4578,7 +4651,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
             return false; // Built-in details should already be created.
         pExisting->enable(bEnabled);
     }
-    else if (type == QLatin1String("accumulator"))
+    else if (sType == QLatin1String("accumulator"))
     {
         auto pExisting = collectors.find(id);
         if (pExisting)
@@ -4588,25 +4661,30 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
             return true;
         }
 
-        const auto sInitialValue = qStringToStringUtf8(items.value("initial_value").toString());
+        const auto sInitialValueQString = items.value("initial_value").toString();
+        const auto sInitialValue = qStringToStringUtf8(sInitialValueQString);
         bool bOk = false;
         const auto initialValue = ::DFG_MODULE_NS(str)::strTo<double>(sInitialValue.rawStorage(), &bOk);
         if (!bOk)
             return false;
 
-        const auto sFormula = qStringToStringUtf8(items.value("formula").toString());
+        const auto sFormulaQString = items.value("formula").toString();
+        const auto sFormula = qStringToStringUtf8(sFormulaQString);
         const auto sDescription = items.value("description").toString();
         const auto sUiNameShort = items.value("ui_name_short").toString();
         const auto sUiNameLong = items.value("ui_name_long").toString();
 
         auto spNewCollector = std::make_shared<SelectionDetailCollector_formula>(id, sFormula, initialValue);
         spNewCollector->setProperty("description", sDescription);
+        spNewCollector->setProperty("formula", sFormulaQString);
+        spNewCollector->setProperty("initial_value", sInitialValueQString);
+        spNewCollector->setProperty("type", sType);
         spNewCollector->setProperty("ui_name_short", sUiNameShort);
         spNewCollector->setProperty("ui_name_long", sUiNameLong);
 
         auto pMenu = (m_spDetailSelector) ? m_spDetailSelector->menu() : nullptr;
         if (pMenu)
-            DFG_OPAQUE_REF().addDetailMenuEntry(*spNewCollector, *pMenu);
+            DFG_OPAQUE_REF().addDetailMenuEntry(*this, *spNewCollector, *pMenu);
 
         auto spNewCollectorSet = std::make_shared<SelectionDetailCollectorContainer>(collectors);
         spNewCollectorSet->push_back(std::move(spNewCollector));
@@ -4616,6 +4694,36 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
         return false;
 
     return true;
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::deleteDetail(const StringViewUtf8& id)
+{
+    if (!DFG_OPAQUE_REF().m_spCollectors)
+        return false;
+
+    auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
+
+    auto pExisting = collectors.find(id);
+
+    if (!pExisting || pExisting->isBuiltIn())
+        return false; // Didn't find requested collector or it is a built-in
+
+    if (QMessageBox::question(this, tr("Confirm deletion"), tr("Delete selection detail '%1'?").arg(pExisting->getUiName_short())) != QMessageBox::Yes)
+        return false;
+
+    auto spNewCollectorSet = std::make_shared<SelectionDetailCollectorContainer>(collectors);
+    if (spNewCollectorSet->erase(id))
+    {
+        // Removing related action from 'detail button' context menu.
+        auto pMenu = (m_spDetailSelector) ? m_spDetailSelector->menu() : nullptr;
+        if (pMenu)
+            DFG_OPAQUE_REF().removeDetailMenuEntry(*pExisting, *pMenu);
+
+        std::atomic_store(&DFG_OPAQUE_REF().m_spCollectors, std::move(spNewCollectorSet));
+        return true;
+    }
+    else
+        return false;
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDetails()
@@ -5598,12 +5706,21 @@ public:
     StringUtf8 m_id;
     std::atomic<bool> m_abEnabled = true;
     QObjectStorage<QCheckBox> m_spCheckBox;
+    QObjectStorage<QAction> m_spContextMenuAction;
     QVariantMap m_properties;
 };
 
 SelectionDetailCollector::SelectionDetailCollector(StringUtf8 sId) { DFG_OPAQUE_REF().m_id = std::move(sId); }
 SelectionDetailCollector::SelectionDetailCollector(const QString& sId) : SelectionDetailCollector(qStringToStringUtf8(sId)) {}
-SelectionDetailCollector::~SelectionDetailCollector() = default;
+SelectionDetailCollector::~SelectionDetailCollector()
+{
+    auto pCheckBox = DFG_OPAQUE_REF().m_spCheckBox.release();
+    if (pCheckBox)
+        pCheckBox->deleteLater(); // Using deleteLater() as checkbox may be used when collector gets deleted.
+    auto pContextMenuAction = DFG_OPAQUE_REF().m_spContextMenuAction.release();
+    if (pContextMenuAction)
+        pContextMenuAction->deleteLater();
+}
 
 auto SelectionDetailCollector::id() const -> StringViewUtf8
 {
@@ -5664,6 +5781,30 @@ QCheckBox* SelectionDetailCollector::getCheckBoxPtr()
     return DFG_OPAQUE_REF().m_spCheckBox.get();
 }
 
+QAction* SelectionDetailCollector::getCheckBoxAction()
+{
+    if (!DFG_OPAQUE_REF().m_spContextMenuAction)
+    {
+        auto pAct = new QWidgetAction(nullptr);
+        pAct->setDefaultWidget(this->getCheckBoxPtr());
+        DFG_OPAQUE_REF().m_spContextMenuAction.reset(pAct);
+    }
+    return DFG_OPAQUE_REF().m_spContextMenuAction.get();
+}
+
+bool SelectionDetailCollector::isBuiltIn() const
+{
+    return getProperty("type").toString().isEmpty();
+}
+
+QString SelectionDetailCollector::exportDefinitionToJson() const
+{
+    auto pOpaq = DFG_OPAQUE_PTR();
+    if (!pOpaq)
+        return QString();
+    return QString::fromUtf8(QJsonDocument::fromVariant(pOpaq->m_properties).toJson());
+}
+
 /////////////////////////////////////////////////////////////////////////////////////
 // 
 // SelectionDetailCollector_formula
@@ -5719,16 +5860,30 @@ void SelectionDetailCollector_formula::resetImpl()
 
 auto SelectionDetailCollectorContainer::find(const StringViewUtf8& id) -> SelectionDetailCollector*
 {
-    auto iter = std::find_if(this->begin(), this->end(), [&](const std::shared_ptr<SelectionDetailCollector>& sp)
-    {
-        return sp && sp->id() == id;
-    });
+    auto iter = findIter(id);
     return (iter != this->end()) ? iter->get() : nullptr;
 }
 
 auto SelectionDetailCollectorContainer::find(const QString& id) -> SelectionDetailCollector*
 {
     return find(StringViewUtf8(SzPtrUtf8(id.toUtf8())));
+}
+
+auto SelectionDetailCollectorContainer::findIter(const StringViewUtf8& id) -> Container::iterator
+{
+    return std::find_if(this->begin(), this->end(), [&](const std::shared_ptr<SelectionDetailCollector>& sp)
+    {
+        return sp && sp->id() == id;
+    });
+}
+
+bool SelectionDetailCollectorContainer::erase(const StringViewUtf8& id)
+{
+    auto iter = findIter(id);
+    if (iter == this->end())
+        return false;
+    BaseClass::erase(iter);
+    return true;
 }
 
 } } // namespace dfg::qt
