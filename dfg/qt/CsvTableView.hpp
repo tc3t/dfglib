@@ -83,6 +83,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class SelectionDetailCollector
     {
     public:
+        static const char s_propertyName_id[];
+        static const char s_propertyName_type[];
+        static const char s_propertyName_uiNameShort[];
+        static const char s_propertyName_uiNameLong[];
+        static const char s_propertyName_description[];
+
         SelectionDetailCollector(StringUtf8 sId);
         SelectionDetailCollector(const QString& sId);
         virtual ~SelectionDetailCollector();
@@ -128,6 +134,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
         using BaseClass = SelectionDetailCollector;
         using FormulaParser = ::DFG_MODULE_NS(math)::FormulaParser;
+
+        static const char s_propertyName_formula[];
+        static const char s_propertyName_initialValue[];
 
         SelectionDetailCollector_formula(StringUtf8 sId, StringViewUtf8 svFormula, double initialValue);
         ~SelectionDetailCollector_formula();

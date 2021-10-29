@@ -4296,11 +4296,11 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
 
             // Creating tooltip text
             {
-                const auto sDescription = rCollector.getProperty("description").toString();
-                auto sType = rCollector.getProperty("type").toString();
+                const auto sDescription = rCollector.getProperty(SelectionDetailCollector::s_propertyName_description).toString();
+                auto sType = rCollector.getProperty(SelectionDetailCollector::s_propertyName_type).toString();
                 if (rCollector.isBuiltIn())
                     sType = tr("Built-in");
-                auto sFormula = rCollector.getProperty("formula").toString();
+                auto sFormula = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_formula).toString();
                 if (!sFormula.isEmpty())
                     sFormula = tr("<li>Formula: %1</li>").arg(sFormula);
                 const QString sToolTip = tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3</ul>").arg(sType, rCollector.getUiName_short(), sFormula);
@@ -4513,15 +4513,26 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
 {
     const auto sLabel = tr("Adding new selection detail. Description of fields:"
                            "<ul>"
-                           "<li><b>formula:</b> Formula used to calculate the value, predefined variables 'acc' and 'value' are available : 'acc' is current accumulant value and 'value' is current cell value</li>"
-                           "<li><b>initial_value:</b> Initial value of the accumulant, for example when defining a sum accumulant, initial value is typically 0.</li>"
-                           "<li><b>ui_name_short:</b> Short name version to show in UI.</li>"
-                           "<li><b>ui_name_long:</b> Long name version to show in UI.</li>"
-                           "<li><b>description:</b> A more detailed description of the new detail.</li>"
+                           "<li><b>%1:</b> Formula used to calculate the value, predefined variables 'acc' and 'value' are available : 'acc' is current accumulant value and 'value' is current cell value</li>"
+                           "<li><b>%2:</b> Initial value of the accumulant, for example when defining a sum accumulant, initial value is typically 0.</li>"
+                           "<li><b>%3:</b> Short name version to show in UI.</li>"
+                           "<li><b>%4:</b> Long name version to show in UI. if omitted, short name will be used</li>"
+                           "<li><b>%5:</b> A more detailed description of the new detail. Can be omitted</li>"
                            "</ul>"
-                           R"(Example: { "formula": "acc + value^2", "initial_value": "0", "description": "Calculates sum of squares" } )");
+                           R"(Example: { "%1": "acc + value^2", "%2": "0", "%5": "Calculates sum of squares" } )")
+                           .arg(SelectionDetailCollector_formula::s_propertyName_formula,
+                                SelectionDetailCollector_formula::s_propertyName_initialValue,
+                                SelectionDetailCollector::s_propertyName_uiNameShort,
+                                SelectionDetailCollector::s_propertyName_uiNameLong,
+                                SelectionDetailCollector::s_propertyName_description);
 
-    QString sJson = tr("{\n  \"formula\": \"\",\n  \"initial_value\": \"\",\n  \"ui_name_long\": \"\",\n  \"ui_name_short\": \"\",\n  \"description\": \"\"\n}");
+    QString sJson = tr("{\n  \"%1\": \"\",\n  \"%2\": \"\",\n  \"%3\": \"\",\n  \"%4\": \"\",\n  \"%5\": \"\"\n}")
+                    .arg(SelectionDetailCollector_formula::s_propertyName_formula,
+                         SelectionDetailCollector_formula::s_propertyName_initialValue,
+                         SelectionDetailCollector::s_propertyName_uiNameShort,
+                         SelectionDetailCollector::s_propertyName_uiNameLong,
+                         SelectionDetailCollector::s_propertyName_description
+                        );
     QJsonDocument jsonDoc;
     while (true) // Asking definition until getting valid json or cancel.
     {
@@ -4546,17 +4557,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
     }
 
     auto inputs = jsonDoc.toVariant().toMap();
-
-    inputs["id"] = []() // Generating random 4 character alphabetical id
-        {
-            using namespace ::DFG_MODULE_NS(rand);
-            QString s(4, '\0');
-            auto randEng = createDefaultRandEngineRandomSeeded();
-            auto distrEng = makeDistributionEngineUniform(&randEng, int('a'), int('z'));
-            std::generate(s.begin(), s.end(), distrEng);
-            return s;
-        }();
-    inputs["type"] = QString("accumulator");
+    inputs[SelectionDetailCollector::s_propertyName_type] = QString("accumulator");
 
     if (!addDetail(inputs))
     {
@@ -4633,9 +4634,20 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
 
     auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
 
-    const auto idQString = items.value("id").toString();
+    auto idQString = items.value("id").toString();
     if (idQString.isEmpty())
-        return false;
+    {
+        // If there's no id, generating random 4 character alphabetical id
+        idQString = []()
+        {
+            using namespace ::DFG_MODULE_NS(rand);
+            QString s(4, '\0');
+            auto randEng = createDefaultRandEngineRandomSeeded();
+            auto distrEng = makeDistributionEngineUniform(&randEng, int('a'), int('z'));
+            std::generate(s.begin(), s.end(), distrEng);
+            return s;
+        }();
+    }
     const auto id = qStringToStringUtf8(idQString);
     const bool bEnabled = items.value("enabled", true).toBool();
     using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail;
@@ -4661,26 +4673,26 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
             return true;
         }
 
-        const auto sInitialValueQString = items.value("initial_value").toString();
+        const auto sInitialValueQString = items.value(SelectionDetailCollector_formula::s_propertyName_initialValue).toString();
         const auto sInitialValue = qStringToStringUtf8(sInitialValueQString);
         bool bOk = false;
         const auto initialValue = ::DFG_MODULE_NS(str)::strTo<double>(sInitialValue.rawStorage(), &bOk);
         if (!bOk)
             return false;
 
-        const auto sFormulaQString = items.value("formula").toString();
+        const auto sFormulaQString = items.value(SelectionDetailCollector_formula::s_propertyName_formula).toString();
         const auto sFormula = qStringToStringUtf8(sFormulaQString);
-        const auto sDescription = items.value("description").toString();
-        const auto sUiNameShort = items.value("ui_name_short").toString();
-        const auto sUiNameLong = items.value("ui_name_long").toString();
+        const auto sDescription = items.value(SelectionDetailCollector::s_propertyName_description).toString();
+        const auto sUiNameShort = items.value(SelectionDetailCollector::s_propertyName_uiNameShort).toString();
+        const auto sUiNameLong = items.value(SelectionDetailCollector::s_propertyName_uiNameLong).toString();
 
         auto spNewCollector = std::make_shared<SelectionDetailCollector_formula>(id, sFormula, initialValue);
-        spNewCollector->setProperty("description", sDescription);
-        spNewCollector->setProperty("formula", sFormulaQString);
-        spNewCollector->setProperty("initial_value", sInitialValueQString);
-        spNewCollector->setProperty("type", sType);
-        spNewCollector->setProperty("ui_name_short", sUiNameShort);
-        spNewCollector->setProperty("ui_name_long", sUiNameLong);
+        spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_description, sDescription);
+        spNewCollector->setProperty(SelectionDetailCollector_formula::s_propertyName_formula, sFormulaQString);
+        spNewCollector->setProperty(SelectionDetailCollector_formula::s_propertyName_initialValue, sInitialValueQString);
+        spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_type, sType);
+        spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_uiNameShort, sUiNameShort);
+        spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_uiNameLong, sUiNameLong);
 
         auto pMenu = (m_spDetailSelector) ? m_spDetailSelector->menu() : nullptr;
         if (pMenu)
@@ -5710,6 +5722,12 @@ public:
     QVariantMap m_properties;
 };
 
+const char SelectionDetailCollector::s_propertyName_description[]  = "description";
+const char SelectionDetailCollector::s_propertyName_id[]           = "id";
+const char SelectionDetailCollector::s_propertyName_type[]         = "type";
+const char SelectionDetailCollector::s_propertyName_uiNameShort[]  = "ui_name_short";
+const char SelectionDetailCollector::s_propertyName_uiNameLong[]   = "ui_name_long";
+
 SelectionDetailCollector::SelectionDetailCollector(StringUtf8 sId) { DFG_OPAQUE_REF().m_id = std::move(sId); }
 SelectionDetailCollector::SelectionDetailCollector(const QString& sId) : SelectionDetailCollector(qStringToStringUtf8(sId)) {}
 SelectionDetailCollector::~SelectionDetailCollector()
@@ -5818,7 +5836,10 @@ public:
     double m_initialValue;
     double m_accValue;
     double m_cellValue = std::numeric_limits<double>::quiet_NaN();
-}; // Opaque class of SelectionDetailCollector_formula 
+}; // Opaque class of SelectionDetailCollector_formula
+
+const char SelectionDetailCollector_formula::s_propertyName_formula[]      = "formula";
+const char SelectionDetailCollector_formula::s_propertyName_initialValue[] = "initial_value";
 
 SelectionDetailCollector_formula::SelectionDetailCollector_formula(StringUtf8 sId, StringViewUtf8 svFormula, double initialValue)
     : BaseClass(std::move(sId))
