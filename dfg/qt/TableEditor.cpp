@@ -152,7 +152,7 @@ namespace
                                               WindowExtentProperty,
                                               [] { return WindowExtentProperty::fromPercentage(35); },
                                               WindowExtentProperty);
-    DFG_QT_DEFINE_OBJECT_PROPERTY("TableEditorPropertyId_selectionDetails",
+    DFG_QT_DEFINE_OBJECT_PROPERTY_QSTRING("TableEditorPropertyId_selectionDetails",
                                               TableEditor,
                                               TableEditorPropertyId_selectionDetails,
                                               QString,

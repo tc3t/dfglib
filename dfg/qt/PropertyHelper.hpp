@@ -40,7 +40,7 @@ template <> struct CLASS##PropertyDefinition<static_cast<int>(ID)> \
 
 // Defines QString property that handles QStringList to QString conversion.
 #define DFG_QT_DEFINE_OBJECT_PROPERTY_QSTRING(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC) \
-    DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC, qStringFromVariantWithQStringListHandling)
+    DFG_QT_DEFINE_OBJECT_PROPERTY_CUSTOM_TYPE(STR_ID, CLASS, ID, RV_TYPE, DEFAULT_FUNC, ::DFG_MODULE_NS(qt)::qStringFromVariantWithQStringListHandling)
 
 // Returns object property. First tries object's internal property map, then from application settings.
 // Note: The way how internal properties are stored (current in properties of 'obj') is an implementation detail that may change.
