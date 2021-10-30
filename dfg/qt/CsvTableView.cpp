@@ -2349,7 +2349,7 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::reloadFromFile() -> bool
     if (!getProceedConfirmationFromUserIfInModifiedState(tr("reload table from file")))
         return false;
     
-    if (!sPath.isEmpty() && openFile(sPath, pCsvModel->getOpenTimeLoadOptions()))
+    if (!sPath.isEmpty() && openFile(sPath, pCsvModel->getOpenTimeLoadOptions())) // Note: using old open time load options, which is needed e.g. to keep filter options in case of "open with options", means that if one changes .conf-file, it won't be taken into account on reload.
         return true;
     else
     {
@@ -4762,6 +4762,23 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::collectors() 
     return std::atomic_load(&pOpaq->m_spCollectors);
 }
 
+auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::detailConfigsToString() const -> QString
+{
+    auto spCollectors = collectors();
+    if (!spCollectors)
+        return QString();
+    QString s;
+    for (const auto& spCollector : *spCollectors)
+    {
+        if (!spCollector || !spCollector->isEnabled())
+            continue;
+        if (!s.isEmpty())
+            s += "\n";
+        s += spCollector->exportDefinitionToJson(true /*= include id*/, true /* single line */);
+    }
+    return s;
+}
+
 void DFG_CLASS_NAME(CsvTableView)::onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
     onSelectionModelOrContentChanged(selected, deselected, QItemSelection());
@@ -5815,12 +5832,21 @@ bool SelectionDetailCollector::isBuiltIn() const
     return getProperty("type").toString().isEmpty();
 }
 
-QString SelectionDetailCollector::exportDefinitionToJson() const
+QString SelectionDetailCollector::exportDefinitionToJson(const bool bIncludeId, const bool bSingleLine) const
 {
     auto pOpaq = DFG_OPAQUE_PTR();
     if (!pOpaq)
         return QString();
-    return QString::fromUtf8(QJsonDocument::fromVariant(pOpaq->m_properties).toJson());
+    const QJsonDocument::JsonFormat format = (bSingleLine) ? QJsonDocument::Compact : QJsonDocument::Indented;
+    if (isBuiltIn())
+        return QString(R"({ "id":"%1"%2 })").arg(viewToQString(id()), isEnabled() ? "" : R"(", "enabled":"0")");
+    else
+    {
+        auto m = pOpaq->m_properties;
+        if (bIncludeId)
+            m[s_propertyName_id] = viewToQString(id());
+        return QString::fromUtf8(QJsonDocument::fromVariant(m).toJson(format));
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

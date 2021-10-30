@@ -116,7 +116,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Resets collector clearing memory from previous collection around.
         void reset() { if (m_bNeedsUpdate) resetImpl(); }
 
-        QString exportDefinitionToJson() const;
+        QString exportDefinitionToJson(const bool bIncludeId = false, const bool bSingleLine = false) const;
 
     private:
         virtual double valueImpl() const { return std::numeric_limits<double>::quiet_NaN(); }
@@ -244,6 +244,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         double getMaxTimeInSeconds() const;
         bool isStopRequested() const;
+
+        QString detailConfigsToString() const;
 
         // Thread-safe
         void clearAllDetails();

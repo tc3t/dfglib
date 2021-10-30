@@ -474,7 +474,9 @@ void DFG_MODULE_NS(qt)::TableEditor::CellEditor::setFontPointSizeF(const qreal p
     m_spTableView->setModel(m_spProxyModel.get());
     std::unique_ptr<CsvTableViewBasicSelectionAnalyzerPanel> spAnalyzerPanel(new CsvTableViewBasicSelectionAnalyzerPanel(this));
     m_spTableView->addSelectionAnalyzer(std::make_shared<CsvTableViewBasicSelectionAnalyzer>(spAnalyzerPanel.get()));
+    QPointer<CsvTableViewBasicSelectionAnalyzerPanel> spAnalyzerPanelCapture(spAnalyzerPanel.get());
     m_spSelectionAnalyzerPanel.reset(spAnalyzerPanel.release());
+    m_spTableView->addConfigSavePropertyFetcher([=]() { return std::make_pair(QString("properties/selectionDetails"), spAnalyzerPanelCapture->detailConfigsToString()); });
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigSelectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterActivated, this, &ThisClass::onFilterRequested));
