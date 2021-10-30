@@ -4301,9 +4301,13 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
                 if (rCollector.isBuiltIn())
                     sType = tr("Built-in");
                 auto sFormula = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_formula).toString();
+                auto sInitialValue = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_initialValue).toString();
                 if (!sFormula.isEmpty())
+                {
                     sFormula = tr("<li>Formula: %1</li>").arg(sFormula);
-                const QString sToolTip = tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3</ul>").arg(sType, rCollector.getUiName_short(), sFormula);
+                    sInitialValue = tr("<li>Initial value: %1</li>").arg(sInitialValue);
+                }
+                const QString sToolTip = tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3%4</ul>").arg(sType, rCollector.getUiName_short(), sFormula, sInitialValue);
                 pCheckBox->setToolTip(sToolTip);
             }
 
