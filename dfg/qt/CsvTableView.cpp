@@ -4686,6 +4686,8 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
 
         const auto sFormulaQString = items.value(SelectionDetailCollector_formula::s_propertyName_formula).toString();
         const auto sFormula = qStringToStringUtf8(sFormulaQString);
+        if (sFormula.empty())
+            return false;
         const auto sDescription = items.value(SelectionDetailCollector::s_propertyName_description).toString();
         const auto sUiNameShort = items.value(SelectionDetailCollector::s_propertyName_uiNameShort).toString();
         const auto sUiNameLong = items.value(SelectionDetailCollector::s_propertyName_uiNameLong).toString();
@@ -5935,6 +5937,16 @@ bool SelectionDetailCollectorContainer::erase(const StringViewUtf8& id)
         return false;
     BaseClass::erase(iter);
     return true;
+}
+
+void SelectionDetailCollectorContainer::updateAll(const double val)
+{
+    for (auto& sp : *this)
+    {
+        if (!sp || !sp->isEnabled())
+            continue;
+        sp->update(val);
+    }
 }
 
 } } // namespace dfg::qt

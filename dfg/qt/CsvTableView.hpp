@@ -161,6 +161,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool erase(const StringViewUtf8& id);
 
+        void updateAll(const double val);
+
     private:
         auto findIter(const StringViewUtf8& id) -> Container::iterator;
     }; // class SelectionDetailCollectorContainer
