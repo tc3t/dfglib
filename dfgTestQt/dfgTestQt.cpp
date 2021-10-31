@@ -145,7 +145,40 @@ g,h
     EXPECT_EQ("g", rViewModel.data(rViewModel.index(1, 0)).toString());
     EXPECT_EQ("h", rViewModel.data(rViewModel.index(1, 1)).toString());
 }
-#endif
+#endif // (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+
+TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicDetailHandling)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvTableViewBasicSelectionAnalyzerPanel panel;
+
+    DFGTEST_EXPECT_FALSE(panel.addDetail( { {"type", "accumulator"}, {"formula", "acc + value"} } )); // Missing initial value
+    DFGTEST_EXPECT_FALSE(panel.addDetail( { {"type", "accumulator"}, {"initial_value", 0} } )); // Missing formula string
+    DFGTEST_EXPECT_FALSE(panel.addDetail( { {"formula", "acc + value"}, {"initial_value", 0} } )); // Missing type
+    DFGTEST_EXPECT_FALSE(panel.addDetail( { {"type", "unknown_type"}, {"formula", "acc + value"}, {"initial_value", 0} } )); // Bad type
+
+    DFGTEST_EXPECT_TRUE(panel.addDetail( { {"id", "test_sum" }, {"type", "accumulator"}, {"formula", "acc + value"}, {"initial_value", "0"} } ));
+    DFGTEST_EXPECT_TRUE(panel.addDetail( { {"id", "test_product" }, {"type", "accumulator"}, {"formula", "acc * value"}, {"initial_value", "1"} } ));
+    DFGTEST_EXPECT_TRUE(panel.addDetail( { {"type", "accumulator"}, {"formula", "acc + value"}, {"initial_value", 0} } )); // Tests that can add without id
+
+    auto spCollectors = panel.collectors();
+    DFGTEST_ASSERT_TRUE(spCollectors != nullptr);
+
+    spCollectors->updateAll(2);
+    spCollectors->updateAll(3);
+
+    auto pSumCollector = spCollectors->find("test_sum");
+    auto pProductCollector = spCollectors->find("test_product");
+
+    DFGTEST_EXPECT_TRUE(pSumCollector != nullptr);
+    DFGTEST_EXPECT_TRUE(pProductCollector != nullptr);
+
+    if (pSumCollector)
+        DFGTEST_EXPECT_EQ(5, pSumCollector->value());
+
+    if (pProductCollector)
+        DFGTEST_EXPECT_EQ(6, pProductCollector->value());
+}
 
 TEST(dfgQt, qstringUtils)
 {
