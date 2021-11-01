@@ -161,9 +161,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool erase(const StringViewUtf8& id);
 
+        void setEnableStatusForAll(bool b);
+
         void updateAll(const double val);
 
     private:
+        template <class Func_T>
+        void forEachCollector(Func_T&& func);
+
         auto findIter(const StringViewUtf8& id) -> Container::iterator;
     }; // class SelectionDetailCollectorContainer
 
@@ -247,21 +252,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         double getMaxTimeInSeconds() const;
         bool isStopRequested() const;
 
+        // Can be called while evaluation is ongoing.
         QString detailConfigsToString() const;
 
-        // Thread-safe
+        // Can be called while evaluation is ongoing.
+        void setEnableStatusForAll(bool b);
+
+        // Can be called while evaluation is ongoing.
         void clearAllDetails();
 
-        // Thread-safe
+        // Can be called while evaluation is ongoing
         bool addDetail(const QVariantMap& items);
 
-        // Thread-safe
+        // Can be called while evaluation is ongoing
         bool deleteDetail(const StringViewUtf8& id);
 
-        // Thread-safe
+        // Can be called while evaluation is ongoing
         void setDefaultDetails();
 
-        // Thread-safe
+        // Can be called while evaluation is ongoing
         CollectorContainerPtr collectors() const;
 
     signals:
@@ -276,9 +285,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onAddCustomCollector();
         void onEnableAllDetails();
         void onDisableAllDetails();
-
-    private:
-        void setEnableStatusForAll(bool b);
 
     private:
         QObjectStorage<QLineEdit>      m_spValueDisplay;

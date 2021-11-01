@@ -431,17 +431,14 @@ const CsvTableView* CsvTableViewSortFilterProxyModel::getTableView() const
     return qobject_cast<CsvTableView*>(parent());
 }
 
-}} // namespace dfg::qt
-///////////////////////
-
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::TableEditor)
+DFG_OPAQUE_PTR_DEFINE(TableEditor)
 {
     QMap<QModelIndex, QString> m_pendingEdits; // Stores edits done in cell editor which couldn't be applied immediately to be tried later.
     QPointer<QWidget> m_spResizeWindow;        // Defines widget to resize/move if document requests such.
     bool m_bIgnoreOnSelectionChanged = false;
 };
 
-void DFG_MODULE_NS(qt)::TableEditor::CellEditor::setFontPointSizeF(const qreal pointSize)
+void TableEditor::CellEditor::setFontPointSizeF(const qreal pointSize)
 {
     if (pointSize <= 0)
     {
@@ -454,7 +451,7 @@ void DFG_MODULE_NS(qt)::TableEditor::CellEditor::setFontPointSizeF(const qreal p
 }
 
 
-::DFG_MODULE_NS(qt)::TableEditor::TableEditor()
+TableEditor::TableEditor()
 {
     // Model
     m_spTableModel.reset(new CsvItemModel);
@@ -636,10 +633,23 @@ void DFG_MODULE_NS(qt)::TableEditor::CellEditor::setFontPointSizeF(const qreal p
     resizeColumnsToView();
 }
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::~DFG_CLASS_NAME(TableEditor)()
+TableEditor::~TableEditor()
 {
     m_spCellEditorDockWidget.release();
 }
+
+auto TableEditor::tableView() -> ViewClass*
+{
+    return this->m_spTableView.get();
+}
+
+auto TableEditor::selectionDetailPanel() -> QWidget*
+{
+    return this->m_spSelectionAnalyzerPanel.get();
+}
+
+}} // namespace dfg::qt
+///////////////////////
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString path)
 {

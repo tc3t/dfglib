@@ -147,7 +147,54 @@ g,h
 }
 #endif // (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
 
-TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicDetailHandling)
+TEST(dfgQt, TableEditor_selectionDetails)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    TableEditor tableEditor;
+
+    auto pView = tableEditor.tableView();
+
+    DFGTEST_ASSERT_TRUE(pView != nullptr);
+    DFGTEST_ASSERT_TRUE(tableEditor.m_spTableModel != nullptr);
+
+    // Generating content
+    tableEditor.m_spTableModel->openString(R"(,
+1,5
+9,6
+a,7
+2,8
+    )");
+
+    auto pDetailPanel = qobject_cast<CsvTableViewBasicSelectionAnalyzerPanel*>(tableEditor.selectionDetailPanel());
+
+    DFGTEST_ASSERT_TRUE(pDetailPanel != nullptr);
+
+    // Adding one custom detail
+    pDetailPanel->addDetail({ {"id", "test_product" }, {"type", "accumulator"}, {"formula", "acc * value"}, {"initial_value", "1"} } );
+    pDetailPanel->setEnableStatusForAll(true);
+
+    QString sResult;
+    const auto handler = [&](const QString& sResultArg) { sResult = sResultArg; };
+
+    DFG_QT_VERIFY_CONNECT(QObject::connect(pDetailPanel, &CsvTableViewBasicSelectionAnalyzerPanel::sigSetValueDisplayString, pDetailPanel, handler));
+
+    pView->selectColumn(0);
+
+    // Manually running event loop in order to trigger handling of signal sigSetValueDisplayString
+    for (int i = 0; i < 10 && sResult.isEmpty(); ++i)
+    {
+        QCoreApplication::processEvents();
+        QThread::msleep(10);
+    }
+    DFGTEST_ASSERT_TRUE(!sResult.isEmpty());
+
+    // Note: numeric precision in results is subject to change.
+    DFGTEST_EXPECT_EQ(
+        "Included: 3, Excluded: 1, Sum: 12, Avg: 4, Median: 2, Min: 1, Max: 9, Variance: 12.666666666666668, StdDev (pop): 3.5590260840104371, StdDev (smp): 4.358898943540674, Is sorted (num): no (asc for 2 first), test_product: 18",
+        sResult);
+}
+
+TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicCustomDetailHandling)
 {
     using namespace ::DFG_MODULE_NS(qt);
     CsvTableViewBasicSelectionAnalyzerPanel panel;
@@ -167,11 +214,15 @@ TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicDetailHandling)
     spCollectors->updateAll(2);
     spCollectors->updateAll(3);
 
-    auto pSumCollector = spCollectors->find("test_sum");
-    auto pProductCollector = spCollectors->find("test_product");
+    const auto getCollector = [&](const char* psz)
+    {
+        auto p = spCollectors->find(psz);
+        DFGTEST_EXPECT_TRUE(p != nullptr);
+        return p;
+    };
 
-    DFGTEST_EXPECT_TRUE(pSumCollector != nullptr);
-    DFGTEST_EXPECT_TRUE(pProductCollector != nullptr);
+    auto pSumCollector = getCollector("test_sum");
+    auto pProductCollector = getCollector("test_product");
 
     if (pSumCollector)
         DFGTEST_EXPECT_EQ(5, pSumCollector->value());

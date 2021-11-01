@@ -97,6 +97,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         TableEditor();
         ~TableEditor() DFG_OVERRIDE_DESTRUCTOR;
 
+        ViewClass* tableView();
+
+        QWidget* selectionDetailPanel();
+
         /** Returns true if opened, false otherwise. Opening will fail if TableEditor already has a file opened and it has been modified. */
         bool tryOpenFileFromPath(QString path);
 

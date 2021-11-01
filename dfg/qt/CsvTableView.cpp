@@ -4571,15 +4571,10 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setEnableStatusForAll(const bool b)
 {
-    if (!DFG_OPAQUE_REF().m_spCollectors)
+    auto spCollectors = collectors();
+    if (!spCollectors)
         return;
-
-    auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
-    for (auto& spCollector : collectors)
-    {
-        if (spCollector)
-            spCollector->enable(b);
-    }
+    spCollectors->setEnableStatusForAll(b);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEnableAllDetails()
@@ -4608,15 +4603,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::isStopRequest
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::clearAllDetails()
 {
-    auto pCollectors = DFG_OPAQUE_REF().m_spCollectors.get();
-    if (!pCollectors)
-        return;
-    for (auto& spItem : *pCollectors)
-    {
-        if (!spItem)
-            continue;
-        spItem->enable(false);
-    }
+    setEnableStatusForAll(false);
 }
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items)
@@ -5941,11 +5928,29 @@ bool SelectionDetailCollectorContainer::erase(const StringViewUtf8& id)
 
 void SelectionDetailCollectorContainer::updateAll(const double val)
 {
+    forEachCollector([=](SelectionDetailCollector& collector)
+    {
+        if (collector.isEnabled())
+            collector.update(val);
+    });
+}
+
+void SelectionDetailCollectorContainer::setEnableStatusForAll(const bool b)
+{
+    forEachCollector([=](SelectionDetailCollector& collector)
+    {
+        collector.enable(b);
+    });
+}
+
+template <class Func_T>
+void SelectionDetailCollectorContainer::forEachCollector(Func_T&& func)
+{
     for (auto& sp : *this)
     {
-        if (!sp || !sp->isEnabled())
-            continue;
-        sp->update(val);
+      if (!sp)
+          continue;
+      func(*sp);
     }
 }
 
