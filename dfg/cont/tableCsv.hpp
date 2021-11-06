@@ -20,195 +20,9 @@
 #include "MapToStringViews.hpp"
 #include "../numericTypeTools.hpp"
 #include "vectorSso.hpp"
+#include "../CsvFormatDefinition.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
-    
-    class DFG_CLASS_NAME(CsvFormatDefinition)
-    {
-    public:
-        //DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeN) :
-        // Note: default values are questionable because default read vals should have metachars, but default write vals should not.
-        DFG_CLASS_NAME(CsvFormatDefinition)(const char cSep/* = ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharAutoDetect*/,
-                                            const char cEnc/* = '"'*/,
-                                            DFG_MODULE_NS(io)::EndOfLineType eol/* = DFG_MODULE_NS(io)::EndOfLineTypeN*/,
-                                            DFG_MODULE_NS(io)::TextEncoding encoding/* = DFG_MODULE_NS(io)::encodingUTF8*/) :
-            m_cSep(cSep),
-            m_cEnc(cEnc),
-            m_eolType(eol),
-            m_textEncoding(encoding),
-            m_enclosementBehaviour(DFG_MODULE_NS(io)::EbEncloseIfNeeded),
-            m_bWriteHeader(true),
-            m_bWriteBom(true)
-        {}
-
-        // Reads properties from given config, items not present in config are not modified.
-        void fromConfig(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config);
-
-        void appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const;
-
-        template <class Str_T>
-        static Str_T csvFilePathToConfigFilePath(const Str_T& str)
-        {
-            // Note: changing this would likely require changes at least to file extension filters in qt-module.
-            return str + ".conf";
-        }
-
-        int32 separatorChar() const { return m_cSep; }
-        void separatorChar(int32 cSep) { m_cSep = cSep; }
-        int32 enclosingChar() const { return m_cEnc; }
-        void enclosingChar(int32 cEnc) { m_cEnc = cEnc; }
-        int32 eolCharFromEndOfLineType() const { return ::DFG_MODULE_NS(io)::eolCharFromEndOfLineType(eolType()); }
-
-        DFG_MODULE_NS(io)::EndOfLineType eolType() const { return m_eolType; }
-        void eolType(DFG_MODULE_NS(io)::EndOfLineType eolType) { m_eolType = eolType; }
-
-        bool headerWriting() const { return m_bWriteHeader; }
-        void headerWriting(bool bWriteHeader) { m_bWriteHeader = bWriteHeader; }
-
-        bool bomWriting() const { return m_bWriteBom; }
-        void bomWriting(bool bWriteBom) { m_bWriteBom = bWriteBom; }
-
-        DFG_MODULE_NS(io)::TextEncoding textEncoding() const { return m_textEncoding; }
-        void textEncoding(DFG_MODULE_NS(io)::TextEncoding encoding) { m_textEncoding = encoding; }
-
-        void setProperty(const DFG_CLASS_NAME(StringViewC)& svKey, const DFG_CLASS_NAME(StringViewC)& svValue)
-        {
-            m_genericProperties[svKey.toString()] = svValue.toString();
-        }
-
-        std::string getProperty(const DFG_CLASS_NAME(StringViewC)& svKey, const DFG_CLASS_NAME(StringViewC)& defaultValue) const
-        {
-            auto iter = m_genericProperties.find(svKey);
-            return (iter != m_genericProperties.cend()) ? iter->second : defaultValue.toString();
-        }
-
-        bool hasProperty(const DFG_CLASS_NAME(StringViewC)& svKey) const
-        {
-            return m_genericProperties.hasKey(svKey);
-        }
-
-        DFG_MODULE_NS(io)::EnclosementBehaviour enclosementBehaviour() const { return m_enclosementBehaviour; }
-        void enclosementBehaviour(const DFG_MODULE_NS(io)::EnclosementBehaviour eb) { m_enclosementBehaviour = eb; }
-
-        int32 m_cSep;
-        int32 m_cEnc;
-        //int32 m_cEol;
-        DFG_MODULE_NS(io)::EndOfLineType m_eolType;
-        DFG_MODULE_NS(io)::TextEncoding m_textEncoding;
-        DFG_MODULE_NS(io)::EnclosementBehaviour m_enclosementBehaviour; // Affects only writing.
-        bool m_bWriteHeader;
-        bool m_bWriteBom;
-        ::DFG_MODULE_NS(cont)::MapVectorAoS<std::string, std::string> m_genericProperties; // Generic properties (e.g. if implementation needs specific flags)
-    };
-
-    inline void DFG_CLASS_NAME(CsvFormatDefinition)::fromConfig(const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config)
-    {
-        // Encoding
-        {
-            auto p = config.valueStrOrNull(DFG_UTF8("encoding"));
-            if (p)
-                textEncoding(DFG_MODULE_NS(io)::strIdToEncoding(p->c_str().rawPtr()));
-        }
-
-        // Enclosing char
-        {
-            auto p = config.valueStrOrNull(DFG_UTF8("enclosing_char"));
-            if (p)
-            {
-                if (p->empty())
-                    enclosingChar(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone);
-                else
-                {
-                    auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());
-                    if (rv.first)
-                        enclosingChar(rv.second);
-                }
-            }
-        }
-
-        // Separator char
-        {
-            auto p = config.valueStrOrNull(DFG_UTF8("separator_char"));
-            if (p)
-            {
-                auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());
-                if (rv.first)
-                    separatorChar(rv.second);
-            }
-        }
-
-        // EOL-type
-        {
-            auto p = config.valueStrOrNull(DFG_UTF8("end_of_line_type"));
-            if (p)
-                eolType(DFG_MODULE_NS(io)::endOfLineTypeFromStr(p->rawStorage()));
-        }
-
-        // BOM writing
-        {
-            auto p = config.valueStrOrNull(DFG_UTF8("bom_writing"));
-            if (p)
-                bomWriting(DFG_MODULE_NS(str)::strToByNoThrowLexCast<bool>(p->rawStorage()));
-        }
-
-        // Properties
-        {
-            config.forEachStartingWith(DFG_UTF8("properties/"), [&](const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StringViewT& relativeUri, const DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)::StringViewT& value)
-            {
-                setProperty(relativeUri, value);
-            });
-        }
-    }
-
-    inline void DFG_CLASS_NAME(CsvFormatDefinition)::appendToConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const
-    {
-        // Encoding
-        {
-            auto psz = DFG_MODULE_NS(io)::encodingToStrId(m_textEncoding);
-            if (!DFG_MODULE_NS(str)::isEmptyStr(psz))
-                config.setKeyValue(DFG_UTF8("encoding"), SzPtrUtf8(DFG_MODULE_NS(io)::encodingToStrId(m_textEncoding)));
-        }
-
-        
-        // Enclosing char
-        {
-            if (m_cEnc == DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone)
-                config.setKeyValue(DFG_UTF8("enclosing_char"), DFG_UTF8(""));
-            else if (!DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(m_cEnc) && m_cEnc >= 0)
-            {
-                char buffer[32];
-                DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", m_cEnc);
-                config.setKeyValue(DFG_UTF8("enclosing_char"), SzPtrUtf8(buffer));
-            }
-        }
-
-        // Separator char
-        if (!DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(m_cSep) && m_cSep >= 0)
-        {
-            char buffer[32];
-            DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", m_cSep);
-            config.setKeyValue(DFG_UTF8("separator_char"), SzPtrUtf8(buffer));
-        }
-
-        // EOL-type
-        {
-            const auto psz = DFG_MODULE_NS(io)::eolLiteralStrFromEndOfLineType(m_eolType);
-            if (!DFG_MODULE_NS(str)::isEmptyStr(psz))
-                config.setKeyValue(DFG_UTF8("end_of_line_type"), SzPtrUtf8(psz.c_str()));
-        }
-
-        // BOM writing
-        {
-            config.setKeyValue(DFG_UTF8("bom_writing"), (m_bWriteBom) ? DFG_UTF8("1") : DFG_UTF8("0"));
-        }
-
-        // Properties
-        // TODO: Generic properties are std::string so must figure out raw bytes to UTF-8 conversion. In practice consider changing properties to UTF-8
-        {
-            //m_genericProperties
-        }
-    }
-
     namespace DFG_DETAIL_NS
     {
         template <class Strm_T>
@@ -451,7 +265,7 @@ DFG_ROOT_NS_BEGIN{
                     }
                     const auto nTargetRow = nInputRow - m_nFilteredRowCount;
                     if (m_rowContentFilter(m_rTable, nInputRow, nInputCol, nTargetRow, nTargetCol, pData, nCount))
-                        m_rTable.setElement(nTargetRow, nTargetCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
+                        m_rTable.setElement(nTargetRow, nTargetCol, StringViewUtf8(TypedCharPtrUtf8R(pData), nCount));
                 };
 
                 void onReadDone()
@@ -507,7 +321,7 @@ DFG_ROOT_NS_BEGIN{
                 {
                     DFG_STATIC_ASSERT(InternalEncoding_T == DFG_MODULE_NS(io)::encodingUTF8, "Implimentation exists only for UTF8-encoding");
                     // TODO: this effectively assumes that user given input is valid UTF8.
-                    m_rTable.setElement(nRow, nCol, DFG_CLASS_NAME(StringViewUtf8)(TypedCharPtrUtf8R(pData), nCount));
+                    m_rTable.setElement(nRow, nCol, StringViewUtf8(TypedCharPtrUtf8R(pData), nCount));
                 };
 
                 TableCsv& m_rTable;
@@ -515,7 +329,7 @@ DFG_ROOT_NS_BEGIN{
 
         public:
 
-            DFG_CLASS_NAME(TableCsv)()
+            TableCsv()
                 : m_readFormat(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
                 , m_saveFormat(m_readFormat)
             {}
@@ -551,7 +365,7 @@ DFG_ROOT_NS_BEGIN{
             }
 
             // TODO: test
-            bool isContentAndSizesIdenticalWith(const DFG_CLASS_NAME(TableCsv)& other) const
+            bool isContentAndSizesIdenticalWith(const TableCsv& other) const
             {
                 const auto nRows = this->rowCountByMaxRowIndex();
                 const auto nCols = this->colCountByMaxColIndex();
@@ -685,7 +499,7 @@ DFG_ROOT_NS_BEGIN{
             }
 
             template <class Strm_T, class CharAppender_T, class Reader_T>
-            void read(Strm_T& strm, const DFG_CLASS_NAME(CsvFormatDefinition)& formatDef, CharAppender_T, Reader_T&& cellHandler)
+            void read(Strm_T& strm, const CsvFormatDefinition& formatDef, CharAppender_T, Reader_T&& cellHandler)
             {
                 using namespace DFG_MODULE_NS(io);
                 this->clear();
@@ -750,7 +564,7 @@ DFG_ROOT_NS_BEGIN{
                         return;
                     utf8::unchecked::iterator<const char*> inputIter(pData);
                     utf8::unchecked::iterator<const char*> inputIterEnd(pData + std::strlen(pData));
-                    DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(strm,
+                    DelimitedTextCellWriter::writeCellFromStrIter(strm,
                                                                                  makeRange(inputIter, inputIterEnd),
                                                                                  uint32(m_format.separatorChar()),
                                                                                  uint32(m_format.enclosingChar()),
@@ -778,7 +592,7 @@ DFG_ROOT_NS_BEGIN{
                     }
                 }
 
-                DFG_CLASS_NAME(CsvFormatDefinition) m_format;
+                CsvFormatDefinition m_format;
                 std::string m_bytes;
                 std::string m_workBytes;
                 const char* m_pEncodedSep;
@@ -794,7 +608,7 @@ DFG_ROOT_NS_BEGIN{
             }
 
             template <class Stream_T>
-            static auto createWritePolicy(DFG_CLASS_NAME(CsvFormatDefinition) format) -> WritePolicySimple<Stream_T>
+            static auto createWritePolicy(CsvFormatDefinition format) -> WritePolicySimple<Stream_T>
             {
                 return WritePolicySimple<Stream_T>(format);
             }
@@ -845,9 +659,9 @@ DFG_ROOT_NS_BEGIN{
                 writeToStream(strm, policy);
             }
 
-            DFG_CLASS_NAME(CsvFormatDefinition) m_readFormat; // Stores the format of previously read input. If no read is done, stores to default output format.
+            CsvFormatDefinition m_readFormat; // Stores the format of previously read input. If no read is done, stores to default output format.
                                                               // TODO: specify content in case of interrupted read.
-            DFG_CLASS_NAME(CsvFormatDefinition) m_saveFormat; // Format to be used when saving
+            CsvFormatDefinition m_saveFormat; // Format to be used when saving
         }; // class CsvTable
 
 } } // module namespace

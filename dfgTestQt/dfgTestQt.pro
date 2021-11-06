@@ -56,6 +56,7 @@ SOURCES += \
     main.cpp
 
 HEADERS += \
+    ../dfg/CsvFormatDefinition.hpp \
     ../dfg/qt/ConsoleDisplay.hpp \
     ../dfg/qt/CsvItemModel.hpp \
     ../dfg/qt/CsvTableView.hpp \

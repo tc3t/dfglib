@@ -215,6 +215,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/PatternMatcher.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/InputDialog.hpp \
         $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/CsvFormatDefinition.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/operations.hpp \
         $$_PRO_FILE_PWD_/../../dfg/chartsAll.hpp \

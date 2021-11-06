@@ -701,6 +701,7 @@
     <ClInclude Include="..\dfg\cont\vectorSso.hpp" />
     <ClInclude Include="..\dfg\cont\ViewableSharedPtr.hpp" />
     <ClInclude Include="..\dfg\crypt.hpp" />
+    <ClInclude Include="..\dfg\CsvFormatDefinition.hpp" />
     <ClInclude Include="..\dfg\dataAnalysisAll.hpp" />
     <ClInclude Include="..\dfg\dataAnalysis\correlation.hpp" />
     <ClInclude Include="..\dfg\dataAnalysis\smoothWithNeighbourAverages.hpp" />
