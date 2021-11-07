@@ -1,6 +1,7 @@
 #include "CsvItemModel.hpp"
 #include "qtIncludeHelpers.hpp"
 #include "PropertyHelper.hpp"
+#include "../cont/tableCsv.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QUndoStack>
@@ -125,6 +126,28 @@ namespace
         }
     };
 } // unnamed namesapce
+
+namespace dfg { namespace qt {
+
+class CsvItemModel::OpaqueTypeDefs
+{
+public:
+    using RawDataTable = ::DFG_MODULE_NS(cont)::TableSz<char, Index, ::DFG_MODULE_NS(io)::encodingUTF8>;
+    using DataTable    = ::DFG_MODULE_NS(cont)::TableCsv<char, Index, ::DFG_MODULE_NS(io)::encodingUTF8>;
+};
+
+namespace DFG_DETAIL_NS
+{
+    // Internal hack to allow CsvItemModel implementation to use table() -function to refer to actual datatable
+    // while still being able to declare the table() function in header without including actual implementation header.
+    class CsvItemModelTable::TableRef : public CsvItemModel::OpaqueTypeDefs::DataTable
+    {
+        TableRef() = delete;
+        ~TableRef() = delete;
+    }; // class CsvItemModelTable::TableRef
+}
+
+}} // namespace dfg::qt
 
 const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
 
@@ -515,10 +538,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
 namespace
 {
     template <class Strm_T>
-    class CsvWritePolicy : public ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable::WritePolicySimple<Strm_T>
+    class CsvWritePolicy : public ::DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::WritePolicySimple<Strm_T>
     {
     public:
-        typedef ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable::WritePolicySimple<Strm_T> BaseClass;
+        typedef ::DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::WritePolicySimple<Strm_T> BaseClass;
         using CsvItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
 
         DFG_BASE_CONSTRUCTOR_DELEGATE_1(CsvWritePolicy, BaseClass)
@@ -889,7 +912,7 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(cons
         if (!::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sFilePath))
         {
             const auto s8bitPath = qStringToFileApi8Bit(sFilePath);
-            const auto peekedFormat = peekCsvFormatFromFile(s8bitPath, Min(1024, saturateCast<int>(::DFG_MODULE_NS(os)::fileSize(s8bitPath))));
+            const auto peekedFormat = peekCsvFormatFromFile(sFilePath, Min(1024, saturateCast<int>(::DFG_MODULE_NS(os)::fileSize(s8bitPath))));
             loadOptions.eolType(peekedFormat.eolType());
         }
         return loadOptions;
@@ -950,14 +973,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         return intervalSetFromString<int>(sv, (std::numeric_limits<int>::max)()).shift_raw(-CsvItemModel::internalColumnToVisibleShift());
     }
 
-    class CancellableReader : public DFG_MODULE_NS(qt)::CsvItemModel::DataTable::DefaultCellHandler
+    class CancellableReader : public DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::DefaultCellHandler
     {
     public:
-        using BaseClass = ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable::DefaultCellHandler;
+        using BaseClass = ::DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::DefaultCellHandler;
         using ItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
         using ProgressController = ItemModel::LoadOptions::ProgressController;
 
-        CancellableReader(ItemModel::DataTable& rTable, ProgressController& rProgressController)
+        CancellableReader(ItemModel::OpaqueTypeDefs::DataTable& rTable, ProgressController& rProgressController)
             : BaseClass(rTable)
             , m_rProgressController(rProgressController)
         {}
@@ -972,7 +995,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
                     if (!rProcessController(processedCount))
                     {
                         rProcessController.setCancelled(true);
-                        throw CsvItemModel::DataTable::OperationCancelledException();
+                        throw CsvItemModel::OpaqueTypeDefs::DataTable::OperationCancelledException();
                     }
                 }
             }
@@ -1000,9 +1023,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         using BaseClass = CancellableReader;
         using ItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
         using DataTable = ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable;
-        using FilterCellHandler = decltype(DataTable().createFilterCellHandler());
+        using FilterCellHandler = decltype(ItemModel::OpaqueTypeDefs::DataTable().createFilterCellHandler());
 
-        CancellableFilterReader(ItemModel::DataTable& rTable, ProgressController& rProgressController, FilterCellHandler& rFilterCellHandler)
+        CancellableFilterReader(ItemModel::OpaqueTypeDefs::DataTable& rTable, ProgressController& rProgressController, FilterCellHandler& rFilterCellHandler)
             : BaseClass(rTable, rProgressController)
             , m_rFilterCellHandler(rFilterCellHandler)
         {}
@@ -1042,7 +1065,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
             return false;
         }
 
-        bool isMatch(const int nInputRow, const CsvItemModel::DataTable::RowContentFilterBuffer& rowBuffer)
+        bool isMatch(const int nInputRow, const CsvItemModel::OpaqueTypeDefs::DataTable::RowContentFilterBuffer& rowBuffer)
         {
             CancellableReader::handleProgressController(m_rProgressController, 0, static_cast<size_t>(nInputRow), 0, 0);
             const bool bIsMatch = m_multiMatcher.isMatchByCallback([&](const MatcherDefinition& matcher)
@@ -1304,9 +1327,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(cons
 {
     using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ::DFG_MODULE_NS(cont) ::IntervalSet<int>>;
     IntervalContainer intervalsByColumn; 
-    table.forEachFwdColumnIndex([&](const int c)
+    table.impl().forEachFwdColumnIndex([&](const int c)
     {
-        table.forEachFwdRowInColumn(c, [&](const int r, SzPtrUtf8R tpsz)
+        table.impl().forEachFwdRowInColumn(c, [&](const int r, SzPtrUtf8R tpsz)
         {
             auto tpszEffective = (pFill) ? pFill : tpsz;
             if (tpszEffective && privSetDataToTable(r, c, tpszEffective))
@@ -1892,6 +1915,15 @@ void CsvItemModel::forEachColInfoWhile(std::function<bool(const ColInfo&)> func)
     forEachColInfoWhileImpl(*this, std::move(func));
 }
 
+auto CsvItemModel::table()       -> DataTableRef      { return m_table.impl(); }
+auto CsvItemModel::table() const -> DataTableConstRef { return m_table.impl(); }
+
+auto CsvItemModel::peekCsvFormatFromFile(const QString& sPath, const size_t nPeekLimitAsBaseChars) -> CsvFormatDefinition
+{
+    return ::DFG_ROOT_NS::peekCsvFormatFromFile(qStringToFileApi8Bit(sPath), nPeekLimitAsBaseChars);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // class CsvitemModel::ColInfo
@@ -1953,6 +1985,60 @@ bool CsvItemModel::ColInfo::setProperty(const uintptr_t& contextId, const String
     }
     return bChanged;
 }
+
+namespace DFG_DETAIL_NS
+{
+    DFG_OPAQUE_PTR_DEFINE(CsvItemModelTable)
+    {
+        using DataTable = CsvItemModel::OpaqueTypeDefs::DataTable;
+
+        DataTable m_table;
+    };
+
+    CsvItemModelTable::CsvItemModelTable() = default;
+    CsvItemModelTable::~CsvItemModelTable() = default;
+
+    auto CsvItemModelTable::impl() -> TableRef&
+    {
+        return static_cast<TableRef&>(DFG_OPAQUE_REF().m_table);
+    }
+
+    auto CsvItemModelTable::impl() const -> const TableRef&
+    {
+        return static_cast<const TableRef&>(DFG_OPAQUE_PTR()->m_table);
+    }
+
+    auto CsvItemModelTable::operator()(Index nRow, Index nCol) const -> SzPtrUtf8R
+    {
+        return impl()(nRow, nCol);
+    }
+
+    void CsvItemModelTable::setElement(Index nRow, Index nCol, StringViewUtf8 sv)
+    {
+        impl().setElement(nRow, nCol, sv);
+    }
+
+    void CsvItemModelTable::forEachFwdRowInColumnWhile(Index nCol, std::function<bool (Index)> whileFunc, std::function<void (Index, SzPtrUtf8R)> func) const
+    {
+        impl().forEachFwdRowInColumnWhile(nCol, whileFunc, func);
+    }
+
+    void CsvItemModelTable::forEachFwdRowInColumn(Index nCol, std::function<void (Index, SzPtrUtf8R)> func) const
+    {
+        impl().forEachFwdRowInColumn(nCol, func);
+    }
+
+    auto CsvItemModelTable::rowCountByMaxRowIndex() const -> Index
+    {
+        return impl().rowCountByMaxRowIndex();
+    }
+
+    auto CsvItemModelTable::cellCountNonEmpty() const -> Index
+    {
+        return impl().cellCountNonEmpty();
+    }
+
+} // namespace DFG_DETAIL_NS
 
 }} // namespace dfg::qt
 /////////////////////////////////

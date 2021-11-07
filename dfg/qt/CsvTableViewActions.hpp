@@ -17,7 +17,6 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../alg.hpp"
 #include "qtBasic.hpp"
 #include "tableViewUndoCommands.hpp"
-#include "../cont/table.hpp"
 #include "../math/FormulaParser.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
@@ -65,7 +64,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     namespace DFG_DETAIL_NS
     {
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char, int, DFG_MODULE_NS(io)::encodingUTF8> CellMemory;
+        using CellMemory = CsvItemModel::RawDataTable;
 
         static void storeCells(CellMemory& cellMemory, DFG_CLASS_NAME(CsvTableView)& rView)
         {
@@ -217,7 +216,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             DFG_DETAIL_NS::CellMemory cellMemory;
             rTableView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*bContinue*/)
             {
-                cellMemory.addString(DFG_UTF8(""), index.row(), index.column());
+                cellMemory.setElement(index.row(), index.column(), DFG_UTF8(""));
             });
             pCsvModel->setDataByBatch_noUndo(cellMemory, DFG_UTF8(""));
         }

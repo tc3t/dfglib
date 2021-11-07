@@ -3,7 +3,6 @@
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
 #include "qtBasic.hpp"
-#include "../cont/tableCsv.hpp"
 #include "../io/textEncodingTypes.hpp"
 #include "StringMatchDefinition.hpp"
 #include "../build/languageFeatureInfo.hpp"
@@ -11,6 +10,7 @@
 #include "../OpaquePtr.hpp"
 #include "containerUtils.hpp"
 #include "../numericTypeTools.hpp"
+#include "../CsvFormatDefinition.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -27,14 +27,14 @@ DFG_END_INCLUDE_QT_HEADERS
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
 {
     template <class Cont_T>
-    class DFG_CLASS_NAME(SortedSequence);
+    class SortedSequence;
 
-    class DFG_CLASS_NAME(CsvConfig);
+    class CsvConfig;
 } }
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io)
 {
-    class DFG_CLASS_NAME(OfStreamWithEncoding);
+    class OfStreamWithEncoding;
 } }
 
 class QUndoStack;
@@ -113,6 +113,34 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             QBrush m_highlightBrush;
         }; // class HighlightDefinition
 
+        // Provides public interface for internal table implementation.
+        class CsvItemModelTable
+        {
+        public:
+            using Index = int32;
+
+            CsvItemModelTable();
+            ~CsvItemModelTable();
+
+            SzPtrUtf8R operator()(Index nRow, Index nCol) const;
+            void setElement(Index nRow, Index nCol, StringViewUtf8);
+
+            void forEachFwdRowInColumnWhile(Index nCol, std::function<bool (Index)> whileFunc, std::function<void (Index, SzPtrUtf8R)> func) const;
+
+            void forEachFwdRowInColumn(Index nCol, std::function<void (Index, SzPtrUtf8R)> func) const;
+
+            Index rowCountByMaxRowIndex() const;
+
+            Index cellCountNonEmpty() const;
+
+            class TableRef;
+
+                  TableRef& impl();
+            const TableRef& impl() const;
+
+            DFG_OPAQUE_PTR_DECLARE();
+        }; // class CsvItemModelTable
+
     } // detail-namespace
 
     class CsvItemModel : public QAbstractTableModel
@@ -126,11 +154,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef int32 Index;
         typedef int64 LinearIndex; // LinearIndex guarantees that LinearIndex(rowCount()) * LinearIndex(columnCount()) does not overflow.
         typedef std::ostream StreamT;
-        typedef DFG_MODULE_NS(cont)::TableSz<char, Index, DFG_MODULE_NS(io)::encodingUTF8> RawDataTable;
-        typedef DFG_MODULE_NS(cont)::TableCsv<char, Index, DFG_MODULE_NS(io)::encodingUTF8> DataTable;
+        typedef DFG_DETAIL_NS::CsvItemModelTable RawDataTable;
+        typedef RawDataTable DataTable;
         typedef DFG_MODULE_NS(cont)::SortedSequence<std::vector<Index>> IndexSet;
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
         typedef DFG_MODULE_NS(qt)::StringMatchDefinition StringMatchDefinition;
+        class OpaqueTypeDefs;
 
         enum ColType
         {
@@ -156,6 +185,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             FindAdvanceStyleLinear,
             FindAdvanceStyleRowIncrement
         };
+
+        using DataTableRef      =       DFG_DETAIL_NS::CsvItemModelTable::TableRef&;
+        using DataTableConstRef = const DFG_DETAIL_NS::CsvItemModelTable::TableRef&;
 
         class ColInfo
         {
@@ -520,8 +552,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent);
 #endif
 
-              DataTable& table()       { return m_table; }
-        const DataTable& table() const { return m_table; }
+        // Returns internal datatable type defined only in CsvItemModel.cpp
+        DataTableRef&      table();
+        DataTableConstRef& table() const;
+
+        static CsvFormatDefinition peekCsvFormatFromFile(const QString& sPath, const size_t nPeekLimitAsBaseChars = 512);
 
     signals:
         void sigModifiedStatusChanged(bool bNewStatus);
@@ -573,7 +608,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
         beginResetModel(); // This might be a bit coarse for smaller edits.
         m_bResetting = true;
-        func(table());
+        func(m_table);
         endResetModel();
         m_bResetting = false;
         setModifiedStatus(true);

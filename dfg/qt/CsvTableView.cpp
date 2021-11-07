@@ -1650,7 +1650,7 @@ public:
             m_spContentFilterWidget.reset(new JsonListWidget(this));
         }
 
-        const auto defaultFormatSettings = (isSaveDialog()) ? m_saveOptions : peekCsvFormatFromFile(qStringToFileApi8Bit(sFilePath));
+        const auto defaultFormatSettings = (isSaveDialog()) ? m_saveOptions : CsvTableView::CsvModel::peekCsvFormatFromFile(sFilePath);
 
         // Separator
         {
