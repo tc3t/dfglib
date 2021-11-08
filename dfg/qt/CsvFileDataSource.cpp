@@ -3,6 +3,7 @@
 #include "../os.hpp"
 #include "qtIncludeHelpers.hpp"
 #include "connectHelper.hpp"
+#include "../cont/tableCsv.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QFileSystemWatcher>

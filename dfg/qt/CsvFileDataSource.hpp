@@ -2,11 +2,11 @@
 
 #include "../dfgDefs.hpp"
 #include "graphTools.hpp"
-#include "../cont/tableCsv.hpp"
 #include "../cont/MapToStringViews.hpp"
 #include "../str/string.hpp"
 #include "containerUtils.hpp"
 #include "FileDataSource.hpp"
+#include "../CsvFormatDefinition.hpp"
 
 class QFileSystemWatcher;
 

@@ -32,6 +32,7 @@
 #include <dfg/str/stringLiteralCharToValue.hpp>
 #include <dfg/cont/IntervalSetSerialization.hpp>
 #include <dfg/cont/detail/MapBlockIndex.hpp>
+#include <dfg/cont/tableUtils.hpp>
 
 #if (DFG_LANGFEAT_MUTEX_11 == 1)
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -1867,3 +1868,62 @@ TEST(dfgCont, MapBlockIndex_benchmarks)
 }
 
 #endif
+
+namespace
+{
+    class CustomString : public std::string
+    {
+    public:
+        CustomString() {}
+        DFG_BASE_CONSTRUCTOR_DELEGATE_1(CustomString, std::string) {}
+    };
+};
+
+TEST(dfgCont, tableUtils_readStreamToTable)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+    using namespace DFG_MODULE_NS(io);
+    std::string s = "a,b,c,d\n"
+        "e,f,g,h\n"
+        "i,j,k,l,m,n";
+    BasicImStream strm(s.c_str(), s.size());
+    std::array<std::string, 14> contExpected = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n" };
+    const auto cont = readStreamToTable(strm, ',', char(-1), '\n');
+
+    Table<CustomString> table2;
+    {
+        BasicImStream strm2(s.c_str(), s.size());
+        readStreamToTable(strm2, ',', char(-1), '\n', table2);
+    }
+    TableSz<char> table2Sz;
+    {
+        BasicImStream strm2(s.c_str(), s.size());
+        readStreamToTable(strm2, ',', char(-1), '\n', table2Sz);
+    }
+    EXPECT_EQ(cont.getCellCount(), table2.getCellCount());
+    if (cont.getCellCount() == table2.getCellCount())
+        EXPECT_TRUE((std::equal(cont.cbegin(), cont.cend(), table2.cbegin())));
+
+    EXPECT_EQ(cont.getRowCount(), 3);
+    if (cont.getRowCount() >= 3)
+    {
+        EXPECT_EQ(cont.getColumnCountOnRow(0), 4);
+        EXPECT_EQ(cont.getColumnCountOnRow(1), 4);
+        EXPECT_EQ(cont.getColumnCountOnRow(2), 6);
+    }
+
+    size_t nCounter = 0;
+    for (size_t r = 0; r < cont.getRowCount(); ++r)
+    {
+        for (size_t c = 0; c < cont.getColumnCountOnRow(r); ++c)
+        {
+            if (!isValidIndex(contExpected, nCounter))
+            {
+                ADD_FAILURE();
+                break;
+            }
+            EXPECT_EQ(cont(r, c), contExpected[nCounter++]);
+        }
+    }
+}

@@ -10,13 +10,15 @@
 #include "colour.hpp"
 #include "console.hpp"
 #include "crypt.hpp"
+#include "CsvFormatDefinition.hpp"
 #include "dfgBase.hpp"
-#
+
 #include "guid.hpp"
 #include "hash.hpp"
 #include "iterableForRange.hpp"
 #include "memsetZeroSecure.hpp"
 #include "numericTypeTools.hpp"
+#include "OpaquePtr.hpp"
 #include "ptrToContiguousMemory.hpp"
 #include "rangeIterator.hpp"
 #include "ReadOnlySzParam.hpp"

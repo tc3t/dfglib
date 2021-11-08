@@ -2,7 +2,6 @@
 #define DFG_IO_DELIMITEDTEXTREADER_VGDXYCDA
 
 #include "../io.hpp"
-#include "../cont/table.hpp"
 #include "../io/BasicImStream.hpp"
 #include <bitset>
 #include <type_traits>
@@ -1535,35 +1534,6 @@ public:
         IfStreamWithEncoding istrm(sPath, encoding);
         CellReader<CellDataT, std::istream> reader(istrm, cd);
         return read(reader, cellHandler);
-    }
-
-    // Reads table to container.
-    template <class Stream_T, class Char_T>
-    static DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Table)<std::basic_string<Char_T>> readTableToStringContainer(Stream_T& strm, const Char_T cSeparator, const Char_T cEnc, const Char_T eol)
-    {
-        CellData<Char_T> cellDataHandler(cSeparator, cEnc, eol);
-        auto reader = createReader(strm, cellDataHandler);
-        DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Table)<std::basic_string<Char_T>> tableStrings;
-        auto cellHandler = [&](const size_t nRow, const size_t /*nCol*/, const decltype(cellDataHandler)& cdh)
-        {
-            tableStrings.pushBackOnRow(nRow, cdh.getBuffer());
-        };
-        read(reader, cellHandler);
-        return tableStrings;
-    }
-
-    // Overload enabling the use of user-defined container of type Table<UserStringType>.
-    template <class Char_T, class Stream_T, class StrCont_T>
-    static void readTableToStringContainer(Stream_T& strm, const Char_T cSeparator, const Char_T cEnc, const Char_T eol, StrCont_T& dest)
-    {
-        CellData<Char_T> cellDataHandler(cSeparator, cEnc, eol);
-        auto reader = createReader(strm, cellDataHandler);
-        auto cellHandler = [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& cdh)
-        {
-            dest.setElement(nRow, nCol, cdh.getBuffer());
-            //dest.pushBackOnRow(nRow, cdh.getBuffer());
-        };
-        read(reader, cellHandler);
     }
 
     // Returns sepator item if found, s_nMetaCharNone if not found.

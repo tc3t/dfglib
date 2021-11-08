@@ -692,6 +692,7 @@
     <ClInclude Include="..\dfg\cont\SortedSequence.hpp" />
     <ClInclude Include="..\dfg\cont\table.hpp" />
     <ClInclude Include="..\dfg\cont\tableCsv.hpp" />
+    <ClInclude Include="..\dfg\cont\tableUtils.hpp" />
     <ClInclude Include="..\dfg\cont\TorRef.hpp" />
     <ClInclude Include="..\dfg\cont\TrivialPair.hpp" />
     <ClInclude Include="..\dfg\cont\UniqueResourceHolder.hpp" />

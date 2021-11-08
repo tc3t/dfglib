@@ -13,6 +13,8 @@
 #include <dfg/io/DelimitedTextWriter.hpp>
 #include <dfg/utf/utfBom.hpp>
 #include <dfg/time/timerCpu.hpp>
+#include <dfg/cont/table.hpp>
+#include <dfg/cont/tableUtils.hpp>
 
 int main(int argc, const char* argv[])
 {
@@ -106,8 +108,8 @@ int main(int argc, const char* argv[])
     DFG_MODULE_NS(cont)::TableSz<char> tableUtf8;
     DFG_MODULE_NS(cont)::TableSz<char> tableUtf32Be;
     DFG_MODULE_NS(time)::TimerCpu timer;
-    DFG_MODULE_NS(io)::DelimitedTextReader::readTableToStringContainer<char>(istrmUtf8, DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect, cUtf8Enc, cUtf8Eol, tableUtf8);
-    DFG_MODULE_NS(io)::DelimitedTextReader::readTableToStringContainer<char>(istrmUtf32Be, DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect, cUtf32Enc, cUtf32Eol, tableUtf32Be);
+    DFG_MODULE_NS(cont)::readStreamToTable<char>(istrmUtf8, DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect, cUtf8Enc, cUtf8Eol, tableUtf8);
+    DFG_MODULE_NS(cont)::readStreamToTable<char>(istrmUtf32Be, DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect, cUtf32Enc, cUtf32Eol, tableUtf32Be);
 
     const auto elapsed = timer.elapsedWallSeconds();
     std::cout << "Reading data took " << elapsed << " seconds" << std::endl;

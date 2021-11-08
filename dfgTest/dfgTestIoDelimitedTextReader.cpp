@@ -1080,63 +1080,6 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestRandomTextRead)
     }
 }
 
-namespace
-{
-    class CustomString : public std::string
-    {
-    public:
-        CustomString() {}
-        DFG_BASE_CONSTRUCTOR_DELEGATE_1(CustomString, std::string) {}
-    };
-};
-
-TEST(DfgIo, DelimitedTextReader_readTableToContainer)
-{
-    using namespace DFG_MODULE_NS(io);
-    std::string s = "a,b,c,d\n"
-        "e,f,g,h\n"
-        "i,j,k,l,m,n";
-    DFG_CLASS_NAME(BasicImStream) strm(s.c_str(), s.size());
-    std::array<std::string, 14> contExpected = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n" };
-    const auto cont = DFG_CLASS_NAME(DelimitedTextReader)::readTableToStringContainer(strm, ',', char(-1), '\n');
-
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Table)<CustomString> table2;
-    {
-        DFG_CLASS_NAME(BasicImStream) strm2(s.c_str(), s.size());
-        DFG_CLASS_NAME(DelimitedTextReader)::readTableToStringContainer(strm2, ',', char(-1), '\n', table2);
-    }
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableSz)<char> table2Sz;
-    {
-        DFG_CLASS_NAME(BasicImStream) strm2(s.c_str(), s.size());
-        DFG_CLASS_NAME(DelimitedTextReader)::readTableToStringContainer(strm2, ',', char(-1), '\n', table2Sz);
-    }
-    EXPECT_EQ(cont.getCellCount(), table2.getCellCount());
-    if (cont.getCellCount() == table2.getCellCount())
-        EXPECT_TRUE((std::equal(cont.cbegin(), cont.cend(), table2.cbegin())));
-
-    EXPECT_EQ(cont.getRowCount(), 3);
-    if (cont.getRowCount() >= 3)
-    {
-        EXPECT_EQ(cont.getColumnCountOnRow(0), 4);
-        EXPECT_EQ(cont.getColumnCountOnRow(1), 4);
-        EXPECT_EQ(cont.getColumnCountOnRow(2), 6);
-    }
-
-    size_t nCounter = 0;
-    for (size_t r = 0; r < cont.getRowCount(); ++r)
-    {
-        for (size_t c = 0; c < cont.getColumnCountOnRow(r); ++c)
-        {
-            if (!DFG_ROOT_NS::isValidIndex(contExpected, nCounter))
-            {
-                ADD_FAILURE();
-                break;
-            }
-            EXPECT_EQ(cont(r, c), contExpected[nCounter++]);
-        }
-    }
-}
-
 TEST(DfgIo, DelimitedTextReader_tokenizeLine)
 {
     using namespace DFG_ROOT_NS;
