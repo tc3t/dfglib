@@ -38,7 +38,7 @@
         <li>global_config   : Defines default config values for all panels.</li>
     </ul>
    <li><i>name</i>: name of the object, shown e.g. in legend.</li>
-   <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left.</li>
+   <li><i>panel_id</i>: Target panel (e.g. panel where graph is drawn or to which <i>panel_config</i> applies to). Currently grid paneling is supported; syntax is "panel_id":"grid(row number, column number)". (1,1) means top left. If omitted, default panel is used.</li>
    <li><i>y_axis_id</i>: Defines whether chart object uses y-axis on the left (y) or on the right side (y2). Possible values: {<b><i>y</i></b>, <i>y2</i>}. If field is not present, <i>y</i> is used.</li>
    <li><i>data_source</i>: Defines data source from which to fetch data. If omitted, default source is used.</li>
     <ul>
@@ -58,7 +58,7 @@
                     <ul>
                         <li>File is monitored for changes: if it changes or gets renamed, on next chart update new values should be used automatically.
                         <li>Example: {"type":"xy", "data_source":"sqlite_file(C:/Users/user/Desktop/data.sqlite3, SELECT * FROM example_table)"}</li>
-                        <li>Example: {"type":"xy", "data_source":"sqlite_file(C:/Users/user/Desktop/data.sqlite3, \"SELECT some_column, another_column FROM example_table\""}</li>
+                        <li>Example: {"type":"xy", "data_source":"sqlite_file(C:/Users/user/Desktop/data.sqlite3, \"SELECT some_column, another_column FROM example_table\")"}</li>
                         <li>Note to Windows users: path separator should be either slash '/' or double backslash '\\', single backslash '\' does not work.</li>
                     </ul>
             </ul>
