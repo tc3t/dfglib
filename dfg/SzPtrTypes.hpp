@@ -191,12 +191,20 @@ struct TypedCharPtrT : public std::conditional<Type_T == CharPtrTypeUtf16, DFG_D
     // Making sure that Char_T and type defined for Type_T are the same (ignoring const difference)
     DFG_STATIC_ASSERT((std::is_same<typename std::remove_const<Char_T>::type, typename CharPtrTypeToBaseCharType<Type_T>::type>::value), "Char_T must be compatible with given type");
 
+    using CharTConstInverse = typename std::conditional<std::is_const<Char_T>::value, typename std::remove_const<Char_T>::type, const Char_T>::type;
+
     using BaseClass::BaseClass; // Inheriting constructor
 
     // Automatic conversion from char -> const char
     operator TypedCharPtrT<const Char_T, Type_T>() const { return TypedCharPtrT<const Char_T, Type_T>(this->m_p); }
 
     bool operator==(const TypedCharPtrT& other) const
+    {
+        return this->m_p == other.m_p;
+    }
+
+    // This was added for MSVC2022 C++20 mode, dfgTest wouldn't compile without.
+    bool operator==(const TypedCharPtrT<CharTConstInverse, Type_T>& other) const
     {
         return this->m_p == other.m_p;
     }
@@ -361,10 +369,10 @@ DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypesWithEncoding == 4, "Missi
 // Literal creation macros.
 // Usage: DFG_ASCII("abc")
 // Note that DFG_ASCII("abc") and SzPtrAscii("abc") are different: the macro version is intended to guarantee that the string representation is really ASCII, while the 
-// latter requires that the compiler implements "abc" as ASCII. So essentially DFG_UTF8("abc") should be equivalent to SzPtrUtf8(u8"abc")
+// latter requires that the compiler implements "abc" as ASCII. So essentially DFG_UTF8("abc") should be equivalent to SzPtrUtf8(u8"abc") (at least in C++17)
 #if DFG_LANGFEAT_UNICODE_STRING_LITERALS
-    #define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(u8##x) // TODO: verify that x is ASCII-compatible.
-    #define DFG_UTF8(x)     ::DFG_ROOT_NS::SzPtrUtf8(u8##x)
+    #define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(reinterpret_cast<const char*>(u8##x)) // TODO: verify that x is ASCII-compatible.
+    #define DFG_UTF8(x)     ::DFG_ROOT_NS::SzPtrUtf8(reinterpret_cast<const char*>(u8##x))
     #define DFG_UTF16(x)    ::DFG_ROOT_NS::SzPtrUtf16(u##x)
 #else
     #define DFG_ASCII(x)    ::DFG_ROOT_NS::SzPtrAscii(x)   // Creates typed ascii-string literal from string literal. Usage: DFG_ASCII("abc")  (TODO: implement, currently a placeholder)

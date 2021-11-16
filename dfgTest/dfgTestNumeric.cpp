@@ -966,9 +966,9 @@ TEST(dfgNumeric, loopVectorization)
     EXPECT_EQ(v16, vD);
 }
 
-TEST(dfgNumeric, loopVectorizationSin)
+namespace
 {
-    const auto test = [](const char* psz, const int method) -> double
+    static double loopVectorizationSinImpl(const char* psz, const int method)
     {
         typedef double ValType;
         using namespace DFG_ROOT_NS;
@@ -1035,13 +1035,16 @@ TEST(dfgNumeric, loopVectorizationSin)
             //std::cout << "Dest alignment: " << (uintptr_t)(destPtr) % 16 << "\n";
         #endif
         return sum;
-    };
+    }
+}
 
-    const auto sum0 = test("dfg vector loop", 0);
-    const auto sum1 = test("dfg transform2", 1);
-    const auto sum2 = test("dfg transformInPlace", 2);
-    const auto sum3 = test("plain loop", 3);
-    const auto sum4 = test("non-vectorized", 4);
+TEST(dfgNumeric, loopVectorizationSin)
+{
+    const auto sum0 = loopVectorizationSinImpl("dfg vector loop", 0);
+    const auto sum1 = loopVectorizationSinImpl("dfg transform2", 1);
+    const auto sum2 = loopVectorizationSinImpl("dfg transformInPlace", 2);
+    const auto sum3 = loopVectorizationSinImpl("plain loop", 3);
+    const auto sum4 = loopVectorizationSinImpl("non-vectorized", 4);
     EXPECT_EQ(sum0, sum1);
     EXPECT_EQ(sum0, sum2);
     EXPECT_EQ(sum0, sum3);

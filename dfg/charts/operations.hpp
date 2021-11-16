@@ -724,7 +724,7 @@ namespace operations
             if (argList.valueCount() != 3)
                 return privInvalidCreationArgsResult();
             const auto axis = axisStrToIndex(argList.value(0));
-            if (axis == axisIndex_invalid)
+            if (axis == static_cast<int>(axisIndex_invalid))
                 return privInvalidCreationArgsResult();
             ChartEntryOperation op(FilterOperation::operation);
 
@@ -932,7 +932,7 @@ namespace operations
             return ChartEntryOperation();
 
         const auto axis = axisStrToIndex(argList.value(0));
-        if (axis == axisIndex_invalid)
+        if (axis == static_cast<int>(axisIndex_invalid))
             return ChartEntryOperation();
 
         ChartEntryOperation op(&Formula::operation);

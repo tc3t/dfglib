@@ -119,9 +119,9 @@ TEST(dfgCharts, operations)
         ChartOperationPipeData pipeArg(nullptr, nullptr);
         EXPECT_FALSE(op);
         EXPECT_FALSE(op.hasErrors());
-        EXPECT_EQ(ChartEntryOperation::axisIndex_x, ChartEntryOperation::axisStrToIndex(DFG_UTF8("x")));
-        EXPECT_EQ(ChartEntryOperation::axisIndex_y, ChartEntryOperation::axisStrToIndex(DFG_UTF8("y")));
-        EXPECT_EQ(ChartEntryOperation::axisIndex_invalid, ChartEntryOperation::axisStrToIndex(DFG_UTF8("a")));
+        EXPECT_EQ(static_cast<int>(ChartEntryOperation::axisIndex_x), ChartEntryOperation::axisStrToIndex(DFG_UTF8("x")));
+        EXPECT_EQ(static_cast<int>(ChartEntryOperation::axisIndex_y), ChartEntryOperation::axisStrToIndex(DFG_UTF8("y")));
+        EXPECT_EQ(static_cast<int>(ChartEntryOperation::axisIndex_invalid), ChartEntryOperation::axisStrToIndex(DFG_UTF8("a")));
         op(pipeArg);
         EXPECT_TRUE(op.hasError(ChartEntryOperation::error_noCallable));
     }

@@ -1919,8 +1919,8 @@ TEST(dfgStr, utf16)
         const wchar_t szBuffer[] = L"abc";
         TypedCharPtrUtf16R tp = szBuffer;
         SzPtrUtf16R tpsz(szBuffer);
-        EXPECT_EQ(szBuffer, tp);
-        EXPECT_EQ(szBuffer, tpsz);
+        EXPECT_EQ(szBuffer, tp.operator const wchar_t* ());
+        EXPECT_EQ(szBuffer, tpsz.operator const wchar_t *());
         StringUtf16 s16(tpsz);
         EXPECT_STREQ(szBuffer, s16.c_str());
         StringUtf16 s16_2(szBuffer, szBuffer + DFG_COUNTOF_SZ(szBuffer));
