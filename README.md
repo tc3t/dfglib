@@ -93,7 +93,7 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status of general unit tests (dfgTest) (as of 2021-06-19 commit [e39f80be](https://github.com/tc3t/dfglib/tree/e39f80bed20a58e00803d1d553d6973fe9607d6b), with Boost 1.70.0 unless stated otherwise)
+## Build status of general unit tests (dfgTest) (as of 2021-06-19 commit [e39f80be](https://github.com/tc3t/dfglib/tree/e39f80bed20a58e00803d1d553d6973fe9607d6b), with Boost 1.70.0 unless stated otherwise, MSVC2022 added 2021-11-17)
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
@@ -113,6 +113,8 @@ Usage types:
 | VC2017        | x64           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
 | VC2019        | x86           | Release | 100 % (291/291) | std:c++17 with Conformance mode |
 | VC2019        | x64           | Release | 100 % (291/291) | std:c++17 with Conformance mode |
+| VC2022        | x86           | Release | 100 % (293/293) | (commit [c928e432](https://github.com/tc3t/dfglib/commit/c928e432bee9912e5cbee9e09e139cc23df2f616)) std:c++20 with Conformance mode |
+| VC2022        | x64           | Release | 100 % (293/293) | (commit [c928e432](https://github.com/tc3t/dfglib/commit/c928e432bee9912e5cbee9e09e139cc23df2f616)) std:c++20 with Conformance mode |
 ||||||
 
 <br>
