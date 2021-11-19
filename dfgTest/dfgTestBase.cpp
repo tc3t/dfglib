@@ -897,7 +897,7 @@ TEST(dfgTypeTraits, IsTrueTrait)
 TEST(dfgBuild, buildTimeDetails)
 {
     using namespace DFG_ROOT_NS;
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorAoS)<BuildTimeDetail, NonNullCStr> vals;
+    DFG_MODULE_NS(cont)::MapVectorAoS<BuildTimeDetail, NonNullCStr> vals;
     getBuildTimeDetailStrs([&](BuildTimeDetail btd, const NonNullCStr psz)
     {
         vals[btd] = psz;
@@ -936,6 +936,19 @@ TEST(dfgBuild, buildTimeDetails)
 #ifdef BOOST_LIB_VERSION
     EXPECT_STREQ(BOOST_LIB_VERSION, vals[BuildTimeDetail_boostVersion]);
 #endif
+
+    // C++ standard version
+#if defined(_MSC_VER)
+    #if _MSVC_LANG == 202002L
+        DFGTEST_EXPECT_STREQ("C++20 (202002L)", vals[BuildTimeDetail_cppStandardVersion]);
+    #elif _MSVC_LANG == 201703L
+        DFGTEST_EXPECT_STREQ("C++17 (201703L)", vals[BuildTimeDetail_cppStandardVersion]);
+    #elif DFG_TEMP_CPP_VERSION == 201402L
+        DFGTEST_EXPECT_STREQ("C++14 (201402L)", vals[BuildTimeDetail_cppStandardVersion]);
+    #elif DFG_TEMP_CPP_VERSION == 201103L
+        DFGTEST_EXPECT_STREQ("C++11 (201103L)", vals[BuildTimeDetail_cppStandardVersion]);
+    #endif
+#endif // if defined(_MSC_VER)
 }
 
 TEST(dfgBuild, DFG_STRING_LITERAL_TO_TYPED_LITERAL)

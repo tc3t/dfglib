@@ -199,7 +199,8 @@ int main(int argc, char **argv)
         using namespace ::DFG_ROOT_NS;
         std::cout << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
             << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << "), "
-                    << getBuildTimeDetailStr<BuildTimeDetail_standardLibrary>() 
+            << getBuildTimeDetailStr<BuildTimeDetail_cppStandardVersion>()
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_standardLibrary>()
             << ", " << getBuildTimeDetailStr<BuildTimeDetail_architecture>()
 #if defined(_MSC_VER)
             << ", " << getBuildTimeDetailStr<BuildTimeDetail_buildDebugReleaseType>()

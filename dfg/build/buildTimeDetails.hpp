@@ -38,6 +38,7 @@ enum BuildTimeDetail
     BuildTimeDetail_dateTime,                // Build time as date time in unspecified format.
     BuildTimeDetail_compilerAndShortVersion, // Compiler
     BuildTimeDetail_compilerFullVersion,     // Full compiler version
+    BuildTimeDetail_cppStandardVersion,      // C++ version in use (e.g. "C++11 (201103L)")
     BuildTimeDetail_standardLibrary,         // Standard library identifier in unspecified format or empty is not available, currently MSVC, libstdc++ and libc++ are detected.
     BuildTimeDetail_buildDebugReleaseType,   // Debug/release type. TODO: more precise definition especially on Non-Windows
     BuildTimeDetail_architecture,            // Build architecture
@@ -53,6 +54,7 @@ namespace DFG_DETAIL_NS
         "Build date",
         "Compiler",
         "Compiler (full version)",
+        "C++ standard version",
         "Standard library",
         "Debug/release type",
         "Architecture",
@@ -83,6 +85,39 @@ DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(boostVersion)
 #else
     return "";
 #endif
+}
+
+DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(cppStandardVersion)
+{
+#if defined(_MSC_VER)
+    #define DFG_TEMP_CPP_VERSION _MSVC_LANG // For details why using this instead of __cplusplus, see comments in strTo.hpp
+#else
+    #define DFG_TEMP_CPP_VERSION __cplusplus
+#endif
+
+    //https://stackoverflow.com/a/7132549
+#if DFG_TEMP_CPP_VERSION > 202002L
+    #define DFG_TEMP_CPP_VERSION_STR "> C++20"
+#elif DFG_TEMP_CPP_VERSION == 202002L
+    #define DFG_TEMP_CPP_VERSION_STR "C++20"
+#elif DFG_TEMP_CPP_VERSION == 201703L
+    #define DFG_TEMP_CPP_VERSION_STR "C++17"
+#elif DFG_TEMP_CPP_VERSION == 201402L
+    #define DFG_TEMP_CPP_VERSION_STR "C++14"
+#elif DFG_TEMP_CPP_VERSION == 201103L
+    #define DFG_TEMP_CPP_VERSION_STR "C++11"
+#elif DFG_TEMP_CPP_VERSION == 199711L
+    #define DFG_TEMP_CPP_VERSION_STR "C++98"
+#elif DFG_TEMP_CPP_VERSION == 1
+    #define DFG_TEMP_CPP_VERSION_STR "< C++98"
+#else 
+    #define DFG_TEMP_CPP_VERSION_STR "Unknown"
+#endif
+
+    return DFG_TEMP_CPP_VERSION_STR " (" DFG_STRINGIZE(DFG_TEMP_CPP_VERSION) ")";
+
+#undef DFG_TEMP_CPP_VERSION_STR
+#undef DFG_TEMP_CPP_VERSION
 }
 
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(standardLibrary)
@@ -161,6 +196,7 @@ inline void getBuildTimeDetailStrs(Func&& func)
     DFG_TEMP_DO_FOR_BUILD_DETAIL(dateTime);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(compilerAndShortVersion);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(compilerFullVersion);
+    DFG_TEMP_DO_FOR_BUILD_DETAIL(cppStandardVersion);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(standardLibrary);
 #ifdef _MSC_VER
     DFG_TEMP_DO_FOR_BUILD_DETAIL(buildDebugReleaseType);

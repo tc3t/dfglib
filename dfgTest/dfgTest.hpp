@@ -14,6 +14,7 @@
 #define DFGTEST_EXPECT_LE(a, b)             EXPECT_LE(a, b)
 #define DFGTEST_EXPECT_LT(a, b)             EXPECT_LT(a, b)
 #define DFGTEST_EXPECT_DOUBLE_EQ(a,b)       EXPECT_DOUBLE_EQ(a,b)
+#define DFGTEST_EXPECT_STREQ(a, b)          EXPECT_STREQ(a, b)
 
 #define DFGTEST_ASSERT_TRUE(a)              ASSERT_TRUE(a)
 #define DFGTEST_ASSERT_FALSE(a)             ASSERT_FALSE(a)
