@@ -1867,8 +1867,6 @@ TEST(dfgCont, MapBlockIndex_benchmarks)
 #endif
 }
 
-#endif
-
 namespace
 {
     class CustomString : public std::string
@@ -1927,3 +1925,5 @@ TEST(dfgCont, tableUtils_readStreamToTable)
         }
     }
 }
+
+#endif // Build on/off switch
