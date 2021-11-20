@@ -163,8 +163,14 @@ constexpr char ChartObjectFieldIdStr_axisLabelColour[] = "axis_label_colour";
 //      Available properties:
 //          -line_colour
 //          -label_colour
-// Example: "axis_properties_y": "(line_colour, red, label_colour, green)"
+//          -range_start
+//          -range_end
+// Example: "axis_properties_y": "(line_colour, red, label_colour, green, range_start, 10, range_end, 20)"
 constexpr char ChartObjectFieldIdStr_axisProperties[] = "axis_properties_";
+constexpr char ChartObjectFieldIdStr_axisProperty_lineColour[]  = "line_colour";
+constexpr char ChartObjectFieldIdStr_axisProperty_labelColour[] = "label_colour";
+constexpr char ChartObjectFieldIdStr_axisProperty_rangeStart[]  = "range_start";
+constexpr char ChartObjectFieldIdStr_axisProperty_rangeEnd[]    = "range_end";
 
 // operation_
 constexpr char ChartObjectFieldIdStr_operation[] = "operation_";

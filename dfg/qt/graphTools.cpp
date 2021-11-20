@@ -3188,14 +3188,31 @@ void ChartCanvasQCustomPlot::setAxisProperties(const StringViewUtf8& svPanelId, 
         DFG_QT_CHART_CONSOLE_WARNING(tr("No axis '%1' found from panel '%2': setting properties ignored").arg(viewToQString(svAxisId), viewToQString(svPanelId)));
         return;
     }
+
+    const auto setRangeHelper = [&](const NonNullCStr pszAxisPropId, const StringViewSzUtf8& svPropValue)
+    {
+        const auto val = ::DFG_MODULE_NS(str)::strTo<double>(svPropValue);
+        if (::DFG_MODULE_NS(math)::isFinite(val))
+            pAxis->setProperty(pszAxisPropId, val);
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Invalid range start '%1', unable to convert to value").arg(viewToQString(svPropValue)));
+    };
+
     for (size_t i = 0, nArgCount = args.valueCount(); i < nArgCount; i += 2)
     {
+        using namespace ::DFG_MODULE_NS(charts);
         const auto svPropId = args.value(i);
+        const auto svPropIdUntyped = svPropId.asUntypedView();
         const auto svPropValue = args.value(i + 1);
-        if (svPropId == DFG_UTF8("line_colour"))
+
+        if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_lineColour)
             setPanelAxisColour(*pAxis, QColor(viewToQString(svPropValue)));
-        else if (svPropId == DFG_UTF8("label_colour"))
+        else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_labelColour)
             setPanelAxisLabelColour(*pAxis, QColor(viewToQString(svPropValue)));
+        else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_rangeStart)
+            setRangeHelper("dfglib_range_start", svPropValue);
+        else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_rangeEnd)
+            setRangeHelper("dfglib_range_end", svPropValue);
         else
             DFG_QT_CHART_CONSOLE_WARNING(tr("Unrecognized axis property '%1' for axis '%2' in panel '%3'").arg(viewToQString(svPropId), viewToQString(svAxisId), viewToQString(svPanelId)));
     }
@@ -4038,10 +4055,33 @@ void ChartCanvasQCustomPlot::optimizeAllAxesRanges()
 
     pQcp->rescaleAxes();
 
-    // Adding margin to axes so that min/max point markers won't get clipped by axisRect.
+    // Setting axis ranges and adding margin, by default margin is added so that min/max point markers won't get clipped by axisRect.
     forEachAxisRect([](QCPAxisRect& rect)
     {
-        forEachAxis(&rect, [](QCPAxis& axis) { axis.scaleRange(1.1); });
+        forEachAxis(&rect, [](QCPAxis& axis)
+        {
+            const auto propRangeStart = axis.property("dfglib_range_start");
+            const auto propRangeEnd = axis.property("dfglib_range_end");
+            // Note scaling must be done before settings ranges in order to have range edge at given positition instead of being shifted by margin.
+            axis.scaleRange(1.1);
+            const auto oldRange = axis.range();
+            auto newRange = oldRange;
+            // Not using setRangeLower/Upper() because if e.g. old range is (-10, 10) and one calls setRangeLower(20), the range ends up being (10, 20)
+            if (propRangeStart.type() == QMetaType::Double)
+            {
+                newRange.lower = propRangeStart.toDouble();
+                if (newRange.upper < newRange.lower)
+                    newRange.upper = newRange.lower + 1;
+            }
+            if (propRangeEnd.type() == QMetaType::Double)
+            {
+                newRange.upper = propRangeEnd.toDouble();
+                if (newRange.upper < newRange.lower)
+                    newRange.lower = newRange.upper - 1;
+            }
+            if (oldRange != newRange)
+                axis.setRange(newRange);
+        });
     });
 
     pQcp->replot();
