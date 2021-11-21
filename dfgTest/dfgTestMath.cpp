@@ -644,6 +644,8 @@ TEST(dfgMath, FormulaParser)
         EXPECT_TRUE(parser.defineFunction("f3", [](double a, double b, double c) {return a + b + c; }, true));
         EXPECT_TRUE(parser.defineFunction("f4", [](double a, double b, double c, double d) {return a + b + c + d; }, true));
         EXPECT_TRUE(parser.defineFunction("fglobal", [](double a) -> double{ return a + globalValue++; }, false));
+        EXPECT_TRUE(parser.defineFunction("hexParser", [](const char* psz) -> double { return std::strtoul(psz, nullptr, 16); }, true));
+        EXPECT_TRUE(parser.defineFunction("binParser", [](const char* psz) -> double { return std::strtoul(psz, nullptr, 2); }, true));
 
         EXPECT_EQ(1,  parser.setFormulaAndEvaluateAsDouble("f0()"));
         EXPECT_EQ(2,  parser.setFormulaAndEvaluateAsDouble("f1(2)"));
@@ -652,6 +654,8 @@ TEST(dfgMath, FormulaParser)
         EXPECT_EQ(14, parser.setFormulaAndEvaluateAsDouble("f4(2, 3, 4, 5)"));
         EXPECT_EQ(1,  parser.setFormulaAndEvaluateAsDouble("fglobal(0)+fglobal(0)")); // Tests that fglobal(0) is not optimized to single call.
         EXPECT_TRUE(isNan(parser.setFormulaAndEvaluateAsDouble("f0(2)")));
+
+        DFGTEST_EXPECT_LEFT(259, parser.setFormulaAndEvaluateAsDouble((R"(1 + hexParser("ff") + binParser("11"))"))); // 1 + 255 + 3
     }
 
     // Error handling

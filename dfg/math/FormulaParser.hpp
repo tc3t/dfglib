@@ -77,6 +77,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         using FuncType_D_3D = double(*)(double, double, double);
         using FuncType_D_4D = double(*)(double, double, double, double);
 
+        using FuncType_D_1PSZ = double(*)(const char*);
+
         static constexpr size_t maxFunctorCountPerType() { return 20; }
 
         ReturnStatus setFormula(const StringViewC sv); // Returns ReturnStatus that evaluates to true iff successful. Note: successful return value doesn't guarantee that formula is even well formed, i.e. may return true even if formula has syntax errors.
@@ -104,6 +106,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         // If function of given identifier already exists, old function definition is replaced.
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_0D func, bool bAllowOptimization);
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_1D func, bool bAllowOptimization);
+        ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_1PSZ func, bool bAllowOptimization);
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_2D func, bool bAllowOptimization);
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_3D func, bool bAllowOptimization);
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_4D func, bool bAllowOptimization);
