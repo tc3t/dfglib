@@ -48,6 +48,7 @@ SOURCES += \
     ../dfg/qt/qxt/gui/qxtspanslider.cpp \
     ../dfg/qt/JsonListWidget.cpp \
     ../dfg/qt/sqlTools.cpp \
+    ../dfg/qt/stringConversions.cpp \
     ../dfg/str/fmtlib/format.cc \
     ../externals/gtest/gtest-all.cc \
     dfgTestCsvItemModel.cpp \
@@ -86,6 +87,7 @@ HEADERS += \
     ../dfg/qt/sqlTools.hpp \
     ../dfg/qt/JsonListWidget.hpp \
     ../dfg/qt/PatternMatcher.hpp \
+    ../dfg/qt/stringConversions.hpp \
     ../dfgTest/dfgTest.hpp
 
 OTHER_FILES += \

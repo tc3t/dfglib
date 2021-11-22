@@ -184,6 +184,7 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/stringConversions.cpp \
         $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.cpp
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
@@ -214,6 +215,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/PatternMatcher.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/InputDialog.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/stringConversions.hpp \
         $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.hpp \
         $$_PRO_FILE_PWD_/../../dfg/CsvFormatDefinition.hpp \
         $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
