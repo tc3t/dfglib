@@ -842,6 +842,67 @@ TEST(dfgQt, CsvTableView_columnIndexMappingWithHiddenColumns)
     }
 }
 
+TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    csvModel.openString(
+        ",\n"
+        "1.25,2021-11-22 12:01:02\n"
+        "\"2,5\",2021-11-22 12:01:02.125+00:00\n"
+        "3,2021-11-22 12:01:02.125+01:00\n"
+        "4,00:00:00\n"
+        "5,13:01:02.125\n"
+        "6,24:00:00\n"
+    );
+
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.25", csvModel.rawStringViewAt(0, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("2,5", csvModel.rawStringViewAt(1, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("3", csvModel.rawStringViewAt(2, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("4", csvModel.rawStringViewAt(3, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("5", csvModel.rawStringViewAt(4, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("6", csvModel.rawStringViewAt(5, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("2021-11-22 12:01:02", csvModel.rawStringViewAt(0, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("2021-11-22 12:01:02.125+00:00", csvModel.rawStringViewAt(1, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("2021-11-22 12:01:02.125+01:00", csvModel.rawStringViewAt(2, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("00:00:00", csvModel.rawStringViewAt(3, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("13:01:02.125", csvModel.rawStringViewAt(4, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("24:00:00", csvModel.rawStringViewAt(5, 1));
+
+    // Transforming values with formula generator, text at (r, c) -> cellValue(r, c)
+    // Dates are expected to be converted into numeric values.
+    {
+        CsvItemModel generateParamModel;
+        generateParamModel.openString(
+                    "\t\n"
+                    "Target\tWhole table\n"
+                    "Generator\tFormula\n"
+                    "Formula\tcellValue(trow, tcol)\n"
+                    "Format type\tg\n"
+                    "Format precision\t14");
+        view.generateContentImpl(generateParamModel);
+    }
+
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.25", csvModel.rawStringViewAt(0, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("2.5", csvModel.rawStringViewAt(1, 0)); // This tests for (hacky) 'comma as dot'-conversion.
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("3", csvModel.rawStringViewAt(2, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("4", csvModel.rawStringViewAt(3, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("5", csvModel.rawStringViewAt(4, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("6", csvModel.rawStringViewAt(5, 0));
+
+    // Dates without timezone specifier are interpreted as UTC
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1637582462", csvModel.rawStringViewAt(0, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1637582462.125", csvModel.rawStringViewAt(1, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1637578862.125", csvModel.rawStringViewAt(2, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("0", csvModel.rawStringViewAt(3, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("46862.125", csvModel.rawStringViewAt(4, 1));
+    // 24:00:00 is not a valid QTime so 24:00:00 cellValue() returns nan.
+    //DFGTEST_EXPECT_EQ_LITERAL_UTF8("86400", csvModel.rawStringViewAt(5, 1));
+}
+
 TEST(dfgQt, CsvTableView_columnVisibilityConfPropertyHandling)
 {
     using namespace ::DFG_MODULE_NS(qt);

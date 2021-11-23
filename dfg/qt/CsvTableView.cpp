@@ -21,6 +21,7 @@
 #include "../math/FormulaParser.hpp"
 #include "../func/memFuncMedian.hpp"
 #include "InputDialog.hpp"
+#include "stringConversions.hpp"
 #include <chrono>
 #include <bitset>
 
@@ -3133,7 +3134,7 @@ namespace
                 sFuncNames.resize(sFuncNames.length() - 2); // Removing trailing ", ".
                 m_spDynamicHelpWidget->setText(tr("Generates content using given formula.<br>"
                     "<b>Available variables and content-related functions</b>:"
-                    "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>cellValue(row, column)</b>: Value of cell at (row, column) (1-based indexes). Content is generated from top to bottom.</li>"
+                    "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>cellValue(row, column)</b>: Value of cell at (row, column) (1-based indexes). Dates return epoch times (dates interpreted as UTC if timezone not specified), times return seconds since previous midnight. Content is generated from top to bottom.</li>"
                     "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>trow</b>: Row of cell to which content is being generated, 1-based index.</li>"
                     "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>tcol</b>: Column of cell to which content is being generated, 1-based index.</li>"
                     "<li>&nbsp;&nbsp;&nbsp;&nbsp;<b>rowcount</b>: Number of rows in table </li>"
@@ -3690,9 +3691,10 @@ namespace
 
 namespace
 {
-    double cellValueAsDouble(CsvItemModel::DataTable* pTable, const double rowDouble, const double colDouble)
+    static double cellValueAsDouble(CsvItemModel::DataTable* pTable, const double rowDouble, const double colDouble)
     {
         using namespace ::DFG_MODULE_NS(math);
+        using namespace ::DFG_MODULE_NS(qt);
         if (!pTable)
             return std::numeric_limits<double>::quiet_NaN();
         int r, c;
@@ -3700,9 +3702,11 @@ namespace
             return std::numeric_limits<double>::quiet_NaN();
         r = ::DFG_MODULE_NS(qt)::CsvItemModel::visibleRowIndexToInternal(r);
         c = ::DFG_MODULE_NS(qt)::CsvItemModel::visibleRowIndexToInternal(c);
-        return ::DFG_MODULE_NS(str)::strTo<double>((*pTable)(r, c));
+        const auto tpsz = (*pTable)(r, c);
+        const auto rv = (tpsz) ? tableCellStringToDouble(tpsz) : std::numeric_limits<double>::quiet_NaN();
+        return rv;
     }
-};
+} // unnamed namespace
 
 bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
 {
