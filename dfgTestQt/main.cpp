@@ -57,6 +57,7 @@ int main(int argc, char **argv)
 
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue_dateHandling";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";

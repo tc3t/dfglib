@@ -3527,16 +3527,12 @@ namespace
         dateFromMilliSecondsUtc
     };
 
-    template <class T>
-    qint64 valToInt64(T val)
-    {
-        return val;
-    }
-
-    qint64 valToDateInt64(double val)
+    qint64 valToDateInt64(const double val)
     {
         qint64 intVal;
-        return (::DFG_MODULE_NS(math)::isFloatConvertibleTo(val, &intVal)) ? intVal : -1;
+        double valIntPart;
+        std::modf(val, &valIntPart);
+        return (::DFG_MODULE_NS(math)::isFloatConvertibleTo(valIntPart, &intVal)) ? intVal : -1;
     }
 
     template <class T, size_t N>
@@ -3553,21 +3549,22 @@ namespace
         }
         else
         {
-            const auto i64 = valToDateInt64(val);
+            const auto factor = (type == GeneratorFormatType::dateFromSecondsLocal || type == GeneratorFormatType::dateFromSecondsUtc) ? 1000 : 1;
+            const auto i64 = valToDateInt64(factor * val);
             if (i64 < 0 || !pFormat)
             {
                 table.setElement(r, c, DFG_UTF8(""));
                 return;
             }
             QString sResult;
-            if (type == GeneratorFormatType::dateFromSecondsLocal)
-                sResult = rView.dateTimeToString(QDateTime::fromSecsSinceEpoch(i64, Qt::LocalTime), pFormat);
-            else if (type == GeneratorFormatType::dateFromMilliSecondsLocal)
-                sResult = rView.dateTimeToString(QDateTime::fromMSecsSinceEpoch(i64, Qt::LocalTime), pFormat);
-            else if (type == GeneratorFormatType::dateFromSecondsUtc)
-                sResult = rView.dateTimeToString(QDateTime::fromSecsSinceEpoch(i64, Qt::UTC), pFormat);
-            else if (type == GeneratorFormatType::dateFromMilliSecondsUtc)
-                sResult = rView.dateTimeToString(QDateTime::fromMSecsSinceEpoch(i64, Qt::UTC), pFormat);
+            Qt::TimeSpec timeSpec = Qt::TimeZone; // Using Qt::TimeZone as "not set"-value
+            if (type == GeneratorFormatType::dateFromSecondsLocal || type == GeneratorFormatType::dateFromMilliSecondsLocal)
+                timeSpec = Qt::LocalTime;
+            else if (type == GeneratorFormatType::dateFromSecondsUtc || type == GeneratorFormatType::dateFromMilliSecondsUtc)
+                timeSpec = Qt::UTC;
+
+            if (timeSpec != Qt::TimeZone)
+                sResult = rView.dateTimeToString(QDateTime::fromMSecsSinceEpoch(i64, timeSpec), pFormat);
             else
             {
                 DFG_ASSERT_IMPLEMENTED(false);

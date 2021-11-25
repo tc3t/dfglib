@@ -903,6 +903,73 @@ TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue)
     //DFGTEST_EXPECT_EQ_LITERAL_UTF8("86400", csvModel.rawStringViewAt(5, 1));
 }
 
+TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue_dateHandling)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    // 2021-11-25T10:01:02Z = 1637834462 s
+    const QString sExpectedLocal = [] { auto dt = QDateTime::fromMSecsSinceEpoch(1637834462125); dt.setTimeSpec(Qt::LocalTime); return dt;}().toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+    DFGTEST_ASSERT_FALSE(sExpectedLocal.isEmpty());
+
+    // First column has expected strings, second has items that are converted.
+    csvModel.openString(
+        QString(",\n"
+        "2021-11-25 12:01:02.125,2021-11-25 12:01:02.125\n"       // Tests round-trip with exact decimal
+        "2021-11-25 12:01:02.333,2021-11-25 12:01:02.333\n"       // Tests round-trip with inexact decimal
+        "2021-11-25 10:01:02.125,2021-11-25 12:01:02.125+02:00\n" // Tests round-trip with timezone info
+        "2021-11-25 10:01:02.125,1637834462.125\n"                // Tests value to utc date handling with seconds.
+        "2021-11-25 10:01:02.125,1637834462125\n"                 // Tests value to utc date handling with milliseconds.
+        "%1,1637834462.125\n"                                     // Tests value to local date handling with seconds.
+        "%1,1637834462125\n").arg(sExpectedLocal)                 // Tests value to local date handling with milliseconds.
+    );
+
+    CsvItemModel generateParamModel;
+    generateParamModel.openString(
+                "\t\n"
+                "Target\tSelection\n"
+                "Generator\tFormula\n"
+                "Formula\tcellValue(trow, tcol)\n"
+                "Format type\tg\n"
+                "Format precision\t14");
+
+    // Converting dates on second column into epoch time values
+    for (int r = 0; r < 3; ++r)
+    {
+        view.selectCell(r, 1);
+        view.generateContentImpl(generateParamModel);
+    }
+
+    generateParamModel.setDataNoUndo(3, 1, DFG_UTF8("date_sec_utc"));
+    generateParamModel.setDataNoUndo(4, 1, DFG_UTF8("yyyy-MM-dd hh:mm:ss.zzz"));
+    for (int r = 0; r < 4; ++r)
+    {
+        view.selectCell(r, 1);
+        view.generateContentImpl(generateParamModel);
+    }
+
+    generateParamModel.setDataNoUndo(3, 1, DFG_UTF8("date_msec_utc"));
+    for (int r = 4; r < 7; ++r)
+    {
+        if (r == 4)
+            generateParamModel.setDataNoUndo(3, 1, DFG_UTF8("date_msec_utc"));
+        else if (r == 5)
+            generateParamModel.setDataNoUndo(3, 1, DFG_UTF8("date_sec_local"));
+        else
+            generateParamModel.setDataNoUndo(3, 1, DFG_UTF8("date_msec_local"));
+        view.selectCell(r, 1);
+        view.generateContentImpl(generateParamModel);
+    }
+
+    for (int r = 0; r < csvModel.rowCount(); ++r)
+    {
+        DFGTEST_EXPECT_LEFT(csvModel.rawStringViewAt(r, 0).asUntypedView(), csvModel.rawStringViewAt(r, 1).asUntypedView());
+    }
+}
+
 TEST(dfgQt, CsvTableView_columnVisibilityConfPropertyHandling)
 {
     using namespace ::DFG_MODULE_NS(qt);
