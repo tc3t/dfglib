@@ -918,13 +918,13 @@ TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue_dateHandling)
     // First column has expected strings, second has items that are converted.
     csvModel.openString(
         QString(",\n"
-        "2021-11-25 12:01:02.125,2021-11-25 12:01:02.125\n"       // Tests round-trip with exact decimal
-        "2021-11-25 12:01:02.333,2021-11-25 12:01:02.333\n"       // Tests round-trip with inexact decimal
-        "2021-11-25 10:01:02.125,2021-11-25 12:01:02.125+02:00\n" // Tests round-trip with timezone info
-        "2021-11-25 10:01:02.125,1637834462.125\n"                // Tests value to utc date handling with seconds.
-        "2021-11-25 10:01:02.125,1637834462125\n"                 // Tests value to utc date handling with milliseconds.
-        "%1,1637834462.125\n"                                     // Tests value to local date handling with seconds.
-        "%1,1637834462125\n").arg(sExpectedLocal)                 // Tests value to local date handling with milliseconds.
+        "2021-11-22 mo 12:01:02.125,2021-11-22 12:01:02.125\n"       // Tests round-trip with exact decimal
+        "2021-11-23 tu 12:01:02.333,2021-11-23 12:01:02.333\n"       // Tests round-trip with inexact decimal
+        "2021-11-24 we 10:01:02.125,2021-11-24 12:01:02.125+02:00\n" // Tests round-trip with timezone info
+        "2021-11-25 Thu 10:01:02.125,1637834462.125\n"               // Tests value to utc date handling with seconds.
+        "2021-11-25 10:01:02.125,1637834462125\n"                    // Tests value to utc date handling with milliseconds.
+        "%1,1637834462.125\n"                                        // Tests value to local date handling with seconds.
+        "%1,1637834462125\n").arg(sExpectedLocal)                    // Tests value to local date handling with milliseconds.
     );
 
     CsvItemModel generateParamModel;
@@ -944,14 +944,17 @@ TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue_dateHandling)
     }
 
     generateParamModel.setDataNoUndo(3, 1, DFG_UTF8("date_sec_utc"));
-    generateParamModel.setDataNoUndo(4, 1, DFG_UTF8("yyyy-MM-dd hh:mm:ss.zzz"));
+    generateParamModel.setDataNoUndo(4, 1, DFG_UTF8("yyyy-MM-dd WD hh:mm:ss.zzz"));
     for (int r = 0; r < 4; ++r)
     {
+        if (r == 3) // For the last one in the first four, using different weekday format
+            view.setProperty("CsvTableView_weekDayNames", "Mon,Tue,Wed,Thu,Fri,Sat,Sun");
         view.selectCell(r, 1);
         view.generateContentImpl(generateParamModel);
     }
 
     generateParamModel.setDataNoUndo(3, 1, DFG_UTF8("date_msec_utc"));
+    generateParamModel.setDataNoUndo(4, 1, DFG_UTF8("yyyy-MM-dd hh:mm:ss.zzz"));
     for (int r = 4; r < 7; ++r)
     {
         if (r == 4)

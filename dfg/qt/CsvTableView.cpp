@@ -2959,7 +2959,7 @@ namespace
                 "    Date times:\n"
                 "        date_sec_local, date_msec_local: value is interpreted as epoch time in seconds or milliseconds and converted to local time\n"
                 "        date_sec_utc, date_msec_utc: like date_sec_local, but converted to UTC time\n"
-                "        Format precision accepts formats defined for QDateTime, for example yyyy-MM-dd HH:mm:ss.zzz"), this);
+                "        Format precision accepts formats defined for QDateTime, for example yyyy-MM-dd HH:mm:ss.zzz. As an extension to QDateTime formats, WD can be used to insert weekday"), this);
             pStaticHelpLabel->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
             m_pLayout->addWidget(pStaticHelpLabel);
             m_pLayout->addWidget(m_spDynamicHelpWidget.get());
