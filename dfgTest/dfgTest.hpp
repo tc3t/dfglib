@@ -36,3 +36,63 @@
 
 // For testing cases where left is string literal and rigth utf8, for example: DFGTEST_EXPECT_EQ_LITERAL_UTF8("abc", functionThatReturnsUtf8())
 #define DFGTEST_EXPECT_EQ_LITERAL_UTF8(x, y) EXPECT_EQ(x, ::DFG_ROOT_NS::StringViewUtf8(y).asUntypedView())
+
+
+// Defining StringView printers for GoogleTest. Note that while these also provide clearer output to test console,
+// it is not just about convenience, e.g. comparison of StringViewUtf8 fails to compile without these.
+
+#include <ostream>
+#include <dfg/ReadOnlySzParam.hpp>
+
+namespace DFG_ROOT_NS
+{
+    namespace dfgtest_googletest
+    {
+        inline void gtestPrintToImpl(const char* psz, const size_t nSize, ::std::ostream* pOstrm)
+        {
+            using namespace DFG_ROOT_NS;
+            if (!pOstrm)
+                return;
+            // Google Test (1.11) prints e.g. std::string with quotes so using for views as well.
+            *pOstrm << "\"";
+            pOstrm->write(psz, static_cast<std::streamsize>(nSize));
+            *pOstrm << "\"";
+        }
+
+        inline void gtestPrintToImpl(const wchar_t* psz, const size_t nSize, ::std::ostream* pOstrm)
+        {
+            using namespace DFG_ROOT_NS;
+            if (!pOstrm)
+                return;
+            *pOstrm << "L\"";
+            // Printing ASCII as regular chars and non-ascii as \x{hex-value}
+            for (size_t i = 0; i < nSize; ++i)
+            {
+                const auto c = psz[i];
+                if (c < 128)
+                    *pOstrm << static_cast<char>(c);
+                else
+                    *pOstrm << "\\x{" << std::hex << uint32(c) << "}";
+            }
+            *pOstrm << "\"";
+        }
+    }
+
+    // Note: printer implementation needs care to avoid ODR-pitfalls etc.
+    //          https://stackoverflow.com/questions/24673515/googletest-printto-not-getting-called-for-a-class
+    //          https://stackoverflow.com/questions/42597726/how-to-pretty-print-qstring-with-googletest-framework
+
+    // StringView
+    template <class T, class T2>
+    void PrintTo(const StringView<T, T2>& sv, ::std::ostream* pOstrm)
+    {
+        dfgtest_googletest::gtestPrintToImpl(sv.asUntypedView().data(), sv.size(), pOstrm);
+    }
+
+    // StringViewSz
+    template <class T, class T2>
+    void PrintTo(const StringViewSz<T, T2>& sv, ::std::ostream* pOstrm)
+    {
+        dfgtest_googletest::gtestPrintToImpl(sv.asUntypedView().data(), sv.size(), pOstrm);
+    }
+}

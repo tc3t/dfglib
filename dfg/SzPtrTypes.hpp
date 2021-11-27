@@ -3,6 +3,7 @@
 #include "dfgDefs.hpp"
 #include "dfgBaseTypedefs.hpp"
 #include "build/languageFeatureInfo.hpp"
+#include "dfgAssert.hpp"
 #include <cstddef> // For std::nullptr_t
 #include <type_traits>
 #include "build/utils.hpp"

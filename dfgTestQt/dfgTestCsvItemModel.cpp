@@ -9,6 +9,7 @@
 #include <dfg/iter/FunctionValueIterator.hpp>
 #include <dfg/os/TemporaryFileStream.hpp>
 #include "../dfgTest/dfgTest.hpp"
+#include "dfgTestQt_gtestPrinters.hpp"
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <gtest/gtest.h>

@@ -215,3 +215,24 @@ int main(int argc, char **argv)
 #endif
     return rv;
 }
+
+// This can be used to test GoogleTest printers
+#if 0
+TEST(dfgTest, googleTestStringViewPrinter)
+{
+    using namespace DFG_ROOT_NS;
+    DFGTEST_EXPECT_LEFT(StringViewC("abcde"), StringViewC("fghij"));
+    DFGTEST_EXPECT_LEFT(StringViewSzC("abcde"), StringViewSzC("fghij"));
+    DFGTEST_EXPECT_LEFT(StringViewW(L"abc\xe4" L"de"), StringViewW(L"fghij"));
+    DFGTEST_EXPECT_LEFT(StringViewSzW(L"abcde"), StringViewSzW(L"fghij"));
+    DFGTEST_EXPECT_LEFT(StringViewAscii(DFG_ASCII("abcde")), StringViewAscii(DFG_ASCII("fghij")));
+    DFGTEST_EXPECT_LEFT(StringViewSzAscii(DFG_ASCII("abcde")), StringViewSzAscii(DFG_ASCII("fghij")));
+    DFGTEST_EXPECT_LEFT(StringViewLatin1(DFG_ASCII("abcde")), StringViewLatin1(DFG_ASCII("fghij")));
+    DFGTEST_EXPECT_LEFT(StringViewSzLatin1(DFG_ASCII("abcde")), StringViewSzLatin1(DFG_ASCII("fghij")));
+    DFGTEST_EXPECT_LEFT(StringViewUtf8(DFG_UTF8("abcde")), StringViewUtf8(DFG_UTF8("fghij")));
+    DFGTEST_EXPECT_LEFT(StringViewSzUtf8(DFG_UTF8("abcde")), StringViewSzUtf8(DFG_UTF8("fghij")));
+    DFGTEST_EXPECT_LEFT(std::string("abcde"), std::string("fghij"));
+    DFGTEST_EXPECT_LEFT(std::wstring(L"abcde"), std::wstring(L"fghij"));
+}
+
+#endif // GoogleTest printer tests

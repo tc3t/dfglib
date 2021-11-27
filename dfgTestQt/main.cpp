@@ -1,6 +1,7 @@
 #include <dfg/dfgDefs.hpp>
 #include <dfg/os.hpp>
 #include <iostream>
+#include "dfgTestQt_gtestPrinters.hpp"
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <gtest/gtest.h>
@@ -11,6 +12,12 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 // Including .cc-file due possible Qt Creator bug (for details, see dfgQtTableEditor.pro)
 #include <dfg/str/fmtlib/format.cc>
+
+void PrintTo(const QString& s, ::std::ostream* pOstrm)
+{
+    if (pOstrm)
+        *pOstrm << '"' << qUtf8Printable(s) << '"';
+}
 
 namespace
 {

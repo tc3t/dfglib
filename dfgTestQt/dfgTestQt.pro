@@ -88,7 +88,8 @@ HEADERS += \
     ../dfg/qt/JsonListWidget.hpp \
     ../dfg/qt/PatternMatcher.hpp \
     ../dfg/qt/stringConversions.hpp \
-    ../dfgTest/dfgTest.hpp
+    ../dfgTest/dfgTest.hpp \
+    dfgTestQt_gtestPrinters.hpp
 
 OTHER_FILES += \
     ../dfg/qt/res/chartGuide.html
