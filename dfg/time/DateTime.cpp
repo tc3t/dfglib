@@ -14,7 +14,7 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time)
 {
 
-auto UtcOffsetInfo::offsetDiffInSeconds(const DFG_CLASS_NAME(UtcOffsetInfo) & other) const -> int32
+auto UtcOffsetInfo::offsetDiffInSeconds(const UtcOffsetInfo& other) const -> int32
 {
     if (isSet() && other.isSet())
         return other.offsetInSeconds() - offsetInSeconds();
@@ -82,11 +82,8 @@ DateTime DateTime::fromString(const StringViewC& sv)
     return rv;
 }
 
-} } // namespace dfg::time
-
-
 #ifdef _WIN32
-DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::DFG_CLASS_NAME(DateTime)(const SYSTEMTIME& st)
+DateTime::DateTime(const SYSTEMTIME& st)
 {
     m_year = st.wYear;
     m_month = static_cast<uint8>(st.wMonth);
@@ -94,7 +91,7 @@ DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::DFG_CLASS_NAME(DateTime)(const SY
     m_milliSecSinceMidnight = millisecondsSinceMidnight(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
 
-auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::privTimeDiff(const SYSTEMTIME& st0, const SYSTEMTIME& st1) -> std::chrono::duration<int64, std::ratio<1, 10000000>>
+auto DateTime::privTimeDiff(const SYSTEMTIME& st0, const SYSTEMTIME& st1) -> std::chrono::duration<int64, std::ratio<1, 10000000>>
 {
     const auto toInteger = [](const _SYSTEMTIME& st)
     {
@@ -111,14 +108,14 @@ auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::privTimeDiff(const SYSTEMTIM
     return i1 - i0;
 }
 
-auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::timeDiffInSecondsI(const SYSTEMTIME& st0, const SYSTEMTIME& st1) -> std::chrono::seconds
+auto DateTime::timeDiffInSecondsI(const SYSTEMTIME& st0, const SYSTEMTIME& st1) -> std::chrono::seconds
 {
     const auto diff = privTimeDiff(st0, st1);
     typedef decltype(diff) TimeDiffReturnType;
     return std::chrono::seconds(diff.count() * TimeDiffReturnType::period::num / TimeDiffReturnType::period::den);
 }
 
-SYSTEMTIME DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::toSystemTime() const
+SYSTEMTIME DateTime::toSystemTime() const
 {
     SYSTEMTIME st;
     st.wYear = m_year;
@@ -133,39 +130,36 @@ SYSTEMTIME DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::toSystemTime() const
 }
 #endif // _WIN32
 
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time) {
-
-    namespace DFG_DETAIL_NS
-    {
+namespace DFG_DETAIL_NS
+{
 #ifndef _WIN32
-        template <class Func_T>
-        DFG_CLASS_NAME(DateTime) createDateTime(Func_T timeFunc)
-        {
-            struct timeval tv;
-            gettimeofday(&tv, nullptr);
+    template <class Func_T>
+    DateTime createDateTime(Func_T timeFunc)
+    {
+        struct timeval tv;
+        gettimeofday(&tv, nullptr);
 
-            const time_t secsSinceEpoch = tv.tv_sec;
-            struct tm df;
-            timeFunc(&secsSinceEpoch, &df);
-            DFG_CLASS_NAME(DateTime) dt(df.tm_year + 1900, df.tm_mon, df.tm_mday, df.tm_hour, df.tm_min, df.tm_sec, tv.tv_usec / 1000);
-            return dt;
-        }
+        const time_t secsSinceEpoch = tv.tv_sec;
+        struct tm df;
+        timeFunc(&secsSinceEpoch, &df);
+        DateTime dt(df.tm_year + 1900, df.tm_mon, df.tm_mday, df.tm_hour, df.tm_min, df.tm_sec, tv.tv_usec / 1000);
+        return dt;
+    }
 #endif
-    } // Detail namespace
+} // Detail namespace
 
-} }
 
-auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::millisecondsSinceMidnight(const int hour, const int minutes, const int seconds, const int milliseconds) -> uint32
+auto DateTime::millisecondsSinceMidnight(const int hour, const int minutes, const int seconds, const int milliseconds) -> uint32
 {
     return 1000 * (hour * 3600 + minutes * 60 + seconds) + milliseconds;
 }
 
-auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::systemTime_utc() -> DFG_CLASS_NAME(DateTime)
+auto DateTime::systemTime_utc() -> DateTime
 {
 #ifdef _WIN32
     SYSTEMTIME stUtc;
     GetSystemTime(&stUtc); // Returned time is in UTC
-    DFG_CLASS_NAME(DateTime) dt(stUtc);
+    DateTime dt(stUtc);
     dt.m_utcOffsetInfo.setOffsetInSeconds(0);
     return dt;
 #else
@@ -175,14 +169,14 @@ auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::systemTime_utc() -> DFG_CLAS
 #endif
 }
 
-auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::systemTime_local() -> DFG_CLASS_NAME(DateTime)
+auto DateTime::systemTime_local() -> DateTime
 {
 #ifdef _WIN32
     SYSTEMTIME stUtc;
     GetSystemTime(&stUtc); // Returned time is in UTC
     SYSTEMTIME stLocal;
     SystemTimeToTzSpecificLocalTime(nullptr /*nullptr = use current time zone */, &stUtc, &stLocal);
-    DFG_CLASS_NAME(DateTime) dt(stLocal);
+    DateTime dt(stLocal);
     dt.m_utcOffsetInfo.setOffset(timeDiffInSecondsI(stUtc, stLocal));
     return dt;
 #else
@@ -193,10 +187,12 @@ auto DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::systemTime_local() -> DFG_CL
 }
 
 #ifdef _WIN32
-std::chrono::duration<double> DFG_MODULE_NS(time)::DFG_CLASS_NAME(DateTime)::secondsTo(const DFG_CLASS_NAME(DateTime)& other) const
+std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
 {
     return privTimeDiff(toSystemTime(), other.toSystemTime()) - std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
 }
 #endif
+
+} } // namespace dfg::time
 
 #endif // DFG_LANGFEAT_CHRONO_11

@@ -36,12 +36,12 @@ public:
 
     bool isSet() const { return m_offsetValue != s_nNotSetValueMimicing; }
 
-    // If isSet() == false, returns 0.
+    // Returns +HH:MM offset in seconds, e.g. +01:00 returns 3600. If isSet() == false, returns 0.
     int32 offsetInSeconds() const { return (isSet()) ? m_offsetValue : 0; }
     void setOffset(const std::chrono::seconds& offset) { m_offsetValue = static_cast<int>(offset.count()); }
     void setOffsetInSeconds(const int nOffset) { m_offsetValue = nOffset; }
 
-    int32 m_offsetValue; // Positive means ahead of UTC-time, e.g. value 3600 means 1 hour ahead of UTC.
+    int32 m_offsetValue; // Timezone specifier in seconds or unset (=s_nNotSetValueMimicing). Positive means +HH:MM timezone, e.g. value 3600 means +01:00.
 }; // class UtcOffsetInfo
 
 class DateTime
