@@ -3,6 +3,7 @@
 #include "../dfgBaseTypedefs.hpp"
 #include "../numericTypeTools.hpp"
 #include "../build/languageFeatureInfo.hpp"
+#include "../ReadOnlySzParam.hpp"
 
 #if DFG_LANGFEAT_CHRONO_11
 #include <chrono>
@@ -16,22 +17,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time) {
 
 
 #if DFG_LANGFEAT_CHRONO_11
-class DFG_CLASS_NAME(UtcOffsetInfo)
+class UtcOffsetInfo
 {
 public:
     static const int32 s_nNotSetValueMimicing = NumericTraits<int32>::minValue; // With the 'mimicing not set'-value this UtcOffsetInfo mimics UtcOffsetInfo of another operand in certain operations.
-    DFG_CLASS_NAME(UtcOffsetInfo)() :
+    UtcOffsetInfo() :
         m_offsetValue(s_nNotSetValueMimicing)
     {
     }
 
-    DFG_CLASS_NAME(UtcOffsetInfo)(const std::chrono::seconds& offset) :
+    UtcOffsetInfo(const std::chrono::seconds& offset) :
         m_offsetValue(static_cast<int>(offset.count()))
     {
     }
 
     // If both return true from isSet(), return value is other.setOffsetInSeconds() - this->offsetDiffInSeconds()
-    int32 offsetDiffInSeconds(const DFG_CLASS_NAME(UtcOffsetInfo)& other) const;
+    int32 offsetDiffInSeconds(const UtcOffsetInfo& other) const;
 
     bool isSet() const { return m_offsetValue != s_nNotSetValueMimicing; }
 
@@ -41,15 +42,31 @@ public:
     void setOffsetInSeconds(const int nOffset) { m_offsetValue = nOffset; }
 
     int32 m_offsetValue; // Positive means ahead of UTC-time, e.g. value 3600 means 1 hour ahead of UTC.
-};
+}; // class UtcOffsetInfo
 
-class DFG_CLASS_NAME(DateTime)
+class DateTime
 {
 public:
-	DFG_CLASS_NAME(DateTime)(int year, int month, int day, int hour, int minute, int second, int milliseconds, DFG_CLASS_NAME(UtcOffsetInfo) utcOffsetInfo = DFG_CLASS_NAME(UtcOffsetInfo)());
+    DateTime();
+	DateTime(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
+
+    // Parses DateTime from string
+    // Supported formats
+    //      yyyy-mm-ddX
+    //      yyyy-mm-ddXhh:mm:ss
+    //      yyyy-mm-ddXhh:mm:ssZ
+    //      yyyy-mm-ddXhh:mm:ss+hh
+    //      yyyy-mm-ddXhh:mm:ss+hh:mm
+    //      yyyy-mm-ddXhh:mm:ss.zzz
+    //      yyyy-mm-ddXhh:mm:ss.zzzZ
+    //      yyyy-mm-ddXhh:mm:ss.zzz+hh:mm
+    //      yyyy-mm-ddXhh:mm:ss.zzz-hh:mm
+    // where X is either ' ' or 'T'
+    // If input string does not have supported format or has invalid values (e.g. month 13), behaviour is undefined (i.e. function must not be used for untrusted strings).
+    static DateTime fromString(const StringViewC& sv);
 
 #ifdef _WIN32
-    explicit DFG_CLASS_NAME(DateTime)(const _SYSTEMTIME& st);
+    explicit DateTime(const _SYSTEMTIME& st);
 
     _SYSTEMTIME toSystemTime() const;
 
@@ -58,13 +75,13 @@ public:
     static std::chrono::seconds timeDiffInSecondsI(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
 
     // Return value is positive if *this < other
-	std::chrono::duration<double> secondsTo(const DFG_CLASS_NAME(DateTime)& other) const;
+	std::chrono::duration<double> secondsTo(const DateTime& other) const;
 #endif
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
     // This behaviour differs from that of e.g. std::localtime (see systemTime_local-test)
-    static DFG_CLASS_NAME(DateTime) systemTime_local();
-    static DFG_CLASS_NAME(DateTime) systemTime_utc();
+    static DateTime systemTime_local();
+    static DateTime systemTime_utc();
 
     static uint32 millisecondsSinceMidnight(int hour, int minutes, int seconds, int milliseconds);
     uint32 millisecondsSinceMidnight() const { return m_milliSecSinceMidnight; }
@@ -97,13 +114,13 @@ public:
         return static_cast<uint8>(((m_milliSecSinceMidnight / 1000) / 3600));
     }
 
-	const DFG_CLASS_NAME(UtcOffsetInfo)& utcOffsetInfo() const { return m_utcOffsetInfo; }
+	const UtcOffsetInfo& utcOffsetInfo() const { return m_utcOffsetInfo; }
 
     uint16 m_year;
     uint8 m_month; // In range 1-12
     uint8 m_day;   // In range 1-31
     uint32 m_milliSecSinceMidnight;
-    DFG_CLASS_NAME(UtcOffsetInfo) m_utcOffsetInfo;
+    UtcOffsetInfo m_utcOffsetInfo;
 }; // class DateTime
 
 #endif // DFG_LANGFEAT_CHRONO_11
