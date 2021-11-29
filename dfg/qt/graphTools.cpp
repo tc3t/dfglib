@@ -4615,7 +4615,7 @@ namespace
 
         if (bSuccess)
         {
-            QMessageBox::information(this, nullptr, tr("Successfully exported to path<br>") + QString("<a href=file:///%1>%1</a>").arg(sOutputPath));
+            QMessageBox::information(this, nullptr, tr("Successfully exported to path<br>") + QString("<a href=\"file:///%1\">%1</a>").arg(sOutputPath.toHtmlEscaped()));
         }
         else
         {
