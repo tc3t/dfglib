@@ -4,6 +4,7 @@
 #include "../numericTypeTools.hpp"
 #include "../build/languageFeatureInfo.hpp"
 #include "../ReadOnlySzParam.hpp"
+#include <ctime>
 
 #if DFG_LANGFEAT_CHRONO_11
 #include <chrono>
@@ -65,6 +66,12 @@ public:
     // If input string does not have supported format or has invalid values (e.g. month 13), behaviour is undefined (i.e. function must not be used for untrusted strings).
     static DateTime fromString(const StringViewC& sv);
 
+    // Returns std::tm not taking UTC offset into account nor milliseconds, i.e. as if UTC offset and milliseconds were zero.
+    // Members tm_wday, tm_yday and tm_isdst are set to -1.
+    // If year is < 1900, returns zero-initialized std::tm.
+    // If 'this' is not a valid datetime, behaviour is undefined.
+    std::tm toStdTm_utcOffsetIgnored() const;
+
 #ifdef _WIN32
     explicit DateTime(const _SYSTEMTIME& st);
 
@@ -76,6 +83,9 @@ public:
 
     // Return value is positive if *this < other
 	std::chrono::duration<double> secondsTo(const DateTime& other) const;
+
+    // If 'this' is valid datetime for unix time and UtfOffset structure is set, returns corresponding unix time; otherwise behaviour is undefined.
+    int64 toSecondsSinceEpoch() const;
 #endif
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
@@ -93,8 +103,8 @@ public:
     }
 
     uint16 year() const { return m_year; }
-    uint8 month() const { return m_month; }
-    uint8 day() const { return m_day; }
+    uint8 month() const { return m_month; } // Returns month in range [1, 12]
+    uint8 day() const { return m_day; }     // Returns month day in range [1, 31]
 
     // Returns second part of day time, i.e. 'ss' in hh:mm:ss
     uint8 second() const

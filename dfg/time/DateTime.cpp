@@ -186,12 +186,40 @@ auto DateTime::systemTime_local() -> DateTime
 #endif
 }
 
+std::tm DateTime::toStdTm_utcOffsetIgnored() const
+{
+    std::tm tm{};
+    if (year() < 1900)
+        return tm;
+    tm.tm_year = year() - 1900;
+    tm.tm_mon  = month() - 1; // std::tm uses range [0, 11]
+    tm.tm_mday = day();
+
+    tm.tm_hour  = hour();
+    tm.tm_min   = minute();
+    tm.tm_sec   = second();
+    tm.tm_wday  = -1;
+    tm.tm_yday  = -1;
+    tm.tm_isdst = -1; // "negative if no information is available" (https://en.cppreference.com/w/cpp/chrono/c/tm)
+    return tm;
+}
+
 #ifdef _WIN32
 std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
 {
     return privTimeDiff(toSystemTime(), other.toSystemTime()) - std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
 }
-#endif
+
+int64 DateTime::toSecondsSinceEpoch() const
+{
+    if (!utcOffsetInfo().isSet())
+        return 0;
+    auto tm = toStdTm_utcOffsetIgnored();
+    const auto t = _mkgmtime64(&tm);
+    return static_cast<int64>(t) - utcOffsetInfo().offsetInSeconds();
+}
+
+#endif // _WIN32
 
 } } // namespace dfg::time
 

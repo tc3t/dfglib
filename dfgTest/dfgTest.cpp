@@ -191,6 +191,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.TypedCharPtrT";
     //::testing::GTEST_FLAG(filter) = "dfgStr.utf16";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_fromString";
+    //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_toSecondsSinceEpoch";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToEncoded";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.windows1252charToCp";
