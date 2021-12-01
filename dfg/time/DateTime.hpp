@@ -85,7 +85,9 @@ public:
 	std::chrono::duration<double> secondsTo(const DateTime& other) const;
 
     // If 'this' is valid datetime for unix time and UtfOffset structure is set, returns corresponding unix time; otherwise behaviour is undefined.
+    // Milliseconds are treated as zero.
     int64 toSecondsSinceEpoch() const;
+    int64 toMillisecondsSinceEpoch() const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds
 #endif
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.

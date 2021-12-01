@@ -173,12 +173,25 @@ TEST(dfgTime, DateTime_toSecondsSinceEpoch)
     const DateTime time1(2021, 11, 30, 12, 01, 02, 250, UtcOffsetInfo(std::chrono::seconds(3600)));
     const DateTime time2(2021, 11, 30, 12, 01, 02, 750, UtcOffsetInfo(std::chrono::seconds(-3600)));
 
-    const auto epochTime0 = time0.toSecondsSinceEpoch();
-    const auto epochTime1 = time1.toSecondsSinceEpoch();
-    const auto epochTime2 = time2.toSecondsSinceEpoch();
-    DFGTEST_EXPECT_LEFT(1638273662, epochTime0);
-    DFGTEST_EXPECT_LEFT(1638273662 - 3600, epochTime1);
-    DFGTEST_EXPECT_LEFT(1638273662 + 3600, epochTime2);
+    // toSecondsSinceEpoch
+    {
+        const auto epochTime0 = time0.toSecondsSinceEpoch();
+        const auto epochTime1 = time1.toSecondsSinceEpoch();
+        const auto epochTime2 = time2.toSecondsSinceEpoch();
+        DFGTEST_EXPECT_LEFT(1638273662, epochTime0);
+        DFGTEST_EXPECT_LEFT(1638273662 - 3600, epochTime1);
+        DFGTEST_EXPECT_LEFT(1638273662 + 3600, epochTime2);
+    }
+
+    // toMilllisecondsSinceEpoch
+    {
+        const auto epochTime0 = time0.toMillisecondsSinceEpoch();
+        const auto epochTime1 = time1.toMillisecondsSinceEpoch();
+        const auto epochTime2 = time2.toMillisecondsSinceEpoch();
+        DFGTEST_EXPECT_LEFT(1638273662000, epochTime0);
+        DFGTEST_EXPECT_LEFT(1638273662250 - 3600000, epochTime1);
+        DFGTEST_EXPECT_LEFT(1638273662750 + 3600000, epochTime2);
+    }
 }
 #endif // _WIN32
 

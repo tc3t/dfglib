@@ -219,6 +219,14 @@ int64 DateTime::toSecondsSinceEpoch() const
     return static_cast<int64>(t) - utcOffsetInfo().offsetInSeconds();
 }
 
+int64 DateTime::toMillisecondsSinceEpoch() const
+{
+    auto val = toSecondsSinceEpoch();
+    val *= 1000;
+    val += this->millisecond();
+    return val;
+}
+
 #endif // _WIN32
 
 } } // namespace dfg::time
