@@ -22,6 +22,7 @@ TEST(dfgTime, DateTime)
     const DateTime dtUtc2(2016, 7, 30, 23,  2,  3,  4, UtcOffsetInfo(std::chrono::seconds(0)));
     const DateTime dt2(2016, 7, 30, 23, 2, 3, 4);
     const DateTime dtUtc3(2016, 7, 31,  1,  2,  3,  4, UtcOffsetInfo(std::chrono::seconds(7200)));
+    DFGTEST_EXPECT_TRUE(DateTime().isNull());
     EXPECT_EQ(dt0.year(), 2016);
     EXPECT_EQ(dt0.month(), 7);
     EXPECT_EQ(dt0.day(), 29);
@@ -161,6 +162,50 @@ TEST(dfgTime, DateTime_fromString)
         DateTime_fromStringImpl(2021, 11, 28, 12, 1, 2, 123, 11700);  // Tests yyyy-mm-dd hh:mm:ss.zzz+03:15 
 
         DFGTEST_EXPECT_LEFT(125, DateTime::fromString("2021-11-28T12:01:02.125").millisecond()); // Tests that can parse when date and time are separated by 'T'
+    }
+
+    // Basic negative tests
+    {
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("-100-12-02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-13-02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2012-12-32").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021--12-02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12--02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("abcd-12-02").isNull());
+        //DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12- 2").isNull()); // TODO
+        //DFGTEST_EXPECT_TRUE(DateTime::fromString("2021- 2-02").isNull()); // TODO
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021.12.02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-ab-02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-ab").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02A12:01:02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:-1:02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:-2").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12.01:02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01.02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 ab:01:02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:ab:02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:ab").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 24:00:00").isNull()); // h == 24 is not supported
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:60:00").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.abc").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.1").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.12").isNull());
+
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02A01:00").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02+-1:00").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02+01:-2").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02+24:00").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.1000Z").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100A01:00").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+aa:00").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+1:2").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+24:00").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+01:99").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+01:-1").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+01:ab").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+ab:01").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+-1").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:02.100+24").isNull());
     }
 }
 

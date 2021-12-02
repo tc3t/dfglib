@@ -48,7 +48,7 @@ public:
 class DateTime
 {
 public:
-    DateTime();
+    DateTime(); // Constructs DateTime which doesn't represent any datetime and for which isNull() is true.
 	DateTime(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
 
     // Parses DateTime from string
@@ -71,6 +71,9 @@ public:
     // If year is < 1900, returns zero-initialized std::tm.
     // If 'this' is not a valid datetime, behaviour is undefined.
     std::tm toStdTm_utcOffsetIgnored() const;
+
+    // Returns true iff 'this' is equivalent to default-constructed DateTime.
+    bool isNull() const;
 
 #ifdef _WIN32
     explicit DateTime(const _SYSTEMTIME& st);
