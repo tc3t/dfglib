@@ -138,7 +138,10 @@ namespace
         if (timezoneOffsetInSeconds == tzNone)
             DFGTEST_EXPECT_FALSE(rv.utcOffsetInfo().isSet());
         else
+        {
+            DFGTEST_EXPECT_TRUE(rv.utcOffsetInfo().isSet());
             DFGTEST_EXPECT_LEFT(timezoneOffsetInSeconds, rv.utcOffsetInfo().offsetInSeconds());
+        }
         return rv;
     }
 }
@@ -172,12 +175,13 @@ TEST(dfgTime, DateTime_fromString)
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021--12-02").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12--02").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("abcd-12-02").isNull());
-        //DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12- 2").isNull()); // TODO
-        //DFGTEST_EXPECT_TRUE(DateTime::fromString("2021- 2-02").isNull()); // TODO
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12- 2").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021- 2-02").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021.12.02").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-ab-02").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-ab").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02A12:01:02").isNull());
+        DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01").isNull()); // Allowing this could be ok, but at least for now not accepted.
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:-1:02").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12:01:-2").isNull());
         DFGTEST_EXPECT_TRUE(DateTime::fromString("2021-12-02 12.01:02").isNull());

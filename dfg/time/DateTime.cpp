@@ -2,6 +2,7 @@
 #include "../dfgAssert.hpp"
 #include "../str/strTo.hpp"
 #include "../alg.hpp"
+#include <regex>
 
 #if DFG_LANGFEAT_CHRONO_11
 
@@ -43,71 +44,71 @@ DateTime DateTime::fromString(const StringViewC& sv)
     using namespace ::DFG_MODULE_NS(str);
     DateTime rv;
 
-    if (sv.size() >= 8 && sv[4] == '-' && sv[7] == '-') // Something starting with ????-??-?? (ISO 8601, https://en.wikipedia.org/wiki/ISO_8601)
+    // yyyy-mm-dd (ISO 8601, https://en.wikipedia.org/wiki/ISO_8601)
+    std::regex dateRegex(R"((\d{4})-(\d\d)-(\d\d)$)");
+    std::cmatch baseMatch;
+    if (sv.size() < 10 || !std::regex_match(sv.begin(), sv.begin() + 10, baseMatch, dateRegex) || baseMatch.size() != 4)
+        return DateTime();
+
+    const auto asInt = [](const std::csub_match& subMatch) { return ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(subMatch.first, subMatch.second)); };
+
+    // 0 has entire match, so actual captures start from index 1.
+    const int nYear  = asInt(baseMatch[1]);
+    const int nMonth = asInt(baseMatch[2]);
+    const int nDay   = asInt(baseMatch[3]);
+    if (nYear <= 0 || nMonth <= 0 || nDay <= 0 || nMonth > 12 || nDay > 31)
+        return DateTime();
+    rv.m_year  = saturateCast<decltype(rv.m_year)>(nYear);
+    rv.m_month = saturateCast<decltype(rv.m_month)>(nMonth);
+    rv.m_day   = saturateCast<decltype(rv.m_day)>(nDay);
+
+    if (sv.size() == 10)
+        return rv;
+
+    // yyyy-MM-ddThh:mm:ss has size 19
+    std::regex timeRegex(R"([ T](\d\d):(\d\d):(\d\d)(\.\d\d\d|)$)");
+    const auto nHasMsDot = (sv.size() >= 21 && sv[19] == '.');
+    const size_t nTimeEnd = (!nHasMsDot) ? 19 : 23;
+    if (sv.size() < 19 || !std::regex_match(sv.begin() + 10, sv.begin() + nTimeEnd, baseMatch, timeRegex) || baseMatch.size() != 5)
+        return DateTime();
+
+    const auto h = asInt(baseMatch[1]);
+    if (h < 0 || h > 23)
+        return DateTime();
+    const auto m = asInt(baseMatch[2]);
+    if (m < 0 || m > 59)
+        return DateTime();
+    const auto s = asInt(baseMatch[3]);
+    if (s < 0 || s > 60)
+        return DateTime();
+    const int ms = (baseMatch[4].length() > 0) ? ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(baseMatch[4].first + 1, baseMatch[4].second)) : 0; // + 1 to skip dot
+    if (ms < 0 || ms > 999)
+        return DateTime();
+
+    rv.m_milliSecSinceMidnight = millisecondsSinceMidnight(h, m, s, ms);
+
+    if (sv.size() == nTimeEnd)
+        return rv;
+
+    if (sv.size() == nTimeEnd + 1 && sv.back() == 'Z')
     {
-        const int nYear  = strTo<int>(sv.substr_startCount(0, 4));
-        const int nMonth = strTo<int>(sv.substr_startCount(5, 2));
-        const int nDay   = strTo<int>(sv.substr_startCount(8, 2));
-        if (nYear <= 0 || nMonth <= 0 || nDay <= 0 || nMonth > 12 || nDay > 31)
-            return DateTime();
-        rv.m_year  = saturateCast<decltype(rv.m_year)>(nYear);
-        rv.m_month = saturateCast<decltype(rv.m_month)>(nMonth);
-        rv.m_day   = saturateCast<decltype(rv.m_day)>(nDay);
-
-        const auto isTzStartChar = [](const char& c) { return ::DFG_MODULE_NS(alg)::contains("Z+-", c); };
-
-        // size 19 is yyyy-MM-ddThh:mm:ss
-        if (sv.size() >= 19) // Case ????-??-??[T ]hh:mm:ss[.zzz][Z|HH:MM]
-        {
-            if (sv[13] != ':' || sv[16] != ':')
-                return DateTime();
-            if (!::DFG_MODULE_NS(alg)::contains("T ", sv[10]))
-                return DateTime();
-            bool bOk = false;
-            const auto h = strTo<int>(sv.substr_startCount(11, 2), &bOk);
-            if (!bOk || h < 0 || h > 23)
-                return DateTime();
-            const auto m = strTo<int>(sv.substr_startCount(14, 2), &bOk);
-            if (!bOk || m < 0 || m > 59)
-                return DateTime();
-            const auto s = strTo<int>(sv.substr_startCount(17, 2), &bOk);
-            if (!bOk || s < 0 || s > 60)
-                return DateTime();
-            const bool bHasMsDot = (sv.size() >= 20 && sv[19] == '.');
-            if (bHasMsDot && sv.size() < 23)
-                return DateTime();
-            const auto ms = (bHasMsDot) ? strTo<int>(sv.substr_startCount(20, 3), &bOk) : 0;
-            if (!bOk || ms < 0 || ms > 999)
-                return DateTime();
-
-            rv.m_milliSecSinceMidnight = millisecondsSinceMidnight(h, m, s, ms);
-
-            // Timezone specifier after milliseconds? Accepted formats: Z, +-hh, +-hh:mm
-            if ((bHasMsDot && sv.size() >= 24) || (!bHasMsDot && sv.size() >= 20))
-            {
-                if ((bHasMsDot && !isTzStartChar(sv[23])) || (!bHasMsDot && !isTzStartChar(sv[19])))
-                    return DateTime();
-                const size_t nStartPos = (bHasMsDot) ? 23 : 19;
-                if (sv[nStartPos] == 'Z')
-                    rv.m_utcOffsetInfo.setOffsetInSeconds(0);
-                else if (sv.size() > nStartPos + 2)
-                {
-                    const auto signFactor = (sv[nStartPos] == '+') ? 1 : -1;
-                    const auto tzh = strTo<int>(sv.substr_startCount(nStartPos + 1, 2), &bOk);
-                    if (!bOk || tzh < 0 || tzh >= 24)
-                        return DateTime();
-                    auto tzm = 0;
-                    if (sv.size() > nStartPos + 5)
-                    {
-                        tzm = strTo<int>(sv.substr_startCount(nStartPos + 4, 2), &bOk);
-                        if (!bOk || tzm < 0 || tzm >= 60)
-                            return DateTime();
-                    }
-                    rv.m_utcOffsetInfo.setOffsetInSeconds(signFactor * 60 * (60 * tzh + tzm));
-                }
-            }
-        }
+        rv.m_utcOffsetInfo.setOffsetInSeconds(0);
+        return rv;
     }
+
+    std::regex tzRegex(R"(([\+-])(\d\d)(:\d\d|)$)");
+    if (!std::regex_match(sv.begin() + nTimeEnd, sv.end(), baseMatch, tzRegex) || baseMatch.size() != 4)
+        return DateTime();
+
+    const auto signFactor = (baseMatch[1] == '+') ? 1 : -1;
+    const auto tzh = asInt(baseMatch[2]);
+    if (tzh < 0 || tzh >= 24)
+        return DateTime();
+    auto tzm = (baseMatch[3].length() > 0) ? ::DFG_MODULE_NS(str)::strTo<int>(StringViewC(baseMatch[3].first + 1, baseMatch[3].second)) : 0; // + 1 to skip ':'
+    if (tzm < 0 || tzm >= 60)
+        return DateTime();
+    rv.m_utcOffsetInfo.setOffsetInSeconds(signFactor * 60 * (60 * tzh + tzm));
+
     return rv;
 }
 

@@ -51,9 +51,9 @@ public:
     DateTime(); // Constructs DateTime which doesn't represent any datetime and for which isNull() is true.
 	DateTime(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
 
-    // Parses DateTime from string
+    // Creates DateTime from a string
     // Supported formats
-    //      yyyy-mm-ddX
+    //      yyyy-mm-dd
     //      yyyy-mm-ddXhh:mm:ss
     //      yyyy-mm-ddXhh:mm:ssZ
     //      yyyy-mm-ddXhh:mm:ss+hh
@@ -63,7 +63,9 @@ public:
     //      yyyy-mm-ddXhh:mm:ss.zzz+hh:mm
     //      yyyy-mm-ddXhh:mm:ss.zzz-hh:mm
     // where X is either ' ' or 'T'
-    // If input string does not have supported format or has invalid values (e.g. month 13), behaviour is undefined (i.e. function must not be used for untrusted strings).
+    // If input string does not have supported format or has invalid values (e.g. month 13), returned DateTime can be null or unspecified:
+    //      -most invalid formats return null DateTime.
+    //      -non-null return is not guaranteed to be valid DateTime.
     static DateTime fromString(const StringViewC& sv);
 
     // Returns std::tm not taking UTC offset into account nor milliseconds, i.e. as if UTC offset and milliseconds were zero.
