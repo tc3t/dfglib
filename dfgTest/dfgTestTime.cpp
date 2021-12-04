@@ -7,6 +7,10 @@
 #include <ctime>
 #include <dfg/str/format_fmt.hpp>
 
+#ifdef _WIN32
+    #include <Windows.h>
+#endif
+
 #if DFG_LANGFEAT_CHRONO_11
 
 #include <chrono>
@@ -37,6 +41,11 @@ TEST(dfgTime, DateTime)
     EXPECT_EQ(0, dtUtc2.secondsTo(dtUtc3).count());
     EXPECT_EQ(7200, dt2.secondsTo(dtUtc3).count());
     EXPECT_EQ(-7200, dtUtc3.secondsTo(dt2).count());
+
+    DFGTEST_EXPECT_LEFT(DayOfWeek::unknown, DateTime().dayOfWeek());
+    DFGTEST_EXPECT_LEFT(DayOfWeek::Friday, dt0.dayOfWeek());
+    DFGTEST_EXPECT_LEFT(DayOfWeek::Saturday, dtUtc2.dayOfWeek());
+    DFGTEST_EXPECT_LEFT(DayOfWeek::Sunday, dtUtc3.dayOfWeek());
 }
 
 TEST(dfgTime, DateTime_systemTime_local)
@@ -242,6 +251,49 @@ TEST(dfgTime, DateTime_toSecondsSinceEpoch)
         DFGTEST_EXPECT_LEFT(1638273662750 + 3600000, epochTime2);
     }
 }
+
+TEST(dfgTime, DateTime_toSYSTEMTIME)
+{
+    using namespace ::DFG_MODULE_NS(time);
+
+    // Positive tests
+    {
+        const DateTime t0Utc(1999, 12, 31, 23, 30, 1, 125, UtcOffsetInfo(std::chrono::seconds(0)));
+        const DateTime t0TzPlus(1999, 12, 31, 23, 30, 1, 125, UtcOffsetInfo(std::chrono::seconds(3600)));
+        const DateTime t0TzMinus(1999, 12, 31, 23, 30, 1, 125, UtcOffsetInfo(std::chrono::seconds(-3600)));
+
+        const auto t0UtcSt = t0Utc.toSYSTEMTIME();
+        const auto t0TzPlusSt = t0TzPlus.toSYSTEMTIME();
+        const auto t0TzMinusSt = t0TzMinus.toSYSTEMTIME();
+
+        DFGTEST_EXPECT_LEFT(5, t0UtcSt.wDayOfWeek);
+        DFGTEST_EXPECT_LEFT(23, t0TzPlusSt.wHour);
+        DFGTEST_EXPECT_LEFT(23, t0TzMinusSt.wHour);
+
+        const DateTime t0UtcRoundTrip(t0UtcSt);
+
+        DFGTEST_EXPECT_LEFT(t0Utc.year(), t0UtcRoundTrip.year());
+        DFGTEST_EXPECT_LEFT(t0Utc.month(), t0UtcRoundTrip.month());
+        DFGTEST_EXPECT_LEFT(t0Utc.day(), t0UtcRoundTrip.day());
+        DFGTEST_EXPECT_LEFT(t0Utc.hour(), t0UtcRoundTrip.hour());
+        DFGTEST_EXPECT_LEFT(t0Utc.minute(), t0UtcRoundTrip.minute());
+        DFGTEST_EXPECT_LEFT(t0Utc.second(), t0UtcRoundTrip.second());
+        DFGTEST_EXPECT_LEFT(t0Utc.millisecond(), t0UtcRoundTrip.millisecond());
+        DFGTEST_EXPECT_LEFT(t0Utc.dayOfWeek(), t0UtcRoundTrip.dayOfWeek());
+        DFGTEST_EXPECT_LEFT(DayOfWeek::Friday, t0Utc.dayOfWeek());
+        // Note: not testing utc offset, it is not preserved in toWin32SystemTime().
+    }
+
+    // Negative test
+    {
+        const auto isZeroSystemTime = [](const SYSTEMTIME& st) { auto p = reinterpret_cast<const char*>(&st); return std::all_of(p, p + sizeof(SYSTEMTIME), [](const char c) { return c == 0; }); };
+        DFGTEST_EXPECT_TRUE(isZeroSystemTime(DateTime().toSYSTEMTIME()));
+        // Valid SYSTEMTIME years are "1601 through 30827"
+        DFGTEST_EXPECT_TRUE(isZeroSystemTime(DateTime(1600, 1, 1, 12, 0, 0, 0).toSYSTEMTIME()));
+        DFGTEST_EXPECT_TRUE(isZeroSystemTime(DateTime(30828, 1, 1, 12, 0, 0, 0).toSYSTEMTIME()));
+    }
+}
+
 #endif // _WIN32
 
 #endif // DFG_LANGFEAT_CHRONO_11

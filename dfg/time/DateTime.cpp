@@ -121,12 +121,36 @@ DateTime::DateTime(const SYSTEMTIME& st)
     m_milliSecSinceMidnight = millisecondsSinceMidnight(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
 
+namespace
+{
+    static FILETIME systemTimeToFileTime(const SYSTEMTIME& st)
+    {
+        FILETIME ft{};
+        if (SystemTimeToFileTime(&st, &ft) != 0)
+            return ft;
+        else
+        {
+            ft.dwHighDateTime = maxValueOfType<decltype(ft.dwHighDateTime)>();
+            ft.dwLowDateTime = maxValueOfType<decltype(ft.dwLowDateTime)>();
+            return ft;
+        }
+    }
+
+    static SYSTEMTIME fileTimeToSystemTime(const FILETIME& ft)
+    {
+        SYSTEMTIME st{};
+        if (FileTimeToSystemTime(&ft, &st) != 0)
+            return st;
+        else
+            return SYSTEMTIME{};
+    }
+}
+
 auto DateTime::privTimeDiff(const SYSTEMTIME& st0, const SYSTEMTIME& st1) -> std::chrono::duration<int64, std::ratio<1, 10000000>>
 {
     const auto toInteger = [](const _SYSTEMTIME& st)
     {
-        FILETIME ft;
-        SystemTimeToFileTime(&st, &ft);
+        const FILETIME ft = systemTimeToFileTime(st);
         ULARGE_INTEGER uli;
         uli.LowPart = ft.dwLowDateTime;
         uli.HighPart = ft.dwHighDateTime;
@@ -145,17 +169,34 @@ auto DateTime::timeDiffInSecondsI(const SYSTEMTIME& st0, const SYSTEMTIME& st1) 
     return std::chrono::seconds(diff.count() * TimeDiffReturnType::period::num / TimeDiffReturnType::period::den);
 }
 
-SYSTEMTIME DateTime::toSystemTime() const
+auto DateTime::dayOfWeek() const -> DayOfWeek
+{
+    auto st = toSYSTEMTIME();
+    if (st.wYear != 0)
+    {
+        DFG_STATIC_ASSERT(DayOfWeek::Sunday == 0, "Implementation assumes sunday == 0");
+        return static_cast<DayOfWeek>(st.wDayOfWeek);
+    }
+    else
+        return DayOfWeek::unknown;
+}
+
+SYSTEMTIME DateTime::toSYSTEMTIME() const
 {
     SYSTEMTIME st;
+
     st.wYear = m_year;
-    st.wMonth = m_month;;
-    //st.wDayOfWeek = ; TODO
+    st.wMonth = m_month;
+    st.wDayOfWeek = 0; // According to documentation of SystemTimeToFileTime() "The wDayOfWeek member of the SYSTEMTIME structure is ignored." so doesn't matter if this is wrong at this point.
     st.wDay = m_day;
     st.wHour = hour();
     st.wMinute = minute();
     st.wSecond = second();
     st.wMilliseconds = millisecond();
+
+    // Hack: filling in weekday by roundtrip conversion with FileTime
+    const auto ft = systemTimeToFileTime(st);
+    st = fileTimeToSystemTime(ft);
     return st;
 }
 #endif // _WIN32
@@ -242,7 +283,7 @@ std::tm DateTime::toStdTm_utcOffsetIgnored() const
 #ifdef _WIN32
 std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
 {
-    return privTimeDiff(toSystemTime(), other.toSystemTime()) - std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
+    return privTimeDiff(toSYSTEMTIME(), other.toSYSTEMTIME()) - std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
 }
 
 int64 DateTime::toSecondsSinceEpoch() const

@@ -16,6 +16,7 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time) {
 
+enum DayOfWeek { Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, unknown };
 
 #if DFG_LANGFEAT_CHRONO_11
 class UtcOffsetInfo
@@ -80,7 +81,9 @@ public:
 #ifdef _WIN32
     explicit DateTime(const _SYSTEMTIME& st);
 
-    _SYSTEMTIME toSystemTime() const;
+    // Converts 'this' to SYSTEMTIME ignoring UTC offset, i.e. interpreting 'this' as if having UTC offset 0. 
+    // If conversion fails, returns zero-initialized SYSTEMTIME
+    _SYSTEMTIME toSYSTEMTIME() const;
 
     // Return value is positive if st0 < st1
     static std::chrono::duration<int64, std::ratio<1, 10000000>> privTimeDiff(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
@@ -93,6 +96,9 @@ public:
     // Milliseconds are treated as zero.
     int64 toSecondsSinceEpoch() const;
     int64 toMillisecondsSinceEpoch() const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds
+
+    DayOfWeek dayOfWeek() const;
+
 #endif
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
