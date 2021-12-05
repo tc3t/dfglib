@@ -16,7 +16,7 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time) {
 
-enum DayOfWeek { Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, unknown };
+enum class DayOfWeek : uint8 { Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, unknown };
 
 #if DFG_LANGFEAT_CHRONO_11
 class UtcOffsetInfo
@@ -142,6 +142,7 @@ public:
     uint16 m_year;
     uint8 m_month; // In range 1-12
     uint8 m_day;   // In range 1-31
+    DayOfWeek m_dayOfWeek = DayOfWeek::unknown;
     uint32 m_milliSecSinceMidnight;
     UtcOffsetInfo m_utcOffsetInfo;
 }; // class DateTime

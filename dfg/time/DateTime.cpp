@@ -118,6 +118,8 @@ DateTime::DateTime(const SYSTEMTIME& st)
     m_year = st.wYear;
     m_month = static_cast<uint8>(st.wMonth);
     m_day = static_cast<uint8>(st.wDay);
+    DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
+    m_dayOfWeek = static_cast<DayOfWeek>(st.wDayOfWeek);
     m_milliSecSinceMidnight = millisecondsSinceMidnight(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
 
@@ -171,10 +173,12 @@ auto DateTime::timeDiffInSecondsI(const SYSTEMTIME& st0, const SYSTEMTIME& st1) 
 
 auto DateTime::dayOfWeek() const -> DayOfWeek
 {
+    if (m_dayOfWeek != DayOfWeek::unknown)
+        return m_dayOfWeek;
     auto st = toSYSTEMTIME();
     if (st.wYear != 0)
     {
-        DFG_STATIC_ASSERT(DayOfWeek::Sunday == 0, "Implementation assumes sunday == 0");
+        DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
         return static_cast<DayOfWeek>(st.wDayOfWeek);
     }
     else
@@ -194,9 +198,19 @@ SYSTEMTIME DateTime::toSYSTEMTIME() const
     st.wSecond = second();
     st.wMilliseconds = millisecond();
 
-    // Hack: filling in weekday by roundtrip conversion with FileTime
-    const auto ft = systemTimeToFileTime(st);
-    st = fileTimeToSystemTime(ft);
+    if (this->m_dayOfWeek != DayOfWeek::unknown)
+    {
+        DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
+        const auto dayOfWeekNumeric = static_cast<uint8>(this->m_dayOfWeek);
+        st.wDayOfWeek = dayOfWeekNumeric;
+    }
+    else
+    {
+        // Hack: filling in weekday by roundtrip conversion with FileTime
+        const auto ft = systemTimeToFileTime(st);
+        st = fileTimeToSystemTime(ft);
+    }
+    
     return st;
 }
 #endif // _WIN32
@@ -259,7 +273,7 @@ auto DateTime::systemTime_local() -> DateTime
 
 bool DateTime::isNull() const
 {
-    return m_year == 0 && m_month == 0 && m_day == 0 && m_milliSecSinceMidnight == 0 && !m_utcOffsetInfo.isSet();
+    return m_year == 0 && m_month == 0 && m_day == 0 && m_dayOfWeek == DayOfWeek::unknown && m_milliSecSinceMidnight == 0 && !m_utcOffsetInfo.isSet();
 }
 
 std::tm DateTime::toStdTm_utcOffsetIgnored() const
