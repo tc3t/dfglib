@@ -28,6 +28,7 @@ public:
     {
     }
 
+    // Positive means +HH:MM offset
     UtcOffsetInfo(const std::chrono::seconds& offset) :
         m_offsetValue(static_cast<int>(offset.count()))
     {
@@ -50,6 +51,15 @@ class DateTime
 {
 public:
     DateTime(); // Constructs DateTime which doesn't represent any datetime and for which isNull() is true.
+
+    // year         : year as such
+    // month        : in range 1-12
+    // day          : in range 1-31
+    // hour         : in range 0-23
+    // minute       : in range 0-59
+    // second       : in range 0-59
+    // millisecond  : in range 0-999
+    // utcOffsetInfo: defines how this DateTime is related to UTC time
 	DateTime(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
 
     // Creates DateTime from a string
@@ -68,6 +78,12 @@ public:
     //      -most invalid formats return null DateTime.
     //      -non-null return is not guaranteed to be valid DateTime.
     static DateTime fromString(const StringViewC& sv);
+
+    // Constructs DateTime from std::tm.
+    // By default information in std::tm is interpreted as if being timezone-less datetime
+    // effectively equivalent to fromString("yyyy-mm-dd hh:mm:ss").
+    // Members tm_yday and tm_isdst are ignored.
+    static DateTime fromStdTm(const std::tm& tm, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
 
     // Returns std::tm not taking UTC offset into account nor milliseconds, i.e. as if UTC offset and milliseconds were zero.
     // Members tm_wday, tm_yday and tm_isdst are set to -1.
@@ -100,6 +116,11 @@ public:
     DayOfWeek dayOfWeek() const;
 
 #endif
+
+    // Returns true if 'this' and 'other' have equivalent year, month, day, hour, minute, second and millisecond parts.
+    bool isLocalDateTimeEquivalent(const DateTime& other) const;
+    // Returns true if 'this' and 'tm' have equivalent year, month, day, hour, minute and second parts.
+    bool isLocalDateTimeEquivalent(const std::tm& tm) const;
 
     // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
     // This behaviour differs from that of e.g. std::localtime (see systemTime_local-test)

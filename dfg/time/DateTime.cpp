@@ -112,6 +112,22 @@ DateTime DateTime::fromString(const StringViewC& sv)
     return rv;
 }
 
+DateTime DateTime::fromStdTm(const std::tm& tm, const UtcOffsetInfo utcOffsetInfo)
+{
+    DateTime dt(
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec,
+        0,
+        utcOffsetInfo);
+    DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
+    dt.m_dayOfWeek = static_cast<DayOfWeek>(tm.tm_wday);
+    return dt;
+}
+
 #ifdef _WIN32
 DateTime::DateTime(const SYSTEMTIME& st)
 {
@@ -298,6 +314,23 @@ std::tm DateTime::toStdTm_utcOffsetIgnored() const
 std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
 {
     return privTimeDiff(toSYSTEMTIME(), other.toSYSTEMTIME()) - std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
+}
+
+bool DateTime::isLocalDateTimeEquivalent(const DateTime& other) const
+{
+    return
+        this->year()        == other.year()   &&
+        this->month()       == other.month()  &&
+        this->day()         == other.day()    &&
+        this->hour()        == other.hour()   &&
+        this->minute()      == other.minute() &&
+        this->second()      == other.second() &&
+        this->millisecond() == other.millisecond();
+}
+
+bool DateTime::isLocalDateTimeEquivalent(const std::tm& tm) const
+{
+    return isLocalDateTimeEquivalent(fromStdTm(tm));
 }
 
 int64 DateTime::toSecondsSinceEpoch() const

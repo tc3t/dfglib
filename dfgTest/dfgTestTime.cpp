@@ -222,6 +222,48 @@ TEST(dfgTime, DateTime_fromString)
     }
 }
 
+TEST(dfgTime, DateTime_fromStdTm)
+{
+    using namespace ::DFG_MODULE_NS(time);
+
+    // According to https://en.cppreference.com/w/cpp/chrono/c/time
+    // "The encoding of calendar time in std::time_t is unspecified, but most systems conform to the POSIX specification "
+    // Checking that implementation conforms by using some fixed unix times.
+    const std::time_t t20210601_120102 = 1622548862;
+    const std::time_t t20211205_120102 = 1638705662;
+    const auto toTm = [](const std::time_t t) { auto p = std::gmtime(&t); return (p) ? *p : std::tm{}; };
+    const auto tm20210601_120102 = toTm(t20210601_120102);;
+    const auto tm20211250_120102 = toTm(t20211205_120102);;
+    DFGTEST_EXPECT_LEFT(121, tm20210601_120102.tm_year);
+    DFGTEST_EXPECT_LEFT(5,   tm20210601_120102.tm_mon);
+    DFGTEST_EXPECT_LEFT(1,   tm20210601_120102.tm_mday);
+    DFGTEST_EXPECT_LEFT(12,  tm20210601_120102.tm_hour);
+    DFGTEST_EXPECT_LEFT(1,   tm20210601_120102.tm_min);
+    DFGTEST_EXPECT_LEFT(2,   tm20210601_120102.tm_sec);
+    DFGTEST_EXPECT_LEFT(2,   tm20210601_120102.tm_wday);
+    DFGTEST_EXPECT_LEFT(151, tm20210601_120102.tm_yday);
+
+    DFGTEST_EXPECT_LEFT(121, tm20211250_120102.tm_year);
+    DFGTEST_EXPECT_LEFT(11,  tm20211250_120102.tm_mon);
+    DFGTEST_EXPECT_LEFT(5,   tm20211250_120102.tm_mday);
+    DFGTEST_EXPECT_LEFT(12,  tm20211250_120102.tm_hour);
+    DFGTEST_EXPECT_LEFT(1,   tm20211250_120102.tm_min);
+    DFGTEST_EXPECT_LEFT(2,   tm20211250_120102.tm_sec);
+    DFGTEST_EXPECT_LEFT(0,   tm20211250_120102.tm_wday);
+    DFGTEST_EXPECT_LEFT(338, tm20211250_120102.tm_yday);
+
+    const auto dt20211250_120102 = DateTime::fromStdTm(tm20211250_120102);
+    const auto dt20211250_120102Z = DateTime::fromStdTm(tm20211250_120102, UtcOffsetInfo(std::chrono::seconds(0)));
+    const auto dt20211250_120102Plus1 = DateTime::fromStdTm(tm20211250_120102, UtcOffsetInfo(std::chrono::seconds(3600)));
+    const auto dt20211250_120102Minus1 = DateTime::fromStdTm(tm20211250_120102, UtcOffsetInfo(std::chrono::seconds(-3600)));
+    DFGTEST_EXPECT_TRUE(dt20211250_120102.isLocalDateTimeEquivalent(tm20211250_120102));
+    DFGTEST_EXPECT_TRUE(dt20211250_120102.isLocalDateTimeEquivalent(dt20211250_120102Z));
+    DFGTEST_EXPECT_TRUE(dt20211250_120102.isLocalDateTimeEquivalent(dt20211250_120102Plus1));
+    DFGTEST_EXPECT_TRUE(dt20211250_120102.isLocalDateTimeEquivalent(dt20211250_120102Minus1));
+    DFGTEST_EXPECT_LEFT(3600, dt20211250_120102Z.toSecondsSinceEpoch() - dt20211250_120102Plus1.toSecondsSinceEpoch());
+    DFGTEST_EXPECT_LEFT(-3600, dt20211250_120102Z.toSecondsSinceEpoch() - dt20211250_120102Minus1.toSecondsSinceEpoch());
+}
+
 #ifdef _WIN32
 TEST(dfgTime, DateTime_toSecondsSinceEpoch)
 {
