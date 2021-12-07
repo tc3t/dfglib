@@ -313,7 +313,9 @@ std::tm DateTime::toStdTm_utcOffsetIgnored() const
 #ifdef _WIN32
 std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
 {
-    return privTimeDiff(toSYSTEMTIME(), other.toSYSTEMTIME()) - std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
+    const auto offsetDiff = std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
+    const auto rawDiff = privTimeDiff(toSYSTEMTIME(), other.toSYSTEMTIME());
+    return rawDiff - offsetDiff;
 }
 
 bool DateTime::isLocalDateTimeEquivalent(const DateTime& other) const

@@ -105,7 +105,8 @@ public:
     static std::chrono::duration<int64, std::ratio<1, 10000000>> privTimeDiff(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
     static std::chrono::seconds timeDiffInSecondsI(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
 
-    // Return value is positive if *this < other
+    // Returns seconds from 'this' to other, positive if 'this' is before 'other'.
+    // Real, accurate-to-seconds time difference between the dates may differ from the result since leap second handling is unspecified.
 	std::chrono::duration<double> secondsTo(const DateTime& other) const;
 
     // If 'this' is valid datetime for unix time and UtfOffset structure is set, returns corresponding unix time; otherwise behaviour is undefined.

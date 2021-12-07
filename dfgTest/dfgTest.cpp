@@ -190,9 +190,11 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.toStr";
     //::testing::GTEST_FLAG(filter) = "dfgStr.TypedCharPtrT";
     //::testing::GTEST_FLAG(filter) = "dfgStr.utf16";
+    //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_dayOfWeek";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_fromString";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_toSecondsSinceEpoch";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_fromStdTm";
+    //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_secondsTo";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_toSYSTEMTIME";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToEncoded";

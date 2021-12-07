@@ -15,7 +15,6 @@
 
 #include <chrono>
 
-#ifdef _WIN32
 TEST(dfgTime, DateTime)
 {
     using namespace DFG_MODULE_NS(time);
@@ -34,18 +33,46 @@ TEST(dfgTime, DateTime)
     EXPECT_EQ(dt0.minute(), 13);
     EXPECT_EQ(dt0.second(), 14);
     EXPECT_EQ(dt0.millisecond(), 15);
-    EXPECT_EQ(std::chrono::seconds(1), dt0.secondsTo(dt1));
-    EXPECT_EQ(std::chrono::seconds(-1), dt1.secondsTo(dt0));
-    EXPECT_EQ(std::chrono::seconds(-10800), dtUtc0.secondsTo(dtUtc1));
-    EXPECT_EQ(std::chrono::seconds(10800), dtUtc1.secondsTo(dtUtc0));
-    EXPECT_EQ(0, dtUtc2.secondsTo(dtUtc3).count());
-    EXPECT_EQ(7200, dt2.secondsTo(dtUtc3).count());
-    EXPECT_EQ(-7200, dtUtc3.secondsTo(dt2).count());
+}
+
+#ifdef _WIN32
+
+TEST(dfgTime, DateTime_dayOfWeek)
+{
+    using namespace DFG_MODULE_NS(time);
+    DateTime dt0(2016, 7, 29, 12, 13, 14, 15);
+    const DateTime dtUtc2(2016, 7, 30, 23, 2, 3, 4, UtcOffsetInfo(std::chrono::seconds(0)));
+    const DateTime dtUtc3(2016, 7, 31, 1, 2, 3, 4, UtcOffsetInfo(std::chrono::seconds(7200)));
 
     DFGTEST_EXPECT_LEFT(DayOfWeek::unknown, DateTime().dayOfWeek());
     DFGTEST_EXPECT_LEFT(DayOfWeek::Friday, dt0.dayOfWeek());
     DFGTEST_EXPECT_LEFT(DayOfWeek::Saturday, dtUtc2.dayOfWeek());
     DFGTEST_EXPECT_LEFT(DayOfWeek::Sunday, dtUtc3.dayOfWeek());
+}
+
+TEST(dfgTime, DateTime_secondsTo)
+{
+    using namespace DFG_MODULE_NS(time);
+    DateTime dt0(2016, 7, 29, 12, 13, 14, 15);
+    DateTime dt1(2016, 7, 29, 12, 13, 15, 15);
+    const DateTime dtUtc0(2016, 7, 29, 12, 13, 14, 15, UtcOffsetInfo(std::chrono::seconds(-3600)));
+    const DateTime dtUtc1(2016, 7, 29, 12, 13, 14, 15, UtcOffsetInfo(std::chrono::seconds(7200)));
+    const DateTime dtUtc2(2016, 7, 30, 23, 2, 3, 4, UtcOffsetInfo(std::chrono::seconds(0)));
+    const DateTime dt2(2016, 7, 30, 23, 2, 3, 4);
+    const DateTime dtUtc3(2016, 7, 31, 1, 2, 3, 4, UtcOffsetInfo(std::chrono::seconds(7200)));
+    const DateTime dt1990(1990, 06, 01, 12, 1, 2, 250, UtcOffsetInfo(std::chrono::seconds(0)));
+    const DateTime dt2020(2020, 06, 01, 13, 2, 3, 750, UtcOffsetInfo(std::chrono::seconds(0)));
+
+    DFGTEST_EXPECT_LEFT(std::chrono::seconds(1), dt0.secondsTo(dt1));
+    DFGTEST_EXPECT_LEFT(std::chrono::seconds(-1), dt1.secondsTo(dt0));
+    DFGTEST_EXPECT_LEFT(std::chrono::seconds(-10800), dtUtc0.secondsTo(dtUtc1));
+    DFGTEST_EXPECT_LEFT(std::chrono::seconds(10800), dtUtc1.secondsTo(dtUtc0));
+    DFGTEST_EXPECT_LEFT(0, dtUtc2.secondsTo(dtUtc3).count());
+    DFGTEST_EXPECT_LEFT(7200, dt2.secondsTo(dtUtc3).count());
+    DFGTEST_EXPECT_LEFT(-7200, dtUtc3.secondsTo(dt2).count());
+
+    DFGTEST_EXPECT_LEFT(946774861.5, dt1990.secondsTo(dt2020).count());
+    DFGTEST_EXPECT_LEFT(-1 * dt1990.secondsTo(dt2020).count(), dt2020.secondsTo(dt1990).count());
 }
 
 TEST(dfgTime, DateTime_systemTime_local)
