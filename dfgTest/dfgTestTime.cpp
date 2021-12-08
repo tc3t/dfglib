@@ -258,9 +258,8 @@ TEST(dfgTime, DateTime_fromStdTm)
     // Checking that implementation conforms by using some fixed unix times.
     const std::time_t t20210601_120102 = 1622548862;
     const std::time_t t20211205_120102 = 1638705662;
-    const auto toTm = [](const std::time_t t) { auto p = std::gmtime(&t); return (p) ? *p : std::tm{}; };
-    const auto tm20210601_120102 = toTm(t20210601_120102);;
-    const auto tm20211250_120102 = toTm(t20211205_120102);;
+    const auto tm20210601_120102 = stdGmTime(t20210601_120102);
+    const auto tm20211250_120102 = stdGmTime(t20211205_120102);
     DFGTEST_EXPECT_LEFT(121, tm20210601_120102.tm_year);
     DFGTEST_EXPECT_LEFT(5,   tm20210601_120102.tm_mon);
     DFGTEST_EXPECT_LEFT(1,   tm20210601_120102.tm_mday);
@@ -292,6 +291,29 @@ TEST(dfgTime, DateTime_fromStdTm)
 }
 
 #ifdef _WIN32
+TEST(dfgTime, DateTime_fromTime_t)
+{
+    using namespace ::DFG_MODULE_NS(time);
+    const std::time_t t20211205_120102 = 1638705662;
+
+    const auto dt0Z       = DateTime::fromTime_t(t20211205_120102);
+    const auto dt0Plus12  = DateTime::fromTime_t(t20211205_120102, std::chrono::seconds(12 * 60 * 60));
+    const auto dt0Minus12 = DateTime::fromTime_t(t20211205_120102, std::chrono::seconds(-12 * 3600));
+
+    DFGTEST_EXPECT_LEFT(t20211205_120102, dt0Z.toSecondsSinceEpoch());
+    DFGTEST_EXPECT_LEFT(t20211205_120102, dt0Plus12.toSecondsSinceEpoch());
+    DFGTEST_EXPECT_LEFT(t20211205_120102, dt0Minus12.toSecondsSinceEpoch());
+    DFGTEST_EXPECT_FALSE(dt0Z.isLocalDateTimeEquivalent(dt0Plus12));
+    DFGTEST_EXPECT_FALSE(dt0Z.isLocalDateTimeEquivalent(dt0Minus12));
+    DFGTEST_EXPECT_FALSE(dt0Plus12.isLocalDateTimeEquivalent(dt0Minus12));
+    DFGTEST_EXPECT_TRUE(DateTime(2021, 12, 5, 12, 1, 2, 0).isLocalDateTimeEquivalent(dt0Z));
+    DFGTEST_EXPECT_TRUE(DateTime(2021, 12, 6,  0, 1, 2, 0).isLocalDateTimeEquivalent(dt0Plus12));
+    DFGTEST_EXPECT_TRUE(DateTime(2021, 12, 5,  0, 1, 2, 0).isLocalDateTimeEquivalent(dt0Minus12));
+
+    const auto dtInvalidOffset = DateTime::fromTime_t(t20211205_120102, std::chrono::seconds(-360000000));
+    DFGTEST_EXPECT_TRUE(dtInvalidOffset.isNull());
+}
+
 TEST(dfgTime, DateTime_toSecondsSinceEpoch)
 {
     using namespace ::DFG_MODULE_NS(time);

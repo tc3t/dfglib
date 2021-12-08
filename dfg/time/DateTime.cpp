@@ -15,6 +15,18 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time)
 {
 
+std::tm stdGmTime(const time_t t)
+{
+#ifdef _WIN32
+    std::tm tm{};
+    const auto err = gmtime_s(&tm, &t);
+    return (err == 0) ? tm : std::tm{};
+#else
+    auto pTm = gmtime(&t);
+    return (pTm) ? *pTm : std::tm{};
+#endif
+}
+
 auto UtcOffsetInfo::offsetDiffInSeconds(const UtcOffsetInfo& other) const -> int32
 {
     if (isSet() && other.isSet())
@@ -125,6 +137,17 @@ DateTime DateTime::fromStdTm(const std::tm& tm, const UtcOffsetInfo utcOffsetInf
         utcOffsetInfo);
     DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
     dt.m_dayOfWeek = static_cast<DayOfWeek>(tm.tm_wday);
+    return dt;
+}
+
+DateTime DateTime::fromTime_t(const std::time_t t, const std::chrono::seconds utcOffset)
+{
+    if (utcOffset.count() < -24 * 60 * 60 || utcOffset.count() > 24 * 60 * 60)
+        return DateTime();
+    // First determining calendar date in UTC with given offset.
+    const auto tm = stdGmTime(t + utcOffset.count());
+    auto dt = fromStdTm(tm);
+    dt.m_utcOffsetInfo.setOffset(utcOffset);
     return dt;
 }
 

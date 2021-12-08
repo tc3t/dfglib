@@ -18,6 +18,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time) {
 
 enum class DayOfWeek : uint8 { Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, unknown };
 
+// Wrapper for std::gmtime(). If conversion fails, returns zero-initialized std::tm.
+// On Windows, guaranteed to be thread-safe (according to https://en.cppreference.com/w/cpp/chrono/c/gmtime std::gmtime() "may not be thread-safe.")
+std::tm stdGmTime(const time_t t);
+
 #if DFG_LANGFEAT_CHRONO_11
 class UtcOffsetInfo
 {
@@ -84,6 +88,12 @@ public:
     // effectively equivalent to fromString("yyyy-mm-dd hh:mm:ss").
     // Members tm_yday and tm_isdst are ignored.
     static DateTime fromStdTm(const std::tm& tm, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
+
+    // Constructs DateTime from std::time_t. If time_t is valid, resulting DateTime has identical epochTime, but
+    // calendar DateTime depends on utcOffset, which by default is 0.
+    // For example if 't' corresponds to 2021-12-08 12:00:00, by default resulting DateTime is 2021-12-08 12:00:00Z
+    // If given offset 3600, resulting DateTime is 2021-12-08 13:00:00+01:00
+    static DateTime fromTime_t(std::time_t t, std::chrono::seconds utcOffset = std::chrono::seconds(0));
 
     // Returns std::tm not taking UTC offset into account nor milliseconds, i.e. as if UTC offset and milliseconds were zero.
     // Members tm_wday, tm_yday and tm_isdst are set to -1.

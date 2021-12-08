@@ -194,6 +194,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_fromString";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_toSecondsSinceEpoch";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_fromStdTm";
+    //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_fromTime_t";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_secondsTo";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_toSYSTEMTIME";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
