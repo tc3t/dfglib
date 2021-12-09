@@ -17,13 +17,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time)
 
 std::tm stdGmTime(const time_t t)
 {
-#ifdef _WIN32
     std::tm tm{};
+#ifdef _WIN32
     const auto err = gmtime_s(&tm, &t);
     return (err == 0) ? tm : std::tm{};
 #else
-    auto pTm = gmtime(&t);
-    return (pTm) ? *pTm : std::tm{};
+    return (gmtime_r(&t, &tm) != nullptr) ? tm : std::tm{};
 #endif
 }
 
@@ -210,20 +209,6 @@ auto DateTime::timeDiffInSecondsI(const SYSTEMTIME& st0, const SYSTEMTIME& st1) 
     return std::chrono::seconds(diff.count() * TimeDiffReturnType::period::num / TimeDiffReturnType::period::den);
 }
 
-auto DateTime::dayOfWeek() const -> DayOfWeek
-{
-    if (m_dayOfWeek != DayOfWeek::unknown)
-        return m_dayOfWeek;
-    auto st = toSYSTEMTIME();
-    if (st.wYear != 0)
-    {
-        DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
-        return static_cast<DayOfWeek>(st.wDayOfWeek);
-    }
-    else
-        return DayOfWeek::unknown;
-}
-
 SYSTEMTIME DateTime::toSYSTEMTIME() const
 {
     SYSTEMTIME st;
@@ -280,16 +265,19 @@ auto DateTime::millisecondsSinceMidnight(const int hour, const int minutes, cons
 
 auto DateTime::systemTime_utc() -> DateTime
 {
-#ifdef _WIN32
-    SYSTEMTIME stUtc;
-    GetSystemTime(&stUtc); // Returned time is in UTC
-    DateTime dt(stUtc);
-    dt.m_utcOffsetInfo.setOffsetInSeconds(0);
-    return dt;
-#else
-    auto dt = ::DFG_MODULE_NS(time)::DFG_DETAIL_NS::createDateTime(&gmtime_r);
-    dt.m_utcOffsetInfo.setOffsetInSeconds(0);
-    return dt;
+    return fromStdTm(stdGmTime(std::time(nullptr)), UtcOffsetInfo(std::chrono::seconds(0)));
+#if 0 // Old implementations, left for reference to see how platform-specific functions can be used if need be.
+    #ifdef _WIN32
+        SYSTEMTIME stUtc;
+        GetSystemTime(&stUtc); // Returned time is in UTC
+        DateTime dt(stUtc);
+        dt.m_utcOffsetInfo.setOffsetInSeconds(0);
+        return dt;
+    #else
+        auto dt = ::DFG_MODULE_NS(time)::DFG_DETAIL_NS::createDateTime(&gmtime_r);
+        dt.m_utcOffsetInfo.setOffsetInSeconds(0);
+        return dt;
+    #endif
 #endif
 }
 
@@ -340,6 +328,7 @@ std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
     const auto rawDiff = privTimeDiff(toSYSTEMTIME(), other.toSYSTEMTIME());
     return rawDiff - offsetDiff;
 }
+#endif // _WIN32
 
 bool DateTime::isLocalDateTimeEquivalent(const DateTime& other) const
 {
@@ -363,8 +352,16 @@ int64 DateTime::toSecondsSinceEpoch() const
     if (!utcOffsetInfo().isSet())
         return 0;
     auto tm = toStdTm_utcOffsetIgnored();
+
+#ifdef _WIN32
     const auto t = _mkgmtime64(&tm);
-    return static_cast<int64>(t) - utcOffsetInfo().offsetInSeconds();
+#else
+    // https://stackoverflow.com/questions/283166/easy-way-to-convert-a-struct-tm-expressed-in-utc-to-time-t-type
+    // https://stackoverflow.com/questions/12353011/how-to-convert-a-utc-date-time-to-a-time-t-in-c
+    const auto t = timegm(&tm);
+#endif
+    // Note: assuming that t is in seconds
+    return (t >= 0) ? static_cast<int64>(t) - utcOffsetInfo().offsetInSeconds() : -1;
 }
 
 int64 DateTime::toMillisecondsSinceEpoch() const
@@ -375,7 +372,21 @@ int64 DateTime::toMillisecondsSinceEpoch() const
     return val;
 }
 
-#endif // _WIN32
+#ifdef _WIN32
+auto DateTime::dayOfWeek() const -> DayOfWeek
+{
+    if (m_dayOfWeek != DayOfWeek::unknown)
+        return m_dayOfWeek;
+    auto st = toSYSTEMTIME();
+    if (st.wYear != 0)
+    {
+        DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
+        return static_cast<DayOfWeek>(st.wDayOfWeek);
+    }
+    else
+        return DayOfWeek::unknown;
+}
+#endif
 
 } } // namespace dfg::time
 

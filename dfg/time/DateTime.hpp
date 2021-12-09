@@ -119,14 +119,13 @@ public:
     // Real, accurate-to-seconds time difference between the dates may differ from the result since leap second handling is unspecified.
 	std::chrono::duration<double> secondsTo(const DateTime& other) const;
 
+    DayOfWeek dayOfWeek() const;
+#endif
+
     // If 'this' is valid datetime for unix time and UtfOffset structure is set, returns corresponding unix time; otherwise behaviour is undefined.
     // Milliseconds are treated as zero.
     int64 toSecondsSinceEpoch() const;
     int64 toMillisecondsSinceEpoch() const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds
-
-    DayOfWeek dayOfWeek() const;
-
-#endif
 
     // Returns true if 'this' and 'other' have equivalent year, month, day, hour, minute, second and millisecond parts.
     bool isLocalDateTimeEquivalent(const DateTime& other) const;

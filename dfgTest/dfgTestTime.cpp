@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_TIME) && DFGTEST_BUILD_MODULE_TIME == 1) || (!defined(DFGTEST_BUILD_MODULE_TIME) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/time.hpp>
 #include <dfg/time/DateTime.hpp>
@@ -290,7 +290,6 @@ TEST(dfgTime, DateTime_fromStdTm)
     DFGTEST_EXPECT_LEFT(-3600, dt20211250_120102Z.toSecondsSinceEpoch() - dt20211250_120102Minus1.toSecondsSinceEpoch());
 }
 
-#ifdef _WIN32
 TEST(dfgTime, DateTime_fromTime_t)
 {
     using namespace ::DFG_MODULE_NS(time);
@@ -343,6 +342,7 @@ TEST(dfgTime, DateTime_toSecondsSinceEpoch)
     }
 }
 
+#ifdef _WIN32
 TEST(dfgTime, DateTime_toSYSTEMTIME)
 {
     using namespace ::DFG_MODULE_NS(time);

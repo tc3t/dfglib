@@ -44,5 +44,6 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 //#define DFGTEST_BUILD_MODULE_MATH                         1
 //#define DFGTEST_BUILD_MODULE_OS                           1
 //#define DFGTEST_BUILD_MODULE_STR                          1
+//#define DFGTEST_BUILD_MODULE_TIME                         1
 // 
 //#define DFGTEST_BUILD_MODULE_
