@@ -35,21 +35,25 @@ TEST(dfgTime, DateTime)
     EXPECT_EQ(dt0.millisecond(), 15);
 }
 
-#ifdef _WIN32
-
 TEST(dfgTime, DateTime_dayOfWeek)
 {
     using namespace DFG_MODULE_NS(time);
     DateTime dt0(2016, 7, 29, 12, 13, 14, 15);
     const DateTime dtUtc2(2016, 7, 30, 23, 2, 3, 4, UtcOffsetInfo(std::chrono::seconds(0)));
     const DateTime dtUtc3(2016, 7, 31, 1, 2, 3, 4, UtcOffsetInfo(std::chrono::seconds(7200)));
+    const DateTime dtUtc20200229(2020, 2, 29, 12, 1, 2, 0, UtcOffsetInfo(std::chrono::seconds(0)));
+    const DateTime dtUtc20210229(2021, 2, 29, 12, 1, 2, 0, UtcOffsetInfo(std::chrono::seconds(0)));
 
     DFGTEST_EXPECT_LEFT(DayOfWeek::unknown, DateTime().dayOfWeek());
     DFGTEST_EXPECT_LEFT(DayOfWeek::Friday, dt0.dayOfWeek());
     DFGTEST_EXPECT_LEFT(DayOfWeek::Saturday, dtUtc2.dayOfWeek());
     DFGTEST_EXPECT_LEFT(DayOfWeek::Sunday, dtUtc3.dayOfWeek());
+    DFGTEST_EXPECT_LEFT(DayOfWeek::Saturday, dtUtc20200229.dayOfWeek());
+    DFGTEST_EXPECT_LEFT(DayOfWeek::Saturday, DateTime::fromTime_t(dtUtc20200229.toTime_t()).dayOfWeek());
+    DFGTEST_EXPECT_LEFT(DayOfWeek::unknown, dtUtc20210229.dayOfWeek()); // Date is invalid
 }
 
+#ifdef _WIN32
 TEST(dfgTime, DateTime_secondsTo)
 {
     using namespace DFG_MODULE_NS(time);
@@ -329,6 +333,10 @@ TEST(dfgTime, DateTime_toSecondsSinceEpoch)
         DFGTEST_EXPECT_LEFT(1638273662, epochTime0);
         DFGTEST_EXPECT_LEFT(1638273662 - 3600, epochTime1);
         DFGTEST_EXPECT_LEFT(1638273662 + 3600, epochTime2);
+        // If time_t and epoch are not identical, DateTime likely won't work correctly so testing that they are equal on current implementation.
+        DFGTEST_EXPECT_LEFT(epochTime0, time0.toTime_t());
+        DFGTEST_EXPECT_LEFT(epochTime1, time1.toTime_t());
+        DFGTEST_EXPECT_LEFT(epochTime2, time2.toTime_t());
     }
 
     // toMilllisecondsSinceEpoch

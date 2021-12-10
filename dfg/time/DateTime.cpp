@@ -15,6 +15,20 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time)
 {
 
+DayOfWeek toDayOfWeek(const std::tm& tm)
+{
+    DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
+    return (tm.tm_wday >= 0 && tm.tm_wday <= 6) ? static_cast<DayOfWeek>(tm.tm_wday) : DayOfWeek::unknown;
+}
+
+#ifdef _WIN32
+DayOfWeek toDayOfWeek(const SYSTEMTIME& st)
+{
+    DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
+    return (st.wDayOfWeek >= 0 && st.wDayOfWeek <= 6) ? static_cast<DayOfWeek>(st.wDayOfWeek) : DayOfWeek::unknown;
+}
+#endif // _WIN32
+
 std::tm stdGmTime(const time_t t)
 {
     std::tm tm{};
@@ -24,6 +38,23 @@ std::tm stdGmTime(const time_t t)
 #else
     return (gmtime_r(&t, &tm) != nullptr) ? tm : std::tm{};
 #endif
+}
+
+std::time_t tmUtcToTime_t(std::tm& tm)
+{
+    const auto origTm = tm;
+ #ifdef _WIN32
+    const auto t = _mkgmtime64(&tm);
+#else
+    // https://stackoverflow.com/questions/283166/easy-way-to-convert-a-struct-tm-expressed-in-utc-to-time-t-type
+    // https://stackoverflow.com/questions/12353011/how-to-convert-a-utc-date-time-to-a-time-t-in-c
+    const auto t = timegm(&tm);
+#endif
+    // Functions above don't return error on (some) invalid dates, they just adjusts fields. 
+    // So checking that date wasn't changed.
+    if (origTm.tm_year != tm.tm_year || origTm.tm_mon != tm.tm_mon || origTm.tm_mday != tm.tm_mday)
+        return std::time_t(-1);
+    return t;
 }
 
 auto UtcOffsetInfo::offsetDiffInSeconds(const UtcOffsetInfo& other) const -> int32
@@ -134,8 +165,7 @@ DateTime DateTime::fromStdTm(const std::tm& tm, const UtcOffsetInfo utcOffsetInf
         tm.tm_sec,
         0,
         utcOffsetInfo);
-    DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
-    dt.m_dayOfWeek = static_cast<DayOfWeek>(tm.tm_wday);
+    dt.m_dayOfWeek = toDayOfWeek(tm);
     return dt;
 }
 
@@ -156,8 +186,7 @@ DateTime::DateTime(const SYSTEMTIME& st)
     m_year = st.wYear;
     m_month = static_cast<uint8>(st.wMonth);
     m_day = static_cast<uint8>(st.wDay);
-    DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
-    m_dayOfWeek = static_cast<DayOfWeek>(st.wDayOfWeek);
+    m_dayOfWeek = toDayOfWeek(st);
     m_milliSecSinceMidnight = millisecondsSinceMidnight(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
 
@@ -347,19 +376,18 @@ bool DateTime::isLocalDateTimeEquivalent(const std::tm& tm) const
     return isLocalDateTimeEquivalent(fromStdTm(tm));
 }
 
+std::time_t DateTime::toTime_t() const
+{
+    return saturateCast<std::time_t>(toSecondsSinceEpoch());
+}
+
 int64 DateTime::toSecondsSinceEpoch() const
 {
     if (!utcOffsetInfo().isSet())
         return 0;
     auto tm = toStdTm_utcOffsetIgnored();
+    const auto t = tmUtcToTime_t(tm);
 
-#ifdef _WIN32
-    const auto t = _mkgmtime64(&tm);
-#else
-    // https://stackoverflow.com/questions/283166/easy-way-to-convert-a-struct-tm-expressed-in-utc-to-time-t-type
-    // https://stackoverflow.com/questions/12353011/how-to-convert-a-utc-date-time-to-a-time-t-in-c
-    const auto t = timegm(&tm);
-#endif
     // Note: assuming that t is in seconds
     return (t >= 0) ? static_cast<int64>(t) - utcOffsetInfo().offsetInSeconds() : -1;
 }
@@ -372,21 +400,23 @@ int64 DateTime::toMillisecondsSinceEpoch() const
     return val;
 }
 
-#ifdef _WIN32
 auto DateTime::dayOfWeek() const -> DayOfWeek
 {
     if (m_dayOfWeek != DayOfWeek::unknown)
         return m_dayOfWeek;
+#ifdef _WIN32 // 'else'-implementation works also on Windows, but using SYSTEMTIME since it has wider date support (e.g. year start from 1601 instead of 1970)
     auto st = toSYSTEMTIME();
     if (st.wYear != 0)
-    {
-        DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
-        return static_cast<DayOfWeek>(st.wDayOfWeek);
-    }
+        return toDayOfWeek(st);
     else
         return DayOfWeek::unknown;
-}
+#else
+    auto tm = toStdTm_utcOffsetIgnored();
+    tm.tm_isdst = 0;
+    const auto t = tmUtcToTime_t(tm); // Note: this updates tm if successful (tm_wday in particular)
+    return (t >= 0) ? toDayOfWeek(tm) : DayOfWeek::unknown;
 #endif
+}
 
 } } // namespace dfg::time
 

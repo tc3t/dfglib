@@ -18,9 +18,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(time) {
 
 enum class DayOfWeek : uint8 { Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, unknown };
 
+DayOfWeek toDayOfWeek(const std::tm&);
+#ifdef _WIN32
+    DayOfWeek toDayOfWeek(const _SYSTEMTIME&);
+#endif
+
+
 // Wrapper for std::gmtime(). If conversion fails, returns zero-initialized std::tm.
 // On Windows, guaranteed to be thread-safe (according to https://en.cppreference.com/w/cpp/chrono/c/gmtime std::gmtime() "may not be thread-safe.")
 std::tm stdGmTime(const time_t t);
+
+// Converts std::tm-structure representing date time in UTC to std::time_t
+std::time_t tmUtcToTime_t(const std::tm& tm);
 
 #if DFG_LANGFEAT_CHRONO_11
 class UtcOffsetInfo
@@ -118,14 +127,17 @@ public:
     // Returns seconds from 'this' to other, positive if 'this' is before 'other'.
     // Real, accurate-to-seconds time difference between the dates may differ from the result since leap second handling is unspecified.
 	std::chrono::duration<double> secondsTo(const DateTime& other) const;
+#endif
 
     DayOfWeek dayOfWeek() const;
-#endif
 
     // If 'this' is valid datetime for unix time and UtfOffset structure is set, returns corresponding unix time; otherwise behaviour is undefined.
     // Milliseconds are treated as zero.
     int64 toSecondsSinceEpoch() const;
     int64 toMillisecondsSinceEpoch() const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds
+
+    // Convenience method, effectively a wrapper for toSecondsSinceEpoch().
+    std::time_t toTime_t() const;
 
     // Returns true if 'this' and 'other' have equivalent year, month, day, hour, minute, second and millisecond parts.
     bool isLocalDateTimeEquivalent(const DateTime& other) const;
