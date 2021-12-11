@@ -23,6 +23,14 @@ DayOfWeek toDayOfWeek(const std::tm&);
     DayOfWeek toDayOfWeek(const _SYSTEMTIME&);
 #endif
 
+enum class TimeZone
+{
+    Z = 0,
+    plus1h = 1 * 3600, plus2h = 2 * 3600, plus3h = 3 * 3600, plus4h = 4 * 3600, plus5h = 5 * 3600, plus6h = 6 * 3600,
+    plus7h = 7 * 3600, plus8h = 8 * 3600, plus9h = 9 * 3600, plus10h = 10 * 3600, plus11h = 11 * 3600, plus12h = 12 * 3600,
+    minus1h = -1 * 3600, minus2h = -2 * 3600, minus3h = -3 * 3600, minus4h = -4 * 3600, minus5h = -5 * 3600, minus6h = -6 * 3600,
+    minus7h = -7 * 3600, minus8h = -8 * 3600, minus9h = -9 * 3600, minus10h = -10 * 3600, minus11h = -11 * 3600, minus12h = -12 * 3600,
+};
 
 // Wrapper for std::gmtime(). If conversion fails, returns zero-initialized std::tm.
 // On Windows, guaranteed to be thread-safe (according to https://en.cppreference.com/w/cpp/chrono/c/gmtime std::gmtime() "may not be thread-safe.")
@@ -44,6 +52,12 @@ public:
     // Positive means +HH:MM offset
     UtcOffsetInfo(const std::chrono::seconds& offset) :
         m_offsetValue(static_cast<int>(offset.count()))
+    {
+    }
+
+    // Convenience overload to construct UtcOffsetInfo(TimeZone::Z) instead of UtcOffsetInfo(std::chrono::seconds(0))
+    UtcOffsetInfo(const TimeZone tz)
+        : UtcOffsetInfo(std::chrono::seconds(static_cast<int>(tz)))
     {
     }
 
@@ -123,18 +137,19 @@ public:
     // Return value is positive if st0 < st1
     static std::chrono::duration<int64, std::ratio<1, 10000000>> privTimeDiff(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
     static std::chrono::seconds timeDiffInSecondsI(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
+#endif
 
     // Returns seconds from 'this' to other, positive if 'this' is before 'other'.
     // Real, accurate-to-seconds time difference between the dates may differ from the result since leap second handling is unspecified.
 	std::chrono::duration<double> secondsTo(const DateTime& other) const;
-#endif
 
     DayOfWeek dayOfWeek() const;
 
-    // If 'this' is valid datetime for unix time and UtfOffset structure is set, returns corresponding unix time; otherwise behaviour is undefined.
+    // If 'this' is valid datetime for unix time and its UtfOffsetInfo or given UtcOffsetInfo structure is set, returns corresponding unix time; otherwise behaviour is undefined.
+    // If utcOffset is given as argument, it overrides utcOffsetInfo in 'this'.
     // Milliseconds are treated as zero.
-    int64 toSecondsSinceEpoch() const;
-    int64 toMillisecondsSinceEpoch() const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds
+    int64 toSecondsSinceEpoch(UtcOffsetInfo utcOffset = UtcOffsetInfo()) const;
+    int64 toMillisecondsSinceEpoch(UtcOffsetInfo utcOffset = UtcOffsetInfo()) const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds
 
     // Convenience method, effectively a wrapper for toSecondsSinceEpoch().
     std::time_t toTime_t() const;

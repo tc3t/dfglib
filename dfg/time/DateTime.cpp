@@ -350,14 +350,19 @@ std::tm DateTime::toStdTm_utcOffsetIgnored() const
     return tm;
 }
 
-#ifdef _WIN32
 std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
 {
+#ifdef _WIN32 // 'else'-implementation works also on Windows, but using SYSTEMTIME since it has wider date support (e.g. year start from 1601 instead of 1970)
     const auto offsetDiff = std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
     const auto rawDiff = privTimeDiff(toSYSTEMTIME(), other.toSYSTEMTIME());
     return rawDiff - offsetDiff;
+#else
+    const auto n0 = toMillisecondsSinceEpoch(TimeZone::Z);
+    const auto n1 = other.toMillisecondsSinceEpoch(TimeZone::Z);
+    const auto nOffsetDiff = std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
+    return std::chrono::duration<double>(std::chrono::milliseconds(n1 - n0)) - nOffsetDiff;
+#endif
 }
-#endif // _WIN32
 
 bool DateTime::isLocalDateTimeEquivalent(const DateTime& other) const
 {
@@ -381,20 +386,21 @@ std::time_t DateTime::toTime_t() const
     return saturateCast<std::time_t>(toSecondsSinceEpoch());
 }
 
-int64 DateTime::toSecondsSinceEpoch() const
+int64 DateTime::toSecondsSinceEpoch(const UtcOffsetInfo utcOffset) const
 {
-    if (!utcOffsetInfo().isSet())
+    if (!utcOffsetInfo().isSet() && !utcOffset.isSet())
         return 0;
     auto tm = toStdTm_utcOffsetIgnored();
     const auto t = tmUtcToTime_t(tm);
+    const auto effectiveUtcOffset = (utcOffset.isSet()) ? utcOffset : this->m_utcOffsetInfo;
 
     // Note: assuming that t is in seconds
-    return (t >= 0) ? static_cast<int64>(t) - utcOffsetInfo().offsetInSeconds() : -1;
+    return (t >= 0) ? static_cast<int64>(t) - effectiveUtcOffset.offsetInSeconds() : -1;
 }
 
-int64 DateTime::toMillisecondsSinceEpoch() const
+int64 DateTime::toMillisecondsSinceEpoch(const UtcOffsetInfo utcOffset) const
 {
-    auto val = toSecondsSinceEpoch();
+    auto val = toSecondsSinceEpoch(utcOffset);
     val *= 1000;
     val += this->millisecond();
     return val;

@@ -33,6 +33,35 @@ TEST(dfgTime, DateTime)
     EXPECT_EQ(dt0.minute(), 13);
     EXPECT_EQ(dt0.second(), 14);
     EXPECT_EQ(dt0.millisecond(), 15);
+
+    // TimeZone constructor tests
+    {
+        DFGTEST_EXPECT_LEFT(0, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::Z).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(1 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus1h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(2 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus2h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(3 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus3h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(4 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus4h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(5 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus5h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(6 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus6h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(7 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus7h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(8 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus8h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(9 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus9h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(10 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus10h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(11 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus11h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(12 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::plus12h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-1 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus1h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-2 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus2h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-3 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus3h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-4 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus4h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-5 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus5h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-6 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus6h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-7 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus7h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-8 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus8h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-9 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus9h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-10 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus10h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-11 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus11h).utcOffsetInfo().offsetInSeconds());
+        DFGTEST_EXPECT_LEFT(-12 * 3600, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::minus12h).utcOffsetInfo().offsetInSeconds());
+    }
 }
 
 TEST(dfgTime, DateTime_dayOfWeek)
@@ -53,7 +82,6 @@ TEST(dfgTime, DateTime_dayOfWeek)
     DFGTEST_EXPECT_LEFT(DayOfWeek::unknown, dtUtc20210229.dayOfWeek()); // Date is invalid
 }
 
-#ifdef _WIN32
 TEST(dfgTime, DateTime_secondsTo)
 {
     using namespace DFG_MODULE_NS(time);
@@ -77,8 +105,20 @@ TEST(dfgTime, DateTime_secondsTo)
 
     DFGTEST_EXPECT_LEFT(946774861.5, dt1990.secondsTo(dt2020).count());
     DFGTEST_EXPECT_LEFT(-1 * dt1990.secondsTo(dt2020).count(), dt2020.secondsTo(dt1990).count());
+
+#ifdef _WIN32
+    const DateTime dt1601(1601, 1, 1, 0, 0, 0, 0, UtcOffsetInfo(TimeZone::Z));
+    const DateTime dt1602(1602, 1, 1, 0, 0, 0, 0, UtcOffsetInfo(TimeZone::Z));
+    DFGTEST_EXPECT_LEFT(365 * 24 * 60 * 60, dt1601.secondsTo(dt1602).count());
+#endif
+    const DateTime dt2020_01_01(2020, 1, 1, 0, 0, 0, 0, UtcOffsetInfo(TimeZone::Z));
+    const DateTime dt2021_01_01(2021, 1, 1, 0, 0, 0, 0, UtcOffsetInfo(TimeZone::Z));
+    const DateTime dt2022_01_01_plus1(2022, 1, 1, 0, 0, 0, 0, UtcOffsetInfo(TimeZone::plus1h));
+    DFGTEST_EXPECT_LEFT(366 * 24 * 60 * 60, dt2020_01_01.secondsTo(dt2021_01_01).count());
+    DFGTEST_EXPECT_LEFT(365 * 24 * 60 * 60 - 3600, dt2021_01_01.secondsTo(dt2022_01_01_plus1).count());
 }
 
+#ifdef _WIN32
 TEST(dfgTime, DateTime_systemTime_local)
 {
     using namespace DFG_MODULE_NS(time);
