@@ -144,12 +144,27 @@ template <class T> inline T round(const double& val)
 // Limits 'val' to given range. If 'val' is less than 'lowerLimit', 'val' is set to value 'lowerLimit'.
 // Similarly if 'val' is greater than 'upperLimit', 'val' is set to value 'upperLimit'.
 // If 'lowerLimit' > 'upperLimit', 'val' won't be modified.
+// If any of the input values are NaN's, behaviour is undefined.
 template <class T, class C>
-inline void limit(T& val, const C& lowerLimit, const C& upperLimit)
+inline T& limit(T& val, const C lowerLimit, const C upperLimit)
 {
-    if (lowerLimit > upperLimit) return;
-    if (val < lowerLimit) val = lowerLimit;
-    else if (val > upperLimit) val = upperLimit;
+    if (lowerLimit > upperLimit)
+        return val;
+    const auto effectiveLower = saturateCast<T>(lowerLimit);
+    const auto effectiveUpper = saturateCast<T>(upperLimit);
+    if (val < effectiveLower)
+        val = effectiveLower;
+    else if (val > effectiveUpper)
+        val = effectiveUpper;
+    return val;
+}
+
+// Like limit(), but does not modify input value and returns the limited value.
+template <class T, class C>
+inline T limited(T val, const C lowerLimit, const C upperLimit)
+{
+    limit(val, lowerLimit, upperLimit);
+    return val;
 }
 
 // Like Limit, but with upperlimit only.

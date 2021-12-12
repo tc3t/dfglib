@@ -885,6 +885,27 @@ TEST(dfg, maxValue)
     DFGTEST_STATIC_TEST(maxValue(int8(10), uint64(3)) == 10);
 }
 
+TEST(dfg, limit)
+{
+    using namespace DFG_ROOT_NS;
+
+    DFGTEST_EXPECT_LEFT(50,  limited(50, 0, 100));
+    DFGTEST_EXPECT_LEFT(100, limited(200, 0, 100));
+    DFGTEST_EXPECT_LEFT(0,   limited(-200, 0, 100));
+    DFGTEST_EXPECT_LEFT(50,  limited(1000, int8(-50), int8(50)));
+    DFGTEST_EXPECT_LEFT(-50, limited(-1000, int8(-50), int8(50)));
+    DFGTEST_EXPECT_LEFT(10,  limited(-1000, uint32(10), uint32(50)));
+    DFGTEST_EXPECT_LEFT(100,  limited(int8(100), int32(-1000), int32(1000)));
+    
+    int32 i32 = 123;
+    DFGTEST_EXPECT_LEFT(100, limit(i32, 0, 100));
+    DFGTEST_EXPECT_LEFT(100, i32);
+    DFGTEST_EXPECT_LEFT(200, limit(i32, 200, 300));
+    DFGTEST_EXPECT_LEFT(200, i32);
+    uint32 ui32 = 123;
+    DFGTEST_EXPECT_LEFT(50, limit(ui32, -10, 50));
+    DFGTEST_EXPECT_LEFT(50, ui32);
+}
 
 TEST(dfgTypeTraits, IsTrueTrait)
 {
