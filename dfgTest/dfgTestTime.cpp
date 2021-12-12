@@ -6,6 +6,7 @@
 #include <dfg/time/DateTime.hpp>
 #include <ctime>
 #include <dfg/str/format_fmt.hpp>
+#include <dfg/math.hpp>
 
 #ifdef _WIN32
     #include <Windows.h>
@@ -116,6 +117,10 @@ TEST(dfgTime, DateTime_secondsTo)
     const DateTime dt2022_01_01_plus1(2022, 1, 1, 0, 0, 0, 0, UtcOffsetInfo(TimeZone::plus1h));
     DFGTEST_EXPECT_LEFT(366 * 24 * 60 * 60, dt2020_01_01.secondsTo(dt2021_01_01).count());
     DFGTEST_EXPECT_LEFT(365 * 24 * 60 * 60 - 3600, dt2021_01_01.secondsTo(dt2022_01_01_plus1).count());
+
+    DFGTEST_EXPECT_NAN(dtUtc0.secondsTo(DateTime()).count());
+    DFGTEST_EXPECT_NAN(DateTime().secondsTo(dtUtc0).count());
+    DFGTEST_EXPECT_NAN(dtUtc0.secondsTo(DateTime(1500, 1, 1, 12, 0, 0, 0, TimeZone::Z)).count());
 }
 
 #ifdef _WIN32
@@ -387,6 +392,19 @@ TEST(dfgTime, DateTime_toSecondsSinceEpoch)
         DFGTEST_EXPECT_LEFT(1638273662000, epochTime0);
         DFGTEST_EXPECT_LEFT(1638273662250 - 3600000, epochTime1);
         DFGTEST_EXPECT_LEFT(1638273662750 + 3600000, epochTime2);
+    }
+
+    // Testing invalid date times
+    {
+        DFGTEST_EXPECT_LEFT(-1, DateTime().toSecondsSinceEpoch());
+        DFGTEST_EXPECT_LEFT(-1, DateTime().toMillisecondsSinceEpoch());
+        DFGTEST_EXPECT_LEFT(-1, DateTime(2021, 2, 29, 12, 0, 0, 0).toSecondsSinceEpoch(TimeZone::Z));
+        DFGTEST_EXPECT_LEFT(-1, DateTime(2021, 13, 1, 12, 0, 0, 0).toSecondsSinceEpoch(TimeZone::Z));
+        DFGTEST_EXPECT_LEFT(-1, DateTime(2021, 12, 32, 12, 0, 0, 0).toSecondsSinceEpoch(TimeZone::Z));
+        DFGTEST_EXPECT_LEFT(-1, DateTime(2021, 12, 01, 25, 0, 0, 0).toSecondsSinceEpoch(TimeZone::Z));
+        DFGTEST_EXPECT_LEFT(-1, DateTime(2021, 12, 01, 12, 61, 0, 0).toSecondsSinceEpoch(TimeZone::Z));
+        DFGTEST_EXPECT_LEFT(-1, DateTime(2021, 12, 01, 12, 0, 61, 0).toSecondsSinceEpoch(TimeZone::Z));
+        DFGTEST_EXPECT_LEFT(-1, DateTime(2021, 12, 01, 12, 0, 0, 1000).toSecondsSinceEpoch(TimeZone::Z));
     }
 }
 

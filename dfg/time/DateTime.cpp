@@ -74,9 +74,14 @@ DateTime::DateTime() : DateTime(0, 0, 0, 0, 0, 0, 0)
 
 DateTime::DateTime(int year, int month, int day, int hour, int minute, int second, int milliseconds, UtcOffsetInfo utcOffsetInfo)
 {
-    m_year = static_cast<uint16>(year);
-    m_month = static_cast<uint8>(month);
-    m_day = static_cast<uint8>(day);
+    if (month < 0 || month > 12 || day < 0 || day > 31 || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 || milliseconds < 0 || milliseconds > 999)
+    {
+        *this = DateTime();
+        return;
+    }
+    m_year = saturateCast<uint16>(year);
+    m_month = saturateCast<uint8>(month);
+    m_day = saturateCast<uint8>(day);
     m_milliSecSinceMidnight = millisecondsSinceMidnight(hour, minute, second, milliseconds);
     m_utcOffsetInfo = utcOffsetInfo;
 }
@@ -157,15 +162,16 @@ DateTime DateTime::fromString(const StringViewC& sv)
 DateTime DateTime::fromStdTm(const std::tm& tm, const UtcOffsetInfo utcOffsetInfo)
 {
     DateTime dt(
-        tm.tm_year + 1900,
-        tm.tm_mon + 1,
+        limited(tm.tm_year, -10000, 10000) + 1900, // Some arbitrary limits to prevent overflows, but lets outright bad input values to still get noticed in constructor.
+        limited(tm.tm_mon, -10, 20) + 1, // Limiting like above.
         tm.tm_mday,
         tm.tm_hour,
         tm.tm_min,
         tm.tm_sec,
         0,
         utcOffsetInfo);
-    dt.m_dayOfWeek = toDayOfWeek(tm);
+    if (!dt.isNull())
+        dt.m_dayOfWeek = toDayOfWeek(tm);
     return dt;
 }
 
@@ -181,14 +187,6 @@ DateTime DateTime::fromTime_t(const std::time_t t, const std::chrono::seconds ut
 }
 
 #ifdef _WIN32
-DateTime::DateTime(const SYSTEMTIME& st)
-{
-    m_year = st.wYear;
-    m_month = static_cast<uint8>(st.wMonth);
-    m_day = static_cast<uint8>(st.wDay);
-    m_dayOfWeek = toDayOfWeek(st);
-    m_milliSecSinceMidnight = millisecondsSinceMidnight(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-}
 
 namespace
 {
@@ -213,6 +211,25 @@ namespace
         else
             return SYSTEMTIME{};
     }
+
+    bool isOutrightInvalidSYSTEMTIME(const SYSTEMTIME& st)
+    {
+        return (st.wYear < 1601 || st.wYear > 30827 || st.wDay == 0 || st.wMonth == 0);
+    }
+}
+
+DateTime::DateTime(const SYSTEMTIME& st)
+{
+    if (isOutrightInvalidSYSTEMTIME(st))
+    {
+        *this = DateTime();
+        return;
+    }
+    m_year = st.wYear;
+    m_month = saturateCast<uint8>(st.wMonth);
+    m_day = saturateCast<uint8>(st.wDay);
+    m_dayOfWeek = toDayOfWeek(st);
+    m_milliSecSinceMidnight = millisecondsSinceMidnight(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
 
 auto DateTime::privTimeDiff(const SYSTEMTIME& st0, const SYSTEMTIME& st1) -> std::chrono::duration<int64, std::ratio<1, 10000000>>
@@ -223,7 +240,7 @@ auto DateTime::privTimeDiff(const SYSTEMTIME& st0, const SYSTEMTIME& st1) -> std
         ULARGE_INTEGER uli;
         uli.LowPart = ft.dwLowDateTime;
         uli.HighPart = ft.dwHighDateTime;
-        return std::chrono::duration<int64, std::ratio<1, 10000000>>(static_cast<int64>(uli.QuadPart));
+        return std::chrono::duration<int64, std::ratio<1, 10000000>>(saturateCast<int64>(uli.QuadPart));
     };
 
     const auto i0 = toInteger(st0);
@@ -294,7 +311,7 @@ auto DateTime::millisecondsSinceMidnight(const int hour, const int minutes, cons
 
 auto DateTime::systemTime_utc() -> DateTime
 {
-    return fromStdTm(stdGmTime(std::time(nullptr)), UtcOffsetInfo(std::chrono::seconds(0)));
+    return fromStdTm(stdGmTime(std::time(nullptr)), UtcOffsetInfo(TimeZone::Z));
 #if 0 // Old implementations, left for reference to see how platform-specific functions can be used if need be.
     #ifdef _WIN32
         SYSTEMTIME stUtc;
@@ -352,13 +369,21 @@ std::tm DateTime::toStdTm_utcOffsetIgnored() const
 
 std::chrono::duration<double> DateTime::secondsTo(const DateTime& other) const
 {
-#ifdef _WIN32 // 'else'-implementation works also on Windows, but using SYSTEMTIME since it has wider date support (e.g. year start from 1601 instead of 1970)
+    if (this->isNull() || other.isNull())
+        return std::chrono::duration<double>(std::numeric_limits<double>::quiet_NaN());
+#ifdef _WIN32 // 'else'-implementation works also on Windows, but using SYSTEMTIME since it has wider date support than unix time (e.g. year start from 1601 instead of 1970)
     const auto offsetDiff = std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
+    const auto thisSt = toSYSTEMTIME();
+    const auto otherSt = other.toSYSTEMTIME();
+    if (isOutrightInvalidSYSTEMTIME(thisSt) || isOutrightInvalidSYSTEMTIME(otherSt))
+        return std::chrono::duration<double>(std::numeric_limits<double>::quiet_NaN());
     const auto rawDiff = privTimeDiff(toSYSTEMTIME(), other.toSYSTEMTIME());
     return rawDiff - offsetDiff;
 #else
     const auto n0 = toMillisecondsSinceEpoch(TimeZone::Z);
     const auto n1 = other.toMillisecondsSinceEpoch(TimeZone::Z);
+    if (n0 < 0 || n1 < 0)
+        return std::chrono::duration<double>(std::numeric_limits<double>::quiet_NaN());
     const auto nOffsetDiff = std::chrono::duration<double>(m_utcOffsetInfo.offsetDiffInSeconds(other.m_utcOffsetInfo));
     return std::chrono::duration<double>(std::chrono::milliseconds(n1 - n0)) - nOffsetDiff;
 #endif
@@ -389,7 +414,7 @@ std::time_t DateTime::toTime_t() const
 int64 DateTime::toSecondsSinceEpoch(const UtcOffsetInfo utcOffset) const
 {
     if (!utcOffsetInfo().isSet() && !utcOffset.isSet())
-        return 0;
+        return -1;
     auto tm = toStdTm_utcOffsetIgnored();
     const auto t = tmUtcToTime_t(tm);
     const auto effectiveUtcOffset = (utcOffset.isSet()) ? utcOffset : this->m_utcOffsetInfo;
@@ -401,6 +426,8 @@ int64 DateTime::toSecondsSinceEpoch(const UtcOffsetInfo utcOffset) const
 int64 DateTime::toMillisecondsSinceEpoch(const UtcOffsetInfo utcOffset) const
 {
     auto val = toSecondsSinceEpoch(utcOffset);
+    if (val < 0)
+        return -1;
     val *= 1000;
     val += this->millisecond();
     return val;
@@ -410,12 +437,9 @@ auto DateTime::dayOfWeek() const -> DayOfWeek
 {
     if (m_dayOfWeek != DayOfWeek::unknown)
         return m_dayOfWeek;
-#ifdef _WIN32 // 'else'-implementation works also on Windows, but using SYSTEMTIME since it has wider date support (e.g. year start from 1601 instead of 1970)
+#ifdef _WIN32 // 'else'-implementation works also on Windows, but using SYSTEMTIME since it has wider date support (e.g. year start from 1601 instead of 1900/1970)
     auto st = toSYSTEMTIME();
-    if (st.wYear != 0)
-        return toDayOfWeek(st);
-    else
-        return DayOfWeek::unknown;
+    return (st.wYear != 0) ? toDayOfWeek(st) : DayOfWeek::unknown;
 #else
     auto tm = toStdTm_utcOffsetIgnored();
     tm.tm_isdst = 0;

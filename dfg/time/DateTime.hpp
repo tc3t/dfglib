@@ -32,11 +32,10 @@ enum class TimeZone
     minus7h = -7 * 3600, minus8h = -8 * 3600, minus9h = -9 * 3600, minus10h = -10 * 3600, minus11h = -11 * 3600, minus12h = -12 * 3600,
 };
 
-// Wrapper for std::gmtime(). If conversion fails, returns zero-initialized std::tm.
-// On Windows, guaranteed to be thread-safe (according to https://en.cppreference.com/w/cpp/chrono/c/gmtime std::gmtime() "may not be thread-safe.")
+// Thread-safe wrapper for std::gmtime(): i.e. function that converts std::time to std::tm UTC calendar datetime. If conversion fails, returns zero-initialized std::tm.
 std::tm stdGmTime(const time_t t);
 
-// Converts std::tm-structure representing date time in UTC to std::time_t
+// Inverse of stdGmTime(): converts std::tm-structure representing date time in UTC to std::time_t
 std::time_t tmUtcToTime_t(const std::tm& tm);
 
 #if DFG_LANGFEAT_CHRONO_11
@@ -51,7 +50,7 @@ public:
 
     // Positive means +HH:MM offset
     UtcOffsetInfo(const std::chrono::seconds& offset) :
-        m_offsetValue(static_cast<int>(offset.count()))
+        m_offsetValue(saturateCast<int>(offset.count()))
     {
     }
 
@@ -68,7 +67,7 @@ public:
 
     // Returns +HH:MM offset in seconds, e.g. +01:00 returns 3600. If isSet() == false, returns 0.
     int32 offsetInSeconds() const { return (isSet()) ? m_offsetValue : 0; }
-    void setOffset(const std::chrono::seconds& offset) { m_offsetValue = static_cast<int>(offset.count()); }
+    void setOffset(const std::chrono::seconds& offset) { m_offsetValue = saturateCast<int>(offset.count()); }
     void setOffsetInSeconds(const int nOffset) { m_offsetValue = nOffset; }
 
     int32 m_offsetValue; // Timezone specifier in seconds or unset (=s_nNotSetValueMimicing). Positive means +HH:MM timezone, e.g. value 3600 means +01:00.
@@ -79,6 +78,7 @@ class DateTime
 public:
     DateTime(); // Constructs DateTime which doesn't represent any datetime and for which isNull() is true.
 
+    // Constructs DateTime from given datetime items. If given items do not form a valid DateTime, state of DateTime object is unspecified.
     // year         : year as such
     // month        : in range 1-12
     // day          : in range 1-31
@@ -109,11 +109,13 @@ public:
     // Constructs DateTime from std::tm.
     // By default information in std::tm is interpreted as if being timezone-less datetime
     // effectively equivalent to fromString("yyyy-mm-dd hh:mm:ss").
-    // Members tm_yday and tm_isdst are ignored.
+    // Member tm_isdst is ignored.
+    // If std::tm does not represent a valid date time, state of returned DateTime is unspecified.
     static DateTime fromStdTm(const std::tm& tm, UtcOffsetInfo utcOffsetInfo = UtcOffsetInfo());
 
     // Constructs DateTime from std::time_t. If time_t is valid, resulting DateTime has identical epochTime, but
     // calendar DateTime depends on utcOffset, which by default is 0.
+    // If time_t is not valid, state of returned DateTime is unspecified.
     // For example if 't' corresponds to 2021-12-08 12:00:00, by default resulting DateTime is 2021-12-08 12:00:00Z
     // If given offset 3600, resulting DateTime is 2021-12-08 13:00:00+01:00
     static DateTime fromTime_t(std::time_t t, std::chrono::seconds utcOffset = std::chrono::seconds(0));
@@ -121,49 +123,64 @@ public:
     // Returns std::tm not taking UTC offset into account nor milliseconds, i.e. as if UTC offset and milliseconds were zero.
     // Members tm_wday, tm_yday and tm_isdst are set to -1.
     // If year is < 1900, returns zero-initialized std::tm.
-    // If 'this' is not a valid datetime, behaviour is undefined.
+    // If 'this' is not a valid datetime, state of returned std::tm is unspecified.
     std::tm toStdTm_utcOffsetIgnored() const;
 
     // Returns true iff 'this' is equivalent to default-constructed DateTime.
     bool isNull() const;
 
 #ifdef _WIN32
+    // Constructs DateTime from given SYSTEMTIME. If given SYSTEMTIME is not valid, state of DateTime object is unspecified.
     explicit DateTime(const _SYSTEMTIME& st);
 
     // Converts 'this' to SYSTEMTIME ignoring UTC offset, i.e. interpreting 'this' as if having UTC offset 0. 
     // If conversion fails, returns zero-initialized SYSTEMTIME
     _SYSTEMTIME toSYSTEMTIME() const;
 
-    // Return value is positive if st0 < st1
+    // Returns time difference between two SYSTEMTIME's in units of 100 ns, return value is positive if st0 is before st1.
     static std::chrono::duration<int64, std::ratio<1, 10000000>> privTimeDiff(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
+    // Returns time difference between two SYSTEMTIME's in seconds
     static std::chrono::seconds timeDiffInSecondsI(const _SYSTEMTIME& st0, const _SYSTEMTIME& st1);
 #endif
 
     // Returns seconds from 'this' to other, positive if 'this' is before 'other'.
-    // Real, accurate-to-seconds time difference between the dates may differ from the result since leap second handling is unspecified.
+    // Leaps seconds are ignored, i.e. real monotonic time difference between the dates may differ from the result.
+    // Return value can be NaN if difference can't be determined.
+    // Note about UtcOffset handling:
+    //      -If either one of the DateTime's have unset UtcOffsetInfo, both DateTime are treated as if having the same UtcOffsetInfo.
+    //      -While this function does not require presence of UtcOffsetInfo, it's worth noting that DateTime's not having UtcOffsetInfo
+    //       are inherently error prone in time systems that use dayligth saving:
+    //          -If time jumps from 04:00 -> 03:00 due to DST adjustment, time difference between local date time
+    //           yyyy-mm-dd 03:30:00 and yyyy-mm-dd 03:30:00 can be 0 or 3600 s - this function returns 0.
+    //          -If time jumps from 03:00 -> 04:00 due to DST adjustment
+    //              -time difference between local date time yyyy-mm-dd 02:59:00 and yyyy-mm-dd 03:30:00 is not defined - this function returns 31 * 60 s.
+    //              -time difference between local date time yyyy-mm-dd 02:59:00 and yyyy-mm-dd 04:01:00 is 2 minutes - this function returns 62 * 60 s.
 	std::chrono::duration<double> secondsTo(const DateTime& other) const;
 
     DayOfWeek dayOfWeek() const;
 
-    // If 'this' is valid datetime for unix time and its UtfOffsetInfo or given UtcOffsetInfo structure is set, returns corresponding unix time; otherwise behaviour is undefined.
+    // If 'this' is valid datetime for unix time and its UtfOffsetInfo or given UtcOffsetInfo structure is set, returns corresponding unix time; if unable to compute result, returns -1.
     // If utcOffset is given as argument, it overrides utcOffsetInfo in 'this'.
     // Milliseconds are treated as zero.
     int64 toSecondsSinceEpoch(UtcOffsetInfo utcOffset = UtcOffsetInfo()) const;
-    int64 toMillisecondsSinceEpoch(UtcOffsetInfo utcOffset = UtcOffsetInfo()) const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds
+    int64 toMillisecondsSinceEpoch(UtcOffsetInfo utcOffset = UtcOffsetInfo()) const; // Like toSecondsSinceEpoch, but takes milliseconds into account and returned value is in milliseconds (or -1 on error).
 
     // Convenience method, effectively a wrapper for toSecondsSinceEpoch().
     std::time_t toTime_t() const;
 
-    // Returns true if 'this' and 'other' have equivalent year, month, day, hour, minute, second and millisecond parts.
+    // Returns true iff 'this' and 'other' have equivalent year, month, day, hour, minute, second and millisecond parts.
     bool isLocalDateTimeEquivalent(const DateTime& other) const;
-    // Returns true if 'this' and 'tm' have equivalent year, month, day, hour, minute and second parts.
+    // Returns isLocalDateTimeEquivalent(*this, fromStdTm(tm)).
     bool isLocalDateTimeEquivalent(const std::tm& tm) const;
 
-    // Returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable.
-    // This behaviour differs from that of e.g. std::localtime (see systemTime_local-test)
+    // Returns local system time.
+    // On Windows, returned value is guaranteed to return system (OS) time that is not dependent on TZ environment variable. This behaviour differs from that of e.g. std::localtime (see systemTime_local-test)
+    // On other platforms, TZ environment variable may affect return value. Also state of UtcOffsetInfo is unspecified.
     static DateTime systemTime_local();
+    // Returns system time in UTC.
     static DateTime systemTime_utc();
 
+    // Returns milliseconds since midnight given hh:mm:ss.zzz. If input values are not valid, behaviour is undefined.
     static uint32 millisecondsSinceMidnight(int hour, int minutes, int seconds, int milliseconds);
     uint32 millisecondsSinceMidnight() const { return m_milliSecSinceMidnight; }
 
@@ -201,7 +218,7 @@ public:
     uint8 m_month; // In range 1-12
     uint8 m_day;   // In range 1-31
     DayOfWeek m_dayOfWeek = DayOfWeek::unknown;
-    uint32 m_milliSecSinceMidnight;
+    uint32 m_milliSecSinceMidnight = 0;
     UtcOffsetInfo m_utcOffsetInfo;
 }; // class DateTime
 
