@@ -23,7 +23,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
     *   -C++11 cmath functions: cbrt, erf, erfc, hypot, tgamma
     *   -If compiled with C++17: assoc_laguerre, assoc_legendre, beta, comp_ellint_1, comp_ellint_2, comp_ellint_3, cyl_bessel_i, cyl_bessel_j, cyl_bessel_k, cyl_neumann,
     *                            ellint_1, ellint_2, ellint_3, expint, gcd, hermite, laguerre, legendre, lcm, riemann_zeta, sph_bessel, sph_legendre, sph_neumann.
-    *   -time_epochMsec: returns milliseconds since 1970-01-01, i.e. epoch time in milliseconds
+    *   -DateTime functions:
+    *       -time_epochMsec          : input: none. Output: milliseconds since 1970-01-01, i.e. epoch time in milliseconds.
+    *       -time_ISOdateToEpochSec  : input: ISO formatted datetime. output: epoch time of given datetime, NaN on error.
+    *           -Note: If given DateTime does not have timezone specifier, returns NaN.
+    *       -time_ISOdateToYearNum   : input: ISO formatted datetime. output: year of given datetime, NaN on error.
+    *       -time_ISOdateToMonthNum  : input: ISO formatted datetime. output: month number in range 1-12, NaN on error.
+    *       -time_ISOdateToDayOfMonth: input: ISO formatted datetime. output: day of given month, NaN on error.
+    *       -time_ISOdateToDayOfWeek : input: ISO formatted datetime. output: day of week in range 0 (Sunday) - 6 (Saturday), NaN on error.
+    *       -time_ISOdateToHour      : input: ISO formatted datetime. output: hour of given date time, NaN on error. If datetime does not have time part, returns 0.
+    *       -time_ISOdateToMinute    : input: ISO formatted datetime. output: minute of given date time, NaN on error. If datetime does not have time part, returns 0.
+    *       -time_ISOdateToSecond    : input: ISO formatted datetime. output: second of given date time, NaN on error. If datetime does not have time part, returns 0.
+    *       -time_ISOdateToUtcOffsetInSeconds: input: ISO formatted datetime. output: UTC offset in seconds, positive from +hh:mm timezones. NaN if unknown.
+    *
     *   -Built-in function from muparser:
     *		sin, cos, tan
 			asin, acos, atan, atan2

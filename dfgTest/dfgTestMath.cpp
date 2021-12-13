@@ -10,6 +10,7 @@
 #include <dfg/math/evalPolynomial.hpp>
 #include <dfg/math/interpolationLinear.hpp>
 #include <dfg/math/FormulaParser.hpp>
+#include <dfg/time/DateTime.hpp>
 #include <dfg/cont.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/str.hpp>
@@ -835,16 +836,19 @@ TEST(dfgMath, FormulaParser_randomFunctions)
 TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
 {
     using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
     using namespace DFG_MODULE_NS(math);
 
     {
-        std::vector<const char*> expectedFunctions {
+        std::vector<StringViewC> expectedFunctions {
             "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "avg", "cbrt",
             "cos", "cosh", "erf", "erfc", "exp", "hypot", "ln", "log", "log10", "log2", "max", "min", "rand_bernoulli",
             "rand_binomial", "rand_cauchy", "rand_chiSquared", "rand_exponential", "rand_extremeValue", "rand_fisherF",
             "rand_gamma", "rand_geometric", "rand_logNormal", "rand_negBinomial", "rand_normal", "rand_poisson", 
             "rand_studentT", "rand_uniformInt", "rand_uniformReal", "rand_weibull",
-            "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh", "tgamma", "time_epochMsec"
+            "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh", "tgamma",
+            "time_epochMsec", "time_ISOdateToEpochSec", "time_ISOdateToYearNum", "time_ISOdateToMonthNum", "time_ISOdateToDayOfMonth",
+            "time_ISOdateToDayOfWeek", "time_ISOdateToHour", "time_ISOdateToMinute", "time_ISOdateToSecond", "time_ISOdateToUtcOffsetInSeconds"
             };
 #if defined(__cpp_lib_math_special_functions) ||  (defined(__STDCPP_MATH_SPEC_FUNCS__) && (__STDCPP_MATH_SPEC_FUNCS__ >= 201003L))
         expectedFunctions.push_back("assoc_laguerre");
@@ -870,8 +874,8 @@ TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
         expectedFunctions.push_back("sph_bessel");
         expectedFunctions.push_back("sph_legendre");
         expectedFunctions.push_back("sph_neumann");
-        std::sort(expectedFunctions.begin(), expectedFunctions.end(), [](const char* a, const char* b) { return (std::strcmp(a, b) < 0); });
 #endif
+        std::sort(expectedFunctions.begin(), expectedFunctions.end());
 
         std::vector<std::string> foundFunctions;
         FormulaParser parser;
@@ -881,6 +885,7 @@ TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
             foundFunctions.push_back(sv.toString());
             return true;
         });
+        std::sort(foundFunctions.begin(), foundFunctions.end());
         EXPECT_TRUE(::DFG_MODULE_NS(cont)::isEqualContent(expectedFunctions, foundFunctions));
     }
 }
@@ -950,5 +955,87 @@ TEST(dfgMath, FormulaParser_time_epochMsec)
     }
 }
 
-#endif
+TEST(dfgMath, FormulaParser_time_ISOdateTo)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(math);
+    using namespace DFG_MODULE_NS(time);
 
+    FormulaParser parser;
+
+    // time_ISOdateToEpochSec
+    {
+        DFGTEST_EXPECT_LEFT(1639396862, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToEpochSec(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(1639396862 - 10 * 3600, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToEpochSec(\"2021-12-13 12:01:02+10:00\")"));
+        DFGTEST_EXPECT_LEFT(1639396862 + 10 * 3600, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToEpochSec(\"2021-12-13 12:01:02-10:00\")"));
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("time_ISOdateToEpochSec(\"2021-20-13 12:01:02\")")); // Invalid month
+        DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("time_ISOdateToEpochSec(\"2021-12-13 12:01:02\")")); // No time zone info
+    }
+
+    // time_ISOdateToYearNum
+    {
+        DFGTEST_EXPECT_LEFT(2021, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToYearNum(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(2021, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToYearNum(\"2021-12-13 12:01:02\")"));
+        DFGTEST_EXPECT_NAN(       parser.setFormulaAndEvaluateAsDouble("time_ISOdateToYearNum(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+
+    // time_ISOdateToMonthNum
+    {
+        DFGTEST_EXPECT_LEFT(12, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMonthNum(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(12, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMonthNum(\"2021-12-13 12:01:02\")"));
+        DFGTEST_EXPECT_NAN(     parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMonthNum(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+
+    // time_ISOdateToDayOfMonth
+    {
+        DFGTEST_EXPECT_LEFT(13, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfMonth(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(13, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfMonth(\"2021-12-13 12:01:02\")"));
+        DFGTEST_EXPECT_LEFT(13, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfMonth(\"2021-12-13 12:01:02+12:00\")"));
+        DFGTEST_EXPECT_NAN(     parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfMonth(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+
+    // time_ISOdateToDayOfWeek
+    {
+        DFGTEST_EXPECT_LEFT(1, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfWeek(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(1, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfWeek(\"2021-12-13 12:01:02\")"));
+        DFGTEST_EXPECT_LEFT(1, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfWeek(\"2021-12-13 12:01:02+12:00\")"));
+        DFGTEST_EXPECT_NAN(    parser.setFormulaAndEvaluateAsDouble("time_ISOdateToDayOfWeek(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+
+    // time_ISOdateToHour
+    {
+        DFGTEST_EXPECT_LEFT(12, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToHour(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(12, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToHour(\"2021-12-13 12:01:02\")"));
+        DFGTEST_EXPECT_LEFT(12, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToHour(\"2021-12-13 12:01:02+12:00\")"));
+        DFGTEST_EXPECT_LEFT( 0, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToHour(\"2021-12-13\")"));
+        DFGTEST_EXPECT_NAN(     parser.setFormulaAndEvaluateAsDouble("time_ISOdateToHour(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+
+    // time_ISOdateToMinute
+    {
+        DFGTEST_EXPECT_LEFT(1, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMinute(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(1, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMinute(\"2021-12-13 12:01:02\")"));
+        DFGTEST_EXPECT_LEFT(1, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMinute(\"2021-12-13 12:01:02+12:00\")"));
+        DFGTEST_EXPECT_LEFT(0, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMinute(\"2021-12-13\")"));
+        DFGTEST_EXPECT_NAN(    parser.setFormulaAndEvaluateAsDouble("time_ISOdateToMinute(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+
+    // time_ISOdateToSecond
+    {
+        DFGTEST_EXPECT_LEFT(2,     parser.setFormulaAndEvaluateAsDouble("time_ISOdateToSecond(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(2,     parser.setFormulaAndEvaluateAsDouble("time_ISOdateToSecond(\"2021-12-13 12:01:02\")"));
+        DFGTEST_EXPECT_LEFT(2.125, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToSecond(\"2021-12-13 12:01:02.125+12:00\")"));
+        DFGTEST_EXPECT_LEFT(0,     parser.setFormulaAndEvaluateAsDouble("time_ISOdateToSecond(\"2021-12-13\")"));
+        DFGTEST_EXPECT_NAN(        parser.setFormulaAndEvaluateAsDouble("time_ISOdateToSecond(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+
+    // time_ISOdateToUtcOffsetInSeconds
+    {
+        DFGTEST_EXPECT_LEFT(0,         parser.setFormulaAndEvaluateAsDouble("time_ISOdateToUtcOffsetInSeconds(\"2021-12-13 12:01:02Z\")"));
+        DFGTEST_EXPECT_LEFT(12 * 3600, parser.setFormulaAndEvaluateAsDouble("time_ISOdateToUtcOffsetInSeconds(\"2021-12-13 12:01:02.125+12:00\")"));
+        DFGTEST_EXPECT_NAN(            parser.setFormulaAndEvaluateAsDouble("time_ISOdateToUtcOffsetInSeconds(\"2021-12-13 12:01:02\")")); // No time zone info
+        DFGTEST_EXPECT_NAN(            parser.setFormulaAndEvaluateAsDouble("time_ISOdateToUtcOffsetInSeconds(\"2021-20-13 12:01:02\")")); // Invalid month
+    }
+}
+
+#endif

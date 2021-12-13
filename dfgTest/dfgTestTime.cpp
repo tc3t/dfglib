@@ -35,6 +35,9 @@ TEST(dfgTime, DateTime)
     EXPECT_EQ(dt0.second(), 14);
     EXPECT_EQ(dt0.millisecond(), 15);
 
+    DFGTEST_EXPECT_LEFT(3.004, dt2.secondsAsDouble());
+    DFGTEST_EXPECT_LEFT(3.004, dtUtc3.secondsAsDouble());
+
     // TimeZone constructor tests
     {
         DFGTEST_EXPECT_LEFT(0, DateTime(2020, 12, 11, 0, 0, 0, 0, TimeZone::Z).utcOffsetInfo().offsetInSeconds());

@@ -5,6 +5,7 @@
 #include "../build/languageFeatureInfo.hpp"
 #include "../ReadOnlySzParam.hpp"
 #include <ctime>
+#include <limits>
 
 #if DFG_LANGFEAT_CHRONO_11
 #include <chrono>
@@ -198,6 +199,12 @@ public:
     uint8 second() const
     {
         return static_cast<uint8>(((m_milliSecSinceMidnight / 1000) % 3600) % 60);
+    }
+
+    // Returns second fraction as double, e.g. if time is 12:01:02.125, returns 2.125. May return NaN.
+    double secondsAsDouble() const
+    {
+        return (!isNull()) ? second() + (millisecond() / 1000.0) : std::numeric_limits<double>::quiet_NaN();
     }
 
     // Returns second part of day time, i.e. 'mm' in hh:mm:ss

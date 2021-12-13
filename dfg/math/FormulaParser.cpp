@@ -3,6 +3,7 @@
 #include "../cont/SetVector.hpp"
 #include "../rand/distributionHelpers.hpp"
 #include "../rand.hpp"
+#include "../time/DateTime.hpp"
 #include <cmath>
 #include <numeric>
 #include <chrono>
@@ -239,6 +240,50 @@ double time_epochMsec()
     return static_cast<double>(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
 }
 
+// For documentation, see time_ISOdateToEpochSec from header.
+double time_ISOdateToEpochSec(const char* pszDateTime)
+{
+    using namespace ::DFG_MODULE_NS(time);
+    const auto dt = DateTime::fromString(pszDateTime);
+    const auto t = dt.toMillisecondsSinceEpoch();
+    if (t < 0)
+        return std::numeric_limits<double>::quiet_NaN();
+    return static_cast<double>(t) / 1000.0;
+}
+
+// Helper function to return property from given datetime string.
+template <class Access_T>
+double time_ISOdateToField(const char* pszDateTime, Access_T pmFunc)
+{
+    using namespace ::DFG_MODULE_NS(time);
+    const auto dt = DateTime::fromString(pszDateTime);
+    if (dt.isNull())
+        return std::numeric_limits<double>::quiet_NaN();
+    const auto fieldItem = (dt.*pmFunc)();
+    return static_cast<double>(fieldItem);
+}
+
+#define DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(FUNCNAME, ACCESSFUNC) double FUNCNAME(const char* pszDateTime) { return time_ISOdateToField(pszDateTime, &::DFG_MODULE_NS(time)::DateTime::ACCESSFUNC); }
+
+// Definitions for various time_ -functions
+DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(time_ISOdateToYearNum,    year);
+DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(time_ISOdateToMonthNum,   month);
+DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(time_ISOdateToDayOfMonth, day);
+DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(time_ISOdateToDayOfWeek,  dayOfWeek);
+DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(time_ISOdateToHour,       hour);
+DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(time_ISOdateToMinute,     minute);
+DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC(time_ISOdateToSecond,     secondsAsDouble);
+
+#undef DFG_TEMP_DEFINE_DATETIME_ACCESSFUNC
+
+// For documentation, see time_ISOdateToUtcOffsetInSeconds from header.
+double time_ISOdateToUtcOffsetInSeconds(const char* pszDateTime)
+{
+    using namespace ::DFG_MODULE_NS(time);
+    const auto offsetInfo = DateTime::fromString(pszDateTime).utcOffsetInfo();
+    return (offsetInfo.isSet()) ? static_cast<double>(offsetInfo.offsetInSeconds()) : std::numeric_limits<double>::quiet_NaN();
+}
+
 } } } // dfg:math::DFG_DETAIL_NS
 
 
@@ -294,9 +339,20 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 
 ::DFG_MODULE_NS(math)::FormulaParser::FormulaParser()
 {
-#define DFG_TEMP_DEFINE_FUNC(NAME) defineFunction(#NAME, ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::caller_##NAME, true)
+#define DFG_TEMP_DEFINE_FUNC(NAME)      DFG_VERIFY(defineFunction(#NAME, ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::caller_##NAME, true))
+#define DFG_TEMP_DEFINE_TIME_FUNC(NAME) DFG_VERIFY(defineFunction("time_" #NAME, ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::time_##NAME, true))
 
-    defineFunction("time_epochMsec", ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::time_epochMsec, false);
+    // DateTime-functions
+    DFG_VERIFY(defineFunction("time_epochMsec", ::DFG_MODULE_NS(math)::DFG_DETAIL_NS::time_epochMsec, false)); // Defined separately due to "AllowOptimization = false" -flag.
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToEpochSec);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToYearNum);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToMonthNum);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToDayOfMonth);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToDayOfWeek);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToHour);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToMinute);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToSecond);
+    DFG_TEMP_DEFINE_TIME_FUNC(ISOdateToUtcOffsetInSeconds);
 
     // C++11
     DFG_TEMP_DEFINE_FUNC(cbrt);
@@ -333,6 +389,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 #endif
 
 #undef DFG_TEMP_DEFINE_FUNC
+#undef DFG_TEMP_DEFINE_TIME_FUNC
 }
 
 ::DFG_MODULE_NS(math)::FormulaParser::~FormulaParser()
