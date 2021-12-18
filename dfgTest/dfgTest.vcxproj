@@ -837,6 +837,7 @@
     <ClInclude Include="..\dfg\cont\detail\keyContainerUtils.hpp" />
     <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp" />
     <ClInclude Include="..\dfg\cont\elementType.hpp" />
+    <ClInclude Include="..\dfg\cont\Flags.hpp" />
     <ClInclude Include="..\dfg\cont\interleavedXsortedTwoChannelWrapper.hpp" />
     <ClInclude Include="..\dfg\cont\IntervalSet.hpp" />
     <ClInclude Include="..\dfg\cont\IntervalSetSerialization.hpp" />

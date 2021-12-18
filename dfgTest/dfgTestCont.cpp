@@ -15,6 +15,7 @@
 #include <dfg/cont/interleavedXsortedTwoChannelWrapper.hpp>
 #include <dfg/cont/valueArray.hpp>
 #include <dfg/cont/CsvConfig.hpp>
+#include <dfg/cont/Flags.hpp>
 #include <dfg/cont/IntervalSet.hpp>
 #include <dfg/cont/IntervalSetSerialization.hpp>
 #include <dfg/cont/MapToStringViews.hpp>
@@ -1862,6 +1863,147 @@ TEST(dfgCont, intervalSetFromString)
             EXPECT_EQ(7, ic.minElement());
             EXPECT_EQ(8, ic.maxElement());
         }
+    }
+}
+
+DFG_DEFINE_SCOPED_ENUM_FLAGS_WITH_OPERATORS(TestFlags, ::DFG_ROOT_NS::uint16,
+    one = 0x1,
+    two = 0x2,
+    three = 0x4,
+    one_and_three = one | three
+)
+
+class FlagsTestClass
+{
+public:
+    DFG_DEFINE_SCOPED_ENUM_FLAGS(Enums, int,
+        a = 1,
+        b = 2)
+
+    DFG_DEFINE_SCOPED_ENUM_FLAGS(Enums2, int,
+        a = 1,
+        b = 2)
+};
+DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(FlagsTestClass::Enums)
+
+TEST(dfgCont, Flags)
+{
+    using namespace ::DFG_ROOT_NS;
+    {
+        DFGTEST_STATIC_TEST(sizeof(uint16) == sizeof(TestFlags::one));
+        DFGTEST_STATIC_TEST(sizeof(uint16) == sizeof(TestFlags));
+        TestFlags flags = TestFlags::one;
+        DFGTEST_EXPECT_LEFT(1, flags);
+        flags |= TestFlags::two;
+        DFGTEST_EXPECT_LEFT(3, flags);
+        flags &= TestFlags::one;
+        DFGTEST_EXPECT_LEFT(1, flags);
+        flags |= TestFlags::one | TestFlags::two | TestFlags::three;
+        DFGTEST_EXPECT_LEFT(7, flags);
+        flags &= TestFlags::one | TestFlags::three;
+        DFGTEST_EXPECT_LEFT(5, flags);
+        flags |= TestFlags::two & TestFlags::one_and_three;
+        DFGTEST_EXPECT_LEFT(5, flags);
+
+        const auto oneAndThreeCopy = flags;
+        DFGTEST_EXPECT_EQ(5, oneAndThreeCopy);
+
+        // operatorX(Flags, Flags)
+        DFGTEST_EXPECT_LEFT(3, TestFlags(TestFlags::one) | TestFlags(TestFlags::two));
+        DFGTEST_EXPECT_LEFT(1, TestFlags(TestFlags::one) & TestFlags(TestFlags::one_and_three));
+        DFGTEST_EXPECT_LEFT(4, TestFlags(TestFlags::one) ^ TestFlags(TestFlags::one_and_three));
+
+        // operator!
+        {
+            DFGTEST_EXPECT_TRUE(!TestFlags());
+            DFGTEST_EXPECT_FALSE(!TestFlags(TestFlags::one));
+        }
+
+        // operator^
+        {
+            const auto f1 = TestFlags::one | TestFlags::two;
+            DFGTEST_EXPECT_FALSE(f1 ^ f1);
+            auto f2 = f1;
+            f2.setFlag(TestFlags::two, false);
+            DFGTEST_EXPECT_LEFT(2, f2 ^ f1);
+            f2 ^= f1;
+            DFGTEST_EXPECT_LEFT(2, f2);
+            f2 ^= TestFlags::two;
+            DFGTEST_EXPECT_LEFT(0, f2);
+        }
+
+        // setFlag & testFlag
+        {
+            auto f1 = TestFlags::one_and_three | TestFlags::two;
+            DFGTEST_EXPECT_LEFT(7, f1);
+            f1.setFlag(TestFlags::one, false);
+            DFGTEST_EXPECT_LEFT(6, f1);
+            DFGTEST_EXPECT_FALSE(f1.testFlag(TestFlags::one));
+            DFGTEST_EXPECT_TRUE(f1.testFlag(TestFlags::two));
+            DFGTEST_EXPECT_TRUE(f1.testFlag(TestFlags::three));
+
+
+            f1.setFlag(TestFlags::three, false);
+            DFGTEST_EXPECT_LEFT(2, f1);
+            DFGTEST_EXPECT_FALSE(f1.testFlag(TestFlags::one));
+            DFGTEST_EXPECT_TRUE(f1.testFlag(TestFlags::two));
+            DFGTEST_EXPECT_FALSE(f1.testFlag(TestFlags::three));
+        }
+
+        // operator~
+        {
+            TestFlags f = TestFlags::one;
+            DFGTEST_EXPECT_TRUE(f.testFlag(TestFlags::one));
+            DFGTEST_EXPECT_FALSE(f.testFlag(TestFlags::two));
+            DFGTEST_EXPECT_FALSE(f.testFlag(TestFlags::three));
+            f = ~f;
+            DFGTEST_EXPECT_FALSE(f.testFlag(TestFlags::one));
+            DFGTEST_EXPECT_TRUE(f.testFlag(TestFlags::two));
+            DFGTEST_EXPECT_TRUE(f.testFlag(TestFlags::three));
+        }
+
+        // These arithmetic operations should not compile
+        {
+#if 0
+            TestFlags() + TestFlags();
+            TestFlags() + TestFlags::one;
+            TestFlags::one + TestFlags();
+            TestFlags() + 1;
+            1 + TestFlags();
+            TestFlags() + uint16(1);
+
+            TestFlags() - TestFlags();
+            TestFlags() - TestFlags::one;
+            TestFlags::one - TestFlags();
+            TestFlags() - 1;
+            1 - TestFlags();
+            TestFlags() - uint16(1);
+
+            TestFlags()* TestFlags();
+            TestFlags()* TestFlags::one;
+            TestFlags::one* TestFlags();
+            TestFlags() * 1;
+            1 * TestFlags();
+            TestFlags()* uint16(1);
+
+            TestFlags::one + 1;
+            TestFlags::one - 1;
+            TestFlags::one * 1;
+
+            1 + TestFlags::one;
+            1 - TestFlags::one;
+            1 * TestFlags::one;
+#endif
+        }
+    }
+
+    // Testing that DFG_DEFINE_SCOPED_ENUM_FLAGS() works and that can define operations outside the class. 
+    {
+        DFGTEST_STATIC_TEST(1 == FlagsTestClass::Enums::a);
+        DFGTEST_STATIC_TEST(1 == FlagsTestClass::Enums2::a);
+        DFGTEST_STATIC_TEST(2 == FlagsTestClass::Enums::b);
+        DFGTEST_EXPECT_LEFT(3, (FlagsTestClass::Enums::a | FlagsTestClass::Enums::b));
+        DFGTEST_EXPECT_LEFT(0, (FlagsTestClass::Enums::a & FlagsTestClass::Enums::b));
     }
 }
 

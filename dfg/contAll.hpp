@@ -5,6 +5,7 @@
 #include "cont/contAlg.hpp"
 #include "cont/CsvConfig.hpp"
 #include "cont/elementType.hpp"
+#include "cont/Flags.hpp"
 #include "cont/interleavedXsortedTwoChannelWrapper.hpp"
 #include "cont/IntervalSet.hpp"
 #include "cont/IntervalSetSerialization.hpp"
