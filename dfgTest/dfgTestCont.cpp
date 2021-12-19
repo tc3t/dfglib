@@ -1886,32 +1886,75 @@ public:
 };
 DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(FlagsTestClass::Enums)
 
+// Some SFINAE-magic to test that certain operations do not compile for given types.
+// Typedefs 'OPtype' as void if operation is not available, otherwise the operation type.
+// For example if T0() | T1() is not available, 'orType' is typedef for void.
+template <class T0, class T1> struct ShouldNotCompileOperation
+{
+#define DFGTEST_TEMP_DEFINE_OP(NAME, OP) \
+    template <class U0, class U1> static auto NAME##Func(U0 a, U1 b) -> decltype(a OP b); \
+    static auto NAME##Func(...) -> void; \
+    using NAME##Type = decltype(NAME##Func(T0(), T1()))
+
+    DFGTEST_TEMP_DEFINE_OP(or,         |);
+    DFGTEST_TEMP_DEFINE_OP(and,        &);
+    DFGTEST_TEMP_DEFINE_OP(xor,        ^);
+    DFGTEST_TEMP_DEFINE_OP(plus,       +);
+    DFGTEST_TEMP_DEFINE_OP(minus,      -);
+    DFGTEST_TEMP_DEFINE_OP(mul,        *);
+    DFGTEST_TEMP_DEFINE_OP(equals,    ==);
+    DFGTEST_TEMP_DEFINE_OP(notEquals, !=);
+
+#undef DFGTEST_TEMP_DEFINE_OP
+}; // class ShouldNotCompileOperation
+
+#define DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(T0, T1, OP) \
+    DFGTEST_STATIC_TEST((std::is_same<void, ShouldNotCompileOperation<T0, T1>::OP##Type>::value == true)); \
+    DFGTEST_STATIC_TEST((std::is_same<void, ShouldNotCompileOperation<T1, T0>::OP##Type>::value == true))
+
+#define DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(OP) \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, FlagsTestClass::Enums, OP); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), decltype(FlagsTestClass::Enums::a), OP); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, int, OP); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), int, OP); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), uint16, OP)
+
 TEST(dfgCont, Flags)
 {
     using namespace ::DFG_ROOT_NS;
+    // commonChartTools.hpp: ChartDataType
+    // charts/operations.hpp: ChartEntryOperation::Error
+    // CsvTableView.cpp: ActionFlags
+    // graphTools.hpp: DataQueryDetails
     {
         DFGTEST_STATIC_TEST(sizeof(uint16) == sizeof(TestFlags::one));
         DFGTEST_STATIC_TEST(sizeof(uint16) == sizeof(TestFlags));
         TestFlags flags = TestFlags::one;
-        DFGTEST_EXPECT_LEFT(1, flags);
+        DFGTEST_EXPECT_LEFT(1, flags.toNumber());
         flags |= TestFlags::two;
-        DFGTEST_EXPECT_LEFT(3, flags);
+        DFGTEST_EXPECT_LEFT(3, flags.toNumber());
         flags &= TestFlags::one;
-        DFGTEST_EXPECT_LEFT(1, flags);
+        DFGTEST_EXPECT_LEFT(1, flags.toNumber());
         flags |= TestFlags::one | TestFlags::two | TestFlags::three;
-        DFGTEST_EXPECT_LEFT(7, flags);
+        DFGTEST_EXPECT_LEFT(7, flags.toNumber());
         flags &= TestFlags::one | TestFlags::three;
-        DFGTEST_EXPECT_LEFT(5, flags);
+        DFGTEST_EXPECT_LEFT(5, flags.toNumber());
         flags |= TestFlags::two & TestFlags::one_and_three;
-        DFGTEST_EXPECT_LEFT(5, flags);
+        DFGTEST_EXPECT_LEFT(5, flags.toNumber());
 
         const auto oneAndThreeCopy = flags;
-        DFGTEST_EXPECT_EQ(5, oneAndThreeCopy);
+        DFGTEST_EXPECT_EQ(5, oneAndThreeCopy.toNumber());
 
         // operatorX(Flags, Flags)
-        DFGTEST_EXPECT_LEFT(3, TestFlags(TestFlags::one) | TestFlags(TestFlags::two));
-        DFGTEST_EXPECT_LEFT(1, TestFlags(TestFlags::one) & TestFlags(TestFlags::one_and_three));
-        DFGTEST_EXPECT_LEFT(4, TestFlags(TestFlags::one) ^ TestFlags(TestFlags::one_and_three));
+        DFGTEST_EXPECT_LEFT(3, (TestFlags(TestFlags::one) | TestFlags(TestFlags::two)).toNumber());
+        DFGTEST_EXPECT_LEFT(1, (TestFlags(TestFlags::one) & TestFlags(TestFlags::one_and_three)).toNumber());
+        DFGTEST_EXPECT_LEFT(4, (TestFlags(TestFlags::one) ^ TestFlags(TestFlags::one_and_three)).toNumber());
+
+        // operator==
+        {
+            DFGTEST_STATIC_TEST(TestFlags::one == TestFlags::one);
+            DFGTEST_STATIC_TEST(TestFlags::one != TestFlags::two);
+        }
 
         // operator!
         {
@@ -1925,26 +1968,26 @@ TEST(dfgCont, Flags)
             DFGTEST_EXPECT_FALSE(f1 ^ f1);
             auto f2 = f1;
             f2.setFlag(TestFlags::two, false);
-            DFGTEST_EXPECT_LEFT(2, f2 ^ f1);
+            DFGTEST_EXPECT_LEFT(2, (f2 ^ f1).toNumber());
             f2 ^= f1;
-            DFGTEST_EXPECT_LEFT(2, f2);
+            DFGTEST_EXPECT_LEFT(2, f2.toNumber());
             f2 ^= TestFlags::two;
-            DFGTEST_EXPECT_LEFT(0, f2);
+            DFGTEST_EXPECT_LEFT(0, f2.toNumber());
         }
 
         // setFlag & testFlag
         {
             auto f1 = TestFlags::one_and_three | TestFlags::two;
-            DFGTEST_EXPECT_LEFT(7, f1);
+            DFGTEST_EXPECT_LEFT(7, f1.toNumber());
             f1.setFlag(TestFlags::one, false);
-            DFGTEST_EXPECT_LEFT(6, f1);
+            DFGTEST_EXPECT_LEFT(6, f1.toNumber());
             DFGTEST_EXPECT_FALSE(f1.testFlag(TestFlags::one));
             DFGTEST_EXPECT_TRUE(f1.testFlag(TestFlags::two));
             DFGTEST_EXPECT_TRUE(f1.testFlag(TestFlags::three));
 
 
             f1.setFlag(TestFlags::three, false);
-            DFGTEST_EXPECT_LEFT(2, f1);
+            DFGTEST_EXPECT_LEFT(2, f1.toNumber());
             DFGTEST_EXPECT_FALSE(f1.testFlag(TestFlags::one));
             DFGTEST_EXPECT_TRUE(f1.testFlag(TestFlags::two));
             DFGTEST_EXPECT_FALSE(f1.testFlag(TestFlags::three));
@@ -1961,39 +2004,25 @@ TEST(dfgCont, Flags)
             DFGTEST_EXPECT_TRUE(f.testFlag(TestFlags::two));
             DFGTEST_EXPECT_TRUE(f.testFlag(TestFlags::three));
         }
+    }
 
-        // These arithmetic operations should not compile
+    // Testing that various operations between different types are not defined
+    {
+        DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(or);
+        DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(and);
+        DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(xor);
+        DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(plus);
+        DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(minus);
+        DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(mul);
+
+        // Testing equals and notEquals separately as comparing different enum items compiles even though it preferably shouldn't
         {
-#if 0
-            TestFlags() + TestFlags();
-            TestFlags() + TestFlags::one;
-            TestFlags::one + TestFlags();
-            TestFlags() + 1;
-            1 + TestFlags();
-            TestFlags() + uint16(1);
-
-            TestFlags() - TestFlags();
-            TestFlags() - TestFlags::one;
-            TestFlags::one - TestFlags();
-            TestFlags() - 1;
-            1 - TestFlags();
-            TestFlags() - uint16(1);
-
-            TestFlags()* TestFlags();
-            TestFlags()* TestFlags::one;
-            TestFlags::one* TestFlags();
-            TestFlags() * 1;
-            1 * TestFlags();
-            TestFlags()* uint16(1);
-
-            TestFlags::one + 1;
-            TestFlags::one - 1;
-            TestFlags::one * 1;
-
-            1 + TestFlags::one;
-            1 - TestFlags::one;
-            1 * TestFlags::one;
-#endif
+            DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, FlagsTestClass::Enums, equals);
+            DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, int, equals);
+            DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, FlagsTestClass::Enums, notEquals);
+            DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, int, notEquals);
+            //DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), decltype(FlagsTestClass::Enums::a), equals);    // TODO: known shortcoming
+            //DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), decltype(FlagsTestClass::Enums::a), notEquals); // TODO: known shortcoming
         }
     }
 
@@ -2002,9 +2031,12 @@ TEST(dfgCont, Flags)
         DFGTEST_STATIC_TEST(1 == FlagsTestClass::Enums::a);
         DFGTEST_STATIC_TEST(1 == FlagsTestClass::Enums2::a);
         DFGTEST_STATIC_TEST(2 == FlagsTestClass::Enums::b);
-        DFGTEST_EXPECT_LEFT(3, (FlagsTestClass::Enums::a | FlagsTestClass::Enums::b));
-        DFGTEST_EXPECT_LEFT(0, (FlagsTestClass::Enums::a & FlagsTestClass::Enums::b));
+        DFGTEST_EXPECT_LEFT(3, (FlagsTestClass::Enums::a | FlagsTestClass::Enums::b).toNumber());
+        DFGTEST_EXPECT_LEFT(0, (FlagsTestClass::Enums::a & FlagsTestClass::Enums::b).toNumber());
     }
 }
+
+#undef DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION
+#undef DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET
 
 #endif

@@ -32,11 +32,12 @@ public:
     Flags  operator^(const Flags other) const { auto a = *this; a ^= other; return a; }
 
     Flags& setFlag(Enum flag, bool bOn = true) { if (bOn) *this |= flag; else this->m_nFlags &= ~flag; return *this; }
-    bool testFlag(Enum flag) const { return (this->m_nFlags & flag) != 0; }
+    bool testFlag(Enum flag) const { return (this->m_nFlags & static_cast<IntT>(flag)) != 0; }
 
     bool operator!() const { return this->m_nFlags == 0; }
     Flags operator~() const { Flags a; a.m_nFlags = ~this->m_nFlags; return a; }
-    operator IntT() const { return m_nFlags; }
+    //operator IntT() const { return m_nFlags; }
+    IntT toNumber() const { return m_nFlags; }
 
     constexpr inline void operator+(Flags other) const noexcept = delete;
     constexpr inline void operator+(Enum other)  const noexcept = delete;
@@ -56,6 +57,10 @@ public:
 //      Defines enum class -like entity whose enum-items can be used like flags:
 //          -All enum items are scoped under SCOPE_NAME
 //          -Can define multiple enums e.g. in one class.
+//      Known shortcomings:
+//          -Comparison of different enum items compiles (e.g. Enum1::a == Enum2::a compiles, but e.g. Qt Creator 5.0.2 generated "warning: comparison of different enumeration types")
+//          -Operations between different enums create complex compile errors (e.g. Enum1::a | Enum2::a)
+//          -If operators for enum are not defined with DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(), operators such as | compile with enum items as well as with enum/int mix.
 // Example:
 //      DFG_DEFINE_SCOPED_ENUM_FLAGS_WITH_OPERATORS(TestFlags, ::DFG_ROOT_NS::uint16,
 //          flagOne = 0x1,
@@ -100,7 +105,8 @@ public: \
     bool testFlag(Enum flag) const { return this->m_flags.testFlag(flag); } \
     bool operator!() const { return !this->m_flags; } \
     SCOPE_NAME operator~() const { SCOPE_NAME a; a.m_flags = ~this->m_flags; return a; } \
-    operator INTTYPE() const { return m_flags.operator INTTYPE(); } \
+    INTTYPE toNumber() const { return m_flags.toNumber(); } \
+    /*operator INTTYPE() const { return m_flags.operator INTTYPE(); } */ \
 \
     constexpr inline void operator+(SCOPE_NAME other) const noexcept = delete; \
     constexpr inline void operator+(Enum other)       const noexcept = delete; \
@@ -117,13 +123,21 @@ public: \
 // End of macro-definition for DFG_DEFINE_SCOPED_ENUM_FLAGS
 ///////////////////////////////////////////////////////////
 
+
 //////////////////////////////////////////
 // DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS
-//      Defines operators for given enum type created by DFG_DEFINE_SCOPED_ENUM_FLAGS-macro
+//      Defines operators for given enum type created by DFG_DEFINE_SCOPED_ENUM_FLAGS-macro and deletes operations that should not be accepted.
 //
 #define DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(SCOPE_NAME) \
-    static inline SCOPE_NAME operator|(SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) | f2;} \
-    static inline SCOPE_NAME operator&(SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) & f2;} \
+                       inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) | f2;} \
+    template <class T> inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
+    template <class T> inline SCOPE_NAME operator| (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
+                       inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) & f2;} \
+    template <class T> inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
+    template <class T> inline SCOPE_NAME operator& (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
+                       inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) ^ f2;} \
+    template <class T> inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
+    template <class T> inline SCOPE_NAME operator^ (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
     constexpr inline void operator+(SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2)      noexcept = delete; \
     constexpr inline void operator+(SCOPE_NAME::Enum f1, SCOPE_NAME f2)            noexcept = delete; \
     constexpr inline void operator+(int f1, SCOPE_NAME f2)                         noexcept = delete; \
