@@ -17,27 +17,32 @@ public:
     using IntT = typename std::underlying_type<Enum>::type;
     constexpr Flags() = default;
     constexpr Flags(Enum e) : m_nFlags(static_cast<IntT>(e)) {}
+private:
+    constexpr Flags(const IntT val) : m_nFlags(val) {}
 
+public:
     Flags& operator|=(Enum flag)         { m_nFlags |= flag;           return *this; }
     Flags& operator|=(const Flags other) { m_nFlags |= other.m_nFlags; return *this; }
     Flags& operator&=(Enum flag)         { m_nFlags &= flag;           return *this; }
     Flags& operator&=(const Flags other) { m_nFlags &= other.m_nFlags; return *this; }
     Flags& operator^=(Enum flag)         { m_nFlags ^= flag;           return *this; }
     Flags& operator^=(const Flags other) { m_nFlags ^= other.m_nFlags; return *this; }
-    Flags  operator|(const Enum flag)   const { auto a = *this; a |= flag;  return a; }
-    Flags  operator|(const Flags other) const { auto a = *this; a |= other; return a; }
-    Flags  operator&(const Enum flag)   const { auto a = *this; a &= flag;  return a; }
-    Flags  operator&(const Flags other) const { auto a = *this; a &= other; return a; }
-    Flags  operator^(const Enum flag)   const { auto a = *this; a ^= flag;  return a; }
-    Flags  operator^(const Flags other) const { auto a = *this; a ^= other; return a; }
+    constexpr Flags  operator|(const Enum flag)   const { return Flags(toNumber() | static_cast<IntT>(flag)); }
+    constexpr Flags  operator|(const Flags other) const { return Flags(toNumber() | other.toNumber()); }
+    constexpr Flags  operator&(const Enum flag)   const { return Flags(toNumber() & static_cast<IntT>(flag)); }
+    constexpr Flags  operator&(const Flags other) const { return Flags(toNumber() & other.toNumber()); }
+    constexpr Flags  operator^(const Enum flag)   const { return Flags(toNumber() ^ static_cast<IntT>(flag)); }
+    constexpr Flags  operator^(const Flags other) const { return Flags(toNumber() ^ other.toNumber()); }
+
+    constexpr bool operator==(const Flags other) const { return this->m_nFlags == other.m_nFlags; } \
+    constexpr bool operator!=(const Flags other) const { return !(*this == other); } \
 
     Flags& setFlag(Enum flag, bool bOn = true) { if (bOn) *this |= flag; else this->m_nFlags &= ~flag; return *this; }
-    bool testFlag(Enum flag) const { return (this->m_nFlags & static_cast<IntT>(flag)) != 0; }
+    constexpr bool testFlag(Enum flag) const { return (this->m_nFlags & static_cast<IntT>(flag)) != 0; }
 
-    bool operator!() const { return this->m_nFlags == 0; }
-    Flags operator~() const { Flags a; a.m_nFlags = ~this->m_nFlags; return a; }
-    //operator IntT() const { return m_nFlags; }
-    IntT toNumber() const { return m_nFlags; }
+    constexpr bool operator!() const { return this->m_nFlags == 0; }
+    constexpr Flags operator~() const { return Flags(~this->m_nFlags); }
+    constexpr IntT toNumber() const { return m_nFlags; }
 
     constexpr inline void operator+(Flags other) const noexcept = delete;
     constexpr inline void operator+(Enum other)  const noexcept = delete;
@@ -94,19 +99,20 @@ public: \
     SCOPE_NAME& operator&=(const SCOPE_NAME other) { m_flags &= other.m_flags; return *this; } \
     SCOPE_NAME& operator^=(Enum flag)              { m_flags ^= flag;          return *this; } \
     SCOPE_NAME& operator^=(const SCOPE_NAME other) { m_flags ^= other.m_flags; return *this; } \
-    SCOPE_NAME  operator|(const Enum flag)        const { return m_flags | flag; } \
-    SCOPE_NAME  operator|(const SCOPE_NAME other) const { return m_flags | other.m_flags; } \
-    SCOPE_NAME  operator&(const Enum flag)        const { return m_flags & flag; } \
-    SCOPE_NAME  operator&(const SCOPE_NAME other) const { return m_flags & other.m_flags; } \
-    SCOPE_NAME  operator^(const Enum flag)        const { return m_flags ^ flag; } \
-    SCOPE_NAME  operator^(const SCOPE_NAME other) const { return m_flags ^ other.m_flags; } \
+    constexpr SCOPE_NAME  operator|(const Enum flag)        const { return m_flags | flag; } \
+    constexpr SCOPE_NAME  operator|(const SCOPE_NAME other) const { return m_flags | other.m_flags; } \
+    constexpr SCOPE_NAME  operator&(const Enum flag)        const { return m_flags & flag; } \
+    constexpr SCOPE_NAME  operator&(const SCOPE_NAME other) const { return m_flags & other.m_flags; } \
+    constexpr SCOPE_NAME  operator^(const Enum flag)        const { return m_flags ^ flag; } \
+    constexpr SCOPE_NAME  operator^(const SCOPE_NAME other) const { return m_flags ^ other.m_flags; } \
+    constexpr bool operator==(const SCOPE_NAME other) const { return this->m_flags == other.m_flags; } \
+    constexpr bool operator!=(const SCOPE_NAME other) const { return this->m_flags != other.m_flags; } \
 \
     SCOPE_NAME& setFlag(Enum flag, bool bOn = true) { m_flags.setFlag(flag, bOn); return *this; }  \
-    bool testFlag(Enum flag) const { return this->m_flags.testFlag(flag); } \
-    bool operator!() const { return !this->m_flags; } \
-    SCOPE_NAME operator~() const { SCOPE_NAME a; a.m_flags = ~this->m_flags; return a; } \
-    INTTYPE toNumber() const { return m_flags.toNumber(); } \
-    /*operator INTTYPE() const { return m_flags.operator INTTYPE(); } */ \
+    constexpr bool testFlag(Enum flag) const { return this->m_flags.testFlag(flag); } \
+    constexpr bool operator!() const { return !this->m_flags; } \
+    constexpr SCOPE_NAME operator~() const { return SCOPE_NAME(~this->m_flags); } \
+    constexpr INTTYPE toNumber() const { return m_flags.toNumber(); } \
 \
     constexpr inline void operator+(SCOPE_NAME other) const noexcept = delete; \
     constexpr inline void operator+(Enum other)       const noexcept = delete; \
@@ -129,13 +135,13 @@ public: \
 //      Defines operators for given enum type created by DFG_DEFINE_SCOPED_ENUM_FLAGS-macro and deletes operations that should not be accepted.
 //
 #define DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(SCOPE_NAME) \
-                       inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) | f2;} \
+             constexpr inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) | f2;} \
     template <class T> inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
     template <class T> inline SCOPE_NAME operator| (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
-                       inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) & f2;} \
+             constexpr inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) & f2;} \
     template <class T> inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
     template <class T> inline SCOPE_NAME operator& (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
-                       inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) ^ f2;} \
+             constexpr inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) ^ f2;} \
     template <class T> inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
     template <class T> inline SCOPE_NAME operator^ (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
     constexpr inline void operator+(SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2)      noexcept = delete; \

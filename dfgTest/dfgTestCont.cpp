@@ -1950,8 +1950,32 @@ TEST(dfgCont, Flags)
         DFGTEST_EXPECT_LEFT(1, (TestFlags(TestFlags::one) & TestFlags(TestFlags::one_and_three)).toNumber());
         DFGTEST_EXPECT_LEFT(4, (TestFlags(TestFlags::one) ^ TestFlags(TestFlags::one_and_three)).toNumber());
 
+        // constexpr tests
+        {
+            DFGTEST_STATIC_TEST(TestFlags() == TestFlags());
+
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::one_and_three) == (TestFlags::one | TestFlags::three));
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::one_and_three) == (TestFlags(TestFlags::one) | TestFlags(TestFlags::three)));
+
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::one) == (TestFlags::one & TestFlags::one_and_three));
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::one) == (TestFlags(TestFlags::one) & TestFlags(TestFlags::one_and_three)));
+
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::three) == (TestFlags::one ^ TestFlags::one_and_three));
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::three) == (TestFlags(TestFlags::one) ^ TestFlags(TestFlags::one_and_three)));
+
+            DFGTEST_STATIC_TEST(!TestFlags());
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::one).testFlag(TestFlags::one) == true);
+            DFGTEST_STATIC_TEST(TestFlags(TestFlags::one).testFlag(TestFlags::two) == false);
+
+            DFGTEST_STATIC_TEST((~TestFlags(TestFlags::one)).toNumber() == (1 << 16) - 1 - 1);
+        }
+
         // operator==
         {
+            DFGTEST_EXPECT_TRUE(TestFlags() == TestFlags());
+            DFGTEST_EXPECT_TRUE(TestFlags(TestFlags::one) == TestFlags(TestFlags::one));
+            DFGTEST_EXPECT_TRUE(TestFlags(TestFlags::one) != TestFlags(TestFlags::two));
+            DFGTEST_EXPECT_FALSE(TestFlags() != TestFlags());
             DFGTEST_STATIC_TEST(TestFlags::one == TestFlags::one);
             DFGTEST_STATIC_TEST(TestFlags::one != TestFlags::two);
         }
