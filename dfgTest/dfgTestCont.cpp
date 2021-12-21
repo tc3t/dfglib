@@ -1941,6 +1941,7 @@ TEST(dfgCont, Flags)
         DFGTEST_EXPECT_LEFT(5, flags.toNumber());
         flags |= TestFlags::two & TestFlags::one_and_three;
         DFGTEST_EXPECT_LEFT(5, flags.toNumber());
+        DFGTEST_EXPECT_EQ(TestFlags::fromNumber(flags.toNumber()), flags);
 
         const auto oneAndThreeCopy = flags;
         DFGTEST_EXPECT_EQ(5, oneAndThreeCopy.toNumber());
@@ -1953,6 +1954,9 @@ TEST(dfgCont, Flags)
         // constexpr tests
         {
             DFGTEST_STATIC_TEST(TestFlags() == TestFlags());
+
+            DFGTEST_STATIC_TEST(TestFlags::fromNumber(3) == (TestFlags::one | TestFlags::two));
+            DFGTEST_STATIC_TEST(TestFlags::fromNumber(3) != (TestFlags::one | TestFlags::three));
 
             DFGTEST_STATIC_TEST(TestFlags(TestFlags::one_and_three) == (TestFlags::one | TestFlags::three));
             DFGTEST_STATIC_TEST(TestFlags(TestFlags::one_and_three) == (TestFlags(TestFlags::one) | TestFlags(TestFlags::three)));

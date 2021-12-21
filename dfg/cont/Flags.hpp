@@ -17,6 +17,7 @@ public:
     using IntT = typename std::underlying_type<Enum>::type;
     constexpr Flags() = default;
     constexpr Flags(Enum e) : m_nFlags(static_cast<IntT>(e)) {}
+    constexpr static Flags fromNumber(const IntT number) { return Flags(number); }
 private:
     constexpr Flags(const IntT val) : m_nFlags(val) {}
 
@@ -92,6 +93,7 @@ public: \
     constexpr SCOPE_NAME() = default; \
     constexpr SCOPE_NAME(Enum e) : m_flags(e) {} \
     constexpr SCOPE_NAME(Storage flags) : m_flags(flags) { } \
+    constexpr static SCOPE_NAME fromNumber(const Storage::IntT number) { return SCOPE_NAME(Storage::fromNumber(number)); } \
 \
     SCOPE_NAME& operator|=(Enum flag)              { m_flags |= flag;          return *this; } \
     SCOPE_NAME& operator|=(const SCOPE_NAME other) { m_flags |= other.m_flags; return *this; } \
