@@ -41,6 +41,7 @@ public:
     Flags& setFlag(Enum flag, bool bOn = true) { if (bOn) *this |= flag; else this->m_nFlags &= ~flag; return *this; }
     constexpr bool testFlag(Enum flag) const { return (this->m_nFlags & static_cast<IntT>(flag)) != 0; }
 
+    constexpr explicit operator bool() const { return this->m_nFlags != 0; }
     constexpr bool operator!() const { return this->m_nFlags == 0; }
     constexpr Flags operator~() const { return Flags(~this->m_nFlags); }
     constexpr IntT toNumber() const { return m_nFlags; }
@@ -112,6 +113,7 @@ public: \
 \
     SCOPE_NAME& setFlag(Enum flag, bool bOn = true) { m_flags.setFlag(flag, bOn); return *this; }  \
     constexpr bool testFlag(Enum flag) const { return this->m_flags.testFlag(flag); } \
+    constexpr explicit operator bool() const { return this->m_flags.operator bool(); } \
     constexpr bool operator!() const { return !this->m_flags; } \
     constexpr SCOPE_NAME operator~() const { return SCOPE_NAME(~this->m_flags); } \
     constexpr INTTYPE toNumber() const { return m_flags.toNumber(); } \

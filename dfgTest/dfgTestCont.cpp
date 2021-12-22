@@ -1922,10 +1922,6 @@ template <class T0, class T1> struct ShouldNotCompileOperation
 TEST(dfgCont, Flags)
 {
     using namespace ::DFG_ROOT_NS;
-    // commonChartTools.hpp: ChartDataType
-    // charts/operations.hpp: ChartEntryOperation::Error
-    // CsvTableView.cpp: ActionFlags
-    // graphTools.hpp: DataQueryDetails
     {
         DFGTEST_STATIC_TEST(sizeof(uint16) == sizeof(TestFlags::one));
         DFGTEST_STATIC_TEST(sizeof(uint16) == sizeof(TestFlags));
@@ -1942,6 +1938,10 @@ TEST(dfgCont, Flags)
         flags |= TestFlags::two & TestFlags::one_and_three;
         DFGTEST_EXPECT_LEFT(5, flags.toNumber());
         DFGTEST_EXPECT_EQ(TestFlags::fromNumber(flags.toNumber()), flags);
+        DFGTEST_EXPECT_TRUE(flags);
+        DFGTEST_EXPECT_FALSE(TestFlags());
+        DFGTEST_EXPECT_TRUE(TestFlags::one | TestFlags::two);
+        DFGTEST_EXPECT_FALSE(TestFlags::one & TestFlags::two);
 
         const auto oneAndThreeCopy = flags;
         DFGTEST_EXPECT_EQ(5, oneAndThreeCopy.toNumber());
@@ -1957,6 +1957,9 @@ TEST(dfgCont, Flags)
 
             DFGTEST_STATIC_TEST(TestFlags::fromNumber(3) == (TestFlags::one | TestFlags::two));
             DFGTEST_STATIC_TEST(TestFlags::fromNumber(3) != (TestFlags::one | TestFlags::three));
+
+            DFGTEST_STATIC_TEST(TestFlags::one | TestFlags::two);
+            DFGTEST_STATIC_TEST(!(TestFlags::one & TestFlags::two));
 
             DFGTEST_STATIC_TEST(TestFlags(TestFlags::one_and_three) == (TestFlags::one | TestFlags::three));
             DFGTEST_STATIC_TEST(TestFlags(TestFlags::one_and_three) == (TestFlags(TestFlags::one) | TestFlags(TestFlags::three)));
