@@ -12,6 +12,7 @@
 #include "../dataAnalysis/smoothWithNeighbourAverages.hpp"
 #include "../dataAnalysis/smoothWithNeighbourMedians.hpp"
 #include "../math/FormulaParser.hpp"
+#include "../cont/Flags.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
@@ -419,7 +420,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         using DataVectorRef     = ChartOperationPipeData::DataVectorRef;
 
         // Error flags; set when errors are encountered.
-        using ErrorMask = int;
         enum Error
         {
             error_missingInput                  = 0x1,    // Pipe data does not have expected data.
@@ -431,6 +431,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
             error_unableToCreateDataVectors     = 0x40,   // Operation failed because new data vectors couldn't be created.
             error_processingError               = 0x80    // Error occured while operating, this can happen for example if creation args are bad and/or incompatible with input.
         };
+        using ErrorMask = ::DFG_MODULE_NS(cont)::Flags<Error>;
 
         // Helper enum for storing creation arg string as numeric value.
         enum AxisIndex
@@ -490,7 +491,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         void privStoreArg(Cont_T& cont, size_t nIndex, T&& item);
 
         OperationCall*    m_pCall          = &ChartEntryOperation::defaultCall;
-        ErrorMask         m_errors         = 0;
+        ErrorMask         m_errors;
         DefinitionArgList    m_argList;
         DefinitionArgStrList m_argStrList; // TODO: unify arglist to single variant list.
         StringT           m_sDefinition;            // For (optionally) storing the text from which operation was created from.
@@ -510,12 +511,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
     inline bool ChartEntryOperation::hasErrors() const
     {
-        return m_errors != 0;
+        return m_errors.operator bool();
     }
 
     inline bool ChartEntryOperation::hasError(Error err) const
     {
-        return (m_errors & err) != 0;
+        return (m_errors & err).operator bool();
     }
 
     inline double ChartEntryOperation::argAsDouble(const size_t nIndex) const

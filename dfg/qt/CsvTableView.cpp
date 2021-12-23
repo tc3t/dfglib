@@ -22,6 +22,7 @@
 #include "../func/memFuncMedian.hpp"
 #include "InputDialog.hpp"
 #include "stringConversions.hpp"
+#include "../cont/Flags.hpp"
 #include <chrono>
 #include <bitset>
 
@@ -587,30 +588,16 @@ namespace
         };
     };
 
-    struct ActionFlags
-    {
-        using uint32 = DFG_ROOT_NS::uint32;
-
-        ActionFlags(uint32 flags)
-            : m_nFlags(flags)
-        {}
-
-        enum
-        {
-            unknown               = 0x0,
-            readOnly              = 0x1, // Makes no changes of any kind to table content nor to view.
-            contentEdit           = 0x2, // May edit table content
-            contentStructureEdit  = 0x4, // May edit table structure (changing row/column count etc.).
-            viewEdit              = 0x8, // May edit view (selection, proxy/filter).
-            anyContentEdit        = contentEdit | contentStructureEdit,
-            defaultContentEdit    = contentEdit | viewEdit,
-            defaultStructureEdit  = contentEdit | contentStructureEdit | viewEdit
-        };
-
-        operator uint32() const { return m_nFlags; }
-
-        uint32 m_nFlags;
-    };
+    DFG_DEFINE_SCOPED_ENUM_FLAGS_WITH_OPERATORS(ActionFlags, ::DFG_ROOT_NS::uint32,
+        unknown               = 0x0,
+        readOnly              = 0x1, // Makes no changes of any kind to table content nor to view.
+        contentEdit           = 0x2, // May edit table content
+        contentStructureEdit  = 0x4, // May edit table structure (changing row/column count etc.).
+        viewEdit              = 0x8, // May edit view (selection, proxy/filter).
+        anyContentEdit        = contentEdit | contentStructureEdit,
+        defaultContentEdit    = contentEdit | viewEdit,
+        defaultStructureEdit  = contentEdit | contentStructureEdit | viewEdit
+    ) // ActionsFlags
 
     const char gszPropertyActionFlags[] = "dfglib_actionFlags";
 
@@ -618,12 +605,12 @@ namespace
     {
         if (!pAction)
             return;
-        pAction->setProperty(gszPropertyActionFlags, DFG_ROOT_NS::uint32(flags));
+        pAction->setProperty(gszPropertyActionFlags, flags.toNumber());
     }
 
     ActionFlags getActionType(QAction* pAction)
     {
-        return (pAction) ? ActionFlags(pAction->property(gszPropertyActionFlags).toUInt()) : ActionFlags::unknown;
+        return (pAction) ? ActionFlags::fromNumber(pAction->property(gszPropertyActionFlags).toUInt()) : ActionFlags::unknown;
     }
 
     QMenu* createActionMenu(::DFG_MODULE_NS(qt)::CsvTableView* pParent, const QString& sMenuTitle, const ActionFlags actionFlags, QMenu* pMenu = nullptr)
@@ -1343,7 +1330,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         if (!pAction)
             return;
         const auto type = getActionType(pAction);
-        if ((type & ActionFlags::anyContentEdit) != 0)
+        if (type & ActionFlags::anyContentEdit)
         {
             pAction->setVisible(!bReadOnly); // Note: setVisible(false) implies that action is not accesssible at all, e.g. through shortcut (i.e. action is effectively disabled)
         }

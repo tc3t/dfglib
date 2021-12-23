@@ -299,7 +299,7 @@ static ConsoleLogHandle gConsoleLogHandle;
 QString formatOperationErrorsForUserVisibleText(const ::DFG_MODULE_NS(charts)::ChartEntryOperation& op)
 {
     const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
-    return tr("error mask = 0x%1").arg(op.m_errors, 0, 16);
+    return tr("error mask = 0x%1").arg(op.m_errors.toNumber(), 0, 16);
 }
 
 QString getOperationDefinitionUsageGuide(const StringViewUtf8& svOperationId)
