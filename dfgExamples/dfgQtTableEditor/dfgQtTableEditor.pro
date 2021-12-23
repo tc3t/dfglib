@@ -185,7 +185,8 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/stringConversions.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.cpp
+        $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/time/DateTime.cpp
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
         SOURCES += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp
