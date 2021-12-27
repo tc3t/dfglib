@@ -23,6 +23,21 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
 
 */
 
+// DFG_CPLUSPLUS: either equivalent to __cplusplus or it's effective counterpart (e.g. in MSVC)
+#if defined(_MSC_VER)
+    #define DFG_CPLUSPLUS _MSVC_LANG // For details why using this instead of __cplusplus, see comments in strTo.hpp
+#else
+    #define DFG_CPLUSPLUS __cplusplus
+#endif
+
+// __cplusplus values for different standards, https://stackoverflow.com/a/7132549
+#define DFG_CPLUSPLUS_20      202002L
+#define DFG_CPLUSPLUS_17      201703L
+#define DFG_CPLUSPLUS_14      201402L
+#define DFG_CPLUSPLUS_11      201103L
+#define DFG_CPLUSPLUS_98      199711L
+#define DFG_CPLUSPLUS_PRE_98       1L
+
 // Set Boost-usage macros. Using (external) Boost is enabled by default.
 #define DFG_BUILD_OPT_USE_BOOST_DEFAULT 1
 #ifdef DFG_BUILD_OPT_USE_BOOST_OVERRIDE

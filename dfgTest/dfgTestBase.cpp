@@ -959,17 +959,15 @@ TEST(dfgBuild, buildTimeDetails)
 #endif
 
     // C++ standard version
-#if defined(_MSC_VER)
-    #if _MSVC_LANG == 202002L
+    #if DFG_CPLUSPLUS == 202002L
         DFGTEST_EXPECT_STREQ("C++20 (202002L)", vals[BuildTimeDetail_cppStandardVersion]);
-    #elif _MSVC_LANG == 201703L
+    #elif DFG_CPLUSPLUS == 201703L
         DFGTEST_EXPECT_STREQ("C++17 (201703L)", vals[BuildTimeDetail_cppStandardVersion]);
-    #elif DFG_TEMP_CPP_VERSION == 201402L
+    #elif DFG_CPLUSPLUS == 201402L
         DFGTEST_EXPECT_STREQ("C++14 (201402L)", vals[BuildTimeDetail_cppStandardVersion]);
-    #elif DFG_TEMP_CPP_VERSION == 201103L
+    #elif DFG_CPLUSPLUS == 201103L
         DFGTEST_EXPECT_STREQ("C++11 (201103L)", vals[BuildTimeDetail_cppStandardVersion]);
     #endif
-#endif // if defined(_MSC_VER)
 }
 
 TEST(dfgBuild, DFG_STRING_LITERAL_TO_TYPED_LITERAL)
