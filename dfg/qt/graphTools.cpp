@@ -4298,19 +4298,35 @@ void ::DFG_MODULE_NS(qt)::GraphControlPanel::onDisplayStateChanged(const ChartDi
         return;
     QString sText;
     QString sToolTip;
+    QString sStyleSheet;
     bool bEnable = true;
     switch (state)
     {
         case ChartDisplayState::idle:       sText = tr(GraphDefinitionWidget::s_szApplyText); break;
         case ChartDisplayState::updating:
-            sText = tr(GraphDefinitionWidget::s_szTerminateText);
-            if (state.totalUpdateStepCount() > 0)
-                sText += QString(" (preparing %1/%2)").arg(state.completedUpdateStepCount()).arg(state.totalUpdateStepCount());
-            sToolTip = tr("If update is terminated, currently processed chart entries are finished before terminating");
+            {
+                sText = tr(GraphDefinitionWidget::s_szTerminateText);
+                if (state.totalUpdateStepCount() > 0)
+                {
+                    sText += QString(" (preparing %1/%2)").arg(state.completedUpdateStepCount()).arg(state.totalUpdateStepCount());
+                    const double progress = double(state.completedUpdateStepCount()) / double(state.totalUpdateStepCount());
+                    // Stylesheet solution adapted from https://forum.qt.io/topic/82456/how-to-design-a-qpushbutton-with-progress/4
+                    // Using palette of QPushButton directly didn't seem to work (setting gradient brush to QPalette::Button role didn't affect background
+                    // and some of the hints in https://stackoverflow.com/questions/21685414/qt5-setting-background-color-to-qpushbutton-and-qcheckbox didn't help either)
+                    sStyleSheet = QString(
+                        "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,"
+                        "stop:0 rgba(0, 200, 0, 255), stop:%1 rgba(0, 255, 0, 255),"
+                        "stop:%2 rgba(255, 255, 255, 255), stop:1 rgba(255, 255, 255, 255));")
+                        .arg(progress - 0.001f)
+                        .arg(progress);
+                }
+                sToolTip = tr("If update is terminated, currently processed chart entries are finished before terminating");
+            }
             break;
         case ChartDisplayState::finalizing: sText = tr("Finalizing..."); bEnable = false; break;
         default: sText = tr("Bug"); break;
     }
+    pButton->setStyleSheet(sStyleSheet);
     pButton->setText(sText);
     pButton->setToolTip(sToolTip);
     pButton->setEnabled(bEnable);
