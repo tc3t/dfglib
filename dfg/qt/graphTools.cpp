@@ -1211,6 +1211,13 @@ void ChartDefinition::forEachEntry(Func_T&& handler) const
     forEachEntryWhile([] { return true; }, std::forward<Func_T>(handler));
 }
 
+size_t ChartDefinition::getForEachEntryCount() const
+{
+    size_t nCount = 0;
+    forEachEntry([&](Dummy) { ++nCount; });
+    return nCount;
+}
+
 bool ChartDefinition::isSourceUsed(const GraphDataSourceId& sourceId, bool* pHasErrorEntries) const
 {
     bool bFound = false;
@@ -1531,7 +1538,7 @@ void GraphDefinitionWidget::onActionButtonClicked()
     const auto sButtonText = pButton->text();
     if (sButtonText == tr(s_szApplyText))
         pController->refresh();
-    else if (sButtonText == tr(s_szTerminateText))
+    else if (sButtonText.startsWith(tr(s_szTerminateText)))
     {
         pController->refreshTerminate();
         pButton->setText("Terminating...");
@@ -4295,7 +4302,12 @@ void ::DFG_MODULE_NS(qt)::GraphControlPanel::onDisplayStateChanged(const ChartDi
     switch (state)
     {
         case ChartDisplayState::idle:       sText = tr(GraphDefinitionWidget::s_szApplyText); break;
-        case ChartDisplayState::updating:   sText = tr(GraphDefinitionWidget::s_szTerminateText); sToolTip = tr("Note that currently processed chart entries are finished before terminating"); break;
+        case ChartDisplayState::updating:
+            sText = tr(GraphDefinitionWidget::s_szTerminateText);
+            if (state.totalUpdateStepCount() > 0)
+                sText += QString(" (preparing %1/%2)").arg(state.completedUpdateStepCount()).arg(state.totalUpdateStepCount());
+            sToolTip = tr("If update is terminated, currently processed chart entries are finished before terminating");
+            break;
         case ChartDisplayState::finalizing: sText = tr("Finalizing..."); bEnable = false; break;
         default: sText = tr("Bug"); break;
     }
@@ -4810,6 +4822,8 @@ void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::pre
     {
         const auto& chartDefinition = spParam->chartDefinition();
         const auto pCurrentThread = QThread::currentThread();
+        const auto totalForEachCount = saturateCast<int>(chartDefinition.getForEachEntryCount());
+        int progressCounter = 0;
         chartDefinition.forEachEntry([&](const GraphDefinitionEntry& entry)
         {
             if (DFG_OPAQUE_REF().m_terminateFlag)
@@ -4821,6 +4835,8 @@ void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::pre
                 iterSource = tryCreateOnDemandDataSource(sSourceId, sources);
             if (iterSource != sources.end() && sources.iterToRef(iterSource).isSafeToQueryDataFromThread(pCurrentThread))
                 spParam->storePreparedData(entry, GraphControlAndDisplayWidget::prepareData(spParam->cache(), sources.iterToRef(iterSource), entry));
+            ++progressCounter;
+            Q_EMIT sigOnEntryPrepared(EntryPreparedParam(progressCounter, totalForEachCount));
         });
         if (DFG_OPAQUE_REF().m_terminateFlag)
             spParam->setTerminatedFlag(true);
@@ -4831,6 +4847,32 @@ void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::pre
 void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::terminatePreparation()
 {
     DFG_OPAQUE_REF().m_terminateFlag = true;
+}
+
+
+////////////////////////////////////////////////////
+//
+//
+// GraphControlAndDisplayWidget::EntryPreparedParam
+// 
+//
+////////////////////////////////////////////////////
+
+::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::EntryPreparedParam::EntryPreparedParam(const int nTotalPrepareReadyCount, const int nTotalPrepareCount)
+    : m_nTotalPrepareReadyCount(nTotalPrepareReadyCount)
+    , m_nTotalPrepareCount(nTotalPrepareCount)
+{
+
+}
+
+int ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::EntryPreparedParam::totalPrepareReadyCount() const
+{
+    return this->m_nTotalPrepareReadyCount;
+}
+
+int ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::EntryPreparedParam::totalPrepareCount() const
+{
+    return this->m_nTotalPrepareCount;
 }
 
 // Opaque member definition for GraphControlAndDisplayWidget
@@ -5026,7 +5068,13 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     rChart.beginUpdateState();
     auto pControlPanel = getChartControlPanel();
     if (pControlPanel)
-        pControlPanel->onDisplayStateChanged(ChartDisplayState::updating);
+    {
+        int nTotalSteps = -1;
+        auto pDefWidget = getDefinitionWidget();
+        if (pDefWidget)
+            nTotalSteps = saturateCast<int>(pDefWidget->getChartDefinition().getForEachEntryCount());
+        pControlPanel->onDisplayStateChanged(ChartDisplayState(ChartDisplayState::updating, 0, nTotalSteps));
+    }
 
     // Clearing existing objects.
     rChart.removeAllChartObjects(false); // false = no repaint
@@ -5039,10 +5087,18 @@ bool ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshTerminateImpl()
     if (pPreparator)
     {
         pPreparator->terminatePreparation();
+        DFG_QT_CHART_CONSOLE_INFO(tr("Terminated chart update"));
         return true;
     }
     else
         return false;
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationUpdate(EntryPreparedParam param)
+{
+    auto pControlPanel = getChartControlPanel();
+    if (pControlPanel)
+        pControlPanel->onDisplayStateChanged(ChartDisplayState(ChartDisplayState::updating, param.totalPrepareReadyCount(), param.totalPrepareCount()));
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationReady(ChartRefreshParamPtr spParam)
@@ -5244,6 +5300,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
         static bool bIsMetaTypeRegistered = false;
         if (!bIsMetaTypeRegistered)
         {
+            qRegisterMetaType<EntryPreparedParam>("EntryPreparedParam"); // Note: format matters, e.g. may break if string has namespace qualifiers.
             qRegisterMetaType<ChartRefreshParamPtr>("ChartRefreshParamPtr"); // Note: format matters, e.g. may break if string has namespace qualifiers.
             bIsMetaTypeRegistered = true;
         }
@@ -5253,6 +5310,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
         opaqueThis.m_spChartPreparator = new ChartDataPreparator;
         opaqueThis.m_spChartPreparator->moveToThread(opaqueThis.m_spThreadDataPreparation);
         DFG_QT_VERIFY_CONNECT(connect(this, &GraphControlAndDisplayWidget::sigChartDataPreparationNeeded, opaqueThis.m_spChartPreparator.data(), &ChartDataPreparator::prepareData));
+        DFG_QT_VERIFY_CONNECT(connect(opaqueThis.m_spChartPreparator.data(), &GraphControlAndDisplayWidget::ChartDataPreparator::sigOnEntryPrepared, this, &GraphControlAndDisplayWidget::onChartDataPreparationUpdate));
         DFG_QT_VERIFY_CONNECT(connect(opaqueThis.m_spChartPreparator.data(), &GraphControlAndDisplayWidget::ChartDataPreparator::sigPreparationFinished, this, &GraphControlAndDisplayWidget::onChartDataPreparationReady));
         opaqueThis.m_spThreadDataPreparation->start();
     }

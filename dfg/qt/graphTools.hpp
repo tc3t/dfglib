@@ -54,6 +54,9 @@ class ChartDefinition
 public:
     ChartDefinition(const QString& sJson = QString(), GraphDataSourceId defaultSourceId = GraphDataSourceId());
 
+    // Returns the number of entries that forEachEntry() would call. This may differ from m_controlEntries.size() e.g. if there are commented out items or empty strings.
+    size_t getForEachEntryCount() const;
+
     // Calls given handler for each entry. Note that entry given to handler is temporary so it's address must not be stored and used after handler call; make a copy if it needs to be stored.
     template <class Func_T>
     void forEachEntry(Func_T&& handler) const;
@@ -316,8 +319,10 @@ class ChartDisplayState
 {
 public:
     using Enum = int;
-    ChartDisplayState(Enum state) :
-        m_state(state)
+    ChartDisplayState(Enum state, const int nCompletedUpdateSteps = -1, const int nTotalUpdateSteps = -1)
+        : m_state(state)
+        , m_nCompletedUpdateSteps(nCompletedUpdateSteps)
+        , m_nTotalUpdateSteps(nTotalUpdateSteps)
     {}
     operator Enum() const { return m_state; }
     enum
@@ -327,8 +332,13 @@ public:
         idle
     };
 
+    int completedUpdateStepCount() const { return m_nCompletedUpdateSteps; }
+    int totalUpdateStepCount() const     { return m_nTotalUpdateSteps; }
+
 private:
     int m_state = idle;
+    int m_nCompletedUpdateSteps;
+    int m_nTotalUpdateSteps;
 };
 
 // Interface for controlling charts
@@ -480,6 +490,19 @@ private:
     ChartCanvas* chart();
 
 public:
+    class EntryPreparedParam
+    {
+    public:
+        EntryPreparedParam() = default;
+        explicit EntryPreparedParam(int nTotalPrepareReadyCount, int nTotalPrepareCount);
+
+        int totalPrepareReadyCount() const;
+        int totalPrepareCount() const;
+
+        int m_nTotalPrepareReadyCount = -1;
+        int m_nTotalPrepareCount = -1;
+    }; // class EntryPreparedParam
+
     class ChartRefreshParam
     {
     public:
@@ -505,6 +528,9 @@ public:
 
     // Starts fetching data for chart items
     void startChartDataFetching();
+
+    // Called when preparation of a chart entry is ready, used for progress indicator.
+    void onChartDataPreparationUpdate(EntryPreparedParam param);
     // Called when chart data has been prepared and actual chart items can be created.
     void onChartDataPreparationReady(ChartRefreshParamPtr spParam);
 
@@ -535,6 +561,7 @@ public:
     void terminatePreparation(); // Request to terminate current preparation.
 
 signals:
+    void sigOnEntryPrepared(EntryPreparedParam);
     void sigPreparationFinished(ChartRefreshParamPtr spParam);
 
 private:
