@@ -4844,13 +4844,16 @@ void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::pre
         {
             if (DFG_OPAQUE_REF().m_terminateFlag)
                 return;
-            auto& sources = spParam->dataSources();
-            const auto sSourceId = entry.sourceId(chartDefinition.m_defaultSourceId);
-            auto iterSource = sources.findById(sSourceId);
-            if (iterSource == sources.end())
-                iterSource = tryCreateOnDemandDataSource(sSourceId, sources);
-            if (iterSource != sources.end() && sources.iterToRef(iterSource).isSafeToQueryDataFromThread(pCurrentThread))
-                spParam->storePreparedData(entry, GraphControlAndDisplayWidget::prepareData(spParam->cache(), sources.iterToRef(iterSource), entry));
+            if (entry.isEnabled())
+            {
+                auto& sources = spParam->dataSources();
+                const auto sSourceId = entry.sourceId(chartDefinition.m_defaultSourceId);
+                auto iterSource = sources.findById(sSourceId);
+                if (iterSource == sources.end())
+                    iterSource = tryCreateOnDemandDataSource(sSourceId, sources);
+                if (iterSource != sources.end() && sources.iterToRef(iterSource).isSafeToQueryDataFromThread(pCurrentThread))
+                    spParam->storePreparedData(entry, GraphControlAndDisplayWidget::prepareData(spParam->cache(), sources.iterToRef(iterSource), entry));
+            }
             ++progressCounter;
             Q_EMIT sigOnEntryPrepared(EntryPreparedParam(progressCounter, totalForEachCount));
         });
