@@ -5084,7 +5084,6 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
     DFG_QT_CHART_CONSOLE_INFO(tr("-------- Refresh number %1 started").arg(DFG_OPAQUE_REF().m_nRefreshCounter));
     DFG_OPAQUE_REF().m_nRefreshCounter++;
 
-    rChart.beginUpdateState();
     auto pControlPanel = getChartControlPanel();
     if (pControlPanel)
     {
@@ -5094,6 +5093,10 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshImpl()
             nTotalSteps = saturateCast<int>(pDefWidget->getChartDefinition().getForEachEntryCount());
         pControlPanel->onDisplayStateChanged(ChartDisplayState(ChartDisplayState::updating, 0, nTotalSteps));
     }
+
+    // Note: beginUpdateState() may freeze GUI for a while so should be called after control panel handling which forces repaint
+    //       so that user sees that something happened by clicking Apply-button.
+    rChart.beginUpdateState();   
 
     // Clearing existing objects.
     rChart.removeAllChartObjects(false); // false = no repaint
