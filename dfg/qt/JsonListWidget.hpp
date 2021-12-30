@@ -39,6 +39,10 @@ public:
 
     void setLineWrapping(bool bWrap);
 
+    void addCommentToSelection();
+    void removeCommentFromSelection(); // For every line in selection that starts with a comment, removes one comment.
+    void setSelectionCommenting(bool bAdd);
+
     SyntaxCheckResult checkSyntax() const;
     static QString formatErrorMessage(const SyntaxCheckResult&);
 

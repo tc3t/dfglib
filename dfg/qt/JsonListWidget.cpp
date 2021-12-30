@@ -95,6 +95,20 @@ void ::DFG_MODULE_NS(qt)::JsonListWidget::contextMenuEvent(QContextMenuEvent* pE
         }
     }
 
+    // Comment/uncomment -actions
+    {
+        {
+            auto pAction = spMenu->addAction(tr("Add comment to selection"));
+            if (pAction)
+                DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &JsonListWidget::addCommentToSelection));
+        }
+        {
+            auto pAction = spMenu->addAction(tr("Remove comment from selection"));
+            if (pAction)
+                DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &JsonListWidget::removeCommentFromSelection));
+        }
+    }
+
     // Actions from 'this'
     {
         spMenu->addSeparator();
@@ -108,6 +122,31 @@ void ::DFG_MODULE_NS(qt)::JsonListWidget::contextMenuEvent(QContextMenuEvent* pE
 void ::DFG_MODULE_NS(qt)::JsonListWidget::setLineWrapping(const bool bWrap)
 {
     this->setLineWrapMode((bWrap) ? QPlainTextEdit::WidgetWidth : QPlainTextEdit::NoWrap);
+}
+
+void ::DFG_MODULE_NS(qt)::JsonListWidget::addCommentToSelection()
+{
+    setSelectionCommenting(true);
+}
+
+void ::DFG_MODULE_NS(qt)::JsonListWidget::removeCommentFromSelection()
+{
+    setSelectionCommenting(false);
+}
+
+void ::DFG_MODULE_NS(qt)::JsonListWidget::setSelectionCommenting(const bool bComment)
+{
+    auto cursor = this->textCursor();
+    const auto sSelectedText = cursor.selectedText();
+    auto lines = sSelectedText.split(QChar(8233)); // If there are line breaks in selection, selectedText() will "contain a Unicode U+2029 paragraph separator character instead of a newline \n character" (Qt 5.13 documentation)
+    for (auto& s : lines)
+    {
+        if (bComment)
+            s.prepend('#');
+        else if (!s.isEmpty() && s.front() == '#')
+            s.remove(0, 1);
+    }
+    cursor.insertText(lines.join('\n'));
 }
 
 auto ::DFG_MODULE_NS(qt)::JsonListWidget::checkSyntax() const -> std::pair<bool, std::vector<JsonListParseError>>
