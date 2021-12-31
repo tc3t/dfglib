@@ -268,6 +268,12 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
     m_readTimeInSeconds(-1),
     m_writeTimeInSeconds(-1)
 {
+    static bool sbMetaTypesRegistered = false;
+    if (!sbMetaTypesRegistered)
+    {
+        sbMetaTypesRegistered = true;
+        qRegisterMetaType<QVector<int>>("QVector<int>"); // For dataChanged() (https://bugreports.qt.io/browse/QTBUG-46517)
+    }
     DFG_OPAQUE_REF().m_spReadWriteLock = std::make_shared<QReadWriteLock>(QReadWriteLock::Recursive);
 }
 
@@ -1323,7 +1329,7 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section
         return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill)
+void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)
 {
     using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ::DFG_MODULE_NS(cont) ::IntervalSet<int>>;
     IntervalContainer intervalsByColumn; 
@@ -1331,6 +1337,8 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(cons
     {
         table.impl().forEachFwdRowInColumn(c, [&](const int r, SzPtrUtf8R tpsz)
         {
+            if (isCancelledFunc && isCancelledFunc())
+                return; // TODO: should break loop
             auto tpszEffective = (pFill) ? pFill : tpsz;
             if (tpszEffective && privSetDataToTable(r, c, tpszEffective))
                 intervalsByColumn[c].insert(r);
@@ -2031,6 +2039,11 @@ namespace DFG_DETAIL_NS
     auto CsvItemModelTable::rowCountByMaxRowIndex() const -> Index
     {
         return impl().rowCountByMaxRowIndex();
+    }
+
+    auto CsvItemModelTable::colCountByMaxColIndex() const -> Index
+    {
+        return impl().colCountByMaxColIndex();
     }
 
     auto CsvItemModelTable::cellCountNonEmpty() const -> Index

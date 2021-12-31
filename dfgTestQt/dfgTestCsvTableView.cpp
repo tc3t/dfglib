@@ -691,6 +691,91 @@ TEST(dfgQt, CsvTableView_insertDateTimes)
     testInserts("hh:mm:ss", "dd.MM.yyyy", "yyyy hh");
 }
 
+TEST(dfgQt, CsvTableView_insertDateTimesUndoRedo)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    viewModel.setDynamicSortFilter(true);
+    view.setModel(&viewModel);
+
+    ASSERT_TRUE(csvModel.openString(
+    ",\n"
+    "a,4\n"
+    "bc,3\n"
+    "c,2\n"
+    "d,1\n"
+    ));
+
+    viewModel.setFilterWildcard("*c");
+    viewModel.sort(1);
+
+    const auto viewModelContent = [&](const int r, const int c)
+    {
+        const auto index = viewModel.index(r, c);
+        const auto s = viewModel.data(index);
+        return s.toString();
+    };
+
+    // Now view table should be
+    // c, 2
+    // bc, 3
+    DFGTEST_EXPECT_LEFT("c", viewModelContent(0, 0));
+    DFGTEST_EXPECT_LEFT("bc", viewModelContent(1, 0));
+    DFGTEST_EXPECT_LEFT("2", viewModelContent(0, 1));
+    DFGTEST_EXPECT_LEFT("3", viewModelContent(1, 1));
+
+    view.selectColumn(1);
+    view.insertGeneric("test", "test insert");
+
+    view.resetSorting();
+    viewModel.setFilterWildcard(QString());
+
+    DFGTEST_EXPECT_LEFT("a",  viewModelContent(0, 0));
+    DFGTEST_EXPECT_LEFT("bc", viewModelContent(1, 0));
+    DFGTEST_EXPECT_LEFT("c",  viewModelContent(2, 0));
+    DFGTEST_EXPECT_LEFT("d",  viewModelContent(3, 0));
+
+    DFGTEST_EXPECT_LEFT("4",    viewModelContent(0, 1));
+    DFGTEST_EXPECT_LEFT("test", viewModelContent(1, 1));
+    DFGTEST_EXPECT_LEFT("test", viewModelContent(2, 1));
+    DFGTEST_EXPECT_LEFT("1",    viewModelContent(3, 1));
+
+    view.undo();
+
+    DFGTEST_EXPECT_LEFT("a",  viewModelContent(0, 0));
+    DFGTEST_EXPECT_LEFT("bc", viewModelContent(1, 0));
+    DFGTEST_EXPECT_LEFT("c",  viewModelContent(2, 0));
+    DFGTEST_EXPECT_LEFT("d",  viewModelContent(3, 0));
+
+    DFGTEST_EXPECT_LEFT("4",    viewModelContent(0, 1));
+    DFGTEST_EXPECT_LEFT("3", viewModelContent(1, 1));
+    DFGTEST_EXPECT_LEFT("2", viewModelContent(2, 1));
+    DFGTEST_EXPECT_LEFT("1",    viewModelContent(3, 1));
+
+    view.redo();
+
+    DFGTEST_EXPECT_LEFT("a",  viewModelContent(0, 0));
+    DFGTEST_EXPECT_LEFT("bc", viewModelContent(1, 0));
+    DFGTEST_EXPECT_LEFT("c",  viewModelContent(2, 0));
+    DFGTEST_EXPECT_LEFT("d",  viewModelContent(3, 0));
+
+    DFGTEST_EXPECT_LEFT("4",    viewModelContent(0, 1));
+    DFGTEST_EXPECT_LEFT("test", viewModelContent(1, 1));
+    DFGTEST_EXPECT_LEFT("test", viewModelContent(2, 1));
+    DFGTEST_EXPECT_LEFT("1",    viewModelContent(3, 1));
+
+    view.selectCell(2, 1);
+    view.insertGeneric("test2", "test insert 2");
+    DFGTEST_EXPECT_LEFT("test2", viewModelContent(2, 1));
+    view.undo();
+    DFGTEST_EXPECT_LEFT("test", viewModelContent(2, 1));
+    view.redo();
+    DFGTEST_EXPECT_LEFT("test2", viewModelContent(2, 1));
+}
+
 TEST(dfgQt, CsvTableView_resizeTableNoUi)
 {
     using namespace DFG_MODULE_NS(qt);

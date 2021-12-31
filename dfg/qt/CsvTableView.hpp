@@ -17,6 +17,7 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QHeaderView>
     #include <QPointer>
+    #include <QProgressDialog>
 DFG_END_INCLUDE_QT_HEADERS
 
 class QUndoStack;
@@ -317,6 +318,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int m_nLatestContextMenuEventColumn_dataModel = -1;
     };
 
+    class ProgressWidget : public QProgressDialog
+    {
+    public:
+        using BaseClass = QProgressDialog;
+        enum class IsCancellable { yes, no };
+
+        ProgressWidget(const QString sLabelText, const IsCancellable isCancellable, QWidget* pParent);
+
+        // Thread-safe
+        bool isCancelled() const;
+
+        std::atomic_bool m_abCancelled{ false };
+    }; // Class ProgressWidget
+
     // View for showing CsvItemModel.
     class CsvTableView : public TableView
     {
@@ -519,6 +534,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void invalidateSortFilterProxyModel();
 
+        void doModalOperation(const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void(ProgressWidget*)> func);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -634,7 +651,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setUndoEnabled(bool);
         void setReadOnlyMode(bool);
 
-        void insertGeneric(const QString& s);
+        void insertGeneric(const QString& s, const QString& sOperationUiName);
 
         // Column header action handlers
         void setColumnNames();

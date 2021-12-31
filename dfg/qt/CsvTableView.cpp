@@ -400,37 +400,6 @@ namespace
 {
     static const char gszDefaultOpenFileFilter[] = QT_TR_NOOP("CSV or SQLite files (*.csv *.tsv *.csv.conf *.sqlite3 *.sqlite *.db);; CSV files (*.csv *.tsv *.csv.conf);; SQLite files (*.sqlite3 *.sqlite *.db);; All files(*.*)");
 
-    class ProgressWidget : public QProgressDialog
-    {
-    public:
-        typedef QProgressDialog BaseClass;
-        enum class IsCancellable { yes, no };
-
-        ProgressWidget(const QString sLabelText, const IsCancellable isCancellable, QWidget* pParent)
-            : BaseClass(sLabelText, QString(), 0, 0, pParent)
-        {
-            removeContextHelpButtonFromDialog(this);
-            removeCloseButtonFromDialog(this);
-            setWindowModality(Qt::WindowModal);
-            if (isCancellable == IsCancellable::yes)
-            {
-                auto spCancelButton = std::unique_ptr<QPushButton>(new QPushButton(tr("Cancel"), this));
-                connect(spCancelButton.get(), &QPushButton::clicked, [&]() { m_abCancelled = true; });
-                setCancelButton(spCancelButton.release()); // "The progress dialog takes ownership"
-            }
-            else
-                setCancelButton(nullptr); // Making sure that cancel button is not shown.
-        }
-
-        // Thread-safe
-        bool isCancelled() const
-        {
-            return m_abCancelled.load(std::memory_order_relaxed);
-        }
-
-        std::atomic_bool m_abCancelled{ false };
-    }; // Class ProgressWidget
-
     enum CsvTableViewPropertyId
     {
         CsvTableViewPropertyId_diffProgPath,
@@ -1417,42 +1386,29 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyModeFromProperty(const Str_T&
         this->setReadOnlyMode(false);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s)
+void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s, const QString& sOperationUiName)
 {
-    auto pModel = model();
-    if (!pModel)
-        return;
-    auto lockReleaser = this->tryLockForEdit();
-    if (!lockReleaser.isLocked() || isReadOnlyMode()) // In read-only mode, should not even end up to this function, but checking isReadOnlyMode() for robustness.
-    {
-        privShowExecutionBlockedNotification(tr("Insert date/time"));
-        return;
-    }
-    forEachIndexInSelection(*this, ModelIndexTypeView, [&](const QModelIndex& index, bool& bContinue)
-    {
-        DFG_UNUSED(bContinue);
-        pModel->setData(index, s);
-    });
+    executeAction<CsvTableViewActionFill>(this, s, sOperationUiName);
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableView::insertDate() -> QDate
 {
     const auto date = QDate::currentDate();
-    insertGeneric(dateTimeToString(date, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateFormat>(this)));
+    insertGeneric(dateTimeToString(date, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateFormat>(this)), tr("Insert date"));
     return date;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableView::insertTime() -> QTime
 {
     const auto t = QTime::currentTime();
-    insertGeneric(dateTimeToString(t, getCsvModelOrViewProperty<CsvTableViewPropertyId_timeFormat>(this)));
+    insertGeneric(dateTimeToString(t, getCsvModelOrViewProperty<CsvTableViewPropertyId_timeFormat>(this)), tr("Insert time"));
     return t;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableView::insertDateTime() -> QDateTime
 {
     const auto dt = QDateTime::currentDateTime();
-    insertGeneric(dateTimeToString(dt, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)));
+    insertGeneric(dateTimeToString(dt, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)), tr("Insert DateTime"));
     return dt;
 }
 
@@ -1529,7 +1485,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveToFileImpl(const QString& path, cons
         
 
     bool bSuccess = false;
-    doModalOperation(this, tr("Saving to file\n%1").arg(path), ProgressWidget::IsCancellable::no, "CsvTableViewFileWriter", [&](ProgressWidget*)
+    doModalOperation(tr("Saving to file\n%1").arg(path), ProgressWidget::IsCancellable::no, "CsvTableViewFileWriter", [&](ProgressWidget*)
         {
             // TODO: allow user to cancel saving (e.g. if it takes too long)
             if (bSaveAsSqlite)
@@ -2147,7 +2103,7 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     clearUndoStack(); // Clearing undo stack before modal operation since doing it during read caused "ASSERT failure in QCoreApplication::sendEvent: "Cannot send events to objects owned by a different thread."
 
     bool bSuccess = false;
-    doModalOperation(this, tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), ProgressWidget::IsCancellable::yes, "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
+    doModalOperation(tr("Reading file of size %1\n%2%3").arg(formattedDataSize(QFileInfo(sPath).size()), sPath, sAdditionalInfo), ProgressWidget::IsCancellable::yes, "CsvTableViewFileLoader", [&](ProgressWidget* pProgressWidget)
         {
             CsvItemModel::LoadOptions loadOptions(formatDef);
             bool bHasProgress = false;
@@ -2285,7 +2241,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTableFromClipboar
     loadOptions.textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
     bool bSuccess = false;
 
-    doModalOperation(this, tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), ProgressWidget::IsCancellable::yes, "CsvTableViewClipboardLoader", [&](ProgressWidget*)
+    doModalOperation(tr("Reading from clipboard, input size is %1").arg(sClipboardText.size()), ProgressWidget::IsCancellable::yes, "CsvTableViewClipboardLoader", [&](ProgressWidget*)
     {
         bSuccess = pCsvModel->openFromMemory(sClipboardText.data(), static_cast<size_t>(sClipboardText.size()), loadOptions);
     });
@@ -2529,7 +2485,7 @@ size_t CsvTableView::replace(const QVariantMap& params)
     size_t nEditCount = 0;
     const auto selection = storeSelection();
 
-    doModalOperation(this, tr("Executing Find & Replace..."), ProgressWidget::IsCancellable::yes, "find_replace", [&](ProgressWidget* pProgressDialog)
+    doModalOperation(tr("Executing Find & Replace..."), ProgressWidget::IsCancellable::yes, "find_replace", [&](ProgressWidget* pProgressDialog)
     {
         const auto bOldModifiedStatus = pCsvModel->isModified();
         pCsvModel->batchEditNoUndo([&](CsvItemModel::DataTable& table)
@@ -5357,6 +5313,11 @@ QString CsvTableView::getColumnName(const ColumnIndex_view viewIndex) const
     return getColumnName(columnIndexViewToData(viewIndex));
 }
 
+void CsvTableView::doModalOperation(const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void(ProgressWidget*)> func)
+{
+    ::doModalOperation(this, sProgressDialogLabel, isCancellable, sThreadName, func);
+}
+
 } } // namespace dfg::qt
 /////////////////////////////////
 
@@ -5940,6 +5901,33 @@ void SelectionDetailCollectorContainer::forEachCollector(Func_T&& func)
           continue;
       func(*sp);
     }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+// 
+// ProgressWidget
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+ProgressWidget::ProgressWidget(const QString sLabelText, const IsCancellable isCancellable, QWidget* pParent)
+    : BaseClass(sLabelText, QString(), 0, 0, pParent)
+{
+    removeContextHelpButtonFromDialog(this);
+    removeCloseButtonFromDialog(this);
+    setWindowModality(Qt::WindowModal);
+    if (isCancellable == IsCancellable::yes)
+    {
+        auto spCancelButton = std::unique_ptr<QPushButton>(new QPushButton(tr("Cancel"), this));
+        connect(spCancelButton.get(), &QPushButton::clicked, [&]() { m_abCancelled = true; });
+        setCancelButton(spCancelButton.release()); // "The progress dialog takes ownership"
+    }
+    else
+        setCancelButton(nullptr); // Making sure that cancel button is not shown.
+}
+
+bool ProgressWidget::isCancelled() const
+{
+    return m_abCancelled.load(std::memory_order_relaxed);
 }
 
 } } // namespace dfg::qt

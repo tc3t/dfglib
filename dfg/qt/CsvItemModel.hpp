@@ -131,6 +131,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             Index rowCountByMaxRowIndex() const;
 
+            Index colCountByMaxColIndex() const;
+
             Index cellCountNonEmpty() const;
 
             class TableRef;
@@ -506,7 +508,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Copies all elements from 'table' to this by (row, column) indexes and bypasses undo.
         // If pFill is given, data written to each (row, column) will be pFill instead of table(row, column)
-        void setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill = SzPtrUtf8R(nullptr));
+        // If isCancelledFunc is given, implementation polls the function if batch edit should be terminated, should return true to stop editing, false to continue.
+        void setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill = SzPtrUtf8R(nullptr), std::function<bool()> isCancelledFunc = std::function<bool()>());
 
         void setHighlighter(HighlightDefinition hld);
 
