@@ -5932,3 +5932,5 @@ bool ProgressWidget::isCancelled() const
 
 } } // namespace dfg::qt
 /////////////////////////////////
+
+#include "detail/CsvTableViewActions.cpp"

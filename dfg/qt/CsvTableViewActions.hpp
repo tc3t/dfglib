@@ -10,7 +10,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QApplication>
 #include <QClipboard>
 #include <QPointer>
-#include <QTimer>
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <unordered_map>
@@ -35,14 +34,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     };
 
+    typedef DFG_SUB_NS_NAME(undoCommands)::TableViewUndoCommandInsertRow CsvTableViewActionInsertRow;
+    typedef DFG_SUB_NS_NAME(undoCommands)::CsvTableViewActionResizeTable CsvTableViewActionResizeTable;
 
-    typedef DFG_SUB_NS_NAME(undoCommands)::DFG_CLASS_NAME(TableViewUndoCommandInsertRow) DFG_CLASS_NAME(CsvTableViewActionInsertRow);
-    typedef DFG_SUB_NS_NAME(undoCommands)::DFG_CLASS_NAME(CsvTableViewActionResizeTable) DFG_CLASS_NAME(CsvTableViewActionResizeTable);
-
-    class DFG_CLASS_NAME(CsvTableViewActionInsertColumn) : public DFG_CLASS_NAME(UndoCommand)
+    class CsvTableViewActionInsertColumn : public UndoCommand
     {
     public:
-        DFG_CLASS_NAME(CsvTableViewActionInsertColumn)(DFG_CLASS_NAME(CsvItemModel)* pModel, const int nCol)
+        CsvTableViewActionInsertColumn(CsvItemModel* pModel, const int nCol)
             : m_pModel(pModel),
               m_nWhere(nCol)
         {
@@ -60,7 +58,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             m_pModel->insertColumn(m_nWhere);
         }
     private:
-        DFG_CLASS_NAME(CsvItemModel)* m_pModel;
+        CsvItemModel* m_pModel;
         int m_nWhere;
     };
 
@@ -68,7 +66,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
         using CellMemory = CsvItemModel::RawDataTable;
 
-        static void storeCells(CellMemory& cellMemory, DFG_CLASS_NAME(CsvTableView)& rView)
+        static void storeCells(CellMemory& cellMemory, CsvTableView& rView)
         {
             auto pModel = rView.csvModel();
             if (!pModel)
@@ -88,15 +86,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     } // namespace DFG_DETAIL_NS
 
-    class DFG_CLASS_NAME(CsvTableViewActionDelete) : public DFG_CLASS_NAME(UndoCommand)
+    class CsvTableViewActionDelete : public UndoCommand
     {
     public:
-        typedef DFG_CLASS_NAME(CsvTableViewActionDelete) ThisClass;
-        typedef DFG_CLASS_NAME(UndoCommand) BaseClass;
+        typedef CsvTableViewActionDelete ThisClass;
+        typedef UndoCommand BaseClass;
 
         // Note: Sorting can change indexes after undo point -> must use model indexes and make sure that
         // they won't be modified outside undo.
-        DFG_CLASS_NAME(CsvTableViewActionDelete)(DFG_CLASS_NAME(CsvTableView)& rTableView, QAbstractProxyModel* pProxyModel, const bool bRowMode) :
+        CsvTableViewActionDelete(CsvTableView& rTableView, QAbstractProxyModel* pProxyModel, const bool bRowMode) :
             m_pView(&rTableView),
             m_pCsvModel(rTableView.csvModel()),
             m_pProxyModel(pProxyModel),
@@ -125,7 +123,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                     for (size_t i = 0; i < m_vecIndexes.size(); ++i)
                     {
                         sDesc.append(" ");
-                        sDesc.append(QString("%1").arg(DFG_CLASS_NAME(CsvItemModel)::internalRowIndexToVisible(m_vecIndexes[i])));
+                        sDesc.append(QString("%1").arg(CsvItemModel::internalRowIndexToVisible(m_vecIndexes[i])));
                     }
                     sDesc.append(" }");
                 }
@@ -200,7 +198,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Optimization for undoless deletion.
         template <class Impl_T>
-        static void privDirectRedo(DFG_CLASS_NAME(CsvTableView)& rTableView, QAbstractProxyModel* pProxyModel, const bool bRowMode)
+        static void privDirectRedo(CsvTableView& rTableView, QAbstractProxyModel* pProxyModel, const bool bRowMode)
         {
             DFG_STATIC_ASSERT((std::is_same<Impl_T, ThisClass>::value), "");
 
@@ -224,8 +222,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         }
 
     private:
-        DFG_CLASS_NAME(CsvTableView)* m_pView;
-        DFG_CLASS_NAME(CsvItemModel)* m_pCsvModel;
+        CsvTableView* m_pView;
+        CsvItemModel* m_pCsvModel;
         QAbstractProxyModel* m_pProxyModel;
         std::vector<int> m_vecIndexes;
         std::vector<QString> m_vecData;
@@ -238,79 +236,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class CsvTableViewActionFill : public UndoCommand
     {
     public:
-        CsvTableViewActionFill(CsvTableView* pView, const QString& sFill, const QString& sOperationUiName)
-            : m_spView(pView)
-            , m_sFill(qStringToStringUtf8(sFill))
-            , m_sOperationUiName(sOperationUiName)
-        {
-            auto pModel = (pView) ? pView->csvModel() : nullptr;
-            if (!pModel)
-                return;
-            pView->forEachIndexInSelection(*pView, CsvTableView::ModelIndexTypeSource, [&](const QModelIndex& index, bool& bContinue)
-            {
-                DFG_UNUSED(bContinue);
-                m_cellMemoryRedo.setElement(index.row(), index.column(), DFG_UTF8(""));
-                m_cellMemoryUndo.setElement(index.row(), index.column(), pModel->rawStringViewAt(index.row(), index.column()));
-                ++m_nCellCount;
-            });
-            setText(m_sOperationUiName + pView->tr(", %1 cell(s)").arg(m_nCellCount));
-        }
+        CsvTableViewActionFill(CsvTableView* pView, const QString& sFill, const QString& sOperationUiName);
 
-        void undo()
-        {
-            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
-            if (!pModel)
-                return;
-            if (m_nCellCount == 1)
-                DFG_DETAIL_NS::restoreCells(m_cellMemoryUndo, *pModel);
-            else
-            {
-                bool bIsCancelled = false;
-                m_spView->doModalOperation(m_spView->tr("Undo '%1' in progress...").arg(m_sOperationUiName), ProgressWidget::IsCancellable::yes, "undo_action_fill", [&](ProgressWidget* pWidget)
-                    {
-                        DFG_DETAIL_NS::restoreCells(m_cellMemoryUndo, *pModel, SzPtrUtf8R(nullptr), [&]()
-                            {
-                                if (pWidget)
-                                    bIsCancelled = pWidget->isCancelled();
-                                return bIsCancelled;
-                            });
-                    });
-                m_spView->invalidateSortFilterProxyModel(); // Without this call fill result might not show in UI until triggering manual draw e.g. by scrolling.
-                if (bIsCancelled)
-                {
-                    // redoing so that won't leave half-way result, i.e. that cancelled undo is as if not having undoed at all.
-                    QTimer::singleShot(0, m_spView.data(), &CsvTableView::redo);
-                }
-            }
-        }
-        void redo()
-        {
-            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
-            if (!pModel)
-                return;
-            if (m_nCellCount == 1) // When having only one selected cell, setting cell directly to avoid fiddling with worker thread. Limit is coarse, there's no need to use worker thread for 2 cells either etc.
-                pModel->setDataNoUndo(m_cellMemoryRedo.rowCountByMaxRowIndex() - 1, m_cellMemoryRedo.colCountByMaxColIndex() - 1, m_sFill.c_str());
-            else // case: inserting to more than one cell, using batch edit
-            {
-                bool bIsCancelled = false;
-                m_spView->doModalOperation(m_spView->tr("'%1' in progress...").arg(m_sOperationUiName), ProgressWidget::IsCancellable::yes, "redo_action_fill", [&](ProgressWidget* pWidget)
-                    {
-                        pModel->setDataByBatch_noUndo(m_cellMemoryRedo, m_sFill.c_str(), [&]()
-                            {
-                                if (pWidget)
-                                    bIsCancelled = pWidget->isCancelled();
-                                return bIsCancelled;
-                            });
-                    });
-                m_spView->invalidateSortFilterProxyModel(); // Without this call fill result might not show in UI until triggering manual draw e.g. by scrolling.
-                if (bIsCancelled)
-                {
-                    // Undoing so that won't leave half-way result, i.e. that cancelled redo is as if not having redoed at all. If undo is disabled, this does nothing, i.e. cells has been filled until terminated.
-                    // Note that using singleShot() instead of calling m_spView->undo() directly as it seemed to mess up undo stack.
-                    QTimer::singleShot(0, m_spView.data(), &CsvTableView::undo);
-                }
-            }
-        }
+        void undo();
+        void redo();
+
     private:
         QPointer<CsvTableView> m_spView;
         StringUtf8 m_sFill;
@@ -381,7 +311,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 }
 
                 QTextStream strm(&sText, QIODevice::ReadOnly);
-                DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(strm, '\t', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
+                DFG_MODULE_NS(io)::DelimitedTextReader::read<wchar_t>(strm, '\t', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
                 {
                     const auto indexTarget = m_pView->mapToDataModel(pViewModel->index(viewModelIndex.row() + static_cast<int>(nRow),
                                                                                                        viewModelIndex.column() + static_cast<int>(nCol)));
@@ -447,7 +377,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             }
         }
     private:
-        DFG_CLASS_NAME(CsvTableView)* m_pView;
+        CsvTableView* m_pView;
         int m_nWhere;	// Stores the index of the new row.
         QModelIndex m_where; /// Cell mode: Stores the top-left dataModel index where the paste should take place.
         DFG_DETAIL_NS::CellMemory m_cellMemoryUndo;
@@ -456,10 +386,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bRowMode;
     };
 
-    class DFG_CLASS_NAME(CsvTableViewActionDeleteColumn) : public DFG_CLASS_NAME(UndoCommand)
+    class CsvTableViewActionDeleteColumn : public UndoCommand
     {
     public:
-        DFG_CLASS_NAME(CsvTableViewActionDeleteColumn)(DFG_CLASS_NAME(CsvTableView)* pView, const int nCol)
+        CsvTableViewActionDeleteColumn(CsvTableView* pView, const int nCol)
             : m_pView(pView),
                 m_nWhere(nCol)
         {
@@ -491,16 +421,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             pModel->removeColumn(m_nWhere);
         }
     private:
-        DFG_CLASS_NAME(CsvTableView)* m_pView;
+        CsvTableView* m_pView;
         int m_nWhere;
         std::vector<QString> m_vecStrings;
         QString m_sColumnName;
     };
 
-    class DFG_CLASS_NAME(CsvTableViewHeaderActionPasteColumn) : public DFG_CLASS_NAME(UndoCommand)
+    class CsvTableViewHeaderActionPasteColumn : public UndoCommand
     {
     public:
-        DFG_CLASS_NAME(CsvTableViewHeaderActionPasteColumn)(DFG_CLASS_NAME(CsvTableView)* pView, const int nCol)
+        CsvTableViewHeaderActionPasteColumn(CsvTableView* pView, const int nCol)
             : m_pView(pView), m_nWhere(nCol)
         {
 
@@ -557,16 +487,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             m_pView->selectionModel()->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Columns);
         }
     private:
-        DFG_CLASS_NAME(CsvTableView)* m_pView;
+        CsvTableView* m_pView;
         int m_nWhere;
         std::vector<QString> m_vecStringsOld;
         std::vector<QString> m_vecStringsNew;
     };
 
-    class DFG_CLASS_NAME(CsvTableViewHeaderActionRenameColumn) : public DFG_CLASS_NAME(UndoCommand)
+    class CsvTableViewHeaderActionRenameColumn : public UndoCommand
     {
     public:
-        DFG_CLASS_NAME(CsvTableViewHeaderActionRenameColumn)(DFG_CLASS_NAME(CsvTableView)* pView, const int nCol, const QString& sNew)
+        CsvTableViewHeaderActionRenameColumn(CsvTableView* pView, const int nCol, const QString& sNew)
             : m_pView(pView), m_nWhere(nCol), m_sColumnNameNew(sNew)
         {
             auto pModel = (m_pView) ? m_pView->csvModel() : nullptr;
@@ -595,17 +525,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             pModel->setColumnName(m_nWhere, m_sColumnNameNew);
         }
     private:
-        DFG_CLASS_NAME(CsvTableView)* m_pView;
+        CsvTableView* m_pView;
         int m_nWhere;
         QString m_sColumnNameOld;
         QString m_sColumnNameNew;
 
     };
 
-    class DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader) : public DFG_CLASS_NAME(UndoCommand)
+    class CsvTableViewActionMoveFirstRowToHeader : public UndoCommand
     {
     public:
-        DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)(DFG_CLASS_NAME(CsvTableView)* pView, bool bInverted = false)
+        CsvTableViewActionMoveFirstRowToHeader(CsvTableView* pView, bool bInverted = false)
             : m_pView(pView),
             m_bInverted(bInverted)
         {
@@ -654,7 +584,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             const auto pModel = (m_pView) ? m_pView->csvModel() : nullptr;
             if (!pModel)
                 return;
-            //DFG_CLASS_NAME(CsvTableViewActionDelete)(*m_pView, m_pView->getProxyModelPtr(), true, ).redo();
+            //CsvTableViewActionDelete(*m_pView, m_pView->getProxyModelPtr(), true, ).redo();
 
             const auto& headerNameStrings = (m_bInverted) ? m_vecHdrStrings : m_vecFirstRowStrings;
             if (headerNameStrings.empty())
@@ -690,7 +620,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 redoImpl();
         }
     private:
-        DFG_CLASS_NAME(CsvTableView)* m_pView;
+        CsvTableView* m_pView;
         bool m_bInverted; // If m_bInverted == true, behaviour is "Header to first row".
         std::vector<QString> m_vecHdrStrings;
         std::vector<QString> m_vecFirstRowStrings;
