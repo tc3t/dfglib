@@ -455,9 +455,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Sets data of given index without triggering undo.
         // Note: Given model index must be valid; this function does not check it.
         void setDataNoUndo(const QModelIndex& index, const QString& str);
-        void setDataNoUndo(const QModelIndex& index, SzPtrUtf8R pszU8);
-        void setDataNoUndo(const int nRow, const int nCol, const QString& str);
-        void setDataNoUndo(const int nRow, const int nCol, SzPtrUtf8R pszU8);
+        void setDataNoUndo(const QModelIndex& index, StringViewUtf8 sv);
+        void setDataNoUndo(int nRow, int nCol, const QString& str);
+        void setDataNoUndo(int nRow, int nCol, StringViewUtf8 sv);
 
         // Sets data to table as follows:
         //      -Checks if target indexes are valid, returns false if not.
@@ -466,7 +466,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         //      -Does NOT signal dataChanged()
         // Note: Caller must handle dataChanged signaling and setting modified.
         // Return: true if value was set, false otherwise.
-        bool privSetDataToTable(int nRow, int nCol, SzPtrUtf8R pszU8);
+        bool privSetDataToTable(int nRow, int nCol, StringViewUtf8 sv);
 
         void setColumnName(const int nCol, const QString& sName);
 

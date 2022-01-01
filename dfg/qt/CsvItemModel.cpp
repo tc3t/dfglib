@@ -1362,7 +1362,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(cons
     setModifiedStatus(true);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::privSetDataToTable(const int nRow, const int nCol, SzPtrUtf8R pszU8)
+bool DFG_MODULE_NS(qt)::CsvItemModel::privSetDataToTable(const int nRow, const int nCol, const StringViewUtf8 sv)
 {
     if (!isValidRow(nRow) || !isValidColumn(nCol))
     {
@@ -1371,19 +1371,16 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::privSetDataToTable(const i
     }
 
     // Check whether the new value is different from old to avoid setting modified even if nothing changes.
-    const SzPtrUtf8R pExisting = table()(nRow, nCol);
-    if (pExisting && std::strlen(pszU8.c_str()) <= std::strlen(pExisting.c_str()))
-    {
-        if (std::strcmp(pExisting.c_str(), pszU8.c_str()) == 0) // Identical item? If yes, skip rest to avoid setting modified.
-            return false;
-    }
+    const auto svExisting = table().viewAt(nRow, nCol);
+    if (svExisting == sv) // Identical item? If yes, skip rest to avoid setting modified.
+        return false;
 
-    return setItem(nRow, nCol, pszU8);
+    return setItem(nRow, nCol, sv);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nRow, const int nCol, SzPtrUtf8R pszU8)
+void DFG_MODULE_NS(qt)::CsvItemModel::setDataNoUndo(const int nRow, const int nCol, const StringViewUtf8 sv)
 {
-    if (!privSetDataToTable(nRow, nCol, pszU8))
+    if (!privSetDataToTable(nRow, nCol, sv))
         return;
 
     auto indexItem = index(nRow, nCol);
@@ -1391,9 +1388,9 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nR
     setModifiedStatus(true);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const SzPtrUtf8R pszU8)
+void DFG_MODULE_NS(qt)::CsvItemModel::setDataNoUndo(const QModelIndex& index, const StringViewUtf8 sv)
 {
-    setDataNoUndo(index.row(), index.column(), pszU8);
+    setDataNoUndo(index.row(), index.column(), sv);
 }
 
 void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const QString& str)
