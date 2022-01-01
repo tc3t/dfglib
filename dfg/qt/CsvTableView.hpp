@@ -710,6 +710,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void addHeaderActions();
         void addMiscellaneousActions();
 
+        bool insertRowImpl(int insertType);
+
         void addSeparatorAction();
         void addSeparatorActionTo(QWidget* pTarget);
 

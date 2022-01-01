@@ -2403,19 +2403,27 @@ void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0, Param1_T&& p1,
     (*m_spUndoStack)->push(command); // Stack takes ownership of command.
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::clearSelected()
+bool CsvTableView::clearSelected()
 {
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionDelete)>(*this, getProxyModelPtr(), false /*false = not row mode*/);
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::insertRowHere()
+bool CsvTableView::insertRowImpl(const int insertType)
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionInsertRow)>(this, DFG_SUB_NS_NAME(undoCommands)::InsertRowTypeBefore);
+    auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
+    if (pProxy && !pProxy->filterRegularExpression().pattern().isEmpty() && !pProxy->filterRegularExpression().match(QString()).hasMatch())
+        showStatusInfoTip(tr("Inserted row was hidden due to filter"));
+    return executeAction<CsvTableViewActionInsertRow>(this, static_cast<DFG_SUB_NS_NAME(undoCommands)::InsertRowType>(insertType));
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::insertRowAfterCurrent()
+bool CsvTableView::insertRowHere()
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionInsertRow)>(this, DFG_SUB_NS_NAME(undoCommands)::InsertRowTypeAfter);
+    return insertRowImpl(DFG_SUB_NS_NAME(undoCommands)::InsertRowTypeBefore);
+}
+
+bool CsvTableView::insertRowAfterCurrent()
+{
+    return insertRowImpl(DFG_SUB_NS_NAME(undoCommands)::InsertRowTypeAfter);
 }
 
 bool DFG_CLASS_NAME(CsvTableView)::insertColumn()
