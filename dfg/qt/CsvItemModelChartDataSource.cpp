@@ -94,8 +94,13 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
     };
 
     // Calling given handler for each row in column but instead of doing it for each cell individually, gathering blocks and passing blocks to handler (performance optimization).
-    rTable.forEachFwdRowInColumn(static_cast<int>(c), [&](const int r, const SzPtrUtf8R psz)
+    const auto nRowCount = rTable.rowCountByMaxRowIndex();
+    const auto colAsInt = saturateCast<int>(c);
+    for (int r = 0; r < nRowCount; ++r) // Note: not using rTable.forEachFwdRowInColumn() since it skips null-cells
     {
+        auto psz = rTable(r, colAsInt);
+        if (psz == nullptr)
+            psz = DFG_UTF8("");
         if (rows.size() >= nBlockSize || vals.size() >= nBlockSize || stringViews.size() >= nBlockSize)
         {
             callHandler();
@@ -114,7 +119,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
         }
         if (queryDetails.areStringsRequested())
             stringViews.push_back(psz);
-    });
+    }
     if (!rows.empty() || !vals.empty() || !stringViews.empty())
         callHandler();
 }
