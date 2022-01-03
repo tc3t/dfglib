@@ -1,7 +1,5 @@
 #include "../CsvTableViewActions.hpp"
 
-#include "qtIncludeHelpers.hpp"
-
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QTimer>
 DFG_END_INCLUDE_QT_HEADERS
@@ -81,6 +79,88 @@ void CsvTableViewActionFill::redo()
             QTimer::singleShot(0, m_spView.data(), &CsvTableView::undo);
         }
     }
+}
+
+
+CsvTableViewActionResizeTable::CsvTableViewActionResizeTable(CsvTableView* pView, const int nNewRowCount, const int nNewColCount)
+    : m_spView(pView)
+{
+    auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+    if (!pModel)
+        return;
+
+    m_nOldRowCount = pModel->rowCount();
+    m_nOldColCount = pModel->columnCount();
+    m_nNewRowCount = nNewRowCount;
+    m_nNewColCount = nNewColCount;
+
+    // If some content got removed due to resize, storing it to memory so that undo can restore them
+    {
+        for (int r = m_nNewRowCount; r < m_nOldRowCount; ++r)
+        {
+            for (int c = 0; c < m_nOldColCount; ++c)
+                this->m_cellMemory.setElement(r, c, pModel->rawStringViewAt(r, c));
+        }
+        for (int c = m_nNewColCount; c < m_nOldColCount; ++c)
+        {
+            for (int r = 0; r < Min(m_nNewRowCount, m_nOldRowCount); ++r) // Min() is used to avoid bottom right corner to be handled twice when both row and column count gets smaller.
+                this->m_cellMemory.setElement(r, c, pModel->rawStringViewAt(r, c));
+        }
+    }
+
+    QString sDesc = m_spView->tr("Resize to (%1, %2)").arg(m_nNewRowCount).arg(m_nNewColCount);
+    setText(sDesc);
+}
+
+void CsvTableViewActionResizeTable::impl(const int nTargetRowCount, const int nTargetColCount)
+{
+    auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+    if (!pModel)
+        return;
+
+    const int nCurrentRowCount = pModel->rowCount();
+    const int nCurrentColCount = pModel->columnCount();
+
+    // Change row count
+    if (nCurrentRowCount >= 0 && nTargetRowCount >= 0)
+    {
+        const auto nPositiveCount = (nCurrentRowCount < nTargetRowCount) ? nTargetRowCount - nCurrentRowCount : nCurrentRowCount - nTargetRowCount;
+        if (nCurrentRowCount < nTargetRowCount)
+            pModel->insertRows(nCurrentRowCount, nPositiveCount);
+        else
+            pModel->removeRows(nCurrentRowCount - nPositiveCount, nPositiveCount);
+    }
+
+    // Change column count
+    if (nCurrentColCount >= 0 && nTargetColCount >= 0)
+    {
+        const auto nPositiveCount = (nCurrentColCount < nTargetColCount) ? nTargetColCount - nCurrentColCount : nCurrentColCount - nTargetColCount;
+        if (nCurrentColCount < nTargetColCount)
+            pModel->insertColumns(nCurrentColCount, nPositiveCount);
+        else
+            pModel->removeColumns(nCurrentColCount - nPositiveCount, nPositiveCount);
+    }
+}
+
+void CsvTableViewActionResizeTable::undo()
+{
+    auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+    if (!pModel)
+        return;
+    impl(m_nOldRowCount, m_nOldColCount);
+    // Restoring cells if needed
+    if (m_nNewRowCount < m_nOldRowCount || m_nNewColCount < m_nOldColCount)
+    {
+        m_spView->doModalOperation(m_spView->tr("Undoing resize in progress..."), ProgressWidget::IsCancellable::no, "undo_resize", [&](ProgressWidget* /*pWidget*/)
+            {
+                pModel->setDataByBatch_noUndo(m_cellMemory);
+            });
+    }
+}
+
+void CsvTableViewActionResizeTable::redo()
+{
+    impl(m_nNewRowCount, m_nNewColCount);
 }
 
 }} // namespace dfg::qt

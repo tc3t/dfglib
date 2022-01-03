@@ -35,7 +35,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     };
 
     typedef DFG_SUB_NS_NAME(undoCommands)::TableViewUndoCommandInsertRow CsvTableViewActionInsertRow;
-    typedef DFG_SUB_NS_NAME(undoCommands)::CsvTableViewActionResizeTable CsvTableViewActionResizeTable;
 
     class CsvTableViewActionInsertColumn : public UndoCommand
     {
@@ -733,4 +732,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QModelIndexList m_initialSelection; // Stores CsvModel indexes to which operation is to be done.
         DFG_DETAIL_NS::CellMemory m_cellMemoryUndo; // Stores cell content before the operation.
     }; // class CsvTableViewActionEvaluateSelectionAsFormula
+
+    class CsvTableViewActionResizeTable : public UndoCommand
+    {
+    public:
+        CsvTableViewActionResizeTable(CsvTableView* pView, int nNewRowCount, int nNewColCount);
+
+        void impl(const int nTargetRowCount, const int nTargetColCount);
+
+        void undo();
+
+        void redo();
+
+    private:
+        QPointer<CsvTableView> m_spView;
+        int m_nOldRowCount = -1;
+        int m_nOldColCount = -1;
+        int m_nNewRowCount = -1;
+        int m_nNewColCount = -1;
+        DFG_DETAIL_NS::CellMemory m_cellMemory; // When shrinking table, stores content from the removed area so that undo can restored them.
+    }; // class CsvTableViewActionResizeTable
 }}

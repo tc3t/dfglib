@@ -99,6 +99,44 @@ TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
     EXPECT_EQ(QString("d"), model.data(model.index(3, 1)).toString());
 }
 
+TEST(dfgQt, CsvTableView_undoAfterResize)
+{
+    ::DFG_MODULE_NS(qt)::CsvItemModel csvModel;
+    ::DFG_MODULE_NS(qt)::CsvTableView view(nullptr, nullptr);
+    QSortFilterProxyModel viewModel;
+    viewModel.setSourceModel(&csvModel);
+    viewModel.setDynamicSortFilter(true);
+    view.setModel(&viewModel);
+
+    view.resizeTableNoUi(2, 2);
+    csvModel.setDataNoUndo(0, 0, DFG_UTF8("a"));
+    csvModel.setDataNoUndo(0, 1, DFG_UTF8("b"));
+    csvModel.setDataNoUndo(1, 0, DFG_UTF8("c"));
+    csvModel.setDataNoUndo(1, 1, DFG_UTF8("d"));
+
+    view.resizeTableNoUi(2, 1);
+    DFGTEST_EXPECT_LEFT(2, csvModel.rowCount());
+    DFGTEST_EXPECT_LEFT(1, csvModel.columnCount());
+    view.undo();
+    DFGTEST_EXPECT_LEFT(2, csvModel.rowCount());
+    DFGTEST_EXPECT_LEFT(2, csvModel.columnCount());
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", csvModel.rawStringViewAt(0, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", csvModel.rawStringViewAt(0, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", csvModel.rawStringViewAt(1, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("d", csvModel.rawStringViewAt(1, 1));
+
+    view.resizeTableNoUi(1, 3);
+    DFGTEST_EXPECT_LEFT(1, csvModel.rowCount());
+    DFGTEST_EXPECT_LEFT(3, csvModel.columnCount());
+    view.undo();
+    DFGTEST_EXPECT_LEFT(2, csvModel.rowCount());
+    DFGTEST_EXPECT_LEFT(2, csvModel.columnCount());
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", csvModel.rawStringViewAt(0, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", csvModel.rawStringViewAt(0, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", csvModel.rawStringViewAt(1, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("d", csvModel.rawStringViewAt(1, 1));
+}
+
 namespace
 {
     void populateModelWithRowColumnIndexStrings(::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)& csvModel, int nRowCount = -1, int nColCount = -1)
