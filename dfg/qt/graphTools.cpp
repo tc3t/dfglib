@@ -2735,7 +2735,7 @@ auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param
             const auto iterEnd = keyRange.cend();
             double minDiff = std::numeric_limits<double>::infinity();
             for (auto iter = keyRange.cbegin(), iterNext = keyRange.cbegin() + 1; iterNext != iterEnd; ++iter, ++iterNext)
-                minDiff = std::min(minDiff, *iterNext - *iter);
+                minDiff = Min(minDiff, *iterNext - *iter);
             binWidth = minDiff;
         }
         else

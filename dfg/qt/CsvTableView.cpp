@@ -784,7 +784,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
         if (pMenu)
         {
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Delete selected row(s)"), tr("Shift+Del"), ActionFlags::defaultStructureEdit, deleteSelectedRow);
-            addViewAction(*this, *pMenu,     tr("Delete current column"),  tr("Ctrl+Del"),  ActionFlags::defaultStructureEdit, false, QOverload<void>::of(&ThisClass::deleteCurrentColumn));
+            addViewAction(*this, *pMenu,     tr("Delete current column"),  tr("Ctrl+Del"),  ActionFlags::defaultStructureEdit, false, static_cast<decltype(&ThisClass::deleteSelectedRow)>(&ThisClass::deleteCurrentColumn)); // QOverload didn't work on some Qt versions so using deleteSelectedRow() to get bool (void) overload
         }
     } // End of "Insert row/column"-items
 
@@ -2410,9 +2410,11 @@ bool CsvTableView::clearSelected()
 
 bool CsvTableView::insertRowImpl(const int insertType)
 {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
     if (pProxy && !pProxy->filterRegularExpression().pattern().isEmpty() && !pProxy->filterRegularExpression().match(QString()).hasMatch())
         showStatusInfoTip(tr("Inserted row was hidden due to filter"));
+#endif
     return executeAction<CsvTableViewActionInsertRow>(this, static_cast<DFG_SUB_NS_NAME(undoCommands)::InsertRowType>(insertType));
 }
 
@@ -2870,7 +2872,7 @@ namespace
             m_spSettingsTable.reset(new CsvTableView(nullptr, this));
             m_spSettingsModel.reset(new CsvItemModel);
             m_spDynamicHelpWidget.reset(new QLabel(this));
-            m_spDynamicHelpWidget->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+            m_spDynamicHelpWidget->setTextInteractionFlags(static_cast<Qt::TextInteractionFlags>(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard)); // Using static_cast for Qt 5.9 compatibility.
             m_spSettingsTable->setModel(m_spSettingsModel.get());
             m_spSettingsTable->setItemDelegate(new ComboBoxDelegate(this));
 
@@ -2911,7 +2913,7 @@ namespace
                 "        date_sec_local, date_msec_local: value is interpreted as epoch time in seconds or milliseconds and converted to local time\n"
                 "        date_sec_utc, date_msec_utc: like date_sec_local, but converted to UTC time\n"
                 "        Format precision accepts formats defined for QDateTime, for example yyyy-MM-dd HH:mm:ss.zzz. As an extension to QDateTime formats, WD can be used to insert weekday"), this);
-            pStaticHelpLabel->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+            pStaticHelpLabel->setTextInteractionFlags(static_cast<Qt::TextInteractionFlags>(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard)); // Using static_cast for Qt 5.9 compatibility.
             m_pLayout->addWidget(pStaticHelpLabel);
             m_pLayout->addWidget(m_spDynamicHelpWidget.get());
 
@@ -4587,7 +4589,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
             QString s(4, '\0');
             auto randEng = createDefaultRandEngineRandomSeeded();
             auto distrEng = makeDistributionEngineUniform(&randEng, int('a'), int('z'));
-            std::generate(s.begin(), s.end(), distrEng);
+            std::generate(s.begin(), s.end(), [&]() { return QChar(distrEng()); } );
             return s;
         }();
     }
@@ -5683,7 +5685,7 @@ DFG_OPAQUE_PTR_DEFINE(SelectionDetailCollector)
 {
 public:
     StringUtf8 m_id;
-    std::atomic<bool> m_abEnabled = true;
+    std::atomic<bool> m_abEnabled{true};
     QObjectStorage<QCheckBox> m_spCheckBox;
     QObjectStorage<QAction> m_spContextMenuAction;
     QVariantMap m_properties;

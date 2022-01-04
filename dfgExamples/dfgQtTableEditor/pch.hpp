@@ -37,6 +37,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
+#include <dfg/qt/qtBasic.hpp>
 #include <dfg/alg.hpp>
 #include <dfg/cont/IntervalSet.hpp>
 #include <dfg/cont/IntervalSetSerialization.hpp>
@@ -55,7 +56,6 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/CsvItemModel.hpp>
 #include <dfg/qt/CsvTableViewActions.hpp>
-#include <dfg/qt/qtBasic.hpp>
 #include <dfg/qt/sqlTools.hpp>
 #include <dfg/rand/distributionHelpers.hpp>
 #include <dfg/str/string.hpp>

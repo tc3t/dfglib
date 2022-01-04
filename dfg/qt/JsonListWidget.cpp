@@ -143,7 +143,7 @@ void ::DFG_MODULE_NS(qt)::JsonListWidget::setSelectionCommenting(const bool bCom
     {
         if (bComment)
             s.prepend('#');
-        else if (!s.isEmpty() && s.front() == '#')
+        else if (!s.isEmpty() && s[0] == '#')
             s.remove(0, 1);
     }
     cursor.insertText(lines.join('\n'));
