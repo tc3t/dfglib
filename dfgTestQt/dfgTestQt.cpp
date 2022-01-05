@@ -190,9 +190,8 @@ a,7
     DFGTEST_ASSERT_TRUE(!sResult.isEmpty());
 
     // Note: numeric precision in results is subject to change.
-    DFGTEST_EXPECT_EQ(
-        "Included: 3, Excluded: 1, Sum: 12, Avg: 4, Median: 2, Min: 1, Max: 9, Variance: 12.666666666666668, StdDev (pop): 3.5590260840104371, StdDev (smp): 4.358898943540674, Is sorted (num): no (asc for 2 first), test_product: 18",
-        sResult);
+    const char szExpectedRegExp[] = R"(Included: 3, Excluded: 1, Sum: 12, Avg: 4, Median: 2, Min: 1, Max: 9, Variance: 12\.666666666666668, StdDev \(pop\): 3\.559026084010437.*, StdDev \(smp\): 4\.358898943540674, Is sorted \(num\): no \(asc for 2 first\), test_product: 18)";
+    DFGTEST_EXPECT_LEFT(0, sResult.indexOf(QRegularExpression(szExpectedRegExp)));
 }
 
 TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicCustomDetailHandling)
