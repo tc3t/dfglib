@@ -615,6 +615,9 @@ namespace
         using namespace DFG_MODULE_NS(str);
 
         typedef std::numeric_limits<T> NumLim;
+
+        const auto isAnyOf = [](const char* psz, const std::array<const char*, 2>& arr) { return std::find(arr.begin(), arr.end(), StringViewC(psz)) != arr.end(); };
+
         EXPECT_EQ("0.76", DFG_SUB_NS_NAME(str)::toStrC(static_cast<T>(0.76L))); // Note: T(0.76) can be != 0.76L if T=long double and sizeof(double) != sizeof(long double)
 
         {
@@ -624,7 +627,6 @@ namespace
 
         // Testing use of precision argument
         {
-            const auto isAnyOf = [](const char* psz, const std::array<const char*, 2>& arr) { return std::find(arr.begin(), arr.end(), StringViewC(psz)) != arr.end(); };
             char buffer[16];
             EXPECT_TRUE(isAnyOf(floatingPointToStr(T(1234), buffer, 3), { "1.23e+03", "1.23e+003" }));
             EXPECT_TRUE(isAnyOf(floatingPointToStr(T(1235), buffer, 3), { "1.24e+03", "1.24e+003" }));
@@ -651,6 +653,31 @@ namespace
 
         // NaN
         EXPECT_TRUE(beginsWith(toStrC(NumLim::quiet_NaN()), "nan"));
+
+#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+        // Testing CharsFormat argument
+        {
+            char buffer[128];
+            DFGTEST_EXPECT_STREQ("1.25", floatingPointToStr(T(1.25), buffer, -1, CharsFormat::general));
+            DFGTEST_EXPECT_STREQ("1.25", floatingPointToStr(T(1.25), buffer,  3, CharsFormat::default_fmt));
+            DFGTEST_EXPECT_STREQ("1.25", floatingPointToStr(T(1.25), buffer, -1, CharsFormat::fixed));
+            DFGTEST_EXPECT_STREQ("1.250000", floatingPointToStr(T(1.25), buffer, 6, CharsFormat::fixed));
+            DFGTEST_EXPECT_TRUE(isAnyOf(floatingPointToStr(T(1.25), buffer, -1, CharsFormat::scientific), { "1.25e+00", "1.25e+000" }));
+            DFGTEST_EXPECT_STREQ("1.4p+0", floatingPointToStr(T(1.25), buffer, -1, CharsFormat::hex));
+            DFGTEST_EXPECT_STREQ("1.400p+0", floatingPointToStr(T(1.25), buffer, 3, CharsFormat::hex));
+
+            if (NumLim::max() > 1e128)
+            {
+                // Doesn't fit to buffer, empty return expected
+                DFGTEST_EXPECT_STREQ("", floatingPointToStr(NumLim::max(), buffer, 130, CharsFormat::fixed));
+            }
+        }
+
+        // Testing that string-returning version works with long outputs
+        {
+            DFGTEST_EXPECT_FALSE(floatingPointToStr<StringUtf8>(NumLim::max(), -1, CharsFormat::fixed).empty());
+        }
+#endif // DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG
     }
 
     template <class Int_T>

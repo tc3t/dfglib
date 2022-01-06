@@ -237,29 +237,54 @@ template <size_t N> char* toStr(const double val, char(&buf)[N], const char* psz
     return buf;
 }
 
-// Converts a double to string so that std::atof(toStr(val,...)) == val for all non-NaN, finite numbers.
-// The returned string representation is, roughly speaking, intended to be shortest possible fulfilling the above condition expect for integers, 
-// for which formats such as 1000000 may be preferred to scientific format 1e6.
+enum class CharsFormat
+{
+#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+    fixed      = static_cast<int>(std::chars_format::fixed),
+    general    = static_cast<int>(std::chars_format::general),
+    hex        = static_cast<int>(std::chars_format::hex),
+    scientific = static_cast<int>(std::chars_format::scientific),
+    default_fmt = scientific | fixed | hex
+#else
+    default_fmt = 123
+#endif
+};
+
+// Converts a floating point type to a string representation using given precision and format.
+//  Format:
+//      default_fmt: If used with -1 precision, string representation is such that every non-NaN, finite number can be converted back to original floating point value with string-to-double conversion.
+//                   If precision is not -1, interpreted as 'general'.
+//      fixed      : With large enough buffer, string representation is equivalent to std::to_chars(psz, psz + nDstSize, val, std::chars_format::fixed, [nPrecParam])
+//      general    : like fixed but with std::chars_format::general
+//      hex        : like fixed but with std::chars_format::hex
+//      scientific : like fixed but with std::chars_format::scientific
+//                  
 // For +- infinity, return value is inf/-inf.
 // For NaN's, return value begins with "nan"
 // Note: If string representation does not fit to buffer, resulting string will be empty (given nDstSize > 0).
+// Returns psz, i.e. pointer to beginning of string representation.
 template <class T>
-inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, const int nPrecParam = -1)
+inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, const int nPrecision, const CharsFormat charsFormat)
 {
+    DFG_STATIC_ASSERT(std::is_floating_point<T>::value, "floatingPointToStr() requires floating point type");
     if (nDstSize < 1 || !psz)
         return psz;
 #if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
-    const auto tcResult = (nPrecParam == -1) ? std::to_chars(psz, psz + nDstSize, val) : std::to_chars(psz, psz + nDstSize, val, std::chars_format::general, nPrecParam);
+    const auto tcResult = (nPrecision == -1 && charsFormat == CharsFormat::default_fmt)
+                            ? std::to_chars(psz, psz + nDstSize, val) // Case: -1 and default_fmt
+                            : (nPrecision == -1)  ? std::to_chars(psz, psz + nDstSize, val, static_cast<std::chars_format>(charsFormat)) // case: -1 and not default_fmt
+                                                  : std::to_chars(psz, psz + nDstSize, val, static_cast<std::chars_format>((charsFormat == CharsFormat::default_fmt) ? CharsFormat::general : charsFormat), nPrecision);
     if (tcResult.ec == std::errc() && static_cast<size_t>(std::distance(psz, tcResult.ptr)) < nDstSize)
         *tcResult.ptr = '\0';
     else
         *psz = '\0';
     return psz;
 #elif DFG_TOSTR_USING_TO_CHARS == 1
+    DFG_UNUSED(charsFormat);
     // In this branch only default-precision overload is available.
-    if (nPrecParam == -1)
+    if (nPrecision == -1)
     {
-        const auto tcResult = (nPrecParam == -1) ? std::to_chars(psz, psz + nDstSize, val) : std::to_chars(psz, psz + nDstSize, val);
+        const auto tcResult = std::to_chars(psz, psz + nDstSize, val);
         if (tcResult.ec == std::errc() && static_cast<size_t>(std::distance(psz, tcResult.ptr)) < nDstSize)
             *tcResult.ptr = '\0';
         else
@@ -267,25 +292,79 @@ inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, c
         return psz;
     }
     else
-        return DFG_DETAIL_NS::floatingPointToStrFallback(val, psz, nDstSize, nPrecParam);
+        return DFG_DETAIL_NS::floatingPointToStrFallback(val, psz, nDstSize, nPrecision);
 #else
-    return DFG_DETAIL_NS::floatingPointToStrFallback(val, psz, nDstSize, nPrecParam);
+    DFG_UNUSED(charsFormat);
+    return DFG_DETAIL_NS::floatingPointToStrFallback(val, psz, nDstSize, nPrecision);
 #endif
 }
 
-template <class T, size_t N>
-inline char* floatingPointToStr(const T val, char (&sz)[N], const int nPrecParam = -1)
+// Equivalent to floatingPointToStr(val, psz, nDstSize, nPrecision, CharsFormat::default_fmt)
+template <class T>
+inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize, const int nPrecision)
 {
-    return floatingPointToStr(val, sz, N, nPrecParam);
+    return floatingPointToStr(val, psz, nDstSize, nPrecision, CharsFormat::default_fmt);
 }
 
-template <class Str_T>
-inline Str_T floatingPointToStr(const double val, const int nPrecParam = -1)
+// Equivalent to floatingPointToStr(val, psz, nDstSize, -1)
+template <class T>
+inline char* floatingPointToStr(const T val, char* psz, const size_t nDstSize)
+{
+    return floatingPointToStr(val, psz, nDstSize, -1);
+}
+
+// Equivalent to floatingPointToStr(val, sz, N, nPrecision, charsFormat)
+template <class T, size_t N>
+inline char* floatingPointToStr(const T val, char(&sz)[N], const int nPrecision, const CharsFormat charsFormat)
+{
+    return floatingPointToStr(val, sz, N, nPrecision, charsFormat);
+}
+
+// Equivalent to floatingPointToStr(val, sz, nPrecision, CharsFormat::default_fmt)
+template <class T, size_t N>
+inline char* floatingPointToStr(const T val, char (&sz)[N], const int nPrecision)
+{
+    return floatingPointToStr(val, sz, N, nPrecision, CharsFormat::default_fmt);
+}
+
+// Equivalent to floatingPointToStr(val, sz, -1)
+template <class T, size_t N>
+inline char* floatingPointToStr(const T val, char(&sz)[N])
+{
+    return floatingPointToStr(val, sz, N, -1);
+}
+
+// Returns string representation using given precision and CharsFormat.
+template <class Str_T, class T>
+inline Str_T floatingPointToStr(const T val, const int nPrecision, const CharsFormat charsFormat)
 {
     char szBuf[32] = "";
-    floatingPointToStr(val, szBuf, nPrecParam);
-    Str_T s(SzPtrAscii(szBuf));
-    return s;
+    floatingPointToStr(val, szBuf, nPrecision, charsFormat);
+    if (szBuf[0] != '\0')
+        return Str_T(SzPtrAscii(szBuf));
+    else // Didn't fit to 32 chars, trying bigger buffers. TODO: calculate needed buffer size.
+    {
+        std::string s(128, '\0');
+        for (; s[0] == '\0' && s.size() <= 1024; s.resize(s.size() * 2))
+        {
+            floatingPointToStr(val, &s[0], s.size(), nPrecision, charsFormat);
+        }
+        return Str_T(SzPtrAscii(s.c_str()));
+    }
+}
+
+// Equivalent to floatingPointToStr(val, nPrecision, CharsFormat::default_fmt)
+template <class Str_T, class T>
+inline Str_T floatingPointToStr(const T val, const int nPrecision)
+{
+    return floatingPointToStr<Str_T>(val, nPrecision, CharsFormat::default_fmt);
+}
+
+// Equivalent to floatingPointToStr(val, -1)
+template <class Str_T, class T>
+inline Str_T floatingPointToStr(const T val)
+{
+    return floatingPointToStr<Str_T>(val, -1);
 }
 
 typedef int ItoaReturnValue;
