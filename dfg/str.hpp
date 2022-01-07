@@ -229,9 +229,9 @@ Str_T toStrT(const T& obj)
     return toStrT(obj, str);
 }
 
-// Converts double to string using sprintf() and given format string and writes to result to given buffer.
+// Converts object to string using sprintf() and given format string and writes to result to given buffer.
 // Note: Result format is dependent on locale so the output string might not be convertible back to double with strTo().
-template <size_t N> char* toStr(const double val, char(&buf)[N], const char* pszSprintfFormat) // TODO: test
+template <class T, size_t N> char* toStrSprintf(const T val, char(&buf)[N], const char* pszSprintfFormat) // TODO: test
 {
     DFG_DETAIL_NS::sprintf_s(buf, N, pszSprintfFormat, val);
     return buf;

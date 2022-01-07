@@ -23,8 +23,11 @@
 #include "InputDialog.hpp"
 #include "stringConversions.hpp"
 #include "../cont/Flags.hpp"
+#include "../math/sign.hpp"
+#include "../str.hpp"
 #include <chrono>
 #include <bitset>
+#include <cctype> // For std::isdigit
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -3425,7 +3428,11 @@ namespace
     }
 
     const char gszIntegerTypes[] = "diouxX";
-    const char gszFloatTypes[] = "gGeEfaA";
+#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+    const char gszFloatTypes[] = "aefg";
+#else
+    const char gszFloatTypes[] = "g"; // Note: actual formatting may differ from sprintf 'g' and std::to_chars() with std::chars_format::general
+#endif
 
     // TODO: test
     bool isValidNumberFormatType(const QString& s)
@@ -3458,7 +3465,7 @@ namespace
         }
         if (!isValidNumberFormatType(sFormatType))
         {
-            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Format type parameter is not accepted. Note: only a subset of printf-valid items can be used."));
+            QMessageBox::information(nullptr, tr("Invalid parameter"), tr("Format type parameter '%1' is not supported, only the following printf-types are available: %2").arg(sFormatType, gszFloatTypes));
             return std::string();
         }
         if (!sPrecision.isEmpty())
@@ -3480,6 +3487,87 @@ namespace
         dateFromMilliSecondsUtc
     };
 
+    auto sprintfTypeCharToCharsFormat(const char c) -> ::DFG_MODULE_NS(str)::CharsFormat
+    {
+        using namespace ::DFG_MODULE_NS(str);
+    #if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+        switch (c)
+        {
+            case 'a': return CharsFormat::hex;
+            case 'e': return CharsFormat::scientific;
+            case 'f': return CharsFormat::fixed;
+            case 'g': return CharsFormat::general;
+            default:  return CharsFormat::default_fmt;
+        }
+    #else
+        DFG_UNUSED(c);
+        return CharsFormat::default_fmt;
+    #endif
+    }
+
+    int formatStringToPrecision(const ::DFG_ROOT_NS::StringViewC sv)
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
+        auto p = std::find(sv.begin(), sv.end(), '.');
+        if (p == sv.end())
+            return -1;
+        ++p;
+        const auto pStart = p;
+        for (; p != sv.end() && std::isdigit(*p) != 0; ++p) {}
+        const auto nPrec = strTo<int>(StringViewC(pStart, p));
+        return nPrec;
+    }
+
+    template <class T, size_t N>
+    auto numberValToString(T val, char(&buffer)[N], const char *pFormat, std::true_type) -> ::DFG_ROOT_NS::SzPtrUtf8R
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
+        using namespace ::DFG_MODULE_NS(math);
+        DFG_STATIC_ASSERT(std::is_floating_point<T>::value, "This function requires floating point type");
+        if (!pFormat)
+        {
+            DFG_ASSERT(false); // pFormat is always assumed to be non-null in this implementation.
+            return DFG_UTF8("");
+        }
+        const StringViewC svFormat(pFormat);
+        // pFormat is expected to always be of format %[.nPrecision]type
+        const auto nPrecision = formatStringToPrecision(svFormat);
+        #if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+            const auto charsFormat = sprintfTypeCharToCharsFormat(svFormat.back());
+            auto p = buffer;
+            if (charsFormat == CharsFormat::hex)
+            {
+                // Unlike 'a' in printf specification, CharsFormat::hex does not prepend 0x so adding it manually.
+                DFG_STATIC_ASSERT(N >= 4, "Expecting buffer to be at least 4 bytes.");
+                if (signBit(val) == 1)
+                {
+                    *p++ = '-';
+                    val = signCopied(val, 1.0);
+                }
+                *p++ = '0';
+                *p++ = 'x';
+            }
+            floatingPointToStr(val, p, N - (p - buffer), nPrecision, charsFormat);
+        #else // case: DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG != 1
+            floatingPointToStr(val, buffer, nPrecision);
+        #endif
+
+        return SzPtrUtf8R(buffer);
+    }
+
+    template <class T, size_t N>
+    auto numberValToString(const T val, char(&buffer)[N], const char* pFormat, std::false_type) -> ::DFG_ROOT_NS::SzPtrUtf8R
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
+        DFG_STATIC_ASSERT(!std::is_floating_point<T>::value, "This function is not for floating point types");
+        DFG_UNUSED(pFormat);
+        toStr(val, buffer);
+        return SzPtrUtf8R(buffer);
+    }
+
     qint64 valToDateInt64(const double val)
     {
         qint64 intVal;
@@ -3491,16 +3579,14 @@ namespace
     template <class T, size_t N>
     void setTableElement(const ::DFG_MODULE_NS(qt)::CsvTableView& rView, CsvItemModel::DataTable& table, const int r, const int c, const T val, char(&buffer)[N], const char *pFormat, const GeneratorFormatType type)
     {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
         if (type == GeneratorFormatType::number)
         {
-            if (pFormat)
-                ::DFG_MODULE_NS(str)::toStr(val, buffer, pFormat);
-            else
-                ::DFG_MODULE_NS(str)::toStr(val, buffer);
-            table.setElement(r, c, DFG_ROOT_NS::SzPtrUtf8R(buffer));
+            table.setElement(r, c, numberValToString(val, buffer, pFormat, std::is_floating_point<T>()));
             buffer[0] = '\0';
         }
-        else
+        else // Case: other than numeric type.
         {
             const auto factor = (type == GeneratorFormatType::dateFromSecondsLocal || type == GeneratorFormatType::dateFromSecondsUtc) ? 1000 : 1;
             const auto i64 = valToDateInt64(factor * val);

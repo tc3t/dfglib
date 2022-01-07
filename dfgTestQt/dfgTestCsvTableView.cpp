@@ -1,5 +1,6 @@
 #include <dfg/qt/CsvItemModel.hpp>
 #include <dfg/io.hpp>
+#include <dfg/math/sign.hpp>
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/qt/containerUtils.hpp>
 #include <dfg/qt/CsvTableView.hpp>
@@ -1095,6 +1096,93 @@ TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue_dateHandling)
     {
         DFGTEST_EXPECT_LEFT(csvModel.rawStringViewAt(r, 0).asUntypedView(), csvModel.rawStringViewAt(r, 1).asUntypedView());
     }
+}
+
+TEST(dfgQt, CsvTableView_generateContent_numberFormat)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(math);
+    using namespace ::DFG_MODULE_NS(qt);
+    using namespace ::DFG_MODULE_NS(str);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    view.resizeTableNoUi(1, 1);
+
+    CsvItemModel generateModel;
+    generateModel.openString(
+                "\t\n"
+                "Target\tSelection\n"
+                "Generator\tFormula\n"
+                "Formula\t1.25\n"
+                "Format type\tg\n"
+                "Format precision\t14");
+
+    const auto createGenerateParam = [&](const double value, const char* pszType, const char* pszPrecision) -> CsvItemModel&
+    {
+        generateModel.setDataNoUndo(2, 1, SzPtrUtf8(toStrC(value).c_str()));
+        generateModel.setDataNoUndo(3, 1, SzPtrUtf8(pszType));
+        generateModel.setDataNoUndo(4, 1, SzPtrUtf8(pszPrecision));
+        return generateModel;
+    };
+
+    const auto isAnyOf = [](const StringViewC sv, const std::array<const char*, 2>& arr) { return std::find(arr.begin(), arr.end(), sv) != arr.end(); };
+
+    view.selectCell(0, 0);
+    view.generateContentImpl(createGenerateParam(1.25, "g", "14"));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.25", csvModel.rawStringViewAt(0, 0));
+
+    view.generateContentImpl(createGenerateParam(1.25, "g", "1"));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1", csvModel.rawStringViewAt(0, 0));
+
+    // Testing empty precision: it is to be interpreted as default roundtrippable representation
+    {
+        view.generateContentImpl(createGenerateParam(1.25, "g", ""));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.25", csvModel.rawStringViewAt(0, 0));
+
+        view.generateContentImpl(createGenerateParam(123456789.125, "g", ""));
+        DFGTEST_EXPECT_TRUE(isAnyOf(csvModel.rawStringViewAt(0, 0).asUntypedView(), { "123456789.125", "1.23456789125e+08" }));
+    }
+
+#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+    // a (hex)
+    {
+        view.generateContentImpl(createGenerateParam(1.265625, "a", ""));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("0x1.44p+0", csvModel.rawStringViewAt(0, 0));
+
+        view.generateContentImpl(createGenerateParam(1.265625, "a", "1"));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("0x1.4p+0", csvModel.rawStringViewAt(0, 0));
+
+        view.generateContentImpl(createGenerateParam(-1.265625, "a", ""));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("-0x1.44p+0", csvModel.rawStringViewAt(0, 0));
+
+        // Testing that negative zero works correctly.
+        view.generateContentImpl(createGenerateParam(signCopied(0.0, -1.0), "a", ""));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("-0x0p+0", csvModel.rawStringViewAt(0, 0));
+    }
+
+    // e (scientific)
+    {
+        view.generateContentImpl(createGenerateParam(1.25, "e", ""));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.25e+00", csvModel.rawStringViewAt(0, 0));
+
+        view.generateContentImpl(createGenerateParam(1.28, "e", "1"));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.3e+00", csvModel.rawStringViewAt(0, 0));
+    }
+
+    // f (fixed)
+    {
+        view.generateContentImpl(createGenerateParam(1.25, "f", ""));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.25", csvModel.rawStringViewAt(0, 0));
+
+        view.generateContentImpl(createGenerateParam(1.28, "f", "1"));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.3", csvModel.rawStringViewAt(0, 0));
+
+        view.generateContentImpl(createGenerateParam(1.25, "f", "6"));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("1.250000", csvModel.rawStringViewAt(0, 0));
+    }
+#endif
 }
 
 TEST(dfgQt, CsvTableView_columnVisibilityConfPropertyHandling)
