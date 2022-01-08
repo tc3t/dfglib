@@ -2792,7 +2792,7 @@ namespace
         { "Unused"              , ValueTypeDouble   , ""                                                    , ""               , nullptr }, // 4
         { "Unused"              , ValueTypeDouble   , ""                                                    , ""               , nullptr }, // 5
         { "Format type"         , ValueTypeString   , ""                                                    , "g"              , nullptr }, // 6
-        { "Format precision"    , ValueTypeUInteger , ""                                                    , "6"              , nullptr }, // 7. Note: empty value must be supported as well.
+        { "Format precision"    , ValueTypeUInteger , ""                                                    , ""               , nullptr }, // 7
         { "Fill string"         , ValueTypeString   , ""                                                    , ""               , nullptr }, // 8
         { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform, 0, 100", integerDistributionCompleters }, // 9
         { "Parameters"          , ValueTypeCsvList  , ""                                                    , "uniform, 0, 1"  , realDistributionCompleters }  // 10
