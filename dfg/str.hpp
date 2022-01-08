@@ -120,71 +120,9 @@ namespace DFG_DETAIL_NS
         return rv;
     }
 
-    template <class T> inline T strToFloatingPoint(const char* /*psz*/)
-    { 
-        DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "strToFloatingPoint: implementation is not available for given type");
-    }
-
-    template <> inline float strToFloatingPoint<float>(const char* psz)
-    { 
-    #if defined(_MSC_VER) && (DFG_MSVC_VER < DFG_MSVC_VER_2013)
-        return static_cast<float>(std::strtod(psz, nullptr));
-    #else
-        return std::strtof(psz, nullptr);
-    #endif
-    }
-
-    template <> inline double strToFloatingPoint<double>(const char* psz)
-    { 
-        return std::strtod(psz, nullptr);
-    }
-
-    template <> inline long double strToFloatingPoint<long double>(const char* psz)
-    {
-    #if defined(_MSC_VER) && (DFG_MSVC_VER < DFG_MSVC_VER_2013)
-        DFG_STATIC_ASSERT(sizeof(double) == sizeof(long double), "In MSVC2010 and MSVC2012 long double is expected to be identical to double");
-        return std::strtod(psz, nullptr);
-    #else
-        return std::strtold(psz, nullptr);
-    #endif
-    }
-
     // floatingPointToStr() to use when std::to_chars() is not available: converting using brittle locale-dependent sprintf().
     template <class T>
-    inline char* floatingPointToStrFallback(const T val, char* psz, const size_t nDstSize, const int nPrecParam = -1)
-    {
-        if (DFG_MODULE_NS(math)::isInf(val))
-            return strCpyAllThatFit(psz, nDstSize, (val > 0) ? "inf" : "-inf");
-        else if (DFG_MODULE_NS(math)::isNan(val))
-            return strCpyAllThatFit(psz, nDstSize, "nan");
-        auto nPrec = nPrecParam;
-        if (nPrec < 0)
-            nPrec = static_cast<decltype(nPrec)>(DFG_MODULE_NS(math)::DFG_CLASS_NAME(RoundedUpToMultipleT) < std::numeric_limits<T>::digits * 30103, 100000 > ::value / 100000 + 1); // 30103 == round(log10(2) * 100000)
-            //nPrec = std::numeric_limits<T>::max_digits10; // This seems to be too-little-by-one in VC2010 so use the manual version above.
-        else if (nPrec >= 1000) // Limit precision to 3 digits.
-            nPrec = 999;
-        char szFormat[8] = "";
-        DFG_DETAIL_NS::sprintf_s(szFormat, sizeof(szFormat), "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
-        if (static_cast<size_t>(DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val)) >= nDstSize)
-        {
-            psz[0] = '\0'; // Result did't fit -> returning empty string.
-            return psz;
-        }
-        std::replace(psz, psz + std::strlen(psz), ',', '.'); // Hack: fix for locales where decimal separator is comma. Locales using other than dot or comma remain broken.
-
-        // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
-        //               std::atof(pszLonger) == std::atof(pszShorter).
-        if (nPrecParam == -1 && std::strlen(psz) > std::numeric_limits<T>::digits10)
-        {
-            char szShortFormat[8] = "";
-            DFG_DETAIL_NS::sprintf_s(szShortFormat, sizeof(szShortFormat), "%%.%u%s", std::numeric_limits<T>::digits10, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
-            DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szShortFormat, val);
-            if (DFG_DETAIL_NS::strToFloatingPoint<T>(psz) == val)
-                return psz;
-            DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val); // Shorter was too short, reconvert.
-        }
-        return psz;
-    }
+    inline char* floatingPointToStrFallback(const T val, char* psz, const size_t nDstSize, const int nPrecParam = -1);
 
     template <class T, class Str_T>
     Str_T& toStrTImpl(const T& obj, Str_T& str)
@@ -801,7 +739,64 @@ Char_T* skipWhitespacesSz(Char_T* psz)
 }
 
 }} // module str
+// End of namespace dfg::str
+///////////////////////////////////////////////////
 
 #include "str/strTo.hpp"
+
+///////////////////////////////////////////////////
+// Begin of namespace dfg::str
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
+
+namespace DFG_DETAIL_NS
+{
+    template <class T>
+    inline char* floatingPointToStrFallback(const T val, char* psz, const size_t nDstSize, const int nPrecParam)
+    {
+        if (DFG_MODULE_NS(math)::isInf(val))
+            return strCpyAllThatFit(psz, nDstSize, (val > 0) ? "inf" : "-inf");
+        else if (DFG_MODULE_NS(math)::isNan(val))
+            return strCpyAllThatFit(psz, nDstSize, "nan");
+        auto nPrec = nPrecParam;
+        if (nPrec < 0)
+            nPrec = static_cast<decltype(nPrec)>(DFG_MODULE_NS(math)::DFG_CLASS_NAME(RoundedUpToMultipleT) < std::numeric_limits<T>::digits * 30103, 100000 > ::value / 100000 + 1); // 30103 == round(log10(2) * 100000)
+            //nPrec = std::numeric_limits<T>::max_digits10; // This seems to be too-little-by-one in VC2010 so use the manual version above.
+        else if (nPrec >= 1000) // Limit precision to 3 digits.
+            nPrec = 999;
+        char szFormat[8] = "";
+        DFG_DETAIL_NS::sprintf_s(szFormat, sizeof(szFormat), "%%.%u%s", nPrec, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
+        if (static_cast<size_t>(DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val)) >= nDstSize)
+        {
+            psz[0] = '\0'; // Result did't fit -> returning empty string.
+            return psz;
+        }
+
+        const auto toClocale = [](char* pszSprintf)
+        {
+            std::replace(pszSprintf, pszSprintf + std::strlen(pszSprintf), ',', '.'); // Hack: fix for locales where decimal separator is comma. Locales using other than dot or comma remain broken.
+        };
+
+        toClocale(psz);
+
+        // Manual tweak: if using default precision and string is suspiciously long, try if shorter precision is enough in the sense that
+        //               std::atof(pszLonger) == std::atof(pszShorter).
+        if (nPrecParam == -1 && std::strlen(psz) > std::numeric_limits<T>::digits10)
+        {
+            char szShortFormat[8] = "";
+            DFG_DETAIL_NS::sprintf_s(szShortFormat, sizeof(szShortFormat), "%%.%u%s", std::numeric_limits<T>::digits10, DFG_DETAIL_NS::floatingPointTypeToSprintfType<T>());
+            DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szShortFormat, val);
+            toClocale(psz);
+            if (strTo<T>(psz) == val)
+                return psz;
+            DFG_DETAIL_NS::sprintf_s(psz, nDstSize, szFormat, val); // Shorter was too short, reconvert.
+            toClocale(psz);
+        }
+        return psz;
+    }
+} // namespace DFG_DETAIL_NS
+
+}} // module str
+// End of namespace dfg::str
+///////////////////////////////////////////////////
 
 #endif // include guard

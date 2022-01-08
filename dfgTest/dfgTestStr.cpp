@@ -562,6 +562,10 @@ TEST(dfgStr, strTo)
             EXPECT_EQ(1, std::strtod("1.25", nullptr)); // Making sure that comma-locale is effective meaning that std::strtod() fails to parse dot separator.
             EXPECT_EQ(1.25, strTo<double>("1.25", &bOk));
             EXPECT_TRUE(bOk);
+
+            // Test case for issue that affected qt::TableEditor (comma-handling was ignored in some more complex cases than 1.25)
+            DFGTEST_EXPECT_LEFT("12.666666666666668", toStrC(12.666666666666668));
+
             // Switching back to original locale.
             std::setlocale(LC_ALL, "C");
             // Making sure that setting back "C"-locale worked.
