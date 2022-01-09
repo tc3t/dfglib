@@ -517,15 +517,15 @@ namespace
         auto pProgressDialog = new ProgressWidget(sProgressDialogLabel, isCancellable, pParent);
         auto pWorkerThread = new QThread();
         pWorkerThread->setObjectName(sThreadName); // Sets thread name visible to debugger.
-        QObject::connect(pWorkerThread, &QThread::started, [&]()
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QThread::started, [&]()
                 {
                     func(pProgressDialog);
                     pWorkerThread->quit();
-                });
+                }));
         // Connect thread finish to trigger event loop quit and closing of progress bar.
-        QObject::connect(pWorkerThread, &QThread::finished, &eventLoop, &QEventLoop::quit);
-        QObject::connect(pWorkerThread, &QThread::finished, pWorkerThread, &QObject::deleteLater);
-        QObject::connect(pWorkerThread, &QObject::destroyed, pProgressDialog, &QObject::deleteLater);
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QThread::finished, &eventLoop, &QEventLoop::quit));
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QThread::finished, pWorkerThread, &QObject::deleteLater));
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QObject::destroyed, pProgressDialog, &QObject::deleteLater));
 
         pWorkerThread->start();
 
@@ -3074,7 +3074,8 @@ namespace
             else if (genType == GeneratorTypeFormula)
             {
                 ::DFG_MODULE_NS(math)::FormulaParser parser;
-                parser.defineRandomFunctions();
+                if (!parser.defineRandomFunctions())
+                    QMessageBox::information(this, tr("Internal error"), tr("Internal error occurred causing documentation of random functions to be unavailable"));
                 QString sFuncNames;
                 decltype(sFuncNames.length()) nLastBrPos = 0;
                 parser.forEachDefinedFunctionNameWhile([&](const ::DFG_ROOT_NS::StringViewC& sv)
@@ -3809,18 +3810,26 @@ bool CsvTableView::generateContentImpl(const CsvItemModel& settingsModel)
         const auto sFormula = settingsModel.data(settingsModel.index(LastNonParamPropertyId + 1, 1)).toString().toUtf8();
         ::DFG_MODULE_NS(math)::FormulaParser parser;
         DFG_VERIFY(parser.defineRandomFunctions());
-        parser.setFormula(sFormula.data());
+        if (!parser.setFormula(sFormula.data()))
+        {
+            DFG_ASSERT_WITH_MSG(false, "Failed to set formula to parser");
+            return false;
+        }
         char buffer[32] = "";
         double tr = std::numeric_limits<double>::quiet_NaN();
         double tc = std::numeric_limits<double>::quiet_NaN();
         const double rowCount = rModel.rowCount();
         const double colCount = rModel.columnCount();
         CsvItemModel::DataTable* pTable = nullptr;
-        parser.defineFunctor("cellValue", [&](double r, double c) { return cellValueAsDouble(pTable, r, c); }, false);
-        parser.defineVariable("trow", &tr);
-        parser.defineVariable("tcol", &tc);
-        parser.defineConstant("rowcount", rowCount);
-        parser.defineConstant("colcount", colCount);
+        if (!parser.defineFunctor("cellValue", [&](double r, double c) { return cellValueAsDouble(pTable, r, c); }, false)
+            || !parser.defineVariable("trow", &tr)
+            || !parser.defineVariable("tcol", &tc)
+            || !parser.defineConstant("rowcount", rowCount)
+            || !parser.defineConstant("colcount", colCount))
+        {
+            DFG_ASSERT_WITH_MSG(false, "Failed to set functions/variables/constants to parser");
+            return false;
+        }
         const auto formatType = adjustFormatAndGetType(pszFormat);
         const auto generator = [&](CsvItemModel::DataTable& table, const int r, const int c, size_t)
         {
@@ -6014,7 +6023,7 @@ ProgressWidget::ProgressWidget(const QString sLabelText, const IsCancellable isC
     if (isCancellable == IsCancellable::yes)
     {
         auto spCancelButton = std::unique_ptr<QPushButton>(new QPushButton(tr("Cancel"), this));
-        connect(spCancelButton.get(), &QPushButton::clicked, [&]() { m_abCancelled = true; });
+        DFG_QT_VERIFY_CONNECT(connect(spCancelButton.get(), &QPushButton::clicked, [&]() { m_abCancelled = true; }));
         setCancelButton(spCancelButton.release()); // "The progress dialog takes ownership"
     }
     else

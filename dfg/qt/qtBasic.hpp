@@ -29,7 +29,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 inline void ignore(QTextStream& strm, const int nCount)
 {
 	for(int i = 0; i<nCount; ++i)
-		strm.read(1);
+		strm.read(1); // TODO: this is highly suboptimal, returns string on every read.
 }
 
 // TODO: Check what this should be.

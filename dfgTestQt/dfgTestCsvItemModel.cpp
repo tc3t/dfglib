@@ -29,7 +29,7 @@ TEST(dfgQt, CsvItemModel)
     {
         const QString sInputPath = QString("testfiles/example%1.csv").arg(i);
         const QString sOutputPath = QString("testfiles/generated/example%1.testOutput.csv").arg(i);
-        if (!QFileInfo(sInputPath).exists())
+        if (!QFileInfo::exists(sInputPath))
         {
             const bool bAtLeastOneFileFound = (i != 0);
             EXPECT_TRUE(bAtLeastOneFileFound);

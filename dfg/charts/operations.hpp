@@ -429,7 +429,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
             error_unexpectedInputVectorCount    = 0x10,   // Input has unexpected vector count.
             error_unexpectedInputVectorTypes    = 0x20,   // Input has unexpected type (e.g. string instead of number)
             error_unableToCreateDataVectors     = 0x40,   // Operation failed because new data vectors couldn't be created.
-            error_processingError               = 0x80    // Error occured while operating, this can happen for example if creation args are bad and/or incompatible with input.
+            error_processingError               = 0x80,   // Error occured while operating, this can happen for example if creation args are bad and/or incompatible with input.
+            error_unableToDefineVariables       = 0x100   // Failed to define variables to internal parser.
         };
         using ErrorMask = ::DFG_MODULE_NS(cont)::Flags<Error>;
 
@@ -983,10 +984,11 @@ namespace operations
             return;
         }
 
-        if (pValuesX)
-            parser.defineVariable("x", &x);
-        if (pValuesY)
-            parser.defineVariable("y", &y);
+        if ((pValuesX && !parser.defineVariable("x", &x)) || (pValuesY && !parser.defineVariable("y", &y)))
+        {
+            op.setError(error_unableToDefineVariables);
+            return;
+        }
 
         const auto nSize = (pValuesX) ? pValuesX->size() : pValuesY->size();
         if (pValuesX && pValuesY && pValuesX->size() != pValuesY->size())

@@ -459,8 +459,10 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::setFormula(const StringViewC sv) -> R
 
 double ::DFG_MODULE_NS(math)::FormulaParser::setFormulaAndEvaluateAsDouble(const StringViewC sv)
 {
-    setFormula(sv);
-    return this->evaluateFormulaAsDouble();
+    if (setFormula(sv))
+        return this->evaluateFormulaAsDouble();
+    else
+        return std::numeric_limits<double>::quiet_NaN();
 }
 
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineVariable(const StringViewC sv, double* pVar) -> ReturnStatus

@@ -31,7 +31,7 @@ inline void memsetZeroSecure(const VoidPtr pData, const size_t nSize)
 template <class T>
 inline void memsetZeroSecure(T& a)
 {
-	static_assert(std::is_pod<T>::value == true && std::is_pointer<T>::value == false, "Won't memset non-pods or pointers");
+	DFG_STATIC_ASSERT(std::is_trivially_copyable<T>::value == true && std::is_pointer<T>::value == false, "Won't memset pointers or types that are not trivially copyable");
 	memsetZeroSecure(&a, sizeof(a));
 }
 

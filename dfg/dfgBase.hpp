@@ -11,6 +11,7 @@
 #include "scopedCaller.hpp"
 #include "rangeIterator.hpp"
 #include <cmath>
+#include <type_traits>
 
 #include "dfgBaseTypedefs.hpp"
 #include "bits/byteSwap.hpp"
@@ -181,7 +182,7 @@ inline void limitMax(T& val, const C& upperLimit)
 //       (To be sure that the memory gets zeroed, call memsetZeroSecure)
 template <class T> inline void memsetZero(T& a)
 {
-    static_assert(std::is_pod<T>::value == true && std::is_pointer<T>::value == false, "Won't memset non-pods or pointers");
+    DFG_STATIC_ASSERT(std::is_trivially_copyable<T>::value == true && std::is_pointer<T>::value == false, "Won't memset pointers or types that are not trivially copyable");
     memset(&a, 0, sizeof(a));
 }
 

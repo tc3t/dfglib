@@ -2,6 +2,7 @@
 
 #include "dfgDefs.hpp"
 #include "dfgBase.hpp" // For DFG_COUNTOF
+#include <type_traits>
 
 #ifdef _WIN32
     #include <stdexcept>
@@ -95,7 +96,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(crypt) {
         bool Generate(T& obj)
         //-------------------------
         {
-            static_assert(std::is_pod<T>::value == true, "Generate is available only for PODs");
+            DFG_STATIC_ASSERT(std::is_trivially_copyable<T>::value == true, "Generate is available only for trivially copyable T");
             return Generate(&obj, sizeof(obj));
         }
 

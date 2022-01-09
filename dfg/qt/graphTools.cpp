@@ -5290,7 +5290,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
     DFG_QT_CHART_CONSOLE_INFO(tr("Refresh lasted %1 ms (repaint took %2 %)").arg(round<int>(1000 * elapsed)).arg(round<int>(100.0 * elapsedRepaint / elapsed)));
 
     // Cache diagnostics
-    if (m_spCache && m_spControlPanel->m_bLogCacheDiagnosticsOnUpdate)
+    if (m_spCache && pControlPanel && pControlPanel->m_bLogCacheDiagnosticsOnUpdate)
     {
         QString s;
         for (const auto& item : m_spCache->m_tableSelectionDatas)
@@ -5304,7 +5304,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
         DFG_QT_CHART_CONSOLE_INFO(QString("Cache usage: %1").arg(s));
     }
 
-    pControlPanel->onDisplayStateChanged(ChartDisplayState::idle);
+    if (pControlPanel)
+        pControlPanel->onDisplayStateChanged(ChartDisplayState::idle);
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()

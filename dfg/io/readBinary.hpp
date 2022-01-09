@@ -22,10 +22,7 @@ template <class StrmT> StrmT& readBinary(StrmT& istrm, void* pBuf, const size_t 
 template <class Strm_T, class T>
 Strm_T& readBinary(Strm_T& istrm, T& obj)
 {
-#ifdef _MSC_VER // TODO: Add proper check, this was added for GCC 4.8.1
-    // is_pod was added for VC2013, where, unlike with VC2010 and VC2012, array of pods returned false for has_trivial_assign<T>.
-    DFG_STATIC_ASSERT(DFG_MODULE_NS(TypeTraits)::IsTriviallyCopyAssignable<T>::value == true || std::is_pod<T>::value == true, "readBinary(Strm_T, T&) only accepts trivially assignable or pod T's");
-#endif
+    DFG_STATIC_ASSERT(std::is_trivially_copyable<T>::value == true, "readBinary(Strm_T, T&) only accepts trivially copyable T");
     return readBinary(istrm, &obj, sizeof(obj));
 }
 

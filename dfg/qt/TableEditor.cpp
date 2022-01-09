@@ -244,7 +244,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
                 const auto addMenuItem = [&](const QString& sTitle, const QString& sInsertText)
                 {
                     auto pAct = pMenu->addAction(sTitle);
-                    DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, [=]()
+                    DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, m_pTextEdit, [=]()
                     {
                         m_pTextEdit->setText(sInsertText);
                     }));

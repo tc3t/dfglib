@@ -46,8 +46,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
     auto strCat(Str_T&& dest, const PARAMTYPE& s0) -> DFG_TEMP_RETURN_TYPE \
     { \
         PARAMTYPE arrParams[] = { s0 }; \
-        DFG_DETAIL_NS::strCatImpl(std::forward<Str_T>(dest), arrParams, DFG_COUNTOF(arrParams)); \
-        return std::forward<Str_T>(dest); \
+        DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
+        return dest; \
     } \
     template <class Str_T> \
     auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1) -> DFG_TEMP_RETURN_TYPE \
