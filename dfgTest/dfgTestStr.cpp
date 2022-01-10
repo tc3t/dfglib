@@ -293,6 +293,24 @@ TEST(dfgStr, strCat)
         strCat(sCapacityTest, "");
         EXPECT_EQ(nCapacityAfterReserve, sCapacityTest.capacity());
     }
+
+    // Checking that storage of rvalue input string is not duplicated
+    {
+        std::string sSource;
+        const auto stringReturner = [&]() -> std::string&& { sSource = "12345679801234567890"; return std::move(sSource); };
+
+        auto sCat = strCat(stringReturner(), "a");
+        DFGTEST_EXPECT_LEFT("12345679801234567890a", sCat);
+        DFGTEST_EXPECT_TRUE(sSource.empty());
+
+        sCat = strCat(stringReturner(), "a", "b");
+        DFGTEST_EXPECT_LEFT("12345679801234567890ab", sCat);
+        DFGTEST_EXPECT_TRUE(sSource.empty());
+
+        std::string sSource2 = "abc";
+        strCat(sSource2, "d", "e");
+        DFGTEST_EXPECT_LEFT("abcde", sSource2);
+    }
 }
 
 TEST(dfgStr, strToByLexCast)

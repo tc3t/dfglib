@@ -39,6 +39,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
 
     // Defines return type: Str_T for rvalues and Str_T& for lvalues.
 #define DFG_TEMP_RETURN_TYPE typename std::conditional<std::is_rvalue_reference<Str_T&&>::value, Str_T, Str_T&>::type
+#define DFG_TEMP_STRCAT_RETURN return std::forward<Str_T>(dest);
 
     // Defines the actual functions for given char type. These are just boilerplate interfaces passing the actual work to strCatImpl().
 #define DFG_TEMP_MACRO_DEFINE_STRCAT(PARAMTYPE, STR) \
@@ -47,35 +48,35 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
     { \
         PARAMTYPE arrParams[] = { s0 }; \
         DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
-        return dest; \
+        DFG_TEMP_STRCAT_RETURN \
     } \
     template <class Str_T> \
     auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1) -> DFG_TEMP_RETURN_TYPE \
     { \
         PARAMTYPE arrParams[] = { s0, s1 }; \
         DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
-        return dest; \
+        DFG_TEMP_STRCAT_RETURN \
     } \
     template <class Str_T> \
     auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2) -> DFG_TEMP_RETURN_TYPE \
     { \
         PARAMTYPE arrParams[] = { s0, s1, s2 }; \
         DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
-        return dest; \
+        DFG_TEMP_STRCAT_RETURN \
     } \
     template <class Str_T> \
     auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2, const PARAMTYPE& s3) -> DFG_TEMP_RETURN_TYPE \
     { \
         PARAMTYPE arrParams[] = { s0, s1, s2, s3 }; \
         DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
-        return dest; \
+        DFG_TEMP_STRCAT_RETURN \
     } \
     template <class Str_T> \
     auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2, const PARAMTYPE& s3, const PARAMTYPE& s4) -> DFG_TEMP_RETURN_TYPE \
     { \
         PARAMTYPE arrParams[] = { s0, s1, s2, s3, s4 }; \
         DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
-        return dest; \
+        DFG_TEMP_STRCAT_RETURN \
     } \
     template <class Str_T> \
     auto strCat(Str_T&& dest, const PARAMTYPE& s0, const PARAMTYPE& s1, const PARAMTYPE& s2, const PARAMTYPE& s3, const PARAMTYPE& s4, const PARAMTYPE& s5, \
@@ -84,7 +85,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
     { \
         PARAMTYPE arrParams[] = { s0, s1, s2, s3, s4, s5, s6, s7, s8, s9 }; \
         DFG_DETAIL_NS::strCatImpl(dest, arrParams, DFG_COUNTOF(arrParams)); \
-        return dest; \
+        DFG_TEMP_STRCAT_RETURN \
     } 
 
     // Define strCat for char wchar_t parameters.
@@ -96,5 +97,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
 
 #undef DFG_TEMP_MACRO_DEFINE_STRCAT
 #undef DFG_TEMP_RETURN_TYPE
+#undef DFG_TEMP_STRCAT_RETURN
 
 } } // module namespace
