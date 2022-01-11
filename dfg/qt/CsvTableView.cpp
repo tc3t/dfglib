@@ -517,7 +517,7 @@ namespace
         auto pProgressDialog = new ProgressWidget(sProgressDialogLabel, isCancellable, pParent);
         auto pWorkerThread = new QThread();
         pWorkerThread->setObjectName(sThreadName); // Sets thread name visible to debugger.
-        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QThread::started, [&]()
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QThread::started, pWorkerThread, [&]()
                 {
                     func(pProgressDialog);
                     pWorkerThread->quit();
@@ -1249,7 +1249,7 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbs
     QModelIndexList listSelected = (!pProxy) ? getSelectedItemIndexes_viewModel() : getSelectedItemIndexes_dataModel();
 
     ::DFG_MODULE_NS(cont)::SetVector<int> rows;
-    for (const auto& listIndex : listSelected)
+    for (const auto& listIndex : qAsConst(listSelected))
     {
         if (listIndex.isValid())
             rows.insert(listIndex.row());
@@ -6023,7 +6023,7 @@ ProgressWidget::ProgressWidget(const QString sLabelText, const IsCancellable isC
     if (isCancellable == IsCancellable::yes)
     {
         auto spCancelButton = std::unique_ptr<QPushButton>(new QPushButton(tr("Cancel"), this));
-        DFG_QT_VERIFY_CONNECT(connect(spCancelButton.get(), &QPushButton::clicked, [&]() { m_abCancelled = true; }));
+        DFG_QT_VERIFY_CONNECT(connect(spCancelButton.get(), &QPushButton::clicked, this, [&]() { m_abCancelled = true; }));
         setCancelButton(spCancelButton.release()); // "The progress dialog takes ownership"
     }
     else
