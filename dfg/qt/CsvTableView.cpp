@@ -4345,18 +4345,21 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
 
             // Creating tooltip text
             {
-                const auto sDescription = rCollector.getProperty(SelectionDetailCollector::s_propertyName_description).toString();
+                auto sDescription = rCollector.getProperty(SelectionDetailCollector::s_propertyName_description).toString();
                 auto sType = rCollector.getProperty(SelectionDetailCollector::s_propertyName_type).toString();
                 if (rCollector.isBuiltIn())
                     sType = tr("Built-in");
-                auto sFormula = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_formula).toString();
-                auto sInitialValue = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_initialValue).toString();
+                auto sFormula = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_formula).toString().toHtmlEscaped();
+                auto sInitialValue = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_initialValue).toString().toHtmlEscaped();
                 if (!sFormula.isEmpty())
                 {
                     sFormula = tr("<li>Formula: %1</li>").arg(sFormula);
                     sInitialValue = tr("<li>Initial value: %1</li>").arg(sInitialValue);
                 }
-                const QString sToolTip = tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3%4</ul>").arg(sType, rCollector.getUiName_short(), sFormula, sInitialValue);
+                if (!sDescription.isEmpty())
+                    sDescription = tr("<li>Description: %1</li>").arg(sDescription.toHtmlEscaped());
+                const QString sToolTip = tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3%4%5</ul>")
+                                        .arg(sType.toHtmlEscaped(), rCollector.getUiName_short().toHtmlEscaped(), sFormula, sInitialValue, sDescription);
                 pCheckBox->setToolTip(sToolTip);
             }
 
