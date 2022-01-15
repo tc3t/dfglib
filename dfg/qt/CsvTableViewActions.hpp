@@ -4,6 +4,7 @@
 #include "CsvTableView.hpp"
 #include "CsvItemModel.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../OpaquePtr.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractProxyModel>
@@ -11,8 +12,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QClipboard>
 #include <QPointer>
 DFG_END_INCLUDE_QT_HEADERS
-
-#include <unordered_map>
 
 #include "../io/DelimitedTextReader.hpp"
 #include "../alg.hpp"
@@ -751,5 +750,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int m_nNewRowCount = -1;
         int m_nNewColCount = -1;
         DFG_DETAIL_NS::CellMemory m_cellMemory; // When shrinking table, stores content from the removed area so that undo can restored them.
+
+        DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewActionResizeTable
 }}

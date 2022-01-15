@@ -110,6 +110,8 @@ TEST(dfgQt, CsvTableView_undoAfterResize)
     view.setModel(&viewModel);
 
     view.resizeTableNoUi(2, 2);
+    csvModel.setColumnName(0, "Col1");
+    csvModel.setColumnName(1, "Col2");
     csvModel.setDataNoUndo(0, 0, DFG_UTF8("a"));
     csvModel.setDataNoUndo(0, 1, DFG_UTF8("b"));
     csvModel.setDataNoUndo(1, 0, DFG_UTF8("c"));
@@ -121,6 +123,8 @@ TEST(dfgQt, CsvTableView_undoAfterResize)
     view.undo();
     DFGTEST_EXPECT_LEFT(2, csvModel.rowCount());
     DFGTEST_EXPECT_LEFT(2, csvModel.columnCount());
+    DFGTEST_EXPECT_LEFT("Col1", csvModel.getHeaderName(0));
+    DFGTEST_EXPECT_LEFT("Col2", csvModel.getHeaderName(1));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", csvModel.rawStringViewAt(0, 0));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", csvModel.rawStringViewAt(0, 1));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", csvModel.rawStringViewAt(1, 0));
@@ -132,6 +136,8 @@ TEST(dfgQt, CsvTableView_undoAfterResize)
     view.undo();
     DFGTEST_EXPECT_LEFT(2, csvModel.rowCount());
     DFGTEST_EXPECT_LEFT(2, csvModel.columnCount());
+    DFGTEST_EXPECT_LEFT("Col1", csvModel.getHeaderName(0));
+    DFGTEST_EXPECT_LEFT("Col2", csvModel.getHeaderName(1));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", csvModel.rawStringViewAt(0, 0));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", csvModel.rawStringViewAt(0, 1));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", csvModel.rawStringViewAt(1, 0));

@@ -1,6 +1,7 @@
 #include "../CsvTableViewActions.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QMap>
     #include <QTimer>
 DFG_END_INCLUDE_QT_HEADERS
 
@@ -81,6 +82,16 @@ void CsvTableViewActionFill::redo()
     }
 }
 
+////////////////////////////////////////////////////////////////////////////
+///
+/// CsvTableViewActionResizeTable
+///
+////////////////////////////////////////////////////////////////////////////
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionResizeTable)
+{
+    QMap<int, QString> m_columnNames;
+};
 
 CsvTableViewActionResizeTable::CsvTableViewActionResizeTable(CsvTableView* pView, const int nNewRowCount, const int nNewColCount)
     : m_spView(pView)
@@ -103,6 +114,7 @@ CsvTableViewActionResizeTable::CsvTableViewActionResizeTable(CsvTableView* pView
         }
         for (int c = m_nNewColCount; c < m_nOldColCount; ++c)
         {
+            DFG_OPAQUE_REF().m_columnNames[c] = pModel->getHeaderName(c);
             for (int r = 0; r < Min(m_nNewRowCount, m_nOldRowCount); ++r) // Min() is used to avoid bottom right corner to be handled twice when both row and column count gets smaller.
                 this->m_cellMemory.setElement(r, c, pModel->rawStringViewAt(r, c));
         }
@@ -139,6 +151,13 @@ void CsvTableViewActionResizeTable::impl(const int nTargetRowCount, const int nT
             pModel->insertColumns(nCurrentColCount, nPositiveCount);
         else
             pModel->removeColumns(nCurrentColCount - nPositiveCount, nPositiveCount);
+
+        for (auto iter = DFG_OPAQUE_REF().m_columnNames.begin(), iterEnd = DFG_OPAQUE_REF().m_columnNames.end(); iter != iterEnd; ++iter)
+        {
+            if (iter.key() >= nTargetColCount)
+                break;
+            pModel->setColumnName(iter.key(), iter.value());
+        }
     }
 }
 
