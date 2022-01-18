@@ -1,148 +1,71 @@
 # dfgQtTableEditor
 
-Example application for viewing and editing csv-files demonstrating features in dfglib. Also includes ability to open SQLite3-files and optionally visualization.
+csv-oriented table editor based on dfglib using Qt as UI framework. Also includes ability to open SQLite3-files and optionally visualization using [QCustomPlot](https://www.qcustomplot.com/).
 
 ## Building
 
-### __Version 2.1.0__:
+### __Version 2.2.0__:
 
-Has been successfully build with:
-| Compiler      | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
-| ------------- | ----- | ---- | -- | -- | -- |
-| Clang 6.0.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
-| Clang 10.0.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
-| GCC 7.5.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
-| GCC 9.3.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
-| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
-| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2017 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+Has been build with:
+| Compiler      | C++ standard [1] | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
+| ------------- | ---------------- | -- | ---- | -- | -- | -- |
+| Clang 6.0.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
+| Clang 10.0.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
+| Clang 12.0.0 (clang-cl, MSVC2019.10/11) | C++14 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| GCC 7.5.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
+| GCC 9.3.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
+| GCC 9.3.0 | C++17 | 6.0 | Ubuntu 20.04 | 1.71 | No |
+| MinGW 7.3.0 | C++17 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2017.9 | C++14 | 5.9 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2017.9 | C++17 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2019.10/11 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2022.0 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
 | | | |
 
-Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
+[1] As reported by *__cplusplus* macro  or equivalent.
 
-If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. For concrete build steps, see section for version 1.0.0.
+Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. While building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges. If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70.
 
-### __Version 2.0.0__:
-
-Has been successfully build with:
-| Compiler      | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
-| ------------- | ----- | ---- | -- | -- | -- |
-| Clang 6.0.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
-| Clang 10.0.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
-| GCC 7.5.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
-| GCC 9.3.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
-| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
-| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2017 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| | | |
-
-Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
-
- If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. For concrete build steps, see section for version 1.0.0.
-
-### __Version 1.9.0__:
-
-Has been successfully build with:
-| Compiler      | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
-| ------------- | ----- | ---- | -- | -- | -- |
-| Clang 6.0.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
-| Clang 10.0.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
-| GCC 7.5.0 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
-| GCC 9.3.0 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
-| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
-| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2017, MSVC2019 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| | | |
-
-Also expected to build directly or with little changes on MSVC2015; minimum Qt version is somewhere around 5.6 and 5.9. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
-
- If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out). For concrete build steps, see section for version 1.0.0.
-
-### __Version 1.8.0__:
-
-Has been successfully build with:
-| Compiler      | Qt | OS | Boost | Charting? | Comments |
-| ------------- | ----- | ---- | -- | -- | -- |
-| Clang 6.0.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
-| Clang 10.0.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_
-| GCC 7.5.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No |  |
-| GCC 9.3.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes |
-| GCC 9.3.0 | 6.0 | Ubuntu 20.04 | 1.71 | No |
-| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes |
-| MSVC2017, MSVC2019 | 5.9/5.12/5.13 | Windows 8.1 | 1.70 | Yes |
-| MSVC2019 | 6.0 | Windows 8.1 | 1.70 | Yes (*) | * With adjusted version of QCustomPlot 2.0.1 to allow building with Qt 6.0
-| | | |
-
-Also expected to build with MSVC2015; might also build with Qt versions before 5.9, but not earlier than 5.6. Note that while building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges.
-
- If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out). For concrete build steps, see section for version 1.0.0.
-
-### __Version 1.7.0__:
-
-Has been successfully build with:
-| Compiler      | Qt | OS | Boost | Charting? | Comments |
-| ------------- | ----- | ---- | -- | -- | -- |
-| Clang 6.0.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
-| Clang 10.0.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_
-| GCC 7.5.0 | 5.9.5 | Ubuntu 18.04 | 1.65.1 | No |  |
-| GCC 9.3.0 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes |
-| MinGW 7.3.0 | 5.13 | Windows 8.1 | 1.70 | Yes |
-| MSVC2017, MSVC2019 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes |
-| | | |
-
-### __Version 1.6.0__:
-
-Known to build with:
-* Clang 6.0.0 with Qt 5.9.5 (Ubuntu 18.04)
-* GCC 7.5.0 with Qt 5.9.5 (Ubuntu 18.04)
-* MinGW 7.3.0 with Qt 5.13 (Windows 8.1)
-* MSVC2017, MSVC2019 with Qt 5.12/5.13 (Windows 8.1). Expected to build also with MSVC2015.
-
-If building with QCustomPlot charting, requires Boost >= 1.70 (or that uses of boost::histogram are commented out)
-
-See detailed instructions from section of Version 1.0.0
-
-### __Version 1.5.0__:
-
-Like earlier versions with following changes:
-* Building with MSVC 2012 and 2013 is no longer supported.
-* Qt 5.6 is minimum Qt version
-* If building with QCustomPlot charting, requires Boost >= 1.70
-
-### __Version 1.1.0__:
-
-Like with version 1.0.0, but won't anymore build with MSVC 2010.
-
-### __Version 1.0.0 or earlier__:
-Requires basic C++11 support (as available since VC2010), Qt 5 and Boost (in include path). Some source packages may be available in [dfglib releases](https://github.com/tc3t/dfglib/releases).
-
-To build (assuming having compatible Qt version, Qt Creator and compiler available):
+Concrete build steps assuming having compatible Qt version, Qt Creator and compiler available:
 * Open dfgQtTableEditor.pro in Qt Creator
 * Choose suitable Qt kit to use
 * Click build
 
-Has been build with the following setups:
-
-* MSVC 2010, Qt 5.2.1, Boost 1.70, 32-bit (Windows 8.1)
-* MSVC 2012, Qt 5.2.1, Boost 1.70, 64-bit (Windows 8.1)
-* MSVC 2013, Qt 5.4.2, Boost 1.70, 64-bit (Windows 8.1)
-* MSVC 2015 update 3, Qt 5.8, Boost 1.70, 64-bit (Windows 8.1)
-* MSVC 2017.9, Qt 5.9.8, Boost 1.70, 64-bit (Windows 8.1)
-* MSVC 2017.9, Qt 5.11.2, Boost 1.70, 64-bit (Windows 8.1)
-* MSVC 2017.9, Qt 5.12, Boost 1.70, 64-bit (Windows 8.1)
-* MSVC 2017.9, Qt 5.13, Boost 1.70, 64-bit (Windows 8.1)
-* GCC 5.4.0, Qt 5.5.1, Boost 1.61, 32-bit (Ubuntu 16.04.6, 32-bit)
-* GCC 7.4.0, Qt 5.9.5, Boost 1.65.1, 64-bit (Ubuntu 18.04.2, 64-bit)
-* Clang 3.8.0, Qt 5.5.1, Boost 1.61, 32-bit (Ubuntu 16.04.6, 32-bit)
-* Clang 6.0.0, Qt 5.9.5, Boost 1.65.1, 64-bit (Ubuntu 18.04.2, 64-bit)
-* (with tweaks done 2019-09-29 in commit [c6cef13](https://github.com/tc3t/dfglib/commit/c6cef13711274fa37e6294ff34cfcc2855cfaffa)): MinGW 7.3.0, Qt 5.13.1, Boost 1.70, 64-bit (Windows 8.1)
-
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
+To see build chart of older versions, see [readme of 2.1.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.1.0/dfgExamples/dfgQtTableEditor)
+
 ## Version history
+
+### 2.2.0, 2022-01-18
+* Tag: [2.2.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.2.0)
+    * General
+        * [new] Can now hide columns ([#102](https://github.com/tc3t/dfglib/issues/102))
+        * [new] Formula-definable selection details and general improvements to selection detail widget (tooltip, enable/disable all actions) ([#103](https://github.com/tc3t/dfglib/issues/103))
+        * [new] can now transpose table ([#100](https://github.com/tc3t/dfglib/issues/100), [8f1591f0](https://github.com/tc3t/dfglib/commit/8f1591f0b0f8f9ae497519a52946ccc294ad6b1a))
+        * [new] ability to add weekday to Insert->date and to content generation dateTime formats ([#99](https://github.com/tc3t/dfglib/issues/99))
+        * [new] Extended "Go To Line" into "Go To Cell" ([#98](https://github.com/tc3t/dfglib/issues/98), [cf4d8ebc](https://github.com/tc3t/dfglib/commit/cf4d8ebc5b5653af8c8c00cb7a617e45592114cd))
+        * [imp] can now specify date/time formats in .conf-file. ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e))
+        * [imp] added "Reload from file"-action to context menu ([#101](https://github.com/tc3t/dfglib/issues/101), [4a6bfeac](https://github.com/tc3t/dfglib/commit/4a6bfeac444e8b0c226ff0554d0d3fd7d83ba1bc))
+        * [imp] multiple improvements to insert-action ([#112](https://github.com/tc3t/dfglib/issues/112), [031339d6](https://github.com/tc3t/dfglib/commit/031339d60c00598cc634b6902397008383ef7d57))
+        * [mod] Table view context menu is now smaller ([4dd8e735](https://github.com/tc3t/dfglib/commit/4dd8e7355b232bf031694a2eb89ad0cc706c55a7))
+        * [fix/reg] undoing shrinking resize now also restores previously existed cells, causes resize undo to be much heavier operation in now. ([#118](https://github.com/tc3t/dfglib/issues/118), [eceb507e](https://github.com/tc3t/dfglib/commit/eceb507e98710d130d83b5032c05799f9b73fead))
+        * [fix] Insert date/time actions and "Set column headers" were available in read-only mode ([6464b44c](https://github.com/tc3t/dfglib/commit/6464b44ced787819c54c505d96328b1e41d8bba5), [8a8a8110](https://github.com/tc3t/dfglib/commit/8a8a8110b85f819b8269736f678f8150c1533562))
+        * [fix] Various minor fixes and changes (Changing find column triggered faulty "data changed'-signals in some cases [33f69c43](https://github.com/tc3t/dfglib/commit/33f69c43dd204718161f9706c5685dbebfca0c55), About box now shows C++ standard version [bfcbeed2](https://github.com/tc3t/dfglib/commit/bfcbeed28af965fb76110d36dc5225a67cee0465), Now a info tip is shown if inserted row is hidden immediately due to filter [#114](https://github.com/tc3t/dfglib/issues/114) [d931b7e6](https://github.com/tc3t/dfglib/commit/d931b7e629d6b5b52c2dc231a70a7eee6e87c0a1))
+    * Content generator
+        * [imp] Formula parser now has new time handling functions ([#106](https://github.com/tc3t/dfglib/issues/106), [12c9e607](https://github.com/tc3t/dfglib/commit/12c9e6079245a1cd677eb94e58dfc49ffab5750c))
+        * [imp/mod] In content generator, cellValue() function now returns numeric values for dates and times. Also value with comma such as 1,25 is now interpreted as 1.25 ([98819f66](https://github.com/tc3t/dfglib/commit/98819f66f64af33b739ea1d7aaedce042b1b34d6))
+        * [mod] in content generator default floating point precision is now round-trippable instead of 6 ([e9386e6e](https://github.com/tc3t/dfglib/commit/e9386e6e2c4aade73a6b5875d899fa379539a5b8))
+        * [fix] Date formatting would result to empty if input value had milliseconds in decimal part ([1dcb9a18](https://github.com/tc3t/dfglib/commit/1dcb9a1872cd9656e77f4a9b88fc67e819581d30))
+    * Charts
+        * [new] Can now set axis range from panel_config axis_properties ([#105](https://github.com/tc3t/dfglib/issues/105), [7817a05d](https://github.com/tc3t/dfglib/commit/7817a05da3f3eec7d0b16726dfcf6662f318aa70))
+        * [imp] Apply button now shows chart preparation progress ([#108](https://github.com/tc3t/dfglib/issues/108))
+        * [imp] Chart definition text widget now has context menu entry to comment/uncomment ([139f6311](https://github.com/tc3t/dfglib/commit/139f63116c5739812a0e10e31cc8edd6a077a908))
+        * [fix] In some cases bars-chart remained completely hidden after inserting rows and some content ([#115](https://github.com/tc3t/dfglib/issues/115), [7144b69d](https://github.com/tc3t/dfglib/commit/7144b69de86256cf654eeabd87cc71d4feca46ce))
+        * [fix] chart entries were prepared even if they were disabled ([7d1e9d71](https://github.com/tc3t/dfglib/commit/7d1e9d716c4b074e4ea94fa3af21d74e38c42de9))
+        * [fix] in image export "Successfully exported to path"-widget file link didn't always work due to missing escaping ([9f52d21a](https://github.com/tc3t/dfglib/commit/9f52d21a6c121c3886af9036d275159c67115200))
+        * [fix] clicking Apply-button sometimes seemed to react only after a long delay ([b24a42e7](https://github.com/tc3t/dfglib/commit/b24a42e7be1e62b112603cf90b2d9b401b5e3817))
+
 
 ### 2.1.0, 2021-09-09
 * Tag: [2.1.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.1.0)
