@@ -11,8 +11,10 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QDialog>
     #include <QDialogButtonBox>
+    #include <QGuiApplication>
     #include <QLabel>
     #include <QMenu>
+    #include <QScreen>
     #include <QString>
     #include <QTimer>
     #include <QWidgetAction>
@@ -149,6 +151,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_QT_VERIFY_CONNECT(QObject::connect(pButtonBox, &QDialogButtonBox::accepted, pDlg, &QDialog::accept));
         DFG_QT_VERIFY_CONNECT(QObject::connect(pButtonBox, &QDialogButtonBox::rejected, pDlg, &QDialog::reject));
         return pButtonBox;
+    }
+
+    inline void maximizeHorizontally(QWidget* pWidget)
+    {
+        if (!pWidget)
+            return;
+        auto pPrimaryScreen = QGuiApplication::primaryScreen();
+        if (pPrimaryScreen)
+        {
+            const auto screenRect = pPrimaryScreen->geometry();
+            pWidget->resize(screenRect.width(), pWidget->height());
+            pWidget->move(0, pWidget->y());
+        }
     }
 
 }} // Module namespace

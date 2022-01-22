@@ -9,6 +9,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QMenu>
 #include <QTimer>
 #include <QIcon>
 #include <QMainWindow>
@@ -29,6 +30,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/build/buildTimeDetails.hpp>
 #include <dfg/debug/structuredExceptionHandling.h>
 #include <dfg/qt/CsvTableView.hpp>
+#include <dfg/qt/widgetHelpers.hpp>
 #include <exception>
 
 
@@ -269,17 +271,47 @@ int main(int argc, char *argv[])
         #endif
     }
 
-    // Add about-button to TableEditor toolbar.
+    // Adding toolbar buttons
     {
-        QDesktopServices::setUrlHandler("dfgdiff", &diffDisplay, "urlHandler");
-        auto button = new QToolButton(&tableEditor);
-        button->setToolTip(QApplication::tr("Information about the application"));
-        auto pStyle = a.style();
-        if (pStyle)
-            button->setIcon(pStyle->standardIcon(QStyle::SP_MessageBoxInformation));
-        DFG_QT_VERIFY_CONNECT(QObject::connect(button, &QToolButton::clicked, &onShowAboutBox));
         tableEditor.addToolBarSeparator();
-        tableEditor.addToolBarWidget(button);
+        // Adding operations-button to TableEditor toolbar
+        {
+            auto pButton = new QToolButton(&tableEditor);
+
+            pButton->setToolTip(QApplication::tr("Operations"));
+            pButton->setPopupMode(QToolButton::InstantPopup);
+
+            auto pMenu = new QMenu(pButton); // Deletion through parentship
+            const auto addMenuItem = [&](const QString& sTitle, const QString sIconPath, std::function<void()> func)
+            {
+                auto pAct = pMenu->addAction(sTitle);
+                if (pAct)
+                {
+                    DFG_QT_VERIFY_CONNECT(QObject::connect(pAct, &QAction::triggered, &mainWindow, func));
+                    if (!sIconPath.isEmpty())
+                        pAct->setIcon(QIcon(sIconPath));
+                }
+            };
+
+            addMenuItem(mainWindow.tr("Maximize window horizontally"), ":/resources/maximizeHorizontally.png", [&]() { dfg::qt::maximizeHorizontally(&mainWindow); });
+
+            pButton->setMenu(pMenu); // Does not transfer ownership
+            pButton->setIcon(QIcon(":/resources/actionsButton.png"));
+
+            tableEditor.addToolBarWidget(pButton);
+        }
+
+        // Adding about-button to TableEditor toolbar.
+        {
+            QDesktopServices::setUrlHandler("dfgdiff", &diffDisplay, "urlHandler");
+            auto pButton = new QToolButton(&tableEditor);
+            pButton->setToolTip(QApplication::tr("Information about the application"));
+            auto pStyle = a.style();
+            if (pStyle)
+                pButton->setIcon(pStyle->standardIcon(QStyle::SP_MessageBoxInformation));
+            DFG_QT_VERIFY_CONNECT(QObject::connect(pButton, &QToolButton::clicked, &onShowAboutBox));
+            tableEditor.addToolBarWidget(pButton);
+        }
     }
 
     // Set shortcuts visible in context menus in >= 5.13. This is bit of a mess (these notes might be Windows-specific):
