@@ -294,6 +294,7 @@ int main(int argc, char *argv[])
             };
 
             addMenuItem(mainWindow.tr("Maximize window horizontally"), ":/resources/maximizeHorizontally.png", [&]() { dfg::qt::maximizeHorizontally(&mainWindow); });
+            addMenuItem(mainWindow.tr("Maximize window vertically"),   ":/resources/maximizeVertically.png"  , [&]() { dfg::qt::maximizeVertically(&mainWindow);   });
 
             pButton->setMenu(pMenu); // Does not transfer ownership
             pButton->setIcon(QIcon(":/resources/actionsButton.png"));

@@ -5,5 +5,6 @@
         <file alias="chartGuide.html">../../dfg/qt/res/chartGuide.html</file>
         <file>resources/actionsButton.png</file>
         <file>resources/maximizeHorizontally.png</file>
+        <file>resources/maximizeVertically.png</file>
     </qresource>
 </RCC>

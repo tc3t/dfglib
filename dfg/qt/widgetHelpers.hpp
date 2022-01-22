@@ -153,6 +153,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         return pButtonBox;
     }
 
+    // Maximizes window horizontally (frames are included in the maximed view). Behaviour in case of multiscreen display is unspecified.
     inline void maximizeHorizontally(QWidget* pWidget)
     {
         if (!pWidget)
@@ -160,9 +161,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         auto pPrimaryScreen = QGuiApplication::primaryScreen();
         if (pPrimaryScreen)
         {
-            const auto screenRect = pPrimaryScreen->geometry();
-            pWidget->resize(screenRect.width(), pWidget->height());
+            const auto screenRect = pPrimaryScreen->availableSize();
+            const auto nAdjust = pWidget->frameGeometry().width() - pWidget->geometry().width();
+            pWidget->resize(screenRect.width() - nAdjust, pWidget->height());
             pWidget->move(0, pWidget->y());
+        }
+    }
+
+    // Maximizes window vertically (frames are included in the maximed view). Behaviour in case of multiscreen display is unspecified.
+    inline void maximizeVertically(QWidget* pWidget)
+    {
+        if (!pWidget)
+            return;
+        auto pPrimaryScreen = QGuiApplication::primaryScreen();
+        if (pPrimaryScreen)
+        {
+            const auto screenRect = pPrimaryScreen->availableSize();
+            const auto nAdjust = pWidget->frameGeometry().height() - pWidget->geometry().height();
+            pWidget->resize(pWidget->width(), screenRect.height() - nAdjust);
+            pWidget->move(pWidget->x(), 0);
         }
     }
 
