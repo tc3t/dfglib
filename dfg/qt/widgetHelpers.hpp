@@ -182,5 +182,30 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             pWidget->move(pWidget->x(), 0);
         }
     }
+    
+    // Centers widget to screen and resizes by ratios. Behaviour in case of multiscreen display is unspecified.
+    inline void centreAndResizeToScreen(QWidget* pWidget, const double widthRatio, const double heightRatio)
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(math);
+        if (!pWidget)
+            return;
+        const auto isValidRatio = [](const double d) { return isFinite(d) && d > 0 && d <= 1; };
+        if (!isValidRatio(widthRatio) || !isValidRatio(heightRatio))
+            return;
+        auto pPrimaryScreen = QGuiApplication::primaryScreen();
+        if (pPrimaryScreen)
+        {
+            const auto screenRect = pPrimaryScreen->availableSize();
+            const auto nWidthAdjust = pWidget->frameGeometry().width() - pWidget->geometry().width();
+            const auto nHeightAdjust = pWidget->frameGeometry().height() - pWidget->geometry().height();
+            const auto nNewTotalWidth = round<int>(widthRatio * screenRect.width());
+            const auto nNewTotalHeight = round<int>(heightRatio * screenRect.height());
+            pWidget->resize(nNewTotalWidth - nWidthAdjust, nNewTotalHeight - nHeightAdjust);
+            const auto xPos = (screenRect.width() - nNewTotalWidth) / 2;
+            const auto yPos = (screenRect.height() - nNewTotalHeight) / 2;
+            pWidget->move(xPos, yPos);
+        }
+    }
 
 }} // Module namespace

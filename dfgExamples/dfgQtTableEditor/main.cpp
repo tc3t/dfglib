@@ -145,6 +145,9 @@ static void onShowAboutBox()
 
 class MainWindow : public QMainWindow
 {
+public:
+    void setDefaultGeometry(); // Moves and resizes mainwindow to default position and size.
+
     // QWidget interface
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -158,6 +161,11 @@ void MainWindow::closeEvent(QCloseEvent* event)
         event->accept();
     else
         event->ignore();
+}
+
+void MainWindow::setDefaultGeometry()
+{
+    dfg::qt::centreAndResizeToScreen(this, 0.8, 0.8);
 }
 
 int main(int argc, char *argv[])
@@ -293,8 +301,9 @@ int main(int argc, char *argv[])
                 }
             };
 
-            addMenuItem(mainWindow.tr("Maximize window horizontally"), ":/resources/maximizeHorizontally.png", [&]() { dfg::qt::maximizeHorizontally(&mainWindow); });
-            addMenuItem(mainWindow.tr("Maximize window vertically"),   ":/resources/maximizeVertically.png"  , [&]() { dfg::qt::maximizeVertically(&mainWindow);   });
+            addMenuItem(mainWindow.tr("Maximize window horizontally"),              ":/resources/maximizeHorizontally.png", [&]() { dfg::qt::maximizeHorizontally(&mainWindow); });
+            addMenuItem(mainWindow.tr("Maximize window vertically"),                ":/resources/maximizeVertically.png"  , [&]() { dfg::qt::maximizeVertically(&mainWindow); });
+            addMenuItem(mainWindow.tr("Reset window to default size and position"), ":/resources/defaultSize.png"         , [&]() { mainWindow.setDefaultGeometry(); });
 
             pButton->setMenu(pMenu); // Does not transfer ownership
             pButton->setIcon(QIcon(":/resources/actionsButton.png"));
@@ -330,6 +339,8 @@ int main(int argc, char *argv[])
         pStyleHints->setShowShortcutsInContextMenus(true);
     }
 #endif
+
+    mainWindow.setDefaultGeometry();
 
     while (true)
     {
