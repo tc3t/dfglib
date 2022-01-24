@@ -8,7 +8,7 @@
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
    |__|_|  /____/|   __(____  /__|  /____  >\___  >__|
 		 \/      |__|       \/           \/     \/
-   Copyright (C) 2004 - 2020 Ingo Berg
+   Copyright (C) 2004 - 2021 Ingo Berg
 
 	Redistribution and use in source and binary forms, with or without modification, are permitted
 	provided that the following conditions are met:
@@ -143,6 +143,19 @@ namespace dfg_mu
 			AddCallback(a_strName, ParserCallback(a_pFun, a_bAllowOpt), m_FunDef, ValidNameChars());
 		}
 
+		/** \fn void dfg_mu::ParserBase::DefineFunUserData
+			\brief Define a parser function with user data (not null).
+			\param a_strName Name of the function
+			\param a_pFun Pointer to the callback function
+			\param a_pUserData Pointer that will be passed back to callback (shall not be nullptr)
+			\param a_bAllowOpt A flag indicating this function may be optimized
+		*/
+		template<typename T>
+		void DefineFunUserData(const string_type& a_strName, T a_pFun, void* a_pUserData, bool a_bAllowOpt = true)
+		{
+			AddCallback(a_strName, ParserCallback(a_pFun, a_pUserData, a_bAllowOpt), m_FunDef, ValidNameChars());
+		}
+
 		void DefineOprt(const string_type& a_strName, fun_type2 a_pFun, unsigned a_iPri = 0, EOprtAssociativity a_eAssociativity = oaLEFT, bool a_bAllowOpt = false);
 		void DefineConst(const string_type& a_sName, value_type a_fVal);
 		void DefineStrConst(const string_type& a_sName, const string_type& a_strVal);
@@ -165,6 +178,7 @@ namespace dfg_mu
 		const string_type& GetExpr() const;
 		const funmap_type& GetFunDef() const;
 		string_type GetVersion(EParserVersionInfo eInfo = pviFULL) const;
+		const ParserByteCode& GetByteCode() const;
 
 		const char_type** GetOprtDef() const;
 		void DefineNameChars(const char_type* a_szCharset);
@@ -203,24 +217,24 @@ namespace dfg_mu
 
 			explicit change_dec_sep(char_type cDecSep, char_type cThousandsSep = 0, int nGroup = 3)
 				:std::numpunct<TChar>()
-				, m_nGroup(nGroup)
-				, m_cDecPoint(cDecSep)
-				, m_cThousandsSep(cThousandsSep)
+				,m_nGroup(nGroup)
+				,m_cDecPoint(cDecSep)
+				,m_cThousandsSep(cThousandsSep)
 			{}
 
 		protected:
 
-			virtual char_type do_decimal_point() const
+			char_type do_decimal_point() const override
 			{
 				return m_cDecPoint;
 			}
 
-			virtual char_type do_thousands_sep() const
+			char_type do_thousands_sep() const override
 			{
 				return m_cThousandsSep;
 			}
 
-			virtual std::string do_grouping() const
+			std::string do_grouping() const override
 			{
 				// fix for issue 4: https://code.google.com/p/muparser/issues/detail?id=4
 				// courtesy of Jens Bartsch
@@ -297,5 +311,9 @@ namespace dfg_mu
 	};
 
 } // namespace dfg_mu
+
+#if defined(_MSC_VER)
+	#pragma warning(pop)
+#endif
 
 #endif
