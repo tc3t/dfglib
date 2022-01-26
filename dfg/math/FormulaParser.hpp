@@ -91,8 +91,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 
         using FuncType_D_1PSZ = double(*)(const char*);
 
-        static constexpr size_t maxFunctorCountPerType() { return 20; }
-
         ReturnStatus setFormula(const StringViewC sv); // Returns ReturnStatus that evaluates to true iff successful. Note: successful return value doesn't guarantee that formula is even well formed, i.e. may return true even if formula has syntax errors.
 
         // Calls setFormula() and returns evaluateFormulaAsDouble().
@@ -124,28 +122,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
         ReturnStatus defineFunction(const StringViewC& sv, FuncType_D_4D func, bool bAllowOptimization);
 
         // Defines function as std::function
-        // NOTE: these functions are not thread safe and have obscure global restrictions, please read notes below if intending to use.
-        //      -Underlying implementation doesn't natively provide a way to define stateful function so this is 
-        //       implemented using a global list of standalone functions where each function refer to a global extra parameter.
-        //      -For each function type, there can simultaneously be at most maxFunctorCountPerType() functors defined in all FormulaParser instances.
-        //          -If having maximum count, this function returns failure.
-        //      -All FormulaParser instances that use this function, should be handled from one thread only (e.g. deleting an instance that has used
-        //       defineFunctor() from one thread while another instance in another thread calls defineFunctor() is not safe)
         ReturnStatus defineFunctor(const StringViewC& sv, std::function<double()> func, bool bAllowOptimization);
         ReturnStatus defineFunctor(const StringViewC& sv, std::function<double(double)> func, bool bAllowOptimization);
         ReturnStatus defineFunctor(const StringViewC& sv, std::function<double(double, double)> func, bool bAllowOptimization);
 
         // Defines random functions for this parser.
-        // Note: uses defineFunctor() so it's limitations apply to this function.
-        // Note: This disables formula optimizer.
         ReturnStatus defineRandomFunctions();
 
         // Calls given function for each defined function name, handler should return true to continue iteration, false to terminate.
         void forEachDefinedFunctionNameWhile(std::function<bool (const StringViewC&)> handler) const;
 
     private:
-        template <class Func_T, class ExtraParam_T, class FuncType_T, size_t N>
-        ReturnStatus defineFunctorImpl(ExtraParam_T (&extraParamArr)[N], FuncType_T (&funcArr)[N], const StringViewC& sv, Func_T&& func, bool bAllowOptimization);
+        template <class UserData_T, class Func_T>
+        ReturnStatus defineFunctorImpl(const StringViewC& sv, Func_T&& func, bool bAllowOptimization);
 
         template <class Func_T>
         ReturnStatus defineFunctionImpl(const StringViewC& sv, Func_T func, bool bAllowOptimization);

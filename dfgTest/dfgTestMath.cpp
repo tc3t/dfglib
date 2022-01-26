@@ -693,8 +693,6 @@ TEST(dfgMath, FormulaParser_functors)
     using namespace DFG_MODULE_NS(math);
     using namespace DFG_MODULE_NS(str);
 
-    const auto nMaxFunctorCount = FormulaParser::maxFunctorCountPerType();
-
     // Basic tests
     {
         double a = 1, b = 2, c = 3;
@@ -708,64 +706,14 @@ TEST(dfgMath, FormulaParser_functors)
         EXPECT_EQ(12,  parser.setFormulaAndEvaluateAsDouble("f1(10)"));
         EXPECT_EQ(323, parser.setFormulaAndEvaluateAsDouble("f2(20, 300)"));
         EXPECT_EQ(5,   parser.setFormulaAndEvaluateAsDouble("fr0()"));
+
+        // Checking that giving empty functor as argument behaves.
+        EXPECT_FALSE(parser.defineFunctor("empty_functor_test", std::function<double()>(), true));
+
+        // Checking that trying to define invalid functor doesn't leak expections.
+        EXPECT_FALSE(parser.defineFunctor("i + n - v * a / l ^ i + d", [=]() { return 0; }, true));
     }
 
-    // Testing functor limits
-    {
-        FormulaParser parser;
-        for (uint32 i = 0; i < nMaxFunctorCount; ++i)
-        {
-            EXPECT_TRUE(parser.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
-            EXPECT_TRUE(parser.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
-            EXPECT_TRUE(parser.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
-        }
-        // These calls are expected to fail as max count has been added already.
-        EXPECT_FALSE(parser.defineFunctor("f0", []() { return 0.0; }, true));
-        EXPECT_FALSE(parser.defineFunctor("f1", [](double) { return 0.0; }, true));
-        EXPECT_FALSE(parser.defineFunctor("f2", [](double, double) { return 0.0; }, true));
-    }
-
-    // Testing that clean up works correctly when there are multiple parsers.
-    {
-        FormulaParser parser0;
-        {
-            FormulaParser parser1;
-            DFG_STATIC_ASSERT(nMaxFunctorCount % 2 == 0, "This test expects even max functor count");
-            for (uint32 i = 0; i < nMaxFunctorCount / 2; ++i)
-            {
-                EXPECT_TRUE(parser0.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
-                EXPECT_TRUE(parser1.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
-                EXPECT_TRUE(parser0.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
-                EXPECT_TRUE(parser1.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
-                EXPECT_TRUE(parser0.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
-                EXPECT_TRUE(parser1.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
-            }
-            EXPECT_FALSE(parser0.defineFunctor("f0", []() { return 0.0; }, true));
-            EXPECT_FALSE(parser1.defineFunctor("f0", []() { return 0.0; }, true));
-        }
-        for (uint32 i = 0; i < nMaxFunctorCount / 2; ++i)
-        {
-            EXPECT_TRUE(parser0.defineFunctor("f0_a" + toStrC(i), [=]() { return i; }, true));
-            EXPECT_TRUE(parser0.defineFunctor("f1_a" + toStrC(i), [=](double) { return i; }, true));
-            EXPECT_TRUE(parser0.defineFunctor("f2_a" + toStrC(i), [=](double, double) { return i; }, true));
-        }
-    }
-
-    // Adding max count again to make sure that destruction of previous FormulaParsers has correctly cleaned up functors.
-    {
-        FormulaParser parser;
-        for (uint32 i = 0; i < nMaxFunctorCount; ++i)
-        {
-            // Trying to add some invalid functors to make sure that they don't consume resources.
-            EXPECT_FALSE(parser.defineFunctor("i + n - v * a / l ^ i + d", [=]() { return i; }, true));
-            EXPECT_FALSE(parser.defineFunctor("i + n - v * a / l ^ i + d", [=](double) { return i; }, true));
-            EXPECT_FALSE(parser.defineFunctor("i + n - v * a / l ^ i + d", [=](double, double) { return i; }, true));
-
-            EXPECT_TRUE(parser.defineFunctor("f0_" + toStrC(i), [=]() { return i; }, true));
-            EXPECT_TRUE(parser.defineFunctor("f1_" + toStrC(i), [=](double) { return i; }, true));
-            EXPECT_TRUE(parser.defineFunctor("f2_" + toStrC(i), [=](double, double) { return i; }, true));
-        }
-    }
 }
 
 TEST(dfgMath, FormulaParser_randomFunctions)

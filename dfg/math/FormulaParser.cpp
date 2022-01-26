@@ -1,6 +1,5 @@
 #include "FormulaParser.hpp"
 #include <limits>
-#include "../cont/SetVector.hpp"
 #include "../rand/distributionHelpers.hpp"
 #include "../rand.hpp"
 #include "../time/DateTime.hpp"
@@ -21,102 +20,50 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) { namespace muParserExt {
 
-template <size_t N>
-struct FunctorHelperT
+class MuparserUserData
 {
-    template <class Func_T>
-    class ExtraParamT
-    {
-    public:
-        operator bool() const
-        {
-            return (m_callback) ? true : false;
-        }
-        void reset()
-        {
-            m_callback = Func_T();
-        }
-        Func_T m_callback;
-    };
+public:
+    virtual ~MuparserUserData() = default;
+};
 
-    using ExtraParam0 = ExtraParamT<std::function<double()>>;
-    using ExtraParam1 = ExtraParamT<std::function<double(double)>>;
-    using ExtraParam2 = ExtraParamT<std::function<double(double, double)>>;
+template <class T> T userDataDefaultReturnValue() { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "Implementation not available for given type"); }
 
-    FunctorHelperT()
-    {
-        fillFunctionPointers<N - 1>(std::integral_constant<bool, (N > 0)>());
-    }
+template <> double userDataDefaultReturnValue<double>() { return std::numeric_limits<double>::quiet_NaN(); }
 
-    static double extraParamCallHandler0(ExtraParam0& param)                     { return param.m_callback(); }
-    static double extraParamCallHandler1(ExtraParam1& param, double a)           { return param.m_callback(a); }
-    static double extraParamCallHandler2(ExtraParam2& param, double a, double b) { return param.m_callback(a, b); }
-
-    template <size_t M> static double fD0D()                   { return extraParamCallHandler0(s_extraParams0[M]); }
-    template <size_t M> static double fD1D(double a)           { return extraParamCallHandler1(s_extraParams1[M], a); }
-    template <size_t M> static double fD2D(double a, double b) { return extraParamCallHandler2(s_extraParams2[M], a, b); }
-
-    template <size_t M>
-    static void fillFunctionPointers()
-    {
-        s_fp_D_0D[M] = &fD0D<M>;
-        s_fp_D_1D[M] = &fD1D<M>;
-        s_fp_D_2D[M] = &fD2D<M>;
-    }
-
-    template <size_t M>
-    static void fillFunctionPointers(std::false_type)
-    {
-        fillFunctionPointers<M>();
-    }
-
-    template <size_t M>
-    static void fillFunctionPointers(std::true_type)
-    {
-        fillFunctionPointers<M>();
-        fillFunctionPointers<M - 1>(std::integral_constant<bool, (M - 1 > 0)>());
-    }
-
-    static ExtraParam0 s_extraParams0[N];
-    static ExtraParam1 s_extraParams1[N];
-    static ExtraParam2 s_extraParams2[N];
-
-    static ::DFG_MODULE_NS(math)::FormulaParser::FuncType_D_0D s_fp_D_0D[N];
-    static ::DFG_MODULE_NS(math)::FormulaParser::FuncType_D_1D s_fp_D_1D[N];
-    static ::DFG_MODULE_NS(math)::FormulaParser::FuncType_D_2D s_fp_D_2D[N];
-}; // class FunctorHelperT
-
-template <size_t N> typename FunctorHelperT<N>::ExtraParam0 FunctorHelperT<N>::s_extraParams0[N];
-template <size_t N> typename FunctorHelperT<N>::ExtraParam1 FunctorHelperT<N>::s_extraParams1[N];
-template <size_t N> typename FunctorHelperT<N>::ExtraParam2 FunctorHelperT<N>::s_extraParams2[N];
-
-template <size_t N> ::DFG_MODULE_NS(math)::FormulaParser::FuncType_D_0D FunctorHelperT<N>::s_fp_D_0D[N];
-template <size_t N> ::DFG_MODULE_NS(math)::FormulaParser::FuncType_D_1D FunctorHelperT<N>::s_fp_D_1D[N];
-template <size_t N> ::DFG_MODULE_NS(math)::FormulaParser::FuncType_D_2D FunctorHelperT<N>::s_fp_D_2D[N];
-
-using FunctorHelper = FunctorHelperT<FormulaParser::maxFunctorCountPerType()>;
-FunctorHelper gFunctorHelper;
-
-template <class Cont_T, class ParamArr_T, size_t N>
-void cleanUpFunctors(Cont_T& paramsToCleanUp, ParamArr_T(&paramArr)[N])
+template <class Return_T, class... ArgTypes_T>
+class MuparserUserDataT : public MuparserUserData
 {
-    if (paramsToCleanUp.empty())
-        return;
-    for (size_t i = 0; i < N; ++i)
+public:
+    using FunctionT = std::function<Return_T(ArgTypes_T...)>;
+    using ReturnT = Return_T;
+
+    MuparserUserDataT(FunctionT func)
+        : m_func(std::move(func))
+    {}
+
+    Return_T operator()(ArgTypes_T... args)
     {
-        if (!paramArr[i])
-            continue;
-        auto pParam = reinterpret_cast<uintptr_t>(&paramArr[i]);
-        auto iter = paramsToCleanUp.find(pParam);
-        if (iter != paramsToCleanUp.end())
-        {
-            paramArr[i].reset();
-            paramsToCleanUp.erase(iter);
-            if (paramsToCleanUp.empty())
-                break;
-        }
+        if (m_func)
+            return m_func(std::forward<ArgTypes_T>(args)...);
+        else
+            return userDataDefaultReturnValue<Return_T>();
     }
-}
+
+    static Return_T muParserCallback(void* pArg, ArgTypes_T... args)
+    {
+        auto pUserData = reinterpret_cast<MuparserUserDataT*>(pArg);
+        if (pUserData)
+            return (*pUserData)(std::forward<ArgTypes_T>(args)...);
+        else
+            return userDataDefaultReturnValue<ReturnT>();
+    }
+
+    FunctionT m_func;
+}; // class MuparserUserDataT
+
+using MuparserUserData_D_0D = MuparserUserDataT<double>;
+using MuparserUserData_D_1D = MuparserUserDataT<double, double>;
+using MuparserUserData_D_2D = MuparserUserDataT<double, double, double>;
 
 } } } // namespace dfg::math::muParserExt
 
@@ -332,8 +279,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 {
     using RandEngT = decltype(::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded());
     dfg_mu::Parser m_parser;
-    ::DFG_MODULE_NS(cont)::SetVector<uintptr_t> m_ownedParams;
     std::unique_ptr<RandEngT> m_spRandEng;
+    std::vector<std::unique_ptr<muParserExt::MuparserUserData>> m_userDatas;
 };
 
 
@@ -394,54 +341,39 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(math)::FormulaParser)
 
 ::DFG_MODULE_NS(math)::FormulaParser::~FormulaParser()
 {
-    using namespace ::DFG_MODULE_NS(math)::muParserExt;
-    // Cleaning up owned functors for globals
-    {
-        auto& ownedParams = DFG_OPAQUE_REF().m_ownedParams;
-        cleanUpFunctors(ownedParams, FunctorHelper::s_extraParams0);
-        cleanUpFunctors(ownedParams, FunctorHelper::s_extraParams1);
-        cleanUpFunctors(ownedParams, FunctorHelper::s_extraParams2);
-    }
-}   
+}
 
-template <class Func_T, class ExtraParam_T, class FuncType_T, size_t N>
-auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctorImpl(ExtraParam_T(&extraParamArr)[N], FuncType_T(&funcArr)[N], const StringViewC& sv, Func_T&& func, bool bAllowOptimization) -> ReturnStatus
+template <class UserData_T, class Func_T>
+auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctorImpl(const StringViewC& sv, Func_T&& func, const bool bAllowOptimization) -> ReturnStatus
 {
-    using namespace ::DFG_MODULE_NS(math)::muParserExt;
-    size_t i = 0;
-    // Finding free param slot
-    for (; i < N; ++i)
+    if (!func)
+        return ReturnStatus::failure("func is null");
+    DFG_OPAQUE_REF().m_userDatas.emplace_back(new UserData_T(std::move(func)));
+    try
     {
-        if (!extraParamArr[i])
-            break;
+        DFG_OPAQUE_REF().m_parser.DefineFunUserData(sv.toString(), UserData_T::muParserCallback, DFG_OPAQUE_REF().m_userDatas.back().get(), bAllowOptimization);
+        return ReturnStatus::success();
     }
-    if (i >= N)
-        return ReturnStatus::failure("No free slots"); // No free slot found
-    const auto rv = defineFunction(sv, funcArr[i], bAllowOptimization);
-    if (rv)
+    catch (const dfg_mu::Parser::exception_type& e)
     {
-        extraParamArr[i].m_callback = std::forward<Func_T>(func);
-        DFG_OPAQUE_REF().m_ownedParams.insert(reinterpret_cast<uintptr_t>(&extraParamArr[i]));
+        DFG_OPAQUE_REF().m_userDatas.pop_back();
+        return ReturnStatus::failure(e);
     }
-    return rv;
 }
 
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctor(const StringViewC& sv, std::function<double()> func, const bool bAllowOptimization) -> ReturnStatus
 {
-    using namespace ::DFG_MODULE_NS(math)::muParserExt;
-    return defineFunctorImpl(FunctorHelper::s_extraParams0, FunctorHelper::s_fp_D_0D, sv, std::move(func), bAllowOptimization);
+    return defineFunctorImpl<muParserExt::MuparserUserData_D_0D>(sv, std::move(func), bAllowOptimization);
 }
 
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctor(const StringViewC& sv, std::function<double(double)> func, const bool bAllowOptimization) -> ReturnStatus
 {
-    using namespace ::DFG_MODULE_NS(math)::muParserExt;
-    return defineFunctorImpl(FunctorHelper::s_extraParams1, FunctorHelper::s_fp_D_1D, sv, std::move(func), bAllowOptimization);
+    return defineFunctorImpl<muParserExt::MuparserUserData_D_1D>(sv, std::move(func), bAllowOptimization);
 }
 
 auto ::DFG_MODULE_NS(math)::FormulaParser::defineFunctor(const StringViewC& sv, std::function<double(double, double)> func, const bool bAllowOptimization) -> ReturnStatus
 {
-    using namespace ::DFG_MODULE_NS(math)::muParserExt;
-    return defineFunctorImpl(FunctorHelper::s_extraParams2, FunctorHelper::s_fp_D_2D, sv, std::move(func), bAllowOptimization);
+    return defineFunctorImpl<muParserExt::MuparserUserData_D_2D>(sv, std::move(func), bAllowOptimization);
 }
 
 auto ::DFG_MODULE_NS(math)::FormulaParser::setFormula(const StringViewC sv) -> ReturnStatus
@@ -603,9 +535,8 @@ auto ::DFG_MODULE_NS(math)::FormulaParser::defineRandomFunctions() -> ReturnStat
 {
     auto& opaqueThis = DFG_OPAQUE_REF();
     if (opaqueThis.m_spRandEng)
-        return ReturnStatus::failure("Random engine not available");
+        return ReturnStatus::failure("Random functions already defined");
     using RandEngT = std::remove_reference<decltype(opaqueThis)>::type::RandEngT;
-    opaqueThis.m_parser.EnableOptimizer(false); // muParser doesn't seem to respect optimize-flag (https://github.com/beltoforion/muparser/issues/93), so must turn off optimizer completely.
     opaqueThis.m_spRandEng.reset(new RandEngT(::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded()));
     DistributionAdder<RandEngT> adder(*this, *opaqueThis.m_spRandEng);
     ::DFG_MODULE_NS(rand)::DFG_DETAIL_NS::forEachDistributionType(adder);
