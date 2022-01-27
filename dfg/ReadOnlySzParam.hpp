@@ -32,6 +32,9 @@ template <> inline ConstWCharPtr readOnlySzParamConverter<wchar_t, ConstWCharPtr
 template <> inline ConstCharPtr readOnlySzParamConverter<char, std::string>(const std::string& s) { return s.c_str(); }
 template <> inline ConstWCharPtr readOnlySzParamConverter<wchar_t, std::wstring>(const std::wstring& s) { return s.c_str(); }
 
+template <class Char_T, class Str_T>
+class StringViewSz;
+
 /*
  
 NOTE: ReadOnlySzParam is deprecated; StringView and StringViewSz are alternatives.
@@ -110,6 +113,9 @@ public:
 	{
 		return m_pSz;
 	}
+
+    // Support for implicit conversion to StringViewSz
+    operator StringViewSz<Char_T, std::basic_string<Char_T>>() const;
 
 	// Note: Having both
 	//       operator const CharT* and
@@ -861,6 +867,11 @@ typedef StringViewSz<char, StringLatin1>    StringViewSzLatin1;
 typedef StringViewSz<char, StringUtf8>      StringViewSzUtf8;
 typedef StringViewSz<char16_t, StringUtf16> StringViewSzUtf16;
 
+template <class Char_T>
+ReadOnlySzParam<Char_T>::operator StringViewSz<Char_T>() const
+{
+    return StringViewSz<Char_T>(this->c_str());
+}
 
 // StringView wrapper that can optionally own the content. To be used e.g. in cases where return value from a function
 // can be a view to a string literal or constructed temporary.

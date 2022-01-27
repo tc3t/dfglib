@@ -894,20 +894,20 @@ TEST(dfgStr, intToRadixRepresentation)
 
 namespace
 {
-    void ReadOnlySzParamOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamC) sC)
+    void ReadOnlySzParamOverloadTest(DFG_ROOT_NS::ReadOnlySzParamC sC)
     {
         std::string s = sC.c_str();
     }
-    void ReadOnlySzParamOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamW) sW)
+    void ReadOnlySzParamOverloadTest(DFG_ROOT_NS::ReadOnlySzParamW sW)
     {
         std::wstring s = sW.c_str(); 
     }
 
-    void ReadOnlySzParamWithSizeOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamWithSizeC) sC)
+    void ReadOnlySzParamWithSizeOverloadTest(DFG_ROOT_NS::ReadOnlySzParamWithSizeC sC)
     {
         std::string s = sC.c_str();
     }
-    void ReadOnlySzParamWithSizeOverloadTest(DFG_ROOT_NS::DFG_CLASS_NAME(ReadOnlySzParamWithSizeW) sW)
+    void ReadOnlySzParamWithSizeOverloadTest(DFG_ROOT_NS::ReadOnlySzParamWithSizeW sW)
     {
         std::wstring s = sW.c_str();
     }
@@ -916,21 +916,21 @@ namespace
 TEST(dfgStr, ReadOnlySzParam)
 {
     using namespace DFG_ROOT_NS;
-    const auto func0 = [](DFG_CLASS_NAME(ReadOnlySzParamC) s)
+    const auto func0 = [](ReadOnlySzParamC s)
     {
-        return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s);
+        return ::DFG_MODULE_NS(str)::strTo<size_t>(s);
     };
-    const auto func1 = [](DFG_CLASS_NAME(ReadOnlySzParamW) s)
+    const auto func1 = [](ReadOnlySzParamW s)
     {
-        return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s);
+        return ::DFG_MODULE_NS(str)::strTo<size_t>(s);
     };
-    const auto func2 = [](DFG_CLASS_NAME(ReadOnlySzParamWithSizeC) s)
+    const auto func2 = [](ReadOnlySzParamWithSizeC s)
     {
-        return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s) + s.length();
+        return ::DFG_MODULE_NS(str)::strTo<size_t>(s) + s.length();
     };
-    const auto func3 = [](DFG_CLASS_NAME(ReadOnlySzParamWithSizeW) s)
+    const auto func3 = [](ReadOnlySzParamWithSizeW s)
     {
-        return DFG_ROOT_NS::DFG_SUB_NS_NAME(str)::strTo<size_t>(s) + s.length();
+        return ::DFG_MODULE_NS(str)::strTo<size_t>(s) + s.length();
     };
 
     EXPECT_EQ(987654321, func0("987654321"));
@@ -954,6 +954,16 @@ TEST(dfgStr, ReadOnlySzParam)
     ReadOnlySzParamWithSizeOverloadTest(L"test");
     ReadOnlySzParamWithSizeOverloadTest(std::string("test"));
     ReadOnlySzParamWithSizeOverloadTest(std::wstring(L"test"));
+
+    // Testing conversion to StringViewSz
+    {
+        ReadOnlySzParamC a("a");
+        ReadOnlySzParamW w(L"b");
+        StringViewSzC svC = a;
+        StringViewSzW svW = w;
+        DFGTEST_EXPECT_LEFT("a", svC);
+        DFGTEST_EXPECT_LEFT(L"b", svW);
+    }
 }
 
 namespace
