@@ -513,8 +513,13 @@ TEST(dfgStr, strTo)
     // Testing that invalid input won't crash etc. and returns zero initialized value or NaN.
     {
         const char* p = nullptr;
+        const wchar_t* pw = nullptr;
+        double d = 0;
         EXPECT_EQ(0, strTo<int>(p));
         DFGTEST_EXPECT_NAN(strTo<double>(p));
+        DFGTEST_EXPECT_NAN(strTo(p, d));
+        DFGTEST_EXPECT_NAN(strTo<double>(pw));
+        DFGTEST_EXPECT_NAN(strTo(pw, d));
         EXPECT_EQ(0, strTo<int>("abc"));
         EXPECT_EQ(0, strTo<int>(""));
         DFGTEST_EXPECT_NAN(strTo<double>("  "));

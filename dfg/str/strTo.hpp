@@ -318,6 +318,13 @@ namespace DFG_DETAIL_NS
         return t;
     }
 
+    template <class T, class Char_T> typename std::remove_cv<T>::type convertStrToImpl(const Char_T* psz, bool* pSuccess = nullptr)
+    {
+        using CvRemovedT = typename std::remove_cv<T>::type;
+        return genericImpl<CvRemovedT>(psz, pSuccess);
+    }
+
+    /*
     #define CONVERT_STR_TO_IMPL(typeName, funcA, funcW) \
         template <> inline typeName convertStrToImpl(const NonNullCStr psz) {return static_cast<typeName>(funcA(psz));} \
         template <> inline typeName convertStrToImpl(const NonNullCStrW psz) {return static_cast<typeName>(funcW(psz));}
@@ -325,17 +332,6 @@ namespace DFG_DETAIL_NS
         template <> inline typeName convertStrToImpl(const NonNullCStr psz) {return static_cast<typeName>(funcA(psz, param1, param2));} \
         template <> inline typeName convertStrToImpl(const NonNullCStrW psz) {return static_cast<typeName>(funcW(psz, param1, param2));}
 
-    template <class T> T convertStrToImpl(const NonNullCStr psz, bool* pSuccess = nullptr)
-    {
-        return genericImpl<T>(psz, pSuccess);
-    }
-
-    template <class T> T convertStrToImpl(const NonNullCStrW psz, bool* pSuccess = nullptr)
-    {
-        return genericImpl<T>(psz, pSuccess);
-    }
-
-    /*
     CONVERT_STR_TO_IMPL(int8, atoi, wtoiImpl);
     CONVERT_STR_TO_IMPL(uint8, atoi, wtoiImpl);
     CONVERT_STR_TO_IMPL(int16, atoi, wtoiImpl);
@@ -346,35 +342,40 @@ namespace DFG_DETAIL_NS
     CONVERT_STR_TO_IMPL(uint64, strtoui64Impl, wcstoui64Impl);
     CONVERT_STR_TO_IMPL(float, atof, wtofImpl);
     CONVERT_STR_TO_IMPL(double, atof, wtofImpl);
-    */
-
-
     // Long double not implemented.
     #undef CONVERT_STR_TO_IMPL
     #undef CONVERT_STR_TO_IMPL_PARAMS
+    */
+
 } // detail namespace
 
-template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStr psz, bool* pSuccess = nullptr)
-    {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz, pSuccess);}
-template <class T> inline typename std::remove_cv<T>::type convertStrTo(const NonNullCStrW psz, bool* pSuccess = nullptr)
-    {return DFG_DETAIL_NS::convertStrToImpl<typename std::remove_cv<T>::type>(psz, pSuccess);}
-
 // Single parameter strTo()
-template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStr psz, bool* pSuccess = nullptr)
-    {return convertStrTo<T>(psz, pSuccess);}
+template <class T> inline typename std::remove_cv<T>::type strTo(const char* psz, bool* pSuccess = nullptr)
+{
+    return DFG_DETAIL_NS::convertStrToImpl<T>(psz, pSuccess);
+}
 
-template <class T> inline typename std::remove_cv<T>::type strTo(const NonNullCStrW psz, bool* pSuccess = nullptr)
-    {return convertStrTo<T>(psz, pSuccess);}
+template <class T> inline typename std::remove_cv<T>::type strTo(const wchar_t* psz, bool* pSuccess = nullptr)
+{
+    return DFG_DETAIL_NS::convertStrToImpl<T>(psz, pSuccess);
+}
 
 // Single parameter strTo()
 template <class T> inline typename std::remove_cv<T>::type strTo(const std::string& s, bool* pSuccess = nullptr)
 {
-    return convertStrTo<T>(s.c_str(), pSuccess);
+    return strTo<T>(s.c_str(), pSuccess);
 }
 
 template <class T> inline typename std::remove_cv<T>::type strTo(const std::wstring& s, bool* pSuccess = nullptr)
 {
-    return convertStrTo<T>(s.c_str(), pSuccess);
+    return strTo<T>(s.c_str(), pSuccess);
+}
+
+// strTo(x) for StringViewSz
+template <class T, class Char_T, class Str_T>
+inline typename std::remove_cv<T>::type strTo(const StringViewSz<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
+{
+    return strTo<T>(sv.asUntypedView().c_str(), pSuccess);
 }
 
 // strTo(x) for StringView
@@ -382,35 +383,22 @@ template <class T, class Char_T, class Str_T>
 inline typename std::remove_cv<T>::type strTo(const StringView<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
 {
     // TODO: convert directly from string view instead of creating redundant temporary.
-    return convertStrTo<T>(toCharPtr_raw(sv.toString().c_str()), pSuccess);
-}
-
-// strTo(x) for StringViewSz
-template <class T, class Char_T, class Str_T>
-inline typename std::remove_cv<T>::type strTo(const StringViewSz<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
-{
-    return convertStrTo<T>(toCharPtr_raw(sv.c_str()), pSuccess);
+    return strTo<T>(toCharPtr_raw(sv.toString().c_str()), pSuccess);
 }
 
 // strTo(x) for SzPtrT
 template <class T, class Char_T, CharPtrType Type_T>
 inline typename std::remove_cv<T>::type strTo(const SzPtrT<Char_T, Type_T>& sv, bool* pSuccess = nullptr)
 {
-    return convertStrTo<T>(toCharPtr_raw(sv.c_str()), pSuccess);
+    const Char_T* pszRaw = toCharPtr_raw(sv.c_str());
+    return strTo<T>(pszRaw, pSuccess);
 }
 
 // Overloads that take the destination object as parameter.
-template<class T> inline T& convertStrTo(const NonNullCStr psz, T& obj)  {return (obj = convertStrTo<T>(psz));}
-template<class T> inline T& convertStrTo(const NonNullCStrW psz, T& obj) {return (obj = convertStrTo<T>(psz));}
-
-// Overloads for std::string and std::wstring.
-template<class T> inline T& convertStrTo(const std::string& s, T& obj)  {return (obj = convertStrTo<T>(s.c_str()));}
-template<class T> inline T& convertStrTo(const std::wstring& s, T& obj) {return (obj = convertStrTo<T>(s.c_str()));}
-
-template <class T> inline T& strTo(const NonNullCStr psz, T& obj)	{return convertStrTo(psz, obj);}
-template <class T> inline T& strTo(const NonNullCStrW psz, T& obj)	{return convertStrTo(psz, obj);}
-template <class T> inline T& strTo(const std::string& s, T& obj)	{return convertStrTo(s, obj);}
-template <class T> inline T& strTo(const std::wstring& s, T& obj)	{return convertStrTo(s, obj);}
+template <class T> inline T& strTo(const char* sv, T& obj, bool* pbOk = nullptr)         { return (obj = strTo<T>(sv, pbOk)); }
+template <class T> inline T& strTo(const wchar_t* sv, T& obj, bool* pbOk = nullptr)      { return (obj = strTo<T>(sv, pbOk)); }
+template <class T> inline T& strTo(const std::string& sv, T& obj, bool* pbOk = nullptr)  { return (obj = strTo<T>(sv, pbOk)); }
+template <class T> inline T& strTo(const std::wstring& sv, T& obj, bool* pbOk = nullptr) { return (obj = strTo<T>(sv, pbOk)); }
 
 }} // module str
 
