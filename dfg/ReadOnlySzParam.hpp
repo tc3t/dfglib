@@ -547,21 +547,31 @@ public:
         DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
     }
 
+    // Constructs from null-terminated string or if sizeof(CharT) == 1, psz can also be a nullptr. If sizeof(CharT) != 1 and psz == nullptr, behaviour is undefined.
     StringViewSz(SzPtrT psz) :
         BaseClass(psz),
         m_nSize(DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated)
     {
-        DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
+        if (psz == nullptr)
+            initFromNull();
     }
 
-    // Constructs StringViewSz and optionally sets size requiring psz[nCount] == '\0'.
-    // Precondition: psz != nullptr && (nCount == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || psz[nCount] == '\0')
+    // Constructs StringViewSz and optionally sets size requiring psz[nCount] == '\0' or that (psz == nullptr && nCount == 0 && sizeof(CharT) == 1)
+    // Precondition: (psz != nullptr && (nCount == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || psz[nCount] == '\0')) || (psz == nullptr && nCount == 0 && sizeof(CharT) == 1)
     StringViewSz(SzPtrT psz, const size_t nCount) :
         BaseClass(psz),
         m_nSize(nCount)
     {
-        DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
-        DFG_ASSERT_CORRECTNESS(m_nSize == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || toCharPtr_raw(this->m_pFirst)[nCount] == '\0');
+        if (psz == nullptr)
+        {
+            DFG_ASSERT_INVALID_ARGUMENT(nCount == 0, "Count must be zero when psz == nullptr");
+            initFromNull();
+        }
+        else
+        {
+            DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
+            DFG_ASSERT_CORRECTNESS(m_nSize == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || toCharPtr_raw(this->m_pFirst)[nCount] == '\0');
+        }
     }
 
     // Documentation is in StringView
@@ -578,6 +588,14 @@ protected:
         BaseClass(nullptr),
         m_nSize(0)
     {}
+
+    void initFromNull()
+    {
+        DFG_ASSERT_UB(sizeof(Char_T) == 1); // If sizeof Char_T is not 1 (assuming it to mean that Char_T* can be treated as if char* with respect to aliasing),
+                                            // accessing m_nSize through this->m_pFirst (i.e. a const Char_T*) is UB (e.g. https://stackoverflow.com/a/29676395)
+        m_nSize = 0;
+        this->m_pFirst = PtrT(reinterpret_cast<PtrRawT>(&m_nSize)); // Making m_pFirst to point to length which is zero and thus provides a null terminator.
+    }
 
 public:
 
