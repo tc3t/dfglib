@@ -132,25 +132,41 @@ TEST(dfgStr, strCmp)
     using namespace DFG_MODULE_NS(str);
 
     // String literal
-    EXPECT_EQ(std::strcmp("a", "a"), strCmp("a", "a"));
-    EXPECT_EQ(std::strcmp("b", "a"), strCmp("b", "a"));
+    DFGTEST_EXPECT_EQ(std::strcmp("a", "a"), strCmp("a", "a"));
+    DFGTEST_EXPECT_EQ(std::strcmp("b", "a"), strCmp("b", "a"));
 
     // Wide string literal
-    EXPECT_EQ(std::wcscmp(L"a", L"a"), strCmp(L"a", L"a"));
-    EXPECT_EQ(std::wcscmp(L"b", L"a"), strCmp(L"b", L"a"));
+    DFGTEST_EXPECT_EQ(std::wcscmp(L"a", L"a"), strCmp(L"a", L"a"));
+    DFGTEST_EXPECT_EQ(std::wcscmp(L"b", L"a"), strCmp(L"b", L"a"));
 
     // SzPtr
-    EXPECT_EQ(0, strCmp(SzPtrUtf8("a"), SzPtrUtf8("a")));
-    EXPECT_TRUE(strCmp(SzPtrUtf8("a"), SzPtrUtf8("b")) < 0);
+    DFGTEST_EXPECT_EQ(0, strCmp(SzPtrUtf8("a"), SzPtrUtf8("a")));
+    DFGTEST_EXPECT_TRUE(strCmp(SzPtrUtf8("a"), SzPtrUtf8("b")) < 0);
 
     // char16_t
     {
         const char16_t sz0[] = u"ab";
         const char16_t sz1[] = u"abc";
-        EXPECT_LT(strCmp(sz0, sz1), 0);
-        EXPECT_EQ(strCmp(sz0, sz0), 0);
-        EXPECT_EQ(strCmp(u"", u""), 0);
-        EXPECT_GT(strCmp(sz1, sz0), 0);
+        DFGTEST_EXPECT_LT(strCmp(sz0, sz1), 0);
+        DFGTEST_EXPECT_EQ(strCmp(sz0, sz0), 0);
+        DFGTEST_EXPECT_EQ(strCmp(u"", u""), 0);
+        DFGTEST_EXPECT_GT(strCmp(sz1, sz0), 0);
+
+        DFGTEST_EXPECT_LE(strCmp(u"", sz0), 0);
+        DFGTEST_EXPECT_GE(strCmp(sz0, u""), 0);
+    }
+
+    // char32_t
+    {
+        const char32_t sz0[] = U"ab";
+        const char32_t sz1[] = U"abc";
+        DFGTEST_EXPECT_LT(strCmp(sz0, sz1), 0);
+        DFGTEST_EXPECT_EQ(strCmp(sz0, sz0), 0);
+        DFGTEST_EXPECT_EQ(strCmp(U"", U""), 0);
+        DFGTEST_EXPECT_GT(strCmp(sz1, sz0), 0);
+
+        DFGTEST_EXPECT_LE(strCmp(U"", sz0), 0);
+        DFGTEST_EXPECT_GE(strCmp(sz0, U""), 0);
     }
 }
 
