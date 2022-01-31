@@ -59,12 +59,13 @@ namespace DFG_ROOT_NS
             *pOstrm << "\"";
         }
 
-        inline void gtestPrintToImpl(const wchar_t* psz, const size_t nSize, ::std::ostream* pOstrm)
+        template <class Char_T>
+        inline void gtestPrintToImpl(const Char_T* psz, const size_t nSize, ::std::ostream* pOstrm, const char* pszTypePrefix)
         {
             using namespace DFG_ROOT_NS;
             if (!pOstrm)
                 return;
-            *pOstrm << "L\"";
+            *pOstrm << pszTypePrefix << "\"";
             // Printing ASCII as regular chars and non-ascii as \x{hex-value}
             for (size_t i = 0; i < nSize; ++i)
             {
@@ -75,6 +76,24 @@ namespace DFG_ROOT_NS
                     *pOstrm << "\\x{" << std::hex << uint32(c) << "}";
             }
             *pOstrm << "\"";
+        }
+
+        // for wchar_t
+        inline void gtestPrintToImpl(const wchar_t* psz, const size_t nSize, ::std::ostream* pOstrm)
+        {
+            gtestPrintToImpl(psz, nSize, pOstrm, "L");
+        }
+
+        // For char16_t
+        inline void gtestPrintToImpl(const char16_t* psz, const size_t nSize, ::std::ostream* pOstrm)
+        {
+            gtestPrintToImpl(psz, nSize, pOstrm, "c16");
+        }
+
+        // For char32_t
+        inline void gtestPrintToImpl(const char32_t* psz, const size_t nSize, ::std::ostream* pOstrm)
+        {
+            gtestPrintToImpl(psz, nSize, pOstrm, "c32");
         }
     }
 

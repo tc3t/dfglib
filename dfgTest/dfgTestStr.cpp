@@ -1178,7 +1178,7 @@ namespace
         StringView_T view(conv(sz));
         StringView_T view2Chars(conv(&sz[0] + 1), 2);
         EXPECT_EQ(conv(&sz[1]), view2Chars.begin());
-        EXPECT_STREQ(&sz[1], toCharPtr_raw(view2Chars.begin()));
+        EXPECT_EQ(StringView_T(conv(&sz[1])).asUntypedView(), toCharPtr_raw(view2Chars.begin()));
         EXPECT_EQ(2, view2Chars.length());
         StringView_T view2(s);
         EXPECT_EQ(s.c_str(), view2.begin());
@@ -1253,12 +1253,15 @@ TEST(dfgStr, StringView)
 {
     using namespace DFG_ROOT_NS;
 
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewC), char, std::string, true>([](const char* psz) {return psz; });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewW), wchar_t, std::wstring, true>([](const wchar_t* psz) {return psz; });
+    TestStringViewImpl<StringViewC, char, std::string, true>([](const char* psz)             { return psz; });
+    TestStringViewImpl<StringViewW, wchar_t, std::wstring, true>([](const wchar_t* psz)      { return psz; });
+    TestStringViewImpl<StringView16, char16_t, std::u16string, true>([](const char16_t* psz) { return psz; });
+    TestStringViewImpl<StringView32, char32_t, std::u32string, true>([](const char32_t* psz) { return psz; });
 
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewAscii), char, StringAscii, true>([](const char* psz) {return DFG_ROOT_NS::SzPtrAscii(psz); });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewLatin1), char, StringLatin1, true>([](const char* psz) {return DFG_ROOT_NS::SzPtrLatin1(psz); });
-    TestStringViewImpl<DFG_CLASS_NAME(StringViewUtf8), char, StringUtf8, false>([](const char* psz) {return DFG_ROOT_NS::SzPtrUtf8(psz); });
+    TestStringViewImpl<StringViewAscii, char, StringAscii, true>([](const char* psz)          { return DFG_ROOT_NS::SzPtrAscii(psz); });
+    TestStringViewImpl<StringViewLatin1, char, StringLatin1, true>([](const char* psz)        { return DFG_ROOT_NS::SzPtrLatin1(psz); });
+    TestStringViewImpl<StringViewUtf8, char, StringUtf8, false>([](const char* psz)           { return DFG_ROOT_NS::SzPtrUtf8(psz); });
+    TestStringViewImpl<StringViewUtf16, char16_t, StringUtf16, false>([](const char16_t* psz) { return DFG_ROOT_NS::SzPtrUtf16(psz); });
 
     // Test that StringViewUtf8 accepts SzPtrAscii.
     {
@@ -1392,10 +1395,13 @@ TEST(dfgStr, StringViewSz)
 
     TestStringViewSzImpl<StringViewSzC, char, std::string>([](const char* psz)          { return psz; });
     TestStringViewSzImpl<StringViewSzW, wchar_t, std::wstring>([](const wchar_t* psz)   { return psz; });
+    TestStringViewSzImpl<StringViewSz16, char16_t, std::u16string>([](const char16_t* psz) { return psz; });
+    TestStringViewSzImpl<StringViewSz32, char32_t, std::u32string>([](const char32_t* psz) { return psz; });
 
     TestStringViewSzImpl<StringViewSzAscii, char, StringAscii>([](const char* psz)      { return DFG_ROOT_NS::SzPtrAscii(psz); });
     TestStringViewSzImpl<StringViewSzLatin1, char, StringLatin1>([](const char* psz)    { return DFG_ROOT_NS::SzPtrLatin1(psz); });
     TestStringViewSzImpl<StringViewSzUtf8, char, StringUtf8>([](const char* psz)        { return DFG_ROOT_NS::SzPtrUtf8(psz); });
+    TestStringViewSzImpl<StringViewSzUtf16, char16_t, StringUtf16>([](const char16_t* psz) { return DFG_ROOT_NS::SzPtrUtf16(psz); });
 
     // Making sure that StringViewSzC().substr_start() returns StringViewSzC instead of StringViewC.
     DFGTEST_STATIC_TEST((std::is_same<StringViewSzC, decltype(StringViewSzC("").substr_start(0))>::value));

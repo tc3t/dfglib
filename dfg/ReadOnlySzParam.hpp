@@ -340,6 +340,7 @@ namespace DFG_DETAIL_NS
     template <> struct StringViewBase<std::string>    { typedef StringViewIndexAccessBase<std::string>    type; };
     template <> struct StringViewBase<std::wstring>   { typedef StringViewIndexAccessBase<std::wstring>   type; };
     template <> struct StringViewBase<std::u16string> { typedef StringViewIndexAccessBase<std::u16string> type; };
+    template <> struct StringViewBase<std::u32string> { typedef StringViewIndexAccessBase<std::u32string> type; };
     template <> struct StringViewBase<StringAscii>    { typedef StringViewIndexAccessBase<StringAscii>    type; };
     template <> struct StringViewBase<StringLatin1>   { typedef StringViewIndexAccessBase<StringLatin1>   type; };
     template <> struct StringViewBase<StringUtf8>     { using type = StringViewDefaultBase<StringUtf8>; };
@@ -873,6 +874,8 @@ typedef ReadOnlySzParamWithSize<wchar_t>    ReadOnlySzParamWithSizeW;
 
 typedef StringView<char>                  StringViewC;
 typedef StringView<wchar_t>               StringViewW;
+typedef StringView<char16_t>              StringView16;
+typedef StringView<char32_t>              StringView32;
 typedef StringView<char, StringAscii>     StringViewAscii;
 typedef StringView<char, StringLatin1>    StringViewLatin1;
 typedef StringView<char, StringUtf8>      StringViewUtf8;
@@ -880,6 +883,8 @@ typedef StringView<char16_t, StringUtf16> StringViewUtf16;
 
 typedef StringViewSz<char>                  StringViewSzC;
 typedef StringViewSz<wchar_t>               StringViewSzW;
+typedef StringViewSz<char16_t>              StringViewSz16;
+typedef StringViewSz<char32_t>              StringViewSz32;
 typedef StringViewSz<char, StringAscii>     StringViewSzAscii;
 typedef StringViewSz<char, StringLatin1>    StringViewSzLatin1;
 typedef StringViewSz<char, StringUtf8>      StringViewSzUtf8;

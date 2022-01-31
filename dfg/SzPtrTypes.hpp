@@ -21,6 +21,7 @@ DFG_ROOT_NS_BEGIN
 enum CharPtrType
 {
     // Char ptr types without encoding. (must have value < 0).
+    CharPtrTypeChar32   = -4,
     CharPtrTypeChar16   = -3,
     CharPtrTypeCharW    = -2,
     CharPtrTypeCharC    = -1,
@@ -48,6 +49,7 @@ template <CharPtrType TypeEnum_T> struct CharPtrTypeToBaseCharType              
 template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeCharC>  { using type = char; };
 template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeCharW>  { using type = wchar_t; };
 template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeChar16> { using type = char16_t; };
+template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeChar32> { using type = char32_t; };
 template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeAscii>  { using type = char; };
 template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeLatin1> { using type = char; };
 template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeUtf8>   { using type = char; };
@@ -55,7 +57,7 @@ template <>                       struct CharPtrTypeToBaseCharType<CharPtrTypeUt
 
 namespace DFG_DETAIL_NS
 {
-    const auto gnNumberOfCharPtrTypes = 5;
+    const auto gnNumberOfCharPtrTypes = 8;
     const auto gnNumberOfCharPtrTypesWithEncoding = 4;
 
     template <CharPtrType PtrType, class Int_T>
@@ -86,11 +88,12 @@ namespace DFG_DETAIL_NS
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeCharC,  char>     CodePointCharC;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeCharW,  wchar_t>  CodePointCharW;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeChar16, char16_t> CodePointChar16;
+typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeChar32, char32_t> CodePointChar32;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeAscii,  char>     CodePointAscii;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeLatin1, uint8>    CodePointLatin1;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeUtf8,   uint32>   CodePointUtf8;
 typedef DFG_DETAIL_NS::CodePointT<CharPtrTypeUtf16,  uint32>   CodePointUtf16;
-DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 5, "");
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 8, "");
 
 namespace DFG_DETAIL_NS
 {
@@ -98,11 +101,12 @@ namespace DFG_DETAIL_NS
     template <> struct TypedCharPtrDeRefType<CharPtrTypeCharC>  { typedef CodePointCharC  type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeCharW>  { typedef CodePointCharW  type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeChar16> { typedef CodePointChar16 type; };
+    template <> struct TypedCharPtrDeRefType<CharPtrTypeChar32> { typedef CodePointChar32 type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeAscii>  { typedef CodePointAscii  type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeLatin1> { typedef CodePointLatin1 type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeUtf8>   { typedef CodePointUtf8   type; };
     template <> struct TypedCharPtrDeRefType<CharPtrTypeUtf16>  { typedef CodePointUtf16  type; };
-    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 5, "");
+    DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 8, "");
 }
 
 namespace DFG_DETAIL_NS
@@ -123,11 +127,12 @@ template <CharPtrType PtrType_T> struct CharPtrTypeTraits {};
 template <> struct CharPtrTypeTraits<CharPtrTypeCharC>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeCharC,  true> {};
 template <> struct CharPtrTypeTraits<CharPtrTypeCharW>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeCharW,  true> {};
 template <> struct CharPtrTypeTraits<CharPtrTypeChar16> : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeChar16, true> {};
+template <> struct CharPtrTypeTraits<CharPtrTypeChar32> : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeChar32, true> {};
 template <> struct CharPtrTypeTraits<CharPtrTypeAscii>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeAscii,  true>  {};
 template <> struct CharPtrTypeTraits<CharPtrTypeLatin1> : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeLatin1, true>  {};
 template <> struct CharPtrTypeTraits<CharPtrTypeUtf8>   : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeUtf8,   false> {};
 template <> struct CharPtrTypeTraits<CharPtrTypeUtf16>  : public DFG_DETAIL_NS::CharPtrTypeTraitsImpl<CharPtrTypeUtf16,  false> {};
-DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 5, "");
+DFG_STATIC_ASSERT(DFG_DETAIL_NS::gnNumberOfCharPtrTypes == 8, "");
 
 namespace DFG_DETAIL_NS
 {
@@ -184,9 +189,9 @@ namespace DFG_DETAIL_NS
 } // namespace DFG_DETAIL_NS
 
 template <class Char_T, CharPtrType Type_T>
-struct TypedCharPtrT : public std::conditional<Type_T == CharPtrTypeUtf16, DFG_DETAIL_NS::TypedCharPtrTImplicitBase<Char_T, Type_T>, DFG_DETAIL_NS::TypedCharPtrTExplicitBase<Char_T, Type_T>>::type
+struct TypedCharPtrT : public std::conditional<Type_T == CharPtrTypeUtf16 || Type_T == CharPtrTypeChar32, DFG_DETAIL_NS::TypedCharPtrTImplicitBase<Char_T, Type_T>, DFG_DETAIL_NS::TypedCharPtrTExplicitBase<Char_T, Type_T>>::type
 {
-    using BaseClass = typename std::conditional<Type_T == CharPtrTypeUtf16, DFG_DETAIL_NS::TypedCharPtrTImplicitBase<Char_T, Type_T>, DFG_DETAIL_NS::TypedCharPtrTExplicitBase<Char_T, Type_T>>::type;
+    using BaseClass = typename std::conditional<Type_T == CharPtrTypeUtf16 || Type_T == CharPtrTypeChar32, DFG_DETAIL_NS::TypedCharPtrTImplicitBase<Char_T, Type_T>, DFG_DETAIL_NS::TypedCharPtrTExplicitBase<Char_T, Type_T>>::type;
     DFG_STATIC_ASSERT(sizeof(Char_T) <= 2, "Char_T must have size 1 or 2");
 
     // Making sure that Char_T and type defined for Type_T are the same (ignoring const difference)
@@ -393,6 +398,7 @@ template <> constexpr CharPtrType charPtrTypeByPtr<wchar_t*>()            { retu
 template <> constexpr CharPtrType charPtrTypeByPtr<const wchar_t*>()      { return CharPtrTypeCharW; }
 template <> constexpr CharPtrType charPtrTypeByPtr<char16_t*>()           { return CharPtrTypeChar16; }
 template <> constexpr CharPtrType charPtrTypeByPtr<const char16_t*>()     { return CharPtrTypeChar16; }
+template <> constexpr CharPtrType charPtrTypeByPtr<const char32_t*>()     { return CharPtrTypeChar32; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiR>()  { return CharPtrTypeAscii; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrAsciiW>()  { return CharPtrTypeAscii; }
 template <> constexpr CharPtrType charPtrTypeByPtr<TypedCharPtrLatin1R>() { return CharPtrTypeLatin1; }
