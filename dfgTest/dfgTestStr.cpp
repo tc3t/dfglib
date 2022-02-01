@@ -432,8 +432,11 @@ TEST(dfgStr, strTo)
                         { \
                     EXPECT_STREQ(szBufferA, toCstr(toStrC(val))); \
                     EXPECT_STREQ(szBufferW, toCstr(toStrW(val))); \
+                    type var; \
                     EXPECT_EQ(strTo<type>(szBufferA), val); \
                     EXPECT_EQ(strTo<type>(szBufferW), val); \
+                    EXPECT_EQ(strTo(szBufferA, var), val); \
+                    EXPECT_EQ(strTo(szBufferW, var), val); \
                         }
 
     //CHECK_A_AND_W(int8, int8_min, 10, "-128");
@@ -498,26 +501,26 @@ TEST(dfgStr, strTo)
 
     // Test that strTo() accepts StringView's
     {
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewC)("1")));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewW)(L"1")));
+        EXPECT_EQ(1, strTo<int>(StringViewC("1")));
+        EXPECT_EQ(1, strTo<int>(StringViewW(L"1")));
     }
 
     // Test that strTo() accepts StringViewSz's
     {
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzC)("1")));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzW)(L"1")));
+        EXPECT_EQ(1, strTo<int>(StringViewSzC("1")));
+        EXPECT_EQ(1, strTo<int>(StringViewSzW(L"1")));
     }
 
     // Test typed strings
     {
         EXPECT_EQ(1, strTo<int>(DFG_ASCII("1")));
         EXPECT_EQ(1, strTo<int>(DFG_UTF8("1")));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewAscii)(DFG_ASCII("1"))));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzAscii)(DFG_ASCII("1"))));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewLatin1)(SzPtrLatin1("1"))));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzLatin1)(SzPtrLatin1("1"))));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewUtf8)(DFG_UTF8("1"))));
-        EXPECT_EQ(1, strTo<int>(DFG_CLASS_NAME(StringViewSzUtf8)(DFG_UTF8("1"))));
+        EXPECT_EQ(1, strTo<int>(StringViewAscii(DFG_ASCII("1"))));
+        EXPECT_EQ(1, strTo<int>(StringViewSzAscii(DFG_ASCII("1"))));
+        EXPECT_EQ(1, strTo<int>(StringViewLatin1(SzPtrLatin1("1"))));
+        EXPECT_EQ(1, strTo<int>(StringViewSzLatin1(SzPtrLatin1("1"))));
+        EXPECT_EQ(1, strTo<int>(StringViewUtf8(DFG_UTF8("1"))));
+        EXPECT_EQ(1, strTo<int>(StringViewSzUtf8(DFG_UTF8("1"))));
     }
 
     // Testing that leading or trailing spaces won't break parsing
@@ -546,14 +549,6 @@ TEST(dfgStr, strTo)
     EXPECT_EQ(volVal, uint32_max);
 
     EXPECT_EQ(1.0, strTo<long double>("1"));
-
-    /*
-    for(size_t i = 0; i < 37; i++)
-    {
-        toStr(i, szBufferA, 36);
-        std::cout << szBufferA << endl;
-    }
-    */
 
     // Double tests
     {

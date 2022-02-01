@@ -10,6 +10,8 @@
 #include "../ReadOnlySzParam.hpp"
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
+#include <type_traits>
+
 // For now optionally using std::from_chars() on MSVC2017 with version >= 8 and on MSVC2019 with version >= 4
 // MSVC2017 note: with default build options _MSVC_LANG < 201703L so from_chars() won't be used by default.
 // MSVC2017 references: https://devblogs.microsoft.com/cppblog/stl-features-and-fixes-in-vs-2017-15-8/, https://docs.microsoft.com/en-us/cpp/overview/cpp-conformance-improvements?view=vs-2017#improvements_157
@@ -28,20 +30,116 @@
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 
+
+namespace DFG_DETAIL_NS
+{
+    namespace StrToConversionClass
+    {
+        using integer       = std::integral_constant<int, 1>;
+        using floatingPoint = std::integral_constant<int, 2>;
+        using boolType      = std::integral_constant<int, 3>;
+        using general       = std::integral_constant<int, 100>;
+    }
+
+    template <class ConversionClass_T>
+    class StrToParam_common
+    {
+    public:
+        StrToParam_common(bool* pOk = nullptr)
+            : m_pbOk(pOk)
+        {}
+
+        static constexpr ConversionClass_T conversionClass()
+        {
+            return ConversionClass_T();
+        }
+
+        void setSuccessFlagIfPresent(const bool b)
+        {
+            if (m_pbOk)
+                *m_pbOk = b;
+        }
+
+        bool* m_pbOk;
+    }; // class StrToParam_common
+
+    class StrToParam_bool : public StrToParam_common<StrToConversionClass::boolType>
+    {
+    public:
+        using BaseClass = StrToParam_common<StrToConversionClass::boolType>;
+        using BaseClass::BaseClass;
+    }; // class StrToParam_bool
+
+    class StrToParam_integer : public StrToParam_common<StrToConversionClass::integer>
+    {
+    public:
+        using BaseClass = StrToParam_common<StrToConversionClass::integer>;
+
+        StrToParam_integer(bool* pOk = nullptr)
+            : BaseClass(pOk)
+        {}
+    }; // class StrToParam_integer
+
+    class StrToParam_floatingPoint : public StrToParam_common<StrToConversionClass::floatingPoint>
+    {
+        using BaseClass = StrToParam_common<StrToConversionClass::floatingPoint>;
+
+        using BaseClass::BaseClass;
+    }; // class StrToParam_floatingPoint
+
+    template <class T> class StrToParamImpl : public StrToParam_common<StrToConversionClass::general> { using BaseClass = StrToParam_common<StrToConversionClass::general>; using BaseClass::BaseClass; };
+
+    // Integer types
+    template <> class StrToParamImpl<bool>               : public DFG_DETAIL_NS::StrToParam_bool    { using BaseClass = StrToParam_bool; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<short>              : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<unsigned short>     : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<int>                : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<unsigned int>       : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<long>               : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<unsigned long>      : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<long long>          : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<unsigned long long> : public DFG_DETAIL_NS::StrToParam_integer { using BaseClass = StrToParam_integer; using BaseClass::BaseClass; };
+
+    // Floating point types
+    template <> class StrToParamImpl<float>         : public DFG_DETAIL_NS::StrToParam_floatingPoint { using BaseClass = StrToParam_floatingPoint; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<double>        : public DFG_DETAIL_NS::StrToParam_floatingPoint { using BaseClass = StrToParam_floatingPoint; using BaseClass::BaseClass; };
+    template <> class StrToParamImpl<long double>   : public DFG_DETAIL_NS::StrToParam_floatingPoint { using BaseClass = StrToParam_floatingPoint; using BaseClass::BaseClass; };
+
+    template <class T> using StrToParam = DFG_DETAIL_NS::StrToParamImpl<typename std::decay<T>::type>;
+
+    template <class T, class Char_T>
+    T& strToByNoThrowLexCastImpl(const StringView<Char_T>& sv, T& val, StrToParam<T> param = StrToParam<T>())
+    {
+        bool bSuccess = true;
+        try
+        {
+            val = boost::lexical_cast<T>(sv.dataRaw(), sv.length());
+        }
+        catch (const boost::bad_lexical_cast&)
+        {
+            bSuccess = false;
+            val = T();
+        }
+        param.setSuccessFlagIfPresent(bSuccess);
+        return val;
+    }
+} // namespace DFG_DETAIL_NS
+/////////////////////
+
+template <class T> using StrToParam = DFG_DETAIL_NS::StrToParam<T>;
+
 template <class Str_T, class T>
-T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
+T& strToByNoThrowLexCast(const Str_T& s, T& obj, StrToParam<T> param = StrToParam<T>())
 {
 #if DFG_BUILD_OPT_USE_BOOST==1
     try
     {
         obj = boost::lexical_cast<T>(s);
-        if (pSuccess)
-            *pSuccess = true;
+        param.setSuccessFlagIfPresent(true);
     }
     catch(const boost::bad_lexical_cast&)
     {
-        if (pSuccess)
-            *pSuccess = false;
+        param.setSuccessFlagIfPresent(false);
         obj = T();
     }
     return obj;
@@ -50,50 +148,35 @@ T& strToByNoThrowLexCast(const Str_T& s, T& obj, bool* pSuccess = nullptr)
 #endif
 }
 
-template <class T, class Char_T>
-T& strToByNoThrowLexCastImpl(const StringView<Char_T>& sv, T& val, bool* pSuccess = nullptr)
-{
-    bool bSuccess = true;
-    try
-    {
-        val = boost::lexical_cast<T>(sv.dataRaw(), sv.length());
-    }
-    catch (const boost::bad_lexical_cast&)
-    {
-        bSuccess = false;
-        val = T();
-    }
-    if (pSuccess)
-        *pSuccess = bSuccess;
-    return val;
-}
+template <class T>
+T& strToByNoThrowLexCast(const StringViewC& sv, T& val, StrToParam<T> param = StrToParam<T>()) { return DFG_DETAIL_NS::strToByNoThrowLexCastImpl(sv, val, param); }
 
 template <class T>
-T& strToByNoThrowLexCast(const StringViewC& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
-
-template <class T>
-T& strToByNoThrowLexCast(const StringViewW& sv, T& val, bool* pSuccess = nullptr) { return strToByNoThrowLexCastImpl(sv, val, pSuccess); }
+T& strToByNoThrowLexCast(const StringViewW& sv, T& val, StrToParam<T> param = StrToParam<T>()) { return DFG_DETAIL_NS::strToByNoThrowLexCastImpl(sv, val, param); }
 
 template <class Char_T>
-bool& strToBoolNoThrowLexCast(const StringView<Char_T>& sv, bool& val, bool* pSuccess = nullptr)
+bool& strToBoolNoThrowLexCast(const StringView<Char_T>& sv, bool& val, StrToParam<bool> param = StrToParam<bool>())
 { 
     if (sv == DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "true"))
+    {
         val = true;
+        param.setSuccessFlagIfPresent(true);
+    }
     else if (sv == DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, "false"))
+    {
         val = false;
+        param.setSuccessFlagIfPresent(true);
+    }
     else
-        val = strToByNoThrowLexCastImpl(sv, val, pSuccess);
+        val = strToByNoThrowLexCastImpl(sv, val, param);
     return val;
 }
 
-template <> inline bool& strToByNoThrowLexCast(const StringViewC& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
-template <> inline bool& strToByNoThrowLexCast(const StringViewW& sv, bool& val, bool* pSuccess) { return strToBoolNoThrowLexCast(sv, val, pSuccess); }
-
 template <class T>
-T strToByNoThrowLexCast(const ReadOnlySzParamC& s, bool* pSuccess = nullptr)
+T strToByNoThrowLexCast(const ReadOnlySzParamC& s, StrToParam<T> param = StrToParam<T>())
 {
     T val;
-    return strToByNoThrowLexCast(s, val, pSuccess);
+    return strToByNoThrowLexCast(s, val, param);
 }
 
 namespace DFG_DETAIL_NS
@@ -214,66 +297,66 @@ namespace DFG_DETAIL_NS
 
 #if DFG_STRTO_USING_FROM_CHARS == 1
     template <class T>
-    inline void fromChars(StringView<char> sv, T& t, const T defaultValue, bool* pSuccess)
+    inline void fromChars(StringView<char> sv, T& t, const T defaultValue, StrToParam<T> param)
     {
         t = defaultValue;
         const auto rv = std::from_chars(sv.data(), sv.endRaw(), t);
-        if (pSuccess)
-            *pSuccess = (rv.ptr == sv.endRaw() && rv.ec == std::errc());
+        param.setSuccessFlagIfPresent(rv.ptr == sv.endRaw() && rv.ec == std::errc());
     }
 #endif
 
+    // Specialization for case that Char_T != char or T is bool or T is non-integer.
     template <class Char_T, class T>
-    inline void convertImpl2(StringView<Char_T> sv, T& t, bool* pSuccess, std::false_type)
+    inline void convertImpl2(StringView<Char_T> sv, T& t, StrToParam<T> param, std::false_type)
     {
-        strToByNoThrowLexCast(sv, t, pSuccess);
+        DFG_DETAIL_NS::strToByNoThrowLexCastImpl(sv, t, param);
     }
 
+    // Specialization for case that Char_T == char and T is non-bool integer.
     template <class Char_T, class T>
-    inline void convertImpl2(StringView<Char_T> sv, T& t, bool* pSuccess, std::true_type)
+    inline void convertImpl2(StringView<Char_T> sv, T& t, StrToParam<T> param, std::true_type)
     {
         DFG_STATIC_ASSERT(std::is_integral<T>::value, "Internal error: integer implementation called with non-integer");
 #if DFG_STRTO_USING_FROM_CHARS == 1
-        fromChars(sv, t, T(), pSuccess);
+        fromChars(sv, t, T(), param);
 #else
-        convertImpl2(sv, t, pSuccess, std::false_type());
+        convertImpl2(sv, t, param, std::false_type());
 #endif
     }
 
     template <class Char_T, class T>
-    inline void convertImpl(StringView<Char_T> sv, T& t, bool* pSuccess = nullptr)
+    inline void convertImpl(StringView<Char_T> sv, T& t, StrToParam<T> param)
     {
         constexpr bool isCharAndNonBoolInteger = std::is_integral<T>::value && std::is_same<Char_T, char>::value && !std::is_same<T, bool>::value;
-        convertImpl2(sv, t, pSuccess, std::integral_constant<bool, isCharAndNonBoolInteger>());
+        convertImpl2(sv, t, param, std::integral_constant<bool, isCharAndNonBoolInteger>());
     }
 
     template <class T>
-    inline void convertImplFloatOrLongDouble(StringView<char> sv, T& t, bool* pSuccess)
+    inline void convertImplFloatOrLongDouble(StringView<char> sv, T& t, StrToParam<T> param)
     {
 #if DFG_STRTO_USING_FROM_CHARS == 1
-        fromChars(sv, t, std::numeric_limits<T>::quiet_NaN(), pSuccess);
+        fromChars(sv, t, std::numeric_limits<T>::quiet_NaN(), param);
 #else
-        convertImpl2(sv, t, pSuccess, std::false_type());
+        convertImpl2(sv, t, param, std::false_type());
 #endif
     }
 
-    inline void convertImpl(StringView<char> sv, float& t, bool* pSuccess = nullptr)
+    inline void convertImpl(StringView<char> sv, float& t, StrToParam<float> param)
     {
-        convertImplFloatOrLongDouble(sv, t, pSuccess);
+        convertImplFloatOrLongDouble(sv, t, param);
     }
 
-    inline void convertImpl(StringView<char> sv, long double& t, bool* pSuccess = nullptr)
+    inline void convertImpl(StringView<char> sv, long double& t, StrToParam<long double> param)
     {
-        convertImplFloatOrLongDouble(sv, t, pSuccess);
+        convertImplFloatOrLongDouble(sv, t, param);
     }
 
-    inline void convertImpl(StringView<char> sv, double& t, bool* pSuccess = nullptr)
+    inline void convertImpl(StringView<char> sv, double& t, StrToParam<double> param)
     {
         // While view itself is not necessarily null-terminated, the underlying string is and since
         // trailing spaces seem to be no problem for strtod(), passing the start pointer as such.
-        
 #if DFG_STRTO_USING_FROM_CHARS == 1
-        fromChars(sv, t, std::numeric_limits<double>::quiet_NaN(), pSuccess);
+        fromChars(sv, t, std::numeric_limits<double>::quiet_NaN(), param);
 #else
         char* pEnd;
     #if defined(_MSC_VER)
@@ -284,20 +367,39 @@ namespace DFG_DETAIL_NS
     #else
             t = strtod_l(sv.data(), &pEnd, plainNumericLocale());
     #endif
-            if (pSuccess)
-                *pSuccess = (pEnd == sv.endRaw());
+            param.setSuccessFlagIfPresent(pEnd == sv.endRaw());
 #endif
+    }
+
+    // Specialization for integers
+    template <class Char_T, class T>
+    inline void convertImpl(StringView<Char_T> sv, T& val, StrToParam<T> param, StrToConversionClass::integer)
+    {
+        convertImpl(sv, val, param);
+    }
+
+    // Specialization for floating points
+    template <class Char_T, class T>
+    inline void convertImpl(StringView<Char_T> sv, T& val, StrToParam<T> param, StrToConversionClass::floatingPoint)
+    {
+        convertImpl(sv, val, param);
+    }
+
+    // Specialization for bool
+    template <class Char_T>
+    inline void convertImpl(StringView<Char_T> sv, bool& val, StrToParam<bool> param, StrToConversionClass::boolType)
+    {
+        strToBoolNoThrowLexCast(sv, val, param);
     }
 
     template <class T>
     T defaultStrToReturnValue() { return std::numeric_limits<T>::quiet_NaN(); }
 
     template <class T, class Char_T>
-    T genericImpl(const Char_T* psz, bool* pSuccess = nullptr)
+    T genericImpl(const Char_T* psz, StrToParam<T> param)
     {
         auto t = defaultStrToReturnValue<T>();
-        if (pSuccess)
-            *pSuccess = false;
+        param.setSuccessFlagIfPresent(false);
         if (!psz)
             return t;
 
@@ -314,14 +416,14 @@ namespace DFG_DETAIL_NS
             --pEnd;
 
         StringView<Char_T> sv(psz, pEnd - psz);
-        convertImpl(sv, t, pSuccess);
+        convertImpl(sv, t, param, param.conversionClass());
         return t;
     }
 
-    template <class T, class Char_T> typename std::remove_cv<T>::type convertStrToImpl(const Char_T* psz, bool* pSuccess = nullptr)
+    template <class T, class Char_T> typename std::remove_cv<T>::type convertStrToImpl(const Char_T* psz, StrToParam<T> param)
     {
         using CvRemovedT = typename std::remove_cv<T>::type;
-        return genericImpl<CvRemovedT>(psz, pSuccess);
+        return genericImpl<CvRemovedT>(psz, param);
     }
 
     /*
@@ -348,57 +450,66 @@ namespace DFG_DETAIL_NS
     */
 
 } // detail namespace
+/////////////////////
 
 // Single parameter strTo()
-template <class T> inline typename std::remove_cv<T>::type strTo(const char* psz, bool* pSuccess = nullptr)
+template <class T> inline typename std::remove_cv<T>::type strTo(const char* psz, StrToParam<T> param = StrToParam<T>())
 {
-    return DFG_DETAIL_NS::convertStrToImpl<T>(psz, pSuccess);
+    return DFG_DETAIL_NS::convertStrToImpl<T>(psz, param);
 }
 
-template <class T> inline typename std::remove_cv<T>::type strTo(const wchar_t* psz, bool* pSuccess = nullptr)
+template <class T> inline typename std::remove_cv<T>::type strTo(const wchar_t* psz, StrToParam<T> param = StrToParam<T>())
 {
-    return DFG_DETAIL_NS::convertStrToImpl<T>(psz, pSuccess);
+    return DFG_DETAIL_NS::convertStrToImpl<T>(psz, param);
 }
 
 // Single parameter strTo()
-template <class T> inline typename std::remove_cv<T>::type strTo(const std::string& s, bool* pSuccess = nullptr)
+template <class T> inline typename std::remove_cv<T>::type strTo(const std::string& s, StrToParam<T> param = StrToParam<T>())
 {
-    return strTo<T>(s.c_str(), pSuccess);
+    return strTo<T>(s.c_str(), param);
 }
 
-template <class T> inline typename std::remove_cv<T>::type strTo(const std::wstring& s, bool* pSuccess = nullptr)
+template <class T> inline typename std::remove_cv<T>::type strTo(const std::wstring& s, StrToParam<T> param = StrToParam<T>())
 {
-    return strTo<T>(s.c_str(), pSuccess);
+    return strTo<T>(s.c_str(), param);
 }
 
 // strTo(x) for StringViewSz
 template <class T, class Char_T, class Str_T>
-inline typename std::remove_cv<T>::type strTo(const StringViewSz<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
+inline typename std::remove_cv<T>::type strTo(const StringViewSz<Char_T, Str_T>& sv, StrToParam<T> param = StrToParam<T>())
 {
-    return strTo<T>(sv.asUntypedView().c_str(), pSuccess);
+    return strTo<T>(sv.asUntypedView().c_str(), param);
 }
 
 // strTo(x) for StringView
 template <class T, class Char_T, class Str_T>
-inline typename std::remove_cv<T>::type strTo(const StringView<Char_T, Str_T>& sv, bool* pSuccess = nullptr)
+inline typename std::remove_cv<T>::type strTo(const StringView<Char_T, Str_T>& sv, StrToParam<T> param = StrToParam<T>())
 {
     // TODO: convert directly from string view instead of creating redundant temporary.
-    return strTo<T>(toCharPtr_raw(sv.toString().c_str()), pSuccess);
+    return strTo<T>(toCharPtr_raw(sv.toString().c_str()), param);
 }
 
 // strTo(x) for SzPtrT
 template <class T, class Char_T, CharPtrType Type_T>
-inline typename std::remove_cv<T>::type strTo(const SzPtrT<Char_T, Type_T>& sv, bool* pSuccess = nullptr)
+inline typename std::remove_cv<T>::type strTo(const SzPtrT<Char_T, Type_T>& sv, StrToParam<T> param = StrToParam<T>())
 {
     const Char_T* pszRaw = toCharPtr_raw(sv.c_str());
-    return strTo<T>(pszRaw, pSuccess);
+    return strTo<T>(pszRaw, param);
 }
 
 // Overloads that take the destination object as parameter.
-template <class T> inline T& strTo(const char* sv, T& obj, bool* pbOk = nullptr)         { return (obj = strTo<T>(sv, pbOk)); }
-template <class T> inline T& strTo(const wchar_t* sv, T& obj, bool* pbOk = nullptr)      { return (obj = strTo<T>(sv, pbOk)); }
-template <class T> inline T& strTo(const std::string& sv, T& obj, bool* pbOk = nullptr)  { return (obj = strTo<T>(sv, pbOk)); }
-template <class T> inline T& strTo(const std::wstring& sv, T& obj, bool* pbOk = nullptr) { return (obj = strTo<T>(sv, pbOk)); }
+template <class T> inline T& strTo(const StringViewSzC sv, T& obj, StrToParam<T> param) { return (obj = strTo<T>(sv, param)); }
+template <class T> inline T& strTo(const wchar_t* psz,     T& obj, StrToParam<T> param) { return (obj = strTo<T>(psz, param)); }
+template <class T> inline T& strTo(const std::wstring& s,  T& obj, StrToParam<T> param) { return (obj = strTo<T>(s, param)); }
+
+template <class T, class... ArgTypes_T>
+T& strTo(const StringViewSzC sv, T& obj, ArgTypes_T... args) { return strTo<T>(sv, obj, StrToParam<T>(args...)); }
+
+template <class T, class... ArgTypes_T>
+T& strTo(const wchar_t* sv, T& obj, ArgTypes_T... args) { return strTo<T>(sv, obj, StrToParam<T>(args...)); }
+
+template <class T, class... ArgTypes_T>
+T& strTo(const std::wstring& s, T& obj, ArgTypes_T... args) { return strTo<T>(s, obj, StrToParam<T>(args...)); }
 
 }} // module str
 
