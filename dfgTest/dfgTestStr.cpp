@@ -410,6 +410,51 @@ namespace
     {
         testFloatingPointConversionsT<double>(psz, expectedValue, bExpected);
     }
+
+    template <class T, class Char_T, size_t N>
+    void testStrToIntegerConversionRadix10(const T val, const Char_T(&szBuffer)[N])
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+        T dst;
+        DFGTEST_EXPECT_LEFT(val, strTo<T>(szBuffer));
+        DFGTEST_EXPECT_LEFT(val, strTo(szBuffer, dst));
+    }
+
+    template <class T, size_t N>
+    void testStrToIntegerConversionWithRadix(const T val, const int radix, const char(&szBuffer)[N])
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+#if DFG_STRTO_RADIX_SUPPORT == 1
+        T dst;
+        // Converting string to value using explicit template argument.
+        DFGTEST_EXPECT_LEFT(val, strTo<T>(szBuffer, NumberRadix(radix)));
+        // Converting string to value using reference argument.
+        DFGTEST_EXPECT_LEFT(val, strTo(szBuffer, dst, NumberRadix(radix)));
+#else
+        if (radix == 10)
+            testStrToIntegerConversionRadix10(val, szBuffer);
+#endif
+    }
+
+    template <class T, size_t N>
+    void testStrToIntegerConversionWithRadix(const T val, const int radix, const wchar_t (&szBuffer)[N])
+    {
+        if (radix == 10)
+            testStrToIntegerConversionRadix10(val, szBuffer);
+    }
+
+    template <class T, class Char_T>
+    void testStrToIntegerConversion(const T val, const int radix, const ::DFG_ROOT_NS::StringView<Char_T> svExpected)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(str);
+        Char_T szBuffer[128];
+        // Converting value to string using caller-given buffer
+        DFGTEST_EXPECT_LEFT(svExpected, toStr(val, szBuffer, radix));
+        testStrToIntegerConversionWithRadix(val, radix, szBuffer);
+    }
 } // unnamed namespace
 
 
@@ -423,21 +468,9 @@ TEST(dfgStr, strTo)
     #pragma warning(disable:4127) // conditional expression is constant
 #endif // defined(_MSC_VER)
 
-    char szBufferA[128];
-    wchar_t szBufferW[128];
 #define CHECK_A_AND_W(type, val, radix, szExpected) \
-        EXPECT_STREQ(szExpected, toStr(val, szBufferA, radix)); \
-        EXPECT_STREQ(L##szExpected, toStr(val, szBufferW, radix)); \
-        if (radix == 10) \
-                        { \
-                    EXPECT_STREQ(szBufferA, toCstr(toStrC(val))); \
-                    EXPECT_STREQ(szBufferW, toCstr(toStrW(val))); \
-                    type var; \
-                    EXPECT_EQ(strTo<type>(szBufferA), val); \
-                    EXPECT_EQ(strTo<type>(szBufferW), val); \
-                    EXPECT_EQ(strTo(szBufferA, var), val); \
-                    EXPECT_EQ(strTo(szBufferW, var), val); \
-                        }
+        testStrToIntegerConversion<type, char>(val, radix, szExpected); \
+        testStrToIntegerConversion<type, wchar_t>(val, radix, L##szExpected);
 
     //CHECK_A_AND_W(int8, int8_min, 10, "-128");
     CHECK_A_AND_W(int16, int16_min, 10, "-32768");
