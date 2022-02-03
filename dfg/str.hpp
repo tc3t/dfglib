@@ -164,10 +164,11 @@ template <class Str_T, class T>
 Str_T toStrT(const T& obj)
 {
     Str_T str;
-    return toStrT(obj, str);
+    toStr(obj, str);
+    return str;
 }
 
-// Converts object to string using sprintf() and given format string and writes to result to given buffer.
+// Converts object to string using sprintf() and given format string and writes result to given buffer.
 // Note: Result format is dependent on locale so the output string might not be convertible back to double with strTo().
 template <class T, size_t N> char* toStrSprintf(const T val, char(&buf)[N], const char* pszSprintfFormat) // TODO: test
 {

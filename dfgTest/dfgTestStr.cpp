@@ -724,11 +724,16 @@ namespace
         using namespace DFG_ROOT_NS;
         using namespace ::DFG_MODULE_NS(str);
         char buffer[32];
-        toStr((std::numeric_limits<Int_T>::max)(),  buffer);
-        EXPECT_EQ((std::numeric_limits<Int_T>::max)(), strTo<Int_T>(buffer));
-        toStr((std::numeric_limits<Int_T>::min)(), buffer);
-        EXPECT_EQ((std::numeric_limits<Int_T>::min)(), strTo<Int_T>(buffer));
+        const auto maxVal = (std::numeric_limits<Int_T>::max)();
+        const auto minVal = (std::numeric_limits<Int_T>::min)();
+        toStr(maxVal,  buffer);
+        DFGTEST_EXPECT_LEFT(buffer, toStrT<std::string>(maxVal));
+        DFGTEST_EXPECT_LEFT(maxVal, strTo<Int_T>(buffer));
+
+        toStr(minVal, buffer);
+        DFGTEST_EXPECT_LEFT(minVal, strTo<Int_T>(buffer));
     }
+
 } // unnamed namespace
 
 TEST(dfgStr, toStr)
