@@ -35,9 +35,12 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 class NumberRadix
 {
 public:
+    // Radix must be within [2, 36].
     explicit NumberRadix(const int nRadix = 10)
         : m_nRadix(nRadix)
-    {}
+    {
+        DFG_ASSERT_UB(m_nRadix >= 2 && m_nRadix <= 36);
+    }
 
     operator int() const
     {

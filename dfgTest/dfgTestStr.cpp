@@ -484,14 +484,20 @@ TEST(dfgStr, strTo)
     CHECK_A_AND_W(int16, int16_max, 2, "111111111111111");
     CHECK_A_AND_W(int16, int16_max, 10, "32767");
     CHECK_A_AND_W(int16, int16_max, 16, "7fff");
+    CHECK_A_AND_W(int64, int16_max, 32, "vvv");
+    CHECK_A_AND_W(int64, int16_max, 36, "pa7");
 
     CHECK_A_AND_W(int32, int32_max, 2, "1111111111111111111111111111111");
     CHECK_A_AND_W(int32, int32_max, 10, "2147483647");
     CHECK_A_AND_W(int32, int32_max, 16, "7fffffff");
+    CHECK_A_AND_W(int64, int32_max, 32, "1vvvvvv");
+    CHECK_A_AND_W(int64, int32_max, 36, "zik0zj");
 
     CHECK_A_AND_W(int64, int64_max, 2, "111111111111111111111111111111111111111111111111111111111111111");
     CHECK_A_AND_W(int64, int64_max, 10, "9223372036854775807");
     CHECK_A_AND_W(int64, int64_max, 16, "7fffffffffffffff");
+    CHECK_A_AND_W(int64, int64_max, 32, "7vvvvvvvvvvvv");
+    CHECK_A_AND_W(int64, int64_max, 36, "1y2p0ij32e8e7");
 
     //CHECK_A_AND_W(uint8, uint8_max, 2, "11111111");
     //CHECK_A_AND_W(uint8, uint8_max, 10, "255");
@@ -500,15 +506,19 @@ TEST(dfgStr, strTo)
     CHECK_A_AND_W(uint16, uint16_max, 2, "1111111111111111");
     CHECK_A_AND_W(uint16, uint16_max, 10, "65535");
     CHECK_A_AND_W(uint16, uint16_max, 16, "ffff");
+    CHECK_A_AND_W(uint16, uint16_max, 36, "1ekf");
 
     CHECK_A_AND_W(uint32, uint32_max, 2, "11111111111111111111111111111111");
     CHECK_A_AND_W(uint32, uint32_max, 10, "4294967295");
     CHECK_A_AND_W(uint32, uint32_max, 16, "ffffffff");
+    CHECK_A_AND_W(uint32, uint32_max, 32, "3vvvvvv");
+    CHECK_A_AND_W(uint32, uint32_max, 36, "1z141z3");
 
     CHECK_A_AND_W(uint64, uint64_max, 2, "1111111111111111111111111111111111111111111111111111111111111111");
     CHECK_A_AND_W(uint64, uint64_max, 10, "18446744073709551615");
     CHECK_A_AND_W(uint64, uint64_max, 16, "ffffffffffffffff");
     CHECK_A_AND_W(uint64, uint64_max, 32, "fvvvvvvvvvvvv");
+    CHECK_A_AND_W(uint64, uint64_max, 36, "3w5e11264sgsf");
 
 
     EXPECT_EQ(strTo<int32>("2147483647"), int32_max);
