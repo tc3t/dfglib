@@ -12,6 +12,7 @@
 #include "numericTypeTools.hpp"
 #include <algorithm>
 #include "preprocessor/compilerInfoMsvc.hpp"
+#include "str/strTo.hpp"
 
 #if DFG_BUILD_OPT_USE_BOOST==1
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -26,17 +27,6 @@
                                 // (by the programmer) to be ANSI-encoded.
 #define DFG_DEFINE_STRING_LITERAL_C(name, str) const char name[] = str;
 #define DFG_DEFINE_STRING_LITERAL_W(name, str) const wchar_t name[] = L##str;
-
-// TODO: improve std::to_chars() detection, currently enabled only on MSVC
-// Note: std::to_chars() overload for floating point with precision argument doesn't seem to be available MSVC2017.9 (15.9) so using another flag for that.
-#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L)
-    #define DFG_TOSTR_USING_TO_CHARS 1
-    #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG (DFG_MSVC_VER >= DFG_MSVC_VER_2019_4)
-    #include <charconv>
-#else
-    #define DFG_TOSTR_USING_TO_CHARS 0
-    #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG 0
-#endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
 
@@ -175,19 +165,6 @@ template <class T, size_t N> char* toStrSprintf(const T val, char(&buf)[N], cons
     DFG_DETAIL_NS::sprintf_s(buf, N, pszSprintfFormat, val);
     return buf;
 }
-
-enum class CharsFormat
-{
-#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
-    fixed      = static_cast<int>(std::chars_format::fixed),
-    general    = static_cast<int>(std::chars_format::general),
-    hex        = static_cast<int>(std::chars_format::hex),
-    scientific = static_cast<int>(std::chars_format::scientific),
-    default_fmt = scientific | fixed | hex
-#else
-    default_fmt = 123
-#endif
-};
 
 // Converts a floating point type to a string representation using given precision and format.
 //  Format:
@@ -742,8 +719,6 @@ Char_T* skipWhitespacesSz(Char_T* psz)
 }} // module str
 // End of namespace dfg::str
 ///////////////////////////////////////////////////
-
-#include "str/strTo.hpp"
 
 ///////////////////////////////////////////////////
 // Begin of namespace dfg::str

@@ -20,14 +20,19 @@
 // Note that using _MSVC_LANG below instead of __cplusplus because of reason listed here: https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
 //      -i.e getting correct __cplusplus value needs a non-default build flag.
 // This is coarse check that needs to be manually updated when std::from_chars() become available on other compilers.
-// NOTE: if changing these limits, check also related to_chars() checking in str.hpp
+// TODO: improve std::to_chars() detection, currently enabled only on MSVC
+// Note: std::to_chars() overload for floating point with precision argument doesn't seem to be available MSVC2017.9 (15.9) so using another flag for that.
 #if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L)
     #define DFG_STRTO_USING_FROM_CHARS 1
-    #define DFG_STRTO_RADIX_SUPPORT 1
+    #define DFG_STRTO_RADIX_SUPPORT    1
+    #define DFG_TOSTR_USING_TO_CHARS   1
+    #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG (DFG_MSVC_VER >= DFG_MSVC_VER_2019_4)
     #include <charconv>
 #else
     #define DFG_STRTO_USING_FROM_CHARS 0
-    #define DFG_STRTO_RADIX_SUPPORT 0
+    #define DFG_STRTO_RADIX_SUPPORT    0
+    #define DFG_TOSTR_USING_TO_CHARS   0
+    #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG 0
 #endif
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(str) {
@@ -49,6 +54,19 @@ public:
 
     int m_nRadix;
 }; // class NumberRadix
+
+enum class CharsFormat
+{
+#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+    fixed       = static_cast<int>(std::chars_format::fixed),
+    general     = static_cast<int>(std::chars_format::general),
+    hex         = static_cast<int>(std::chars_format::hex),
+    scientific  = static_cast<int>(std::chars_format::scientific),
+    default_fmt = scientific | fixed | hex
+#else
+    default_fmt = 123
+#endif
+}; // class CharsFormat
 
 namespace DFG_DETAIL_NS
 {
@@ -143,19 +161,33 @@ namespace DFG_DETAIL_NS
     public:
         using BaseClass = StrToParam_common<StrToConversionClass::floatingPoint>;
 
+        StrToParam_floatingPoint(CharsFormat cf = CharsFormat::default_fmt, bool* pOk = nullptr)
+            : BaseClass(pOk)
+            , m_charsFormat(cf)
+        {
+        }
+
+        StrToParam_floatingPoint(bool* pOk)
+            : BaseClass(pOk)
+            , m_charsFormat(CharsFormat::default_fmt)
+        {
+        }
+
+        bool hasFromCharsArgument() const
+        {
+            return (m_charsFormat != CharsFormat::default_fmt);
+        }
+
 #if DFG_STRTO_USING_FROM_CHARS == 1
-        constexpr bool hasFromCharsArgument() const
+        // Precondition: hasFromCharsArgument() == true
+        std::chars_format fromCharsArgument() const
         {
-            return false;
+            DFG_ASSERT_INVALID_ARGUMENT(hasFromCharsArgument(), "hasFromCharsArgument() must be true when calling fromCharsArgument()");
+            return (m_charsFormat != CharsFormat::default_fmt) ? static_cast<std::chars_format>(m_charsFormat) : std::chars_format::general;
         }
+#endif // DFG_STRTO_USING_FROM_CHARS == 1
 
-        constexpr std::chars_format fromCharsArgument() const
-        {
-            return std::chars_format::general;
-        }
-#endif
-
-        using BaseClass::BaseClass;
+        CharsFormat m_charsFormat;
     }; // class StrToParam_floatingPoint for char
 
     template <class T, class Char_T> class StrToParamImpl : public StrToParam_common<StrToConversionClass::general> { using BaseClass = StrToParam_common<StrToConversionClass::general>; using BaseClass::BaseClass; };

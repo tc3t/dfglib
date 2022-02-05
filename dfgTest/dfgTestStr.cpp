@@ -536,6 +536,57 @@ TEST(dfgStr, strTo)
     EXPECT_EQ(strTo<uint64>("18446744073709551615"), uint64_max);
     EXPECT_EQ(strTo<const uint64>("18446744073709551615"), uint64_max);
 
+    // Testing call interfaces for integers
+    {
+        bool bOk = false;
+        DFGTEST_EXPECT_LEFT(123, strTo<int>("123"));
+        DFGTEST_EXPECT_LEFT(123, strTo<int>("123", &bOk));
+
+        DFGTEST_EXPECT_TRUE(bOk);
+        strTo<int>("a", &bOk);
+        DFGTEST_EXPECT_FALSE(bOk);
+
+        int val;
+        DFGTEST_EXPECT_LEFT(123, strTo("123", val, &bOk));
+
+#if DFG_STRTO_RADIX_SUPPORT == 1
+        DFGTEST_EXPECT_LEFT(16, strTo<int>("10", NumberRadix(16)));
+        DFGTEST_EXPECT_LEFT(17, strTo("11", val, NumberRadix(16)));
+
+        DFGTEST_EXPECT_LEFT(17, strTo("11", val, NumberRadix(16), &bOk));
+        DFGTEST_EXPECT_TRUE(bOk);
+        //DFGTEST_EXPECT_LEFT(17, strTo<int>("11", NumberRadix(16), &bOk)); // TODO: this should work
+        //DFGTEST_EXPECT_TRUE(bOk);
+#endif // DFG_STRTO_RADIX_SUPPORT == 1
+    }
+
+    // Testing call interfaces for floating point types
+    {
+        bool bOk = false;
+        DFGTEST_EXPECT_LEFT(123.25, strTo<double>("123.25"));
+        DFGTEST_EXPECT_LEFT(123.25, strTo<double>("123.25", &bOk));
+
+        DFGTEST_EXPECT_TRUE(bOk);
+        strTo<double>("a", &bOk);
+        DFGTEST_EXPECT_FALSE(bOk);
+
+        double val;
+        DFGTEST_EXPECT_LEFT(123.25, strTo("123.25", val, &bOk));
+
+#if DFG_STRTO_RADIX_SUPPORT == 1
+        DFGTEST_EXPECT_LEFT(1.25, strTo<double>("1.4p+0", CharsFormat::hex));
+        DFGTEST_EXPECT_LEFT(1.25, strTo("1.4p+0", val, CharsFormat::hex));
+
+        DFGTEST_EXPECT_LEFT(1.25, strTo("1.4p+0", val, CharsFormat::hex, &bOk));
+        DFGTEST_EXPECT_TRUE(bOk);
+        strTo("q.wp+0", val, CharsFormat::hex, &bOk);
+        DFGTEST_EXPECT_FALSE(bOk);
+
+        //DFGTEST_EXPECT_LEFT(1.25, strTo<double>("1.4p+0", CharsFormat::hex, &bOk)); // TODO: this should work
+        //DFGTEST_EXPECT_TRUE(bOk);
+#endif // DFG_STRTO_RADIX_SUPPORT == 1
+    }
+
     // Testing that strTo() accepts std::string and std::wstring
     {
         EXPECT_EQ(1, strTo<int>(std::string("1")));
