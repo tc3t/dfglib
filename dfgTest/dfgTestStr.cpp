@@ -463,11 +463,6 @@ TEST(dfgStr, strTo)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(str);
 
-#if defined(_MSC_VER)
-    #pragma warning(push)
-    #pragma warning(disable:4127) // conditional expression is constant
-#endif // defined(_MSC_VER)
-
 #define CHECK_A_AND_W(type, val, radix, szExpected) \
         testStrToIntegerConversion<type, char>(val, radix, szExpected); \
         testStrToIntegerConversion<type, wchar_t>(val, radix, L##szExpected);
@@ -555,8 +550,8 @@ TEST(dfgStr, strTo)
 
         DFGTEST_EXPECT_LEFT(17, strTo("11", val, NumberRadix(16), &bOk));
         DFGTEST_EXPECT_TRUE(bOk);
-        //DFGTEST_EXPECT_LEFT(17, strTo<int>("11", NumberRadix(16), &bOk)); // TODO: this should work
-        //DFGTEST_EXPECT_TRUE(bOk);
+        DFGTEST_EXPECT_LEFT(17, strTo<int>("11", { NumberRadix(16), &bOk } ));
+        DFGTEST_EXPECT_TRUE(bOk);
 #endif // DFG_STRTO_RADIX_SUPPORT == 1
     }
 
@@ -582,8 +577,22 @@ TEST(dfgStr, strTo)
         strTo("q.wp+0", val, CharsFormat::hex, &bOk);
         DFGTEST_EXPECT_FALSE(bOk);
 
-        //DFGTEST_EXPECT_LEFT(1.25, strTo<double>("1.4p+0", CharsFormat::hex, &bOk)); // TODO: this should work
-        //DFGTEST_EXPECT_TRUE(bOk);
+        DFGTEST_EXPECT_LEFT(1.25, strTo<double>("1.4p+0", { CharsFormat::hex, &bOk }));
+        DFGTEST_EXPECT_TRUE(bOk);
+#endif // DFG_STRTO_RADIX_SUPPORT == 1
+    }
+
+    // Testing 0x handling for hex
+    {
+#if DFG_STRTO_RADIX_SUPPORT == 1
+        DFGTEST_EXPECT_LEFT(17, strTo<int>("0x11", { NumberRadix(16) } ));
+        DFGTEST_EXPECT_LEFT(17, strTo<int>("0X11", NumberRadix(16) ));
+        // Testing that 0x/0X is not taken into account when radix != 16
+        bool bOk;
+        DFGTEST_EXPECT_LEFT(0, strTo<int>("0X11", { NumberRadix(10), &bOk }));
+        DFGTEST_EXPECT_FALSE(bOk);
+        DFGTEST_EXPECT_LEFT(0, strTo<int>("0X11", { NumberRadix(17), &bOk }));
+        DFGTEST_EXPECT_FALSE(bOk);
 #endif // DFG_STRTO_RADIX_SUPPORT == 1
     }
 
@@ -711,9 +720,6 @@ TEST(dfgStr, strTo)
 
 #undef CHECK_A_AND_W
 
-#if defined(_MSC_VER)
-    #pragma warning(pop)
-#endif // defined(_MSC_VER)
 }
 
 namespace

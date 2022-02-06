@@ -140,11 +140,21 @@ namespace DFG_DETAIL_NS
             return this->m_radix;
         }
 
+        NumberRadix radix() const
+        {
+            return m_radix;
+        }
+
         NumberRadix m_radix;
 #else // case: DFG_STRTO_USING_FROM_CHARS == 0
         StrToParam_integer(bool* pOk = nullptr)
             : BaseClass(pOk)
         {}
+
+        constexpr NumberRadix radix() const
+        {
+            return NumberRadix(10);
+        }
 #endif
     }; // class StrToParam_integer for char
 
@@ -498,6 +508,24 @@ namespace DFG_DETAIL_NS
     template <class T>
     T defaultStrToReturnValue() { return std::numeric_limits<T>::quiet_NaN(); }
 
+#if DFG_STRTO_RADIX_SUPPORT == 1
+    template <class T>
+    const char* skipPrefix(const char* psz, StrToParam<T, char> param, StrToConversionClass::integer)
+    {
+        if (param.radix() == 16 && psz[0] == '0' && (psz[1] == 'x' || psz[1] == 'X'))
+            return psz + 2;
+        else
+            return psz;
+    }
+#endif // DFG_STRTO_RADIX_SUPPORT == 1
+
+    template <class T, class Char_T>
+    const Char_T* skipPrefix(const Char_T* psz, StrToParam<T, Char_T> param, Dummy)
+    {
+        DFG_UNUSED(param);
+        return psz;
+    }
+
     template <class T, class Char_T>
     T genericImpl(const Char_T* psz, StrToParam<T, Char_T> param)
     {
@@ -509,6 +537,8 @@ namespace DFG_DETAIL_NS
         // Trimming front.
         while (*psz == ' ')
             ++psz;
+
+        psz = skipPrefix<T>(psz, param, param.conversionClass());
 
         if (*psz == '\0')
             return t;
