@@ -1341,7 +1341,7 @@ TEST(dfgCont, TableCsv_peekCsvFormatFromFile)
 
 TEST(dfgCont, CsvConfig)
 {
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+    DFG_MODULE_NS(cont)::CsvConfig config;
     config.loadFromFile("testfiles/csvConfigTest_0.csv");
 
     EXPECT_EQ(DFG_UTF8("UTF8"), config.value(DFG_UTF8("encoding")));
@@ -1371,6 +1371,15 @@ TEST(dfgCont, CsvConfig)
     EXPECT_EQ(nullptr, config.valueStrOrNull(DFG_UTF8("a/non_existent_item")));
 
     EXPECT_EQ(19, config.entryCount());
+
+    // tests for contains()
+    {
+        DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("encoding")));
+        DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("channels")));
+        DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("channels/0")));
+        DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("channels/0/width")));
+        DFGTEST_EXPECT_FALSE(config.contains(DFG_UTF8("non-existing")));
+    }
 }
 
 // Both forEachKeyValue and forEachStartingWith

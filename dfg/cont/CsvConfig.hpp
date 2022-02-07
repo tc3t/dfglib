@@ -81,7 +81,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             if (nFileSize <= 0)
                 return;
 
-            // Check for ridiculously large file.
+            // Ignoring unexpectedly large files
             if (nFileSize > 100000000) // 100 MB
                 return;
 
@@ -126,6 +126,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
         }
 
+        bool contains(const StringViewT svUri) const
+        {
+            auto p = valueStrOrNull(svUri);
+            return (p != nullptr);
+        }
+
         StorageStringT value(const StringViewT& svUri, const StringViewT& svDefault = StringViewT()) const
         {
             auto p = valueStrOrNull(svUri);
@@ -163,6 +169,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             }
         }
 
+        // Calls func for every key/value pair. func should accept two arguments of type StringViewT.
         template <class Func_T>
         void forEachKeyValue(Func_T&& func) const
         {
