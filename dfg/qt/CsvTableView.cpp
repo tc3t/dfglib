@@ -1919,6 +1919,15 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::populateCsvConfig(const CsvItemModel& rD
         config.setKeyValue(qStringToStringUtf8(keyValue.first), qStringToStringUtf8(keyValue.second));
     }
 
+    // Adding items that are in existing .conf-file, but which were not yet added.
+    CsvConfig existingConfig;
+    existingConfig.loadFromFile(qStringToFileApi8Bit(CsvFormatDefinition::csvFilePathToConfigFilePath(rDataModel.getFilePath())));
+    existingConfig.forEachKeyValue([&](const CsvConfig::StringViewT svKey, const CsvConfig::StringViewT svValue)
+    {
+        if (!config.contains(svKey) && svKey != DFG_UTF8("properties"))
+            config.setKeyValue(svKey.toString(), svValue.toString());
+    });
+
     return config;
 }
 
@@ -1973,16 +1982,28 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileWithOptions()
     viewDlg.addVerticalLayoutWidget(0, new QLabel(tr("To omit item from saved config, clear related text from Key-column"), &viewDlg.dialog()));
     CsvItemModel configModel;
 
+    CsvConfig existingConfig;
+    const auto sExistingConfPath = CsvFormatDefinition::csvFilePathToConfigFilePath(pModel->getFilePath());
+    const bool bHasExistingConfPath = QFileInfo::exists(sExistingConfPath);
+    existingConfig.loadFromFile(qStringToFileApi8Bit(sExistingConfPath));
+
     configModel.insertRows(0, saturateCast<int>(config.entryCount()));
-    configModel.insertColumns(0, 2);
+    configModel.insertColumns(0, (bHasExistingConfPath) ? 3 : 2);
     configModel.setColumnName(0, tr("Key"));
     configModel.setColumnName(1, tr("Value"));
+    if (bHasExistingConfPath)
+        configModel.setColumnName(2, tr("Existing value"));
 
     int nRow = 0;
     config.forEachKeyValue([&](const StringViewUtf8& svKey, const StringViewUtf8& svValue)
     {
         configModel.setItem(nRow, 0, svKey);
         configModel.setItem(nRow, 1, svValue);
+        if (bHasExistingConfPath)
+        {
+            const auto existingValue = existingConfig.value(svKey);
+            configModel.setItem(nRow, 2, existingValue);
+        }
         ++nRow;
     });
 
