@@ -88,14 +88,23 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {
         public:
             HighlightDefinition(const QString id,
+                                const int row,
                                 const int col,
                                 StringMatchDefinition matcher,
                                 QBrush highlightBrush = QBrush(Qt::green, Qt::SolidPattern)
                                 )
                 : m_id(id)
+                , m_nRow(row)
                 , m_nColumn(col)
                 , m_matcher(matcher)
                 , m_highlightBrush(highlightBrush)
+            {}
+
+            HighlightDefinition(const QString id,
+                const int col,
+                StringMatchDefinition matcher,
+                QBrush highlightBrush = QBrush(Qt::green, Qt::SolidPattern))
+                : HighlightDefinition(id, -1, col, matcher, highlightBrush)
             {}
 
             bool hasMatchString() const
@@ -108,6 +117,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             const StringMatchDefinition& matcher() const { return m_matcher; }
 
             QString m_id;
+            int m_nRow;
             int m_nColumn;
             StringMatchDefinition m_matcher;
             QBrush m_highlightBrush;

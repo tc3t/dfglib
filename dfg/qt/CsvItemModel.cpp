@@ -201,8 +201,11 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::initFromItemM
 QVariant DFG_MODULE_NS(qt)::DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
 {
     DFG_ASSERT_CORRECTNESS(role != Qt::DisplayRole);
-    // Negative column setting is interpreted as 'match any'.
-    if (!index.isValid() || (m_nColumn >= 0 && index.column() != m_nColumn) || role != Qt::BackgroundRole)
+    if (!index.isValid() || role != Qt::BackgroundRole)
+        return QVariant();
+    // Negative row/column setting is interpreted as 'match any'.
+    const auto isApplicableIndex = [](const int nMyIndex, const int nQueryIndex) { return (nMyIndex < 0 || nQueryIndex == nMyIndex); };
+    if (!isApplicableIndex(m_nRow, index.row()) || !isApplicableIndex(m_nColumn, index.column()))
         return QVariant();
     auto displayData = model.data(index);
     if (m_matcher.isMatchWith(displayData.toString()))

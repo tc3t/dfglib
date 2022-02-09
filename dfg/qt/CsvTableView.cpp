@@ -2001,8 +2001,11 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileWithOptions()
         configModel.setItem(nRow, 1, svValue);
         if (bHasExistingConfPath)
         {
+            const auto bOldConfigHasKey = existingConfig.contains(svKey);
             const auto existingValue = existingConfig.value(svKey);
             configModel.setItem(nRow, 2, existingValue);
+            if (bOldConfigHasKey && existingValue != svValue) // If existing value is different from proposed value, highlighting old value in red.
+                configModel.setHighlighter(CsvItemModel::HighlightDefinition(QString("diffHighlighter_%1").arg(nRow), nRow, 2, StringMatchDefinition::makeMatchEverythingMatcher(), QBrush(QColor(255, 0, 0, 64), Qt::SolidPattern)));
         }
         ++nRow;
     });
