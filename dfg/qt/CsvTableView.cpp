@@ -85,10 +85,20 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 {
-    template <class T>
-    QString floatToQString(const T val)
+    class FloatToStringParam
     {
-        return QString::fromLatin1(DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::DFG_CLASS_NAME(StringAscii)>(val).c_str().c_str());
+    public:
+        FloatToStringParam(const int nPrecision)
+            : m_nPrecision(nPrecision)
+        {}
+
+        int m_nPrecision;
+    };
+
+    template <class T>
+    QString floatToQString(const T val, const FloatToStringParam toStrParam)
+    {
+        return QString::fromLatin1(::DFG_MODULE_NS(str)::floatingPointToStr<DFG_ROOT_NS::StringAscii>(val, toStrParam.m_nPrecision).c_str().c_str());
     }
 
     const char* gBasicSelectionDetailCollectorStrIds[] = 
@@ -265,21 +275,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 return QObject::tr("no (%1 for %2 first)").arg(pszSortDir).arg(m_nSortedUntil);
         }
 
-        QString uiValueStr(const BuiltInDetail id, const QItemSelection& selection) const
+        QString uiValueStr(const BuiltInDetail id, const QItemSelection& selection, const FloatToStringParam toStrParam) const
         {
             switch (id)
             {
                 case BuiltInDetail::cellCountIncluded: return QString::number(m_avgMf.callCount());
                 case BuiltInDetail::cellCountExcluded: return QString::number(m_nExcluded);
-                case BuiltInDetail::sum              : return floatToQString(m_avgMf.sum());
-                case BuiltInDetail::average          : return floatToQString(m_avgMf.average());
-                case BuiltInDetail::median           : return floatToQString(m_medianMf.median());
-                case BuiltInDetail::minimum          : return floatToQString(m_minMaxMf.minValue());
-                case BuiltInDetail::maximum          : return floatToQString(m_minMaxMf.maxValue());
+                case BuiltInDetail::sum              : return floatToQString(m_avgMf.sum(), toStrParam);
+                case BuiltInDetail::average          : return floatToQString(m_avgMf.average(), toStrParam);
+                case BuiltInDetail::median           : return floatToQString(m_medianMf.median(), toStrParam);
+                case BuiltInDetail::minimum          : return floatToQString(m_minMaxMf.minValue(), toStrParam);
+                case BuiltInDetail::maximum          : return floatToQString(m_minMaxMf.maxValue(), toStrParam);
 #if defined(BOOST_VERSION)
-                case BuiltInDetail::variance         : return floatToQString(boost::accumulators::variance(m_varianceMf));
-                case BuiltInDetail::stddev_population: return floatToQString(std::sqrt(boost::accumulators::variance(m_varianceMf)));
-                case BuiltInDetail::stddev_sample    : return floatToQString(std::sqrt(double(m_avgMf.callCount()) / double(m_avgMf.callCount() - 1) * boost::accumulators::variance(m_varianceMf)));
+                case BuiltInDetail::variance         : return floatToQString(boost::accumulators::variance(m_varianceMf), toStrParam);
+                case BuiltInDetail::stddev_population: return floatToQString(std::sqrt(boost::accumulators::variance(m_varianceMf)), toStrParam);
+                case BuiltInDetail::stddev_sample    : return floatToQString(std::sqrt(double(m_avgMf.callCount()) / double(m_avgMf.callCount() - 1) * boost::accumulators::variance(m_varianceMf)), toStrParam);
 #endif
                 case BuiltInDetail::isSortedNum      : return privMakeIsSortedValueString(selection);
                 default: DFG_ASSERT_IMPLEMENTED(false); return QString();
@@ -289,7 +299,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         static auto selectionDetailNameToId(const ::DFG_ROOT_NS::StringViewUtf8& svId) -> BuiltInDetail;
         static auto builtInDetailToStrId(BuiltInDetail detail) -> StringViewUtf8;
 
-        QString resultString(const QItemSelection& selection) const
+        QString resultString(const QItemSelection& selection, const FloatToStringParam toStrParam) const
         {
             DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorStrIds)        == static_cast<size_t>(BuiltInDetail::detailCount), "Detail enum/string array count mismatch");
             DFG_STATIC_ASSERT(DFG_COUNTOF(gBasicSelectionDetailCollectorUiNames_long)  == static_cast<size_t>(BuiltInDetail::detailCount), "Detail enum/string array count mismatch");
@@ -307,13 +317,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             {
                 if (!isEnabled(id))
                     return true;
-                addToResultString(uiName_short(id), uiValueStr(id, selection));
+                addToResultString(uiName_short(id), uiValueStr(id, selection, toStrParam));
                 return true;
             });
             for (auto pCollector : m_activeNonBuiltInCollectors)
             {
                 if (pCollector)
-                    addToResultString(pCollector->getUiName_short(), floatToQString(pCollector->value()));
+                    addToResultString(pCollector->getUiName_short(), floatToQString(pCollector->value(), toStrParam));
             }
             return s;
         }
@@ -443,12 +453,6 @@ namespace
     void setCsvTableViewProperty(CsvTableView* view, const typename CsvTableViewPropertyDefinition<ID>::PropertyType& val)
     {
         DFG_MODULE_NS(qt)::setProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>>(view, QVariant(val));
-    }
-
-    template <class T>
-    QString floatToQString(const T val)
-    {
-        return ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::floatToQString(val);
     }
 
     // Properties
@@ -4419,6 +4423,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
     {
         rMenu.removeAction(rCollector.getCheckBoxAction());
     }
+
+    int m_nDefaultNumericPrecision = -1;
 }; // CsvTableViewBasicSelectionAnalyzerPanel opaque class 
 
 ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent) :
@@ -4447,7 +4453,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
         const auto defaultFlags = DetailCollector::defaultEnableFlags();
         DFG_OPAQUE_REF().m_spCollectors = std::make_shared<SelectionDetailCollectorContainer>();
 
-        // Enable/disable all items
+        // Generic items such as enable/disable all
         {
             {
                 auto pAct = pMenu->addAction(tr("Enable all"));
@@ -4456,6 +4462,10 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
             {
                 auto pAct = pMenu->addAction(tr("Disable all"));
                 DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &CsvTableViewBasicSelectionAnalyzerPanel::onDisableAllDetails));
+            }
+            {
+                auto pAct = pMenu->addAction(tr("Set default numeric precision..."));
+                DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, this, &CsvTableViewBasicSelectionAnalyzerPanel::onQueryDefaultNumericPrecision));
             }
         }
 
@@ -4663,6 +4673,16 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onDisableAllD
     setEnableStatusForAll(false);
 }
 
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onQueryDefaultNumericPrecision()
+{
+    const auto nOld = DFG_OPAQUE_REF().m_nDefaultNumericPrecision;
+    bool bOk = false;
+    const auto nNew = QInputDialog::getInt(this, tr("Default numeric precision"), tr("New numeric precision\n(default roundtrippable precision can be set with -1)"), nOld, -1, 999, 1, &bOk);
+    if (!bOk)
+        return;
+    setDefaultNumericPrecision(nNew);
+}
+
 double ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeInSeconds() const
 {
     bool bOk = false;
@@ -4821,6 +4841,17 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDet
             continue;
         spItem->enable(defaultFlags.test(static_cast<size_t>(builtInDetailId)));
     }
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultNumericPrecision(const int nDefaultPrecision)
+{
+    DFG_OPAQUE_REF().m_nDefaultNumericPrecision = nDefaultPrecision;
+}
+
+int ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::defaultNumericPrecision() const
+{
+    auto pOpaq = DFG_OPAQUE_PTR();
+    return (pOpaq) ? pOpaq->m_nDefaultNumericPrecision : -1;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::collectors() const -> CollectorContainerPtr
@@ -5603,6 +5634,8 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const 
         ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector collector;
         collector.loadDetailHandlers(uiPanel->collectors());
 
+        const auto nNumericPrecision = uiPanel->defaultNumericPrecision();
+
         // For each selection
         for(auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
         {
@@ -5633,7 +5666,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const 
 
         QString sMessage;
         if (completionStatus == CompletionStatus_completed)
-            sMessage = collector.resultString(selection);
+            sMessage = collector.resultString(selection, nNumericPrecision);
         else if (completionStatus == CompletionStatus_terminatedByTimeLimit)
             sMessage = uiPanel->tr("Interrupted (time limit exceeded)");
         else if (completionStatus == CompletionStatus_terminatedByUserRequest)

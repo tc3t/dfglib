@@ -271,6 +271,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Can be called while evaluation is ongoing
         void setDefaultDetails();
 
+        // Sets default numeric precision
+        void setDefaultNumericPrecision(const int nPrecision);
+
+        int defaultNumericPrecision() const;
+
         // Can be called while evaluation is ongoing
         CollectorContainerPtr collectors() const;
 
@@ -286,6 +291,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onAddCustomCollector();
         void onEnableAllDetails();
         void onDisableAllDetails();
+        void onQueryDefaultNumericPrecision();
 
     private:
         QObjectStorage<QLineEdit>      m_spValueDisplay;
