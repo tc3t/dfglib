@@ -4424,7 +4424,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
         rMenu.removeAction(rCollector.getCheckBoxAction());
     }
 
-    int m_nDefaultNumericPrecision = -1;
+    std::atomic_int m_nDefaultNumericPrecision { -1 };
 }; // CsvTableViewBasicSelectionAnalyzerPanel opaque class 
 
 ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent) :
@@ -4675,7 +4675,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onDisableAllD
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onQueryDefaultNumericPrecision()
 {
-    const auto nOld = DFG_OPAQUE_REF().m_nDefaultNumericPrecision;
+    const auto nOld = defaultNumericPrecision();
     bool bOk = false;
     const auto nNew = QInputDialog::getInt(this, tr("Default numeric precision"), tr("New numeric precision\n(default roundtrippable precision can be set with -1)"), nOld, -1, 999, 1, &bOk);
     if (!bOk)
@@ -4851,7 +4851,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultNum
 int ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::defaultNumericPrecision() const
 {
     auto pOpaq = DFG_OPAQUE_PTR();
-    return (pOpaq) ? pOpaq->m_nDefaultNumericPrecision : -1;
+    return (pOpaq) ? pOpaq->m_nDefaultNumericPrecision.load() : -1;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::collectors() const -> CollectorContainerPtr
