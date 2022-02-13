@@ -50,7 +50,8 @@ namespace
         TableEditorPropertyId_cellEditorFontPointSize,
         TableEditorPropertyId_cellEditorHeight,
         TableEditorPropertyId_selectionDetails,
-        TableEditorPropertyId_last = TableEditorPropertyId_selectionDetails
+        TableEditorPropertyId_selectionDetailsResultPrecision,
+        TableEditorPropertyId_last = TableEditorPropertyId_selectionDetailsResultPrecision
     };
 
     // Class for window extent (=one dimension of window size) either as absolute value or as percentage of some widget size
@@ -157,6 +158,11 @@ namespace
                                               TableEditorPropertyId_selectionDetails,
                                               QString,
                                               [] { return QString(); });
+    DFG_QT_DEFINE_OBJECT_PROPERTY("TableEditorPropertyId_selectionDetailsResultPrecision",
+                                              TableEditor,
+                                              TableEditorPropertyId_selectionDetailsResultPrecision,
+                                              int,
+                                              [] { return -1; });
 
 
     template <TableEditorPropertyId ID>
@@ -723,6 +729,8 @@ void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetails(const StringViewC& sv
                 pDetailPanel->addDetail(obj.toVariantMap());
             });
         }
+        const auto nDefaultPrecision = getTableEditorProperty<TableEditorPropertyId_selectionDetailsResultPrecision>(this);
+        pDetailPanel->setDefaultNumericPrecision(nDefaultPrecision);
     }
 }
 
@@ -941,7 +949,7 @@ void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool
 
     // Re-apply properties that might have changed with change of this setting.
     {
-        DFG_STATIC_ASSERT(TableEditorPropertyId_last == 3, "Check whether new properties should be handled here.");
+        DFG_STATIC_ASSERT(TableEditorPropertyId_last == 4, "Check whether new properties should be handled here.");
 
         // cellEditorHeight
         setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this));

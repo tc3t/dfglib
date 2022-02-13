@@ -315,6 +315,10 @@ TableEditor_chartPanelWidth = %50
 ; For details, see documentation of properties/selectionDetails in 'File specific configuration'
 TableEditorPropertyId_selectionDetails = {\"id\":\"avg\"} {\"id\":\"max\"}
 
+; Defines application level default for numeric precision of selection detail results.
+; Default: -1 ( =roundtrippable precision )
+TableEditorPropertyId_selectionDetailsResultPrecision = 6
+
 ; -----------------------------------------------------------
 ; CsvItemModel
 
