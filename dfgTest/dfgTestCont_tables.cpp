@@ -1370,7 +1370,7 @@ TEST(dfgCont, CsvConfig)
     EXPECT_EQ(DFG_UTF8("default_value"), config.value(DFG_UTF8("a/non_existent_item"), DFG_UTF8("default_value")));
     EXPECT_EQ(nullptr, config.valueStrOrNull(DFG_UTF8("a/non_existent_item")));
 
-    EXPECT_EQ(19, config.entryCount());
+    EXPECT_EQ(20, config.entryCount());
 
     // tests for contains()
     {
@@ -1394,9 +1394,11 @@ TEST(dfgCont, CsvConfig_forEach)
     config.loadFromFile("testfiles/csvConfigTest_0.csv");
     StorageT expectedKeys;
     expectedKeys.push_back(StringUtf8(DFG_UTF8("property_one")));
+    expectedKeys.push_back(StringUtf8(DFG_UTF8("property_three")));
     expectedKeys.push_back(StringUtf8(DFG_UTF8("property_two")));
     StorageT expectedValues;
     expectedValues.push_back(StringUtf8(DFG_UTF8("abc")));
+    expectedValues.push_back(StringUtf8(DFG_UTF8("123")));
     expectedValues.push_back(StringUtf8(DFG_UTF8("def")));
 
     StorageT actualKeys;
@@ -1415,7 +1417,7 @@ TEST(dfgCont, CsvConfig_forEach)
     {
         keyValues[svKey.toString()] = svValue.toString();
     });
-    DFGTEST_EXPECT_LEFT(19, keyValues.size());
+    DFGTEST_EXPECT_LEFT(20, keyValues.size());
     DFGTEST_EXPECT_LEFT(DFG_UTF8("integer"), keyValues[DFG_UTF8("channels/0/type")]);
     DFGTEST_EXPECT_LEFT(DFG_UTF8("UTF8"), keyValues[DFG_UTF8("encoding")]);
 }
@@ -1442,9 +1444,9 @@ TEST(dfgCont, CsvConfig_saving)
 
 TEST(dfgCont, CsvFormatDefinition_FromCsvConfig)
 {
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
+    DFG_MODULE_NS(cont)::CsvConfig config;
     config.loadFromFile("testfiles/csvConfigTest_0.csv");
-    DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
+    DFG_ROOT_NS::CsvFormatDefinition format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
     format.bomWriting(false);
     format.fromConfig(config);
     EXPECT_EQ(DFG_MODULE_NS(io)::encodingUTF8, format.textEncoding());
@@ -1454,6 +1456,9 @@ TEST(dfgCont, CsvFormatDefinition_FromCsvConfig)
     EXPECT_EQ(true, format.bomWriting());
     EXPECT_EQ("abc", format.getProperty("property_one", ""));
     EXPECT_EQ("def", format.getProperty("property_two", ""));
+
+    DFGTEST_EXPECT_LEFT(123, format.getPropertyThroughStrTo<int>("property_three", -1));
+    DFGTEST_EXPECT_LEFT(-1, format.getPropertyThroughStrTo<int>("non-existent property", -1));
 }
 
 TEST(dfgCont, CsvFormatDefinition_ToConfig)

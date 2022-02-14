@@ -9,6 +9,7 @@
 #include "cont/CsvConfig.hpp"
 #include "str/stringLiteralCharToValue.hpp"
 #include "numericTypeTools.hpp"
+#include "../str/strTo.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
@@ -66,13 +67,21 @@ public:
         m_genericProperties[svKey.toString()] = svValue.toString();
     }
 
-    std::string getProperty(const StringViewC & svKey, const StringViewC & defaultValue) const
+    std::string getProperty(const StringViewC& svKey, const StringViewC& defaultValue) const
     {
         auto iter = m_genericProperties.find(svKey);
         return (iter != m_genericProperties.cend()) ? iter->second : defaultValue.toString();
     }
 
-    bool hasProperty(const StringViewC & svKey) const
+    // Convenience method for returning property as type T converted through strTo<T>()
+    template <class T>
+    T getPropertyThroughStrTo(const StringViewC& svKey, const T& defaultValue) const
+    {
+        auto iter = m_genericProperties.find(svKey);
+        return (iter != m_genericProperties.cend()) ? ::DFG_MODULE_NS(str)::strTo<T>(iter->second) : defaultValue;
+    }
+
+    bool hasProperty(const StringViewC& svKey) const
     {
         return m_genericProperties.hasKey(svKey);
     }
