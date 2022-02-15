@@ -58,6 +58,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     class CsvTableViewBasicSelectionAnalyzerPanel;
 
+    namespace DFG_DETAIL_NS
+    {
+        class FloatToStringParam
+        {
+        public:
+            FloatToStringParam(const int nPrecision)
+                : m_nPrecision(nPrecision)
+            {}
+
+            int m_nPrecision;
+        };
+    } // namespace DFG_DETAIL_NS
+
     // Typed column index representing index of data model
     class ColumnIndex_data
     {
@@ -89,6 +102,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static const char s_propertyName_uiNameShort[];
         static const char s_propertyName_uiNameLong[];
         static const char s_propertyName_description[];
+        static const char s_propertyName_resultPrecision[];
+
+        using FloatToStringParam = DFG_DETAIL_NS::FloatToStringParam;
 
         SelectionDetailCollector(StringUtf8 sId);
         SelectionDetailCollector(const QString& sId);
@@ -101,13 +117,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setProperty(const QString& sKey, const QVariant value);
         QVariant getProperty(const QString& sKey, const QVariant defaultValue = QVariant()) const;
+        bool deleteProperty(const QString& sKey); // Returns true iff property was deleted
 
         QString getUiName_long() const;
         QString getUiName_short() const;
 
+        FloatToStringParam toStrParam(FloatToStringParam toStrParam) const;
+
         QCheckBox* createCheckBox(QMenu* pParent);
         QCheckBox* getCheckBoxPtr();
         QAction* getCheckBoxAction();
+
+        void updateCheckBoxToolTip();
 
         bool isBuiltIn() const;
 

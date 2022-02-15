@@ -85,16 +85,6 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 {
-    class FloatToStringParam
-    {
-    public:
-        FloatToStringParam(const int nPrecision)
-            : m_nPrecision(nPrecision)
-        {}
-
-        int m_nPrecision;
-    };
-
     template <class T>
     QString floatToQString(const T val, const FloatToStringParam toStrParam)
     {
@@ -317,13 +307,14 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
             {
                 if (!isEnabled(id))
                     return true;
-                addToResultString(uiName_short(id), uiValueStr(id, selection, toStrParam));
+                auto pCollector = (m_spCollectors) ? m_spCollectors->find(builtInDetailToStrId(id)) : nullptr;
+                addToResultString(uiName_short(id), uiValueStr(id, selection, (pCollector) ? pCollector->toStrParam(toStrParam) : toStrParam));
                 return true;
             });
             for (auto pCollector : m_activeNonBuiltInCollectors)
             {
                 if (pCollector)
-                    addToResultString(pCollector->getUiName_short(), floatToQString(pCollector->value(), toStrParam));
+                    addToResultString(pCollector->getUiName_short(), floatToQString(pCollector->value(), pCollector->toStrParam(toStrParam)));
             }
             return s;
         }
@@ -4372,37 +4363,35 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
             }));
 
             // Creating tooltip text
+            rCollector.updateCheckBoxToolTip();
+
+            const auto addAction = [&](const QString& s, std::function<void()> slotHandler)
             {
-                auto sDescription = rCollector.getProperty(SelectionDetailCollector::s_propertyName_description).toString();
-                auto sType = rCollector.getProperty(SelectionDetailCollector::s_propertyName_type).toString();
-                if (rCollector.isBuiltIn())
-                    sType = tr("Built-in");
-                auto sFormula = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_formula).toString().toHtmlEscaped();
-                auto sInitialValue = rCollector.getProperty(SelectionDetailCollector_formula::s_propertyName_initialValue).toString().toHtmlEscaped();
-                if (!sFormula.isEmpty())
-                {
-                    sFormula = tr("<li>Formula: %1</li>").arg(sFormula);
-                    sInitialValue = tr("<li>Initial value: %1</li>").arg(sInitialValue);
-                }
-                if (!sDescription.isEmpty())
-                    sDescription = tr("<li>Description: %1</li>").arg(sDescription.toHtmlEscaped());
-                const QString sToolTip = tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3%4%5</ul>")
-                                        .arg(sType.toHtmlEscaped(), rCollector.getUiName_short().toHtmlEscaped(), sFormula, sInitialValue, sDescription);
-                pCheckBox->setToolTip(sToolTip);
-            }
+                auto pAct = new QAction(s, &rMenu); // Deletion through parentship
+                DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, pCheckBox, slotHandler));
+                pCheckBox->addAction(pAct);
+            };
 
             // Adding context menu actions
+            addAction(tr("Reset result precision to default"), [=]() { pCollector->deleteProperty(SelectionDetailCollector::s_propertyName_resultPrecision); pCollector->updateCheckBoxToolTip(); });
+            addAction(tr("Set result precision..."), [=]()
+                {
+                    bool bOk;
+                    const auto nNew = QInputDialog::getInt(pCollector->getCheckBoxPtr(),
+                                         tr("New precision"),
+                                         tr("New precision for collector '%1'").arg(pCollector->getUiName_long()),
+                                         pCollector->getProperty(SelectionDetailCollector::s_propertyName_resultPrecision, -1).toInt(),
+                                         -1, 999, 1, &bOk);
+                    if (!bOk)
+                        return;
+                    pCollector->setProperty(SelectionDetailCollector::s_propertyName_resultPrecision, nNew);
+                    pCollector->updateCheckBoxToolTip();
+                });
+
             if (!rCollector.isBuiltIn())
             {
                 const auto sId = rCollector.id().toString();
                 QPointer<CsvTableViewBasicSelectionAnalyzerPanel> spPanel = &rPanel;
-
-                const auto addAction = [&](const QString& s, std::function<void ()> slotHandler)
-                {
-                    auto pAct = new QAction(s, &rMenu); // Deletion through parentship
-                    DFG_QT_VERIFY_CONNECT(connect(pAct, &QAction::triggered, pCheckBox, slotHandler));
-                    pCheckBox->addAction(pAct);
-                };
 
                 // Delete action
                 addAction(tr("Delete"), [=]() { if (spPanel) spPanel->deleteDetail(sId); });
@@ -4413,8 +4402,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
                         if (pClipboard)
                             pClipboard->setText(pCollector->exportDefinitionToJson());
                     });
-                pCheckBox->setContextMenuPolicy(Qt::ActionsContextMenu);
             }
+            pCheckBox->setContextMenuPolicy(Qt::ActionsContextMenu);
         }
         rMenu.addAction(rCollector.getCheckBoxAction());
     }
@@ -4608,20 +4597,23 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
                            "<li><b>%3:</b> Short name version to show in UI.</li>"
                            "<li><b>%4:</b> Long name version to show in UI. if omitted, short name will be used</li>"
                            "<li><b>%5:</b> A more detailed description of the new detail. Can be omitted</li>"
+                           "<li><b>%6:</b> Numerical precision of result in range [-1, 999]. Can be omitted. -1 means roundtrippable precision</li>"
                            "</ul>"
                            R"(Example: { "%1": "acc + value^2", "%2": "0", "%5": "Calculates sum of squares" } )")
                            .arg(SelectionDetailCollector_formula::s_propertyName_formula,
                                 SelectionDetailCollector_formula::s_propertyName_initialValue,
                                 SelectionDetailCollector::s_propertyName_uiNameShort,
                                 SelectionDetailCollector::s_propertyName_uiNameLong,
-                                SelectionDetailCollector::s_propertyName_description);
+                                SelectionDetailCollector::s_propertyName_description,
+                                SelectionDetailCollector::s_propertyName_resultPrecision);
 
-    QString sJson = tr("{\n  \"%1\": \"\",\n  \"%2\": \"\",\n  \"%3\": \"\",\n  \"%4\": \"\",\n  \"%5\": \"\"\n}")
+    QString sJson = tr("{\n  \"%1\": \"\",\n  \"%2\": \"\",\n  \"%3\": \"\",\n  \"%4\": \"\",\n  \"%5\": \"\",\n  \"%6\": \"\"\n}")
                     .arg(SelectionDetailCollector_formula::s_propertyName_formula,
                          SelectionDetailCollector_formula::s_propertyName_initialValue,
                          SelectionDetailCollector::s_propertyName_uiNameShort,
                          SelectionDetailCollector::s_propertyName_uiNameLong,
-                         SelectionDetailCollector::s_propertyName_description
+                         SelectionDetailCollector::s_propertyName_description,
+                         SelectionDetailCollector::s_propertyName_resultPrecision
                         );
     QJsonDocument jsonDoc;
     while (true) // Asking definition until getting valid json or cancel.
@@ -4714,6 +4706,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
     //      [ui_name_short]: Short UI name for the detail
     //      [ui_name_long] : Long UI name for the detail
     //      [description]  : Longer description of the detail, shown as tooltip.
+    //      [result_precision]: Numerical precision of string representation of collector's result
     // Example : { "id": "square_sum", "type": "accumulator", "initial_value": "0", "formula": "acc + value^2", "ui_name_short": "Sum^2", "ui_name_long": "Sum of squares", "description": "This detail shows the sum of squared values" }
 
     if (!DFG_OPAQUE_REF().m_spCollectors)
@@ -4739,6 +4732,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
     const bool bEnabled = items.value("enabled", true).toBool();
     using Detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::BuiltInDetail;
     const auto sType = items.value("type").toString();
+    const auto nPrecision = items.value(SelectionDetailCollector::s_propertyName_resultPrecision, -2).toInt();
     if (sType.isEmpty())
     {
         const auto detail = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::selectionDetailNameToId(id);
@@ -4749,6 +4743,10 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
         if (!pExisting)
             return false; // Built-in details should already be created.
         pExisting->enable(bEnabled);
+        if (nPrecision != -2)
+            pExisting->setProperty(SelectionDetailCollector::s_propertyName_resultPrecision, nPrecision);
+
+        pExisting->updateCheckBoxToolTip();
     }
     else if (sType == QLatin1String("accumulator"))
     {
@@ -4782,6 +4780,8 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
         spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_type, sType);
         spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_uiNameShort, sUiNameShort);
         spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_uiNameLong, sUiNameLong);
+        if (nPrecision != -2)
+            spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_resultPrecision, nPrecision);
 
         auto pMenu = (m_spDetailSelector) ? m_spDetailSelector->menu() : nullptr;
         if (pMenu)
@@ -4845,7 +4845,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDet
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultNumericPrecision(const int nDefaultPrecision)
 {
-    DFG_OPAQUE_REF().m_nDefaultNumericPrecision = nDefaultPrecision;
+    DFG_OPAQUE_REF().m_nDefaultNumericPrecision = limited(nDefaultPrecision, -1, 999);
 }
 
 int ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::defaultNumericPrecision() const
@@ -5851,6 +5851,7 @@ const char SelectionDetailCollector::s_propertyName_id[]           = "id";
 const char SelectionDetailCollector::s_propertyName_type[]         = "type";
 const char SelectionDetailCollector::s_propertyName_uiNameShort[]  = "ui_name_short";
 const char SelectionDetailCollector::s_propertyName_uiNameLong[]   = "ui_name_long";
+const char SelectionDetailCollector::s_propertyName_resultPrecision[] = "result_precision";
 
 SelectionDetailCollector::SelectionDetailCollector(StringUtf8 sId) { DFG_OPAQUE_REF().m_id = std::move(sId); }
 SelectionDetailCollector::SelectionDetailCollector(const QString& sId) : SelectionDetailCollector(qStringToStringUtf8(sId)) {}
@@ -5894,6 +5895,11 @@ QVariant SelectionDetailCollector::getProperty(const QString& sKey, const QVaria
     return (pOpaq) ? pOpaq->m_properties.value(sKey, defaultValue) : defaultValue;
 }
 
+bool SelectionDetailCollector::deleteProperty(const QString& sKey)
+{
+    return DFG_OPAQUE_REF().m_properties.remove(sKey) != 0;
+}
+
 QString SelectionDetailCollector::getUiName_long() const
 {
     auto s = getProperty("ui_name_long").toString();
@@ -5910,6 +5916,11 @@ QString SelectionDetailCollector::getUiName_short() const
     if (s.isEmpty())
         s = viewToQString(id());
     return s;
+}
+
+auto SelectionDetailCollector::toStrParam(const FloatToStringParam toStrParam) const -> FloatToStringParam
+{
+    return FloatToStringParam(getProperty(s_propertyName_resultPrecision, toStrParam.m_nPrecision).toInt());
 }
 
 QCheckBox* SelectionDetailCollector::createCheckBox(QMenu* pParent)
@@ -5932,6 +5943,32 @@ QAction* SelectionDetailCollector::getCheckBoxAction()
         DFG_OPAQUE_REF().m_spContextMenuAction.reset(pAct);
     }
     return DFG_OPAQUE_REF().m_spContextMenuAction.get();
+}
+
+void SelectionDetailCollector::updateCheckBoxToolTip()
+{
+    auto pCheckBox = this->getCheckBoxPtr();
+    if (!pCheckBox)
+        return;
+    auto sDescription = this->getProperty(SelectionDetailCollector::s_propertyName_description).toString();
+    auto sType = this->getProperty(SelectionDetailCollector::s_propertyName_type).toString();
+    if (this->isBuiltIn())
+        sType = pCheckBox->tr("Built-in");
+    auto sFormula = this->getProperty(SelectionDetailCollector_formula::s_propertyName_formula).toString().toHtmlEscaped();
+    auto sInitialValue = this->getProperty(SelectionDetailCollector_formula::s_propertyName_initialValue).toString().toHtmlEscaped();
+    auto sPrecision = this->getProperty(SelectionDetailCollector_formula::s_propertyName_resultPrecision).toString().toHtmlEscaped();
+    if (!sFormula.isEmpty())
+    {
+        sFormula = pCheckBox->tr("<li>Formula: %1</li>").arg(sFormula);
+        sInitialValue = pCheckBox->tr("<li>Initial value: %1</li>").arg(sInitialValue);
+    }
+    if (!sDescription.isEmpty())
+        sDescription = pCheckBox->tr("<li>Description: %1</li>").arg(sDescription.toHtmlEscaped());
+    if (!sPrecision.isEmpty())
+        sPrecision = pCheckBox->tr("<li>Result precision: %1</li>").arg(sPrecision);
+    const QString sToolTip = pCheckBox->tr("<ul><li>Type: %1</li><li>Short name: %2</li>%3%4%5%6</ul>")
+        .arg(sType.toHtmlEscaped(), this->getUiName_short().toHtmlEscaped(), sFormula, sInitialValue, sDescription, sPrecision);
+    pCheckBox->setToolTip(sToolTip);
 }
 
 bool SelectionDetailCollector::isBuiltIn() const

@@ -711,7 +711,7 @@ namespace
     }
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetails(const StringViewC& sv)
+void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetails(const StringViewC& sv, const int nResultPrecision)
 {
     auto pDetailPanel = qobject_cast<CsvTableViewBasicSelectionAnalyzerPanel*>(m_spSelectionAnalyzerPanel.get());
     if (pDetailPanel)
@@ -729,7 +729,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetails(const StringViewC& sv
                 pDetailPanel->addDetail(obj.toVariantMap());
             });
         }
-        const auto nDefaultPrecision = getTableEditorProperty<TableEditorPropertyId_selectionDetailsResultPrecision>(this);
+        const auto nDefaultPrecision = (nResultPrecision == -2) ? getTableEditorProperty<TableEditorPropertyId_selectionDetailsResultPrecision>(this) : nResultPrecision;
         pDetailPanel->setDefaultNumericPrecision(nDefaultPrecision);
     }
 }
@@ -849,10 +849,10 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
     }
 
     // Setting selection details
-    setSelectionDetails(loadOptions.getProperty(CsvOptionProperty_selectionDetails, ""));
+    setSelectionDetails(loadOptions.getProperty(CsvOptionProperty_selectionDetails, ""), loadOptions.getPropertyThroughStrTo<int>(CsvOptionProperty_selectionDetailsPrecision, -2));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSaveCompleted(const bool success, const double saveTimeInSeconds)
+void DFG_MODULE_NS(qt)::TableEditor::onSaveCompleted(const bool success, const double saveTimeInSeconds)
 {
     if (!m_spStatusBar)
         return;

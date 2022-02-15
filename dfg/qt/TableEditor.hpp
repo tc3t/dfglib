@@ -130,7 +130,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void closeEvent(QCloseEvent* event) override;
 
     private:
-        void setSelectionDetails(const StringViewC& sv);
+        void setSelectionDetails(const StringViewC& sv, int nResultPrecision = -2);
         void setSelectionDetailsFromIni(const QString& sv);
 
     signals:
