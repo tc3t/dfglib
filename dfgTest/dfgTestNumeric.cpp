@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_NUMERIC) && DFGTEST_BUILD_MODULE_NUMERIC == 1) || (!defined(DFGTEST_BUILD_MODULE_NUMERIC) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/numericAll.hpp>
 #include <dfg/math/pow.hpp>
@@ -15,6 +15,7 @@
 #include <dfg/iter/szIterator.hpp>
 #include <numeric>
 #include <list>
+#include <dfg/func/memFuncMedian.hpp>
 
 #include <boost/units/io.hpp>
 #include <boost/units/quantity.hpp>
@@ -1269,7 +1270,11 @@ TEST(dfgNumeric, rescale)
 TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
 {
     using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(alg);
     using namespace DFG_MODULE_NS(numeric);
+    using namespace DFG_MODULE_NS(func);
+
+    using PercentileMemFuncD = MemFuncPercentile_enclosingElem<double>;
 
     // Test single element
     {
@@ -1283,10 +1288,13 @@ TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
 
         const auto percentileElem0 = percentileInSorted_enclosingElem(arr, 0);
         EXPECT_EQ(1, percentileElem0);
+        DFGTEST_EXPECT_LEFT(percentileElem0, forEachFwd(arr, PercentileMemFuncD(0)).percentile());
         const auto percentileElem50 = percentileInSorted_enclosingElem(arr, 50);
         EXPECT_EQ(1, percentileElem50);
+        DFGTEST_EXPECT_LEFT(percentileElem50, forEachFwd(arr, PercentileMemFuncD(50)).percentile());
         const auto percentileElem100 = percentileInSorted_enclosingElem(arr, 100);
         EXPECT_EQ(1, percentileElem100);
+        DFGTEST_EXPECT_LEFT(percentileElem100, forEachFwd(arr, PercentileMemFuncD(100)).percentile());
     }
 
     // Test two elements
@@ -1314,10 +1322,13 @@ TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
 
         const auto percentileElem0 = percentileInSorted_enclosingElem(arr, 0);
         EXPECT_EQ(1, percentileElem0);
+        DFGTEST_EXPECT_LEFT(percentileElem0, forEachFwd(arr, PercentileMemFuncD(0)).percentile());
         const auto percentileElem50 = percentileInSorted_enclosingElem(arr, 50);
         EXPECT_EQ(2, percentileElem50);
+        DFGTEST_EXPECT_LEFT(percentileElem50, forEachFwd(arr, PercentileMemFuncD(50)).percentile());
         const auto percentileElem100 = percentileInSorted_enclosingElem(arr, 100);
         EXPECT_EQ(2, percentileElem100);
+        DFGTEST_EXPECT_LEFT(percentileElem100, forEachFwd(arr, PercentileMemFuncD(100)).percentile());
     }
 
     // Test four elements
@@ -1333,18 +1344,25 @@ TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
 
         const auto percentileElem0 = percentileInSorted_enclosingElem(arr, 0);
         EXPECT_EQ(1, percentileElem0);
+        DFGTEST_EXPECT_LEFT(percentileElem0, forEachFwd(arr, PercentileMemFuncD(0)).percentile());
         const auto percentileElem249 = percentileInSorted_enclosingElem(arr, 24.9);
         EXPECT_EQ(1, percentileElem249);
+        DFGTEST_EXPECT_LEFT(percentileElem249, forEachFwd(arr, PercentileMemFuncD(24.9)).percentile());
         const auto percentileElem25 = percentileInSorted_enclosingElem(arr, 25);
         EXPECT_EQ(2, percentileElem25);
+        DFGTEST_EXPECT_LEFT(percentileElem25, forEachFwd(arr, PercentileMemFuncD(25)).percentile());
         const auto percentileElem49 = percentileInSorted_enclosingElem(arr, 49);
         EXPECT_EQ(2, percentileElem49);
+        DFGTEST_EXPECT_LEFT(percentileElem49, forEachFwd(arr, PercentileMemFuncD(49)).percentile());
         const auto percentileElem50 = percentileInSorted_enclosingElem(arr, 50);
         EXPECT_EQ(3, percentileElem50);
+        DFGTEST_EXPECT_LEFT(percentileElem50, forEachFwd(arr, PercentileMemFuncD(50)).percentile());
         const auto percentileElem75 = percentileInSorted_enclosingElem(arr, 75);
         EXPECT_EQ(4, percentileElem75);
+        DFGTEST_EXPECT_LEFT(percentileElem75, forEachFwd(arr, PercentileMemFuncD(75)).percentile());
         const auto percentileElem100 = percentileInSorted_enclosingElem(arr, 110);
         EXPECT_EQ(4, percentileElem100);
+        DFGTEST_EXPECT_LEFT(percentileElem100, forEachFwd(arr, PercentileMemFuncD(110)).percentile());
 
         // Test percentileInSorted_enclosingElem with ArrayWrapper
         {
@@ -1388,6 +1406,31 @@ TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
         const auto rv54_63 = percentileRangeInSortedII(vec, 54.35, 63.17);
         EXPECT_EQ(rv54_63.first, std::begin(vec) + 7065);
         EXPECT_EQ(rv54_63.second, std::begin(vec) + 8213);
+    }
+
+    // Testing equality of percentileInSorted_enclosingElem() and PercentileMemFuncD with bigger input
+    {
+        double vals[] = { 3, 23, 59, 2, 29, 59, 2, 32, 27, 91, 44, 29, 70, 40, 75, 94, 20, 64, 13, 97, 34, 60, 82, 98, 6 };
+        const auto memFunc0 = forEachFwd(vals, PercentileMemFuncD(0)).percentile();
+        const auto memFunc25 = forEachFwd(vals, PercentileMemFuncD(25)).percentile();
+        const auto memFunc50 = forEachFwd(vals, PercentileMemFuncD(50)).percentile();
+        const auto memFunc75 = forEachFwd(vals, PercentileMemFuncD(75)).percentile();
+        const auto memFunc100 = forEachFwd(vals, PercentileMemFuncD(100)).percentile();
+
+        // Expected values from LibreOffice PERCENTILE()
+        DFGTEST_EXPECT_LEFT(2, memFunc0);
+        DFGTEST_EXPECT_LEFT(23, memFunc25);
+        DFGTEST_EXPECT_LEFT(40, memFunc50);
+        DFGTEST_EXPECT_LEFT(70, memFunc75);
+        DFGTEST_EXPECT_LEFT(98, memFunc100);
+
+        std::sort(std::begin(vals), std::end(vals));
+        
+        for (double d = 0; d <= 100; d += 0.5)
+        {
+            const auto memFuncValue = forEachFwd(vals, PercentileMemFuncD(d)).percentile();
+            DFGTEST_EXPECT_LEFT(memFuncValue, percentileInSorted_enclosingElem(vals, d));
+        }
     }
 
     // Test that 50, 50 gives median.
