@@ -9,7 +9,7 @@
 #include "cont/CsvConfig.hpp"
 #include "str/stringLiteralCharToValue.hpp"
 #include "numericTypeTools.hpp"
-#include "../str/strTo.hpp"
+#include "str/strTo.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
