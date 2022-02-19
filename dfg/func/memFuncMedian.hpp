@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../dfgDefs.hpp"
 #include "../dfgBase.hpp"
 #include "../dfgAssert.hpp"
@@ -73,8 +75,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
     class MemFuncPercentile_enclosingElem
     {
     public:
-        MemFuncPercentile_enclosingElem(const double percentile)
-            : m_ratiotile(percentile / 100.0)
+        MemFuncPercentile_enclosingElem(const double percentage)
+            : m_ratiotile(percentage / 100.0)
         {
         }
 
@@ -110,6 +112,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
             DFG_ASSERT_CORRECTNESS(m_contSmaller.size() == nOrdinalRank);
         }
 
+        double percentage() const
+        {
+            return m_ratiotile * 100.0;
+        }
+
         Percentile_T percentile() const
         {
             if (m_contGreater.empty())
@@ -118,6 +125,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
                 return m_max.value();
             else
                 return m_contGreater.top();
+        }
+
+        // Clears memory, i.e. result-wise returns object to state as if operator() had not been called. Behaviour with respect to allocated memory is unspecified.
+        void clear()
+        {
+            m_contSmaller = decltype(m_contSmaller)();
+            m_contGreater = decltype(m_contGreater)();
+            m_max = decltype(m_max)();
         }
 
     private:

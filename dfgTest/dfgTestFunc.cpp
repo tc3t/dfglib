@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_FUNC) && DFGTEST_BUILD_MODULE_FUNC == 1) || (!defined(DFGTEST_BUILD_MODULE_FUNC) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/funcAll.hpp>
 #include <dfg/alg.hpp>
@@ -114,6 +114,43 @@ TEST(dfgFunc, MemFuncMedian)
             mfMedian(vals.back());
             EXPECT_EQ(median(vals), mfMedian.median());
         }
+    }
+}
+
+TEST(dfgFunc, MemFuncPercentile_enclosingElem)
+{
+    // Note: most tests are bundled in dfgNumeric.percentileRange_and_percentile_ceilElem
+
+    using namespace DFG_MODULE_NS(func);
+
+    {
+        MemFuncPercentile_enclosingElem<double> mf(26);
+        mf(3);
+        DFGTEST_EXPECT_LEFT(3, mf.percentile());
+        mf(1);
+        DFGTEST_EXPECT_LEFT(1, mf.percentile());
+        mf(2);
+        DFGTEST_EXPECT_LEFT(1, mf.percentile());
+        DFGTEST_EXPECT_LEFT(26, mf.percentage());
+        mf.clear();
+        DFGTEST_EXPECT_NAN(mf.percentile());
+        DFGTEST_EXPECT_LEFT(26, mf.percentage());
+        mf(0);
+        mf(3);
+        mf(1);
+        mf(0.5);
+        mf(2);
+        DFGTEST_EXPECT_LEFT(0.5, mf.percentile());
+        mf(5);
+        DFGTEST_EXPECT_LEFT(0.5, mf.percentile());
+        mf(6);
+        DFGTEST_EXPECT_LEFT(0.5, mf.percentile());
+        mf(7);
+        DFGTEST_EXPECT_LEFT(1, mf.percentile());
+        mf(-1);
+        DFGTEST_EXPECT_LEFT(0.5, mf.percentile());
+        mf(-0.5);
+        DFGTEST_EXPECT_LEFT(0, mf.percentile());
     }
 }
 
