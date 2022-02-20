@@ -4590,30 +4590,49 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationE
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCollector()
 {
-    const auto sLabel = tr("Adding new selection detail. Description of fields:"
-                           "<ul>"
-                           "<li><b>%1:</b> Formula used to calculate the value, predefined variables 'acc' and 'value' are available : 'acc' is current accumulant value and 'value' is current cell value</li>"
-                           "<li><b>%2:</b> Initial value of the accumulant, for example when defining a sum accumulant, initial value is typically 0.</li>"
-                           "<li><b>%3:</b> Short name version to show in UI.</li>"
-                           "<li><b>%4:</b> Long name version to show in UI. if omitted, short name will be used</li>"
-                           "<li><b>%5:</b> A more detailed description of the new detail. Can be omitted</li>"
-                           "<li><b>%6:</b> Numerical precision of result in range [-1, 999]. Can be omitted. -1 means roundtrippable precision</li>"
-                           "</ul>"
-                           R"(Example: { "%1": "acc + value^2", "%2": "0", "%5": "Calculates sum of squares" } )")
-                           .arg(SelectionDetailCollector_formula::s_propertyName_formula,
-                                SelectionDetailCollector_formula::s_propertyName_initialValue,
-                                SelectionDetailCollector::s_propertyName_uiNameShort,
-                                SelectionDetailCollector::s_propertyName_uiNameLong,
-                                SelectionDetailCollector::s_propertyName_description,
-                                SelectionDetailCollector::s_propertyName_resultPrecision);
+    const auto sLabel = tr("New selection detail. Description of fields:<br>"
+        "Common fields:"
+        "<ul>"
+            "<li><b>%3:</b> Short name version to show in UI.</li>"
+            "<li><b>%4:</b> Long name version to show in UI. if omitted, short name will be used</li>"
+            "<li><b>%5:</b> A more detailed description of the new detail. Can be omitted</li>"
+            "<li><b>%6:</b> Numerical precision of result in range [-1, 999]. Can be omitted, -1 means roundtrippable precision</li>"
+        "</ul>"
+        "Formula accumulator:"
+        "<ul>"
+            "<li><b>%1:</b> Formula used to calculate the value, predefined variables 'acc' and 'value' are available : 'acc' is current accumulant value and 'value' is current cell value</li>"
+            "<li><b>%2:</b> Initial value of the accumulant, for example when defining a sum accumulant, initial value is typically 0.</li>"
+        "</ul>"
+        "Percentile (using MemFuncPercentile_enclosingElem):"
+        "<ul>"
+            "<li><b>%7:</b> percentage (range [0, 100]).</li>"
+        "</ul>")
+        .arg(SelectionDetailCollector_formula::s_propertyName_formula,
+             SelectionDetailCollector_formula::s_propertyName_initialValue,
+             SelectionDetailCollector::s_propertyName_uiNameShort,
+             SelectionDetailCollector::s_propertyName_uiNameLong,
+             SelectionDetailCollector::s_propertyName_description,
+             SelectionDetailCollector::s_propertyName_resultPrecision,
+             SelectionDetailCollector_percentile::s_propertyName_percentage);
 
-    QString sJson = tr("{\n  \"%1\": \"\",\n  \"%2\": \"\",\n  \"%3\": \"\",\n  \"%4\": \"\",\n  \"%5\": \"\",\n  \"%6\": \"\"\n}")
+    const QString sExampleSquareSum = tr(R"({ "%4": "SquareSum", "%1": "acc + value^2", "%2": "0", "%3": "Calculates sum of squares" })")
+        .arg(SelectionDetailCollector_formula::s_propertyName_formula,
+             SelectionDetailCollector_formula::s_propertyName_initialValue,
+             SelectionDetailCollector::s_propertyName_description,
+             SelectionDetailCollector::s_propertyName_uiNameShort);
+    const QString sExamplePercentile = tr(R"({ "%1": "10", "%2": "10th percentile" })")
+        .arg(SelectionDetailCollector_percentile::s_propertyName_percentage, SelectionDetailCollector::s_propertyName_description);
+
+    const QString sExamples = tr("# Examples:\n#    %1\n#    %2\n\n").arg(sExampleSquareSum, sExamplePercentile);
+        
+    QString sJson = tr("%7# Below is a template for formula accumulator\n{\n  \"%1\": \"\",\n  \"%2\": \"\",\n  \"%3\": \"\",\n  \"%4\": \"\",\n  \"%5\": \"\",\n  \"%6\": \"\"\n}")
                     .arg(SelectionDetailCollector_formula::s_propertyName_formula,
                          SelectionDetailCollector_formula::s_propertyName_initialValue,
                          SelectionDetailCollector::s_propertyName_uiNameShort,
                          SelectionDetailCollector::s_propertyName_uiNameLong,
                          SelectionDetailCollector::s_propertyName_description,
-                         SelectionDetailCollector::s_propertyName_resultPrecision
+                         SelectionDetailCollector::s_propertyName_resultPrecision,
+                         sExamples
                         );
     QJsonDocument jsonDoc;
     while (true) // Asking definition until getting valid json or cancel.
@@ -4628,6 +4647,13 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
         if (sJson.isEmpty())
             return;
 
+        // Removing leading commented lines
+        auto lines = sJson.split('\n');
+        while (!lines.empty() && lines.front().startsWith("#"))
+            lines.pop_front();
+
+        sJson = lines.join('\n');
+
         QJsonParseError parseError;
         jsonDoc = QJsonDocument::fromJson(sJson.toUtf8(), &parseError);
         if (jsonDoc.isNull()) // Parsing failed?
@@ -4639,7 +4665,19 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
     }
 
     auto inputs = jsonDoc.toVariant().toMap();
-    inputs[SelectionDetailCollector::s_propertyName_type] = QString("accumulator");
+    // If there's no type-property, deducing it from other fields and adding it to data map
+    if (!inputs.contains(SelectionDetailCollector::s_propertyName_type))
+    {
+        if (inputs.contains(SelectionDetailCollector_formula::s_propertyName_formula))
+            inputs[SelectionDetailCollector::s_propertyName_type] = QString("accumulator");
+        else if (inputs.contains(SelectionDetailCollector_percentile::s_propertyName_percentage))
+        {
+            inputs[SelectionDetailCollector::s_propertyName_type] = QString("percentile");
+            // If there's no short name, using default name "percentile_<percentage>.
+            if (!inputs.contains(SelectionDetailCollector::s_propertyName_uiNameShort))
+                inputs[SelectionDetailCollector::s_propertyName_uiNameShort] = QString("percentile_%1").arg(inputs[SelectionDetailCollector_percentile::s_propertyName_percentage].toString());
+        }
+    }
 
     if (!addDetail(inputs))
     {
@@ -4698,7 +4736,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
 {
     // Expected fields
     //      id             : identifier of the detail, must be unique.
-    //      [type]         : Type of collector, either empty for built-in ones or "accumulator".
+    //      [type]         : Type of collector, either empty for built-in ones, "accumulator" or "percentile".
     //      [initial_value]: Initial value for collector if it needs one
     //                          -Needed by: accumulator
     //      [formula]      : Formula used to compute values if collector needs one
@@ -4748,7 +4786,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
 
         pExisting->updateCheckBoxToolTip();
     }
-    else if (sType == QLatin1String("accumulator"))
+    else if (sType == QLatin1String("accumulator") || sType == QLatin1String("percentile"))
     {
         auto pExisting = collectors.find(id);
         if (pExisting)
@@ -4758,28 +4796,50 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
             return true;
         }
 
-        const auto sInitialValueQString = items.value(SelectionDetailCollector_formula::s_propertyName_initialValue).toString();
-        const auto sInitialValue = qStringToStringUtf8(sInitialValueQString);
-        bool bOk = false;
-        const auto initialValue = ::DFG_MODULE_NS(str)::strTo<double>(sInitialValue.rawStorage(), &bOk);
-        if (!bOk)
-            return false;
-
-        const auto sFormulaQString = items.value(SelectionDetailCollector_formula::s_propertyName_formula).toString();
-        const auto sFormula = qStringToStringUtf8(sFormulaQString);
-        if (sFormula.empty())
-            return false;
         const auto sDescription = items.value(SelectionDetailCollector::s_propertyName_description).toString();
         const auto sUiNameShort = items.value(SelectionDetailCollector::s_propertyName_uiNameShort).toString();
         const auto sUiNameLong = items.value(SelectionDetailCollector::s_propertyName_uiNameLong).toString();
 
-        auto spNewCollector = std::make_shared<SelectionDetailCollector_formula>(id, sFormula, initialValue);
+        std::shared_ptr<SelectionDetailCollector> spNewCollector;
+
+        if (sType == QLatin1String("accumulator"))
+        {
+            const auto sInitialValueQString = items.value(SelectionDetailCollector_formula::s_propertyName_initialValue).toString();
+            const auto sInitialValue = qStringToStringUtf8(sInitialValueQString);
+            bool bOk = false;
+            const auto initialValue = ::DFG_MODULE_NS(str)::strTo<double>(sInitialValue.rawStorage(), &bOk);
+            if (!bOk)
+                return false;
+
+            const auto sFormulaQString = items.value(SelectionDetailCollector_formula::s_propertyName_formula).toString();
+            const auto sFormula = qStringToStringUtf8(sFormulaQString);
+            if (sFormula.empty())
+                return false;
+
+            spNewCollector = std::make_shared<SelectionDetailCollector_formula>(id, sFormula, initialValue);
+            spNewCollector->setProperty(SelectionDetailCollector_formula::s_propertyName_formula, sFormulaQString);
+            spNewCollector->setProperty(SelectionDetailCollector_formula::s_propertyName_initialValue, sInitialValueQString);
+        }
+        else if (sType == QLatin1String("percentile"))
+        {
+            bool bOkToDouble;
+            const auto sPercentage = items.value(SelectionDetailCollector_percentile::s_propertyName_percentage).toString();
+            const auto percentage = sPercentage.toDouble(&bOkToDouble);
+            if (bOkToDouble)
+            {
+                spNewCollector = std::make_shared<SelectionDetailCollector_percentile>(id, percentage);
+                spNewCollector->setProperty(SelectionDetailCollector_percentile::s_propertyName_percentage, sPercentage);
+            }
+        }
+
+        if (!spNewCollector)
+            return false;
+
         spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_description, sDescription);
-        spNewCollector->setProperty(SelectionDetailCollector_formula::s_propertyName_formula, sFormulaQString);
-        spNewCollector->setProperty(SelectionDetailCollector_formula::s_propertyName_initialValue, sInitialValueQString);
         spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_type, sType);
         spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_uiNameShort, sUiNameShort);
         spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_uiNameLong, sUiNameLong);
+
         if (nPrecision != -2)
             spNewCollector->setProperty(SelectionDetailCollector::s_propertyName_resultPrecision, nPrecision);
 
@@ -6041,6 +6101,45 @@ void SelectionDetailCollector_formula::resetImpl()
 {
     DFG_OPAQUE_REF().m_accValue = DFG_OPAQUE_REF().m_initialValue;
     DFG_OPAQUE_REF().m_cellValue = std::numeric_limits<double>::quiet_NaN();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+// 
+// SelectionDetailCollector_percentile
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+DFG_OPAQUE_PTR_DEFINE(SelectionDetailCollector_percentile)
+{
+public:
+    ::DFG_MODULE_NS(func)::MemFuncPercentile_enclosingElem<double> m_memFunc{0};
+}; // Opaque class of SelectionDetailCollector_percentile
+
+const char SelectionDetailCollector_percentile::s_propertyName_percentage[] = "percentage";
+
+SelectionDetailCollector_percentile::SelectionDetailCollector_percentile(StringUtf8 sId, const double percentage)
+    : BaseClass(std::move(sId))
+{
+    DFG_OPAQUE_REF().m_memFunc.m_ratiotile = percentage / 100;
+    this->m_bNeedsUpdate = true;
+}
+
+SelectionDetailCollector_percentile::~SelectionDetailCollector_percentile() = default;
+
+double SelectionDetailCollector_percentile::valueImpl() const
+{
+    auto pOpaq = DFG_OPAQUE_PTR();
+    return (pOpaq) ? pOpaq->m_memFunc.percentile() : std::numeric_limits<double>::quiet_NaN();
+}
+
+void SelectionDetailCollector_percentile::updateImpl(const double val)
+{
+    DFG_OPAQUE_REF().m_memFunc(val);
+}
+
+void SelectionDetailCollector_percentile::resetImpl()
+{
+    DFG_OPAQUE_REF().m_memFunc.clear();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

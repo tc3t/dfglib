@@ -171,6 +171,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_OPAQUE_PTR_DECLARE();
     }; // Class SelectionDetailCollector_formula
 
+    // Selection detail collector for percentile.
+    class SelectionDetailCollector_percentile : public SelectionDetailCollector
+    {
+    public:
+        using BaseClass = SelectionDetailCollector;
+
+        static const char s_propertyName_percentage[];
+
+        SelectionDetailCollector_percentile(StringUtf8 sId, double percentage);
+        ~SelectionDetailCollector_percentile();
+
+    private:
+        double valueImpl() const override;
+        void updateImpl(double val) override;
+        void resetImpl() override;
+
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // Class SelectionDetailCollector_formula
+
     // Stores SelectionDetailCollectors
     class SelectionDetailCollectorContainer : public std::vector<std::shared_ptr<SelectionDetailCollector>>
     {
