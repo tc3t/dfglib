@@ -170,8 +170,10 @@ a,7
 
     DFGTEST_ASSERT_TRUE(pDetailPanel != nullptr);
 
-    // Adding one custom detail
+    // Adding some custom details
     pDetailPanel->addDetail({ {"id", "test_product" }, {"type", "accumulator"}, {"formula", "acc * value"}, {"initial_value", "1"} } );
+    pDetailPanel->addDetail({ {"id", "percentile_33" }, {"type", "percentile"}, {"percentage", "33"} } );
+    pDetailPanel->addDetail({ {"id", "percentile_34" }, {"type", "percentile"}, {"percentage", "34"} } );
     pDetailPanel->setEnableStatusForAll(true);
 
     QString sResult;
@@ -190,7 +192,7 @@ a,7
     DFGTEST_ASSERT_TRUE(!sResult.isEmpty());
 
     // Note: numeric precision in results is subject to change.
-    const char szExpectedRegExp[] = R"(Included: 3, Excluded: 1, Sum: 12, Avg: 4, Median: 2, Min: 1, Max: 9, Variance: 12\.666666666666668, StdDev \(pop\): 3\.559026084010437.*, StdDev \(smp\): 4\.358898943540674, Is sorted \(num\): no \(asc for 2 first\), test_product: 18)";
+    const char szExpectedRegExp[] = R"(Included: 3, Excluded: 1, Sum: 12, Avg: 4, Median: 2, Min: 1, Max: 9, Variance: 12\.666666666666668, StdDev \(pop\): 3\.559026084010437.*, StdDev \(smp\): 4\.358898943540674, Is sorted \(num\): no \(asc for 2 first\), test_product: 18, percentile_33: 1, percentile_34: 2)";
     DFGTEST_EXPECT_LEFT(0, sResult.indexOf(QRegularExpression(szExpectedRegExp)));
 }
 
