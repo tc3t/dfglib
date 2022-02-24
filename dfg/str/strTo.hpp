@@ -151,7 +151,7 @@ namespace DFG_DETAIL_NS
             : BaseClass(pOk)
         {}
 
-        constexpr NumberRadix radix() const
+        NumberRadix radix() const
         {
             return NumberRadix(10);
         }
