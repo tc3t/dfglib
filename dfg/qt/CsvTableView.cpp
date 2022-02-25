@@ -749,7 +749,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Open related config file..."),      noShortCut, ActionFlags::unknown, openConfigFile); // To improve: this entry could be disabled if there is no file open or it does not have associated config.
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Save config file..."),              noShortCut, ActionFlags::unknown, saveConfigFile);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Save config file with options..."), noShortCut, ActionFlags::unknown, saveConfigFileWithOptions);
-            if (QFileInfo::exists(QtApplication::getApplicationSettingsPath()))
+            // Adding app config -action (will be hidden if getAllowApplicationSettingsUsage() return false and is made visible later if value changes)
             {
                 addSeparatorActionTo(pMenu);
                 auto& rAction = DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Open app config file"), noShortCut, ActionFlags::unknown, openAppConfigFile);
@@ -2028,18 +2028,50 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileWithOptions()
     return saveConfigFileTo(config, sPath);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openAppConfigFile()
+/////////////////////////////////
+// Start of dfg::qt namespace
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
+
+bool CsvTableView::openAppConfigFile()
 {
-    const auto sPath = DFG_CLASS_NAME(QtApplication)::getApplicationSettingsPath();
+    const auto sPath = QtApplication::getApplicationSettingsPath();
     if (sPath.isEmpty())
         return false;
     QFileInfo fi(sPath);
-    if (fi.isExecutable() || !fi.isReadable())
+    if (!fi.exists())
+    {
+        if (QMessageBox::question(this,
+                                  tr("App config file is missing"),
+                                  tr("App config file does not exist, create?\n\nFile path would be '%1'?").arg(sPath))
+                == QMessageBox::Yes)
+        {
+            if (QtApplication::createApplicationSettingsFile())
+                return openAppConfigFile();
+            else
+            {
+                QMessageBox::warning(this, tr("Opening app config file"), tr("Unable to create app config file"));
+                return false;
+            }
+        }
         return false;
+    }
+    if (fi.isExecutable() || !fi.isReadable())
+    {
+        QString sLabel;
+        if (!fi.exists())
+            sLabel = tr("File does not exist");
+        else if (!fi.isReadable())
+            sLabel = tr("File exists but is not readable");
+        else if (fi.isExecutable())
+            sLabel = tr("File exists but is executable");
+        sLabel += tr(", path '%1'").arg(sPath);
+        QMessageBox::information(this, tr("Unable to open app config file"), sLabel);
+        return false;
+    }
     return QDesktopServices::openUrl(QUrl(QString("file:///%1").arg(sPath)));
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::openConfigFile()
+bool CsvTableView::openConfigFile()
 {
     auto pModel = csvModel();
     if (!pModel)
@@ -2225,6 +2257,9 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
 
     return bSuccess;
 }
+
+} } // namespace dfg::qt
+/////////////////////////////////
 
 bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getProceedConfirmationFromUserIfInModifiedState(const QString& sTranslatedActionDescription)
 {

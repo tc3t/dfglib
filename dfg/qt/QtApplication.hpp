@@ -12,11 +12,12 @@ class QSettings;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
-    class DFG_CLASS_NAME(QtApplication)
+    class QtApplication
     {
     public:
         static std::unique_ptr<QSettings> getApplicationSettings();
         static QString getApplicationSettingsPath();
+        static bool createApplicationSettingsFile(); // If no file exists at getApplicationSettingsPath(), creates file to that path. Returns true if file existed or was created, false otherwise.
 
         static QString m_sSettingsPath;
     };
