@@ -400,7 +400,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 }}} // dfg::qt::DFG_DETAIL_NS
 
 
-using namespace DFG_MODULE_NS(qt);
+/////////////////////////////////
+// Start of dfg::qt namespace
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
 namespace
 {
@@ -637,17 +639,17 @@ namespace
 
 } // unnamed namespace
 
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableView)
+DFG_OPAQUE_PTR_DEFINE(CsvTableView)
 {
 public:
-    std::vector<::DFG_MODULE_NS(qt)::CsvTableView::PropertyFetcher> m_propertyFetchers;
+    std::vector<CsvTableView::PropertyFetcher> m_propertyFetchers;
     std::bitset<1> m_flags;
     QPointer<QAction> m_spActReadOnly;
     QAbstractItemView::EditTriggers m_editTriggers;
     QPalette m_readWriteModePalette;
 };
 
-::DFG_MODULE_NS(qt)::CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
+CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
     : BaseClass(pParent)
     , m_matchDef(QString(), Qt::CaseInsensitive, PatternMatcher::Wildcard)
     , m_nFindColumnIndex(0)
@@ -681,12 +683,12 @@ public:
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addSeparatorAction()
+void CsvTableView::addSeparatorAction()
 {
     addSeparatorActionTo(this);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addSeparatorActionTo(QWidget* pTarget)
+void CsvTableView::addSeparatorActionTo(QWidget* pTarget)
 {
     if (!pTarget)
         return;
@@ -695,7 +697,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addSeparatorActionTo(QWidget* pTarget)
     pTarget->addAction(pAction);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
+void CsvTableView::addAllActions()
 {
     addOpenSaveActions();   
         addSeparatorAction();
@@ -715,7 +717,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addAllActions()
 #define DFG_TEMP_ADD_VIEW_ACTION(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, false, &ThisClass::HANDLER)
 #define DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, true, &ThisClass::HANDLER)
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
+void CsvTableView::addOpenSaveActions()
 {
     // New table
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("New table"),                tr("Ctrl+N"),       ActionFlags::unknown, createNewTable);
@@ -760,7 +762,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addOpenSaveActions()
     } // Config menu
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
+void CsvTableView::addDimensionEditActions()
 {
     // Header/first line move actions
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Move first row to header"), noShortCut, ActionFlags::defaultContentEdit, moveFirstRowToHeader);
@@ -792,7 +794,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addDimensionEditActions()
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Transpose"),    noShortCut,   ActionFlags::defaultStructureEdit, transpose);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
+void CsvTableView::addFindAndSelectionActions()
 {
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Invert selection"), tr("Ctrl+I"), ActionFlags::viewEdit, invertSelection);
 
@@ -805,7 +807,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addFindAndSelectionActions()
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Filter"),        tr("Alt+F"),    ActionFlags::viewEdit,           onFilterRequested);
 }
 
-void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
+void CsvTableView::addContentEditActions()
 {
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Cut"),                          tr("Ctrl+X"), ActionFlags::defaultContentEdit, cut);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Copy"),                         tr("Ctrl+C"), ActionFlags::readOnly,           copy);
@@ -834,7 +836,7 @@ void::DFG_MODULE_NS(qt)::CsvTableView::addContentEditActions()
     privAddUndoRedoActions();
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
+void CsvTableView::addSortActions()
 {
     auto pMenu = createActionMenu(this, tr("Sorting"), ActionFlags::viewEdit);
     if (!pMenu)
@@ -846,7 +848,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addSortActions()
 
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addHeaderActions()
+void CsvTableView::addHeaderActions()
 {
     auto spMenu = createResizeColumnsMenu();
     if (!spMenu)
@@ -855,7 +857,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addHeaderActions()
     createActionMenu(this, tr("Resize header"), ActionFlags::readOnly, spMenu.release());
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addMiscellaneousActions()
+void CsvTableView::addMiscellaneousActions()
 {
     DFG_TEMP_ADD_VIEW_ACTION(*this,           tr("Diff with unmodified"), tr("Alt+D"), ActionFlags::readOnly, diffWithUnmodified);
     DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*this, tr("Row mode"),             noShortCut,  ActionFlags::viewEdit, setRowMode).setToolTip(tr("Selections by row instead of by cell (experimental)"));
@@ -864,7 +866,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::addMiscellaneousActions()
     DFG_OPAQUE_REF().m_spActReadOnly = &rActReadOnly;
 }
 
-DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
+CsvTableView::~CsvTableView()
 {
     // Removing temporary files.
     for (auto iter = m_tempFilePathsToRemoveOnExit.cbegin(), iterEnd = m_tempFilePathsToRemoveOnExit.cend(); iter != iterEnd; ++iter)
@@ -874,7 +876,7 @@ DFG_CLASS_NAME(CsvTableView)::~DFG_CLASS_NAME(CsvTableView)()
     stopAnalyzerThreads();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::stopAnalyzerThreads()
+void CsvTableView::stopAnalyzerThreads()
 {
     // Sending interrupt signals to analyzers.
     forEachSelectionAnalyzer([](SelectionAnalyzer& analyzer) { analyzer.disable(); });
@@ -886,7 +888,7 @@ void DFG_CLASS_NAME(CsvTableView)::stopAnalyzerThreads()
 }
 
 template <class Func_T>
-void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzer(Func_T func)
+void CsvTableView::forEachSelectionAnalyzer(Func_T func)
 {
     for (auto iter = m_selectionAnalyzers.cbegin(), iterEnd = m_selectionAnalyzers.cend(); iter != iterEnd; ++iter)
     {
@@ -895,7 +897,7 @@ void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzer(Func_T func)
 }
 
 template <class Func_T>
-void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzerThread(Func_T func)
+void CsvTableView::forEachSelectionAnalyzerThread(Func_T func)
 {
     for (auto iter = m_analyzerThreads.begin(), iterEnd = m_analyzerThreads.end(); iter != iterEnd; ++iter)
     {
@@ -904,7 +906,7 @@ void DFG_CLASS_NAME(CsvTableView)::forEachSelectionAnalyzerThread(Func_T func)
     }
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::createResizeColumnsMenu() -> std::unique_ptr<QMenu>
+auto CsvTableView::createResizeColumnsMenu() -> std::unique_ptr<QMenu>
 {
     std::unique_ptr<QMenu> spMenu(new QMenu);
 
@@ -928,18 +930,18 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::createResizeColumnsMenu() -> std::unique
 #undef DFG_TEMP_ADD_VIEW_ACTION
 #undef DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE
 
-void DFG_CLASS_NAME(CsvTableView)::createUndoStack()
+void CsvTableView::createUndoStack()
 {
-    m_spUndoStack.reset(new DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TorRef)<QUndoStack>);
+    m_spUndoStack.reset(new DFG_MODULE_NS(cont)::TorRef<QUndoStack>);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::clearUndoStack()
+void CsvTableView::clearUndoStack()
 {
     if (m_spUndoStack)
         m_spUndoStack->item().clear();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::showUndoWindow()
+void CsvTableView::showUndoWindow()
 {
     if (!m_spUndoStack)
         return;
@@ -965,9 +967,9 @@ namespace
 
     void setUndoActionText(QAction* pAction, const QString& s) { setUndoRedoActionText(pAction, QAction::tr("&Undo"), s); }
     void setRedoActionText(QAction* pAction, const QString& s) { setUndoRedoActionText(pAction, QAction::tr("&Redo"), s); }
-}
+} // unnamed namespace
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::privAddUndoRedoActions(QAction* pAddBefore)
+void CsvTableView::privAddUndoRedoActions(QAction* pAddBefore)
 {
     if (!m_spUndoStack)
         createUndoStack();
@@ -1043,7 +1045,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::privAddUndoRedoActions(QAction* pAddBefo
     }
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setExternalUndoStack(QUndoStack* pUndoStack)
+void CsvTableView::setExternalUndoStack(QUndoStack* pUndoStack)
 {
     if (!m_spUndoStack)
         createUndoStack();
@@ -1077,7 +1079,7 @@ void DFG_CLASS_NAME(CsvTableView)::setExternalUndoStack(QUndoStack* pUndoStack)
     privAddUndoRedoActions(pAddNewBefore);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
+void CsvTableView::contextMenuEvent(QContextMenuEvent* pEvent)
 {
     DFG_UNUSED(pEvent);
 
@@ -1121,7 +1123,7 @@ void DFG_CLASS_NAME(CsvTableView)::contextMenuEvent(QContextMenuEvent* pEvent)
     */
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setModel(QAbstractItemModel* pModel)
+void CsvTableView::setModel(QAbstractItemModel* pModel)
 {
     const QAbstractItemModel* pPreviousViewModel = model();
     const CsvModel* pPreviousCsvModel = csvModel();
@@ -1156,19 +1158,19 @@ namespace
         auto pProxyModel = qobject_cast<ProxyModel_T*>(pModel);
         return (pProxyModel) ? qobject_cast<CsvModel_T*>(pProxyModel->sourceModel()) : nullptr;
     }
-}
+} // unnamed namespace
 
-auto DFG_CLASS_NAME(CsvTableView)::csvModel() -> CsvModel*
+auto CsvTableView::csvModel() -> CsvModel*
 {
     return csvModelImpl<CsvModel, QAbstractProxyModel>(model());
 }
 
-auto DFG_CLASS_NAME(CsvTableView)::csvModel() const -> const CsvModel*
+auto CsvTableView::csvModel() const -> const CsvModel*
 {
    return csvModelImpl<const CsvModel, const QAbstractProxyModel>(model());
 }
 
-int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow() const
+int CsvTableView::getFirstSelectedViewRow() const
 {
     auto selection = getSelection();
     auto pModel = model();
@@ -1182,7 +1184,7 @@ int DFG_CLASS_NAME(CsvTableView)::getFirstSelectedViewRow() const
     return minRow.value();
 }
 
-std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, const QAbstractProxyModel* pProxy) const
+std::vector<int> CsvTableView::getRowsOfCol(const int nCol, const QAbstractProxyModel* pProxy) const
 {
     auto pModel = model();
     std::vector<int> vec(static_cast<size_t>((pModel) ? pModel->rowCount() : 0));
@@ -1198,25 +1200,25 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfCol(const int nCol, cons
     return vec;
 }
 
-QModelIndexList DFG_CLASS_NAME(CsvTableView)::selectedIndexes() const
+QModelIndexList CsvTableView::selectedIndexes() const
 {
     DFG_ASSERT_WITH_MSG(false, "Avoid using selectedIndexes() as it's behaviour is unclear when using proxies: selected indexes of proxy or underlying model?");
     return BaseClass::selectedIndexes();
 }
 
-int DFG_CLASS_NAME(CsvTableView)::getRowCount_dataModel() const
+int CsvTableView::getRowCount_dataModel() const
 {
     auto pModel = this->csvModel();
     return (pModel) ? pModel->getRowCount() : 0;
 }
 
-int DFG_CLASS_NAME(CsvTableView)::getRowCount_viewModel() const
+int CsvTableView::getRowCount_viewModel() const
 {
     auto pModel = this->model();
     return (pModel) ? pModel->rowCount() : 0;
 }
 
-QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_dataModel() const
+QModelIndexList CsvTableView::getSelectedItemIndexes_dataModel() const
 {
     auto pSelectionModel = selectionModel();
     if (!pSelectionModel)
@@ -1232,7 +1234,7 @@ QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_dataModel()
     return selected;
 }
 
-QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_viewModel() const
+QModelIndexList CsvTableView::getSelectedItemIndexes_viewModel() const
 {
     auto indexes = getSelectedItemIndexes_dataModel();
     auto pProxy = getProxyModelPtr();
@@ -1241,7 +1243,7 @@ QModelIndexList DFG_CLASS_NAME(CsvTableView)::getSelectedItemIndexes_viewModel()
     return indexes;
 }
 
-std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbstractProxyModel* pProxy) const
+std::vector<int> CsvTableView::getRowsOfSelectedItems(const QAbstractProxyModel* pProxy) const
 {
     QModelIndexList listSelected = (!pProxy) ? getSelectedItemIndexes_viewModel() : getSelectedItemIndexes_dataModel();
 
@@ -1254,22 +1256,22 @@ std::vector<int> DFG_CLASS_NAME(CsvTableView)::getRowsOfSelectedItems(const QAbs
     return std::move(rows.m_storage);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::invertSelection()
+void CsvTableView::invertSelection()
 {
     BaseClass::invertSelection();
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::isRowMode() const
+bool CsvTableView::isRowMode() const
 {
     return (selectionBehavior() == QAbstractItemView::SelectRows);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setRowMode(const bool b)
+void CsvTableView::setRowMode(const bool b)
 {
     setSelectionBehavior((b) ? QAbstractItemView::SelectRows : QAbstractItemView::SelectItems);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::setUndoEnabled(const bool bEnable)
+void CsvTableView::setUndoEnabled(const bool bEnable)
 {
     auto pCsvModel = csvModel();
     clearUndoStack();
@@ -1287,12 +1289,12 @@ void DFG_CLASS_NAME(CsvTableView)::setUndoEnabled(const bool bEnable)
     }
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::isReadOnlyMode() const
+bool CsvTableView::isReadOnlyMode() const
 {
     return DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_flags.test(CsvTableViewFlag::readOnly);
 }
 
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
+namespace DFG_DETAIL_NS
 {
     void handleActionForReadOnly(QAction* pAction, const bool bReadOnly)
     {
@@ -1312,9 +1314,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                 handleActionForReadOnly(pMenuAction, bReadOnly);
         }
     }
-}}}
+} // namespace DFG_DETAIL_NS
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
+void CsvTableView::setReadOnlyMode(const bool bReadOnly)
 {
     auto& rOpaq = DFG_OPAQUE_REF();
     if (rOpaq.m_flags.test(CsvTableViewFlag::readOnly) == bReadOnly)
@@ -1378,7 +1380,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyMode(const bool bReadOnly)
 }
 
 template <class Str_T>
-void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyModeFromProperty(const Str_T& s)
+void CsvTableView::setReadOnlyModeFromProperty(const Str_T& s)
 {
     if (s == "readOnly")
         this->setReadOnlyMode(true);
@@ -1386,33 +1388,33 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::setReadOnlyModeFromProperty(const Str_T&
         this->setReadOnlyMode(false);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::insertGeneric(const QString& s, const QString& sOperationUiName)
+void CsvTableView::insertGeneric(const QString& s, const QString& sOperationUiName)
 {
     executeAction<CsvTableViewActionFill>(this, s, sOperationUiName);
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::insertDate() -> QDate
+auto CsvTableView::insertDate() -> QDate
 {
     const auto date = QDate::currentDate();
     insertGeneric(dateTimeToString(date, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateFormat>(this)), tr("Insert date"));
     return date;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::insertTime() -> QTime
+auto CsvTableView::insertTime() -> QTime
 {
     const auto t = QTime::currentTime();
     insertGeneric(dateTimeToString(t, getCsvModelOrViewProperty<CsvTableViewPropertyId_timeFormat>(this)), tr("Insert time"));
     return t;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::insertDateTime() -> QDateTime
+auto CsvTableView::insertDateTime() -> QDateTime
 {
     const auto dt = QDateTime::currentDateTime();
     insertGeneric(dateTimeToString(dt, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)), tr("Insert DateTime"));
     return dt;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition)& formatDef)
+bool CsvTableView::saveToFileImpl(const DFG_ROOT_NS::CsvFormatDefinition& formatDef)
 {
     auto sPath = QFileDialog::getSaveFileName(this,
         tr("Save file"),
@@ -1426,7 +1428,7 @@ bool DFG_CLASS_NAME(CsvTableView)::saveToFileImpl(const DFG_ROOT_NS::DFG_CLASS_N
     return saveToFileImpl(sPath, formatDef);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition& formatDef)
+bool CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition& formatDef)
 {
     QFileInfo fileInfo(path);
     if (fileInfo.exists() && !fileInfo.isWritable())
@@ -1511,7 +1513,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveToFileImpl(const QString& path, cons
 }
 
 
-bool DFG_CLASS_NAME(CsvTableView)::save()
+bool CsvTableView::save()
 {
     auto model = csvModel();
     const auto& path = (model) ? model->getFilePath() : QString();
@@ -1521,13 +1523,13 @@ bool DFG_CLASS_NAME(CsvTableView)::save()
         return saveToFile();
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::saveToFile()
+bool CsvTableView::saveToFile()
 {
     auto pModel = csvModel();
     return (pModel) ? saveToFileImpl(pModel->getSaveOptions()) : false;
 }
 
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
+namespace DFG_DETAIL_NS {
 
 const char szContentFilterHelpText[] =
     QT_TR_NOOP("List of single line JSON-strings defining list of filters\n"
@@ -1553,8 +1555,7 @@ const char szContentFilterHelpText[] =
                "        Defines filter group for filters that are AND'ed; different and-groups are OR'ed.\n"
                "        Default: Filter belongs to default and-group.\n"
               );
-} } }
-
+} // namespace DFG_DETAIL_NS
 
 class CsvFormatDefinitionDialog : public QDialog
 {
@@ -1562,8 +1563,8 @@ public:
     typedef QDialog BaseClass;
     enum DialogType { DialogTypeSave, DialogTypeLoad };
 
-    typedef ::DFG_MODULE_NS(qt)::CsvItemModel::LoadOptions LoadOptions;
-    typedef ::DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions SaveOptions;
+    typedef CsvItemModel::LoadOptions LoadOptions;
+    typedef CsvItemModel::SaveOptions SaveOptions;
 
     CsvFormatDefinitionDialog(CsvTableView* pParent, const DialogType dialogType, const CsvTableView::CsvModel* pModel, const QString& sFilePath = QString())
         : BaseClass(pParent)
@@ -1664,7 +1665,7 @@ public:
         {
             // Completer columns
             spLayout->addRow(tr("Completer columns"), m_spCompleterColumns.get());
-            ::DFG_MODULE_NS(qt)::CsvItemModel::setCompleterHandlingFromInputSize(m_loadOptions, DFG_MODULE_NS(os)::fileSize(qStringToFileApi8Bit(sFilePath)), nullptr);
+            CsvItemModel::setCompleterHandlingFromInputSize(m_loadOptions, DFG_MODULE_NS(os)::fileSize(qStringToFileApi8Bit(sFilePath)), nullptr);
             m_spCompleterColumns->setText(m_loadOptions.getProperty(CsvOptionProperty_completerColumns, "*").c_str());
             m_spCompleterColumns->setToolTip(tr("Comma-separated list of column indexes (1-based index) where completion is available, use * to enable on all."));
 
@@ -1685,7 +1686,7 @@ public:
             // Content filters
             spLayout->addRow(tr("Content filters"), m_spContentFilterWidget.get());
             DFG_REQUIRE(m_spContentFilterWidget != nullptr);
-            const auto loadOptions = ::DFG_MODULE_NS(qt)::CsvItemModel::getLoadOptionsForFile(sFilePath);
+            const auto loadOptions = CsvItemModel::getLoadOptionsForFile(sFilePath);
             const auto readFilters = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
             m_spContentFilterWidget->setPlaceholderText(tr("List of filters, see tooltip for syntax guide"));
             if (!readFilters.empty())
@@ -1875,7 +1876,7 @@ bool CsvTableView::saveToFileWithOptions()
     return saveToFileImpl(dlg.getSaveOptions());
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) -> CsvConfig
+auto CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) -> CsvConfig
 {
     CsvConfig config;
 
@@ -1928,7 +1929,7 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::populateCsvConfig(const CsvItemModel& rD
     return config;
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileTo(const CsvConfig& config, const QString& sPath)
+bool CsvTableView::saveConfigFileTo(const CsvConfig& config, const QString& sPath)
 {
     const auto bSuccess = config.saveToFile(qStringToFileApi8Bit(sPath));
     if (!bSuccess)
@@ -1937,7 +1938,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileTo(const CsvConfig& config
     return bSuccess;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::askConfigFilePath(CsvItemModel& rModel) -> QString
+auto CsvTableView::askConfigFilePath(CsvItemModel& rModel) -> QString
 {
     const auto sModelPath = rModel.getFilePath();
     const auto sPathSuggestion = (sModelPath.isEmpty()) ? QString() : CsvFormatDefinition::csvFilePathToConfigFilePath(sModelPath);
@@ -1951,7 +1952,7 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::askConfigFilePath(CsvItemModel& rModel) 
     return sPath;
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFile()
+bool CsvTableView::saveConfigFile()
 {
     auto pModel = csvModel();
     if (!pModel)
@@ -1967,7 +1968,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFile()
     return saveConfigFileTo(config, sPath);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileWithOptions()
+bool CsvTableView::saveConfigFileWithOptions()
 {
     auto pModel = csvModel();
     if (!pModel)
@@ -2027,10 +2028,6 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::saveConfigFileWithOptions()
 
     return saveConfigFileTo(config, sPath);
 }
-
-/////////////////////////////////
-// Start of dfg::qt namespace
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
 bool CsvTableView::openAppConfigFile()
 {
@@ -2258,10 +2255,7 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     return bSuccess;
 }
 
-} } // namespace dfg::qt
-/////////////////////////////////
-
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getProceedConfirmationFromUserIfInModifiedState(const QString& sTranslatedActionDescription)
+bool CsvTableView::getProceedConfirmationFromUserIfInModifiedState(const QString& sTranslatedActionDescription)
 {
     auto pModel = csvModel();
     if (pModel && pModel->isModified())
@@ -2276,7 +2270,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::getProceedConfirmationFrom
     return true;
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTable()
+void CsvTableView::createNewTable()
 {
     auto pCsvModel = csvModel();
     if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState(tr("open a new table")))
@@ -2285,7 +2279,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTable()
     pCsvModel->openNewTable();
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTableFromClipboard()
+bool CsvTableView::createNewTableFromClipboard()
 {
     auto pCsvModel = csvModel();
     if (!pCsvModel || !getProceedConfirmationFromUserIfInModifiedState(tr("open a new table")))
@@ -2311,14 +2305,14 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableView)::createNewTableFromClipboar
     return bSuccess;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::openFromFile()
+bool CsvTableView::openFromFile()
 {
     if (!getProceedConfirmationFromUserIfInModifiedState(tr("open a new file")))
         return false;
     return openFile(getOpenFileName(this));
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
+bool CsvTableView::openFromFileWithOptions()
 {
     if (!getProceedConfirmationFromUserIfInModifiedState(tr("open a new file")))
         return false;
@@ -2339,7 +2333,7 @@ bool DFG_CLASS_NAME(CsvTableView)::openFromFileWithOptions()
     return openFile(sPath, loadOptions);
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::reloadFromFile() -> bool
+auto CsvTableView::reloadFromFile() -> bool
 {
     auto pCsvModel = csvModel();
     const auto sPath = (pCsvModel) ? pCsvModel->getFilePath() : QString();
@@ -2361,7 +2355,7 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::reloadFromFile() -> bool
     }
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
+bool CsvTableView::mergeFilesToCurrent()
 {
     auto sPaths = QFileDialog::getOpenFileNames(this,
         tr("Select files to merge"),
@@ -2395,7 +2389,7 @@ bool DFG_CLASS_NAME(CsvTableView)::mergeFilesToCurrent()
 
 
 template <class T, class Param0_T>
-bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
+bool CsvTableView::executeAction(Param0_T&& p0)
 {
     DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING;
     
@@ -2408,7 +2402,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0)
 }
 
 template <class T, class Param0_T, class Param1_T>
-bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
+bool CsvTableView::executeAction(Param0_T&& p0, Param1_T&& p1)
 {
     DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING;
 
@@ -2421,7 +2415,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1)
 }
 
 template <class T, class Param0_T, class Param1_T, class Param2_T>
-bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
+bool CsvTableView::executeAction(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
 {
     DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING;
 
@@ -2436,7 +2430,7 @@ bool DFG_CLASS_NAME(CsvTableView)::executeAction(Param0_T&& p0, Param1_T&& p1, P
 #undef DFG_TEMP_HANDLE_EXECUTE_ACTION_LOCKING
 
 template <class T, class Param0_T>
-void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0)
+void CsvTableView::pushToUndoStack(Param0_T&& p0)
 {
     if (!m_spUndoStack)
         createUndoStack();
@@ -2445,7 +2439,7 @@ void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0)
 }
 
 template <class T, class Param0_T, class Param1_T>
-void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0, Param1_T&& p1)
+void CsvTableView::pushToUndoStack(Param0_T&& p0, Param1_T&& p1)
 {
     if (!m_spUndoStack)
         createUndoStack();
@@ -2454,7 +2448,7 @@ void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0, Param1_T&& p1)
 }
 
 template <class T, class Param0_T, class Param1_T, class Param2_T>
-void DFG_CLASS_NAME(CsvTableView)::pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
+void CsvTableView::pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
 {
     if (!m_spUndoStack)
         createUndoStack();
@@ -2487,13 +2481,13 @@ bool CsvTableView::insertRowAfterCurrent()
     return insertRowImpl(DFG_SUB_NS_NAME(undoCommands)::InsertRowTypeAfter);
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::insertColumn()
+bool CsvTableView::insertColumn()
 {
     const auto nCol = currentIndex().column();
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionInsertColumn)>(csvModel(), nCol);
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::insertColumnAfterCurrent()
+bool CsvTableView::insertColumnAfterCurrent()
 {
     const auto nCol = currentIndex().column();
     if (nCol >= 0)
@@ -2502,14 +2496,14 @@ bool DFG_CLASS_NAME(CsvTableView)::insertColumnAfterCurrent()
         return false;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::cut()
+bool CsvTableView::cut()
 {
     copy();
     clearSelected();
     return true;
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::undo()
+void CsvTableView::undo()
 {
     if (!m_spUndoStack)
         return;
@@ -2522,7 +2516,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::undo()
     m_spUndoStack->item().undo();
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::redo()
+void CsvTableView::redo()
 {
     if (!m_spUndoStack)
         return;
@@ -2595,7 +2589,7 @@ size_t CsvTableView::replace(const QVariantMap& params)
     return nEditCount;
 }
 
-QString DFG_MODULE_NS(qt)::CsvTableView::makeClipboardStringForCopy(QChar cDelim)
+QString CsvTableView::makeClipboardStringForCopy(QChar cDelim)
 {
     auto pViewModel = model();
     if (!pViewModel)
@@ -2666,7 +2660,7 @@ QString DFG_MODULE_NS(qt)::CsvTableView::makeClipboardStringForCopy(QChar cDelim
     return sOutput;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::copy()
+bool CsvTableView::copy()
 {
     QString str = makeClipboardStringForCopy();
 
@@ -2674,12 +2668,12 @@ bool DFG_CLASS_NAME(CsvTableView)::copy()
     return true;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::paste()
+bool CsvTableView::paste()
 {
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionPaste)>(this);
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::deleteCurrentColumn()
+bool CsvTableView::deleteCurrentColumn()
 {
     const auto curIndex = currentIndex();
     const int nRow = curIndex.row();
@@ -2689,17 +2683,17 @@ bool DFG_CLASS_NAME(CsvTableView)::deleteCurrentColumn()
     return rv;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::deleteCurrentColumn(const int nCol)
+bool CsvTableView::deleteCurrentColumn(const int nCol)
 {
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionDeleteColumn)>(this, nCol);
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::deleteSelectedRow()
+bool CsvTableView::deleteSelectedRow()
 {
     return executeAction<DFG_CLASS_NAME(CsvTableViewActionDelete)>(*this, getProxyModelPtr(), true /*row mode*/);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::resizeTable()
+bool CsvTableView::resizeTable()
 {
     auto pModel = model();
     if (!pModel)
@@ -2715,12 +2709,12 @@ bool ::DFG_MODULE_NS(qt)::CsvTableView::resizeTable()
     return resizeTableNoUi(nRows, nCols);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::resizeTableNoUi(const int r, const int c)
+bool CsvTableView::resizeTableNoUi(const int r, const int c)
 {
     return executeAction<CsvTableViewActionResizeTable>(this, r, c);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableView::transpose()
+bool CsvTableView::transpose()
 {
     auto pCsvModel = csvModel();
     if (!pCsvModel)
@@ -2950,10 +2944,7 @@ namespace
             sPrecision.prepend('.');
         return std::string(("%" + sPrecision + sFormatType).toLatin1());
     }
-} // unnamed namespace
 
-namespace
-{
     typedef decltype(QString().split(' ')) RandQStringArgs;
 
     enum class GeneratorFormatType
@@ -3201,10 +3192,7 @@ namespace
             return generateRandom<std::student_t_distribution<double>, 1>(target, view, params, pszFormat);
         return false;
     }
-}
 
-namespace
-{
     static double cellValueAsDouble(::DFG_MODULE_NS(qt)::CsvItemModel::DataTable* pTable, const double rowDouble, const double colDouble)
     {
         using namespace ::DFG_MODULE_NS(math);
@@ -3326,19 +3314,19 @@ bool CsvTableView::generateContentImpl(const CsvModel& settingsModel)
     return false;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::moveFirstRowToHeader()
+bool CsvTableView::moveFirstRowToHeader()
 {
     auto pModel = model();
-    return (pModel && pModel->rowCount() > 0 && pModel->columnCount() > 0) ? executeAction<DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)>(this) : false;
+    return (pModel && pModel->rowCount() > 0 && pModel->columnCount() > 0) ? executeAction<CsvTableViewActionMoveFirstRowToHeader>(this) : false;
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::moveHeaderToFirstRow()
+bool CsvTableView::moveHeaderToFirstRow()
 {
     auto pModel = model();
-    return (pModel && pModel->columnCount() > 0) ? executeAction<DFG_CLASS_NAME(CsvTableViewActionMoveFirstRowToHeader)>(this, true) : false;
+    return (pModel && pModel->columnCount() > 0) ? executeAction<CsvTableViewActionMoveFirstRowToHeader>(this, true) : false;
 }
 
-QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr()
+QAbstractProxyModel* CsvTableView::getProxyModelPtr()
 {
     return qobject_cast<QAbstractProxyModel*>(model());
 }
@@ -3348,7 +3336,7 @@ const QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr() cons
     return qobject_cast<const QAbstractProxyModel*>(model());
 }
 
-bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
+bool CsvTableView::diffWithUnmodified()
 {
     const char szTempFileNameTemplate[] = "dfgqtCTV"; // static part for temporary filenames.
     auto dataModelPtr = csvModel();
@@ -3436,7 +3424,7 @@ bool DFG_CLASS_NAME(CsvTableView)::diffWithUnmodified()
     }
 }
 
-bool DFG_MODULE_NS(qt)::CsvTableView::getAllowApplicationSettingsUsage() const
+bool CsvTableView::getAllowApplicationSettingsUsage() const
 {
     return property(gPropertyIdAllowAppSettingsUsage).toBool();
 }
@@ -3448,7 +3436,7 @@ void CsvTableView::setAllowApplicationSettingsUsage(const bool b)
     Q_EMIT sigOnAllowApplicationSettingsUsageChanged(b);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::finishEdits()
+void CsvTableView::finishEdits()
 {
     const auto viewState = state();
     if (viewState == EditingState)
@@ -3460,12 +3448,12 @@ void DFG_CLASS_NAME(CsvTableView)::finishEdits()
     }
 }
 
-int DFG_CLASS_NAME(CsvTableView)::getFindColumnIndex() const
+int CsvTableView::getFindColumnIndex() const
 {
     return m_nFindColumnIndex;
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onFilterRequested()
+void CsvTableView::onFilterRequested()
 {
     const QMetaMethod findActivatedSignal = QMetaMethod::fromSignal(&ThisClass::sigFilterActivated);
     if (isSignalConnected(findActivatedSignal))
@@ -3474,7 +3462,7 @@ void DFG_CLASS_NAME(CsvTableView)::onFilterRequested()
         QToolTip::showText(QCursor::pos(), tr("Sorry, standalone filter is not implemented."));
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::onGoToCellTriggered()
+void CsvTableView::onGoToCellTriggered()
 {
     auto pModel = model();
     if (!pModel || pModel->rowCount() <= 0)
@@ -3517,7 +3505,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::onGoToCellTriggered()
     }
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
+void CsvTableView::onFindRequested()
 {
     const QMetaMethod findActivatedSignal = QMetaMethod::fromSignal(&ThisClass::sigFindActivated);
     if (isSignalConnected(findActivatedSignal))
@@ -3537,7 +3525,7 @@ void DFG_CLASS_NAME(CsvTableView)::onFindRequested()
     }
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onFind(const bool forward)
+void CsvTableView::onFind(const bool forward)
 {
     if (!m_matchDef.hasMatchString())
         return;
@@ -3582,12 +3570,12 @@ void DFG_CLASS_NAME(CsvTableView)::onFind(const bool forward)
         forgetLatestFindPosition();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onFindNext()
+void CsvTableView::onFindNext()
 {
     onFind(true);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onFindPrevious()
+void CsvTableView::onFindPrevious()
 {
     onFind(false);
 }
@@ -3682,7 +3670,7 @@ void CsvTableView::setFindText(const StringMatchDef matchDef, const int nCol)
 }
 
 template <class Func_T>
-void DFG_CLASS_NAME(CsvTableView)::forEachCompleterEnabledColumnIndex(Func_T func)
+void CsvTableView::forEachCompleterEnabledColumnIndex(Func_T func)
 {
     auto pModel = csvModel();
     if (pModel)
@@ -3697,7 +3685,7 @@ void DFG_CLASS_NAME(CsvTableView)::forEachCompleterEnabledColumnIndex(Func_T fun
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::onNewSourceOpened()
+void CsvTableView::onNewSourceOpened()
 {
     // Setting completer delegates to columns that have completers enabled.
     forEachCompleterEnabledColumnIndex([&](const int nCol, CsvModel::ColInfo* pColInfo)
@@ -3802,7 +3790,7 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
 
 } // unnamed namespace
 
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel)
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewBasicSelectionAnalyzerPanel)
 {
     CsvTableViewBasicSelectionAnalyzerPanel::CollectorContainerPtr m_spCollectors;
 
@@ -3874,7 +3862,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
     std::atomic_int m_nDefaultNumericPrecision { -1 };
 }; // CsvTableViewBasicSelectionAnalyzerPanel opaque class 
 
-::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent) :
+CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel(QWidget *pParent) :
     BaseClass(pParent)
 {
     auto layout = new QGridLayout(this);
@@ -3978,25 +3966,25 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel
     DFG_QT_VERIFY_CONNECT(connect(this, &ThisClass::sigSetValueDisplayString, this, &ThisClass::setValueDisplayString_myThread));
 }
 
-::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::~CsvTableViewBasicSelectionAnalyzerPanel() = default;
+CsvTableViewBasicSelectionAnalyzerPanel::~CsvTableViewBasicSelectionAnalyzerPanel() = default;
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setValueDisplayString(const QString& s)
+void CsvTableViewBasicSelectionAnalyzerPanel::setValueDisplayString(const QString& s)
 {
     Q_EMIT sigSetValueDisplayString(s);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setValueDisplayString_myThread(const QString& s)
+void CsvTableViewBasicSelectionAnalyzerPanel::setValueDisplayString_myThread(const QString& s)
 {
     if (m_spValueDisplay)
         m_spValueDisplay->setText(s);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationStarting(const bool bEnabled)
+void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationStarting(const bool bEnabled)
 {
     Q_EMIT sigEvaluationStartingHandleRequest(bEnabled);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationStarting_myThread(const bool bEnabled)
+void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationStarting_myThread(const bool bEnabled)
 {
     if (bEnabled)
     {
@@ -4024,12 +4012,12 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationS
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded(const double timeInSeconds, const DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus)
+void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded(const double timeInSeconds, const DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus)
 {
     Q_EMIT sigEvaluationEndedHandleRequest(timeInSeconds, static_cast<int>(completionStatus));
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded_myThread(const double timeInSeconds, const int completionStatus)
+void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded_myThread(const double timeInSeconds, const int completionStatus)
 {
     if (m_spProgressBar)
     {
@@ -4046,7 +4034,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationE
         m_spStopButton->setEnabled(false);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCollector()
+void CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCollector()
 {
     const auto sLabel = tr("New selection detail. Description of fields:<br>"
         "Common fields:"
@@ -4143,7 +4131,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onAddCustomCo
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setEnableStatusForAll(const bool b)
+void CsvTableViewBasicSelectionAnalyzerPanel::setEnableStatusForAll(const bool b)
 {
     auto spCollectors = collectors();
     if (!spCollectors)
@@ -4151,17 +4139,17 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setEnableStat
     spCollectors->setEnableStatusForAll(b);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onEnableAllDetails()
+void CsvTableViewBasicSelectionAnalyzerPanel::onEnableAllDetails()
 {
     setEnableStatusForAll(true);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onDisableAllDetails()
+void CsvTableViewBasicSelectionAnalyzerPanel::onDisableAllDetails()
 {
     setEnableStatusForAll(false);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onQueryDefaultNumericPrecision()
+void CsvTableViewBasicSelectionAnalyzerPanel::onQueryDefaultNumericPrecision()
 {
     const auto nOld = defaultNumericPrecision();
     bool bOk = false;
@@ -4171,7 +4159,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::onQueryDefaul
     setDefaultNumericPrecision(nNew);
 }
 
-double ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeInSeconds() const
+double CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeInSeconds() const
 {
     bool bOk = false;
     double val = 0;
@@ -4180,17 +4168,17 @@ double ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::getMaxTimeI
     return (bOk) ? val : -1.0;
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::isStopRequested() const
+bool CsvTableViewBasicSelectionAnalyzerPanel::isStopRequested() const
 {
     return (m_spStopButton && m_spStopButton->isChecked());
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::clearAllDetails()
+void CsvTableViewBasicSelectionAnalyzerPanel::clearAllDetails()
 {
     setEnableStatusForAll(false);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items)
+bool CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items)
 {
     // Expected fields
     //      id             : identifier of the detail, must be unique.
@@ -4315,7 +4303,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::addDetail(con
     return true;
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::deleteDetail(const StringViewUtf8& id)
+bool CsvTableViewBasicSelectionAnalyzerPanel::deleteDetail(const StringViewUtf8& id)
 {
     if (!DFG_OPAQUE_REF().m_spCollectors)
         return false;
@@ -4345,7 +4333,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::deleteDetail(
         return false;
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDetails()
+void CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDetails()
 {
     if (!DFG_OPAQUE_REF().m_spCollectors)
         return;
@@ -4361,18 +4349,18 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDet
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::setDefaultNumericPrecision(const int nDefaultPrecision)
+void CsvTableViewBasicSelectionAnalyzerPanel::setDefaultNumericPrecision(const int nDefaultPrecision)
 {
     DFG_OPAQUE_REF().m_nDefaultNumericPrecision = limited(nDefaultPrecision, -1, 999);
 }
 
-int ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::defaultNumericPrecision() const
+int CsvTableViewBasicSelectionAnalyzerPanel::defaultNumericPrecision() const
 {
     auto pOpaq = DFG_OPAQUE_PTR();
     return (pOpaq) ? pOpaq->m_nDefaultNumericPrecision.load() : -1;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::collectors() const -> CollectorContainerPtr
+auto CsvTableViewBasicSelectionAnalyzerPanel::collectors() const -> CollectorContainerPtr
 {
     auto pOpaq = DFG_OPAQUE_PTR();
     if (!pOpaq)
@@ -4380,7 +4368,7 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::collectors() 
     return std::atomic_load(&pOpaq->m_spCollectors);
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::detailConfigsToString() const -> QString
+auto CsvTableViewBasicSelectionAnalyzerPanel::detailConfigsToString() const -> QString
 {
     auto spCollectors = collectors();
     if (!spCollectors)
@@ -4397,19 +4385,19 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzerPanel::detailConfigs
     return s;
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected)
+void CsvTableView::onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
     onSelectionModelOrContentChanged(selected, deselected, QItemSelection());
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onViewModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
+void CsvTableView::onViewModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
 {
     DFG_UNUSED(roles);
     // For now not checking if change actually happened within selection, to be improved later if there are practical cases where content gets changed outside the selection.
     onSelectionModelOrContentChanged(QItemSelection(), QItemSelection(), QItemSelection(topLeft, bottomRight));
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onSelectionModelOrContentChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedViewModelItems)
+void CsvTableView::onSelectionModelOrContentChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedViewModelItems)
 {
     Q_EMIT sigSelectionChanged(selected, deselected, editedViewModelItems);
 
@@ -4449,7 +4437,7 @@ void DFG_CLASS_NAME(CsvTableView)::onSelectionModelOrContentChanged(const QItemS
     forEachSelectionAnalyzer([&](SelectionAnalyzer& analyzer) { analyzer.addSelectionToQueue(selection); });
 }
 
-void DFG_CLASS_NAME(CsvTableView)::addSelectionAnalyzer(std::shared_ptr<SelectionAnalyzer> spAnalyzer)
+void CsvTableView::addSelectionAnalyzer(std::shared_ptr<SelectionAnalyzer> spAnalyzer)
 {
     if (!spAnalyzer)
         return;
@@ -4458,7 +4446,7 @@ void DFG_CLASS_NAME(CsvTableView)::addSelectionAnalyzer(std::shared_ptr<Selectio
         m_selectionAnalyzers.push_back(std::move(spAnalyzer));
 }
 
-void DFG_CLASS_NAME(CsvTableView)::removeSelectionAnalyzer(const SelectionAnalyzer* pAnalyzer)
+void CsvTableView::removeSelectionAnalyzer(const SelectionAnalyzer* pAnalyzer)
 {
     auto iter = std::find_if(m_selectionAnalyzers.begin(), m_selectionAnalyzers.end(), [=](const std::shared_ptr<SelectionAnalyzer>& sp)
     {
@@ -4468,7 +4456,7 @@ void DFG_CLASS_NAME(CsvTableView)::removeSelectionAnalyzer(const SelectionAnalyz
         m_selectionAnalyzers.erase(iter);
 }
 
-QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToViewModel(const QModelIndex& index) const
+QModelIndex CsvTableView::mapToViewModel(const QModelIndex& index) const
 {
     const auto pIndexModel = index.model();
     if (pIndexModel == model())
@@ -4479,7 +4467,7 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToViewModel(const QModelIndex& inde
         return QModelIndex();
 }
 
-QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToDataModel(const QModelIndex& index) const
+QModelIndex CsvTableView::mapToDataModel(const QModelIndex& index) const
 {
     const auto pIndexModel = index.model();
     if (pIndexModel == csvModel())
@@ -4490,12 +4478,12 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToDataModel(const QModelIndex& inde
         return QModelIndex();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::forgetLatestFindPosition()
+void CsvTableView::forgetLatestFindPosition()
 {
     m_latestFoundIndex = QModelIndex();
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewEvenly()
+void CsvTableView::onColumnResizeAction_toViewEvenly()
 {
     auto pViewPort = viewport();
     auto pHorizontalHeader = horizontalHeader();
@@ -4507,7 +4495,7 @@ void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewEvenly()
     pHorizontalHeader->setDefaultSectionSize(sectionSize);
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewContentAware()
+void CsvTableView::onColumnResizeAction_toViewContentAware()
 {
     auto pHeader = horizontalHeader();
     auto pViewPort = viewport();
@@ -4604,8 +4592,6 @@ void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_toViewContentAware()
     } // 'Needs truncation'-case
 }
 
-DFG_ROOT_NS_BEGIN
-{
     namespace
     {
         void onHeaderResizeAction_content(QHeaderView* pHeader)
@@ -4636,30 +4622,29 @@ DFG_ROOT_NS_BEGIN
                 pHeader->setDefaultSectionSize(nNewSize);
             }
         }
-    }
-} // namespace dfg
+    } // unnamed namespace
 
-void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_content()
+void CsvTableView::onColumnResizeAction_content()
 {
     onHeaderResizeAction_content(horizontalHeader());
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onRowResizeAction_content()
+void CsvTableView::onRowResizeAction_content()
 {
     onHeaderResizeAction_content(verticalHeader());
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onColumnResizeAction_fixedSize()
+void CsvTableView::onColumnResizeAction_fixedSize()
 {
     onHeaderResizeAction_fixedSize(this, horizontalHeader());
 }
 
-void DFG_CLASS_NAME(CsvTableView)::onRowResizeAction_fixedSize()
+void CsvTableView::onRowResizeAction_fixedSize()
 {
     onHeaderResizeAction_fixedSize(this, verticalHeader());
 }
 
-QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, const int r, const int c)
+QModelIndex CsvTableView::mapToSource(const QAbstractItemModel* pModel, const QAbstractProxyModel* pProxy, const int r, const int c)
 {
     if (pProxy)
         return pProxy->mapToSource(pProxy->index(r, c));
@@ -4669,13 +4654,13 @@ QModelIndex DFG_CLASS_NAME(CsvTableView)::mapToSource(const QAbstractItemModel* 
         return QModelIndex();
 }
 
-QItemSelection DFG_CLASS_NAME(CsvTableView)::getSelection() const
+QItemSelection CsvTableView::getSelection() const
 {
     auto pSelectionModel = selectionModel();
     return (pSelectionModel) ? pSelectionModel->selection() : QItemSelection();
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::privCreateActionBlockedDueToLockedContentMessage(const QString& actionname) -> QString
+auto CsvTableView::privCreateActionBlockedDueToLockedContentMessage(const QString& actionname) -> QString
 {
     if (isReadOnlyMode())
         return tr("Executing action '%1' was blocked: table is in read-only mode").arg(actionname);
@@ -4683,12 +4668,12 @@ auto ::DFG_MODULE_NS(qt)::CsvTableView::privCreateActionBlockedDueToLockedConten
         return tr("Executing action '%1' was blocked: table is being accessed by some other operation. Please try again later.").arg(actionname);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::showStatusInfoTip(const QString& sMsg)
+void CsvTableView::showStatusInfoTip(const QString& sMsg)
 {
     showInfoTip(sMsg, this);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::privShowExecutionBlockedNotification(const QString& actionname)
+void CsvTableView::privShowExecutionBlockedNotification(const QString& actionname)
 {
     // Showing a note to user that execution was blocked. Not using QToolTip as it is a bit brittle in this use case:
     // it may disappear too quickly and disappear triggers are difficult to control in general.
@@ -4700,22 +4685,22 @@ void ::DFG_MODULE_NS(qt)::CsvTableView::privShowExecutionBlockedNotification(con
     showStatusInfoTip(privCreateActionBlockedDueToLockedContentMessage(actionname));
 }
 
-auto DFG_CLASS_NAME(CsvTableView)::tryLockForEdit() -> LockReleaser
+auto CsvTableView::tryLockForEdit() -> LockReleaser
 {
     return (m_spEditLock && m_spEditLock->tryLockForWrite()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
 }
 
-auto DFG_CLASS_NAME(CsvTableView)::tryLockForRead() -> LockReleaser
+auto CsvTableView::tryLockForRead() -> LockReleaser
 {
     return (m_spEditLock && m_spEditLock->tryLockForRead()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
 }
 
-auto ::DFG_CLASS_NAME(CsvTableView)::horizontalTableHeader() -> TableHeaderView*
+auto CsvTableView::horizontalTableHeader() -> TableHeaderView*
 {
     return qobject_cast<TableHeaderView*>(horizontalHeader());
 }
 
-void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
+void CsvTableView::setColumnNames()
 {
     auto pCsvModel = this->csvModel();
     if (!pCsvModel)
@@ -4770,39 +4755,35 @@ void ::DFG_CLASS_NAME(CsvTableView)::setColumnNames()
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableView::addConfigSavePropertyFetcher(PropertyFetcher fetcher)
+void CsvTableView::addConfigSavePropertyFetcher(PropertyFetcher fetcher)
 {
     DFG_OPAQUE_REF().m_propertyFetchers.push_back(std::move(fetcher));
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::weekDayNames() const -> QStringList
+auto CsvTableView::weekDayNames() const -> QStringList
 {
     const auto s = getCsvModelOrViewProperty<CsvTableViewPropertyId_weekDayNames>(this);
     return s.split(',');
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const -> QString
+auto CsvTableView::dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const -> QString
 {
     QString rv = dateTime.toString(sFormat);
     ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleWeekDayFormat(rv, dateTime.date().dayOfWeek(), [&]() { return this-> weekDayNames(); });
     return rv;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QDate& date, const QString& sFormat) const -> QString
+auto CsvTableView::dateTimeToString(const QDate& date, const QString& sFormat) const -> QString
 {
     QString rv = date.toString(sFormat);
     ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::handleWeekDayFormat(rv, date.dayOfWeek(), [&]() { return this-> weekDayNames(); });
     return rv;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableView::dateTimeToString(const QTime& qtime, const QString& sFormat) const -> QString
+auto CsvTableView::dateTimeToString(const QTime& qtime, const QString& sFormat) const -> QString
 {
     return qtime.toString(sFormat);
 }
-
-/////////////////////////////////
-// Start of dfg::qt namespace
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
 namespace
 {
@@ -4996,20 +4977,17 @@ QString CsvTableView::getColumnName(const ColumnIndex_view viewIndex) const
 
 void CsvTableView::doModalOperation(const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void(ProgressWidget*)> func)
 {
-    ::doModalOperation(this, sProgressDialogLabel, isCancellable, sThreadName, func);
+    ::DFG_MODULE_NS(qt)::doModalOperation(this, sProgressDialogLabel, isCancellable, sThreadName, func);
 }
 
-} } // namespace dfg::qt
-/////////////////////////////////
-
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewDlg)
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewDlg)
 {
 public:
     QObjectStorage<QDialog> m_spDialog;
     QObjectStorage<CsvTableView> m_spTableView;
 };
 
-::DFG_MODULE_NS(qt)::CsvTableViewDlg::CsvTableViewDlg(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, CsvTableView::ViewType viewType)
+CsvTableViewDlg::CsvTableViewDlg(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, CsvTableView::ViewType viewType)
 {
     DFG_OPAQUE_REF().m_spDialog.reset(new QDialog(pParent));
     DFG_OPAQUE_REF().m_spTableView.reset(new CsvTableView(std::move(spReadWriteLock), DFG_OPAQUE_REF().m_spDialog.get(), viewType));
@@ -5026,36 +5004,36 @@ public:
     removeContextHelpButtonFromDialog(&dlg);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewDlg::setModel(QAbstractItemModel* pModel)
+void CsvTableViewDlg::setModel(QAbstractItemModel* pModel)
 {
     DFG_OPAQUE_REF().m_spTableView->setModel(pModel);
 }
 
-int ::DFG_MODULE_NS(qt)::CsvTableViewDlg::exec()
+int CsvTableViewDlg::exec()
 {
     DFG_OPAQUE_REF().m_spDialog->show(); // To get dimensions for column resize.
     csvView().onColumnResizeAction_toViewContentAware();
     return DFG_OPAQUE_REF().m_spDialog->exec();
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewDlg::resize(const int w, const int h)
+void CsvTableViewDlg::resize(const int w, const int h)
 {
     dialog().resize(w, h);
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableViewDlg::dialog() -> QWidget&
+auto CsvTableViewDlg::dialog() -> QWidget&
 {
     DFG_REQUIRE(DFG_OPAQUE_REF().m_spDialog != nullptr);
     return *DFG_OPAQUE_REF().m_spDialog;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableViewDlg::csvView() -> CsvTableView&
+auto CsvTableViewDlg::csvView() -> CsvTableView&
 {
     DFG_REQUIRE(DFG_OPAQUE_REF().m_spTableView != nullptr);
     return *DFG_OPAQUE_REF().m_spTableView;
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewDlg::addVerticalLayoutWidget(int nPos, QWidget* pWidget)
+void CsvTableViewDlg::addVerticalLayoutWidget(int nPos, QWidget* pWidget)
 {
     auto pLayout = qobject_cast<QVBoxLayout*>(dialog().layout());
     DFG_ASSERT_CORRECTNESS(pLayout != nullptr);
@@ -5064,7 +5042,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDlg::addVerticalLayoutWidget(int nPos, QWi
     pLayout->insertWidget(nPos, pWidget);
 }
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()
+CsvTableViewSelectionAnalyzer::CsvTableViewSelectionAnalyzer()
     : m_abIsEnabled(true)
     , m_bPendingCheckQueue(false)
     , m_abNewSelectionPending(false)
@@ -5072,12 +5050,12 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::DFG_CLASS_NAME
     m_spMutexAnalyzeQueue.reset(new QMutex);
 }
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::~DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)()
+CsvTableViewSelectionAnalyzer::~CsvTableViewSelectionAnalyzer()
 {
 
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::addSelectionToQueueImpl(QItemSelection selection)
+void CsvTableViewSelectionAnalyzer::addSelectionToQueueImpl(QItemSelection selection)
 {
     QMutexLocker locker(m_spMutexAnalyzeQueue.get());
     // If there's nothing in analyze queue, add selection...
@@ -5093,7 +5071,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::addSelect
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAnalyzeQueue()
+void CsvTableViewSelectionAnalyzer::onCheckAnalyzeQueue()
 {
     QMutexLocker locker(m_spMutexAnalyzeQueue.get());
     if (!m_analyzeQueue.empty())
@@ -5121,14 +5099,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::onCheckAn
 
 
 
-::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::CsvTableViewBasicSelectionAnalyzer(PanelT* uiPanel)
+CsvTableViewBasicSelectionAnalyzer::CsvTableViewBasicSelectionAnalyzer(PanelT* uiPanel)
    : m_spUiPanel(uiPanel)
 {
 }
 
-::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::~CsvTableViewBasicSelectionAnalyzer() = default;
+CsvTableViewBasicSelectionAnalyzer::~CsvTableViewBasicSelectionAnalyzer() = default;
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const QItemSelection selection)
+void CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const QItemSelection selection)
 {
     auto uiPanel = m_spUiPanel.data();
     if (!uiPanel)
@@ -5203,9 +5181,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const 
 
 #undef DFG_CSVTABLEVIEW_PROPERTY_PREFIX
 
-/////////////////////////////////
-// Start of dfg::qt namespace
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
 TableHeaderView::TableHeaderView(CsvTableView* pParent) :
     BaseClass(Qt::Horizontal, pParent)
