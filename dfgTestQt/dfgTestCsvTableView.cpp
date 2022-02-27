@@ -444,10 +444,10 @@ TEST(dfgQt, CsvTableView_replace)
     EXPECT_EQ(2u, view.replace(QVariantMap({{"find", "a"}, {"replace", "c"}})));
     EXPECT_TRUE(csvModel.isModified());
 
-    EXPECT_STREQ("c", csvModel.RawStringPtrAt(0, 0).c_str());
-    EXPECT_STREQ("b", csvModel.RawStringPtrAt(0, 1).c_str());
-    EXPECT_STREQ("1c2", csvModel.RawStringPtrAt(1, 0).c_str());
-    EXPECT_STREQ("d", csvModel.RawStringPtrAt(1, 1).c_str());
+    EXPECT_STREQ("c", csvModel.rawStringPtrAt(0, 0).c_str());
+    EXPECT_STREQ("b", csvModel.rawStringPtrAt(0, 1).c_str());
+    EXPECT_STREQ("1c2", csvModel.rawStringPtrAt(1, 0).c_str());
+    EXPECT_STREQ("d", csvModel.rawStringPtrAt(1, 1).c_str());
 }
 
 TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula)

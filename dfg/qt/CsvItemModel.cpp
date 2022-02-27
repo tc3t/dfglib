@@ -1270,9 +1270,14 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnNames() const -> 
     return names;
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::RawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
+auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
 {
     return SzPtrUtf8R(table()(nRow, nCol));
+}
+
+auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringPtrAt(const QModelIndex& index) const -> SzPtrUtf8R
+{
+    return rawStringPtrAt(index.row(), index.column());
 }
 
 auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringViewAt(const int nRow, const int nCol) const -> StringViewUtf8

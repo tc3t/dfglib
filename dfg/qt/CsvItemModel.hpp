@@ -358,8 +358,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static int internalColumnIndexToVisible(const int nCol) { return saturateAdd<int>(nCol,  internalColumnToVisibleShift()); }
         static int visibleColumnIndexToInternal(const int nCol) { return saturateAdd<int>(nCol, -internalColumnToVisibleShift()); }
 
-        DFG_CLASS_NAME(CsvItemModel)();
-        ~DFG_CLASS_NAME(CsvItemModel)();
+        CsvItemModel();
+        ~CsvItemModel();
 
         // Calls saveToFile(m_sFilePath)
         bool saveToFile();
@@ -383,7 +383,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
 
         bool openNewTable();
-        bool mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other);
+        bool mergeAnotherTableToThis(const CsvItemModel& other);
         bool openFile(const QString& sDbFilePath);
         bool openFromSqlite(const QString& sDbFilePath, const QString& sQuery);
         bool openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions);
@@ -446,7 +446,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // @p vecStrings will be empty.
         void columnToStrings(const int nCol, std::vector<QString>& vecStrings);
 
-        SzPtrUtf8R RawStringPtrAt(const int nRow, const int nCol) const;
+        // Returns typed string pointer. Prefer to use rawStringViewAt() as first choice as returning null-terminated string pointers need assumption about underlying implementation.
+        SzPtrUtf8R rawStringPtrAt(const int nRow, const int nCol) const;
+        SzPtrUtf8R rawStringPtrAt(const QModelIndex& index) const;
         StringViewUtf8 rawStringViewAt(const int nRow, const int nCol) const;
         StringViewUtf8 rawStringViewAt(const QModelIndex& index) const;
 
@@ -484,7 +486,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         template <class Cont_T>
         void removeRows(const Cont_T& indexesAscSorted) { removeRows(::DFG_MODULE_NS(cont)::ArrayWrapper::createArrayWrapper(indexesAscSorted)); }
 
-        void removeRows(const ::DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<const int>& indexesAscSorted);
+        void removeRows(const ::DFG_MODULE_NS(cont)::ArrayWrapperT<const int>& indexesAscSorted);
 
         bool transpose();
 
@@ -509,7 +511,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         LoadOptions getLoadOptionsFromConfFile() const; // Shortcut for CsvItemModel::getLoadOptionsForFile(this->getFilePath())
         LoadOptions getOpenTimeLoadOptions() const { return m_loadOptionsInOpen; } // Returns LoadOptions that were used when opened from file or memory.
 
-        void populateConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const;
+        void populateConfig(::DFG_MODULE_NS(cont)::CsvConfig& config) const;
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
         // Note: Does not check whether the table has actually changed and always sets the model modified.

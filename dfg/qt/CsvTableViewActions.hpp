@@ -72,7 +72,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             rView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& bContinue)
             {
                 DFG_UNUSED(bContinue);
-                SzPtrUtf8R p = pModel->RawStringPtrAt(index.row(), index.column());
+                SzPtrUtf8R p = pModel->rawStringPtrAt(index);
                 cellMemory.setElement(index.row(), index.column(), (p) ? p : SzPtrUtf8(""));
             });
         }
@@ -317,7 +317,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                         return;
                     const auto nTargetRow = indexTarget.row();
                     const auto nTargetCol = indexTarget.column();
-                    m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, pModel->RawStringPtrAt(nTargetRow, nTargetCol));
+                    m_cellMemoryUndo.setElement(nTargetRow, nTargetCol, pModel->rawStringPtrAt(nTargetRow, nTargetCol));
                     const int intSize = (nSize < NumericTraits<int>::maxValue) ? static_cast<int>(nSize) : NumericTraits<int>::maxValue;
                     m_cellMemoryRedo.setElement(nTargetRow, nTargetCol, SzPtrUtf8R(QString::fromWCharArray(p, intSize).toUtf8().data())); // TODO: Should not need to create a temporary QString for wchar_t -> UTF8 transform.
                 });
@@ -640,7 +640,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             size_t nCellCount = 0;
             rView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
             {
-                m_cellMemoryUndo.setElement(index.row(), index.column(), rModel.RawStringPtrAt(index.row(), index.column()));
+                m_cellMemoryUndo.setElement(index.row(), index.column(), rModel.rawStringPtrAt(index));
                 ++nCellCount;
                 m_initialSelection.push_back(index);
             });

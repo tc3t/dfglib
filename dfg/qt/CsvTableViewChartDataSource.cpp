@@ -128,7 +128,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(D
         {
             // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
             const auto sourceModelIndex = m_spView->mapToDataModel(pModel->index(r, c));
-            const auto pszData = pCsvModel->RawStringPtrAt(sourceModelIndex.row(), sourceModelIndex.column());
+            const auto pszData = pCsvModel->rawStringPtrAt(sourceModelIndex);
             const double row = CsvItemModel::internalRowIndexToVisible(r);
             double val = 0;
             SourceDataSpan dataSpan;

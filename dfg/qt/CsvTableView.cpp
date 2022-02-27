@@ -1475,7 +1475,7 @@ bool CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition
             {
                 const auto viewIndex = pViewModel->index(r, c);
                 const auto sourceIndex = mapToDataModel(viewIndex);
-                const auto pStr = pModel->RawStringPtrAt(sourceIndex.row(), sourceIndex.column());
+                const auto pStr = pModel->rawStringPtrAt(sourceIndex);
                 saveAsShownModel.setDataNoUndo(r, c, pStr);
             }
         }

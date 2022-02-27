@@ -151,12 +151,12 @@ TEST(dfgQt, CsvItemModel_filteredRead)
         EXPECT_EQ(QString("Col1"), model.getHeaderName(0));
         EXPECT_EQ(QString("Col2"), model.getHeaderName(1));
         EXPECT_EQ(QString("Col4"), model.getHeaderName(2));
-        EXPECT_EQ(QString("2,1"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
-        EXPECT_EQ(QString("2,2"), QString::fromUtf8(model.RawStringPtrAt(0, 1).c_str()));
-        EXPECT_EQ(QString("2,4"), QString::fromUtf8(model.RawStringPtrAt(0, 2).c_str()));
-        EXPECT_EQ(QString("4,1"), QString::fromUtf8(model.RawStringPtrAt(1, 0).c_str()));
-        EXPECT_EQ(QString("4,2"), QString::fromUtf8(model.RawStringPtrAt(1, 1).c_str()));
-        EXPECT_EQ(QString("4,4"), QString::fromUtf8(model.RawStringPtrAt(1, 2).c_str()));
+        EXPECT_EQ(QString("2,1"), QString::fromUtf8(model.rawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(QString("2,2"), QString::fromUtf8(model.rawStringPtrAt(0, 1).c_str()));
+        EXPECT_EQ(QString("2,4"), QString::fromUtf8(model.rawStringPtrAt(0, 2).c_str()));
+        EXPECT_EQ(QString("4,1"), QString::fromUtf8(model.rawStringPtrAt(1, 0).c_str()));
+        EXPECT_EQ(QString("4,2"), QString::fromUtf8(model.rawStringPtrAt(1, 1).c_str()));
+        EXPECT_EQ(QString("4,4"), QString::fromUtf8(model.rawStringPtrAt(1, 2).c_str()));
     }
 
     // Content filter, basic test
@@ -168,7 +168,7 @@ TEST(dfgQt, CsvItemModel_filteredRead)
         ASSERT_EQ(1, model.rowCount());
         ASSERT_EQ(5, model.columnCount());
         EXPECT_EQ(QString("Col4"), model.getHeaderName(4));
-        EXPECT_EQ(QString("1,4"), QString::fromUtf8(model.RawStringPtrAt(0, 4).c_str()));
+        EXPECT_EQ(QString("1,4"), QString::fromUtf8(model.rawStringPtrAt(0, 4).c_str()));
         EXPECT_EQ(5, model.m_table.cellCountNonEmpty());
     }
 
@@ -184,8 +184,8 @@ TEST(dfgQt, CsvItemModel_filteredRead)
         ASSERT_EQ(5, model.columnCount());
         EXPECT_EQ(QString("Col0"), model.getHeaderName(0));
         EXPECT_EQ(QString("Col4"), model.getHeaderName(4));
-        EXPECT_EQ(QString("1,4"), QString::fromUtf8(model.RawStringPtrAt(0, 4).c_str()));
-        EXPECT_EQ(QString("3,0"), QString::fromUtf8(model.RawStringPtrAt(1, 0).c_str()));
+        EXPECT_EQ(QString("1,4"), QString::fromUtf8(model.rawStringPtrAt(0, 4).c_str()));
+        EXPECT_EQ(QString("3,0"), QString::fromUtf8(model.rawStringPtrAt(1, 0).c_str()));
         EXPECT_EQ(10, model.m_table.cellCountNonEmpty());
     }
 
@@ -202,7 +202,7 @@ TEST(dfgQt, CsvItemModel_filteredRead)
         ASSERT_EQ(1, model.rowCount());
         ASSERT_EQ(1, model.columnCount());
         EXPECT_EQ(QString("Col1"), model.getHeaderName(0));
-        EXPECT_EQ(QString("3,1"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(QString("3,1"), QString::fromUtf8(model.rawStringPtrAt(0, 0).c_str()));
         EXPECT_EQ(1, model.m_table.cellCountNonEmpty());
     }
 
@@ -235,8 +235,8 @@ TEST(dfgQt, CsvItemModel_filteredRead)
         ASSERT_EQ(2, model.columnCount());
         EXPECT_EQ(QString("Col0"), model.getHeaderName(0));
         EXPECT_EQ(QString("Col1"), model.getHeaderName(1));
-        EXPECT_EQ(QString("b"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
-        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.RawStringPtrAt(0, 1).c_str()));
+        EXPECT_EQ(QString("b"), QString::fromUtf8(model.rawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.rawStringPtrAt(0, 1).c_str()));
         EXPECT_EQ(2, model.m_table.cellCountNonEmpty());
     }
 
@@ -250,10 +250,10 @@ TEST(dfgQt, CsvItemModel_filteredRead)
         ASSERT_EQ(2, model.columnCount());
         EXPECT_EQ(QString("Col0"), model.getHeaderName(0));
         EXPECT_EQ(QString("Col1"), model.getHeaderName(1));
-        EXPECT_EQ(QString("b"), QString::fromUtf8(model.RawStringPtrAt(0, 0).c_str()));
-        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.RawStringPtrAt(0, 1).c_str()));
-        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.RawStringPtrAt(1, 0).c_str()));
-        EXPECT_EQ(QString("c"), QString::fromUtf8(model.RawStringPtrAt(1, 1).c_str()));
+        EXPECT_EQ(QString("b"), QString::fromUtf8(model.rawStringPtrAt(0, 0).c_str()));
+        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.rawStringPtrAt(0, 1).c_str()));
+        EXPECT_EQ(QString("ab"), QString::fromUtf8(model.rawStringPtrAt(1, 0).c_str()));
+        EXPECT_EQ(QString("c"), QString::fromUtf8(model.rawStringPtrAt(1, 1).c_str()));
         EXPECT_EQ(4, model.m_table.cellCountNonEmpty());
     }
 }
