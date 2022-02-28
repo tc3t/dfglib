@@ -323,17 +323,29 @@ QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getTableTitle(const QSt
     return (!sFileName.isEmpty()) ? sFileName : sDefault;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::isSupportedEncodingForSaving(const DFG_MODULE_NS(io)::TextEncoding encoding) const
+bool DFG_MODULE_NS(qt)::CsvItemModel::isSupportedEncodingForSaving(const DFG_MODULE_NS(io)::TextEncoding encoding) const
 {
     return (encoding == DFG_MODULE_NS(io)::encodingUTF8) || (encoding == DFG_MODULE_NS(io)::encodingLatin1);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile()
+std::string DFG_MODULE_NS(qt)::CsvItemModel::saveToByteString(const SaveOptions& options)
+{
+    ::DFG_MODULE_NS(io)::BasicOmcByteStream<std::string> ostrm;
+    saveImpl(ostrm, options);
+    return ostrm.releaseData();
+}
+
+auto DFG_MODULE_NS(qt)::CsvItemModel::saveToByteString() -> std::string
+{
+    return saveToByteString(SaveOptions(this));
+}
+
+bool DFG_MODULE_NS(qt)::CsvItemModel::saveToFile()
 {
     return saveToFile(m_sFilePath);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath)
+bool DFG_MODULE_NS(qt)::CsvItemModel::saveToFile(const QString& sPath)
 {
     return saveToFile(sPath, SaveOptions(this));
 }

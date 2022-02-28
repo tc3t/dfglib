@@ -270,10 +270,10 @@ namespace
 // Test that saving uses the same settings as loading
 TEST(dfgQt, CsvItemModel_readFormatUsageOnWrite)
 {
-    typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) ModelT;
-    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<std::string> StrmT;
-    typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::LoadOptions LoadOptionsT;
-    typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDef;
+    typedef DFG_MODULE_NS(qt)::CsvItemModel ModelT;
+    typedef DFG_MODULE_NS(io)::OmcByteStream<std::string> StrmT;
+    typedef DFG_MODULE_NS(qt)::CsvItemModel::LoadOptions LoadOptionsT;
+    typedef DFG_ROOT_NS::CsvFormatDefinition CsvFormatDef;
 #define DFG_TEMP_BOM DFG_UTF_BOM_STR_UTF8
     CsvItemModelReadFormatTestCase testCases[] =
     {
@@ -298,7 +298,8 @@ TEST(dfgQt, CsvItemModel_readFormatUsageOnWrite)
         StrmT ostrm;
         model.save(ostrm);
 
-        EXPECT_EQ(iter->m_pszInput, ostrm.container());
+        DFGTEST_EXPECT_EQ(iter->m_pszInput, ostrm.container());
+        DFGTEST_EXPECT_EQ(iter->m_pszInput, model.saveToByteString()); // Making sure that also saveToByteString() uses correct save options
     }
 #undef DFG_TEMP_BOM
 }

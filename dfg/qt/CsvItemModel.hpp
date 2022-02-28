@@ -369,6 +369,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool saveToFile(const QString& sPath);
         bool saveToFile(const QString& sPath, const SaveOptions& options);
 
+        // Returns csv-data as bytes, encoding depends on save options.
+        std::string saveToByteString(const SaveOptions& options);
+        std::string saveToByteString(); // Convenience overload: calls saveToByteString() with default save options as argument
+
         bool exportAsSQLiteFile(const QString& sPath);
         bool exportAsSQLiteFile(const QString& sPath, const SaveOptions& options);
 
