@@ -561,10 +561,11 @@ namespace
 
     DFG_DEFINE_SCOPED_ENUM_FLAGS_WITH_OPERATORS(ActionFlags, ::DFG_ROOT_NS::uint32,
         unknown               = 0x0,
-        readOnly              = 0x1, // Makes no changes of any kind to table content nor to view.
-        contentEdit           = 0x2, // May edit table content
-        contentStructureEdit  = 0x4, // May edit table structure (changing row/column count etc.).
-        viewEdit              = 0x8, // May edit view (selection, proxy/filter).
+        readOnly              = 0x1,  // Makes no changes of any kind to table content nor to view.
+        contentEdit           = 0x2,  // May edit table content
+        contentStructureEdit  = 0x4,  // May edit table structure (changing row/column count etc.).
+        viewEdit              = 0x8,  // May edit view (selection, proxy/filter).
+        confEdit              = 0x10, // May edit fields related to .conf-file (e.g. column type), but not actual table content
         anyContentEdit        = contentEdit | contentStructureEdit,
         defaultContentEdit    = contentEdit | viewEdit,
         defaultStructureEdit  = contentEdit | contentStructureEdit | viewEdit
@@ -648,6 +649,8 @@ public:
     QAbstractItemView::EditTriggers m_editTriggers;
     QPalette m_readWriteModePalette;
 };
+
+const char CsvTableView::s_szCsvSaveOption_saveAsShown[] = "CsvTableView_saveAsShown";
 
 CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, const ViewType viewType)
     : BaseClass(pParent)
@@ -1414,7 +1417,7 @@ auto CsvTableView::insertDateTime() -> QDateTime
     return dt;
 }
 
-bool CsvTableView::saveToFileImpl(const DFG_ROOT_NS::CsvFormatDefinition& formatDef)
+bool CsvTableView::saveToFileImpl(const CsvFormatDefinition& formatDef)
 {
     auto sPath = QFileDialog::getSaveFileName(this,
         tr("Save file"),
@@ -1449,7 +1452,7 @@ bool CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition
     }
 
     const bool bSaveAsSqlite = (fileInfo.suffix() == QLatin1String("sqlite3"));
-    const bool bSaveAsShown = (formatDef.getProperty("CsvTableView_saveAsShown", "") == "1");
+    const bool bSaveAsShown = (formatDef.getProperty(s_szCsvSaveOption_saveAsShown, "") == "1");
 
     auto pModel = csvModel();
     if (!pModel)
@@ -1832,7 +1835,7 @@ public:
             m_saveOptions.headerWriting(m_spSaveHeader->isChecked());
             m_saveOptions.bomWriting(m_spWriteBOM->isChecked());
             if (m_spSaveAsShown->isChecked())
-                m_saveOptions.setProperty("CsvTableView_saveAsShown", "1");
+                m_saveOptions.setProperty(CsvTableView::s_szCsvSaveOption_saveAsShown, "1");
             m_saveOptions.textEncoding(encoding);
         }
 
@@ -3331,7 +3334,7 @@ QAbstractProxyModel* CsvTableView::getProxyModelPtr()
     return qobject_cast<QAbstractProxyModel*>(model());
 }
 
-const QAbstractProxyModel* DFG_CLASS_NAME(CsvTableView)::getProxyModelPtr() const
+const QAbstractProxyModel* CsvTableView::getProxyModelPtr() const
 {
     return qobject_cast<const QAbstractProxyModel*>(model());
 }
@@ -5292,6 +5295,22 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
             {
                 rActVisible.setDisabled(true); // Not letting all columns to be hidden to prevent column header from getting removed.
                 rActVisible.setToolTip(tr("Hiding disabled: hiding all columns is not supported"));
+            }
+            auto pTypeMenu = menu.addMenu(tr("Data type"));
+            if (pTypeMenu)
+            {
+                pTypeMenu->setToolTip(tr("Type can be used to change sorting behaviour. Does not affect underlying storage"));
+                const auto funcSetType = [=](const CsvItemModel::ColType colType)
+                {
+                    auto pModel = pView->csvModel();
+                    if (pModel)
+                        pModel->setColumnType(m_nLatestContextMenuEventColumn_dataModel, colType);
+                };
+                const auto currentType = pCsvModel->getColType(m_nLatestContextMenuEventColumn_dataModel);
+                const bool bIsTextType = (currentType == CsvItemModel::ColTypeText);
+                const bool bIsNumberType = (currentType == CsvItemModel::ColTypeNumber);
+                addViewAction(rView, *pTypeMenu, tr("Text")  , noShortCut, ActionFlags::confEdit, { true, bIsTextType }  , [=]() { funcSetType(CsvItemModel::ColTypeText);   });
+                addViewAction(rView, *pTypeMenu, tr("Number"), noShortCut, ActionFlags::confEdit, { true, bIsNumberType }, [=]() { funcSetType(CsvItemModel::ColTypeNumber); });
             }
         }
     }

@@ -5,6 +5,7 @@
 #include "connectHelper.hpp"
 #include "PropertyHelper.hpp"
 #include "PatternMatcher.hpp"
+#include "stringConversions.hpp"
 
 #include "qtIncludeHelpers.hpp"
 DFG_BEGIN_INCLUDE_QT_HEADERS
@@ -388,7 +389,23 @@ CsvTableViewSortFilterProxyModel::CsvTableViewSortFilterProxyModel(QWidget* pNon
 
 CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
+bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const
+{
+    auto pView = getTableView();
+    auto pCsvModel = (pView) ? pView->csvModel() : nullptr;
+    if (pCsvModel)
+    {
+        const auto dataIndexLeft = pView->mapToDataModel(sourceLeft);
+        const auto colType = pCsvModel->getColType(dataIndexLeft.column());
+        switch (colType)
+        {
+            case CsvItemModel::ColTypeNumber: return tableCellStringToDouble(pCsvModel->rawStringPtrAt(dataIndexLeft)) < tableCellStringToDouble(pCsvModel->rawStringPtrAt(pView->mapToDataModel(sourceRight)));
+        }
+    }
+    return BaseClass::lessThan(sourceLeft, sourceRight);
+}
+
+bool CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
 {
     auto pView = getTableView();
     if (pView)

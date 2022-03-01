@@ -47,6 +47,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     protected:
         bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
         bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+        bool lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const;
 
         DFG_OPAQUE_PTR_DECLARE();
     };

@@ -297,6 +297,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ifNeeded
         };
 
+        static const char s_szCsvSaveOption_saveAsShown[];
+
         CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, ViewType viewType = ViewType::allFeatures);
         ~CsvTableView() DFG_OVERRIDE_DESTRUCTOR;
 

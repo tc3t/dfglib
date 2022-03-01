@@ -1204,6 +1204,58 @@ TEST(dfgQt, CsvTableView_columnVisibilityConfPropertyHandling)
     DFGTEST_EXPECT_TRUE(view.isColumnVisible(ColumnIndex_data(2)));
 }
 
+TEST(dfgQt, CsvTableView_sorting)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(io);
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    CsvTableViewSortFilterProxyModel viewModel(&view);
+    viewModel.setSourceModel(&csvModel);
+    view.setModel(&viewModel);
+
+    csvModel.openString(
+        ",\n"
+        "2, 7\n"
+        "-1, 50\n"
+        "-10, 8\n"
+    );
+
+    CsvFormatDefinition saveFormat(',', '"', EndOfLineTypeN, TextEncoding::encodingUTF8);
+    saveFormat.bomWriting(false);
+    saveFormat.setProperty(CsvTableView::s_szCsvSaveOption_saveAsShown, "1");
+
+    const auto saveToString = [&]() -> std::string
+    {
+        const char szFilePath[] = "testfiles/generated/dfgQt_CsvTableView_sorting.csv";
+        view.saveToFileImpl(szFilePath, saveFormat);
+        const auto bytes = ::DFG_MODULE_NS(io)::fileToMemory_readOnly(szFilePath);
+        const auto byteSpan = bytes.asSpan<char>();
+        return std::string(byteSpan.begin(), byteSpan.end());
+    };
+
+    view.setSortingEnabled(true);
+
+    // Text sorting by first column
+    view.sortByColumn(0, Qt::AscendingOrder);
+    DFGTEST_EXPECT_LEFT(",\n-1,50\n-10,8\n2,7\n", saveToString());
+
+    // Text sorting by second column
+    view.sortByColumn(1, Qt::AscendingOrder);
+    DFGTEST_EXPECT_LEFT(",\n-1,50\n2,7\n-10,8\n", saveToString());
+
+    // Number sorting by first column
+    csvModel.setColumnType(0, CsvItemModel::ColTypeNumber);
+    view.sortByColumn(0, Qt::AscendingOrder);
+    DFGTEST_EXPECT_LEFT(",\n-10,8\n-1,50\n2,7\n", saveToString());
+
+    // Number sorting by second column
+    csvModel.setColumnType(1, CsvItemModel::ColTypeNumber);
+    view.sortByColumn(1, Qt::AscendingOrder);
+    DFGTEST_EXPECT_LEFT(",\n2,7\n-10,8\n-1,50\n", saveToString());
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);
