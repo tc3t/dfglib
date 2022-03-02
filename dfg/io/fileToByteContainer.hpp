@@ -9,6 +9,7 @@
 #include "../os/memoryMappedFile.hpp"
 #include "../rangeIterator.hpp"
 #include "../stdcpp/stdversion.hpp"
+#include "../cont/elementType.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -37,6 +38,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
             // Deleting asSpan<T>() for rvalues to avoid dangling spans, i.e. spans that would point to storage of deleted ReadOnlyByteStorage.
             template <class T> SpanT<T> asSpan() const && = delete;
+
+            // Returns content as given container type using constructor that takes (const T* begin, const T* end) arguments, where T is element type of Cont_T
+            template <class Cont_T>
+            Cont_T asContainer() const
+            {
+                using T = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
+                auto span = asSpan<T>();
+                return Cont_T(span.begin(), span.end());
+            }
 
             bool isMemoryMapped() const { return m_bUsingMmf && m_mmf.is_open(); }
 
@@ -198,7 +208,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             {
             }
         }
-        // Getting here means that opening memory mapped file failed or that it it may not be used.
+        // Getting here means that opening memory mapped file failed or that memory mapping may not be used.
         try
         {
             storage.m_bUsingMmf = false;

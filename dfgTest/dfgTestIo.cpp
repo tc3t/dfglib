@@ -1399,6 +1399,7 @@ TEST(dfgIo, fileToMemory_readOnly)
 #if defined(__cpp_lib_byte) && (__cpp_lib_byte >= 201603L)
         const auto vecBytes = fileToByteContainer<std::vector<std::byte>>(szFilePath);
         EXPECT_TRUE(isEqualContent(vecBytes, bytes.asSpan<std::byte>()));
+        DFGTEST_EXPECT_TRUE(isEqualContent(vecBytes, bytes.asContainer<std::vector<std::byte>>()));
 #endif
         EXPECT_TRUE(isEqualContent(vecChar, bytes.asSpan<char>()));
         EXPECT_TRUE(isEqualContent(vecChar, bytesNoMmf.asSpan<char>()));
@@ -1406,6 +1407,13 @@ TEST(dfgIo, fileToMemory_readOnly)
         EXPECT_TRUE(isEqualContent(vecInt8, bytes.asSpan<int8>()));
         EXPECT_TRUE(isEqualContent(vecUint8, bytes.asSpan<uint8>()));
         EXPECT_TRUE(isEqualContent(s, bytes.asSpan<char>()));
+
+        // asContainer() tests
+        DFGTEST_EXPECT_TRUE(isEqualContent(vecChar, bytes.asContainer<std::string>()));
+        DFGTEST_EXPECT_TRUE(isEqualContent(vecChar, bytes.asContainer<std::vector<char>>()));
+        DFGTEST_EXPECT_TRUE(isEqualContent(vecUint8, bytes.asContainer<std::vector<uint8>>()));
+        DFGTEST_EXPECT_TRUE(isEqualContent(vecChar, fileToMemory_readOnly(szFilePath).asContainer<std::string>())); // Testing that, unlike asSpan(), asContainer() works for rvalue
+        //DFGTEST_EXPECT_TRUE(isEqualContent(std::vector<uint16>(), bytes.asContainer<std::vector<uint16>>())); // This should fail to compile since asContainer() requires sizeof(element type) == 1
 
         bytesNoMmf.releaseStorage(); // Just calling this shouldn't yet clear contents
         EXPECT_EQ(62, bytesNoMmf.size());
