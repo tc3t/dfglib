@@ -1659,14 +1659,28 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setModifiedStatus(const bo
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnType(const int nCol, const ColType colType)
+void DFG_MODULE_NS(qt)::CsvItemModel::setColumnType(const Index nCol, const ColType colType)
 {
     auto pColInfo = getColInfo(nCol);
-    if (!pColInfo)
+    if (!pColInfo || pColInfo->m_type == colType)
         return;
     pColInfo->m_type = colType;
     setModifiedStatus(true);
     Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
+}
+
+void DFG_MODULE_NS(qt)::CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
+{
+    if (!isValidColumn(nCol))
+        return;
+    if (sColType == "text")
+        setColumnType(nCol, ColTypeText);
+    else if (sColType == "number")
+        setColumnType(nCol, ColTypeNumber);
+    else if (!sColType.empty())
+    {
+        DFG_ASSERT_INVALID_ARGUMENT(true, "Unexpected column type");
+    }
 }
 
 QString& DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim)

@@ -374,3 +374,26 @@ TEST(dfgQt, CsvItemModel_setSize)
     EXPECT_EQ(0, model.rowCount());
     EXPECT_EQ(0, model.columnCount());
 }
+
+TEST(dfgQt, CsvItemModel_setColumnType)
+{
+    using namespace DFG_MODULE_NS(qt);
+    CsvItemModel model;
+    model.setSize(1, 2);
+    model.setModifiedStatus(false);
+    DFGTEST_EXPECT_FALSE(model.isModified());
+    model.setColumnType(0, CsvItemModel::ColTypeText); // Should do nothing since type already is text type
+    DFGTEST_EXPECT_FALSE(model.isModified());
+    model.setColumnType(0, ""); // Should do nothing since type argument is empty.
+    DFGTEST_EXPECT_FALSE(model.isModified());
+    model.setColumnType(0, "text"); // Should do nothing since type already is text type
+    DFGTEST_EXPECT_FALSE(model.isModified());
+    model.setColumnType(0, CsvItemModel::ColTypeNumber);
+    DFGTEST_EXPECT_TRUE(model.isModified());
+    DFGTEST_EXPECT_LEFT(CsvItemModel::ColTypeNumber, model.getColType(0));
+    DFGTEST_EXPECT_LEFT(CsvItemModel::ColTypeText, model.getColType(1));
+    model.setColumnType(0, "text");
+    model.setColumnType(1, "number");
+    DFGTEST_EXPECT_LEFT(CsvItemModel::ColTypeText, model.getColType(0));
+    DFGTEST_EXPECT_LEFT(CsvItemModel::ColTypeNumber, model.getColType(1));
+}

@@ -459,7 +459,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Sets cell strings in column @p nCol to those given in @p vecStrings.
         void setColumnCells(const int nCol, const std::vector<QString>& vecStrings);
 
-        void setColumnType(const int nCol, const ColType colType);
+        void setColumnType(const Index nCol, const ColType colType);
+        void setColumnType(const Index nCol, const StringViewC sColType); // sColType must one of: <empty> (=type not changed), "text", "number".
 
         // Tokenizes properly formatted text line and sets the data
         // as cells of given row @p nRow.
