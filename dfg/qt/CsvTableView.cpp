@@ -1879,6 +1879,12 @@ bool CsvTableView::saveToFileWithOptions()
     return saveToFileImpl(dlg.getSaveOptions());
 }
 
+auto CsvTableView::populateCsvConfig() -> CsvConfig
+{
+    auto pModel = csvModel();
+    return (pModel) ? populateCsvConfig(*pModel) : CsvConfig();
+}
+
 auto CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) -> CsvConfig
 {
     CsvConfig config;

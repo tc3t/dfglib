@@ -1256,6 +1256,39 @@ TEST(dfgQt, CsvTableView_sorting)
     DFGTEST_EXPECT_LEFT(",\n2,7\n-10,8\n-1,50\n", saveToString());
 }
 
+TEST(dfgQt, CsvTableView_populateCsvConfig)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvItemModel csvModel;
+    CsvTableView view(nullptr, nullptr);
+    view.setModel(&csvModel);
+
+    view.resizeTableNoUi(2, 3);
+    csvModel.setColumnType(1, CsvItemModel::ColTypeNumber);
+
+    const auto config = view.populateCsvConfig();
+    const auto saveOptions = csvModel.getSaveOptions();
+
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("1", config.value(DFG_UTF8("bom_writing")));
+    DFGTEST_EXPECT_LEFT(qStringToStringUtf8(QString("\\x%1").arg(saveOptions.enclosingChar(), 0, 16)), config.value(DFG_UTF8("enclosing_char")));
+    // TODO: fix this, populateCsvConfig() doesn't correctly populate CsvConfig for separator
+    //DFGTEST_EXPECT_LEFT(qStringToStringUtf8(QString("\\x%1").arg(saveOptions.separatorChar(), 0, 16)), config.value(DFG_UTF8("separator_char")));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("UTF8", config.value(DFG_UTF8("encoding")));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("\\n", config.value(DFG_UTF8("end_of_line_type")));
+
+    // columnsByIndex
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("number", config.value(DFG_UTF8("columnsByIndex/2/datatype")));
+    DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("columnsByIndex/1/width_pixels")));
+    DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("columnsByIndex/2/width_pixels")));
+    DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("columnsByIndex/3/width_pixels")));
+
+    // These properties are filled by TableEditor so not available here.
+    //DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("properties/windowHeight")));
+    //DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("properties/windowPosX")));
+    //DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("properties/windowPosY")));
+    //DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("properties/windowWidth")));
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);

@@ -422,6 +422,7 @@ Available keys:
 
 | Key (URI)      | Purpose  | Possible values | Notes |
 | -------------  | -----    | ------          | ----- |
+| columnsByIndex/ColumnIndexHere/datatype | Defines how to interpret content in some operations, as of 2.3.0 only affects column sorting behaviour | _text_ (default), _number_ | Since 2.3.0 |
 | columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column (1-based column index) | integer | |
 | columnsByIndex/ColumnIndexHere/visible | Defines whether column is visible (1-based column index) | 0 or 1, default is 1 | Since 2.2.0 |
 | encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |

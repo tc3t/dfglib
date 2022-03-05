@@ -17,6 +17,8 @@ DFG_ROOT_NS_BEGIN
 class CsvFormatDefinition
 {
 public:
+    using CsvConfig = ::DFG_MODULE_NS(cont)::CsvConfig;
+
     //CsvFormatDefinition(const char cSep = ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect, const char cEnc = '"', DFG_MODULE_NS(io)::EndOfLineType eol = DFG_MODULE_NS(io)::EndOfLineTypeN) :
     // Note: default values are questionable because default read vals should have metachars, but default write vals should not.
     CsvFormatDefinition(const char cSep/* = ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect*/,
@@ -33,9 +35,9 @@ public:
     {}
 
     // Reads properties from given config, items not present in config are not modified.
-    void fromConfig(const DFG_MODULE_NS(cont)::CsvConfig & config);
+    void fromConfig(const CsvConfig& config);
 
-    void appendToConfig(DFG_MODULE_NS(cont)::CsvConfig & config) const;
+    void appendToConfig(CsvConfig& config) const;
 
     template <class Str_T>
     static Str_T csvFilePathToConfigFilePath(const Str_T & str)

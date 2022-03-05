@@ -449,6 +449,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         ColumnIndex_data columnIndexViewToData(ColumnIndex_view) const; // Returns data column index of given view index
 
         CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
+        CsvConfig populateCsvConfig(); // Calls populateCsvConfig(*csvModel()) if csvModel() is non-null, otherwise does nothing.
 
         QStringList weekDayNames() const;
         QString dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const;

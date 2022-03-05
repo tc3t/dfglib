@@ -735,9 +735,9 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char*
     });
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions& options, std::function<bool()> tableFiller)
+bool DFG_MODULE_NS(qt)::CsvItemModel::readData(const LoadOptions& options, std::function<bool()> tableFiller)
 {
-    DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) readTimer;
+    ::DFG_MODULE_NS(time)::TimerCpu readTimer;
 
     beginResetModel();
     m_bResetting = true;
@@ -751,7 +751,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
     const QString optionsCompleterColumns(options.getProperty(CsvOptionProperty_completerColumns, "not_given").c_str());
     const auto completerEnabledColumnsStrItems = optionsCompleterColumns != "not_given" ? optionsCompleterColumns.split(',') : getCsvItemModelProperty<CsvItemModelPropertyId_completerEnabledColumnIndexes>(this);
     const auto completerEnabledInAll = (completerEnabledColumnsStrItems.size() == 1 && completerEnabledColumnsStrItems[0].trimmed() == "*");
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(SetVector)<int> completerEnabledColumns;
+    DFG_MODULE_NS(cont)::SetVector<Index> completerEnabledColumns;
 
     if (!completerEnabledInAll)
     {
@@ -770,9 +770,11 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
             };
 
     // Setting headers.
+    const auto config = this->getConfig();
     const auto nMaxColCount = table().colCountByMaxColIndex();
+    char szUrlBuffer[64];
     m_vecColInfo.reserve(static_cast<size_t>(nMaxColCount));
-    for (int c = 0; c < nMaxColCount; ++c)
+    for (Index c = 0; c < nMaxColCount; ++c)
     {
         SzPtrUtf8R p = table()(0, c); // HACK: assumes header to be on row 0 and UTF8-encoding.
         m_vecColInfo.push_back(ColInfo(this, (p) ? QString::fromUtf8(p.c_str()) : QString()));
@@ -784,6 +786,13 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::readData(const LoadOptions
             m_vecColInfo.back().m_spCompleter->moveToThread(this->thread());
             m_vecColInfo.back().m_spCompleter->setCaseSensitivity(Qt::CaseInsensitive);
             m_vecColInfo.back().m_completerType = CompleterTypeTexts;
+        }
+
+        // Setting column types
+        {
+            ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szUrlBuffer, sizeof(szUrlBuffer), "columnsByIndex/%d/datatype", internalColumnIndexToVisible(c));
+            const auto sDataType = config.value(SzPtrUtf8(szUrlBuffer), DFG_UTF8(""));
+            this->setColumnType(c, sDataType.rawStorage());
         }
     }
     // Since the header is stored separately in this model, remove it from the table.
@@ -919,14 +928,43 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& 
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::populateConfig(DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig)& config) const
+void DFG_MODULE_NS(qt)::CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvConfig& config) const
 {
     table().m_readFormat.appendToConfig(config);
+
+    // Adding column datatype
+    {
+        const auto existingConfig = getConfig();
+        char szBuffer[64];
+        const auto formatToBuffer = [&](const char* pszFormat, const int nCol) { ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), pszFormat, nCol); };
+        for (int c = 0, nCount = this->columnCount(); c < nCount; ++c)
+        {
+            const auto nVisibleColumnIndex = internalColumnIndexToVisible(c);
+            formatToBuffer("columnsByIndex/%d/datatype", nVisibleColumnIndex);
+            // Adding only if differs from default or if existing config already has the field)
+            if (this->getColType(c) != CsvItemModel::ColTypeText || existingConfig.contains(SzPtrUtf8(szBuffer)))
+            {
+                config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), this->getColTypeAsString(c).toString());
+            }
+        }
+    }
 }
 
-auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
+auto ::DFG_MODULE_NS(qt)::CsvItemModel::getConfig() const -> ::DFG_MODULE_NS(cont)::CsvConfig
 {
-    auto sConfFilePath = DFG_CLASS_NAME(CsvFormatDefinition)::csvFilePathToConfigFilePath(sFilePath);
+    return getConfig(CsvFormatDefinition::csvFilePathToConfigFilePath(getFilePath()));
+}
+
+auto DFG_MODULE_NS(qt)::CsvItemModel::getConfig(const QString& sConfFilePath) -> ::DFG_MODULE_NS(cont)::CsvConfig
+{
+    ::DFG_MODULE_NS(cont)::CsvConfig config;
+    config.loadFromFile(qStringToFileApi8Bit(sConfFilePath));
+    return config;
+}
+
+auto DFG_MODULE_NS(qt)::CsvItemModel::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
+{
+    auto sConfFilePath = CsvFormatDefinition::csvFilePathToConfigFilePath(sFilePath);
     if (!QFileInfo::exists(sConfFilePath))
     {
         LoadOptions loadOptions;
@@ -938,14 +976,10 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsForFile(cons
         }
         return loadOptions;
     }
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) config;
-    config.loadFromFile(qStringToFileApi8Bit(sConfFilePath));
-    LoadOptions loadOptions;
-    loadOptions.fromConfig(config);
-    return loadOptions;
+    return LoadOptions::constructFromConfig(getConfig(sConfFilePath));
 }
 
-auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getLoadOptionsFromConfFile() const -> LoadOptions
+auto DFG_MODULE_NS(qt)::CsvItemModel::getLoadOptionsFromConfFile() const -> LoadOptions
 {
     return getLoadOptionsForFile(getFilePath());
 }
@@ -1673,13 +1707,13 @@ void DFG_MODULE_NS(qt)::CsvItemModel::setColumnType(const Index nCol, const Stri
 {
     if (!isValidColumn(nCol))
         return;
-    if (sColType == "text")
+    if (sColType == ColInfo::columnTypeAsString(ColTypeText))
         setColumnType(nCol, ColTypeText);
-    else if (sColType == "number")
+    else if (sColType == ColInfo::columnTypeAsString(ColTypeNumber))
         setColumnType(nCol, ColTypeNumber);
-    else if (!sColType.empty())
+    else if (!sColType.empty() && sColType != "default")
     {
-        DFG_ASSERT_INVALID_ARGUMENT(true, "Unexpected column type");
+        DFG_ASSERT_INVALID_ARGUMENT(false, "Unexpected column type");
     }
 }
 
@@ -2023,6 +2057,20 @@ bool CsvItemModel::ColInfo::setProperty(const uintptr_t& contextId, const String
         iter->second = value;
     }
     return bChanged;
+}
+
+auto CsvItemModel::ColInfo::columnTypeAsString() const -> StringViewUtf8
+{
+    return columnTypeAsString(this->m_type);
+}
+
+auto CsvItemModel::ColInfo::columnTypeAsString(const ColType colType) -> StringViewUtf8
+{
+    switch (colType)
+    {
+        case ColTypeNumber: return DFG_UTF8("number");
+        default           : return DFG_UTF8("text");
+    }
 }
 
 namespace DFG_DETAIL_NS

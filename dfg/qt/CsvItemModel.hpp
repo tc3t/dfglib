@@ -164,7 +164,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         static const QString s_sEmpty;
         typedef QAbstractTableModel BaseClass;
-        typedef int32 Index;
+        typedef int32 Index;       // Index type for both rows and columns
         typedef int64 LinearIndex; // LinearIndex guarantees that LinearIndex(rowCount()) * LinearIndex(columnCount()) does not overflow.
         typedef std::ostream StreamT;
         typedef DFG_DETAIL_NS::CsvItemModelTable RawDataTable;
@@ -213,6 +213,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ColInfo(CsvItemModel* pModel, QString sName = QString(), ColType type = ColTypeText, CompleterType complType = CompleterTypeNone);
 
             bool hasCompleter() const { return m_spCompleter.get() != nullptr; }
+
+            StringViewUtf8 columnTypeAsString() const;
+            static StringViewUtf8 columnTypeAsString(ColType colType);
 
             Index index() const;
 
@@ -336,6 +339,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                 DFG_MODULE_NS(io)::encodingUnknown)
             {}
 
+            static LoadOptions constructFromConfig(const CsvConfig& config)
+            {
+                LoadOptions options;
+                options.fromConfig(config);
+                return options;
+            }
+
             bool isFilteredRead() const
             {
                 return isFilteredRead(getProperty(CsvOptionProperty_includeRows, ""),
@@ -422,8 +432,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QStringList getColumnNames() const;
         const QString& getHeaderName(const int nCol) const { return (isValidColumn(nCol)) ? m_vecColInfo[nCol].m_name : s_sEmpty; }
 
-        ColType getColType(const int nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_type : ColTypeText); }
-        CompleterType getColCompleterType(const int nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_completerType : CompleterTypeNone); }
+        ColType getColType(const Index nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_type : ColTypeText); }
+        StringViewUtf8 getColTypeAsString(const Index nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].columnTypeAsString() : StringViewUtf8()); }
+        CompleterType getColCompleterType(const Index nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_completerType : CompleterTypeNone); }
 
         ColInfo*       getColInfo(const int nCol)       { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
         const ColInfo* getColInfo(const int nCol) const { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
@@ -517,6 +528,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         LoadOptions getOpenTimeLoadOptions() const { return m_loadOptionsInOpen; } // Returns LoadOptions that were used when opened from file or memory.
 
         void populateConfig(::DFG_MODULE_NS(cont)::CsvConfig& config) const;
+
+        ::DFG_MODULE_NS(cont)::CsvConfig getConfig() const;
+        static ::DFG_MODULE_NS(cont)::CsvConfig getConfig(const QString& sConfFilePath);
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
         // Note: Does not check whether the table has actually changed and always sets the model modified.
