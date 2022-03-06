@@ -265,6 +265,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             setKeyValue(StorageStringT(pszKey), StorageStringT(pszValue));
         }
 
+        // Convenience function for effecticvely doing setKeyValue(StorageStringT::fromRawString(svKey), StorageStringT::fromRawString(svValue))
+        // Note: relies on caller guarantee that given untyped views are valid for fromRawString()
+        void setKeyValue_fromUntyped(StringViewC svKey, StringViewC svValue)
+        {
+            setKeyValue(StorageStringT::fromRawString(svKey.toString()), StorageStringT::fromRawString(svValue.toString()));
+        }
+
         // TODO: test
         bool operator==(const CsvConfig& other) const
         {

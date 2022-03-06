@@ -1463,8 +1463,8 @@ TEST(dfgCont, CsvFormatDefinition_FromCsvConfig)
 
 TEST(dfgCont, CsvFormatDefinition_ToConfig)
 {
-    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) CsvConfig;
-    typedef DFG_ROOT_NS::DFG_CLASS_NAME(CsvFormatDefinition) CsvFormatDef;
+    typedef ::DFG_MODULE_NS(cont)::CsvConfig CsvConfig;
+    typedef ::DFG_ROOT_NS::CsvFormatDefinition CsvFormatDef;
     // Basic test
     {
         CsvConfig inConfig;
@@ -1487,10 +1487,25 @@ TEST(dfgCont, CsvFormatDefinition_ToConfig)
     // Test 'no enclosing char'-handling
     {
         CsvFormatDef format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
-        format.enclosingChar(DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone);
+        format.enclosingChar(DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone);
         CsvConfig config;
         format.appendToConfig(config);
         EXPECT_TRUE(DFG_MODULE_NS(str)::isEmptyStr(config.value(DFG_UTF8("enclosing_char"), DFG_UTF8("a"))));
+    }
+
+    // Test handling of printable/unprintable chars
+    {
+        CsvFormatDef format('\x1f', 0x7e, DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
+        CsvFormatDef format2(' ', 33, DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
+        CsvConfig config;
+        CsvConfig config2;
+        format.appendToConfig(config);
+        format2.appendToConfig(config2);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("\\x1f", config.value(DFG_UTF8("separator_char")));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("~", config.value(DFG_UTF8("enclosing_char")));
+
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("\\x20", config2.value(DFG_UTF8("separator_char")));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("!", config2.value(DFG_UTF8("enclosing_char")));
     }
 }
 

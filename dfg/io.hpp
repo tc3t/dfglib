@@ -46,7 +46,7 @@ inline char eolCharFromEndOfLineType(EndOfLineType eolType)
 
 // Returns eol-string from EndOfLineType. For EndOfLineTypeMixed, return empty.
 // TODO: test
-inline std::string eolStrFromEndOfLineType(EndOfLineType eolType)
+inline StringViewC eolStrFromEndOfLineType(EndOfLineType eolType)
 {
     switch (eolType)
     {
@@ -61,7 +61,7 @@ inline std::string eolStrFromEndOfLineType(EndOfLineType eolType)
 
 // Like eolStrFromEndOfLineType(), but returned string in "source-code" -format, i.e. "\\n" instead of "\n" etc.
 // TODO: test
-inline std::string eolLiteralStrFromEndOfLineType(EndOfLineType eolType)
+inline StringViewC eolLiteralStrFromEndOfLineType(EndOfLineType eolType)
 {
     switch (eolType)
     {

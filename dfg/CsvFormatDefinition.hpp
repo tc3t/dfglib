@@ -40,7 +40,7 @@ public:
     void appendToConfig(CsvConfig& config) const;
 
     template <class Str_T>
-    static Str_T csvFilePathToConfigFilePath(const Str_T & str)
+    static Str_T csvFilePathToConfigFilePath(const Str_T& str)
     {
         // Note: changing this would likely require changes at least to file extension filters in qt-module.
         return str + ".conf";
@@ -48,12 +48,15 @@ public:
 
     int32 separatorChar() const { return m_cSep; }
     void separatorChar(int32 cSep) { m_cSep = cSep; }
+    std::string separatorCharAsString() const;
     int32 enclosingChar() const { return m_cEnc; }
     void enclosingChar(int32 cEnc) { m_cEnc = cEnc; }
+    std::string enclosingCharAsString() const;
     int32 eolCharFromEndOfLineType() const { return ::DFG_MODULE_NS(io)::eolCharFromEndOfLineType(eolType()); }
 
     DFG_MODULE_NS(io)::EndOfLineType eolType() const { return m_eolType; }
     void eolType(DFG_MODULE_NS(io)::EndOfLineType eolType) { m_eolType = eolType; }
+    StringViewC eolTypeAsString() const; // Convenience function returning ::DFG_MODULE_NS(io)::eolLiteralStrFromEndOfLineType(eolType());
 
     bool headerWriting() const { return m_bWriteHeader; }
     void headerWriting(bool bWriteHeader) { m_bWriteHeader = bWriteHeader; }
@@ -63,8 +66,9 @@ public:
 
     DFG_MODULE_NS(io)::TextEncoding textEncoding() const { return m_textEncoding; }
     void textEncoding(DFG_MODULE_NS(io)::TextEncoding encoding) { m_textEncoding = encoding; }
+    StringViewC textEncodingAsString() const; // Convenience function returning ::DFG_MODULE_NS(io)::encodingToStrId(textEncoding())
 
-    void setProperty(const StringViewC & svKey, const StringViewC & svValue)
+    void setProperty(const StringViewC& svKey, const StringViewC& svValue)
     {
         m_genericProperties[svKey.toString()] = svValue.toString();
     }
@@ -90,6 +94,8 @@ public:
 
     DFG_MODULE_NS(io)::EnclosementBehaviour enclosementBehaviour() const { return m_enclosementBehaviour; }
     void enclosementBehaviour(const DFG_MODULE_NS(io)::EnclosementBehaviour eb) { m_enclosementBehaviour = eb; }
+
+    static std::string charAsPrintableString(int32 c);
 
     int32 m_cSep;
     int32 m_cEnc;
@@ -176,26 +182,18 @@ inline void CsvFormatDefinition::appendToConfig(DFG_MODULE_NS(cont)::CsvConfig& 
         if (m_cEnc == DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone)
             config.setKeyValue(DFG_UTF8("enclosing_char"), DFG_UTF8(""));
         else if (!DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(m_cEnc) && m_cEnc >= 0)
-        {
-            char buffer[32];
-            DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", m_cEnc);
-            config.setKeyValue(DFG_UTF8("enclosing_char"), SzPtrUtf8(buffer));
-        }
+            config.setKeyValue_fromUntyped("enclosing_char", charAsPrintableString(m_cEnc));
     }
 
     // Separator char
     if (!DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(m_cSep) && m_cSep >= 0)
-    {
-        char buffer[32];
-        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", m_cSep);
-        config.setKeyValue(DFG_UTF8("separator_char"), SzPtrUtf8(buffer));
-    }
+        config.setKeyValue_fromUntyped("separator_char", charAsPrintableString(m_cSep));
 
     // EOL-type
     {
-        const auto psz = DFG_MODULE_NS(io)::eolLiteralStrFromEndOfLineType(m_eolType);
-        if (!DFG_MODULE_NS(str)::isEmptyStr(psz))
-            config.setKeyValue(DFG_UTF8("end_of_line_type"), SzPtrUtf8(psz.c_str()));
+        const auto sv = ::DFG_MODULE_NS(io)::eolLiteralStrFromEndOfLineType(eolType());
+        if (!sv.empty())
+            config.setKeyValue_fromUntyped("end_of_line_type", sv);
     }
 
     // BOM writing
@@ -208,6 +206,38 @@ inline void CsvFormatDefinition::appendToConfig(DFG_MODULE_NS(cont)::CsvConfig& 
     {
         //m_genericProperties
     }
+}
+
+inline std::string CsvFormatDefinition::charAsPrintableString(const int32 c)
+{
+    if (c >= 33 && c <= 126)
+        return std::string(1, static_cast<char>(c));
+    else
+    {
+        char buffer[32];
+        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", c);
+        return buffer;
+    }
+}
+
+inline std::string CsvFormatDefinition::separatorCharAsString() const
+{
+    return charAsPrintableString(separatorChar());
+}
+
+inline std::string CsvFormatDefinition::enclosingCharAsString() const
+{
+    return charAsPrintableString(enclosingChar());
+}
+
+inline StringViewC CsvFormatDefinition::eolTypeAsString() const
+{
+    return ::DFG_MODULE_NS(io)::eolLiteralStrFromEndOfLineType(eolType());
+}
+
+inline auto CsvFormatDefinition::textEncodingAsString() const -> StringViewC
+{
+    return ::DFG_MODULE_NS(io)::encodingToStrId(textEncoding());
 }
 
 } // namespace DFG_ROOT_NS

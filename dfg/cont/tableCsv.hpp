@@ -537,11 +537,11 @@ DFG_ROOT_NS_BEGIN{
                     m_format(csvFormat)
                 {
                     const auto cSep = m_format.separatorChar();
-                    const std::string sEol = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(m_format.eolType());
+                    const auto svEol = ::DFG_MODULE_NS(io)::eolStrFromEndOfLineType(m_format.eolType());
                     const auto encoding = m_format.textEncoding();
                     DFG_MODULE_NS(utf)::cpToEncoded(cSep, std::back_inserter(m_bytes), encoding);
                     m_nEncodedSepSizeInBytes = static_cast<decltype(m_nEncodedSepSizeInBytes)>(m_bytes.size());
-                    for (auto iter = sEol.cbegin(), iterEnd = sEol.cend(); iter != iterEnd; ++iter)
+                    for (auto iter = svEol.cbegin(), iterEnd = svEol.cend(); iter != iterEnd; ++iter)
                         DFG_MODULE_NS(utf)::cpToEncoded(*iter, std::back_inserter(m_bytes), encoding);
                     m_nEncodedEolSizeInBytes = static_cast<decltype(m_nEncodedEolSizeInBytes)>(m_bytes.size()) - m_nEncodedSepSizeInBytes;
                     // Note: set the pointers after all bytes have been written to m_bytes to make sure that 
