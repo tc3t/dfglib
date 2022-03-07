@@ -182,18 +182,18 @@ namespace
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions::initFromItemModelPtr(const DFG_CLASS_NAME(CsvItemModel)* pItemModel)
+void DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions::initFromItemModelPtr(const CsvItemModel* pItemModel)
 {
     if (pItemModel)
     {
         // If model seems to have been opened from existing input (file/memory), use format of m_table, otherwise use save format from settings.
         *this = (pItemModel->latestReadTimeInSeconds() >= 0) ? pItemModel->table().saveFormat() : defaultSaveOptions(pItemModel);
-        if (::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::isMetaChar(this->separatorChar()))
+        if (::DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(this->separatorChar()))
             this->separatorChar(defaultSaveOptions(pItemModel).separatorChar());
         if (!pItemModel->isSupportedEncodingForSaving(textEncoding()))
         {
             // Encoding is not supported, fallback to UTF-8.
-            textEncoding(DFG_MODULE_NS(io)::encodingUTF8);
+            textEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
         }
     }
 }
@@ -795,7 +795,7 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::readData(const LoadOptions& options, std::
             this->setColumnType(c, sDataType.rawStorage());
         }
     }
-    // Since the header is stored separately in this model, remove it from the table.
+    // Since the header is stored separately in this model, remove it from the table. This can be a bit heavy operation for big tables
     table().removeRows(0, 1);
     if (m_nRowCount >= 1)
         m_nRowCount--;
@@ -931,6 +931,15 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& 
 void DFG_MODULE_NS(qt)::CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvConfig& config) const
 {
     table().m_readFormat.appendToConfig(config);
+
+    const auto saveOptions = SaveOptions(this);
+
+    // In some cases table's readFormat may differ from SaveOptions so setting format options manually.
+    config.setKeyValue_fromUntyped("enclosing_char", saveOptions.enclosingCharAsString());
+    config.setKeyValue_fromUntyped("separator_char", saveOptions.separatorCharAsString());
+    config.setKeyValue_fromUntyped("end_of_line_type", saveOptions.eolTypeAsString());
+    config.setKeyValue_fromUntyped("encoding", saveOptions.textEncodingAsString());
+    config.setKeyValue_fromUntyped("bom_writing", saveOptions.bomWriting() ? "1" : "0");
 
     // Adding column datatype
     {

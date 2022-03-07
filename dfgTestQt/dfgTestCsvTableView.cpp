@@ -1259,9 +1259,14 @@ TEST(dfgQt, CsvTableView_sorting)
 TEST(dfgQt, CsvTableView_populateCsvConfig)
 {
     using namespace ::DFG_MODULE_NS(qt);
+    using namespace ::DFG_MODULE_NS(io);
     CsvItemModel csvModel;
     CsvTableView view(nullptr, nullptr);
     view.setModel(&csvModel);
+
+    csvModel.setProperty("CsvItemModel_defaultFormatSeparator", ":");
+    csvModel.setProperty("CsvItemModel_defaultFormatEnclosingChar", "'");
+    csvModel.setProperty("CsvItemModel_defaultFormatEndOfLine", "\r\n");
 
     view.resizeTableNoUi(2, 3);
     csvModel.setColumnType(1, CsvItemModel::ColTypeNumber);
@@ -1269,12 +1274,23 @@ TEST(dfgQt, CsvTableView_populateCsvConfig)
     const auto config = view.populateCsvConfig();
     const auto saveOptions = csvModel.getSaveOptions();
 
+    DFGTEST_EXPECT_TRUE(saveOptions.bomWriting());
+    DFGTEST_EXPECT_LEFT(':', saveOptions.separatorChar());
+    DFGTEST_EXPECT_LEFT('\'', saveOptions.enclosingChar());
+    DFGTEST_EXPECT_LEFT(EndOfLineTypeRN, saveOptions.eolType());
+
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("1", config.value(DFG_UTF8("bom_writing")));
-    DFGTEST_EXPECT_LEFT(qStringToStringUtf8(QString("\\x%1").arg(saveOptions.enclosingChar(), 0, 16)), config.value(DFG_UTF8("enclosing_char")));
-    // TODO: fix this, populateCsvConfig() doesn't correctly populate CsvConfig for separator
-    //DFGTEST_EXPECT_LEFT(qStringToStringUtf8(QString("\\x%1").arg(saveOptions.separatorChar(), 0, 16)), config.value(DFG_UTF8("separator_char")));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8(":", config.value(DFG_UTF8("separator_char")));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("'", config.value(DFG_UTF8("enclosing_char")));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("\\r\\n", config.value(DFG_UTF8("end_of_line_type")));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("UTF8", config.value(DFG_UTF8("encoding")));
-    DFGTEST_EXPECT_EQ_LITERAL_UTF8("\\n", config.value(DFG_UTF8("end_of_line_type")));
+
+    // Testing that non-printable chars are returned in \xYY format.
+    {
+        csvModel.setProperty("CsvItemModel_defaultFormatSeparator", "\\x1f");
+        const auto config2 = view.populateCsvConfig();
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("\\x1f", config2.value(DFG_UTF8("separator_char")));
+    }
 
     // columnsByIndex
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("number", config.value(DFG_UTF8("columnsByIndex/2/datatype")));

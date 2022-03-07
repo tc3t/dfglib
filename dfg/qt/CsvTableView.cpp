@@ -1625,7 +1625,7 @@ public:
         // EOL
         m_spEolEdit->addItems(QStringList() << "\\n" << "\\r" << "\\r\\n");
         {
-            addCurrentOptionToCombobox(*m_spEolEdit, DFG_MODULE_NS(io)::eolStrFromEndOfLineType(defaultFormatSettings.eolType()).c_str());
+            addCurrentOptionToCombobox(*m_spEolEdit, untypedViewToQStringAsUtf8(defaultFormatSettings.eolTypeAsString()));
         }
         m_spEolEdit->setEditable(false);
 
