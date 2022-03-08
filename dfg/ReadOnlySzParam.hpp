@@ -407,6 +407,12 @@ public:
     {
     }
 
+    template <class Char2_T, class Str2_T>
+    StringView(StringView<Char2_T, Str2_T> sv)
+    {
+        constructFromStringView(sv, std::is_same<PtrT, PtrRawT>());
+    }
+
     StringView(PtrT psz, const size_t nCountOfBaseChars) :
         BaseClass(psz, nCountOfBaseChars)
     {
@@ -431,6 +437,20 @@ protected:
     StringView(typename BaseClass::NonSzConstructorTag)
         : StringView()
     {}
+
+    // Constructing from another StringView when 'this' is untyped, automatically convert to untyped.
+    template <class Char2_T, class Str2_T>
+    void constructFromStringView(StringView<Char2_T, Str2_T> sv, std::true_type)
+    {
+        *this = StringView(sv.dataRaw(), sv.length());
+    }
+
+    // Constructing from another StringView when 'this' is typed, relies on implicit PtrT conversions.
+    template <class Char2_T, class Str2_T>
+    void constructFromStringView(StringView<Char2_T, Str2_T> sv, std::false_type)
+    {
+        *this = StringView(sv.data(), sv.length());
+    }
 
 public:
 
