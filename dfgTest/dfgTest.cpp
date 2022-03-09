@@ -242,6 +242,9 @@ TEST(dfgTest, googleTestStringViewPrinter)
     DFGTEST_EXPECT_LEFT(StringViewSzUtf8(DFG_UTF8("abcde")), StringViewSzUtf8(DFG_UTF8("fghij")));
     DFGTEST_EXPECT_LEFT(std::string("abcde"), std::string("fghij"));
     DFGTEST_EXPECT_LEFT(std::wstring(L"abcde"), std::wstring(L"fghij"));
+
+    DFGTEST_EXPECT_LEFT(DFG_UTF8("abcde"), DFG_UTF8("fghij"));
+    DFGTEST_EXPECT_LEFT(DFG_ASCII("abcde"), DFG_ASCII("fghij"));
 }
 
 #endif // GoogleTest printer tests
