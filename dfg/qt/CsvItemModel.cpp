@@ -44,6 +44,11 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "StringMatchDefinition.hpp"
 #include "sqlTools.hpp"
 
+/////////////////////////////////
+// Start of dfg::qt namespace
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
+{
+
 namespace
 {
     enum CsvItemModelPropertyId
@@ -98,9 +103,9 @@ namespace
                                   []() { return "\n"; });
 
     template <CsvItemModelPropertyId ID>
-    auto getCsvItemModelProperty(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
+    auto getCsvItemModelProperty(const CsvItemModel* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
     {
-        return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>>(pModel);
+        return getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>>(pModel);
     }
 
     template <CsvItemModelPropertyId Id_T>
@@ -127,8 +132,6 @@ namespace
     };
 } // unnamed namesapce
 
-namespace dfg { namespace qt {
-
 class CsvItemModel::OpaqueTypeDefs
 {
 public:
@@ -147,19 +150,17 @@ namespace DFG_DETAIL_NS
     }; // class CsvItemModelTable::TableRef
 }
 
-}} // namespace dfg::qt
-
-const QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::s_sEmpty;
+const QString CsvItemModel::s_sEmpty;
 
 #define DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT BaseClass(',', '"', DFG_MODULE_NS(io)::EndOfLineTypeN, DFG_MODULE_NS(io)::encodingUTF8)
 
-DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions::SaveOptions(CsvItemModel* pItemModel)
+CsvItemModel::SaveOptions::SaveOptions(CsvItemModel* pItemModel)
     : DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT
 {
     initFromItemModelPtr(pItemModel);
 }
 
-DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions::SaveOptions(const CsvItemModel* pItemModel)
+CsvItemModel::SaveOptions::SaveOptions(const CsvItemModel* pItemModel)
     : DFG_TEMP_SAVEOPTIONS_BASECLASS_INIT
 {
     initFromItemModelPtr(pItemModel);
@@ -169,9 +170,9 @@ DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions::SaveOptions(const CsvItemModel* pI
 
 namespace
 {
-    static DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions defaultSaveOptions(const DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)* pItemModel)
+    static CsvItemModel::SaveOptions defaultSaveOptions(const CsvItemModel* pItemModel)
     {
-        typedef DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions SaveOptionsT;
+        typedef CsvItemModel::SaveOptions SaveOptionsT;
         if (!pItemModel)
             return SaveOptionsT(pItemModel);
         SaveOptionsT rv = pItemModel->table().saveFormat();
@@ -182,7 +183,7 @@ namespace
     }
 }
 
-void DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions::initFromItemModelPtr(const CsvItemModel* pItemModel)
+void CsvItemModel::SaveOptions::initFromItemModelPtr(const CsvItemModel* pItemModel)
 {
     if (pItemModel)
     {
@@ -198,7 +199,7 @@ void DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions::initFromItemModelPtr(const Cs
     }
 }
 
-QVariant DFG_MODULE_NS(qt)::DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
+QVariant DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
 {
     DFG_ASSERT_CORRECTNESS(role != Qt::DisplayRole);
     if (!index.isValid() || role != Qt::BackgroundRole)
@@ -214,13 +215,13 @@ QVariant DFG_MODULE_NS(qt)::DFG_DETAIL_NS::HighlightDefinition::data(const QAbst
         return QVariant();
 }
 
-DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
+namespace
 {
-    class DFG_CLASS_NAME(CsvTableModelActionCellEdit) : public QUndoCommand
+    class CsvTableModelActionCellEdit : public QUndoCommand
     {
-        typedef DFG_CLASS_NAME(CsvItemModel) ModelT;
+        typedef CsvItemModel ModelT;
     public:
-        DFG_CLASS_NAME(CsvTableModelActionCellEdit)(ModelT& rDataModel, const QModelIndex& index, const QString& sNew)
+        CsvTableModelActionCellEdit(ModelT& rDataModel, const QModelIndex& index, const QString& sNew)
             : m_pDataModel(&rDataModel), m_index(index), m_sNewData(sNew)
         {
             m_sOldData = m_pDataModel->data(m_index).toString();
@@ -248,22 +249,22 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace
         QModelIndex m_index;
         QString m_sOldData;
         QString m_sNewData;
-    }; // DFG_CLASS_NAME(CsvTableModelActionCellEdit)
+    }; // CsvTableModelActionCellEdit
 
-} } } // dfg::qt::unnamed_namespace
+} // unnamed namespace
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::ColInfo::CompleterDeleter::operator()(QCompleter* p) const
+void CsvItemModel::ColInfo::CompleterDeleter::operator()(QCompleter* p) const
 {
     if (p)
         p->deleteLater(); // Can't delete directly due to thread affinity (i.e. might get deleted from wrong thread triggering Qt asserts).
 }
 
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvItemModel)
+DFG_OPAQUE_PTR_DEFINE(CsvItemModel)
 {
     std::shared_ptr<QReadWriteLock> m_spReadWriteLock;
 };
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() :
+CsvItemModel::CsvItemModel() :
     m_pUndoStack(nullptr),
     m_nRowCount(0),
     m_bModified(false),
@@ -280,22 +281,22 @@ DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::DFG_CLASS_NAME(CsvItemModel)() 
     DFG_OPAQUE_REF().m_spReadWriteLock = std::make_shared<QReadWriteLock>(QReadWriteLock::Recursive);
 }
 
-DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::~DFG_CLASS_NAME(CsvItemModel)()
+CsvItemModel::~CsvItemModel()
 {
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvItemModel::getReadWriteLock() -> std::shared_ptr<QReadWriteLock>
+auto CsvItemModel::getReadWriteLock() -> std::shared_ptr<QReadWriteLock>
 {
     return DFG_OPAQUE_REF().m_spReadWriteLock;
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvItemModel::tryLockForEdit() -> LockReleaser
+auto CsvItemModel::tryLockForEdit() -> LockReleaser
 {
     auto& spLock = DFG_OPAQUE_REF().m_spReadWriteLock;
     return (spLock && spLock->tryLockForWrite()) ? LockReleaser(spLock.get()) : LockReleaser();
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvItemModel::tryLockForRead() const -> LockReleaser
+auto CsvItemModel::tryLockForRead() const -> LockReleaser
 {
     auto pOpaque = DFG_OPAQUE_PTR();
     if (!pOpaque)
@@ -304,18 +305,18 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModel::tryLockForRead() const -> LockReleaser
     return (spLock && spLock->tryLockForRead()) ? LockReleaser(spLock.get()) : LockReleaser();
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithoutSignalEmit(QString s)
+void CsvItemModel::setFilePathWithoutSignalEmit(QString s)
 {
     m_sFilePath = std::move(s);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setFilePathWithSignalEmit(QString s)
+void CsvItemModel::setFilePathWithSignalEmit(QString s)
 {
     setFilePathWithoutSignalEmit(std::move(s));
     Q_EMIT sigSourcePathChanged();
 }
 
-QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getTableTitle(const QString& sDefault) const
+QString CsvItemModel::getTableTitle(const QString& sDefault) const
 {
     if (!m_sTitle.isEmpty())
         return m_sTitle;
@@ -323,35 +324,35 @@ QString DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getTableTitle(const QSt
     return (!sFileName.isEmpty()) ? sFileName : sDefault;
 }
 
-bool DFG_MODULE_NS(qt)::CsvItemModel::isSupportedEncodingForSaving(const DFG_MODULE_NS(io)::TextEncoding encoding) const
+bool CsvItemModel::isSupportedEncodingForSaving(const DFG_MODULE_NS(io)::TextEncoding encoding) const
 {
     return (encoding == DFG_MODULE_NS(io)::encodingUTF8) || (encoding == DFG_MODULE_NS(io)::encodingLatin1);
 }
 
-std::string DFG_MODULE_NS(qt)::CsvItemModel::saveToByteString(const SaveOptions& options)
+std::string CsvItemModel::saveToByteString(const SaveOptions& options)
 {
     ::DFG_MODULE_NS(io)::BasicOmcByteStream<std::string> ostrm;
     saveImpl(ostrm, options);
     return ostrm.releaseData();
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::saveToByteString() -> std::string
+auto CsvItemModel::saveToByteString() -> std::string
 {
     return saveToByteString(SaveOptions(this));
 }
 
-bool DFG_MODULE_NS(qt)::CsvItemModel::saveToFile()
+bool CsvItemModel::saveToFile()
 {
     return saveToFile(m_sFilePath);
 }
 
-bool DFG_MODULE_NS(qt)::CsvItemModel::saveToFile(const QString& sPath)
+bool CsvItemModel::saveToFile(const QString& sPath)
 {
     return saveToFile(sPath, SaveOptions(this));
 }
 
 template <class OutFile_T, class Stream_T>
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options)
+bool CsvItemModel::saveToFileImpl(const QString& sPath, OutFile_T& outFile, Stream_T& strm, const SaveOptions& options)
 {
     const bool bSuccess = saveImpl(strm, options) && (outFile.writeIntermediateToFinalLocation() == 0);
     if (bSuccess)
@@ -365,7 +366,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFileImpl(const QStri
     return bSuccess;
 }
 
-auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getOutputFileSizeEstimate() const -> uint64
+auto CsvItemModel::getOutputFileSizeEstimate() const -> uint64
 {
     const uint64 nRows = static_cast<uint64>(table().rowCountByMaxRowIndex());
     const int nColCount = getColumnCount();
@@ -376,7 +377,7 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getOutputFileSizeEstimate(
     return 5 * (nBytes + table().contentStorageSizeInBytes()) / 4; // Put a little extra for enclosing chars etc.
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& sPath, const SaveOptions& options)
+bool CsvItemModel::saveToFile(const QString& sPath, const SaveOptions& options)
 {
     QFileInfo fileInfo(sPath);
     if (!QDir().mkpath(fileInfo.absolutePath())) // Making sure that the target folder exists, otherwise opening the file will fail.
@@ -415,12 +416,12 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::saveToFile(const QString& 
     return saveToFileImpl(sPath, outFile, outFile.intermediateFileStream(), options);
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const QString& sPath)
+bool CsvItemModel::exportAsSQLiteFile(const QString& sPath)
 {
     return exportAsSQLiteFile(sPath, defaultSaveOptions(this));
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const QString& sPath, const SaveOptions& options)
+bool CsvItemModel::exportAsSQLiteFile(const QString& sPath, const SaveOptions& options)
 {
     using SQLiteDatabase = ::DFG_MODULE_NS(sql)::SQLiteDatabase;
     DFG_UNUSED(options);
@@ -546,12 +547,12 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::exportAsSQLiteFile(const
     return rv;
 }
 
-auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getSaveOptions() const -> SaveOptions
+auto CsvItemModel::getSaveOptions() const -> SaveOptions
 {
     return SaveOptions(this);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
+bool CsvItemModel::save(StreamT& strm)
 {
     return save(strm, SaveOptions(this));
 }
@@ -559,11 +560,10 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm)
 namespace
 {
     template <class Strm_T>
-    class CsvWritePolicy : public ::DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::WritePolicySimple<Strm_T>
+    class CsvWritePolicy : public CsvItemModel::OpaqueTypeDefs::DataTable::WritePolicySimple<Strm_T>
     {
     public:
-        typedef ::DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::WritePolicySimple<Strm_T> BaseClass;
-        using CsvItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
+        typedef CsvItemModel::OpaqueTypeDefs::DataTable::WritePolicySimple<Strm_T> BaseClass;
 
         DFG_BASE_CONSTRUCTOR_DELEGATE_1(CsvWritePolicy, BaseClass)
         {
@@ -586,13 +586,13 @@ namespace
 
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::save(StreamT& strm, const SaveOptions& options)
+bool CsvItemModel::save(StreamT& strm, const SaveOptions& options)
 {
     return saveImpl(strm, options);
 }
 
 template <class Stream_T>
-bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions& options)
+bool CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions& options)
 {
     DFG_MODULE_NS(time)::TimerCpu writeTimer;
     m_messagesFromLatestSave.clear();
@@ -625,7 +625,7 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions
         DFG_MODULE_NS(io)::writeDelimited(strm, m_vecColInfo, sSepEncoded, [&](Stream_T& strm, const ColInfo& colInfo)
         {
             sEncodedTemp.clear();
-            DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrIter(std::back_inserter(sEncodedTemp),
+            DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellFromStrIter(std::back_inserter(sEncodedTemp),
                                                                                              colInfo.m_name,
                                                                                              cSep,
                                                                                              cEnc,
@@ -669,19 +669,19 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions
     return strm.good();
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvItemModel::setItem(const int nRow, const int nCol, const StringViewUtf8& sv)
+bool CsvItemModel::setItem(const int nRow, const int nCol, const StringViewUtf8& sv)
 {
     const auto bRv = table().addString(sv, nRow, nCol);
     DFG_ASSERT(bRv); // Triggering ASSERT means that string couldn't be added to table.
     return bRv;
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvItemModel::setItem(const int nRow, const int nCol, const QString& str)
+bool CsvItemModel::setItem(const int nRow, const int nCol, const QString& str)
 {
     return setItem(nRow, nCol, SzPtrUtf8R(str.toUtf8()));
 }
 
-void ::DFG_MODULE_NS(qt)::CsvItemModel::setRow(const int nRow, QString sLine)
+void CsvItemModel::setRow(const int nRow, QString sLine)
 {
     if (!this->isValidRow(nRow))
         return;
@@ -689,7 +689,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModel::setRow(const int nRow, QString sLine)
     const wchar_t cSeparator = (bHasTabs) ? L'\t' : L',';
     const wchar_t cEnclosing = (cSeparator == ',') ? L'"' : L'\0';
     QTextStream strm(&sLine);
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::readRow<wchar_t>(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const p, const size_t nDataLength)
+    DFG_MODULE_NS(io)::DelimitedTextReader::readRow<wchar_t>(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const p, const size_t nDataLength)
     {
         const auto nSize = (nDataLength > NumericTraits<int>::maxValue) ? NumericTraits<int>::maxValue : static_cast<int>(nDataLength);
         setItem(nRow, static_cast<int>(nCol), QString::fromWCharArray(p, nSize));
@@ -699,7 +699,7 @@ void ::DFG_MODULE_NS(qt)::CsvItemModel::setRow(const int nRow, QString sLine)
         Q_EMIT dataChanged(this->index(nRow, 0), this->index(nRow, getColumnCount()-1));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
+void CsvItemModel::clear()
 {
     table().clear();
     m_vecColInfo.clear();
@@ -714,18 +714,18 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::clear()
         m_pUndoStack->clear();
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& strm)
+bool CsvItemModel::openStream(QTextStream& strm)
 {
     return openStream(strm, LoadOptions());
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openStream(QTextStream& strm, const LoadOptions& loadOptions)
+bool CsvItemModel::openStream(QTextStream& strm, const LoadOptions& loadOptions)
 {
     auto s = strm.readAll();
     return openString(s, loadOptions);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char* data, const size_t nSize, LoadOptions loadOptions)
+bool CsvItemModel::openFromMemory(const char* data, const size_t nSize, LoadOptions loadOptions)
 {
     setCompleterHandlingFromInputSize(loadOptions, nSize);
     return readData(loadOptions, [&]()
@@ -735,7 +735,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromMemory(const char*
     });
 }
 
-bool DFG_MODULE_NS(qt)::CsvItemModel::readData(const LoadOptions& options, std::function<bool()> tableFiller)
+bool CsvItemModel::readData(const LoadOptions& options, std::function<bool()> tableFiller)
 {
     ::DFG_MODULE_NS(time)::TimerCpu readTimer;
 
@@ -815,7 +815,7 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::readData(const LoadOptions& options, std::
     return bTableFillerRv;
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
+void CsvItemModel::initCompletionFeature()
 {
     std::vector<std::set<QString>> vecCompletionSet;
 
@@ -844,7 +844,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::initCompletionFeature()
     }
 }
 
-int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findColumnIndexByName(const QString& sHeaderName, const int returnValueIfNotFound) const
+int CsvItemModel::findColumnIndexByName(const QString& sHeaderName, const int returnValueIfNotFound) const
 {
     for (auto i = 0, nCount = getColumnCount(); i < nCount; ++i)
     {
@@ -854,7 +854,7 @@ int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findColumnIndexByName(const
     return returnValueIfNotFound;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openNewTable()
+bool CsvItemModel::openNewTable()
 {
     auto rv = readData(LoadOptions(), [&]()
     {
@@ -872,7 +872,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openNewTable()
     return rv;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(const DFG_CLASS_NAME(CsvItemModel)& other)
+bool CsvItemModel::mergeAnotherTableToThis(const CsvItemModel& other)
 {
     const auto nOtherRowCount = other.getRowCount();
     if (nOtherRowCount < 1 || getRowCount() >= getRowCountUpperBound())
@@ -910,12 +910,12 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::mergeAnotherTableToThis(co
     return true;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& str)
+bool CsvItemModel::openString(const QString& str)
 {
     return openString(str, LoadOptions());
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& str, const LoadOptions& loadOptions)
+bool CsvItemModel::openString(const QString& str, const LoadOptions& loadOptions)
 {
     const auto bytes = str.toUtf8();
     if (loadOptions.textEncoding() == DFG_MODULE_NS(io)::encodingUTF8)
@@ -928,7 +928,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openString(const QString& 
     }
 }
 
-void DFG_MODULE_NS(qt)::CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvConfig& config) const
+void CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvConfig& config) const
 {
     table().m_readFormat.appendToConfig(config);
 
@@ -959,19 +959,19 @@ void DFG_MODULE_NS(qt)::CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvCon
     }
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvItemModel::getConfig() const -> ::DFG_MODULE_NS(cont)::CsvConfig
+auto CsvItemModel::getConfig() const -> ::DFG_MODULE_NS(cont)::CsvConfig
 {
     return getConfig(CsvFormatDefinition::csvFilePathToConfigFilePath(getFilePath()));
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::getConfig(const QString& sConfFilePath) -> ::DFG_MODULE_NS(cont)::CsvConfig
+auto CsvItemModel::getConfig(const QString& sConfFilePath) -> ::DFG_MODULE_NS(cont)::CsvConfig
 {
     ::DFG_MODULE_NS(cont)::CsvConfig config;
     config.loadFromFile(qStringToFileApi8Bit(sConfFilePath));
     return config;
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
+auto CsvItemModel::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
 {
     auto sConfFilePath = CsvFormatDefinition::csvFilePathToConfigFilePath(sFilePath);
     if (!QFileInfo::exists(sConfFilePath))
@@ -988,31 +988,31 @@ auto DFG_MODULE_NS(qt)::CsvItemModel::getLoadOptionsForFile(const QString& sFile
     return LoadOptions::constructFromConfig(getConfig(sConfFilePath));
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::getLoadOptionsFromConfFile() const -> LoadOptions
+auto CsvItemModel::getLoadOptionsFromConfFile() const -> LoadOptions
 {
     return getLoadOptionsForFile(getFilePath());
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(const QString& sDbFilePath)
+bool CsvItemModel::openFile(const QString& sDbFilePath)
 {
     return openFile(sDbFilePath, getLoadOptionsForFile(sDbFilePath));
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::importFiles(const QStringList& paths)
+bool CsvItemModel::importFiles(const QStringList& paths)
 {
     if (paths.empty())
         return true;
 
     for (auto iter = paths.cbegin(), iterEnd = paths.cend(); iter != iterEnd; ++iter)
     {
-        DFG_CLASS_NAME(CsvItemModel) temp;
+        CsvItemModel temp;
         temp.openFile(*iter);
         mergeAnotherTableToThis(temp);
     }
     return true; // TODO: more detailed return value (e.g. that how many were read successfully).
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes, const CsvItemModel* pModel)
+void CsvItemModel::setCompleterHandlingFromInputSize(LoadOptions& loadOptions, const uint64 nSizeInBytes, const CsvItemModel* pModel)
 {
     const auto optionsHasCompleterLimit = loadOptions.hasProperty(CsvOptionProperty_completerEnabledSizeLimit);
     const auto limit = (optionsHasCompleterLimit)
@@ -1027,21 +1027,19 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setCompleterHandlingFromIn
     }
 }
 
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
- namespace DFG_DETAIL_NS
+namespace DFG_DETAIL_NS
 {
     ::DFG_MODULE_NS(cont)::IntervalSet<int> columnIntervalSetFromText(const StringViewSzC& sv)
     {
         using namespace ::DFG_MODULE_NS(cont);
-        using namespace ::DFG_MODULE_NS(qt);
         return intervalSetFromString<int>(sv, (std::numeric_limits<int>::max)()).shift_raw(-CsvItemModel::internalColumnToVisibleShift());
     }
 
-    class CancellableReader : public DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::DefaultCellHandler
+    class CancellableReader : public CsvItemModel::OpaqueTypeDefs::DataTable::DefaultCellHandler
     {
     public:
-        using BaseClass = ::DFG_MODULE_NS(qt)::CsvItemModel::OpaqueTypeDefs::DataTable::DefaultCellHandler;
-        using ItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
+        using BaseClass = CsvItemModel::OpaqueTypeDefs::DataTable::DefaultCellHandler;
+        using ItemModel = CsvItemModel;
         using ProgressController = ItemModel::LoadOptions::ProgressController;
 
         CancellableReader(ItemModel::OpaqueTypeDefs::DataTable& rTable, ProgressController& rProgressController)
@@ -1085,8 +1083,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
     {
     public:
         using BaseClass = CancellableReader;
-        using ItemModel = ::DFG_MODULE_NS(qt)::CsvItemModel;
-        using DataTable = ::DFG_MODULE_NS(qt)::CsvItemModel::DataTable;
+        using ItemModel = CsvItemModel;
+        using DataTable = CsvItemModel::DataTable;
         using FilterCellHandler = decltype(ItemModel::OpaqueTypeDefs::DataTable().createFilterCellHandler());
 
         CancellableFilterReader(ItemModel::OpaqueTypeDefs::DataTable& rTable, ProgressController& rProgressController, FilterCellHandler& rFilterCellHandler)
@@ -1107,7 +1105,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
     class TextFilterMatcher
     {
     public:
-        using ItemModel          = ::DFG_MODULE_NS(qt)::CsvItemModel;
+        using ItemModel          = CsvItemModel;
         using ProgressController = ItemModel::LoadOptions::ProgressController;
 
         using MatcherDefinition = CsvItemModelStringMatcher;
@@ -1150,9 +1148,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
         MultiMatchDef m_multiMatcher;
         ProgressController& m_rProgressController;
     }; // TextFilterMatcher
-} }} // namespace dfg::qt::DFG_DETAIL_NS
+} // namespace DFG_DETAIL_NS
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePath, LoadOptions loadOptions)
+bool CsvItemModel::openFile(QString sDbFilePath, LoadOptions loadOptions)
 {
     if (sDbFilePath.isEmpty())
         return false;
@@ -1230,7 +1228,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFile(QString sDbFilePa
     }
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvItemModel::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions)
+bool CsvItemModel::readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions)
 {
     if (!QFileInfo::exists(sDbFilePath))
     {
@@ -1287,13 +1285,13 @@ bool ::DFG_MODULE_NS(qt)::CsvItemModel::readDataFromSqlite(const QString& sDbFil
     return true;
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
+bool CsvItemModel::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
 {
     auto loadOptions = getLoadOptionsForFile(sDbFilePath);
     return openFromSqlite(sDbFilePath, sQuery, loadOptions);
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions)
+bool CsvItemModel::openFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions)
 {
     m_messagesFromLatestOpen.clear();
     // Limiting completer usage by file size is highly coarse for databases, but at least this can prevent simple huge query cases from using completers.
@@ -1302,18 +1300,18 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::openFromSqlite(const QSt
 }
 
 //Note: When implementing a table based model, rowCount() should return 0 when the parent is valid.
-int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
+int CsvItemModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
 {
     return (!parent.isValid()) ? getRowCount() : 0;
 }
 
 
-int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnCount(const QModelIndex& parent /*= QModelIndex()*/) const
+int CsvItemModel::columnCount(const QModelIndex& parent /*= QModelIndex()*/) const
 {
     return (!parent.isValid()) ? getColumnCount() : 0;
 }
 
-auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnNames() const -> QStringList
+auto CsvItemModel::getColumnNames() const -> QStringList
 {
     const auto nCount = columnCount();
     QStringList names;
@@ -1325,27 +1323,27 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnNames() const -> 
     return names;
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
+auto CsvItemModel::rawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
 {
     return SzPtrUtf8R(table()(nRow, nCol));
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringPtrAt(const QModelIndex& index) const -> SzPtrUtf8R
+auto CsvItemModel::rawStringPtrAt(const QModelIndex& index) const -> SzPtrUtf8R
 {
     return rawStringPtrAt(index.row(), index.column());
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringViewAt(const int nRow, const int nCol) const -> StringViewUtf8
+auto CsvItemModel::rawStringViewAt(const int nRow, const int nCol) const -> StringViewUtf8
 {
     return StringViewUtf8(table()(nRow, nCol));
 }
 
-auto DFG_MODULE_NS(qt)::CsvItemModel::rawStringViewAt(const QModelIndex& index) const -> StringViewUtf8
+auto CsvItemModel::rawStringViewAt(const QModelIndex& index) const -> StringViewUtf8
 {
     return rawStringViewAt(index.row(), index.column());
 }
 
-QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
+QVariant CsvItemModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
 {
     if (!index.isValid())
         return QVariant();
@@ -1376,7 +1374,7 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::data(const QModelIndex
     return QVariant();
 }
 
-QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
+QVariant CsvItemModel::headerData(int section, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
 {
     if (role != Qt::DisplayRole && role != Qt::ToolTipRole)
         return QVariant();
@@ -1392,7 +1390,7 @@ QVariant DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::headerData(int section
         return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)
+void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)
 {
     using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ::DFG_MODULE_NS(cont) ::IntervalSet<int>>;
     IntervalContainer intervalsByColumn; 
@@ -1425,7 +1423,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataByBatch_noUndo(cons
     setModifiedStatus(true);
 }
 
-bool DFG_MODULE_NS(qt)::CsvItemModel::privSetDataToTable(const int nRow, const int nCol, const StringViewUtf8 sv)
+bool CsvItemModel::privSetDataToTable(const int nRow, const int nCol, const StringViewUtf8 sv)
 {
     if (!isValidRow(nRow) || !isValidColumn(nCol))
     {
@@ -1441,7 +1439,7 @@ bool DFG_MODULE_NS(qt)::CsvItemModel::privSetDataToTable(const int nRow, const i
     return setItem(nRow, nCol, sv);
 }
 
-void DFG_MODULE_NS(qt)::CsvItemModel::setDataNoUndo(const int nRow, const int nCol, const StringViewUtf8 sv)
+void CsvItemModel::setDataNoUndo(const int nRow, const int nCol, const StringViewUtf8 sv)
 {
     if (!privSetDataToTable(nRow, nCol, sv))
         return;
@@ -1451,22 +1449,22 @@ void DFG_MODULE_NS(qt)::CsvItemModel::setDataNoUndo(const int nRow, const int nC
     setModifiedStatus(true);
 }
 
-void DFG_MODULE_NS(qt)::CsvItemModel::setDataNoUndo(const QModelIndex& index, const StringViewUtf8 sv)
+void CsvItemModel::setDataNoUndo(const QModelIndex& index, const StringViewUtf8 sv)
 {
     setDataNoUndo(index.row(), index.column(), sv);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const QModelIndex& index, const QString& str)
+void CsvItemModel::setDataNoUndo(const QModelIndex& index, const QString& str)
 {
     setDataNoUndo(index.row(), index.column(), str);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setDataNoUndo(const int nRow, const int nCol, const QString& str)
+void CsvItemModel::setDataNoUndo(const int nRow, const int nCol, const QString& str)
 {
     setDataNoUndo(nRow, nCol, SzPtrUtf8(str.toUtf8().data()));
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setData(const QModelIndex& index, const QVariant& value, int role /*= Qt::EditRole*/)
+bool CsvItemModel::setData(const QModelIndex& index, const QVariant& value, int role /*= Qt::EditRole*/)
 {
     // Sets the role data for the item at index to value.
     // Returns true if successful; otherwise returns false.
@@ -1475,7 +1473,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setData(const QModelIndex&
     if (index.isValid() && role == Qt::EditRole && isValidRow(index.row()) && isValidColumn(index.column()))
     {
         if (m_pUndoStack)
-            m_pUndoStack->push(new DFG_CLASS_NAME(CsvTableModelActionCellEdit)(*this, index, value.toString()));
+            m_pUndoStack->push(new CsvTableModelActionCellEdit(*this, index, value.toString()));
         else
             setDataNoUndo(index, value.toString());
         return true;
@@ -1483,7 +1481,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setData(const QModelIndex&
      return false;
 }
 
-bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHeaderData(const int section, Qt::Orientation orientation, const QVariant &value, const int role)
+bool CsvItemModel::setHeaderData(const int section, Qt::Orientation orientation, const QVariant &value, const int role)
 {
     if (orientation == Qt::Horizontal && role == Qt::EditRole && section >= 0 && section < getColumnCount())
     {
@@ -1501,7 +1499,7 @@ bool ::DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHeaderData(const int 
         return BaseClass::setHeaderData(section, orientation, value, role);
 }
 
-Qt::ItemFlags DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::flags(const QModelIndex& index) const
+Qt::ItemFlags CsvItemModel::flags(const QModelIndex& index) const
 {
     #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
         const Qt::ItemFlags f = QAbstractTableModel::flags(index);
@@ -1519,21 +1517,21 @@ Qt::ItemFlags DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::flags(const QMode
 
 }
 
-int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getRowCountUpperBound() const
+int CsvItemModel::getRowCountUpperBound() const
 {
     // For now mostly a dedicated replacement for
     // NumericTraits<int>::maxValue for integer addition overflow control.
     return NumericTraits<int>::maxValue - 1;
 }
 
-int DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::getColumnCountUpperBound() const
+int CsvItemModel::getColumnCountUpperBound() const
 {
     // For now mostly a dedicated replacement for
     // NumericTraits<int>::maxValue for integer addition overflow control.
     return NumericTraits<int>::maxValue - 1;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, const int count, const QModelIndex& parent /*= QModelIndex()*/)
+bool CsvItemModel::insertRows(int position, const int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     const auto nOldRowCount = getRowCount();
     if (position < 0)
@@ -1549,7 +1547,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertRows(int position, c
     return true;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
+bool CsvItemModel::removeRows(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     if (count <= 0 || parent.isValid() || !isValidRow(position) || getRowCountUpperBound() - position < count  || !isValidRow(position + count - 1))
         return false;
@@ -1573,7 +1571,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(int position, i
     return true;
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumnsImpl(int position, int count)
+void CsvItemModel::insertColumnsImpl(int position, int count)
 {
     table().insertColumnsAt(position, count);
     for(int i = position; i<position + count; ++i)
@@ -1582,7 +1580,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumnsImpl(int posi
     }
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position, const int count, const QModelIndex& parent /*= QModelIndex()*/)
+bool CsvItemModel::insertColumns(int position, const int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     if (position < 0)
         position = getColumnCount();
@@ -1595,7 +1593,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::insertColumns(int position
     return true;
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeColumns(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
+bool CsvItemModel::removeColumns(int position, int count, const QModelIndex& parent /*= QModelIndex()*/)
 {
     const int nLast = position + count - 1;
     if (count < 0 || parent.isValid() || !isValidColumn(position) || !isValidColumn(nLast))
@@ -1610,7 +1608,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeColumns(int position
     return true;
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnName(const int nCol, const QString& sName)
+void CsvItemModel::setColumnName(const int nCol, const QString& sName)
 {
     auto pColInfo = getColInfo(nCol);
     if (pColInfo)
@@ -1621,7 +1619,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnName(const int nC
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(const ::DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT)<const int>& indexesAscSorted)
+void CsvItemModel::removeRows(const ::DFG_MODULE_NS(cont)::ArrayWrapperT<const int>& indexesAscSorted)
 {
     if (indexesAscSorted.empty())
         return;
@@ -1667,7 +1665,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::removeRows(const ::DFG_MOD
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnToStrings(const int nCol, std::vector<QString>& vecStrings)
+void CsvItemModel::columnToStrings(const int nCol, std::vector<QString>& vecStrings)
 {
     vecStrings.clear();
     if (!isValidColumn(nCol))
@@ -1680,7 +1678,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::columnToStrings(const int 
     });
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnCells(const int nCol, const std::vector<QString>& vecStrings)
+void CsvItemModel::setColumnCells(const int nCol, const std::vector<QString>& vecStrings)
 {
     if (!isValidColumn(nCol))
         return;
@@ -1693,7 +1691,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setColumnCells(const int n
         Q_EMIT dataChanged(this->index(0, nCol), this->index(getRowCount()-1, nCol));
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setModifiedStatus(const bool bMod /*= true*/)
+void CsvItemModel::setModifiedStatus(const bool bMod /*= true*/)
 {
     if (bMod != m_bModified)
     {
@@ -1702,7 +1700,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setModifiedStatus(const bo
     }
 }
 
-void DFG_MODULE_NS(qt)::CsvItemModel::setColumnType(const Index nCol, const ColType colType)
+void CsvItemModel::setColumnType(const Index nCol, const ColType colType)
 {
     auto pColInfo = getColInfo(nCol);
     if (!pColInfo || pColInfo->m_type == colType)
@@ -1712,7 +1710,7 @@ void DFG_MODULE_NS(qt)::CsvItemModel::setColumnType(const Index nCol, const ColT
     Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
 }
 
-void DFG_MODULE_NS(qt)::CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
+void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
 {
     if (!isValidColumn(nCol))
         return;
@@ -1726,10 +1724,10 @@ void DFG_MODULE_NS(qt)::CsvItemModel::setColumnType(const Index nCol, const Stri
     }
 }
 
-QString& DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim)
+QString& CsvItemModel::dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim)
 {
     QTextStream strm(&sDst);
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellFromStrStrm(strm,
+    DFG_MODULE_NS(io)::DelimitedTextCellWriter::writeCellFromStrStrm(strm,
         sSrc,
         cDelim,
         QChar('"'),
@@ -1738,7 +1736,7 @@ QString& DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::dataCellToString(const
     return sDst;
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow, QString& str, const QChar cDelim, const IndexSet* pSetIgnoreColumns /*= nullptr*/) const
+void CsvItemModel::rowToString(const int nRow, QString& str, const QChar cDelim, const IndexSet* pSetIgnoreColumns /*= nullptr*/) const
 {
     if (!isValidRow(nRow))
         return;
@@ -1758,12 +1756,12 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::rowToString(const int nRow
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setUndoStack(QUndoStack* pStack)
+void CsvItemModel::setUndoStack(QUndoStack* pStack)
 {
     m_pUndoStack = pStack;
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHighlighter(HighlightDefinition hld)
+void CsvItemModel::setHighlighter(HighlightDefinition hld)
 {
     auto existing = std::find_if(m_highlighters.begin(), m_highlighters.end(), [&](const HighlightDefinition& a) { return hld.m_id == a.m_id; });
 
@@ -1778,14 +1776,14 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::setHighlighter(HighlightDe
         endResetModel();
 }
 
-QModelIndexList DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::match(const QModelIndex& start, int role, const QVariant& value, const int hits, const Qt::MatchFlags flags) const
+QModelIndexList CsvItemModel::match(const QModelIndex& start, int role, const QVariant& value, const int hits, const Qt::MatchFlags flags) const
 {
     // match() is not adequate for needed find functionality (e.g. misses backward find, https://bugreports.qt.io/browse/QTBUG-344)
     // so find implementation is not using match().
     return BaseClass::match(start, role, value, hits, flags);
 }
 
-QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::nextCellByFinderAdvance(const QModelIndex& seedIndex, const FindDirection direction, const FindAdvanceStyle advanceStyle) const
+QModelIndex CsvItemModel::nextCellByFinderAdvance(const QModelIndex& seedIndex, const FindDirection direction, const FindAdvanceStyle advanceStyle) const
 {
     int r = Max(0, seedIndex.row());
     int c = Max(0, seedIndex.column());
@@ -1793,7 +1791,7 @@ QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::nextCellByFinderAdv
     return index(r, c);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::nextCellByFinderAdvance(int& r, int& c, const FindDirection direction, const FindAdvanceStyle advanceStyle) const
+void CsvItemModel::nextCellByFinderAdvance(int& r, int& c, const FindDirection direction, const FindAdvanceStyle advanceStyle) const
 {
     if (advanceStyle == FindAdvanceStyleRowIncrement)
     {
@@ -1843,7 +1841,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::nextCellByFinderAdvance(in
     }
 }
 
-auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::wrappedDistance(const QModelIndex& from, const QModelIndex& to, const FindDirection direction) const -> LinearIndex
+auto CsvItemModel::wrappedDistance(const QModelIndex& from, const QModelIndex& to, const FindDirection direction) const -> LinearIndex
 {
     if (!from.isValid() || !to.isValid())
         return 0;
@@ -1865,7 +1863,7 @@ auto DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::wrappedDistance(const QMod
     }
 }
 
-QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findNextHighlighterMatch(QModelIndex seedIndex, // Seed which is advanced before doing first actual match.
+QModelIndex CsvItemModel::findNextHighlighterMatch(QModelIndex seedIndex, // Seed which is advanced before doing first actual match.
                                                                                       const FindDirection direction)
 {
     if (m_highlighters.empty())
@@ -1899,11 +1897,6 @@ QModelIndex DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::findNextHighlighter
     }
     return QModelIndex();
 }
-
-/////////////////////////////////
-// Start of dfg::qt namespace
-DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
-{
 
 bool CsvItemModel::setSize(Index nNewRowCount, Index nNewColCount)
 {
@@ -2012,7 +2005,7 @@ auto CsvItemModel::peekCsvFormatFromFile(const QString& sPath, const size_t nPee
 //
 //////////////////////////////////////////////////////////////////////////
 
-DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvItemModel::ColInfo)
+DFG_OPAQUE_PTR_DEFINE(CsvItemModel::ColInfo)
 {
     template <class K_T, class V_T> using MapT = ::DFG_MODULE_NS(cont)::MapVectorSoA<K_T, V_T>;
     MapT<uintptr_t, MapT<StringUtf8, QVariant>> m_properties;
@@ -2141,15 +2134,11 @@ namespace DFG_DETAIL_NS
 
 } // namespace DFG_DETAIL_NS
 
-}} // namespace dfg::qt
-/////////////////////////////////
-
-
 
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
 static const QString sMimeTypeStr = "text/csv";
 
-QStringList DFG_CLASS_NAME(CsvItemModel)::mimeTypes() const
+QStringList CsvItemModel::mimeTypes() const
 {
     QStringList types;
     //types << "application/vnd.text.list";
@@ -2157,7 +2146,7 @@ QStringList DFG_CLASS_NAME(CsvItemModel)::mimeTypes() const
     return types;
 }
 
-QMimeData* DFG_CLASS_NAME(CsvItemModel)::mimeData(const QModelIndexList& indexes) const
+QMimeData* CsvItemModel::mimeData(const QModelIndexList& indexes) const
 {
     QMimeData *mimeData = new QMimeData();
     QByteArray encodedData;
@@ -2181,7 +2170,7 @@ QMimeData* DFG_CLASS_NAME(CsvItemModel)::mimeData(const QModelIndexList& indexes
     return mimeData;
 }
 
-bool DFG_CLASS_NAME(CsvItemModel)::dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent)
+bool CsvItemModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent)
 {
     Q_UNUSED(column);
     if (parent.isValid() || action == Qt::IgnoreAction || data == nullptr || !data->hasFormat(sMimeTypeStr))
@@ -2195,3 +2184,6 @@ bool DFG_CLASS_NAME(CsvItemModel)::dropMimeData(const QMimeData* data, Qt::DropA
 }
 
 #endif // DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
+
+}} // namespace dfg::qt
+/////////////////////////////////
