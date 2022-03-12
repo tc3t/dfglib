@@ -56,6 +56,43 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QA
         model->setData(index, sNewText, Qt::EditRole);
 }
 
+void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    if (!option.state.testFlag(QStyle::State_Selected))
+    {
+        // If cell is not selected, default painting does what's needed
+        BaseClass::paint(painter, option, index);
+        return;
+    }
+    // Getting here means that cell is selected and since selected cells don't use index.data(Qt::BackgroundRole) in background drawing,
+    // handling the case manually and adjusting color if needed (related to ticket #120 about selected items that match find-filter not showing clearly)
+    const auto bgRole = index.data(Qt::BackgroundRole);
+    if (bgRole.isNull())
+        BaseClass::paint(painter, option, index); // Cell has no BackgroundRole -> default painting does what's needed.
+    else
+    {
+        // Getting here means that index is selected and it has non-default background -> using BackgroundRole
+        // with adjustments so that cell has different background color than what non-selected would have.
+        const auto bIsActive = option.state.testFlag(QStyle::State_Active);
+        const auto bgBrush = bgRole.value<QBrush>();
+        const auto bgColor = bgBrush.color();
+        const auto makeBgColor = [&]()
+        {
+            // Arbitrary adjustment to bgColor.
+            const auto factor = (bIsActive) ? 0.5 : 0.75;
+            return QColor(limited(static_cast<int>(bgColor.red() * factor), 0, 255),
+                          limited(static_cast<int>(bgColor.green() * factor), 0, 255),
+                          limited(static_cast<int>(bgColor.blue() * factor), 0, 255));
+        };
+        auto newPalette = option.palette;
+        const auto colorGroup = bIsActive ? QPalette::Active : QPalette::Inactive;
+        newPalette.setColor(colorGroup, QPalette::Highlight, makeBgColor());
+        auto newOption = option;
+        newOption.palette = newPalette;
+        BaseClass::paint(painter, newOption, index);
+    }
+}
+
 DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::CsvTableViewCompleterDelegate(QWidget* pParent, QCompleter* pCompleter)
     : BaseClass(pParent)
     , m_spCompleter(pCompleter)
