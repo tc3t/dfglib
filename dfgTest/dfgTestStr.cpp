@@ -1821,6 +1821,29 @@ TEST(dfgStr, stringLiteralCharToValue)
     EXPECT_EQ(0x7f, rv5.second);
 }
 
+TEST(dfgStr, charToPrintable)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(str);
+    for (int c = 0; c <= int8_max; ++c)
+    {
+        const auto roundTrip = stringLiteralCharToValue<char>(charToPrintable(c));
+        DFGTEST_EXPECT_TRUE(roundTrip.first);
+        DFGTEST_EXPECT_LEFT(c, roundTrip.second);
+    }
+    DFGTEST_EXPECT_EQ("\\t", charToPrintable('\t'));
+    DFGTEST_EXPECT_EQ("\\a", charToPrintable('\a'));
+    DFGTEST_EXPECT_EQ("\\b", charToPrintable('\b'));
+    DFGTEST_EXPECT_EQ("\\f", charToPrintable('\f'));
+    DFGTEST_EXPECT_EQ("\\n", charToPrintable('\n'));
+    DFGTEST_EXPECT_EQ("\\r", charToPrintable('\r'));
+    DFGTEST_EXPECT_EQ("\\v", charToPrintable('\v'));
+
+    DFGTEST_EXPECT_EQ("\\x7fffffff", charToPrintable(int32_max));
+    DFGTEST_EXPECT_EQ(int32_max, stringLiteralCharToValue<int32>(charToPrintable(int32_max)).second);
+    DFGTEST_EXPECT_EQ("", charToPrintable(-1));
+}
+
 TEST(dfgStr, beginsWith)
 {
     using namespace DFG_MODULE_NS(str);

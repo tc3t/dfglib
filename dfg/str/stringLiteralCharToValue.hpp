@@ -8,6 +8,16 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
 
+    namespace DFG_DETAIL_NS
+    {
+        constexpr bool hasAsciiCompatibleCharLiterals()
+        {
+            // Testing only a subset, for more detail:  https://stackoverflow.com/questions/63980636/how-can-i-check-if-char-encoding-is-ascii
+            return '\a' == 0x07 && '\b' == 0x08 && '\t' == 0x09 && '\n' == 0x0a && '\v' == 0x0b && '\f' == 0x0c &&
+                   '\r' == 0x0d && 'a' == 0x61 && '~' == 0x7e;
+        }
+    }
+
     // Converts character definition as written in string literal to corresponding character value (e.g. "\\t" -> '\t')
     // Returns: pair (bool, Char_T), where bool tells whether the Char_T value is valid.
     //      If str.size() == 1 && str[0] is non-escape sequence that fits to Char_T -> returns (true, str[0])
@@ -69,6 +79,32 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(str) {
                 rv = std::pair<bool, Char_T>(true, rvC);
         }
         return rv;
+    }
+
+    // Given a char value, returns a string representation of it. For most of printable ASCII-values, string has char as such and
+    // for rest, returns escaped representation which can be converted back to char value with stringLiteralCharToValue()
+    inline std::string charToPrintable(const int32 c)
+    {
+        DFG_STATIC_ASSERT(DFG_DETAIL_NS::hasAsciiCompatibleCharLiterals(), "Implementation assumes ascii-compatible characters");
+        if (c >= 33 && c <= 126)
+            return std::string(1, static_cast<char>(c));
+        else if (c >= 0)
+        {
+            char buffer[16];
+            switch (c)
+            {
+                case '\t': return "\\t";
+                case '\a': return "\\a";
+                case '\b': return "\\b";
+                case '\f': return "\\f";
+                case '\n': return "\\n";
+                case '\r': return "\\r";
+                case '\v': return "\\v";
+                default: DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", c); return buffer;
+            }
+        }
+        else
+            return std::string();
     }
 
 } } // module namespace

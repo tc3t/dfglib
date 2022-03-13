@@ -178,6 +178,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith";
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_TypedStrings";
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_StringViews";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.charToPrintable";
     //::testing::GTEST_FLAG(filter) = "dfgStr.floatingPointTypeToSprintfType";
     //::testing::GTEST_FLAG(filter) = "dfgStr.intToRadixRepresentation";
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";

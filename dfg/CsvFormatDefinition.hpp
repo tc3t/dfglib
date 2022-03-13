@@ -210,14 +210,7 @@ inline void CsvFormatDefinition::appendToConfig(DFG_MODULE_NS(cont)::CsvConfig& 
 
 inline std::string CsvFormatDefinition::charAsPrintableString(const int32 c)
 {
-    if (c >= 33 && c <= 126)
-        return std::string(1, static_cast<char>(c));
-    else
-    {
-        char buffer[32];
-        DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(buffer, sizeof(buffer), "\\x%x", c);
-        return buffer;
-    }
+    return ::DFG_MODULE_NS(str)::charToPrintable(c);
 }
 
 inline std::string CsvFormatDefinition::separatorCharAsString() const
