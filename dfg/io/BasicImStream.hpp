@@ -17,19 +17,19 @@ namespace DFG_DETAIL_NS
 
 
 template <class Base_T>
-class DFG_CLASS_NAME(BasicStreamBuffer_T) : public Base_T
+class BasicStreamBuffer_T : public Base_T
 {
 public:
     typedef typename Base_T::char_type char_type;
     typedef const char_type* ConstCharTPtr;
 
-    DFG_CLASS_NAME(BasicStreamBuffer_T)(const ConstCharTPtr pData, const size_t nCharCount) :
+    BasicStreamBuffer_T(const ConstCharTPtr pData, const size_t nCharCount) :
         m_pBegin(pData),
         m_pCurrent(pData),
         m_pEnd(pData + nCharCount)
     {}
 
-    DFG_CLASS_NAME(BasicStreamBuffer_T)(DFG_CLASS_NAME(BasicStreamBuffer_T)&& other) noexcept :
+    BasicStreamBuffer_T(BasicStreamBuffer_T&& other) noexcept :
         m_pBegin(other.m_pBegin),
         m_pCurrent(other.m_pCurrent),
         m_pEnd(other.m_pEnd)
@@ -97,18 +97,22 @@ public:
 
 // Basic input stream for reading characters from memory using stream-like interface.
 template <class Char_T>
-class DFG_CLASS_NAME(BasicImStream_T) : public DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicImStream_T<Char_T>), size_t, Char_T>
+class BasicImStream_T : public BasicIStreamCRTP<BasicImStream_T<Char_T>, size_t, Char_T>
 {
 public:
-    typedef DFG_CLASS_NAME(BasicIStreamCRTP)<DFG_CLASS_NAME(BasicImStream_T<Char_T>), size_t, Char_T> BaseClass;
+    typedef BasicIStreamCRTP<BasicImStream_T<Char_T>, size_t, Char_T> BaseClass;
     
-    typedef DFG_CLASS_NAME(BasicStreamBuffer_T)<DFG_DETAIL_NS::DefaultBasicStreamBufferBase<Char_T>> StreamBufferT;
+    typedef BasicStreamBuffer_T<DFG_DETAIL_NS::DefaultBasicStreamBufferBase<Char_T>> StreamBufferT;
     typedef typename BaseClass::int_type int_type;
     typedef typename BaseClass::PosType PosType;
 
-    DFG_CLASS_NAME(BasicImStream_T)(const Char_T* pData, const size_t nCharCount) :
+    BasicImStream_T(const Char_T* pData, const size_t nCharCount) :
         m_streamBuffer(pData, nCharCount)
     {}
+
+    // Constructing from compatible container (e.g. from std::string when Char_T is char)
+    template <class Cont_T> BasicImStream_T(Cont_T& cont) : BasicImStream_T(cont.data(), cont.size()) {}
+    template <class Cont_T> BasicImStream_T(Cont_T&& cont) = delete; // Constructing from rvalue is not allowed to make it less easy to accidentally cause input go dangling
 
     size_t sizeInCharacters() const { return m_streamBuffer.countInCharsTotal(); }
     size_t countOfRemainingElems() const { return m_streamBuffer.countInCharsRemaining(); }
@@ -133,7 +137,7 @@ public:
 
     bool good() const { return !m_streamBuffer.isAtEnd(); }
 
-    DFG_CLASS_NAME(BasicImStream_T)& read(Char_T* p, const size_t nCharCount)
+    BasicImStream_T& read(Char_T* p, const size_t nCharCount)
     {
         m_streamBuffer.read(p, nCharCount);
         return *this;
@@ -178,10 +182,10 @@ public:
     StreamBufferT m_streamBuffer;
 };
 
-typedef DFG_CLASS_NAME(BasicImStream_T<char>) DFG_CLASS_NAME(BasicImStream);
+typedef BasicImStream_T<char> BasicImStream;
 
 
-template <class T> inline size_t readBytes(DFG_CLASS_NAME(BasicImStream_T)<T>& istrm, char* pDest, const size_t nMaxReadSize)
+template <class T> inline size_t readBytes(BasicImStream_T<T>& istrm, char* pDest, const size_t nMaxReadSize)
 {
     return istrm.readBytes(pDest, nMaxReadSize);
 }

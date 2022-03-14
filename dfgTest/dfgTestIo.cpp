@@ -468,7 +468,7 @@ TEST(dfgIo, BasicImStream)
     using namespace DFG_MODULE_NS(io);
 
     {
-        DFG_CLASS_NAME(BasicImStream) istrm(szData, DFG_COUNTOF_CSL(szData));
+        BasicImStream istrm(szData, DFG_COUNTOF_SZ(szData));
 
         char c;
         readBinary(istrm, c);
@@ -483,9 +483,33 @@ TEST(dfgIo, BasicImStream)
         EXPECT_FALSE(istrm.good());
     }
 
+    // Testing constructor that takes a lvalue container
+    {
+        std::string a = "abc";
+        const std::vector<char> b = { 'd', 'e' };
+        std::vector<char16_t> c = { 'f' };
+        {
+            // These should fail to compile: constructing from rvalue is not allowed to make it less easy to accidentally cause input go dangling as it would in these cases
+            //BasicImStream istrm0(std::string("abc"));
+            //BasicImStream istrm1(std::vector<char>({ 'd', 'e', 'f' }));
+            //BasicImStream_T<char16_t> istrm2(std::vector<char16_t>({ 'g', 'h', 'i' }));
+        }
+        {
+            BasicImStream istrm0(a);
+            BasicImStream istrm1(b);
+            BasicImStream_T<char16_t> istrm2(c);
+            DFGTEST_EXPECT_LEFT(3, istrm0.countOfRemainingElems());
+            DFGTEST_EXPECT_LEFT(2, istrm1.countOfRemainingElems());
+            DFGTEST_EXPECT_LEFT(1, istrm2.countOfRemainingElems());
+            DFGTEST_EXPECT_LEFT(a.data(), istrm0.beginPtr());
+            DFGTEST_EXPECT_LEFT(b.data(), istrm1.beginPtr());
+            DFGTEST_EXPECT_LEFT(c.data(), istrm2.beginPtr());
+        }
+    }
+
     // get-testing
     {
-        getTest<DFG_CLASS_NAME(BasicImStream)>();
+        getTest<BasicImStream>();
         getTest<std::istrstream>();
     }
 }
