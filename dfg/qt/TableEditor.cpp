@@ -42,6 +42,8 @@ DFG_END_INCLUDE_QT_HEADERS
 
 #define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
+
 namespace
 {
     enum TableEditorPropertyId
@@ -167,9 +169,9 @@ namespace
 
 
     template <TableEditorPropertyId ID>
-    auto getTableEditorProperty(DFG_MODULE_NS(qt)::TableEditor* editor) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>::PropertyType
+    auto getTableEditorProperty(TableEditor* editor) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>::PropertyType
     {
-        return DFG_MODULE_NS(qt)::getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>>(editor);
+        return getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>>(editor);
     }
 
     class HighlightTextEdit : public QLineEdit
@@ -218,9 +220,7 @@ namespace
 
 } // unnamed namespace
 
-Q_DECLARE_METATYPE(WindowExtentProperty); // Note: placing this in unnamed namespace generated a "class template specialization of 'QMetaTypeId' must occure at global scope"-message
-
-DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS {
+namespace DFG_DETAIL_NS {
 
     // TODO: move to CsvTableView.h?
     class FindPanelWidget : public QWidget
@@ -526,7 +526,7 @@ TableEditor::TableEditor()
 
     // Status bar
     {
-        m_spStatusBar.reset(new DFG_CLASS_NAME(TableEditorStatusBar));
+        m_spStatusBar.reset(new TableEditorStatusBar);
     }
 
     m_spMainSplitter.reset(new QSplitter(Qt::Horizontal, this));
@@ -671,10 +671,7 @@ auto TableEditor::selectionDetailPanel() -> QWidget*
     return this->m_spSelectionAnalyzerPanel.get();
 }
 
-}} // namespace dfg::qt
-///////////////////////
-
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString path)
+bool TableEditor::tryOpenFileFromPath(QString path)
 {
     auto pModel = (m_spTableView) ? m_spTableView->csvModel() : nullptr;
     if (!pModel || pModel->isModified())
@@ -683,7 +680,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::tryOpenFileFromPath(QString
     return m_spTableView->openFile(path);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setWindowModified(bool bNewModifiedStatus)
+void TableEditor::setWindowModified(bool bNewModifiedStatus)
 {
     const auto bCurrentStatus = isWindowModified();
     if (bCurrentStatus != bNewModifiedStatus)
@@ -693,7 +690,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::setWindowModified(bool bNew
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()
+void TableEditor::updateWindowTitle()
 {
     // Note: [*] is a placeholder for modified-indicator (see QWidget::windowModified)
     QString sTitle = QString("%1 [*]").arg((m_spTableModel) ? m_spTableModel->getTableTitle(tr("Unsaved")) : QString());
@@ -701,7 +698,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::updateWindowTitle()
     setWindowTitle(sTitle);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSourcePathChanged()
+void TableEditor::onSourcePathChanged()
 {
     if (!m_spTableModel || !m_spLineEditSourcePath)
         return;
@@ -710,7 +707,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onSourcePathChanged()
     updateWindowTitle();
 }
 
-void DFG_MODULE_NS(qt)::TableEditor::setResizeWindow(QWidget* pWindow)
+void TableEditor::setResizeWindow(QWidget* pWindow)
 {
     DFG_OPAQUE_REF().m_spResizeWindow = pWindow;
 }
@@ -728,7 +725,7 @@ namespace
     }
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetails(const StringViewC& sv, const int nResultPrecision)
+void TableEditor::setSelectionDetails(const StringViewC& sv, const int nResultPrecision)
 {
     auto pDetailPanel = qobject_cast<CsvTableViewBasicSelectionAnalyzerPanel*>(m_spSelectionAnalyzerPanel.get());
     if (pDetailPanel)
@@ -780,7 +777,7 @@ namespace
     }
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetailsFromIni(const QString& s)
+void TableEditor::setSelectionDetailsFromIni(const QString& s)
 {
     // Ini-property is expected to have space-separated json objects
     if (!s.isEmpty())
@@ -791,7 +788,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::setSelectionDetailsFromIni(const QString&
     }
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
+void TableEditor::onNewSourceOpened()
 {
     if (!m_spTableModel)
         return;
@@ -869,7 +866,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onNewSourceOpened()
     setSelectionDetails(loadOptions.getProperty(CsvOptionProperty_selectionDetails, ""), loadOptions.getPropertyThroughStrTo<int>(CsvOptionProperty_selectionDetailsPrecision, -2));
 }
 
-void DFG_MODULE_NS(qt)::TableEditor::onSaveCompleted(const bool success, const double saveTimeInSeconds)
+void TableEditor::onSaveCompleted(const bool success, const double saveTimeInSeconds)
 {
     if (!m_spStatusBar)
         return;
@@ -879,7 +876,7 @@ void DFG_MODULE_NS(qt)::TableEditor::onSaveCompleted(const bool success, const d
         m_spStatusBar->showMessage(tr("Saving failed lasting %1 s").arg(saveTimeInSeconds, 0, 'g', 4));
 }
 
-void DFG_MODULE_NS(qt)::TableEditor::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& edited)
+void TableEditor::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& edited)
 {
     DFG_UNUSED(selected);
     DFG_UNUSED(deselected);
@@ -938,12 +935,12 @@ void DFG_MODULE_NS(qt)::TableEditor::onSelectionChanged(const QItemSelection& se
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onModifiedStatusChanged(const bool b)
+void TableEditor::onModifiedStatusChanged(const bool b)
 {
     setWindowModified(b);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnResizeStyle style)
+void TableEditor::resizeColumnsToView(ColumnResizeStyle style)
 {
     auto viewport = (m_spTableView) ? m_spTableView->viewport() : nullptr;
     if (!viewport || !m_spTableModel || m_spTableModel->getColumnCount() == 0)
@@ -960,7 +957,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::resizeColumnsToView(ColumnR
     }
 }
 
-void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool b)
+void TableEditor::setAllowApplicationSettingsUsage(const bool b)
 {
     setProperty(gPropertyIdAllowAppSettingsUsage, b);
 
@@ -985,7 +982,7 @@ void DFG_MODULE_NS(qt)::TableEditor::setAllowApplicationSettingsUsage(const bool
         m_spTableView->setAllowApplicationSettingsUsage(b);
 }
 
-bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::handleExitConfirmationAndReturnTrueIfCanExit()
+bool TableEditor::handleExitConfirmationAndReturnTrueIfCanExit()
 {
     auto pView = m_spTableView.get();
     auto model = (pView) ? pView->csvModel() : nullptr;
@@ -1023,7 +1020,7 @@ bool DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::handleExitConfirmationAndRe
     return true;
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* event)
+void TableEditor::closeEvent(QCloseEvent* event)
 {
     if (!event)
     {
@@ -1037,7 +1034,7 @@ void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::closeEvent(QCloseEvent* eve
         event->ignore();
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::handlePendingEdits()
+void TableEditor::handlePendingEdits()
 {
     if (!m_spTableView || !this->m_spTableModel)
         return;
@@ -1062,7 +1059,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::handlePendingEdits()
     }
 }
 
-void DFG_MODULE_NS(qt)::TableEditor::onCellEditorTextChanged()
+void TableEditor::onCellEditorTextChanged()
 {
     if (!m_spTableView)
         return;
@@ -1087,7 +1084,7 @@ void DFG_MODULE_NS(qt)::TableEditor::onCellEditorTextChanged()
     }
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::onHighlightTextChanged(const QString& text)
+void TableEditor::onHighlightTextChanged(const QString& text)
 {
     if (!m_spTableView || !m_spFindPanel || !m_spFindPanel->m_pColumnSelector)
         return;
@@ -1097,7 +1094,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onHighlightTextChanged(const QString& tex
     m_spTableView->onFindNext();
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::setFilterJson(const QString& sJson)
+void TableEditor::setFilterJson(const QString& sJson)
 {
     if (!m_spFilterPanel || !m_spFilterPanel->m_pTextEdit || !m_spFilterPanel->m_pMatchSyntaxCombobox)
         return;
@@ -1107,7 +1104,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::setFilterJson(const QString& sJson)
     m_spFilterPanel->m_pTextEdit->setText(sJson);
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::onFilterTextChanged(const QString& text)
+void TableEditor::onFilterTextChanged(const QString& text)
 {
     if (!m_spFilterPanel)
         return;
@@ -1159,9 +1156,8 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onFilterTextChanged(const QString& text)
 
 namespace
 {
-    static void setColumnSelectorToolTip(const ::DFG_MODULE_NS(qt)::CsvTableView& rView, QSpinBox* pSpinBox, const ::DFG_MODULE_NS(qt)::CsvItemModel* pModel, const int nIndexShiftedDataCol)
+    static void setColumnSelectorToolTip(const CsvTableView& rView, QSpinBox* pSpinBox, const CsvItemModel* pModel, const int nIndexShiftedDataCol)
     {
-        using namespace ::DFG_MODULE_NS(qt);
         if (!pSpinBox || !pModel)
             return;
         const auto nModelCol = pModel->visibleColumnIndexToInternal(nIndexShiftedDataCol);
@@ -1178,7 +1174,7 @@ namespace
     }
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::onFindColumnChanged(const int newCol)
+void TableEditor::onFindColumnChanged(const int newCol)
 {
     // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(newCol);
@@ -1190,7 +1186,7 @@ void ::DFG_MODULE_NS(qt)::TableEditor::onFindColumnChanged(const int newCol)
     onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
 }
 
-void ::DFG_MODULE_NS(qt)::TableEditor::onFilterColumnChanged(const int nNewCol)
+void TableEditor::onFilterColumnChanged(const int nNewCol)
 {
     // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(nNewCol);
@@ -1212,45 +1208,45 @@ namespace
     }
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFindRequested()
+void TableEditor::onFindRequested()
 {
     if (m_spFindPanel)
         activateFindTextEdit(m_spFindPanel->m_pTextEdit);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterRequested()
+void TableEditor::onFilterRequested()
 {
     if (m_spFilterPanel)
         activateFindTextEdit(m_spFilterPanel->m_pTextEdit);
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onHighlightTextCaseSensitivityChanged(const bool bCaseSensitive)
+void TableEditor::onHighlightTextCaseSensitivityChanged(const bool bCaseSensitive)
 {
     DFG_UNUSED(bCaseSensitive);
     if (m_spFindPanel)
         onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::onFilterCaseSensitivityChanged(const bool bCaseSensitive)
+void TableEditor::onFilterCaseSensitivityChanged(const bool bCaseSensitive)
 {
     DFG_UNUSED(bCaseSensitive);
     if (m_spFilterPanel)
         onFilterTextChanged(m_spFilterPanel->getPattern());
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::addToolBarSeparator()
+void TableEditor::addToolBarSeparator()
 {
     if (m_spToolBar)
         m_spToolBar->addSeparator();
 }
 
-void DFG_MODULE_NS(qt)::DFG_CLASS_NAME(TableEditor)::addToolBarWidget(QWidget* pWidget)
+void TableEditor::addToolBarWidget(QWidget* pWidget)
 {
     if (m_spToolBar)
         m_spToolBar->addWidget(pWidget);
 }
 
-int DFG_MODULE_NS(qt)::TableEditor::setGraphDisplay(QWidget* pGraphDisplay)
+int TableEditor::setGraphDisplay(QWidget* pGraphDisplay)
 {
     DFG_ASSERT_CORRECTNESS(m_spMainSplitter != nullptr);
     if (!pGraphDisplay || !m_spMainSplitter)
@@ -1262,9 +1258,14 @@ int DFG_MODULE_NS(qt)::TableEditor::setGraphDisplay(QWidget* pGraphDisplay)
     return setChartPanelWidth(m_spMainSplitter.get(), this->width(), getTableEditorProperty<TableEditorPropertyId_chartPanelWidth>(this));
 }
 
-void DFG_MODULE_NS(qt)::TableEditor::onViewReadOnlyModeChanged(const bool bReadOnly)
+void TableEditor::onViewReadOnlyModeChanged(const bool bReadOnly)
 {
     setCellEditorTitle(m_spCellEditorDockWidget.get(), QString(), bReadOnly);
     if (m_spCellEditor)
         m_spCellEditor->setReadOnly(bReadOnly);
 }
+
+} } // namespace dfg::qt
+/////////////////////////////////
+
+Q_DECLARE_METATYPE(::DFG_MODULE_NS(qt)::WindowExtentProperty); // Note: placing this in namespace generated a "class template specialization of 'QMetaTypeId' must occure at global scope"-message
