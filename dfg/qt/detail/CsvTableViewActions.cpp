@@ -7,6 +7,77 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
 
+////////////////////////////////////////////////////////////////////////////
+///
+/// SelectionForEachUndoCommand
+///
+////////////////////////////////////////////////////////////////////////////
+
+namespace DFG_DETAIL_NS
+{
+
+    auto SelectionForEachUndoCommand::VisitorParams::setIndex(const QModelIndex& index) -> SelectionForEachUndoCommand::VisitorParams&
+    {
+        m_modelIndex = index;
+        this->m_svData = dataModel().rawStringViewAt(index);
+        return *this;
+    }
+
+    SelectionForEachUndoCommand::SelectionForEachUndoCommand(QString sCommandTitleTemplate, CsvTableView* pView)
+        : m_spView(pView)
+    {
+        auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+        if (!pModel)
+            return;
+
+        auto& rView = *m_spView;
+        auto& rModel = *pModel;
+
+        size_t nCellCount = 0;
+        rView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+            {
+                m_cellMemoryUndo.setElement(index.row(), index.column(), rModel.rawStringPtrAt(index));
+                ++nCellCount;
+                m_initialSelection.push_back(index);
+            });
+
+        setText(sCommandTitleTemplate.arg(nCellCount));
+    }
+
+    void SelectionForEachUndoCommand::undo()
+    {
+        auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
+        if (pModel)
+            restoreCells(m_cellMemoryUndo, *pModel);
+    }
+
+    void SelectionForEachUndoCommand::redo()
+    {
+        auto spGenerator = this->createGenerator();
+        if (!spGenerator)
+            return;
+        privDirectRedoImpl(this->m_spView, &this->m_initialSelection, [&](VisitorParams& params)
+            {
+                for (const auto& index : qAsConst(this->m_initialSelection))
+                    spGenerator->handleCell(params.setIndex(index));
+                spGenerator->onForEachLoopDone(params.setIndex(QModelIndex()));
+            });
+    }
+
+    void SelectionForEachUndoCommand::privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelectList, std::function<void(VisitorParams&)> looper)
+    {
+        auto pModel = (pView) ? pView->csvModel() : nullptr;
+        if (!pModel)
+            return;
+        VisitorParams params = { QModelIndex(), *pModel, *pView };
+        looper(params);
+        if (pView && pSelectList)
+            pView->setSelectedIndexed(*pSelectList, [&](const QModelIndex& index) { return pView->mapToViewModel(index); }); // Selecting the items that were edited by redo.
+    }
+
+} // namespace DFG_DETAIL_NS
+
+
 CsvTableViewActionFill::CsvTableViewActionFill(CsvTableView* pView, const QString& sFill, const QString& sOperationUiName)
     : m_spView(pView)
     , m_sFill(qStringToStringUtf8(sFill))
@@ -80,6 +151,86 @@ void CsvTableViewActionFill::redo()
             QTimer::singleShot(0, m_spView.data(), &CsvTableView::undo);
         }
     }
+}
+
+////////////////////////////////////////////////////////////////////////////
+///
+/// CsvTableViewActionEvaluateSelectionAsFormula
+///
+////////////////////////////////////////////////////////////////////////////
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor)
+{
+    ::DFG_MODULE_NS(math)::FormulaParser parser;
+    char szBuffer[32] = "";
+    size_t m_nFailureCount = 0;
+    QString m_sFailureMsgs;
+};
+
+void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::handleCell(VisitorParams& params)
+{
+    auto sv = params.stringView().asUntypedView();
+    if (sv.empty())
+        return; // Skipping empty strings.
+    if (!sv.empty() && sv.front() == '=')
+        sv.pop_front(); // Skipping leading = if present
+
+    auto& parser = DFG_OPAQUE_REF().parser;
+    ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus evalStatus;
+
+    const auto index = params.index();
+    const auto val = (parser.setFormula(sv)) ? parser.evaluateFormulaAsDouble(&evalStatus) : std::numeric_limits<double>::quiet_NaN();
+    if (evalStatus)
+    {
+        auto& rModel = params.dataModel();
+        auto& szBuffer = DFG_OPAQUE_REF().szBuffer;
+        rModel.setDataNoUndo(index, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(val, szBuffer)));
+    }
+    else
+    {
+        auto& nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
+        const size_t nMaxFailureMessageCount = maxFailureMessageCount();
+        ++nFailureCount;
+        if (nFailureCount <= nMaxFailureMessageCount)
+        {
+            auto& rView = params.view();
+            auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
+            if (nFailureCount == 1)
+                sFailureMsgs += rView.tr("Failed evaluations:");
+            sFailureMsgs.push_back(rView.tr("\ncell(%1, %2): '%3'")
+                .arg(CsvItemModel::internalRowIndexToVisible(index.row()))
+                .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
+                .arg(untypedViewToQStringAsUtf8(evalStatus.errorString())));
+        }
+    }
+}
+
+void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::onForEachLoopDone(VisitorParams& params)
+{
+    // If generator encountered errors, showing a status info widget
+    auto& rView = params.view();
+    const auto nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
+    const auto nMaxFailureMessageCount = maxFailureMessageCount();
+    auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
+    if (nFailureCount > nMaxFailureMessageCount)
+        sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
+    if (!sFailureMsgs.isEmpty())
+        rView.showStatusInfoTip(sFailureMsgs);
+}
+
+CsvTableViewActionEvaluateSelectionAsFormula::CsvTableViewActionEvaluateSelectionAsFormula(CsvTableView* pView)
+    : BaseClass((pView) ? pView->tr("Evaluate %1 cell(s) as formula") : QString("bug"), pView)
+{
+}
+
+auto CsvTableViewActionEvaluateSelectionAsFormula::createGeneratorStatic() -> std::unique_ptr<FormulaVisitor>
+{
+    return std::unique_ptr<FormulaVisitor>(new FormulaVisitor);
+}
+
+auto CsvTableViewActionEvaluateSelectionAsFormula::createGenerator() -> std::unique_ptr<Visitor>
+{
+    return createGeneratorStatic();
 }
 
 ////////////////////////////////////////////////////////////////////////////

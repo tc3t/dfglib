@@ -23,6 +23,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
     namespace DFG_DETAIL_NS
     {
+        using CellMemory = CsvItemModel::RawDataTable;
+
         inline void removeNewlineCharsFromEnd(QString& s)
         {
             if (s.endsWith("\r\n"))
@@ -31,7 +33,81 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 s.chop(1);
         }
 
-    };
+        // Base class for undo commands that edit selection cell-by-cell.
+        // With this base class actual command doesn't need to implement undo/redo functionality.
+        class SelectionForEachUndoCommand : public UndoCommand
+        {
+        public:
+            class VisitorParams
+            {
+            public:
+                QModelIndex index() const   { return m_modelIndex; }
+                CsvItemModel& dataModel()   { return m_rDataModel; }
+                CsvTableView& view()        { return m_rView;      }
+                StringViewUtf8 stringView() { return m_svData; }
+
+                VisitorParams& setIndex(const QModelIndex& index);
+
+                QModelIndex m_modelIndex;
+                CsvItemModel& m_rDataModel;
+                CsvTableView& m_rView;
+                StringViewUtf8 m_svData;
+            };
+
+            // Abstract visitor class that implements the actual cell visit behaviour
+            class Visitor
+            {
+            public:
+                virtual ~Visitor() = default;
+
+                // Called for each visited cell
+                virtual void handleCell(VisitorParams& params) = 0;
+
+                // Called when all cells have been visited.
+                virtual void onForEachLoopDone(VisitorParams&) {}
+
+                // Returns the maximum number of failure messages to store when cell handling fails.
+                // This may logically be dependent on the actual visitor, but using static value 10
+                // until need arise to make it customisable.
+                size_t maxFailureMessageCount() const { return 10; }
+            };
+
+            // Constructor.
+            //      -sCommandTitleTemplate is used as a format template that gets one argument: number of selected cells
+            SelectionForEachUndoCommand(QString sCommandTitleTemplate, CsvTableView* pView);
+
+            void undo();
+            void redo();
+
+            // Optimization for undoless action which doesn't need to store old cells to undo buffer.
+            template <class Impl_T>
+            static void privDirectRedo(CsvTableView* pView)
+            {
+                auto spGenerator = Impl_T::createGeneratorStatic();
+                if (!spGenerator)
+                    return;
+                privDirectRedoImpl(pView, nullptr, [&](VisitorParams& params)
+                    {
+                        pView->forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+                            {
+                                spGenerator->handleCell(params.setIndex(index));
+                            });
+                        spGenerator->onForEachLoopDone(params.setIndex(QModelIndex()));
+                    });
+            }
+
+            static void privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelectList, std::function<void(VisitorParams&)> looper);
+
+        private:
+            virtual std::unique_ptr<Visitor> createGenerator() = 0;
+
+        private:
+            QPointer<CsvTableView> m_spView;
+            QModelIndexList m_initialSelection; // Stores CsvModel indexes to which operation is to be done.
+            CellMemory m_cellMemoryUndo;        // Stores cell content before the operation.
+        }; // SelectionForEachUndoCommand
+
+    } // namespace DFG_DETAIL_NS
 
     typedef DFG_SUB_NS_NAME(undoCommands)::TableViewUndoCommandInsertRow CsvTableViewActionInsertRow;
 
@@ -62,8 +138,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     namespace DFG_DETAIL_NS
     {
-        using CellMemory = CsvItemModel::RawDataTable;
-
         static void storeCells(CellMemory& cellMemory, CsvTableView& rView)
         {
             auto pModel = rView.csvModel();
@@ -228,7 +302,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_DETAIL_NS::CellMemory m_cellMemory; // Used in cell mode to store cell texts.
         int m_nFirstItemRow = -1;
         bool m_bRowMode;
-    };
+    }; // class CsvTableViewActionDelete
 
     // Represents a fill operation: setting constant content to N cells which is considered as one undo/redo-step
     class CsvTableViewActionFill : public UndoCommand
@@ -624,112 +698,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<QString> m_vecFirstRowStrings;
     };
 
-    class CsvTableViewActionEvaluateSelectionAsFormula : public UndoCommand
+    class CsvTableViewActionEvaluateSelectionAsFormula : public DFG_DETAIL_NS::SelectionForEachUndoCommand
     {
     public:
-        CsvTableViewActionEvaluateSelectionAsFormula(CsvTableView* pView)
-            : m_spView(pView)
+        using BaseClass = DFG_DETAIL_NS::SelectionForEachUndoCommand;
+
+        CsvTableViewActionEvaluateSelectionAsFormula(CsvTableView* pView);
+
+        class FormulaVisitor : public Visitor
         {
-            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
-            if (!pModel)
-                return;
+        public:
+            void handleCell(VisitorParams& params) override;
+            void onForEachLoopDone(VisitorParams& params) override;
 
-            auto& rView = *m_spView;
-            auto& rModel = *pModel;
+            DFG_OPAQUE_PTR_DECLARE();
+        };
 
-            size_t nCellCount = 0;
-            rView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
-            {
-                m_cellMemoryUndo.setElement(index.row(), index.column(), rModel.rawStringPtrAt(index));
-                ++nCellCount;
-                m_initialSelection.push_back(index);
-            });
-
-            setText(rView.tr("Evaluate %1 cell(s) as formula").arg(nCellCount));
-        }
-
-        void undo()
-        {
-            auto pModel = (m_spView) ? m_spView->csvModel() : nullptr;
-            if (pModel)
-                DFG_DETAIL_NS::restoreCells(m_cellMemoryUndo, *pModel);
-        }
-
-        void redo()
-        {
-            privDirectRedoImpl(this->m_spView, &this->m_initialSelection, [&](std::function<void(const QModelIndex&)> indexHandler)
-            {
-                if (!indexHandler)
-                    return;
-                for (const auto& index : qAsConst(this->m_initialSelection))
-                    indexHandler(index);
-            });
-        }
-
-        // Optimization for undoless action.
-        template <class Impl_T>
-        static void privDirectRedo(CsvTableView* pView)
-        {
-            privDirectRedoImpl(pView, nullptr, [&](std::function<void(const QModelIndex&)> indexHandler)
-            {
-                pView->forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
-                {
-                    indexHandler(index);
-                });
-            });
-        }
-
-        static void privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelectList, std::function<void (std::function<void (const QModelIndex&)>)> looper)
-        {
-            auto pModel = (pView) ? pView->csvModel() : nullptr;
-            if (!pModel)
-                return;
-            auto& rView = *pView;
-            auto& rModel = *pModel;
-            ::DFG_MODULE_NS(math)::FormulaParser parser;
-            char szBuffer[32] = "";
-            QString sFailureMsgs;
-            size_t nFailureCount = 0;
-            const size_t nMaxFailureMessageCount = 10;
-            looper([&](const QModelIndex &index)
-            {
-                auto sv = rModel.rawStringViewAt(index).asUntypedView();
-                if (sv.empty())
-                    return; // Skipping empty strings.
-                if (!sv.empty() && sv.front() == '=')
-                    sv.pop_front(); // Skipping leading = if present
-                ::DFG_MODULE_NS(math)::FormulaParser::ReturnStatus evalStatus;
-
-                const auto val = (parser.setFormula(sv)) ? parser.evaluateFormulaAsDouble(&evalStatus) : std::numeric_limits<double>::quiet_NaN();
-                if (evalStatus)
-                    rModel.setDataNoUndo(index, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(val, szBuffer)));
-                else
-                {
-                    ++nFailureCount;
-                    if (nFailureCount <= nMaxFailureMessageCount)
-                    {
-                        if (nFailureCount == 1)
-                            sFailureMsgs += rView.tr("Failed evaluations:");
-                        sFailureMsgs.push_back(rView.tr("\ncell(%1, %2): '%3'")
-                            .arg(CsvItemModel::internalRowIndexToVisible(index.row()))
-                            .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
-                            .arg(untypedViewToQStringAsUtf8(evalStatus.errorString())));
-                    }
-
-                }
-            });
-            if (nFailureCount > nMaxFailureMessageCount)
-                sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
-            if (!sFailureMsgs.isEmpty())
-                rView.showStatusInfoTip(sFailureMsgs);
-            if (pSelectList)
-                rView.setSelectedIndexed(*pSelectList, [&](const QModelIndex& index) { return rView.mapToViewModel(index); }); // Selecting the items that were edited by redo.
-        }
-
-    private:
-        QPointer<CsvTableView> m_spView;
-        QModelIndexList m_initialSelection; // Stores CsvModel indexes to which operation is to be done.
-        DFG_DETAIL_NS::CellMemory m_cellMemoryUndo; // Stores cell content before the operation.
+        static std::unique_ptr<FormulaVisitor> createGeneratorStatic();
+        std::unique_ptr<Visitor> createGenerator() override;
     }; // class CsvTableViewActionEvaluateSelectionAsFormula
 
     class CsvTableViewActionResizeTable : public UndoCommand
