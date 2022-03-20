@@ -80,10 +80,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             void redo();
 
             // Optimization for undoless action which doesn't need to store old cells to undo buffer.
-            template <class Impl_T>
-            static void privDirectRedo(CsvTableView* pView)
+            template <class Impl_T, class ... Args_T>
+            static void privDirectRedo(CsvTableView* pView, Args_T&& ... args)
             {
-                auto spGenerator = Impl_T::createGeneratorStatic();
+                auto spGenerator = Impl_T::createVisitorStatic(args...);
                 if (!spGenerator)
                     return;
                 privDirectRedoImpl(pView, nullptr, [&](VisitorParams& params)
@@ -99,7 +99,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             static void privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelectList, std::function<void(VisitorParams&)> looper);
 
         private:
-            virtual std::unique_ptr<Visitor> createGenerator() = 0;
+            virtual std::unique_ptr<Visitor> createVisitor() = 0;
 
         private:
             QPointer<CsvTableView> m_spView;
@@ -714,8 +714,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             DFG_OPAQUE_PTR_DECLARE();
         };
 
-        static std::unique_ptr<FormulaVisitor> createGeneratorStatic();
-        std::unique_ptr<Visitor> createGenerator() override;
+        static std::unique_ptr<FormulaVisitor> createVisitorStatic();
+        std::unique_ptr<Visitor> createVisitor() override;
     }; // class CsvTableViewActionEvaluateSelectionAsFormula
 
     class CsvTableViewActionResizeTable : public UndoCommand
@@ -739,4 +739,38 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewActionResizeTable
+
+    class CsvTableViewActionChangeRadix : public DFG_DETAIL_NS::SelectionForEachUndoCommand
+    {
+    public:
+        using BaseClass = DFG_DETAIL_NS::SelectionForEachUndoCommand;
+
+        class Params
+        {
+        public:
+            bool isValid() const;
+
+            int fromRadix = 10;
+            int toRadix = 0;
+        };
+
+        CsvTableViewActionChangeRadix(CsvTableView* pView, Params params);
+
+        class RadixChangeVisitor : public Visitor
+        {
+        public:
+            RadixChangeVisitor(Params params);
+            void handleCell(VisitorParams& params) override;
+            void onForEachLoopDone(VisitorParams& params) override;
+
+            DFG_OPAQUE_PTR_DECLARE();
+        };
+
+        static std::unique_ptr<RadixChangeVisitor> createVisitorStatic(Params params);
+
+        std::unique_ptr<Visitor> createVisitor() override;
+
+    private:
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // class CsvTableViewActionChangeRadix
 }}

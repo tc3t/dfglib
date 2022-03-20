@@ -53,7 +53,7 @@ namespace DFG_DETAIL_NS
 
     void SelectionForEachUndoCommand::redo()
     {
-        auto spGenerator = this->createGenerator();
+        auto spGenerator = this->createVisitor();
         if (!spGenerator)
             return;
         privDirectRedoImpl(this->m_spView, &this->m_initialSelection, [&](VisitorParams& params)
@@ -223,14 +223,14 @@ CsvTableViewActionEvaluateSelectionAsFormula::CsvTableViewActionEvaluateSelectio
 {
 }
 
-auto CsvTableViewActionEvaluateSelectionAsFormula::createGeneratorStatic() -> std::unique_ptr<FormulaVisitor>
+auto CsvTableViewActionEvaluateSelectionAsFormula::createVisitorStatic() -> std::unique_ptr<FormulaVisitor>
 {
     return std::unique_ptr<FormulaVisitor>(new FormulaVisitor);
 }
 
-auto CsvTableViewActionEvaluateSelectionAsFormula::createGenerator() -> std::unique_ptr<Visitor>
+auto CsvTableViewActionEvaluateSelectionAsFormula::createVisitor() -> std::unique_ptr<Visitor>
 {
-    return createGeneratorStatic();
+    return createVisitorStatic();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -331,6 +331,108 @@ void CsvTableViewActionResizeTable::undo()
 void CsvTableViewActionResizeTable::redo()
 {
     impl(m_nNewRowCount, m_nNewColCount);
+}
+
+////////////////////////////////////////////////////////////////////////////
+///
+/// CsvTableViewActionChangeRadix
+///
+////////////////////////////////////////////////////////////////////////////
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionChangeRadix)
+{
+    Params m_params;
+};
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionChangeRadix::RadixChangeVisitor)
+{
+    char szBuffer[96] = "";
+    size_t m_nFailureCount = 0;
+    QString m_sFailureMsgs;
+    Params m_radixParams;
+};
+
+CsvTableViewActionChangeRadix::RadixChangeVisitor::RadixChangeVisitor(Params params)
+{
+    DFG_OPAQUE_REF().m_radixParams = params;
+}
+
+void CsvTableViewActionChangeRadix::RadixChangeVisitor::handleCell(VisitorParams& params)
+{
+    auto sv = params.stringView().asUntypedView();
+    if (sv.empty())
+        return; // Skipping empty strings.
+
+    using namespace ::DFG_MODULE_NS(str);
+    const auto nFromRadix = DFG_OPAQUE_REF().m_radixParams.fromRadix;
+    bool bOk;
+#if DFG_STRTO_RADIX_SUPPORT == 1
+    const auto nSrcVal = strTo<int64>(sv, { NumberRadix(nFromRadix), &bOk });
+#else
+    const auto nSrcVal = untypedViewToQStringAsUtf8(sv).toLongLong(&bOk, nFromRadix);
+#endif
+    auto& szBuffer = DFG_OPAQUE_REF().szBuffer;
+    if (bOk)
+    {
+        const auto nToRadix = DFG_OPAQUE_REF().m_radixParams.toRadix;
+        toStr(nSrcVal, szBuffer, nToRadix);
+    }
+    else
+        szBuffer[0] = '\0'; // Clearing output if conversion failed.
+    auto& rModel = params.dataModel();
+    const auto index = params.index();
+    rModel.setDataNoUndo(index, SzPtrUtf8(szBuffer));
+    if (!bOk)
+    {
+        auto& nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
+        ++nFailureCount;
+        const size_t nMaxFailureMessageCount = maxFailureMessageCount();
+        if (nFailureCount <= nMaxFailureMessageCount)
+        {
+            auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
+            auto& rView = params.view();
+            if (nFailureCount == 1)
+                sFailureMsgs += rView.tr("Failed conversions:");
+            sFailureMsgs.push_back(rView.tr("\ncell(%1, %2): %3")
+                .arg(CsvItemModel::internalRowIndexToVisible(index.row()))
+                .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
+                .arg((sv.size() <= 16) ? untypedViewToQStringAsUtf8(sv) : QString("%1...").arg(untypedViewToQStringAsUtf8(sv.substr_startCount(0, 16)))));
+        }
+    }
+}
+
+void CsvTableViewActionChangeRadix::RadixChangeVisitor::onForEachLoopDone(VisitorParams& params)
+{
+    auto& rView = params.view();
+    const auto nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
+    const auto nMaxFailureMessageCount = maxFailureMessageCount();
+    auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
+    if (nFailureCount > nMaxFailureMessageCount)
+        sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
+    if (!sFailureMsgs.isEmpty())
+        rView.showStatusInfoTip(sFailureMsgs);
+}
+
+CsvTableViewActionChangeRadix::CsvTableViewActionChangeRadix(CsvTableView* pView, Params params)
+    : BaseClass((pView) ? pView->tr("Change radix for %1 cell(s)") : QString("bug"), pView)
+{
+    DFG_OPAQUE_REF().m_params = params;
+}
+
+auto CsvTableViewActionChangeRadix::createVisitorStatic(Params params) -> std::unique_ptr<RadixChangeVisitor>
+{
+    return (params.isValid()) ? std::unique_ptr<RadixChangeVisitor>(new RadixChangeVisitor(params)) : nullptr;
+}
+
+auto CsvTableViewActionChangeRadix::createVisitor() -> std::unique_ptr<Visitor>
+{
+    return createVisitorStatic(DFG_OPAQUE_REF().m_params);
+}
+
+bool CsvTableViewActionChangeRadix::Params::isValid() const
+{
+    const auto isValidRadix = [](const int n) { return n >= 2 && n <= 36; };
+    return isValidRadix(this->fromRadix) && isValidRadix(this->toRadix);
 }
 
 }} // namespace dfg::qt

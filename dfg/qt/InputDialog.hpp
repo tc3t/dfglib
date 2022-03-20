@@ -11,6 +11,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QDialog>
     #include <QDialogButtonBox>
     #include <QInputDialog>
+    #include <QJsonDocument>
     #include <QLabel>
     #include <QListView>
     #include <QStringListModel>
@@ -89,6 +90,57 @@ public:
         }
         return rv;
     }
+
+    static QString getJsonAsText(
+        QWidget* pParent,
+        const QString& sTitle,
+        const QString& sLabel,
+        const QVariantMap& initialItems,
+        bool* pOk = nullptr);
+
+    static QVariantMap getJsonAsVariantMap(
+        QWidget* pParent,
+        const QString& sTitle,
+        const QString& sLabel,
+        const QVariantMap& initialItems,
+        bool* pOk = nullptr);
+
 }; // class InputDialog
+
+
+QString InputDialog::getJsonAsText(
+    QWidget* pParent,
+    const QString& sTitle,
+    const QString& sLabel,
+    const QVariantMap& initialItems,
+    bool* pOk)
+{
+    if (pOk)
+        *pOk = false;
+    auto jsonDoc = QString::fromUtf8(QJsonDocument::fromVariant(initialItems).toJson());
+    if (jsonDoc.isNull())
+        return QString();
+    bool bOk;
+    const auto sJson = InputDialog::getMultiLineText(pParent, sTitle, sLabel, jsonDoc, &bOk);
+    if (pOk)
+        *pOk = bOk;
+    return sJson;
+}
+
+QVariantMap InputDialog::getJsonAsVariantMap(
+    QWidget* pParent,
+    const QString& sTitle,
+    const QString& sLabel,
+    const QVariantMap& initialItems,
+    bool* pOk)
+{
+    bool bOk;
+    bool* pEffectiveOk = (pOk) ? pOk : &bOk;
+    const auto sJson = getJsonAsText(pParent, sTitle, sLabel, initialItems, pEffectiveOk);
+    if (*pEffectiveOk)
+        return QJsonDocument::fromJson(sJson.toUtf8()).toVariant().toMap();
+    else
+        return QVariantMap();
+}
 
 }} // namespace dfg::qt
