@@ -1044,11 +1044,19 @@ namespace
     void StringViewCutTailTests(Ptr_T psz)
     {
         StringView_T sv(psz);
-        ASSERT_EQ(3, sv.length());
-        DFG_MODULE_NS(cont)::cutTail(sv, sv.end() - ptrdiff_t(2));
-        EXPECT_EQ(1, sv.length());
+        StringView_T sv2(psz);
+        DFGTEST_ASSERT_EQ(3, sv.length());
+        const auto nCutCount = 2;
+        DFG_MODULE_NS(cont)::cutTail(sv, sv.end() - ptrdiff_t(nCutCount));
+        sv2.cutTail_byCutCount(nCutCount);
+        DFGTEST_EXPECT_LEFT(1, sv.length());
+        DFGTEST_EXPECT_LEFT(1, sv2.length());
         typedef decltype(sv[0]) CodePointType;
-        EXPECT_EQ(CodePointType('a'), sv[0]);
+        DFGTEST_EXPECT_LEFT(CodePointType('a'), sv[0]);
+        DFGTEST_EXPECT_LEFT(CodePointType('a'), sv2[0]);
+        // Testing that cutting with count greater than size behaves.
+        sv2.cutTail_byCutCount(10);
+        DFGTEST_EXPECT_TRUE(sv2.empty());
     }
 }
 
@@ -1081,24 +1089,27 @@ TEST(dfgCont, contAlg)
     DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_pop_front<std::list<int>>::value == true);
 
     DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<std::vector<int>>::value == false);
-    DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)>::value == true);
+    DFGTEST_STATIC(DFG_MODULE_NS(cont)::DFG_DETAIL_NS::cont_contAlg_hpp::Has_cutTail<DFG_ROOT_NS::StringViewC>::value == true);
 
     contAlgImpl<std::deque<int>>();
     contAlgImpl<std::list<int>>();
     contAlgImpl<std::string>();
     contAlgImpl<std::vector<int>>();
 
-    // Test cutTail for StringViewC
+    // Testing cutTail for trivially indexable StringViews
     {
-        StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)>("abc");
-        StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewAscii)>(DFG_ROOT_NS::SzPtrAscii("abc"));
-        StringViewCutTailTests<DFG_ROOT_NS::DFG_CLASS_NAME(StringViewLatin1)>(DFG_ROOT_NS::SzPtrLatin1("abc"));
+        using namespace ::DFG_ROOT_NS;
+        StringViewCutTailTests<StringViewC>("abc");
+        StringViewCutTailTests<StringViewAscii>(SzPtrAscii("abc"));
+        StringViewCutTailTests<StringViewLatin1>(SzPtrLatin1("abc"));
+        StringViewCutTailTests<StringView16>(u"abc");
+        StringViewCutTailTests<StringView32>(U"abc");
     }
 
     // tryReserve()
     {
         tryReserveTests<std::vector<int>>();
-        tryReserveTests<DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<int>>();
+        tryReserveTests<DFG_MODULE_NS(cont)::Vector<int>>();
     }
 }
 

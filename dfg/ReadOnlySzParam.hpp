@@ -332,7 +332,12 @@ namespace DFG_DETAIL_NS
         #else
             const auto nCount = (this->m_pFirst + ptrdiff_t(this->m_nSize)) - iter;
         #endif
-            this->m_nSize -= nCount;
+            cutTail_byCutCount(nCount);
+        }
+
+        void cutTail_byCutCount(const size_t nCount)
+        {
+            this->m_nSize -= Min(nCount, this->m_nSize);
         }
     }; // StringViewIndexAccessBase
 
