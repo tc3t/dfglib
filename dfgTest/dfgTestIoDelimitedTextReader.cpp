@@ -400,9 +400,11 @@ TEST(DfgIo, DelimitedTextReader_readRow)
     for(size_t i = 0; i<count(arrCellExpected); ++i)
     {
         const auto& expected = arrCellExpected[i];
-        ::DFG_MODULE_NS(io)::BasicImStream strm(std::get<0>(expected).c_str(), std::get<0>(expected).size());
-        ::DFG_MODULE_NS(io)::BasicImStream strm2(std::get<0>(expected).c_str(), std::get<0>(expected).size());
-        ::DFG_MODULE_NS(io)::BasicImStream strm3(std::get<0>(expected).c_str(), std::get<0>(expected).size());
+        const auto& sInput = std::get<0>(expected);
+        const auto& exceptedCells = std::get<1>(expected);
+        ::DFG_MODULE_NS(io)::BasicImStream strm(sInput);
+        ::DFG_MODULE_NS(io)::BasicImStream strm2(sInput);
+        ::DFG_MODULE_NS(io)::BasicImStream strm3(sInput.c_str(), sInput.size());
 
         DelimitedTextReader::CellData<char> cellDataHandler(',', '"', '\n');
         auto reader = DelimitedTextReader::createReader(strm, cellDataHandler);
@@ -416,13 +418,18 @@ TEST(DfgIo, DelimitedTextReader_readRow)
         auto cellHandler2 = [&](const size_t nCol, const decltype(cellDataHandler)& cdh) { cellHandler(nCol, cdh.getBuffer().data(), cdh.getBuffer().size()); };
 
         DelimitedTextReader::readRow(reader, cellHandler2);
-        EXPECT_EQ(std::get<1>(expected), vecStrings);
+        EXPECT_EQ(exceptedCells, vecStrings);
         vecStrings.clear();
         DelimitedTextReader::readRow<char>(strm2, ',', '"', '\n', cellHandler);
-        EXPECT_EQ(std::get<1>(expected), vecStrings);
+        EXPECT_EQ(exceptedCells, vecStrings);
         vecStrings.clear();
         DelimitedTextReader::readRow<char>(strm3, CsvFormatDefinition(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingNone), cellHandler);
-        EXPECT_EQ(std::get<1>(expected), vecStrings);
+        EXPECT_EQ(exceptedCells, vecStrings);
+
+        // Testing that readRow() accepts rvalue stream
+        vecStrings.clear();
+        DelimitedTextReader::readRow<char>(::DFG_MODULE_NS(io)::BasicImStream(std::get<0>(expected)), ',', '"', '\n', cellHandler);
+        EXPECT_EQ(exceptedCells, vecStrings);
     }
 
     // Test 'skip rest of row'-behaviour

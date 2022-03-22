@@ -1360,7 +1360,7 @@ public:
     // For example: func(const size_t nCol, const char* const p, const size_t nSize) 
     // TODO: test
     template <class Char_T, class Stream_T, class ItemHandlerFunc>
-    static void readRow(Stream_T& istrm,
+    static void readRow(Stream_T&& istrm,
                         const int cSeparator,
                         const int cEnclosing,
                         const int cEndOfLine,
