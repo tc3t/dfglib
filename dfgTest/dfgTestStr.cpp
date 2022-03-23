@@ -1204,6 +1204,12 @@ namespace
         EXPECT_EQ(conv(szBufAbc), sv.substr_start(0));
         EXPECT_EQ(conv(szBufBc), sv.substr_start(1));
         EXPECT_EQ(conv(szBufEmpty), sv.substr_start(5));
+
+        DFGTEST_EXPECT_EQ(conv(szBufEmpty), sv.substr_tailByCount(0));
+        DFGTEST_EXPECT_EQ(conv(szBufC), sv.substr_tailByCount(1));
+        DFGTEST_EXPECT_EQ(conv(szBufBc), sv.substr_tailByCount(2));
+        DFGTEST_EXPECT_EQ(conv(szBufAbc), sv.substr_tailByCount(3));
+        DFGTEST_EXPECT_EQ(conv(szBufAbc), sv.substr_tailByCount(1000));
     }
 
     template <class StringView_T, class RawToTypedConv_T>

@@ -367,6 +367,12 @@ namespace DFG_DETAIL_NS
         return View_T(iterSubStart, iterSubStart + nCount);
     }
 
+    template <class View_T>
+    View_T substr_tailByCount(const View_T& sv, const size_t nTailLength)
+    {
+        return sv.substr_start(sv.size() - Min(sv.size(), nTailLength));
+    }
+
 } // namespace DFG_DETAIL_NS
 
 // Note: Unlike ReadOnlySzParam, the string view stored here can't guarantee access to null terminated string.
@@ -492,6 +498,12 @@ public:
     StringView substr_start(const size_t nStart) const
     {
         return substr_startCount(nStart, (std::numeric_limits<size_t>::max)());
+    }
+
+    // Returns tail of length nTailLength or size() if nTailLength >= size()
+    StringView substr_tailByCount(const size_t nTailLength) const
+    {
+        return DFG_DETAIL_NS::substr_tailByCount(*this, nTailLength);
     }
 
     const_iterator end() const
@@ -636,6 +648,12 @@ public:
     {
         auto sv = substr_startCount(nStart, (std::numeric_limits<size_t>::max)());
         return StringViewSz(SzPtrT(sv.beginRaw()));
+    }
+
+    // Returns tail of length nTailLength or size() if nTailLength >= size()
+    StringViewSz substr_tailByCount(const size_t nTailLength) const
+    {
+        return DFG_DETAIL_NS::substr_tailByCount(*this, nTailLength);
     }
 
     // Returns view as untyped.
