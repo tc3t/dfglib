@@ -1920,6 +1920,57 @@ TEST(dfgStr, beginsWith_StringViews)
     //EXPECT_TRUE(beginsWith(SvC("ab"), SvSzC("a")));   
 }
 
+namespace
+{
+    template <class StringView_T, class Conv_T>
+    void endsWith_StringViews_impl(Conv_T conv)
+    {
+        using namespace ::DFG_MODULE_NS(str);
+        using Sv = StringView_T;
+        using CharT = typename Sv::CharT;
+        using StringT = typename Sv::StringT;
+#define DFG_TEMP_S(STR) Sv(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, STR)))
+        // Testing that compiles with literal arguments
+        DFGTEST_EXPECT_TRUE(endsWith(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "ab")), conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "b"))));
+        // Testing that compiles with untyped StringT
+        DFGTEST_EXPECT_TRUE(endsWith(StringT(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "ab"))), StringT(conv(DFG_STRING_LITERAL_BY_CHARTYPE(CharT, "b")))));
+
+        DFGTEST_EXPECT_TRUE(endsWith(DFG_TEMP_S("ab"), DFG_TEMP_S("b")));
+        DFGTEST_EXPECT_TRUE(endsWith(DFG_TEMP_S("ab"), DFG_TEMP_S("")));
+
+        DFGTEST_EXPECT_FALSE(endsWith(DFG_TEMP_S("a"), DFG_TEMP_S("b")));
+        DFGTEST_EXPECT_FALSE(endsWith(DFG_TEMP_S(""), DFG_TEMP_S("a")));
+        DFGTEST_EXPECT_FALSE(endsWith(DFG_TEMP_S("a"), DFG_TEMP_S("ab")));
+#undef DFG_TEMP_S
+    }
+} // unnamed namespace
+
+TEST(dfgStr, endsWith)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(str);
+
+    // Testing that returns true for empty needles
+    DFGTEST_EXPECT_TRUE(endsWith("abc", ""));
+    DFGTEST_EXPECT_TRUE(endsWith("", ""));
+
+    endsWith_StringViews_impl<StringViewC>     ([](const char* psz)     { return psz; });
+    endsWith_StringViews_impl<StringViewAscii> ([](const char* psz)     { return SzPtrAscii(psz); });
+    endsWith_StringViews_impl<StringViewLatin1>([](const char* psz)     { return SzPtrLatin1(psz); });
+    endsWith_StringViews_impl<StringViewUtf8>  ([](const char* psz)     { return SzPtrUtf8(psz); });
+    endsWith_StringViews_impl<StringViewUtf16> ([](const char16_t* psz) { return SzPtrUtf16(psz); });
+    endsWith_StringViews_impl<StringView16>    ([](const char16_t* psz) { return psz; });
+    endsWith_StringViews_impl<StringView32>    ([](const char32_t* psz) { return psz; });
+    
+    endsWith_StringViews_impl<StringViewSzC>     ([](const char* psz)     { return psz; });
+    endsWith_StringViews_impl<StringViewSzAscii> ([](const char* psz)     { return SzPtrAscii(psz); });
+    endsWith_StringViews_impl<StringViewSzLatin1>([](const char* psz)     { return SzPtrLatin1(psz); });
+    endsWith_StringViews_impl<StringViewSzUtf8>  ([](const char* psz)     { return SzPtrUtf8(psz); });
+    endsWith_StringViews_impl<StringViewSzUtf16> ([](const char16_t* psz) { return SzPtrUtf16(psz); });
+    endsWith_StringViews_impl<StringViewSz16>    ([](const char16_t* psz) { return psz; });
+    endsWith_StringViews_impl<StringViewSz32>    ([](const char32_t* psz) { return psz; });
+}
+
 TEST(dfgStr, format_fmt)
 {
     using namespace DFG_ROOT_NS;

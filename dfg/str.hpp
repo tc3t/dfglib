@@ -602,6 +602,33 @@ bool beginsWith(const StringView<Char_T, Str_T>& sSearchFrom, const StringView<C
     return nFromSize >= nForSize && std::equal(iterForRaw, iterEndForRaw, iterFromRaw);
 }
 
+namespace DFG_DETAIL_NS
+{
+    // Returns true iff first view (haystack) ends with second (needle). If needle is empty, returns true.
+    template <class Char_T>
+    bool endsWithImpl(const StringView<Char_T>& svHaystack, const StringView<Char_T>& svNeedle)
+    {
+        const auto svEnd = svHaystack.substr_tailByCount(svNeedle.size());
+        return svEnd == svNeedle;
+    }
+}
+
+// Returns true iff first view (haystack) ends with second (needle). If needle is empty, returns true.
+template <class Str0_T, class Str1_T>
+bool endsWith(const Str0_T& haystack, const Str1_T& needle)
+{
+    using CharT = typename std::remove_const<typename std::remove_pointer<decltype(toCharPtr_raw(toCstr(haystack)))>::type>::type;
+    return DFG_DETAIL_NS::endsWithImpl<CharT>(toCharPtr_raw(toCstr(haystack)), toCharPtr_raw(toCstr(needle)));
+}
+
+// Overload for StringView which is not compatible with generic implementation due to use of toCstr().
+template <class Char_T, class Str_T>
+bool endsWith(const StringView<Char_T, Str_T>& svHaystackArg, const StringView<Char_T, Str_T>& svNeedleArg)
+{
+    return DFG_DETAIL_NS::endsWithImpl<Char_T>(svHaystackArg.asUntypedView(), svNeedleArg.asUntypedView());
+}
+
+
 // Tests whether string is empty.
 // [in] : Pointer to null terminated string or string object.
 // return : True iff. string is empty(i.e. if it's length is zero).
