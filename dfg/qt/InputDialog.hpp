@@ -14,6 +14,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QJsonDocument>
     #include <QLabel>
     #include <QListView>
+    #include <QPlainTextEdit>
     #include <QStringListModel>
     #include <QVBoxLayout>
 DFG_END_INCLUDE_QT_HEADERS
@@ -96,6 +97,7 @@ public:
         const QString& sTitle,
         const QString& sLabel,
         const QVariantMap& initialItems,
+        const QString sSelectedValueKey = QString(),
         bool* pOk = nullptr);
 
     static QVariantMap getJsonAsVariantMap(
@@ -103,6 +105,7 @@ public:
         const QString& sTitle,
         const QString& sLabel,
         const QVariantMap& initialItems,
+        const QString sSelectedValueKey = QString(),
         bool* pOk = nullptr);
 
 }; // class InputDialog
@@ -113,18 +116,41 @@ QString InputDialog::getJsonAsText(
     const QString& sTitle,
     const QString& sLabel,
     const QVariantMap& initialItems,
+    const QString sSelectedValueKey,
     bool* pOk)
 {
     if (pOk)
         *pOk = false;
-    auto jsonDoc = QString::fromUtf8(QJsonDocument::fromVariant(initialItems).toJson());
-    if (jsonDoc.isNull())
+    auto sJsonDoc = QString::fromUtf8(QJsonDocument::fromVariant(initialItems).toJson());
+    if (sJsonDoc.isEmpty())
         return QString();
-    bool bOk;
-    const auto sJson = InputDialog::getMultiLineText(pParent, sTitle, sLabel, jsonDoc, &bOk);
+    QDialog dlg;
+    dlg.setWindowTitle(sTitle);
+    removeContextHelpButtonFromDialog(&dlg);
+    QVBoxLayout layout(&dlg);
+    auto pTextEdit = new QPlainTextEdit(sJsonDoc, &dlg); // Deletion by parenthood
+    layout.addWidget(new QLabel(sLabel, &dlg)); // Deletion by parenthood
+    layout.addWidget(pTextEdit);
+    layout.addWidget(addOkCancelButtonBoxToDialog(&dlg, &layout));
+
+    // If sSelectedValueKey is non-empty, selecting value of that key for convenient editing (i.e. don't need to find and select field to edit)
+    if (!sSelectedValueKey.isEmpty())
+    {
+        if (pTextEdit->find(QString("\"%1\": ").arg(sSelectedValueKey)))
+        {
+            auto textCursor = pTextEdit->textCursor();
+            const auto nSelectionEnd = textCursor.selectionEnd();
+            textCursor.setPosition(nSelectionEnd);
+            textCursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+            pTextEdit->setTextCursor(textCursor);
+        }
+    }
+
+    const auto dlgRv = dlg.exec();
+    const bool bOk = (dlgRv == QDialog::Accepted);
     if (pOk)
         *pOk = bOk;
-    return sJson;
+    return (bOk) ? pTextEdit->toPlainText() : QString();
 }
 
 QVariantMap InputDialog::getJsonAsVariantMap(
@@ -132,11 +158,12 @@ QVariantMap InputDialog::getJsonAsVariantMap(
     const QString& sTitle,
     const QString& sLabel,
     const QVariantMap& initialItems,
+    const QString sSelectedValueKey,
     bool* pOk)
 {
     bool bOk;
     bool* pEffectiveOk = (pOk) ? pOk : &bOk;
-    const auto sJson = getJsonAsText(pParent, sTitle, sLabel, initialItems, pEffectiveOk);
+    const auto sJson = getJsonAsText(pParent, sTitle, sLabel, initialItems, sSelectedValueKey, pEffectiveOk);
     if (*pEffectiveOk)
         return QJsonDocument::fromJson(sJson.toUtf8()).toVariant().toMap();
     else

@@ -2766,6 +2766,7 @@ void CsvTableView::changeRadix()
         tr("Change radix"),
         tr("Change radix for numbers in selected cells. Valid radix values are 2-36 and values in range of int64 can be converted"),
         { {"from_radix", 10}, {"to_radix", 16} },
+        "to_radix",
         &bOk
     );
     if (!bOk)
