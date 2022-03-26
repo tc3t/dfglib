@@ -902,6 +902,34 @@ TEST(dfgStr, toStr)
         EXPECT_EQ(s, s2);
         EXPECT_EQ(ws, ws2);
     }
+
+    // Radix tests
+    {
+        char szBuffer[96];
+        // Radix 2
+        DFGTEST_EXPECT_STREQ("10", toStr(2, szBuffer, 2));
+        DFGTEST_EXPECT_STREQ("100100", toStr(36, szBuffer, 2));
+        DFGTEST_EXPECT_STREQ("111111111111111111111111111111111111111111111111111111111111111", toStr(int64_max, szBuffer, 2));
+        DFGTEST_EXPECT_STREQ("-1000000000000000000000000000000000000000000000000000000000000000", toStr(int64_min, szBuffer, 2));
+        DFGTEST_EXPECT_STREQ("-1", toStr(-1, szBuffer, 2));
+        DFGTEST_EXPECT_STREQ("-100100", toStr(-36, szBuffer, 2));
+
+        // Radix 16
+        DFGTEST_EXPECT_STREQ("2", toStr(2, szBuffer, 16));
+        DFGTEST_EXPECT_STREQ("24", toStr(36, szBuffer, 16));
+        DFGTEST_EXPECT_STREQ("7fffffffffffffff", toStr(int64_max, szBuffer, 16));
+        DFGTEST_EXPECT_STREQ("-8000000000000000", toStr(int64_min, szBuffer, 16));
+        DFGTEST_EXPECT_STREQ("-1", toStr(-1, szBuffer, 16));
+        DFGTEST_EXPECT_STREQ("-24", toStr(-36, szBuffer, 16));
+
+        // Radix 36
+        DFGTEST_EXPECT_STREQ("2", toStr(2, szBuffer, 36));
+        DFGTEST_EXPECT_STREQ("10", toStr(36, szBuffer, 36));
+        DFGTEST_EXPECT_STREQ("1y2p0ij32e8e7", toStr(int64_max, szBuffer, 36));
+        DFGTEST_EXPECT_STREQ("-1y2p0ij32e8e8", toStr(int64_min, szBuffer, 36));
+        DFGTEST_EXPECT_STREQ("-1", toStr(-1, szBuffer, 36));
+        DFGTEST_EXPECT_STREQ("-10", toStr(-36, szBuffer, 36));
+    }
 }
 
 namespace

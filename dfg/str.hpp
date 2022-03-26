@@ -394,7 +394,8 @@ namespace DFG_DETAIL_NS
     DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(uint64,  char,         ui64toa_s,  f7); \
     DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTION(uint64,  wchar_t,      ui64tow_s,  f8);
 
-#ifdef _WIN32
+// #ifdef _WIN32
+#if 0 // Not using these as they don't convert negative values correctly when radix != 10
     DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS(_itoa_s, _itow_s, _ultoa_s, _ultow_s, _i64toa_s, _i64tow_s, _ui64toa_s, _ui64tow_s)
 #else
     DFG_TEMP_DEFINE_ITOA_LIKE_FUNCTIONS((itoa<int32, char>), (itoa<int32, wchar_t>), (itoa<uint32, char>), (itoa<uint32, wchar_t>), (itoa<int64, char>), (itoa<int64, wchar_t>), (itoa<uint64, char>), (itoa<uint64, wchar_t>))
