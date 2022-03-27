@@ -92,6 +92,12 @@ public:
         return rv;
     }
 
+    // Similar to get QInputDialog::getMultiLineText(), but specialized for getting json text.
+    // Returns json-text or empty if cancelled. Returned string is not guaranteed to be valid json.
+    // Parameters (most are similar to parameters in QInputDialog::getMultiLineText()):
+    //      'initialItems'     : Variant map which is used to construct json-text shown in the text edit widget (corresponds to 'text' parameter in getMultiLineText())
+    //      'sSelectedValueKey': If given, text edit selects text of this key, e.g. if json text is { "some_key":123 } and this argument is "some_key", text edit selects 123.
+    //                           Note that selection is based on simple text search so only usable in simple contexts.
     static QString getJsonAsText(
         QWidget* pParent,
         const QString& sTitle,
@@ -100,6 +106,7 @@ public:
         const QString sSelectedValueKey = QString(),
         bool* pOk = nullptr);
 
+    // Convenience overload returning QVariantMap instead of json as QString, returns empty QVariantMap if given text is not valid json
     static QVariantMap getJsonAsVariantMap(
         QWidget* pParent,
         const QString& sTitle,
@@ -124,7 +131,7 @@ QString InputDialog::getJsonAsText(
     auto sJsonDoc = QString::fromUtf8(QJsonDocument::fromVariant(initialItems).toJson());
     if (sJsonDoc.isEmpty())
         return QString();
-    QDialog dlg;
+    QDialog dlg(pParent);
     dlg.setWindowTitle(sTitle);
     removeContextHelpButtonFromDialog(&dlg);
     QVBoxLayout layout(&dlg);

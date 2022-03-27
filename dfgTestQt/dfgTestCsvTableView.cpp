@@ -5,6 +5,7 @@
 #include <dfg/qt/containerUtils.hpp>
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/ConsoleDisplay.hpp>
+#include <dfg/qt/CsvTableViewActions.hpp>
 #include <dfg/qt/CsvTableViewChartDataSource.hpp>
 #include <dfg/qt/CsvFileDataSource.hpp>
 #include <dfg/qt/TableEditor.hpp>
@@ -1303,6 +1304,128 @@ TEST(dfgQt, CsvTableView_populateCsvConfig)
     //DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("properties/windowPosX")));
     //DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("properties/windowPosY")));
     //DFGTEST_EXPECT_TRUE(config.contains(DFG_UTF8("properties/windowWidth")));
+}
+
+TEST(dfgQt, CsvTableView_changeRadix)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(qt);
+    using namespace ::DFG_MODULE_NS(str);
+
+    using JsonId = CsvTableViewActionChangeRadixParams::ParamId;
+    const auto idToStr = [](const JsonId id) { return CsvTableViewActionChangeRadixParams::paramStringId(id); };
+
+    // Basic tests
+    {
+        CsvItemModel csvModel;
+        CsvTableView view(nullptr, nullptr);
+        view.setModel(&csvModel);
+
+        const int64 rowValues[] = {1, 8, 16, -36, int64_min, int64_max};
+
+        // csv-file with identical value on each row but with different radix on every column
+        // 2, 8, 10, 16, 36
+        // with value 1, 8, 16, -36, int64_min, int64_max
+        DFGTEST_ASSERT_TRUE(csvModel.openString(
+            " , , , , \n"                 // Header
+            "1,1,1,1,1\n"                 // 1
+            "1000,10,8,8,8\n"             // 8
+            "10000, 20, 16, 10, g\n"      // 16
+            "-100100, -44, -36, -24, -10\n" // -36
+            "-1000000000000000000000000000000000000000000000000000000000000000, -1000000000000000000000, -9223372036854775808, -8000000000000000, -1y2p0ij32e8e8\n" // int64_min
+            "111111111111111111111111111111111111111111111111111111111111111, 777777777777777777777, 9223372036854775807, 7fffffffffffffff, 1y2p0ij32e8e7" // int64_max
+        ));
+
+        const auto changeRadixOnColumn = [&](const int nCol, const int nSourceRadix, const int nResultRadix)
+        {
+            view.selectColumn(nCol);
+            CsvTableViewActionChangeRadixParams params(
+            {
+                { idToStr(JsonId::fromRadix), nSourceRadix}, {idToStr(JsonId::toRadix), nResultRadix},
+                { idToStr(JsonId::ignorePrefix), ""}, {idToStr(JsonId::ignoreSuffix), ""},
+                { idToStr(JsonId::resultPrefix), ""}, {idToStr(JsonId::resultSuffix), ""}
+            });
+            view.changeRadix(params);
+        };
+
+        const auto testEquality = [&]()
+        {
+            const auto nCol = csvModel.getColumnCount();
+            for (int r = 0; r < csvModel.getRowCount(); ++r)
+            {
+                for (int c = 1; c < nCol; ++c)
+                    DFGTEST_EXPECT_LEFT(csvModel.rawStringViewAt(r, c - 1), csvModel.rawStringViewAt(r, c));
+            }
+        };
+
+        // Changing all columns to radix 10
+        changeRadixOnColumn(0,  2, 10);
+        changeRadixOnColumn(1,  8, 10);
+        changeRadixOnColumn(2, 10, 10);
+        changeRadixOnColumn(3, 16, 10);
+        changeRadixOnColumn(4, 36, 10);
+        testEquality();
+
+        // Changing all columns to radix 2
+        changeRadixOnColumn(0, 10, 2);
+        changeRadixOnColumn(1, 10, 2);
+        changeRadixOnColumn(2, 10, 2);
+        changeRadixOnColumn(3, 10, 2);
+        changeRadixOnColumn(4, 10, 2);
+        testEquality();
+
+        // Changing all columns to radix 36
+        changeRadixOnColumn(0, 2, 36);
+        changeRadixOnColumn(1, 2, 36);
+        changeRadixOnColumn(2, 2, 36);
+        changeRadixOnColumn(3, 2, 36);
+        changeRadixOnColumn(4, 2, 36);
+        testEquality();
+
+        // Changing all columns to radix 10
+        changeRadixOnColumn(0, 36, 10);
+        changeRadixOnColumn(1, 36, 10);
+        changeRadixOnColumn(2, 36, 10);
+        changeRadixOnColumn(3, 36, 10);
+        changeRadixOnColumn(4, 36, 10);
+        testEquality();
+
+        // Testing that trying to change to invalid radix does nothing.
+        changeRadixOnColumn(0, 36, -1);
+        changeRadixOnColumn(1, 36, int32_max);
+        changeRadixOnColumn(2, 36, -2);
+        changeRadixOnColumn(3, 36, 0);
+        changeRadixOnColumn(4, 36, -int32_min);
+
+        for (int r = 0; r < int(DFG_COUNTOF(rowValues)); ++r)
+        {
+            for (int c = 0; c < csvModel.getColumnCount(); ++c)
+                DFGTEST_EXPECT_LEFT(rowValues[r], strTo<int64>(csvModel.rawStringViewAt(r, c)));
+        }
+    }
+
+    // Prefix/suffix handling
+    {
+        CsvItemModel csvModel;
+        CsvTableView view(nullptr, nullptr);
+        view.setModel(&csvModel);
+        view.resizeTableNoUi(3, 1);
+        csvModel.setDataNoUndo(0, 0, DFG_UTF8("0x10_abc"));
+        csvModel.setDataNoUndo(1, 0, DFG_UTF8("20_abc"));
+        csvModel.setDataNoUndo(2, 0, DFG_UTF8("0x-30"));
+        CsvTableViewActionChangeRadixParams params(
+        {
+            { idToStr(JsonId::fromRadix), 16}, {idToStr(JsonId::toRadix), 10},
+            { idToStr(JsonId::ignorePrefix), "0x"}, {idToStr(JsonId::ignoreSuffix), "_abc"},
+            { idToStr(JsonId::resultPrefix), "a"}, {idToStr(JsonId::resultSuffix), "b"}
+        });
+        view.selectColumn(0);
+        view.changeRadix(params);
+
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("a16b", csvModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("a32b", csvModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("a-48b", csvModel.rawStringViewAt(2, 0));
+    }
 }
 
 TEST(dfgQt, TableView_makeSingleCellSelection)

@@ -818,7 +818,7 @@ void CsvTableView::addContentEditActions()
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Clear selected cell(s)"),       tr("Del"),    ActionFlags::defaultContentEdit, clearSelected);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Generate content..."),          tr("Alt+G"),  ActionFlags::defaultContentEdit, generateContent);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Evaluate selected as formula"), tr("Alt+C"),  ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Change radix..."),              noShortCut,   ActionFlags::defaultContentEdit, changeRadix);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Change radix..."),              noShortCut,   ActionFlags::defaultContentEdit, onChangeRadixUiAction);
 
     // Insert-menu
     {
@@ -2753,7 +2753,7 @@ bool CsvTableView::transpose()
     return bSuccess;
 }
 
-void CsvTableView::changeRadix()
+void CsvTableView::onChangeRadixUiAction()
 {
     if (!isSelectionNonEmpty())
     {
@@ -2761,20 +2761,26 @@ void CsvTableView::changeRadix()
         return;
     }
     bool bOk = false;
+    using JsonId = CsvTableViewActionChangeRadix::Params::ParamId;
+    const auto idToStr = [](const JsonId id) { return CsvTableViewActionChangeRadix::Params::paramStringId(id); };
     const auto items = InputDialog::getJsonAsVariantMap(
         this,
         tr("Change radix"),
-        tr("Change radix for numbers in selected cells. Valid radix values are 2-36 and values in range of int64 can be converted"),
-        { {"from_radix", 10}, {"to_radix", 16} },
-        "to_radix",
+        tr("Change radix for numbers in selected cells.\n"
+           "Valid radix values are 2-36 and values in range of int64 can be converted\n"
+           "If prefix/suffix is given, lack of such prefix/suffix is not considered as error"),
+        {   
+            { idToStr(JsonId::fromRadix), 10}, {idToStr(JsonId::toRadix), 0},
+            { idToStr(JsonId::ignorePrefix), ""}, {idToStr(JsonId::ignoreSuffix), ""},
+            { idToStr(JsonId::resultPrefix), ""}, {idToStr(JsonId::resultSuffix), ""}
+        },
+        idToStr(JsonId::toRadix), // Sets selected text to be value of toRadix
         &bOk
     );
     if (!bOk)
         return;
 
-    CsvTableViewActionChangeRadix::Params params;
-    params.fromRadix = items["from_radix"].toInt();
-    params.toRadix = items["to_radix"].toInt();
+    CsvTableViewActionChangeRadix::Params params(items);
     if (!params.isValid())
     {
         this->showStatusInfoTip(tr("Action ignored: not all radix values are valid: source radix = %1, destination radix = %2")
@@ -2782,6 +2788,11 @@ void CsvTableView::changeRadix()
             .arg(params.toRadix));
         return;
     }
+    changeRadix(params);
+}
+
+void CsvTableView::changeRadix(const CsvTableViewActionChangeRadixParams& params)
+{
     executeAction<CsvTableViewActionChangeRadix>(this, params);
 }
 

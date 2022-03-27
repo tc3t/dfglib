@@ -740,19 +740,37 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewActionResizeTable
 
+    class CsvTableViewActionChangeRadixParams
+    {
+    public:
+        enum class ParamId
+        {
+            fromRadix,
+            toRadix,
+            ignorePrefix,
+            ignoreSuffix,
+            resultPrefix,
+            resultSuffix
+        };
+
+        CsvTableViewActionChangeRadixParams(const QVariantMap& params = QVariantMap());
+        bool isValid() const;
+        static QString paramStringId(ParamId);
+        bool hasResultAdjustments() const;
+
+        int fromRadix = 10;
+        int toRadix = 0;
+        StringUtf8 ignorePrefix;
+        StringUtf8 ignoreSuffix;
+        StringUtf8 resultPrefix;
+        StringUtf8 resultSuffix;
+    };
+
     class CsvTableViewActionChangeRadix : public DFG_DETAIL_NS::SelectionForEachUndoCommand
     {
     public:
         using BaseClass = DFG_DETAIL_NS::SelectionForEachUndoCommand;
-
-        class Params
-        {
-        public:
-            bool isValid() const;
-
-            int fromRadix = 10;
-            int toRadix = 0;
-        };
+        using Params = CsvTableViewActionChangeRadixParams;
 
         CsvTableViewActionChangeRadix(CsvTableView* pView, Params params);
 

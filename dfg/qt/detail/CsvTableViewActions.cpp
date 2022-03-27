@@ -1,4 +1,6 @@
 #include "../CsvTableViewActions.hpp"
+#include "../../str/format_fmt.hpp"
+#include "../../str.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QMap>
@@ -73,6 +75,48 @@ namespace DFG_DETAIL_NS
         looper(params);
         if (pView && pSelectList)
             pView->setSelectedIndexed(*pSelectList, [&](const QModelIndex& index) { return pView->mapToViewModel(index); }); // Selecting the items that were edited by redo.
+    }
+
+    class VisitorErrorMessageHandler
+    {
+    public:
+        using MessageGenerator = std::function<QString()>;
+
+        // Handles error and if needed, calls messageGenerator to get needed error message text.
+        // If messageGenerator is not given, prints cell contents as extra info
+        void handleError(CsvTableView& rView, const StringViewC svCell, const QModelIndex& index, const size_t nMaxFailureMessageCount, MessageGenerator messageGenerator = MessageGenerator());
+
+        void showErrorMessageIfAvailable(CsvTableView& rView, const size_t nMaxFailureMessageCount);
+
+        size_t m_nFailureCount = 0;
+        QString m_sFailureMsgs;
+
+    }; // class VisitorErrorMessageHandler
+
+    void VisitorErrorMessageHandler::handleError(CsvTableView& rView, const StringViewC svCell,const QModelIndex& index, const size_t nMaxFailureMessageCount, MessageGenerator messageGenerator)
+    {
+        auto& nFailureCount = this->m_nFailureCount;
+        ++nFailureCount;
+        if (nFailureCount <= nMaxFailureMessageCount)
+        {
+            auto& sFailureMsgs = this->m_sFailureMsgs;
+            if (nFailureCount == 1)
+                sFailureMsgs += rView.tr("Operation failed for cells:");
+            sFailureMsgs.push_back(rView.tr("\n(%1, %2): \"%3\"")
+                .arg(CsvItemModel::internalRowIndexToVisible(index.row()))
+                .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
+                .arg((messageGenerator) ? messageGenerator() : ((svCell.size() <= 16) ? untypedViewToQStringAsUtf8(svCell) : QString("%1...").arg(untypedViewToQStringAsUtf8(svCell.substr_startCount(0, 16))))));
+        }
+    }
+
+    void VisitorErrorMessageHandler::showErrorMessageIfAvailable(CsvTableView& rView, const size_t nMaxFailureMessageCount)
+    {
+        const auto nFailureCount = this->m_nFailureCount;
+        auto& sFailureMsgs = this->m_sFailureMsgs;
+        if (nFailureCount > nMaxFailureMessageCount)
+            sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
+        if (!sFailureMsgs.isEmpty())
+            rView.showStatusInfoTip(sFailureMsgs);
     }
 
 } // namespace DFG_DETAIL_NS
@@ -346,9 +390,8 @@ DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionChangeRadix)
 
 DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionChangeRadix::RadixChangeVisitor)
 {
+    DFG_DETAIL_NS::VisitorErrorMessageHandler m_errorMessageHandler;
     char szBuffer[96] = "";
-    size_t m_nFailureCount = 0;
-    QString m_sFailureMsgs;
     Params m_radixParams;
 };
 
@@ -359,58 +402,65 @@ CsvTableViewActionChangeRadix::RadixChangeVisitor::RadixChangeVisitor(Params par
 
 void CsvTableViewActionChangeRadix::RadixChangeVisitor::handleCell(VisitorParams& params)
 {
-    auto sv = params.stringView().asUntypedView();
-    if (sv.empty())
+    const auto svCell = params.stringView().asUntypedView();
+    if (svCell.empty())
         return; // Skipping empty strings.
 
+    auto sv = svCell;
     using namespace ::DFG_MODULE_NS(str);
-    const auto nFromRadix = DFG_OPAQUE_REF().m_radixParams.fromRadix;
+    auto& rOpaq = DFG_OPAQUE_REF();
+    const auto radixParams = rOpaq.m_radixParams;
+    const auto index = params.index();
+
+    if (!radixParams.isValid())
+    {
+        rOpaq.m_errorMessageHandler.handleError(params.view(), svCell, index, maxFailureMessageCount(), [&]()
+            {
+                return params.view().tr("Invalid radix params: %1 -> %2").arg(radixParams.fromRadix).arg(radixParams.toRadix);
+            });
+        return;
+    }
+
+    // Skipping prefix if defined
+    if (!radixParams.ignorePrefix.empty())
+    {
+        if (beginsWith(sv, StringViewC(radixParams.ignorePrefix.rawStorage())))
+            sv = sv.substr_start(radixParams.ignorePrefix.size());
+    }
+    // Skipping suffix if defined
+    if (!radixParams.ignoreSuffix.empty())
+    {
+        if (endsWith(sv, StringViewC(radixParams.ignoreSuffix.rawStorage())))
+            sv.cutTail_byCutCount(radixParams.ignoreSuffix.size());
+    }
+
+    const auto nFromRadix = radixParams.fromRadix;
     bool bOk;
 #if DFG_STRTO_RADIX_SUPPORT == 1
     const auto nSrcVal = strTo<int64>(sv, { NumberRadix(nFromRadix), &bOk });
-#else
+#else // Case: in older compilers fallbacking to conversion using QString
     const auto nSrcVal = untypedViewToQStringAsUtf8(sv).toLongLong(&bOk, nFromRadix);
 #endif
-    auto& szBuffer = DFG_OPAQUE_REF().szBuffer;
+    auto& szBuffer = rOpaq.szBuffer;
     if (bOk)
     {
-        const auto nToRadix = DFG_OPAQUE_REF().m_radixParams.toRadix;
+        const auto nToRadix = radixParams.toRadix;
         toStr(nSrcVal, szBuffer, nToRadix);
     }
     else
         szBuffer[0] = '\0'; // Clearing output if conversion failed.
     auto& rModel = params.dataModel();
-    const auto index = params.index();
-    rModel.setDataNoUndo(index, SzPtrUtf8(szBuffer));
+    if (radixParams.hasResultAdjustments())
+        rModel.setDataNoUndo(index, SzPtrUtf8(format_fmt("{}{}{}", radixParams.resultPrefix.rawStorage(), szBuffer, radixParams.resultSuffix.rawStorage()).c_str()));
+    else
+        rModel.setDataNoUndo(index, SzPtrUtf8(szBuffer));
     if (!bOk)
-    {
-        auto& nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
-        ++nFailureCount;
-        const size_t nMaxFailureMessageCount = maxFailureMessageCount();
-        if (nFailureCount <= nMaxFailureMessageCount)
-        {
-            auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
-            auto& rView = params.view();
-            if (nFailureCount == 1)
-                sFailureMsgs += rView.tr("Failed conversions:");
-            sFailureMsgs.push_back(rView.tr("\ncell(%1, %2): %3")
-                .arg(CsvItemModel::internalRowIndexToVisible(index.row()))
-                .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
-                .arg((sv.size() <= 16) ? untypedViewToQStringAsUtf8(sv) : QString("%1...").arg(untypedViewToQStringAsUtf8(sv.substr_startCount(0, 16)))));
-        }
-    }
+        rOpaq.m_errorMessageHandler.handleError(params.view(), svCell, index, maxFailureMessageCount());
 }
 
 void CsvTableViewActionChangeRadix::RadixChangeVisitor::onForEachLoopDone(VisitorParams& params)
 {
-    auto& rView = params.view();
-    const auto nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
-    const auto nMaxFailureMessageCount = maxFailureMessageCount();
-    auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
-    if (nFailureCount > nMaxFailureMessageCount)
-        sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
-    if (!sFailureMsgs.isEmpty())
-        rView.showStatusInfoTip(sFailureMsgs);
+    DFG_OPAQUE_REF().m_errorMessageHandler.showErrorMessageIfAvailable(params.view(), maxFailureMessageCount());
 }
 
 CsvTableViewActionChangeRadix::CsvTableViewActionChangeRadix(CsvTableView* pView, Params params)
@@ -429,10 +479,40 @@ auto CsvTableViewActionChangeRadix::createVisitor() -> std::unique_ptr<Visitor>
     return createVisitorStatic(DFG_OPAQUE_REF().m_params);
 }
 
-bool CsvTableViewActionChangeRadix::Params::isValid() const
+CsvTableViewActionChangeRadixParams::CsvTableViewActionChangeRadixParams(const QVariantMap& params)
+{
+    const auto getVar = [&](const ParamId id) { return params[paramStringId(id)]; };
+    this->fromRadix    = getVar(ParamId::fromRadix).toInt();
+    this->toRadix      = getVar(ParamId::toRadix).toInt();
+    this->ignorePrefix = qStringToStringUtf8(getVar(ParamId::ignorePrefix).toString());
+    this->ignoreSuffix = qStringToStringUtf8(getVar(ParamId::ignoreSuffix).toString());
+    this->resultPrefix = qStringToStringUtf8(getVar(ParamId::resultPrefix).toString());
+    this->resultSuffix = qStringToStringUtf8(getVar(ParamId::resultSuffix).toString());
+}
+
+QString CsvTableViewActionChangeRadixParams::paramStringId(const ParamId id)
+{
+    switch (id)
+    {
+        case ParamId::fromRadix   : return "from_radix";
+        case ParamId::toRadix     : return "to_radix";
+        case ParamId::ignorePrefix: return "ignore_prefix";
+        case ParamId::ignoreSuffix: return "ignore_suffix";
+        case ParamId::resultPrefix: return "result_prefix";
+        case ParamId::resultSuffix: return "result_suffix";
+        default: return "BUG";
+    }
+}
+
+bool CsvTableViewActionChangeRadixParams::isValid() const
 {
     const auto isValidRadix = [](const int n) { return n >= 2 && n <= 36; };
     return isValidRadix(this->fromRadix) && isValidRadix(this->toRadix);
+}
+
+bool CsvTableViewActionChangeRadixParams::hasResultAdjustments() const
+{
+    return !this->resultPrefix.empty() || !this->resultSuffix.empty();
 }
 
 }} // namespace dfg::qt

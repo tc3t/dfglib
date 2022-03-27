@@ -59,6 +59,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     class CsvTableViewBasicSelectionAnalyzerPanel;
 
+    class CsvTableViewActionChangeRadixParams;
+
     namespace DFG_DETAIL_NS
     {
         class FloatToStringParam
@@ -544,6 +546,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool generateContent();
 
         void evaluateSelectionAsFormula();
+
+        void onChangeRadixUiAction();
+        void changeRadix(const CsvTableViewActionChangeRadixParams& params);
 
         bool diffWithUnmodified();
 
