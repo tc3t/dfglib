@@ -82,7 +82,7 @@ namespace DFG_DETAIL_NS
     public:
         using MessageGenerator = std::function<QString()>;
 
-        // Handles error and if needed, calls messageGenerator to get needed error message text.
+        // Handles error and if needed, calls messageGenerator to get needed error message text; messageGenerator is not stored so only needs to be valid during the call.
         // If messageGenerator is not given, prints cell contents as extra info
         void handleError(CsvTableView& rView, const StringViewC svCell, const QModelIndex& index, const size_t nMaxFailureMessageCount, MessageGenerator messageGenerator = MessageGenerator());
 
@@ -207,13 +207,13 @@ DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisit
 {
     ::DFG_MODULE_NS(math)::FormulaParser parser;
     char szBuffer[32] = "";
-    size_t m_nFailureCount = 0;
-    QString m_sFailureMsgs;
+    DFG_DETAIL_NS::VisitorErrorMessageHandler m_errorMessageHandler;
 };
 
 void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::handleCell(VisitorParams& params)
 {
-    auto sv = params.stringView().asUntypedView();
+    const auto svCell = params.stringView().asUntypedView();
+    auto sv = svCell;
     if (sv.empty())
         return; // Skipping empty strings.
     if (!sv.empty() && sv.front() == '=')
@@ -231,35 +231,12 @@ void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::handleCell(Vi
         rModel.setDataNoUndo(index, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(val, szBuffer)));
     }
     else
-    {
-        auto& nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
-        const size_t nMaxFailureMessageCount = maxFailureMessageCount();
-        ++nFailureCount;
-        if (nFailureCount <= nMaxFailureMessageCount)
-        {
-            auto& rView = params.view();
-            auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
-            if (nFailureCount == 1)
-                sFailureMsgs += rView.tr("Failed evaluations:");
-            sFailureMsgs.push_back(rView.tr("\ncell(%1, %2): '%3'")
-                .arg(CsvItemModel::internalRowIndexToVisible(index.row()))
-                .arg(CsvItemModel::internalColumnIndexToVisible(index.column()))
-                .arg(untypedViewToQStringAsUtf8(evalStatus.errorString())));
-        }
-    }
+        DFG_OPAQUE_REF().m_errorMessageHandler.handleError(params.view(), svCell, index, maxFailureMessageCount());
 }
 
 void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::onForEachLoopDone(VisitorParams& params)
 {
-    // If generator encountered errors, showing a status info widget
-    auto& rView = params.view();
-    const auto nFailureCount = DFG_OPAQUE_REF().m_nFailureCount;
-    const auto nMaxFailureMessageCount = maxFailureMessageCount();
-    auto& sFailureMsgs = DFG_OPAQUE_REF().m_sFailureMsgs;
-    if (nFailureCount > nMaxFailureMessageCount)
-        sFailureMsgs += rView.tr("\n+ %1 failure(s)").arg(nFailureCount - nMaxFailureMessageCount);
-    if (!sFailureMsgs.isEmpty())
-        rView.showStatusInfoTip(sFailureMsgs);
+    DFG_OPAQUE_REF().m_errorMessageHandler.showErrorMessageIfAvailable(params.view(), maxFailureMessageCount());
 }
 
 CsvTableViewActionEvaluateSelectionAsFormula::CsvTableViewActionEvaluateSelectionAsFormula(CsvTableView* pView)
