@@ -2767,12 +2767,14 @@ void CsvTableView::onChangeRadixUiAction()
         this,
         tr("Change radix"),
         tr("Change radix for numbers in selected cells.\n"
-           "Valid radix values are 2-36 and values in range of int64 can be converted\n"
-           "If prefix/suffix is given, lack of such prefix/suffix is not considered as error"),
+           "Valid %2 values are 2-36 and values in range of int64 can be converted\n"
+           "If prefix/suffix is given, lack of such prefix/suffix is not considered as error\n"
+           "%1 can be used to define custom digits (e.g. \"ab\" would define radix 2 with digits {a,b} instead of typical {0,1}): if given, %2 can be omitted as length defines radix, which can be > 36")
+            .arg(idToStr(JsonId::resultDigits), idToStr(JsonId::toRadix)),
         {   
             { idToStr(JsonId::fromRadix), 10}, {idToStr(JsonId::toRadix), 0},
             { idToStr(JsonId::ignorePrefix), ""}, {idToStr(JsonId::ignoreSuffix), ""},
-            { idToStr(JsonId::resultPrefix), ""}, {idToStr(JsonId::resultSuffix), ""}
+            { idToStr(JsonId::resultPrefix), ""}, {idToStr(JsonId::resultSuffix), ""}, { idToStr(JsonId::resultDigits), "" }
         },
         idToStr(JsonId::toRadix), // Sets selected text to be value of toRadix
         &bOk

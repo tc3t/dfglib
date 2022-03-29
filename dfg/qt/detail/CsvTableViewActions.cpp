@@ -418,11 +418,30 @@ void CsvTableViewActionChangeRadix::RadixChangeVisitor::handleCell(VisitorParams
 #else // Case: in older compilers fallbacking to conversion using QString
     const auto nSrcVal = untypedViewToQStringAsUtf8(sv).toLongLong(&bOk, nFromRadix);
 #endif
+
     auto& szBuffer = rOpaq.szBuffer;
+    DFG_DETAIL_NS::VisitorErrorMessageHandler::MessageGenerator messageGenerator;
     if (bOk)
     {
         const auto nToRadix = radixParams.toRadix;
-        toStr(nSrcVal, szBuffer, nToRadix);
+        if (nToRadix != radixParams.resultDigits.size())
+            toStr(nSrcVal, szBuffer, nToRadix);
+        else // Case: itoa with non-default digits.
+        {
+            QChar chars[128];
+            const auto rv = intToRadixRepresentation(nSrcVal, nToRadix, [&](const size_t i) { return radixParams.resultDigits[saturateCast<unsigned int>(i)]; }, '-', std::begin(chars), std::end(chars));
+            if (rv > 0 && rv < DFG_COUNTOF(szBuffer))
+            {
+                QString s(chars, rv);
+                strCpyAllThatFit(szBuffer, s.toUtf8().data());
+            }
+            else
+            {
+                szBuffer[0] = '\0';
+                bOk = false;
+                messageGenerator = [&]() { return params.view().tr("Failed: intToRadixRepresentation() returned %1, buffer size = %2").arg(rv).arg(DFG_COUNTOF(szBuffer)); };
+            }
+        }
     }
     else
         szBuffer[0] = '\0'; // Clearing output if conversion failed.
@@ -432,7 +451,7 @@ void CsvTableViewActionChangeRadix::RadixChangeVisitor::handleCell(VisitorParams
     else
         rModel.setDataNoUndo(index, SzPtrUtf8(szBuffer));
     if (!bOk)
-        rOpaq.m_errorMessageHandler.handleError(params.view(), svCell, index, maxFailureMessageCount());
+        rOpaq.m_errorMessageHandler.handleError(params.view(), svCell, index, maxFailureMessageCount(), messageGenerator);
 }
 
 void CsvTableViewActionChangeRadix::RadixChangeVisitor::onForEachLoopDone(VisitorParams& params)
@@ -465,6 +484,9 @@ CsvTableViewActionChangeRadixParams::CsvTableViewActionChangeRadixParams(const Q
     this->ignoreSuffix = qStringToStringUtf8(getVar(ParamId::ignoreSuffix).toString());
     this->resultPrefix = qStringToStringUtf8(getVar(ParamId::resultPrefix).toString());
     this->resultSuffix = qStringToStringUtf8(getVar(ParamId::resultSuffix).toString());
+    this->resultDigits = getVar(ParamId::resultDigits).toString();
+    if (this->toRadix == 0 && !this->resultDigits.isEmpty())
+        this->toRadix = this->resultDigits.size();
 }
 
 QString CsvTableViewActionChangeRadixParams::paramStringId(const ParamId id)
@@ -477,6 +499,7 @@ QString CsvTableViewActionChangeRadixParams::paramStringId(const ParamId id)
         case ParamId::ignoreSuffix: return "ignore_suffix";
         case ParamId::resultPrefix: return "result_prefix";
         case ParamId::resultSuffix: return "result_suffix";
+        case ParamId::resultDigits: return "result_digits";
         default: return "BUG";
     }
 }
@@ -484,7 +507,7 @@ QString CsvTableViewActionChangeRadixParams::paramStringId(const ParamId id)
 bool CsvTableViewActionChangeRadixParams::isValid() const
 {
     const auto isValidRadix = [](const int n) { return n >= 2 && n <= 36; };
-    return isValidRadix(this->fromRadix) && isValidRadix(this->toRadix);
+    return isValidRadix(this->fromRadix) && this->toRadix >= 2 && ((this->resultDigits.isEmpty() && this->toRadix <= 36) || (this->toRadix == saturateCast<int>(this->resultDigits.size())));
 }
 
 bool CsvTableViewActionChangeRadixParams::hasResultAdjustments() const

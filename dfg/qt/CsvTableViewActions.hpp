@@ -750,7 +750,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ignorePrefix,
             ignoreSuffix,
             resultPrefix,
-            resultSuffix
+            resultSuffix,
+            resultDigits
         };
 
         CsvTableViewActionChangeRadixParams(const QVariantMap& params = QVariantMap());
@@ -764,6 +765,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         StringUtf8 ignoreSuffix;
         StringUtf8 resultPrefix;
         StringUtf8 resultSuffix;
+        QString resultDigits;
     };
 
     class CsvTableViewActionChangeRadix : public DFG_DETAIL_NS::SelectionForEachUndoCommand

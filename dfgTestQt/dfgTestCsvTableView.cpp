@@ -1426,6 +1426,56 @@ TEST(dfgQt, CsvTableView_changeRadix)
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("a32b", csvModel.rawStringViewAt(1, 0));
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("a-48b", csvModel.rawStringViewAt(2, 0));
     }
+
+    // Custom digit tests
+    {
+        CsvItemModel csvModel;
+        CsvTableView view(nullptr, nullptr);
+        view.setModel(&csvModel);
+        view.resizeTableNoUi(1, 1);
+
+        csvModel.setDataNoUndo(0, 0, DFG_UTF8("9876543210"));
+        CsvTableViewActionChangeRadixParams params(
+        {
+            { idToStr(JsonId::fromRadix), 10},
+            { idToStr(JsonId::resultDigits), "-+bilgfd/_" }
+        });
+        view.selectColumn(0);
+        view.changeRadix(params);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("_/dfglib+-", csvModel.rawStringViewAt(0, 0));
+
+        // Testing that faulty params having inconsistent arguments does nothing
+#define DFG_TEMP_ES "\xE2\x82\xAC" // \xE2\x82\xAC is eurosign in UTF-8
+        params = CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::resultDigits), QString::fromUtf8(DFG_TEMP_ES "I") } }); 
+        params.toRadix = 10;
+        csvModel.setDataNoUndo(0, 0, DFG_UTF8("5"));
+        view.selectColumn(0);
+        view.changeRadix(params);
+        // changeRadix() should do nothing since toRadix (=10) is not the same as radix defined by resultDigits (=2)
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("5", csvModel.rawStringViewAt(0, 0));
+
+        // Testing that multibyte codepoint as digits work correctly.
+        params = CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::resultDigits), QString::fromUtf8(DFG_TEMP_ES "I") } });
+        view.selectColumn(0);
+        view.changeRadix(params);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("I" DFG_TEMP_ES "I", csvModel.rawStringViewAt(0, 0)); // 5 = 101b
+#undef DFG_TEMP_ES
+
+        // Testing radix 62
+        const char digits62[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        params = CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::resultDigits), digits62 } });
+        view.resizeTableNoUi(4, 1);
+        csvModel.setDataNoUndo(0, 0, DFG_UTF8("61"));
+        csvModel.setDataNoUndo(1, 0, DFG_UTF8("62"));
+        csvModel.setDataNoUndo(2, 0, SzPtrUtf8(toStrC(int64_min).c_str()));
+        csvModel.setDataNoUndo(3, 0, SzPtrUtf8(toStrC(int64_max).c_str()));
+        view.selectColumn(0);
+        view.changeRadix(params);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("Z", csvModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("10", csvModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("-aZl8N0y58M8", csvModel.rawStringViewAt(2, 0)); // -aZl8N0y58M8 = -1* (10, 61, 21, 8, 49, 0, 34, 5, 8, 48, 8)
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("aZl8N0y58M7", csvModel.rawStringViewAt(3, 0));
+    }
 }
 
 TEST(dfgQt, TableView_makeSingleCellSelection)
