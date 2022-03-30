@@ -923,7 +923,7 @@ TEST(dfgQt, CsvTableView_contextMenuSize)
         if (pAct && pAct->isVisible() && !pAct->isSeparator())
             ++nCount;
     }
-    EXPECT_LE(nCount, 37); // A semi-arbitrary value.
+    DFGTEST_EXPECT_LE(nCount, 38); // A semi-arbitrary value.
 }
 
 TEST(dfgQt, CsvTableView_columnIndexMappingWithHiddenColumns)
