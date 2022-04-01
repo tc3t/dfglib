@@ -1404,6 +1404,26 @@ TEST(dfgQt, CsvTableView_changeRadix)
         }
     }
 
+    // Testing radix 62
+    {
+        CsvItemModel csvModel;
+        CsvTableView view(nullptr, nullptr);
+        view.setModel(&csvModel);
+        view.resizeTableNoUi(1, 1);
+        auto params = CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::toRadix), 62 } });
+        view.resizeTableNoUi(4, 1);
+        csvModel.setDataNoUndo(0, 0, DFG_UTF8("61"));
+        csvModel.setDataNoUndo(1, 0, DFG_UTF8("62"));
+        csvModel.setDataNoUndo(2, 0, SzPtrUtf8(toStrC(int64_min).c_str()));
+        csvModel.setDataNoUndo(3, 0, SzPtrUtf8(toStrC(int64_max).c_str()));
+        view.selectColumn(0);
+        view.changeRadix(params);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("Z", csvModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("10", csvModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("-aZl8N0y58M8", csvModel.rawStringViewAt(2, 0)); // -aZl8N0y58M8 = -1* (10, 61, 21, 8, 49, 0, 34, 5, 8, 48, 8)
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("aZl8N0y58M7", csvModel.rawStringViewAt(3, 0));
+    }
+
     // Prefix/suffix handling
     {
         CsvItemModel csvModel;
@@ -1461,21 +1481,26 @@ TEST(dfgQt, CsvTableView_changeRadix)
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("I" DFG_TEMP_ES "I", csvModel.rawStringViewAt(0, 0)); // 5 = 101b
 #undef DFG_TEMP_ES
 
-        // Testing radix 62
-        const char digits62[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        params = CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::resultDigits), digits62 } });
-        view.resizeTableNoUi(4, 1);
-        csvModel.setDataNoUndo(0, 0, DFG_UTF8("61"));
-        csvModel.setDataNoUndo(1, 0, DFG_UTF8("62"));
-        csvModel.setDataNoUndo(2, 0, SzPtrUtf8(toStrC(int64_min).c_str()));
-        csvModel.setDataNoUndo(3, 0, SzPtrUtf8(toStrC(int64_max).c_str()));
-        view.selectColumn(0);
-        view.changeRadix(params);
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("Z", csvModel.rawStringViewAt(0, 0));
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("10", csvModel.rawStringViewAt(1, 0));
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("-aZl8N0y58M8", csvModel.rawStringViewAt(2, 0)); // -aZl8N0y58M8 = -1* (10, 61, 21, 8, 49, 0, 34, 5, 8, 48, 8)
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("aZl8N0y58M7", csvModel.rawStringViewAt(3, 0));
+        // Testing radix 64 with given digits
+        {
+            const char digits64[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ{}";
+            params = CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::resultDigits), digits64 } });
+            view.resizeTableNoUi(4, 1);
+            csvModel.setDataNoUndo(0, 0, DFG_UTF8("63"));
+            csvModel.setDataNoUndo(1, 0, DFG_UTF8("64"));
+            csvModel.setDataNoUndo(2, 0, SzPtrUtf8(toStrC(int64_min).c_str()));
+            csvModel.setDataNoUndo(3, 0, SzPtrUtf8(toStrC(int64_max).c_str()));
+            view.selectColumn(0);
+            view.changeRadix(params);
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("}", csvModel.rawStringViewAt(0, 0));
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("10", csvModel.rawStringViewAt(1, 0));
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("-80000000000", csvModel.rawStringViewAt(2, 0));
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("7}}}}}}}}}}", csvModel.rawStringViewAt(3, 0));
+        }
     }
+
+    DFGTEST_EXPECT_TRUE(CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::toRadix), 62 } }).isValid());
+    DFGTEST_EXPECT_FALSE(CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::toRadix), 63 } }).isValid());
 }
 
 TEST(dfgQt, TableView_makeSingleCellSelection)

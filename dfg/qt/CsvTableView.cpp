@@ -2767,9 +2767,9 @@ void CsvTableView::onChangeRadixUiAction()
         this,
         tr("Change radix"),
         tr("Change radix for numbers in selected cells.\n"
-           "Valid %2 values are 2-36 and values in range of int64 can be converted\n"
+           "Valid %2 values are 2-62 and values in range of int64 can be converted\n"
            "If prefix/suffix is given, lack of such prefix/suffix is not considered as error\n"
-           "%1 can be used to define custom digits (e.g. \"ab\" would define radix 2 with digits {a,b} instead of typical {0,1}): if given, %2 can be omitted as length defines radix, which can be > 36")
+           "%1 can be used to define custom digits (e.g. \"ab\" would define radix 2 with digits {a,b} instead of typical {0,1}): if given, %2 can be omitted as length defines radix, which can be > 62")
             .arg(idToStr(JsonId::resultDigits), idToStr(JsonId::toRadix)),
         {   
             { idToStr(JsonId::fromRadix), 10}, {idToStr(JsonId::toRadix), 0},

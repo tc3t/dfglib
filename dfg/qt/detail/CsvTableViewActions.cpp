@@ -487,6 +487,8 @@ CsvTableViewActionChangeRadixParams::CsvTableViewActionChangeRadixParams(const Q
     this->resultDigits = getVar(ParamId::resultDigits).toString();
     if (this->toRadix == 0 && !this->resultDigits.isEmpty())
         this->toRadix = this->resultDigits.size();
+    if (this->toRadix > 36  && this->toRadix <= 62 && this->resultDigits.isEmpty())
+        this->resultDigits = QString::fromUtf8("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", this->toRadix);
 }
 
 QString CsvTableViewActionChangeRadixParams::paramStringId(const ParamId id)
@@ -506,8 +508,8 @@ QString CsvTableViewActionChangeRadixParams::paramStringId(const ParamId id)
 
 bool CsvTableViewActionChangeRadixParams::isValid() const
 {
-    const auto isValidRadix = [](const int n) { return n >= 2 && n <= 36; };
-    return isValidRadix(this->fromRadix) && this->toRadix >= 2 && ((this->resultDigits.isEmpty() && this->toRadix <= 36) || (this->toRadix == saturateCast<int>(this->resultDigits.size())));
+    const auto isValidFromRadix = [](const int n) { return n >= 2 && n <= 36; };
+    return isValidFromRadix(this->fromRadix) && this->toRadix >= 2 && ((this->resultDigits.isEmpty() && this->toRadix <= 62) || (this->toRadix == saturateCast<int>(this->resultDigits.size())));
 }
 
 bool CsvTableViewActionChangeRadixParams::hasResultAdjustments() const
