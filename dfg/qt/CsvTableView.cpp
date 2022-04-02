@@ -648,6 +648,7 @@ public:
     QPointer<QAction> m_spActReadOnly;
     QAbstractItemView::EditTriggers m_editTriggers;
     QPalette m_readWriteModePalette;
+    QVariantMap m_previousChangeRadixArgs;
 };
 
 const char CsvTableView::s_szCsvSaveOption_saveAsShown[] = "CsvTableView_saveAsShown";
@@ -2760,27 +2761,40 @@ void CsvTableView::onChangeRadixUiAction()
         this->showStatusInfoTip(tr("Selection is empty"));
         return;
     }
-    bool bOk = false;
+
     using JsonId = CsvTableViewActionChangeRadix::Params::ParamId;
     const auto idToStr = [](const JsonId id) { return CsvTableViewActionChangeRadix::Params::paramStringId(id); };
-    const auto items = InputDialog::getJsonAsVariantMap(
-        this,
-        tr("Change radix"),
-        tr("Change radix for numbers in selected cells.\n"
-           "Valid %2 values are 2-62 and values in range of int64 can be converted\n"
-           "If prefix/suffix is given, lack of such prefix/suffix is not considered as error\n"
-           "%1 can be used to define custom digits (e.g. \"ab\" would define radix 2 with digits {a,b} instead of typical {0,1}): if given, %2 can be omitted as length defines radix, which can be > 62")
-            .arg(idToStr(JsonId::resultDigits), idToStr(JsonId::toRadix)),
-        {   
+
+    if (DFG_OPAQUE_REF().m_previousChangeRadixArgs.isEmpty())
+    {
+        DFG_OPAQUE_REF().m_previousChangeRadixArgs = {
             { idToStr(JsonId::fromRadix), 10}, {idToStr(JsonId::toRadix), 0},
             { idToStr(JsonId::ignorePrefix), ""}, {idToStr(JsonId::ignoreSuffix), ""},
             { idToStr(JsonId::resultPrefix), ""}, {idToStr(JsonId::resultSuffix), ""}, { idToStr(JsonId::resultDigits), "" }
-        },
+        };
+    }
+
+    bool bOk = false;
+    const auto items = InputDialog::getJsonAsVariantMap(
+        this,
+        tr("Change radix"),
+        tr("Change radix for numbers in selected cells."
+           "<ul>"
+           "<li>Valid %3 values are 2-36</li>"
+           "<li>Valid %2 values are 2-62</li>"
+           "<li>Values in range of int64 can be converted</li>"
+           "<li>If prefix/suffix is given, lack of such prefix/suffix is not considered as error</li>"
+           "<li>%1 can be used to define custom digits (e.g. \"ab\" would define radix 2 with digits {a,b} instead of typical {0,1}): if given, %2 can be omitted as length defines radix</li>"
+           "</ul>")
+            .arg(idToStr(JsonId::resultDigits), idToStr(JsonId::toRadix), idToStr(JsonId::fromRadix)),
+        DFG_OPAQUE_REF().m_previousChangeRadixArgs,
         idToStr(JsonId::toRadix), // Sets selected text to be value of toRadix
         &bOk
     );
     if (!bOk)
         return;
+
+    DFG_OPAQUE_REF().m_previousChangeRadixArgs = items;
 
     CsvTableViewActionChangeRadix::Params params(items);
     if (!params.isValid())
