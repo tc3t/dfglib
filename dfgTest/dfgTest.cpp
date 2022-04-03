@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_formula";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_passWindow";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_smoothing_indexNb";
+    //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_textFilter";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.ChartEntryOperationManager";
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg";
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg_equal";

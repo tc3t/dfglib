@@ -637,6 +637,70 @@ TEST(dfgCharts, operations_formula)
     }
 }
 
+TEST(dfgCharts, operations_textFilter)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(charts);
+
+    ChartEntryOperationManager opManager;
+
+    // Basic tests
+    {
+        const ChartOperationPipeData::StringVector xVals{ StringUtf8::fromRawString("a"), StringUtf8::fromRawString("b"), StringUtf8::fromRawString("c"), StringUtf8::fromRawString("d") };
+        const ValueVectorD yVals{ 1, 2, 3, 4 };
+        ChartOperationPipeData arg(&xVals, &yVals);
+        ChartOperationPipeData argNeg(&xVals, &yVals);
+        auto op = opManager.createOperation(DFG_UTF8("textFilter(x, a|c)"));
+        auto opNeg = opManager.createOperation(DFG_UTF8("textFilter(x, a|c, reg_exp, 1)"));
+        op(arg);
+        opNeg(argNeg);
+        DFGTEST_EXPECT_FALSE(op.hasErrors());
+        DFGTEST_EXPECT_FALSE(opNeg.hasErrors());
+        {
+            auto pStrings = arg.stringsByIndex(0);
+            auto pValues = arg.valuesByIndex(1);
+            DFGTEST_ASSERT_TRUE(pStrings != nullptr);
+            DFGTEST_ASSERT_TRUE(pValues != nullptr);
+            DFGTEST_EXPECT_LEFT(2, pStrings->size());
+            DFGTEST_EXPECT_LEFT(2, pValues->size());
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", (*pStrings)[0]);
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", (*pStrings)[1]);
+            DFGTEST_EXPECT_LEFT(1, (*pValues)[0]);
+            DFGTEST_EXPECT_LEFT(3, (*pValues)[1]);
+        }
+        {
+            auto pStrings = argNeg.stringsByIndex(0);
+            auto pValues = argNeg.valuesByIndex(1);
+            DFGTEST_ASSERT_TRUE(pStrings != nullptr);
+            DFGTEST_ASSERT_TRUE(pValues != nullptr);
+            DFGTEST_EXPECT_LEFT(2, pStrings->size());
+            DFGTEST_EXPECT_LEFT(2, pValues->size());
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", (*pStrings)[0]);
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("d", (*pStrings)[1]);
+            DFGTEST_EXPECT_LEFT(2, (*pValues)[0]);
+            DFGTEST_EXPECT_LEFT(4, (*pValues)[1]);
+        }
+    }
+
+    // Testing that invalid regex doesn't throw expection
+    {
+        auto op = opManager.createOperation(DFG_UTF8("textFilter(x, [)"));
+        DFGTEST_EXPECT_FALSE(op.operator bool());
+    }
+
+    // Testing that unsupported match type returns empty op
+    {
+        auto op = opManager.createOperation(DFG_UTF8("textFilter(x, a|c, invalid_type)"));
+        DFGTEST_EXPECT_FALSE(op.operator bool());
+    }
+
+    // Testing that bad negate value returns empty op
+    {
+        auto op = opManager.createOperation(DFG_UTF8("textFilter(x, a|c, reg_exp, a)"));
+        DFGTEST_EXPECT_FALSE(op.operator bool());
+    }
+}
+
 TEST(dfgCharts, ChartEntryOperationManager)
 {
     using namespace ::DFG_ROOT_NS;

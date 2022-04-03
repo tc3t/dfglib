@@ -9,6 +9,7 @@
 #include <deque>
 #include <functional>
 #include <vector>
+#include <regex>
 #include "../dataAnalysis/smoothWithNeighbourAverages.hpp"
 #include "../dataAnalysis/smoothWithNeighbourMedians.hpp"
 #include "../math/FormulaParser.hpp"
@@ -470,8 +471,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         // Filters all pipe data vectors by keep flags created by input vector 'axis' and keep predicate 'keepPred'.
         // Concrete example: filters x,y vectors by pass window applied to x-axis, where 'keepPred' is called for
         //                   for all x-values and it returns true if x-value is within window and should be kept.
+        template <class Func_T, class PipeAccess_T>
+        inline void privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T&& keepPred, PipeAccess_T&& pipeAccess);
+
+        // Convenience overload that filters using double vector
         template <class Func_T>
-        void privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T&& keepPred);
+        inline void privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T&& func);
 
         // Returns pointer to pipe vector by axis index.
         static ValueVectorD* privPipeVectorByAxisIndex(ChartOperationPipeData& arg, double index);
@@ -561,11 +566,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         ::DFG_MODULE_NS(alg)::forEachFwd(arg.m_vectorRefs, func);
     }
 
-    template <class Func_T>
-    inline void ChartEntryOperation::privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T&& func)
+    template <class Func_T, class PipeAccess_T>
+    inline void ChartEntryOperation::privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T&& func, PipeAccess_T&& pipeAccess)
     {
         using namespace DFG_MODULE_NS(alg);
-        auto pCont = privPipeVectorByAxisIndex(arg, axis);
+        auto pCont = pipeAccess(arg, axis);
         if (!pCont)
         {
             const auto nIndex = floatAxisValueToAxisIndex(axis);
@@ -599,6 +604,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
                 this->setError(error_unexpectedInputVectorTypes);
             DFG_ASSERT_IMPLEMENTED(false);
         });
+    }
+
+    template <class Func_T>
+    inline void ChartEntryOperation::privFilterBySingle(ChartOperationPipeData& arg, const double axis, Func_T&& func)
+    {
+        return privFilterBySingle(arg, axis, std::forward<Func_T>(func), [](ChartOperationPipeData& arg2, const double axis2) { return privPipeVectorByAxisIndex(arg2, axis2); });
     }
 
     inline ChartEntryOperation::operator bool() const
@@ -806,8 +817,113 @@ namespace operations
         {
             return !PassWindowOperation::filter(v, lowerBound, upperBound);
         }
-    }; // PassWindowOperation
+    }; // BlockWindowOperation
 
+     /** Implements TextFilter operation that keeps text entries by match pattern.
+     *  Id:
+     *      textFilter
+     *  Parameters:
+     *      -0: axis, either x or y
+     *      -1: Match pattern, by default regular expression syntax
+     *      -[2]: pattern type: default is reg_exp, currently it is the only one supported
+     *      -[3]: negate: if 1, match will be negated, i.e. normally pattern "a" would keep texts having "a", with negate would keep texts not having "a"
+     *  Dependencies
+     *      -[x] or [y] depending on parameter 0
+     *  Outputs:
+     *      -The same number of vectors as in input
+     */
+    class TextFilterOperation : public ChartEntryOperation
+    {
+    public:
+        using BaseClass = ChartEntryOperation;
+
+        static SzPtrUtf8R id();
+
+        static ChartEntryOperation create(const CreationArgList& argList);
+
+        static void operation(ChartEntryOperation& op, ChartOperationPipeData& arg);
+    }; // TextFilterOperation
+
+    inline auto TextFilterOperation::id() -> SzPtrUtf8R
+    {
+        return DFG_UTF8("textFilter");
+    }
+
+    inline auto TextFilterOperation::create(const CreationArgList& argList) -> ChartEntryOperation
+    {
+        if (argList.valueCount() < 2)
+            return ChartEntryOperation();
+        const auto axis = axisStrToIndex(argList.value(0));
+        if (axis == static_cast<int>(axisIndex_invalid))
+            return ChartEntryOperation();
+
+        const auto svMatchPattern = argList.value(1);
+        const auto svPatternType = argList.value(2);
+        const auto svNegate = argList.value(3);
+        const auto svCaseSensitivity = argList.value(4);
+
+        // Checking if arguments have unsupported values
+        if (   (!svPatternType.empty()     && svPatternType != DFG_UTF8("reg_exp"))
+            || (!svNegate.empty() && (svNegate != DFG_UTF8("0") && svNegate != DFG_UTF8("1")))
+            || (!svCaseSensitivity.empty() && svCaseSensitivity != DFG_UTF8("1"))
+           )
+        {
+            return ChartEntryOperation();
+        }
+        
+        // Testing that can create regex from given pattern
+        try
+        {
+            std::regex(svMatchPattern.asUntypedView().toString());
+        }
+        catch (...)
+        {
+            return ChartEntryOperation();
+        }
+
+        ChartEntryOperation op(&TextFilterOperation::operation);
+
+        op.storeArg(0, axis);
+        op.storeArg(1, svMatchPattern);
+        op.storeArg(2, svPatternType);
+        op.storeArg(3, svNegate);
+        return op;
+    }
+
+    // Executes operation on pipe data.
+    inline void TextFilterOperation::operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
+    {
+        if (op.argCount() < 2)
+        {
+            op.setError(error_badCreationArgs);
+            return;
+        }
+        const auto axis = op.argAsDouble(0);
+        const auto svMatchPattern = op.argAsString(1);
+        const auto svNegate = (op.argAsString(3) == DFG_UTF8("1"));
+        if (svMatchPattern.empty())
+            return;
+
+        std::regex re;
+        try
+        {
+            re.assign(svMatchPattern.asUntypedView().toString());
+        }
+        catch (...)
+        {
+            op.setError(error_badCreationArgs);
+            return;
+        }
+
+        const auto pipeAccess = [](const ChartOperationPipeData& arg, const double axis) { return arg.constStringsByIndex(floatAxisValueToAxisIndex(axis)); };
+        
+        const auto filter = [&](const StringViewUtf8& sv)
+        {
+            const bool b = std::regex_match(sv.beginRaw(), sv.endRaw(), re);
+            return (svNegate) ? !b : b;
+        };
+        op.privFilterBySingle(arg, axis, filter, pipeAccess);
+    }
 
     /** Implements index neighbour smoothing
      *
@@ -1041,6 +1157,7 @@ inline ChartEntryOperationManager::ChartEntryOperationManager()
     add<operations::BlockWindowOperation>();
     add<operations::Smoothing_indexNb>();
     add<operations::Formula>();
+    add<operations::TextFilterOperation>();
 }
 
 inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAndParams) -> ChartEntryOperation
