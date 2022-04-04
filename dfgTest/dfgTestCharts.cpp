@@ -682,6 +682,36 @@ TEST(dfgCharts, operations_textFilter)
         }
     }
 
+    // Testing handling of empty pattern
+    {
+        const ChartOperationPipeData::StringVector xVals{ StringUtf8::fromRawString("a"), StringUtf8::fromRawString("b"), StringUtf8::fromRawString("c"), StringUtf8::fromRawString("d") };
+        const ValueVectorD yVals{ 1, 2, 3, 4 };
+        ChartOperationPipeData arg(&xVals, &yVals);
+        ChartOperationPipeData argNeg(&xVals, &yVals);
+        auto op = opManager.createOperation(DFG_UTF8("textFilter(x,)"));
+        auto opNeg = opManager.createOperation(DFG_UTF8("textFilter(x,,,1)"));
+        op(arg);
+        opNeg(argNeg);
+        DFGTEST_EXPECT_FALSE(op.hasErrors());
+        DFGTEST_EXPECT_FALSE(opNeg.hasErrors());
+        {
+            auto pStrings = arg.stringsByIndex(0);
+            auto pValues = arg.valuesByIndex(1);
+            DFGTEST_ASSERT_TRUE(pStrings != nullptr);
+            DFGTEST_ASSERT_TRUE(pValues != nullptr);
+            DFGTEST_EXPECT_TRUE(pStrings->empty());
+            DFGTEST_EXPECT_TRUE(pValues->empty());
+        }
+        {
+            auto pStrings = argNeg.stringsByIndex(0);
+            auto pValues = argNeg.valuesByIndex(1);
+            DFGTEST_ASSERT_TRUE(pStrings != nullptr);
+            DFGTEST_ASSERT_TRUE(pValues != nullptr);
+            DFGTEST_EXPECT_LEFT(4, pStrings->size());
+            DFGTEST_EXPECT_LEFT(4, pValues->size());
+        }
+    }
+
     // Testing that invalid regex doesn't throw expection
     {
         auto op = opManager.createOperation(DFG_UTF8("textFilter(x, [)"));

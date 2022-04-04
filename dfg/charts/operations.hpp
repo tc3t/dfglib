@@ -901,8 +901,6 @@ namespace operations
         const auto axis = op.argAsDouble(0);
         const auto svMatchPattern = op.argAsString(1);
         const auto svNegate = (op.argAsString(3) == DFG_UTF8("1"));
-        if (svMatchPattern.empty())
-            return;
 
         std::regex re;
         try
