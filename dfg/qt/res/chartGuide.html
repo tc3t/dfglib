@@ -281,5 +281,20 @@
                     <li>1 (optional): smoothing type, default is 'average'. Possible values: average, median, default</li>
                 </ul>
             </ul>
+            <li><i>textFilter</i></li>
+            <ul>
+                <li>Inclusive text filter, similar to passWindow but for strings. Keeps strings that match given regular expression.</li>
+                <li>Example: textFilter(x, .*a.*). Filters input by x-axis so that every kept string includes "a"</li>
+                <li>Example: textFilter(x, .*a.*,,1). Negated filter: keeps strings that do not include "a" </li>
+                <li>Example: textFilter(x, Name [1|2]). Filters input by x-axis so that every kept string is either "Name 1" or "Name 2"</li>
+                <li>Example: textFilter(x, \".*,a.*\"). Keeps strings that include ",a"</li>
+                <li>Parameters</li>
+                <ul>
+                    <li>0: [x,y]: coordinate whose value is passed to filter (must have string typed data)</li>
+                    <li>1: Regular expression pattern</li>
+                    <li>2 (optional): Pattern type. Must be either empty or "reg_exp"</li>
+                    <li>3 (optional): Negate. If "1", match is inverted (i.e. keeps all that don't match pattern). Default is "0"</li>
+                </ul>
+            </ul>
         </ul>
     </ul>
