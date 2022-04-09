@@ -768,9 +768,18 @@ void CsvTableView::addOpenSaveActions()
 
 void CsvTableView::addDimensionEditActions()
 {
-    // Header/first line move actions
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Move first row to header"), noShortCut, ActionFlags::defaultContentEdit, moveFirstRowToHeader);
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Move header to first row"), noShortCut, ActionFlags::defaultContentEdit, moveHeaderToFirstRow);
+    // Header actions
+    {
+        auto pMenu = createActionMenu(this, tr("Header actions"), ActionFlags::unknown);
+        if (pMenu)
+        {
+            // Header/first line move actions
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Move first row to header"), noShortCut, ActionFlags::defaultContentEdit, moveFirstRowToHeader);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Move header to first row"), noShortCut, ActionFlags::defaultContentEdit, moveHeaderToFirstRow);
+
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Select column visibility..."), noShortCut, ActionFlags::viewEdit, showSelectColumnVisibilityDialog);
+        }
+    }
 
     // "Insert row/column"-items
     {
