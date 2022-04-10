@@ -10,6 +10,7 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QDialog>
     #include <QString>
+    #include <QStringList>
     #include <QStyledItemDelegate>
     #include <QVector>
 DFG_END_INCLUDE_QT_HEADERS
@@ -17,7 +18,6 @@ DFG_END_INCLUDE_QT_HEADERS
 class QGridLayout;
 class QLabel;
 class QModelIndex;
-class QStringList;
 class QVBoxLayout;
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
