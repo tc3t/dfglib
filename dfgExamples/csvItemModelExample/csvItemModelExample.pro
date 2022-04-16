@@ -26,6 +26,7 @@ SOURCES += ../../dfg/os/memoryMappedFile.cpp \
     ../../dfg/qt/sqlTools.cpp \
     ../../dfg/math/FormulaParser.cpp \
     ../../dfg/qt/stringConversions.cpp \
+    ../../dfg/str/fmtlib/fmt.cpp \
     ../../dfg/time/DateTime.cpp \
     ./main.cpp
 

@@ -49,7 +49,7 @@ SOURCES += \
     ../dfg/qt/JsonListWidget.cpp \
     ../dfg/qt/sqlTools.cpp \
     ../dfg/qt/stringConversions.cpp \
-    ../dfg/str/fmtlib/format.cc \
+    ../dfg/str/fmtlib/fmt.cpp \
     ../dfg/time/DateTime.cpp \
     ../externals/gtest/gtest-all.cc \
     dfgTestCsvItemModel.cpp \

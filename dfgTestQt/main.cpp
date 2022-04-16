@@ -10,8 +10,6 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 #include <dfg/build/buildTimeDetails.hpp> // Note: this must be included after Qt-header in order to have BuildTimeDetail_qtVersion available.
 
-// Including .cc-file due possible Qt Creator bug (for details, see dfgQtTableEditor.pro)
-#include <dfg/str/fmtlib/format.cc>
 
 void PrintTo(const QString& s, ::std::ostream* pOstrm)
 {

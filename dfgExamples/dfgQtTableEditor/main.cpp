@@ -8,6 +8,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QDialog>
 #include <QDesktopServices>
 #include <QFileInfo>
+#include <QItemSelection>
+#include <QItemSelectionRange>
 #include <QMessageBox>
 #include <QMenu>
 #include <QTimer>
@@ -31,20 +33,10 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/debug/structuredExceptionHandling.h>
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/widgetHelpers.hpp>
+#include <dfg/qt/CsvItemModel.hpp>
 #include <exception>
 
-
-#include <QItemSelection>
-#include <QItemSelectionRange>
-
-DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
-    #include <dfg/str/fmtlib/format.cc>
-DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
-
-#include <dfg/qt/CsvItemModel.hpp>
-
 static QWidget* gpMainWindow = nullptr;
-
 
 void DiffUrlHandler::urlHandler(const QUrl& url)
 {
