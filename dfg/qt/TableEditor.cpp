@@ -757,7 +757,7 @@ namespace
         while (nStart < utf8.size())
         {
             QJsonParseError parseError;
-            auto jsonDoc = QJsonDocument::fromJson(utf8.mid(nStart), &parseError);
+            QJsonDocument::fromJson(utf8.mid(nStart), &parseError);
             if (parseError.error == QJsonParseError::GarbageAtEnd && parseError.offset != 0)
             {
                 nStart += parseError.offset;

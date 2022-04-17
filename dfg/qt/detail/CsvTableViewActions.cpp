@@ -486,7 +486,7 @@ CsvTableViewActionChangeRadixParams::CsvTableViewActionChangeRadixParams(const Q
     this->resultSuffix = qStringToStringUtf8(getVar(ParamId::resultSuffix).toString());
     this->resultDigits = getVar(ParamId::resultDigits).toString();
     if (this->toRadix == 0 && !this->resultDigits.isEmpty())
-        this->toRadix = this->resultDigits.size();
+        this->toRadix = saturateCast<int>(this->resultDigits.size());
     if (this->toRadix > 36  && this->toRadix <= 62 && this->resultDigits.isEmpty())
         this->resultDigits = QString::fromUtf8("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", this->toRadix);
 }

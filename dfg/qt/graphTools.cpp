@@ -1453,7 +1453,7 @@ void GraphDefinitionWidget::showGuideWidget()
             auto pActivateFind = new QAction(pTextEdit);
             pActivateFind->setShortcut(QString("Ctrl+F"));
             m_spGuideWidget->addAction(pActivateFind); // Needed in order to get shortcut trigger; parentship is not enough.
-            DFG_QT_VERIFY_CONNECT(connect(pActivateFind, &QAction::triggered, [=]() { pFindEdit->setFocus(); pFindEdit->selectAll(); }));
+            DFG_QT_VERIFY_CONNECT(connect(pActivateFind, &QAction::triggered, pFindEdit, [=]() { pFindEdit->setFocus(); pFindEdit->selectAll(); }));
         }
 
         const auto wrapCursor = [](QTextEdit* pTextEdit, QLineEdit* pFindEdit, const QTextDocument::FindFlags findFlags, const QTextCursor::MoveOperation moveOp)
@@ -1474,7 +1474,7 @@ void GraphDefinitionWidget::showGuideWidget()
             auto pActionF3 = new QAction(m_spGuideWidget.get());
             pActionF3->setShortcut(QString("F3"));
             m_spGuideWidget->addAction(pActionF3); // Needed in order to get shortcut trigger; parentship is not enough.
-            DFG_QT_VERIFY_CONNECT(connect(pActionF3, &QAction::triggered, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindFlags(), QTextCursor::Start); }));
+            DFG_QT_VERIFY_CONNECT(connect(pActionF3, &QAction::triggered, pTextEdit, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindFlags(), QTextCursor::Start); }));
         }
         
         // Adding shortcut Shift+F3 (find backward)
@@ -1482,11 +1482,11 @@ void GraphDefinitionWidget::showGuideWidget()
             auto pActionShiftF3 = new QAction(m_spGuideWidget.get());
             pActionShiftF3->setShortcut(QString("Shift+F3"));
             m_spGuideWidget->addAction(pActionShiftF3); // Needed in order to get shortcut trigger; parentship is not enough.
-            DFG_QT_VERIFY_CONNECT(connect(pActionShiftF3, &QAction::triggered, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindBackward, QTextCursor::End); }));
+            DFG_QT_VERIFY_CONNECT(connect(pActionShiftF3, &QAction::triggered, pTextEdit, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindBackward, QTextCursor::End); }));
         }
 
         // Connecting textChanged() to trigger find.
-        DFG_QT_VERIFY_CONNECT(connect(pFindEdit, &QLineEdit::textChanged, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindFlags(), QTextCursor::Start); }));
+        DFG_QT_VERIFY_CONNECT(connect(pFindEdit, &QLineEdit::textChanged, pTextEdit, [=]() { wrapCursor(pTextEdit, pFindEdit, QTextDocument::FindFlags(), QTextCursor::Start); }));
         
         pLayout->addWidget(pTextEdit);
         removeContextHelpButtonFromDialog(m_spGuideWidget.get());
@@ -4225,7 +4225,7 @@ DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : Base
             pAction->setCheckable(true);
             m_bLogCacheDiagnosticsOnUpdate = (DFG_BUILD_DEBUG_RELEASE_TYPE == StringViewC("debug"));
             pAction->setChecked(m_bLogCacheDiagnosticsOnUpdate);
-            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, [&](const bool b) { m_bLogCacheDiagnosticsOnUpdate = b; }));
+            DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::toggled, this, [&](const bool b) { m_bLogCacheDiagnosticsOnUpdate = b; }));
             pConsole->addAction(pAction);
         }
         m_spConsoleWidget.reset(pConsole);
