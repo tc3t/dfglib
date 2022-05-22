@@ -6,6 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2022-05-22, dfgQtTableEditor [version 2.3.0](dfgExamples/dfgQtTableEditor/README.md/#230-2022-05-22) (Numerically sortable columns, 'Change radix'-tool, textFilter chart operation...)
 * 2022-01-18, dfgQtTableEditor [version 2.2.0](dfgExamples/dfgQtTableEditor/README.md/#220-2022-01-18) (Hidable columns, date/time related improvements...)
 * 2021-09-09, dfgQtTableEditor [version 2.1.0](dfgExamples/dfgQtTableEditor/README.md/#210-2021-09-09) (multicolumn filtering, read-only mode...)
 * 2021-06-24, dfgQtTableEditor [version 2.0.0](dfgExamples/dfgQtTableEditor/README.md/#200-2021-06-24)
@@ -83,7 +84,7 @@ Summary of 3rd party code in dfglib (last revised 2021-06-19).
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) | Qt-related utilities
 | [muparser](https://github.com/beltoforion/muparser) (version 2.3.3, commit [5ccc8878](https://github.com/beltoforion/muparser/tree/5ccc887864381aeacf1277062fcbb76475623a02), 2022-01-13) with some edits | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
 | [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Versions 2.0.1 and 2.1.0 are known to work as of dfgQtTableEditor version 1.9.0.
-| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, earliest version that works might be 5.8.
+| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, 5.12, 5.13, 6.0, earliest version that works might be 5.8.
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:

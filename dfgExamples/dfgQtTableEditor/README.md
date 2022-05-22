@@ -4,27 +4,27 @@ csv-oriented table editor based on dfglib using Qt as UI framework. Also include
 
 ## Building
 
-### __Version 2.2.0__:
+### __Version 2.3.0__:
 
 Has been build with:
 | Compiler      | C++ standard [1] | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
 | ------------- | ---------------- | -- | ---- | -- | -- | -- |
 | Clang 6.0.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
 | Clang 10.0.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
-| Clang 12.0.0 (clang-cl, MSVC2019.10/11) | C++14 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| Clang 12.0.0 (clang-cl, MSVC2019.10/11) | C++14 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0.  May need a workaround for "lld-link: error: undefined symbol: wmemchr" as described in message of [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9)
 | GCC 7.5.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
-| GCC 9.3.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
-| GCC 9.3.0 | C++17 | 6.0 | Ubuntu 20.04 | 1.71 | No |
+| GCC 9.4.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
+| GCC 9.4.0 | C++17 | 6.0 | Ubuntu 20.04 | 1.71 | No |
 | MinGW 7.3.0 | C++17 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2017.9 | C++14 | 5.9 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2017.9 | C++14 | 5.9 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0.
 | MSVC2017.9 | C++17 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
 | MSVC2019.10/11 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2022.0 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2022.1 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
 | | | |
 
 [1] As reported by *__cplusplus* macro  or equivalent.
 
-Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. While building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges. If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70.
+Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. While building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges. If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. Using QCustomPlot 2.1 and Qt >=6.2 may need additional patch as discussed in [QCustomPlot forums](https://www.qcustomplot.com/index.php/support/forum/2380).
 
 Concrete build steps assuming having compatible Qt version, Qt Creator and compiler available:
 * Open dfgQtTableEditor.pro in Qt Creator
@@ -33,9 +33,26 @@ Concrete build steps assuming having compatible Qt version, Qt Creator and compi
 
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
-To see build chart of older versions, see [readme of 2.1.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.1.0/dfgExamples/dfgQtTableEditor)
+To see build chart of older versions, see [readme of 2.2.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.2.0/dfgExamples/dfgQtTableEditor)
 
 ## Version history
+
+### 2.3.0, 2022-05-22
+* Tag: [2.3.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.3.0)
+    * General
+        * [new] Numeric base converter tool, available from context menu entry "Change radix"  ([#97](https://github.com/tc3t/dfglib/issues/97))
+        * [new] Can now sort columns numerically ([#119](https://github.com/tc3t/dfglib/issues/119))
+        * [new] New selection detail: percentile ([#104](https://github.com/tc3t/dfglib/issues/104))
+        * [imp] Toolbar now has convenience actions to resize window ([#90](https://github.com/tc3t/dfglib/issues/90))
+        * [imp] Focussed cell matching with find filter is now shown more clearly ([#120](https://github.com/tc3t/dfglib/issues/120), [cbdaeab5](https://github.com/tc3t/dfglib/commit/cbdaeab519e5f99359e7cc9d18e4f75fcb9589c5))
+        * [imp] Can now control selection detail numeric format ([#123](https://github.com/tc3t/dfglib/issues/123))
+        * [imp] Saving .conf file now preserves manually added fields ([#122](https://github.com/tc3t/dfglib/issues/122))
+        * [imp] If trying to open non-existent app config file from menu, now asking if one should be created ([#116](https://github.com/tc3t/dfglib/issues/116), [9eae1644](https://github.com/tc3t/dfglib/commit/9eae1644b9cfcb99ebdaee63cd4dae9ce5cebfaa))
+        * [imp] Updated muparser 2.3.2 -> 2.3.3 ([#126](https://github.com/tc3t/dfglib/issues/126))
+        * [fix] Can now unhide columns even if column header is not available ([#127](https://github.com/tc3t/dfglib/issues/127), [ad94c2c7](https://github.com/tc3t/dfglib/commit/ad94c2c7a2a01082375849ee51b154302c69de10))
+    * Charts
+        * [new] New operation: textFilter. Can be used e.g. to filter bar labels ([#121](https://github.com/tc3t/dfglib/issues/121))
+
 
 ### 2.2.0, 2022-01-18
 * Tag: [2.2.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.2.0)
