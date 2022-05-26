@@ -6,12 +6,15 @@
 #include "PropertyHelper.hpp"
 #include "PatternMatcher.hpp"
 #include "stringConversions.hpp"
+#include "widgetHelpers.hpp"
 
 #include "qtIncludeHelpers.hpp"
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAction>
 #include <QCheckBox>
+#include <QClipboard>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDockWidget>
 #include <QGridLayout>
 #include <QLineEdit>
@@ -459,6 +462,7 @@ DFG_OPAQUE_PTR_DEFINE(TableEditor)
     QMap<QModelIndex, QString> m_pendingEdits; // Stores edits done in cell editor which couldn't be applied immediately to be tried later.
     QPointer<QWidget> m_spResizeWindow;        // Defines widget to resize/move if document requests such.
     bool m_bIgnoreOnSelectionChanged = false;
+    QObjectStorage<QToolButton> m_spFileInfoButton;
 };
 
 void TableEditor::CellEditor::setFontPointSizeF(const qreal pointSize)
@@ -509,6 +513,38 @@ TableEditor::TableEditor()
     m_spLineEditSourcePath->setReadOnly(true);
     m_spLineEditSourcePath->setPlaceholderText(tr("<no file path available>"));
 
+    // File info tool button
+    {
+        DFG_OPAQUE_REF().m_spFileInfoButton.reset(new QToolButton(this));
+        auto pButton = DFG_OPAQUE_REF().m_spFileInfoButton.get();
+
+        pButton->setPopupMode(QToolButton::InstantPopup);
+        pButton->setHidden(true);
+
+        // Adding menu to button
+        {
+            auto pMenu = new QMenu(pButton); // Deletion through parentship
+            const auto addMenuItem = [&](const QString& sTitle, const QString sIconPath, decltype(&TableEditor::onCopyFileInfoToClipboard) func)
+            {
+                auto pAct = pMenu->addAction(sTitle);
+                if (pAct)
+                {
+                    DFG_QT_VERIFY_CONNECT(QObject::connect(pAct, &QAction::triggered, this, func));
+                    if (!sIconPath.isEmpty())
+                        pAct->setIcon(QIcon(sIconPath));
+                }
+            };
+
+            addMenuItem(tr("Copy file info to clipboard"), QString(), &TableEditor::onCopyFileInfoToClipboard);
+            pButton->setMenu(pMenu); // Does not transfer ownership
+        }
+
+        auto pStyle = QApplication::style();
+        if (pStyle)
+            pButton->setIcon(pStyle->standardIcon(QStyle::SP_MessageBoxInformation));
+
+    }
+
     // Cell Editor and it's container widget
     {
         m_spCellEditorDockWidget.reset(new QDockWidget(this));
@@ -540,6 +576,8 @@ TableEditor::TableEditor()
         {
             auto firstRowLayout = new QHBoxLayout; // Deletion through layout parentship (see addLayout).
             firstRowLayout->addWidget(m_spLineEditSourcePath.get());
+
+            firstRowLayout->addWidget(DFG_OPAQUE_REF().m_spFileInfoButton.get());
 
             m_spToolBar.reset(new QToolBar(this));
             firstRowLayout->addWidget(m_spToolBar.get());
@@ -788,6 +826,77 @@ void TableEditor::setSelectionDetailsFromIni(const QString& s)
     }
 }
 
+namespace
+{
+    static QString createInfoText(const QObject* pTrObj, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel)
+    {
+        if (!pTrObj || !pModel)
+            return QString();
+        QString sTooltipText;
+        const QObject& trObj = *pTrObj;
+        auto& model = *pModel;
+        const auto sFilePath = model.getFilePath();
+
+        if (!sFilePath.isEmpty())
+        {
+            const auto dateTimeToString = [&](const QDateTime& dateTime) { return dateTime.toString("yyyy-MM-dd hh:mm:ss"); };
+            const QFileInfo fi(sFilePath);
+            if (fi.exists())
+            {
+                const auto fileBom = ::DFG_MODULE_NS(io)::checkBOMFromFile(qStringToFileApi8Bit(sFilePath));
+                const auto yesNoText = [&](const bool b) { return (b) ? trObj.tr("yes") : trObj.tr("no"); };
+                const QString sBom = (fileBom != ::DFG_MODULE_NS(io)::encodingUnknown) ? ::DFG_MODULE_NS(io)::encodingToStrId(fileBom) : trObj.tr("not present");
+                const QFileInfo targetFileInfo = (fi.isSymLink()) ? QFileInfo(fi.symLinkTarget()) : fi;
+                sTooltipText = trObj.tr(
+                    "%8\n"
+                    "\n"
+                    "%7"
+                    "    File size     : %1\n"
+                    "    Created       : %2\n"
+                    "    Last modified : %3\n"
+                    "    Hidden        : %4\n"
+                    "    Writable      : %5\n"
+                    "    BOM           : %6"
+                ).arg(
+                    trObj.tr("%1 (%2 bytes)").arg(formattedDataSize(targetFileInfo.size(), 2), QString::number(targetFileInfo.size())), // 1
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
+                    dateTimeToString(targetFileInfo.birthTime()), // 2
+#else
+                    dateTimeToString(targetFileInfo.created()), // 2
+#endif
+                    dateTimeToString(targetFileInfo.lastModified()), // 3
+                    yesNoText(targetFileInfo.isHidden()), // 4
+                    yesNoText(targetFileInfo.isWritable()), // 5
+                    sBom, // 6
+                    (fi.isSymLink()) ? trObj.tr("    Symlink target: %1\n").arg(targetFileInfo.absoluteFilePath()) : QString(), // 7
+                    (fi.isSymLink()) ? trObj.tr("File info for symlink target").arg(targetFileInfo.absoluteFilePath()) : trObj.tr("File info") // 8
+                ); 
+            }
+            else
+                sTooltipText = trObj.tr("No file exists in path %1").arg(sFilePath);
+        }
+        return sTooltipText;
+    }
+
+    static void updateFileInfoToolTip(QToolButton* pButton, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel)
+    {
+        if (!pButton)
+            return;
+
+        const auto sToolTipText = createInfoText(pButton, pModel);
+        pButton->setVisible(!sToolTipText.isEmpty());
+        pButton->setToolTip(sToolTipText);
+    }
+} // unnamed namespace
+
+void TableEditor::onCopyFileInfoToClipboard()
+{
+    const auto sInfoText = createInfoText(DFG_OPAQUE_REF().m_spFileInfoButton.get(), m_spTableModel.get());
+    auto pClipboard = QApplication::clipboard();
+    if (pClipboard)
+        pClipboard->setText(sInfoText);
+}
+
 void TableEditor::onNewSourceOpened()
 {
     if (!m_spTableModel)
@@ -842,6 +951,7 @@ void TableEditor::onNewSourceOpened()
 
     resizeColumnsToView();
     updateWindowTitle();
+    updateFileInfoToolTip(DFG_OPAQUE_REF().m_spFileInfoButton.get(), &model);
 
     if (m_spChartDisplay)
     {
@@ -871,7 +981,10 @@ void TableEditor::onSaveCompleted(const bool success, const double saveTimeInSec
     if (!m_spStatusBar)
         return;
     if (success)
+    {
         m_spStatusBar->showMessage(tr("Saving done in %1 s").arg(saveTimeInSeconds, 0, 'g', 4));
+        updateFileInfoToolTip(DFG_OPAQUE_REF().m_spFileInfoButton.get(), this->m_spTableModel.get());
+    }
     else
         m_spStatusBar->showMessage(tr("Saving failed lasting %1 s").arg(saveTimeInSeconds, 0, 'g', 4));
 }

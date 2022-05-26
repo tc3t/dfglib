@@ -154,6 +154,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onHighlightTextCaseSensitivityChanged(bool);
         void onFilterCaseSensitivityChanged(bool);
         void onViewReadOnlyModeChanged(bool);
+        void onCopyFileInfoToClipboard();
 
     public:
         QObjectStorage<ViewClass> m_spTableView;
