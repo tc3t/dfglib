@@ -41,6 +41,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QToolButton>
 #include <QSplitter>
 #include <QTimer>
+#include <QVector>
 DFG_END_INCLUDE_QT_HEADERS
 
 #define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
@@ -80,12 +81,12 @@ namespace
         WindowExtentProperty(const QVariant& v) :
             m_val(0)
         {
-			// Check if v is already of type WindowExtentProperty
-			if (v.canConvert<WindowExtentProperty>())
-			{
-				*this = v.value<WindowExtentProperty>();
-				return;
-			}
+            // Check if v is already of type WindowExtentProperty
+            if (v.canConvert<WindowExtentProperty>())
+            {
+                *this = v.value<WindowExtentProperty>();
+                return;
+            }
             bool ok = false;
             auto intVal = v.toInt(&ok);
             if (ok) // Plain int? If yes, interpret as absolute value.
@@ -435,7 +436,7 @@ bool CsvTableViewSortFilterProxyModel::filterAcceptsRow(const int sourceRow, con
             return false;
         });
     }
-    else 
+    else
         return BaseClass::filterAcceptsRow(sourceRow, sourceParent);
 }
 
@@ -828,11 +829,17 @@ void TableEditor::setSelectionDetailsFromIni(const QString& s)
 
 namespace
 {
-    static QString createInfoText(const QObject* pTrObj, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel)
+    enum class FileInfoFormatType
+    {
+        clipboard,
+        tooltip
+    };
+
+    static QString createFileInfoText(const QObject* pTrObj, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel, const FileInfoFormatType formatType)
     {
         if (!pTrObj || !pModel)
             return QString();
-        QString sTooltipText;
+        QString sInfoText;
         const QObject& trObj = *pTrObj;
         auto& model = *pModel;
         const auto sFilePath = model.getFilePath();
@@ -845,37 +852,58 @@ namespace
             {
                 const auto fileBom = ::DFG_MODULE_NS(io)::checkBOMFromFile(qStringToFileApi8Bit(sFilePath));
                 const auto yesNoText = [&](const bool b) { return (b) ? trObj.tr("yes") : trObj.tr("no"); };
-                const QString sBom = (fileBom != ::DFG_MODULE_NS(io)::encodingUnknown) ? ::DFG_MODULE_NS(io)::encodingToStrId(fileBom) : trObj.tr("not present");
+                const QString sEncoding = (fileBom != ::DFG_MODULE_NS(io)::encodingUnknown) ? ::DFG_MODULE_NS(io)::encodingToStrId(fileBom) : trObj.tr("unknown (note: detection is based only on UTF BOM)");
                 const QFileInfo targetFileInfo = (fi.isSymLink()) ? QFileInfo(fi.symLinkTarget()) : fi;
-                sTooltipText = trObj.tr(
-                    "%8\n"
-                    "\n"
-                    "%7"
-                    "    File size     : %1\n"
-                    "    Created       : %2\n"
-                    "    Last modified : %3\n"
-                    "    Hidden        : %4\n"
-                    "    Writable      : %5\n"
-                    "    BOM           : %6"
-                ).arg(
-                    trObj.tr("%1 (%2 bytes)").arg(formattedDataSize(targetFileInfo.size(), 2), QString::number(targetFileInfo.size())), // 1
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
-                    dateTimeToString(targetFileInfo.birthTime()), // 2
-#else
-                    dateTimeToString(targetFileInfo.created()), // 2
-#endif
-                    dateTimeToString(targetFileInfo.lastModified()), // 3
-                    yesNoText(targetFileInfo.isHidden()), // 4
-                    yesNoText(targetFileInfo.isWritable()), // 5
-                    sBom, // 6
-                    (fi.isSymLink()) ? trObj.tr("    Symlink target: %1\n").arg(targetFileInfo.absoluteFilePath()) : QString(), // 7
-                    (fi.isSymLink()) ? trObj.tr("File info for symlink target").arg(targetFileInfo.absoluteFilePath()) : trObj.tr("File info") // 8
-                ); 
+
+                QVector<QPair<QString, QString>> fields;
+                if (fi.isSymLink())
+                {
+                    fields.push_back(qMakePair(trObj.tr("Symlink path"), fi.absoluteFilePath()));
+                    fields.push_back(qMakePair(trObj.tr("Target file path"), targetFileInfo.absoluteFilePath()));
+                }
+                else
+                {
+                    fields.push_back(qMakePair(trObj.tr("File path"), targetFileInfo.absoluteFilePath()));
+                }
+
+                fields.push_back(qMakePair(trObj.tr("File size"), trObj.tr("%1 (%2 bytes)").arg(formattedDataSize(targetFileInfo.size(), 2), QString::number(targetFileInfo.size()))));
+                fields.push_back(qMakePair(trObj.tr("Created"),
+                    #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
+                        dateTimeToString(targetFileInfo.birthTime())));
+                    #else
+                        dateTimeToString(targetFileInfo.created())));
+                    #endif
+                fields.push_back(qMakePair(trObj.tr("Last modified"), dateTimeToString(targetFileInfo.lastModified())));
+                fields.push_back(qMakePair(trObj.tr("Hidden"), yesNoText(targetFileInfo.isHidden())));
+                fields.push_back(qMakePair(trObj.tr("Writable"), yesNoText(targetFileInfo.isWritable())));
+                fields.push_back(qMakePair(trObj.tr("Encoding"), sEncoding));
+
+                if (formatType == FileInfoFormatType::tooltip)
+                {
+                    sInfoText += "<table>";
+                    for (const auto& item : qAsConst(fields))
+                    {
+                        sInfoText.append(QString("<tr><td>%1</td><td>%2</td></tr>").arg(item.first, item.second));
+                    }
+                    sInfoText += "</table>";
+                }
+                else if (formatType == FileInfoFormatType::clipboard)
+                {
+                    // For clipboard formatting as CSV
+                    for (const auto& item : qAsConst(fields))
+                    {
+                        sInfoText.append(QString("%1\t%2\n").arg(item.first, item.second));
+                    }
+                }
+                else
+                {
+                    DFG_ASSERT_IMPLEMENTED(false);
+                }
             }
-            else
-                sTooltipText = trObj.tr("No file exists in path %1").arg(sFilePath);
+            else // case: File does not exist
+                sInfoText = trObj.tr("No file exists in path %1").arg(sFilePath);
         }
-        return sTooltipText;
+        return sInfoText;
     }
 
     static void updateFileInfoToolTip(QToolButton* pButton, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel)
@@ -883,7 +911,7 @@ namespace
         if (!pButton)
             return;
 
-        const auto sToolTipText = createInfoText(pButton, pModel);
+        const auto sToolTipText = createFileInfoText(pButton, pModel, FileInfoFormatType::tooltip);
         pButton->setVisible(!sToolTipText.isEmpty());
         pButton->setToolTip(sToolTipText);
     }
@@ -891,7 +919,7 @@ namespace
 
 void TableEditor::onCopyFileInfoToClipboard()
 {
-    const auto sInfoText = createInfoText(DFG_OPAQUE_REF().m_spFileInfoButton.get(), m_spTableModel.get());
+    const auto sInfoText = createFileInfoText(DFG_OPAQUE_REF().m_spFileInfoButton.get(), m_spTableModel.get(), FileInfoFormatType::clipboard);
     auto pClipboard = QApplication::clipboard();
     if (pClipboard)
         pClipboard->setText(sInfoText);
