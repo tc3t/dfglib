@@ -127,6 +127,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setFilterJson(const QString& sJson);
 
+        void updateFileInfoToolTip();
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 

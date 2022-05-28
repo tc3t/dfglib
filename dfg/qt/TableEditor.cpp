@@ -378,6 +378,32 @@ namespace DFG_DETAIL_NS {
                 m_spJsonInsertButton->setVisible(bIsJson);
         }
     };
+
+    class FileInfoToolButton : public QToolButton
+    {
+    public:
+        using BaseClass = QToolButton;
+
+        FileInfoToolButton(TableEditor* pParent)
+            : BaseClass(pParent)
+            , m_spTableEditor(pParent)
+        {}
+
+    protected:
+        bool event(QEvent* pEvent) override
+        {
+            if (pEvent && pEvent->type() == QEvent::ToolTip)
+            {
+                // When getting tooltip event, updating tooltip text.
+                if (m_spTableEditor)
+                    m_spTableEditor->updateFileInfoToolTip();
+            }
+            return BaseClass::event(pEvent);
+        }
+
+        QPointer<TableEditor> m_spTableEditor;
+    }; // class FileInfoToolButton
+
 } // namespace DFG_DETAILS_NS (inside namespace dfg::qt)
 
 DFG_OPAQUE_PTR_DEFINE(CsvTableViewSortFilterProxyModel)
@@ -516,7 +542,7 @@ TableEditor::TableEditor()
 
     // File info tool button
     {
-        DFG_OPAQUE_REF().m_spFileInfoButton.reset(new QToolButton(this));
+        DFG_OPAQUE_REF().m_spFileInfoButton.reset(new DFG_DETAIL_NS::FileInfoToolButton(this));
         auto pButton = DFG_OPAQUE_REF().m_spFileInfoButton.get();
 
         pButton->setPopupMode(QToolButton::InstantPopup);
@@ -906,7 +932,7 @@ namespace
         return sInfoText;
     }
 
-    static void updateFileInfoToolTip(QToolButton* pButton, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel)
+    static void updateFileInfoToolTipImpl(QToolButton* pButton, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel)
     {
         if (!pButton)
             return;
@@ -916,6 +942,11 @@ namespace
         pButton->setToolTip(sToolTipText);
     }
 } // unnamed namespace
+
+void TableEditor::updateFileInfoToolTip()
+{
+    updateFileInfoToolTipImpl(DFG_OPAQUE_REF().m_spFileInfoButton.get(), this->m_spTableModel.get());
+}
 
 void TableEditor::onCopyFileInfoToClipboard()
 {
@@ -979,7 +1010,7 @@ void TableEditor::onNewSourceOpened()
 
     resizeColumnsToView();
     updateWindowTitle();
-    updateFileInfoToolTip(DFG_OPAQUE_REF().m_spFileInfoButton.get(), &model);
+    updateFileInfoToolTip();
 
     if (m_spChartDisplay)
     {
@@ -1011,7 +1042,7 @@ void TableEditor::onSaveCompleted(const bool success, const double saveTimeInSec
     if (success)
     {
         m_spStatusBar->showMessage(tr("Saving done in %1 s").arg(saveTimeInSeconds, 0, 'g', 4));
-        updateFileInfoToolTip(DFG_OPAQUE_REF().m_spFileInfoButton.get(), this->m_spTableModel.get());
+        updateFileInfoToolTip();
     }
     else
         m_spStatusBar->showMessage(tr("Saving failed lasting %1 s").arg(saveTimeInSeconds, 0, 'g', 4));
