@@ -49,6 +49,9 @@ constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for e
     constexpr char ChartObjectChartTypeStr_txy[] = "txy";
         // txy-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
+    constexpr char ChartObjectChartTypeStr_txys[] = "txys";
+        // txys-type has properties: see list defined in forEachUnrecognizedPropertyId().
+
     constexpr char ChartObjectChartTypeStr_histogram[] = "histogram";
         // histogram-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
@@ -122,6 +125,7 @@ constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 // x_source/y_source, value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
 constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
 constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
+constexpr char ChartObjectFieldIdStr_zSource[] = "z_source"; // TODO: not yet properly handled in various places
     constexpr char ChartObjectSourceTypeStr_columnName[]    = "column_name";
     constexpr char ChartObjectSourceTypeStr_rowIndex[]      = "row_index"; // Value is to be taken from row index of another column.
 
@@ -580,6 +584,8 @@ public:
 
     // Sets x values and y values. If given x and y ranges have different size, request is ignored.
     virtual void setValues(InputSpanD, InputSpanD, const std::vector<bool>* pFilterFlags = nullptr) = 0;
+
+    virtual void setMetaDataByFunctor(std::function<StringViewUtf8 (double, double, double)> func) { DFG_UNUSED(func); }
 }; // Class XySeries
 
 
@@ -881,7 +887,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
     using namespace DFG_DETAIL_NS;
     const auto sType = controlItem.fieldValueStr(ChartObjectFieldIdStr_type);
     const auto isType = [&](const char* pszId) { return sType == SzPtrUtf8(pszId); };
-    if (isType(ChartObjectChartTypeStr_xy) || isType(ChartObjectChartTypeStr_txy))
+    if (isType(ChartObjectChartTypeStr_xy) || isType(ChartObjectChartTypeStr_txy) || isType(ChartObjectChartTypeStr_txys))
     {
         checkForUnrecongnizedProperties(controlItem, func, {
             ChartObjectFieldIdStr_enabled,

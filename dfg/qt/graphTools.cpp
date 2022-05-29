@@ -121,7 +121,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
                               const GraphDataSource::DataSourceIndex defaultValue)->GraphDataSource::DataSourceIndex;
 
     template <class ColRange_T, class IsRowSpecifier_T>
-    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier);
+    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, GraphDataSource::DataSourceIndex& z, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier);
 
     ChartController* getControllerFromParents(QObject* pThis)
     {
@@ -1087,13 +1087,13 @@ public:
      *      -The list may have more than requested number of columns. For xy-type, column index of x is placed in rColumnIndexes[0] and y in rColumnIndexes[1] respectively.
      *      -rRowFlag-array receives isColumnRowIndex() flags.
      */
-    TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 2>& rColumnIndexes, std::array<bool, 2>& rRowFlags);
+    TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 3>& rColumnIndexes, std::array<bool, 3>& rRowFlags);
 
     CacheKeyToTableSelectionaMap m_tableSelectionDatas;
 }; // ChartDataCache
 
 
-auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 2>& rColumnIndexes, std::array<bool, 2>& rRowFlags) -> TableSelectionOptional
+auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 3>& rColumnIndexes, std::array<bool, 3>& rRowFlags) -> TableSelectionOptional
 {
     std::fill(rColumnIndexes.begin(), rColumnIndexes.end(), GraphDataSource::invalidIndex());
     std::fill(rRowFlags.begin(), rRowFlags.end(), false);
@@ -1115,8 +1115,10 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
 
     auto& xColumnIndex = rColumnIndexes[0];
     auto& yColumnIndex = rColumnIndexes[1];
+    auto& zColumnIndex = rColumnIndexes[2];
     xColumnIndex = getChosenColumnIndex(source, ChartObjectFieldIdStr_xSource, defEntry, nDefaultValue);
     yColumnIndex = getChosenColumnIndex(source, ChartObjectFieldIdStr_ySource, defEntry, nDefaultValue);
+    zColumnIndex = getChosenColumnIndex(source, ChartObjectFieldIdStr_zSource, defEntry, nDefaultValue);
 
     const auto isRowIndexSpecifier = [=](const DataSourceIndex i) { return i == nRowColumnSpecifier; };
 
@@ -1129,8 +1131,10 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
 
     auto& bXisRowIndex = rRowFlags[0];
     auto& bYisRowIndex = rRowFlags[1];
+    auto& bZisRowIndex = rRowFlags[2];
     bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
     bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
+    bZisRowIndex = false;
 
     if (bXisRowIndex && bYisRowIndex)
     {
@@ -1147,17 +1151,21 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
             bYisRowIndex = true;
     }
 
-    makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, columns, isRowIndexSpecifier);
+    makeEffectiveColumnIndexes(xColumnIndex, yColumnIndex, zColumnIndex, columns, isRowIndexSpecifier);
 
     const auto bStringsNeededForX = (!bXisRowIndex && (defEntry.isType(ChartObjectChartTypeStr_bars) || (defEntry.isType(ChartObjectChartTypeStr_histogram) && defEntry.fieldValueStr(ChartObjectFieldIdStr_binType) == DFG_UTF8("text"))));
     const auto bStringsNeededForY = (!bYisRowIndex && defEntry.isType(ChartObjectChartTypeStr_histogram) && defEntry.fieldValueStr(ChartObjectFieldIdStr_binType) == DFG_UTF8("text"));
+    const auto bStringsNeededForZ = (!bZisRowIndex && defEntry.isType(ChartObjectChartTypeStr_txys));
 
     const auto bXsuccess = (bStringsNeededForX) ? rCacheItem.storeColumnFromSource_strings(source, xColumnIndex) : rCacheItem.storeColumnFromSource(source, xColumnIndex);
     bool bYsuccess = false;
+    bool bZsuccess = false;
     if (bXsuccess)
         bYsuccess = (bStringsNeededForY) ? rCacheItem.storeColumnFromSource_strings(source, yColumnIndex) : rCacheItem.storeColumnFromSource(source, yColumnIndex);
+    if (bYsuccess)
+        bZsuccess = (!defEntry.isType(ChartObjectChartTypeStr_txys) || rCacheItem.storeColumnFromSource_strings(source, zColumnIndex));
 
-    if (bXsuccess && bYsuccess)
+    if (bXsuccess && bYsuccess && bZsuccess)
         return iter->second;
     else
         return TableSelectionOptional(); // Failed to read columns
@@ -1349,6 +1357,7 @@ void GraphDefinitionWidget::addJsonWidgetContextMenuEntries(JsonListWidget& rJso
         };
         addInsertAction(tr("Insert basic 'xy'"),        R"({ "type":"xy" })");
         addInsertAction(tr("Insert basic 'txy'"),       R"({ "type":"txy" })");
+        addInsertAction(tr("Insert basic 'txys'"),      R"({ "type":"txys" })");
         addInsertAction(tr("Insert basic 'bars'"),      R"({ "type":"bars" })");
         addInsertAction(tr("Insert basic 'histogram'"), R"({ "type":"histogram" })");
         addInsertAction(tr("Insert basic 'panel_config'"),
@@ -1564,6 +1573,26 @@ static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(
 
 static void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData);
 
+// Extended QPCurve providing metadata for every point; i.e. effectively a xy-graph with string info on third dimension shown in tooltip.
+class CustomPlotCurveWithMetaData : public QCPCurve
+{
+public:
+    using BaseClass = QCPCurve;
+    using BaseClass::BaseClass;
+
+    StringViewUtf8 metaDataStringAt(const QCPCurveData& data) const
+    {
+        return m_metaData[data.t].toStringView();
+    }
+
+    void setMetaDataStringAt(const QCPCurveData& data, const StringViewUtf8& sv)
+    {
+        m_metaData.insert(data.t, sv);
+    }
+
+    ::DFG_MODULE_NS(cont)::MapToStringViews<double, StringUtf8> m_metaData;
+}; // class CustomPlotCurveWithMetaData
+
 // Defines custom implementation for ChartObject. This is used to avoid repeating virtual overrides in ChartObjects.
 class ChartObjectQCustomPlot : public ::DFG_MODULE_NS(charts)::ChartObject
 {
@@ -1724,6 +1753,22 @@ public:
     {
         if (!setValuesImpl<QCPGraphData>(getGraph(), xVals, yVals, pFilterFlags, [](Dummy, double x, double y) { return QCPGraphData(x,y); } ))
             setValuesImpl<QCPCurveData>(getCurve(), xVals, yVals, pFilterFlags, [](size_t n, double x, double y) { return QCPCurveData(static_cast<double>(n), x, y); });
+    }
+
+    void setMetaDataByFunctor(std::function<StringViewUtf8(double, double, double)> func) override
+    {
+        auto pCurve = dynamic_cast<CustomPlotCurveWithMetaData*>(m_spQcpObject.data());
+        if (pCurve)
+        {
+            auto spData = pCurve->data();
+            if (spData)
+            {
+                for (const auto& dataItem : *spData)
+                {
+                    pCurve->setMetaDataStringAt(dataItem, func(dataItem.t, dataItem.key, dataItem.value));
+                }
+            }
+        }
     }
 
     void setLineStyle(StringViewC svStyle) override;
@@ -2653,6 +2698,11 @@ auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) 
     else if (type == ChartObjectChartTypeStr_txy)
     {
         pQcpCurve = new QCPCurve(pXaxis, pYaxis); // Owned by QCustomPlot
+        setTypeToQcpObjectProperty(pQcpCurve, type);
+    }
+    else if (type == ChartObjectChartTypeStr_txys)
+    {
+        pQcpCurve = new CustomPlotCurveWithMetaData(pXaxis, pYaxis); // Owned by QCustomPlot
         setTypeToQcpObjectProperty(pQcpCurve, type);
     }
     else
@@ -3633,9 +3683,13 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCu
     auto pointToText = PointToTextConverter<QCPCurveData>(*pCurve);
 
     toolTipStream << tr("<br>Nearest points and distance to cursor:");
+    const auto pMetaCurve = dynamic_cast<const CustomPlotCurveWithMetaData*>(pCurve);
     for (const auto& item : nearest)
     {
-        toolTipStream << QString("<br>%1 (%2)").arg(pointToText(item.data, toolTipStream)).arg(std::sqrt(item.distanceSquare));
+        if (pMetaCurve)
+            toolTipStream << QString("<br>%1: %2 (%3)").arg(pointToText(item.data, toolTipStream), viewToQString(pMetaCurve->metaDataStringAt(item.data))).arg(std::sqrt(item.distanceSquare));
+        else
+            toolTipStream << QString("<br>%1 (%2)").arg(pointToText(item.data, toolTipStream)).arg(std::sqrt(item.distanceSquare));
     }
 
     return true;
@@ -5247,7 +5301,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
                 pPreparedData = &dummy; // Setting pPreparedData to dummy data to prevent refreshX calls from starting to compute data.
             try
             {
-                if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
+                if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy || sEntryType == ChartObjectChartTypeStr_txys)
                     refreshXy(context, rChart, configParamCreator, source, defEntry, pPreparedData);
                 else if (sEntryType == ChartObjectChartTypeStr_histogram)
                     refreshHistogram(context, rChart, configParamCreator, source, defEntry, pPreparedData);
@@ -5403,7 +5457,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
     }
 
     template <class ColRange_T, class IsRowSpecifier_T>
-    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier)
+    void makeEffectiveColumnIndexes(GraphDataSource::DataSourceIndex& x, GraphDataSource::DataSourceIndex& y, GraphDataSource::DataSourceIndex& z, const ColRange_T& colRange, IsRowSpecifier_T isRowIndexSpecifier)
     {
         if (colRange.empty())
             return;
@@ -5459,6 +5513,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
                 y = colRange[nDefaultYindex];
             }
         }
+
+        if (colRange.size() >= 3 && !isPresent(z))
+        {
+            // If there's no z-defined, taking first free one.
+            for (size_t i = 0; i < 3; ++i)
+            {
+                if (x != colRange[i] && y != colRange[i])
+                    z = colRange[i];
+            }
+        }
     }
 } } } // dfg:::qt::<unnamed>
 
@@ -5469,7 +5533,7 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareData(std::shared_pt
     // Note: this duplicates type selection logic from onChartDataPreparationReady()
     try
     {
-        if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy)
+        if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy || sEntryType == ChartObjectChartTypeStr_txys)
             return prepareDataForXy(spCache, source, defEntry);
         else if (sEntryType == ChartObjectChartTypeStr_histogram)
             return prepareDataForHistogram(spCache, source, defEntry);
@@ -5491,8 +5555,8 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
     if (!spCache)
         spCache.reset(new ChartDataCache);
 
-    std::array<DataSourceIndex, 2> columnIndexes;
-    std::array<bool, 2> rowFlags;
+    std::array<DataSourceIndex, 3> columnIndexes;
+    std::array<bool, 3> rowFlags;
     auto optData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optData || optData->columnCount() < 1)
@@ -5500,10 +5564,13 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
 
     auto& tableData = *optData;
 
+    const auto bNeedMetaStrings = defEntry.isType(ChartObjectChartTypeStr_txys);
+
     auto pXdata = tableData.columnDataByIndex(columnIndexes[0]);
     auto pYdata = tableData.columnDataByIndex(columnIndexes[1]);
+    auto pZdata = (bNeedMetaStrings) ? tableData.columnStringsByIndex(columnIndexes[2]) : nullptr;
 
-    if (!pXdata || !pYdata)
+    if (!pXdata || !pYdata || (bNeedMetaStrings && !pZdata))
         return ChartData();
 
     const bool bXisRowIndex = rowFlags[0];
@@ -5530,11 +5597,15 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
     const auto& yValueMap = (pXdata != pYdata) ? *pYdata : xValueMap;
     auto xIter = xValueMap.cbegin();
     auto yIter = yValueMap.cbegin();
+    const TableSelectionCacheItem::RowToStringMap dummyZmap;
+    auto zIter = (pZdata) ? pZdata->cbegin() : dummyZmap.cbegin();
+    decltype(TableSelectionCacheItem::RowToStringMap::m_valueStorage) zStrings; // Filled with final strings if needed.
     DataSourceIndex nSizeAfterRowFilter = 0;
-    for (; xIter != xValueMap.cend() && yIter != yValueMap.cend();)
+    for (; xIter != xValueMap.cend() && yIter != yValueMap.cend() && (!pZdata || zIter != pZdata->cend());)
     {
         const auto xRow = xIter->first;
         const auto yRow = yIter->first;
+        const auto zRow = (pZdata) ? zIter->first : 0;
         if (xRow < yRow)
         {
             ++xIter;
@@ -5545,8 +5616,24 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
             ++yIter;
             continue;
         }
-        // Current xIter and yIter point to the same row ->
+        // Getting here means that x and y are pointing to the same row. Checking z if needed
+        if (pZdata)
+        {
+            if (zRow < xRow)
+            {
+                ++zIter;
+                continue;
+            }
+            else if (zRow > xRow)
+            {
+                ++xIter;
+                ++yIter;
+                continue;
+            }
+        }
+        // Getting means that all needed iterator are pointing to the same row. ->
         // storing (x,y) values to start of xValueMap if not filtered out.
+        // If strings are needed, storing them to zStrings
         DFG_ASSERT_UB(::DFG_MODULE_NS(math)::isFloatConvertibleTo<int>(xRow));
         if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow)))
         {
@@ -5559,18 +5646,24 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
                 xValueMap.m_valueStorage[nSizeAfterRowFilter] = y;
                 minMaxX(x);
                 minMaxY(y);
+                if (pZdata)
+                    zStrings.push_back(zIter->second);
                 nSizeAfterRowFilter++;
             }
         }
         ++xIter;
         ++yIter;
+        if (pZdata)
+            ++zIter;
     }
 
     xValueMap.m_keyStorage.resize(nSizeAfterRowFilter);
     xValueMap.m_valueStorage.resize(nSizeAfterRowFilter);
+    DFG_ASSERT_CORRECTNESS(!pZdata || nSizeAfterRowFilter == zStrings.size());
 
     // Applying operations
-    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&xValueMap.m_keyStorage, &xValueMap.m_valueStorage);
+    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData;
+    operationData.setDataRefs(&xValueMap.m_keyStorage, &xValueMap.m_valueStorage, ChartOperationPipeData::DataVectorRef((pZdata) ? &zStrings : nullptr));
     defEntry.applyOperations(operationData);
 
     ChartData rv;
@@ -5579,8 +5672,10 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
     rv.m_bYisRowIndex = bYisRowIndex;
     rv.m_columnDataTypes.push_back(tableData.columnDataType(pXdata));
     rv.m_columnDataTypes.push_back(tableData.columnDataType(pYdata));
+    rv.m_columnDataTypes.push_back(ChartDataType::unknown);
     rv.m_columnNames.push_back(tableData.columnName(pXdata));
     rv.m_columnNames.push_back(tableData.columnName(pYdata));
+    rv.m_columnNames.push_back(tableData.columnName(columnIndexes[2]));
     return rv;
 }
 
@@ -5632,13 +5727,33 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(RefreshContext& 
 
     // Setting values to series.
     rSeries.setValues(makeRange(*pXvalues), makeRange(*pYvalues));
+    if (defEntry.isType(::DFG_MODULE_NS(charts)::ChartObjectChartTypeStr_txys))
+    {
+        auto pMetaStrings = rawData.constStringsByIndex(2);
+        if (pMetaStrings)
+        {
+            rSeries.setMetaDataByFunctor([&](const double t, const Dummy, const Dummy) -> StringViewUtf8
+            {
+                size_t n = 0;
+                if (::DFG_MODULE_NS(math)::isFloatConvertibleTo(t, &n) && isValidIndex(*pMetaStrings, n))
+                    return (*pMetaStrings)[n];
+                else
+                    return StringViewUtf8();
+            });
+        }
+    }
 
     // Setting line style
     {
         bool bFound = false;
         defEntry.doForLineStyleIfPresent([&](const char* psz) { bFound = true; rSeries.setLineStyle(psz); });
-        if (!bFound) // If not found, setting value from default config or if not present there either, using basic-style
-            rSeries.setLineStyle(configParamCreator().valueStr(ChartObjectFieldIdStr_lineStyle, SzPtrUtf8(ChartObjectLineStyleStr_basic)));
+        if (!bFound)
+        {
+            if (defEntry.isType(ChartObjectChartTypeStr_txys)) // For txys, always using none-style as default.
+                rSeries.setLineStyle(ChartObjectLineStyleStr_none);
+            else // For others types, if not found, setting value from default config or if not present there either, using basic style
+                rSeries.setLineStyle(configParamCreator().valueStr(ChartObjectFieldIdStr_lineStyle, SzPtrUtf8(ChartObjectLineStyleStr_basic)));
+        }
     }
 
     // Setting point style
@@ -5710,8 +5825,8 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForHistogram(
 
     const bool bTextValued = (sBinType == DFG_UTF8("text"));
 
-    std::array<DataSourceIndex, 2> columnIndexes;
-    std::array<bool, 2> rowFlags;
+    std::array<DataSourceIndex, 3> columnIndexes;
+    std::array<bool, 3> rowFlags;
     auto optTableData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optTableData)
@@ -5899,8 +6014,8 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(std::
     if (!spCache)
         spCache.reset(new ChartDataCache);
 
-    std::array<DataSourceIndex, 2> columnIndexes;
-    std::array<bool, 2> rowFlags;
+    std::array<DataSourceIndex, 3> columnIndexes;
+    std::array<bool, 3> rowFlags;
     auto optTableData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
 
     if (!optTableData || optTableData->columnCount() < 1)
