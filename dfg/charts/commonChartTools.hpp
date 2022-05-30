@@ -125,7 +125,7 @@ constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 // x_source/y_source, value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
 constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
 constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
-constexpr char ChartObjectFieldIdStr_zSource[] = "z_source"; // TODO: not yet properly handled in various places
+constexpr char ChartObjectFieldIdStr_zSource[] = "z_source"; // TODO: document
     constexpr char ChartObjectSourceTypeStr_columnName[]    = "column_name";
     constexpr char ChartObjectSourceTypeStr_rowIndex[]      = "row_index"; // Value is to be taken from row index of another column.
 
@@ -897,6 +897,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_pointStyle,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_ySource,
+            (isType(ChartObjectChartTypeStr_txys) ? ChartObjectFieldIdStr_zSource : nullptr),
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_panelId,
             ChartObjectFieldIdStr_yAxisId,
