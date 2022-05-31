@@ -5470,6 +5470,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             return;
         }
 
+        const auto nextUsableIndex = [&](const auto src) // Note: src is column index, not index of colRange.
+        {
+            auto n = ((indexOf(src) + 1) % colRange.size()); // Using next column as next (wrapping to beginning if src is last)...
+            if (isPresent(z) && colRange[n] == z && colRange.size() >= 3) // ...unless it is already occupied by z-index. Then skipping z-index.
+                n = ((indexOf(src) + 2) % colRange.size());
+            return n;
+        };
+        const auto previousUsableIndex = [&](const auto src) // Note: src is column index, not index of colRange.
+        {
+            const auto indexOfSrc = indexOf(src);
+            auto n = (indexOfSrc >= 1) ? indexOfSrc - 1 : colRange.size() - 1; // Using one before src-column as previous (wrapping to end if src is first)...
+            if (isPresent(z) && colRange[n] == z && colRange.size() >= 3) // ...unless it is already occupied by z-index. Then skipping z-index.
+                n = (indexOfSrc >= 2) ? indexOfSrc - 2 : colRange.size() - 2 - indexOfSrc;
+            return n;
+        };
+
         if (isPresent(x)) // Case: x was defined
         {
             if (!isPresent(y)) // y is not set?
@@ -5477,7 +5493,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
                 if (isRowIndexSpecifier(y))
                     y = x;
                 else
-                    y = colRange[(indexOf(x) + 1) % colRange.size()]; // Using next column as y (wrapping to beginning if x is last).
+                    y = colRange[nextUsableIndex(x)];
             }
         }
         else if (isPresent(y)) // case: x is not defined and y defined
@@ -5486,16 +5502,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
                 x = y;
             else
             {
-                const auto indexOfy = indexOf(y);
                 if (colRange.size() >= 2)
-                    x = (indexOfy > 0) ? colRange[indexOfy - 1] : colRange.back(); // Using one before y-column as x (wrapping to end if y is first)
+                    x = colRange[previousUsableIndex(y)];
                 else // Case: only one column -> x = y
                     x = y;
             }
         }
         else // Case: both are either undefined or other one is row_index-specifier
         {
-            const auto nDefaultYindex = (colRange.size() >= 2) ? 1 : 0;
+            const auto nDefaultXindex = (indexOf(z) != 0 || colRange.size() < 2) ? 0 : 1;
+            const auto nDefaultYindex = (colRange.size() >= 2) ? nextUsableIndex(colRange[nDefaultXindex]) : nDefaultXindex;
             if (isRowIndexSpecifier(x))
             {
                 y = colRange[nDefaultYindex];
@@ -5503,13 +5519,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             }
             else if (isRowIndexSpecifier(y))
             {
-                x = colRange[0];
+                x = colRange[nDefaultXindex];
                 y = x;
             }
             else
             {
                 //using defaults i.e.first column as x and next (if available) as y
-                x = colRange[0];
+                x = colRange[nDefaultXindex];
                 y = colRange[nDefaultYindex];
             }
         }
@@ -5520,7 +5536,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             for (size_t i = 0; i < 3; ++i)
             {
                 if (x != colRange[i] && y != colRange[i])
+                {
                     z = colRange[i];
+                    break;
+                }
             }
         }
     }
