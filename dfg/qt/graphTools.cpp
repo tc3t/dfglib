@@ -3640,11 +3640,15 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCu
     if (!spPoints)
         return false;
 
-    toolTipStream << tr("<br>Graph size: %1").arg(pCurve->dataCount());
+    auto& rCurve = *pCurve;
+
+    toolTipStream << tr("<br>Graph size: %1").arg(rCurve.dataCount());
 
     // Unlike in QCPGraph, now adjacent points in index space can be arbitrarily far from each other in both x and y axis.
     // So in practice need to go through all points to find nearest and this time showing nearest by distance between cursor and point,
     // not just x-coordinate distance between them.
+
+    enum class DistanceType { raw, axisNormalized };
 
     struct DistanceAndPoint
     {
@@ -3662,12 +3666,34 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCu
     const auto pow2 = [](const double val) { return val * val; };
 
     const auto distanceSquare = [&](const QCPCurveData& xy) { return pow2(xy.key - cursorXy.first) + pow2(xy.value - cursorXy.second); };
+    const auto axisNormalizedSquare = [&](const QCPCurveData& xy)
+    {
+        // Problem with raw distance is that if other axis is covering , say, [0, 1] and the other [1e5, 1e6], nearest points to cursor are typically
+        // those closest on y-axis. However for tooltip visual distance is probably what user is looking for.
+        auto pKeyAxis = rCurve.keyAxis();
+        auto pValueAxis = rCurve.valueAxis();
+        if (pKeyAxis && pValueAxis)
+        {
+            const auto normalizedPow2 = [&](const double a, const double b, const QCPAxis& rAxis)
+            { 
+                const auto axisRange = rAxis.range().size();
+                return pow2((a - b) / axisRange);
+            };
+            return normalizedPow2(xy.key, cursorXy.first, *pKeyAxis) + normalizedPow2(xy.value, cursorXy.second, *pValueAxis);
+        }
+        else
+            return std::numeric_limits<double>::quiet_NaN();
+    };
 
     const auto nToolTipPointCount = static_cast<size_t>(Min(5, spPoints->size()));
 
+    const auto pMetaCurve = dynamic_cast<const CustomPlotCurveWithMetaData*>(pCurve);
+
+    const auto distanceType = (pMetaCurve) ? DistanceType::axisNormalized : DistanceType::raw;
+
     std::for_each(spPoints->constBegin(), spPoints->constEnd(), [&](const QCPCurveData& data)
     {
-        const auto d2 = distanceSquare(data);
+        const auto d2 = (distanceType == DistanceType::raw) ? distanceSquare(data) : axisNormalizedSquare(data);
         if (nearest.size() >= nToolTipPointCount)
         {
             if (d2 < nearest.back().distanceSquare)
@@ -3682,8 +3708,7 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCu
 
     auto pointToText = PointToTextConverter<QCPCurveData>(*pCurve);
 
-    toolTipStream << tr("<br>Nearest points and distance to cursor:");
-    const auto pMetaCurve = dynamic_cast<const CustomPlotCurveWithMetaData*>(pCurve);
+    toolTipStream << tr("<br>Nearest points and %1distance to cursor:").arg((distanceType == DistanceType::axisNormalized) ? tr("axis normalized ") :QString());
     for (const auto& item : nearest)
     {
         if (pMetaCurve)
