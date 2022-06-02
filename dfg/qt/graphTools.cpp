@@ -1134,7 +1134,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
     auto& bZisRowIndex = rRowFlags[2];
     bXisRowIndex = isRowIndexSpecifier(xColumnIndex);
     bYisRowIndex = isRowIndexSpecifier(yColumnIndex);
-    bZisRowIndex = false;
+    bZisRowIndex = isRowIndexSpecifier(zColumnIndex);
 
     if (bXisRowIndex && bYisRowIndex)
     {
@@ -1163,7 +1163,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
     if (bXsuccess)
         bYsuccess = (bStringsNeededForY) ? rCacheItem.storeColumnFromSource_strings(source, yColumnIndex) : rCacheItem.storeColumnFromSource(source, yColumnIndex);
     if (bYsuccess)
-        bZsuccess = (!defEntry.isType(ChartObjectChartTypeStr_txys) || rCacheItem.storeColumnFromSource_strings(source, zColumnIndex));
+        bZsuccess = (!defEntry.isType(ChartObjectChartTypeStr_txys) || bZisRowIndex || rCacheItem.storeColumnFromSource_strings(source, zColumnIndex));
 
     if (bXsuccess && bYsuccess && bZsuccess)
         return iter->second;
@@ -5555,7 +5555,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) { namespace
             }
         }
 
-        if (colRange.size() >= 3 && !isPresent(z))
+        if (colRange.size() >= 3 && !isPresent(z) && !isRowIndexSpecifier(z))
         {
             // If there's no z-defined, taking first free one.
             for (size_t i = 0; i < 3; ++i)
@@ -5610,15 +5610,16 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
 
     const auto bNeedMetaStrings = defEntry.isType(ChartObjectChartTypeStr_txys);
 
+    const bool bXisRowIndex = rowFlags[0];
+    const bool bYisRowIndex = rowFlags[1];
+    const bool bZisRowIndex = rowFlags[2];
+
     auto pXdata = tableData.columnDataByIndex(columnIndexes[0]);
     auto pYdata = tableData.columnDataByIndex(columnIndexes[1]);
     auto pZdata = (bNeedMetaStrings) ? tableData.columnStringsByIndex(columnIndexes[2]) : nullptr;
 
-    if (!pXdata || !pYdata || (bNeedMetaStrings && !pZdata))
+    if (!pXdata || !pYdata || (bNeedMetaStrings && !pZdata && !bZisRowIndex))
         return ChartData();
-
-    const bool bXisRowIndex = rowFlags[0];
-    const bool bYisRowIndex = rowFlags[1];
 
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxX;
     DFG_MODULE_NS(func)::MemFuncMinMax<double> minMaxY;
@@ -5678,6 +5679,7 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
         // Getting means that all needed iterator are pointing to the same row. ->
         // storing (x,y) values to start of xValueMap if not filtered out.
         // If strings are needed, storing them to zStrings
+        DFG_ASSERT_CORRECTNESS(xRow == yRow && (!pZdata || xRow == zRow));
         DFG_ASSERT_UB(::DFG_MODULE_NS(math)::isFloatConvertibleTo<int>(xRow));
         if (!pxRowSet || pxRowSet->hasValue(static_cast<int>(xRow)))
         {
@@ -5692,6 +5694,8 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
                 minMaxY(y);
                 if (pZdata)
                     zStrings.push_back(zIter->second);
+                else if (bNeedMetaStrings && bZisRowIndex)
+                    zStrings.push_back(StringUtf8::fromRawString(::DFG_MODULE_NS(str)::toStrC(xRow)));
                 nSizeAfterRowFilter++;
             }
         }
@@ -5707,7 +5711,7 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
 
     // Applying operations
     ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData;
-    operationData.setDataRefs(&xValueMap.m_keyStorage, &xValueMap.m_valueStorage, ChartOperationPipeData::DataVectorRef((pZdata) ? &zStrings : nullptr));
+    operationData.setDataRefs(&xValueMap.m_keyStorage, &xValueMap.m_valueStorage, ChartOperationPipeData::DataVectorRef((bNeedMetaStrings) ? &zStrings : nullptr));
     defEntry.applyOperations(operationData);
 
     ChartData rv;
