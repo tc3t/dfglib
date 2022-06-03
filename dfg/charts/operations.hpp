@@ -440,7 +440,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         {
             axisIndex_invalid   = -1,
             axisIndex_x         = 0,
-            axisIndex_y         = 1
+            axisIndex_y         = 1,
+            axisIndex_z         = 2
         };
 
         ChartEntryOperation(OperationCall call = nullptr);
@@ -634,6 +635,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
             return axisIndex_x;
         else if (sv == DFG_UTF8("y"))
             return axisIndex_y;
+        else if (sv == DFG_UTF8("z"))
+            return axisIndex_z;
         else
             return axisIndex_invalid;
     }
@@ -823,7 +826,7 @@ namespace operations
      *  Id:
      *      textFilter
      *  Parameters:
-     *      -0: axis, either x or y
+     *      -0: axis, x, y or z
      *      -1: Match pattern, by default regular expression syntax
      *      -[2]: pattern type: default is reg_exp, currently it is the only one supported
      *      -[3]: negate: if 1, match will be negated, i.e. normally pattern "a" would keep texts having "a", with negate would keep texts not having "a"
