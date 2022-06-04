@@ -32,6 +32,7 @@
     <ul>
         <li>xy              : Graph of (x, y) points shown sorted by x-value. When only one column is available, uses line numbers as x-values</li>
         <li>txy             : Like xy, but does not sort x-values so can be used for arbitrary xy-curves</li>
+        <li>txys            : Like txy, but has third data column whose cell texts are shown in tooltip.</li>
         <li>histogram       : Histogram</li>
         <li>bars            : Bar chart, especially for showing bars for data where one column defines labels (strings) and another column specifies values for labels.</li>
         <li>panel_config    : Defines panel items such as title and axes labels</li>
@@ -88,7 +89,7 @@
       </ul>
 </ul>
 
-<h2>Fields for type <i>xy</i> and <i>txy</i></h2>
+<h2>Fields for type <i>xy</i>, <i>txy</i> and <i>txys</i></h2>
     <ul>
         <li><i>x_source</i>:</li>
             <ul>
@@ -99,6 +100,11 @@
             <ul>
                 <li>column_name(name): y-values will be taken from column that has name <i>name</i>.</li>
                 <li>row_index: values will be taken from row index of x-values</li>
+            </ul>
+        <li><i>z_source</i> (only for type <i>txys</i>):</li>
+            <ul>
+                <li>column_name(name): z-values will be taken from column that has name <i>name</i>.</li>
+                <li>row_index: values will be taken from row index of other columns</li>
             </ul>
         <li><i>line_colour</i>:</li>
             <ul>
@@ -127,10 +133,14 @@
             <ul>
                 <li>Like for <i>xy</i>, but only <i>none</i> and <i>basic</i> are available.</li>
             </ul>
+        <li><i>line_style</i> for type <i>txys</i>:</li>
+            <ul>
+                <li>Default is <i>none</i>, otherwise like for <i>txy</i>.</li>
+            </ul>
         <li><i>point_style</i>:</li>
             <ul>
-                <li><b>none</b> : No point indicator. Default value if field not present</li>
-                <li>basic: Basic indicator for every point</li>
+                <li>none: No point indicator.</li>
+                <li><b>basic</b>: Basic indicator for every point. Default value if field not present</li>
             </ul>
         <li>Operations, see Operations-section for details</li>
     </ul>
@@ -217,6 +227,7 @@
         <li>Input available for operations by chart type</li>
         <ul>
             <li><i>xy</i> and <i>txy</i>: x and y</li>
+            <li><i>txys</i>: x, y and z. z-items are strings.</li>
             <li><i>histogram</i>: x and y. x is bin positions (not the raw input data), y is bar heights.</li>
             <li><i>bars</i>: y (bar heights). Note that e.g. merge_identical_labels is done after operations.</li>
         </ul>
@@ -290,7 +301,7 @@
                 <li>Example: textFilter(x, \".*,a.*\"). Keeps strings that include ",a"</li>
                 <li>Parameters</li>
                 <ul>
-                    <li>0: [x,y]: coordinate whose value is passed to filter (must have string typed data)</li>
+                    <li>0: [x,y,z]: coordinate whose value is passed to filter (must have string typed data)</li>
                     <li>1: Regular expression pattern</li>
                     <li>2 (optional): Pattern type. Must be either empty or "reg_exp"</li>
                     <li>3 (optional): Negate. If "1", match is inverted (i.e. keeps all that don't match pattern). Default is "0"</li>

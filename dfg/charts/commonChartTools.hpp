@@ -125,7 +125,7 @@ constexpr char ChartObjectFieldIdStr_xRows[] = "x_rows";
 // x_source/y_source, value is parenthesis parametrisized value (e.g. x_source: column_name(header 1))
 constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
 constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
-constexpr char ChartObjectFieldIdStr_zSource[] = "z_source"; // TODO: document
+constexpr char ChartObjectFieldIdStr_zSource[] = "z_source";
     constexpr char ChartObjectSourceTypeStr_columnName[]    = "column_name";
     constexpr char ChartObjectSourceTypeStr_rowIndex[]      = "row_index"; // Value is to be taken from row index of another column.
 
@@ -571,6 +571,29 @@ class XySeries : public ChartObject
 {
 public:
     using BaseClass = ChartObject;
+    class PointMetaData
+    {
+    public:
+        PointMetaData() = default;
+
+        // Constructs metadata from a string view that caller guarantees to be readable as long as call context requires.
+        // For example with setMetaDataByFunctor() until the next call of callback function or end of setMetaDataByFunctor() function.
+        static PointMetaData fromStableStringView(const StringViewUtf8 sv)
+        {
+            PointMetaData m;
+            m.m_sv = sv;
+            return m;
+        }
+
+        StringViewUtf8 string() const
+        {
+            return m_sv;
+        }
+
+        StringViewUtf8 m_sv;
+    }; // class PointMetaData
+
+    using MetaDataSetterCallback = std::function<PointMetaData(double, double, double)>;
 protected:
     XySeries() : BaseClass(ChartObjectType::xySeries) {}
 public:
@@ -585,7 +608,10 @@ public:
     // Sets x values and y values. If given x and y ranges have different size, request is ignored.
     virtual void setValues(InputSpanD, InputSpanD, const std::vector<bool>* pFilterFlags = nullptr) = 0;
 
-    virtual void setMetaDataByFunctor(std::function<StringViewUtf8 (double, double, double)> func) { DFG_UNUSED(func); }
+    // When xy-series represents (x, y, text)-triplet, this function will call 'func'
+    // for every (index, x, y)-triplet and sets returned PointMetaData as metadata for point (index, x, y).
+    // @return The number of points for which 'func' was called.
+    virtual size_t setMetaDataByFunctor(MetaDataSetterCallback func) { DFG_UNUSED(func); return 0; }
 }; // Class XySeries
 
 

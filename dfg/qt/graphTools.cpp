@@ -1579,15 +1579,16 @@ class CustomPlotCurveWithMetaData : public QCPCurve
 public:
     using BaseClass = QCPCurve;
     using BaseClass::BaseClass;
+    using PointMetaData = ::DFG_MODULE_NS(charts)::XySeries::PointMetaData;
 
     StringViewUtf8 metaDataStringAt(const QCPCurveData& data) const
     {
         return m_metaData[data.t].toStringView();
     }
 
-    void setMetaDataStringAt(const QCPCurveData& data, const StringViewUtf8& sv)
+    void setMetaDataStringAt(const QCPCurveData& data, const PointMetaData& metadata)
     {
-        m_metaData.insert(data.t, sv);
+        m_metaData.insert(data.t, metadata.string());
     }
 
     ::DFG_MODULE_NS(cont)::MapToStringViews<double, StringUtf8> m_metaData;
@@ -1755,21 +1756,7 @@ public:
             setValuesImpl<QCPCurveData>(getCurve(), xVals, yVals, pFilterFlags, [](size_t n, double x, double y) { return QCPCurveData(static_cast<double>(n), x, y); });
     }
 
-    void setMetaDataByFunctor(std::function<StringViewUtf8(double, double, double)> func) override
-    {
-        auto pCurve = dynamic_cast<CustomPlotCurveWithMetaData*>(m_spQcpObject.data());
-        if (pCurve)
-        {
-            auto spData = pCurve->data();
-            if (spData)
-            {
-                for (const auto& dataItem : *spData)
-                {
-                    pCurve->setMetaDataStringAt(dataItem, func(dataItem.t, dataItem.key, dataItem.value));
-                }
-            }
-        }
-    }
+    size_t setMetaDataByFunctor(MetaDataSetterCallback func) override;
 
     void setLineStyle(StringViewC svStyle) override;
 
@@ -1867,6 +1854,27 @@ void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
         
     }
     setScatterStyle(style);
+}
+
+size_t XySeriesQCustomPlot::setMetaDataByFunctor(MetaDataSetterCallback func)
+{
+    auto pCurve = dynamic_cast<CustomPlotCurveWithMetaData*>(m_spQcpObject.data());
+    if (pCurve)
+    {
+        auto spData = pCurve->data();
+        size_t nCallCount = 0;
+        if (spData)
+        {
+            for (const auto& dataItem : *spData)
+            {
+                pCurve->setMetaDataStringAt(dataItem, func(dataItem.t, dataItem.key, dataItem.value));
+                ++nCallCount;
+            }
+        }
+        return nCallCount;
+    }
+    else
+        return 0;
 }
 
 
@@ -5780,13 +5788,14 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(RefreshContext& 
         auto pMetaStrings = rawData.constStringsByIndex(2);
         if (pMetaStrings)
         {
-            rSeries.setMetaDataByFunctor([&](const double t, const Dummy, const Dummy) -> StringViewUtf8
+            using PointMetaData = ::DFG_MODULE_NS(charts)::XySeries::PointMetaData;
+            rSeries.setMetaDataByFunctor([&](const double t, const Dummy, const Dummy) -> PointMetaData
             {
                 size_t n = 0;
                 if (::DFG_MODULE_NS(math)::isFloatConvertibleTo(t, &n) && isValidIndex(*pMetaStrings, n))
-                    return (*pMetaStrings)[n];
+                    return PointMetaData::fromStableStringView((*pMetaStrings)[n]);
                 else
-                    return StringViewUtf8();
+                    return PointMetaData();
             });
         }
     }
