@@ -9,6 +9,7 @@
 #include "../cont/valueArray.hpp"
 #include "../cont/ViewableSharedPtr.hpp"
 #include "../charts/commonChartTools.hpp"
+#include "../charts/operations.hpp"
 #include "../OpaquePtr.hpp"
 #include <memory>
 #include <vector>
@@ -606,4 +607,43 @@ namespace DFG_DETAIL_NS
     }; // class SourceSpanBuffer
 }
 
-} } // module namespace
+namespace DFG_DETAIL_NS
+{
+
+    using ConsoleLogLevel = ::DFG_MODULE_NS(charts)::AbstractChartControlItem::LogLevel;
+
+    class ConsoleLogHandle
+    {
+    public:
+        using HandlerT = std::function<void(const char*, ConsoleLogLevel)>;
+
+        ~ConsoleLogHandle();
+
+        void setHandler(HandlerT handler);
+        void setDesiredLevel(ConsoleLogLevel newLevel);
+        void log(const char* psz, const ConsoleLogLevel msgLogLevel);
+        void log(const QString& s, const ConsoleLogLevel msgLogLevel);
+        void privSetEffectiveLevel();
+        ConsoleLogLevel effectiveLevel() const;
+
+        std::atomic<ConsoleLogLevel> m_effectiveLevel{ ConsoleLogLevel::none };
+        ConsoleLogLevel m_desiredLevel = ConsoleLogLevel::info;
+        HandlerT m_handler = nullptr;
+    }; // class ConsoleLogHandle
+
+    extern ConsoleLogHandle gConsoleLogHandle;
+
+    ::DFG_MODULE_NS(charts)::ChartEntryOperationManager& operationManager();
+
+    QString formatOperationErrorsForUserVisibleText(const ::DFG_MODULE_NS(charts)::ChartEntryOperation& op);
+
+} // namesapace DFG_DETAIL_NS
+
+} } // dfg::qt
+
+#define DFG_QT_CHART_CONSOLE_LOG_NO_LEVEL_CHECK(LEVEL, MSG) DFG_DETAIL_NS::gConsoleLogHandle.log(MSG, LEVEL)
+#define DFG_QT_CHART_CONSOLE_LOG(LEVEL, MSG) if (LEVEL <= DFG_DETAIL_NS::gConsoleLogHandle.effectiveLevel()) DFG_QT_CHART_CONSOLE_LOG_NO_LEVEL_CHECK(LEVEL, MSG)
+#define DFG_QT_CHART_CONSOLE_DEBUG(MSG)      DFG_QT_CHART_CONSOLE_LOG(DFG_DETAIL_NS::ConsoleLogLevel::debug, MSG)
+#define DFG_QT_CHART_CONSOLE_INFO(MSG)       DFG_QT_CHART_CONSOLE_LOG(DFG_DETAIL_NS::ConsoleLogLevel::info, MSG)
+#define DFG_QT_CHART_CONSOLE_WARNING(MSG)    DFG_QT_CHART_CONSOLE_LOG(DFG_DETAIL_NS::ConsoleLogLevel::warning, MSG)
+#define DFG_QT_CHART_CONSOLE_ERROR(MSG)      DFG_QT_CHART_CONSOLE_LOG(DFG_DETAIL_NS::ConsoleLogLevel::error, MSG)

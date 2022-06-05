@@ -191,6 +191,7 @@ SOURCES += \
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
         SOURCES += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp
+        SOURCES += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/graphTools_qcustomplot.cpp
 }
 
 HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
@@ -227,6 +228,7 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
         HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.h
+        HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/graphTools_qcustomplot.hpp
 }
 
 equals(DFGQTE_USING_PCH, "1") {

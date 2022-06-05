@@ -1,0 +1,2246 @@
+#include "graphTools_qcustomplot.hpp"
+#include "../connectHelper.hpp"
+#include "../widgetHelpers.hpp"
+#include "../qtBasic.hpp"
+
+using namespace DFG_MODULE_NS(charts)::fieldsIds;
+
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
+
+namespace
+{
+    // Returns initial placeholder text for operation definition.
+    QString getOperationDefinitionPlaceholder(const StringViewUtf8& svOperationId)
+    {
+        using namespace ::DFG_MODULE_NS(charts)::operations;
+        const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
+        if (svOperationId == PassWindowOperation::id())
+            return tr("%1(x, 0, 1)").arg(viewToQString(svOperationId));
+        return QString("%1()").arg(viewToQString(svOperationId));
+    }
+
+    QString getOperationDefinitionUsageGuide(const StringViewUtf8& svOperationId)
+    {
+        using namespace ::DFG_MODULE_NS(charts)::operations;
+        const auto tr = [](const char* psz) { return QCoreApplication::tr(psz); };
+        if (svOperationId == PassWindowOperation::id())
+            return tr("%1(<axis>, <lower_bound>, <upper_bound>)").arg(viewToQString(svOperationId));
+        return QString();
+    }
+} // unnamed namespace
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// ChartObjectQCustomPlot
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+void ChartObjectQCustomPlot::setNameImpl(const ChartObjectStringView s)
+{
+    if (m_spPlottable)
+        m_spPlottable->setName(viewToQString(s));
+}
+
+auto ChartObjectQCustomPlot::nameImpl() const -> StringViewOrOwnerUtf8
+{
+    return (m_spPlottable) ? StringViewOrOwnerUtf8::makeOwned(qStringToStringUtf8(m_spPlottable->name())) : StringViewOrOwnerUtf8();
+}
+
+void ChartObjectQCustomPlot::setColourImpl(ChartObjectStringView svColour, std::function<void(QCPAbstractPlottable&, const QColor&)> setter)
+{
+    if (!m_spPlottable || svColour.empty())
+        return;
+    const QString s = viewToQString(svColour);
+    QColor color(s);
+    if (color.isValid())
+        setter(*m_spPlottable, color);
+    else
+        DFG_QT_CHART_CONSOLE_WARNING(m_spPlottable->tr("Unable to parse colour with definition %1").arg(s));
+}
+
+void ChartObjectQCustomPlot::setLineColourImpl(ChartObjectStringView svLineColour)
+{
+    setColourImpl(svLineColour, [](QCPAbstractPlottable& plottable, const QColor& color)
+        {
+            auto pen = plottable.pen();
+            pen.setColor(color);
+            plottable.setPen(pen);
+        });
+}
+
+void ChartObjectQCustomPlot::setFillColourImpl(ChartObjectStringView svFillColour)
+{
+    setColourImpl(svFillColour, [](QCPAbstractPlottable& plottable, const QColor& color)
+        {
+            plottable.setBrush(color);
+        });
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// XySeriesQCustomPlot
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+XySeriesQCustomPlot::XySeriesQCustomPlot(QCPAbstractPlottable* pQcpObject)
+    : m_spQcpObject(pQcpObject)
+{
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spQcpObject.data());
+}
+
+bool XySeriesQCustomPlot::setLineStyle(QCPGraph* pGraph, StringViewC svStyle)
+{
+    if (!pGraph)
+        return false;
+
+    QCPGraph::LineStyle style = QCPGraph::lsNone; // Note: If changing this, reflect change to logging below.
+    if (svStyle == "basic")
+        style = QCPGraph::lsLine;
+    else if (svStyle == "step_left")
+        style = QCPGraph::lsStepLeft;
+    else if (svStyle == "step_right")
+        style = QCPGraph::lsStepRight;
+    else if (svStyle == "step_middle")
+        style = QCPGraph::lsStepCenter;
+    else if (svStyle == "pole")
+        style = QCPGraph::lsImpulse;
+    else if (svStyle != "none")
+    {
+        // Ending up here means that entry was unrecognized.
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
+    }
+    pGraph->setLineStyle(style);
+    return true;
+}
+
+bool XySeriesQCustomPlot::setLineStyle(QCPCurve* pCurve, StringViewC svStyle)
+{
+    if (!pCurve)
+        return false;
+
+    QCPCurve::LineStyle style = QCPCurve::lsNone; // Note: If changing this, reflect change to logging below.
+    if (svStyle == "basic")
+        style = QCPCurve::lsLine;
+    else if (svStyle != "none")
+    {
+        // Ending up here means that entry was unrecognized.
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown line style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
+    }
+    pCurve->setLineStyle(style);
+    return true;
+}
+
+void XySeriesQCustomPlot::setLineStyle(StringViewC svStyle)
+{
+    if (!setLineStyle(getGraph(), svStyle))
+        setLineStyle(getCurve(), svStyle);
+}
+
+void XySeriesQCustomPlot::setScatterStyle(const QCPScatterStyle style)
+{
+    auto pGraph = getGraph();
+    if (pGraph)
+        pGraph->setScatterStyle(style);
+    else
+    {
+        auto pCurve = getCurve();
+        if (pCurve)
+            pCurve->setScatterStyle(style);
+    }
+}
+
+void XySeriesQCustomPlot::setPointStyle(StringViewC svStyle)
+{
+    if (!m_spQcpObject)
+        return;
+    QCPScatterStyle style = QCPScatterStyle::ssNone; // Note: If changing this, reflect change to logging below.
+    if (svStyle == "basic")
+        style = QCPScatterStyle::ssCircle;
+    else if (svStyle != "none")
+    {
+        // Ending up here means that entry was unrecognized.
+        DFG_QT_CHART_CONSOLE_WARNING(QString("Unknown point style '%1', using style 'none'").arg(untypedViewToQStringAsUtf8(svStyle)));
+
+    }
+    setScatterStyle(style);
+}
+
+size_t XySeriesQCustomPlot::setMetaDataByFunctor(MetaDataSetterCallback func)
+{
+    auto pCurve = dynamic_cast<CustomPlotCurveWithMetaData*>(m_spQcpObject.data());
+    if (pCurve)
+    {
+        auto spData = pCurve->data();
+        size_t nCallCount = 0;
+        if (spData)
+        {
+            for (const auto& dataItem : *spData)
+            {
+                pCurve->setMetaDataStringAt(dataItem, func(dataItem.t, dataItem.key, dataItem.value));
+                ++nCallCount;
+            }
+        }
+        return nCallCount;
+    }
+    else
+        return 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// HistogramQCustomPlot
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+HistogramQCustomPlot::HistogramQCustomPlot(QCPBars* pBars)
+{
+    m_spBars = pBars;
+    if (!m_spBars)
+        return;
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spBars.data());
+}
+
+HistogramQCustomPlot::~HistogramQCustomPlot()
+{
+}
+
+void HistogramQCustomPlot::setValues(InputSpanD xVals, InputSpanD yVals)
+{
+    if (!m_spBars)
+        return;
+    fillQcpPlottable<QCPBarsData>(*m_spBars, xVals, yVals);
+
+    m_spBars->rescaleAxes(); // TODO: revise, probably not desirable when there are more than one plottable in canvas.
+}
+
+double HistogramQCustomPlot::setBarWidth(const double width)
+{
+    if (!m_spBars)
+        return std::numeric_limits<double>::quiet_NaN();
+    m_spBars->setWidthType(QCPBars::wtPlotCoords);
+    m_spBars->setWidth(width);
+    return m_spBars->width();
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// BarSeriesQCustomPlot
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+BarSeriesQCustomPlot::BarSeriesQCustomPlot(QCPBars* pBars)
+{
+    m_spBars = pBars;
+    if (!m_spBars)
+        return;
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spBars.data());
+}
+
+BarSeriesQCustomPlot::~BarSeriesQCustomPlot()
+{
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// ChartCanvasQCustomPlot
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+ChartCanvasQCustomPlot::ChartCanvasQCustomPlot(QWidget* pParent)
+{
+    m_spChartView.reset(new QCustomPlot(pParent));
+
+    const auto interactions = m_spChartView->interactions();
+    // iRangeZoom: "Axis ranges are zoomable with the mouse wheel"
+    // iRangeDrag: Allows moving view point by dragging.
+    // iSelectPlottables: "Plottables are selectable"
+    // iSelectLegend: "Legends are selectable"
+    m_spChartView->setInteractions(interactions | QCP::iRangeZoom | QCP::iRangeDrag | QCP::iSelectPlottables | QCP::iSelectLegend);
+
+    DFG_QT_VERIFY_CONNECT(connect(m_spChartView.get(), &QCustomPlot::mouseMove, this, &ChartCanvasQCustomPlot::mouseMoveEvent));
+}
+
+bool ChartCanvasQCustomPlot::hasChartObjects() const
+{
+    return m_spChartView && (m_spChartView->plottableCount() > 0);
+}
+
+namespace
+{
+    // Returns true iff pObj was non-null
+    template<class T>
+    static bool addContextMenuEntriesForXyType(QCustomPlot& rQcp, QMenu& rMenu, T* pObj)
+    {
+        if (!pObj)
+            return false;
+        // Adding line style entries
+        {
+            addSectionEntryToMenu(&rMenu, rMenu.tr("Line Style"));
+            const auto currentLineStyle = pObj->lineStyle();
+            forEachQCustomPlotLineStyle(pObj, [&](const typename T::LineStyle style, const char* pszStyleName)
+                {
+                    addGraphStyleAction(rMenu, *pObj, rQcp, currentLineStyle, style, rMenu.tr(pszStyleName), &T::setLineStyle);
+                });
+        }
+
+        // Adding point style entries
+        {
+            addSectionEntryToMenu(&rMenu, rMenu.tr("Point Style"));
+            const auto currentPointStyle = pObj->scatterStyle().shape();
+            forEachQCustomPlotScatterStyle([&](const QCPScatterStyle::ScatterShape style, const char* pszStyleName)
+                {
+                    addGraphStyleAction(rMenu, *pObj, rQcp, currentPointStyle, style, rMenu.tr(pszStyleName), &T::setScatterStyle);
+                });
+        }
+        return true;
+    }
+}
+
+void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHandle)
+{
+    if (!m_spChartView || !pMenuHandle)
+        return;
+    auto pMenuRawObj = reinterpret_cast<QObject*>(pMenuHandle);
+    auto pMenu = qobject_cast<QMenu*>(pMenuRawObj);
+    if (!pMenu)
+        return;
+
+    QMenu& menu = *pMenu;
+
+    /*
+    According to class inheritance tree, plottable can be one of these:
+    QCPGraph, QCPCurve, QCPBars, QCPStatisticalBox, QCPColorMap, QCPFinancial
+    */
+    const auto nPlottableCount = m_spChartView->plottableCount();
+    for (int i = 0; i < nPlottableCount; ++i)
+    {
+        auto pPlottable = m_spChartView->plottable(i);
+        if (!pPlottable)
+            continue;
+        //const auto name = pPlottable->name();
+
+        // TODO: limit length
+        // TODO: icon based on object type (xy, histogram...)
+        auto pSubMenu = menu.addMenu(pPlottable->name());
+        if (!pSubMenu)
+            continue;
+
+        // Adding menu title
+        addTitleEntryToMenu(pSubMenu, pPlottable->name());
+
+        // Adding remove-entry
+        pSubMenu->addAction(tr("Remove"), m_spChartView.get(), [=]() { m_spChartView->removePlottable(pPlottable); repaintCanvas(); });
+
+        // Adding operations-menu
+        {
+            auto pOperationsMenu = pSubMenu->addMenu(tr("Operations"));
+            if (pOperationsMenu)
+            {
+                QPointer<QCPAbstractPlottable> spPlottable = pPlottable;
+                pOperationsMenu->addAction(tr("Apply multiple..."), pPlottable, [=]() { applyChartOperationsTo(spPlottable); });
+                pOperationsMenu->addSeparator();
+                DFG_DETAIL_NS::operationManager().forEachOperationId([&](StringUtf8 sOperationId)
+                    {
+                        // TODO: add operation only if it accepts input type that chart object provides.
+                        pOperationsMenu->addAction(viewToQString(sOperationId), pPlottable, [=]() { applyChartOperationTo(spPlottable, sOperationId); });
+                    });
+
+            }
+        }
+
+        if (addContextMenuEntriesForXyType(*m_spChartView, *pSubMenu, qobject_cast<QCPGraph*>(pPlottable)))
+            continue;
+        if (addContextMenuEntriesForXyType(*m_spChartView, *pSubMenu, qobject_cast<QCPCurve*>(pPlottable)))
+            continue;
+
+        auto pBars = qobject_cast<QCPBars*>(pPlottable);
+        if (pBars)
+        {
+            addSectionEntryToMenu(pSubMenu, tr("Bar controls not implemented"));
+            continue;
+        }
+    }
+}
+
+void ChartCanvasQCustomPlot::removeAllChartObjects(const bool bRepaint)
+{
+    auto p = getWidget();
+    if (!p)
+        return;
+    p->clearPlottables();
+
+    // Removing legends
+    removeLegends();
+
+    // Removing panels
+    auto pPlotLayout = p->plotLayout();
+    if (pPlotLayout)
+    {
+        for (int i = 0, nCount = pPlotLayout->elementCount(); i < nCount; ++i)
+            pPlotLayout->removeAt(i);
+        auto pFirstPanel = (pPlotLayout->elementCount() >= 1) ? dynamic_cast<ChartPanel*>(pPlotLayout->elementAt(0)) : nullptr;
+        if (pFirstPanel)
+            pFirstPanel->setTitle(StringViewUtf8());
+        pPlotLayout->simplify(); // This removes the empty space that removed items left.
+
+        // Removing axis labels
+        forEachAxisRect([&](QCPAxisRect& axisRect)
+            {
+                forEachAxis(&axisRect, [](QCPAxis& rAxis)
+                    {
+                        rAxis.setLabel(QString());
+                        // Resetting colours
+                        ChartCanvasQCustomPlot::resetPanelAxisColour(rAxis);
+                        ChartCanvasQCustomPlot::resetPanelAxisLabelColour(rAxis);
+                    });
+            });
+    }
+    if (bRepaint)
+        repaintCanvas();
+}
+
+namespace
+{
+    void createDateTimeTicker(QCPAxis& rAxis, const QLatin1String sFormat)
+    {
+        QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
+        dateTicker->setDateTimeFormat(sFormat);
+        dateTicker->setDateTimeSpec(Qt::UTC);
+        rAxis.setTicker(dateTicker);
+    }
+
+    void setAxisTicker(QCPAxis& rAxis, const ChartDataType type)
+    {
+        // TODO: should use the same date format as in input data and/or have the format customisable.
+        if (type == ChartDataType::dateAndTimeMillisecondTz)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss.zzzZ")); // TODO: should show in the same timezone as input
+        else if (type == ChartDataType::dateAndTimeMillisecond)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss.zzz"));
+        else if (type == ChartDataType::dateAndTimeTz)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ssZ")); // TODO: should show in the same timezone as input
+        else if (type == ChartDataType::dateAndTime)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss"));
+        else if (type == ChartDataType::dateOnly)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd"));
+        else if (type == ChartDataType::dateOnlyYearMonth)
+            createDateTimeTicker(rAxis, QLatin1String("yyyy-MM"));
+        else if (type == ChartDataType::dayTimeMillisecond)
+            createDateTimeTicker(rAxis, QLatin1String("hh:mm:ss.zzz"));
+        else if (type == ChartDataType::dayTime)
+            createDateTimeTicker(rAxis, QLatin1String("hh:mm:ss"));
+        else
+            rAxis.setTicker(QSharedPointer<QCPAxisTicker>(new QCPAxisTicker)); // Resets to default ticker. TODO: do only if needed (i.e. if current ticker is something else than plain QCPAxisTicker)
+    }
+
+    void setAutoAxisLabel(QCPAxis& rAxis, const StringViewUtf8 svDataName)
+    {
+        auto sNew = rAxis.label();
+        if (!sNew.isEmpty())
+            sNew += QLatin1String(", ");
+        sNew += viewToQString(svDataName);
+        rAxis.setLabel(sNew);
+    }
+}
+
+void ChartCanvasQCustomPlot::setTypeToQcpObjectProperty(QCPAbstractPlottable* pPlottable, const StringViewC& type)
+{
+    if (pPlottable)
+        pPlottable->setProperty("chartEntryType", untypedViewToQStringAsUtf8(type));
+}
+
+auto ChartCanvasQCustomPlot::createXySeries(const XySeriesCreationParam& param) -> ChartObjectHolder<XySeries>
+{
+    auto p = getWidget();
+    if (!p)
+        return nullptr;
+
+    auto pXaxis = getXAxis(param);
+    auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
+    if (!pXaxis || !pYaxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to obtain axis for xySeries"));
+        return nullptr;
+    }
+
+    const auto type = param.definitionEntry().graphTypeStr();
+
+    QCPGraph* pQcpGraph = nullptr;
+    QCPCurve* pQcpCurve = nullptr;
+    if (type == ChartObjectChartTypeStr_xy)
+    {
+        pQcpGraph = p->addGraph(pXaxis, pYaxis);
+        setTypeToQcpObjectProperty(pQcpGraph, type);
+    }
+    else if (type == ChartObjectChartTypeStr_txy)
+    {
+        pQcpCurve = new QCPCurve(pXaxis, pYaxis); // Owned by QCustomPlot
+        setTypeToQcpObjectProperty(pQcpCurve, type);
+    }
+    else if (type == ChartObjectChartTypeStr_txys)
+    {
+        pQcpCurve = new CustomPlotCurveWithMetaData(pXaxis, pYaxis); // Owned by QCustomPlot
+        setTypeToQcpObjectProperty(pQcpCurve, type);
+    }
+    else
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid type '%1'").arg(untypedViewToQStringAsUtf8(type.asUntypedView())));
+        return nullptr;
+    }
+
+    if (!pQcpGraph && !pQcpCurve)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: failed to create QCP-object"));
+        return nullptr;
+    }
+
+    // Setting axis type
+    setAxisTicker(*pXaxis, param.xType);
+    setAxisTicker(*pYaxis, param.yType);
+
+    // Setting auto axis labels if enabled
+    if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
+    {
+        setAutoAxisLabel(*pXaxis, param.m_sXname);
+        setAutoAxisLabel(*pYaxis, param.m_sYname);
+    }
+    if (pQcpGraph)
+        return ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(pQcpGraph));
+    else
+        return ChartObjectHolder<XySeries>(new XySeriesQCustomPlot(pQcpCurve));
+}
+
+auto ChartCanvasQCustomPlot::createHistogram(const HistogramCreationParam& param) -> ChartObjectHolder<Histogram>
+{
+    // If histogram is string-type (=bin per strings, values are number of identical strings), handling it separately - it is effectively a bar chart.
+    if (!param.stringValueRange.empty())
+    {
+        DFG_ASSERT_CORRECTNESS(param.stringValueRange.size() == param.countRange.size());
+        auto barSeries = createBarSeries(BarSeriesCreationParam(param.config(), param.definitionEntry(), param.stringValueRange, param.countRange, param.xType, param.m_sXname, StringUtf8()));
+        DFG_ASSERT_CORRECTNESS(barSeries.size() <= 1);
+        auto spImpl = (!barSeries.empty()) ? dynamic_cast<BarSeriesQCustomPlot*>(barSeries[0].get()) : nullptr;
+        return (spImpl) ? std::make_shared<HistogramQCustomPlot>(spImpl->m_spBars.data()) : nullptr;
+    }
+
+    const auto valueRange = param.valueRange;
+
+    if (valueRange.empty())
+        return nullptr;
+
+    auto minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(valueRange);
+    if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
+        return nullptr;
+
+    auto pXaxis = getXAxis(param);
+    auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
+
+    if (!pXaxis || !pYaxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create histogram, no suitable target panel found'"));
+        return nullptr;
+    }
+
+    std::unique_ptr<QCPBars> spQCPBars(new QCPBars(pXaxis, pYaxis));
+    setTypeToQcpObjectProperty(spQCPBars.get(), ChartObjectChartTypeStr_histogram);
+    auto spHistogram = std::make_shared<HistogramQCustomPlot>(spQCPBars.release()); // Note: QCPBars is owned by QCustomPlot-object.
+
+    const bool bOnlySingleValue = (*minMaxPair.first == *minMaxPair.second);
+
+    const auto nBinCount = (!bOnlySingleValue) ? param.definitionEntry().fieldValue<int>(ChartObjectFieldIdStr_binCount, 100) : -1;
+
+    spHistogram->setValues(param.valueRange, param.countRange);
+
+    double binWidth = std::numeric_limits<double>::quiet_NaN();
+
+    if (nBinCount >= 0)
+        binWidth = (*minMaxPair.second - *minMaxPair.first) / static_cast<double>(nBinCount);
+    else // Case: bin for every value.
+    {
+        const auto keyRange = makeRange(param.valueRange);
+        if (keyRange.size() >= 2)
+        {
+            const auto iterEnd = keyRange.cend();
+            double minDiff = std::numeric_limits<double>::infinity();
+            for (auto iter = keyRange.cbegin(), iterNext = keyRange.cbegin() + 1; iterNext != iterEnd; ++iter, ++iterNext)
+                minDiff = Min(minDiff, *iterNext - *iter);
+            binWidth = minDiff;
+        }
+        else
+            binWidth = 1;
+    }
+
+    // Setting bar width
+    {
+        const double defaultBarWidthFactor = 1;
+        const auto barWidthFactorRequest = param.definitionEntry().fieldValue<double>(ChartObjectFieldIdStr_barWidthFactor, defaultBarWidthFactor);
+        const auto barWidthRequest = binWidth * barWidthFactorRequest;
+        const auto actualBarWidth = spHistogram->setBarWidth(barWidthRequest);
+        if (actualBarWidth != barWidthRequest)
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to use requested bar width factor %1, using bar width %2").arg(barWidthFactorRequest).arg(actualBarWidth));
+    }
+
+    // Settings ticker for x-axis.
+    setAxisTicker(*pXaxis, param.xType);
+
+    // Setting auto axis label for x-axis if enabled
+    if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
+        setAutoAxisLabel(*pXaxis, param.m_sXname);
+
+    pXaxis->scaleRange(1.1); // Adds margins so that boundary lines won't get clipped by axisRect
+
+    return spHistogram;
+}
+
+auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param) -> std::vector<ChartObjectHolder<BarSeries>>
+{
+    using ReturnType = std::vector<ChartObjectHolder<BarSeries>>;
+    auto pXaxis = getXAxis(param);
+    auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
+
+    if (!pXaxis || !pYaxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create histogram, no suitable target panel found'"));
+        return ReturnType();
+    }
+
+    auto labelRange = param.labelRange;
+    auto valueRange = param.valueRange;
+
+    if (labelRange.empty() || labelRange.size() != valueRange.size())
+        return ReturnType();
+
+    auto minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(valueRange);
+    if (*minMaxPair.first > *minMaxPair.second || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.first) || !DFG_MODULE_NS(math)::isFinite(*minMaxPair.second))
+        return ReturnType();
+
+    // Handling bar merging if requested
+    QVector<StringUtf8> adjustedLabels; // label buffer that is used for if bars need to be merged
+    QVector<double> yAdjustedData; // y value buffer that is used for if bars need to be merged
+    const auto bMergeIdentical = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_mergeIdenticalLabels, false);
+    if (bMergeIdentical)
+    {
+        ::DFG_MODULE_NS(cont)::MapVectorSoA<StringUtf8, double> uniqueValues;
+        uniqueValues.setSorting(false); // Want to keep original order.
+        for (size_t i = 0, nCount = valueRange.size(); i < nCount; ++i)
+            uniqueValues[labelRange[i]] += valueRange[i];
+        if (uniqueValues.size() != valueRange.size()) // Does data have duplicate bar identifiers?
+        {
+            DFG_REQUIRE(valueRange.size() >= uniqueValues.size());
+            const auto nRemoveCount = valueRange.size() - uniqueValues.size();
+            const auto nNewLabelSize = saturateCast<int>(valueRange.size() - nRemoveCount);
+            adjustedLabels.resize(saturateCast<int>(nNewLabelSize));
+            yAdjustedData.resize(saturateCast<int>(uniqueValues.size()));
+            int i = 0;
+            for (const auto& item : uniqueValues)
+            {
+                adjustedLabels[i] = item.first;
+                yAdjustedData[i] = item.second;
+                i++;
+            }
+            // Recalculating y-range.
+            minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
+            labelRange = adjustedLabels;
+            valueRange = yAdjustedData;
+        }
+    }
+
+    QVector<double> ticks;
+    QVector<QString> labels;
+
+    // Checking if there is existing text ticker and if yes, prepending existing ticks and labels before new items.
+    auto pExistingTextTicker = dynamic_cast<QCPAxisTickerText*>(pXaxis->ticker().data()); // QCPAxisTicker is not a QObject (at least in 2.0.1) so can't use qobject_cast
+    if (pExistingTextTicker)
+    {
+        const auto& tickerTicks = pExistingTextTicker->ticks();
+        for (auto iter = tickerTicks.cbegin(), iterEnd = tickerTicks.end(); iter != iterEnd; ++iter)
+        {
+            ticks.push_back(iter.key());
+            labels.push_back(iter.value());
+        }
+    }
+
+    ::DFG_MODULE_NS(cont)::ValueVector<double> stackedValues;
+    // Checking if bars in current data should be stacked under identical label.
+    const auto sBarLabel = param.definitionEntry().fieldValueStr(ChartObjectFieldIdStr_barLabel);
+    if (!sBarLabel.empty())
+    {
+        stackedValues.assign(valueRange);
+        adjustedLabels.clear();
+        adjustedLabels.push_back(sBarLabel);
+        labelRange = adjustedLabels;
+    }
+
+    const bool bStackBars = param.definitionEntry().fieldValue(ChartObjectFieldIdStr_stackOnExistingLabels, false);
+
+    QCPBars* pStackBarsOn = nullptr;
+
+    if (bStackBars)
+    {
+        // If stacking is enabled, finding last existing bar chart; stacking is done on top of that.
+        const auto plottables = pXaxis->plottables();
+        for (const auto& pPlottable : plottables)
+        {
+            auto pBars = qobject_cast<QCPBars*>(pPlottable);
+            if (!pBars || pPlottable->property("chartEntryType").toString() != ChartObjectChartTypeStr_bars)
+                continue;
+            pStackBarsOn = pBars;
+        }
+    }
+
+    QMap<QString, double> mapExistingLabelToXcoordinate;
+
+    // If stacking is enabled, finding existing labels.
+    if (pStackBarsOn)
+    {
+        auto pTextTicker = dynamic_cast<QCPAxisTickerText*>(pXaxis->ticker().data()); // QCPAxisTicker is not a QObject (at least in 2.0.1) so can't use qobject_cast
+        if (pTextTicker)
+        {
+            const auto& tickerTicks = pTextTicker->ticks();
+            for (auto iter = tickerTicks.cbegin(), iterEnd = tickerTicks.end(); iter != iterEnd; ++iter)
+            {
+                mapExistingLabelToXcoordinate[iter.value()] = iter.key(); // Note: if there are identical labels, picks last occurence.
+            }
+        }
+    }
+
+    // Filling x-data; ticks and labels.
+    const auto existingTickCount = labels.size();
+    QVector<double> xValues;
+    for (size_t i = 0, nCount = labelRange.size(); i < nCount; ++i)
+    {
+        const auto& sNewLabel = labelRange[i];
+        auto sqNewLabel = viewToQString(sNewLabel);
+        auto iter = mapExistingLabelToXcoordinate.find(sqNewLabel);
+        if (iter == mapExistingLabelToXcoordinate.end()) // If using stacking and label already exists, not adding label or tick; using existing instead.
+        {
+            // Existing label not found -> adding new
+            labels.push_back(std::move(sqNewLabel));
+            ticks.push_back(static_cast<double>(ticks.size() + 1));
+            xValues.push_back(ticks.back());
+        }
+        else
+            xValues.push_back(iter.value()); // Identical label already exists -> using it's x-value
+    }
+
+    DFG_REQUIRE(existingTickCount <= ticks.size());
+
+    // Setting text ticker
+    {
+        QSharedPointer<QCPAxisTickerText> textTicker(new QCPAxisTickerText);
+        textTicker->addTicks(ticks, labels);
+        pXaxis->setTicker(textTicker);
+    }
+
+    //  Setting x-axis range
+    pXaxis->setRange(0, saturateCast<int>(static_cast<size_t>(ticks.size()) + 1u));
+
+    // Setting y-axis range
+    pYaxis->setRange(0, *minMaxPair.second);
+
+    // Setting auto axis labels if enabled
+    if (param.config().value(ChartObjectFieldIdStr_autoAxisLabels, true))
+    {
+        setAutoAxisLabel(*pXaxis, param.m_sXname);
+        setAutoAxisLabel(*pYaxis, param.m_sYname);
+    }
+
+    if (stackedValues.empty())
+    {
+        auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
+        setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
+        DFG_ASSERT_CORRECTNESS(static_cast<size_t>(xValues.size()) == valueRange.size());
+        fillQcpPlottable<QCPBarsData>(*pBars, xValues, valueRange);
+        pBars->moveAbove(pStackBarsOn);
+        ReturnType rv;
+        rv.push_back(std::make_shared<BarSeriesQCustomPlot>(pBars));
+        return rv;
+    }
+    else
+    {
+        ReturnType rv;
+        size_t i = 0;
+        for (const auto val : stackedValues)
+        {
+            auto pBars = new QCPBars(pXaxis, pYaxis); // Note: QCPBars is owned by QCustomPlot-object.
+            pBars->setName(viewToQString(param.labelRange[i++]));
+            setTypeToQcpObjectProperty(pBars, param.definitionEntry().graphTypeStr());
+            fillQcpPlottable<QCPBarsData>(*pBars, xValues, makeRange(&val, &val + 1));
+            pBars->moveAbove(pStackBarsOn);
+            pStackBarsOn = pBars;
+            rv.push_back(std::make_shared<BarSeriesQCustomPlot>(pBars));
+        }
+        return rv;
+    }
+}
+
+void ChartCanvasQCustomPlot::setAxisLabel(StringViewUtf8 svPanelId, StringViewUtf8 svAxisId, StringViewUtf8 svAxisLabel)
+{
+    auto pAxis = getAxis(svPanelId, svAxisId);
+    if (pAxis)
+        pAxis->setLabel(viewToQString(svAxisLabel));
+}
+
+void ChartCanvasQCustomPlot::setAxisTickLabelDirection(StringViewUtf8 svPanelId, StringViewUtf8 svAxisId, StringViewUtf8 svValue)
+{
+    auto pAxis = getAxis(svPanelId, svAxisId);
+    if (pAxis)
+    {
+        bool bOk = true;
+        const auto sValue = viewToQString(svValue);
+        const auto val = (!sValue.isEmpty()) ? sValue.toDouble(&bOk) : 0;
+        if (bOk)
+            pAxis->setTickLabelRotation(val);
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(QString("Bad tick label direction, got '%1'. Using default").arg(sValue));
+    }
+}
+
+void ChartCanvasQCustomPlot::repaintCanvas()
+{
+    auto p = getWidget();
+    if (!p)
+        return;
+    if (m_spUpdateIndicator)
+        p->removeItem(m_spUpdateIndicator);
+    p->replot();
+}
+
+int ChartCanvasQCustomPlot::width() const
+{
+    auto pCustomPlot = getWidget();
+    return (pCustomPlot) ? pCustomPlot->width() : 0;
+}
+
+int ChartCanvasQCustomPlot::height() const
+{
+    auto pCustomPlot = getWidget();
+    return (pCustomPlot) ? pCustomPlot->height() : 0;
+}
+
+void ChartCanvasQCustomPlot::setBackground(const StringViewUtf8& sv)
+{
+    auto pCustomPlot = getWidget();
+    if (!pCustomPlot)
+        return;
+
+    bool bSetDefault = true;
+    auto defaultBackgroundSetter = makeScopedCaller([] {}, [&]() { if (bSetDefault) pCustomPlot->setBackground(QBrush(Qt::white, Qt::SolidPattern)); });
+
+    if (sv.empty())
+        return;
+
+    auto args = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem::fromStableView(sv);
+
+    if (args.key() != DFG_UTF8("gradient_linear"))
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Unrecognized background definition '%1'").arg(viewToQString(args.key())));
+        return;
+    }
+
+    // gradient_linear expects: gradient_linear(direction, linear position1, color1, [linear position 2, color2...])
+    if (args.valueCount() < 3)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Too few points for gradient_linear background: expected at least 3, got %1").arg(args.valueCount()));
+        return;
+    }
+
+    const auto svDirection = args.value(0);
+    if (svDirection != DFG_UTF8("vertical") && svDirection != DFG_UTF8("default")) // Currently only vertical and default are supported, to support horizontal and numeric angle.
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Unsupported gradient direction '%1'").arg(viewToQString(svDirection)));
+        return;
+    }
+
+    const auto nEffectiveArgCount = args.valueCount() - (1 - args.valueCount() % 2);
+    if (args.valueCount() % 2 == 0)
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Uneven argument count for gradient_linear, last item ignored"));
+
+    QLinearGradient gradient(0, 0, 0, this->height());
+    for (size_t i = 1; i < nEffectiveArgCount; i += 2)
+    {
+        const auto linearPos = args.valueAs<double>(i);
+        if (::DFG_MODULE_NS(math)::isNan(linearPos) || linearPos < 0 || linearPos > 1)
+        {
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Expected linear gradient position [0, 1], got '%1', item ignored").arg(viewToQString(args.value(i))));
+            continue;
+        }
+        const QColor colour(viewToQString(args.value(i + 1)));
+        if (!colour.isValid())
+        {
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Unable to parse colour '%1', linear gradient item ignored").arg(viewToQString(args.value(i + 1))));
+            continue;
+        }
+        gradient.setColorAt(linearPos, colour);
+    }
+    bSetDefault = false;
+    pCustomPlot->setBackground(QBrush(gradient));
+}
+
+void ChartCanvasQCustomPlot::setPanelAxesColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef)
+{
+    auto pPanel = getChartPanel(svPanelId);
+    if (!pPanel)
+        return;
+    const QColor color(viewToQString(svColourDef));
+    pPanel->forEachAxis([&](QCPAxis& axis)
+        {
+            setPanelAxisColour(axis, color);
+        });
+}
+
+void ChartCanvasQCustomPlot::setPanelAxisColour(QCPAxis& axis, const QColor& color)
+{
+    axis.setBasePen(QPen(color));
+    axis.setTickPen(QPen(color));
+    axis.setSubTickPen(QPen(color));
+}
+
+void ChartCanvasQCustomPlot::resetPanelAxisColour(QCPAxis& axis)
+{
+    setPanelAxisColour(axis, QColor(Qt::black));
+}
+
+void ChartCanvasQCustomPlot::setPanelAxesLabelColour(StringViewUtf8 svPanelId, StringViewUtf8 svColourDef)
+{
+    auto pPanel = getChartPanel(svPanelId);
+    if (!pPanel)
+        return;
+    const QColor color(viewToQString(svColourDef));
+    pPanel->forEachAxis([&](QCPAxis& axis)
+        {
+            setPanelAxisLabelColour(axis, color);
+        });
+}
+
+void ChartCanvasQCustomPlot::setAxisProperties(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId, const ArgList& args)
+{
+    auto pAxis = this->getAxis(svPanelId, svAxisId);
+    if (!pAxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("No axis '%1' found from panel '%2': setting properties ignored").arg(viewToQString(svAxisId), viewToQString(svPanelId)));
+        return;
+    }
+
+    const auto setRangeHelper = [&](const NonNullCStr pszAxisPropId, const StringViewSzUtf8& svPropValue)
+    {
+        const auto val = ::DFG_MODULE_NS(str)::strTo<double>(svPropValue);
+        if (::DFG_MODULE_NS(math)::isFinite(val))
+            pAxis->setProperty(pszAxisPropId, val);
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Invalid range start '%1', unable to convert to value").arg(viewToQString(svPropValue)));
+    };
+
+    for (size_t i = 0, nArgCount = args.valueCount(); i < nArgCount; i += 2)
+    {
+        using namespace ::DFG_MODULE_NS(charts);
+        const auto svPropId = args.value(i);
+        const auto svPropIdUntyped = svPropId.asUntypedView();
+        const auto svPropValue = args.value(i + 1);
+
+        if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_lineColour)
+            setPanelAxisColour(*pAxis, QColor(viewToQString(svPropValue)));
+        else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_labelColour)
+            setPanelAxisLabelColour(*pAxis, QColor(viewToQString(svPropValue)));
+        else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_rangeStart)
+            setRangeHelper("dfglib_range_start", svPropValue);
+        else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_rangeEnd)
+            setRangeHelper("dfglib_range_end", svPropValue);
+        else
+            DFG_QT_CHART_CONSOLE_WARNING(tr("Unrecognized axis property '%1' for axis '%2' in panel '%3'").arg(viewToQString(svPropId), viewToQString(svAxisId), viewToQString(svPanelId)));
+    }
+}
+
+void ChartCanvasQCustomPlot::setPanelAxisLabelColour(QCPAxis& axis, const QColor& color)
+{
+    axis.setTickLabelColor(color);
+    axis.setLabelColor(color);
+}
+
+void ChartCanvasQCustomPlot::resetPanelAxisLabelColour(QCPAxis& axis)
+{
+    setPanelAxisLabelColour(axis, QColor(Qt::black));
+}
+
+bool ChartCanvasQCustomPlot::isLegendEnabled() const
+{
+    return m_bLegendEnabled;
+}
+
+bool ChartCanvasQCustomPlot::enableLegend(bool bEnable)
+{
+    if (m_bLegendEnabled == bEnable)
+        return m_bLegendEnabled;
+
+    m_bLegendEnabled = bEnable;
+
+    if (m_bLegendEnabled)
+        createLegends();
+    else
+        removeLegends();
+
+    repaintCanvas();
+    return m_bLegendEnabled;
+}
+
+bool ChartCanvasQCustomPlot::enableToolTip(const bool b)
+{
+    m_bToolTipEnabled = b;
+    return m_bToolTipEnabled;
+}
+
+void ChartCanvasQCustomPlot::removeLegends()
+{
+    // Removing legends (would get deleted automatically with AxisRect's, but doing it here expclitly to keep m_legends up-to-date.)
+    qDeleteAll(m_legends);
+    m_legends.clear();
+    auto p = getWidget();
+    if (p && p->legend)
+    {
+        p->legend->clearItems();
+        p->legend->setVisible(false);
+    }
+}
+
+void ChartCanvasQCustomPlot::createLegends()
+{
+    // Creating legends for all AxisRects
+    auto p = getWidget();
+    if (!p)
+        return;
+
+    // Clearing old legends
+    removeLegends();
+
+    auto axisRects = p->axisRects();
+    QVector<QCPAbstractPlottable*> plottables;
+    for (int i = 0, nCount = p->plottableCount(); i < nCount; ++i)
+        plottables.push_back(p->plottable(i));
+    for (const auto& pAxisRect : axisRects)
+    {
+        if (!pAxisRect)
+            continue;
+        if (plottables.isEmpty())
+            break; // All plottables added to legends, nothing left to do.
+
+        QCPLegend* pLegend = nullptr;
+        if (pAxisRect != p->axisRect() || p->legend == nullptr)
+        {
+            pLegend = new QCPLegend;
+            m_legends.push_back(pLegend);
+            auto pLayout = pAxisRect->insetLayout();
+            if (!pLayout)
+            {
+                DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error inserLayout() returned null"));
+                continue;
+            }
+            pLayout->addElement(pLegend, Qt::AlignTop | Qt::AlignRight);
+            pLegend->setLayer(QLatin1String("legend"));
+        }
+        else // Case: default AxisRect, uses existing legend. Would crash if creating another.
+            pLegend = p->legend;
+
+        if (!pLegend)
+            continue;
+
+        // Add all plottables in this AxisRect to legend.
+        for (int i = 0; i < plottables.size();)
+        {
+            auto pPlottable = plottables[i];
+            if (pPlottable->keyAxis() == pAxisRect->axis(QCPAxis::atBottom)) // This is probably not very future proof in case of advanced axis options.
+            {
+                pPlottable->addToLegend(pLegend);
+                plottables.remove(i);
+            }
+            else
+                ++i;
+        }
+        pLegend->setVisible(true);
+    }
+    if (!plottables.isEmpty())
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Number of items that didn't end up in any legend: %1").arg(plottables.size()));
+}
+
+bool ChartCanvasQCustomPlot::getGridPos(const StringViewUtf8 svPanelId, int& nRow, int& nCol)
+{
+    auto panelId = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem::fromStableView(svPanelId);
+    if (!svPanelId.empty() && (panelId.key() != DFG_UTF8("grid") || panelId.valueCount() > 2))
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Failed to retrieve grid panel: invalid panel definition '%1'").arg(viewToQString(svPanelId)));
+        return false;
+    }
+    nRow = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(0);
+    nCol = (panelId.key().empty()) ? 1 : panelId.valueAs<int>(1);
+    if (nRow < 1 || nCol < 1 || nRow > 1000 || nCol > 1000)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Invalid panel grid index, expecting [1, 1000], got row = %1, column = %2").arg(nRow).arg(nCol));
+        return false;
+    }
+    // Converting from user's 1-based index to internal 0-based.
+    --nRow; --nCol;
+    return true;
+}
+
+template <class This_T, class Func_T>
+void ChartCanvasQCustomPlot::forEachAxisRectImpl(This_T& rThis, Func_T&& func)
+{
+    auto pQcp = rThis.getWidget();
+    if (!pQcp)
+        return;
+    auto axisRects = pQcp->axisRects();
+    for (auto pAxisRect : axisRects)
+    {
+        if (pAxisRect)
+            func(*pAxisRect);
+    }
+}
+
+template <class Func_T> void ChartCanvasQCustomPlot::forEachAxisRect(Func_T&& func) { forEachAxisRectImpl(*this, std::forward<Func_T>(func)); }
+template <class Func_T> void ChartCanvasQCustomPlot::forEachAxisRect(Func_T&& func) const { forEachAxisRectImpl(*this, std::forward<Func_T>(func)); }
+
+template <class Func_T>
+void ChartCanvasQCustomPlot::forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func)
+{
+    if (!pAxisRect)
+        return;
+    auto axes = pAxisRect->axes();
+    for (auto pAxis : axes)
+    {
+        if (pAxis)
+            func(*pAxis);
+    }
+}
+
+template <class Func_T>
+void ChartCanvasQCustomPlot::forEachChartPanelUntil(Func_T&& func)
+{
+    auto pCustomPlot = getWidget();
+    auto pMainLayout = (pCustomPlot) ? pCustomPlot->plotLayout() : nullptr;
+    if (!pMainLayout)
+        return;
+    const auto nElemCount = pMainLayout->elementCount();
+    for (int i = 0; i < nElemCount; ++i)
+    {
+        auto pElement = pMainLayout->elementAt(i);
+        auto pPanel = dynamic_cast<ChartPanel*>(pElement);
+        if (pPanel)
+            if (!func(*pPanel))
+                break;
+    }
+}
+
+auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCPAxisRect*
+{
+    int nRow = 0;
+    int nCol = 0;
+    if (!getGridPos(svPanelId, nRow, nCol))
+        return nullptr;
+
+    auto p = getWidget();
+    if (!p)
+        return nullptr;
+
+    auto pLayout = p->plotLayout();
+    if (!pLayout)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: layout object does not exist"));
+        return nullptr;
+    }
+    QCPAxisRect* pExistingAxisRect = nullptr;
+    ChartPanel* pChartPanel = dynamic_cast<ChartPanel*>(pLayout->element(nRow, nCol));
+    if (pChartPanel)
+        pExistingAxisRect = pChartPanel->axisRect();
+    if (!pExistingAxisRect)
+    {
+        if (!pChartPanel)
+        {
+            pChartPanel = new ChartPanel(p, svPanelId);
+            pLayout->addElement(nRow, nCol, pChartPanel);
+        }
+        pExistingAxisRect = pChartPanel->axisRect();
+    }
+    if (!pExistingAxisRect)
+    {
+        DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error: no panel object"));
+        return nullptr;
+    }
+    return pExistingAxisRect;
+}
+
+auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) -> ChartPanel*
+{
+    const auto isWithinAxisRange = [](QCPAxis* pAxis, const double val)
+    {
+        return (pAxis) ? pAxis->range().contains(val) : false;
+    };
+
+    ChartPanel* pPanel = nullptr;
+    forEachChartPanelUntil([&](ChartPanel& panel)
+        {
+            auto pXaxis1 = panel.primaryXaxis();
+            auto pYaxis1 = panel.primaryYaxis();
+            if (pXaxis1 && pYaxis1)
+            {
+                const auto xCoord = pXaxis1->pixelToCoord(pos.x());
+                const auto yCoord = pYaxis1->pixelToCoord(pos.y());
+                if (isWithinAxisRange(pXaxis1, xCoord) && isWithinAxisRange(pYaxis1, yCoord))
+                    pPanel = &panel;
+            }
+            return pPanel == nullptr;
+        });
+    return pPanel;
+}
+
+auto ChartCanvasQCustomPlot::getChartPanel(const StringViewUtf8& svPanelId) -> ChartPanel*
+{
+    auto pCustomPlot = getWidget();
+    auto pMainLayout = (pCustomPlot) ? pCustomPlot->plotLayout() : nullptr;
+    if (!pMainLayout)
+        return nullptr;
+
+    int nRow = 0;
+    int nCol = 0;
+    if (!getGridPos(svPanelId, nRow, nCol))
+        return nullptr;
+    return dynamic_cast<ChartPanel*>(pMainLayout->element(nRow, nCol));
+}
+
+auto ChartCanvasQCustomPlot::getChartPanelByAxis(const QCPAxis* pAxis) -> ChartPanel*
+{
+    ChartPanel* pPanel = nullptr;
+    forEachChartPanelUntil([&](ChartPanel& rPanel)
+        {
+            if (rPanel.hasAxis(pAxis))
+                pPanel = &rPanel;
+            return pPanel == nullptr;
+        });
+    return pPanel;
+}
+
+auto ChartCanvasQCustomPlot::getAxis(const StringViewUtf8& svPanelId, const StringViewUtf8& svAxisId) -> QCPAxis*
+{
+    auto pAxisRect = getAxisRect(svPanelId);
+    if (svAxisId == DFG_UTF8("x"))
+        return pAxisRect->axis(QCPAxis::atBottom);
+    else if (svAxisId == DFG_UTF8("y"))
+        return pAxisRect->axis(QCPAxis::atLeft);
+    else if (svAxisId == DFG_UTF8("y2"))
+        return pAxisRect->axis(QCPAxis::atRight);
+
+    DFG_QT_CHART_CONSOLE_WARNING(tr("Didn't find axis '%1' from panel '%2'").arg(viewToQString(svAxisId), viewToQString(svPanelId)));
+    return nullptr;
+}
+
+auto ChartCanvasQCustomPlot::getAxisRect(const ChartObjectCreationParam& param) -> QCPAxisRect*
+{
+    return getAxisRect(param.panelId());
+}
+
+auto ChartCanvasQCustomPlot::getAxis(const ChartObjectCreationParam& param, const QCPAxis::AxisType axisType) -> QCPAxis*
+{
+    auto pAxisRect = getAxisRect(param);
+    return (pAxisRect) ? pAxisRect->axis(axisType) : nullptr;
+}
+
+auto ChartCanvasQCustomPlot::getXAxis(const ChartObjectCreationParam& param) -> QCPAxis*
+{
+    return getAxis(param, QCPAxis::atBottom);
+}
+
+auto ChartCanvasQCustomPlot::getYAxis(const ChartObjectCreationParam& param) -> QCPAxis*
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    bool bAxisIdPresent = false;
+    const auto sAxisId = param.definitionEntry().fieldValueStr(ChartObjectFieldIdStr_yAxisId, &bAxisIdPresent);
+    if (!bAxisIdPresent || sAxisId == DFG_UTF8("y"))
+        return getAxis(param, QCPAxis::atLeft);
+    else if (sAxisId == DFG_UTF8("y2"))
+    {
+        auto pAxis = getAxis(param, QCPAxis::atRight);
+        if (pAxis)
+            pAxis->setVisible(true);
+        return pAxis;
+    }
+    else
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Invalid axis id '%1'. Expected either 'y' or 'y2'").arg(viewToQString(sAxisId)));
+        return nullptr;
+    }
+}
+
+void ChartCanvasQCustomPlot::setPanelTitle(StringViewUtf8 svPanelId, StringViewUtf8 svTitle, StringViewUtf8 svTitleColor)
+{
+    auto p = getWidget();
+    auto pMainLayout = (p) ? p->plotLayout() : nullptr;
+    if (!pMainLayout)
+        return;
+
+    int nRow = 0;
+    int nCol = 0;
+    if (!getGridPos(svPanelId, nRow, nCol))
+        return;
+
+    auto pElement = pMainLayout->element(nRow, nCol);
+    auto pPanel = dynamic_cast<ChartPanel*>(pElement);
+    if (pPanel == nullptr)
+    {
+        pPanel = new ChartPanel(p, svTitle);
+        if (pElement)
+            pPanel->addElement(pElement); // This transfers existing element to new layout.
+        pMainLayout->addElement(nRow, nCol, pPanel);
+    }
+    if (pPanel)
+        pPanel->setTitle(svTitle, svTitleColor);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// ChartPanel
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+ChartPanel::ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId)
+    : m_pQcp(pQcp)
+    , m_panelId(QString::fromUtf8(svPanelId.beginRaw(), svPanelId.sizeAsInt()))
+{
+}
+
+auto ChartPanel::axisRect() -> QCPAxisRect*
+{
+    const auto nElemCount = this->elementCount();
+    if (nElemCount == 0 || (nElemCount == 1 && qobject_cast<QCPTextElement*>(this->elementAt(0)) != nullptr))
+        addElement(nElemCount, 0, new QCPAxisRect(m_pQcp));
+    return qobject_cast<QCPAxisRect*>(elementAt(elementCount() - 1));
+}
+
+auto ChartPanel::axisRect() const -> const QCPAxisRect*
+{
+    const auto nElemCount = elementCount();
+    return (nElemCount > 0) ? qobject_cast<QCPAxisRect*>(elementAt(nElemCount - 1)) : nullptr;
+}
+
+auto ChartPanel::axis(AxisT::AxisType axisType)       -> AxisT* { return ChartPanel::axisImpl(*this, axisType); }
+auto ChartPanel::axis(AxisT::AxisType axisType) const -> const AxisT* { return ChartPanel::axisImpl(*this, axisType); }
+
+auto ChartPanel::primaryXaxis()       -> AxisT* { return axis(AxisT::atBottom); }
+auto ChartPanel::primaryXaxis() const -> const AxisT* { return axis(AxisT::atBottom); }
+
+auto ChartPanel::primaryYaxis() -> AxisT*
+{
+    return axis(AxisT::atLeft);
+}
+
+auto ChartPanel::secondaryXaxis() -> AxisT*
+{
+    return nullptr;
+}
+
+auto ChartPanel::secondaryYaxis() -> AxisT*
+{
+    return nullptr;
+}
+
+bool ChartPanel::hasAxis(const QCPAxis* pAxis)
+{
+    return pAxis == primaryXaxis() || pAxis == primaryYaxis() || pAxis == secondaryXaxis() || pAxis == secondaryYaxis();
+}
+
+QString ChartPanel::getTitle() const
+{
+    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
+    return (pTitle) ? pTitle->text() : QString();
+}
+
+void ChartPanel::setTitle(StringViewUtf8 svTitle, StringViewUtf8 svColor)
+{
+    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
+    if (svTitle.empty())
+    {
+        // In case of empty title removing the text element.
+        if (pTitle)
+        {
+            this->remove(pTitle);
+            this->simplify(); // To remove the empty space.
+        }
+    }
+    else
+    {
+        if (!pTitle)
+        {
+            pTitle = new QCPTextElement(this->parentPlot());
+            this->insertRow(0); // insert an empty row above the axis rect
+            addElement(0, 0, pTitle);
+        }
+        pTitle->setText(viewToQString(svTitle));
+        pTitle->setFont(QFont("sans", 12, QFont::Bold));
+        if (!svColor.empty())
+        {
+            const QColor color(viewToQString(svColor));
+            if (color.isValid())
+                pTitle->setTextColor(color);
+        }
+    }
+}
+
+auto ChartPanel::pixelToCoord_primaryAxis(const QPoint& pos) -> PairT
+{
+    auto pXaxis = primaryXaxis();
+    auto pYaxis = primaryYaxis();
+    const auto x = (pXaxis) ? pXaxis->pixelToCoord(pos.x()) : std::numeric_limits<double>::quiet_NaN();
+    const auto y = (pYaxis) ? pYaxis->pixelToCoord(pos.y()) : std::numeric_limits<double>::quiet_NaN();
+    return PairT(x, y);
+}
+
+void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler)
+{
+    if (!m_pQcp || !handler)
+        return;
+    const auto nCount = m_pQcp->plottableCount();
+    for (int i = 0; i < nCount; ++i)
+    {
+        auto pPlottable = m_pQcp->plottable(i);
+        if (pPlottable && pPlottable->keyAxis() == this->primaryXaxis())
+            handler(*pPlottable);
+    }
+}
+
+auto ChartPanel::countOf(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const -> uint32
+{
+    auto pPrimaryX = primaryXaxis();
+    if (!pPrimaryX)
+        return 0;
+    uint32 nCount = 0;
+    const auto plottables = pPrimaryX->plottables();
+    const auto sQstringType = QString::fromUtf8(type.data(), type.sizeAsInt());
+    for (const auto& pPlottable : plottables)
+    {
+        if (!pPlottable)
+            continue;
+        nCount += pPlottable->property("chartEntryType").toString() == sQstringType;
+    }
+    return nCount;
+}
+
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& xy, ToolTipTextStream& toolTipStream)
+{
+    if (!pGraph)
+        return false;
+
+    toolTipStream << tr("<br>Graph size: %1").arg(pGraph->dataCount());
+
+    const auto spData = pGraph->data();
+    if (!spData)
+        return true;
+
+    createNearestPointToolTipList(*spData, xy, toolTipStream, PointToTextConverter<QCPGraphData>(*pGraph));
+
+    return true;
+}
+
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPCurve* pCurve, const PointXy& cursorXy, ToolTipTextStream& toolTipStream)
+{
+    const auto spPoints = (pCurve) ? pCurve->data() : nullptr;
+    if (!spPoints)
+        return false;
+
+    auto& rCurve = *pCurve;
+
+    toolTipStream << tr("<br>Graph size: %1").arg(rCurve.dataCount());
+
+    // Unlike in QCPGraph, now adjacent points in index space can be arbitrarily far from each other in both x and y axis.
+    // So in practice need to go through all points to find nearest and this time showing nearest by distance between cursor and point,
+    // not just x-coordinate distance between them.
+
+    enum class DistanceType { raw, axisNormalized };
+
+    struct DistanceAndPoint
+    {
+        DistanceAndPoint(double d2, QCPCurveData curveData)
+            : distanceSquare(d2)
+            , data(curveData)
+        {}
+        bool operator<(const DistanceAndPoint& other) const { return this->distanceSquare < other.distanceSquare; }
+        double distanceSquare;
+        QCPCurveData data;
+    };
+
+    ::DFG_MODULE_NS(cont)::SortedSequence<std::vector<DistanceAndPoint>> nearest;
+
+    const auto pow2 = [](const double val) { return val * val; };
+
+    const auto distanceSquare = [&](const QCPCurveData& xy) { return pow2(xy.key - cursorXy.first) + pow2(xy.value - cursorXy.second); };
+    const auto axisNormalizedSquare = [&](const QCPCurveData& xy)
+    {
+        // Problem with raw distance is that if other axis is covering , say, [0, 1] and the other [1e5, 1e6], nearest points to cursor are typically
+        // those closest on y-axis. However for tooltip visual distance is probably what user is looking for.
+        auto pKeyAxis = rCurve.keyAxis();
+        auto pValueAxis = rCurve.valueAxis();
+        if (pKeyAxis && pValueAxis)
+        {
+            const auto normalizedPow2 = [&](const double a, const double b, const QCPAxis& rAxis)
+            {
+                const auto axisRange = rAxis.range().size();
+                return pow2((a - b) / axisRange);
+            };
+            return normalizedPow2(xy.key, cursorXy.first, *pKeyAxis) + normalizedPow2(xy.value, cursorXy.second, *pValueAxis);
+        }
+        else
+            return std::numeric_limits<double>::quiet_NaN();
+    };
+
+    const auto nToolTipPointCount = static_cast<size_t>(Min(5, spPoints->size()));
+
+    const auto pMetaCurve = dynamic_cast<const CustomPlotCurveWithMetaData*>(pCurve);
+
+    const auto distanceType = (pMetaCurve) ? DistanceType::axisNormalized : DistanceType::raw;
+
+    std::for_each(spPoints->constBegin(), spPoints->constEnd(), [&](const QCPCurveData& data)
+        {
+            const auto d2 = (distanceType == DistanceType::raw) ? distanceSquare(data) : axisNormalizedSquare(data);
+            if (nearest.size() >= nToolTipPointCount)
+            {
+                if (d2 < nearest.back().distanceSquare)
+                {
+                    nearest.pop_back();
+                    nearest.insert(DistanceAndPoint(d2, data));
+                }
+            }
+            else
+                nearest.insert(DistanceAndPoint(d2, data));
+        });
+
+    auto pointToText = PointToTextConverter<QCPCurveData>(*pCurve);
+
+    toolTipStream << tr("<br>Nearest points and %1distance to cursor:").arg((distanceType == DistanceType::axisNormalized) ? tr("axis normalized ") : QString());
+    for (const auto& item : nearest)
+    {
+        if (pMetaCurve)
+            toolTipStream << QString("<br>%1: %2 (%3)").arg(pointToText(item.data, toolTipStream), viewToQString(pMetaCurve->metaDataStringAt(item.data))).arg(std::sqrt(item.distanceSquare));
+        else
+            toolTipStream << QString("<br>%1 (%2)").arg(pointToText(item.data, toolTipStream)).arg(std::sqrt(item.distanceSquare));
+    }
+
+    return true;
+}
+
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& xy, ToolTipTextStream& toolTipStream)
+{
+    if (!pBars)
+        return false;
+
+    toolTipStream << tr("<br>Bin count: %1").arg(pBars->dataCount());
+    toolTipStream << tr("<br>Bin width: %1").arg(toolTipStream.numberToText(pBars->width())); // Note: probably fails for some pBars->widthType()'s
+
+    const auto spData = pBars->data();
+    if (!spData)
+        return true;
+
+    PointToTextConverter<QCPBarsData> pointToText(*pBars);
+    createNearestPointToolTipList(*spData, xy, toolTipStream, pointToText);
+
+    return true;
+}
+
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const BarStack* pBarStack, const PointXy& cursorXy, ToolTipTextStream& toolTipStream)
+{
+    if (!pBarStack)
+        return false;
+
+    auto& rBarStack = *pBarStack;
+
+    const auto sStackLabel = rBarStack.label();
+
+    // Stack label (x value label)
+    toolTipStream << tr("<br>Bar stack: <b>%1</b>").arg(sStackLabel.toHtmlEscaped());
+    // Axis identifier
+    auto pValueAxis = rBarStack.valueAxis();
+    if (pValueAxis && pValueAxis->axisType() == QCPAxis::atRight) // Printing y-axis info if using non-default.
+        toolTipStream << tr("<br>y axis: %1").arg(axisTypeToToolTipString(pValueAxis->axisType()));
+
+    toolTipStream << tr("<br>Bar count: %1").arg(pBarStack->size());
+
+    rBarStack.forEachSubBar(cursorXy, toolTipStream, [&](const QString& sLabel, const QString& sValue, const QColor& color, const bool bIsCursorWithin)
+        {
+            toolTipStream << QString("<br>%4<font color=\"%2\">'%1'</font>: %3%5").arg(
+                sLabel.toHtmlEscaped(),
+                color.name(),
+                sValue,
+                (bIsCursorWithin) ? "<b>" : "",
+                (bIsCursorWithin) ? "</b>" : "");
+        });
+
+    return true;
+}
+
+void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
+{
+    if (!pEvent || !m_bToolTipEnabled)
+        return;
+
+    const auto cursorPos = pEvent->pos();
+
+    auto pPanel = getChartPanel(cursorPos);
+
+    if (!pPanel)
+        return;
+
+    const auto xy = pPanel->pixelToCoord_primaryAxis(cursorPos);
+
+    ToolTipTextStream toolTipStream;
+    const QString sPanelId = pPanel->getPanelId();
+    const QString sPanelTitle = pPanel->getTitle();
+    if (!sPanelId.isEmpty() || !sPanelTitle.isEmpty())
+    {
+        const QString sPanelTitlePart = (!sPanelTitle.isEmpty()) ? QString(" ('%1')").arg(sPanelTitle) : QString();
+
+        toolTipStream << tr("Panel: %1%2").arg(pPanel->getPanelId(), sPanelTitlePart).toHtmlEscaped() + "<br>";
+    }
+    toolTipStream << QString("x = %1, y = %2").arg(toolTipStream.numberToText(xy.first), toolTipStream.numberToText(xy.second));
+
+    BarStacks barStacks;
+
+    pPanel->forEachChartObject([&](const QCPAbstractPlottable& plottable)
+        {
+            barStacks.storeStack(qobject_cast<const QCPBars*>(&plottable));
+        });
+
+    QSet<const BarStack*> handledStacks;
+
+    // For each chart object in this panel
+    pPanel->forEachChartObject([&](const QCPAbstractPlottable& plottable)
+        {
+            constexpr char szSeparator[] = "<br>---------------------------";
+
+            // Handling bar stacks first.
+            auto pBars = qobject_cast<const QCPBars*>(&plottable);
+            if (pBars)
+            {
+                auto stacks = barStacks.findStacks(*pBars);
+                if (!stacks.empty())
+                {
+                    for (const auto pStack : stacks)
+                    {
+                        if (!handledStacks.contains(pStack)) // Handling this object only if related stack not handled already.
+                        {
+                            toolTipStream << szSeparator;
+                            toolTipTextForChartObjectAsHtml(pStack, xy, toolTipStream);
+                            handledStacks.insert(pStack);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            toolTipStream << szSeparator;
+
+            // Name
+            toolTipStream << QString("<br><font color=\"%2\">'%1'</font>").arg(plottable.name().toHtmlEscaped(), plottable.pen().color().name());
+            // Axis identifier
+            {
+                const auto pValueAxis = plottable.valueAxis();
+                if (pValueAxis && pValueAxis->axisType() == QCPAxis::atRight) // Printing y-axis info if using non-default.
+                    toolTipStream << tr("<br>y axis: %1").arg(axisTypeToToolTipString(pValueAxis->axisType()));
+            }
+            if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPGraph*>(&plottable), xy, toolTipStream)) {}
+            else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPCurve*>(&plottable), xy, toolTipStream)) {}
+            else if (toolTipTextForChartObjectAsHtml(pBars, xy, toolTipStream)) {}
+        });
+
+    QToolTip::showText(pEvent->globalPos(), toolTipStream.toPlainText());
+}
+
+namespace
+{
+    template <class Cont_T>
+    auto createOperationPipeDataImpl(const QSharedPointer<Cont_T> spData) -> ::DFG_MODULE_NS(charts)::ChartOperationPipeData
+    {
+        using namespace ::DFG_MODULE_NS(charts);
+        if (!spData)
+            return ChartOperationPipeData();
+
+        ChartOperationPipeData pipeData;
+        auto px = pipeData.editableValuesByIndex(0);
+        auto py = pipeData.editableValuesByIndex(1);
+        if (!px || !py)
+        {
+            DFG_ASSERT(false); // Not expected to ever end up here.
+            return pipeData;
+        }
+        const auto nSize = static_cast<size_t>(spData->size());
+        px->resize(nSize);
+        py->resize(nSize);
+        size_t i = 0;
+        for (auto xy : *spData)
+        {
+            (*px)[i] = xy.key;
+            (*py)[i] = xy.value;
+            i++;
+        }
+        pipeData.setValueVectorsAsData();
+        return pipeData;
+    }
+}
+
+auto ChartCanvasQCustomPlot::createOperationPipeData(QCPAbstractPlottable* pPlottable) -> ::DFG_MODULE_NS(charts)::ChartOperationPipeData
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    if (!pPlottable)
+        return ChartOperationPipeData();
+    auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
+    if (pGraph)
+        return createOperationPipeDataImpl(pGraph->data());
+    auto pCurve = qobject_cast<QCPCurve*>(pPlottable);
+    if (pCurve)
+        return createOperationPipeDataImpl(pCurve->data());
+    auto pBars = qobject_cast<QCPBars*>(pPlottable);
+    if (pBars)
+        return createOperationPipeDataImpl(pBars->data());
+    DFG_ASSERT_IMPLEMENTED(false);
+    return ChartOperationPipeData();
+}
+
+void ChartCanvasQCustomPlot::applyChartOperationTo(QPointer<QCPAbstractPlottable> spPlottable, const StringViewUtf8& svOperationId)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    QCPAbstractPlottable* pPlottable = spPlottable.data();
+    if (!pPlottable)
+        return;
+
+    QString sOperationDefinition;
+    // Asking arguments from user
+    {
+        const QString sAdditionInfo = (qobject_cast<QCPBars*>(pPlottable) != nullptr)
+            ? tr("\nNote: bar chart string labels are not passed to operation")
+            : QString();
+        sOperationDefinition = QInputDialog::getText(this->m_spChartView.data(),
+            tr("Applying operation"),
+            tr("Define operation for '%1'\nUsage: %2%3").arg(pPlottable->name(), getOperationDefinitionUsageGuide(svOperationId), sAdditionInfo),
+            QLineEdit::Normal,
+            getOperationDefinitionPlaceholder(svOperationId));
+        if (sOperationDefinition.isEmpty())
+            return;
+    }
+    applyChartOperationsTo(pPlottable, QStringList(sOperationDefinition));
+}
+
+void ChartCanvasQCustomPlot::applyChartOperationsTo(QPointer<QCPAbstractPlottable> spPlottable)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    QCPAbstractPlottable* pPlottable = spPlottable.data();
+    if (!pPlottable)
+        return;
+
+    // Asking operation list from user
+    // TODO: showing operation guide in the UI would be nice.
+    QString sInitial;
+    bool bGoodOperationList = false;
+    do
+    {
+        QStringList operationStringList;
+        const QString sAdditionInfo = (qobject_cast<QCPBars*>(pPlottable) != nullptr)
+            ? tr("\nNote: bar chart string labels are not passed to operations")
+            : QString();
+        bool bOk;
+        sInitial = QInputDialog::getMultiLineText(this->m_spChartView.data(),
+            tr("Applying operations"),
+            tr("Define operations (one per line) for '%1'\n%2").arg(pPlottable->name(), sAdditionInfo),
+            sInitial,
+            &bOk);
+        operationStringList = sInitial.split('\n');
+        if (!bOk || operationStringList.isEmpty())
+            return;
+        bGoodOperationList = applyChartOperationsTo(pPlottable, operationStringList);
+    } while (!bGoodOperationList);
+}
+
+bool ChartCanvasQCustomPlot::applyChartOperationsTo(QCPAbstractPlottable* pPlottable, const QStringList& operationStringList)
+{
+    auto& manager = DFG_DETAIL_NS::operationManager();
+    ChartEntryOperationList operations;
+    QString sErrors;
+    for (const auto& sItem : operationStringList)
+    {
+        if (sItem.isEmpty() || sItem[0] == '#')
+            continue;
+        StringUtf8 sDef(SzPtrUtf8(sItem.toUtf8()));
+        auto op = manager.createOperation(sDef);
+        if (op)
+        {
+            op.m_sDefinition = std::move(sDef);
+            operations.push_back(std::move(op));
+        }
+        else
+        {
+            sErrors += tr("\n'%1': ").arg(sItem);
+            if (sItem.indexOf("(") != -1 && manager.hasOperation(SzPtrUtf8(sItem.mid(0, sItem.indexOf("(")).toUtf8())))
+                sErrors += tr("invalid arguments");
+            else
+                sErrors += tr("no such operation");
+        }
+    }
+    if (!sErrors.isEmpty())
+    {
+        QMessageBox::information(getWidget(), tr("Unable to create operations"), tr("Unable to create operations, the following errors were encountered:\n%1").arg(sErrors));
+        return false;
+    }
+    applyChartOperationsTo(pPlottable, operations);
+    return true;
+}
+
+void ChartCanvasQCustomPlot::applyChartOperationsTo(QCPAbstractPlottable* pPlottable, ChartEntryOperationList& operations)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+
+    if (!pPlottable || operations.empty())
+        return;
+
+    auto pipeData = createOperationPipeData(pPlottable);
+    if (pipeData.vectorCount() == 0)
+    {
+        return;
+    }
+    operations.executeAll(pipeData);
+
+    // Checking for errors
+    QString sErrors;
+    for (const auto& op : operations)
+    {
+        if (op.hasErrors())
+        {
+            sErrors += tr("\nOperation '%1': %2").arg(viewToQString(op.m_sDefinition), DFG_DETAIL_NS::formatOperationErrorsForUserVisibleText(op));
+        }
+    }
+    if (!sErrors.isEmpty())
+    {
+        QMessageBox::information(getWidget(),
+            tr("Errors in operations"),
+            tr("There were errors applying operations, changes were not applied to chart object '%1'\n\nList of errors:\n%2").arg(pPlottable->name(), sErrors));
+        return;
+    }
+
+    fillQcpPlottable(pPlottable, pipeData);
+
+    // Replotting so that the result comes visible.
+    m_spChartView->replot();
+}
+
+void ChartCanvasQCustomPlot::optimizeAllAxesRanges()
+{
+    auto pQcp = getWidget();
+    if (!pQcp)
+        return;
+
+    // Scaling doesn't seem to work correctly if plotting hasn't been made yet. So if that seems to be the case, replotting first.
+    bool bDoReplotFirst = false;
+    forEachAxisRect([&](QCPAxisRect& rect)
+        {
+            bDoReplotFirst = bDoReplotFirst || (rect.width() == 0);
+        });
+
+    if (bDoReplotFirst)
+        pQcp->replot();
+
+    pQcp->rescaleAxes();
+
+    // Setting axis ranges and adding margin, by default margin is added so that min/max point markers won't get clipped by axisRect.
+    forEachAxisRect([](QCPAxisRect& rect)
+        {
+            forEachAxis(&rect, [](QCPAxis& axis)
+                {
+                    const auto propRangeStart = axis.property("dfglib_range_start");
+                    const auto propRangeEnd = axis.property("dfglib_range_end");
+                    // Note scaling must be done before settings ranges in order to have range edge at given positition instead of being shifted by margin.
+                    axis.scaleRange(1.1);
+                    const auto oldRange = axis.range();
+                    auto newRange = oldRange;
+                    // Not using setRangeLower/Upper() because if e.g. old range is (-10, 10) and one calls setRangeLower(20), the range ends up being (10, 20)
+                    if (propRangeStart.type() == QMetaType::Double)
+                    {
+                        newRange.lower = propRangeStart.toDouble();
+                        if (newRange.upper < newRange.lower)
+                            newRange.upper = newRange.lower + 1;
+                    }
+                    if (propRangeEnd.type() == QMetaType::Double)
+                    {
+                        newRange.upper = propRangeEnd.toDouble();
+                        if (newRange.upper < newRange.lower)
+                            newRange.lower = newRange.upper - 1;
+                    }
+                    if (oldRange != newRange)
+                        axis.setRange(newRange);
+                });
+        });
+
+    pQcp->replot();
+}
+
+void ChartCanvasQCustomPlot::beginUpdateState()
+{
+    auto pQcp = getWidget();
+    if (!pQcp)
+        return;
+    if (m_spUpdateIndicator)
+    {
+        DFG_ASSERT_CORRECTNESS(false); // beginUpdateState() getting called twice before replot? Not a fatal error, but asserting just to make sure it get's noticed during development.
+        return;
+    }
+
+    m_spUpdateIndicator = new QCPItemText(pQcp); // QCustomPlot-object takes ownership.
+    auto pUpdateIndicator = m_spUpdateIndicator.data();
+    pUpdateIndicator->setClipToAxisRect(false); // If clipToAxisRect is true, text would show only within one axis rect; in practice means that typically works only when there's just one panel.
+    pUpdateIndicator->setText(tr("Updating..."));
+    pUpdateIndicator->setLayer("legend"); // Setting text to legend layer so that it shows above graph stuff (axes etc.).
+    // Placing text in the middle of canvas.
+    {
+        pUpdateIndicator->position->setType(QCPItemPosition::ptViewportRatio);
+        pUpdateIndicator->position->setCoords(0.5, 0.5);
+    }
+    // Increasing font size
+    adjustWidgetFontProperties(pUpdateIndicator, 15);
+    // Setting text background so that text shows better.
+    pUpdateIndicator->setBrush(QBrush(QColor(255, 255, 255, 200))); // Somewhat transparent white background.
+
+    pQcp->setBackground(QBrush(QColor(240, 240, 240))); // Setting light grey background during update.
+    pQcp->replot();
+}
+
+auto ChartCanvasQCustomPlot::findPanelOfChartObject(const ChartObject* pObj) -> ::DFG_MODULE_NS(charts)::ChartPanel*
+{
+    auto * pObject = (pObj) ? dynamic_cast<const ChartObjectQCustomPlot*>(pObj->implementationObject()) : nullptr;
+    if (!pObject)
+        return nullptr;
+    auto pQcpPlottable = pObject->qcpPlottable();
+    if (!pQcpPlottable)
+        return nullptr;
+    auto pQcp = getWidget();
+    if (!pQcp)
+        return nullptr;
+
+    return getChartPanelByAxis(pQcpPlottable->keyAxis());
+}
+
+void ChartCanvasQCustomPlot::BarStack::storeStackLabel(const QCPBarsData& data, const QCPBars& rBars)
+{
+    m_sLabel = PointToTextConverter<QCPBarsData>(rBars).xText(data);
+    m_xValue = data.key;
+}
+
+QString ChartCanvasQCustomPlot::BarStack::label() const
+{
+    return m_sLabel;
+}
+
+const QCPAxis* ChartCanvasQCustomPlot::BarStack::valueAxis() const
+{
+    auto pBars = barsInstance();
+    return (pBars) ? pBars->valueAxis() : nullptr;
+}
+
+const QCustomPlot* ChartCanvasQCustomPlot::BarStack::parentPlot() const
+{
+    auto pBars = barsInstance();
+    return (pBars) ? pBars->parentPlot() : nullptr;
+}
+
+const QCPBars* ChartCanvasQCustomPlot::BarStack::barsInstance() const
+{
+    return (!m_subBarInfos.empty()) ? m_subBarInfos.front().m_spBars.data() : nullptr;
+}
+
+double ChartCanvasQCustomPlot::BarStack::barWidth() const
+{
+    auto pBar = barsInstance();
+    return (pBar) ? pBar->width() : std::numeric_limits<double>::quiet_NaN();
+}
+
+bool ChartCanvasQCustomPlot::BarStack::isXwithinStackX(const double x) const
+{
+    const auto barHalfWidth = barWidth() / 2;
+    return x >= (this->m_xValue - barHalfWidth) && x <= (this->m_xValue + barHalfWidth);
+}
+
+void ChartCanvasQCustomPlot::BarStack::forEachSubBar(const PointXy& pointXy, ToolTipTextStream& toolTipStream, SubBarHandler handler) const
+{
+    DFG_UNUSED(toolTipStream);
+    if (!handler)
+        return;
+
+    const auto pQcp = parentPlot();
+
+    for (const auto& subBarInfo : m_subBarInfos)
+    {
+        const QCPBars* pBar = subBarInfo.m_spBars;
+        if (!pBar)
+            continue;
+        const bool bIsPointWithIn = [&]()
+        {
+            if (pQcp && isXwithinStackX(pointXy.first))
+            {
+                auto pKeyAxis = pBar->keyAxis();
+                auto pValueAxis = pBar->valueAxis();
+                if (pKeyAxis && pValueAxis)
+                {
+                    // Testing if cursor is within given bar.
+                    const auto xPix = pKeyAxis->coordToPixel(pointXy.first);
+                    const auto yPix = pValueAxis->coordToPixel(pointXy.second);
+                    const double selectDistance = pBar->selectTest(QPointF(xPix, yPix), false);
+                    if (selectDistance >= 0 && selectDistance < pQcp->selectionTolerance())
+                        return true;
+                }
+            }
+            return false;
+        }();
+
+        handler(subBarInfo.m_sLabel,
+            PointToTextConverter<QCPBarsData>(*pBar).yText(subBarInfo.m_data),
+            pBar->pen().color().name(),
+            bIsPointWithIn);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// GraphDisplayImageExportDialog
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+template <class T> T propertyValueAs(const QJsonObject&, const char*);
+template <> bool    propertyValueAs<bool>(const QJsonObject& obj, const char* psz) { return obj.value(psz).toVariant().toBool(); }
+template <> int     propertyValueAs<int>(const QJsonObject& obj, const char* psz) { return obj.value(psz).toVariant().toInt(); }
+template <> double  propertyValueAs<double>(const QJsonObject& obj, const char* psz) { return obj.value(psz).toVariant().toDouble(); }
+template <> QString propertyValueAs<QString>(const QJsonObject& obj, const char* psz) { return obj.value(psz).toVariant().toString(); }
+
+GraphDisplayImageExportDialog::GraphDisplayImageExportDialog(QCustomPlot* pCustomPlot) :
+    m_spCustomPlot(pCustomPlot)
+{
+    m_spMessageConsole.reset(new QPlainTextEdit(this));
+    m_spMessageConsole->setReadOnly(true);
+    m_spMessageConsole->setMaximumHeight(100);
+
+    DFG_MODULE_NS(qt)::removeContextHelpButtonFromDialog(this);
+
+    // Definition widget
+    {
+        m_spDefinitionEdit.reset(new QPlainTextEdit(this));
+        QVariantMap keyVals;
+        keyVals.insert("format", "");
+        keyVals.insert("type", "png");
+        keyVals.insert("width", 0);
+        keyVals.insert("height", 0);
+        keyVals.insert("scale", 1.0);
+        keyVals.insert("quality", -1);
+        keyVals.insert("resolution", 96);
+        keyVals.insert("resolution_unit", "dots_per_inch");
+        keyVals.insert("pdf_title", "");
+        const QString baseFileName = QString("dfgqte_image_%1").arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"));
+        keyVals.insert("output_base_file_name", baseFileName);
+        auto outputDir = QDir::current();
+        if (!QFileInfo(outputDir.absolutePath()).isWritable()) // If current directory is not writable... 
+            outputDir = QDir::home(); // ...changing output dir to user's home directory.
+        keyVals.insert("output_dir", outputDir.absolutePath());
+
+        // Params ignored for now:
+        //keyVals.insert("pen", "TODO"); // pdf-specific
+        //keyVals.insert("pdfCreator", "TODO"); // pdf-specific
+        m_spDefinitionEdit->setPlainText(QJsonDocument::fromVariant(keyVals).toJson());
+    }
+
+    // Help widget
+    auto pHelpWidget = new QLabel(this);
+    pHelpWidget->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    pHelpWidget->setText(tr("<h3>Available image types and their parameters</h3>"
+        "Note that most parameters are optional, required ones are underlined."
+        "<ul>"
+        "<li><b>bpm</b>: width, height, scale, resolution, resolution_unit</li>"
+        "<li><b>pdf</b>: width, height, pdf_title</li>"
+        "<li><b>png</b>: width, height, scale, quality, resolution, resolution_unit</li>"
+        //"<li><b>jpg</b>: width, height, scale, quality, resolution, resolution_unit</li>" // Commented out for now as don't know when it would be a good idea to save chart-like content as jpg.
+        "<li><b>rastered</b>: <u>format</u>, width, height, scale, quality, resolution, resolution_unit</li>"
+        "</ul>"
+        "<h3>Parameters</h3>"
+        "<ul>"
+        "<li><b>format</b>: Image format such as 'jpg', 'pbm', 'pgm', 'ppm', 'xbm' or 'xpm'. For more details, see Qt documentation for QImageWriter::supportedImageFormats().</li>"
+        "<li><b>height</b>: Image height. For png, bmp, rastered: height in pixels. For pdf, see documentation of QCustomPlot::savePdf(). If this or width value is zero, uses widget dimensions.</li>"
+        "<li><b>output_dir</b>: Directory where output file will be written.</li>"
+        "<li><b>output_base_file_name</b>: Base name of output file Extension will be added automatically.</li>"
+        "<li><b>output_overwrite</b>: If true, writes output file even if file at given path already exists.</li>"
+        "<li><b>pdf_title</b>: Sets pdf title metadata.</li>"
+        "<li><b>quality</b>: [0, 100], when -1, using default.</li>"
+        "<li><b>resolution</b>: Written to image file header, no direct effect on quality or pixel size.</li>"
+        "<li><b>resolution_unit</b>: Unit of 'resolution'-field. Possible values: dots_per_meter, dots_per_centimeter, dots_per_inch.</li>"
+        "<li><b>scale</b>: Image scaling factor. For example if width is 100 and height 300, using scale factor 2 results to image of size 200*600. This will scale e.g. line widths accordingly.</li>"
+        "<li><b>width</b>: Image width. Details are like for height.</li>"
+        "</ul>"
+    ));
+
+    // Control buttons
+    auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this));
+
+    DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::accepted, this, &GraphDisplayImageExportDialog::accept));
+    DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, &QDialogButtonBox::rejected, this, &QDialog::reject));
+
+    // Adding items to layout.
+    auto pLayout = new QVBoxLayout(this);
+    pLayout->addWidget(m_spDefinitionEdit.get());
+    pLayout->addWidget(pHelpWidget);
+    pLayout->addWidget(m_spMessageConsole.get());
+    pLayout->addWidget(&rButtonBox);
+
+    setWindowTitle(tr("Image export"));
+}
+
+void GraphDisplayImageExportDialog::onInvalidParameter(const QString& sMsg)
+{
+    addLog(LogType::invalidParameter, sMsg);
+}
+
+void GraphDisplayImageExportDialog::addLog(const LogType logType, const QString& sMsg)
+{
+    QString sMsgWithTime = QString("%1: %2").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz"), sMsg);
+    if (logType == LogType::invalidParameter || logType == LogType::error)
+        m_spMessageConsole->appendHtml(QString("<font color=\"#ff0000\">%1</font>").arg(sMsgWithTime));
+    else
+        m_spMessageConsole->appendHtml(sMsgWithTime);
+}
+
+QByteArray GraphDisplayImageExportDialog::getExportDefinition() const
+{
+    return (m_spDefinitionEdit) ? m_spDefinitionEdit->toPlainText().toUtf8() : QByteArray();
+}
+
+QCP::ResolutionUnit GraphDisplayImageExportDialog::stringToResolutionUnit(const QString& s)
+{
+    if (s == QLatin1String("dots_per_meter"))
+        return QCP::ruDotsPerMeter;
+    else if (s == QLatin1String("dots_per_centimeter"))
+        return QCP::ruDotsPerCentimeter;
+    else if (s == QLatin1String("dots_per_inch"))
+        return QCP::ruDotsPerInch;
+    else
+    {
+        onInvalidParameter(tr("Invalid resolution unit '%1'. Using dots_per_inch.").arg(s));
+        return QCP::ruDotsPerInch;
+    }
+}
+
+void GraphDisplayImageExportDialog::accept()
+{
+    if (!m_spCustomPlot)
+        return;
+
+    const auto jsonDoc = QJsonDocument::fromJson(getExportDefinition());
+    const auto propertyMap = jsonDoc.object();
+    const auto sType = propertyValueAs<QString>(propertyMap, "type");
+
+    const char* acceptedTypes[] = { "bmp", "pdf", "png", "rastered" };
+
+    // Checking if type is valid.
+    if (std::end(acceptedTypes) == std::find_if(std::begin(acceptedTypes), std::end(acceptedTypes), [&](const char* psz) { return QLatin1String(psz) == sType; }))
+    {
+        onInvalidParameter(tr("Invalid export type '%1'").arg(sType));
+        return;
+    }
+
+    // Forming extension; uses type as such or in case of 'rastered', deducded from 'format'
+    const QString sExtension = [&]()
+    {
+        if (sType != QLatin1String("rastered"))
+            return sType;
+        else
+            return propertyValueAs<QString>(propertyMap, "format");
+    }();
+
+    // Making sure that extension is sane
+    if (sExtension.isEmpty() || sExtension.size() > 4 || std::any_of(sExtension.begin(), sExtension.end(), [](const QChar& c) { return !c.isLetterOrNumber() || c.unicode() > 127; }))
+    {
+        onInvalidParameter(tr("Extension '%1' is not accepted; for now maximum extension length is 4 and only ASCII-letters and numbers are accepted").arg(sExtension));
+        return;
+    }
+
+    const auto sOutputDir = propertyValueAs<QString>(propertyMap, "output_dir");
+    const auto sOutputBaseFileName = propertyValueAs<QString>(propertyMap, "output_base_file_name");
+    if (sOutputDir.isEmpty() || sOutputBaseFileName.isEmpty())
+    {
+        onInvalidParameter(tr("Unable to export image: output directory path or base file name is empty"));
+        return;
+    }
+    const QString sFileName = QString("%1.%2").arg(sOutputBaseFileName, sExtension);
+    const QString sOutputPath = QDir(sOutputDir).absoluteFilePath(sFileName);
+    const QFileInfo fileInfo(sOutputPath);
+    if (fileInfo.isDir())
+    {
+        onInvalidParameter(tr("Unable to write to path '%1': path is an existing directory").arg(sOutputPath));
+        return;
+    }
+    if (fileInfo.exists() && !propertyValueAs<bool>(propertyMap, "output_overwrite"))
+    {
+        onInvalidParameter(tr("Unable to write to path'%1': file already exists. If overwriting is desired, set 'output_overwrite' to true.").arg(sOutputPath));
+        return;
+    }
+
+    bool bSuccess = false;
+    if (sType == "bmp")
+    {
+        bSuccess = m_spCustomPlot->saveBmp(sOutputPath,
+            propertyValueAs<int>(propertyMap, "width"),
+            propertyValueAs<int>(propertyMap, "height"),
+            propertyValueAs<double>(propertyMap, "scale"),
+            propertyValueAs<int>(propertyMap, "resolution"),
+            stringToResolutionUnit(propertyValueAs<QString>(propertyMap, "resolution_unit"))
+        );
+    }
+    else if (sType == "pdf")
+    {
+        bSuccess = m_spCustomPlot->savePdf(sOutputPath,
+            propertyValueAs<int>(propertyMap, "width"),
+            propertyValueAs<int>(propertyMap, "height"),
+            QCP::epAllowCosmetic, // TODO: make customisable.
+            QString(), // TODO: check what to use (is 'pdfCreator'-field)
+            propertyValueAs<QString>(propertyMap, "pdf_title")
+        );
+    }
+    else if (sType == "png")
+    {
+        bSuccess = m_spCustomPlot->savePng(sOutputPath,
+            propertyValueAs<int>(propertyMap, "width"),
+            propertyValueAs<int>(propertyMap, "height"),
+            propertyValueAs<double>(propertyMap, "scale"),
+            propertyValueAs<int>(propertyMap, "quality"),
+            propertyValueAs<int>(propertyMap, "resolution"),
+            stringToResolutionUnit(propertyValueAs<QString>(propertyMap, "resolution_unit"))
+        );
+    }
+    else if (sType == "rastered")
+    {
+        bSuccess = m_spCustomPlot->saveRastered(sOutputPath,
+            propertyValueAs<int>(propertyMap, "width"),
+            propertyValueAs<int>(propertyMap, "height"),
+            propertyValueAs<double>(propertyMap, "scale"),
+            propertyValueAs<QString>(propertyMap, "format").toUtf8(),
+            propertyValueAs<int>(propertyMap, "quality"),
+            propertyValueAs<int>(propertyMap, "resolution"),
+            stringToResolutionUnit(propertyValueAs<QString>(propertyMap, "resolution_unit"))
+        );
+    }
+    else // Case: unknown type
+    {
+        onInvalidParameter(tr("Invalid type '%1'").arg(sType));
+        return;
+    }
+
+    if (bSuccess)
+    {
+        QMessageBox::information(this, nullptr, tr("Successfully exported to path<br>") + QString("<a href=\"file:///%1\">%1</a>").arg(sOutputPath.toHtmlEscaped()));
+    }
+    else
+    {
+        addLog(LogType::error, tr("Export failed."));
+        return;
+    }
+
+    BaseClass::accept();
+}
+
+
+} } // dfg:::qt
