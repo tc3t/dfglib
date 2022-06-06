@@ -7,6 +7,68 @@ using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
 
+template <class ChartObject_T, class ValueCont_T>
+static void fillQcpPlottable(ChartObject_T & rChartObject, ValueCont_T && yVals);
+
+template <class DataType_T, class ChartObject_T>
+static void fillQcpPlottable(ChartObject_T & rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>&xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>&yVals);
+
+static void fillQcpPlottable(QCPAbstractPlottable * pPlottable, ::DFG_MODULE_NS(charts)::ChartOperationPipeData & pipeData);
+
+template <class Func_T>
+void forEachQCustomPlotLineStyle(const QCPGraph*, Func_T && func);
+
+template <class Func_T>
+void forEachQCustomPlotLineStyle(const QCPCurve*, Func_T && func);
+
+template <class Func_T>
+void forEachQCustomPlotScatterStyle(Func_T && func);
+
+template <class Cont_T, class PointToText_T>
+static void createNearestPointToolTipList(Cont_T & cont, const PointXy & xy, ToolTipTextStream & toolTipStream, PointToText_T pointToText); // Note: QCPDataContainer doesn't seem to have const begin()/end() so must take cont by non-const reference.
+
+static QString axisTypeToToolTipString(const QCPAxis::AxisType axisType);
+
+template <class Data_T>
+class PointToTextConverter
+{
+public:
+    PointToTextConverter(const QCPAbstractPlottable& plottable)
+    {
+        const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
+        auto spXticker = axisTicker(plottable.keyAxis());
+        auto spYticker = axisTicker(plottable.valueAxis());
+        m_pXdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spXticker.data());
+        m_pYdateTicker = dynamic_cast<const QCPAxisTickerDateTime*>(spYticker.data());
+        m_pXtextTicker = dynamic_cast<QCPAxisTickerText*>(spXticker.data());
+    }
+
+    QString operator()(const Data_T& data, const ToolTipTextStream& toolTipStream) const
+    {
+        DFG_UNUSED(toolTipStream);
+        return QString("(%1, %2)").arg(xText(data), yText(data));
+    }
+
+    QString xText(const Data_T& data) const
+    {
+        return ToolTipTextStream::numberToText(data.key, m_pXdateTicker, m_pXtextTicker);
+    }
+
+    QString yText(const Data_T& data) const
+    {
+        return ToolTipTextStream::numberToText(data.value, m_pYdateTicker);
+    }
+
+    static QString tr(const char* psz)
+    {
+        return QApplication::tr(psz);
+    }
+
+    const QCPAxisTickerDateTime* m_pXdateTicker = nullptr;
+    const QCPAxisTickerDateTime* m_pYdateTicker = nullptr;
+    QCPAxisTickerText* m_pXtextTicker = nullptr; // Not const because of reasons noted in ToolTipTextStream::numberToText()
+}; // PointToTextConverter
+
 namespace
 {
     // Returns initial placeholder text for operation definition.
@@ -186,6 +248,90 @@ size_t XySeriesQCustomPlot::setMetaDataByFunctor(MetaDataSetterCallback func)
         return 0;
 }
 
+void XySeriesQCustomPlot::resize(const DataSourceIndex nNewSize)
+{
+    if (!resizeImpl(getGraph(), nNewSize, [](Dummy, double x, double y) { return QCPGraphData(x, y); }))
+        resizeImpl(getCurve(), nNewSize, [](DataSourceIndex i, double x, double y) { return QCPCurveData(static_cast<double>(i), x, y); });
+}
+
+QCPGraph* XySeriesQCustomPlot::getGraph()
+{
+    return qobject_cast<QCPGraph*>(m_spQcpObject.data());
+}
+
+QCPCurve* XySeriesQCustomPlot::getCurve()
+{
+    return qobject_cast<QCPCurve*>(m_spQcpObject.data());
+}
+
+void XySeriesQCustomPlot::setValues(InputSpanD xVals, InputSpanD yVals, const std::vector<bool>* pFilterFlags)
+{
+    if (!setValuesImpl<QCPGraphData>(getGraph(), xVals, yVals, pFilterFlags, [](Dummy, double x, double y) { return QCPGraphData(x, y); }))
+        setValuesImpl<QCPCurveData>(getCurve(), xVals, yVals, pFilterFlags, [](size_t n, double x, double y) { return QCPCurveData(static_cast<double>(n), x, y); });
+}
+
+template <class QCPObject_T, class Constructor_T>
+bool XySeriesQCustomPlot::resizeImpl(QCPObject_T* pQcpObject, const DataSourceIndex nNewSize, Constructor_T constructor)
+{
+    if (!pQcpObject)
+        return false;
+    auto spData = pQcpObject->data();
+    if (!spData)
+        return true;
+    const auto nOldSize = static_cast<DataSourceIndex>(spData->size());
+    if (nOldSize == nNewSize)
+        return true;
+    if (nNewSize < nOldSize)
+    {
+        if (nNewSize <= 0)
+            spData->clear();
+        else
+            spData->removeAfter((spData->at(static_cast<int>(nNewSize - 1)))->sortKey());
+    }
+    else
+    {
+        const auto nAddCount = nNewSize - nOldSize;
+        for (DataSourceIndex i = 0; i < nAddCount; ++i)
+            spData->add(constructor(i, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+
+    }
+    return true;
+}
+
+template <class DataType_T, class QcpObject_T, class DataContructor_T>
+bool XySeriesQCustomPlot::setValuesImpl(QcpObject_T* pQcpObject, InputSpanD xVals, InputSpanD yVals, const std::vector<bool>* pFilterFlags, DataContructor_T constructor)
+{
+    if (!pQcpObject)
+        return false;
+
+    if (xVals.size() != yVals.size())
+        return true;
+
+    auto iterY = yVals.cbegin();
+    QVector<DataType_T> data;
+    if (pFilterFlags && pFilterFlags->size() == xVals.size())
+    {
+        auto iterFlag = pFilterFlags->begin();
+        size_t n = 0;
+        for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY, ++iterFlag, ++n)
+        {
+            if (*iterFlag)
+                data.push_back(constructor(n, *iterX, *iterY));
+        }
+    }
+    else
+    {
+        data.reserve(saturateCast<int>(xVals.size()));
+        size_t n = 0;
+        for (auto iterX = xVals.cbegin(), iterEnd = xVals.cend(); iterX != iterEnd; ++iterX, ++iterY, ++n)
+        {
+            data.push_back(constructor(n, *iterX, *iterY));
+        }
+    }
+    fillQcpPlottable(*pQcpObject, std::move(data));
+    return true;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////
 //
 // HistogramQCustomPlot
@@ -269,6 +415,18 @@ bool ChartCanvasQCustomPlot::hasChartObjects() const
 
 namespace
 {
+    template <class QCPObject_T, class Style_T, class StyleSetter_T>
+    static void addGraphStyleAction(QMenu& rMenu, QCPObject_T& rQcpObject, QCustomPlot& rCustomPlot, const Style_T currentStyle, const Style_T style, const QString& sStyleName, StyleSetter_T styleSetter)
+    {
+        auto pAction = rMenu.addAction(sStyleName, [=, &rQcpObject, &rCustomPlot]() { (rQcpObject.*styleSetter)(style); rCustomPlot.replot(); });
+        if (pAction)
+        {
+            pAction->setCheckable(true);
+            if (currentStyle == style)
+                pAction->setChecked(true);
+        }
+    }
+
     // Returns true iff pObj was non-null
     template<class T>
     static bool addContextMenuEntriesForXyType(QCustomPlot& rQcp, QMenu& rMenu, T* pObj)
@@ -1293,133 +1451,168 @@ void ChartCanvasQCustomPlot::setPanelTitle(StringViewUtf8 svPanelId, StringViewU
         pPanel->setTitle(svTitle, svTitleColor);
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////
 //
-// ChartPanel
+// ChartCanvasQCustomPlot::BarStack
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-ChartPanel::ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId)
-    : m_pQcp(pQcp)
-    , m_panelId(QString::fromUtf8(svPanelId.beginRaw(), svPanelId.sizeAsInt()))
+void ChartCanvasQCustomPlot::BarStack::storeStackLabel(const QCPBarsData& data, const QCPBars& rBars)
 {
+    m_sLabel = PointToTextConverter<QCPBarsData>(rBars).xText(data);
+    m_xValue = data.key;
 }
 
-auto ChartPanel::axisRect() -> QCPAxisRect*
+QString ChartCanvasQCustomPlot::BarStack::label() const
 {
-    const auto nElemCount = this->elementCount();
-    if (nElemCount == 0 || (nElemCount == 1 && qobject_cast<QCPTextElement*>(this->elementAt(0)) != nullptr))
-        addElement(nElemCount, 0, new QCPAxisRect(m_pQcp));
-    return qobject_cast<QCPAxisRect*>(elementAt(elementCount() - 1));
+    return m_sLabel;
 }
 
-auto ChartPanel::axisRect() const -> const QCPAxisRect*
+const QCPAxis* ChartCanvasQCustomPlot::BarStack::valueAxis() const
 {
-    const auto nElemCount = elementCount();
-    return (nElemCount > 0) ? qobject_cast<QCPAxisRect*>(elementAt(nElemCount - 1)) : nullptr;
+    auto pBars = barsInstance();
+    return (pBars) ? pBars->valueAxis() : nullptr;
 }
 
-auto ChartPanel::axis(AxisT::AxisType axisType)       -> AxisT* { return ChartPanel::axisImpl(*this, axisType); }
-auto ChartPanel::axis(AxisT::AxisType axisType) const -> const AxisT* { return ChartPanel::axisImpl(*this, axisType); }
-
-auto ChartPanel::primaryXaxis()       -> AxisT* { return axis(AxisT::atBottom); }
-auto ChartPanel::primaryXaxis() const -> const AxisT* { return axis(AxisT::atBottom); }
-
-auto ChartPanel::primaryYaxis() -> AxisT*
+const QCustomPlot* ChartCanvasQCustomPlot::BarStack::parentPlot() const
 {
-    return axis(AxisT::atLeft);
+    auto pBars = barsInstance();
+    return (pBars) ? pBars->parentPlot() : nullptr;
 }
 
-auto ChartPanel::secondaryXaxis() -> AxisT*
+const QCPBars* ChartCanvasQCustomPlot::BarStack::barsInstance() const
 {
-    return nullptr;
+    return (!m_subBarInfos.empty()) ? m_subBarInfos.front().m_spBars.data() : nullptr;
 }
 
-auto ChartPanel::secondaryYaxis() -> AxisT*
+double ChartCanvasQCustomPlot::BarStack::barWidth() const
 {
-    return nullptr;
+    auto pBar = barsInstance();
+    return (pBar) ? pBar->width() : std::numeric_limits<double>::quiet_NaN();
 }
 
-bool ChartPanel::hasAxis(const QCPAxis* pAxis)
+bool ChartCanvasQCustomPlot::BarStack::isXwithinStackX(const double x) const
 {
-    return pAxis == primaryXaxis() || pAxis == primaryYaxis() || pAxis == secondaryXaxis() || pAxis == secondaryYaxis();
+    const auto barHalfWidth = barWidth() / 2;
+    return x >= (this->m_xValue - barHalfWidth) && x <= (this->m_xValue + barHalfWidth);
 }
 
-QString ChartPanel::getTitle() const
+void ChartCanvasQCustomPlot::BarStack::forEachSubBar(const PointXy& pointXy, ToolTipTextStream& toolTipStream, SubBarHandler handler) const
 {
-    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
-    return (pTitle) ? pTitle->text() : QString();
-}
-
-void ChartPanel::setTitle(StringViewUtf8 svTitle, StringViewUtf8 svColor)
-{
-    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
-    if (svTitle.empty())
-    {
-        // In case of empty title removing the text element.
-        if (pTitle)
-        {
-            this->remove(pTitle);
-            this->simplify(); // To remove the empty space.
-        }
-    }
-    else
-    {
-        if (!pTitle)
-        {
-            pTitle = new QCPTextElement(this->parentPlot());
-            this->insertRow(0); // insert an empty row above the axis rect
-            addElement(0, 0, pTitle);
-        }
-        pTitle->setText(viewToQString(svTitle));
-        pTitle->setFont(QFont("sans", 12, QFont::Bold));
-        if (!svColor.empty())
-        {
-            const QColor color(viewToQString(svColor));
-            if (color.isValid())
-                pTitle->setTextColor(color);
-        }
-    }
-}
-
-auto ChartPanel::pixelToCoord_primaryAxis(const QPoint& pos) -> PairT
-{
-    auto pXaxis = primaryXaxis();
-    auto pYaxis = primaryYaxis();
-    const auto x = (pXaxis) ? pXaxis->pixelToCoord(pos.x()) : std::numeric_limits<double>::quiet_NaN();
-    const auto y = (pYaxis) ? pYaxis->pixelToCoord(pos.y()) : std::numeric_limits<double>::quiet_NaN();
-    return PairT(x, y);
-}
-
-void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler)
-{
-    if (!m_pQcp || !handler)
+    DFG_UNUSED(toolTipStream);
+    if (!handler)
         return;
-    const auto nCount = m_pQcp->plottableCount();
-    for (int i = 0; i < nCount; ++i)
+
+    const auto pQcp = parentPlot();
+
+    for (const auto& subBarInfo : m_subBarInfos)
     {
-        auto pPlottable = m_pQcp->plottable(i);
-        if (pPlottable && pPlottable->keyAxis() == this->primaryXaxis())
-            handler(*pPlottable);
+        const QCPBars* pBar = subBarInfo.m_spBars;
+        if (!pBar)
+            continue;
+        const bool bIsPointWithIn = [&]()
+        {
+            if (pQcp && isXwithinStackX(pointXy.first))
+            {
+                auto pKeyAxis = pBar->keyAxis();
+                auto pValueAxis = pBar->valueAxis();
+                if (pKeyAxis && pValueAxis)
+                {
+                    // Testing if cursor is within given bar.
+                    const auto xPix = pKeyAxis->coordToPixel(pointXy.first);
+                    const auto yPix = pValueAxis->coordToPixel(pointXy.second);
+                    const double selectDistance = pBar->selectTest(QPointF(xPix, yPix), false);
+                    if (selectDistance >= 0 && selectDistance < pQcp->selectionTolerance())
+                        return true;
+                }
+            }
+            return false;
+        }();
+
+        handler(subBarInfo.m_sLabel,
+            PointToTextConverter<QCPBarsData>(*pBar).yText(subBarInfo.m_data),
+            pBar->pen().color().name(),
+            bIsPointWithIn);
     }
 }
 
-auto ChartPanel::countOf(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const -> uint32
+bool ChartCanvasQCustomPlot::BarStack::hasObject(const QCPBars& bars) const
 {
-    auto pPrimaryX = primaryXaxis();
-    if (!pPrimaryX)
-        return 0;
-    uint32 nCount = 0;
-    const auto plottables = pPrimaryX->plottables();
-    const auto sQstringType = QString::fromUtf8(type.data(), type.sizeAsInt());
-    for (const auto& pPlottable : plottables)
+    for (const auto& info : m_subBarInfos)
     {
-        if (!pPlottable)
-            continue;
-        nCount += pPlottable->property("chartEntryType").toString() == sQstringType;
+        if (info.m_spBars.data() == &bars)
+            return true;
     }
-    return nCount;
+    return false;
+}
+
+const QCPBars& ChartCanvasQCustomPlot::BarStack::findTopMostBar(const QCPBars& rBars)
+{
+    auto pBars = &rBars;
+    while (pBars->barAbove() != nullptr)
+        pBars = pBars->barAbove();
+    return *pBars;
+}
+
+void ChartCanvasQCustomPlot::BarStack::append(const QCPBarsData& data, const QCPBars& rBars)
+{
+    auto pBars = &findTopMostBar(rBars);
+    for (; pBars != nullptr; pBars = pBars->barBelow())
+    {
+        // Fetching data (=height) for current bar.
+        auto spData = pBars->data();
+        DFG_ASSERT_CORRECTNESS(spData != nullptr); // To detect if this ever happens
+        if (spData)
+        {
+            auto iterData = spData->findBegin(data.sortKey(), false);
+            DFG_ASSERT_CORRECTNESS(iterData != spData->end() && iterData->key == data.key);
+            if (iterData != spData->end() && iterData->key == data.key)
+                m_subBarInfos.push_back(SubBarInfo(*iterData, *pBars));
+        }
+    }
+    storeStackLabel(data, rBars);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// ChartCanvasQCustomPlot::BarStacks
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+void ChartCanvasQCustomPlot::BarStacks::storeStack(const QCPBars* pBars)
+{
+    // Not doing anything if any of following:
+    //  -No object given
+    //  -Related stacks already stored
+    //  -Object has no below or above bar.
+    if (!pBars || hasBar(*pBars) || (pBars->barAbove() == nullptr && pBars->barBelow() == nullptr))
+        return;
+
+    auto spData = pBars->data();
+    if (!spData || spData->isEmpty())
+        return;
+    for (const auto& data : *spData)
+    {
+        m_mapPosToBarStack[data.key].append(data, *pBars);
+    }
+}
+
+// Returns BarStacks related to given QCPBars-object
+auto ChartCanvasQCustomPlot::BarStacks::findStacks(const QCPBars& bars) const -> std::vector<const BarStack*>
+{
+    std::vector<const BarStack*> stacks;
+    for (const auto& stack : m_mapPosToBarStack.valueRange())
+    {
+        if (stack.hasObject(bars))
+            stacks.push_back(&stack);
+    }
+    return stacks;
+}
+
+// Returns true iff given QCPBars is within any stored stack.
+bool ChartCanvasQCustomPlot::BarStacks::hasBar(const QCPBars& bars) const
+{
+    return !findStacks(bars).empty();
 }
 
 bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& xy, ToolTipTextStream& toolTipStream)
@@ -1920,84 +2113,141 @@ auto ChartCanvasQCustomPlot::findPanelOfChartObject(const ChartObject* pObj) -> 
     return getChartPanelByAxis(pQcpPlottable->keyAxis());
 }
 
-void ChartCanvasQCustomPlot::BarStack::storeStackLabel(const QCPBarsData& data, const QCPBars& rBars)
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// ChartPanel
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+ChartPanel::ChartPanel(QCustomPlot* pQcp, StringViewUtf8 svPanelId)
+    : m_pQcp(pQcp)
+    , m_panelId(QString::fromUtf8(svPanelId.beginRaw(), svPanelId.sizeAsInt()))
 {
-    m_sLabel = PointToTextConverter<QCPBarsData>(rBars).xText(data);
-    m_xValue = data.key;
 }
 
-QString ChartCanvasQCustomPlot::BarStack::label() const
+auto ChartPanel::axisRect() -> QCPAxisRect*
 {
-    return m_sLabel;
+    const auto nElemCount = this->elementCount();
+    if (nElemCount == 0 || (nElemCount == 1 && qobject_cast<QCPTextElement*>(this->elementAt(0)) != nullptr))
+        addElement(nElemCount, 0, new QCPAxisRect(m_pQcp));
+    return qobject_cast<QCPAxisRect*>(elementAt(elementCount() - 1));
 }
 
-const QCPAxis* ChartCanvasQCustomPlot::BarStack::valueAxis() const
+auto ChartPanel::axisRect() const -> const QCPAxisRect*
 {
-    auto pBars = barsInstance();
-    return (pBars) ? pBars->valueAxis() : nullptr;
+    const auto nElemCount = elementCount();
+    return (nElemCount > 0) ? qobject_cast<QCPAxisRect*>(elementAt(nElemCount - 1)) : nullptr;
 }
 
-const QCustomPlot* ChartCanvasQCustomPlot::BarStack::parentPlot() const
+auto ChartPanel::axis(AxisT::AxisType axisType)       -> AxisT* { return ChartPanel::axisImpl(*this, axisType); }
+auto ChartPanel::axis(AxisT::AxisType axisType) const -> const AxisT* { return ChartPanel::axisImpl(*this, axisType); }
+
+auto ChartPanel::primaryXaxis()       -> AxisT* { return axis(AxisT::atBottom); }
+auto ChartPanel::primaryXaxis() const -> const AxisT* { return axis(AxisT::atBottom); }
+
+auto ChartPanel::primaryYaxis() -> AxisT*
 {
-    auto pBars = barsInstance();
-    return (pBars) ? pBars->parentPlot() : nullptr;
+    return axis(AxisT::atLeft);
 }
 
-const QCPBars* ChartCanvasQCustomPlot::BarStack::barsInstance() const
+auto ChartPanel::secondaryXaxis() -> AxisT*
 {
-    return (!m_subBarInfos.empty()) ? m_subBarInfos.front().m_spBars.data() : nullptr;
+    return nullptr;
 }
 
-double ChartCanvasQCustomPlot::BarStack::barWidth() const
+auto ChartPanel::secondaryYaxis() -> AxisT*
 {
-    auto pBar = barsInstance();
-    return (pBar) ? pBar->width() : std::numeric_limits<double>::quiet_NaN();
+    return nullptr;
 }
 
-bool ChartCanvasQCustomPlot::BarStack::isXwithinStackX(const double x) const
+bool ChartPanel::hasAxis(const QCPAxis* pAxis)
 {
-    const auto barHalfWidth = barWidth() / 2;
-    return x >= (this->m_xValue - barHalfWidth) && x <= (this->m_xValue + barHalfWidth);
+    return pAxis == primaryXaxis() || pAxis == primaryYaxis() || pAxis == secondaryXaxis() || pAxis == secondaryYaxis();
 }
 
-void ChartCanvasQCustomPlot::BarStack::forEachSubBar(const PointXy& pointXy, ToolTipTextStream& toolTipStream, SubBarHandler handler) const
+QString ChartPanel::getTitle() const
 {
-    DFG_UNUSED(toolTipStream);
-    if (!handler)
-        return;
+    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
+    return (pTitle) ? pTitle->text() : QString();
+}
 
-    const auto pQcp = parentPlot();
-
-    for (const auto& subBarInfo : m_subBarInfos)
+void ChartPanel::setTitle(StringViewUtf8 svTitle, StringViewUtf8 svColor)
+{
+    auto pTitle = qobject_cast<QCPTextElement*>(element(0, 0));
+    if (svTitle.empty())
     {
-        const QCPBars* pBar = subBarInfo.m_spBars;
-        if (!pBar)
-            continue;
-        const bool bIsPointWithIn = [&]()
+        // In case of empty title removing the text element.
+        if (pTitle)
         {
-            if (pQcp && isXwithinStackX(pointXy.first))
-            {
-                auto pKeyAxis = pBar->keyAxis();
-                auto pValueAxis = pBar->valueAxis();
-                if (pKeyAxis && pValueAxis)
-                {
-                    // Testing if cursor is within given bar.
-                    const auto xPix = pKeyAxis->coordToPixel(pointXy.first);
-                    const auto yPix = pValueAxis->coordToPixel(pointXy.second);
-                    const double selectDistance = pBar->selectTest(QPointF(xPix, yPix), false);
-                    if (selectDistance >= 0 && selectDistance < pQcp->selectionTolerance())
-                        return true;
-                }
-            }
-            return false;
-        }();
-
-        handler(subBarInfo.m_sLabel,
-            PointToTextConverter<QCPBarsData>(*pBar).yText(subBarInfo.m_data),
-            pBar->pen().color().name(),
-            bIsPointWithIn);
+            this->remove(pTitle);
+            this->simplify(); // To remove the empty space.
+        }
+    }
+    else
+    {
+        if (!pTitle)
+        {
+            pTitle = new QCPTextElement(this->parentPlot());
+            this->insertRow(0); // insert an empty row above the axis rect
+            addElement(0, 0, pTitle);
+        }
+        pTitle->setText(viewToQString(svTitle));
+        pTitle->setFont(QFont("sans", 12, QFont::Bold));
+        if (!svColor.empty())
+        {
+            const QColor color(viewToQString(svColor));
+            if (color.isValid())
+                pTitle->setTextColor(color);
+        }
     }
 }
+
+auto ChartPanel::pixelToCoord_primaryAxis(const QPoint& pos) -> PairT
+{
+    auto pXaxis = primaryXaxis();
+    auto pYaxis = primaryYaxis();
+    const auto x = (pXaxis) ? pXaxis->pixelToCoord(pos.x()) : std::numeric_limits<double>::quiet_NaN();
+    const auto y = (pYaxis) ? pYaxis->pixelToCoord(pos.y()) : std::numeric_limits<double>::quiet_NaN();
+    return PairT(x, y);
+}
+
+void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler)
+{
+    if (!m_pQcp || !handler)
+        return;
+    const auto nCount = m_pQcp->plottableCount();
+    for (int i = 0; i < nCount; ++i)
+    {
+        auto pPlottable = m_pQcp->plottable(i);
+        if (pPlottable && pPlottable->keyAxis() == this->primaryXaxis())
+            handler(*pPlottable);
+    }
+}
+
+auto ChartPanel::countOf(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const -> uint32
+{
+    auto pPrimaryX = primaryXaxis();
+    if (!pPrimaryX)
+        return 0;
+    uint32 nCount = 0;
+    const auto plottables = pPrimaryX->plottables();
+    const auto sQstringType = QString::fromUtf8(type.data(), type.sizeAsInt());
+    for (const auto& pPlottable : plottables)
+    {
+        if (!pPlottable)
+            continue;
+        nCount += pPlottable->property("chartEntryType").toString() == sQstringType;
+    }
+    return nCount;
+}
+
+template <class This_T>
+auto ChartPanel::axisImpl(This_T& rThis, AxisT::AxisType axisType) -> decltype(rThis.axis(axisType))
+{
+    auto pAxisRect = rThis.axisRect();
+    return (pAxisRect) ? pAxisRect->axis(axisType) : nullptr;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////
 //
@@ -2241,6 +2491,237 @@ void GraphDisplayImageExportDialog::accept()
 
     BaseClass::accept();
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// ToolTipTextStream
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+ToolTipTextStream& ToolTipTextStream::operator<<(const QString& str)
+{
+    m_sText += str;
+    return *this;
+}
+
+const QString& ToolTipTextStream::toPlainText() const
+{
+    return m_sText;
+}
+
+QString ToolTipTextStream::numberToText(const double d)
+{
+    return QString::number(d);
+}
+
+QString ToolTipTextStream::numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker)
+{
+    if (!pTimeTicker || ::DFG_MODULE_NS(math)::isNan(d))
+        return numberToText(d);
+    else
+    {
+        const auto timeSpec = pTimeTicker->dateTimeSpec();
+        auto dt = pTimeTicker->keyToDateTime(d).toTimeSpec(timeSpec);
+        return dt.toString(pTimeTicker->dateTimeFormat());
+    }
+}
+
+QString ToolTipTextStream::numberToText(const double d, QCPAxisTickerText* pTextTicker) // Note: pTextTicker param is not const because QCPAxisTickerText doesn't seem to provide const-way of asking ticks.
+{
+    return (!pTextTicker) ? numberToText(d) : pTextTicker->ticks().value(d);
+}
+
+QString ToolTipTextStream::numberToText(const double d, const QCPAxisTickerDateTime* pTimeTicker, QCPAxisTickerText* pTextTicker)
+{
+    if (pTimeTicker)
+        return numberToText(d, pTimeTicker);
+    else if (pTextTicker)
+        return numberToText(d, pTextTicker);
+    else
+        return numberToText(d);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// Miscellaneous
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+template <class ChartObject_T, class ValueCont_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
+{
+    // Note the terminology (using QCPGraph as example)
+    //  QCPGraph().data() == QSharedPointer<QCPGraphDataContainer> -> DataContainer == QCPGraphDataContainer == QCPDataContainer<QCPGraphData>
+    //  QCPGraph().data()->set() takes QVector<QCPGraphData> which is the actual storage, this is ValueCont_T
+    using DataContainer = typename decltype(rChartObject.data())::value_type;
+    QSharedPointer<DataContainer> spData(new DataContainer);
+    std::sort(data.begin(), data.end(), qcpLessThanSortKey<typename ValueCont_T::value_type>);
+    spData->set(data, true); // Note: if data is not sorted beforehand, sorting in set() will effetively cause a redundant copy to be created.
+    rChartObject.setData(std::move(spData));
+}
+
+template <class DataType_T, class ChartObject_T, class Transform_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>& xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>& yVals, Transform_T transformer)
+{
+    QVector<DataType_T> values;
+    const auto nSize = saturateCast<int>(Min(xVals.size(), yVals.size()));
+    values.resize(nSize);
+    // Copying from [x], [y] input to [(x,y)] storage that QCPStorage uses.
+    transformer(values, xVals, yVals);
+    fillQcpPlottable(rChartObject, std::move(values));
+}
+
+template <class DataType_T, class ChartObject_T>
+static void fillQcpPlottable(ChartObject_T& rChartObject, const ::DFG_MODULE_NS(charts)::InputSpan<double>& xVals, const ::DFG_MODULE_NS(charts)::InputSpan<double>& yVals)
+{
+    using InputT = ::DFG_MODULE_NS(charts)::InputSpan<double>;
+    const auto transformer = [](QVector<DataType_T>& dest, const InputT& xVals, const InputT& yVals)
+    {
+        std::transform(xVals.cbegin(), xVals.cbegin() + dest.size(), yVals.cbegin(), dest.begin(), [](const double x, const double y) { return DataType_T(x, y); });
+    };
+    fillQcpPlottable<DataType_T>(rChartObject, xVals, yVals, transformer);
+}
+
+static void fillQcpPlottable(QCPAbstractPlottable* pPlottable, ::DFG_MODULE_NS(charts)::ChartOperationPipeData& pipeData)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    if (!pPlottable)
+        return;
+    const auto px = pipeData.constValuesByIndex(0);
+    const auto py = pipeData.constValuesByIndex(1);
+    if (!px || !py)
+        return;
+    auto pGraph = qobject_cast<QCPGraph*>(pPlottable);
+    if (pGraph)
+    {
+        fillQcpPlottable<QCPGraphData>(*pGraph, makeRange(*px), makeRange(*py));
+        return;
+    }
+    auto pCurve = qobject_cast<QCPCurve*>(pPlottable);
+    if (pCurve)
+    {
+        using InputT = ::DFG_MODULE_NS(charts)::InputSpan<double>;
+        const auto transformer = [](QVector<QCPCurveData>& dest, const InputT& xVals, const InputT& yVals)
+        {
+            ::DFG_MODULE_NS(alg)::forEachFwdWithIndexT<size_t>(dest, [&](QCPCurveData& curveData, const size_t i)
+                {
+                    curveData = QCPCurveData(static_cast<double>(i), xVals[i], yVals[i]);
+                });
+        };
+        fillQcpPlottable<QCPCurveData>(*pCurve, makeRange(*px), makeRange(*py), transformer);
+        return;
+    }
+    auto pBars = qobject_cast<QCPBars*>(pPlottable);
+    if (pBars)
+    {
+        fillQcpPlottable<QCPBarsData>(*pBars, makeRange(*px), makeRange(*py));
+        return;
+    }
+    DFG_ASSERT_IMPLEMENTED(false);
+}
+
+template <class Func_T>
+void forEachQCustomPlotLineStyle(const QCPGraph*, Func_T&& func)
+{
+    func(QCPGraph::lsNone, QT_TR_NOOP("None"));
+    func(QCPGraph::lsLine, QT_TR_NOOP("Line"));
+    func(QCPGraph::lsStepLeft, QT_TR_NOOP("Step, left-valued"));
+    func(QCPGraph::lsStepRight, QT_TR_NOOP("Step, right-valued"));
+    func(QCPGraph::lsStepCenter, QT_TR_NOOP("Step middle"));
+    func(QCPGraph::lsImpulse, QT_TR_NOOP("Impulse"));
+}
+
+template <class Func_T>
+void forEachQCustomPlotLineStyle(const QCPCurve*, Func_T&& func)
+{
+    func(QCPCurve::lsNone, QT_TR_NOOP("None"));
+    func(QCPCurve::lsLine, QT_TR_NOOP("Line"));
+}
+
+template <class Func_T>
+void forEachQCustomPlotScatterStyle(Func_T&& func)
+{
+    func(QCPScatterStyle::ssNone,               QT_TR_NOOP("None"));
+    func(QCPScatterStyle::ssDot,                QT_TR_NOOP("Single pixel"));
+    func(QCPScatterStyle::ssCross,              QT_TR_NOOP("Cross"));
+    func(QCPScatterStyle::ssPlus,               QT_TR_NOOP("Plus"));
+    func(QCPScatterStyle::ssCircle,             QT_TR_NOOP("Circle"));
+    func(QCPScatterStyle::ssDisc,               QT_TR_NOOP("Disc"));
+    func(QCPScatterStyle::ssSquare,             QT_TR_NOOP("Square"));
+    func(QCPScatterStyle::ssDiamond,            QT_TR_NOOP("Diamond"));
+    func(QCPScatterStyle::ssStar,               QT_TR_NOOP("Star"));
+    func(QCPScatterStyle::ssTriangle,           QT_TR_NOOP("Triangle"));
+    func(QCPScatterStyle::ssTriangleInverted,   QT_TR_NOOP("Inverted triangle"));
+    func(QCPScatterStyle::ssCrossSquare,        QT_TR_NOOP("CrossSquare"));
+    func(QCPScatterStyle::ssPlusSquare,         QT_TR_NOOP("PlusSquare"));
+    func(QCPScatterStyle::ssCrossCircle,        QT_TR_NOOP("CrossCircle"));
+    func(QCPScatterStyle::ssPlusCircle,         QT_TR_NOOP("PlusCircle"));
+    func(QCPScatterStyle::ssPeace,              QT_TR_NOOP("Peace"));
+}
+
+// Wrapper to provide cbegin() et al that are missing from QCPDataContainer
+template <class Cont_T>
+class QCPContWrapper
+{
+public:
+    using value_type = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
+
+    QCPContWrapper(Cont_T& ref) : m_r(ref) {}
+
+    operator Cont_T& () { return m_r; }
+    operator const Cont_T& () const { return m_r; }
+
+    auto begin()        -> typename Cont_T::iterator { return m_r.begin(); }
+    auto begin() const  -> typename Cont_T::const_iterator { return m_r.constBegin(); }
+    auto cbegin() const -> typename Cont_T::const_iterator { return m_r.constBegin(); }
+
+    auto end()        -> typename Cont_T::iterator { return m_r.end(); }
+    auto end() const  -> typename Cont_T::const_iterator { return m_r.constEnd(); }
+    auto cend() const -> typename Cont_T::const_iterator { return m_r.constEnd(); }
+
+    int size() const { return m_r.size(); }
+
+    Cont_T& m_r;
+}; // class QCPContWrapper
+
+template <class Cont_T, class PointToText_T>
+static void createNearestPointToolTipList(Cont_T& cont, const PointXy& xy, ToolTipTextStream& toolTipStream, PointToText_T pointToText) // Note: QCPDataContainer doesn't seem to have const begin()/end() so must take cont by non-const reference.
+{
+    using DataT = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
+    const auto nearestItems = ::DFG_MODULE_NS(alg)::nearestRangeInSorted(QCPContWrapper<Cont_T>(cont), xy.first, 5, [](const DataT& dp) { return dp.key; });
+    if (nearestItems.empty())
+        return;
+
+    toolTipStream << pointToText.tr("<br>Nearest by x-value:");
+    // Adding items left of nearest
+    for (const DataT& dp : nearestItems.leftRange())
+    {
+        toolTipStream << QString("<br>%1").arg(pointToText(dp, toolTipStream));
+    }
+    // Adding nearest item in bold
+    toolTipStream << QString("<br><b>%1</b>").arg(pointToText(*nearestItems.nearest(), toolTipStream));
+    // Adding items right of nearest
+    for (const DataT& dp : nearestItems.rightRange())
+    {
+        toolTipStream << QString("<br>%1").arg(pointToText(dp, toolTipStream));
+    }
+}
+
+static QString axisTypeToToolTipString(const QCPAxis::AxisType axisType)
+{
+    switch (axisType)
+    {
+    case QCPAxis::atLeft:  return QObject::tr("y");
+    case QCPAxis::atRight: return QObject::tr("y2");
+    default:               return QObject::tr("Unknown");
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// 
+//
+/////////////////////////////////////////////////////////////////////////////////////
 
 
 } } // dfg:::qt
