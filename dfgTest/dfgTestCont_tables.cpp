@@ -758,6 +758,145 @@ TEST(dfgCont, TableSz_swapCellContent)
     DFGTEST_EXPECT_LEFT(16, table.colCountByMaxColIndex());
 }
 
+TEST(dfgCont, TableSz_appendTablesWithMove)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+
+    using TableT = TableSz<char>;
+    using TableCsv = TableCsv<char, uint32>;
+
+    // Basic test with csv-file
+    {
+        TableCsv table;
+        table.readFromFile("testfiles/matrix_3x3.txt");
+        std::vector<StringUtf8> cells;
+        table.forEachNonNullCell([&](const uint32 r, const uint32 c, StringViewUtf8 sv)
+            {
+                const auto n = pairIndexToLinear(r, c, uint32(3));
+                if (cells.size() <= n)
+                    cells.resize(n + 1);
+                cells[n] = sv.toString();
+            });
+        DFGTEST_ASSERT_EQ(9, cells.size());
+        TableCsv table2;
+        table2.readFromFile("testfiles/matrix_3x3.txt");
+        DFGTEST_EXPECT_TRUE(table.appendTablesWithMove(makeRange(&table2, &table2 + 1)));
+        // Checking that moving cleared source tables.
+        DFGTEST_EXPECT_LEFT(0, table2.rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_LEFT(0, table2.colCountByMaxColIndex());
+
+        DFGTEST_EXPECT_LEFT(6, table.rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_LEFT(3, table.colCountByMaxColIndex());
+        size_t nIndex = 0;
+        table.forEachNonNullCell([&](const uint32 r, const uint32 c, StringViewUtf8 sv)
+        {
+            const auto n = pairIndexToLinear(r, c, uint32(3));
+            DFGTEST_EXPECT_LEFT(cells[n % cells.size()], sv);
+            ++nIndex;
+        });
+    }
+
+    // Testing destination table within source tables.
+    {
+        TableT t0;
+        t0.setElement(0, 0, "a");
+        t0.setElement(1, 0, "");
+        TableT t1;
+        t1.setElement(0, 0, "b");
+        std::vector<TableT*> addItems;
+        addItems.push_back(&t0);
+        addItems.push_back(&t1);
+        addItems.push_back(&t0);
+        DFGTEST_EXPECT_TRUE(t0.appendTablesWithMove(addItems, [](TableT* p) { return p; }));
+        DFGTEST_EXPECT_LEFT(7, t0.rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_LEFT(1, t0.colCountByMaxColIndex());
+        DFGTEST_EXPECT_STREQ("a", t0(0, 0));
+        DFGTEST_EXPECT_STREQ("", t0(1, 0));
+        DFGTEST_EXPECT_EQ(t0(0, 0), t0(2, 0));
+        DFGTEST_EXPECT_EQ(t0(1, 0), t0(3, 0));
+        DFGTEST_EXPECT_STREQ("b", t0(4, 0));
+        DFGTEST_EXPECT_STREQ("a", t0(5, 0));
+        DFGTEST_EXPECT_STREQ("", t0(6, 0));
+    }
+
+    // Tests for uneven column sizes, í.e. that tables get appended correctly even if tables have differently sized columns
+    {
+        TableT table;
+        table.insertColumnsAt(0, 3);
+        table.setElement(0, 0, "t0(0,0)");
+        // Note: (0, 1) is intentionally left empty to test that appending for every column starts at rowCountByMaxRowIndex() instead of column-specific size.
+        {
+            std::vector<TableT> newTables(2);
+            newTables[0].setElement(0, 0, "");
+            newTables[0].setElement(1, 0, "t1(1,0)");
+            newTables[0].setElement(0, 1, "t1(0,1)");
+            // nothing in (1, 1)
+
+            newTables[1].setElement(0, 0, "t2(0,0)");
+            // nothing in (0, 1)
+            newTables[1].setElement(0, 2, "t2(0,2)");
+
+            // nothing in (1, 1)
+            newTables[1].setElement(1, 1, "");
+            // nothing in (1, 2)
+
+            DFGTEST_EXPECT_TRUE(table.appendTablesWithMove(newTables));
+        }
+        DFGTEST_EXPECT_LEFT(5, table.rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_LEFT(3, table.colCountByMaxColIndex());
+        DFGTEST_EXPECT_STREQ("t0(0,0)", table(0, 0));
+        DFGTEST_EXPECT_LEFT(nullptr,    table(0, 1));
+        DFGTEST_EXPECT_LEFT(nullptr,    table(0, 2));
+
+        DFGTEST_EXPECT_STREQ("",        table(1, 0));
+        DFGTEST_EXPECT_LEFT(&table.m_emptyString, toCharPtr_raw(table(1, 0))); // Tests implementation detail of adjusting empty string optimization references.
+        DFGTEST_EXPECT_STREQ("t1(0,1)", table(1, 1));
+        DFGTEST_EXPECT_LEFT(nullptr,    table(1, 2));
+
+        DFGTEST_EXPECT_STREQ("t1(1,0)", table(2, 0));
+        DFGTEST_EXPECT_LEFT(nullptr,    table(2, 1));
+        DFGTEST_EXPECT_LEFT(nullptr,    table(2, 2));
+
+        DFGTEST_EXPECT_STREQ("t2(0,0)", table(3, 0));
+        DFGTEST_EXPECT_LEFT(nullptr,    table(3, 1));
+        DFGTEST_EXPECT_STREQ("t2(0,2)", table(3, 2));
+
+        DFGTEST_EXPECT_LEFT(nullptr,    table(4, 0));
+        DFGTEST_EXPECT_STREQ("",        table(4, 1));
+        DFGTEST_EXPECT_LEFT(&table.m_emptyString, toCharPtr_raw(table(4, 1))); // The same comment as in earlier m_emptyString-case
+        DFGTEST_EXPECT_LEFT(nullptr,    table(4, 2));
+    }
+
+    // Testing that final table has column count of maximum column count of tables
+    {
+        std::vector<TableT> tables(3);
+        tables[0].setElement(0, 0, "a");
+        tables[1].setElement(0, 2, "b");
+        tables[2].setElement(0, 3, "c");
+        TableT t;
+        DFGTEST_EXPECT_TRUE(t.appendTablesWithMove(tables));
+        DFGTEST_EXPECT_LEFT(3, t.rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_LEFT(4, t.colCountByMaxColIndex());
+        DFGTEST_EXPECT_STREQ("a", t(0, 0));
+        DFGTEST_EXPECT_STREQ("b", t(1, 2));
+        DFGTEST_EXPECT_STREQ("c", t(2, 3));
+        DFGTEST_EXPECT_LEFT(3, t.cellCountNonEmpty());
+    }
+
+    // Checking that append fails if final row count would be more than maxRowCount()
+    {
+        std::vector<TableSz<char, uint16>> tables(3);
+        tables[0].setElement(25000, 0, "a");
+        tables[1].setElement(25000, 0, "b");
+        tables[2].setElement(25000, 0, "c");
+        DFGTEST_EXPECT_FALSE(tables[0].appendTablesWithMove(makeRange(tables.begin() + 1, tables.end())));
+        DFGTEST_EXPECT_LEFT(25001, tables[0].rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_STREQ("b", tables[1](25000, 0)); // Checking that sources were not cleared given that appending failed.
+        DFGTEST_EXPECT_STREQ("c", tables[2](25000, 0)); // Checking that sources were not cleared given that appending failed.
+    }
+}
+
 TEST(dfgCont, TableCsv)
 {
     using namespace DFG_ROOT_NS;

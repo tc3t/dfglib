@@ -725,6 +725,114 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             return true;
         }
 
+        // Appends given tables to 'this' in row direction moving char buffers out from source tables and clears source tables.
+        // Notes:
+        //      -Given pointer list can include nulls, they are ignored.
+        //      -Resulting row count will be sum of rowCountByMaxRowIndex() + and sum of rowCountByMaxRowIndex() of given tables.
+        //          -If resulting row count would be more than maxRowCount(), function returns false.
+        //      -Resulting column count will be maximum of colCountByMaxRowIndex() of 'this' and given tables.
+        //      -Given list can include 'this', i.e. this function can be used to duplicate table.
+        // @return: true when successful, false otherwise. When false is returned, source tables are not modified.
+        bool appendTablesWithMoveImpl(const std::vector<TableSz*>& others)
+        {
+            const auto nOriginalRowCount = this->rowCountByMaxRowIndex();
+            const auto nOriginalColCount = this->colCountByMaxColIndex();
+
+            // Checking that final table has row count that fits to maxRowCount() and resizing column structure in 'this' if necessary.
+            {
+                IndexT nFinalRowCount = nOriginalRowCount;
+                IndexT nColCount = this->colCountByMaxColIndex();
+                for (const auto& pTable : others)
+                {
+                    if (!pTable)
+                        continue;
+                    const auto nOtherColCount = pTable->colCountByMaxColIndex();
+                    nColCount = Max(nColCount, nOtherColCount);
+                    const auto nRowCountIncrement = pTable->rowCountByMaxRowIndex();
+                    if (maxRowCount() - nFinalRowCount < nRowCountIncrement)
+                        return false;
+                    nFinalRowCount += nRowCountIncrement;
+                }
+                if (nColCount > nOriginalColCount)
+                    this->insertColumnsAt(nOriginalColCount, nColCount - nOriginalColCount);
+            }
+
+            // Appending content in column order (i.e. first append content on column 0, then column 1 etc.).
+            this->forEachFwdColumnIndex([&](const IndexT nCol)
+            {
+                auto& colToRows = this->m_colToRows[nCol];
+
+                IndexT nRowOffset = nOriginalRowCount;
+                for (TableSz* pTable : others)
+                {
+                    if (!pTable)
+                        continue;
+                    auto& rTable = *pTable;
+                    const auto nSourceRowCount = (pTable != this) ? rTable.rowCountByMaxRowIndex() : nOriginalRowCount;
+                    if (this != pTable)
+                    {
+                        // For each row in source table in current column, creating row -> data entries for 'this'.
+                        rTable.forEachFwdRowInColumn(nCol, [&](const IndexT nRow, const SzPtrR content)
+                            {
+                                // Note: check for content != rTable.m_emptyString is there to make sure that 'this' won't be referring to emptyString of other table that may dangle any time after appending.
+                                colToRows.setContent(nRowOffset + nRow, // Sum should not overflow since row counts are checked in the beginning.
+                                                    (toCharPtr_raw(content) != &rTable.m_emptyString) ? toCharPtr_raw(content) : &this->m_emptyString);
+                            });
+                    }
+                    else // Case: source is 'this'. Need separate handling as above forEachFwdRowInColumn() would be modifying the structure inside forEach.
+                    {
+                        // Accessing by index; inefficient for sparse content.
+                        for (IndexT r = 0; r < nSourceRowCount; ++r)
+                        {
+                            const auto data = (*this)(r, nCol);
+                            colToRows.setContent(nRowOffset + r, toCharPtr_raw(data)); // Sum should not overflow since row counts are checked in the beginning.
+                        }
+                    }
+
+                    // Moving char buffers from source tables to current table (not needed when pTable is == 'this')
+                    if (this != pTable)
+                    {
+                        if (isValidIndex(rTable.m_charBuffers, nCol))
+                        {
+                            for (auto& bufferItem : rTable.m_charBuffers[nCol])
+                            {
+                                this->m_charBuffers[nCol].push_back(std::move(bufferItem));
+                            }
+                        }
+                    }
+                    nRowOffset += nSourceRowCount;
+                }
+            }); // for each column
+
+            // Clearing source tables
+            for (auto pTable : others)
+            {
+                if (pTable && pTable != this)
+                    pTable->clear();
+            }
+            
+            return true;
+        }
+
+        // Given a iterable of items, forwards call to appendTablesWithMoveImpl() using given function to map item to TableSz pointer.
+        template <class Iterable_T, class ToPtr_T>
+        bool appendTablesWithMove(Iterable_T&& iterable, ToPtr_T toPtrFunc)
+        {
+            std::vector<TableSz*> tablePtrs;
+            for (auto& item : iterable)
+            {
+                tablePtrs.push_back(toPtrFunc(item));
+            }
+            return appendTablesWithMoveImpl(tablePtrs);
+        }
+
+        // Given a iterable of TableSz's, forwards call to appendTablesWithMoveImpl().
+        template <class Iterable_T>
+        bool appendTablesWithMove(Iterable_T&& iterable)
+        {
+            return appendTablesWithMove(iterable, [](TableSz& t) { return &t; });
+        }
+
         // Shared implementation for const/non-const cases.
         template <class This_T, class Func_T>
         static void privForEachFwdColumnIndexImpl(This_T& rThis, Func_T&& func)
@@ -904,7 +1012,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             const Index_T nColCount = static_cast<Index_T>(m_colToRows.size());
             if (nCol < 0 || nCol > nColCount)
                 nCol = nColCount;
-            nInsertCount = Min(nInsertCount, maxColumnCount() - nColCount);
+            nInsertCount = Min(nInsertCount, IndexT(maxColumnCount() - nColCount));
 
             // Inserting new columns to m_colToRows. Since insert() doesn't work in case of move-only m_colToRows-items, doing it
             // with resize() & rotate()

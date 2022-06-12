@@ -102,6 +102,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_filterCellHandler";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_memStreamTypes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_peekCsvFormatFromFile";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_appendTablesWithMove";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertToFrontPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_contentStorageSizeInBytes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_addRemoveColumns";
