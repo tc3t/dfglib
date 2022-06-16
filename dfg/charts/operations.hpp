@@ -80,8 +80,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
         ChartOperationPipeData& operator=(ChartOperationPipeData&& other) noexcept;
 
-        template <class X_T, class Y_T>
-        ChartOperationPipeData(X_T&& xvals, Y_T&& yvals);
+        template <class X_T, class ... Vals_T>
+        ChartOperationPipeData(X_T&& xvals, Vals_T&& ... yvals);
 
         // Creates internal string vectors.
         void createStringVectors(size_t nCount, size_t nVectorSize);
@@ -141,10 +141,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         std::deque<StringVector> m_stringVectors;   // Temporary string buffers that can be used e.g. if operation changes data type and can't edit existing.
     };
 
-    template <class X_T, class Y_T>
-    inline ChartOperationPipeData::ChartOperationPipeData(X_T&& xvals, Y_T&& yvals)
+    template <class X_T, class ... Vals_T>
+    inline ChartOperationPipeData::ChartOperationPipeData(X_T&& xvals, Vals_T&& ... vals)
     {
-        setDataRefs(std::forward<X_T>(xvals), std::forward<Y_T>(yvals));
+        setDataRefs(xvals, std::forward<Vals_T>(vals)...);
     }
 
     inline ChartOperationPipeData::ChartOperationPipeData(const ChartOperationPipeData& other)
@@ -769,15 +769,15 @@ namespace operations
     } // namespace DFG_DETAIL_NS
 
     /** Implements pass window operation
-     *      Filters out all data points (xi, yi) where chosen coordinate (x/y) is not within [a, b]
+     *      Filters out all data points (xi, yi, [zi]) where chosen coordinate (x/y/z) is not within [a, b]
      *  Id:
      *      passWindow
      *  Parameters:
-     *      -0: axis, either x or y
+     *      -0: axis, either x, y or z
      *      -1: pass window lower limit
      *      -2: pass window upper limit
      *  Dependencies
-     *      -[x] or [y] depending on parameter 0
+     *      -[x], [y] or [z] depending on parameter 0
      *  Outputs:
      *      -The same number of vectors as in input
      *  Details:

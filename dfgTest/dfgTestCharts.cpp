@@ -248,6 +248,22 @@ TEST(dfgCharts, operations_passWindow)
         EXPECT_EQ(ValueVectorD({ 8, 5, 7 }), valsY);
     }
 
+    // Basic z-axis passwindow
+    {
+        ChartEntryOperationList operations;
+        operations.push_back(opManager.createOperation(DFG_ASCII("passWindow(z, 5, 10)")));
+        ValueVectorD valsZ = { 8, -1, 12, 5, 7 };
+        ValueVectorD valsX(valsZ.size());
+        ValueVectorD valsY(valsZ.size());
+        generateAdjacent(valsX, 0, 1);
+        generateAdjacent(valsY, 10, 1);
+        ChartOperationPipeData arg(&valsX, &valsY, &valsZ);
+        operations.executeAll(arg);
+        EXPECT_EQ(ValueVectorD({ 0,   3,  4 }), valsX);
+        EXPECT_EQ(ValueVectorD({ 10, 13, 14 }), valsY);
+        EXPECT_EQ(ValueVectorD({ 8,   5,  7 }), valsZ);
+    }
+
     // Custom string-to-double parser
     {
         ChartEntryOperationList operations;
@@ -318,7 +334,7 @@ TEST(dfgCharts, operations_passWindow)
 
     // Testing error handling
     {
-        auto op = opManager.createOperation(DFG_ASCII("passWindow(z, 5, 10)"));
+        auto op = opManager.createOperation(DFG_ASCII("passWindow(w, 5, 10)"));
         EXPECT_FALSE(op); // op is expected to evalute to false since axis argument is invalid.
         EXPECT_TRUE(op.hasError(ChartEntryOperation::error_badCreationArgs));
     }
