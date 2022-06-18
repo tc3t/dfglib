@@ -28,7 +28,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
     // Container for table which may have non equal row sizes.
     template <class Elem_T, class Index_T = size_t>
-    class DFG_CLASS_NAME(Table)
+    class Table
     {
     public:
         static const auto s_nInvalidIndex = NumericTraits<Index_T>::maxValue;
@@ -201,7 +201,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         {
             typedef SzPtrUtf8W SzPtrW;
             typedef SzPtrUtf8R SzPtrR;
-            typedef DFG_CLASS_NAME(StringTyped)<CharPtrTypeUtf8> StringT;
+            typedef StringTyped<CharPtrTypeUtf8> StringT;
             using  StringViewT = StringViewUtf8;
         };
 
@@ -452,51 +452,52 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         // -Memory usage per cell (64-bit build): ~8 bytes
         // -Memory usage if setting one cell at row N (64-bit build): (N/4096)*16 + 8 * 4096
         // -Content access by row: O(1)
-        template <class Index_T, class Char_T, size_t BlockSize_T>
+        template <class Row_T, class Char_T, size_t BlockSize_T>
         class RowToContentMapBlockIndex : public DFG_DETAIL_NS::MapBlockIndex<const char*, BlockSize_T>
         {
         public:
             using BaseClass = DFG_DETAIL_NS::MapBlockIndex<const char*, BlockSize_T>;
-            using IndexT = typename BaseClass::IndexT;
+            using MapIndexT = typename BaseClass::IndexT;
 
             // Precondition: p != nullptr
-            // Precondition: empty() || (i >= size() && i + 1 <= maxValueOfType<Index_T>()
-            void push_back(const Index_T i, const Char_T* p)
+            // Precondition: empty() || (i >= size() && i + 1 <= maxValueOfType<Row_T>()
+            void push_back(const Row_T i, const Char_T* p)
             {
                 DFG_ASSERT_UB(p != nullptr);
                 DFG_ASSERT_UB(this->empty() || i >= this->sizeAsIndexT());
-                DFG_ASSERT_UB(i <= maxValueOfType<Index_T>() - 1);
+                DFG_ASSERT_UB(i <= maxValueOfType<Row_T>() - 1);
                 this->set(i, p);
             }
 
             // Note: this may be relatively expensive operation.
-            Index_T sizeAsIndexT() const { return static_cast<Index_T>(this->size()); }
+            Row_T sizeAsIndexT() const { return static_cast<Row_T>(this->size()); }
 
-            const Char_T* content(const Index_T nRow, Dummy) const
+            const Char_T* content(const Row_T nRow, Dummy) const
             {
-                return this->value(static_cast<IndexT>(nRow));
+                return this->value(static_cast<MapIndexT>(nRow));
             }
 
             // Precondition: iter is dereferencable
-            Index_T iteratorToRow(const typename BaseClass::const_iterator iter) const
+            Row_T iteratorToRow(const typename BaseClass::const_iterator iter) const
             {
                 DFG_ASSERT_UB(iter->first != this->invalidKey());
-                return iter->first;
+                DFG_ASSERT_UB(isValWithinLimitsOfType<Row_T>(iter->first));
+                return static_cast<Row_T>(iter->first);
             }
 
-            void setContent(const Index_T nRow, const Char_T* p)
+            void setContent(const Row_T nRow, const Char_T* p)
             {
-                this->set(static_cast<IndexT>(nRow), p);
+                this->set(static_cast<MapIndexT>(nRow), p);
             }
 
             // Precondition: nInsertCount is valid count.
-            void insertRowsAt(const Index_T nRow, const Index_T nInsertCount)
+            void insertRowsAt(const Row_T nRow, const Row_T nInsertCount)
             {
                 this->insertKeysByPositionAndCount(nRow, nInsertCount);
             }
 
             // Precondition: nRemoveCount is valid count.
-            void removeRows(const Index_T nRow, const Index_T nRemoveCount)
+            void removeRows(const Row_T nRow, const Row_T nRemoveCount)
             {
                 this->removeKeysByPositionAndCount(nRow, nRemoveCount);
             }
@@ -508,9 +509,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 this->set(iterB->first, aContent);
             }
 
-            static Index_T maxRowCount()
+            static Row_T maxRowCount()
             {
-                return saturateCast<Index_T>(BaseClass::maxKey() + 1);
+                return saturateCast<Row_T>(BaseClass::maxKey() + 1);
             }
 
             // Precondition: iter must be dereferencable.
@@ -519,7 +520,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return iter->second != nullptr;
             }
 
-            typename BaseClass::const_iterator findOrInsertHint(const Index_T nRow)
+            typename BaseClass::const_iterator findOrInsertHint(const Row_T nRow)
             {
                 return this->find(nRow);
             }
@@ -532,7 +533,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
               class Index_T = uint32,
               DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUnknown,
               class InterfaceTypes_T = DFG_DETAIL_NS::TableInterfaceTypes<Char_T, InternalEncoding_T>>
-    class DFG_CLASS_NAME(TableSz)
+    class TableSz
     {
     public:
         // Stores char content. A simple structure that allocates storage on construction and appends new items to storage.
@@ -643,7 +644,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef typename InterfaceTypes_T::StringT StringT;
         using StringViewT = typename InterfaceTypes_T::StringViewT;
 
-        DFG_CLASS_NAME(TableSz)() : 
+        TableSz() : 
             m_emptyString('\0'),
             m_nBlockSize(2048),
             m_bAllowStringsLongerThanBlockSize(true)
@@ -1178,7 +1179,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         // TODO: Implement copying and moving. Currently hidden because default copy causes the pointers in m_colToRows in the new
         //       object to refer to the old table strings.
-        DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(DFG_CLASS_NAME(TableSz));
+        DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(TableSz);
 
         public:
         /*

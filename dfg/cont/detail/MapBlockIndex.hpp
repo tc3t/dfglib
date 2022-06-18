@@ -56,7 +56,7 @@ public:
 // -Semantically represents a map from index to data.
 // -Instead of storing (index, T) pairs, index is stored implicitly by the size of the map
 // -Compared to such implementation with std::vector, this divides indexes into blocks of given size
-//      -In plain vector implementation, adding one key with value N would need a vector of size N+1.
+//      -In plain vector implementation, adding one key N would need a vector of size N+1.
 //      -With MapBlockIndex, this needs N / blockSize() blocks and one allocated block.
 //      -Block sizes are fixed so indexing is O(1).
 // -In blocks, items with default value are considered non-existing.
@@ -215,17 +215,17 @@ public:
     class Iterator
     {
     public:
-        class PairT : public TrivialPair<IndexT, T>
+        class PairT : public TrivialPair<KeyT, T>
         {
         public:
-            using BaseClass = TrivialPair<IndexT, T>;
+            using BaseClass = TrivialPair<KeyT, T>;
             using BaseClass::BaseClass; // Inheriting constructor
             const BaseClass* operator->() const { return this; }
         };
 
         Iterator() = default;
 
-        Iterator(const MapBlockIndex& rCont, const IndexT key)
+        Iterator(const MapBlockIndex& rCont, const KeyT key)
             : m_pCont(&rCont)
             , m_key(key)
         {}
@@ -259,7 +259,7 @@ public:
         }
 
         const MapBlockIndex* m_pCont = nullptr;
-        IndexT m_key = invalidKey();
+        KeyT m_key = invalidKey();
     }; // Class Iterator
 
     using iterator = Iterator;
@@ -287,8 +287,8 @@ public:
         return i;
     }
 
-    static IndexT maxKey()     { return maxValueOfType<IndexT>() - 1; }
-    static IndexT invalidKey() { return maxKey() + 1; }
+    static KeyT maxKey()     { return maxValueOfType<KeyT>() - 1; }
+    static KeyT invalidKey() { return maxKey() + 1; }
 
     // Sets mapping key -> value, overrides existing if key is already mapped.
     // If value is defaultValue(), clears mapping.
