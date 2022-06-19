@@ -39,6 +39,7 @@ To see build chart of older versions, see [readme of 2.2.0](https://github.com/t
 
 ### 2.3.0, 2022-05-22
 * Tag: [2.3.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.3.0)
+    * __Note__: This version has a bug that causes a crash when opening big files ([#141](https://github.com/tc3t/dfglib/issues/141))
     * General
         * [new] Numeric base converter tool, available from context menu entry "Change radix"  ([#97](https://github.com/tc3t/dfglib/issues/97))
         * [new] Can now sort columns numerically ([#119](https://github.com/tc3t/dfglib/issues/119))
@@ -56,6 +57,7 @@ To see build chart of older versions, see [readme of 2.2.0](https://github.com/t
 
 ### 2.2.0, 2022-01-18
 * Tag: [2.2.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.2.0)
+    * __Note__: This version has a bug that causes a crash when opening big files ([#141](https://github.com/tc3t/dfglib/issues/141))
     * General
         * [new] Can now hide columns ([#102](https://github.com/tc3t/dfglib/issues/102))
         * [new] Formula-definable selection details and general improvements to selection detail widget (tooltip, enable/disable all actions) ([#103](https://github.com/tc3t/dfglib/issues/103))

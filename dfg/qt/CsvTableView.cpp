@@ -30,6 +30,7 @@
 #include <chrono>
 #include <bitset>
 #include <cctype> // For std::isdigit
+#include <thread>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -516,8 +517,12 @@ namespace
         auto pProgressDialog = new ProgressWidget(sProgressDialogLabel, isCancellable, pParent);
         auto pWorkerThread = new QThread();
         pWorkerThread->setObjectName(sThreadName); // Sets thread name visible to debugger.
-        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QThread::started, pWorkerThread, [&]()
+        const auto callerThreadId = std::this_thread::get_id();
+        DFG_QT_VERIFY_CONNECT(QObject::connect(pWorkerThread, &QThread::started, [&]() // Note: while typically there would be a context-object in connect()-arguments,
+                                                                                       //       not using it here since e.g. using pWorkerThread there would cause functor to get executed in caller-thread
+                                                                                       //       instead of worker thread. (ticket #141)
                 {
+                    DFG_ASSERT_CORRECTNESS(callerThreadId != std::this_thread::get_id());
                     func(pProgressDialog);
                     pWorkerThread->quit();
                 }));
