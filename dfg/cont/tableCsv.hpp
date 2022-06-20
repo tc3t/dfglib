@@ -22,6 +22,8 @@
 #include "vectorSso.hpp"
 #include "../CsvFormatDefinition.hpp"
 
+#include <thread>
+
 DFG_ROOT_NS_BEGIN{ 
     namespace DFG_DETAIL_NS
     {
@@ -102,6 +104,9 @@ DFG_ROOT_NS_BEGIN{
                 {
                 }
             };
+
+            using ConcurrencySafeCellHandlerNo  = std::integral_constant<int, 0>;
+            using ConcurrencySafeCellHandlerYes = std::integral_constant<int, 1>;
 
             template <class Index_T> using RowContentFilterBuffer = MapToStringViews<Index_T, StringUtf8, StringStorageType::sizeOnly>;
 
@@ -223,6 +228,9 @@ DFG_ROOT_NS_BEGIN{
                 using IndexT = typename Table_T::IndexT;
                 using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<IndexT>;
 
+                // At least row index handling would probably need to be revamped for concurrency-safe reading.
+                static constexpr ConcurrencySafeCellHandlerNo isConcurrencySafeT() { return ConcurrencySafeCellHandlerNo(); }
+
                 FilterCellHandler(Table_T& rTable, RowContentFilter_T&& rowContentFilter)
                     : m_rTable(rTable)
                     , m_rowContentFilter(rowContentFilter)
@@ -297,6 +305,12 @@ DFG_ROOT_NS_BEGIN{
             using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
             template <class StringMatcher_T> using RowContentFilter = DFG_DETAIL_NS::RowContentFilter<ThisClass, StringMatcher_T>;
 
+            // Class-"variables" for concurrency safety. When CellHander returns ConcurrencySafeCellHandlerNo from isConcurrencySafeT(), then TableCsv will not try to
+            // do multithreaded read. When it returns yes, CellHandler class must implement makeConcurrencyClone() that returns a concurrency-safe handler that is used for reading
+            // other block.
+            using ConcurrencySafeCellHandlerNo  = DFG_DETAIL_NS::ConcurrencySafeCellHandlerNo;
+            using ConcurrencySafeCellHandlerYes = DFG_DETAIL_NS::ConcurrencySafeCellHandlerYes;
+
             class OperationCancelledException {};
 
             // RowContentFilterBuffer is a map-like structure that can be iterated with regular range-based for like described in iterating through MapToStringViews.
@@ -308,6 +322,9 @@ DFG_ROOT_NS_BEGIN{
                 void onReadDone()
                 {
                 }
+
+                // Using 'not-safe' as default, derived class can override this.
+                static constexpr ConcurrencySafeCellHandlerNo isConcurrencySafeT() { return ConcurrencySafeCellHandlerNo(); }
             };
 
             class DefaultCellHandler : public CellHandlerBase
@@ -316,6 +333,14 @@ DFG_ROOT_NS_BEGIN{
                 DefaultCellHandler(TableCsv& rTable)
                     : m_rTable(rTable)
                 {}
+
+                // Default handler has no state other than reference to TableCsv and since concurrent reading is done to separate TableCsv-objects,
+                // this handler is concurrency-safe.
+                static constexpr ConcurrencySafeCellHandlerYes isConcurrencySafeT() { return ConcurrencySafeCellHandlerYes(); }
+
+                // Returns a concurrency-safe clone of this that is used for reading to given TableCsv.
+                template <class Derived_T>
+                Derived_T makeConcurrencyClone(TableCsv& rTable) { return Derived_T(rTable); }
 
                 void operator()(const size_t nRow, const size_t nCol, const Char_T* pData, const size_t nCount)
                 {
@@ -425,6 +450,37 @@ DFG_ROOT_NS_BEGIN{
                 }
             }
 
+            // Given byte range and block count, this function returns start positions of read blocks excluding first block that starts at 0.
+            // Start positions are start of line positions.
+            // Overall logic is:
+            //      1. Calculate average block size given byte count and block count.
+            //      2. Set read position to 0 
+            //      3. Increment read position by block size
+            //      4. Advance from start position until finding eol-characters. If eol not found, stop.
+            //      5. Set next block start to next char from eol, i.e. start of next line
+            //      6. Set read position to new block start and goto step 3.
+            static std::vector<size_t> determineBlockStartPos(RangeIterator_T<const char*> bytes, const size_t nBlockCount, const int32 cEol)
+            {
+                if (nBlockCount == 0)
+                    return std::vector<size_t>();
+                const auto nBlockSizeAvg = bytes.size() / nBlockCount;
+                std::vector<size_t> blockStarts;
+                size_t nPos = nBlockSizeAvg;
+                for (; nPos < bytes.size() && blockStarts.size() < nBlockCount;)
+                {
+                    for (; nPos < bytes.size(); ++nPos)
+                    {
+                        if (bytes[nPos] == cEol)
+                        {
+                            blockStarts.push_back(nPos + 1);
+                            nPos = saturateAdd<size_t>(nPos, nBlockSizeAvg);
+                            break;
+                        }
+                    }
+                }
+                return blockStarts;
+            }
+
             CsvFormatDefinition defaultReadFormat() const
             {
                 return CsvFormatDefinition(DelimitedTextReader::s_nMetaCharAutoDetect,
@@ -468,6 +524,22 @@ DFG_ROOT_NS_BEGIN{
                 readFromMemory(sv.data(), sv.size(), formatDef, this->defaultCellHandler());
             }
 
+            template <class CellHandler_T>
+            void privReadFromMemory_utf8(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CellHandler_T&& cellHandler, ConcurrencySafeCellHandlerYes)
+            {
+                // TODO: improve conditions: should at least take input size into account.
+                if (formatDef.getProperty("allowMultiThreadedRead", "0") == "1")
+                    readFromMemoryMultiThreaded(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<CellHandler_T>(cellHandler));
+                else
+                    privReadFromMemory_utf8(strm, formatDef, std::forward<CellHandler_T>(cellHandler), ConcurrencySafeCellHandlerNo());
+            }
+
+            template <class CellHandler_T>
+            void privReadFromMemory_utf8(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CellHandler_T&& cellHandler, ConcurrencySafeCellHandlerNo)
+            {
+                read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<CellHandler_T>(cellHandler));
+            }
+
             template <class Reader_T>
             void readFromMemory(const char* const pData, const size_t nSize, const CsvFormatDefinition& formatDef, Reader_T&& reader)
             {
@@ -485,7 +557,7 @@ DFG_ROOT_NS_BEGIN{
                     const auto bomSkip = (streamBom == DFG_MODULE_NS(io)::encodingUTF8) ? DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8) : 0;
                     DFG_MODULE_NS(io)::BasicImStream strm(pData + bomSkip, nSize - bomSkip);
                     if (formatDef.enclosingChar() == DelimitedTextReader::s_nMetaCharNone) // If there's no enclosing character, data can be read with StringViewCBuffer.
-                        read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<Reader_T>(reader));
+                        privReadFromMemory_utf8(strm, formatDef, std::forward<Reader_T>(reader), typename std::remove_reference<Reader_T>::type::isConcurrencySafeT());
                     else // Case: Enclosing character is defined, using CharAppenderStringViewCBufferWithEnclosedCellSupport.
                         read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport(), std::forward<Reader_T>(reader));
                 }
@@ -527,6 +599,49 @@ DFG_ROOT_NS_BEGIN{
                 catch (...)
                 {
                 }
+            }
+
+            // Reads table from memory possibly in multiple threads. Overall logics:
+            //      -Divides input into blocks
+            //      -Every block is read as regular TableCsv in their own read-threads
+            //      -When all blocks have been read, merges all TableCsv's into 'this'
+            template <class CharAppender_T, class CellHandler_T>
+            void readFromMemoryMultiThreaded(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CharAppender_T, CellHandler_T&& cellHandler)
+            {
+                using MemStrm = ::DFG_MODULE_NS(io)::BasicImStream;
+                const auto nBlockCount = Max<size_t>(1, std::thread::hardware_concurrency());
+                const auto additionalBlockStarts = determineBlockStartPos(makeRange(strm.beginPtr(), strm.endPtr()), nBlockCount, formatDef.eolCharFromEndOfLineType());
+                std::vector<TableCsv> tables(additionalBlockStarts.size());
+                
+                // Creating handler objects for additional blocks
+                using CellHandlerT = typename std::remove_reference<CellHandler_T>::type;
+                std::vector<CellHandlerT> additionalBlockCellHanders;
+                DFG_STATIC_ASSERT((std::is_same<decltype(CellHandlerT::isConcurrencySafeT()), ConcurrencySafeCellHandlerYes>::value), "readFromMemoryMultiThreaded() may be called only for handler that are concurrency-safe");
+                for (size_t i = 0; i < additionalBlockStarts.size(); ++i)
+                    additionalBlockCellHanders.push_back(cellHandler.makeConcurrencyClone<CellHandlerT>(tables[i]));
+
+                const auto blockSize = [&](const size_t i) { return (i + 1 < additionalBlockStarts.size()) ? additionalBlockStarts[i + 1] - additionalBlockStarts[i] : strm.sizeInCharacters() - additionalBlockStarts[i]; };
+                // Launching read-thread for every additional block handler
+                std::vector<std::thread> threads;
+                for (size_t i = 0; i < additionalBlockStarts.size(); ++i)
+                {
+                    threads.push_back(std::thread([i, &tables, &strm, &additionalBlockStarts, blockSize, &formatDef, &additionalBlockCellHanders]()
+                        {
+                            auto& table = tables[i];
+                            MemStrm strmBlock(strm.beginPtr() + additionalBlockStarts[i], blockSize(i));
+                            table.read(strmBlock, formatDef, CharAppender_T(), additionalBlockCellHanders[i]);
+                        }));
+                }
+                // Reading first block from current thread.
+                MemStrm strmFirstBlock(strm.beginPtr(), (!additionalBlockStarts.empty()) ? additionalBlockStarts[0] : strm.sizeInCharacters());
+                read(strmFirstBlock, formatDef, CharAppender_T(), std::forward<CellHandler_T>(cellHandler));
+
+                // Waiting other block handlers to complete.
+                for (size_t i = 0; i < threads.size(); ++i)
+                    threads[i].join();
+
+                // Appending blocks into 'this'.
+                this->appendTablesWithMove(tables);
             }
 
             template <class Stream_T>
@@ -662,6 +777,6 @@ DFG_ROOT_NS_BEGIN{
             CsvFormatDefinition m_readFormat; // Stores the format of previously read input. If no read is done, stores to default output format.
                                                               // TODO: specify content in case of interrupted read.
             CsvFormatDefinition m_saveFormat; // Format to be used when saving
-        }; // class CsvTable
+        }; // class TableCsv
 
 } } // module namespace

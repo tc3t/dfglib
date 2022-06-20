@@ -1047,14 +1047,33 @@ namespace DFG_DETAIL_NS
             , m_rProgressController(rProgressController)
         {}
 
+        template <class Derived_T>
+        Derived_T makeConcurrencyClone(CsvItemModel::OpaqueTypeDefs::DataTable& rTable)
+        { 
+            CancellableReader cr(rTable, m_rProgressController);
+            if (!this->m_spSharedProcessedByteCount)
+            {
+                this->m_spSharedProcessedByteCount = std::make_shared<std::atomic<uint64>>();
+            }
+            cr.m_spSharedProcessedByteCount = this->m_spSharedProcessedByteCount;
+            return cr;
+        }
+
         // Returns approximate increament in progress (in bytes).
-        static uint64 handleProgressController(ProgressController& rProcessController, const uint64 processedCount, const size_t nRow, const size_t nCol, const size_t nCount)
+        static uint64 handleProgressController(ProgressController& rProcessController, uint64& processedCount, std::atomic<uint64>* pSharedCounter, const size_t nRow, const size_t nCol, const size_t nCount)
         {
             if (rProcessController)
             {
                 if (rProcessController.isTimeToUpdateProgress(nRow, nCol))
                 {
-                    if (!rProcessController(processedCount))
+                    auto nTotalProcessCount = processedCount;
+                    if (pSharedCounter)
+                    {
+                        pSharedCounter->fetch_add(processedCount);
+                        nTotalProcessCount = pSharedCounter->load();
+                        processedCount = 0;
+                    }
+                    if (!rProcessController(nTotalProcessCount))
                     {
                         rProcessController.setCancelled(true);
                         throw CsvItemModel::OpaqueTypeDefs::DataTable::OperationCancelledException();
@@ -1066,7 +1085,7 @@ namespace DFG_DETAIL_NS
 
         void handleProgressController(const size_t nRow, const size_t nCol, const size_t nCount)
         {
-            m_nProcessedByteCount += handleProgressController(m_rProgressController, m_nProcessedByteCount, nRow, nCol, nCount);
+            m_nProcessedByteCount += handleProgressController(m_rProgressController, m_nProcessedByteCount, m_spSharedProcessedByteCount.get(), nRow, nCol, nCount);
         }
 
         void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
@@ -1075,7 +1094,9 @@ namespace DFG_DETAIL_NS
             handleProgressController(nRow, nCol, nCount);
         }
 
-        uint64 m_nProcessedByteCount = 0; // Approximate value of processed input bytes; things like \r\n and quoting are ignored so this often undercounts.
+        uint64 m_nProcessedByteCount = 0; // Approximate value of processed input bytes not yet added to shared counter. things like \r\n and quoting are ignored so this often undercounts.
+        std::shared_ptr<std::atomic<uint64>> m_spSharedProcessedByteCount; // Atomic progress counter shared by all clones.
+
         ProgressController& m_rProgressController;
     }; // CancellableReader
 
@@ -1091,6 +1112,8 @@ namespace DFG_DETAIL_NS
             : BaseClass(rTable, rProgressController)
             , m_rFilterCellHandler(rFilterCellHandler)
         {}
+
+        static constexpr ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerNo isConcurrencySafeT() { return ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerNo(); }
 
         void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
         {
@@ -1129,7 +1152,8 @@ namespace DFG_DETAIL_NS
 
         bool isMatch(const int nInputRow, const CsvItemModel::OpaqueTypeDefs::DataTable::RowContentFilterBuffer& rowBuffer)
         {
-            CancellableReader::handleProgressController(m_rProgressController, 0, static_cast<size_t>(nInputRow), 0, 0);
+            uint64 nProcessedCount = 0;
+            CancellableReader::handleProgressController(m_rProgressController, nProcessedCount, nullptr, static_cast<size_t>(nInputRow), 0, 0);
             const bool bIsMatch = m_multiMatcher.isMatchByCallback([&](const MatcherDefinition& matcher)
             {
                 // Checking if current matcher matches with current buffer.

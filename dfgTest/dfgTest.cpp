@@ -101,6 +101,8 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_filterCellHandler";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_memStreamTypes";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_multiThreadedRead";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_multiThreadedReadPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_peekCsvFormatFromFile";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_appendTablesWithMove";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertToFrontPerformance";

@@ -820,7 +820,7 @@ TEST(dfgCont, TableSz_appendTablesWithMove)
         DFGTEST_EXPECT_STREQ("", t0(6, 0));
     }
 
-    // Tests for uneven column sizes, í.e. that tables get appended correctly even if tables have differently sized columns
+    // Tests for uneven column sizes, i.e. that tables get appended correctly even if tables have differently sized columns
     {
         TableT table;
         table.insertColumnsAt(0, 3);
@@ -1476,6 +1476,91 @@ TEST(dfgCont, TableCsv_peekCsvFormatFromFile)
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32BE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF32Be);
     verifyFormatInFile("testfiles/csv_testfiles/csvtestUTF32LE_BOM_sep_2C_eol_r.csv",  ',',    '"', EndOfLineType::EndOfLineTypeR,   encodingUTF32Le);
     verifyFormatInFile("testfiles/csv_testfiles/csvtest_plain_ascii_3x3_sep_3B_eol_r.csv", ';','"', EndOfLineType::EndOfLineTypeR,   encodingUnknown);
+}
+
+TEST(dfgCont, TableCsv_multiThreadedRead)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+    using TableT = TableCsv<char, uint32>;
+    
+    // Basic correctness test
+    {
+        const char path[] = "testfiles/matrix_200x200.txt";
+        const auto baseFormatDef = CsvFormatDefinition(',', ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
+
+        TableT tSingleThreaded;
+        TableT tMultiThreaded;
+
+        // Single-threaded read
+        {
+            CsvFormatDefinition formatDef = baseFormatDef;
+            formatDef.setProperty("allowMultiThreadedRead", "0"); // TODO: revise property handling
+            tSingleThreaded.readFromFile(path, formatDef);
+        }
+
+        // Multithreaded read
+        {
+            CsvFormatDefinition formatDef = baseFormatDef;
+            formatDef.setProperty("allowMultiThreadedRead", "1"); // TODO: revise property handling
+            tMultiThreaded.readFromFile(path, formatDef);
+        }
+
+        DFGTEST_EXPECT_TRUE(tSingleThreaded.isContentAndSizesIdenticalWith(tMultiThreaded));
+        DFGTEST_EXPECT_LEFT(tSingleThreaded.readFormat(), tMultiThreaded.readFormat());
+    }
+}
+
+TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
+{
+#if DFGTEST_ENABLE_BENCHMARKS == 0
+    DFGTEST_MESSAGE("TableCsv_multiThreadedReadPerformance skipped due to build settings");
+#else
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+    using TableT = TableCsv<char, uint32>;
+    using TimerT = ::DFG_MODULE_NS(time)::TimerCpu;
+    const char path[] = "testfiles/matrix_1000x1000.txt"; // Note: this probably too small to actually see benefit from multithreading.
+    
+    const auto baseFormatDef = CsvFormatDefinition(',', ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
+
+    DFGTEST_MESSAGE("Reading path" << path);
+    {
+        {
+            TableT tSingleThreaded;
+            CsvFormatDefinition formatDef = baseFormatDef;
+            formatDef.setProperty("allowMultiThreadedRead", "0"); // TODO: revise property handling
+            TimerT timerSingleThread;
+            tSingleThreaded.readFromFile(path, formatDef);
+            const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
+            DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
+        }
+
+        TableT tMultiThreaded;
+        {
+            TimerT timer;
+            CsvFormatDefinition formatDef = baseFormatDef;
+            formatDef.setProperty("allowMultiThreadedRead", "1"); // TODO: revise property handling
+            tMultiThreaded.readFromFile(path, formatDef);
+
+            const auto elapsed = timer.elapsedWallSeconds();
+            DFGTEST_MESSAGE("Multi-threaded time : " << elapsed);
+        }
+
+        TableT tSingleThreaded;
+        {
+            CsvFormatDefinition formatDef = baseFormatDef;
+            formatDef.setProperty("allowMultiThreadedRead", "0"); // TODO: revise property handling
+            TimerT timerSingleThread;
+            tSingleThreaded.readFromFile(path, formatDef);
+            const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
+            DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
+        }
+
+        DFGTEST_EXPECT_TRUE(tSingleThreaded.isContentAndSizesIdenticalWith(tMultiThreaded));
+        DFGTEST_EXPECT_LEFT(tSingleThreaded.readFormat(), tMultiThreaded.readFormat());
+    }
+#endif // DFGTEST_ENABLE_BENCHMARKS
 }
 
 TEST(dfgCont, CsvConfig)
