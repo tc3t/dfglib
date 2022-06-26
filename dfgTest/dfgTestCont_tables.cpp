@@ -1483,31 +1483,78 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
     using namespace DFG_ROOT_NS;
     using namespace ::DFG_MODULE_NS(cont);
     using TableT = TableCsv<char, uint32>;
+
+    const auto nThreadCountRequest = Max(2u, std::thread::hardware_concurrency());
+    const TableCsvReadWriteOptions basicReadOptionsForMt(',', ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
+    const char szPathMatrix200x200[] = "testfiles/matrix_200x200.txt"; // Note: this file has \r\n EOL
     
     // Basic correctness test
     {
-        const char path[] = "testfiles/matrix_200x200.txt";
-        const auto baseFormatDef = CsvFormatDefinition(',', ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
-
         TableT tSingleThreaded;
         TableT tMultiThreaded;
+        const char* path = szPathMatrix200x200;
 
         // Single-threaded read
         {
-            CsvFormatDefinition formatDef = baseFormatDef;
-            formatDef.setProperty("allowMultiThreadedRead", "0"); // TODO: revise property handling
-            tSingleThreaded.readFromFile(path, formatDef);
+            TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
+            readOptions.setProperty<TableCsvReadWriteOptions::PropertyId::threadCount>(1);
+            tSingleThreaded.readFromFile(path, readOptions);
         }
 
         // Multithreaded read
         {
-            CsvFormatDefinition formatDef = baseFormatDef;
-            formatDef.setProperty("allowMultiThreadedRead", "1"); // TODO: revise property handling
-            tMultiThreaded.readFromFile(path, formatDef);
+            TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
+            readOptions.setProperty<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
+            tMultiThreaded.readFromFile(path, readOptions);
+            const auto nUsedThreadCount = tMultiThreaded.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            DFGTEST_EXPECT_LEFT(nThreadCountRequest, nUsedThreadCount);
         }
 
         DFGTEST_EXPECT_TRUE(tSingleThreaded.isContentAndSizesIdenticalWith(tMultiThreaded));
-        DFGTEST_EXPECT_LEFT(tSingleThreaded.readFormat(), tMultiThreaded.readFormat());
+        DFGTEST_EXPECT_TRUE(tSingleThreaded.readFormat().isFormatMatchingWith(tMultiThreaded.readFormat()));
+        
+    }
+
+    // Checking that multithreaded reading branches won't even be compiled if handler is not multithread-compatible.
+    {
+        class NonMtSafeHandler : public TableT::DefaultCellHandler
+        {
+        public:
+            using BaseClass = TableT::DefaultCellHandler;
+            using ConcurrencySafeCellHandlerNo = TableT::ConcurrencySafeCellHandlerNo;
+
+            NonMtSafeHandler(TableT& rTable, int dummy) // Having constructor with different signature than base class constructor is here 
+                : BaseClass(rTable)                     // to test that isConcurrencySafeT() actually prevents call to default clone implementation
+            {
+                DFG_UNUSED(dummy);
+            }
+
+            static constexpr ConcurrencySafeCellHandlerNo isConcurrencySafeT() { return ConcurrencySafeCellHandlerNo(); }
+        };
+
+        TableT table;
+        TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
+        readOptions.setProperty<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
+        table.readFromFile(szPathMatrix200x200, readOptions, NonMtSafeHandler(table, 1));
+        DFGTEST_EXPECT_LEFT(200, table.rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_LEFT(200, table.colCountByMaxColIndex());
+        const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+        DFGTEST_EXPECT_TRUE(nUsedThreadCount <= 1);
+    }
+
+    // Testing \r handling
+    {
+        auto bytes = ::DFG_MODULE_NS(io)::fileToByteContainer<std::string>(szPathMatrix200x200);
+        ::DFG_MODULE_NS(str)::replaceSubStrsInplaceImpl(bytes, "\r\n", "\r");
+        TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
+        readOptions.eolType(::DFG_MODULE_NS(io)::EndOfLineTypeR);
+        readOptions.setProperty<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
+        TableT table;
+        table.readFromMemory(bytes.data(), bytes.size(), readOptions);
+        DFGTEST_EXPECT_LEFT(200, table.rowCountByMaxRowIndex());
+        DFGTEST_EXPECT_LEFT(200, table.colCountByMaxColIndex());
+        const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+        DFGTEST_EXPECT_LEFT(nThreadCountRequest, nUsedThreadCount);
     }
 }
 
@@ -1521,17 +1568,27 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
     using TableT = TableCsv<char, uint32>;
     using TimerT = ::DFG_MODULE_NS(time)::TimerCpu;
     const char path[] = "testfiles/matrix_1000x1000.txt"; // Note: this probably too small to actually see benefit from multithreading.
+
+    const auto hwConcurrency = std::thread::hardware_concurrency();
+    DFGTEST_MESSAGE("hardware_concurrency() is " << hwConcurrency);
+    if (hwConcurrency <= 1)
+    {
+        DFGTEST_MESSAGE("Not running test since hardware_concurrency() is <= 1");
+        return;
+    }
     
     const auto baseFormatDef = CsvFormatDefinition(',', ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
+
+    const auto PropThreadCount = TableCsvReadWriteOptions::PropertyId::threadCount;
 
     DFGTEST_MESSAGE("Reading path" << path);
     {
         {
             TableT tSingleThreaded;
-            CsvFormatDefinition formatDef = baseFormatDef;
-            formatDef.setProperty("allowMultiThreadedRead", "0"); // TODO: revise property handling
+            TableCsvReadWriteOptions readOptions = baseFormatDef;
+            readOptions.setProperty<PropThreadCount>(1);
             TimerT timerSingleThread;
-            tSingleThreaded.readFromFile(path, formatDef);
+            tSingleThreaded.readFromFile(path, readOptions);
             const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
             DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
         }
@@ -1539,26 +1596,26 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
         TableT tMultiThreaded;
         {
             TimerT timer;
-            CsvFormatDefinition formatDef = baseFormatDef;
-            formatDef.setProperty("allowMultiThreadedRead", "1"); // TODO: revise property handling
-            tMultiThreaded.readFromFile(path, formatDef);
+            TableCsvReadWriteOptions readOptions = baseFormatDef;
+            readOptions.setProperty<PropThreadCount>(hwConcurrency);
+            tMultiThreaded.readFromFile(path, readOptions);
 
             const auto elapsed = timer.elapsedWallSeconds();
-            DFGTEST_MESSAGE("Multi-threaded time : " << elapsed);
+            DFGTEST_MESSAGE("Multi-threaded time : " << elapsed << " (used " << readOptions.getPropertyT<PropThreadCount>(0) << " threads)");
         }
 
         TableT tSingleThreaded;
         {
-            CsvFormatDefinition formatDef = baseFormatDef;
-            formatDef.setProperty("allowMultiThreadedRead", "0"); // TODO: revise property handling
+            TableCsvReadWriteOptions readOptions = baseFormatDef;
+            readOptions.setProperty<PropThreadCount>(1);
             TimerT timerSingleThread;
-            tSingleThreaded.readFromFile(path, formatDef);
+            tSingleThreaded.readFromFile(path, readOptions);
             const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
             DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
         }
 
         DFGTEST_EXPECT_TRUE(tSingleThreaded.isContentAndSizesIdenticalWith(tMultiThreaded));
-        DFGTEST_EXPECT_LEFT(tSingleThreaded.readFormat(), tMultiThreaded.readFormat());
+        DFGTEST_EXPECT_TRUE(tSingleThreaded.readFormat().isFormatMatchingWith(tMultiThreaded.readFormat()));
     }
 #endif // DFGTEST_ENABLE_BENCHMARKS
 }
@@ -1731,6 +1788,22 @@ TEST(dfgCont, CsvFormatDefinition_ToConfig)
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("\\x20", config2.value(DFG_UTF8("separator_char")));
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("!", config2.value(DFG_UTF8("enclosing_char")));
     }
+}
+
+TEST(dfgCont, CsvFormatDefinition_isFormatMatchingWith)
+{
+    typedef ::DFG_ROOT_NS::CsvFormatDefinition CsvFormatDef;
+    const CsvFormatDef baseFormat(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
+    DFGTEST_EXPECT_TRUE(baseFormat.isFormatMatchingWith(baseFormat));
+    DFGTEST_EXPECT_FALSE(baseFormat.isFormatMatchingWith(CsvFormatDef(';', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN,  ::DFG_MODULE_NS(io)::encodingUTF8)));
+    DFGTEST_EXPECT_FALSE(baseFormat.isFormatMatchingWith(CsvFormatDef(',', '|', ::DFG_MODULE_NS(io)::EndOfLineTypeN,  ::DFG_MODULE_NS(io)::encodingUTF8)));
+    DFGTEST_EXPECT_FALSE(baseFormat.isFormatMatchingWith(CsvFormatDef(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeRN, ::DFG_MODULE_NS(io)::encodingUTF8)));
+    DFGTEST_EXPECT_FALSE(baseFormat.isFormatMatchingWith(CsvFormatDef(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN,  ::DFG_MODULE_NS(io)::encodingUTF16Le)));
+
+    auto formatWithDifferentProps = baseFormat;
+    formatWithDifferentProps.setProperty("test", "a");
+    DFGTEST_EXPECT_TRUE(baseFormat.isFormatMatchingWith(formatWithDifferentProps));
+    DFGTEST_EXPECT_TRUE(formatWithDifferentProps.isFormatMatchingWith(baseFormat));
 }
 
 namespace

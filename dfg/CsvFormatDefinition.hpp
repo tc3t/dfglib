@@ -95,6 +95,16 @@ public:
     DFG_MODULE_NS(io)::EnclosementBehaviour enclosementBehaviour() const { return m_enclosementBehaviour; }
     void enclosementBehaviour(const DFG_MODULE_NS(io)::EnclosementBehaviour eb) { m_enclosementBehaviour = eb; }
 
+    // Returns true iff 'this' and 'other' are format matching disregarding properties
+    // Returned true means that the following items are the same:
+    //      -separator and enclosing characters
+    //      -eol-type
+    //      -text encoding
+    //      -enclosement behaviour
+    //      -header-writing
+    //      -BOM-writing
+    bool isFormatMatchingWith(const CsvFormatDefinition& other) const;
+
     static std::string charAsPrintableString(int32 c);
 
     int32 m_cSep;
@@ -231,6 +241,18 @@ inline StringViewC CsvFormatDefinition::eolTypeAsString() const
 inline auto CsvFormatDefinition::textEncodingAsString() const -> StringViewC
 {
     return ::DFG_MODULE_NS(io)::encodingToStrId(textEncoding());
+}
+
+inline bool CsvFormatDefinition::isFormatMatchingWith(const CsvFormatDefinition& other) const
+{
+    return
+        this->m_cSep == other.m_cSep &&
+        this->m_cEnc == other.m_cEnc &&
+        this->m_eolType == other.m_eolType &&
+        this->m_textEncoding == other.m_textEncoding &&
+        this->m_enclosementBehaviour == other.m_enclosementBehaviour &&
+        this->m_bWriteHeader == other.m_bWriteHeader &&
+        this->m_bWriteBom == other.m_bWriteBom;
 }
 
 } // namespace DFG_ROOT_NS

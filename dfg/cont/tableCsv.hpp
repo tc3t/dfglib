@@ -291,6 +291,45 @@ DFG_ROOT_NS_BEGIN{
         } // namespace DFG_DETAIL_NS
 
 
+        class TableCsvReadWriteOptions : public CsvFormatDefinition
+        {
+        public:
+            using BaseClass = CsvFormatDefinition;
+
+            enum class PropertyId
+            {
+                threadCount         // In read parameter: defines request for number of threads to use when reading.
+                                    // In object returned by TableCsv::readFormat(): If reading was done with multiple threads, the number of threads used.
+            };
+
+            static int getDefaultValue(std::integral_constant<int, static_cast<int>(PropertyId::threadCount)>) { return 1; }
+
+            template <PropertyId Id_T> using IdType = decltype(getDefaultValue(std::integral_constant<int, static_cast<int>(Id_T)>()));
+
+            using BaseClass::BaseClass;
+
+            TableCsvReadWriteOptions() = default;
+            TableCsvReadWriteOptions(const BaseClass&  other) : BaseClass(other) {}
+            TableCsvReadWriteOptions(const BaseClass&& other) : BaseClass(std::move(other)) {}
+
+            static inline StringViewAscii propertyIdAsString(PropertyId id);
+
+            template <PropertyId Id_T>
+            void setProperty(const IdType<Id_T> prop);
+
+            template <PropertyId Id_T>
+            static auto getPropertyT(const BaseClass& base, const IdType<Id_T> defaultValue) -> IdType<Id_T>
+            {
+                return base.getPropertyThroughStrTo(propertyIdAsString(Id_T), defaultValue);
+            }
+
+            template <PropertyId Id_T>
+            auto getPropertyT(const IdType<Id_T> defaultValue) const -> IdType<Id_T>
+            {
+                return getPropertyT<Id_T>(*this, defaultValue);
+            }
+        };
+
         template <class Char_T, class Index_T, DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUTF8>
         class TableCsv : public TableSz<Char_T, Index_T, InternalEncoding_T>
         {
@@ -489,17 +528,17 @@ DFG_ROOT_NS_BEGIN{
                     DFG_MODULE_NS(io)::encodingUnknown);
             }
 
-            CsvFormatDefinition readFormat() const
+            TableCsvReadWriteOptions readFormat() const
             {
                 return m_readFormat;
             }
 
-            CsvFormatDefinition saveFormat() const
+            TableCsvReadWriteOptions saveFormat() const
             {
                 return m_saveFormat;
             }
 
-            void saveFormat(const CsvFormatDefinition& newFormat)
+            void saveFormat(const TableCsvReadWriteOptions& newFormat)
             {
                 m_saveFormat = newFormat;
             }
@@ -524,11 +563,19 @@ DFG_ROOT_NS_BEGIN{
                 readFromMemory(sv.data(), sv.size(), formatDef, this->defaultCellHandler());
             }
 
+            // If already checked that multithreaded read is ok from input's format perspective, this function checks if 
+            // format options allow it and is otherwise reasonable to threaded reading.
+            static bool privIsMultithreadedReadOkForFormatCompatibleInput(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef)
+            {
+                // TODO: improve conditions: should at least take input size into account.
+                DFG_UNUSED(strm);
+                return (TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, 1) != 1);
+            }
+
             template <class CellHandler_T>
             void privReadFromMemory_utf8(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CellHandler_T&& cellHandler, ConcurrencySafeCellHandlerYes)
             {
-                // TODO: improve conditions: should at least take input size into account.
-                if (formatDef.getProperty("allowMultiThreadedRead", "0") == "1")
+                if (privIsMultithreadedReadOkForFormatCompatibleInput(strm, formatDef))
                     readFromMemoryMultiThreaded(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<CellHandler_T>(cellHandler));
                 else
                     privReadFromMemory_utf8(strm, formatDef, std::forward<CellHandler_T>(cellHandler), ConcurrencySafeCellHandlerNo());
@@ -557,7 +604,7 @@ DFG_ROOT_NS_BEGIN{
                     const auto bomSkip = (streamBom == DFG_MODULE_NS(io)::encodingUTF8) ? DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8) : 0;
                     DFG_MODULE_NS(io)::BasicImStream strm(pData + bomSkip, nSize - bomSkip);
                     if (formatDef.enclosingChar() == DelimitedTextReader::s_nMetaCharNone) // If there's no enclosing character, data can be read with StringViewCBuffer.
-                        privReadFromMemory_utf8(strm, formatDef, std::forward<Reader_T>(reader), typename std::remove_reference<Reader_T>::type::isConcurrencySafeT());
+                        privReadFromMemory_utf8(strm, formatDef, std::forward<Reader_T>(reader), std::remove_reference<Reader_T>::type::isConcurrencySafeT());
                     else // Case: Enclosing character is defined, using CharAppenderStringViewCBufferWithEnclosedCellSupport.
                         read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport(), std::forward<Reader_T>(reader));
                 }
@@ -609,7 +656,8 @@ DFG_ROOT_NS_BEGIN{
             void readFromMemoryMultiThreaded(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CharAppender_T, CellHandler_T&& cellHandler)
             {
                 using MemStrm = ::DFG_MODULE_NS(io)::BasicImStream;
-                const auto nBlockCount = Max<size_t>(1, std::thread::hardware_concurrency());
+                const auto nBlockCountRequest = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, std::thread::hardware_concurrency());
+                const auto nBlockCount = Max<size_t>(1, nBlockCountRequest);
                 const auto additionalBlockStarts = determineBlockStartPos(makeRange(strm.beginPtr(), strm.endPtr()), nBlockCount, formatDef.eolCharFromEndOfLineType());
                 std::vector<TableCsv> tables(additionalBlockStarts.size());
                 
@@ -618,7 +666,7 @@ DFG_ROOT_NS_BEGIN{
                 std::vector<CellHandlerT> additionalBlockCellHanders;
                 DFG_STATIC_ASSERT((std::is_same<decltype(CellHandlerT::isConcurrencySafeT()), ConcurrencySafeCellHandlerYes>::value), "readFromMemoryMultiThreaded() may be called only for handler that are concurrency-safe");
                 for (size_t i = 0; i < additionalBlockStarts.size(); ++i)
-                    additionalBlockCellHanders.push_back(cellHandler.makeConcurrencyClone<CellHandlerT>(tables[i]));
+                    additionalBlockCellHanders.push_back(cellHandler.template makeConcurrencyClone<CellHandlerT>(tables[i]));
 
                 const auto blockSize = [&](const size_t i) { return (i + 1 < additionalBlockStarts.size()) ? additionalBlockStarts[i + 1] - additionalBlockStarts[i] : strm.sizeInCharacters() - additionalBlockStarts[i]; };
                 // Launching read-thread for every additional block handler
@@ -642,6 +690,8 @@ DFG_ROOT_NS_BEGIN{
 
                 // Appending blocks into 'this'.
                 this->appendTablesWithMove(tables);
+
+                m_readFormat.setProperty<TableCsvReadWriteOptions::PropertyId::threadCount>(static_cast<int>(threads.size() + 1u));
             }
 
             template <class Stream_T>
@@ -774,9 +824,24 @@ DFG_ROOT_NS_BEGIN{
                 writeToStream(strm, policy);
             }
 
-            CsvFormatDefinition m_readFormat; // Stores the format of previously read input. If no read is done, stores to default output format.
-                                                              // TODO: specify content in case of interrupted read.
-            CsvFormatDefinition m_saveFormat; // Format to be used when saving
+            TableCsvReadWriteOptions m_readFormat; // Stores the format of previously read input. If no read is done, stores to default output format.
+                                                   // TODO: specify content in case of interrupted read.
+            TableCsvReadWriteOptions m_saveFormat; // Format to be used when saving
         }; // class TableCsv
+
+        StringViewAscii TableCsvReadWriteOptions::propertyIdAsString(const PropertyId id)
+        {
+            switch (id)
+            {
+                case PropertyId::threadCount: return SzPtrAscii("TableCsvRwo_threadCount");
+                default: DFG_ASSERT_CORRECTNESS(false); return DFG_ASCII("");
+            }
+        }
+
+        template <TableCsvReadWriteOptions::PropertyId Id_T>
+        void TableCsvReadWriteOptions::setProperty(const IdType<Id_T> prop)
+        {
+            BaseClass::setProperty(propertyIdAsString(Id_T), ::DFG_MODULE_NS(str)::toStrC(prop));
+        }
 
 } } // module namespace
