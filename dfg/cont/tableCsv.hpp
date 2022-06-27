@@ -20,7 +20,7 @@
 #include "MapToStringViews.hpp"
 #include "../numericTypeTools.hpp"
 #include "vectorSso.hpp"
-#include "../CsvFormatDefinition.hpp"
+#include "detail/tableCsvHelpers.hpp"
 
 #include <thread>
 
@@ -290,45 +290,6 @@ DFG_ROOT_NS_BEGIN{
             }; // Class FilterCellHandler
         } // namespace DFG_DETAIL_NS
 
-
-        class TableCsvReadWriteOptions : public CsvFormatDefinition
-        {
-        public:
-            using BaseClass = CsvFormatDefinition;
-
-            enum class PropertyId
-            {
-                threadCount         // In read parameter: defines request for number of threads to use when reading.
-                                    // In object returned by TableCsv::readFormat(): If reading was done with multiple threads, the number of threads used.
-            };
-
-            static int getDefaultValue(std::integral_constant<int, static_cast<int>(PropertyId::threadCount)>) { return 1; }
-
-            template <PropertyId Id_T> using IdType = decltype(getDefaultValue(std::integral_constant<int, static_cast<int>(Id_T)>()));
-
-            using BaseClass::BaseClass;
-
-            TableCsvReadWriteOptions() = default;
-            TableCsvReadWriteOptions(const BaseClass&  other) : BaseClass(other) {}
-            TableCsvReadWriteOptions(const BaseClass&& other) : BaseClass(std::move(other)) {}
-
-            static inline StringViewAscii propertyIdAsString(PropertyId id);
-
-            template <PropertyId Id_T>
-            void setProperty(const IdType<Id_T> prop);
-
-            template <PropertyId Id_T>
-            static auto getPropertyT(const BaseClass& base, const IdType<Id_T> defaultValue) -> IdType<Id_T>
-            {
-                return base.getPropertyThroughStrTo(propertyIdAsString(Id_T), defaultValue);
-            }
-
-            template <PropertyId Id_T>
-            auto getPropertyT(const IdType<Id_T> defaultValue) const -> IdType<Id_T>
-            {
-                return getPropertyT<Id_T>(*this, defaultValue);
-            }
-        };
 
         template <class Char_T, class Index_T, DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUTF8>
         class TableCsv : public TableSz<Char_T, Index_T, InternalEncoding_T>
@@ -691,7 +652,7 @@ DFG_ROOT_NS_BEGIN{
                 // Appending blocks into 'this'.
                 this->appendTablesWithMove(tables);
 
-                m_readFormat.setProperty<TableCsvReadWriteOptions::PropertyId::threadCount>(static_cast<int>(threads.size() + 1u));
+                m_readFormat.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(static_cast<int>(threads.size() + 1u));
             }
 
             template <class Stream_T>
@@ -828,20 +789,5 @@ DFG_ROOT_NS_BEGIN{
                                                    // TODO: specify content in case of interrupted read.
             TableCsvReadWriteOptions m_saveFormat; // Format to be used when saving
         }; // class TableCsv
-
-        StringViewAscii TableCsvReadWriteOptions::propertyIdAsString(const PropertyId id)
-        {
-            switch (id)
-            {
-                case PropertyId::threadCount: return SzPtrAscii("TableCsvRwo_threadCount");
-                default: DFG_ASSERT_CORRECTNESS(false); return DFG_ASCII("");
-            }
-        }
-
-        template <TableCsvReadWriteOptions::PropertyId Id_T>
-        void TableCsvReadWriteOptions::setProperty(const IdType<Id_T> prop)
-        {
-            BaseClass::setProperty(propertyIdAsString(Id_T), ::DFG_MODULE_NS(str)::toStrC(prop));
-        }
 
 } } // module namespace

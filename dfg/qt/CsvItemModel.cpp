@@ -1064,8 +1064,8 @@ namespace DFG_DETAIL_NS
         {
             if (rProcessController)
             {
-                if (rProcessController.isTimeToUpdateProgress(nRow, nCol))
-                {
+                if (rProcessController.isTimeToUpdateProgress(nRow, nCol)) // In multithreaded read, this gets called at frequency multiplied by thread count compared to single threaded read.
+                {                                                          // Not optimal, but not expected to be a problem either.
                     auto nTotalProcessCount = processedCount;
                     if (pSharedCounter)
                     {
@@ -1076,6 +1076,7 @@ namespace DFG_DETAIL_NS
                     if (!rProcessController(nTotalProcessCount))
                     {
                         rProcessController.setCancelled(true);
+                        // As of 2022-06 (dfgQtTableEditor 2.4.0), exception is catched in TableCsv::read()
                         throw CsvItemModel::OpaqueTypeDefs::DataTable::OperationCancelledException();
                     }
                 }
@@ -1107,13 +1108,20 @@ namespace DFG_DETAIL_NS
         using ItemModel = CsvItemModel;
         using DataTable = CsvItemModel::DataTable;
         using FilterCellHandler = decltype(ItemModel::OpaqueTypeDefs::DataTable().createFilterCellHandler());
+        using IsBaseClassConcurrencySafeT = std::is_same<decltype(BaseClass::isConcurrencySafeT()), ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerYes>;
+        using IsFilterReaderConcurrencySafeT = std::is_same<decltype(FilterCellHandler::isConcurrencySafeT()), ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerYes>;
+        using MyConcurrencySafetyT = std::conditional<
+            IsBaseClassConcurrencySafeT::value && IsFilterReaderConcurrencySafeT::value,
+            ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerYes,
+            ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerNo
+            >::type;
+        
+        static constexpr MyConcurrencySafetyT isConcurrencySafeT() { return MyConcurrencySafetyT(); }
 
         CancellableFilterReader(ItemModel::OpaqueTypeDefs::DataTable& rTable, ProgressController& rProgressController, FilterCellHandler& rFilterCellHandler)
             : BaseClass(rTable, rProgressController)
             , m_rFilterCellHandler(rFilterCellHandler)
         {}
-
-        static constexpr ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerNo isConcurrencySafeT() { return ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::ConcurrencySafeCellHandlerNo(); }
 
         void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
         {
@@ -1203,6 +1211,7 @@ bool CsvItemModel::openFile(QString sDbFilePath, LoadOptions loadOptions)
             const auto sIncludeRows = loadOptions.getProperty(CsvOptionProperty_includeRows, "");
             const auto sIncludeColumns = loadOptions.getProperty(CsvOptionProperty_includeColumns, "");
             const auto sFilterItems = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
+            loadOptions.setPropertyT<LoadOptions::PropertyId::threadCount>(std::thread::hardware_concurrency());
             const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
             if (loadOptions.isFilteredRead(sIncludeRows, sIncludeColumns, sFilterItems))
             {

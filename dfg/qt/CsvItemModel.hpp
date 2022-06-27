@@ -11,6 +11,7 @@
 #include "containerUtils.hpp"
 #include "../numericTypeTools.hpp"
 #include "../CsvFormatDefinition.hpp"
+#include "../cont/detail/tableCsvHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -298,10 +299,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             CopyableAtomicBool m_cancelled;
         }; // IoOperationProgressController
 
-        class CommonOptionsBase : public CsvFormatDefinition
+        class CommonOptionsBase : public ::DFG_MODULE_NS(cont)::TableCsvReadWriteOptions
         {
         public:
-            using BaseClass = CsvFormatDefinition;
+            using BaseClass = ::DFG_MODULE_NS(cont)::TableCsvReadWriteOptions;
             using BaseClass::BaseClass; // Inheriting constructor
             using ProgressController = IoOperationProgressController;
             CommonOptionsBase(const CsvFormatDefinition& cfd) : BaseClass(cfd) {}
