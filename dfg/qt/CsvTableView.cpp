@@ -2191,10 +2191,14 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                 bHasProgress = true;
             }
             auto lastSetValue = std::chrono::steady_clock::now();
+            uint32 nLastThreadCount = 1;
             if (pProgressWidget)
             {
-                loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([&](const uint64 nProcessedBytes)
+                const QString sOriginalLabel = pProgressWidget->labelText();
+                loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([&](const CsvModel::LoadOptions::ProgressControllerParamT param)
                 {
+                    const auto nProcessedBytes = param.counter();
+                    const auto nThreadCount = param.threadCount();
                     // Calling setValue for progressWidget; note that using invokeMethod() since progressWidget lives in another thread.
                     // Also limiting call rate to maximum of once per 50 ms to prevent calls getting queued if callback gets called more often than what setValues can be invoked.
                     const auto steadyNow = std::chrono::steady_clock::now();
@@ -2202,11 +2206,19 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                     {
                         const bool bCancelled = pProgressWidget->isCancelled();
                         if (bHasProgress && !bCancelled)
+                        {
                             DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble))));
+                            // If thread count used in the operation changed, updating label text.
+                            if (nLastThreadCount != nThreadCount)
+                            {
+                                QString sLabel = tr("%1\nUsing %2 threads").arg(sOriginalLabel).arg(nThreadCount);
+                                DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setLabelText", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(QString, sLabel)));
+                            }
+                        }
                         lastSetValue = steadyNow;
-                        return !bCancelled;
+                        return CsvModel::LoadOptions::ProgressCallbackReturnT(!bCancelled);
                     }
-                    return true;
+                    return CsvModel::LoadOptions::ProgressCallbackReturnT(true);
                 }));
             }
             if (bOpenAsSqlite)

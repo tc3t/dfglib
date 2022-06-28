@@ -1056,6 +1056,7 @@ namespace DFG_DETAIL_NS
                 this->m_spSharedProcessedByteCount = std::make_shared<std::atomic<uint64>>();
             }
             cr.m_spSharedProcessedByteCount = this->m_spSharedProcessedByteCount;
+            m_rProgressController.incrementOperationThreadCount();
             return cr;
         }
 
@@ -1073,7 +1074,7 @@ namespace DFG_DETAIL_NS
                         nTotalProcessCount = pSharedCounter->load();
                         processedCount = 0;
                     }
-                    if (!rProcessController(nTotalProcessCount))
+                    if (!rProcessController(CsvItemModel::IoOperationProgressController::ProgressCallbackParamT(nTotalProcessCount, rProcessController.getCurrentOperationThreadCount())))
                     {
                         rProcessController.setCancelled(true);
                         // As of 2022-06 (dfgQtTableEditor 2.4.0), exception is catched in TableCsv::read()
@@ -1096,7 +1097,7 @@ namespace DFG_DETAIL_NS
         }
 
         uint64 m_nProcessedByteCount = 0; // Approximate value of processed input bytes not yet added to shared counter. things like \r\n and quoting are ignored so this often undercounts.
-        std::shared_ptr<std::atomic<uint64>> m_spSharedProcessedByteCount; // Atomic progress counter shared by all clones.
+        std::shared_ptr<std::atomic<uint64>> m_spSharedProcessedByteCount; // Atomic progress counter shared by all clones to count total bytes processed by all handlers.
 
         ProgressController& m_rProgressController;
     }; // CancellableReader

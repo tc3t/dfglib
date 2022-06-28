@@ -239,19 +239,39 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         class IoOperationProgressController
         {
         public:
-            using ProgressCallback = std::function<bool(uint64)>; // Callback shall return true to continue reading, false to terminate.
+            using ProcessCounterT = uint64;
 
-            class CopyableAtomicBool : public std::atomic_bool
+            using ProgressCallbackReturnT = bool;
+
+            class ProgressCallbackParamT
             {
             public:
-                using BaseClass = std::atomic_bool;
-                CopyableAtomicBool() : BaseClass(false) {}
-                CopyableAtomicBool(const CopyableAtomicBool& other)
+                ProgressCallbackParamT(ProcessCounterT nProcessed, const uint32 nThreadCount = 1)
+                    : m_nCounter(nProcessed)
+                    , m_nThreadCount(nThreadCount)
+                {}
+
+                ProcessCounterT counter() const { return m_nCounter; }
+                uint32 threadCount() const      { return m_nThreadCount; }
+
+                ProcessCounterT m_nCounter = 0;
+                uint32 m_nThreadCount = 1;
+            }; // class ProgressCallbackParam
+
+            using ProgressCallback = std::function<ProgressCallbackReturnT (ProgressCallbackParamT)>; // Callback shall return true to continue reading, false to terminate.
+
+            template <class T>
+            class CopyableAtomicT : public std::atomic<T>
+            {
+            public:
+                using BaseClass = std::atomic<T>;
+                CopyableAtomicT(const T a = T()) : BaseClass(a) {}
+                CopyableAtomicT(const CopyableAtomicT& other)
                     : BaseClass(false)
                 {
                     *this = other;
                 }
-                CopyableAtomicBool& operator=(const CopyableAtomicBool& other)
+                CopyableAtomicT& operator=(const CopyableAtomicT& other)
                 {
                     this->store(other.load());
                     return *this;
@@ -263,9 +283,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 : m_callback(std::move(callback))
             {}
 
-            bool operator()(const uint64 nProcessed)
+            ProgressCallbackReturnT operator()(const ProgressCallbackParamT param)
             {
-                return (m_callback) ? m_callback(nProcessed) : true;
+                return (m_callback) ? m_callback(param) : true;
             }
 
             operator bool() const
@@ -295,8 +315,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 #endif
             }
 
+            // Increments thread count being used in this operation, returns old value + 1.
+            // Thread-safe
+            uint32 incrementOperationThreadCount()
+            {
+                auto nOldValue = m_anOperationThreadCount.fetch_add(1u);
+                return nOldValue + 1u;
+            }
+
+            uint32 getCurrentOperationThreadCount() const
+            {
+                return m_anOperationThreadCount.load(std::memory_order_relaxed);
+            }
+
             ProgressCallback m_callback;
-            CopyableAtomicBool m_cancelled;
+            CopyableAtomicT<bool> m_cancelled{false};
+            CopyableAtomicT<uint32> m_anOperationThreadCount{ 1 };
         }; // IoOperationProgressController
 
         class CommonOptionsBase : public ::DFG_MODULE_NS(cont)::TableCsvReadWriteOptions
@@ -305,6 +339,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             using BaseClass = ::DFG_MODULE_NS(cont)::TableCsvReadWriteOptions;
             using BaseClass::BaseClass; // Inheriting constructor
             using ProgressController = IoOperationProgressController;
+            using ProgressControllerParamT = IoOperationProgressController::ProgressCallbackParamT;
+            using ProgressCallbackReturnT  = IoOperationProgressController::ProgressCallbackReturnT;
             CommonOptionsBase(const CsvFormatDefinition& cfd) : BaseClass(cfd) {}
             CommonOptionsBase(CsvFormatDefinition&& cfd) : BaseClass(std::move(cfd)) {}
 
