@@ -13,11 +13,19 @@ public:
 
     enum class PropertyId
     {
-        threadCount         // In read parameter: defines request for number of threads to use when reading.
-                            // In object returned by TableCsv::readFormat(): If reading was done with multiple threads, the number of threads used.
+        threadCount,                        // In read parameter: defines request for number of threads to use when reading, value 0 is interpreted as "autodetermine"
+                                            //                    Even if setting this to explicit value, TableCsv can choose to use fewer threads e.g. in case of small file.
+                                            //                    To force given thread count to be used even for small files, set threadReadBlockSizeMinimum to zero
+                                            // In object returned by TableCsv::readFormat(): If reading was done with multiple threads, the number of threads used, in single-threaded read either 0 or 1
+
+        threadReadBlockSizeMinimum          // Defines minimum size (in bytes) of read block that thread should have. This is used to control that reading is 
+                                            // distributed to multiple thread only if there is enough work to be done, e.g. to not spread reading of 1 kB file to 16 threads.
     };
 
     static int getDefaultValue(std::integral_constant<int, static_cast<int>(PropertyId::threadCount)>) { return 1; }
+    // Default value is 10 MB. In practice default should be dependent on runtime context (how fast processor etc.),
+    // but simply hardcoding a value that is at least reasonable in some contexts; user should set a better value as needed.
+    static uint64 getDefaultValue(std::integral_constant<int, static_cast<int>(PropertyId::threadReadBlockSizeMinimum)>) { return 10000000; }
 
     template <PropertyId Id_T> using IdType = decltype(getDefaultValue(std::integral_constant<int, static_cast<int>(Id_T)>()));
 
@@ -49,8 +57,9 @@ StringViewAscii TableCsvReadWriteOptions::propertyIdAsString(const PropertyId id
 {
     switch (id)
     {
-    case PropertyId::threadCount: return SzPtrAscii("TableCsvRwo_threadCount");
-    default: DFG_ASSERT_CORRECTNESS(false); return DFG_ASCII("");
+        case PropertyId::threadCount:                   return SzPtrAscii("TableCsvRwo_threadCount");
+        case PropertyId::threadReadBlockSizeMinimum:    return SzPtrAscii("TableCsvRwo_threadReadBlockSizeMinimum");
+        default: DFG_ASSERT_CORRECTNESS(false);         return DFG_ASCII("");
     }
 }
 

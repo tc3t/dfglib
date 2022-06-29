@@ -524,20 +524,42 @@ DFG_ROOT_NS_BEGIN{
                 readFromMemory(sv.data(), sv.size(), formatDef, this->defaultCellHandler());
             }
 
-            // If already checked that multithreaded read is ok from input's format perspective, this function checks if 
-            // format options allow it and is otherwise reasonable to threaded reading.
-            static bool privIsMultithreadedReadOkForFormatCompatibleInput(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef)
+            // If already checked that multithreaded read is ok from input's format perspective, this function determines how many threads to actually consider using.
+            static uint32 privDetermineReadThreadCountRequest(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef)
             {
-                // TODO: improve conditions: should at least take input size into account.
-                DFG_UNUSED(strm);
-                return (TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, 1) != 1);
+                auto nThreadCountRequest = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, 0);
+                if (nThreadCountRequest == 1)
+                    return 1;
+                else if (nThreadCountRequest == 0) // Case: autodetermine, using hardware_concurrency.
+                    nThreadCountRequest = Max<unsigned int>(1, std::thread::hardware_concurrency()); // hardware_concurrency() may return 0 so Max() is there to make sure that have at least value 1.
+                const auto nInputSize = strm.countOfRemainingElems();
+                // For now simply using coarse hardcoded default value 10 MB, should be runtime context dependent
+                const auto nDefaultBlockSize = 10000000;
+                const auto nThreadBlockSize = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(formatDef, nDefaultBlockSize);
+                if (nInputSize < nThreadBlockSize)
+                    return 1; // Whole input is less than thread block size -> not threading.
+                else if (nInputSize / nThreadCountRequest >= nThreadBlockSize)
+                    return nThreadCountRequest; // There is enough work for all available threads.
+                else //
+                {
+                    // Simple linear search, pick first thread count that gives enough work for every thread.
+                    // Note that blocking algorithm might still cause uneven input sizes to different threads or even decide to use less threads.
+                    for (uint32 nThreadCount = nThreadCountRequest - 1; nThreadCount > 1; --nThreadCount)
+                    {
+                        const auto nBlockSize = nInputSize / nThreadCount;
+                        if (nBlockSize >= nThreadBlockSize)
+                            return nThreadCount;
+                    }
+                    return 1;
+                }
             }
 
             template <class CellHandler_T>
             void privReadFromMemory_utf8(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CellHandler_T&& cellHandler, ConcurrencySafeCellHandlerYes)
             {
-                if (privIsMultithreadedReadOkForFormatCompatibleInput(strm, formatDef))
-                    readFromMemoryMultiThreaded(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<CellHandler_T>(cellHandler));
+                const auto nThreadCountRequest = privDetermineReadThreadCountRequest(strm, formatDef);
+                if (nThreadCountRequest > 1)
+                    readFromMemoryMultiThreaded(strm, formatDef, nThreadCountRequest, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<CellHandler_T>(cellHandler));
                 else
                     privReadFromMemory_utf8(strm, formatDef, std::forward<CellHandler_T>(cellHandler), ConcurrencySafeCellHandlerNo());
             }
@@ -614,11 +636,10 @@ DFG_ROOT_NS_BEGIN{
             //      -Every block is read as regular TableCsv in their own read-threads
             //      -When all blocks have been read, merges all TableCsv's into 'this'
             template <class CharAppender_T, class CellHandler_T>
-            void readFromMemoryMultiThreaded(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CharAppender_T, CellHandler_T&& cellHandler)
+            void readFromMemoryMultiThreaded(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, const uint32 nThreadCountRequest, CharAppender_T, CellHandler_T&& cellHandler)
             {
                 using MemStrm = ::DFG_MODULE_NS(io)::BasicImStream;
-                const auto nBlockCountRequest = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, std::thread::hardware_concurrency());
-                const auto nBlockCount = Max<size_t>(1, nBlockCountRequest);
+                const auto nBlockCount = Max<size_t>(1, nThreadCountRequest);
                 const auto additionalBlockStarts = determineBlockStartPos(makeRange(strm.beginPtr(), strm.endPtr()), nBlockCount, formatDef.eolCharFromEndOfLineType());
                 std::vector<TableCsv> tables(additionalBlockStarts.size());
                 
