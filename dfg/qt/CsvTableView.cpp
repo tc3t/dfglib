@@ -2190,32 +2190,35 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                 pProgressWidget->setRange(0, 100);
                 bHasProgress = true;
             }
-            auto lastSetValue = std::chrono::steady_clock::now();
-            uint32 nLastThreadCount = 1;
             if (pProgressWidget)
             {
+                using TimePointT = std::chrono::steady_clock::time_point;
+                const auto timePointToAtomicType = [](const TimePointT& tp) { return tp.time_since_epoch().count(); };
+                std::atomic<long long> aLastSetValue = timePointToAtomicType(std::chrono::steady_clock::now());
+                std::atomic<uint32> anLastThreadCount = 1;
                 const QString sOriginalLabel = pProgressWidget->labelText();
-                loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([&](const CsvModel::LoadOptions::ProgressControllerParamT param)
+                loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([pProgressWidget, fileSizeDouble, bHasProgress, &sOriginalLabel, &timePointToAtomicType, &aLastSetValue, &anLastThreadCount](const CsvModel::LoadOptions::ProgressControllerParamT param)
                 {
                     const auto nProcessedBytes = param.counter();
-                    const auto nThreadCount = param.threadCount();
                     // Calling setValue for progressWidget; note that using invokeMethod() since progressWidget lives in another thread.
                     // Also limiting call rate to maximum of once per 50 ms to prevent calls getting queued if callback gets called more often than what setValues can be invoked.
                     const auto steadyNow = std::chrono::steady_clock::now();
-                    if (steadyNow - lastSetValue > std::chrono::milliseconds(50))
+                    if (steadyNow - TimePointT(TimePointT::duration(aLastSetValue.load(std::memory_order_relaxed))) > std::chrono::milliseconds(50))
                     {
                         const bool bCancelled = pProgressWidget->isCancelled();
                         if (bHasProgress && !bCancelled)
                         {
-                            DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble))));
+                            const auto nProgressPercentage = ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble);
+                            DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, nProgressPercentage)));
                             // If thread count used in the operation changed, updating label text.
-                            if (nLastThreadCount != nThreadCount)
+                            const auto nThreadCount = param.threadCount();
+                            if (anLastThreadCount.load(std::memory_order_relaxed) != nThreadCount)
                             {
                                 QString sLabel = tr("%1\nUsing %2 threads").arg(sOriginalLabel).arg(nThreadCount);
                                 DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setLabelText", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(QString, sLabel)));
                             }
                         }
-                        lastSetValue = steadyNow;
+                        aLastSetValue.store(timePointToAtomicType(steadyNow), std::memory_order_relaxed);
                         return CsvModel::LoadOptions::ProgressCallbackReturnT(!bCancelled);
                     }
                     return CsvModel::LoadOptions::ProgressCallbackReturnT(true);
