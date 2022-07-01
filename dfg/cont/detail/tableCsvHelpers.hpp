@@ -35,15 +35,20 @@ public:
     TableCsvReadWriteOptions(const BaseClass& other) : BaseClass(other) {}
     TableCsvReadWriteOptions(const BaseClass&& other) : BaseClass(std::move(other)) {}
 
-    static inline StringViewAscii propertyIdAsString(PropertyId id);
+    // Returns string identifier of given id. Note that string identifiers are implementation details
+    // to may be subject to change.
+    static inline StringViewAscii privPropertyIdAsString(PropertyId id);
 
     template <PropertyId Id_T>
     void setPropertyT(const IdType<Id_T> prop);
 
     template <PropertyId Id_T>
+    bool hasPropertyT() const;
+
+    template <PropertyId Id_T>
     static auto getPropertyT(const BaseClass& base, const IdType<Id_T> defaultValue) -> IdType<Id_T>
     {
-        return base.getPropertyThroughStrTo(propertyIdAsString(Id_T), defaultValue);
+        return base.getPropertyThroughStrTo(privPropertyIdAsString(Id_T), defaultValue);
     }
 
     template <PropertyId Id_T>
@@ -53,7 +58,7 @@ public:
     }
 }; // class TableCsvReadWriteOptions
 
-StringViewAscii TableCsvReadWriteOptions::propertyIdAsString(const PropertyId id)
+StringViewAscii TableCsvReadWriteOptions::privPropertyIdAsString(const PropertyId id)
 {
     switch (id)
     {
@@ -66,7 +71,13 @@ StringViewAscii TableCsvReadWriteOptions::propertyIdAsString(const PropertyId id
 template <TableCsvReadWriteOptions::PropertyId Id_T>
 void TableCsvReadWriteOptions::setPropertyT(const IdType<Id_T> prop)
 {
-    BaseClass::setProperty(propertyIdAsString(Id_T), ::DFG_MODULE_NS(str)::toStrC(prop));
+    BaseClass::setProperty(privPropertyIdAsString(Id_T), ::DFG_MODULE_NS(str)::toStrC(prop));
+}
+
+template <TableCsvReadWriteOptions::PropertyId Id_T>
+bool TableCsvReadWriteOptions::hasPropertyT() const
+{
+    return BaseClass::hasProperty(privPropertyIdAsString(Id_T));
 }
 
 }} // namespace dfg::cont

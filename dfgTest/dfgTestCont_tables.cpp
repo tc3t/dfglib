@@ -1500,9 +1500,11 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
             // No need to set threadCount as TableCsv should use single-threaded read by default.
             //readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(1);
+            DFGTEST_EXPECT_FALSE(readOptions.hasPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>());
             readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0); // This should have no effect as multhreaded read is not enabled.
+            DFGTEST_EXPECT_TRUE(readOptions.hasPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>());
             tSingleThreaded.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = tMultiThreaded.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = tSingleThreaded.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
             DFGTEST_EXPECT_LE(nUsedThreadCount, 1);
         }
 
