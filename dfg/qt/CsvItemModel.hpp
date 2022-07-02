@@ -71,6 +71,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                               //                  logics is A && B && C && D.
     const char CsvOptionProperty_chartControls[]            = "chartControls";   // Defines chartControls to use.
     const char CsvOptionProperty_chartPanelWidth[]          = "chartPanelWidth"; // Chart panel width to use with the associated document; see TableEditor_chartPanelWidth for format documentation.
+    const char CsvOptionProperty_readThreadBlockSizeMinimum[] = "readThreadBlockSizeMinimum"; // Sets TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum
+    const char CsvOptionProperty_readThreadCountMaximum[]   = "readThreadCountMaximum"; // Sets TableCsvReadWriteOptions::PropertyId::threadCount
     const char CsvOptionProperty_windowHeight[]             = "windowHeight";    // Window height to request for use with the associated document; see TableEditor_chartPanelWidth for format documentation.
     const char CsvOptionProperty_windowWidth[]              = "windowWidth";     // Window width to request for use with the associated document; see TableEditor_chartPanelWidth for format documentation.
     const char CsvOptionProperty_windowPosX[]               = "windowPosX";      // Window x position to request for use with the associated document.
@@ -369,31 +371,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {
         public:
             using BaseClass = CommonOptionsBase;
-            DFG_BASE_CONSTRUCTOR_DELEGATE_1(LoadOptions, BaseClass) {}
-            LoadOptions() : CommonOptionsBase(::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect,
-                                                                '"',
-                                                                DFG_MODULE_NS(io)::EndOfLineTypeN, 
-                                                                DFG_MODULE_NS(io)::encodingUnknown)
-            {}
+            LoadOptions(const CsvFormatDefinition& cfd) : BaseClass(cfd) {}
+            LoadOptions(CsvFormatDefinition&& cfd) : BaseClass(std::move(cfd)) {}
+            LoadOptions(const CsvItemModel* pCsvItemModel = nullptr); // If pCsvItemModel is given, some default properties are queried from it's settings
 
-            static LoadOptions constructFromConfig(const CsvConfig& config)
-            {
-                LoadOptions options;
-                options.fromConfig(config);
-                return options;
-            }
+            static LoadOptions constructFromConfig(const CsvConfig& config, const CsvItemModel* pCsvItemModel);
 
-            bool isFilteredRead() const
-            {
-                return isFilteredRead(getProperty(CsvOptionProperty_includeRows, ""),
-                                      getProperty(CsvOptionProperty_includeColumns, ""),
-                                      getProperty(CsvOptionProperty_readFilters, ""));
-            }
+            bool isFilteredRead() const;
 
-            bool isFilteredRead(const std::string& sIncludeRows, const std::string& sIncludeColumns, const std::string& sFilterItems) const
-            {
-                return !sIncludeRows.empty() || !sIncludeColumns.empty() || !sFilterItems.empty();
-            }
+            bool isFilteredRead(const std::string& sIncludeRows, const std::string& sIncludeColumns, const std::string& sFilterItems) const;
+
+            void setDefaultProperties(const CsvItemModel* pCsvItemModel);
 
         }; // class LoadOptions
 
@@ -560,7 +548,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         float latestReadTimeInSeconds()  const { return m_readTimeInSeconds; }
         float latestWriteTimeInSeconds() const { return m_writeTimeInSeconds; }
 
-        static LoadOptions getLoadOptionsForFile(const QString& sFilePath);
+        LoadOptions getLoadOptionsForFile(const QString& sFilePath) const;
+        static LoadOptions getLoadOptionsForFile(const QString& sFilePath, const CsvItemModel* pModel);
         LoadOptions getLoadOptionsFromConfFile() const; // Shortcut for CsvItemModel::getLoadOptionsForFile(this->getFilePath())
         LoadOptions getOpenTimeLoadOptions() const { return m_loadOptionsInOpen; } // Returns LoadOptions that were used when opened from file or memory.
 

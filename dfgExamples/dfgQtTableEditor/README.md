@@ -372,6 +372,17 @@ CsvItemModel_defaultFormatEnclosingChar=\"
 ; Available types: \n, \r, \r\n
 CsvItemModel_defaultFormatEndOfLine=\n
 
+; Defines minimum block size in bytes for read thread. Every read thread should
+; have block size at least of this size in order to spread reading to separate threads.
+; To allow multithreaded reading regardless of file size, set value to 0.
+; To prevent multithreaded reading, instead of using this property consider setting CsvItemModel_defaultReadThreadCountMaximum to 1
+; For file-specific control, see file specific configuration property readThreadBlockSizeMinimum
+CsvItemModel_defaultReadThreadBlockSizeMinimum
+
+; Defines default maximum count of read threads to be used when reading files, or with 0 to let implementation decide. In practice fewer threads may be used depending on factors such as file size and value of CsvItemModel_defaultReadThreadBlockSizeMinimum.
+; For file-specific control, see file specific configuration property readThreadCountMaximum
+CsvItemModel_defaultReadThreadCountMaximum
+
 ; -----------------------------------------------------------
 ; CsvTableView
              
@@ -458,6 +469,8 @@ Available keys:
 | properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, see [guide](../../dfg/qt/res/chartGuide.html) for detail | Since 1.6.0 |
 | properties/chartPanelWidth | If dfgQtTableEditor is built with chart feature, defines chart panel width to be used with the associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 1.8.1 ([#60](https://github.com/tc3t/dfglib/issues/60))
 | properties/windowHeight | Defines request for window height when opening associated document. | Height value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/readThreadBlockSizeMinimum | file-specific setting for CsvItemModel_readThreadBlockSizeMinimum | non-negative integers | Since 2.4.0 ([#138](https://github.com/tc3t/dfglib/issues/138))
+| properties/readThreadCountMaximum | file-specific setting for CsvItemModel_readThreadCountMaximum | non-negative integers | Since 2.4.0 ([#138](https://github.com/tc3t/dfglib/issues/138))
 | properties/windowWidth | Defines request for window width when opening associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
 | properties/windowPosX | Defines request for window x position when opening associated document, only taken into account if either windowHeight or windowWidth is defined. | x pixel position of top left corner, 0 for left. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
 | properties/windowPosY | Defines request for window y position when opening associated document, only taken into account if either windowHeight or windowWidth is defined. | y pixel position of top left corner, 0 for top. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))

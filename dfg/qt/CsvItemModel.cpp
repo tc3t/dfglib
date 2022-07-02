@@ -58,7 +58,9 @@ namespace
         CsvItemModelPropertyId_maxFileSizeForMemoryStreamWrite, // If output file size estimate is less than this value, writing is tried with memory stream.
         CsvItemModelPropertyId_defaultFormatSeparator,
         CsvItemModelPropertyId_defaultFormatEnclosingChar,
-        CsvItemModelPropertyId_defaultFormatEndOfLine
+        CsvItemModelPropertyId_defaultFormatEndOfLine,
+        CsvItemModelPropertyId_defaultReadThreadBlockSizeMinimum,
+        CsvItemModelPropertyId_defaultReadThreadCountMaximum
     };
 
     template <CsvItemModelPropertyId Id_T>
@@ -101,6 +103,18 @@ namespace
                                   CsvItemModelPropertyId_defaultFormatEndOfLine,
                                   QString,
                                   []() { return "\n"; });
+
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvItemModel_defaultReadThreadBlockSizeMinimum",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_defaultReadThreadBlockSizeMinimum,
+                                  uint64,
+                                  []() { return 10000000; });
+
+    DFG_QT_DEFINE_OBJECT_PROPERTY("CsvItemModel_defaultReadThreadCountMaximum",
+                                  CsvItemModel,
+                                  CsvItemModelPropertyId_defaultReadThreadCountMaximum,
+                                  uint32,
+                                  []() { return 0; }); // 0 means "let TableCsv decide"
 
     template <CsvItemModelPropertyId ID>
     auto getCsvItemModelProperty(const CsvItemModel* pModel) -> typename DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvItemModel)<ID>::PropertyType
@@ -197,6 +211,46 @@ void CsvItemModel::SaveOptions::initFromItemModelPtr(const CsvItemModel* pItemMo
             textEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
         }
     }
+}
+
+CsvItemModel::LoadOptions::LoadOptions(const CsvItemModel* pCsvItemModel)
+    : CommonOptionsBase(
+        ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharAutoDetect,
+        '"',
+        DFG_MODULE_NS(io)::EndOfLineTypeN,
+        DFG_MODULE_NS(io)::encodingUnknown)
+{
+    this->setDefaultProperties(pCsvItemModel);
+}
+
+void CsvItemModel::LoadOptions::setDefaultProperties(const CsvItemModel* pCsvItemModel)
+{
+    using namespace ::DFG_MODULE_NS(str);
+    const auto sDefaultReadThreadCountMaximum = toStrC(getCsvItemModelProperty<CsvItemModelPropertyId_defaultReadThreadCountMaximum>(pCsvItemModel));
+    this->setPropertyT<PropertyId::threadCount>(strTo<int>(this->getProperty(CsvOptionProperty_readThreadCountMaximum, sDefaultReadThreadCountMaximum)));
+
+    const auto sDefaultReadThreadBlockSizeMinimum = toStrC(getCsvItemModelProperty<CsvItemModelPropertyId_defaultReadThreadBlockSizeMinimum>(pCsvItemModel));
+    this->setPropertyT<PropertyId::threadReadBlockSizeMinimum>(strTo<uint64>(this->getProperty(CsvOptionProperty_readThreadBlockSizeMinimum, sDefaultReadThreadBlockSizeMinimum)));
+}
+
+auto CsvItemModel::LoadOptions::constructFromConfig(const CsvConfig& config, const CsvItemModel* pCsvItemModel) -> LoadOptions
+{
+    LoadOptions options(pCsvItemModel);
+    options.fromConfig(config);
+    options.setDefaultProperties(pCsvItemModel);
+    return options;
+}
+
+bool CsvItemModel::LoadOptions::isFilteredRead() const
+{
+    return isFilteredRead(getProperty(CsvOptionProperty_includeRows, ""),
+        getProperty(CsvOptionProperty_includeColumns, ""),
+        getProperty(CsvOptionProperty_readFilters, ""));
+}
+
+bool CsvItemModel::LoadOptions::isFilteredRead(const std::string& sIncludeRows, const std::string& sIncludeColumns, const std::string& sFilterItems) const
+{
+    return !sIncludeRows.empty() || !sIncludeColumns.empty() || !sFilterItems.empty();
 }
 
 QVariant DFG_DETAIL_NS::HighlightDefinition::data(const QAbstractItemModel& model, const QModelIndex& index, const int role) const
@@ -716,7 +770,7 @@ void CsvItemModel::clear()
 
 bool CsvItemModel::openStream(QTextStream& strm)
 {
-    return openStream(strm, LoadOptions());
+    return openStream(strm, LoadOptions(this));
 }
 
 bool CsvItemModel::openStream(QTextStream& strm, const LoadOptions& loadOptions)
@@ -856,7 +910,7 @@ int CsvItemModel::findColumnIndexByName(const QString& sHeaderName, const int re
 
 bool CsvItemModel::openNewTable()
 {
-    auto rv = readData(LoadOptions(), [&]()
+    auto rv = readData(LoadOptions(this), [&]()
     {
         // Create 2x2 table by default, seems to be a better choice than completely empty.
         // Note that row 0 is omitted as it is interpreted as header by readData()
@@ -912,7 +966,7 @@ bool CsvItemModel::mergeAnotherTableToThis(const CsvItemModel& other)
 
 bool CsvItemModel::openString(const QString& str)
 {
-    return openString(str, LoadOptions());
+    return openString(str, LoadOptions(this));
 }
 
 bool CsvItemModel::openString(const QString& str, const LoadOptions& loadOptions)
@@ -971,12 +1025,17 @@ auto CsvItemModel::getConfig(const QString& sConfFilePath) -> ::DFG_MODULE_NS(co
     return config;
 }
 
-auto CsvItemModel::getLoadOptionsForFile(const QString& sFilePath) -> LoadOptions
+auto CsvItemModel::getLoadOptionsForFile(const QString& sFilePath) const -> LoadOptions
+{
+    return getLoadOptionsForFile(sFilePath, this);
+}
+
+auto CsvItemModel::getLoadOptionsForFile(const QString& sFilePath, const CsvItemModel* pModel) -> LoadOptions
 {
     auto sConfFilePath = CsvFormatDefinition::csvFilePathToConfigFilePath(sFilePath);
     if (!QFileInfo::exists(sConfFilePath))
     {
-        LoadOptions loadOptions;
+        LoadOptions loadOptions(pModel);
         if (!::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sFilePath))
         {
             const auto s8bitPath = qStringToFileApi8Bit(sFilePath);
@@ -985,17 +1044,18 @@ auto CsvItemModel::getLoadOptionsForFile(const QString& sFilePath) -> LoadOption
         }
         return loadOptions;
     }
-    return LoadOptions::constructFromConfig(getConfig(sConfFilePath));
+    else
+        return LoadOptions::constructFromConfig(getConfig(sConfFilePath), pModel);
 }
 
 auto CsvItemModel::getLoadOptionsFromConfFile() const -> LoadOptions
 {
-    return getLoadOptionsForFile(getFilePath());
+    return getLoadOptionsForFile(getFilePath(), this);
 }
 
 bool CsvItemModel::openFile(const QString& sDbFilePath)
 {
-    return openFile(sDbFilePath, getLoadOptionsForFile(sDbFilePath));
+    return openFile(sDbFilePath, getLoadOptionsForFile(sDbFilePath, this));
 }
 
 bool CsvItemModel::importFiles(const QStringList& paths)
@@ -1212,7 +1272,6 @@ bool CsvItemModel::openFile(QString sDbFilePath, LoadOptions loadOptions)
             const auto sIncludeRows = loadOptions.getProperty(CsvOptionProperty_includeRows, "");
             const auto sIncludeColumns = loadOptions.getProperty(CsvOptionProperty_includeColumns, "");
             const auto sFilterItems = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
-            loadOptions.setPropertyT<LoadOptions::PropertyId::threadCount>(std::thread::hardware_concurrency());
             const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
             if (loadOptions.isFilteredRead(sIncludeRows, sIncludeColumns, sFilterItems))
             {
@@ -1321,7 +1380,7 @@ bool CsvItemModel::readDataFromSqlite(const QString& sDbFilePath, const QString&
 
 bool CsvItemModel::openFromSqlite(const QString& sDbFilePath, const QString& sQuery)
 {
-    auto loadOptions = getLoadOptionsForFile(sDbFilePath);
+    auto loadOptions = getLoadOptionsForFile(sDbFilePath, this);
     return openFromSqlite(sDbFilePath, sQuery, loadOptions);
 }
 

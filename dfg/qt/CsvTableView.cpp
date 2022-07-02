@@ -1588,7 +1588,8 @@ public:
     CsvFormatDefinitionDialog(CsvTableView* pParent, const DialogType dialogType, const CsvTableView::CsvModel* pModel, const QString& sFilePath = QString())
         : BaseClass(pParent)
         , m_dialogType(dialogType)
-        ,  m_saveOptions(pModel)
+        , m_loadOptions(pModel)
+        , m_saveOptions(pModel)
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
@@ -1705,7 +1706,7 @@ public:
             // Content filters
             spLayout->addRow(tr("Content filters"), m_spContentFilterWidget.get());
             DFG_REQUIRE(m_spContentFilterWidget != nullptr);
-            const auto loadOptions = CsvItemModel::getLoadOptionsForFile(sFilePath);
+            const auto loadOptions = CsvItemModel::getLoadOptionsForFile(sFilePath, pModel);
             const auto readFilters = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
             m_spContentFilterWidget->setPlaceholderText(tr("List of filters, see tooltip for syntax guide"));
             if (!readFilters.empty())
@@ -2141,7 +2142,7 @@ bool CsvTableView::openConfigFile()
 
 bool CsvTableView::openFile(const QString& sPath)
 {
-    return openFile(sPath, CsvItemModel::getLoadOptionsForFile(sPath));
+    return openFile(sPath, CsvItemModel::getLoadOptionsForFile(sPath, csvModel()));
 }
 
 bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDefinition& formatDef)
@@ -2359,7 +2360,7 @@ bool CsvTableView::openFromFileWithOptions()
     const auto sPath = getOpenFileName(this);
     if (sPath.isEmpty())
         return false;
-    CsvFormatDefinitionDialog::LoadOptions loadOptions;
+    CsvFormatDefinitionDialog::LoadOptions loadOptions(csvModel());
     if (!::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(sPath))
     {
         CsvFormatDefinitionDialog dlg(this, CsvFormatDefinitionDialog::DialogTypeLoad, csvModel(), sPath);
