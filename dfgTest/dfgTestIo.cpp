@@ -357,10 +357,10 @@ TEST(dfgIo, StdIStrStreamPerformance)
     #endif
 #endif
 
-    DFG_CLASS_NAME(NullOutputStream) nullStream;
+    ::DFG_MODULE_NS(io)::NullOutputStream nullStream;
     auto& strmSumPrint = nullStream; // std::cout;
 
-    typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) Timer;
+    typedef ::DFG_MODULE_NS(time)::TimerCpu Timer;
 
     // Direct memory read
     {

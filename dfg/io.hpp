@@ -208,25 +208,6 @@ void advanceWhileNextIsAnyOf(Strm_T& strm, const Str_T& sMatchChars)
     });
 }
 
-// Stream that discards all data written to it.
-// Note: Very hacky and incomplete implementation, see e.g. boost::basic_null_sink or
-// Poco::NullOutputStream if a proper implementation is needed.
-// TODO: test
-// TODO: Make interface compatible with std::ostream.
-template <class Char_T, class BaseClass_T = std::basic_ostream<Char_T>>
-class DFG_CLASS_NAME(NullSink)
-{
-public:
-    typedef BaseClass_T BaseClass;
-    DFG_CLASS_NAME(NullSink)() : BaseClass(nullptr)
-    {}
-
-    template <class T>
-    DFG_CLASS_NAME(NullSink)& operator<<(const T&) const { return *this; }
-
-    std::streamsize write(const Char_T*, std::streamsize n) {return n;}
-};
-
 namespace DFG_DETAIL_NS
 {
     namespace io_hpp
