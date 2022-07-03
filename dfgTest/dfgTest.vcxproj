@@ -1083,6 +1083,7 @@
     <ClCompile Include="dfgTestBits.cpp" />
     <ClCompile Include="dfgTestCharts.cpp" />
     <ClCompile Include="dfgTestColour.cpp" />
+    <ClCompile Include="dfgTestConcurrency.cpp" />
     <ClCompile Include="dfgTestCont.cpp" />
     <ClCompile Include="dfgTestContMapVectorPerformance.cpp" />
     <ClCompile Include="dfgTestCont_MapSetVector.cpp" />

@@ -30,6 +30,7 @@
 
 #include "algAll.hpp"
 #include "chartsAll.hpp"
+#include "concurrencyAll.hpp"
 #include "contAll.hpp"
 #include "dataAnalysisAll.hpp"
 #include "debugAll.hpp"

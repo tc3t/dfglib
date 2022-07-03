@@ -24,6 +24,7 @@ set(SOURCE
     dfgTestBits.cpp
     dfgTestCharts.cpp
     dfgTestColour.cpp
+    dfgTestConcurrency.cpp
     dfgTestCont.cpp
     dfgTestCont_MapSetVector.cpp
     dfgTestCont_tables.cpp
