@@ -527,7 +527,7 @@ DFG_ROOT_NS_BEGIN{
             // If already checked that multithreaded read is ok from input's format perspective, this function determines how many threads to actually consider using.
             static uint32 privDetermineReadThreadCountRequest(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef)
             {
-                auto nThreadCountRequest = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, 0);
+                auto nThreadCountRequest = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, 1);
                 if (nThreadCountRequest == 1)
                     return 1;
                 else if (nThreadCountRequest == 0) // Case: autodetermine, using hardware_concurrency.
@@ -540,7 +540,7 @@ DFG_ROOT_NS_BEGIN{
                     return 1; // Whole input is less than thread block size -> not threading.
                 else if (nInputSize / nThreadCountRequest >= nThreadBlockSize)
                     return nThreadCountRequest; // There is enough work for all available threads.
-                else //
+                else // case: thread request should be something between ]1, nThreadCountRequest[
                 {
                     // Simple linear search, pick first thread count that gives enough work for every thread.
                     // Note that blocking algorithm might still cause uneven input sizes to different threads or even decide to use less threads.
