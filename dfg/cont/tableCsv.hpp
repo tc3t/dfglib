@@ -22,7 +22,8 @@
 #include "vectorSso.hpp"
 #include "detail/tableCsvHelpers.hpp"
 
-#include <thread>
+#include "../concurrency/ConditionCounter.hpp"
+#include "../concurrency/ThreadList.hpp"
 
 DFG_ROOT_NS_BEGIN{ 
     namespace DFG_DETAIL_NS
@@ -536,8 +537,8 @@ DFG_ROOT_NS_BEGIN{
                 // For now simply using coarse hardcoded default value 10 MB, should be runtime context dependent
                 const auto nDefaultBlockSize = 10000000;
                 const auto nThreadBlockSize = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(formatDef, nDefaultBlockSize);
-                if (nInputSize < nThreadBlockSize)
-                    return 1; // Whole input is less than thread block size -> not threading.
+                if (nInputSize < nThreadBlockSize / 2)
+                    return 1; // Whole input is less than 2 * thread block size -> not threading. Factor 2 is there because if block size is, say, 10 MB, need to have at least 20 MB input to have 10 MB for both threads.
                 else if (nInputSize / nThreadCountRequest >= nThreadBlockSize)
                     return nThreadCountRequest; // There is enough work for all available threads.
                 else // case: thread request should be something between ]1, nThreadCountRequest[
@@ -642,6 +643,8 @@ DFG_ROOT_NS_BEGIN{
                 const auto nBlockCount = Max<size_t>(1, nThreadCountRequest);
                 const auto additionalBlockStarts = determineBlockStartPos(makeRange(strm.beginPtr(), strm.endPtr()), nBlockCount, formatDef.eolCharFromEndOfLineType());
                 std::vector<TableCsv> tables(additionalBlockStarts.size());
+                std::vector<BaseClass*> tablePtrs(tables.size());
+                std::transform(tables.begin(), tables.end(), tablePtrs.begin(), [](TableCsv& rTable) { return &rTable; });
                 
                 // Creating handler objects for additional blocks
                 using CellHandlerT = typename std::remove_reference<CellHandler_T>::type;
@@ -651,29 +654,83 @@ DFG_ROOT_NS_BEGIN{
                     additionalBlockCellHanders.push_back(cellHandler.template makeConcurrencyClone<CellHandlerT>(tables[i]));
 
                 const auto blockSize = [&](const size_t i) { return (i + 1 < additionalBlockStarts.size()) ? additionalBlockStarts[i + 1] - additionalBlockStarts[i] : strm.sizeInCharacters() - additionalBlockStarts[i]; };
+                
+                std::atomic<IndexT> anNextColumnToMerge{1};
+                IndexT nSeedTableOriginalRowCount = 0;
+                IndexT nColumnCount = 0;
+
+                // Defining column merge function. It merges columns as long as there are unprocessed columns available using variable anNextColumnToMerge.
+                const auto mergeColumns = [&](bool bStartAtZero)
+                {
+                    const bool bDoOverflowCheck = !bStartAtZero;
+                    while (true)
+                    {
+                        const IndexT nCol = [&]()
+                            {
+                                if (bStartAtZero)
+                                {
+                                    bStartAtZero = false;
+                                    return IndexT(0);
+                                }
+                                else
+                                    return anNextColumnToMerge.fetch_add(1);
+                            }();
+                        if (nCol >= nColumnCount || (bDoOverflowCheck && nColumnCount == 0)) // latter condition is to check overflow in fetch_add()
+                            break;
+                        this->appendColumnWithMoveImpl(nCol, nSeedTableOriginalRowCount, tablePtrs);
+                    }
+                };
+
+                ::DFG_MODULE_NS(concurrency)::ThreadList threads;
+                ::DFG_MODULE_NS(concurrency)::ConditionCounter conditionReadsDone(additionalBlockStarts.size());
+                ::DFG_MODULE_NS(concurrency)::ConditionCounter conditionCanStartMerge(1);
+
                 // Launching read-thread for every additional block handler
-                std::vector<std::thread> threads;
                 for (size_t i = 0; i < additionalBlockStarts.size(); ++i)
                 {
-                    threads.push_back(std::thread([i, &tables, &strm, &additionalBlockStarts, blockSize, &formatDef, &additionalBlockCellHanders]()
+                    threads.push_back(std::thread([i, this, &tables, &strm, &additionalBlockStarts, &conditionReadsDone, &tablePtrs,
+                                                   &anNextColumnToMerge, &mergeColumns, &conditionCanStartMerge,
+                                                   &nSeedTableOriginalRowCount, blockSize, &formatDef, &additionalBlockCellHanders]()
                         {
                             auto& table = tables[i];
                             MemStrm strmBlock(strm.beginPtr() + additionalBlockStarts[i], blockSize(i));
+                            // Reading block
                             table.read(strmBlock, formatDef, CharAppender_T(), additionalBlockCellHanders[i]);
+                            // Signaling read completed on this block
+                            conditionReadsDone.decrementCounter();
+                            // Waiting for 'ok to merge columns'-condition
+                            conditionCanStartMerge.waitCounter();
+                            // Starting column merge.
+                            mergeColumns(false);
                         }));
                 }
+                const auto nTotalThreadCount = saturateCast<int>(threads.size() + 1u);
+
                 // Reading first block from current thread.
                 MemStrm strmFirstBlock(strm.beginPtr(), (!additionalBlockStarts.empty()) ? additionalBlockStarts[0] : strm.sizeInCharacters());
                 read(strmFirstBlock, formatDef, CharAppender_T(), std::forward<CellHandler_T>(cellHandler));
+                nSeedTableOriginalRowCount = this->rowCountByMaxRowIndex();
 
-                // Waiting other block handlers to complete.
-                for (size_t i = 0; i < threads.size(); ++i)
-                    threads[i].join();
+                // Wait until other read threads complete
+                conditionReadsDone.waitCounter();
+                // Computing final column count
+                nColumnCount = this->colCountByMaxColIndex();
+                for (const auto& table : tables)
+                    nColumnCount = Max(nColumnCount, table.colCountByMaxColIndex());
 
-                // Appending blocks into 'this'.
-                this->appendTablesWithMove(tables);
+                // Now that all threads have completed reading, notify them to proceed to column merging
+                conditionCanStartMerge.decrementCounter();
 
-                m_readFormat.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(static_cast<int>(threads.size() + 1u));
+                // Appending blocks into 'this' concurrently per column
+                this->appendTablesWithMoveImpl(tablePtrs, [&](BaseClass& rTable)
+                    {
+                        DFG_UNUSED(rTable)
+                        mergeColumns(true);
+                        // Waiting other block handlers to complete.
+                        threads.joinAllAndClear();
+                    });
+                // Writing to read format that how many threads were used in reading
+                m_readFormat.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(nTotalThreadCount);
             }
 
             template <class Stream_T>
