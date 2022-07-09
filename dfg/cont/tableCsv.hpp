@@ -545,7 +545,7 @@ DFG_ROOT_NS_BEGIN{
                 {
                     // Simple linear search, pick first thread count that gives enough work for every thread.
                     // Note that blocking algorithm might still cause uneven input sizes to different threads or even decide to use less threads.
-                    for (uint32 nThreadCount = nThreadCountRequest - 1; nThreadCount > 1; --nThreadCount)
+                    for (auto nThreadCount = nThreadCountRequest - 1; nThreadCount > 1; --nThreadCount)
                     {
                         const auto nBlockSize = nInputSize / nThreadCount;
                         if (nBlockSize >= nThreadBlockSize)
@@ -704,7 +704,7 @@ DFG_ROOT_NS_BEGIN{
                             mergeColumns(false);
                         }));
                 }
-                const auto nTotalThreadCount = saturateCast<int>(threads.size() + 1u);
+                const auto nTotalThreadCount = saturateCast<uint32>(threads.size() + 1u);
 
                 // Reading first block from current thread.
                 MemStrm strmFirstBlock(strm.beginPtr(), (!additionalBlockStarts.empty()) ? additionalBlockStarts[0] : strm.sizeInCharacters());

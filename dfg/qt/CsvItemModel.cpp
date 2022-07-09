@@ -227,7 +227,7 @@ void CsvItemModel::LoadOptions::setDefaultProperties(const CsvItemModel* pCsvIte
 {
     using namespace ::DFG_MODULE_NS(str);
     const auto sDefaultReadThreadCountMaximum = toStrC(getCsvItemModelProperty<CsvItemModelPropertyId_defaultReadThreadCountMaximum>(pCsvItemModel));
-    this->setPropertyT<PropertyId::threadCount>(strTo<int>(this->getProperty(CsvOptionProperty_readThreadCountMaximum, sDefaultReadThreadCountMaximum)));
+    this->setPropertyT<PropertyId::threadCount>(strTo<uint32>(this->getProperty(CsvOptionProperty_readThreadCountMaximum, sDefaultReadThreadCountMaximum)));
 
     const auto sDefaultReadThreadBlockSizeMinimum = toStrC(getCsvItemModelProperty<CsvItemModelPropertyId_defaultReadThreadBlockSizeMinimum>(pCsvItemModel));
     this->setPropertyT<PropertyId::threadReadBlockSizeMinimum>(strTo<uint64>(this->getProperty(CsvOptionProperty_readThreadBlockSizeMinimum, sDefaultReadThreadBlockSizeMinimum)));

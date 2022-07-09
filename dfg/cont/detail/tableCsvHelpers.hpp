@@ -22,18 +22,22 @@ public:
                                             // distributed to multiple thread only if there is enough work to be done, e.g. to not spread reading of 1 kB file to 16 threads.
     };
 
-    static int getDefaultValue(std::integral_constant<int, static_cast<int>(PropertyId::threadCount)>) { return 1; }
+    template <PropertyId Id_T> using PropertyIntegralConstant = std::integral_constant<int, static_cast<int>(Id_T)>;
+
+    static uint32 getDefaultValue(PropertyIntegralConstant<PropertyId::threadCount>) { return uint32(1); }
     // Default value is 10 MB. In practice default should be dependent on runtime context (how fast processor etc.),
     // but simply hardcoding a value that is at least reasonable in some contexts; user should set a better value as needed.
-    static uint64 getDefaultValue(std::integral_constant<int, static_cast<int>(PropertyId::threadReadBlockSizeMinimum)>) { return 10000000; }
+    static uint64 getDefaultValue(PropertyIntegralConstant<PropertyId::threadReadBlockSizeMinimum>) { return 10000000; }
 
-    template <PropertyId Id_T> using IdType = decltype(getDefaultValue(std::integral_constant<int, static_cast<int>(Id_T)>()));
+    template <PropertyId Id_T> using IdType = decltype(getDefaultValue(PropertyIntegralConstant<Id_T>()));
+
+    template <PropertyId Id_T> static IdType<Id_T> getDefaultValueT() { return getDefaultValue(PropertyIntegralConstant<Id_T>()); }
 
     using BaseClass::BaseClass;
 
     TableCsvReadWriteOptions() = default;
     TableCsvReadWriteOptions(const BaseClass& other) : BaseClass(other) {}
-    TableCsvReadWriteOptions(const BaseClass&& other) : BaseClass(std::move(other)) {}
+    TableCsvReadWriteOptions(BaseClass&& other) : BaseClass(std::move(other)) {}
 
     // Returns string identifier of given id. Note that string identifiers are implementation details
     // to may be subject to change.
