@@ -1087,6 +1087,7 @@
     <ClCompile Include="dfgTestCont.cpp" />
     <ClCompile Include="dfgTestContMapVectorPerformance.cpp" />
     <ClCompile Include="dfgTestCont_MapSetVector.cpp" />
+    <ClCompile Include="dfgTestCont_TableCsv.cpp" />
     <ClCompile Include="dfgTestCont_tables.cpp" />
     <ClCompile Include="dfgTestCrypt.cpp" />
     <ClCompile Include="dfgTestCsvPerformance.cpp" />

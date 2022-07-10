@@ -27,6 +27,7 @@ set(SOURCE
     dfgTestConcurrency.cpp
     dfgTestCont.cpp
     dfgTestCont_MapSetVector.cpp
+    dfgTestCont_TableCsv.cpp
     dfgTestCont_tables.cpp
     dfgTestContMapVectorPerformance.cpp
     dfgTestCrypt.cpp
