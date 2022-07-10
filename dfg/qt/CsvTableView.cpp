@@ -1612,10 +1612,13 @@ public:
             m_spCompleterColumns.reset(new QLineEdit(this));
             m_spIncludeRows.reset(new QLineEdit(this));
             m_spIncludeColumns.reset(new QLineEdit(this));
+            m_spThreadCountMax.reset(new QLineEdit(this));
+            m_spThreadReadBlockMin.reset(new QLineEdit(this));
             m_spContentFilterWidget.reset(new JsonListWidget(this));
         }
 
         const auto defaultFormatSettings = (isSaveDialog()) ? m_saveOptions : CsvTableView::CsvModel::peekCsvFormatFromFile(sFilePath);
+        const auto confFileOptions = CsvItemModel::getLoadOptionsForFile(sFilePath, pModel);
 
         // Separator
         {
@@ -1703,6 +1706,20 @@ public:
             m_spIncludeColumns->setToolTip(tr("Defines columns to include from file, all when empty.\
                                               <br>Syntax example: to include first, second and fourth column: <i>1:2; 4</i>"));
 
+            // Threading options
+            {
+                spLayout->addRow(tr("Maximum read thread count"), m_spThreadCountMax.get());
+                spLayout->addRow(tr("Minimum read thread block size (in MB)"), m_spThreadReadBlockMin.get());
+                DFG_REQUIRE(m_spThreadCountMax != nullptr);
+                DFG_REQUIRE(m_spThreadReadBlockMin != nullptr);
+                m_spThreadCountMax->setPlaceholderText(tr("auto"));
+                const auto confThreadCount = confFileOptions.getPropertyT<LoadOptions::PropertyId::threadCount>(0);
+                if (confThreadCount != 0)
+                    m_spThreadCountMax->setText(QString::number(confThreadCount));
+                
+                m_spThreadReadBlockMin->setText(QString::number(confFileOptions.getPropertyT<LoadOptions::PropertyId::threadReadBlockSizeMinimum>(10000000) / 1000000.0));
+            }
+
             // Content filters
             spLayout->addRow(tr("Content filters"), m_spContentFilterWidget.get());
             DFG_REQUIRE(m_spContentFilterWidget != nullptr);
@@ -1711,7 +1728,7 @@ public:
             m_spContentFilterWidget->setPlaceholderText(tr("List of filters, see tooltip for syntax guide"));
             if (!readFilters.empty())
                 m_spContentFilterWidget->setPlainText(QString::fromUtf8(readFilters.c_str()));
-            
+
             m_spContentFilterWidget->setToolTip(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::szContentFilterHelpText);
             m_spContentFilterWidget->setMaximumHeight(100);
         }
@@ -1778,6 +1795,11 @@ public:
         return (val >= 0 && val < 128);
     }
 
+    void showInvalidOptionMessage(const QString& sTitle, const QString& sText)
+    {
+        QMessageBox::information(this, sTitle, sText);
+    }
+
     void accept() override
     {
         using namespace DFG_ROOT_NS;
@@ -1842,6 +1864,29 @@ public:
             }
             m_loadOptions.setProperty(CsvOptionProperty_readFilters, m_spContentFilterWidget->entriesAsNewLineSeparatedString().toUtf8().data());
             m_loadOptions.textEncoding(encoding);
+
+            // Setting threading options
+            {
+                DFG_REQUIRE(m_spThreadCountMax != nullptr);
+                DFG_REQUIRE(m_spThreadReadBlockMin != nullptr);
+                bool bGoodConvert = true, bGoodConvert2 = false;
+                const auto sThreadCount = m_spThreadCountMax->text();
+                const auto nThreadCount = (!sThreadCount.isEmpty()) ? sThreadCount.toUInt(&bGoodConvert) : 0;
+                const auto blockSizeMinMb = round(m_spThreadReadBlockMin->text().toDouble(&bGoodConvert2) * 1000000);
+                if (!bGoodConvert)
+                {
+                    showInvalidOptionMessage(tr("Invalid thread count"), tr("Thread count must be a non-negative integer"));
+                    return;
+                }
+                uint64 nBlockSizeInMb = 0;
+                if (!bGoodConvert2 || !::DFG_MODULE_NS(math)::isFloatConvertibleTo(blockSizeMinMb, &nBlockSizeInMb))
+                {
+                    showInvalidOptionMessage(tr("Invalid thread read block size"), tr("Minimum thread read block size must be a non-negative integer in range of uint64"));
+                    return;
+                }
+                m_loadOptions.setPropertyT<LoadOptions::PropertyId::threadCount>(nThreadCount);
+                m_loadOptions.setPropertyT<LoadOptions::PropertyId::threadReadBlockSizeMinimum>(nBlockSizeInMb);
+            }
         }
         else // case: save dialog
         {
@@ -1885,6 +1930,8 @@ public:
     QObjectStorage<QLineEdit> m_spCompleterColumns;
     QObjectStorage<QLineEdit> m_spIncludeRows;
     QObjectStorage<QLineEdit> m_spIncludeColumns;
+    QObjectStorage<QLineEdit> m_spThreadCountMax;
+    QObjectStorage<QLineEdit> m_spThreadReadBlockMin;
     QObjectStorage<JsonListWidget> m_spContentFilterWidget;
 }; // Class CsvFormatDefinitionDialog
 
