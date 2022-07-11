@@ -478,7 +478,10 @@ DFG_ROOT_NS_BEGIN{
                             break;
                         }
                     }
+                    if (blockStarts.size() + 1 == nBlockCount)
+                        break; // Already found all block starts
                 }
+                DFG_ASSERT_CORRECTNESS(blockStarts.size() < nBlockCount);
                 return blockStarts;
             }
 
