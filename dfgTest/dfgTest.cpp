@@ -125,6 +125,8 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourAverages";
     //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourMedians";
     //::testing::GTEST_FLAG(filter) = "dfgDebug.SehExceptionHandler";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.areAsciiBytesValidContentInEncoding";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.baseCharacterSize";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicIfStream";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicImStream";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicOmcByteStream";
@@ -138,6 +140,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readTableToContainer";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_rnTranslation";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextCellWriterStr";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.encodingStrIds";
     //::testing::GTEST_FLAG(filter) = "dfgIo.endOfLineTypeFromStr";
     //::testing::GTEST_FLAG(filter) = "dfgIo.fileToByteContainer";
     //::testing::GTEST_FLAG(filter) = "dfgIo.fileToMemory_readOnly";
@@ -146,7 +149,9 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIo.IfStreamWithEncoding_rawByteReading";
     //::testing::GTEST_FLAG(filter) = "dfgIo.ImcByteStream";
     //::testing::GTEST_FLAG(filter) = "dfgIo.ImStreamWithEncoding_UCS";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.isBigEndianEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgIo.IStreamWithEncoding_Windows1252";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.isUtfEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgIo.OfStreamWithEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgIo.OfStreamWithEncoding_write";
     //::testing::GTEST_FLAG(filter) = "dfgIo.ostreamPerformance";

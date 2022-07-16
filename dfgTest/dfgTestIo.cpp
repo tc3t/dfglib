@@ -1514,4 +1514,98 @@ TEST(dfgIo, widePathStrToFstreamFriendlyNonWide)
 }
 #endif
 
+TEST(dfgIo, isUtfEncoding)
+{
+    using namespace DFG_MODULE_NS(io);
+    DFGTEST_STATIC_TEST(isUtfEncoding(encodingUTF8));
+    DFGTEST_STATIC_TEST(isUtfEncoding(encodingUTF16Be));
+    DFGTEST_STATIC_TEST(isUtfEncoding(encodingUTF16Le));
+    DFGTEST_STATIC_TEST(isUtfEncoding(encodingUTF32Be));
+    DFGTEST_STATIC_TEST(isUtfEncoding(encodingUTF32Le));
+
+    DFGTEST_STATIC_TEST(!isUtfEncoding(encodingNone));
+    DFGTEST_STATIC_TEST(!isUtfEncoding(encodingLatin1));
+    DFGTEST_STATIC_TEST(!isUtfEncoding(encodingUCS2Be));
+    DFGTEST_STATIC_TEST(!isUtfEncoding(encodingUCS2Le));
+    DFGTEST_STATIC_TEST(!isUtfEncoding(encodingUCS4Be));
+    DFGTEST_STATIC_TEST(!isUtfEncoding(encodingUCS4Le));
+}
+
+TEST(dfgIo, isBigEndianEncoding)
+{
+    using namespace DFG_MODULE_NS(io);
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUTF8));
+    DFGTEST_STATIC_TEST(isBigEndianEncoding(encodingUTF16Be));
+    DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUTF16Le));
+    DFGTEST_STATIC_TEST(isBigEndianEncoding(encodingUTF32Be));
+    DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUTF32Le));
+    DFGTEST_STATIC_TEST(isBigEndianEncoding(encodingUCS2Be));
+    DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUCS2Le));
+    DFGTEST_STATIC_TEST(isBigEndianEncoding(encodingUCS4Be));
+    DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUCS4Le));
+}
+
+TEST(dfgIo, areAsciiBytesValidContentInEncoding)
+{
+    using namespace DFG_MODULE_NS(io);
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingNone));
+    DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingLatin1));
+    DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingWindows1252));
+    DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingUTF8));
+}
+
+TEST(dfgIo, encodingStrIds)
+{
+    using namespace DFG_MODULE_NS(io);
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_EXPECT_STREQ("",             encodingToStrId(encodingUnknown));
+    DFGTEST_EXPECT_STREQ("",             encodingToStrId(encodingNone));
+    DFGTEST_EXPECT_STREQ("UTF8",         encodingToStrId(encodingUTF8));
+    DFGTEST_EXPECT_STREQ("UTF16LE",      encodingToStrId(encodingUTF16Le));
+    DFGTEST_EXPECT_STREQ("UTF16BE",      encodingToStrId(encodingUTF16Be));
+    DFGTEST_EXPECT_STREQ("UTF32LE",      encodingToStrId(encodingUTF32Le));
+    DFGTEST_EXPECT_STREQ("UTF32BE",      encodingToStrId(encodingUTF32Be));
+    DFGTEST_EXPECT_STREQ("Latin1",       encodingToStrId(encodingLatin1));
+    DFGTEST_EXPECT_STREQ("UCS2LE",       encodingToStrId(encodingUCS2Le));
+    DFGTEST_EXPECT_STREQ("UCS2BE",       encodingToStrId(encodingUCS2Be));
+    DFGTEST_EXPECT_STREQ("UCS4LE",       encodingToStrId(encodingUCS4Le));
+    DFGTEST_EXPECT_STREQ("UCS4BE",       encodingToStrId(encodingUCS4Be));
+    DFGTEST_EXPECT_STREQ("windows-1252", encodingToStrId(encodingWindows1252));
+
+    DFGTEST_EXPECT_LEFT(encodingUnknown,     strIdToEncoding(""));
+    DFGTEST_EXPECT_LEFT(encodingUnknown,     strIdToEncoding("abc"));
+    DFGTEST_EXPECT_LEFT(encodingUTF8,        strIdToEncoding("UTF8"));
+    DFGTEST_EXPECT_LEFT(encodingUTF16Le,     strIdToEncoding("UTF16LE"));
+    DFGTEST_EXPECT_LEFT(encodingUTF16Be,     strIdToEncoding("UTF16BE"));
+    DFGTEST_EXPECT_LEFT(encodingUTF32Le,     strIdToEncoding("UTF32LE"));
+    DFGTEST_EXPECT_LEFT(encodingUTF32Be,     strIdToEncoding("UTF32BE"));
+    DFGTEST_EXPECT_LEFT(encodingLatin1,      strIdToEncoding("Latin1"));
+    DFGTEST_EXPECT_LEFT(encodingUCS2Le,      strIdToEncoding("UCS2LE"));
+    DFGTEST_EXPECT_LEFT(encodingUCS2Be,      strIdToEncoding("UCS2BE"));
+    DFGTEST_EXPECT_LEFT(encodingUCS4Le,      strIdToEncoding("UCS4LE"));
+    DFGTEST_EXPECT_LEFT(encodingUCS4Be,      strIdToEncoding("UCS4BE"));
+    DFGTEST_EXPECT_LEFT(encodingWindows1252, strIdToEncoding("windows-1252"));
+}
+
+TEST(dfgIo, baseCharacterSize)
+{
+    using namespace DFG_MODULE_NS(io);
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingUnknown));
+    DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingNone));
+    DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingUTF8));
+    DFGTEST_EXPECT_LEFT(2, baseCharacterSize(encodingUTF16Le));
+    DFGTEST_EXPECT_LEFT(2, baseCharacterSize(encodingUTF16Be));
+    DFGTEST_EXPECT_LEFT(4, baseCharacterSize(encodingUTF32Le));
+    DFGTEST_EXPECT_LEFT(4, baseCharacterSize(encodingUTF32Be));
+    DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingLatin1));
+    DFGTEST_EXPECT_LEFT(2, baseCharacterSize(encodingUCS2Le));
+    DFGTEST_EXPECT_LEFT(2, baseCharacterSize(encodingUCS2Be));
+    DFGTEST_EXPECT_LEFT(4, baseCharacterSize(encodingUCS4Le));
+    DFGTEST_EXPECT_LEFT(4, baseCharacterSize(encodingUCS4Be));
+    DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingWindows1252));
+}
+
 #endif

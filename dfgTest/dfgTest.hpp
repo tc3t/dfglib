@@ -1,6 +1,7 @@
 #pragma once
 
 #define DFGTEST_STATIC_TEST(expr)	DFG_STATIC_ASSERT(expr, "Static test case failed")
+#define DFGTEST_STATIC_TEST_MESSAGE(expr, msg)	DFG_STATIC_ASSERT(expr, "Static test case failed: " msg)
 #define DFGTEST_STATIC(expr)        DFGTEST_STATIC_TEST(expr)  //DFG_STATIC is deprecated, use DFGTEST_STATIC_TEST
 #define DFGTEST_MESSAGE(expr)       std::cout << "    MESSAGE: " << expr << '\n';
 
