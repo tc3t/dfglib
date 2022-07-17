@@ -116,7 +116,9 @@ TEST(dfgConcurrency, ConditionCounter)
         {
             threads.push_back(std::thread([&, i]()
                 {
-                    const auto sleepTime = std::chrono::milliseconds(static_cast<int>(::DFG_MODULE_NS(rand)::rand() * 20));
+                    auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
+                    auto distEng = ::DFG_MODULE_NS(rand)::makeDistributionEngineUniform(&randEng, 0, 20);
+                    const auto sleepTime = std::chrono::milliseconds(distEng());
                     strm << "Entered thread " << ThisThreadPrintable(i) << " and sleeping for " << sleepTime.count() << " ms\n";
                     std::this_thread::sleep_for(sleepTime);
                     anDecrementCounter.fetch_add(1);

@@ -1534,7 +1534,7 @@ TEST(dfgIo, isUtfEncoding)
 TEST(dfgIo, isBigEndianEncoding)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUTF8));
     DFGTEST_STATIC_TEST(isBigEndianEncoding(encodingUTF16Be));
     DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUTF16Le));
@@ -1549,7 +1549,7 @@ TEST(dfgIo, isBigEndianEncoding)
 TEST(dfgIo, areAsciiBytesValidContentInEncoding)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingNone));
     DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingLatin1));
     DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingWindows1252));
@@ -1559,7 +1559,7 @@ TEST(dfgIo, areAsciiBytesValidContentInEncoding)
 TEST(dfgIo, encodingStrIds)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_EXPECT_STREQ("",             encodingToStrId(encodingUnknown));
     DFGTEST_EXPECT_STREQ("",             encodingToStrId(encodingNone));
     DFGTEST_EXPECT_STREQ("UTF8",         encodingToStrId(encodingUTF8));
@@ -1592,7 +1592,7 @@ TEST(dfgIo, encodingStrIds)
 TEST(dfgIo, baseCharacterSize)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case '" DFG_CURRENT_FUNCTION_NAME "' is up-to-date.");
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingUnknown));
     DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingNone));
     DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingUTF8));

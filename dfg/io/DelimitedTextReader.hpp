@@ -1432,7 +1432,7 @@ public:
         typedef std::true_type      IsBasicReaderPossibleType; // Ability to use basic reader does not depend on BufferChar nor on CharAppender.
     };
 
-    static DFG_CONSTEXPR bool isFormatStringViewCCompatible(const FormatDefinitionSingleChars& format)
+    static bool isFormatStringViewCCompatible(const FormatDefinitionSingleChars& format)
     {
         // Note: this is in a way a bit too coarse: enclosing character itself is ok as long as cells do not have enclosing character in them, i.e.
         //       "abc","def" could be read with StringViewCBuffer, but "a""bc","def" could not.
