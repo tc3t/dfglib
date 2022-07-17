@@ -331,8 +331,11 @@ namespace DFG_DETAIL_NS
         if (*iterEnd != ')')
             return;
         // Parsing item inside parenthesis as standard comma-delimited item with quotes.
+        using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
+        DelimitedTextReader::FormatDefinitionSingleChars format('"', DelimitedTextReader::s_nMetaCharNone, ',');
+        format.setFlag(DelimitedTextReader::rfSkipLeadingWhitespaces, true);
         DFG_MODULE_NS(io)::BasicImStream istrm(iterOpen, iterEnd - iterOpen);
-        DFG_MODULE_NS(io)::DelimitedTextReader::read<char>(istrm, ',', '"', DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, [&](size_t, size_t, const char* p, const size_t nSize)
+        DelimitedTextReader::read<char>(istrm, format, [&](size_t, size_t, const char* p, const size_t nSize)
         {
             m_values.push_back(StringT(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(p + nSize)));
         });

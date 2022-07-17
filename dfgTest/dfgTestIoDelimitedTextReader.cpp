@@ -15,6 +15,7 @@
 #include <dfg/iter/szIterator.hpp>
 #include <dfg/time/timerCpu.hpp>
 #include <dfg/cont/tableCsv.hpp>
+#include <dfg/str.hpp>
 
 namespace
 {
@@ -870,6 +871,32 @@ TEST(DfgIo, DelimitedTextReader_read)
         EXPECT_EQ(contExpectedValues, readValues);
         EXPECT_EQ(contExpectedRows, readRows);
         EXPECT_EQ(contExpectedCols, readCols);
+    }
+
+    // Testing handling of rfSkipLeadingWhitespaces-flag
+    {
+        const char szPath[] = "testfiles/matrix_10x10_1to100_eol_n.txt"; // This file has leading whitespaces
+        const auto bytes = ::DFG_MODULE_NS(io)::fileToMemory_readOnly(szPath);
+        const auto byteSpan = bytes.asSpan<char>();
+
+        // With default reader
+        {
+            ::DFG_MODULE_NS(io)::BasicImStream strm(byteSpan);
+            DelimitedTextReader::read<char>(strm, '\t', '"', '\n', [](const size_t nRow, const size_t nCol, const char* const pData, const size_t nSize)
+            {
+                const char* pszLead = (nRow < 1) ? " " : "";
+                DFGTEST_EXPECT_LEFT(pszLead + ::DFG_MODULE_NS(str)::toStrC(nRow * 10 + nCol), StringViewC(pData, nSize));
+            });
+        }
+        // With basic reader
+        {
+            ::DFG_MODULE_NS(io)::BasicImStream strm(byteSpan);
+            DelimitedTextReader::read<char>(strm, '\t', DelimitedTextReader::s_nMetaCharNone, '\n', [](const size_t nRow, const size_t nCol, const char* const pData, const size_t nSize)
+            {
+                const char* pszLead = (nRow < 1) ? " " : "";
+                DFGTEST_EXPECT_LEFT(pszLead + ::DFG_MODULE_NS(str)::toStrC(nRow * 10 + nCol), StringViewC(pData, nSize));
+            });
+        }
     }
 
     //std::cout << "sum: " << sum << std::endl;

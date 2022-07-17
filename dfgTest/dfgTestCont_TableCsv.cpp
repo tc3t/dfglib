@@ -422,8 +422,8 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_EQ(1, table.rowCountByMaxRowIndex());
         EXPECT_EQ(3, table.colCountByMaxColIndex());
         EXPECT_STREQ("14510", table(0, 0).c_str());
-        EXPECT_STREQ("26690", table(0, 1).c_str());
-        EXPECT_STREQ("41354", table(0, 2).c_str());
+        EXPECT_STREQ(" 26690", table(0, 1).c_str());
+        EXPECT_STREQ(" 41354", table(0, 2).c_str());
     }
 
     // Row content filter: basic test
@@ -440,11 +440,11 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_EQ(2, table.rowCountByMaxRowIndex());
         EXPECT_EQ(3, table.colCountByMaxColIndex());
         EXPECT_STREQ("14510", table(0, 0).c_str());
-        EXPECT_STREQ("26690", table(0, 1).c_str());
-        EXPECT_STREQ("41354", table(0, 2).c_str());
+        EXPECT_STREQ(" 26690", table(0, 1).c_str());
+        EXPECT_STREQ(" 41354", table(0, 2).c_str());
         EXPECT_STREQ("17189", table(1, 0).c_str());
-        EXPECT_STREQ("42528", table(1, 1).c_str());
-        EXPECT_STREQ("49812", table(1, 2).c_str());
+        EXPECT_STREQ(" 42528", table(1, 1).c_str());
+        EXPECT_STREQ(" 49812", table(1, 2).c_str());
     }
 
     // Index handling with int-index, mostly to check that this doesn't generate warnings.
@@ -470,8 +470,8 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_EQ(1, table.rowCountByMaxRowIndex());
         EXPECT_EQ(3, table.colCountByMaxColIndex());
         EXPECT_STREQ("17189", table(0, 0).c_str());
-        EXPECT_STREQ("42528", table(0, 1).c_str());
-        EXPECT_STREQ("49812", table(0, 2).c_str());
+        EXPECT_STREQ(" 42528", table(0, 1).c_str());
+        EXPECT_STREQ(" 49812", table(0, 2).c_str());
     }
 
     // Row content filter: single column filter
@@ -488,8 +488,8 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_EQ(1, table.rowCountByMaxRowIndex());
         EXPECT_EQ(3, table.colCountByMaxColIndex());
         EXPECT_STREQ("14510", table(0, 0).c_str());
-        EXPECT_STREQ("26690", table(0, 1).c_str());
-        EXPECT_STREQ("41354", table(0, 2).c_str());
+        EXPECT_STREQ(" 26690", table(0, 1).c_str());
+        EXPECT_STREQ(" 41354", table(0, 2).c_str());
     }
 
     // Column filter
@@ -552,7 +552,7 @@ TEST(dfgCont, TableCsv_filterCellHandler)
         EXPECT_EQ(1, table.rowCountByMaxRowIndex());
         EXPECT_EQ(1, table.colCountByMaxColIndex());
         EXPECT_EQ(1, table.cellCountNonEmpty());
-        EXPECT_STREQ("42528", table(0, 0).c_str());
+        EXPECT_STREQ(" 42528", table(0, 0).c_str());
     }
 }
 

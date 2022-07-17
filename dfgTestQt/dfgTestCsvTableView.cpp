@@ -1218,9 +1218,9 @@ TEST(dfgQt, CsvTableView_sorting)
 
     csvModel.openString(
         ",\n"
-        "2, 7\n"
-        "-1, 50\n"
-        "-10, 8\n"
+        "2,7\n"
+        "-1,50\n"
+        "-10,8\n"
     );
 
     CsvFormatDefinition saveFormat(',', '"', EndOfLineTypeN, TextEncoding::encodingUTF8);

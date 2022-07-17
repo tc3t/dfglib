@@ -20,6 +20,7 @@
 #define DFGTEST_ASSERT_TRUE(a)              ASSERT_TRUE(a)
 #define DFGTEST_ASSERT_FALSE(a)             ASSERT_FALSE(a)
 #define DFGTEST_ASSERT_EQ(a, b)             ASSERT_EQ(a, b)
+#define DFGTEST_ASSERT_LEFT(expected, val)  ASSERT_EQ(expected, val)
 #define DFGTEST_ASSERT_NE(a, b)             ASSERT_NE(a, b)
 #define DFGTEST_ASSERT_DOUBLE_EQ(a, b)      ASSERT_DOUBLE_EQ(a, b)
 

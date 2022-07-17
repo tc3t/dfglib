@@ -250,9 +250,9 @@ public:
             return (m_cEol >= 0) ? 1 : 0;
         }
 
-        int getEnc() const {return m_cEnc;}
-        int getEol() const {return m_cEol;}
-        int getSep() const {return m_cSep;}
+        DFG_CONSTEXPR int getEnc() const {return m_cEnc;}
+        DFG_CONSTEXPR int getEol() const {return m_cEol;}
+        DFG_CONSTEXPR int getSep() const {return m_cSep;}
 
         bool isRnTranslationEnabled() const { return true; }
 
@@ -504,19 +504,20 @@ public:
             m_formatDef(formatDef),
             m_status(cellHrvContinue)
         {
-            privCellDataInit();
+            privCellDataInit(false);
         }
 
         CellData(int cSep, int cEnc, int cEol) :
             m_formatDef(cEnc, cEol, cSep),
             m_status(cellHrvContinue)
         {
-            privCellDataInit();
+            privCellDataInit(true);
         }
 
-        void privCellDataInit()
+        void privCellDataInit(const bool bInitFormatFlags)
         {
-            m_formatDef.setFlag(rfSkipLeadingWhitespaces, true);
+            if (bInitFormatFlags)
+                m_formatDef.setFlag(rfSkipLeadingWhitespaces, true);
             if (m_formatDef.getSep() != ' ')
                 m_whiteSpaces.push_back(' ');
             if (m_formatDef.getSep() != '\t')
@@ -1431,11 +1432,24 @@ public:
         typedef std::true_type      IsBasicReaderPossibleType; // Ability to use basic reader does not depend on BufferChar nor on CharAppender.
     };
 
-    static DFG_CONSTEXPR bool isFormatStringViewCCompatible(const InternalCharType /*cSeparator*/, const InternalCharType cEnclosing, const InternalCharType /*cEndOfLine*/)
+    static DFG_CONSTEXPR bool isFormatStringViewCCompatible(const FormatDefinitionSingleChars& format)
     {
         // Note: this is in a way a bit too coarse: enclosing character itself is ok as long as cells do not have enclosing character in them, i.e.
         //       "abc","def" could be read with StringViewCBuffer, but "a""bc","def" could not.
-        return cEnclosing == s_nMetaCharNone;
+        return format.getEnc() == s_nMetaCharNone;
+    }
+
+    template <class Char_T, class Stream_T, class ItemHandlerFunc>
+    static auto read(Stream_T& istrm,
+        const FormatDefinitionSingleChars& formatDef,
+        ItemHandlerFunc&& ihFunc) -> FormatDefinitionSingleChars
+    {
+        const bool appenderTypeCondition = DFG_DETAIL_NS::IsStreamStringViewCCompatible<Stream_T>::value && std::is_same<Char_T, char>::value;
+        typedef typename std::conditional<appenderTypeCondition, CharAppenderStringViewCBuffer, CharAppenderDefault<CharBuffer<Char_T>, Char_T>>::type AppenderTypeForStringViewCCompatibleCase;
+        if (isFormatStringViewCCompatible(formatDef))
+            return readEx(ParsingDefinition<Char_T, AppenderTypeForStringViewCCompatibleCase>(), istrm, formatDef, std::forward<ItemHandlerFunc>(ihFunc));
+        else
+            return readEx(ParsingDefinition<Char_T, CharAppenderDefault<CharBuffer<Char_T>, Char_T>>(), istrm, formatDef, std::forward<ItemHandlerFunc>(ihFunc));
     }
 
     // Convenience overload.
@@ -1448,14 +1462,11 @@ public:
                         const InternalCharType cSeparator,
                         const InternalCharType cEnclosing,
                         const InternalCharType cEndOfLine,
-                        ItemHandlerFunc ihFunc) -> FormatDefinitionSingleChars
+                        ItemHandlerFunc&& ihFunc) -> FormatDefinitionSingleChars
     {
-        const bool appenderTypeCondition = DFG_DETAIL_NS::IsStreamStringViewCCompatible<Stream_T>::value && std::is_same<Char_T, char>::value;
-        typedef typename std::conditional<appenderTypeCondition, CharAppenderStringViewCBuffer, CharAppenderDefault<CharBuffer<Char_T>, Char_T>>::type AppenderTypeForStringViewCCompatibleCase;
-        if (isFormatStringViewCCompatible(cSeparator, cEnclosing, cEndOfLine))
-            return readEx(ParsingDefinition<Char_T, AppenderTypeForStringViewCCompatibleCase>(), istrm, cSeparator, cEnclosing, cEndOfLine, ihFunc);
-        else
-            return readEx(ParsingDefinition<Char_T, CharAppenderDefault<CharBuffer<Char_T>, Char_T>>(), istrm, cSeparator, cEnclosing, cEndOfLine, ihFunc);
+        FormatDefinitionSingleChars formatDef(cEnclosing, cEndOfLine, cSeparator);
+        formatDef.setFlag(rfSkipLeadingWhitespaces, false);
+        return read<Char_T>(istrm, formatDef, std::forward<ItemHandlerFunc>(ihFunc));
     }
 
     // Convenience overload that takes csv format object, which is expected to have separatorChar(), enclosingChar() and eolCharFromEndOfLineType()
@@ -1494,24 +1505,35 @@ public:
     // row index, column index, Pointer to beginning of buffer, buffer size.
     // For example: func(const size_t nRow, const size_t nCol, const char* const pData, const size_t nSize) 
     // TODO: test
-    template <class FormatDefinition_T, class Stream_T, class ItemHandlerFunc>
-    static auto readEx(FormatDefinition_T, 
+    template <class ParsingDefinition_T, class Stream_T, class ItemHandlerFunc>
+    static auto readEx(ParsingDefinition_T,
                      Stream_T& istrm,
-                     const InternalCharType cSeparator,
-                     const InternalCharType cEnclosing,
-                     const InternalCharType cEndOfLine,
+                     const FormatDefinitionSingleChars formatDefArg,
                      ItemHandlerFunc&& ihFunc) -> FormatDefinitionSingleChars
     {
-        typedef typename FormatDefinition_T::BufferChar Char;
-        typedef typename FormatDefinition_T::CharAppender Appender;
+        typedef typename ParsingDefinition_T::BufferChar Char;
+        typedef typename ParsingDefinition_T::CharAppender Appender;
 
         // TODO: in case of autodetect-controls, peek input to determine actual chars.
 
-        CellData<Char, Char, typename Appender::BufferType, Appender> cellData(cSeparator, cEnclosing, cEndOfLine);
-        if (cEnclosing == s_nMetaCharNone && cSeparator != s_nMetaCharAutoDetect && cEndOfLine != s_nMetaCharAutoDetect)
-            return readImpl(typename FormatDefinition_T::IsBasicReaderPossibleType(), istrm, cellData, std::forward<ItemHandlerFunc>(ihFunc));
-        else
+        CellData<Char, Char, typename Appender::BufferType, Appender> cellData(formatDefArg);
+        const auto& formatDef = cellData.getFormatDefInfo();
+        if (formatDef.getEnc() == s_nMetaCharNone && formatDef.getSep() != s_nMetaCharAutoDetect && formatDef.getEol() != s_nMetaCharAutoDetect && !formatDef.testFlag(rfSkipLeadingWhitespaces))
+            return readImpl(typename ParsingDefinition_T::IsBasicReaderPossibleType(), istrm, cellData, std::forward<ItemHandlerFunc>(ihFunc));
+        else // Case: using default reader
             return readImpl(std::false_type(), istrm, cellData, std::forward<ItemHandlerFunc>(ihFunc));
+    }
+
+    // Convenience overload
+    template <class ParsingDefinition_T, class Stream_T, class ItemHandlerFunc>
+    static auto readEx(ParsingDefinition_T parseDef,
+        Stream_T& istrm,
+        const InternalCharType cSeparator,
+        const InternalCharType cEnclosing,
+        const InternalCharType cEndOfLine,
+        ItemHandlerFunc&& ihFunc) -> FormatDefinitionSingleChars
+    {
+        return readEx<ParsingDefinition_T>(parseDef, istrm, FormatDefinitionSingleChars(cEnclosing, cEndOfLine, cSeparator), std::forward<ItemHandlerFunc>(ihFunc));
     }
 
     // Note: Data parameter is char* instead of void* to make it less likely to call this wrongly for example like

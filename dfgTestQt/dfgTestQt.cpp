@@ -124,7 +124,7 @@ a,b
 c,d
 e,f
 g,h
-    )");
+)");
 
     auto& rView = *tableEditor.m_spTableView;
     QPointer<QAbstractItemModel> spViewModel = rView.model();
@@ -164,7 +164,7 @@ TEST(dfgQt, TableEditor_selectionDetails)
 9,6
 a,7
 2,8
-    )");
+)");
 
     auto pDetailPanel = qobject_cast<CsvTableViewBasicSelectionAnalyzerPanel*>(tableEditor.selectionDetailPanel());
 
