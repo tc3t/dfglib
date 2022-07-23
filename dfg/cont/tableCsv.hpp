@@ -558,48 +558,85 @@ DFG_ROOT_NS_BEGIN{
                 }
             }
 
-            template <class CellHandler_T>
-            void privReadFromMemory_utf8(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CellHandler_T&& cellHandler, ConcurrencySafeCellHandlerYes)
+            template <class Reader_T>
+            void privReadFromMemory_singleThreaded(const char* const pData, const size_t nSize, const ::DFG_MODULE_NS(io)::TextEncoding encoding, const CsvFormatDefinition& formatDef, Reader_T&& reader)
             {
-                const auto nThreadCountRequest = privDetermineReadThreadCountRequest(strm, formatDef);
-                if (nThreadCountRequest > 1)
-                    readFromMemoryMultiThreaded(strm, formatDef, nThreadCountRequest, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<CellHandler_T>(cellHandler));
-                else
-                    privReadFromMemory_utf8(strm, formatDef, std::forward<CellHandler_T>(cellHandler), ConcurrencySafeCellHandlerNo());
+                const auto encodingUtf8 = ::DFG_MODULE_NS(io)::encodingUTF8;
+                if (encoding == encodingUtf8)
+                {
+                    ::DFG_MODULE_NS(io)::BasicImStream strm(pData, nSize);
+                    if (formatDef.enclosingChar() == DelimitedTextReader::s_nMetaCharNone)
+                        read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<Reader_T>(reader));
+                    else 
+                        read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport(), std::forward<Reader_T>(reader));
+                }
+                else if (encoding == ::DFG_MODULE_NS(io)::encodingUnknown)
+                {
+                    // Encoding of source bytes is unknown -> reading as Latin-1.
+                    ::DFG_MODULE_NS(io)::BasicImStream strm(pData, nSize);
+                    read(strm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
+                }
+                else // Case: encoding known and other than UTF8, read using encoding istream.
+                {
+                    ::DFG_MODULE_NS(io)::ImStreamWithEncoding strm(pData, nSize, encoding);
+                    read(strm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
+                }
             }
 
-            template <class CellHandler_T>
-            void privReadFromMemory_utf8(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, CellHandler_T&& cellHandler, ConcurrencySafeCellHandlerNo)
+            template <class Appender_T, class CellHandler_T, class ReadStreamCreator_T>
+            void privReadFromMemory_maybeMultithreaded(ConcurrencySafeCellHandlerYes, const char* const pData, const size_t nSize, const ::DFG_MODULE_NS(io)::TextEncoding encoding, const CsvFormatDefinition& formatDef, Appender_T&& appender, CellHandler_T&& cellHandler, ReadStreamCreator_T&& streamCreator)
             {
-                read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<CellHandler_T>(cellHandler));
+                using MemStream = ::DFG_MODULE_NS(io)::BasicImStream;
+                MemStream strm(pData, nSize);
+                const auto nThreadCountRequest = privDetermineReadThreadCountRequest(strm, formatDef);
+                if (nThreadCountRequest > 1)
+                    privReadFromMemoryMultiThreaded(MemStream(pData, nSize), formatDef, nThreadCountRequest, std::forward<Appender_T>(appender), std::forward<CellHandler_T>(cellHandler), std::forward<ReadStreamCreator_T>(streamCreator));
+                else
+                    privReadFromMemory_singleThreaded(pData, nSize, encoding, formatDef, std::forward<CellHandler_T>(cellHandler));
+                
+            }
+
+            template <class Appender_T, class CellHandler_T, class ReadStreamCreator_T>
+            void privReadFromMemory_maybeMultithreaded(ConcurrencySafeCellHandlerNo, const char* const pData, const size_t nSize, const ::DFG_MODULE_NS(io)::TextEncoding encoding, const CsvFormatDefinition& formatDef, Appender_T&& appender, CellHandler_T&& cellHandler, ReadStreamCreator_T&& streamCreator)
+            {
+                DFG_UNUSED(appender);
+                DFG_UNUSED(streamCreator);
+                privReadFromMemory_singleThreaded(pData, nSize, encoding, formatDef, std::forward<CellHandler_T>(cellHandler));
             }
 
             template <class Reader_T>
-            void readFromMemory(const char* const pData, const size_t nSize, const CsvFormatDefinition& formatDef, Reader_T&& reader)
+            void readFromMemory(const char* pData, size_t nSize, const CsvFormatDefinition& formatDef, Reader_T&& reader)
             {
                 const auto streamBom = DFG_MODULE_NS(io)::checkBOM(pData, nSize);
                 const auto encoding = (formatDef.textEncoding() == DFG_MODULE_NS(io)::encodingUnknown) ? streamBom : formatDef.textEncoding();
-                
-                if (encoding == DFG_MODULE_NS(io)::encodingUnknown)
+                const auto encodingUtf8 = ::DFG_MODULE_NS(io)::encodingUTF8;
+                const auto encodingLatin1 = ::DFG_MODULE_NS(io)::encodingLatin1;
+                const auto encodingUnknown = ::DFG_MODULE_NS(io)::encodingUnknown;
+
+                const auto nBomSkip = (encoding == encodingUtf8 && streamBom == encodingUtf8) ? ::DFG_MODULE_NS(utf)::bomSizeInBytes(encodingUtf8) : 0;
+                pData += nBomSkip;
+                nSize -= nBomSkip;
+
+                // Note: this is more of a implementation limitation. e.g. UTF16 input could be divided into read blocks, but not implemented.
+                const auto bIsEncodingMultithreadCompatible = (encoding == ::DFG_MODULE_NS(io)::encodingUnknown || ::DFG_MODULE_NS(io)::areAsciiBytesValidContentInEncoding(encoding));
+
+                if (bIsEncodingMultithreadCompatible && (formatDef.enclosingChar() == DelimitedTextReader::s_nMetaCharNone))
                 {
-                    // Encoding of source bytes is unknown -> read as Latin-1.
-                    DFG_MODULE_NS(io)::BasicImStream strm(pData, nSize);
-                    read(strm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
+                    using readerConcurrencySafety = decltype(std::remove_reference<Reader_T>::type::isConcurrencySafeT());
+                    const auto readStreamCreatorBasic    = [](const char* pData, const size_t nSize) { return ::DFG_MODULE_NS(io)::BasicImStream(pData, nSize); };
+                    const auto readStreamCreatorEncoding = [=](const char* pData, const size_t nSize) { return ::DFG_MODULE_NS(io)::ImStreamWithEncoding(pData, nSize, encoding); };
+                    if (encoding == encodingUtf8)
+                        privReadFromMemory_maybeMultithreaded(readerConcurrencySafety(), pData, nSize, encoding, formatDef, DelimitedTextReader::CharAppenderStringViewCBuffer(), std::forward<Reader_T>(reader), readStreamCreatorBasic);
+                    else if (encoding == encodingLatin1 || encoding == encodingUnknown)
+                        privReadFromMemory_maybeMultithreaded(readerConcurrencySafety(), pData, nSize, encoding, formatDef, defaultAppender(), std::forward<Reader_T>(reader), readStreamCreatorBasic);
+                    else // If input is not UTF-8 nor Latin1, using encoding-aware stream when reading
+                        privReadFromMemory_maybeMultithreaded(readerConcurrencySafety(), pData, nSize, encoding, formatDef, defaultAppender(), std::forward<Reader_T>(reader), readStreamCreatorEncoding);
                 }
-                else if (encoding == DFG_MODULE_NS(io)::encodingUTF8) // With UTF8 the data can be directly read as bytes.
+                else // Case: single-thread reading
                 {
-                    const auto bomSkip = (streamBom == DFG_MODULE_NS(io)::encodingUTF8) ? DFG_MODULE_NS(utf)::bomSizeInBytes(DFG_MODULE_NS(io)::encodingUTF8) : 0;
-                    DFG_MODULE_NS(io)::BasicImStream strm(pData + bomSkip, nSize - bomSkip);
-                    if (formatDef.enclosingChar() == DelimitedTextReader::s_nMetaCharNone) // If there's no enclosing character, data can be read with StringViewCBuffer.
-                        privReadFromMemory_utf8(strm, formatDef, std::forward<Reader_T>(reader), std::remove_reference<Reader_T>::type::isConcurrencySafeT());
-                    else // Case: Enclosing character is defined, using CharAppenderStringViewCBufferWithEnclosedCellSupport.
-                        read(strm, formatDef, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport(), std::forward<Reader_T>(reader));
+                    privReadFromMemory_singleThreaded(pData, nSize, encoding, formatDef, std::forward<Reader_T>(reader));
                 }
-                else // Case: Known encoding, read using encoding istream.
-                {
-                    DFG_MODULE_NS(io)::ImStreamWithEncoding strm(pData, nSize, encoding);
-                    read(strm, formatDef, defaultAppender(), std::forward<Reader_T>(reader));
-                }
+
                 m_readFormat.textEncoding(encoding);
                 m_saveFormat = m_readFormat;
             }
@@ -639,10 +676,9 @@ DFG_ROOT_NS_BEGIN{
             //      -Divides input into blocks
             //      -Every block is read as regular TableCsv in their own read-threads
             //      -When all blocks have been read, merges all TableCsv's into 'this'
-            template <class CharAppender_T, class CellHandler_T>
-            void readFromMemoryMultiThreaded(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef, const uint32 nThreadCountRequest, CharAppender_T, CellHandler_T&& cellHandler)
+            template <class CharAppender_T, class CellHandler_T, class ReadStreamCreator_T>
+            void privReadFromMemoryMultiThreaded(::DFG_MODULE_NS(io)::BasicImStream strm, const CsvFormatDefinition& formatDef, const uint32 nThreadCountRequest, CharAppender_T, CellHandler_T&& cellHandler, ReadStreamCreator_T&& streamCreator)
             {
-                using MemStrm = ::DFG_MODULE_NS(io)::BasicImStream;
                 const auto nBlockCount = Max<size_t>(1, nThreadCountRequest);
                 const auto additionalBlockStarts = determineBlockStartPos(makeRange(strm.beginPtr(), strm.endPtr()), nBlockCount, formatDef.eolCharFromEndOfLineType());
                 std::vector<TableCsv> tables(additionalBlockStarts.size());
@@ -693,10 +729,10 @@ DFG_ROOT_NS_BEGIN{
                 {
                     threads.push_back(std::thread([i, this, &tables, &strm, &additionalBlockStarts, &conditionReadsDone, &tablePtrs,
                                                    &anNextColumnToMerge, &mergeColumns, &conditionCanStartMerge,
-                                                   &nSeedTableOriginalRowCount, blockSize, &formatDef, &additionalBlockCellHanders]()
+                                                   &nSeedTableOriginalRowCount, blockSize, &formatDef, &additionalBlockCellHanders, streamCreator]()
                         {
                             auto& table = tables[i];
-                            MemStrm strmBlock(strm.beginPtr() + additionalBlockStarts[i], blockSize(i));
+                            auto strmBlock = streamCreator(strm.beginPtr() + additionalBlockStarts[i], blockSize(i));
                             // Reading block
                             table.read(strmBlock, formatDef, CharAppender_T(), additionalBlockCellHanders[i]);
                             // Signaling read completed on this block
@@ -710,7 +746,7 @@ DFG_ROOT_NS_BEGIN{
                 const auto nTotalThreadCount = saturateCast<uint32>(threads.size() + 1u);
 
                 // Reading first block from current thread.
-                MemStrm strmFirstBlock(strm.beginPtr(), (!additionalBlockStarts.empty()) ? additionalBlockStarts[0] : strm.sizeInCharacters());
+                auto strmFirstBlock = streamCreator(strm.beginPtr(), (!additionalBlockStarts.empty()) ? additionalBlockStarts[0] : strm.sizeInCharacters());
                 read(strmFirstBlock, formatDef, CharAppender_T(), std::forward<CellHandler_T>(cellHandler));
                 nSeedTableOriginalRowCount = this->rowCountByMaxRowIndex();
 

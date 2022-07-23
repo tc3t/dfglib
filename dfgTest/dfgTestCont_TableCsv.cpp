@@ -617,9 +617,11 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
     using namespace ::DFG_MODULE_NS(cont);
     using TableT = TableCsv<char, uint32>;
 
-    const auto nThreadCountRequest = Max(2u, std::thread::hardware_concurrency());
+    const auto nThreadCountRequest = limited(std::thread::hardware_concurrency(), 2u, 4u);
     const TableCsvReadWriteOptions basicReadOptionsForMt(',', ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
     const char szPathMatrix200x200[] = "testfiles/matrix_200x200.txt"; // Note: this file has \r\n EOL
+    const char szPathMatrix10x10_eol_n[] = "testfiles/matrix_10x10_1to100_eol_n.txt";
+    
     const auto nFileSizeMatrix200x200 = ::DFG_MODULE_NS(os)::fileSize(szPathMatrix200x200);
     
     // Basic correctness test
@@ -654,6 +656,36 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         DFGTEST_EXPECT_TRUE(tSingleThreaded.isContentAndSizesIdenticalWith(tMultiThreaded));
         DFGTEST_EXPECT_TRUE(tSingleThreaded.readFormat().isFormatMatchingWith(tMultiThreaded.readFormat()));
         
+    }
+
+    // Checking that files having encoding that is compatible with current blocking are read multithreaded.
+    {
+        const char* path = szPathMatrix10x10_eol_n;
+        TableCsvReadWriteOptions readOptionTemplate = basicReadOptionsForMt;
+        readOptionTemplate.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
+        readOptionTemplate.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
+        readOptionTemplate.separatorChar('\t');
+
+        TableT tExpected;
+        tExpected.readFromFile(path);
+
+        const auto testEncoding = [&](const ::DFG_MODULE_NS(io)::TextEncoding encoding)
+        {
+            TableCsvReadWriteOptions readOptions = readOptionTemplate;
+            readOptions.textEncoding(encoding);
+            TableT t;
+            t.readFromFile(path, readOptions);
+            const auto nUsedThreadCount = t.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            DFGTEST_EXPECT_LEFT(nThreadCountRequest, nUsedThreadCount);
+            DFGTEST_EXPECT_LEFT(tExpected.rowCountByMaxRowIndex(), t.rowCountByMaxRowIndex());
+            DFGTEST_EXPECT_LEFT(tExpected.colCountByMaxColIndex(), t.colCountByMaxColIndex());
+            DFGTEST_EXPECT_TRUE(t.isContentAndSizesIdenticalWith(tExpected));
+        };
+
+        testEncoding(::DFG_MODULE_NS(io)::encodingNone);
+        testEncoding(::DFG_MODULE_NS(io)::encodingLatin1);
+        testEncoding(::DFG_MODULE_NS(io)::encodingWindows1252);
+        testEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
     }
 
     // Checking that multithreaded reading branches won't even be compiled if handler is not multithread-compatible.
