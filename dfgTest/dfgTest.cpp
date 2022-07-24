@@ -205,6 +205,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.toStr";
     //::testing::GTEST_FLAG(filter) = "dfgStr.TypedCharPtrT";
     //::testing::GTEST_FLAG(filter) = "dfgStr.utf16";
+    //::testing::GTEST_FLAG(filter) = "dfgTest.googleTestStringViewPrinter";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_dayOfWeek";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_fromString";
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_toSecondsSinceEpoch";
@@ -258,6 +259,11 @@ TEST(dfgTest, googleTestStringViewPrinter)
 
     DFGTEST_EXPECT_LEFT(DFG_UTF8("abcde"), DFG_UTF8("fghij"));
     DFGTEST_EXPECT_LEFT(DFG_ASCII("abcde"), DFG_ASCII("fghij"));
+
+    // StringTyped
+    DFGTEST_EXPECT_LEFT(DFG_ASCII("abcde"), StringAscii(DFG_ASCII("fghij")));
+    DFGTEST_EXPECT_LEFT(DFG_UTF8("abcde"),  StringUtf8(DFG_UTF8("fghij")));
+    DFGTEST_EXPECT_LEFT(StringViewUtf16(DFG_UTF16("abcde")), StringUtf16(DFG_UTF16("fghij")));
 }
 
 #endif // GoogleTest printer tests

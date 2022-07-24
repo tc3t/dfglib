@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_CHARTS) && DFGTEST_BUILD_MODULE_CHARTS == 1) || (!defined(DFGTEST_BUILD_MODULE_CHARTS) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/chartsAll.hpp>
 #include <dfg/cont/Vector.hpp>
@@ -677,8 +677,8 @@ TEST(dfgCharts, operations_textFilter)
             auto pValues = arg.valuesByIndex(1);
             DFGTEST_ASSERT_TRUE(pStrings != nullptr);
             DFGTEST_ASSERT_TRUE(pValues != nullptr);
-            DFGTEST_EXPECT_LEFT(2, pStrings->size());
-            DFGTEST_EXPECT_LEFT(2, pValues->size());
+            DFGTEST_ASSERT_LEFT(2, pStrings->size());
+            DFGTEST_ASSERT_LEFT(2, pValues->size());
             DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", (*pStrings)[0]);
             DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", (*pStrings)[1]);
             DFGTEST_EXPECT_LEFT(1, (*pValues)[0]);

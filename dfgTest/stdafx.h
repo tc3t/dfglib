@@ -36,8 +36,10 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 // Per-module build flags taking precedence over default value if defined.
 //#define DFGTEST_BUILD_MODULE_CONT                         1
 //#define DFGTEST_BUILD_MODULE_BASE                         1
+//#define DFGTEST_BUILD_MODULE_CHARTS                       1
 //#define DFGTEST_BUILD_MODULE_CONT_MAPSETVECTOR            1
 //#define DFGTEST_BUILD_MODULE_CONT_TABLES                  1
+//#define DFGTEST_BUILD_MODULE_CONT_TABLE_CSV               1
 #define DFGTEST_BUILD_MODULE_CSV_BENCHMARK                0
 //#define DFGTEST_BUILD_MODULE_FUNC                         1
 //#define DFGTEST_BUILD_MODULE_IO                           1

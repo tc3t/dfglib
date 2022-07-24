@@ -124,4 +124,11 @@ namespace DFG_ROOT_NS
         dfgtest_googletest::gtestPrintToImpl(toCharPtr_raw(tpsz), ::DFG_MODULE_NS(str)::strLen(tpsz), pOstrm);
     }
 
+    // StringTyped
+    template <CharPtrType Type_T>
+    void PrintTo(const StringTyped<Type_T>& s, ::std::ostream* pOstrm)
+    {
+        PrintTo(StringView<typename StringTyped<Type_T>::CharType, StringTyped<Type_T>>(s), pOstrm);
+    }
+
 } // namespace DFG_ROOT_NS
