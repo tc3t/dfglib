@@ -21,6 +21,7 @@
 #include "../numericTypeTools.hpp"
 #include "vectorSso.hpp"
 #include "detail/tableCsvHelpers.hpp"
+#include "../time/timerCpu.hpp"
 
 #include "../concurrency/ConditionCounter.hpp"
 #include "../concurrency/ThreadList.hpp"
@@ -88,6 +89,16 @@ DFG_ROOT_NS_BEGIN{
     {
         namespace DFG_DETAIL_NS
         {
+            template <class Strm_T> inline StringViewAscii streamStatName()                                 { return DFG_ASCII("custom"); }
+            template <> inline StringViewAscii streamStatName<::DFG_MODULE_NS(io)::BasicImStream>()         { return DFG_ASCII("memory_basic"); }
+            template <> inline StringViewAscii streamStatName<::DFG_MODULE_NS(io)::ImStreamWithEncoding>()  { return DFG_ASCII("memory_encoding"); }
+            template <> inline StringViewAscii streamStatName<::DFG_MODULE_NS(io)::IfStreamWithEncoding>()  { return DFG_ASCII("file_encoding"); }
+
+            template <class Appender_T> inline StringViewAscii appenderStatName() { return DFG_ASCII("custom"); }
+            template <> inline StringViewAscii appenderStatName<::DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderUtf<::DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<char>>>() { return DFG_ASCII("utf_charbufc"); }
+            template <> inline StringViewAscii appenderStatName<::DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderStringViewCBuffer>() { return DFG_ASCII("viewc_basic"); }
+            template <> inline StringViewAscii appenderStatName<::DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport>() { return DFG_ASCII("viewc_enclosed"); }
+
             template <class Index_T>
             constexpr Index_T anyColumn()
             {
@@ -531,7 +542,7 @@ DFG_ROOT_NS_BEGIN{
             // If already checked that multithreaded read is ok from input's format perspective, this function determines how many threads to actually consider using.
             static uint32 privDetermineReadThreadCountRequest(::DFG_MODULE_NS(io)::BasicImStream& strm, const CsvFormatDefinition& formatDef)
             {
-                auto nThreadCountRequest = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(formatDef, 1);
+                auto nThreadCountRequest = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(formatDef, 1);
                 if (nThreadCountRequest == 1)
                     return 1;
                 else if (nThreadCountRequest == 0) // Case: autodetermine, using hardware_concurrency.
@@ -539,7 +550,7 @@ DFG_ROOT_NS_BEGIN{
                 const auto nInputSize = strm.countOfRemainingElems();
                 // For now simply using coarse hardcoded default value 10 MB, should be runtime context dependent
                 const auto nDefaultBlockSize = 10000000;
-                const auto nThreadBlockSize = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(formatDef, nDefaultBlockSize);
+                const auto nThreadBlockSize = TableCsvReadWriteOptions::getPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(formatDef, nDefaultBlockSize);
                 if (nInputSize < nThreadBlockSize / 2)
                     return 1; // Whole input is less than 2 * thread block size -> not threading. Factor 2 is there because if block size is, say, 10 MB, need to have at least 20 MB input to have 10 MB for both threads.
                 else if (nInputSize / nThreadCountRequest >= nThreadBlockSize)
@@ -607,6 +618,7 @@ DFG_ROOT_NS_BEGIN{
             template <class Reader_T>
             void readFromMemory(const char* pData, size_t nSize, const CsvFormatDefinition& formatDef, Reader_T&& reader)
             {
+                ::DFG_MODULE_NS(time)::TimerCpu timer;
                 const auto streamBom = DFG_MODULE_NS(io)::checkBOM(pData, nSize);
                 const auto encoding = (formatDef.textEncoding() == DFG_MODULE_NS(io)::encodingUnknown) ? streamBom : formatDef.textEncoding();
                 const auto encodingUtf8 = ::DFG_MODULE_NS(io)::encodingUTF8;
@@ -638,7 +650,15 @@ DFG_ROOT_NS_BEGIN{
                 }
 
                 m_readFormat.textEncoding(encoding);
+                const auto elapsed = timer.elapsedWallSeconds();
+                if (isReadStatsEnabled())
+                    m_readFormat.setReadStat<TableCsvReadStat::timeTotal>(elapsed);
                 m_saveFormat = m_readFormat;
+            }
+
+            bool isReadStatsEnabled() const
+            {
+                return true;
             }
 
             template <class Strm_T, class CharAppender_T, class Reader_T>
@@ -646,6 +666,12 @@ DFG_ROOT_NS_BEGIN{
             {
                 using namespace DFG_MODULE_NS(io);
                 this->clear();
+
+                if (isReadStatsEnabled())
+                {
+                    m_readFormat.setReadStat<TableCsvReadStat::appenderType>(::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::appenderStatName<CharAppender_T>());
+                    m_readFormat.setReadStat<TableCsvReadStat::streamType>(::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::streamStatName<Strm_T>());
+                }
 
                 typedef DelimitedTextReader::ParsingDefinition<char, CharAppender_T> ParseDef;
                 try
@@ -679,6 +705,7 @@ DFG_ROOT_NS_BEGIN{
             template <class CharAppender_T, class CellHandler_T, class ReadStreamCreator_T>
             void privReadFromMemoryMultiThreaded(::DFG_MODULE_NS(io)::BasicImStream strm, const CsvFormatDefinition& formatDef, const uint32 nThreadCountRequest, CharAppender_T, CellHandler_T&& cellHandler, ReadStreamCreator_T&& streamCreator)
             {
+                ::DFG_MODULE_NS(time)::TimerCpu timerBlockReads;
                 const auto nBlockCount = Max<size_t>(1, nThreadCountRequest);
                 const auto additionalBlockStarts = determineBlockStartPos(makeRange(strm.beginPtr(), strm.endPtr()), nBlockCount, formatDef.eolCharFromEndOfLineType());
                 std::vector<TableCsv> tables(additionalBlockStarts.size());
@@ -752,6 +779,15 @@ DFG_ROOT_NS_BEGIN{
 
                 // Wait until other read threads complete
                 conditionReadsDone.waitCounter();
+
+                if (isReadStatsEnabled())
+                {
+                    const auto blockReadTime = timerBlockReads.elapsedWallSeconds();
+                    m_readFormat.setReadStat<TableCsvReadStat::timeBlockReads>(blockReadTime);
+                }
+
+                ::DFG_MODULE_NS(time)::TimerCpu timerMerge;
+
                 // Computing final column count
                 nColumnCount = this->colCountByMaxColIndex();
                 for (const auto& table : tables)
@@ -768,8 +804,13 @@ DFG_ROOT_NS_BEGIN{
                         // Waiting other block handlers to complete.
                         threads.joinAllAndClear();
                     });
-                // Writing to read format that how many threads were used in reading
-                m_readFormat.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(nTotalThreadCount);
+
+                if (isReadStatsEnabled())
+                {
+                    const auto mergeTime = timerMerge.elapsedWallSeconds();
+                    m_readFormat.setReadStat<TableCsvReadStat::threadCount>(nTotalThreadCount);
+                    m_readFormat.setReadStat<TableCsvReadStat::timeBlockMerge>(mergeTime);
+                }
             }
 
             template <class Stream_T>

@@ -635,21 +635,21 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
             // No need to set threadCount as TableCsv should use single-threaded read by default.
             //readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(1);
-            DFGTEST_EXPECT_FALSE(readOptions.hasPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>());
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0); // This should have no effect as multhreaded read is not enabled.
-            DFGTEST_EXPECT_TRUE(readOptions.hasPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>());
+            DFGTEST_EXPECT_FALSE(readOptions.hasPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>());
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0); // This should have no effect as multhreaded read is not enabled.
+            DFGTEST_EXPECT_TRUE(readOptions.hasPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>());
             tSingleThreaded.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = tSingleThreaded.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>();
             DFGTEST_EXPECT_LE(nUsedThreadCount, 1);
         }
 
         // Multithreaded read
         {
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nThreadCountRequest);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
             tMultiThreaded.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = tMultiThreaded.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = tMultiThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>();
             DFGTEST_EXPECT_LEFT(nThreadCountRequest, nUsedThreadCount);
         }
 
@@ -662,30 +662,46 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
     {
         const char* path = szPathMatrix10x10_eol_n;
         TableCsvReadWriteOptions readOptionTemplate = basicReadOptionsForMt;
-        readOptionTemplate.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
-        readOptionTemplate.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
+        readOptionTemplate.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nThreadCountRequest);
+        readOptionTemplate.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
         readOptionTemplate.separatorChar('\t');
 
         TableT tExpected;
         tExpected.readFromFile(path);
 
-        const auto testEncoding = [&](const ::DFG_MODULE_NS(io)::TextEncoding encoding)
+        const auto testEncoding = [&](const ::DFG_MODULE_NS(io)::TextEncoding encoding, const StringViewSzC svExpectedStreamType, const StringViewSzC svExpectedAppendType)
         {
             TableCsvReadWriteOptions readOptions = readOptionTemplate;
             readOptions.textEncoding(encoding);
             TableT t;
             t.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = t.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = t.readFormat().getReadStat<TableCsvReadStat::threadCount>();
             DFGTEST_EXPECT_LEFT(nThreadCountRequest, nUsedThreadCount);
             DFGTEST_EXPECT_LEFT(tExpected.rowCountByMaxRowIndex(), t.rowCountByMaxRowIndex());
             DFGTEST_EXPECT_LEFT(tExpected.colCountByMaxColIndex(), t.colCountByMaxColIndex());
             DFGTEST_EXPECT_TRUE(t.isContentAndSizesIdenticalWith(tExpected));
+            DFGTEST_EXPECT_LEFT(StringViewAscii(SzPtrAscii(svExpectedAppendType.c_str())), t.readFormat().getReadStat<TableCsvReadStat::appenderType>());
+            DFGTEST_EXPECT_LEFT(StringViewAscii(SzPtrAscii(svExpectedStreamType.c_str())), t.readFormat().getReadStat<TableCsvReadStat::streamType>());
+
+            DFGTEST_EXPECT_NON_NAN(t.readFormat().getReadStat<TableCsvReadStat::timeBlockReads>());
+            DFGTEST_EXPECT_NON_NAN(t.readFormat().getReadStat<TableCsvReadStat::timeBlockMerge>());
+            DFGTEST_EXPECT_NON_NAN(t.readFormat().getReadStat<TableCsvReadStat::timeTotal>());
+
+#if 0 // Some diagnostic messages below
+            DFGTEST_MESSAGE("Encoding         = " << dfg::io::encodingToStrId(encoding));
+            DFGTEST_MESSAGE("Total Read time  = " << t.readFormat().getReadStat<TableCsvReadStat::timeTotal>());
+            DFGTEST_MESSAGE("Block read time  = " << t.readFormat().getReadStat<TableCsvReadStat::timeBlockReads>());
+            DFGTEST_MESSAGE("Block merge time = " << t.readFormat().getReadStat<TableCsvReadStat::timeBlockMerge>());
+            DFGTEST_MESSAGE("Appender type    = " << t.readFormat().getReadStat<TableCsvReadStat::appenderType>().rawStorage());
+            DFGTEST_MESSAGE("Stream type      = " << t.readFormat().getReadStat<TableCsvReadStat::streamType>().rawStorage());
+            DFGTEST_MESSAGE("");
+#endif
         };
 
-        testEncoding(::DFG_MODULE_NS(io)::encodingNone);
-        testEncoding(::DFG_MODULE_NS(io)::encodingLatin1);
-        testEncoding(::DFG_MODULE_NS(io)::encodingWindows1252);
-        testEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
+        testEncoding(::DFG_MODULE_NS(io)::encodingNone, "memory_encoding", "utf_charbufc");
+        testEncoding(::DFG_MODULE_NS(io)::encodingLatin1, "memory_basic", "utf_charbufc");
+        testEncoding(::DFG_MODULE_NS(io)::encodingWindows1252, "memory_encoding", "utf_charbufc");
+        testEncoding(::DFG_MODULE_NS(io)::encodingUTF8, "memory_basic", "viewc_basic");
     }
 
     // Checking that multithreaded reading branches won't even be compiled if handler is not multithread-compatible.
@@ -707,11 +723,11 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
 
         TableT table;
         TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
-        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
+        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nThreadCountRequest);
         table.readFromFile(szPathMatrix200x200, readOptions, NonMtSafeHandler(table, 1));
         DFGTEST_EXPECT_LEFT(200, table.rowCountByMaxRowIndex());
         DFGTEST_EXPECT_LEFT(200, table.colCountByMaxColIndex());
-        const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+        const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
         DFGTEST_EXPECT_TRUE(nUsedThreadCount <= 1);
     }
 
@@ -721,13 +737,13 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         ::DFG_MODULE_NS(str)::replaceSubStrsInplaceImpl(bytes, "\r\n", "\r");
         TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
         readOptions.eolType(::DFG_MODULE_NS(io)::EndOfLineTypeR);
-        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(nThreadCountRequest);
-        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
+        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nThreadCountRequest);
+        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
         TableT table;
         table.readFromMemory(bytes.data(), bytes.size(), readOptions);
         DFGTEST_EXPECT_LEFT(200, table.rowCountByMaxRowIndex());
         DFGTEST_EXPECT_LEFT(200, table.colCountByMaxColIndex());
-        const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+        const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
         DFGTEST_EXPECT_LEFT(nThreadCountRequest, nUsedThreadCount);
     }
 
@@ -740,9 +756,9 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         {
             TableT table;
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(2);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(2);
             table.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
             DFGTEST_EXPECT_LE(nUsedThreadCount, 1);
         }
 
@@ -750,10 +766,10 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         {
             TableT table;
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(4);
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(nInputSize / 2);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(4);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(nInputSize / 2);
             table.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
             DFGTEST_EXPECT_LEFT(2, nUsedThreadCount);
         }
 
@@ -761,10 +777,10 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         {
             TableT table;
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(8);
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(nInputSize * 2 / 11);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(8);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(nInputSize * 2 / 11);
             table.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
             DFGTEST_EXPECT_LEFT(5, nUsedThreadCount);
         }
 
@@ -772,10 +788,10 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         {
             TableT table;
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(8);
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(8);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0);
             table.readFromFile(path, readOptions);
-            const auto nUsedThreadCount = table.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0);
+            const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
             DFGTEST_EXPECT_LEFT(8, nUsedThreadCount);
         }
     }
@@ -802,7 +818,7 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
     
     const auto baseFormatDef = CsvFormatDefinition(',', ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone, ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8);
 
-    const auto PropThreadCount = TableCsvReadWriteOptions::PropertyId::threadCount;
+    const auto PropThreadCount = TableCsvReadWriteOptions::PropertyId::readOpt_threadCount;
 
     DFGTEST_MESSAGE("Reading path" << path);
     {
@@ -814,7 +830,7 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
             tSingleThreaded.readFromFile(path, readOptions);
             const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
             DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
-            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0), 1);
+            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>(), 1);
         }
 
         TableT tMultiThreaded;
@@ -822,7 +838,7 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
             TimerT timer;
             TableCsvReadWriteOptions readOptions = baseFormatDef;
             readOptions.setPropertyT<PropThreadCount>(hwConcurrency);
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum>(0);
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0);
             tMultiThreaded.readFromFile(path, readOptions);
 
             const auto elapsed = timer.elapsedWallSeconds();
@@ -837,7 +853,7 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
             tSingleThreaded.readFromFile(path, readOptions);
             const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
             DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
-            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getPropertyT<TableCsvReadWriteOptions::PropertyId::threadCount>(0), 1);
+            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>(), 1);
         }
 
         DFGTEST_EXPECT_TRUE(tSingleThreaded.isContentAndSizesIdenticalWith(tMultiThreaded));

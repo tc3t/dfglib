@@ -1713,11 +1713,11 @@ public:
                 DFG_REQUIRE(m_spThreadCountMax != nullptr);
                 DFG_REQUIRE(m_spThreadReadBlockMin != nullptr);
                 m_spThreadCountMax->setPlaceholderText(tr("auto"));
-                const auto confThreadCount = confFileOptions.getPropertyT<LoadOptions::PropertyId::threadCount>(0);
+                const auto confThreadCount = confFileOptions.getPropertyT<LoadOptions::PropertyId::readOpt_threadCount>(0);
                 if (confThreadCount != 0)
                     m_spThreadCountMax->setText(QString::number(confThreadCount));
                 
-                m_spThreadReadBlockMin->setText(QString::number(confFileOptions.getPropertyT<LoadOptions::PropertyId::threadReadBlockSizeMinimum>(10000000) / 1000000.0));
+                m_spThreadReadBlockMin->setText(QString::number(confFileOptions.getPropertyT<LoadOptions::PropertyId::readOpt_threadBlockSizeMinimum>(10000000) / 1000000.0));
             }
 
             // Content filters
@@ -1884,8 +1884,8 @@ public:
                     showInvalidOptionMessage(tr("Invalid thread read block size"), tr("Minimum thread read block size must be a non-negative integer in range of uint64"));
                     return;
                 }
-                m_loadOptions.setPropertyT<LoadOptions::PropertyId::threadCount>(nThreadCount);
-                m_loadOptions.setPropertyT<LoadOptions::PropertyId::threadReadBlockSizeMinimum>(nBlockSizeInMb);
+                m_loadOptions.setPropertyT<LoadOptions::PropertyId::readOpt_threadCount>(nThreadCount);
+                m_loadOptions.setPropertyT<LoadOptions::PropertyId::readOpt_threadBlockSizeMinimum>(nBlockSizeInMb);
             }
         }
         else // case: save dialog

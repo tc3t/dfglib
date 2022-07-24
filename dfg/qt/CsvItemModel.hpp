@@ -71,8 +71,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                               //                  logics is A && B && C && D.
     const char CsvOptionProperty_chartControls[]            = "chartControls";   // Defines chartControls to use.
     const char CsvOptionProperty_chartPanelWidth[]          = "chartPanelWidth"; // Chart panel width to use with the associated document; see TableEditor_chartPanelWidth for format documentation.
-    const char CsvOptionProperty_readThreadBlockSizeMinimum[] = "readThreadBlockSizeMinimum"; // Sets TableCsvReadWriteOptions::PropertyId::threadReadBlockSizeMinimum
-    const char CsvOptionProperty_readThreadCountMaximum[]   = "readThreadCountMaximum"; // Sets TableCsvReadWriteOptions::PropertyId::threadCount
+    const char CsvOptionProperty_readThreadBlockSizeMinimum[] = "readThreadBlockSizeMinimum"; // Sets TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum
+    const char CsvOptionProperty_readThreadCountMaximum[]   = "readThreadCountMaximum"; // Sets TableCsvReadWriteOptions::PropertyId::readOpt_threadCount
     const char CsvOptionProperty_windowHeight[]             = "windowHeight";    // Window height to request for use with the associated document; see TableEditor_chartPanelWidth for format documentation.
     const char CsvOptionProperty_windowWidth[]              = "windowWidth";     // Window width to request for use with the associated document; see TableEditor_chartPanelWidth for format documentation.
     const char CsvOptionProperty_windowPosX[]               = "windowPosX";      // Window x position to request for use with the associated document.
