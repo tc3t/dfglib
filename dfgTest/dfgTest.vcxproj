@@ -996,6 +996,7 @@
     <ClInclude Include="..\dfg\reflection\hasMemberFunction.hpp" />
     <ClInclude Include="..\dfg\root\rootIncludeHelpers.hpp" />
     <ClInclude Include="..\dfg\scopedCaller.hpp" />
+    <ClInclude Include="..\dfg\Span.hpp" />
     <ClInclude Include="..\dfg\staticMap.hpp" />
     <ClInclude Include="..\dfg\stdcpp\stdversion.hpp" />
     <ClInclude Include="..\dfg\str.hpp" />

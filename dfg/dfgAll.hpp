@@ -23,6 +23,7 @@
 #include "rangeIterator.hpp"
 #include "ReadOnlySzParam.hpp"
 #include "scopedCaller.hpp"
+#include "Span.hpp"
 #include "staticMap.hpp"
 #include "textualLogic.hpp"
 #include "time.hpp"

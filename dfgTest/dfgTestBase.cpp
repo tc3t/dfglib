@@ -19,6 +19,7 @@
 #include <dfg/cont/MapVector.hpp>
 #include <dfg/OpaquePtr.hpp>
 #include <dfg/str.hpp>
+#include <dfg/Span.hpp>
 
 std::tuple<std::string, std::string, std::string> FunctionNameTest()
 {
@@ -905,6 +906,67 @@ TEST(dfg, limit)
     uint32 ui32 = 123;
     DFGTEST_EXPECT_LEFT(50, limit(ui32, -10, 50));
     DFGTEST_EXPECT_LEFT(50, ui32);
+}
+
+namespace
+{
+    template <class Cont_T>
+    static void testSpanImpl(Cont_T&& cont)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(cont);
+        using RawCont_T = typename std::remove_reference<Cont_T>::type;
+        using ContElemT = typename ElementType<Cont_T>::type;
+        using SpanElemT = typename std::conditional<std::is_const<RawCont_T>::value, typename std::add_const<ContElemT>::type, ContElemT>::type;
+        Span<SpanElemT> span(cont);
+        DFGTEST_EXPECT_LEFT(ptrToContiguousMemory(cont), span.data());
+        DFGTEST_EXPECT_LEFT(count(cont), span.size());
+        DFGTEST_EXPECT_LEFT(span.size(), count(span));
+        DFGTEST_STATIC_TEST((std::is_same<decltype(ptrToContiguousMemory(cont)), decltype(span.data())>::value));
+        if (!span.empty())
+            DFGTEST_EXPECT_LEFT(cont[0], span[0]);
+    }
+}
+
+TEST(dfg, Span)
+{
+    using namespace DFG_ROOT_NS;
+
+    {
+        std::vector<int> v0{ 1,2,3 };
+        const auto v0c = v0;
+        int a0[] = { 4, 5, 6 };
+        const int a1c[] = { 4, 5, 6 };
+        //std::string s0c("abc"); // Note: this does not work before C++17 since std::string::data() returns const char*
+        const std::string s0c("abc");
+        testSpanImpl(v0);
+        testSpanImpl(v0c);
+        testSpanImpl(a0);
+        testSpanImpl(a1c);
+        testSpanImpl(s0c);
+        #if defined(__cpp_lib_span)
+        {
+            // Constructibility from std::span
+            std::span stdSpanV(v0);
+            Span dfgSpanV = stdSpanV;
+            DFGTEST_STATIC_TEST(sizeof(stdSpanV) == sizeof(dfgSpanV));
+            DFGTEST_EXPECT_LEFT(stdSpanV.data(), dfgSpanV.data());
+
+            std::span stdSpanA{ a0 };
+            Span dfgSpanA = stdSpanA;
+            DFGTEST_STATIC_TEST(sizeof(stdSpanA) == sizeof(dfgSpanA));
+            DFGTEST_STATIC_TEST(sizeof(dfgSpanA) < sizeof(dfgSpanV));
+            DFGTEST_EXPECT_LEFT(stdSpanA.data(), dfgSpanA.data());
+        }
+        #endif // defined(__cpp_lib_span)
+    }
+
+    {
+        std::vector<int> v{ 1,2,3 };
+        Span<int> s(v);
+        s[0] = 4;
+        DFGTEST_EXPECT_LEFT(4, s[0]);
+    }
 }
 
 TEST(dfgTypeTraits, IsTrueTrait)

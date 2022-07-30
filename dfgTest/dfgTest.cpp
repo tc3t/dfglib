@@ -60,6 +60,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfg.saturateAdd";
     //::testing::GTEST_FLAG(filter) = "dfg.saturateCast";
     //::testing::GTEST_FLAG(filter) = "dfg.ScopedCaller";
+    //::testing::GTEST_FLAG(filter) = "dfg.Span";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.arrayCopy";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.floatIndexInSorted";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.nearestRangeInSorted";

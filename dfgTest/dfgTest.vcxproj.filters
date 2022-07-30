@@ -702,6 +702,9 @@
     <ClInclude Include="..\dfg\cont\Flags.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\Span.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
