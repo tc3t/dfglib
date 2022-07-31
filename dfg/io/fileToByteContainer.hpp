@@ -10,6 +10,7 @@
 #include "../rangeIterator.hpp"
 #include "../stdcpp/stdversion.hpp"
 #include "../cont/elementType.hpp"
+#include "../Span.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
@@ -31,13 +32,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             template <class T>
             SpanT<T> asSpan() const &
             {
-                DFG_STATIC_ASSERT(std::is_trivial<T>::value && sizeof(T) == 1, "asSpan(): sizeof(T) must be one");
-                const auto p = reinterpret_cast<const T*>(this->data());
-                return SpanT<T>(p, p + this->size());
+                return asSpanImpl<T>();
             }
 
             // Deleting asSpan<T>() for rvalues to avoid dangling spans, i.e. spans that would point to storage of deleted ReadOnlyByteStorage.
             template <class T> SpanT<T> asSpan() const && = delete;
+
+            // Explicit version that can be used where caller guarantees it's ok to get span even if 'this' is rvalue.
+            template <class T> SpanT<T> asSpanFromRValue() const
+            {
+                return asSpanImpl<T>();
+            }
 
             // Returns content as given container type using constructor that takes (const T* begin, const T* end) arguments, where T is element type of Cont_T
             template <class Cont_T>
@@ -59,6 +64,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
         private:
             const char* data() const { return (m_bUsingMmf) ? m_mmf.data() : m_helperStorage.data(); }
+
+            template <class T>
+            SpanT<T> asSpanImpl() const
+            {
+                DFG_STATIC_ASSERT(std::is_trivial<T>::value && sizeof(T) == 1, "asSpanImpl(): sizeof(T) must be one");
+                const auto p = reinterpret_cast<const T*>(this->data());
+                return SpanT<T>(p, p + this->size());
+            }
 
         public:
             bool m_bUsingMmf = true;

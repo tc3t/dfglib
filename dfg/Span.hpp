@@ -26,6 +26,12 @@
             , m_nSize(cont.size())
         {}
 
+        template <class Cont_T>
+        Span(const Cont_T& cont)
+            : m_pData(cont.data())
+            , m_nSize(cont.size())
+        {}
+
         template <class T_0, size_t N_T>
         Span(T_0(&arr)[N_T])
             : m_pData(arr)

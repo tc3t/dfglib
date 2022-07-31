@@ -10,6 +10,7 @@
 #include "../io/OfStream.hpp"
 #include "../io/DelimitedTextWriter.hpp"
 #include "Vector.hpp"
+#include "../Span.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
@@ -68,14 +69,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef StringUtf8 StorageStringT;
         typedef StringViewUtf8 StringViewT;
 
+        static CsvConfig fromMemory(const Span<const char> bytes, const ::DFG_MODULE_NS(io)::TextEncoding encoding = ::DFG_MODULE_NS(io)::encodingUnknown);
+
+        void loadFromMemory(const Span<const char> bytes, const ::DFG_MODULE_NS(io)::TextEncoding encoding = ::DFG_MODULE_NS(io)::encodingUnknown);
+
         void loadFromFile(const StringViewSzC& svConfFilePath)
         {
-            using namespace DFG_ROOT_NS;
-            using namespace DFG_MODULE_NS(io);
-            typedef DelimitedTextReader DelimReader;
-            typedef DelimReader::CharAppenderUtf<DelimReader::CharBuffer<char>> CharAppenderUtfT;
-
-            const auto nFileSize = DFG_MODULE_NS(os)::fileSize(ReadOnlySzParamC(svConfFilePath.c_str()));
+            const auto nFileSize = ::DFG_MODULE_NS(os)::fileSize(ReadOnlySzParamC(svConfFilePath.c_str()));
 
             // Check for empty/non-existent file.
             if (nFileSize <= 0)
@@ -85,45 +85,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             if (nFileSize > 100000000) // 100 MB
                 return;
 
-            DelimReader::FormatDefinitionSingleChars formatDef('"', '\n', ',');
-            DelimReader::CellData<char, char, DelimReader::CharBuffer<char>, CharAppenderUtfT> cd(formatDef);
-
-            DFG_DETAIL_NS::UriHelper baseUri;
-            const size_t notFoundCol = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
-            size_t nFirstNonEmptyCol = notFoundCol;
-            bool bMostRecentRowHadKeyButNoValue = false;
-            DelimReader::readFromFile(svConfFilePath, cd, [&](const size_t /*nRow*/, const size_t nCol, decltype(cd)& cellData)
-            {
-                typedef DFG_MODULE_NS(cont)::CsvConfig::StorageStringT StorageStringT_vc2010_workaround;
-                if (nCol == 0)
-                {
-                    if (bMostRecentRowHadKeyButNoValue)
-                        m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
-                    nFirstNonEmptyCol = notFoundCol;
-                    bMostRecentRowHadKeyButNoValue = false;
-                }
-
-                // When first non-empty has been encountered and this is the next column, read cell and skip rest of line.
-                if (nFirstNonEmptyCol != notFoundCol && nCol == nFirstNonEmptyCol + 1)
-                {
-                    bMostRecentRowHadKeyButNoValue = false;
-                    cellData.setReadStatus(DFG_MODULE_NS(io)::DelimitedTextReader::cellHrvSkipRestOfLine);
-                    const auto& buffer = cellData.getBuffer();
-                    m_mapKeyToValue[baseUri.str()] = StorageStringT_vc2010_workaround(SzPtrUtf8(buffer.data()), SzPtrUtf8(buffer.data() + buffer.size()));
-                    return;
-                }
-
-                if (cellData.empty())
-                    return;
-                if (nFirstNonEmptyCol == notFoundCol)
-                {
-                    nFirstNonEmptyCol = nCol;
-                    baseUri.setTop(StorageStringT_vc2010_workaround::fromRawString(cellData.getBuffer()), nCol);
-                    bMostRecentRowHadKeyButNoValue = true;
-                }
-            });
-            if (bMostRecentRowHadKeyButNoValue)
-                m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
+            loadFromMemory(::DFG_MODULE_NS(io)::fileToMemory_readOnly(svConfFilePath).asSpanFromRValue<char>());
         }
 
         bool contains(const StringViewT svUri) const
@@ -194,66 +156,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         bool saveToFile(const dfg::StringViewSzC& svPath) const
         {
-            typedef StringViewC SvC;
-
-            DFG_MODULE_NS(os)::OutputFile_completeOrNone<> outputFile(svPath.c_str());
+            ::DFG_MODULE_NS(os)::OutputFile_completeOrNone<> outputFile(svPath.c_str());
 
             auto& ostrm = outputFile.intermediateFileStream();
 
             if (!ostrm.is_open())
                 return false;
 
-            // Write BOM
-            {
-                const auto bomBytes = DFG_MODULE_NS(utf)::encodingToBom(DFG_MODULE_NS(io)::encodingUTF8);
-                ostrm.write(bomBytes.data(), sizeInBytes(bomBytes));
-            }
+            saveToStream(ostrm);
 
-            // Writing empty header.
-            ostrm << ",,,\n";
-
-            Vector<SvC> uriStack; // Can use string views as the underlying strings in map won't get invalidated.
-            for (auto iter = m_mapKeyToValue.cbegin(), iterEnd = m_mapKeyToValue.cend(); iter != iterEnd; ++iter)
-            {
-                const auto& uriRawStorage = iter->first.rawStorage();
-                auto nLastSep = uriRawStorage.find_last_of('/');
-                if (nLastSep == std::string::npos) // No separators? (i.e. top-level entry?)
-                {
-                    uriStack.assign(1, uriRawStorage);
-                    privWriteCellsToStream(ostrm, uriRawStorage, iter->second.rawStorage());
-                }
-                else
-                {
-                    const auto nSepCount = std::count(uriRawStorage.cbegin(), uriRawStorage.cend(), '/');
-                    auto iterCurrentPos = uriRawStorage.cbegin();
-                    auto iterNextSep = iterCurrentPos;
-                    for (ptrdiff_t i = 0; i < nSepCount; ++i)
-                    {
-                        iterNextSep = std::find(iterCurrentPos, uriRawStorage.cend(), '/');
-                        DFG_ASSERT_CORRECTNESS(iterNextSep != uriRawStorage.cend());
-                        const SvC sv(&*iterCurrentPos, std::distance(iterCurrentPos, iterNextSep));
-                        if (!isValidIndex(uriStack, i) || !(uriStack[i] == sv))
-                        {
-                            // Don't have this level already in stack; create a new row for this level.
-                            uriStack.resize(i + 1);
-                            for (int j = 0; j < i; ++j)
-                                ostrm << ",";
-                            privWriteCellToStream(ostrm, sv);
-                            ostrm << '\n';
-                            uriStack[i] = sv;
-                        }
-                        iterCurrentPos = iterNextSep + 1;
-                    }
-                    for (int j = 0; j < nSepCount; ++j)
-                        ostrm << ",";
-                    const SvC svLastPart(&*iterCurrentPos, std::distance(iterCurrentPos, uriRawStorage.cend()));
-                    uriStack.resize(nSepCount + 1);
-                    uriStack.back() = svLastPart;
-                    privWriteCellsToStream(ostrm, svLastPart, iter->second.rawStorage());
-                }
-            }
             return (outputFile.writeIntermediateToFinalLocation() == 0);
         }
+
+        StringUtf8 saveToMemory() const;
+
+        template <class Strm_T>
+        void saveToStream(Strm_T& strm) const;
 
         void setKeyValue(StorageStringT sKey, StorageStringT sValue)
         {
@@ -296,5 +214,123 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         MapVectorSoA<StorageStringT, StorageStringT> m_mapKeyToValue;
 
     }; // CsvConfig
+
+    inline void CsvConfig::loadFromMemory(const Span<const char> bytes, const ::DFG_MODULE_NS(io)::TextEncoding encoding)
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(io);
+        typedef DelimitedTextReader DelimReader;
+        typedef DelimReader::CharAppenderUtf<DelimReader::CharBuffer<char>> CharAppenderUtfT;
+
+        DelimReader::FormatDefinitionSingleChars formatDef('"', '\n', ',');
+        DelimReader::CellData<char, char, DelimReader::CharBuffer<char>, CharAppenderUtfT> cd(formatDef);
+
+        DFG_DETAIL_NS::UriHelper baseUri;
+        const size_t notFoundCol = DFG_ROOT_NS::NumericTraits<size_t>::maxValue;
+        size_t nFirstNonEmptyCol = notFoundCol;
+        bool bMostRecentRowHadKeyButNoValue = false;
+        DelimReader::readFromMemory(bytes.data(), bytes.size(), cd, [&](const size_t /*nRow*/, const size_t nCol, decltype(cd)& cellData)
+            {
+                typedef DFG_MODULE_NS(cont)::CsvConfig::StorageStringT StorageStringT_vc2010_workaround;
+                if (nCol == 0)
+                {
+                    if (bMostRecentRowHadKeyButNoValue)
+                        m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
+                    nFirstNonEmptyCol = notFoundCol;
+                    bMostRecentRowHadKeyButNoValue = false;
+                }
+
+                // When first non-empty has been encountered and this is the next column, read cell and skip rest of line.
+                if (nFirstNonEmptyCol != notFoundCol && nCol == nFirstNonEmptyCol + 1)
+                {
+                    bMostRecentRowHadKeyButNoValue = false;
+                    cellData.setReadStatus(DFG_MODULE_NS(io)::DelimitedTextReader::cellHrvSkipRestOfLine);
+                    const auto& buffer = cellData.getBuffer();
+                    m_mapKeyToValue[baseUri.str()] = StorageStringT_vc2010_workaround(SzPtrUtf8(buffer.data()), SzPtrUtf8(buffer.data() + buffer.size()));
+                    return;
+                }
+
+                if (cellData.empty())
+                    return;
+                if (nFirstNonEmptyCol == notFoundCol)
+                {
+                    nFirstNonEmptyCol = nCol;
+                    baseUri.setTop(StorageStringT_vc2010_workaround::fromRawString(cellData.getBuffer()), nCol);
+                    bMostRecentRowHadKeyButNoValue = true;
+                }
+            }, encoding);
+        if (bMostRecentRowHadKeyButNoValue)
+            m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
+    }
+
+    inline CsvConfig CsvConfig::fromMemory(const Span<const char> bytes, const ::DFG_MODULE_NS(io)::TextEncoding encoding)
+    {
+        CsvConfig csvConfig;
+        csvConfig.loadFromMemory(bytes, encoding);
+        return csvConfig;
+    }
+
+    inline StringUtf8 CsvConfig::saveToMemory() const
+    {
+        StringUtf8 rv;
+        ::DFG_MODULE_NS(io)::BasicOmcByteStream<StringUtf8::StorageType> ostrm(&rv.rawStorage());
+        saveToStream(ostrm);
+        return rv;
+    }
+
+    template <class Strm_T>
+    inline void CsvConfig::saveToStream(Strm_T& ostrm) const
+    {
+        using SvC = StringViewC;
+        // Writing BOM
+        {
+            const auto bomBytes = ::DFG_MODULE_NS(utf)::encodingToBom(DFG_MODULE_NS(io)::encodingUTF8);
+            ostrm.write(bomBytes.data(), sizeInBytes(bomBytes));
+        }
+
+        // Writing empty header.
+        ostrm << ",,,\n";
+
+        Vector<SvC> uriStack; // Can use string views as the underlying strings in map won't get invalidated.
+        for (auto iter = m_mapKeyToValue.cbegin(), iterEnd = m_mapKeyToValue.cend(); iter != iterEnd; ++iter)
+        {
+            const auto& uriRawStorage = iter->first.rawStorage();
+            auto nLastSep = uriRawStorage.find_last_of('/');
+            if (nLastSep == std::string::npos) // No separators? (i.e. top-level entry?)
+            {
+                uriStack.assign(1, uriRawStorage);
+                privWriteCellsToStream(ostrm, uriRawStorage, iter->second.rawStorage());
+            }
+            else
+            {
+                const auto nSepCount = std::count(uriRawStorage.cbegin(), uriRawStorage.cend(), '/');
+                auto iterCurrentPos = uriRawStorage.cbegin();
+                auto iterNextSep = iterCurrentPos;
+                for (ptrdiff_t i = 0; i < nSepCount; ++i)
+                {
+                    iterNextSep = std::find(iterCurrentPos, uriRawStorage.cend(), '/');
+                    DFG_ASSERT_CORRECTNESS(iterNextSep != uriRawStorage.cend());
+                    const SvC sv(&*iterCurrentPos, std::distance(iterCurrentPos, iterNextSep));
+                    if (!isValidIndex(uriStack, i) || !(uriStack[i] == sv))
+                    {
+                        // Don't have this level already in stack; create a new row for this level.
+                        uriStack.resize(i + 1);
+                        for (int j = 0; j < i; ++j)
+                            ostrm << ',';
+                        privWriteCellToStream(ostrm, sv);
+                        ostrm << '\n';
+                        uriStack[i] = sv;
+                    }
+                    iterCurrentPos = iterNextSep + 1;
+                }
+                for (int j = 0; j < nSepCount; ++j)
+                    ostrm << ',';
+                const SvC svLastPart(&*iterCurrentPos, std::distance(iterCurrentPos, uriRawStorage.cend()));
+                uriStack.resize(nSepCount + 1);
+                uriStack.back() = svLastPart;
+                privWriteCellsToStream(ostrm, svLastPart, iter->second.rawStorage());
+            }
+        }
+    }
     
 } } // Module namespace 

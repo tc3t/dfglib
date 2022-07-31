@@ -947,21 +947,31 @@ TEST(dfgCont, CsvConfig_forEach)
 
 TEST(dfgCont, CsvConfig_saving)
 {
-    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(CsvConfig) ConfigT;
+    using ConfigT = ::DFG_MODULE_NS(cont)::CsvConfig;
     ConfigT config;
 
-    config.loadFromFile("testfiles/csvConfigTest_1.csv");
+    const char szPathConfigTest1[] = "testfiles/csvConfigTest_1.csv";
+    config.loadFromFile(szPathConfigTest1);
     config.saveToFile("testfiles/generated/csvConfigTest_1.csv");
     ConfigT config2;
-    EXPECT_NE(config, config2);
+    DFGTEST_EXPECT_NE(config, config2);
     config2.loadFromFile("testfiles/generated/csvConfigTest_1.csv");
-    EXPECT_EQ(config, config2);
+    DFGTEST_EXPECT_EQ(config, config2);
+
+    const auto config1fileBytes = ::DFG_MODULE_NS(io)::fileToMemory_readOnly(szPathConfigTest1);
 
     // Test also that the output is exactly the same as input.
     {
-        const auto inputBytes = DFG_MODULE_NS(io)::fileToVector("testfiles/csvConfigTest_1.csv");
-        const auto writtenBytes = DFG_MODULE_NS(io)::fileToVector("testfiles/generated/csvConfigTest_1.csv");
-        EXPECT_EQ(inputBytes, writtenBytes);
+        const auto writtenBytes = ::DFG_MODULE_NS(io)::fileToVector("testfiles/generated/csvConfigTest_1.csv");
+        DFGTEST_EXPECT_TRUE(::DFG_MODULE_NS(cont)::isEqualContent(config1fileBytes.asSpan<char>(), writtenBytes));
+    }
+
+    // Testing memory versions
+    {
+        auto configMem = ConfigT::fromMemory(::DFG_MODULE_NS(io)::fileToMemory_readOnly(szPathConfigTest1).asSpanFromRValue<char>());
+        DFGTEST_EXPECT_EQ(config, configMem);
+        const auto fromMemSavedBytes = configMem.saveToMemory();
+        DFGTEST_EXPECT_TRUE(::DFG_MODULE_NS(cont)::isEqualContent(config1fileBytes.asSpan<char>(), fromMemSavedBytes.rawStorage()));
     }
 }
 

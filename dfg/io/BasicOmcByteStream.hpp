@@ -9,7 +9,7 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
     // A placeholder for non std::ostream-inherited OmcByteStream.
-    template <class Cont_T = DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<char>>
+    template <class Cont_T = ::DFG_MODULE_NS(cont)::Vector<char>>
     class BasicOmcByteStream
     {
     public:
@@ -46,10 +46,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             return true;
         }
 
-        BasicOmcByteStream& operator<<(const DFG_CLASS_NAME(StringViewC)& sv)
+        BasicOmcByteStream& operator<<(const StringViewC& sv)
         { 
             write(sv.data(), sv.size());
             return *this;
+        }
+
+         BasicOmcByteStream& operator<<(const char c)
+        {
+            return operator<<(StringViewC(&c, 1));
         }
 
         void reserve(const size_t nCount)
