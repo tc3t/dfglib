@@ -711,7 +711,7 @@ DFG_ROOT_NS_BEGIN{
                 std::vector<TableCsv> tables(additionalBlockStarts.size());
                 std::vector<BaseClass*> tablePtrs(tables.size());
                 std::transform(tables.begin(), tables.end(), tablePtrs.begin(), [](TableCsv& rTable) { return &rTable; });
-                
+
                 // Creating handler objects for additional blocks
                 using CellHandlerT = typename std::remove_reference<CellHandler_T>::type;
                 std::vector<CellHandlerT> additionalBlockCellHanders;
@@ -720,7 +720,7 @@ DFG_ROOT_NS_BEGIN{
                     additionalBlockCellHanders.push_back(cellHandler.template makeConcurrencyClone<CellHandlerT>(tables[i]));
 
                 const auto blockSize = [&](const size_t i) { return (i + 1 < additionalBlockStarts.size()) ? additionalBlockStarts[i + 1] - additionalBlockStarts[i] : strm.sizeInCharacters() - additionalBlockStarts[i]; };
-                
+
                 std::atomic<IndexT> anNextColumnToMerge{1};
                 IndexT nSeedTableOriginalRowCount = 0;
                 IndexT nColumnCount = 0;
@@ -793,13 +793,12 @@ DFG_ROOT_NS_BEGIN{
                 for (const auto& table : tables)
                     nColumnCount = Max(nColumnCount, table.colCountByMaxColIndex());
 
-                // Now that all threads have completed reading, notify them to proceed to column merging
-                conditionCanStartMerge.decrementCounter();
-
                 // Appending blocks into 'this' concurrently per column
                 this->appendTablesWithMoveImpl(tablePtrs, [&](BaseClass& rTable)
                     {
-                        DFG_UNUSED(rTable)
+                        // Now that all threads have completed reading and column vectors have been resized properly by appendTablesWithMoveImpl(), notify threads to proceed to column merging.
+                        DFG_ASSERT_UB(rTable.colCountByMaxColIndex() == nColumnCount);
+                        conditionCanStartMerge.decrementCounter();
                         mergeColumns(true);
                         // Waiting other block handlers to complete.
                         threads.joinAllAndClear();
