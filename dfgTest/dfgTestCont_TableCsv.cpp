@@ -975,6 +975,33 @@ TEST(dfgCont, CsvConfig_saving)
     }
 }
 
+TEST(dfgCont, CsvConfig_uriPart)
+{
+    using ConfigT = ::DFG_MODULE_NS(cont)::CsvConfig;
+
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("abc", ConfigT::uriPart(DFG_UTF8("abc/def/ghi"), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("def", ConfigT::uriPart(DFG_UTF8("abc/def/ghi"), 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("ghi", ConfigT::uriPart(DFG_UTF8("abc/def/ghi"), 2));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("abc/def/ghi"), 3));
+
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8(""), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8(""), 123456));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("abc", ConfigT::uriPart(DFG_UTF8("abc"), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("/12"), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("12",  ConfigT::uriPart(DFG_UTF8("/12"), 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("12",  ConfigT::uriPart(DFG_UTF8("/12/"), 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("/12"), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("/12/"), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("//ab"), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("//ab"), 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("ab",  ConfigT::uriPart(DFG_UTF8("//ab"), 2));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("/ab////cd"), 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("ab",  ConfigT::uriPart(DFG_UTF8("/ab////cd"), 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("cd",  ConfigT::uriPart(DFG_UTF8("/ab////cd///ef"), 5));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("/ab////cd///ef"), 7));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("ef",  ConfigT::uriPart(DFG_UTF8("/ab////cd///ef"), 8));
+}
+
 TEST(dfgCont, CsvFormatDefinition_FromCsvConfig)
 {
     DFG_MODULE_NS(cont)::CsvConfig config;
