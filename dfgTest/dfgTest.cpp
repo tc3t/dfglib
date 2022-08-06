@@ -80,6 +80,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_saving";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_forEach";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_uriPart";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_FromCsvConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_isFormatMatchingWith";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_ToConfig";

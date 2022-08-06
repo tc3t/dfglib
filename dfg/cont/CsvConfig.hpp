@@ -70,6 +70,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef StringViewUtf8 StringViewT;
 
         static CsvConfig fromMemory(const Span<const char> bytes, const ::DFG_MODULE_NS(io)::TextEncoding encoding = ::DFG_MODULE_NS(io)::encodingUnknown);
+        static CsvConfig fromUtf8(const StringViewUtf8 svData);
 
         void loadFromMemory(const Span<const char> bytes, const ::DFG_MODULE_NS(io)::TextEncoding encoding = ::DFG_MODULE_NS(io)::encodingUnknown);
 
@@ -109,6 +110,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         size_t entryCount() const
         {
             return m_mapKeyToValue.size();
+        }
+
+        bool empty() const
+        {
+            return m_mapKeyToValue.empty();
         }
 
         void clear()
@@ -190,6 +196,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             setKeyValue(StorageStringT::fromRawString(svKey.toString()), StorageStringT::fromRawString(svValue.toString()));
         }
 
+        // Given a uri of type a/b/c, returns n'th part, e.g. uriPart("a/b/c", 0) == "a", uriPart("a/b/c", 2) == "c". If part not present, returns empty view.
+        // Note: Returned view refers to the same underlying string as 'svUri' -> need to be careful if svUri refers to temporary string.
+        static StringViewT uriPart(const StringViewT svUri, const size_t n);
+
         // TODO: test
         bool operator==(const CsvConfig& other) const
         {
@@ -263,6 +273,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             m_mapKeyToValue[baseUri.str()] = DFG_UTF8("");
     }
 
+    inline CsvConfig CsvConfig::fromUtf8(const StringViewUtf8 svData)
+    {
+        return fromMemory(svData.asUntypedView(), ::DFG_MODULE_NS(io)::encodingUTF8);
+    }
+
     inline CsvConfig CsvConfig::fromMemory(const Span<const char> bytes, const ::DFG_MODULE_NS(io)::TextEncoding encoding)
     {
         CsvConfig csvConfig;
@@ -331,6 +346,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 privWriteCellsToStream(ostrm, svLastPart, iter->second.rawStorage());
             }
         }
+    }
+
+    inline auto CsvConfig::uriPart(const StringViewT svUri, const size_t n) -> StringViewT
+    {
+        const auto svUntyped = svUri.asUntypedView();
+        const char* p = svUntyped.data();
+        const char* const pEnd = svUntyped.data() + svUntyped.size();
+        const char* pPartEnd = pEnd;
+        for (size_t i = 0; i < n + 1u && p != pEnd; ++i)
+        {
+            pPartEnd = std::find(p, pEnd, '/');
+            if (i == n)
+                break;
+            else if (pPartEnd != pEnd)
+                p = pPartEnd + 1;
+            else
+                p = pPartEnd;
+        }
+        return StringViewUtf8(TypedCharPtrUtf8R(p), TypedCharPtrUtf8R(pPartEnd));
     }
     
 } } // Module namespace 
