@@ -467,6 +467,14 @@ TEST(dfg, SzPtrTypes)
         EXPECT_TRUE(SzPtrAscii("") != nullptr);
         EXPECT_TRUE(SzPtrAscii(nullptr) == nullptr);
     }
+
+    // constexpr-usage
+    {
+        DFGTEST_STATIC_TEST(SzPtrAsciiR{ "" }.c_str()[0] == '\0');
+        DFGTEST_STATIC_TEST(SzPtrLatin1R{ "" }.c_str()[0] == '\0');
+        DFGTEST_STATIC_TEST(SzPtrUtf8R{ "" }.c_str()[0] == '\0');
+        DFGTEST_STATIC_TEST(SzPtrUtf16R{ u"" }.c_str()[0] == '\0');
+    }
 }
 
 TEST(dfg, toSzPtr)

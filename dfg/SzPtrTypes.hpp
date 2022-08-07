@@ -145,7 +145,7 @@ namespace DFG_DETAIL_NS
             m_p(nullptr)
         {}
 
-        explicit TypedCharPtrTExplicitBase(Char_T* p) :
+        explicit constexpr TypedCharPtrTExplicitBase(Char_T* p) :
             m_p(p)
         {}
 
@@ -167,7 +167,7 @@ namespace DFG_DETAIL_NS
             m_p(nullptr)
         {}
 
-        TypedCharPtrTImplicitBase(Char_T* p) :
+        constexpr TypedCharPtrTImplicitBase(Char_T* p) :
             m_p(p)
         {}
 
@@ -322,7 +322,7 @@ struct SzPtrT : public TypedCharPtrT<Char_T, Type_T>
         BaseClass(nullptr)
     {}
 
-    explicit SzPtrT(Char_T* psz) :
+    explicit constexpr SzPtrT(Char_T* psz) :
         BaseClass(psz)
     {}
 
@@ -340,7 +340,7 @@ struct SzPtrT : public TypedCharPtrT<Char_T, Type_T>
     // Automatic conversion from char -> const char
     operator SzPtrT<const Char_T, Type_T>() const { return SzPtrT<const Char_T, Type_T>(this->m_p); }
 
-    Char_T* c_str() const { return this->m_p; }
+    constexpr Char_T* c_str() const { return this->m_p; }
 };
 
 /*
