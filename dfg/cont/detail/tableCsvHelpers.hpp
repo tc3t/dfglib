@@ -2,6 +2,7 @@
 
 #include "../../CsvFormatDefinition.hpp"
 #include "../../ReadOnlySzParam.hpp"
+#include "../CsvConfig.hpp"
 #include <limits>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
@@ -13,13 +14,27 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
             using SetterArgType = T;
             static T fromString(const StringViewC sv) { return ::DFG_MODULE_NS(str)::strTo<T>(sv); }
             static std::string toSetPropertyArg(const T val) { return ::DFG_MODULE_NS(str)::toStrC(val); }
-        };
+        }; // struct ReadStatBase
         template <> struct ReadStatBase<StringAscii>
         {
             using SetterArgType = StringViewAscii;
-            static StringAscii fromString(const StringViewC sv) { return StringAscii(SzPtrAscii(sv.beginRaw())); }
+            static StringAscii fromString(const StringViewC sv) { return StringAscii::fromRawString(sv.toString()); }
             static StringViewC toSetPropertyArg(const StringViewAscii sv) { return sv.asUntypedView(); }
-        };
+        }; // struct ReadStatBase<StringAscii>
+
+        template <> struct ReadStatBase<StringUtf8>
+        {
+            using SetterArgType = StringViewUtf8;
+            static StringUtf8 fromString(const StringViewC sv) { return StringUtf8::fromRawString(sv.toString()); }
+            static StringViewC toSetPropertyArg(const StringViewUtf8 sv) { return sv.asUntypedView(); }
+        }; // struct ReadStatBase<StringUtf8>
+
+        template <> struct ReadStatBase<CsvConfig>
+        {
+            using SetterArgType = const CsvConfig&;
+            static CsvConfig fromString(const StringViewC sv) { return CsvConfig::fromUtf8(StringViewUtf8(TypedCharPtrUtf8R(sv.data()), sv.size())); }
+            static std::string toSetPropertyArg(const CsvConfig& config) { return config.saveToMemory().rawStorage(); }
+        }; // struct ReadStatBase<CsvConfig>
     } // DFG_DETAIL_NS
 
 #define DFG_TEMP_DEFINE_TABLECSV_READSTAT(NAME, TYPE, DEFAULT_VALUE) \
@@ -36,6 +51,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
     // Defining TableCsvReadStat-identifiers. Each identifier is a class inside namespace ::dfg::cont::TableCsvReadStat
     //                                 Name                 Type            Default value
     DFG_TEMP_DEFINE_TABLECSV_READSTAT(appenderType,         StringAscii,    StringAscii())
+    DFG_TEMP_DEFINE_TABLECSV_READSTAT(errorInfo,            CsvConfig,      CsvConfig())
     DFG_TEMP_DEFINE_TABLECSV_READSTAT(streamType,           StringAscii,    StringAscii())
     DFG_TEMP_DEFINE_TABLECSV_READSTAT(threadCount,          uint32,         0)
     DFG_TEMP_DEFINE_TABLECSV_READSTAT(timeBlockMerge,       double,         std::numeric_limits<double>::quiet_NaN())
@@ -58,6 +74,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
 
 
     } // namespace DFG_DETAIL_NS
+
+namespace TableCsvErrorInfoFields
+{
+    constexpr SzPtrUtf8R errorMsg("error_msg");
+}
 
 class TableCsvReadWriteOptions : public CsvFormatDefinition
 {

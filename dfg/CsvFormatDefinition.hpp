@@ -34,10 +34,21 @@ public:
         m_bWriteBom(true)
     {}
 
+    // Convenience functions for creating commonly used formats.
+    // Creates ',', '"', \n, UTF8
+    static CsvFormatDefinition fromReadTemplate_commaQuoteEolNUtf8()       { return CsvFormatDefinition(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8); }
+    // Creates ',', <no enclosing>, \n, UTF8
+    static CsvFormatDefinition fromReadTemplate_commaNoEnclosingEolNUtf8() { return CsvFormatDefinition(',', metaCharNone(), ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUTF8); }
+
     // Reads properties from given config, items not present in config are not modified.
     void fromConfig(const CsvConfig& config);
 
     void appendToConfig(CsvConfig& config) const;
+
+    static constexpr char metaCharNone()
+    {
+        return ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone;
+    }
 
     template <class Str_T>
     static Str_T csvFilePathToConfigFilePath(const Str_T& str)
@@ -133,7 +144,7 @@ inline void CsvFormatDefinition::fromConfig(const DFG_MODULE_NS(cont)::CsvConfig
         if (p)
         {
             if (p->empty())
-                enclosingChar(DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone);
+                enclosingChar(metaCharNone());
             else
             {
                 auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());
@@ -189,7 +200,7 @@ inline void CsvFormatDefinition::appendToConfig(DFG_MODULE_NS(cont)::CsvConfig& 
 
     // Enclosing char
     {
-        if (m_cEnc == DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone)
+        if (m_cEnc == metaCharNone())
             config.setKeyValue(DFG_UTF8("enclosing_char"), DFG_UTF8(""));
         else if (!DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(m_cEnc) && m_cEnc >= 0)
             config.setKeyValue_fromUntyped("enclosing_char", charAsPrintableString(m_cEnc));

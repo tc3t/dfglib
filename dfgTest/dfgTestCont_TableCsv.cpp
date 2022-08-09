@@ -347,6 +347,63 @@ namespace
 
 }
 
+namespace
+{
+    class ExceptionReader : public ::DFG_MODULE_NS(cont)::TableCsv<char, ::DFG_ROOT_NS::uint32>::DefaultCellHandler
+    {
+    public:
+        using BaseClass = ::DFG_MODULE_NS(cont)::TableCsv<char, ::DFG_ROOT_NS::uint32>::DefaultCellHandler;
+        using BaseClass::BaseClass;
+        
+        void operator()(const size_t nRow, const size_t nCol, const char* pData, const size_t nCount)
+        {
+            BaseClass::operator()(nRow, nCol, pData, nCount);
+            if (nRow == 1)
+                throw std::logic_error(exceptionMessage().c_str());
+        }
+
+        static ::DFG_ROOT_NS::StringViewSzC exceptionMessage()
+        {
+            return "Row 1 encountered";
+        }
+    }; // ExceptionReader
+} // unnamed namespace
+
+TEST(dfgCont, TableCsv_exceptionHandling)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+    using TableT = TableCsv<char, uint32>;
+
+    const char szCsv[] = "1,2\n3,4\n5,6\n7,8";
+    const char szExceptedErrorMsg[] = "Caught exception: 'Row 1 encountered'"; // Format itself is not part of the interface, but testing whole error message string so that unintentional format change is caught by tests.
+
+    // Single-threaded read
+    {
+        TableT t;
+        t.readFromMemory(szCsv, DFG_COUNTOF_SZ(szCsv), CsvFormatDefinition::fromReadTemplate_commaQuoteEolNUtf8(), ExceptionReader(t));
+        const auto errorInfo = t.readFormat().getReadStat<TableCsvReadStat::errorInfo>();
+        DFGTEST_EXPECT_LEFT(1, errorInfo.entryCount()); // If this fails, might simply be due to added fields
+        const auto errorMsg = errorInfo.value(TableCsvErrorInfoFields::errorMsg);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8(szExceptedErrorMsg, errorMsg);
+    }
+
+    // Multithreaded read
+    {
+        TableCsvReadWriteOptions readOptions = TableCsvReadWriteOptions::fromReadTemplate_commaNoEnclosingEolNUtf8();
+        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(2);
+        readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
+        TableT t;
+        t.readFromMemory(szCsv, DFG_COUNTOF_SZ(szCsv), readOptions, ExceptionReader(t));
+        const auto errorInfo = t.readFormat().getReadStat<TableCsvReadStat::errorInfo>();
+        const auto errorMsg0 = errorInfo.value(SzPtrUtf8(format_fmt("threads/thread_0/{}", TableCsvErrorInfoFields::errorMsg.c_str()).c_str()));
+        const auto errorMsg1 = errorInfo.value(SzPtrUtf8(format_fmt("threads/thread_1/{}", TableCsvErrorInfoFields::errorMsg.c_str()).c_str()));
+
+        DFGTEST_EXPECT_LEFT(szExceptedErrorMsg, errorMsg0.rawStorage()); 
+        DFGTEST_EXPECT_LEFT(szExceptedErrorMsg, errorMsg1.rawStorage());
+    }
+}
+
 TEST(dfgCont, TableCsv_filterCellHandler)
 {
     using namespace DFG_ROOT_NS;
@@ -1000,6 +1057,26 @@ TEST(dfgCont, CsvConfig_uriPart)
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("cd",  ConfigT::uriPart(DFG_UTF8("/ab////cd///ef"), 5));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("",    ConfigT::uriPart(DFG_UTF8("/ab////cd///ef"), 7));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("ef",  ConfigT::uriPart(DFG_UTF8("/ab////cd///ef"), 8));
+}
+
+TEST(dfgCont, CsvFormatDefinition)
+{
+    using namespace ::DFG_ROOT_NS;
+    {
+        const auto csvf = CsvFormatDefinition::fromReadTemplate_commaQuoteEolNUtf8();
+        DFGTEST_EXPECT_LEFT(',', csvf.separatorChar());
+        DFGTEST_EXPECT_LEFT('"', csvf.enclosingChar());
+        DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::EndOfLineTypeN, csvf.eolType());
+        DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::encodingUTF8, csvf.textEncoding());
+    }
+
+    {
+        const auto csvf = CsvFormatDefinition::fromReadTemplate_commaNoEnclosingEolNUtf8();
+        DFGTEST_EXPECT_LEFT(',', csvf.separatorChar());
+        DFGTEST_EXPECT_LEFT(CsvFormatDefinition::metaCharNone(), csvf.enclosingChar());
+        DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::EndOfLineTypeN, csvf.eolType());
+        DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::encodingUTF8, csvf.textEncoding());
+    }
 }
 
 TEST(dfgCont, CsvFormatDefinition_FromCsvConfig)

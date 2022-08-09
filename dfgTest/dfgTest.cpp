@@ -81,6 +81,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_saving";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_forEach";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig_uriPart";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_FromCsvConfig";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_isFormatMatchingWith";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvFormatDefinition_ToConfig";
@@ -103,6 +104,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapToStringViews";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SortedSequence";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_exceptionHandling";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_filterCellHandler";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_memStreamTypes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_multiThreadedRead";

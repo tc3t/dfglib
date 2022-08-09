@@ -26,6 +26,8 @@
 #include "../concurrency/ConditionCounter.hpp"
 #include "../concurrency/ThreadList.hpp"
 
+#include "../str/format_fmt.hpp"
+
 DFG_ROOT_NS_BEGIN{ 
     namespace DFG_DETAIL_NS
     {
@@ -661,8 +663,9 @@ DFG_ROOT_NS_BEGIN{
                 return true;
             }
 
+            // Returns true on success, false on failure. In case of failure, extended error details may be available through TableCsvReadStat::errorInfo
             template <class Strm_T, class CharAppender_T, class Reader_T>
-            void read(Strm_T& strm, const CsvFormatDefinition& formatDef, CharAppender_T, Reader_T&& cellHandler)
+            bool read(Strm_T& strm, const CsvFormatDefinition& formatDef, CharAppender_T, Reader_T&& cellHandler)
             {
                 using namespace DFG_MODULE_NS(io);
                 this->clear();
@@ -673,6 +676,7 @@ DFG_ROOT_NS_BEGIN{
                     m_readFormat.setReadStat<TableCsvReadStat::streamType>(::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::streamStatName<Strm_T>());
                 }
 
+                bool exceptionCaught = false;
                 typedef DelimitedTextReader::ParsingDefinition<char, CharAppender_T> ParseDef;
                 try
                 {
@@ -693,9 +697,27 @@ DFG_ROOT_NS_BEGIN{
                     //m_readFormat.bomWriting(); // TODO: This is should be enquiried from the stream whether the stream had BOM.
                     m_saveFormat = m_readFormat;
                 }
+                catch (const std::exception& e)
+                {
+                    if (isReadStatsEnabled())
+                    {
+                        CsvConfig errorInfo;
+                        errorInfo.setKeyValue_fromUntyped(TableCsvErrorInfoFields::errorMsg.c_str(), format_fmt("Caught exception: '{0}'", e.what()));
+                        m_readFormat.setReadStat<TableCsvReadStat::errorInfo>(errorInfo);
+                    }
+                    exceptionCaught = true;
+                }
                 catch (...)
                 {
+                    if (isReadStatsEnabled())
+                    {
+                        CsvConfig errorInfo;
+                        errorInfo.setKeyValue(TableCsvErrorInfoFields::errorMsg, DFG_UTF8("Caught unknown exception type"));
+                        m_readFormat.setReadStat<TableCsvReadStat::errorInfo>(errorInfo);
+                    }
+                    exceptionCaught = true;
                 }
+                return !exceptionCaught;
             }
 
             // Reads table from memory possibly in multiple threads. Overall logics:
@@ -809,6 +831,36 @@ DFG_ROOT_NS_BEGIN{
                     const auto mergeTime = timerMerge.elapsedWallSeconds();
                     m_readFormat.setReadStat<TableCsvReadStat::threadCount>(nTotalThreadCount);
                     m_readFormat.setReadStat<TableCsvReadStat::timeBlockMerge>(mergeTime);
+                }
+
+                // Checking for read errors
+                if (isReadStatsEnabled())
+                {
+                    // Copying all error items from different TableCsv-objects into errorInfo of this
+                    // using uri prefix "threads/thread_{0}/", where {0} is thread index (0 for thread of 'this').
+                    CsvConfig csvConfig;
+                    const auto storeErrors = [&](const TableCsv& table, const size_t nIndex)
+                    {
+                        const auto myError = table.readFormat().template getReadStat<TableCsvReadStat::errorInfo>();
+                        if (!myError.empty())
+                        {
+                            myError.forEachKeyValue([&](CsvConfig::StringViewT svKey, CsvConfig::StringViewT svValue)
+                                {
+                                    auto sKey = format_fmt("threads/thread_{0}/{1}", nIndex, svKey.asUntypedView().toString());
+                                    csvConfig.setKeyValue_fromUntyped(std::move(sKey), svValue);
+                                });
+                        }
+
+                    };
+                    storeErrors(*this, 0);
+                    for (size_t i = 0; i < tables.size(); ++i)
+                    {
+                        storeErrors(*this, i + 1u);
+                    }
+                    if (!csvConfig.empty())
+                    {
+                        this->m_readFormat.setReadStat<TableCsvReadStat::errorInfo>(csvConfig);
+                    }
                 }
             }
 
