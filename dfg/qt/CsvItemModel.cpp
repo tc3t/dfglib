@@ -1137,7 +1137,7 @@ namespace DFG_DETAIL_NS
                     if (!rProcessController(CsvItemModel::IoOperationProgressController::ProgressCallbackParamT(nTotalProcessCount, rProcessController.getCurrentOperationThreadCount())))
                     {
                         rProcessController.setCancelled(true);
-                        // As of 2022-06 (dfgQtTableEditor 2.4.0), exception is catched in TableCsv::read()
+                        // As of 2022-06 (dfgQtTableEditor 2.4.0), exception is caught in TableCsv::read()
                         throw CsvItemModel::OpaqueTypeDefs::DataTable::OperationCancelledException();
                     }
                 }
@@ -1314,7 +1314,33 @@ bool CsvItemModel::openFile(QString sDbFilePath, LoadOptions loadOptions)
                     m_sTitle = tr("%1 (cancelled open)").arg(QFileInfo(sDbFilePath).fileName());
                 }
             }
-            return true; // Currently there's no error detection so always returning true (=success)
+
+            const auto errorInfo = table().readFormat().getReadStat<::DFG_MODULE_NS(cont)::TableCsvReadStat::errorInfo>();
+            if (errorInfo.empty() || loadOptions.m_progressController.isCancelled())
+                return true;
+            else
+            {
+                using namespace ::DFG_MODULE_NS(cont);
+                errorInfo.forEachStartingWith(DFG_UTF8("threads/thread_"), [&](const StringViewUtf8 svKey, const StringViewUtf8 svValue)
+                    {
+                        if (svValue.empty())
+                            return;
+                        // Checking if error_msg-field is included
+                        const auto svFieldName = CsvConfig::uriPart(svKey, 1);
+                        if (svFieldName != TableCsvErrorInfoFields::errorMsg)
+                            return;
+                        
+                        const auto svThreadIndex = CsvConfig::uriPart(svKey, 0);
+                        const auto nThreadIndex = ::DFG_MODULE_NS(str)::strTo<uint64>(svThreadIndex);
+                        
+                        m_messagesFromLatestOpen << tr("Thread %1: %2").arg(nThreadIndex).arg(viewToQString(svValue));
+                    });
+                // In single-threaded read, error_msg-field does not have thread-prefixes.
+                const auto errorMsg = errorInfo.value(TableCsvErrorInfoFields::errorMsg);
+                if (!errorMsg.empty())
+                    m_messagesFromLatestOpen << viewToQString(errorMsg);
+                return false;
+            }
         });
 
         return rv;

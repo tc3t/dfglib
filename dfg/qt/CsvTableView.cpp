@@ -2336,8 +2336,8 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
         onNewSourceOpened();
     else
     {
-        const QString sInfoPart = (!pModel->m_messagesFromLatestOpen.isEmpty()) ? tr("\nThe following message(s) were generated:\n %1").arg(pModel->m_messagesFromLatestOpen.join('\n')) : QString();
-        QMessageBox::information(this, tr("Open failed"), tr("Opening file\n%1\nfailed.%2.").arg(sPath, sInfoPart));
+        const QString sInfoPart = (!pModel->m_messagesFromLatestOpen.isEmpty()) ? tr("\nThe following message(s) were generated:\n%1").arg(pModel->m_messagesFromLatestOpen.join('\n')) : tr("\nThere are no details about the problem available.");
+        QMessageBox::information(this, tr("Open failed"), tr("Opening file\n%1\nencountered problems.%2").arg(sPath, sInfoPart));
     }
 
     return bSuccess;
