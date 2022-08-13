@@ -28,6 +28,8 @@
 
 #include "../str/format_fmt.hpp"
 
+#include <mutex>
+
 DFG_ROOT_NS_BEGIN{ 
     namespace DFG_DETAIL_NS
     {
@@ -743,29 +745,25 @@ DFG_ROOT_NS_BEGIN{
 
                 const auto blockSize = [&](const size_t i) { return (i + 1 < additionalBlockStarts.size()) ? additionalBlockStarts[i + 1] - additionalBlockStarts[i] : strm.sizeInCharacters() - additionalBlockStarts[i]; };
 
-                std::atomic<IndexT> anNextColumnToMerge{1};
+                std::mutex mutexMergeFlags;
+                typename std::make_unsigned<IndexT>::type nNextColumnToMerge = 0; // Accesses must be done while holding mutexMergeFlags
                 IndexT nSeedTableOriginalRowCount = 0;
                 IndexT nColumnCount = 0;
 
-                // Defining column merge function. It merges columns as long as there are unprocessed columns available using variable anNextColumnToMerge.
-                const auto mergeColumns = [&](bool bStartAtZero)
+                // Defining column merge function. It merges columns as long as there are unprocessed columns available using variable nNextColumnToMerge.
+                const auto mergeColumns = [&]()
                 {
-                    const bool bDoOverflowCheck = !bStartAtZero;
                     while (true)
                     {
-                        const IndexT nCol = [&]()
-                            {
-                                if (bStartAtZero)
-                                {
-                                    bStartAtZero = false;
-                                    return IndexT(0);
-                                }
-                                else
-                                    return anNextColumnToMerge.fetch_add(1);
-                            }();
-                        if (nCol >= nColumnCount || (bDoOverflowCheck && nColumnCount == 0)) // latter condition is to check overflow in fetch_add()
-                            break;
-                        this->appendColumnWithMoveImpl(nCol, nSeedTableOriginalRowCount, tablePtrs);
+                        IndexT nColToMerge = 0;
+                        {
+                            std::lock_guard<decltype(mutexMergeFlags)> lock(mutexMergeFlags);
+                            if (static_cast<IndexT>(nNextColumnToMerge) >= nColumnCount)
+                                return;
+                            nColToMerge = static_cast<IndexT>(nNextColumnToMerge);
+                            ++nNextColumnToMerge;
+                        }
+                        this->appendColumnWithMoveImpl(nColToMerge, nSeedTableOriginalRowCount, tablePtrs);
                     }
                 };
 
@@ -777,7 +775,7 @@ DFG_ROOT_NS_BEGIN{
                 for (size_t i = 0; i < additionalBlockStarts.size(); ++i)
                 {
                     threads.push_back(std::thread([i, this, &tables, &strm, &additionalBlockStarts, &conditionReadsDone, &tablePtrs,
-                                                   &anNextColumnToMerge, &mergeColumns, &conditionCanStartMerge,
+                                                   &mergeColumns, &conditionCanStartMerge,
                                                    &nSeedTableOriginalRowCount, blockSize, &formatDef, &additionalBlockCellHanders, streamCreator]()
                         {
                             auto& table = tables[i];
@@ -789,7 +787,7 @@ DFG_ROOT_NS_BEGIN{
                             // Waiting for 'ok to merge columns'-condition
                             conditionCanStartMerge.waitCounter();
                             // Starting column merge.
-                            mergeColumns(false);
+                            mergeColumns();
                         }));
                 }
                 const auto nTotalThreadCount = saturateCast<uint32>(threads.size() + 1u);
@@ -821,7 +819,7 @@ DFG_ROOT_NS_BEGIN{
                         // Now that all threads have completed reading and column vectors have been resized properly by appendTablesWithMoveImpl(), notify threads to proceed to column merging.
                         DFG_ASSERT_UB(rTable.colCountByMaxColIndex() == nColumnCount);
                         conditionCanStartMerge.decrementCounter();
-                        mergeColumns(true);
+                        mergeColumns();
                         // Waiting other block handlers to complete.
                         threads.joinAllAndClear();
                     });
