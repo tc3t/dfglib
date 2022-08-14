@@ -1732,14 +1732,15 @@ public:
             m_spContentFilterWidget->setToolTip(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::szContentFilterHelpText);
             m_spContentFilterWidget->setMaximumHeight(100);
         }
-        //spLayout->addRow(new QLabel(tr("Note: "), this));
 
-        auto& rButtonBox = *(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel));
+        spLayout->addRow(new QLabel(tr("Notes"), this),
+            new QLabel(tr("%1Threaded reading requires empty enclosing char and\n%2UTF8 / Latin1 / Windows-1252 encoding\n"
+                          "%1Best read performance is achieved with empty enclosing char,\n%2UTF8 encoding and no completer columns"
+                         ).arg(QString("%1 ").arg(QChar(0x2022)), "   "), this)); // 0x2022 is code point of bullet. Not using <li> since it introduced unwanted margins.
 
-        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, SIGNAL(accepted()), this, SLOT(accept())));
-        DFG_QT_VERIFY_CONNECT(connect(&rButtonBox, SIGNAL(rejected()), this, SLOT(reject())));
 
-        spLayout->addRow(QString(), &rButtonBox);
+        spLayout->addRow(QString(), addOkCancelButtonBoxToDialog(this, spLayout.get()));
+
         setLayout(spLayout.release());
     }
 

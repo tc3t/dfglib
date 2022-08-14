@@ -454,6 +454,11 @@ DFG_ROOT_NS_BEGIN{
                 }
                 catch (...)
                 {
+                    // Notes:
+                    //      -If FileMemoryMapped throws, ends up here and reading is re-tried below with IfStreamWithEncoding
+                    //      -If single-threaded reading throws from CellHandler, it is caught in read() and won't end up here.
+                    //      -If multithreaded reading throws from somewhere else than CellHandler (e.g. std::thread constructor throws),
+                    //       ends up here and reading is re-tried below with IfStreamWithEncoding.
                 }
 
                 if (!bRead)
@@ -508,12 +513,12 @@ DFG_ROOT_NS_BEGIN{
                     DFG_MODULE_NS(io)::encodingUnknown);
             }
 
-            TableCsvReadWriteOptions readFormat() const
+            const TableCsvReadWriteOptions& readFormat() const
             {
                 return m_readFormat;
             }
 
-            TableCsvReadWriteOptions saveFormat() const
+            const TableCsvReadWriteOptions& saveFormat() const
             {
                 return m_saveFormat;
             }
