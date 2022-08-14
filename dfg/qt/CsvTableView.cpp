@@ -2243,8 +2243,8 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
             {
                 using TimePointT = std::chrono::steady_clock::time_point;
                 const auto timePointToAtomicType = [](const TimePointT& tp) { return tp.time_since_epoch().count(); };
-                std::atomic<long long> aLastSetValue = timePointToAtomicType(std::chrono::steady_clock::now());
-                std::atomic<uint32> anLastThreadCount = 1;
+                std::atomic<long long> aLastSetValue{timePointToAtomicType(std::chrono::steady_clock::now())};
+                std::atomic<uint32> anLastThreadCount{1};
                 const QString sOriginalLabel = pProgressWidget->labelText();
                 loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([pProgressWidget, fileSizeDouble, bHasProgress, &sOriginalLabel, &timePointToAtomicType, &aLastSetValue, &anLastThreadCount](const CsvModel::LoadOptions::ProgressControllerParamT param)
                 {
