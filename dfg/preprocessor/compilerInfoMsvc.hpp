@@ -87,6 +87,9 @@
 #define DFG_MSVC_VER_VC17_2     1932
 #define DFG_MSVC_VER_2022_2     DFG_MSVC_VER_VC17_2
 
+#define DFG_MSVC_VER_VC17_3     1933
+#define DFG_MSVC_VER_2022_3     DFG_MSVC_VER_VC17_3
+
 #if defined(_MSC_VER)
     #define DFG_MSVC_VER	_MSC_VER
 #else
