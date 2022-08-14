@@ -143,9 +143,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     // Adds Ok/Cancel button box to dialog and connects it to QDialog::accept/reject
     // Returns created button box, which is child of pDlg.
-    inline QDialogButtonBox* addOkCancelButtonBoxToDialog(QDialog* pDlg, QLayout* pLayout)
+    inline QDialogButtonBox* addOkCancelButtonBoxToDialog(QDialog* pDlg)
     {
-        if (!pDlg || !pLayout)
+        if (!pDlg)
             return nullptr;
         auto pButtonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, pDlg);
         DFG_QT_VERIFY_CONNECT(QObject::connect(pButtonBox, &QDialogButtonBox::accepted, pDlg, &QDialog::accept));

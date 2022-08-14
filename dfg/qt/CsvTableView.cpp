@@ -1739,7 +1739,7 @@ public:
                          ).arg(QString("%1 ").arg(QChar(0x2022)), "   "), this)); // 0x2022 is code point of bullet. Not using <li> since it introduced unwanted margins.
 
 
-        spLayout->addRow(QString(), addOkCancelButtonBoxToDialog(this, spLayout.get()));
+        spLayout->addRow(QString(), addOkCancelButtonBoxToDialog(this));
 
         setLayout(spLayout.release());
     }
@@ -3637,7 +3637,7 @@ void CsvTableView::onGoToCellTriggered()
 
     pSpinBoxRow->selectAll(); // Sets focus to row edit for expected UX: Ctrl + G -> type row number -> enter.
 
-    pLayout->addRow(addOkCancelButtonBoxToDialog(&dlg, pLayout));
+    pLayout->addRow(addOkCancelButtonBoxToDialog(&dlg));
 
     removeContextHelpButtonFromDialog(&dlg);
     const auto rv = dlg.exec();
@@ -4871,7 +4871,7 @@ void CsvTableView::setColumnNames()
     columnNameView.setModel(&columnNameModel);
     spLayout->addWidget(&columnNameView);
 
-    spLayout->addWidget(addOkCancelButtonBoxToDialog(&dlg, spLayout.get()));
+    spLayout->addWidget(addOkCancelButtonBoxToDialog(&dlg));
 
     dlg.setLayout(spLayout.release());
     removeContextHelpButtonFromDialog(&dlg);

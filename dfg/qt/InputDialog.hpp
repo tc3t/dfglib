@@ -70,7 +70,7 @@ public:
 
         pLayout->addWidget(&view);
 
-        pLayout->addWidget(addOkCancelButtonBoxToDialog(&dlg, pLayout));
+        pLayout->addWidget(addOkCancelButtonBoxToDialog(&dlg));
         removeContextHelpButtonFromDialog(&dlg);
 
         dlg.setLayout(pLayout);
@@ -138,7 +138,7 @@ QString InputDialog::getJsonAsText(
     auto pTextEdit = new QPlainTextEdit(sJsonDoc, &dlg); // Deletion by parenthood
     layout.addWidget(new QLabel(sLabel, &dlg)); // Deletion by parenthood
     layout.addWidget(pTextEdit);
-    layout.addWidget(addOkCancelButtonBoxToDialog(&dlg, &layout));
+    layout.addWidget(addOkCancelButtonBoxToDialog(&dlg));
 
     // If sSelectedValueKey is non-empty, selecting value of that key for convenient editing (i.e. don't need to find and select field to edit)
     if (!sSelectedValueKey.isEmpty())
