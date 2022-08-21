@@ -1075,7 +1075,7 @@ TEST(dfgIo, IfStreamWithEncoding_rawByteReading)
 
     EXPECT_EQ(encodingUTF8, istrm.encoding());
 
-    istrm.setEncoding(encodingNone);
+    istrm.setEncoding(encodingUnknown);
     const auto bytes1 = readAllFromStream<std::vector<char>>(istrm);
 
     EXPECT_EQ(bytes0, bytes1);
@@ -1523,7 +1523,6 @@ TEST(dfgIo, isUtfEncoding)
     DFGTEST_STATIC_TEST(isUtfEncoding(encodingUTF32Be));
     DFGTEST_STATIC_TEST(isUtfEncoding(encodingUTF32Le));
 
-    DFGTEST_STATIC_TEST(!isUtfEncoding(encodingNone));
     DFGTEST_STATIC_TEST(!isUtfEncoding(encodingLatin1));
     DFGTEST_STATIC_TEST(!isUtfEncoding(encodingUCS2Be));
     DFGTEST_STATIC_TEST(!isUtfEncoding(encodingUCS2Le));
@@ -1534,7 +1533,7 @@ TEST(dfgIo, isUtfEncoding)
 TEST(dfgIo, isBigEndianEncoding)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUTF8));
     DFGTEST_STATIC_TEST(isBigEndianEncoding(encodingUTF16Be));
     DFGTEST_STATIC_TEST(!isBigEndianEncoding(encodingUTF16Le));
@@ -1549,8 +1548,7 @@ TEST(dfgIo, isBigEndianEncoding)
 TEST(dfgIo, areAsciiBytesValidContentInEncoding)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
-    DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingNone));
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingLatin1));
     DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingWindows1252));
     DFGTEST_EXPECT_TRUE(areAsciiBytesValidContentInEncoding(encodingUTF8));
@@ -1559,9 +1557,8 @@ TEST(dfgIo, areAsciiBytesValidContentInEncoding)
 TEST(dfgIo, encodingStrIds)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_EXPECT_STREQ("",             encodingToStrId(encodingUnknown));
-    DFGTEST_EXPECT_STREQ("",             encodingToStrId(encodingNone));
     DFGTEST_EXPECT_STREQ("UTF8",         encodingToStrId(encodingUTF8));
     DFGTEST_EXPECT_STREQ("UTF16LE",      encodingToStrId(encodingUTF16Le));
     DFGTEST_EXPECT_STREQ("UTF16BE",      encodingToStrId(encodingUTF16Be));
@@ -1592,9 +1589,8 @@ TEST(dfgIo, encodingStrIds)
 TEST(dfgIo, baseCharacterSize)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if test case is up-to-date.");
+    DFGTEST_STATIC_TEST_MESSAGE(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if test case is up-to-date.");
     DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingUnknown));
-    DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingNone));
     DFGTEST_EXPECT_LEFT(1, baseCharacterSize(encodingUTF8));
     DFGTEST_EXPECT_LEFT(2, baseCharacterSize(encodingUTF16Le));
     DFGTEST_EXPECT_LEFT(2, baseCharacterSize(encodingUTF16Be));

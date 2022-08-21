@@ -10,7 +10,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     enum TextEncoding
     {
         encodingUnknown,
-        encodingNone,
         encodingUTF8,
         encodingUTF16Le,
         encodingUTF16Be,
@@ -22,8 +21,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         encodingUCS4Le,
         encodingUCS4Be,
         encodingWindows1252, // https://en.wikipedia.org/wiki/Windows-1252
-        NumberOfTextCodingItems
+        lastTextEncodingItem = encodingWindows1252
     };
+    constexpr size_t NumberOfTextCodingItems = lastTextEncodingItem + 1u;
 
     constexpr inline bool isUtfEncoding(const TextEncoding encoding)
     {
@@ -32,15 +32,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
     constexpr inline bool isBigEndianEncoding(const TextEncoding encoding)
     {
-        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if implementation is up-to-date.");
+        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if implementation is up-to-date.");
         return (encoding == encodingUTF16Be || encoding == encodingUTF32Be || encoding == encodingUCS2Be || encoding == encodingUCS4Be);
     }
 
     // Returns true iff ASCII-bytes can be written unmodified to storage that uses given encoding.
     inline bool areAsciiBytesValidContentInEncoding(const TextEncoding encoding)
     {
-        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if implementation is up-to-date.");
-        return encoding == encodingUTF8 || encoding == encodingLatin1 || encoding == encodingWindows1252 || encoding == encodingNone;
+        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if implementation is up-to-date.");
+        return encoding == encodingUTF8 || encoding == encodingLatin1 || encoding == encodingWindows1252;
     }
 
     namespace DFG_DETAIL_NS
@@ -64,7 +64,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     inline const char* encodingToStrId(const TextEncoding encoding)
     {
         using namespace DFG_DETAIL_NS;
-        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if implementation is up-to-date.");
+        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if implementation is up-to-date.");
         auto iter = std::find_if(std::begin(EncodingStrIdTable), std::end(EncodingStrIdTable), [&](const std::pair<TextEncoding, const char*>& entry)
         {
             return (entry.first == encoding);
@@ -75,7 +75,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     inline TextEncoding strIdToEncoding(const char* const psz)
     {
         using namespace DFG_DETAIL_NS;
-        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if implementation is up-to-date.");
+        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if implementation is up-to-date.");
         auto iter = std::find_if(std::begin(EncodingStrIdTable), std::end(EncodingStrIdTable), [&](const std::pair<TextEncoding, const char*>& entry)
         {
             return (strcmp(entry.second, psz) == 0);
@@ -109,7 +109,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     // Returns the number of bytes that single base character of given encoding takes
     inline size_t baseCharacterSize(const TextEncoding encoding)
     {
-        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 13, "Number of text encoding items has changed, check if implementation is up-to-date.");
+        DFG_STATIC_ASSERT(NumberOfTextCodingItems == 12, "Number of text encoding items has changed, check if implementation is up-to-date.");
         switch (encoding)
         {
             case encodingUTF16Be:

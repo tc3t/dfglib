@@ -424,7 +424,7 @@ TEST(DfgIo, DelimitedTextReader_readRow)
         DelimitedTextReader::readRow<char>(strm2, ',', '"', '\n', cellHandler);
         EXPECT_EQ(exceptedCells, vecStrings);
         vecStrings.clear();
-        DelimitedTextReader::readRow<char>(strm3, CsvFormatDefinition(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingNone), cellHandler);
+        DelimitedTextReader::readRow<char>(strm3, CsvFormatDefinition(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUnknown), cellHandler);
         EXPECT_EQ(exceptedCells, vecStrings);
 
         // Testing that readRow() accepts rvalue stream
@@ -866,7 +866,7 @@ TEST(DfgIo, DelimitedTextReader_read)
         readRows.clear();
         readCols.clear();
         istrm.seekg(decltype(istrm)::SeekOriginBegin, 0);
-        const CsvFormatDefinition csvFormat(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingNone);
+        const CsvFormatDefinition csvFormat(',', '"', ::DFG_MODULE_NS(io)::EndOfLineTypeN, ::DFG_MODULE_NS(io)::encodingUnknown);
         DelimitedTextReader::read<char>(istrm, csvFormat, cellHandler);
         EXPECT_EQ(contExpectedValues, readValues);
         EXPECT_EQ(contExpectedRows, readRows);
