@@ -755,7 +755,6 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
 #endif
         };
 
-        testEncoding(::DFG_MODULE_NS(io)::encodingNone, "memory_encoding", "utf_charbufc");
         testEncoding(::DFG_MODULE_NS(io)::encodingLatin1, "memory_basic", "utf_charbufc");
         testEncoding(::DFG_MODULE_NS(io)::encodingWindows1252, "memory_encoding", "utf_charbufc");
         testEncoding(::DFG_MODULE_NS(io)::encodingUTF8, "memory_basic", "viewc_basic");
