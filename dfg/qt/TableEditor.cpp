@@ -1076,7 +1076,9 @@ void TableEditor::onSelectionChanged(const QItemSelection& selected, const QItem
                 colDescription = QString::number(ModelClass::internalColumnIndexToVisible(index.column()));
             const QString sAddInfo = QString(" (%1, %2)")
                                 .arg(model.headerData(index.row(), Qt::Vertical).toString(), colDescription);
-            setCellEditorTitle(m_spCellEditorDockWidget.get(), sAddInfo, m_spTableView->isReadOnlyMode());
+            const auto bReadOnly = m_spTableView->isReadOnlyMode() || !model.isCellEditable(index);
+            setCellEditorTitle(m_spCellEditorDockWidget.get(), sAddInfo, bReadOnly);
+            m_spCellEditor->setReadOnly(bReadOnly);
         }
         else
         {

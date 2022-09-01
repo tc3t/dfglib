@@ -842,11 +842,20 @@ bool CsvItemModel::readData(const LoadOptions& options, std::function<bool()> ta
             m_vecColInfo.back().m_completerType = CompleterTypeTexts;
         }
 
-        // Setting column types
+        const auto getConfigColumnPropertyC = [&](const char* pszPropertyName)
         {
-            ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szUrlBuffer, sizeof(szUrlBuffer), "columnsByIndex/%d/datatype", internalColumnIndexToVisible(c));
-            const auto sDataType = config.value(SzPtrUtf8(szUrlBuffer), DFG_UTF8(""));
-            this->setColumnType(c, sDataType.rawStorage());
+            ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szUrlBuffer, sizeof(szUrlBuffer), "columnsByIndex/%d/%s", internalColumnIndexToVisible(c), pszPropertyName);
+            return config.value(SzPtrUtf8(szUrlBuffer)).rawStorage();
+        };
+
+        // Setting column type
+        this->setColumnType(c, getConfigColumnPropertyC("datatype"));
+
+        // Setting read-only mode
+        {
+            const auto sReadOnly = getConfigColumnPropertyC("readOnly");
+            if (sReadOnly == "1")
+                setColumnProperty(c, CsvItemModelColumnProperty::readOnly, true);
         }
     }
     // Since the header is stored separately in this model, remove it from the table. This can be a bit heavy operation for big tables
@@ -1511,11 +1520,13 @@ QVariant CsvItemModel::headerData(int section, Qt::Orientation orientation, int 
 
 void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)
 {
-    using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ::DFG_MODULE_NS(cont) ::IntervalSet<int>>;
+    using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<Index, ::DFG_MODULE_NS(cont) ::IntervalSet<Index>>;
     IntervalContainer intervalsByColumn; 
-    table.impl().forEachFwdColumnIndex([&](const int c)
+    table.impl().forEachFwdColumnIndex([&](const Index c)
     {
-        table.impl().forEachFwdRowInColumn(c, [&](const int r, SzPtrUtf8R tpsz)
+        if (isReadOnlyColumn(c))
+            return;
+        table.impl().forEachFwdRowInColumn(c, [&](const Index r, SzPtrUtf8R tpsz)
         {
             if (isCancelledFunc && isCancelledFunc())
                 return; // TODO: should break loop
@@ -1533,13 +1544,29 @@ void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrU
     {
         const auto nCol = kv.first;
         const auto& intervalSet = kv.second;
-        intervalSet.forEachContiguousRange([&](const int up, const int down)
+        intervalSet.forEachContiguousRange([&](const Index top, const Index bottom)
         {
-            Q_EMIT dataChanged(this->index(up, nCol), this->index(down, nCol));
+            Q_EMIT dataChanged(this->index(top, nCol), this->index(bottom, nCol));
         });
     }
     
     setModifiedStatus(true);
+}
+
+bool CsvItemModel::isReadOnlyColumn(Index c) const
+{
+    return isValidColumn(c) && m_vecColInfo[c].getProperty(CsvItemModelColumnProperty::readOnly).toBool();
+}
+
+bool CsvItemModel::isCellEditable(const Index nRow, const Index nCol) const
+{
+    DFG_UNUSED(nRow);
+    return !isReadOnlyColumn(nCol);
+}
+
+bool CsvItemModel::isCellEditable(const QModelIndex& index)
+{
+    return isCellEditable(index.row(), index.column());
 }
 
 bool CsvItemModel::privSetDataToTable(const int nRow, const int nCol, const StringViewUtf8 sv)
@@ -1550,9 +1577,12 @@ bool CsvItemModel::privSetDataToTable(const int nRow, const int nCol, const Stri
         return false;
     }
 
-    // Check whether the new value is different from old to avoid setting modified even if nothing changes.
+    if (!isCellEditable(nRow, nCol))
+        return false;
+
+    // Checking whether the new value is different from old to avoid setting modified even if nothing changes.
     const auto svExisting = table().viewAt(nRow, nCol);
-    if (svExisting == sv) // Identical item? If yes, skip rest to avoid setting modified.
+    if (svExisting == sv)
         return false;
 
     return setItem(nRow, nCol, sv);
@@ -1730,7 +1760,7 @@ bool CsvItemModel::removeColumns(int position, int count, const QModelIndex& par
 void CsvItemModel::setColumnName(const int nCol, const QString& sName)
 {
     auto pColInfo = getColInfo(nCol);
-    if (pColInfo)
+    if (pColInfo && !pColInfo->getProperty(CsvItemModelColumnProperty::readOnly).toBool())
     {
         pColInfo->m_name = sName;
         setModifiedStatus(true);
@@ -1841,6 +1871,14 @@ void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
     {
         DFG_ASSERT_INVALID_ARGUMENT(false, "Unexpected column type");
     }
+}
+
+void CsvItemModel::setColumnProperty(const Index nCol, CsvItemModelColumnProperty propertyId, QVariant value)
+{
+    auto pColInfo = getColInfo(nCol);
+    if (!pColInfo)
+        return;
+    pColInfo->setProperty(propertyId, value);
 }
 
 QString& CsvItemModel::dataCellToString(const QString& sSrc, QString& sDst, const QChar cDelim)
@@ -2127,7 +2165,8 @@ auto CsvItemModel::peekCsvFormatFromFile(const QString& sPath, const size_t nPee
 DFG_OPAQUE_PTR_DEFINE(CsvItemModel::ColInfo)
 {
     template <class K_T, class V_T> using MapT = ::DFG_MODULE_NS(cont)::MapVectorSoA<K_T, V_T>;
-    MapT<uintptr_t, MapT<StringUtf8, QVariant>> m_properties;
+    MapT<uintptr_t, MapT<StringUtf8, QVariant>> m_contextProperties; // Properties that column have in some context, e.g. visibility in some view.
+    MapT<CsvItemModelColumnProperty, QVariant> m_properties; // Properties that column itself have
 };
 
 CsvItemModel::ColInfo::ColInfo(CsvItemModel* pModel, QString sName, ColType type, CompleterType complType)
@@ -2151,26 +2190,50 @@ auto CsvItemModel::ColInfo::index() const -> Index
     return static_cast<Index>(iter - pModel->m_vecColInfo.begin());
 }
 
+QVariant CsvItemModel::ColInfo::getProperty(const CsvItemModelColumnProperty propertyId, const QVariant& defaultVal) const
+{
+    auto pOpaq = DFG_OPAQUE_PTR();
+    return (pOpaq) ? pOpaq->m_properties.valueCopyOr(propertyId, defaultVal) : defaultVal;
+}
+
 QVariant CsvItemModel::ColInfo::getProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& defaultVal) const
 {
     auto pOpaq = DFG_OPAQUE_PTR();
     if (!pOpaq)
         return defaultVal;
-    auto iter = pOpaq->m_properties.find(contextId);
-    if (iter == pOpaq->m_properties.end())
+    auto iter = pOpaq->m_contextProperties.find(contextId);
+    if (iter == pOpaq->m_contextProperties.end())
         return defaultVal;
     return iter->second.valueCopyOr(svPropertyId, defaultVal);
 }
 
 bool CsvItemModel::ColInfo::setProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& value)
 {
-    auto& m = DFG_OPAQUE_REF().m_properties[contextId];
+    auto& m = DFG_OPAQUE_REF().m_contextProperties[contextId];
     auto iter = m.find(svPropertyId);
     bool bChanged = false;
     if (iter == m.end())
     {
         bChanged = true;
         m[svPropertyId.toString()] = value;
+    }
+    else if (iter->second != value)
+    {
+        bChanged = true;
+        iter->second = value;
+    }
+    return bChanged;
+}
+
+bool CsvItemModel::ColInfo::setProperty(const CsvItemModelColumnProperty& columnProperty, const QVariant& value)
+{
+    auto& m = DFG_OPAQUE_REF().m_properties;
+    auto iter = m.find(columnProperty);
+    bool bChanged = false;
+    if (iter == m.end())
+    {
+        bChanged = true;
+        m[columnProperty] = value;
     }
     else if (iter->second != value)
     {

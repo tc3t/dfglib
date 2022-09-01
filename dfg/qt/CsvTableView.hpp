@@ -23,6 +23,7 @@ DFG_END_INCLUDE_QT_HEADERS
 class QUndoStack;
 class QAbstractProxyModel;
 class QCheckBox;
+class QColor;
 class QDate;
 class QDateTime;
 class QItemSelection;
@@ -54,6 +55,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
     class CsvItemModel;
+    enum class CsvItemModelColumnProperty;
     class CsvTableView;
     class SelectionDetailCollectorContainer;
 
@@ -463,10 +465,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QDateTime insertDateTime(); // Returns QDateTime that was used for creating the inserted string.
 
         QVariant getColumnPropertyByDataModelIndex(int nDataModelCol, const StringViewUtf8& svKey, QVariant defaultValue = QVariant()) const;
+        QVariant getColumnPropertyByDataModelIndex(int nDataModelCol, const CsvItemModelColumnProperty propertyId, QVariant defaultValue = QVariant()) const;
 
         void invalidateSortFilterProxyModel();
 
+        enum class CellEditability { editable, blocked_columnReadOnly, blocked_tableReadOnly, blocked_unspecified };
+        CellEditability getCellEditability(const ColumnIndex_data nCol) const;
+
         void doModalOperation(const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void(ProgressWidget*)> func);
+
+        QColor getReadOnlyBackgroundColour() const;
 
     private:
         template <class T, class Param0_T>
@@ -591,6 +599,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Column header action handlers
         void setColumnNames();
         void setColumnVisibility(int nCol, bool bVisible, ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
+        void setColumnReadOnly(const ColumnIndex_data nCol, const bool bReadOnly);
         void unhideAllColumns();
         void showSelectColumnVisibilityDialog();
 

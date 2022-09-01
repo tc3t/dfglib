@@ -1367,7 +1367,7 @@ void CsvTableView::setReadOnlyMode(const bool bReadOnly)
         {
             auto newPalette = this->palette();
             rOpaq.m_readWriteModePalette = newPalette;
-            newPalette.setColor(QPalette::Base, QColor(248, 248, 248));
+            newPalette.setColor(QPalette::Base, this->getReadOnlyBackgroundColour());
             //newPalette.setColor(QPalette::Window, QColor(0, 0, 255)); // This seems to affect only the space below row headers.
             this->setPalette(newPalette);
         }
@@ -2645,6 +2645,8 @@ size_t CsvTableView::replace(const QVariantMap& params)
             StringUtf8 sTemp;
             forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& rbContinue)
             {
+                if (!pCsvModel->isCellEditable(index))
+                    return;
                 auto tpsz = table(index.row(), index.column());
                 if (!tpsz || std::strstr(tpsz.c_str(), sFindText.c_str().c_str()) == nullptr)
                     return;
@@ -2995,9 +2997,12 @@ static void generateForEachInTarget(const ::DFG_MODULE_NS(qt)::ContentGeneratorD
             // Note: top-to-bottom visit pattern is guaranteed in documentation of cellValue() parser function.
             for (int c = 0; c < nCols; ++c)
             {
+                if (rModel.isReadOnlyColumn(c))
+                    continue;
                 for (int r = 0; r < nRows; ++r, ++nCounter)
                 {
-                    generator(table, r, c, nCounter);
+                    if (rModel.isCellEditable(r, c))
+                        generator(table, r, c, nCounter);
                 }
             }
         });
@@ -3010,7 +3015,8 @@ static void generateForEachInTarget(const ::DFG_MODULE_NS(qt)::ContentGeneratorD
             view.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& bContinue)
             {
                 DFG_UNUSED(bContinue);
-                generator(table, index.row(), index.column(), nCounter++);
+                if (rModel.isCellEditable(index.row(), index.column()))
+                    generator(table, index.row(), index.column(), nCounter++);
             });
         });
     }
@@ -4946,6 +4952,18 @@ namespace
         return (pCsvModel) ? pCsvModel->getColInfo(nCol) : nullptr;
     }
 
+    template <class View_T>
+    static auto getColInfo(View_T& rView, const ColumnIndex_data col) -> decltype(getColInfo(rView, 0))
+    {
+        return getColInfo(rView, col.value());
+    }
+
+    template <class View_T>
+    static auto getColInfo(View_T& rView, const ColumnIndex_view col) -> decltype(getColInfo(rView, 0))
+    {
+        return getColInfo(rView, rView.columnIndexViewToData(col));
+    }
+
     uintptr_t viewPropertyContextId(const CsvTableView& view)
     {
         return reinterpret_cast<uintptr_t>(&view);
@@ -4961,6 +4979,12 @@ QVariant CsvTableView::getColumnPropertyByDataModelIndex(const int nCol, const S
 {
     auto pColInfo = getColInfo(*this, nCol);
     return (pColInfo) ? getColumnProperty(*this, *pColInfo, svKey, defaultValue) : defaultValue;
+}
+
+QVariant CsvTableView::getColumnPropertyByDataModelIndex(const int nCol, const CsvItemModelColumnProperty propertyId, const QVariant defaultValue) const
+{
+    auto pColInfo = getColInfo(*this, nCol);
+    return (pColInfo) ? pColInfo->getProperty(propertyId, defaultValue) : defaultValue;
 }
 
 void CsvTableView::setCaseSensitiveSorting(const bool bCaseSensitive)
@@ -5012,6 +5036,49 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible, cons
 
     if (pColInfo->setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, bVisible) && proxyInvalidation == ProxyModelInvalidation::ifNeeded)
         invalidateSortFilterProxyModel();
+}
+
+auto CsvTableView::getCellEditability(const ColumnIndex_data nCol) const -> CellEditability
+{
+    if (this->isReadOnlyMode())
+        return CellEditability::blocked_tableReadOnly;
+    else if (getColumnPropertyByDataModelIndex(nCol.value(), CsvItemModelColumnProperty::readOnly, false).toBool())
+        return CellEditability::blocked_columnReadOnly;
+    else
+        return CellEditability::editable;
+}
+
+void CsvTableView::setColumnReadOnly(const ColumnIndex_data nCol, const bool bReadOnly)
+{
+    if (this->m_spUndoStack && this->m_spUndoStack->item().count() > 0)
+    {
+        if (QMessageBox::question(
+                this,
+                tr("Changing column read-only"),
+                tr("Changing column read-only status clears undo-buffer (currently has %1 item(s)), proceed?").arg(this->m_spUndoStack->item().count())
+            ) != QMessageBox::Yes)
+            return;
+    }
+
+    auto lockReleaser = this->tryLockForEdit();
+    if (!lockReleaser.isLocked())
+    {
+        showStatusInfoTip(tr("Unable to change column read-only status: there seem to be ongoing operations"));
+        return;
+    }
+
+    clearUndoStack();
+
+    auto pColInfo = getColInfo(*this, nCol);
+    if (!pColInfo)
+    {
+        showStatusInfoTip(tr("Internal error: didn't find column info object"));
+        return;
+    }
+
+    // Note: using real column property instead of context property as it was simpler to implement (don't need to implement checking everywhere in actions etc.)
+    //       and it also makes sense to have the property in model itself rather on view-level.
+    pColInfo->setProperty(CsvItemModelColumnProperty::readOnly, bReadOnly);
 }
 
 void CsvTableView::unhideAllColumns()
@@ -5125,6 +5192,11 @@ QString CsvTableView::getColumnName(const ColumnIndex_view viewIndex) const
 void CsvTableView::doModalOperation(const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void(ProgressWidget*)> func)
 {
     ::DFG_MODULE_NS(qt)::doModalOperation(this, sProgressDialogLabel, isCancellable, sThreadName, func);
+}
+
+QColor CsvTableView::getReadOnlyBackgroundColour() const
+{
+    return QColor(248, 248, 248);
 }
 
 DFG_OPAQUE_PTR_DEFINE(CsvTableViewDlg)
@@ -5439,6 +5511,12 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
             {
                 rActVisible.setDisabled(true); // Not letting all columns to be hidden to prevent column header from getting removed.
                 rActVisible.setToolTip(tr("Hiding disabled: hiding all columns is not supported"));
+            }
+            // Read-only item
+            {
+                const auto funcReadOnlyHandler = [=](const bool bReadOnly) { pView->setColumnReadOnly(ColumnIndex_data(m_nLatestContextMenuEventColumn_dataModel), bReadOnly); };
+                const bool bReadOnly = rView.getColumnPropertyByDataModelIndex(m_nLatestContextMenuEventColumn_dataModel, CsvItemModelColumnProperty::readOnly, false).toBool();
+                addViewAction(rView, menu, tr("Read-only"), noShortCut, ActionFlags::readOnly, { true, bReadOnly }, funcReadOnlyHandler);
             }
             auto pTypeMenu = menu.addMenu(tr("Data type"));
             if (pTypeMenu)

@@ -1,10 +1,12 @@
 #include "CsvTableViewCompleterDelegate.hpp"
 #include "CsvTableView.hpp"
+#include "CsvItemModel.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QKeyEvent>
     #include <QCompleter>
     #include <QLineEdit>
+    #include <QPainter>
 DFG_END_INCLUDE_QT_HEADERS
 
 
@@ -28,6 +30,34 @@ namespace
     : BaseClass(pParent)
     , m_spTableView(qobject_cast<CsvTableView*>(pParent))
 {
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::checkCellEditability(const QModelIndex& index) const
+{
+    if (!m_spTableView)
+        return false;
+    const auto dataIndex = m_spTableView->mapToDataModel(index);
+    const auto cellEditability = m_spTableView->getCellEditability(ColumnIndex_data(dataIndex.column()));
+    if (cellEditability == CsvTableView::CellEditability::editable)
+        return true;
+    else
+    {
+        QString sMsg;
+        switch (cellEditability)
+        {
+            case CsvTableView::CellEditability::blocked_tableReadOnly:  sMsg = tr("Unable to edit: table is read-only"); break;
+            case CsvTableView::CellEditability::blocked_columnReadOnly: sMsg = tr("Unable to edit: column is read-only"); break;
+            default:                                                    sMsg = tr("Unable to edit: cell is not editable"); break;
+        }
+        m_spTableView->showStatusInfoTip(sMsg);
+        return false;
+    }
+}
+
+QWidget* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    DFG_UNUSED(option);
+    return checkCellEditability(index) ? new LineEditCtrl(parent) : nullptr;
 }
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::editorToString(QWidget* pWidget, QString& sText) const
@@ -58,17 +88,26 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QA
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+    const auto doDefaultPaint = [&]()
+    {
+        auto pCsvModel = (m_spTableView) ? m_spTableView->csvModel() : nullptr;
+        const bool bIsCellEditable = (pCsvModel) ? pCsvModel->isCellEditable(m_spTableView->mapToDataModel(index)) : nullptr;
+        if (!bIsCellEditable)
+            painter->fillRect(option.rect, m_spTableView->getReadOnlyBackgroundColour());
+        BaseClass::paint(painter, option, index);
+    };
+
+    // If cell is not selected, default painting does what's needed
     if (!option.state.testFlag(QStyle::State_Selected))
     {
-        // If cell is not selected, default painting does what's needed
-        BaseClass::paint(painter, option, index);
+        doDefaultPaint();
         return;
     }
-    // Getting here means that cell is selected and since selected cells don't use index.data(Qt::BackgroundRole) in background drawing,
+
     // handling the case manually and adjusting color if needed (related to ticket #120 about selected items that match find-filter not showing clearly)
     const auto bgRole = index.data(Qt::BackgroundRole);
     if (bgRole.isNull())
-        BaseClass::paint(painter, option, index); // Cell has no BackgroundRole -> default painting does what's needed.
+        doDefaultPaint(); // Cell has no BackgroundRole -> default painting does what's needed.
     else
     {
         // Getting here means that index is selected and it has non-default background -> using BackgroundRole
@@ -99,13 +138,12 @@ DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::CsvTableViewCompleterDelegate(
 {
 }
 
-DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::~CsvTableViewCompleterDelegate()
-{
+DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::~CsvTableViewCompleterDelegate() = default;
 
-}
-
-QWidget* DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &/* option */, const QModelIndex &/* index */) const
+QWidget* DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &/* option */, const QModelIndex& index) const
 {
+    if (!checkCellEditability(index))
+        return nullptr;
     LineEditCtrl* pLineEdit = new LineEditCtrl(parent);
     if (m_spCompleter)
        pLineEdit->setCompleter(m_spCompleter.data());

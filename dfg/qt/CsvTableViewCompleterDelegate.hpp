@@ -24,11 +24,15 @@ public:
 
     CsvTableViewDelegate(QWidget* pParent);
 
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
     virtual bool editorToString(QWidget* pWidget, QString& sText) const; // To return true iff text should be set to model.
+
+protected:
+    bool checkCellEditability(const QModelIndex& index) const;
 
 public:
     QPointer<CsvTableView> m_spTableView;

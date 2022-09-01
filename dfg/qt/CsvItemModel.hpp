@@ -159,6 +159,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     } // detail-namespace
 
+    enum class CsvItemModelColumnProperty
+    {
+        readOnly // Whether cells in column or column name can be edited. Note that this does not make column completely immutable: for example can remove rows or even completely remove the column.
+    };
+
     class CsvItemModel : public QAbstractTableModel
     {
         Q_OBJECT
@@ -224,9 +229,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             QString name() const;
 
+            // Returns a column property.
+            QVariant getProperty(const CsvItemModelColumnProperty propertyId, const QVariant& defaultVal = QVariant()) const;
+
+            // Returns a property in given context. For example if the same CsvItemModel is used in different views, properties such as column visibility
+            // are not properties of the column itself, but properties of views: column could be shown in one, and be hidden in the other.
+            // ColInfo provides way to store these context-dependent properties to ColInfo object so that views don't need to implement storage.
             QVariant getProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& defaultVal = QVariant()) const;
 
             // Returns true iff property didn't exist or it's value was changed.
+            bool setProperty(const CsvItemModelColumnProperty& columnProperty, const QVariant& value);
             bool setProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& value);
 
             QPointer<CsvItemModel> m_spModel;
@@ -444,13 +456,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setModifiedStatus(const bool bMod = true);
 
         // Returns index of column with name 'sHeaderName' or 'returnValueIfNotFound'.
-        int findColumnIndexByName(const QString& sHeaderName, const int returnValueIfNotFound) const;
+        Index findColumnIndexByName(const QString& sHeaderName, const int returnValueIfNotFound) const;
 
-        int getColumnCount() const { return int(m_vecColInfo.size()); }
-        int getRowCount() const { return m_nRowCount; }
-        bool isValidRow(int r) const { return r >= 0 && r < getRowCount(); }
-        bool isValidColumn(int c) const { return c >= 0 && c < getColumnCount(); }
-
+        Index getColumnCount() const { return int(m_vecColInfo.size()); }
+        Index getRowCount() const { return m_nRowCount; }
+        bool isValidRow(Index r) const { return r >= 0 && r < getRowCount(); }
+        bool isValidColumn(Index c) const { return c >= 0 && c < getColumnCount(); }
+        bool isReadOnlyColumn(Index c) const;
+        bool isCellEditable(Index r, Index c) const; // Returns true iff cell can edited, might be uneditable e.g. due to being on read-only column 
+        bool isCellEditable(const QModelIndex& index); // Convenience overload equivalent to isCellEditable(index.row(), index.colum());
+        
         int getRowCountUpperBound() const; // Returns upper bound for row count (note that effective maximum can be much less)
         int getColumnCountUpperBound() const; // Returns upper bound for column count (note that effective maximum can be much less)
 
@@ -497,6 +512,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setColumnType(const Index nCol, const ColType colType);
         void setColumnType(const Index nCol, const StringViewC sColType); // sColType must one of: <empty> (=type not changed), "text", "number".
+        void setColumnProperty(const Index nCol, CsvItemModelColumnProperty propertyId, QVariant value);
 
         // Tokenizes properly formatted text line and sets the data
         // as cells of given row @p nRow.
@@ -559,6 +575,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         static ::DFG_MODULE_NS(cont)::CsvConfig getConfig(const QString& sConfFilePath);
 
         // Gives internal table to given function object for arbitrary edits and handles model specific tasks such as setting modified.
+        // Note: this is low level access function requiring care when used; for example it's caller responsibility to check active read-only flags in CsvItemModel.
         // Note: Does not check whether the table has actually changed and always sets the model modified.
         // Note: This resets model (for details, see QAbstractItemModel::beginResetModel()). This means that e.g. view selection is lost when calling this function.
         //       If caller wishes to have the same selection before and after this call, it must be handled manually.
