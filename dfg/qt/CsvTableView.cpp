@@ -2064,7 +2064,10 @@ bool CsvTableView::saveConfigFileWithOptions()
     configModel.setColumnName(0, tr("Key"));
     configModel.setColumnName(1, tr("Value"));
     if (bHasExistingConfPath)
+    {
         configModel.setColumnName(2, tr("Existing value"));
+        configModel.setColumnProperty(2, CsvItemModelColumnProperty::readOnly, true);
+    }
 
     int nRow = 0;
     config.forEachKeyValue([&](const StringViewUtf8& svKey, const StringViewUtf8& svValue)
@@ -4870,7 +4873,11 @@ void CsvTableView::setColumnNames()
     const auto nColCount = pCsvModel->columnCount();
     columnNameModel.insertRows(0, nColCount);
     for (int c = 0; c < nColCount; ++c)
+    {
         columnNameModel.setData(columnNameModel.index(c, 0), pCsvModel->getHeaderName(c));
+        if (pCsvModel->getColumnProperty(c, CsvItemModelColumnProperty::readOnly).toBool())
+            columnNameModel.setCellReadOnlyStatus(c, 0, true);
+    }
 
     // Creating a dialog that has CsvTableView and ok & cancel buttons.
     CsvTableView columnNameView(nullptr, this, ViewType::fixedDimensionEdit);
