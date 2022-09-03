@@ -694,6 +694,18 @@ CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWid
     }
 }
 
+CsvTableView::CsvTableView(TagCreateWithModels, QWidget* pParent, ViewType viewType)
+    : CsvTableView(nullptr, pParent, viewType)
+{
+    auto pCsvModel = new CsvItemModel;
+    pCsvModel->setParent(this);
+    auto pProxyModel = new CsvTableViewSortFilterProxyModel(this);
+    pProxyModel->setSourceModel(pCsvModel);
+    DFG_ASSERT_CORRECTNESS(pCsvModel->parent() == this);
+    DFG_ASSERT_CORRECTNESS(pProxyModel->parent() == this);
+    this->setModel(pProxyModel);
+}
+
 void CsvTableView::addSeparatorAction()
 {
     addSeparatorActionTo(this);

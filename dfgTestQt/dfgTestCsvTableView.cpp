@@ -1503,6 +1503,42 @@ TEST(dfgQt, CsvTableView_changeRadix)
     DFGTEST_EXPECT_FALSE(CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::toRadix), 63 } }).isValid());
 }
 
+TEST(dfgQt, CsvTableView_cellEditability)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvTableView view{ CsvTableView::TagCreateWithModels() };
+    view.resizeTableNoUi(2, 3);
+    view.clearUndoStack();
+    view.setColumnReadOnly(ColumnIndex_data(1), true);
+    DFGTEST_ASSERT_TRUE(view.csvModel() != nullptr);
+    view.csvModel()->setCellReadOnlyStatus(1, 2, true);
+
+#define DFGTEST_TEST_CELL_STATUS(VIEW_ROW, VIEW_COL, EXPECTED) DFGTEST_EXPECT_LEFT(CsvTableView::CellEditability::EXPECTED, view.getCellEditability(RowIndex_data(VIEW_ROW), view.columnIndexViewToData(ColumnIndex_view(VIEW_COL))));
+    DFGTEST_TEST_CELL_STATUS(0, 0, editable);
+    DFGTEST_TEST_CELL_STATUS(0, 1, blocked_columnReadOnly);
+    DFGTEST_TEST_CELL_STATUS(0, 2, editable);
+    DFGTEST_TEST_CELL_STATUS(1, 0, editable);
+    DFGTEST_TEST_CELL_STATUS(1, 1, blocked_columnReadOnly);
+    DFGTEST_TEST_CELL_STATUS(1, 2, blocked_cellReadOnly);
+
+    // Hiding first column and making sure that read-only status follows correctly.
+    view.setColumnVisibility(0, false);
+    DFGTEST_TEST_CELL_STATUS(0, 0, blocked_columnReadOnly);
+    DFGTEST_TEST_CELL_STATUS(0, 1, editable);
+    DFGTEST_TEST_CELL_STATUS(1, 0, blocked_columnReadOnly);
+    DFGTEST_TEST_CELL_STATUS(1, 1, blocked_cellReadOnly);
+
+    view.unhideAllColumns();
+    DFGTEST_TEST_CELL_STATUS(0, 0, editable);
+    DFGTEST_TEST_CELL_STATUS(0, 1, blocked_columnReadOnly);
+    DFGTEST_TEST_CELL_STATUS(0, 2, editable);
+    DFGTEST_TEST_CELL_STATUS(1, 0, editable);
+    DFGTEST_TEST_CELL_STATUS(1, 1, blocked_columnReadOnly);
+    DFGTEST_TEST_CELL_STATUS(1, 2, blocked_cellReadOnly);
+
+#undef DFGTEST_TEST_CELL_STATUS
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);

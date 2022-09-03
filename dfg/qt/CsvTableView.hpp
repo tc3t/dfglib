@@ -306,7 +306,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         static const char s_szCsvSaveOption_saveAsShown[];
 
+        struct TagCreateWithModels {};
+
         CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWidget* pParent, ViewType viewType = ViewType::allFeatures);
+        CsvTableView(TagCreateWithModels, QWidget* pParent = nullptr, ViewType viewType = ViewType::allFeatures); // Creates CsvTableView that has newly created data and proxy models as children.
         ~CsvTableView() DFG_OVERRIDE_DESTRUCTOR;
 
         // If already present, old undo stack will be destroyed.

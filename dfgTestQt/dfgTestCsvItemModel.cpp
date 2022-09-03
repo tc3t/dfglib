@@ -414,10 +414,10 @@ TEST(dfgQt, CsvItemModel_cellReadOnly)
         DFGTEST_EXPECT_FALSE(model.setDataNoUndo(1, 0, DFG_UTF8("b")));
         // Inserting row to beginning
         model.insertRow(0);
-        DFGTEST_EXPECT_EQ(3, model.rowCount());
+        DFGTEST_EXPECT_LEFT(3, model.rowCount());
         // Removing columns (for testing that implementation is not relying on columnCount()-dependent LinearIndex)
         model.removeColumns(2, 2);
-        DFGTEST_EXPECT_EQ(2, model.columnCount());
+        DFGTEST_EXPECT_LEFT(2, model.columnCount());
         // Making sure that (1, 0) is still read-only
         DFGTEST_EXPECT_FALSE(model.setDataNoUndo(1, 0, DFG_UTF8("b")));
         // Removing read-only status
