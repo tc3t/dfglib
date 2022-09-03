@@ -316,6 +316,8 @@ void CsvItemModel::ColInfo::CompleterDeleter::operator()(QCompleter* p) const
 DFG_OPAQUE_PTR_DEFINE(CsvItemModel)
 {
     std::shared_ptr<QReadWriteLock> m_spReadWriteLock;
+    ::DFG_MODULE_NS(cont)::SetVector<IndexPairInteger> m_readOnlyCells;
+    // Note: if adding members, check if it needs to be handled in clear()
 };
 
 CsvItemModel::CsvItemModel() :
@@ -766,6 +768,8 @@ void CsvItemModel::clear()
     m_messagesFromLatestSave.clear();
     if (m_pUndoStack)
         m_pUndoStack->clear();
+
+    DFG_OPAQUE_REF().m_readOnlyCells.clear();
 }
 
 bool CsvItemModel::openStream(QTextStream& strm)
@@ -1560,8 +1564,8 @@ bool CsvItemModel::isReadOnlyColumn(Index c) const
 
 bool CsvItemModel::isCellEditable(const Index nRow, const Index nCol) const
 {
-    DFG_UNUSED(nRow);
-    return !isReadOnlyColumn(nCol);
+    auto pOpaq = DFG_OPAQUE_PTR();
+    return !isReadOnlyColumn(nCol) && (!pOpaq || pOpaq->m_readOnlyCells.empty() || !pOpaq->m_readOnlyCells.hasKey(cellRowColumnPairToIndexPairInteger(nRow, nCol)));
 }
 
 bool CsvItemModel::isCellEditable(const QModelIndex& index)
@@ -1588,29 +1592,30 @@ bool CsvItemModel::privSetDataToTable(const int nRow, const int nCol, const Stri
     return setItem(nRow, nCol, sv);
 }
 
-void CsvItemModel::setDataNoUndo(const int nRow, const int nCol, const StringViewUtf8 sv)
+bool CsvItemModel::setDataNoUndo(const Index nRow, const Index nCol, const StringViewUtf8 sv)
 {
     if (!privSetDataToTable(nRow, nCol, sv))
-        return;
+        return false;
 
     auto indexItem = index(nRow, nCol);
     Q_EMIT dataChanged(indexItem, indexItem);
     setModifiedStatus(true);
+    return true;
 }
 
-void CsvItemModel::setDataNoUndo(const QModelIndex& index, const StringViewUtf8 sv)
+bool CsvItemModel::setDataNoUndo(const QModelIndex& index, const StringViewUtf8 sv)
 {
-    setDataNoUndo(index.row(), index.column(), sv);
+    return setDataNoUndo(index.row(), index.column(), sv);
 }
 
-void CsvItemModel::setDataNoUndo(const QModelIndex& index, const QString& str)
+bool CsvItemModel::setDataNoUndo(const QModelIndex& index, const QString& str)
 {
-    setDataNoUndo(index.row(), index.column(), str);
+    return setDataNoUndo(index.row(), index.column(), str);
 }
 
-void CsvItemModel::setDataNoUndo(const int nRow, const int nCol, const QString& str)
+bool CsvItemModel::setDataNoUndo(const Index nRow, const Index nCol, const QString& str)
 {
-    setDataNoUndo(nRow, nCol, SzPtrUtf8(str.toUtf8().data()));
+    return setDataNoUndo(nRow, nCol, SzPtrUtf8(str.toUtf8().data()));
 }
 
 bool CsvItemModel::setData(const QModelIndex& index, const QVariant& value, int role /*= Qt::EditRole*/)
@@ -1873,7 +1878,13 @@ void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
     }
 }
 
-void CsvItemModel::setColumnProperty(const Index nCol, CsvItemModelColumnProperty propertyId, QVariant value)
+QVariant CsvItemModel::getColumnProperty(const Index nCol, const CsvItemModelColumnProperty propertyId, QVariant defaultValue)
+{
+    auto pColInfo = getColInfo(nCol);
+    return (pColInfo) ? pColInfo->getProperty(propertyId, defaultValue) : defaultValue;
+}
+
+void CsvItemModel::setColumnProperty(const Index nCol, const CsvItemModelColumnProperty propertyId, QVariant value)
 {
     auto pColInfo = getColInfo(nCol);
     if (!pColInfo)
@@ -1998,12 +2009,23 @@ void CsvItemModel::nextCellByFinderAdvance(int& r, int& c, const FindDirection d
     }
 }
 
+auto CsvItemModel::cellRowColumnPairToLinearIndex(const Index r, const Index c) const -> LinearIndex
+{
+    return pairIndexToLinear<LinearIndex>(r, c, getColumnCount());
+}
+
+auto CsvItemModel::cellRowColumnPairToIndexPairInteger(Index r, Index c) -> IndexPairInteger
+{
+    DFG_STATIC_ASSERT(sizeof(r) <= 4, "Bitshift logics expects Index to be at most 4 bytes in size");
+    return (static_cast<uint64>(r) << 32) | static_cast<uint64>(c);
+}
+
 auto CsvItemModel::wrappedDistance(const QModelIndex& from, const QModelIndex& to, const FindDirection direction) const -> LinearIndex
 {
     if (!from.isValid() || !to.isValid())
         return 0;
-    const auto fromIndex = DFG_ROOT_NS::pairIndexToLinear<LinearIndex>(from.row(), from.column(), getColumnCount());
-    const auto toIndex = DFG_ROOT_NS::pairIndexToLinear<LinearIndex>(to.row(), to.column(), getColumnCount());
+    const auto fromIndex = cellRowColumnPairToLinearIndex(from.row(), from.column());
+    const auto toIndex = cellRowColumnPairToLinearIndex(to.row(), to.column());
     if (direction == FindDirectionForward)
     {
         if (toIndex >= fromIndex)
@@ -2255,6 +2277,15 @@ auto CsvItemModel::ColInfo::columnTypeAsString(const ColType colType) -> StringV
         case ColTypeNumber: return DFG_UTF8("number");
         default           : return DFG_UTF8("text");
     }
+}
+
+void CsvItemModel::setCellReadOnlyStatus(const Index nRow, const Index nCol, const bool bReadOnly)
+{
+    const auto key = cellRowColumnPairToIndexPairInteger(nRow, nCol);
+    if (bReadOnly)
+        DFG_OPAQUE_REF().m_readOnlyCells.insert(key);
+    else
+        DFG_OPAQUE_REF().m_readOnlyCells.erase(key);
 }
 
 namespace DFG_DETAIL_NS

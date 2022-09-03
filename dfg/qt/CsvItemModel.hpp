@@ -174,6 +174,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef QAbstractTableModel BaseClass;
         typedef int32 Index;       // Index type for both rows and columns
         typedef int64 LinearIndex; // LinearIndex guarantees that LinearIndex(rowCount()) * LinearIndex(columnCount()) does not overflow.
+        typedef uint64 IndexPairInteger; // Integer type that can hold (row, column) pair as integer.
         typedef std::ostream StreamT;
         typedef DFG_DETAIL_NS::CsvItemModelTable RawDataTable;
         typedef RawDataTable DataTable;
@@ -512,7 +513,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setColumnType(const Index nCol, const ColType colType);
         void setColumnType(const Index nCol, const StringViewC sColType); // sColType must one of: <empty> (=type not changed), "text", "number".
-        void setColumnProperty(const Index nCol, CsvItemModelColumnProperty propertyId, QVariant value);
+        QVariant getColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant defaultValue = QVariant());
+        void setColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant value);
+
+        // Sets read-only status for single (row, column) address.
+        // Note: operations such as row insert do not adjust the read-only indexes:
+        //       for example if setting read-only to (0, 0) and inserting row to beginning,
+        //       read-only cell remains at (0, 0). Thus this functionality might only be 
+        //       useful in limited use cases where data table structure is restricted by other means.
+        void setCellReadOnlyStatus(Index nRow, Index nCol, bool bReadOnly);
 
         // Tokenizes properly formatted text line and sets the data
         // as cells of given row @p nRow.
@@ -522,12 +531,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool setItem(const int nRow, const int nCol, const QString& str);
         bool setItem(const int nRow, const int nCol, const StringViewUtf8& sv);
 
-        // Sets data of given index without triggering undo.
+        // Sets data of given index without triggering undo, returns return value of privSetDataToTable()
         // Note: Given model index must be valid; this function does not check it.
-        void setDataNoUndo(const QModelIndex& index, const QString& str);
-        void setDataNoUndo(const QModelIndex& index, StringViewUtf8 sv);
-        void setDataNoUndo(int nRow, int nCol, const QString& str);
-        void setDataNoUndo(int nRow, int nCol, StringViewUtf8 sv);
+        bool setDataNoUndo(const QModelIndex& index, const QString& str);
+        bool setDataNoUndo(const QModelIndex& index, StringViewUtf8 sv);
+        bool setDataNoUndo(Index nRow, Index nCol, const QString& str);
+        bool setDataNoUndo(Index nRow, Index nCol, StringViewUtf8 sv);
 
         // Sets data to table as follows:
         //      -Checks if target indexes are valid, returns false if not.
@@ -535,8 +544,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         //      -Does NOT handle setting modified.
         //      -Does NOT signal dataChanged()
         // Note: Caller must handle dataChanged signaling and setting modified.
-        // Return: true if value was set, false otherwise.
-        bool privSetDataToTable(int nRow, int nCol, StringViewUtf8 sv);
+        // Return: true if value was set and was different from existing, false otherwise.
+        bool privSetDataToTable(Index nRow, Index nCol, StringViewUtf8 sv);
 
         void setColumnName(const int nCol, const QString& sName);
 
@@ -595,6 +604,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QModelIndex nextCellByFinderAdvance(const QModelIndex& seedIndex, const FindDirection direction, const FindAdvanceStyle advanceStyle) const;
         void nextCellByFinderAdvance(int& r, int& c, const FindDirection direction, const FindAdvanceStyle advanceStyle) const;
 
+        LinearIndex cellRowColumnPairToLinearIndex(Index r, Index c) const;
+        static IndexPairInteger cellRowColumnPairToIndexPairInteger(Index r, Index c);
         LinearIndex wrappedDistance(const QModelIndex& from, const QModelIndex& to, const FindDirection direction) const;
 
         // Returns estimate for resulting file size if content is written to file.

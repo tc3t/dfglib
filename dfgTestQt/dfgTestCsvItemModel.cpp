@@ -397,3 +397,33 @@ TEST(dfgQt, CsvItemModel_setColumnType)
     DFGTEST_EXPECT_LEFT(CsvItemModel::ColTypeText, model.getColType(0));
     DFGTEST_EXPECT_LEFT(CsvItemModel::ColTypeNumber, model.getColType(1));
 }
+
+TEST(dfgQt, CsvItemModel_cellReadOnly)
+{
+    using namespace DFG_MODULE_NS(qt);
+    {
+        CsvItemModel model;
+        // Setting size to 1x1
+        model.setSize(2, 4);
+        // Setting cell (1, 0) to "a"
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(1, 0, DFG_UTF8("a")));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", model.rawStringViewAt(1, 0));
+        // Setting read-only to (1, 0)
+        model.setCellReadOnlyStatus(1, 0, true);
+        // Making sure that can't edit (1, 0)
+        DFGTEST_EXPECT_FALSE(model.setDataNoUndo(1, 0, DFG_UTF8("b")));
+        // Inserting row to beginning
+        model.insertRow(0);
+        DFGTEST_EXPECT_EQ(3, model.rowCount());
+        // Removing columns (for testing that implementation is not relying on columnCount()-dependent LinearIndex)
+        model.removeColumns(2, 2);
+        DFGTEST_EXPECT_EQ(2, model.columnCount());
+        // Making sure that (1, 0) is still read-only
+        DFGTEST_EXPECT_FALSE(model.setDataNoUndo(1, 0, DFG_UTF8("b")));
+        // Removing read-only status
+        model.setCellReadOnlyStatus(1, 0, false);
+        // Writing new content to (1, 0).
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(1, 0, DFG_UTF8("b")));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", model.rawStringViewAt(1, 0));
+    }
+}
