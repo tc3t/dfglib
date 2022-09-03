@@ -37,11 +37,9 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::checkCellEditability(const QMode
     if (!m_spTableView)
         return false;
     const auto dataIndex = m_spTableView->mapToDataModel(index);
-    const auto cellEditability = m_spTableView->getCellEditability(ColumnIndex_data(dataIndex.column()));
-    if (cellEditability == CsvTableView::CellEditability::editable)
-        return true;
-    else
-    {
+    const auto cellEditability = m_spTableView->getCellEditability(RowIndex_data(dataIndex.row()), ColumnIndex_data(dataIndex.column()));
+    return (cellEditability == CsvTableView::CellEditability::editable);
+#if 0
         QString sMsg;
         switch (cellEditability)
         {
@@ -50,14 +48,16 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::checkCellEditability(const QMode
             default:                                                    sMsg = tr("Unable to edit: cell is not editable"); break;
         }
         m_spTableView->showStatusInfoTip(sMsg);
-        return false;
-    }
+#endif
 }
 
 QWidget* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     DFG_UNUSED(option);
-    return checkCellEditability(index) ? new LineEditCtrl(parent) : nullptr;
+    auto p = new LineEditCtrl(parent);
+    if (!checkCellEditability(index))
+        p->setReadOnly(true);
+    return p;
 }
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::editorToString(QWidget* pWidget, QString& sText) const
@@ -140,12 +140,10 @@ DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::CsvTableViewCompleterDelegate(
 
 DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::~CsvTableViewCompleterDelegate() = default;
 
-QWidget* DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &/* option */, const QModelIndex& index) const
+QWidget* DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    if (!checkCellEditability(index))
-        return nullptr;
-    LineEditCtrl* pLineEdit = new LineEditCtrl(parent);
-    if (m_spCompleter)
+    auto pLineEdit = qobject_cast<QLineEdit*>(BaseClass::createEditor(parent, option, index));
+    if (pLineEdit && !pLineEdit->isReadOnly())
        pLineEdit->setCompleter(m_spCompleter.data());
     return pLineEdit;
 }
@@ -165,16 +163,17 @@ void DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::updateEditorGeometry(QWid
 
 void LineEditCtrl::keyPressEvent(QKeyEvent *e)
 {
-   if ((e->modifiers() & Qt::ControlModifier) && e->key() == Qt::Key_Space)
-   {
-       // Trigger autocompletion on Ctrl+space (TODO: make customisable)
-       QCompleter* pCompleter = completer();
-       if (pCompleter)
-       {
-           pCompleter->setCompletionPrefix(text());
-           pCompleter->complete();
-       }
-   }
-   else
-       BaseClass::keyPressEvent(e);
+    const auto bHasControlModifier = (e->modifiers() & Qt::ControlModifier);
+    if (bHasControlModifier && e->key() == Qt::Key_Space)
+    {
+        // Trigger autocompletion on Ctrl+space (TODO: make customisable)
+        QCompleter* pCompleter = completer();
+        if (pCompleter)
+        {
+            pCompleter->setCompletionPrefix(text());
+            pCompleter->complete();
+        }
+    }
+    else if (bHasControlModifier || !this->isReadOnly()) // In read-only mode, not passing normal key events to baseclass since it by default triggers "jump to next cell starting with pressed key" which can cause unwanted UX.
+        BaseClass::keyPressEvent(e);
 }

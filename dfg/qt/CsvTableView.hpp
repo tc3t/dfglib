@@ -98,6 +98,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int m_nCol;
     };
 
+    using RowIndex_data = int;
+
     // Analyzes item selection
     class CsvTableViewSelectionAnalyzer : public QObject
     {
@@ -276,6 +278,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef CsvTableViewSelectionAnalyzer SelectionAnalyzer;
         using PropertyFetcher = std::function<std::pair<QString, QString>()>;
         using CsvConfig = ::DFG_MODULE_NS(cont)::CsvConfig;
+        using Index = int; // Should be identical to CsvItemModel::Index
 
         enum class ViewType
         {
@@ -469,8 +472,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void invalidateSortFilterProxyModel();
 
-        enum class CellEditability { editable, blocked_columnReadOnly, blocked_tableReadOnly, blocked_unspecified };
-        CellEditability getCellEditability(const ColumnIndex_data nCol) const;
+        enum class CellEditability { editable, blocked_columnReadOnly, blocked_tableReadOnly, blocked_cellReadOnly, blocked_unspecified };
+        CellEditability getCellEditability(RowIndex_data nRow, ColumnIndex_data nCol) const;
 
         void doModalOperation(const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void(ProgressWidget*)> func);
 

@@ -645,6 +645,8 @@ namespace
 
 } // unnamed namespace
 
+DFG_STATIC_ASSERT((std::is_same<CsvTableView::Index, CsvItemModel::Index>::value), "CsvTableView::Index and CsvItemModel::Index differ");
+
 DFG_OPAQUE_PTR_DEFINE(CsvTableView)
 {
 public:
@@ -5045,12 +5047,14 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible, cons
         invalidateSortFilterProxyModel();
 }
 
-auto CsvTableView::getCellEditability(const ColumnIndex_data nCol) const -> CellEditability
+auto CsvTableView::getCellEditability(const RowIndex_data nRow, const ColumnIndex_data nCol) const -> CellEditability
 {
     if (this->isReadOnlyMode())
         return CellEditability::blocked_tableReadOnly;
     else if (getColumnPropertyByDataModelIndex(nCol.value(), CsvItemModelColumnProperty::readOnly, false).toBool())
         return CellEditability::blocked_columnReadOnly;
+    else if (csvModel() != nullptr && !csvModel()->isCellEditable(nRow, nCol.value()))
+        return CellEditability::blocked_cellReadOnly;
     else
         return CellEditability::editable;
 }
