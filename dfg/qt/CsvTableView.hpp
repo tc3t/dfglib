@@ -435,7 +435,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QItemSelection getSelection() const;
 
         LockReleaser tryLockForEdit(); // Note: edits include both content edit and view edits such as changing filter.
-        LockReleaser tryLockForRead();
+        LockReleaser tryLockForRead() const;
 
         TableHeaderView* horizontalTableHeader();
 
@@ -671,6 +671,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString askConfigFilePath(CsvItemModel& rModel);
         bool saveConfigFileTo(const CsvConfig& config, const QString& sPath);
 
+        template <class Func_T>
+        QVariant getColumnPropertyByDataModelIndexImpl(int nDataModelCol, QVariant defaultValue, Func_T func) const;
+
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;
         QStringList m_tempFilePathsToRemoveOnExit;
@@ -681,7 +684,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::unique_ptr<QMenu> m_spResizeColumnsMenu;
         bool m_bUndoEnabled;
         std::vector<QObjectStorage<QThread>> m_analyzerThreads;
-        std::shared_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited.
+        mutable std::shared_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited.
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableView
 

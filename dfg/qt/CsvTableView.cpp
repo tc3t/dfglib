@@ -4860,7 +4860,7 @@ auto CsvTableView::tryLockForEdit() -> LockReleaser
     return (m_spEditLock && m_spEditLock->tryLockForWrite()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
 }
 
-auto CsvTableView::tryLockForRead() -> LockReleaser
+auto CsvTableView::tryLockForRead() const -> LockReleaser
 {
     return (m_spEditLock && m_spEditLock->tryLockForRead()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
 }
@@ -4996,16 +4996,27 @@ namespace
     }
 } // unnamed namespace
 
+template <class Func_T>
+QVariant CsvTableView::getColumnPropertyByDataModelIndexImpl(int nDataModelCol, QVariant defaultValue, Func_T func) const
+{
+    // This is brittle: if getting read lock fails, this function may effectively return bogus column property which in turn
+    // can mean e.g. that UI shows faulty property status for a column. getColInfo() should probably always guarantee somekind of access
+    // to 'latest known' column info.
+    auto lockReleaser = tryLockForRead();
+    if (!lockReleaser.isLocked())
+        return defaultValue;
+    auto pColInfo = getColInfo(*this, nDataModelCol);
+    return (pColInfo) ? func(*pColInfo) : defaultValue;
+}
+
 QVariant CsvTableView::getColumnPropertyByDataModelIndex(const int nCol, const StringViewUtf8& svKey, const QVariant defaultValue) const
 {
-    auto pColInfo = getColInfo(*this, nCol);
-    return (pColInfo) ? getColumnProperty(*this, *pColInfo, svKey, defaultValue) : defaultValue;
+    return getColumnPropertyByDataModelIndexImpl(nCol, defaultValue, [&](const CsvItemModel::ColInfo& rColInfo) { return getColumnProperty(*this, rColInfo, svKey, defaultValue); });
 }
 
 QVariant CsvTableView::getColumnPropertyByDataModelIndex(const int nCol, const CsvItemModelColumnProperty propertyId, const QVariant defaultValue) const
 {
-    auto pColInfo = getColInfo(*this, nCol);
-    return (pColInfo) ? pColInfo->getProperty(propertyId, defaultValue) : defaultValue;
+    return getColumnPropertyByDataModelIndexImpl(nCol, defaultValue, [&](const CsvItemModel::ColInfo& rColInfo) { return rColInfo.getProperty(propertyId, defaultValue); });
 }
 
 void CsvTableView::setCaseSensitiveSorting(const bool bCaseSensitive)
