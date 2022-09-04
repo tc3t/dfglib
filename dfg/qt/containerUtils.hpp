@@ -123,6 +123,7 @@ public:
     LockReleaser& operator=(LockReleaser&& other) noexcept;
     LockReleaser& operator=(const LockReleaser&) = delete;
     bool isLocked() { return m_pLock != nullptr; }
+    void unlock();
 
     QReadWriteLock* m_pLock;
 }; // class LockReleaser
@@ -140,6 +141,11 @@ inline auto LockReleaser::operator=(LockReleaser&& other) noexcept -> LockReleas
     this->m_pLock = other.m_pLock;
     other.m_pLock = nullptr;
     return *this;
+}
+
+inline void LockReleaser::unlock()
+{
+    *this = LockReleaser();
 }
 
 }} // Module namespace

@@ -5067,7 +5067,10 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible, cons
         return;
 
     if (pColInfo->setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, bVisible) && proxyInvalidation == ProxyModelInvalidation::ifNeeded)
+    {
+        lockReleaser.unlock(); // Must be unlocked before invalidating since UI update may malfunction if holding edit-lock.
         invalidateSortFilterProxyModel();
+    }
 }
 
 auto CsvTableView::getCellEditability(const RowIndex_data nRow, const ColumnIndex_data nCol) const -> CellEditability
@@ -5134,6 +5137,7 @@ void CsvTableView::unhideAllColumns()
         return true;
     });
 
+    lockReleaser.unlock(); // Must be unlocked before invalidating since UI update may malfunction if holding edit-lock.
     invalidateSortFilterProxyModel();
 }
 
@@ -5185,6 +5189,7 @@ void CsvTableView::showSelectColumnVisibilityDialog()
     {
         this->setColumnVisibility(c, visibilityFlags[c], ProxyModelInvalidation::no);
     }
+    lockReleaser.unlock(); // Must be unlocked before invalidating since UI update may malfunction if holding edit-lock.
     invalidateSortFilterProxyModel();
 }
 
