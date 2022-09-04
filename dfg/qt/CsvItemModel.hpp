@@ -242,6 +242,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             bool setProperty(const CsvItemModelColumnProperty& columnProperty, const QVariant& value);
             bool setProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& value);
 
+        private:
+            template <class Cont_T, class Key_T, class ToStorageKey_T>
+            bool setPropertyImpl(Cont_T& cont, const Key_T& key, const QVariant& value, ToStorageKey_T);
+
+            template <class Cont_T, class Key_T>
+            bool setPropertyImpl(Cont_T& cont, const Key_T& key, const QVariant& value);
+
+        public:
             QPointer<CsvItemModel> m_spModel;
             QString m_name;
             ColType m_type;

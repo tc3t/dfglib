@@ -2229,15 +2229,15 @@ QVariant CsvItemModel::ColInfo::getProperty(const uintptr_t& contextId, const St
     return iter->second.valueCopyOr(svPropertyId, defaultVal);
 }
 
-bool CsvItemModel::ColInfo::setProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& value)
+template <class Cont_T, class Key_T, class ToStorageKey_T>
+bool CsvItemModel::ColInfo::setPropertyImpl(Cont_T& cont, const Key_T& key, const QVariant& value, ToStorageKey_T funcToKey)
 {
-    auto& m = DFG_OPAQUE_REF().m_contextProperties[contextId];
-    auto iter = m.find(svPropertyId);
+    auto iter = cont.find(key);
     bool bChanged = false;
-    if (iter == m.end())
+    if (iter == cont.end())
     {
         bChanged = true;
-        m[svPropertyId.toString()] = value;
+        cont[funcToKey(key)] = value;
     }
     else if (iter->second != value)
     {
@@ -2247,22 +2247,20 @@ bool CsvItemModel::ColInfo::setProperty(const uintptr_t& contextId, const String
     return bChanged;
 }
 
+template <class Cont_T, class Key_T>
+bool CsvItemModel::ColInfo::setPropertyImpl(Cont_T& cont, const Key_T& key, const QVariant& value)
+{
+    return setPropertyImpl(cont, key, value, [](const Key_T& a) { return a; });
+}
+
+bool CsvItemModel::ColInfo::setProperty(const uintptr_t& contextId, const StringViewUtf8& svPropertyId, const QVariant& value)
+{
+    return setPropertyImpl(DFG_OPAQUE_REF().m_contextProperties[contextId], svPropertyId, value, [](const StringViewUtf8& sv) { return sv.toString(); });
+}
+
 bool CsvItemModel::ColInfo::setProperty(const CsvItemModelColumnProperty& columnProperty, const QVariant& value)
 {
-    auto& m = DFG_OPAQUE_REF().m_properties;
-    auto iter = m.find(columnProperty);
-    bool bChanged = false;
-    if (iter == m.end())
-    {
-        bChanged = true;
-        m[columnProperty] = value;
-    }
-    else if (iter->second != value)
-    {
-        bChanged = true;
-        iter->second = value;
-    }
-    return bChanged;
+    return setPropertyImpl(DFG_OPAQUE_REF().m_properties, columnProperty, value);
 }
 
 auto CsvItemModel::ColInfo::columnTypeAsString() const -> StringViewUtf8
