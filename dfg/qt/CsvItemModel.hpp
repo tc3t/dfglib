@@ -487,8 +487,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         ColInfo*       getColInfo(const int nCol)       { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
         const ColInfo* getColInfo(const int nCol) const { return isValidColumn(nCol) ? &m_vecColInfo[nCol] : nullptr; }
-        void forEachColInfoWhile(std::function<bool(ColInfo&)>);
-        void forEachColInfoWhile(std::function<bool(const ColInfo&)>) const;
+
+        // Calls given function for each ColInfo. Function should return true to keep iterating.
+        // Locking must be handled by caller and lockReleaser is taken as argument to make the requirement explicit:
+        // if lockReleaser.isLocked() returns false, columns won't be iterated.
+        // @return true if columns were iterated (or could have been had there been any), false otherwise.
+        bool forEachColInfoWhile(const LockReleaser& lockReleaser, std::function<bool(ColInfo&)>);
+        // const-overload.
+        bool forEachColInfoWhile(const LockReleaser& lockReleaser, std::function<bool(const ColInfo&)>) const;
 
         SaveOptions getSaveOptions() const;
 
@@ -678,7 +684,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool readDataFromSqlite(const QString& sDbFilePath, const QString& sQuery, LoadOptions& loadOptions);
 
         template <class This_T, class Func_T>
-        static void forEachColInfoWhileImpl(This_T& rThis, Func_T&& func);
+        static bool forEachColInfoWhileImpl(This_T& rThis, const LockReleaser& lockReleaser, Func_T&& func);
 
     public:
         QUndoStack* m_pUndoStack;

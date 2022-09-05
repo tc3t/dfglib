@@ -722,7 +722,7 @@ void CsvTableView::addSeparatorActionTo(QWidget* pTarget)
 
 void CsvTableView::addAllActions()
 {
-    addOpenSaveActions();   
+    addOpenSaveActions();
         addSeparatorAction();
     addDimensionEditActions();
         addSeparatorAction();
@@ -807,7 +807,7 @@ void CsvTableView::addDimensionEditActions()
         {
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert row here"),             tr("Ins"),                ActionFlags::defaultStructureEdit, insertRowHere);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert row after current"),    tr("Shift+Ins"),          ActionFlags::defaultStructureEdit, insertRowAfterCurrent);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column"),               tr("Ctrl+Alt+Ins"),       ActionFlags::defaultStructureEdit, insertColumn); 
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column"),               tr("Ctrl+Alt+Ins"),       ActionFlags::defaultStructureEdit, insertColumn);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Insert column after current"), tr("Ctrl+Alt+Shift+Ins"), ActionFlags::defaultStructureEdit, insertColumnAfterCurrent);
         }
     } // End of "Insert row/column"-items
@@ -857,7 +857,7 @@ void CsvTableView::addContentEditActions()
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date"),          tr("Alt+Q"),       ActionFlags::defaultContentEdit, insertDate);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Time"),          tr("Alt+W"),       ActionFlags::defaultContentEdit, insertTime);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date and time"), tr("Shift+Alt+Q"), ActionFlags::defaultContentEdit, insertDateTime);
-            
+
         }
     } // End of "Insert row/column"-items
 
@@ -3484,16 +3484,64 @@ bool CsvTableView::generateContentImpl(const CsvModel& settingsModel)
     return false;
 }
 
+namespace
+{
+    namespace ColumnPropertyId
+    {
+        const SzPtrUtf8R visible = DFG_UTF8("visible");
+    } // namespace ColumnPropertyId
+
+    bool checkHeaderFirstRowActionPreconditions(::DFG_MODULE_NS(qt)::CsvTableView& rView, std::function<bool(const ::DFG_MODULE_NS(qt)::CsvTableView::CsvModel&)> funcAdditionalPreconditions)
+    {
+        using namespace ::DFG_MODULE_NS(qt);
+        auto pModel = rView.csvModel();
+        if (!pModel || pModel->columnCount() <= 0 || (funcAdditionalPreconditions && !funcAdditionalPreconditions(*pModel)))
+            return false;
+        bool bHiddenColumnFound = false;
+        bool bReadOnlyColumnFound = false;
+        const auto lockReleaser = rView.tryLockForRead();
+        QString sBlockedMessage;
+        if (!pModel->forEachColInfoWhile(lockReleaser, [&](const CsvTableView::CsvModel::ColInfo& rColInfo)
+            {
+                bHiddenColumnFound = !rView.getColumnPropertyByDataModelIndex(rColInfo.index(), ColumnPropertyId::visible, true).toBool();
+                bReadOnlyColumnFound = rColInfo.getProperty(CsvItemModelColumnProperty::readOnly).toBool();
+                return !bHiddenColumnFound && !bReadOnlyColumnFound;
+            }))
+        {
+            sBlockedMessage = rView.tr("Action can't be executed at the moment: there seems to be ongoing operations");
+        }
+        else
+        {
+            if (bHiddenColumnFound)
+                sBlockedMessage = rView.tr("Action can't be executed while there are hidden columns");
+            else if (bReadOnlyColumnFound)
+                sBlockedMessage = rView.tr("Action can't be executed while there are read-only columns");
+        }
+
+        if (sBlockedMessage.isEmpty())
+            return true;
+        else
+        {
+            rView.showStatusInfoTip(sBlockedMessage);
+            return false;
+        }
+    }
+}
+
 bool CsvTableView::moveFirstRowToHeader()
 {
-    auto pModel = model();
-    return (pModel && pModel->rowCount() > 0 && pModel->columnCount() > 0) ? executeAction<CsvTableViewActionMoveFirstRowToHeader>(this) : false;
+    if (checkHeaderFirstRowActionPreconditions(*this, [](const CsvModel& csvModel) { return csvModel.rowCount() >= 1; }))
+        return executeAction<CsvTableViewActionMoveFirstRowToHeader>(this);
+    else
+        return false;
 }
 
 bool CsvTableView::moveHeaderToFirstRow()
 {
-    auto pModel = model();
-    return (pModel && pModel->columnCount() > 0) ? executeAction<CsvTableViewActionMoveFirstRowToHeader>(this, true) : false;
+    if (checkHeaderFirstRowActionPreconditions(*this, [](const CsvModel&) { return true; }))
+        return executeAction<CsvTableViewActionMoveFirstRowToHeader>(this, true);
+    else
+        return false;
 }
 
 QAbstractProxyModel* CsvTableView::getProxyModelPtr()
@@ -4961,11 +5009,6 @@ auto CsvTableView::dateTimeToString(const QTime& qtime, const QString& sFormat) 
 
 namespace
 {
-    namespace ColumnPropertyId
-    {
-        const SzPtrUtf8R visible = DFG_UTF8("visible");
-    } // namespace ColumnPropertyId
-
     template <class View_T>
     static auto getColInfo(View_T& rView, const int nCol) -> decltype(rView.csvModel()->getColInfo(nCol))
     {
@@ -5054,7 +5097,7 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible, cons
     auto lockReleaser = this->tryLockForEdit();
     if (!lockReleaser.isLocked())
     {
-        showStatusInfoTip(tr("Unable to unhide column: there seems to be ongoing operations"));
+        showStatusInfoTip(tr("Unable to change column visibility: there seems to be ongoing operations"));
         return;
     }
 
@@ -5130,7 +5173,7 @@ void CsvTableView::unhideAllColumns()
     if (!pCsvModel)
         return;
 
-    pCsvModel->forEachColInfoWhile([&](CsvItemModel::ColInfo& colInfo)
+    pCsvModel->forEachColInfoWhile(lockReleaser, [&](CsvItemModel::ColInfo& colInfo)
     {
         if (!colInfo.getProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, true).toBool())
             colInfo.setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, true);
@@ -5148,12 +5191,19 @@ void CsvTableView::showSelectColumnVisibilityDialog()
         return;
     QStringList columns;
     std::vector<bool> visibilityFlags;
-    pCsvModel->forEachColInfoWhile([&](const CsvItemModel::ColInfo& colInfo)
     {
-        columns.push_back(tr("Column %1 ('%2')").arg(CsvItemModel::internalColumnIndexToVisible(colInfo.index())).arg(colInfo.name()));
-        visibilityFlags.push_back(getColumnProperty(*this, colInfo, ColumnPropertyId::visible, true).toBool());
-        return true;
-    });
+        auto lockReleaser = this->tryLockForRead();
+        if (!pCsvModel->forEachColInfoWhile(lockReleaser, [&](const CsvItemModel::ColInfo& colInfo)
+            {
+                columns.push_back(tr("Column %1 ('%2')").arg(CsvItemModel::internalColumnIndexToVisible(colInfo.index())).arg(colInfo.name()));
+                visibilityFlags.push_back(getColumnProperty(*this, colInfo, ColumnPropertyId::visible, true).toBool());
+                return true;
+            }))
+        {
+            showStatusInfoTip(tr("Unable to change column visibility at the moment: there seems to be ongoing operations"));
+            return;
+        }
+    }
     bool bOk = false;
     while (true)
     {
@@ -5503,7 +5553,8 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
         addViewAction(rView, menu, tr("Set column names"), noShortCut, ActionFlags::contentEdit, false, &CsvTableView::setColumnNames);
 
     const auto pCsvModel = rView.csvModel();
-    if (pCsvModel)
+    auto lockReleaser = (pCsvModel) ? rView.tryLockForRead() : LockReleaser();
+    if (pCsvModel && lockReleaser.isLocked())
     {
         menu.addSeparator();
 
@@ -5512,7 +5563,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
 
         const auto nMaxUnhideEntryCount = 10;
         auto nHiddenCount = 0;
-        pCsvModel->forEachColInfoWhile([&](const CsvItemModel::ColInfo& colInfo)
+        pCsvModel->forEachColInfoWhile(lockReleaser, [&](const CsvItemModel::ColInfo& colInfo)
         {
             if (getColumnProperty(rView, colInfo, ColumnPropertyId::visible, true).toBool())
                 return true;
@@ -5576,6 +5627,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
         }
     }
 
+    lockReleaser.unlock();
     if (!menu.actions().isEmpty())
         menu.exec(QCursor::pos());
 }

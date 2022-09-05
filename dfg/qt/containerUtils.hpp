@@ -122,7 +122,7 @@ public:
     LockReleaser(const LockReleaser&) = delete;
     LockReleaser& operator=(LockReleaser&& other) noexcept;
     LockReleaser& operator=(const LockReleaser&) = delete;
-    bool isLocked() { return m_pLock != nullptr; }
+    bool isLocked() const { return m_pLock != nullptr; }
     void unlock();
 
     QReadWriteLock* m_pLock;

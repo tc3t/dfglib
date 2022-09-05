@@ -2148,25 +2148,26 @@ bool CsvItemModel::transpose()
 }
 
 template <class This_T, class Func_T>
-void CsvItemModel::forEachColInfoWhileImpl(This_T& rThis, Func_T&& func)
+bool CsvItemModel::forEachColInfoWhileImpl(This_T& rThis, const LockReleaser& lockReleaser, Func_T&& func)
 {
-    if (!func)
-        return;
+    if (!func || !lockReleaser.isLocked())
+        return false;
     for (auto& colInfo : rThis.m_vecColInfo)
     {
         if (!func(colInfo))
             break;
     }
+    return true;
 }
 
-void CsvItemModel::forEachColInfoWhile(std::function<bool(ColInfo&)> func)
+bool CsvItemModel::forEachColInfoWhile(const LockReleaser& lockReleaser, std::function<bool(ColInfo&)> func)
 {
-    forEachColInfoWhileImpl(*this, std::move(func));
+    return forEachColInfoWhileImpl(*this, lockReleaser, std::move(func));
 }
 
-void CsvItemModel::forEachColInfoWhile(std::function<bool(const ColInfo&)> func) const
+bool CsvItemModel::forEachColInfoWhile(const LockReleaser& lockReleaser, std::function<bool(const ColInfo&)> func) const
 {
-    forEachColInfoWhileImpl(*this, std::move(func));
+    return forEachColInfoWhileImpl(*this, lockReleaser, std::move(func));
 }
 
 auto CsvItemModel::table()       -> DataTableRef      { return m_table.impl(); }
