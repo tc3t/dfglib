@@ -55,6 +55,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_completerEnabledSizeLimit[] = "completerEnabledSizeLimit";
     const char CsvOptionProperty_includeRows[]               = "includeRows"; // To define rows to read from file, as IntervalSet syntax. ASCII, 0-based index
     const char CsvOptionProperty_includeColumns[]            = "includeColumns"; // To define columns to read from file, as IntervalSet syntax. ASCII, 1-based index
+    const char CsvOptionProperty_initialScrollPosition[]     = "initialScrollPosition"; // Defines initial scroll position for opened document.
     const char CsvOptionProperty_readFilters[]               = "readFilters"; // Newline (\n) separated list of extended StringMatchDefinitions, UTF-8
                                                                               // Read filters can be both OR'ed and AND'ed; all AND-groups are OR'ed, i.e. if any AND-group
                                                                               // evaluates true, filter is considered matching. By default all filters are AND'ed, see and_group -property.

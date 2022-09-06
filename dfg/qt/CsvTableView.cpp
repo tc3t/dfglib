@@ -2300,10 +2300,6 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
         pProxyModel->setSourceModel(pModel);
     setModel(pViewModel);
 
-    const auto scrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
-    if (scrollPos == "bottom")
-        scrollToBottom();
-
     // Resize columns to view evenly.
     {
         // Note about scroll bar handling (hack): it seems that scroll bar size is not properly taken into account at this point
@@ -2348,6 +2344,18 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                 }
             });
         }
+    }
+
+    // Setting initial scroll position
+    {
+        const auto loadOptions = pModel->getOpenTimeLoadOptions();
+        QString sInitialScrollPos = untypedViewToQStringAsUtf8(loadOptions.getProperty(CsvOptionProperty_initialScrollPosition, "___"));
+        if (sInitialScrollPos == "___")
+            sInitialScrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
+        if (sInitialScrollPos == "bottom")
+            scrollToBottom();
+        else if (sInitialScrollPos != "top" && !sInitialScrollPos.isEmpty())
+            this->showStatusInfoTip(tr("Unrecognized initial scroll position '%1'. Supported ones are 'top' and 'bottom'; also empty is interpreted as 'use default'").arg(sInitialScrollPos));
     }
 
     if (bSuccess)

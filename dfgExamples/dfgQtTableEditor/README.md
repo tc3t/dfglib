@@ -466,6 +466,7 @@ Available keys:
 | properties/editMode | Defines edit mode when opened | _readOnly_, _readWrite_<br>If empty, handled as if property was not present at all. | Since 2.1.0 |
 | properties/includeRows | Limits rows which are read from file by row index (0-based index, typically header is on row 0) |  | Since 1.5.0 |
 | properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
+| properties/initialScrollPosition | file-specific setting for CsvTableView_initialScrollPosition. | | Since 2.4.0 ([#130](https://github.com/tc3t/dfglib/issues/130))
 | properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
 | properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, see [guide](../../dfg/qt/res/chartGuide.html) for detail | Since 1.6.0 |
 | properties/chartPanelWidth | If dfgQtTableEditor is built with chart feature, defines chart panel width to be used with the associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 1.8.1 ([#60](https://github.com/tc3t/dfglib/issues/60))
