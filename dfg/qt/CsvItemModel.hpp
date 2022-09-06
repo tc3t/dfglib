@@ -48,6 +48,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
 
 #ifndef DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
+    // Note: item-level drag & drop probably requires changes also to CsvTableView, #131 introduced file drag & drop solely in CsvTableView.
     #define DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS  0
 #endif
 
@@ -651,9 +652,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool removeColumns(int position, int columns, const QModelIndex& parent = QModelIndex()) override;
         QModelIndexList match(const QModelIndex& start, int role, const QVariant& value, int hits, Qt::MatchFlags flags) const override;
 #if DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS
-        QStringList mimeTypes() const;
-        QMimeData* mimeData(const QModelIndexList& indexes) const;
-        bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent);
+        QStringList mimeTypes() const override;
+        QMimeData* mimeData(const QModelIndexList& indexes) const override;
+        bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
+        bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
 #endif
 
         // Returns internal datatable type defined only in CsvItemModel.cpp

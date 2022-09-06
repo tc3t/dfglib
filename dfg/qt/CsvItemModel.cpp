@@ -2389,10 +2389,16 @@ bool CsvItemModel::dropMimeData(const QMimeData* data, Qt::DropAction action, in
         return false;
     QByteArray ba = data->data(sMimeTypeStr);
     QString s = ba;
-    if (IsValidRow(row))
+    if (isValidRow(row))
         setRow(row, s);
 
     return true;
+}
+
+bool CsvItemModel::canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const
+{
+    qDebug() << "CsvItemModel::canDropMimeData";
+    return BaseClass::canDropMimeData(data, action, row, column, parent);
 }
 
 #endif // DFG_CSV_ITEM_MODEL_ENABLE_DRAG_AND_DROP_TESTS

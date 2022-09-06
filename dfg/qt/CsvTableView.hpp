@@ -29,6 +29,7 @@ class QDateTime;
 class QItemSelection;
 class QItemSelectionRange;
 class QMenu;
+class QMimeData;
 class QPoint;
 class QProgressBar;
 class QPushButton;
@@ -482,6 +483,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         QColor getReadOnlyBackgroundColour() const;
 
+        QString getAcceptedFileTypeFilter() const; // Returns list of accepted file types in format of QFileDialog filter.
+        QString getFilterTextForOpenFileDialog() const;
+
+        // If mimedata has exactly one file path and it has acceptable suffix, returns it's path, otherwise returns empty.
+        QString getAcceptableFilePathFromMimeData(const QMimeData* pMimeData) const;
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -638,6 +645,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
+        void dragEnterEvent(QDragEnterEvent* event) override;
+        void dragMoveEvent(QDragMoveEvent* pEvent) override;
+        void dropEvent(QDropEvent* event) override;
         QModelIndexList selectedIndexes() const override;
 
     private:
@@ -673,6 +683,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         template <class Func_T>
         QVariant getColumnPropertyByDataModelIndexImpl(int nDataModelCol, QVariant defaultValue, Func_T func) const;
+
+        QString getFilePathFromFileDialog();
+        QString getFilePathFromFileDialog(const QString& sCaption);
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;

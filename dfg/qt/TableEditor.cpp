@@ -534,6 +534,7 @@ TableEditor::TableEditor()
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigReadOnlyModeChanged, this, &ThisClass::onViewReadOnlyModeChanged));
     // Setting default selection details from app settings.
     setSelectionDetailsFromIni(getTableEditorProperty<TableEditorPropertyId_selectionDetails>(this));
+    m_spTableView->setAcceptDrops(true);
 
     // Source path line edit
     m_spLineEditSourcePath.reset(new QLineEdit());

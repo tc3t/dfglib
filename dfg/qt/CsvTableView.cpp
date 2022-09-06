@@ -50,6 +50,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaMethod>
+#include <QMimeData>
 #include <QMutex>
 #include <QMutexLocker>
 #include <QProcess>
@@ -65,6 +66,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QToolButton>
 #include <QToolTip>
 #include <QUndoView>
+#include <QUrl>
 #include <QReadWriteLock>
 #include <QStringListModel>
 DFG_END_INCLUDE_QT_HEADERS
@@ -407,8 +409,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
 namespace
 {
-    static const char gszDefaultOpenFileFilter[] = QT_TR_NOOP("CSV or SQLite files (*.csv *.tsv *.csv.conf *.sqlite3 *.sqlite *.db);; CSV files (*.csv *.tsv *.csv.conf);; SQLite files (*.sqlite3 *.sqlite *.db);; All files(*.*)");
-
     enum CsvTableViewPropertyId
     {
         CsvTableViewPropertyId_diffProgPath,
@@ -544,16 +544,6 @@ namespace
     {
         ::DFG_MODULE_NS(sql)::SQLiteFileOpenDialog dlg(sFilePath, pParent);
         return (dlg.exec() == QDialog::Accepted) ? dlg.query() : QString();
-    }
-
-    QString getOpenFileName(QWidget* pParent)
-    {
-        return QFileDialog::getOpenFileName(pParent,
-                                            QApplication::tr("Open file"),
-                                            QString()/*dir*/,
-                                            QApplication::tr(gszDefaultOpenFileFilter),
-                                            nullptr/*selected filter*/,
-                                            QFileDialog::Options() /*options*/);
     }
 
     struct CsvTableViewFlag
@@ -1154,6 +1144,34 @@ void CsvTableView::contextMenuEvent(QContextMenuEvent* pEvent)
 
     menu.exec(QCursor::pos());
     */
+}
+
+void CsvTableView::dragEnterEvent(QDragEnterEvent* pEvent)
+{
+    if (pEvent && !getAcceptableFilePathFromMimeData(pEvent->mimeData()).isEmpty())
+    {
+        pEvent->acceptProposedAction();
+        pEvent->setAccepted(true);
+    }
+}
+
+void CsvTableView::dragMoveEvent(QDragMoveEvent* pEvent)
+{
+    DFG_UNUSED(pEvent);
+    // Not calling base class implementation as that would pass mimedata to canDropMimeData() of CsvItemModel
+    // which by default returns false effectively disabling drag&drop.
+    //BaseClass::dragMoveEvent(pEvent);
+}
+
+void CsvTableView::dropEvent(QDropEvent* pEvent)
+{
+    auto pMimeData = (pEvent) ? pEvent->mimeData() : nullptr;
+    const auto sPath = getAcceptableFilePathFromMimeData(pMimeData);
+    if (sPath.isEmpty())
+        return;
+
+    if (this->getProceedConfirmationFromUserIfInModifiedState(tr("open file\n%1").arg(sPath)))
+        this->openFile(sPath);
 }
 
 void CsvTableView::setModel(QAbstractItemModel* pModel)
@@ -2423,14 +2441,14 @@ bool CsvTableView::openFromFile()
 {
     if (!getProceedConfirmationFromUserIfInModifiedState(tr("open a new file")))
         return false;
-    return openFile(getOpenFileName(this));
+    return openFile(getFilePathFromFileDialog());
 }
 
 bool CsvTableView::openFromFileWithOptions()
 {
     if (!getProceedConfirmationFromUserIfInModifiedState(tr("open a new file")))
         return false;
-    const auto sPath = getOpenFileName(this);
+    const auto sPath = getFilePathFromFileDialog();
     if (sPath.isEmpty())
         return false;
     CsvFormatDefinitionDialog::LoadOptions loadOptions(csvModel());
@@ -2474,7 +2492,7 @@ bool CsvTableView::mergeFilesToCurrent()
     auto sPaths = QFileDialog::getOpenFileNames(this,
         tr("Select files to merge"),
         QString()/*dir*/,
-        tr(gszDefaultOpenFileFilter),
+        getFilterTextForOpenFileDialog(),
         nullptr/*selected filter*/,
         QFileDialog::Options() /*options*/);
     if (sPaths.isEmpty())
@@ -3584,7 +3602,7 @@ bool CsvTableView::diffWithUnmodified()
                                               );
         if (rv != QMessageBox::Yes)
             return false;
-        const auto manuallyLocatedDiffer = QFileDialog::getOpenFileName(this, tr("Locate diff viewer"));
+        const auto manuallyLocatedDiffer = getFilePathFromFileDialog(tr("Locate diff viewer"));
         if (manuallyLocatedDiffer.isEmpty())
             return false;
         // TODO: store this to in-memory property set so it doesn't need to be queried again for this run.
@@ -5294,6 +5312,53 @@ void CsvTableView::doModalOperation(const QString& sProgressDialogLabel, const P
 QColor CsvTableView::getReadOnlyBackgroundColour() const
 {
     return QColor(248, 248, 248);
+}
+
+QString CsvTableView::getAcceptedFileTypeFilter() const
+{
+    return "*.csv *.tsv *.csv.conf *.sqlite3 *.sqlite *.db";
+}
+
+QString CsvTableView::getFilterTextForOpenFileDialog() const
+{
+    return tr("CSV or SQLite files (%1);; CSV files (*.csv *.tsv *.csv.conf);; SQLite files (*.sqlite3 *.sqlite *.db);; All files(*.*)")
+        .arg(getAcceptedFileTypeFilter());
+}
+
+QString CsvTableView::getAcceptableFilePathFromMimeData(const QMimeData* pMimeData) const
+{
+    if (!pMimeData || !pMimeData->hasUrls())
+        return QString();
+    const auto urls = pMimeData->urls();
+    if (urls.size() == 1 && urls.front().isLocalFile())
+    {
+        const auto url = urls.front();
+        QFileInfo fi(url.toLocalFile());
+        const auto sSuffix = fi.suffix();
+        const auto isAcceptableFileSuffix = [&](const QString& sSuffix)
+        {
+            return getAcceptedFileTypeFilter().indexOf(QString("*.%1 ").arg(sSuffix), 0, Qt::CaseInsensitive) != -1;
+        };
+        return (isAcceptableFileSuffix(fi.suffix()) || isAcceptableFileSuffix(fi.completeSuffix())) ? fi.absoluteFilePath() : QString();
+    }
+    else
+        return QString();
+}
+
+QString CsvTableView::getFilePathFromFileDialog()
+{
+    return getFilePathFromFileDialog(tr("Open file"));
+}
+
+QString CsvTableView::getFilePathFromFileDialog(const QString& sCaption)
+{
+    return QFileDialog::getOpenFileName(this,
+        sCaption,
+        QString(), // dir
+        getFilterTextForOpenFileDialog(),
+        nullptr, // selected filter
+        QFileDialog::Options() // options
+    );
 }
 
 DFG_OPAQUE_PTR_DEFINE(CsvTableViewDlg)
