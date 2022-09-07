@@ -646,6 +646,7 @@ public:
     QAbstractItemView::EditTriggers m_editTriggers;
     QPalette m_readWriteModePalette;
     QVariantMap m_previousChangeRadixArgs;
+    QString m_sInitialScrollPosition;
 };
 
 const char CsvTableView::s_szCsvSaveOption_saveAsShown[] = "CsvTableView_saveAsShown";
@@ -2367,13 +2368,11 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     // Setting initial scroll position
     {
         const auto loadOptions = pModel->getOpenTimeLoadOptions();
-        QString sInitialScrollPos = untypedViewToQStringAsUtf8(loadOptions.getProperty(CsvOptionProperty_initialScrollPosition, "___"));
+        auto& sInitialScrollPos = DFG_OPAQUE_REF().m_sInitialScrollPosition;
+        sInitialScrollPos = untypedViewToQStringAsUtf8(loadOptions.getProperty(CsvOptionProperty_initialScrollPosition, "___"));
         if (sInitialScrollPos == "___")
             sInitialScrollPos = getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this);
-        if (sInitialScrollPos == "bottom")
-            scrollToBottom();
-        else if (sInitialScrollPos != "top" && !sInitialScrollPos.isEmpty())
-            this->showStatusInfoTip(tr("Unrecognized initial scroll position '%1'. Supported ones are 'top' and 'bottom'; also empty is interpreted as 'use default'").arg(sInitialScrollPos));
+        scrollToDefaultPosition();
     }
 
     if (bSuccess)
@@ -5361,6 +5360,23 @@ QString CsvTableView::getFilePathFromFileDialog(const QString& sCaption)
     );
 }
 
+void CsvTableView::scrollToDefaultPosition()
+{
+    const auto& sInitialScrollPosition = DFG_OPAQUE_REF().m_sInitialScrollPosition;
+    if (sInitialScrollPosition == "bottom")
+        scrollToBottom();
+    else if (sInitialScrollPosition == "top" || sInitialScrollPosition.isEmpty())
+        scrollToTop();
+    else
+        this->showStatusInfoTip(tr("Unrecognized scroll position '%1'. Supported ones are 'top' and 'bottom'; also empty is interpreted as 'use default'").arg(sInitialScrollPosition));
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// class CsvTableViewDlg
+//
+//////////////////////////////////////////////////////////////////////////
+
 DFG_OPAQUE_PTR_DEFINE(CsvTableViewDlg)
 {
 public:
@@ -5423,6 +5439,12 @@ void CsvTableViewDlg::addVerticalLayoutWidget(int nPos, QWidget* pWidget)
     pLayout->insertWidget(nPos, pWidget);
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// class CsvTableViewSelectionAnalyzer
+//
+//////////////////////////////////////////////////////////////////////////
+
 CsvTableViewSelectionAnalyzer::CsvTableViewSelectionAnalyzer()
     : m_abIsEnabled(true)
     , m_bPendingCheckQueue(false)
@@ -5478,6 +5500,11 @@ void CsvTableViewSelectionAnalyzer::onCheckAnalyzeQueue()
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// class CsvTableViewBasicSelectionAnalyzer
+//
+//////////////////////////////////////////////////////////////////////////
 
 
 CsvTableViewBasicSelectionAnalyzer::CsvTableViewBasicSelectionAnalyzer(PanelT* uiPanel)
@@ -5562,6 +5589,11 @@ void CsvTableViewBasicSelectionAnalyzer::analyzeImpl(const QItemSelection select
 
 #undef DFG_CSVTABLEVIEW_PROPERTY_PREFIX
 
+//////////////////////////////////////////////////////////////////////////
+//
+// class TableHeaderView
+//
+//////////////////////////////////////////////////////////////////////////
 
 TableHeaderView::TableHeaderView(CsvTableView* pParent) :
     BaseClass(Qt::Horizontal, pParent)

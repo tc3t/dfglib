@@ -1304,6 +1304,13 @@ void TableEditor::onFilterTextChanged(const QString& text)
         return;
     }
 
+    QModelIndex lastVisibleRowDataIndex;
+    if (pProxy->rowCount() > 0)
+    {
+        const auto lasViewIndex = pProxy->index(pProxy->rowCount() - 1, 0);
+        lastVisibleRowDataIndex = pProxy->mapToSource(lasViewIndex);
+    }
+
     m_spFilterPanel->setSyntaxIndicator_good();
     if (m_spFilterPanel->getPatternSyntax() == PatternMatcher::Json)
     {
@@ -1326,6 +1333,19 @@ void TableEditor::onFilterTextChanged(const QString& text)
             DFG_ASSERT(false); // TODO: show information to user.
         }
         pProxy->setFilterKeyColumn(CsvItemModel::visibleColumnIndexToInternal(m_spFilterPanel->m_pColumnSelector->value()));
+    }
+
+    // If there was at least one item before applying filter, trying to keep that visible after filter change.
+    // This tries to make especially filter clearing be more user friendly: view resetting always to top/bottom after filter clear is often a bit inconvenient.
+    const auto scrollToViewIndex = (lastVisibleRowDataIndex.isValid()) ? pProxy->mapFromSource(lastVisibleRowDataIndex) : QModelIndex();
+    if (scrollToViewIndex.isValid())
+    {
+        m_spTableView->repaint(); // scrollTo() didn't seem to do anything without repaint(), e.g. update() wouldn't work either. Probably something less coarse-grained would be sufficient, though.
+        m_spTableView->scrollTo(scrollToViewIndex, QAbstractItemView::PositionAtBottom);
+    }
+    else // case: view was empty before filter change or last visible got filtered out, scroll to default scroll position
+    {
+        m_spTableView->scrollToDefaultPosition();
     }
 }
 

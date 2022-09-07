@@ -489,6 +489,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // If mimedata has exactly one file path and it has acceptable suffix, returns it's path, otherwise returns empty.
         QString getAcceptableFilePathFromMimeData(const QMimeData* pMimeData) const;
 
+        void scrollToDefaultPosition();
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
