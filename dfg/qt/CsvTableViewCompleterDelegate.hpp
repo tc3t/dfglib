@@ -33,6 +33,7 @@ private:
 
 protected:
     bool checkCellEditability(const QModelIndex& index) const;
+    void drawDisplay(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text) const override;
 
 public:
     QPointer<CsvTableView> m_spTableView;

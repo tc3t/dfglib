@@ -86,8 +86,15 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QA
         model->setData(index, sNewText, Qt::EditRole);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optionArg, const QModelIndex& index) const
 {
+    auto option = optionArg;
+    option.index = index; // drawDisplay() didn't seem to receive index by default in option.index, adding it there just in case it will need it at some point.
+
+    // Default alignment in QStyleOptionViewItem::displayAlignment is Qt::AlignLeft which can cause cell to show empty if it has trailing newlines (#135).
+    // In default case adding Qt::AlignTop so that first line will always be shown.
+    const auto displayAlignment = index.data(Qt::TextAlignmentRole);
+    option.displayAlignment = (displayAlignment.isNull()) ? Qt::AlignLeft | Qt::AlignTop : Qt::Alignment(displayAlignment.toInt());
     const auto doDefaultPaint = [&]()
     {
         auto pCsvModel = (m_spTableView) ? m_spTableView->csvModel() : nullptr;
@@ -104,7 +111,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const Q
         return;
     }
 
-    // handling the case manually and adjusting color if needed (related to ticket #120 about selected items that match find-filter not showing clearly)
     const auto bgRole = index.data(Qt::BackgroundRole);
     if (bgRole.isNull())
         doDefaultPaint(); // Cell has no BackgroundRole -> default painting does what's needed.
@@ -112,6 +118,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const Q
     {
         // Getting here means that index is selected and it has non-default background -> using BackgroundRole
         // with adjustments so that cell has different background color than what non-selected would have.
+        // (related to ticket #120 about selected items that match find-filter not showing clearly)
         const auto bIsActive = option.state.testFlag(QStyle::State_Active);
         const auto bgBrush = bgRole.value<QBrush>();
         const auto bgColor = bgBrush.color();
@@ -130,6 +137,37 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const Q
         newOption.palette = newPalette;
         BaseClass::paint(painter, newOption, index);
     }
+}
+
+void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::drawDisplay(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text) const
+{
+    // Checking if adjustments are needed for better multiline visualization (#135)
+    // If rect height is such that only first line is show, adding ellipsis to end of first line.
+    // Not optimal in the sense that with non-default row height, multiline cell can show empty as the ellipsis handling might not get activated.
+    // Also if there is content after last shown row, ellipsis are not shown.
+    if (painter)
+    {
+        const auto nRectHeight = rect.height();
+        const auto nFontHeight = painter->fontMetrics().height();
+        /*
+        // These lines could be used to access row height of the row that is being drawn.
+        const auto nRow = option.index.row();
+        const auto nRowHeight = m_spTableView->rowHeight(nRow);
+        */
+        if (nFontHeight < 10000000 && nRectHeight <= nFontHeight * 7 / 4) // Using factor 1.75 so that ellipsis are shown until second line is mostly shown. First condition is overflow guard.
+        {
+            const auto nEolPos = text.indexOf(QChar::LineSeparator); // Qt converts \n into QChar::LineSeparator in QAbstractItemDelegatePrivate::textForRole() called by QItemDelegate::paint() 
+            if (nEolPos != -1)
+            {
+                // EOL was found, replacing EOL -> ...EOL
+                QString sAdjusted = text;
+                sAdjusted.insert(nEolPos, QChar(0x2026)); // 0x2026 is horizontal ellipsis (https://en.wikipedia.org/wiki/Ellipsis)
+                BaseClass::drawDisplay(painter, option, rect, sAdjusted);
+                return;
+            }
+        }
+    }
+    BaseClass::drawDisplay(painter, option, rect, text);
 }
 
 DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::CsvTableViewCompleterDelegate(QWidget* pParent, QCompleter* pCompleter)

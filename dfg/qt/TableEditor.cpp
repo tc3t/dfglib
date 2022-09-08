@@ -1070,7 +1070,7 @@ void TableEditor::onSelectionChanged(const QItemSelection& selected, const QItem
             m_spCellEditor->setEnabled(true);
 
             auto& model = *m_spTableModel;
-            m_spCellEditor->setPlainText(model.data(index).toString());
+            m_spCellEditor->setPlainText(model.data(index, Qt::EditRole).toString());
 
             auto colDescription = model.headerData(index.column(), Qt::Horizontal).toString();
             if (colDescription.isEmpty())
