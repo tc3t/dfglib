@@ -7,6 +7,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QCompleter>
     #include <QLineEdit>
     #include <QPainter>
+    #include <QPlainTextEdit>
 DFG_END_INCLUDE_QT_HEADERS
 
 
@@ -23,7 +24,9 @@ namespace
         }
     protected:
         void keyPressEvent(QKeyEvent *e);
-    };
+    }; // class LineEditCtrl
+
+    using MultilineEditor = QPlainTextEdit;
 }
 
 ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::CsvTableViewDelegate(QWidget* pParent)
@@ -51,23 +54,39 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::checkCellEditability(const QMode
 #endif
 }
 
+template <class T>
+T* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditorImpl(QWidget* pParent, const QModelIndex& index) const
+{
+    auto pEditor = new T(pParent);
+    if (!checkCellEditability(index))
+        pEditor->setReadOnly(true);
+    return pEditor;
+}
+
 QWidget* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     DFG_UNUSED(option);
-    auto p = new LineEditCtrl(parent);
-    if (!checkCellEditability(index))
-        p->setReadOnly(true);
-    return p;
+    const auto sText = index.data().toString();
+    QWidget* pEditor = nullptr;
+    // If cell has no newlines, using LineEditCtrl...
+    if (sText.indexOf('\n') == -1 && sText.indexOf(QChar::SpecialCharacter::LineSeparator) == -1)
+        pEditor = createEditorImpl<LineEditCtrl>(parent, index);
+    else // ...otherwise MultilineEditor without completer-functionality.
+        pEditor = createEditorImpl<MultilineEditor>(parent, index);
+    return pEditor;
 }
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::editorToString(QWidget* pWidget, QString& sText) const
 {
     auto pLineEdit = qobject_cast<QLineEdit*>(pWidget);
-    DFG_STATIC_ASSERT((std::is_base_of<QLineEdit, LineEditCtrl>::value), "Casting below assumes that LineEditCtrl inherits QLineEdit");
-    DFG_ASSERT_CORRECTNESS(pLineEdit != nullptr); // Assuming that pWidget is QLineEdit might be relying on Qt's implementation details.
+    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultilineEditor*>(pWidget);
     if (pLineEdit)
         sText = pLineEdit->text();
-    return (pLineEdit != nullptr);
+    else if (pMultiLineEditor)
+        sText = pMultiLineEditor->toPlainText();
+    else
+        DFG_ASSERT_IMPLEMENTED(false);
+    return (pLineEdit || pMultiLineEditor);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
@@ -170,6 +189,37 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::drawDisplay(QPainter* painter, c
     BaseClass::drawDisplay(painter, option, rect, text);
 }
 
+void DFG_MODULE_NS(qt)::CsvTableViewDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    auto pMultiLineEditor = dynamic_cast<MultilineEditor*>(editor);
+    if (pMultiLineEditor)
+    {
+        const auto nHeightIncrease = pMultiLineEditor->fontMetrics().height() * 3;
+        editor->setGeometry(option.rect.adjusted(0, 0, 0, nHeightIncrease));
+    }
+    else
+        BaseClass::updateEditorGeometry(editor, option, index);
+}
+
+void DFG_MODULE_NS(qt)::CsvTableViewDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
+{
+    auto pLineEdit = dynamic_cast<LineEditCtrl*>(editor);
+    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultilineEditor*>(editor);
+    const QString sText = index.data().toString();
+    if (pLineEdit)
+        pLineEdit->setText(sText);
+    else if (pMultiLineEditor)
+        pMultiLineEditor->setPlainText(sText);
+    else
+        DFG_ASSERT_IMPLEMENTED(false);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+// 
+// CsvTableViewCompleterDelegate
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
 DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::CsvTableViewCompleterDelegate(QWidget* pParent, QCompleter* pCompleter)
     : BaseClass(pParent)
     , m_spCompleter(pCompleter)
@@ -180,24 +230,18 @@ DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::~CsvTableViewCompleterDelegate
 
 QWidget* DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    auto pLineEdit = qobject_cast<QLineEdit*>(BaseClass::createEditor(parent, option, index));
+    auto pEditor = BaseClass::createEditor(parent, option, index);
+    auto pLineEdit = qobject_cast<QLineEdit*>(pEditor);
     if (pLineEdit && !pLineEdit->isReadOnly())
        pLineEdit->setCompleter(m_spCompleter.data());
-    return pLineEdit;
+    return pEditor;
 }
 
-void DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::setEditorData(QWidget *editor,
-                                    const QModelIndex &index) const
-{
-    LineEditCtrl* pLineEdit = static_cast<LineEditCtrl*>(editor);
-    pLineEdit->setText(index.data().toString());
-}
-
-void DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::updateEditorGeometry(QWidget *editor,
-    const QStyleOptionViewItem &option, const QModelIndex &/* index */) const
-{
-    editor->setGeometry(option.rect);
-}
+/////////////////////////////////////////////////////////////////////////////////////
+// 
+// LineEditCtrl
+//
+/////////////////////////////////////////////////////////////////////////////////////
 
 void LineEditCtrl::keyPressEvent(QKeyEvent *e)
 {

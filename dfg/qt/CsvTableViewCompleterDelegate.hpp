@@ -25,11 +25,16 @@ public:
     CsvTableViewDelegate(QWidget* pParent);
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
     void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
     virtual bool editorToString(QWidget* pWidget, QString& sText) const; // To return true iff text should be set to model.
+
+    template <class T>
+    T* createEditorImpl(QWidget* pParent, const QModelIndex& index) const;
 
 protected:
     bool checkCellEditability(const QModelIndex& index) const;
@@ -52,13 +57,8 @@ public:
     // Does not take ownership of pCompleter.
     CsvTableViewCompleterDelegate(QWidget* pParent = nullptr, QCompleter* pCompleter = nullptr);
     ~CsvTableViewCompleterDelegate();
-
     
     QWidget *createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex &index) const override;
-    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
-
-    void updateEditorGeometry(QWidget* editor,
-    const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
     QPointer<QCompleter> m_spCompleter;
 }; // CsvTableViewCompleterDelegate
