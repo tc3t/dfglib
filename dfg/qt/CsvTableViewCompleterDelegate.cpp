@@ -1,15 +1,17 @@
 #include "CsvTableViewCompleterDelegate.hpp"
 #include "CsvTableView.hpp"
 #include "CsvItemModel.hpp"
+#include "widgetHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-    #include <QKeyEvent>
+    #include <QAbstractButton>
     #include <QCompleter>
+    #include <QKeyEvent>
     #include <QLineEdit>
     #include <QPainter>
     #include <QPlainTextEdit>
+    #include <QVBoxLayout>
 DFG_END_INCLUDE_QT_HEADERS
-
 
 namespace
 {
@@ -26,8 +28,22 @@ namespace
         void keyPressEvent(QKeyEvent *e);
     }; // class LineEditCtrl
 
-    using MultilineEditor = QPlainTextEdit;
-}
+    class MultiLineEditor : public QDialog
+    {
+    public:
+        //using BaseClass = QWidget;
+        using BaseClass = QDialog;
+
+        MultiLineEditor(QWidget* pParent);
+        ~MultiLineEditor();
+
+        QString toPlainText() const;
+        void setPlainText(const QString& s);
+        void setReadOnly(bool bReadOnly);
+
+        ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spPlainTextEdit;
+    }; // class MultiLineEditor
+} // unnamed namespace
 
 ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::CsvTableViewDelegate(QWidget* pParent)
     : BaseClass(pParent)
@@ -71,15 +87,15 @@ QWidget* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditor(QWidget* parent
     // If cell has no newlines, using LineEditCtrl...
     if (sText.indexOf('\n') == -1 && sText.indexOf(QChar::SpecialCharacter::LineSeparator) == -1)
         pEditor = createEditorImpl<LineEditCtrl>(parent, index);
-    else // ...otherwise MultilineEditor without completer-functionality.
-        pEditor = createEditorImpl<MultilineEditor>(parent, index);
+    else // ...otherwise MultiLineEditor without completer-functionality.
+        pEditor = createEditorImpl<MultiLineEditor>(parent, index);
     return pEditor;
 }
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::editorToString(QWidget* pWidget, QString& sText) const
 {
     auto pLineEdit = qobject_cast<QLineEdit*>(pWidget);
-    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultilineEditor*>(pWidget);
+    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultiLineEditor*>(pWidget);
     if (pLineEdit)
         sText = pLineEdit->text();
     else if (pMultiLineEditor)
@@ -189,12 +205,28 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::drawDisplay(QPainter* painter, c
     BaseClass::drawDisplay(painter, option, rect, text);
 }
 
+bool DFG_MODULE_NS(qt)::CsvTableViewDelegate::eventFilter(QObject* editor, QEvent* event)
+{
+    // Special handling for MultiLineEditor Ok-button: clicking OK-button didn't trigger the same handling as clicking mouse outside the editor
+    // so handling it separately. Note that Hide-event from Cancel-button didn't seem to get here at all.
+    if (event && event->type() == QEvent::Hide)
+    {
+        auto pMultiLineEditor = qobject_cast<QDialog*>(editor);
+        if (pMultiLineEditor && pMultiLineEditor->result() == QDialog::Accepted)
+        {
+            Q_EMIT commitData(pMultiLineEditor);
+            return true;
+        }
+    }    
+    return BaseClass::eventFilter(editor, event);
+}
+
 void DFG_MODULE_NS(qt)::CsvTableViewDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    auto pMultiLineEditor = dynamic_cast<MultilineEditor*>(editor);
+    auto pMultiLineEditor = dynamic_cast<MultiLineEditor*>(editor);
     if (pMultiLineEditor)
     {
-        const auto nHeightIncrease = pMultiLineEditor->fontMetrics().height() * 3;
+        const auto nHeightIncrease = pMultiLineEditor->fontMetrics().height() * 6;
         editor->setGeometry(option.rect.adjusted(0, 0, 0, nHeightIncrease));
     }
     else
@@ -204,7 +236,7 @@ void DFG_MODULE_NS(qt)::CsvTableViewDelegate::updateEditorGeometry(QWidget* edit
 void DFG_MODULE_NS(qt)::CsvTableViewDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
     auto pLineEdit = dynamic_cast<LineEditCtrl*>(editor);
-    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultilineEditor*>(editor);
+    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultiLineEditor*>(editor);
     const QString sText = index.data().toString();
     if (pLineEdit)
         pLineEdit->setText(sText);
@@ -258,4 +290,50 @@ void LineEditCtrl::keyPressEvent(QKeyEvent *e)
     }
     else if (bHasControlModifier || !this->isReadOnly()) // In read-only mode, not passing normal key events to baseclass since it by default triggers "jump to next cell starting with pressed key" which can cause unwanted UX.
         BaseClass::keyPressEvent(e);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+// 
+// MultiLineEditor
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+MultiLineEditor::MultiLineEditor(QWidget* pParent)
+    : BaseClass(pParent)
+{
+    setWindowFlags(Qt::SubWindow); // This removes dialog frames and makes sizegrip resize this dialog instead of parent window.
+    m_spPlainTextEdit.reset(new QPlainTextEdit(this));
+    auto pLayout = new QVBoxLayout(this);
+    pLayout->setMargin(0);
+    pLayout->addWidget(m_spPlainTextEdit.get());
+    auto pButtons = ::DFG_MODULE_NS(qt)::addOkCancelButtonBoxToDialog(this);
+    pLayout->addWidget(pButtons);
+    pLayout->addSpacing(15); // To make sure that size grip won't overlap with buttons
+
+    this->setSizeGripEnabled(true);
+
+    DFG_QT_VERIFY_CONNECT(QObject::connect(this, &QDialog::rejected, this, &QObject::deleteLater));
+    DFG_QT_VERIFY_CONNECT(QObject::connect(this, &QDialog::accepted, this, &QObject::deleteLater));
+    setResult(QDialog::Accepted);
+}
+
+MultiLineEditor::~MultiLineEditor()
+{
+}
+
+QString MultiLineEditor::toPlainText() const
+{
+    return (m_spPlainTextEdit) ? m_spPlainTextEdit->toPlainText() : QString();
+}
+
+void MultiLineEditor::setPlainText(const QString& s)
+{
+    if (m_spPlainTextEdit)
+        m_spPlainTextEdit->setPlainText(s);
+}
+
+void MultiLineEditor::setReadOnly(const bool bReadOnly)
+{
+    if (m_spPlainTextEdit)
+        m_spPlainTextEdit->setReadOnly(bReadOnly);
 }
