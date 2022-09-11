@@ -31,7 +31,6 @@ namespace
     class MultiLineEditor : public QDialog
     {
     public:
-        //using BaseClass = QWidget;
         using BaseClass = QDialog;
 
         MultiLineEditor(QWidget* pParent);
@@ -44,6 +43,19 @@ namespace
         ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spPlainTextEdit;
     }; // class MultiLineEditor
 } // unnamed namespace
+
+/////////////////////////////////
+// Start of dfg::qt namespace
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
+
+namespace EditorPropertyIds
+{
+    constexpr char originalText[]       = "originalText";
+    constexpr char readOnly[]           = "readOnly";
+} // namespace EditorProperty
+
+}} // namespace dfg::qt
+/////////////////////////////////
 
 ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::CsvTableViewDelegate(QWidget* pParent)
     : BaseClass(pParent)
@@ -71,24 +83,29 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::checkCellEditability(const QMode
 }
 
 template <class T>
-T* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditorImpl(QWidget* pParent, const QModelIndex& index) const
+T* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditorImpl(QWidget* pParent, const QString& sCurrentText, const QModelIndex& index) const
 {
     auto pEditor = new T(pParent);
     if (!checkCellEditability(index))
+    {
         pEditor->setReadOnly(true);
+        pEditor->setProperty(EditorPropertyIds::readOnly, true); // Setting also as property to avoid need for casting in setModelData() in order to access read-only status.
+    }
+    else
+        pEditor->setProperty(EditorPropertyIds::originalText, sCurrentText);
     return pEditor;
 }
 
 QWidget* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     DFG_UNUSED(option);
-    const auto sText = index.data().toString();
+    const auto sText = index.data(Qt::EditRole).toString();
     QWidget* pEditor = nullptr;
     // If cell has no newlines, using LineEditCtrl...
     if (sText.indexOf('\n') == -1 && sText.indexOf(QChar::SpecialCharacter::LineSeparator) == -1)
-        pEditor = createEditorImpl<LineEditCtrl>(parent, index);
+        pEditor = createEditorImpl<LineEditCtrl>(parent, sText, index);
     else // ...otherwise MultiLineEditor without completer-functionality.
-        pEditor = createEditorImpl<MultiLineEditor>(parent, index);
+        pEditor = createEditorImpl<MultiLineEditor>(parent, sText, index);
     return pEditor;
 }
 
@@ -107,6 +124,15 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::editorToString(QWidget* pWidget,
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
 {
+    if (!editor || editor->property(EditorPropertyIds::readOnly).toBool())
+        return; // Not setting data if editor has read-only property.
+    QString sNewText;
+    if (!editorToString(editor, sNewText))
+        return;
+
+    const auto sOriginalText = editor->property(EditorPropertyIds::originalText).toString();
+    if (sOriginalText == sNewText)
+        return; // If content has not changed, not trying to call setData(): avoids locking and redundant undo-point creation.
     if (m_spTableView)
     {
         auto lockReleaser = m_spTableView->tryLockForEdit();
@@ -116,9 +142,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QA
             return;
         }
     }
-    QString sNewText;
-    if (editorToString(editor, sNewText))
-        model->setData(index, sNewText, Qt::EditRole);
+    model->setData(index, sNewText, Qt::EditRole);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optionArg, const QModelIndex& index) const

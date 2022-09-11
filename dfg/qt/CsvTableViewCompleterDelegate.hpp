@@ -34,7 +34,7 @@ private:
     virtual bool editorToString(QWidget* pWidget, QString& sText) const; // To return true iff text should be set to model.
 
     template <class T>
-    T* createEditorImpl(QWidget* pParent, const QModelIndex& index) const;
+    T* createEditorImpl(QWidget* pParent, const QString& sCurrentText, const QModelIndex& index) const;
 
 protected:
     bool checkCellEditability(const QModelIndex& index) const;
