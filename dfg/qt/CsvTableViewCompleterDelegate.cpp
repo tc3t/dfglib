@@ -13,7 +13,11 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QVBoxLayout>
 DFG_END_INCLUDE_QT_HEADERS
 
-namespace
+/////////////////////////////////
+// Start of dfg::qt namespace
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
+
+namespace DFG_DETAIL_NS
 {
     class LineEditCtrl : public QLineEdit
     {
@@ -40,13 +44,9 @@ namespace
         void setPlainText(const QString& s);
         void setReadOnly(bool bReadOnly);
 
-        ::DFG_MODULE_NS(qt)::QObjectStorage<QPlainTextEdit> m_spPlainTextEdit;
+        QObjectStorage<QPlainTextEdit> m_spPlainTextEdit;
     }; // class MultiLineEditor
-} // unnamed namespace
-
-/////////////////////////////////
-// Start of dfg::qt namespace
-DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
+} // namespace DFG_DETAIL_NS
 
 namespace EditorPropertyIds
 {
@@ -54,16 +54,14 @@ namespace EditorPropertyIds
     constexpr char readOnly[]           = "readOnly";
 } // namespace EditorProperty
 
-}} // namespace dfg::qt
-/////////////////////////////////
 
-::DFG_MODULE_NS(qt)::CsvTableViewDelegate::CsvTableViewDelegate(QWidget* pParent)
+CsvTableViewDelegate::CsvTableViewDelegate(QWidget* pParent)
     : BaseClass(pParent)
     , m_spTableView(qobject_cast<CsvTableView*>(pParent))
 {
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::checkCellEditability(const QModelIndex& index) const
+bool CsvTableViewDelegate::checkCellEditability(const QModelIndex& index) const
 {
     if (!m_spTableView)
         return false;
@@ -83,7 +81,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::checkCellEditability(const QMode
 }
 
 template <class T>
-T* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditorImpl(QWidget* pParent, const QString& sCurrentText, const QModelIndex& index) const
+T* CsvTableViewDelegate::createEditorImpl(QWidget* pParent, const QString& sCurrentText, const QModelIndex& index) const
 {
     auto pEditor = new T(pParent);
     if (!checkCellEditability(index))
@@ -96,23 +94,23 @@ T* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditorImpl(QWidget* pParent,
     return pEditor;
 }
 
-QWidget* ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+QWidget* CsvTableViewDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     DFG_UNUSED(option);
     const auto sText = index.data(Qt::EditRole).toString();
     QWidget* pEditor = nullptr;
     // If cell has no newlines, using LineEditCtrl...
     if (sText.indexOf('\n') == -1 && sText.indexOf(QChar::SpecialCharacter::LineSeparator) == -1)
-        pEditor = createEditorImpl<LineEditCtrl>(parent, sText, index);
+        pEditor = createEditorImpl<DFG_DETAIL_NS::LineEditCtrl>(parent, sText, index);
     else // ...otherwise MultiLineEditor without completer-functionality.
-        pEditor = createEditorImpl<MultiLineEditor>(parent, sText, index);
+        pEditor = createEditorImpl<DFG_DETAIL_NS::MultiLineEditor>(parent, sText, index);
     return pEditor;
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::editorToString(QWidget* pWidget, QString& sText) const
+bool CsvTableViewDelegate::editorToString(QWidget* pWidget, QString& sText) const
 {
     auto pLineEdit = qobject_cast<QLineEdit*>(pWidget);
-    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultiLineEditor*>(pWidget);
+    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<DFG_DETAIL_NS::MultiLineEditor*>(pWidget);
     if (pLineEdit)
         sText = pLineEdit->text();
     else if (pMultiLineEditor)
@@ -122,7 +120,7 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::editorToString(QWidget* pWidget,
     return (pLineEdit || pMultiLineEditor);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
+void CsvTableViewDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
 {
     if (!editor || editor->property(EditorPropertyIds::readOnly).toBool())
         return; // Not setting data if editor has read-only property.
@@ -145,7 +143,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::setModelData(QWidget *editor, QA
     model->setData(index, sNewText, Qt::EditRole);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optionArg, const QModelIndex& index) const
+void CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optionArg, const QModelIndex& index) const
 {
     auto option = optionArg;
     option.index = index; // drawDisplay() didn't seem to receive index by default in option.index, adding it there just in case it will need it at some point.
@@ -198,7 +196,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::paint(QPainter* painter, const Q
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::drawDisplay(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text) const
+void CsvTableViewDelegate::drawDisplay(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text) const
 {
     // Checking if adjustments are needed for better multiline visualization (#135)
     // If rect height is such that only first line is show, adding ellipsis to end of first line.
@@ -229,7 +227,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewDelegate::drawDisplay(QPainter* painter, c
     BaseClass::drawDisplay(painter, option, rect, text);
 }
 
-bool DFG_MODULE_NS(qt)::CsvTableViewDelegate::eventFilter(QObject* editor, QEvent* event)
+bool CsvTableViewDelegate::eventFilter(QObject* editor, QEvent* event)
 {
     // Special handling for MultiLineEditor Ok-button: clicking OK-button didn't trigger the same handling as clicking mouse outside the editor
     // so handling it separately. Note that Hide-event from Cancel-button didn't seem to get here at all.
@@ -245,9 +243,9 @@ bool DFG_MODULE_NS(qt)::CsvTableViewDelegate::eventFilter(QObject* editor, QEven
     return BaseClass::eventFilter(editor, event);
 }
 
-void DFG_MODULE_NS(qt)::CsvTableViewDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void CsvTableViewDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    auto pMultiLineEditor = dynamic_cast<MultiLineEditor*>(editor);
+    auto pMultiLineEditor = dynamic_cast<DFG_DETAIL_NS::MultiLineEditor*>(editor);
     if (pMultiLineEditor)
     {
         const auto nHeightIncrease = pMultiLineEditor->fontMetrics().height() * 6;
@@ -257,17 +255,19 @@ void DFG_MODULE_NS(qt)::CsvTableViewDelegate::updateEditorGeometry(QWidget* edit
         BaseClass::updateEditorGeometry(editor, option, index);
 }
 
-void DFG_MODULE_NS(qt)::CsvTableViewDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
+void CsvTableViewDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
-    auto pLineEdit = dynamic_cast<LineEditCtrl*>(editor);
-    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<MultiLineEditor*>(editor);
+    auto pLineEdit = qobject_cast<QLineEdit*>(editor);
+    auto pMultiLineEditor = (pLineEdit) ? nullptr : dynamic_cast<DFG_DETAIL_NS::MultiLineEditor*>(editor);
     const QString sText = index.data().toString();
     if (pLineEdit)
         pLineEdit->setText(sText);
     else if (pMultiLineEditor)
         pMultiLineEditor->setPlainText(sText);
     else
+    {
         DFG_ASSERT_IMPLEMENTED(false);
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -276,15 +276,15 @@ void DFG_MODULE_NS(qt)::CsvTableViewDelegate::setEditorData(QWidget* editor, con
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::CsvTableViewCompleterDelegate(QWidget* pParent, QCompleter* pCompleter)
+CsvTableViewCompleterDelegate::CsvTableViewCompleterDelegate(QWidget* pParent, QCompleter* pCompleter)
     : BaseClass(pParent)
     , m_spCompleter(pCompleter)
 {
 }
 
-DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::~CsvTableViewCompleterDelegate() = default;
+CsvTableViewCompleterDelegate::~CsvTableViewCompleterDelegate() = default;
 
-QWidget* DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+QWidget* CsvTableViewCompleterDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     auto pEditor = BaseClass::createEditor(parent, option, index);
     auto pLineEdit = qobject_cast<QLineEdit*>(pEditor);
@@ -293,13 +293,17 @@ QWidget* DFG_MODULE_NS(qt)::CsvTableViewCompleterDelegate::createEditor(QWidget 
     return pEditor;
 }
 
+
+namespace DFG_DETAIL_NS
+{
+
 /////////////////////////////////////////////////////////////////////////////////////
 // 
 // LineEditCtrl
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-void LineEditCtrl::keyPressEvent(QKeyEvent *e)
+void LineEditCtrl::keyPressEvent(QKeyEvent* e)
 {
     const auto bHasControlModifier = (e->modifiers() & Qt::ControlModifier);
     if (bHasControlModifier && e->key() == Qt::Key_Space)
@@ -330,7 +334,7 @@ MultiLineEditor::MultiLineEditor(QWidget* pParent)
     auto pLayout = new QVBoxLayout(this);
     pLayout->setMargin(0);
     pLayout->addWidget(m_spPlainTextEdit.get());
-    auto pButtons = ::DFG_MODULE_NS(qt)::addOkCancelButtonBoxToDialog(this);
+    auto pButtons = addOkCancelButtonBoxToDialog(this);
     pLayout->addWidget(pButtons);
     pLayout->addSpacing(15); // To make sure that size grip won't overlap with buttons
 
@@ -361,3 +365,8 @@ void MultiLineEditor::setReadOnly(const bool bReadOnly)
     if (m_spPlainTextEdit)
         m_spPlainTextEdit->setReadOnly(bReadOnly);
 }
+
+} // namespace DFG_DETAIL_NS
+
+}} // namespace dfg::qt
+/////////////////////////////////
