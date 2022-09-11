@@ -650,6 +650,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void dragEnterEvent(QDragEnterEvent* event) override;
         void dragMoveEvent(QDragMoveEvent* pEvent) override;
         void dropEvent(QDropEvent* event) override;
+        void mousePressEvent(QMouseEvent* event) override;
         QModelIndexList selectedIndexes() const override;
 
     private:

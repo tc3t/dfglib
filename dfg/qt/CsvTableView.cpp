@@ -1175,6 +1175,19 @@ void CsvTableView::dropEvent(QDropEvent* pEvent)
         this->openFile(sPath);
 }
 
+void CsvTableView::mousePressEvent(QMouseEvent* event)
+{
+    // When clicking item, disabling autoscroll temporarily to avoid unwanted timer-based ensureVisible-functionality from kicking in (#136).
+    // For details, see d->delayedAutoScroll in QAbstractItemView
+    // Note that can't set autoScroll completely off as that would disable e.g. autoscroll when selecting items with mouse drag.
+    const auto bAutoScroll = hasAutoScroll();
+    if (bAutoScroll)
+        setAutoScroll(false);
+    BaseClass::mousePressEvent(event);
+    if (bAutoScroll)
+        setAutoScroll(true);
+}
+
 void CsvTableView::setModel(QAbstractItemModel* pModel)
 {
     const QAbstractItemModel* pPreviousViewModel = model();
