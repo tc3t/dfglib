@@ -75,6 +75,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             int m_nPrecision;
         };
+
+        class ConfFileProperty;
     } // namespace DFG_DETAIL_NS
 
     // Typed column index representing index of data model
@@ -459,8 +461,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         ColumnIndex_view columnIndexDataToView(ColumnIndex_data) const; // Returns view column index of given data index
         ColumnIndex_data columnIndexViewToData(ColumnIndex_view) const; // Returns data column index of given view index
 
-        CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel);
-        CsvConfig populateCsvConfig(); // Calls populateCsvConfig(*csvModel()) if csvModel() is non-null, otherwise does nothing.
+        CsvConfig populateCsvConfig(const CsvItemModel& rCsvModel) const;
+        CsvConfig populateCsvConfig() const; // Calls populateCsvConfig(*csvModel()) if csvModel() is non-null, otherwise does nothing.
 
         QStringList weekDayNames() const;
         QString dateTimeToString(const QDateTime& dateTime, const QString& sFormat) const;
@@ -689,6 +691,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         QString getFilePathFromFileDialog();
         QString getFilePathFromFileDialog(const QString& sCaption);
+
+        void forEachUserInsertableConfFileProperty(std::function<void(const DFG_DETAIL_NS::ConfFileProperty&)> propHandler) const;
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;

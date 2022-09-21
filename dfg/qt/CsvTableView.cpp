@@ -400,6 +400,31 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         return s;
     }
 
+    class ConfFileProperty
+    {
+    public:
+        ConfFileProperty(QString sKey, QString sDefaultValue)
+            : m_sKey(std::move(sKey))
+            , m_sDefaultValue(std::move(sDefaultValue))
+        {}
+
+        const QString& key() const;
+        const QString& defaultValue() const;
+
+        QString m_sKey;
+        QString m_sDefaultValue;
+    }; // class ConfFileProperty
+
+    const QString& ConfFileProperty::key() const
+    {
+        return m_sKey;
+    }
+
+    const QString& ConfFileProperty::defaultValue() const
+    {
+        return m_sDefaultValue;
+    }
+
 }}} // dfg::qt::DFG_DETAIL_NS
 
 
@@ -1990,13 +2015,13 @@ bool CsvTableView::saveToFileWithOptions()
     return saveToFileImpl(dlg.getSaveOptions());
 }
 
-auto CsvTableView::populateCsvConfig() -> CsvConfig
+auto CsvTableView::populateCsvConfig() const -> CsvConfig
 {
     auto pModel = csvModel();
     return (pModel) ? populateCsvConfig(*pModel) : CsvConfig();
 }
 
-auto CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) -> CsvConfig
+auto CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) const -> CsvConfig
 {
     CsvConfig config;
 
@@ -2029,12 +2054,16 @@ auto CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) -> CsvConfi
         config.setKeyValue(qStringToStringUtf8(QString("properties/%1").arg(CsvOptionProperty_editMode)), StringUtf8::fromRawString("readOnly"));
 
     // Adding additional properties that there might be, in practice this may mean e.g. properties/chartControls
-    for (const auto& fetcher : DFG_OPAQUE_REF().m_propertyFetchers)
+    auto pOpaq = DFG_OPAQUE_PTR();
+    if (pOpaq)
     {
-        if (!fetcher)
-            continue;
-        const auto& keyValue = fetcher();
-        config.setKeyValue(qStringToStringUtf8(keyValue.first), qStringToStringUtf8(keyValue.second));
+        for (const auto& fetcher : pOpaq->m_propertyFetchers)
+        {
+            if (!fetcher)
+                continue;
+            const auto& keyValue = fetcher();
+            config.setKeyValue(qStringToStringUtf8(keyValue.first), qStringToStringUtf8(keyValue.second));
+        }
     }
 
     // Adding items that are in existing .conf-file, but which were not yet added.
@@ -2097,7 +2126,7 @@ bool CsvTableView::saveConfigFileWithOptions()
     auto config = populateCsvConfig(*pModel);
 
     CsvTableViewDlg viewDlg(nullptr, this, ViewType::fixedDimensionEdit);
-    viewDlg.addVerticalLayoutWidget(0, new QLabel(tr("To omit item from saved config, clear related text from Key-column"), &viewDlg.dialog()));
+
     CsvItemModel configModel;
 
     CsvConfig existingConfig;
@@ -2133,6 +2162,52 @@ bool CsvTableView::saveConfigFileWithOptions()
 
     viewDlg.setModel(&configModel);
 
+    // Adding additional controls to CsvTableViewDlg
+    {
+        const auto pParentWidget = &viewDlg.dialog();
+        auto pControlWidget = new QWidget(pParentWidget); // Deletion by parentship
+        auto pLayout = new QHBoxLayout(pControlWidget);
+        pLayout->addWidget(new QLabel(tr("To omit item from saved config, clear related text from Key-column"), pControlWidget));
+
+        // Adding insert-button
+        {
+            auto pInsertButton = new QToolButton(pParentWidget); // Deletion through parentship
+            auto& rButton = *pInsertButton;
+            rButton.setPopupMode(QToolButton::InstantPopup);
+            rButton.setText(rButton.tr("Insert "));
+
+            auto pMenu = new QMenu(&rButton); // Deletion through parentship
+
+            // Adding items to menu.
+            forEachUserInsertableConfFileProperty([&](const DFG_DETAIL_NS::ConfFileProperty& propArg)
+                {
+                    const auto prop = propArg;
+                    auto pAction = new QAction(prop.key(), pInsertButton);
+                    if (!pAction)
+                        return;
+                    const auto clickHandler = [&viewDlg, prop, pMenu, pAction]()
+                    {
+                        auto pModel = viewDlg.csvView().csvModel();
+                        if (!pModel)
+                            return;
+                        const auto nNewRow = pModel->rowCount();
+                        pModel->insertRow(nNewRow);
+                        pModel->setData(pModel->index(nNewRow, 0), prop.key());
+                        pModel->setData(pModel->index(nNewRow, 1), prop.defaultValue());
+                        QTimer::singleShot(0, pMenu, [=]() { pMenu->removeAction(pAction); }); // Removes inserted action from menu
+                    };
+                    DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, pParentWidget, clickHandler));
+                    pMenu->addAction(pAction);
+                });
+            rButton.setMenu(pMenu); // Does not transfer ownership
+            if (!pMenu->actions().empty()) // Adding button to layout only if it has items.
+                pLayout->addWidget(&rButton);
+        }
+
+        viewDlg.addVerticalLayoutWidget(0, pControlWidget);
+    }
+
+    // Launching dialog itself
     viewDlg.resize(600, 500);
     if (viewDlg.exec() != QDialog::Accepted)
         return false;
@@ -5382,6 +5457,26 @@ void CsvTableView::scrollToDefaultPosition()
         scrollToTop();
     else
         this->showStatusInfoTip(tr("Unrecognized scroll position '%1'. Supported ones are 'top' and 'bottom'; also empty is interpreted as 'use default'").arg(sInitialScrollPosition));
+}
+
+void CsvTableView::forEachUserInsertableConfFileProperty(std::function<void(const DFG_DETAIL_NS::ConfFileProperty&)> propHandler) const
+{
+    if (!propHandler)
+        return;
+
+    const auto config = this->populateCsvConfig();
+
+    // Calling handler for items below when they are not already present.
+#define DFG_TEMP_CALL_IF_NEEDED(KEY, DEFAULT_VALUE) if (!config.contains(DFG_UTF8(KEY))) propHandler(DFG_DETAIL_NS::ConfFileProperty(QStringLiteral(KEY), DEFAULT_VALUE))
+    DFG_TEMP_CALL_IF_NEEDED("properties/dateFormat",            getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this));
+    DFG_TEMP_CALL_IF_NEEDED("properties/dateTimeFormat",        getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this));
+    DFG_TEMP_CALL_IF_NEEDED("properties/editMode",              getCsvTableViewProperty<CsvTableViewPropertyId_editMode>(this));
+    DFG_TEMP_CALL_IF_NEEDED("properties/initialScrollPosition", getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this));
+    DFG_TEMP_CALL_IF_NEEDED("properties/timeFormat",            getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this));
+    DFG_TEMP_CALL_IF_NEEDED("properties/weekDayNames",          getCsvTableViewProperty<CsvTableViewPropertyId_weekDayNames>(this));
+    //DFG_TEMP_CALL_IF_NEEDED("properties/", getCsvTableViewProperty<>(this));
+
+#undef DFG_TEMP_CALL_IF_NEEDED
 }
 
 //////////////////////////////////////////////////////////////////////////
