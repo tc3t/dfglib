@@ -862,7 +862,7 @@ DFG_ROOT_NS_BEGIN{
                     }
                     if (!csvConfig.empty())
                     {
-                        this->m_readFormat.setReadStat<TableCsvReadStat::errorInfo>(csvConfig);
+                        this->m_readFormat.template setReadStat<TableCsvReadStat::errorInfo>(csvConfig);
                     }
                 }
             }

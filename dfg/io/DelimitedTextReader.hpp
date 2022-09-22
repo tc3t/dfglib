@@ -233,7 +233,7 @@ public:
 
         static const bool s_hasCompileTimeSeparatorChar = false;
 
-        FormatDefinitionSingleChars(int cEnc, int cEol, int cSep) :
+        DFG_CONSTEXPR FormatDefinitionSingleChars(int cEnc, int cEol, int cSep) :
             m_cEnc(cEnc),
             m_cEol(cEol),
             m_cSep(cSep)
