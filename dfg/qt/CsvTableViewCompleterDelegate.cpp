@@ -155,7 +155,7 @@ void CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     const auto doDefaultPaint = [&]()
     {
         auto pCsvModel = (m_spTableView) ? m_spTableView->csvModel() : nullptr;
-        const bool bIsCellEditable = (pCsvModel) ? pCsvModel->isCellEditable(m_spTableView->mapToDataModel(index)) : nullptr;
+        const bool bIsCellEditable = (pCsvModel) ? pCsvModel->isCellEditable(m_spTableView->mapToDataModel(index)) : false;
         if (!bIsCellEditable)
             painter->fillRect(option.rect, m_spTableView->getReadOnlyBackgroundColour());
         BaseClass::paint(painter, option, index);
