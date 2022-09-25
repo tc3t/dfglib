@@ -130,4 +130,24 @@ Notes:
     #define DFG_LANGFEAT_HAS_DEFAULTED_AND_DELETED_FUNCTIONS 0
 #endif
 
+// DFG_MAYBE_UNUSED (https://en.cppreference.com/w/cpp/language/attributes/maybe_unused)
+#if (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_17)
+    #define DFG_MAYBE_UNUSED [[maybe_unused]]
+#else
+    #define DFG_MAYBE_UNUSED
+#endif
+
+// DFG_NODISCARD (https://en.cppreference.com/w/cpp/language/attributes/nodiscard)
+#if (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_17)
+    #define DFG_NODISCARD [[nodiscard]]
+    #if (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_20)
+        #define DFG_NODISCARD_MSG(MSG) [[nodiscard(MSG)]]
+    #else
+        #define DFG_NODISCARD_MSG(MSG) [[nodiscard]]
+    #endif
+#else
+    #define DFG_NODISCARD
+    #define DFG_NODISCARD_MSG(MSG)
+#endif
+//
 

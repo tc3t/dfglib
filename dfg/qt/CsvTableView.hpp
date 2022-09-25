@@ -437,8 +437,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Convenience function, effectively returns selectionModel()->selection();
         QItemSelection getSelection() const;
 
-        LockReleaser tryLockForEdit(); // Note: edits include both content edit and view edits such as changing filter.
-        LockReleaser tryLockForRead() const;
+        DFG_NODISCARD LockReleaser tryLockForEdit(); // Note: edits include both content edit and view edits such as changing filter.
+        DFG_NODISCARD LockReleaser tryLockForRead() const;
 
         TableHeaderView* horizontalTableHeader();
 

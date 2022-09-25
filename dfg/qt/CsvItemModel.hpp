@@ -504,8 +504,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void rowToString(const int nRow, QString& str, const QChar cDelim, const IndexSet* pSetIgnoreColumns = nullptr) const;
 
         std::shared_ptr<QReadWriteLock> getReadWriteLock();
-        LockReleaser tryLockForEdit();
-        LockReleaser tryLockForRead() const;
+        DFG_NODISCARD LockReleaser tryLockForEdit();
+        DFG_NODISCARD LockReleaser tryLockForRead() const;
 
         QString rowToString(const int nRow, const QChar cDelim = '\t') const
         {

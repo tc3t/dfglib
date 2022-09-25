@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dfgDefs.hpp"
+#include "build/languageFeatureInfo.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
@@ -54,7 +55,7 @@ DFG_ROOT_NS_BEGIN
 	};
 
 	template <class ConstructorFunc_T, class DestructorFunc_T>
-	inline ScopedCaller<ConstructorFunc_T, DestructorFunc_T> makeScopedCaller(ConstructorFunc_T constructorFunc, DestructorFunc_T destructorFunc)
+	DFG_NODISCARD inline ScopedCaller<ConstructorFunc_T, DestructorFunc_T> makeScopedCaller(ConstructorFunc_T constructorFunc, DestructorFunc_T destructorFunc)
 	{
         return ScopedCaller<ConstructorFunc_T, DestructorFunc_T>(std::forward<ConstructorFunc_T>(constructorFunc), std::forward<DestructorFunc_T>(destructorFunc));
 	}
