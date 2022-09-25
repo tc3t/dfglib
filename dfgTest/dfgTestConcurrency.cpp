@@ -31,7 +31,7 @@ namespace
 
             LocallySyncedOStreamOperation(const LocallySyncedOStreamOperation&) = delete;
 
-            LocallySyncedOStreamOperation(LocallySyncedOStreamOperation&& other)
+            LocallySyncedOStreamOperation(LocallySyncedOStreamOperation&& other) DFG_NOEXCEPT_TRUE
                 : m_pStream(other.m_pStream)
                 , m_rMutex(other.m_rMutex)
             {

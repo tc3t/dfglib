@@ -40,7 +40,7 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 namespace
 {
-    static const double baseDateTestDoubleValue = static_cast<double>(QDateTime::fromString("2020-04-25T00:00:00Z", Qt::ISODate).toMSecsSinceEpoch()) / 1000.0;
+    const double baseDateTestDoubleValue = static_cast<double>(QDateTime::fromString(QStringLiteral("2020-04-25T00:00:00Z"), Qt::ISODate).toMSecsSinceEpoch()) / 1000.0;
 
     void testDateToDouble(const char* pszDateString, ::DFG_MODULE_NS(qt)::ChartDataType dataType, const double offsetFromBase, const double baseValue = baseDateTestDoubleValue)
     {
@@ -1395,7 +1395,7 @@ TEST(dfgQt, CsvTableView_changeRadix)
         changeRadixOnColumn(1, 36, int32_max);
         changeRadixOnColumn(2, 36, -2);
         changeRadixOnColumn(3, 36, 0);
-        changeRadixOnColumn(4, 36, -int32_min);
+        changeRadixOnColumn(4, 36, int32_min);
 
         for (int r = 0; r < int(DFG_COUNTOF(rowValues)); ++r)
         {

@@ -573,7 +573,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void evaluateSelectionAsFormula();
 
         void onChangeRadixUiAction();
-        void changeRadix(const CsvTableViewActionChangeRadixParams& params);
+        void changeRadix(const ::DFG_MODULE_NS(qt)::CsvTableViewActionChangeRadixParams& params);
 
         bool diffWithUnmodified();
 
@@ -589,7 +589,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setCaseSensitiveSorting(bool bCaseSensitive);
         void resetSorting();
 
-        void setFindText(const StringMatchDef matchDef, const int nCol);
+        void setFindText(const ::DFG_MODULE_NS(qt)::CsvTableView::StringMatchDef matchDef, const int nCol);
 
         void onNewSourceOpened();
 
@@ -615,8 +615,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Column header action handlers
         void setColumnNames();
-        void setColumnVisibility(int nCol, bool bVisible, ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
-        void setColumnReadOnly(const ColumnIndex_data nCol, const bool bReadOnly);
+        void setColumnVisibility(int nCol, bool bVisible, ::DFG_MODULE_NS(qt)::CsvTableView::ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
+        void setColumnReadOnly(const ::DFG_MODULE_NS(qt)::ColumnIndex_data nCol, const bool bReadOnly);
         void unhideAllColumns();
         void showSelectColumnVisibilityDialog();
 

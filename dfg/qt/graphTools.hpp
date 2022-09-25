@@ -412,7 +412,7 @@ signals:
 public slots:
     void onShowControlsCheckboxToggled(bool b);
     void onShowConsoleCheckboxToggled(bool b);
-    void onDisplayStateChanged(ChartDisplayState state);
+    void onDisplayStateChanged(::DFG_MODULE_NS(qt)::ChartDisplayState state);
 
 public:
     bool m_bLogCacheDiagnosticsOnUpdate = false;

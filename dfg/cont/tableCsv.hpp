@@ -687,7 +687,7 @@ DFG_ROOT_NS_BEGIN{
                 typedef DelimitedTextReader::ParsingDefinition<char, CharAppender_T> ParseDef;
                 try
                 {
-                    const auto& readFormat = DelimitedTextReader::readEx(ParseDef(), strm, formatDef.separatorChar(), formatDef.enclosingChar(), formatDef.eolCharFromEndOfLineType(), std::forward<Reader_T>(cellHandler));
+                    const auto& readFormat = DelimitedTextReader::readEx(ParseDef(), strm, formatDef.separatorChar(), formatDef.enclosingChar(), formatDef.eolCharFromEndOfLineType(), cellHandler);
                     cellHandler.onReadDone();
 
                     m_readFormat.separatorChar(readFormat.getSep());
@@ -819,7 +819,7 @@ DFG_ROOT_NS_BEGIN{
                     nColumnCount = Max(nColumnCount, table.colCountByMaxColIndex());
 
                 // Appending blocks into 'this' concurrently per column
-                this->appendTablesWithMoveImpl(tablePtrs, [&](BaseClass& rTable)
+                this->appendTablesWithMoveImpl(tablePtrs, [&](DFG_MAYBE_UNUSED BaseClass& rTable)
                     {
                         // Now that all threads have completed reading and column vectors have been resized properly by appendTablesWithMoveImpl(), notify threads to proceed to column merging.
                         DFG_ASSERT_UB(rTable.colCountByMaxColIndex() == nColumnCount);

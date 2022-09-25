@@ -116,7 +116,9 @@ bool CsvTableViewDelegate::editorToString(QWidget* pWidget, QString& sText) cons
     else if (pMultiLineEditor)
         sText = pMultiLineEditor->toPlainText();
     else
+    {
         DFG_ASSERT_IMPLEMENTED(false);
+    }
     return (pLineEdit || pMultiLineEditor);
 }
 

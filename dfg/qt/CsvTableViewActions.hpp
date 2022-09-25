@@ -456,7 +456,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_DETAIL_NS::CellMemory m_cellMemoryRedo;
         std::vector<QString> m_vecLines;
         bool m_bRowMode;
-    };
+    }; // class CsvTableViewActionPaste
 
     class CsvTableViewActionDeleteColumn : public UndoCommand
     {
@@ -696,7 +696,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bInverted; // If m_bInverted == true, behaviour is "Header to first row".
         std::vector<QString> m_vecHdrStrings;
         std::vector<QString> m_vecFirstRowStrings;
-    };
+    }; // class CsvTableViewActionMoveFirstRowToHeader
 
     class CsvTableViewActionEvaluateSelectionAsFormula : public DFG_DETAIL_NS::SelectionForEachUndoCommand
     {

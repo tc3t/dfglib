@@ -5421,7 +5421,6 @@ QString CsvTableView::getAcceptableFilePathFromMimeData(const QMimeData* pMimeDa
     {
         const auto url = urls.front();
         QFileInfo fi(url.toLocalFile());
-        const auto sSuffix = fi.suffix();
         const auto isAcceptableFileSuffix = [&](const QString& sSuffix)
         {
             return getAcceptedFileTypeFilter().indexOf(QString("*.%1 ").arg(sSuffix), 0, Qt::CaseInsensitive) != -1;

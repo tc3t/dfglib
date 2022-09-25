@@ -325,12 +325,12 @@ namespace DFG_DETAIL_NS
             this->m_nSize--;
         }
 
-        void cutTail(const PtrT iter)
+        void cutTail(const PtrT iterFirstOfTail)
         {
         #if DFG_LANGFEAT_EXPLICIT_OPERATOR_BOOL
-            const auto nCount = (this->m_pFirst + this->m_nSize) - iter;
+            const auto nCount = (this->m_pFirst + this->m_nSize) - iterFirstOfTail;
         #else
-            const auto nCount = (this->m_pFirst + ptrdiff_t(this->m_nSize)) - iter;
+            const auto nCount = (this->m_pFirst + ptrdiff_t(this->m_nSize)) - iterFirstOfTail;
         #endif
             cutTail_byCutCount(nCount);
         }

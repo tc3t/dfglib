@@ -19,6 +19,12 @@
     <Filter Include="dfg">
       <UniqueIdentifier>{4db20e1f-f002-4e8f-92b2-413e25b8afb7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="dfg\cont">
+      <UniqueIdentifier>{ebd42e43-a48b-4732-a142-e83d429f0a15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\cont\detail">
+      <UniqueIdentifier>{84642c10-9fa4-420f-9499-e425ffedbc0a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -495,9 +501,6 @@
     <ClInclude Include="..\dfg\iter\iteratorTemplate.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\cont\detail\keyContainerUtils.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\build\languageFeatureInfo.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
@@ -669,9 +672,6 @@
     <ClInclude Include="..\dfg\cont\MapToStringViews.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\charts\operations.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
@@ -704,6 +704,15 @@
     </ClInclude>
     <ClInclude Include="..\dfg\Span.hpp">
       <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\detail\tableCsvHelpers.hpp">
+      <Filter>dfg\cont\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\detail\keyContainerUtils.hpp">
+      <Filter>dfg\cont\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp">
+      <Filter>dfg\cont\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

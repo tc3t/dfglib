@@ -202,14 +202,15 @@ void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 3
 {
 #ifdef _MSC_VER
     #pragma warning(push)
-    #pragma warning(disable:4242) // Conversion warnings.
+    #pragma warning(disable:4242) // Conversion warnings. Disabling this warning seems to have broken with VC2022.2
     #pragma warning(disable:4244) // Conversion warnings.
     #pragma warning(disable:4127) // Conditional expression is constant
 #endif
-    const auto outputCharSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
+    using OutputT = typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type;
+    const auto outputCharSize = sizeof(OutputT);
     //DFG_STATIC_ASSERT(outputCharSize == 4, "Iterator value type should be four bytes wide.");
     if (outputCharSize == 4)
-        *result++ = byteSwap(cp, ByteOrderHost, boDest);
+        *result++ = static_cast<OutputT>(byteSwap(cp, ByteOrderHost, boDest));
     else
     {
         DFG_ASSERT_WITH_MSG(false, "Iterator value type should be four bytes wide.");

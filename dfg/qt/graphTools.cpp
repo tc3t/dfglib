@@ -1105,7 +1105,7 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
     if (bXsuccess)
         bYsuccess = (bStringsNeededForY) ? rCacheItem.storeColumnFromSource_strings(source, yColumnIndex) : rCacheItem.storeColumnFromSource(source, yColumnIndex);
     if (bYsuccess)
-        bZsuccess = (!defEntry.isType(ChartObjectChartTypeStr_txys) || bZisRowIndex || rCacheItem.storeColumnFromSource_strings(source, zColumnIndex));
+        bZsuccess = (!bStringsNeededForZ || rCacheItem.storeColumnFromSource_strings(source, zColumnIndex));
 
     if (bXsuccess && bYsuccess && bZsuccess)
         return iter->second;

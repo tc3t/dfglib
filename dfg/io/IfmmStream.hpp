@@ -6,29 +6,30 @@
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
 
-    class DFG_CLASS_NAME(FileMemoryMapped) : public boost::iostreams::mapped_file_source
+    class FileMemoryMapped : public boost::iostreams::mapped_file_source
     {
     public:
         typedef boost::iostreams::mapped_file_source BaseClass;
 
-        DFG_CLASS_NAME(FileMemoryMapped)() {}
-        DFG_BASE_CONSTRUCTOR_DELEGATE_1(DFG_CLASS_NAME(FileMemoryMapped), BaseClass) {}
-        DFG_BASE_CONSTRUCTOR_DELEGATE_2(DFG_CLASS_NAME(FileMemoryMapped), BaseClass) {}
-        DFG_BASE_CONSTRUCTOR_DELEGATE_3(DFG_CLASS_NAME(FileMemoryMapped), BaseClass) {}
+        FileMemoryMapped() {}
+        DFG_BASE_CONSTRUCTOR_DELEGATE_1(FileMemoryMapped, BaseClass) {}
+        DFG_BASE_CONSTRUCTOR_DELEGATE_2(FileMemoryMapped, BaseClass) {}
+        DFG_BASE_CONSTRUCTOR_DELEGATE_3(FileMemoryMapped, BaseClass) {}
     };
 
     // IfStream that uses memory mapped file.
-    class DFG_CLASS_NAME(IfmmStream) : public std::istream
+    // Note: Since IfmmStream is based on std::istream, if performance matters, consider manual memory mapping and using BasicImStream
+    class IfmmStream : public std::istream
     {
     public:
         typedef std::istream BaseClass;
-        typedef DFG_CLASS_NAME(FileMemoryMapped) FileMemoryMappedT;
-        typedef DFG_CLASS_NAME(StreamBufferMem)<char> StreamBufT;
+        typedef FileMemoryMapped FileMemoryMappedT;
+        typedef StreamBufferMem<char> StreamBufT;
 
-        DFG_CLASS_NAME(IfmmStream)() : BaseClass(nullptr) {}
+        IfmmStream() : BaseClass(nullptr) {}
 
         template <class T>
-        DFG_CLASS_NAME(IfmmStream)(const T& t) : BaseClass(nullptr), m_mappedFileSource(t)
+        IfmmStream(const T& t) : BaseClass(nullptr), m_mappedFileSource(t)
         {
             PrivInit();
         }

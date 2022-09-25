@@ -20,7 +20,7 @@ void PrintTo(const QString& s, ::std::ostream* pOstrm)
 namespace
 {
     // Sets working directory so that tests using relative paths will find files.
-    static bool setWorkingDirectory()
+    bool setWorkingDirectory()
     {
         using namespace DFG_MODULE_NS(os);
         const auto cwd = getCurrentWorkingDirectoryC();
