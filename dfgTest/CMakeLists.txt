@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 2.6)
 
 project (dfgTest)
 
+# Example: line below can be used to set clang++ as compiler e.g. on Ubuntu
+# SET(CMAKE_CXX_COMPILER    "/usr/bin/clang++")
+
 include_directories ("${PROJECT_SOURCE_DIR}/"
 	"${PROJECT_SOURCE_DIR}/../externals/"
 	"${PROJECT_SOURCE_DIR}/../")

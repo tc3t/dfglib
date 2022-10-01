@@ -20,7 +20,7 @@ Notes:
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
 // https://gcc.gnu.org/gcc-5/changes.html#libstdcxx, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54316
-#if (defined(__GNUG__) && (__GNUC__ < 5))
+#if (defined(__GNUG__) && (__GNUC__ < 5) && !defined(__clang__))
     #define DFG_LANGFEAT_MOVABLE_STREAMS	0
 #else
     #define DFG_LANGFEAT_MOVABLE_STREAMS	1
