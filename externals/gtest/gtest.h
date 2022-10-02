@@ -1,3 +1,7 @@
+//
+// NOTE: This is modified version of the original source, modifications can be found using search keyword 'dfglib' 
+//
+//
 // Copyright 2005, Google Inc.
 // All rights reserved.
 //
@@ -1536,13 +1540,52 @@ struct faketype {};
 inline bool operator==(faketype, faketype) { return true; }
 inline bool operator!=(faketype, faketype) { return false; }
 
+
+//////////////////////////////////////////////////////////////////////////
+// dfglib adjustments for correctness (e.g. that -1 won't compare equal to uint_max)
+// and to avoid redundant "comparison of integers of different signs"-warnings from code like "EXPECT_EQ(4, cont.size());
+namespace dfglibAdjustements
+{
+    template <class T0, class T1>
+    bool IsEqualHelperImpl(const T0& left, const T1& right, std::false_type)
+    {
+        return left == right;
+    }
+
+    template <class T0, class T1>
+    bool IsEqualHelperImpl(const T0& left, const T1& right, std::true_type)
+    {
+        // Effectively cmp_equal() from C++20
+        // https://en.cppreference.com/w/cpp/utility/intcmp
+        using UT0 = typename std::make_unsigned<T0>::type;
+        using UT1 = typename std::make_unsigned<T1>::type;
+        constexpr auto bLeftIsSigned = std::is_signed<T0>::value;
+        constexpr auto bRightIsSigned = std::is_signed<T1>::value;
+        if (bLeftIsSigned == bRightIsSigned)
+            return left == right;
+        else if (bLeftIsSigned)
+            return left < 0 ? false : UT0(left) == UT1(right);
+        else
+            return right < 0 ? false : UT0(left) == UT1(right);
+    }
+
+    template <class T0, class T1>
+    bool IsEqualHelper(const T0& left, const T1& right)
+    {
+        return IsEqualHelperImpl(left, right, std::integral_constant<bool, std::is_integral<T0>::value&& std::is_integral<T1>::value && (sizeof(left) > 1) && (sizeof(right) > 1)>());
+    }
+
+} // namespace dfglibAdjustements
+//////////////////////////////////////////////////////////////////////////
+
 // The helper function for {ASSERT|EXPECT}_EQ.
 template <typename T1, typename T2>
 AssertionResult CmpHelperEQ(const char* lhs_expression,
                             const char* rhs_expression,
                             const T1& lhs,
                             const T2& rhs) {
-  if (lhs == rhs) {
+  //if (lhs == rhs) { // Original code
+  if (dfglibAdjustements::IsEqualHelper(lhs, rhs)) { // dfglib adjustment
     return AssertionSuccess();
   }
 

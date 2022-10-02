@@ -697,7 +697,7 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
             DFGTEST_EXPECT_TRUE(readOptions.hasPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>());
             tSingleThreaded.readFromFile(path, readOptions);
             const auto nUsedThreadCount = tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>();
-            DFGTEST_EXPECT_LE(nUsedThreadCount, 1);
+            DFGTEST_EXPECT_LE(nUsedThreadCount, 1u);
         }
 
         // Multithreaded read
@@ -815,7 +815,7 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
             readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(2);
             table.readFromFile(path, readOptions);
             const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
-            DFGTEST_EXPECT_LE(nUsedThreadCount, 1);
+            DFGTEST_EXPECT_LE(nUsedThreadCount, 1u);
         }
 
         // With reduced block size minimum, expecting to see 2 threads
@@ -886,7 +886,7 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
             tSingleThreaded.readFromFile(path, readOptions);
             const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
             DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
-            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>(), 1);
+            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>(), 1u);
         }
 
         TableT tMultiThreaded;
@@ -909,7 +909,7 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
             tSingleThreaded.readFromFile(path, readOptions);
             const auto elapsedSingleThread = timerSingleThread.elapsedWallSeconds();
             DFGTEST_MESSAGE("Single-threaded time: " << elapsedSingleThread);
-            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>(), 1);
+            DFGTEST_EXPECT_LE(tSingleThreaded.readFormat().getReadStat<TableCsvReadStat::threadCount>(), 1u);
         }
 
         DFGTEST_EXPECT_TRUE(tSingleThreaded.isContentAndSizesIdenticalWith(tMultiThreaded));

@@ -221,7 +221,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToEncoded";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.windows1252charToCp";
-    
+
     auto rv = RUN_ALL_TESTS();
     {
         using namespace ::DFG_ROOT_NS;
@@ -243,6 +243,13 @@ int main(int argc, char **argv)
 #endif
     return rv;
 }
+
+#if 0
+TEST(dfgTest, googleTestEqualComparison)
+{
+    EXPECT_EQ(-1, (std::numeric_limits<size_t>::max)()); // This falsely passes with original gtest 1.11.0, fails (as it should) with adjusted version.
+}
+#endif
 
 // This can be used to test GoogleTest printers
 #if 0

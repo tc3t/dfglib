@@ -691,7 +691,7 @@ TEST(dfgCont, MapToStringViews)
         EXPECT_EQ(1, m.contentStorageSize()); // This is implementation detail about storing null for empty string optimization, feel free to adjust if implementation changes.
         m.contentStorageCapacity();
         const auto nNewCapacity = m.reserveContentStorage_byBaseCharCount(1000);
-        EXPECT_LE(1000, nNewCapacity);
+        EXPECT_LE(1000u, nNewCapacity);
         EXPECT_EQ(nNewCapacity, m.contentStorageCapacity());
         EXPECT_EQ(nNewCapacity, m.reserveContentStorage_byBaseCharCount(3)); // Calling with smaller than capacity should do nothing.
         m.insert(1, DFG_UTF8("abc"));
