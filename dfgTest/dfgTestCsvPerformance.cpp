@@ -490,27 +490,39 @@ namespace
     }
 #endif // ENABLE_CSV_PARSER_V    
 
-    DFG_NOINLINE void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nCount)
+    DFG_NOINLINE void ExecuteTestCase_TableCsv(std::ostream& output, const std::string& sFilePath, const size_t nRepeatCount, const bool bMultiThreaded = false)
     {
         using namespace DFG_ROOT_NS;
         using namespace ::DFG_MODULE_NS(io);
 
-        typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, uint32> Table;
+        typedef ::DFG_MODULE_NS(cont)::TableCsv<char, uint32> Table;
 
         std::vector<double> runtimes;
 
-        for (size_t i = 0; i < nCount; ++i)
+        const auto nHwConcurrency = std::thread::hardware_concurrency();
+
+        for (size_t i = 0; i < nRepeatCount; ++i)
         {
             TimerType timer;
             Table table;
-            table.readFromFile(sFilePath, CsvFormatDefinition(',', DelimitedTextReader::s_nMetaCharNone, EndOfLineTypeN, encodingUTF8));
+            ::DFG_MODULE_NS(cont)::TableCsvReadWriteOptions options(',', DelimitedTextReader::s_nMetaCharNone, EndOfLineTypeN, encodingUTF8);
+            if (bMultiThreaded)
+            {
+                options.setPropertyT<::DFG_MODULE_NS(cont)::TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nHwConcurrency);
+                options.setPropertyT< ::DFG_MODULE_NS(cont)::TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0);
+            }
+            table.readFromFile(sFilePath, options);
+            const auto elapsedTime = timer.elapsedWallSeconds();
             EXPECT_EQ(gnRowCount + 1, table.rowCountByMaxRowIndex());
             EXPECT_EQ(gnColCount, table.colCountByMaxColIndex());
-            const auto elapsedTime = timer.elapsedWallSeconds();
-
+            if (bMultiThreaded)
+                DFGTEST_EXPECT_LEFT(nHwConcurrency, table.readFormat().getReadStat<::DFG_MODULE_NS(cont)::TableCsvReadStat::threadCount>());
+            else
+                DFGTEST_EXPECT_LE(table.readFormat().getReadStat<::DFG_MODULE_NS(cont)::TableCsvReadStat::threadCount>(), 1u);
+            
             runtimes.push_back(elapsedTime);
         }
-        PrintTestCaseRow(output, sFilePath, runtimes, "\"TableCsv<char,uint32>\"", "runtime", "Read&Store", "N/A");
+        PrintTestCaseRow(output, sFilePath, runtimes, (bMultiThreaded) ? format_fmt("\"TableCsv<char,uint32> (with {} thread(s))\"", nHwConcurrency) : "\"TableCsv<char,uint32> (single-threaded)\"", "runtime", "Read&Store", "N/A");
     }
 
     template <class IStrm_T>
@@ -675,6 +687,7 @@ TEST(dfgPerformance, CsvReadPerformance)
 
     // TableCsv
     ExecuteTestCase_TableCsv(ostrmTestResults, sFilePath, nRunCount);
+    ExecuteTestCase_TableCsv(ostrmTestResults, sFilePath, nRunCount, true /* multithreaded */);
     ExecuteTestCase_TableCsv(ostrmTestResults, sFilePathEnclosed, nRunCount);
 
     ostrmTestResults.close();
