@@ -100,7 +100,6 @@ public:
 
     using BaseClass::BaseClass;
 
-    TableCsvReadWriteOptions() = default;
     TableCsvReadWriteOptions(const BaseClass& other) : BaseClass(other) {}
     TableCsvReadWriteOptions(BaseClass&& other) : BaseClass(std::move(other)) {}
 
