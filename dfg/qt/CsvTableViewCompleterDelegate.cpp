@@ -334,7 +334,7 @@ MultiLineEditor::MultiLineEditor(QWidget* pParent)
     setWindowFlags(Qt::SubWindow); // This removes dialog frames and makes sizegrip resize this dialog instead of parent window.
     m_spPlainTextEdit.reset(new QPlainTextEdit(this));
     auto pLayout = new QVBoxLayout(this);
-    pLayout->setMargin(0);
+    pLayout->setContentsMargins(0, 0, 0, 0);
     pLayout->addWidget(m_spPlainTextEdit.get());
     auto pButtons = addOkCancelButtonBoxToDialog(this);
     pLayout->addWidget(pButtons);
