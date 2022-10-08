@@ -78,7 +78,7 @@ DFG_ROOT_NS_BEGIN
     };
 
 	template <class T>
-	inline bool isAtEnd(const DFG_SUB_NS_NAME(iter)::DFG_CLASS_NAME(SzIterator)<T>& iter, const DFG_SUB_NS_NAME(iter)::DFG_CLASS_NAME(SzIterator)<T>&)
+	inline bool isAtEnd(const ::DFG_MODULE_NS(iter)::SzIterator<T>& iter, const ::DFG_MODULE_NS(iter)::SzIterator<T>&)
 	{
 		return *iter == '\0';
 	}
