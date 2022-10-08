@@ -430,7 +430,7 @@ void CsvTableViewActionChangeRadix::RadixChangeVisitor::handleCell(VisitorParams
         {
             QChar chars[128];
             const auto rv = intToRadixRepresentation(nSrcVal, nToRadix, [&](const size_t i) { return radixParams.resultDigits[saturateCast<unsigned int>(i)]; }, '-', std::begin(chars), std::end(chars));
-            if (rv > 0 && rv < DFG_COUNTOF(szBuffer))
+            if (rv > 0 && static_cast<size_t>(rv) < DFG_COUNTOF(szBuffer))
             {
                 QString s(chars, rv);
                 strCpyAllThatFit(szBuffer, s.toUtf8().data());
