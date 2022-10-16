@@ -70,11 +70,11 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2021-06-19).
+Summary of 3rd party code in dfglib (last revised 2022-10-16).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
-| [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.55, 1.61, 1.65.1 and 1.70.0 |
+| [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.61, 1.65.1, 1.70.0 and 1.71.0 |
 | [Colour Rendering of Spectra](dfg/colour/specRendJw.cpp) | m (used in colour handling tools) | [Public domain](dfg/colour/specRendJw.cpp) | 
 | [cppcsv](https://github.com/paulharris/cppcsv) (commit [daa3d881](https://github.com/paulharris/cppcsv/tree/daa3d881d995b6695b84dde860126fa5f773de56/include/cppcsv), 2020-01-10) | c,t | [MIT](https://github.com/paulharris/cppcsv) | 
 | [dlib](http://dlib.net/)    | m (unit-aware integration) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
@@ -83,9 +83,9 @@ Summary of 3rd party code in dfglib (last revised 2021-06-19).
 | [GoogleTest](https://github.com/google/googletest) (version 1.11.0) | t | [BSD-3](externals/gtest/gtest.h) | Unit test framework used in both dfgTest and dfgTestQt.
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) | Qt-related utilities
 | [muparser](https://github.com/beltoforion/muparser) (version 2.3.3, commit [5ccc8878](https://github.com/beltoforion/muparser/tree/5ccc887864381aeacf1277062fcbb76475623a02), 2022-01-13) with some edits | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
-| [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Versions 2.0.1 and 2.1.0 are known to work as of dfgQtTableEditor version 1.9.0.
-| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Known to work with 5.9, 5.12, 5.13, 6.0, earliest version that works might be 5.8.
-| [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
+| [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Versions 2.0.1 and 2.1.0 are known to work as of dfgQtTableEditor version 2.4.0.
+| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Have been build with 5.9, 5.12, 5.13, 5.15, 6.0, earliest version that works might be 5.8.
+| [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1 with [some edits](https://github.com/tc3t/dfglib/commits/master/dfg/utf/utf8_cpp)) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:
 * c: All or some code from the library comes with dfglib (possibly modified), but is not directly used (i.e. related code can be removed without breaking any features in dfglib).
@@ -95,46 +95,50 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status of general unit tests (dfgTest) (as of 2021-06-19 commit [e39f80be](https://github.com/tc3t/dfglib/tree/e39f80bed20a58e00803d1d553d6973fe9607d6b), with Boost 1.70.0 unless stated otherwise, MSVC2022 added 2021-11-17)
+## Build status of general unit tests (dfgTest) (as of 2022-10-08 commit [80f2c510](https://github.com/tc3t/dfglib/tree/80f2c5109399493d9904a1891d0e7ffd6a6fdce2), with Boost 1.70.0 unless stated otherwise)
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
 | Compiler      | Platform      | Config  | Tests (passed/all) | Comment |
 | ------------- | ------------- | -----   | ------  | ------- |
-| Clang 3.8.0   | x86           |         | 100 % (284/284) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| Clang 6.0.0   | x64           | Release | 100 % (284/284) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| Clang 10.0.0  | x64           | Release | 100 % (284/284) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| Clang 11.0.0 (clang-cl)   | x64           | Release | 100 % (291/291) | Needed manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9)<br>Build with _/std:c++17_ |
-| GCC 5.4.0     | x86           |         | 100 % (284/284) | Boost 1.61, Ubuntu 32-bit 16.04 |
-| GCC 7.5.0     | x64           | Release | 100 % (284/284) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| GCC 9.3.0     | x64           | Release | 100 % (284/284) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| MinGW 7.3.0   | x64           | O2      | 100 % (292/292) | |
-| VC2015        | x86           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
-| VC2015        | x64           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x86           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017        | x64           | Release | 99 % (291/292) | Numerical precision related failure in dfgNumeric.transform |
-| VC2019        | x86           | Release | 100 % (291/291) | std:c++17 with Conformance mode |
-| VC2019        | x64           | Release | 100 % (291/291) | std:c++17 with Conformance mode |
-| VC2022        | x86           | Release | 100 % (293/293) | (commit [c928e432](https://github.com/tc3t/dfglib/commit/c928e432bee9912e5cbee9e09e139cc23df2f616)) std:c++20 with Conformance mode |
-| VC2022        | x64           | Release | 100 % (293/293) | (commit [c928e432](https://github.com/tc3t/dfglib/commit/c928e432bee9912e5cbee9e09e139cc23df2f616)) std:c++20 with Conformance mode |
+| Clang 3.8.0   | x86           |         | 100 % (314/314) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| Clang 6.0.0   | x86-64        | Release | 100 % (314/314) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| Clang 10.0.0  | x86-64        | Release | 100 % (314/314) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| Clang 12.0.0 (clang-cl, MSVC2019.11)   | x86-64           | Release | 100 % (321/321) | Needed manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9)<br>Build with _/std:c++17_ |
+| GCC 5.4.0     | x86           |         | 100 % (314/314) | Boost 1.61, Ubuntu 32-bit 16.04 |
+| GCC 7.5.0     | x86-64        | Release | 100 % (314/314) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| GCC 9.4.0     | x86-64        | Release | 100 % (314/314) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| MinGW 7.3.0   | x86-64        | O2      | 100 % (321/321) | |
+| VC2015 u3     | x86           | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
+| VC2015 u3     | x86-64        | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017.9      | x86           | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
+| VC2017.9      | x86-64        | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
+| VC2019.11     | x86           | Release | 100 % (321/321) | std:c++17 with Conformance mode |
+| VC2019.11     | x86-64        | Release | 100 % (321/321) | std:c++17 with Conformance mode |
+| VC2022.3      | x86           | Release | 100 % (321/321) | std:c++20 with Conformance mode |
+| VC2022.3      | x86-64        | Release | 100 % (321/321) | std:c++20 with Conformance mode |
 ||||||
 
 <br>
 <br>
 
-## Build status of Qt unit tests (dfgTestQt) (as of 2021-06-19 commit [e39f80be](https://github.com/tc3t/dfglib/tree/e39f80bed20a58e00803d1d553d6973fe9607d6b), with Boost 1.70.0 unless stated otherwise)
+## Build status of Qt unit tests (dfgTestQt) (as of 2022-10-08 commit [80f2c510](https://github.com/tc3t/dfglib/tree/80f2c5109399493d9904a1891d0e7ffd6a6fdce2), with Boost 1.70.0 unless stated otherwise)
 
 | Compiler      | Qt     | Platform   | Config   | Tests (passed/all) | Comment |
 | ------------- | ------ | ---------- | -------- | ------------------ | ------- |
-| Clang 6.0.0   | 5.9    | x64        | Release  | 100 % (23/23) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| Clang 10.0.0  | 5.12   | x64        | Release | 100 % (23/23) | Boost 1.71.0, Ubuntu 64-bit 20.04, QMAKESPEC = _linux-clang_ or _linux-clang-libc++_ |
-| GCC 7.5.0     | 5.9    | x64        | Release | 100 % (23/23) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| GCC 9.3.0     | 5.12  | x64        | Release | 100 % (23/23) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| GCC 9.3.0     | 6.0   | x64        | Release | 100 % (23/23) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| MinGW 7.3.0   | 5.13  | x64        | Release | 100 % (23/23) | |
-| VC2017        | 5.9   | x64        | Release | 100 % (23/23) | |
-| VC2017        | 5.13  | x64        | Release | 100 % (23/23) | |
-| VC2019        | 6.0   | x64        | Release | 100 % (23/23) | |
+| Clang 6.0.0 (libstdc++)  | 5.9    | x86-64     | Release  | 98 % (44/45) | Boost 1.65.1, Ubuntu 64-bit 18.04. Test case dfgQt.CsvTableView_saveAsShown crashed with stack trace operator+(QString const&, char const*) () <- dfg::qt::CsvItemModel::getConfig() const () <- dfg::qt::CsvItemModel::readData(dfg::qt::CsvItemModel::LoadOptions const&, std::function<bool ()>) () <- dfg::qt::CsvItemModel::openFile. This was isolated to access of m_sFilePath member in CsvItemModel::getFilePath(). Did not occur in debug-build and some extra qDebug-logging could fix the crash also in release build. |
+| Clang 10.0.0 (libc++)  | 5.12  | x86-64      | Release | 100 % (46/46) | Boost 1.71.0, Ubuntu 64-bit 20.04, QMAKESPEC = _linux-clang-libc++_ |
+| Clang 10.0.0 (libstdc++)  | 5.12  | x86-64      | Release | 98 % (45/46) | Boost 1.71.0, Ubuntu 64-bit 20.04, QMAKESPEC = _linux-clang_. Test case dfgQt.CsvTableView_saveAsShown crashed like in Clang 6.0.0 case mentioned above. |
+| Clang 12.0.0 (clang-cl, MSVC2019.11)  | 5.13   | x86-64        | Release | 100 % (46/46) | |
+| GCC 7.5.0     | 5.9   | x86-64      | Release | 100 % (45/45) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
+| GCC 9.4.0     | 5.12  | x86-64      | Release | 100 % (46/46) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| GCC 9.4.0     | 6.0   | x86-64      | Release | 100 % (46/46) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
+| MinGW 7.3.0   | 5.13  | x86-64      | Release | 100 % (46/46) | |
+| VC2017.9      | 5.9   | x86-64      | Release | 100 % (45/45) | |
+| VC2017.9      | 5.12  | x86-64      | Release | 100 % (46/46) | |
+| VC2019.11     | 5.15  | x86-64      | Release | 100 % (46/46) | |
+| VC2019.11     | 6.0   | x86-64      | Release | 100 % (46/46) | |
+| VC2022.3      | 6.0   | x86-64      | Release | 100 % (46/46) | |
 ||||||
 
 Note: dfgQt.CsvTableView_paste may fail sporadically at least on Windows.
