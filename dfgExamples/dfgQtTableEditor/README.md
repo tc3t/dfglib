@@ -4,22 +4,22 @@ csv-oriented table editor based on dfglib using Qt as UI framework. Also include
 
 ## Building
 
-### __Version 2.3.0__:
+### __Version 2.4.0__:
 
-Has been build with:
+Has been build for x86-64 ([i.e. amd64](https://en.wikipedia.org/wiki/X86-64)) with:
 | Compiler      | C++ standard [1] | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
 | ------------- | ---------------- | -- | ---- | -- | -- | -- |
 | Clang 6.0.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
 | Clang 10.0.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
-| Clang 12.0.0 (clang-cl, MSVC2019.10/11) | C++14 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0.  May need a workaround for "lld-link: error: undefined symbol: wmemchr" as described in message of [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9)
+| Clang 12.0.0 (clang-cl, MSVC2019.10/11) | C++17 | 5.15 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0. Needed a workaround for "lld-link: error: undefined symbol: wmemchr" as described in message of [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9) (e.g. adding wmemchr definition manually to a new .cpp-file and disabling pch)
 | GCC 7.5.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
 | GCC 9.4.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
 | GCC 9.4.0 | C++17 | 6.0 | Ubuntu 20.04 | 1.71 | No |
 | MinGW 7.3.0 | C++17 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
 | MSVC2017.9 | C++14 | 5.9 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0.
 | MSVC2017.9 | C++17 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2019.10/11 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2022.1 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2019.11 | C++17 | 5.15 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+| MSVC2022.3 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
 | | | |
 
 [1] As reported by *__cplusplus* macro  or equivalent.
@@ -33,9 +33,28 @@ Concrete build steps assuming having compatible Qt version, Qt Creator and compi
 
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
-To see build chart of older versions, see [readme of 2.2.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.2.0/dfgExamples/dfgQtTableEditor)
+To see build chart of older versions, see [readme of 2.3.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.3.0/dfgExamples/dfgQtTableEditor)
 
 ## Version history
+
+### 2.4.0, 2022-10-23
+* Tag: [2.4.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.4.0)
+    * Highlights: Multithreaded reading, (x,y,text)-chart, read-only columns, several usability improvement, fixed crash opening big files.
+    * General
+        * [fix] Fixes to crash when opening big files and broken read progress indicator ([#141](https://github.com/tc3t/dfglib/issues/141), [8c3c65dd](https://github.com/tc3t/dfglib/commit/8c3c65ddc79f5be224fc414c74e5f8fe081a7fc0))
+        * [new] Multithreaded reading. Requires empty enclosing char and UTF8 / Latin1 / Windows-1252 encoding and big enough file. For related controls, see options *readThreadBlockSizeMinimum and *readThreadCountMaximum ([#138](https://github.com/tc3t/dfglib/issues/138))
+        * [new] read-only mode for columns ([#129](https://github.com/tc3t/dfglib/issues/129))
+        * [new] Files can now be drag&dropped to open file ([#131](https://github.com/tc3t/dfglib/issues/131), [8c0aec62](https://github.com/tc3t/dfglib/commit/8c0aec62a8692bee696142a9e64011553986f486))
+        * [imp] Added tool button showing info about the currently open file ([#139](https://github.com/tc3t/dfglib/issues/139))
+        * [imp] Can now set initial scroll position from .conf-file ([#130](https://github.com/tc3t/dfglib/issues/130), [e41ed4b5](https://github.com/tc3t/dfglib/commit/e41ed4b502550bba6e68d1116e209da14b675dc4))
+        * [imp/reg] Better visualization of multiline cells. As a related regression, completer is no longer available for multiline cells. ([#135](https://github.com/tc3t/dfglib/issues/135))
+        * [imp] "Save config file with options"-dialog now has a button to insert some fields such as datetimes ([#137](https://github.com/tc3t/dfglib/issues/137), [7657e3b7](https://github.com/tc3t/dfglib/commit/7657e3b74db730ddac94f3ea52184e28a360cb43))
+        * [imp] Leaving cell editor without making changes no longer creates an undo-point ([81c49be1](https://github.com/tc3t/dfglib/commit/81c49be15cffe52c939c8b90820c8b903364443c))
+        * [mod/imp] Adjusted scroll behaviour on filter clear ([#133](https://github.com/tc3t/dfglib/issues/133), [97352273](https://github.com/tc3t/dfglib/commit/97352273d4071493920889dabe85e6e89baff2f2))
+        * [mod] Disabled delayed autoscroll on cell click ([#136](https://github.com/tc3t/dfglib/issues/136), [e0fa63a6](https://github.com/tc3t/dfglib/commit/e0fa63a6e19322f1b2f4ce8ea18aec009686d7ef))
+        * [fix] 'header <-> first row' actions didn't work correctly when columns were hidden ([#143](https://github.com/tc3t/dfglib/issues/143), [a0118b15](https://github.com/tc3t/dfglib/commit/a0118b156bc25f1f6953321fec07be66ec13163d))
+    * Charts
+        * [new] New chart type: (x, y, text) ([#140](https://github.com/tc3t/dfglib/issues/140))
 
 ### 2.3.0, 2022-05-22
 * Tag: [2.3.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.3.0)
@@ -533,7 +552,7 @@ properties,,,
 
 ## Third party code
 
-Summary of 3rd party code in dfgQtTableEditor (last revised 2021-06-27).
+Summary of 3rd party code in dfgQtTableEditor (last revised 2022-10-16).
 
 | Library      | License  |
 | ------------- | ----- |

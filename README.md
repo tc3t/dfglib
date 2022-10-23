@@ -6,6 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2022-10-23, dfgQtTableEditor [version 2.4.0](dfgExamples/dfgQtTableEditor/README.md/#240-2022-10-23) (Multithreaded reading, (x,y,text)-chart, read-only column, fixed crash opening big files...)
 * 2022-05-22, dfgQtTableEditor [version 2.3.0](dfgExamples/dfgQtTableEditor/README.md/#230-2022-05-22) (Numerically sortable columns, 'Change radix'-tool, textFilter chart operation...)
 * 2022-01-18, dfgQtTableEditor [version 2.2.0](dfgExamples/dfgQtTableEditor/README.md/#220-2022-01-18) (Hidable columns, date/time related improvements...)
 * 2021-09-09, dfgQtTableEditor [version 2.1.0](dfgExamples/dfgQtTableEditor/README.md/#210-2021-09-09) (multicolumn filtering, read-only mode...)
