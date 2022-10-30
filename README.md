@@ -6,6 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2022-10-30: dfglib is no longer tested with MSVC2015, GCC 5.4 and Clang 3.8.0, latest tested commit available as branch: [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4)
 * 2022-10-23, dfgQtTableEditor [version 2.4.0](dfgExamples/dfgQtTableEditor/README.md/#240-2022-10-23) (Multithreaded reading, (x,y,text)-chart, read-only column, fixed crash opening big files...)
 * 2022-05-22, dfgQtTableEditor [version 2.3.0](dfgExamples/dfgQtTableEditor/README.md/#230-2022-05-22) (Numerically sortable columns, 'Change radix'-tool, textFilter chart operation...)
 * 2022-01-18, dfgQtTableEditor [version 2.2.0](dfgExamples/dfgQtTableEditor/README.md/#220-2022-01-18) (Hidable columns, date/time related improvements...)
@@ -102,16 +103,12 @@ Usage types:
 
 | Compiler      | Platform      | Config  | Tests (passed/all) | Comment |
 | ------------- | ------------- | -----   | ------  | ------- |
-| Clang 3.8.0   | x86           |         | 100 % (314/314) | Boost 1.61, Ubuntu 32-bit 16.04 |
 | Clang 6.0.0   | x86-64        | Release | 100 % (314/314) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
 | Clang 10.0.0  | x86-64        | Release | 100 % (314/314) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
 | Clang 12.0.0 (clang-cl, MSVC2019.11)   | x86-64           | Release | 100 % (321/321) | Needed manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9)<br>Build with _/std:c++17_ |
-| GCC 5.4.0     | x86           |         | 100 % (314/314) | Boost 1.61, Ubuntu 32-bit 16.04 |
 | GCC 7.5.0     | x86-64        | Release | 100 % (314/314) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
 | GCC 9.4.0     | x86-64        | Release | 100 % (314/314) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
 | MinGW 7.3.0   | x86-64        | O2      | 100 % (321/321) | |
-| VC2015 u3     | x86           | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
-| VC2015 u3     | x86-64        | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
 | VC2017.9      | x86           | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
 | VC2017.9      | x86-64        | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
 | VC2019.11     | x86           | Release | 100 % (321/321) | std:c++17 with Conformance mode |
@@ -146,10 +143,13 @@ Note: dfgQt.CsvTableView_paste may fail sporadically at least on Windows.
 
 <br>
 
-### dfglib is no longer tested with the following compilers:
+### Phased out compilers:
 
 | Compiler | Untested since | Support branch |
 | -------- | --------------- | --------------------- |
+| MSVC2015 | 2022-10-30 | [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4) |
+| GCC 5.4  | 2022-10-30 | [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4) |
+| Clang 3.8.0  | 2022-10-30 | [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4) |
 | MSVC2013 | 2020-02-11 | [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013) |
 | MSVC2012 | 2020-02-11 | [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013) |
 | MSVC2010 | 2020-02-11 | [legacy_msvc_2010_to_2013](https://github.com/tc3t/dfglib/tree/legacy_msvc_2010_to_2013) |

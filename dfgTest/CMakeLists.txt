@@ -11,7 +11,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/"
 
 # TODO: Set VC warning level to W4
 
-add_definitions(-std=c++11) 
+add_definitions(-std=c++17)
 
 SET(HEADERS
     stdafx.h

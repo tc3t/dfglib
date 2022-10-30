@@ -57,7 +57,7 @@ public:
 
 enum class CharsFormat
 {
-#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
+#if (DFG_STRTO_RADIX_SUPPORT == 1)
     fixed       = static_cast<int>(std::chars_format::fixed),
     general     = static_cast<int>(std::chars_format::general),
     hex         = static_cast<int>(std::chars_format::hex),
