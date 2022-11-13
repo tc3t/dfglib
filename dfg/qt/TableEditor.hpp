@@ -125,8 +125,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Sets window to resize/move if document requests to use specific window size/position. If not set, requests are ignored.
         void setResizeWindow(QWidget* pWindow);
 
-        void setFilterJson(const QString& sJson);
-
         void updateFileInfoToolTip();
 
     protected:
@@ -153,6 +151,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onFilterColumnChanged(int nNewCol);
         void onFindRequested();
         void onFilterRequested();
+        void setFilterJson(const QString& sJson);
         void onHighlightTextCaseSensitivityChanged(bool);
         void onFilterCaseSensitivityChanged(bool);
         void onViewReadOnlyModeChanged(bool);

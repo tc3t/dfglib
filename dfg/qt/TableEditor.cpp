@@ -531,6 +531,7 @@ TableEditor::TableEditor()
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigSelectionChanged, this, &ThisClass::onSelectionChanged));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterActivated, this, &ThisClass::onFilterRequested));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterJsonRequested, this, &ThisClass::setFilterJson));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigReadOnlyModeChanged, this, &ThisClass::onViewReadOnlyModeChanged));
     // Setting default selection details from app settings.
     setSelectionDetailsFromIni(getTableEditorProperty<TableEditorPropertyId_selectionDetails>(this));

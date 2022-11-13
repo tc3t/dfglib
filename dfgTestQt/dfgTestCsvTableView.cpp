@@ -1539,6 +1539,90 @@ TEST(dfgQt, CsvTableView_cellEditability)
 #undef DFGTEST_TEST_CELL_STATUS
 }
 
+namespace
+{
+    class CsvTableViewWidget : public ::DFG_MODULE_NS(qt)::CsvTableView
+    {
+    public:
+        using BaseClass = ::DFG_MODULE_NS(qt)::CsvTableView;
+        CsvTableViewWidget()
+            : BaseClass(nullptr, nullptr)
+            , m_proxyModel(this)
+        {
+            m_proxyModel.setSourceModel(&m_csvModel);
+            this->setModel(&m_proxyModel);
+            const auto filterSlot = [&](QString s)
+            {
+                m_sReceivedFilter = s;
+                s.replace("} {", "}\n{");
+                m_proxyModel.setFilterFromNewLineSeparatedJsonList(s.toUtf8());
+
+            };
+            DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigFilterJsonRequested, &m_proxyModel, filterSlot));
+        }
+
+              ::DFG_MODULE_NS(qt)::CsvItemModel& getCsvModel()       { return m_csvModel; }
+        const ::DFG_MODULE_NS(qt)::CsvItemModel& getCsvModel() const { return m_csvModel; }
+
+        ::DFG_MODULE_NS(qt)::CsvItemModel m_csvModel;
+        ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel m_proxyModel;
+        QString m_sReceivedFilter;
+    }; // class CsvTableViewWidget
+} // unnamed namespace
+
+TEST(dfgQt, CsvTableView_filterFromSelection)
+{
+    CsvTableViewWidget viewWidget;
+
+    const char szInputString[] =
+        ",,\n"
+        "1,2,3\n"
+        "4,\"\"\"|()\",6\n" // Selecting second cell from this row
+        "7,8,9\n"
+        "a,b,c\n" // Selecting 'b' from this row
+        "d,e,f\n" // Selecting 'f' from this row
+        "g,h,aFb\n"
+        "f,i,j"; // This should not get matched since 'f' is on different column
+
+    viewWidget.getCsvModel().openString(szInputString);
+
+    const auto pModel = viewWidget.model();
+    DFGTEST_ASSERT_TRUE(pModel != nullptr);
+    const auto nRowCount = pModel->rowCount();
+    const auto nColCount = pModel->columnCount();
+    DFGTEST_EXPECT_LEFT(7, nRowCount);
+    DFGTEST_EXPECT_LEFT(3, nColCount);
+    // Selecting cells that have content '"|()', 'b' and 'f'
+    QModelIndexList selection = { viewWidget.model()->index(1, 1), viewWidget.model()->index(3, 1), viewWidget.model()->index(4, 2) };
+    viewWidget.setSelectedIndexed(selection, nullptr);
+    viewWidget.onFilterFromSelectionRequested_orLogics();
+
+    DFGTEST_EXPECT_EQ(4, viewWidget.model()->rowCount());
+#define DFGTEST_TEMP_TEST_CELL(STR, ROW, COL) DFGTEST_EXPECT_EQ(STR, viewWidget.model()->data(viewWidget.model()->index(ROW, COL)).toString());
+    DFGTEST_TEMP_TEST_CELL("4", 0, 0);
+    DFGTEST_TEMP_TEST_CELL("\"|()", 0, 1);
+    DFGTEST_TEMP_TEST_CELL("6", 0, 2);
+
+    DFGTEST_TEMP_TEST_CELL("a", 1, 0);
+    DFGTEST_TEMP_TEST_CELL("b", 1, 1);
+    DFGTEST_TEMP_TEST_CELL("c", 1, 2);
+
+    DFGTEST_TEMP_TEST_CELL("d", 2, 0);
+    DFGTEST_TEMP_TEST_CELL("e", 2, 1);
+    DFGTEST_TEMP_TEST_CELL("f", 2, 2);
+
+    DFGTEST_TEMP_TEST_CELL("g", 3, 0);
+    DFGTEST_TEMP_TEST_CELL("h", 3, 1);
+    DFGTEST_TEMP_TEST_CELL("aFb", 3, 2); // Tests case insensitivity and substring matching. Filter from selection is expected to match substrings and
+                                         // be case insensitive so 'f' filter should match 'F'.
+
+    // Testing filter format. This mostly tests against unintended changed in filter so if test fails just due to intentional format changes
+    // (or unintentional ones that don't change filter behaviour), simply adjust test string.
+    const auto szExpectedFilter = R"STR({"and_group":"col_2","apply_columns":"2","text":"\\\"\\|\\(\\)|b","type":"reg_exp"} {"and_group":"col_3","apply_columns":"3","text":"f","type":"reg_exp"} )STR";
+    DFGTEST_EXPECT_LEFT(szExpectedFilter, viewWidget.m_sReceivedFilter);
+#undef DFGTEST_TEMP_TEST_CELL
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);

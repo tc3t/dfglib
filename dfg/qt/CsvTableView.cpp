@@ -856,7 +856,17 @@ void CsvTableView::addFindAndSelectionActions()
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Find next"),     tr("F3"),       ActionFlags::viewEdit,           onFindNext);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Find previous"), tr("Shift+F3"), ActionFlags::viewEdit,           onFindPrevious);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Replace"),       tr("Ctrl+H"),   ActionFlags::defaultContentEdit, onReplace);
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Filter"),        tr("Alt+F"),    ActionFlags::viewEdit,           onFilterRequested);
+
+    // Filter-actions
+    {
+        auto pMenu = createActionMenu(this, tr("Filter"), ActionFlags::viewEdit);
+        if (pMenu)
+        {
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Set filter"), tr("Alt+F"), ActionFlags::viewEdit, onFilterRequested);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Create filter from selection (or-columns)"), noShortCut, ActionFlags::viewEdit, onFilterFromSelectionRequested_orLogics);
+        }
+    } // End of Filter actions
+    
 }
 
 void CsvTableView::addContentEditActions()
@@ -3794,7 +3804,71 @@ void CsvTableView::onFilterRequested()
     if (isSignalConnected(findActivatedSignal))
         Q_EMIT sigFilterActivated();
     else
-        QToolTip::showText(QCursor::pos(), tr("Sorry, standalone filter is not implemented."));
+        showStatusInfoTip(tr("Sorry, standalone filter is not implemented."));
+}
+
+void CsvTableView::onFilterFromSelectionRequested_orLogics()
+{
+    const QMetaMethod signalMetaMethod = QMetaMethod::fromSignal(&ThisClass::sigFilterJsonRequested);
+    if (!isSignalConnected(signalMetaMethod))
+    {
+        showStatusInfoTip(tr("Sorry, standalone filter is not implemented."));
+        return;
+    }
+    const auto pCsvModel = csvModel();
+    if (!pCsvModel)
+        return;
+
+    // Fetching all selected items
+    ::DFG_MODULE_NS(cont)::MapVectorSoA<Index, ::DFG_MODULE_NS(cont)::SetVector<QString>> columnItems;
+    size_t nCounter = 0;
+    const size_t nMaxCellCount = 500; // Some arbitrary sanity limit so that won't try create filter out of thoundands/millions of cells.
+    forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& rbContinue)
+    {
+        rbContinue = (nCounter < nMaxCellCount);
+        const auto s = pCsvModel->data(index).toString();
+        if (!s.isEmpty())
+            columnItems[index.column()].insert(s);
+        ++nCounter;
+    });
+    // Checking if there were too many selected items and bailing out if yes.
+    if (nCounter > nMaxCellCount)
+    {
+        this->showStatusInfoTip(tr("Too many cells selected for filter: maximum limit is %1.").arg(nMaxCellCount));
+        return;
+    }
+
+    // Constructing filter: every cell text is OR'ed: every column gets a dedicated json-entity and within the column
+    //                      texts are OR'ed within regexp handling.
+    QString sFilter;
+    for (const auto& colIndexAndStrings : columnItems)
+    {
+        QString sTextPattern;
+        for (const auto& s : colIndexAndStrings.second)
+        {
+            if (!sTextPattern.isEmpty())
+                sTextPattern += "|";
+            //sTextPattern += QString("^%1$").arg(QRegularExpression::escape(s)); // This can be used for stricter non-substring matching.
+            sTextPattern += QString("%1").arg(QRegularExpression::escape(s));
+        }
+
+        const auto nColumn = colIndexAndStrings.first;
+        const auto nUserColumn = CsvItemModel::internalColumnIndexToVisible(nColumn);
+
+        QVariantMap jsonFields;
+        jsonFields["text"] = sTextPattern;
+        jsonFields["type"] = "reg_exp";
+        jsonFields["apply_columns"] = QString::number(nUserColumn);
+        if (columnItems.size() > 1)
+        {
+            const QString sAndGroup = QString("col_%1").arg(nUserColumn);
+            jsonFields["and_group"] = sAndGroup;
+        }
+
+        sFilter += QString("%1 ").arg(QString::fromUtf8(QJsonDocument::fromVariant(jsonFields).toJson(QJsonDocument::Compact)));
+    }
+
+    Q_EMIT sigFilterJsonRequested(sFilter);
 }
 
 void CsvTableView::onGoToCellTriggered()

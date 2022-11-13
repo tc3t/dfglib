@@ -401,9 +401,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         std::unique_ptr<QMenu> createResizeColumnsMenu();
 
+        // Calls given function for every CsvModel index in selection. 'func' is given two arguments: const QModelIndex& index, bool& bContinue
         template <class Func_T>
         void forEachCsvModelIndexInSelection(Func_T func);
 
+        // Const overload, see non-const for documentation.
         template <class Func_T>
         void forEachCsvModelIndexInSelection(Func_T func) const;
 
@@ -585,6 +587,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onReplace();
 
         void onFilterRequested();
+        void onFilterFromSelectionRequested_orLogics();
 
         void setCaseSensitiveSorting(bool bCaseSensitive);
         void resetSorting();
@@ -643,6 +646,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     signals:
         void sigFindActivated();
         void sigFilterActivated();
+        void sigFilterJsonRequested(QString);
         void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedItems);
         void sigOnAllowApplicationSettingsUsageChanged(bool);
         void sigReadOnlyModeChanged(bool);
