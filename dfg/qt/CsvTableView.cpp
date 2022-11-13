@@ -691,7 +691,11 @@ CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWid
 
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
+    {
+        const auto nMinSize = pVertHdr->minimumSectionSize();
+        pVertHdr->setMinimumSectionSize(Min(nMinSize, gnDefaultRowHeight));
         pVertHdr->setDefaultSectionSize(gnDefaultRowHeight); // TODO: make customisable
+    }
 
     // TODO: make customisable.
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -4940,11 +4944,12 @@ void CsvTableView::onColumnResizeAction_toViewContentAware()
                 return;
             bool bOk = false;
             const auto nCurrentSetting = pHeader->defaultSectionSize();
+            const auto nMinimumSize = pHeader->minimumSectionSize();
             const auto nNewSize = QInputDialog::getInt(pParent,
                                                        QApplication::tr("Header size"),
-                                                       QApplication::tr("New header size"),
+                                                       QApplication::tr("New header size (minimum is %1)").arg(nMinimumSize),
                                                        nCurrentSetting,
-                                                       1,
+                                                       nMinimumSize,
                                                        1048575, // Maximum section size at least in Qt 5.2
                                                        1,
                                                        &bOk);
