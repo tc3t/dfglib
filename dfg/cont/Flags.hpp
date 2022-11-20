@@ -6,7 +6,7 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
 // Class for typesafer flag operations for given enum.
-// For defining new enums that use Flags-class under the hood, see macro DFG_DEFINE_SCOPED_FLAGS_WITH_OPERATORS
+// For defining new enums that use Flags-class under the hood, see macro DFG_DEFINE_SCOPED_ENUM_FLAGS_WITH_OPERATORS
 // Related implementations
 //      -QFlags
 template <class Enum_T>

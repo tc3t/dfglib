@@ -9,6 +9,7 @@
 #include <functional>
 #include <tuple>
 #include "../OpaquePtr.hpp"
+#include "../cont/Flags.hpp"
 
 #include "qtIncludeHelpers.hpp"
 
@@ -268,6 +269,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::atomic_bool m_abCancelled{ false };
     }; // Class ProgressWidget
 
+    DFG_DEFINE_SCOPED_ENUM_FLAGS_WITH_OPERATORS(CsvTableViewSelectionFilterFlags, int,
+        caseSensitive         = 0x1, // When not set: case-insensitive
+        columnMatchByAnd      = 0x2, // When not set: columns are matches with or-logics
+        wholeStringMatch      = 0x4  // When not set: substring match
+    ); // CsvTableViewSelectionFilterFlags
+
     // View for showing CsvItemModel.
     class CsvTableView : public TableView
     {
@@ -495,6 +502,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void scrollToDefaultPosition();
 
+        void setFilterFromSelection(CsvTableViewSelectionFilterFlags flags);
+
     private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
@@ -587,7 +596,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onReplace();
 
         void onFilterRequested();
-        void onFilterFromSelectionRequested_orLogics();
+        void onFilterFromSelectionRequested();
 
         void setCaseSensitiveSorting(bool bCaseSensitive);
         void resetSorting();

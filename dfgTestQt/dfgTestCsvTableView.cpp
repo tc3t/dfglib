@@ -1572,55 +1572,93 @@ namespace
 
 TEST(dfgQt, CsvTableView_filterFromSelection)
 {
+    #define DFGTEST_TEMP_TEST_CELL(STR, ROW, COL) DFGTEST_EXPECT_EQ(STR, viewWidget.model()->data(viewWidget.model()->index(ROW, COL)).toString());
+    #define DFGTEST_TEMP_TEST_ROW(ROW, S0, S1, S2) DFGTEST_TEMP_TEST_CELL(S0, ROW, 0); DFGTEST_TEMP_TEST_CELL(S1, ROW, 1); DFGTEST_TEMP_TEST_CELL(S2, ROW, 2)
+
+
     CsvTableViewWidget viewWidget;
 
     const char szInputString[] =
         ",,\n"
         "1,2,3\n"
-        "4,\"\"\"|()\",6\n" // Selecting second cell from this row
+        "4,\"\"\"|()\",6\n" // Second cell from this row is selected in first test
         "7,8,9\n"
-        "a,b,c\n" // Selecting 'b' from this row
-        "d,e,f\n" // Selecting 'f' from this row
+        "a,b,c\n" // 'b' is selected from this row in first test
+        "d,e,f\n" // 'f' is selected from this row in first test
         "g,h,aFb\n"
-        "f,i,j"; // This should not get matched since 'f' is on different column
+        "f,i,j\n"
+        "1,h,afb\n"
+        "1,h,aFb\n"
+        "1,h,aFb2\n"
+        "1,h1,aFb";
 
     viewWidget.getCsvModel().openString(szInputString);
 
     const auto pModel = viewWidget.model();
     DFGTEST_ASSERT_TRUE(pModel != nullptr);
-    const auto nRowCount = pModel->rowCount();
-    const auto nColCount = pModel->columnCount();
-    DFGTEST_EXPECT_LEFT(7, nRowCount);
-    DFGTEST_EXPECT_LEFT(3, nColCount);
+    const auto nRowCountTotal = pModel->rowCount();
+    const auto nColCountTotal = pModel->columnCount();
+    DFGTEST_EXPECT_LEFT(11, nRowCountTotal);
+    DFGTEST_EXPECT_LEFT(3, nColCountTotal);
     // Selecting cells that have content '"|()', 'b' and 'f'
-    QModelIndexList selection = { viewWidget.model()->index(1, 1), viewWidget.model()->index(3, 1), viewWidget.model()->index(4, 2) };
-    viewWidget.setSelectedIndexed(selection, nullptr);
-    viewWidget.onFilterFromSelectionRequested_orLogics();
 
-    DFGTEST_EXPECT_EQ(4, viewWidget.model()->rowCount());
-#define DFGTEST_TEMP_TEST_CELL(STR, ROW, COL) DFGTEST_EXPECT_EQ(STR, viewWidget.model()->data(viewWidget.model()->index(ROW, COL)).toString());
-    DFGTEST_TEMP_TEST_CELL("4", 0, 0);
-    DFGTEST_TEMP_TEST_CELL("\"|()", 0, 1);
-    DFGTEST_TEMP_TEST_CELL("6", 0, 2);
+    // Testing default filter (or-columns, case-insensitive, substring match)
+    {
+        const QModelIndexList selection = { viewWidget.model()->index(1, 1), viewWidget.model()->index(3, 1), viewWidget.model()->index(4, 2) };
+        viewWidget.setSelectedIndexed(selection, nullptr);
+        DFGTEST_EXPECT_EQ(3, viewWidget.getSelectedItemCount());
 
-    DFGTEST_TEMP_TEST_CELL("a", 1, 0);
-    DFGTEST_TEMP_TEST_CELL("b", 1, 1);
-    DFGTEST_TEMP_TEST_CELL("c", 1, 2);
+        viewWidget.onFilterFromSelectionRequested();
 
-    DFGTEST_TEMP_TEST_CELL("d", 2, 0);
-    DFGTEST_TEMP_TEST_CELL("e", 2, 1);
-    DFGTEST_TEMP_TEST_CELL("f", 2, 2);
+        DFGTEST_EXPECT_EQ(8, viewWidget.model()->rowCount());
 
-    DFGTEST_TEMP_TEST_CELL("g", 3, 0);
-    DFGTEST_TEMP_TEST_CELL("h", 3, 1);
-    DFGTEST_TEMP_TEST_CELL("aFb", 3, 2); // Tests case insensitivity and substring matching. Filter from selection is expected to match substrings and
-                                         // be case insensitive so 'f' filter should match 'F'.
+        DFGTEST_TEMP_TEST_ROW(0, "4", "\"|()", "6");
+        DFGTEST_TEMP_TEST_ROW(1, "a", "b", "c");
+        DFGTEST_TEMP_TEST_ROW(2, "d", "e", "f");
+        DFGTEST_TEMP_TEST_ROW(3, "g", "h", "aFb");
+        DFGTEST_TEMP_TEST_ROW(4, "1", "h", "afb");
+        DFGTEST_TEMP_TEST_ROW(5, "1", "h", "aFb");
+        DFGTEST_TEMP_TEST_ROW(6, "1", "h", "aFb2");
+        DFGTEST_TEMP_TEST_ROW(7, "1", "h1", "aFb");
 
-    // Testing filter format. This mostly tests against unintended changed in filter so if test fails just due to intentional format changes
-    // (or unintentional ones that don't change filter behaviour), simply adjust test string.
-    const auto szExpectedFilter = R"STR({"and_group":"col_2","apply_columns":"2","text":"\\\"\\|\\(\\)|b","type":"reg_exp"} {"and_group":"col_3","apply_columns":"3","text":"f","type":"reg_exp"} )STR";
-    DFGTEST_EXPECT_LEFT(szExpectedFilter, viewWidget.m_sReceivedFilter);
+        // Testing filter format. This mostly tests against unintended changed in filter so if test fails just due to intentional format changes
+        // (or unintentional ones that don't change filter behaviour), simply adjust test string.
+        const auto szExpectedFilter = R"STR({"and_group":"col_2","apply_columns":"2","text":"\\\"\\|\\(\\)|b","type":"reg_exp"} {"and_group":"col_3","apply_columns":"3","text":"f","type":"reg_exp"} )STR";
+        DFGTEST_EXPECT_LEFT(szExpectedFilter, viewWidget.m_sReceivedFilter);
+    }
+
+    // Testing strict filter (and-columns, case-sensitive, whole string match)
+    {
+        // Clearing filter
+        viewWidget.sigFilterJsonRequested(QString());
+        DFGTEST_EXPECT_LEFT(nRowCountTotal, viewWidget.getRowCount_viewModel());
+
+        // Selecting "h" and "aFb" from row 5
+        viewWidget.clearSelection(); // For some reason without this call setSelectedIndexed() would select 5 cells.
+        const QModelIndexList selection = { viewWidget.model()->index(5, 1), viewWidget.model()->index(5, 2) };
+        viewWidget.setSelectedIndexed(selection, nullptr);
+        DFGTEST_EXPECT_EQ(2, viewWidget.getSelectedItemCount());
+
+        // Creating filter from selection with strict match flags
+        using namespace ::DFG_MODULE_NS(qt);
+        viewWidget.setFilterFromSelection(
+            CsvTableViewSelectionFilterFlags::Enum::columnMatchByAnd |
+            CsvTableViewSelectionFilterFlags::Enum::caseSensitive |
+            CsvTableViewSelectionFilterFlags::Enum::wholeStringMatch
+        );
+
+        DFGTEST_EXPECT_EQ(2, viewWidget.model()->rowCount());
+
+        DFGTEST_TEMP_TEST_ROW(0, "g", "h", "aFb");
+        DFGTEST_TEMP_TEST_ROW(1, "1", "h", "aFb");
+
+        // Testing filter format. This mostly tests against unintended changed in filter so if test fails just due to intentional format changes
+        // (or unintentional ones that don't change filter behaviour), simply adjust test string.
+        const auto szExpectedFilter = R"STR({"apply_columns":"2","case_sensitive":true,"text":"^h$","type":"reg_exp"} {"apply_columns":"3","case_sensitive":true,"text":"^aFb$","type":"reg_exp"} )STR";
+        DFGTEST_EXPECT_LEFT(szExpectedFilter, viewWidget.m_sReceivedFilter);
+    }
 #undef DFGTEST_TEMP_TEST_CELL
+#undef DFGTEST_TEMP_TEST_ROW
 }
 
 TEST(dfgQt, TableView_makeSingleCellSelection)
@@ -1642,4 +1680,14 @@ TEST(dfgQt, TableView_makeSingleCellSelection)
     view.selectColumn(2);
     view.makeSingleCellSelection(0, 0);
     EXPECT_EQ(makeSingleCellIndexList(0, 0), pSelectionModel->selectedIndexes());
+}
+
+TEST(dfgQt, TableView_setSelectedIndexed)
+{
+    CsvTableViewWidget view;
+    view.resizeTableNoUi(2, 2);
+    view.setSelectedIndexed({ view.model()->index(1, 0), view.model()->index(1, 1) }, nullptr);
+    DFGTEST_EXPECT_LEFT(2, view.getSelectedItemCount());
+    view.setSelectedIndexed({ view.model()->index(1, 0) }, nullptr);
+    DFGTEST_EXPECT_LEFT(1, view.getSelectedItemCount());
 }

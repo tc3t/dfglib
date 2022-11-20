@@ -65,8 +65,10 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue_dateHandling";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_filterFromSelection";
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_filter";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_setSelectedIndexed";
 
     const auto rv = RUN_ALL_TESTS();
     {
