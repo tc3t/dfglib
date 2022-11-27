@@ -1541,33 +1541,24 @@ TEST(dfgQt, CsvTableView_cellEditability)
 
 namespace
 {
-    class CsvTableViewWidget : public ::DFG_MODULE_NS(qt)::CsvTableView
+    class CsvTableWidgetForFilterSelectionTest : public ::DFG_MODULE_NS(qt)::CsvTableWidget
     {
     public:
-        using BaseClass = ::DFG_MODULE_NS(qt)::CsvTableView;
-        CsvTableViewWidget()
-            : BaseClass(nullptr, nullptr)
-            , m_proxyModel(this)
+        using BaseClass = ::DFG_MODULE_NS(qt)::CsvTableWidget;
+        CsvTableWidgetForFilterSelectionTest()
         {
-            m_proxyModel.setSourceModel(&m_csvModel);
-            this->setModel(&m_proxyModel);
             const auto filterSlot = [&](QString s)
             {
                 m_sReceivedFilter = s;
                 s.replace("} {", "}\n{");
-                m_proxyModel.setFilterFromNewLineSeparatedJsonList(s.toUtf8());
+                getViewModel().setFilterFromNewLineSeparatedJsonList(s.toUtf8());
 
             };
-            DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigFilterJsonRequested, &m_proxyModel, filterSlot));
+            DFG_QT_VERIFY_CONNECT(connect(this, &CsvTableView::sigFilterJsonRequested, &getViewModel(), filterSlot));
         }
 
-              ::DFG_MODULE_NS(qt)::CsvItemModel& getCsvModel()       { return m_csvModel; }
-        const ::DFG_MODULE_NS(qt)::CsvItemModel& getCsvModel() const { return m_csvModel; }
-
-        ::DFG_MODULE_NS(qt)::CsvItemModel m_csvModel;
-        ::DFG_MODULE_NS(qt)::CsvTableViewSortFilterProxyModel m_proxyModel;
         QString m_sReceivedFilter;
-    }; // class CsvTableViewWidget
+    }; // class CsvTableWidgetForFilterSelectionTest
 } // unnamed namespace
 
 TEST(dfgQt, CsvTableView_filterFromSelection)
@@ -1576,7 +1567,7 @@ TEST(dfgQt, CsvTableView_filterFromSelection)
     #define DFGTEST_TEMP_TEST_ROW(ROW, S0, S1, S2) DFGTEST_TEMP_TEST_CELL(S0, ROW, 0); DFGTEST_TEMP_TEST_CELL(S1, ROW, 1); DFGTEST_TEMP_TEST_CELL(S2, ROW, 2)
 
 
-    CsvTableViewWidget viewWidget;
+    CsvTableWidgetForFilterSelectionTest viewWidget;
 
     const char szInputString[] =
         ",,\n"
@@ -1684,7 +1675,7 @@ TEST(dfgQt, TableView_makeSingleCellSelection)
 
 TEST(dfgQt, TableView_setSelectedIndexed)
 {
-    CsvTableViewWidget view;
+    ::DFG_MODULE_NS(qt)::CsvTableWidget view;
     view.resizeTableNoUi(2, 2);
     view.setSelectedIndexed({ view.model()->index(1, 0), view.model()->index(1, 1) }, nullptr);
     DFGTEST_EXPECT_LEFT(2, view.getSelectedItemCount());

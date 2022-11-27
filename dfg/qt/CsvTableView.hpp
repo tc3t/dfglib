@@ -19,6 +19,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QHeaderView>
     #include <QPointer>
     #include <QProgressDialog>
+    #include <QSortFilterProxyModel>
 DFG_END_INCLUDE_QT_HEADERS
 
 class QUndoStack;
@@ -79,6 +80,27 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         class ConfFileProperty;
     } // namespace DFG_DETAIL_NS
+
+    class CsvTableViewSortFilterProxyModel : public QSortFilterProxyModel
+    {
+        Q_OBJECT
+    public:
+        using BaseClass = QSortFilterProxyModel;
+
+        CsvTableViewSortFilterProxyModel(QWidget* pNonNullCsvTableViewParent);
+        ~CsvTableViewSortFilterProxyModel();
+
+        void setFilterFromNewLineSeparatedJsonList(const QByteArray& sJson);
+
+        const CsvTableView* getTableView() const;
+
+    protected:
+        bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
+        bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+        bool lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const override;
+
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // class CsvTableViewSortFilterProxyModel
 
     // Typed column index representing index of data model
     class ColumnIndex_data
@@ -720,6 +742,26 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         mutable std::shared_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited.
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableView
+
+
+    // Convenience class that includes CsvItemModel and CsvTableViewSortFilterProxyModel
+    class CsvTableWidget : public CsvTableView
+    {
+    public:
+        using BaseClass = CsvTableView;
+        CsvTableWidget(QWidget* pParent = nullptr);
+        ~CsvTableWidget();
+            
+
+              CsvItemModel& getCsvModel();
+        const CsvItemModel& getCsvModel() const;
+
+              CsvTableViewSortFilterProxyModel& getViewModel();
+        const CsvTableViewSortFilterProxyModel& getViewModel() const;
+
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // class CsvTableWidget
+
 
     // Helper class providing CsvTableView readily usable in a dialog
     class CsvTableViewDlg

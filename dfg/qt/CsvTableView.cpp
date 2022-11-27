@@ -5597,6 +5597,37 @@ void CsvTableView::forEachUserInsertableConfFileProperty(std::function<void(cons
 #undef DFG_TEMP_CALL_IF_NEEDED
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// class CsvTableWidget
+//
+//////////////////////////////////////////////////////////////////////////
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableWidget)
+{
+public:
+    CsvItemModel m_csvModel;
+    std::unique_ptr<CsvTableViewSortFilterProxyModel> m_spProxyModel;
+};
+
+CsvTableWidget::CsvTableWidget(QWidget* pParent)
+    : BaseClass(nullptr, pParent)
+{
+    DFG_OPAQUE_REF().m_spProxyModel.reset(new CsvTableViewSortFilterProxyModel(this));
+    DFG_OPAQUE_REF().m_spProxyModel->setSourceModel(&DFG_OPAQUE_REF().m_csvModel);
+    this->setModel(DFG_OPAQUE_REF().m_spProxyModel.get());
+}
+
+CsvTableWidget::~CsvTableWidget() = default;
+
+CsvItemModel& CsvTableWidget::getCsvModel() { return DFG_OPAQUE_REF().m_csvModel; }
+const CsvItemModel& CsvTableWidget::getCsvModel() const { DFG_ASSERT_UB(DFG_OPAQUE_PTR()); return DFG_OPAQUE_PTR()->m_csvModel; }
+
+CsvTableViewSortFilterProxyModel& CsvTableWidget::getViewModel() { DFG_ASSERT_UB(DFG_OPAQUE_REF().m_spProxyModel); return *DFG_OPAQUE_REF().m_spProxyModel; }
+const CsvTableViewSortFilterProxyModel& CsvTableWidget::getViewModel() const { DFG_ASSERT_UB(DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_spProxyModel); return *DFG_OPAQUE_PTR()->m_spProxyModel; }
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // class CsvTableViewDlg
@@ -6012,6 +6043,86 @@ bool ProgressWidget::isCancelled() const
 {
     return m_abCancelled.load(std::memory_order_relaxed);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+// 
+// CsvTableViewSortFilterProxyModel
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewSortFilterProxyModel)
+{
+    MultiMatchDefinition<CsvItemModelStringMatcher> m_matchers;
+};
+
+CsvTableViewSortFilterProxyModel::CsvTableViewSortFilterProxyModel(QWidget* pNonNullCsvTableViewParent)
+    : BaseClass(pNonNullCsvTableViewParent)
+{
+    DFG_ASSERT_CORRECTNESS(pNonNullCsvTableViewParent != nullptr);
+}
+
+CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
+
+bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const
+{
+    auto pView = getTableView();
+    auto pCsvModel = (pView) ? pView->csvModel() : nullptr;
+    if (pCsvModel)
+    {
+        const auto dataIndexLeft = pView->mapToDataModel(sourceLeft);
+        const auto colType = pCsvModel->getColType(dataIndexLeft.column());
+        switch (colType)
+        {
+            case CsvItemModel::ColTypeNumber: return tableCellStringToDouble(pCsvModel->rawStringPtrAt(dataIndexLeft)) < tableCellStringToDouble(pCsvModel->rawStringPtrAt(pView->mapToDataModel(sourceRight)));
+        }
+    }
+    return BaseClass::lessThan(sourceLeft, sourceRight);
+}
+
+bool CsvTableViewSortFilterProxyModel::filterAcceptsColumn(const int sourceColumn, const QModelIndex& sourceParent) const
+{
+    auto pView = getTableView();
+    if (pView)
+        return pView->isColumnVisible(ColumnIndex_data(sourceColumn));
+    else
+        return BaseClass::filterAcceptsColumn(sourceColumn, sourceParent);
+}
+
+bool CsvTableViewSortFilterProxyModel::filterAcceptsRow(const int sourceRow, const QModelIndex& sourceParent) const
+{
+    auto pOpaq = DFG_OPAQUE_PTR();
+
+    const auto pSourceModel = (pOpaq && !pOpaq->m_matchers.empty()) ? qobject_cast<const CsvItemModel*>(this->sourceModel()) : nullptr;
+    if (pSourceModel)
+    {
+        const auto nColCount = pSourceModel->columnCount();
+        return pOpaq->m_matchers.isMatchByCallback([=](const CsvItemModelStringMatcher& matcher)
+            {
+                for (int c = 0; c < nColCount; ++c) if (matcher.isApplyColumn(c))
+                {
+                    if (matcher.isMatchWith(sourceRow, c, pSourceModel->rawStringViewAt(sourceRow, c)))
+                        return true;
+                }
+                return false;
+            });
+    }
+    else
+        return BaseClass::filterAcceptsRow(sourceRow, sourceParent);
+}
+
+void CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(const QByteArray& sJson)
+{
+    DFG_OPAQUE_REF().m_matchers = MultiMatchDefinition<CsvItemModelStringMatcher>::fromJson(SzPtrUtf8(sJson.data()));
+    // In CsvItemModelStringMatcher row 1 means first non-header row, while here corresponding row is row 0 -> shifting apply rows.
+    // Column doesn't need to be adjusted since there's no header and thus no 0 index difference.
+    DFG_OPAQUE_REF().m_matchers.forEachWhile([](CsvItemModelStringMatcher& matcher)
+        {
+            matcher.m_rows.shift_raw(-CsvItemModel::internalRowToVisibleShift());
+            return true;
+        });
+    this->invalidateFilter();
+}
+
 
 } } // namespace dfg::qt
 /////////////////////////////////
