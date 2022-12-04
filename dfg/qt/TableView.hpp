@@ -2,6 +2,11 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../Span.hpp"
+#include <initializer_list>
+#include "../cont/TrivialPair.hpp"
+#include "../rangeIterator.hpp"
+
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTableView>
@@ -12,13 +17,13 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
-    class DFG_CLASS_NAME(TableView) : public QTableView
+    class TableView : public QTableView
     {
     public:
-        typedef DFG_CLASS_NAME(TableView) ThisClass;
+        typedef TableView ThisClass;
         typedef QTableView BaseClass;
 
-        DFG_CLASS_NAME(TableView)(QWidget* pParent) : BaseClass(pParent)
+        TableView(QWidget* pParent) : BaseClass(pParent)
         {
 
         }
@@ -156,6 +161,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // indexMapper should be provided that maps indexes to that model (for example if this->model() is proxy model while given indexes are from underlying source model)
         void setSelectedIndexed(const QModelIndexList& indexes, std::function<QModelIndex(const QModelIndex&)> indexMapper);
 
+        using IndexPair = ::DFG_MODULE_NS(cont)::TrivialPair<int, int>;
+        // Convenience overload for setting selected indexes with index pairs instead of QModelIndexes
+        void setSelectedIndexed(const Span<const IndexPair> indexes);
+        // Convenience overload for setting selected indexes with initalizer list, e.g. setSelectedIndexed({ {1, 2} })
+        void setSelectedIndexed(const std::initializer_list<const IndexPair>& indexes);
+
     protected:
         QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers) override
         {
@@ -191,7 +202,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             }
             return BaseClass::selectionCommand(index, event);
         }
-    }; // DFG_CLASS_NAME(TableView)
+    }; // TableView
 }}
 
 inline bool ::DFG_MODULE_NS(qt)::TableView::makeSingleCellSelection(const int r, const int c)
@@ -234,4 +245,23 @@ inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const QModelIndex
     auto pSelectionModel = selectionModel();
     if (pSelectionModel)
         pSelectionModel->select(selection, QItemSelectionModel::SelectCurrent);
+}
+
+inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const Span<const IndexPair> indexes)
+{
+    auto pModel = this->model();
+    if (!pModel)
+        return;
+    QModelIndexList modelIndexes;
+    modelIndexes.reserve(saturateCast<int>(indexes.size()));
+    for (const auto item : indexes)
+    {
+        modelIndexes.push_back(pModel->index(item.first, item.second));
+    }
+    setSelectedIndexed(modelIndexes, nullptr);
+}
+
+inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const std::initializer_list<const IndexPair>& indexes)
+{
+    setSelectedIndexed(makeRange(indexes.begin(), indexes.end()));
 }

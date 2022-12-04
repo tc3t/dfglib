@@ -1681,4 +1681,14 @@ TEST(dfgQt, TableView_setSelectedIndexed)
     DFGTEST_EXPECT_LEFT(2, view.getSelectedItemCount());
     view.setSelectedIndexed({ view.model()->index(1, 0) }, nullptr);
     DFGTEST_EXPECT_LEFT(1, view.getSelectedItemCount());
+
+    {
+        view.setSelectedIndexed({ { 0, 1 }, { 1, 0} });
+        const auto selected = view.getSelectedItemIndexes_dataModel();
+        DFGTEST_EXPECT_LEFT(2, selected.size());
+        DFGTEST_EXPECT_LEFT(0, selected.value(0).row());
+        DFGTEST_EXPECT_LEFT(1, selected.value(0).column());
+        DFGTEST_EXPECT_LEFT(1, selected.value(1).row());
+        DFGTEST_EXPECT_LEFT(0, selected.value(1).column());
+    }
 }
