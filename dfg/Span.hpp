@@ -1,7 +1,14 @@
 #pragma once
 
+#include "dfgDefs.hpp"
+
 #if defined(__cpp_lib_span)
     #include <span>
+#endif
+
+DFG_ROOT_NS_BEGIN{
+
+#if defined(__cpp_lib_span)
     template <class T, size_t Extent_T = std::dynamic_extent>
     class Span : public std::span<T, Extent_T>
     {
@@ -38,11 +45,14 @@
             , m_nSize(N_T)
         {}
 
-        T* data() const { return m_pData; }
+        constexpr T* begin() const noexcept { return data(); }
+        constexpr T* end() const noexcept { return data() + size(); }
 
-        size_t size() const { return m_nSize; }
+        constexpr T* data() const noexcept { return m_pData; }
 
-        bool empty() const { return (this->size() == 0); }
+        constexpr size_t size() const noexcept { return m_nSize; }
+
+        constexpr bool empty() const noexcept { return (this->size() == 0); }
 
         T& operator[](const size_t offset) const
         {
@@ -53,3 +63,5 @@
         size_t m_nSize = 0;
     }; // class Span
 #endif
+
+} // namespace DFG_ROOT_NS

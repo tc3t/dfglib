@@ -933,6 +933,16 @@ namespace
         DFGTEST_STATIC_TEST((std::is_same<decltype(ptrToContiguousMemory(cont)), decltype(span.data())>::value));
         if (!span.empty())
             DFGTEST_EXPECT_LEFT(cont[0], span[0]);
+
+        // Tests availalibity of begin()/end() with range-for
+        {
+            size_t i = 0;
+            for (const auto& item : span) 
+            {
+                DFGTEST_EXPECT_LEFT(item, cont[i]);
+                ++i;
+            }
+        }
     }
 }
 
