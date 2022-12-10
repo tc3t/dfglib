@@ -1444,13 +1444,15 @@ namespace
     static void DelimitedTextReader_rnTranslationImpl()
     {
         const CompileTimeFormatDefNoRn formatDef;
-        DelimReader::CellData<char, char, typename Appender_T::BufferType, Appender_T, CompileTimeFormatDefNoRn> cd(formatDef);
+        using HandlerT = DelimReader::CellData<char, char, typename Appender_T::BufferType, Appender_T, CompileTimeFormatDefNoRn>;
+        HandlerT cd(formatDef);
         const char input[] = "a\r\nb\r \nc\nd";
         DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream) strm(input, DFG_COUNTOF_SZ(input));
         auto reader = createReader(IsNormalReader_T(), strm, cd);
         const std::string expectedCells[] = { "a\r", "b\r ", "c", "d" };
         std::vector<std::string> readCells;
-        DelimReader::read(reader, [&](const size_t /*r*/, const size_t /*c*/, const decltype(cd)& cd)
+        
+        DelimReader::read(reader, [&](const size_t /*r*/, const size_t /*c*/, const HandlerT& cd)
         {
             readCells.push_back(std::string(cd.getBuffer().data(), cd.getBuffer().size()));
         });
