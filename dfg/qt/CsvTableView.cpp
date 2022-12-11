@@ -1579,6 +1579,51 @@ bool CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition
     if (!pModel)
         return false;
 
+    // Checking if saving would (silently) change some format aspects in existing file. Currently the following items are checked:
+    //      -Encoding (e.g. existing file is UTF16 but would be saved as UTF8)
+    //      -EOL (e.g. existing file has \r\n but would be saved with \n)
+    // If changes are detected, user is asked whether to continue saving.
+    if (!bSaveAsSqlite)
+    {
+        QString sFormatChangeNotification;
+
+        const auto sExistingPath = pModel->getFilePath();
+        if (!sExistingPath.isEmpty() && sExistingPath == path && QFileInfo::exists(sExistingPath))
+        {
+            const auto existingCsvFormat = CsvItemModel::peekCsvFormatFromFile(sExistingPath);
+
+            const auto existingEncoding = existingCsvFormat.textEncoding();
+            if (existingEncoding != DFG_MODULE_NS(io)::TextEncoding::encodingUnknown && existingEncoding != formatDef.textEncoding())
+            {
+                sFormatChangeNotification = QString("<li>%1</li>").arg(tr("Encoding from '%1' to '%2'").
+                    arg(untypedViewToQStringAsUtf8(::DFG_MODULE_NS(io)::encodingToStrId(existingEncoding)),
+                        untypedViewToQStringAsUtf8(formatDef.textEncodingAsString())
+                    ).toHtmlEscaped());
+            }
+            const auto existingEol = existingCsvFormat.eolType();
+            if (existingEol != formatDef.eolType())
+            {
+                sFormatChangeNotification += QString("<li>%1</li>").arg(tr("end-of-line from '%1' to '%2'").
+                    arg(untypedViewToQStringAsUtf8(::DFG_MODULE_NS(io)::eolLiteralStrFromEndOfLineType(existingEol)),
+                        untypedViewToQStringAsUtf8(formatDef.eolTypeAsString())
+                    ).toHtmlEscaped());
+            }
+        }
+        if (!sFormatChangeNotification.isEmpty())
+        {
+            if (QMessageBox::Yes != QMessageBox::question(
+                this,
+                tr("Confirm format change"),
+                tr("Saving to file<br>"
+                    "%1<br>"
+                    "would change the following file format properties compared to existing file:"
+                    "<ul>%2</ul>"
+                    "Continue?<br><br>"
+                    "Note: only encoding and end-of-line changes are detected.").arg(path.toHtmlEscaped(), sFormatChangeNotification)))
+                return false;
+        }
+    }
+
     CsvItemModel saveAsShownModel; // Temporary model used if saving as shown.
 
     if (bSaveAsShown)
