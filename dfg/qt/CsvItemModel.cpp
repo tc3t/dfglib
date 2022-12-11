@@ -380,6 +380,17 @@ QString CsvItemModel::getTableTitle(const QString& sDefault) const
     return (!sFileName.isEmpty()) ? sFileName : sDefault;
 }
 
+::DFG_MODULE_NS(io)::TextEncoding CsvItemModel::getFileEncoding() const
+{
+    return getFileEncoding(getFilePath());
+}
+
+::DFG_MODULE_NS(io)::TextEncoding CsvItemModel::getFileEncoding(const QString& sFilePath)
+{
+    const auto encoding = ::DFG_MODULE_NS(io)::checkBOMFromFile(qStringToFileApi8Bit(sFilePath));
+    return encoding;
+}
+
 bool CsvItemModel::isSupportedEncodingForSaving(const DFG_MODULE_NS(io)::TextEncoding encoding) const
 {
     return (encoding == DFG_MODULE_NS(io)::encodingUTF8) || (encoding == DFG_MODULE_NS(io)::encodingLatin1);

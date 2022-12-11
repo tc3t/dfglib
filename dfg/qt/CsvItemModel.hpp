@@ -581,6 +581,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         QString getTableTitle(const QString& sDefault = QString()) const;
 
+        // Returns file encoding from given file path. Note: based solely on BOM-markers, so won't detect e.g. BOM-less UTF8
+        static ::DFG_MODULE_NS(io)::TextEncoding getFileEncoding(const QString& filePath);
+
+        // Convenience function returning getFileEncoding(this->getFilePath())
+        ::DFG_MODULE_NS(io)::TextEncoding getFileEncoding() const;
+
         void setFilePathWithoutSignalEmit(QString);
         void setFilePathWithSignalEmit(QString);
 

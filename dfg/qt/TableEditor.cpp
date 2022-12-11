@@ -805,9 +805,9 @@ namespace
             const QFileInfo fi(sFilePath);
             if (fi.exists())
             {
-                const auto fileBom = ::DFG_MODULE_NS(io)::checkBOMFromFile(qStringToFileApi8Bit(sFilePath));
+                const auto fileEncoding = model.getFileEncoding();
                 const auto yesNoText = [&](const bool b) { return (b) ? trObj.tr("yes") : trObj.tr("no"); };
-                const QString sEncoding = (fileBom != ::DFG_MODULE_NS(io)::encodingUnknown) ? ::DFG_MODULE_NS(io)::encodingToStrId(fileBom) : trObj.tr("unknown (note: detection is based only on UTF BOM)");
+                const QString sEncoding = (fileEncoding != ::DFG_MODULE_NS(io)::encodingUnknown) ? ::DFG_MODULE_NS(io)::encodingToStrId(fileEncoding) : trObj.tr("unknown (note: detection is based only on UTF BOM)");
                 const QFileInfo targetFileInfo = (fi.isSymLink()) ? QFileInfo(fi.symLinkTarget()) : fi;
 
                 QVector<QPair<QString, QString>> fields;
