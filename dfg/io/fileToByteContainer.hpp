@@ -94,14 +94,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
     template <class Cont_T, class Stream_T>
     Cont_T readAllFromStream(Stream_T& istrm,
                             size_t nReadStepSize = DFG_DETAIL_NS::gnDefaultFileToMemReadStep,
-                            const size_t nSizeHint = 0,
+                            const size_t nSizeHintArg = 0,
                             const size_t nMaxSize = NumericTraits<size_t>::maxValue)
     {
         Cont_T cont;
+        if (nMaxSize <= 0)
+            return cont;
+        const auto nSizeHint = Min(nSizeHintArg, nMaxSize);
         if (nSizeHint > 0)
             cont.reserve(nSizeHint);
         if (nReadStepSize == 0)
             nReadStepSize = DFG_DETAIL_NS::gnDefaultFileToMemReadStep;
+        nReadStepSize = Min(nReadStepSize, nMaxSize);
         while (istrm.good() && cont.size() < nMaxSize)
         {
             const auto nOldSize = cont.size();
@@ -136,7 +140,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             if (nSizeHint > 0)
             {
                 nSizeHint++; // Add one byte so that readAllFromStream() completes the read in one step rather than reading all, allocating more and then reading zero bytes.
-                nReadStepSize = nSizeHint; // To read the file in one step as we know the size beforehand.
+                nReadStepSize = Min(nMaxSize, nSizeHint); // To read the file in one step as we know the size beforehand.
             }
         }
         DFG_MODULE_NS(io)::BasicIfStream istrm(sFilePath);

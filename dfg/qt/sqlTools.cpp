@@ -143,7 +143,7 @@ bool ::DFG_MODULE_NS(sql)::SQLiteDatabase::isSQLiteFile(const QString& sPath, co
         const size_t nCompareCount = 16; // strlen("SQLite format 3") + null (=15+1).
         const char szExpected[nCompareCount] = "SQLite format 3";
         // Reading first 16 bytes from file.
-        const auto bytes = ::DFG_MODULE_NS(io)::fileToVector(::DFG_MODULE_NS(qt)::qStringToFileApi8Bit(sPath), 0, nCompareCount);
+        const auto bytes = ::DFG_MODULE_NS(io)::fileToVector(::DFG_MODULE_NS(qt)::qStringToFileApi8Bit(sPath), nCompareCount, nCompareCount);
         return bytes.size() == nCompareCount && std::equal(bytes.begin(), bytes.end(), std::begin(szExpected));
     }
 }
