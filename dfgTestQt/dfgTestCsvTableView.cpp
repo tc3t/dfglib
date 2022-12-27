@@ -519,6 +519,7 @@ TEST(dfgQt, CsvTableView_stringToDouble)
 
     // yyyy-MM
     testDateToDouble("2020-05", DataType::dateOnlyYearMonth, 6 * (60 * 60 * 24));
+    testDateToDouble(" 2020-05", DataType::dateOnlyYearMonth, 6 * (60 * 60 * 24)); // Tests trimming whitespaces in front.
     // yyyy-MM-dd
     testDateToDouble("2020-04-25", DataType::dateOnly, 0);
     //yyyy-MM-dd Wd
@@ -549,13 +550,27 @@ TEST(dfgQt, CsvTableView_stringToDouble)
         testDateToDouble("25.4.2020", DataType::dateOnly, 0);
         testDateToDouble("1.5.2020", DataType::dateOnly, 6 * 24 * 60 * 60);
         testDateToDouble("pe 1.5.2020", DataType::dateOnly, 6 * 24 * 60 * 60);
+
+        const double baseDate20221218 = static_cast<double>(QDateTime::fromString(QStringLiteral("2022-12-18T00:00:00Z"), Qt::ISODate).toMSecsSinceEpoch()) / 1000.0;
+        testDateToDouble("18.12.2022 12:01", DataType::dateAndTime, 12 * 60 * 60 + 1 * 60, baseDate20221218);
+        testDateToDouble("18.12.2022 1:01", DataType::dateAndTime, 1 * 60 * 60 + 1 * 60, baseDate20221218);
+        testDateToDouble("   18.12.2022 1:01", DataType::dateAndTime, 1 * 60 * 60 + 1 * 60, baseDate20221218); // Tests trimming whitespaces in front.
+        testDateToDouble("18.12.2022 1:01:02", DataType::dateAndTime, 1 * 60 * 60 + 1 * 60 + 2, baseDate20221218);
+        testDateToDouble("18.12.2022 1:01:02.125", DataType::dateAndTimeMillisecond, 1 * 60 * 60 + 1 * 60 + 2 + 0.125, baseDate20221218);
+        testDateToDouble("18.12.2022 12:01:02.125", DataType::dateAndTimeMillisecond, 12 * 60 * 60 + 1 * 60 + 2 + 0.125, baseDate20221218);
+        testDateToDouble("su 18.12.2022 12:01:02.125", DataType::dateAndTimeMillisecond, 12 * 60 * 60 + 1 * 60 + 2 + 0.125, baseDate20221218);
     }
 
     // Times only
     {
-        // hh:mm:ss
+        // hh:mm
+        testDateToDouble("12:34", DataType::dayTime, 60 * (12 * 60 + 34), 0);
+
+        // [h]h:mm:ss[.zzz]
         testDateToDouble("12:34:56", DataType::dayTime, 60 * (12 * 60 + 34) + 56, 0);
         testDateToDouble("12:34:56.123", DataType::dayTimeMillisecond, 60 * (12 * 60 + 34) + 56 + 0.123, 0);
+        testDateToDouble("2:34:56", DataType::dayTime, 60 * (2 * 60 + 34) + 56, 0);
+        testDateToDouble("2:34:56.125", DataType::dayTimeMillisecond, 60 * (2 * 60 + 34) + 56 + 0.125, 0);
     }
 
     // Testing that invalid format produce NaN's
@@ -584,6 +599,13 @@ TEST(dfgQt, CsvTableView_stringToDouble)
         testDateToDouble_invalidDateFormat("1.13.2020"); // Invalid month
         testDateToDouble_invalidDateFormat("1.-1.2020"); // Invalid month
         testDateToDouble_invalidDateFormat("1.0.2020"); // Invalid month
+
+        testDateToDouble_invalidDateFormat("18.12.2022 123:01"); // Invalid hour
+        testDateToDouble_invalidDateFormat("18.12.2022 12:01:1"); // Invalid second
+        testDateToDouble_invalidDateFormat("18.12.2022 12:01:01.1234"); // Invalid millisecond
+        testDateToDouble_invalidDateFormat("18.12.2022 ab:12"); // Invalid hour
+        testDateToDouble_invalidDateFormat("18.12.2022 12:ab"); // Invalid minute
+        testDateToDouble_invalidDateFormat("18.12.2022 12.23"); // Unsupported hour-minute separator
 
         testDateToDouble_invalidDateFormat("32:34:56");
         testDateToDouble_invalidDateFormat("32:34::56");
