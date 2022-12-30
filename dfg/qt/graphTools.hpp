@@ -557,6 +557,7 @@ class GraphControlAndDisplayWidget::ChartDataPreparator : public QObject
 {
     Q_OBJECT
 public:
+    ChartDataPreparator();
     ~ChartDataPreparator();
     void prepareData(ChartRefreshParamPtr spParam);
     void terminatePreparation(); // Request to terminate current preparation.
