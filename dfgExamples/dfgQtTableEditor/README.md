@@ -471,15 +471,19 @@ Available keys:
 
 | Key (URI)      | Purpose  | Possible values | Notes |
 | -------------  | -----    | ------          | ----- |
-| columnsByIndex/ColumnIndexHere/datatype | Defines how to interpret content in some operations, as of 2.3.0 only affects column sorting behaviour | _text_ (default), _number_ | Since 2.3.0 |
-| columnsByIndex/ColumnIndexHere/width_pixels | Defines column width in pixels for given column (1-based column index) | integer | |
-| columnsByIndex/ColumnIndexHere/visible | Defines whether column is visible (1-based column index) | 0 or 1, default is 1 | Since 2.2.0 |
-| columnsByIndex/ColumnIndexHere/readOnly | Defines whether column is read-only (1-based column index) | 0 or 1, default is 0 | Since 2.4.0 ([#129](https://github.com/tc3t/dfglib/issues/129)) |
+| columnsByIndex/\<ColumnIndexHere\>/datatype | Defines how to interpret content in some operations, as of 2.3.0 only affects column sorting behaviour | _text_ (default), _number_ | Since 2.3.0 |
+| columnsByIndex/\<ColumnIndexHere\>/width_pixels | Defines column width in pixels for given column (1-based column index) | integer | |
+| columnsByIndex/\<ColumnIndexHere\>/visible | Defines whether column is visible (1-based column index) | 0 or 1, default is 1 | Since 2.2.0 |
+| columnsByIndex/\<ColumnIndexHere\>/readOnly | Defines whether column is read-only (1-based column index) | 0 or 1, default is 0 | Since 2.4.0 ([#129](https://github.com/tc3t/dfglib/issues/129)) |
 | encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |
 | enclosing_char | File is read interpreting the given character as enclosing character | ASCII-character as such or escaped format, e.g. \t or \x1f | |
 | separator_char | File is read interpreting the given character as separator character | Like for enclosing_char | |
 | end_of_line_type | File is read using end-of-line type | \n, \r\n, \r | |
 | bom_writing | Whether to write BOM on save | 0, 1 | |
+| properties/columnSortingCaseSensitive | Defines whether column sorting is case-sensitive | 0 or 1, default is 0 | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
+| properties/columnSortingColumnIndex | Defines which column is sorted (1-based column index) | Valid column index | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
+| properties/columnSortingEnabled | Defines whether columns can be sorted | 0 or 1, default is 0 | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
+| properties/columnSortingOrder | Defines sort order for column defined by columnSortingColumnIndex | A or D (Ascending/Descending), default is A | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
 | properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
 | properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
 | properties/editMode | Defines edit mode when opened | _readOnly_, _readWrite_<br>If empty, handled as if property was not present at all. | Since 2.1.0 |

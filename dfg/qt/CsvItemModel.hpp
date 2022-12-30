@@ -87,6 +87,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_timeFormat[]               = "timeFormat";      // Defines default time format.
     const char CsvOptionProperty_dateFormat[]               = "dateFormat";      // Defines default date format.
     const char CsvOptionProperty_dateTimeFormat[]           = "dateTimeFormat";  // Defines default dateTime format.
+    const char CsvOptionProperty_columnSortingEnabled[]       = "columnSortingEnabled";       // Defines whether columns can be sorted from UI (0/1, default is 0)
+    const char CsvOptionProperty_columnSortingCaseSensitive[] = "columnSortingCaseSensitive"; // Defines whether column sorting is case-sensitive (0/1, default is 0)
+    const char CsvOptionProperty_columnSortingColumnIndex[]   = "columnSortingColumnIndex";   // Defines which column is sorted (1-based column index)
+    const char CsvOptionProperty_columnSortingOrder[]         = "columnSortingOrder";         // Defines sort order for column defined by columnSortingColumnIndex (A or D, default is A)
 
     namespace DFG_DETAIL_NS
     {

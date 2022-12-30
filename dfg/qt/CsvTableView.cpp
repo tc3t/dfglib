@@ -25,6 +25,7 @@
 #include "../cont/Flags.hpp"
 #include "../math/sign.hpp"
 #include "../str.hpp"
+#include "../str/format_fmt.hpp"
 #include "detail/CsvTableView/SelectionDetailCollector.hpp"
 #include "detail/CsvTableView/ContentGeneratorDialog.hpp"
 #include <chrono>
@@ -425,6 +426,16 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         return m_sDefaultValue;
     }
 
+    static bool isConfBoolTrue(const StringViewC sv)
+    {
+        return sv == "1";
+    }
+
+    static StringUtf8 boolToConfString(const bool b)
+    {
+        return StringUtf8::fromRawString((b) ? "1" : "0");
+    }
+
 }}} // dfg::qt::DFG_DETAIL_NS
 
 
@@ -668,6 +679,7 @@ public:
     std::vector<CsvTableView::PropertyFetcher> m_propertyFetchers;
     std::bitset<1> m_flags;
     QPointer<QAction> m_spActReadOnly;
+    QPointer<QAction> m_spActSortableColumns;
     QPointer<QAction> m_spActSortCaseSensitivity;
     QAbstractItemView::EditTriggers m_editTriggers;
     QPalette m_readWriteModePalette;
@@ -926,10 +938,9 @@ void CsvTableView::addSortActions()
     if (!pMenu)
         return;
 
-    DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Sortable columns"),       noShortCut, ActionFlags::viewEdit, setSortingEnabled);
+    DFG_OPAQUE_REF().m_spActSortableColumns     = &DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Sortable columns"),       noShortCut, ActionFlags::viewEdit, setSortingEnabled);
     DFG_OPAQUE_REF().m_spActSortCaseSensitivity = &DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Case sensitive sorting"), noShortCut, ActionFlags::viewEdit, setCaseSensitiveSorting);
     DFG_TEMP_ADD_VIEW_ACTION(*pMenu,           tr("Reset sorting"),          noShortCut, ActionFlags::viewEdit, resetSorting);
-
 }
 
 void CsvTableView::addHeaderActions()
@@ -2140,9 +2151,35 @@ auto CsvTableView::populateCsvConfig(const CsvItemModel& rDataModel) const -> Cs
         }
     }
 
+    const auto constructPropertyName = [](const StringViewSzC sv)
+    {
+        return StringUtf8::fromRawString(format_fmt("properties/{}", sv.c_str()));
+    };
+
     // Adding read-only mode if enabled
     if (this->isReadOnlyMode())
-        config.setKeyValue(qStringToStringUtf8(QString("properties/%1").arg(CsvOptionProperty_editMode)), StringUtf8::fromRawString("readOnly"));
+        config.setKeyValue(constructPropertyName(CsvOptionProperty_editMode), StringUtf8::fromRawString("readOnly"));
+
+    // Adding sort-options
+    auto pProxy = qobject_cast<const QSortFilterProxyModel*>(getProxyModelPtr());
+    if (pProxy)
+    {
+        const auto bSortingEnabled = this->isSortingEnabled();
+        config.setKeyValue(constructPropertyName(CsvOptionProperty_columnSortingEnabled), DFG_DETAIL_NS::boolToConfString(bSortingEnabled));
+        if (bSortingEnabled)
+        {
+            config.setKeyValue(constructPropertyName(CsvOptionProperty_columnSortingCaseSensitive), DFG_DETAIL_NS::boolToConfString(pProxy->sortCaseSensitivity() == Qt::CaseSensitive));
+            const auto nSortColView = ColumnIndex_view(pProxy->sortColumn());
+            const auto nSortColData = columnIndexViewToData(nSortColView);
+            if (rDataModel.isValidColumn(nSortColData.value()))
+            {
+                const auto nUserColumnIndex = CsvModel::internalColumnIndexToVisible(nSortColData.value());
+                config.setKeyValue(constructPropertyName(CsvOptionProperty_columnSortingColumnIndex), StringUtf8::fromRawString(::DFG_MODULE_NS(str)::toStrC(nUserColumnIndex)));
+            }
+            const auto sortOrder = pProxy->sortOrder();
+            config.setKeyValue(constructPropertyName(CsvOptionProperty_columnSortingOrder), StringUtf8::fromRawString((sortOrder == Qt::SortOrder::AscendingOrder) ? "A" : "D"));
+        }
+    }
 
     // Adding additional properties that there might be, in practice this may mean e.g. properties/chartControls
     auto pOpaq = DFG_OPAQUE_PTR();
@@ -4222,6 +4259,30 @@ void CsvTableView::onNewSourceOpened()
 
         // Setting edit mode if present in load options
         setReadOnlyModeFromProperty(loadOptions.getProperty(CsvOptionProperty_editMode, ""));
+
+        // Setting sort-options
+        {
+            const auto sSortEnabled = loadOptions.getProperty(CsvOptionProperty_columnSortingEnabled, "");
+            if (!sSortEnabled.empty())
+            {
+                const auto bSortEnabled = DFG_DETAIL_NS::isConfBoolTrue(sSortEnabled);
+                this->setSortingEnabled(bSortEnabled);
+                if (DFG_OPAQUE_REF().m_spActSortableColumns && DFG_OPAQUE_REF().m_spActSortableColumns->isChecked() != bSortEnabled)
+                    QTimer::singleShot(0, this, [=]() { if (DFG_OPAQUE_REF().m_spActSortableColumns) DFG_OPAQUE_REF().m_spActSortableColumns->setChecked(bSortEnabled); });
+                const auto sCaseSensitive = loadOptions.getProperty(CsvOptionProperty_columnSortingCaseSensitive, "");
+                this->setCaseSensitiveSorting(DFG_DETAIL_NS::isConfBoolTrue(sCaseSensitive));
+                const auto sSortColumn = loadOptions.getProperty(CsvOptionProperty_columnSortingColumnIndex, "");
+                const auto sSortOrder = loadOptions.getProperty(CsvOptionProperty_columnSortingOrder, "");
+                bool bColOk = false;
+                const auto nCol = ColumnIndex_data(CsvModel::visibleColumnIndexToInternal(::DFG_MODULE_NS(str)::strTo<Index>(sSortColumn, &bColOk)));
+                if (bColOk && pCsvModel->isValidColumn(nCol.value()))
+                {
+                    const auto nViewCol = columnIndexDataToView(nCol);
+                    const auto sortOrder = (sSortOrder == "D") ? Qt::SortOrder::DescendingOrder : Qt::SortOrder::AscendingOrder;
+                    this->sortByColumn(nViewCol.value(), sortOrder);
+                }
+            }
+        }
     }
 }
 
@@ -5650,13 +5711,24 @@ void CsvTableView::forEachUserInsertableConfFileProperty(std::function<void(cons
     const auto config = this->populateCsvConfig();
 
     // Calling handler for items below when they are not already present.
-#define DFG_TEMP_CALL_IF_NEEDED(KEY, DEFAULT_VALUE) if (!config.contains(DFG_UTF8(KEY))) propHandler(DFG_DETAIL_NS::ConfFileProperty(QStringLiteral(KEY), DEFAULT_VALUE))
-    DFG_TEMP_CALL_IF_NEEDED("properties/dateFormat",            getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this));
-    DFG_TEMP_CALL_IF_NEEDED("properties/dateTimeFormat",        getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this));
-    DFG_TEMP_CALL_IF_NEEDED("properties/editMode",              getCsvTableViewProperty<CsvTableViewPropertyId_editMode>(this));
-    DFG_TEMP_CALL_IF_NEEDED("properties/initialScrollPosition", getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this));
-    DFG_TEMP_CALL_IF_NEEDED("properties/timeFormat",            getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this));
-    DFG_TEMP_CALL_IF_NEEDED("properties/weekDayNames",          getCsvTableViewProperty<CsvTableViewPropertyId_weekDayNames>(this));
+    std::string sTemp;
+#define DFG_TEMP_CALL_IF_NEEDED(KEY, DEFAULT_VALUE) \
+    formatTo_fmt(sTemp, "properties/{}", KEY); \
+    if (!config.contains(SzPtrUtf8(sTemp.c_str()))) propHandler(DFG_DETAIL_NS::ConfFileProperty(QString(sTemp.c_str()), DEFAULT_VALUE))
+
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_dateFormat,            getCsvTableViewProperty<CsvTableViewPropertyId_dateFormat>(this));
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_dateTimeFormat,        getCsvTableViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this));
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_editMode,              getCsvTableViewProperty<CsvTableViewPropertyId_editMode>(this));
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_initialScrollPosition, getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this));
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_timeFormat,            getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this));
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_weekDayNames,          getCsvTableViewProperty<CsvTableViewPropertyId_weekDayNames>(this));
+
+    // These properties don't have application defaults so using hard coded ones.
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_columnSortingEnabled, "0");
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_columnSortingCaseSensitive, "0");
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_columnSortingColumnIndex, "1");
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_columnSortingOrder, "A");
+
     //DFG_TEMP_CALL_IF_NEEDED("properties/", getCsvTableViewProperty<>(this));
 
 #undef DFG_TEMP_CALL_IF_NEEDED
