@@ -668,6 +668,7 @@ public:
     std::vector<CsvTableView::PropertyFetcher> m_propertyFetchers;
     std::bitset<1> m_flags;
     QPointer<QAction> m_spActReadOnly;
+    QPointer<QAction> m_spActSortCaseSensitivity;
     QAbstractItemView::EditTriggers m_editTriggers;
     QPalette m_readWriteModePalette;
     QVariantMap m_previousChangeRadixArgs;
@@ -926,7 +927,7 @@ void CsvTableView::addSortActions()
         return;
 
     DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Sortable columns"),       noShortCut, ActionFlags::viewEdit, setSortingEnabled);
-    DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Case sensitive sorting"), noShortCut, ActionFlags::viewEdit, setCaseSensitiveSorting);
+    DFG_OPAQUE_REF().m_spActSortCaseSensitivity = &DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Case sensitive sorting"), noShortCut, ActionFlags::viewEdit, setCaseSensitiveSorting);
     DFG_TEMP_ADD_VIEW_ACTION(*pMenu,           tr("Reset sorting"),          noShortCut, ActionFlags::viewEdit, resetSorting);
 
 }
@@ -1269,6 +1270,17 @@ void CsvTableView::setModel(QAbstractItemModel* pModel)
     if (pModel)
         DFG_QT_VERIFY_CONNECT(connect(pModel, &CsvModel::dataChanged, this, &ThisClass::onViewModelDataChanged, Qt::UniqueConnection));
     DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionModelChanged));
+
+    // If model is of type QSortFilterProxyModel, updating checked-status of sort case sensitivity.
+    auto pNewSortModel = qobject_cast<QSortFilterProxyModel*>(pModel);
+    if (pNewSortModel)
+    {
+        if (DFG_OPAQUE_REF().m_spActSortCaseSensitivity)
+        {
+            const auto sortCaseSensitivity = pNewSortModel->sortCaseSensitivity();
+            DFG_OPAQUE_REF().m_spActSortCaseSensitivity->setChecked(sortCaseSensitivity == Qt::CaseSensitivity::CaseSensitive);
+        }
+    }
 }
 
 namespace
@@ -5343,7 +5355,15 @@ void CsvTableView::setCaseSensitiveSorting(const bool bCaseSensitive)
 {
     auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
     if (pProxy)
+    {
         pProxy->setSortCaseSensitivity((bCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
+        if (DFG_OPAQUE_REF().m_spActSortCaseSensitivity)
+        {
+            const auto bActionChecked = DFG_OPAQUE_REF().m_spActSortCaseSensitivity->isChecked();
+            if (bCaseSensitive != bActionChecked)
+                DFG_OPAQUE_REF().m_spActSortCaseSensitivity->setChecked(bCaseSensitive);
+        }
+    }
     else
         QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case sensitivity: no suitable proxy model found"));
 }
@@ -6104,6 +6124,7 @@ CsvTableViewSortFilterProxyModel::CsvTableViewSortFilterProxyModel(QWidget* pNon
     : BaseClass(pNonNullCsvTableViewParent)
 {
     DFG_ASSERT_CORRECTNESS(pNonNullCsvTableViewParent != nullptr);
+    this->setSortCaseSensitivity(Qt::CaseInsensitive);
 }
 
 CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
