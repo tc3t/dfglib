@@ -1674,6 +1674,40 @@ TEST(dfgQt, CsvTableView_filterFromSelection)
 #undef DFGTEST_TEMP_TEST_ROW
 }
 
+TEST(dfgQt, CsvTableView_sortSettingsFromConfFile)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvTableWidget table;
+    DFGTEST_EXPECT_TRUE(table.openFile("testfiles/CsvTableView_sortSettingsFromConfFile.csv"));
+
+    DFGTEST_EXPECT_LEFT(1, table.getViewModel().sortColumn());
+    DFGTEST_EXPECT_TRUE(table.isSortingEnabled());
+    DFGTEST_EXPECT_LEFT(Qt::SortOrder::AscendingOrder, table.getViewModel().sortOrder());
+    DFGTEST_EXPECT_LEFT(Qt::CaseInsensitive, table.getViewModel().sortCaseSensitivity());
+
+#define DFG_TEMP_EXPECT(STR, R, C) \
+    DFGTEST_EXPECT_LEFT(STR, table.getViewModel().data(table.getViewModel().index(R, C)).toString())
+
+    DFG_TEMP_EXPECT("4" , 0, 0);
+    DFG_TEMP_EXPECT("A" , 0, 1);
+
+    DFG_TEMP_EXPECT("1" , 1, 0);
+    DFG_TEMP_EXPECT("aa", 1, 1);
+
+    DFG_TEMP_EXPECT("5" , 2, 0);
+    DFG_TEMP_EXPECT("B" , 2, 1);
+
+    DFG_TEMP_EXPECT("2" , 3, 0);
+    DFG_TEMP_EXPECT("bb", 3, 1);
+
+    DFG_TEMP_EXPECT("6" , 4, 0);
+    DFG_TEMP_EXPECT("C" , 4, 1);
+
+    DFG_TEMP_EXPECT("3" , 5, 0);
+    DFG_TEMP_EXPECT("cc", 5, 1);
+#undef DFG_TEMP_EXPECT
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);
