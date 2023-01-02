@@ -57,8 +57,18 @@ namespace
         EXPECT_EQ(4, mConst.size());
 
         // find
-        EXPECT_TRUE(m.find("a") != m.end());
-        EXPECT_TRUE(mConst.find("a") != mConst.end());
+        {
+            EXPECT_TRUE(m.find("a") != m.end());
+            EXPECT_TRUE(mConst.find("a") != mConst.end());
+
+            // Testing existence of operator* and operator-> for const iterator
+            {
+                const auto iter = m.find("a");
+                DFGTEST_ASSERT_TRUE(iter != m.end());
+                DFGTEST_EXPECT_LEFT(3, iter->second);
+                DFGTEST_EXPECT_LEFT(3, (*iter).second);
+            }
+        }
 
         // insert
         {
@@ -194,7 +204,7 @@ namespace
 
         // Check that algorithms compile (may fail if iterator is missing typedefs etc.).
         EXPECT_EQ(mSorted.size(), std::distance(mSorted.cbegin(), mSorted.cend()));
-        std::for_each(mSorted.cbegin(), mSorted.cend(), [](DFG_ROOT_NS::DFG_CLASS_NAME(Dummy)) {});
+        std::for_each(mSorted.cbegin(), mSorted.cend(), [](::DFG_ROOT_NS::Dummy) {});
 
         // Test that setSorting(true) sorts.
         {
@@ -314,11 +324,11 @@ TEST(dfgCont, MapVector)
     using namespace DFG_MODULE_NS(cont);
 
     std::map<std::string, int> mStd;
-    DFG_CLASS_NAME(MapVectorSoA) < std::string, int > mapVectorSoaSorted;
-    DFG_CLASS_NAME(MapVectorSoA) < std::string, int > mapVectorSoaUnsorted;
+    MapVectorSoA<std::string, int> mapVectorSoaSorted;
+    MapVectorSoA<std::string, int> mapVectorSoaUnsorted;
     mapVectorSoaUnsorted.setSorting(false);
-    DFG_CLASS_NAME(MapVectorAoS) < std::string, int > mapVectorAosSorted;
-    DFG_CLASS_NAME(MapVectorAoS) < std::string, int > mapVectorAosUnsorted;
+    MapVectorAoS<std::string, int> mapVectorAosSorted;
+    MapVectorAoS<std::string, int> mapVectorAosUnsorted;
     mapVectorAosUnsorted.setSorting(false);
 
     const int randEngSeed = 12345678;
@@ -336,7 +346,7 @@ TEST(dfgCont, MapVector)
 
     // Test some basic []-operations.
     {
-        DFG_CLASS_NAME(MapVectorAoS) < size_t, double > mm;
+        MapVectorAoS<size_t, double> mm;
         size_t i = 0;
         mm[i] = 2;
         mm[size_t(3)] = 4;
@@ -350,7 +360,7 @@ TEST(dfgCont, MapVector)
 
     // Test access to underlying key/value container for SoA-case.
     {
-        DFG_CLASS_NAME(MapVectorSoA) < float, double > xyVals;
+        MapVectorSoA<float, double> xyVals;
         xyVals.insert(1, 5);
         xyVals.insert(2, 6);
         xyVals.insert(3, 7);
@@ -375,8 +385,8 @@ TEST(dfgCont, MapVector)
     // Test insert
     {
         using namespace DFG_ROOT_NS;
-        DFG_CLASS_NAME(MapVectorAoS) < int32, double > mmAos;
-        DFG_CLASS_NAME(MapVectorSoA) < int32, double > mmSoa;
+        MapVectorAoS<int32, double> mmAos;
+        MapVectorSoA<int32, double> mmSoa;
         int16 i16 = 3;
         int32 i = 1;
         const int32 ci = 2;
@@ -428,7 +438,7 @@ TEST(dfgCont, MapVector_pushBack)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(cont);
-    using MapSoaIntInt = DFG_CLASS_NAME(MapVectorSoA) < int, int > ;
+    using MapSoaIntInt = MapVectorSoA<int, int>;
 
     {
         MapSoaIntInt m;
@@ -789,8 +799,8 @@ TEST(dfgCont, SetVector)
     using namespace DFG_MODULE_NS(cont);
 
     std::set<std::string> mStd;
-    DFG_CLASS_NAME(SetVector) < std::string > setVectorSorted;
-    DFG_CLASS_NAME(SetVector) < std::string > setVectorUnsorted; setVectorUnsorted.setSorting(false);
+    SetVector<std::string> setVectorSorted;
+    SetVector<std::string> setVectorUnsorted; setVectorUnsorted.setSorting(false);
 
     const int randEngSeed = 12345678;
     testSetInterface(mStd, randEngSeed);
@@ -804,8 +814,8 @@ TEST(dfgCont, SetVector)
 
     // Test that SetVector works with std::inserter.
     {
-        DFG_CLASS_NAME(SetVector) < std::string > setVectorSorted2;
-        DFG_CLASS_NAME(SetVector) < std::string > setVectorUnsorted2; setVectorUnsorted2.setSorting(false);
+        SetVector<std::string> setVectorSorted2;
+        SetVector<std::string> setVectorUnsorted2; setVectorUnsorted2.setSorting(false);
         auto insertIter = std::inserter(setVectorSorted2, setVectorSorted2.end());
         *insertIter = "bcd";
         *insertIter = "abc";
@@ -821,9 +831,9 @@ TEST(dfgCont, SetVector)
 
     // Test operator==
     {
-        DFG_CLASS_NAME(SetVector) < std::string > setVectorSorted3;
-        DFG_CLASS_NAME(SetVector) < std::string > setVectorUnsorted3; setVectorUnsorted3.setSorting(false);
-        DFG_CLASS_NAME(SetVector) < std::string > setVectorUnsorted4; setVectorUnsorted4.setSorting(false);
+        SetVector<std::string> setVectorSorted3;
+        SetVector<std::string> setVectorUnsorted3; setVectorUnsorted3.setSorting(false);
+        SetVector<std::string> setVectorUnsorted4; setVectorUnsorted4.setSorting(false);
         setVectorSorted3.insert("b");
         setVectorSorted3.insert("a");
         setVectorUnsorted3.insert("b");
@@ -841,7 +851,7 @@ TEST(dfgCont, SetVector)
 
     // Test some basic []-operations.
     {
-        DFG_CLASS_NAME(SetVector) < int > si;
+        SetVector<int> si;
         si.insert(1);
         int i = 2;
         si.insert(i);
@@ -852,7 +862,7 @@ TEST(dfgCont, SetVector)
 
     // Test moves
     {
-        DFG_CLASS_NAME(SetVector) < std::string > se;
+        SetVector<std::string> se;
         std::string s(30, 'a');
         se.insert(std::move(s));
         EXPECT_TRUE(s.empty());

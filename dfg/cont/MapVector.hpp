@@ -62,16 +62,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             typedef void pointer;
             typedef void reference;
 
-            typedef Value_T& ValueRefType;
-            class PairHelper : public std::pair<const Key_T&, ValueRefType>
+            template <class ValueRef_T>
+            class PairHelperT : public std::pair<const Key_T&, ValueRef_T>
             {
             public:
-                typedef std::pair<const Key_T&, ValueRefType> BaseClass;
+                typedef std::pair<const Key_T&, ValueRef_T> BaseClass;
 
-                PairHelper(const Key_T& k, Value_T& v) : BaseClass(k, v) {}
+                PairHelperT(const Key_T& k, ValueRef_T& v) : BaseClass(k, v) {}
                 BaseClass* operator->() { return this; }
             };
 
+            using PairHelper = PairHelperT<Value_T&>;
+            using PairHelperConst = PairHelperT<const Value_T&>;
 
             IteratorMapVectorSoa(SoA_T& rMap, size_t i) :
                 m_pMap(&rMap),
@@ -97,7 +99,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 return PairHelper(m_pMap->m_keyStorage[m_i], m_pMap->m_valueStorage[m_i]);
             }
 
+            PairHelperConst operator->() const
+            {
+                DFG_ASSERT_UB(this->m_pMap != nullptr);
+                return PairHelperConst(m_pMap->m_keyStorage[m_i], m_pMap->m_valueStorage[m_i]);
+            }
+
             const PairHelper operator*()
+            {
+                return operator->();
+            }
+
+            const PairHelperConst operator*() const
             {
                 return operator->();
             }
