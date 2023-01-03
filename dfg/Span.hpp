@@ -5,6 +5,8 @@
 
 #if defined(__cpp_lib_span)
     #include <span>
+#else
+    #include <type_traits>
 #endif
 
 DFG_ROOT_NS_BEGIN{
@@ -26,6 +28,9 @@ DFG_ROOT_NS_BEGIN{
     class Span
     {
     public:
+        using element_type = T;
+        using value_type = std::remove_cv_t<T>;
+
         Span() = default;
 
         template <class Cont_T>

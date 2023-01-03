@@ -985,6 +985,12 @@ TEST(dfg, Span)
         s[0] = 4;
         DFGTEST_EXPECT_LEFT(4, s[0]);
     }
+
+    // Testing existence of typedefs.
+    {
+        DFGTEST_STATIC_TEST((std::is_same_v<Span<const int>::element_type, const int>));
+        DFGTEST_STATIC_TEST((std::is_same_v<Span<const int>::value_type, int>));
+    }
 }
 
 TEST(dfgTypeTraits, IsTrueTrait)
