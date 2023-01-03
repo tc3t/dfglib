@@ -163,6 +163,17 @@ DFG_ROOT_NS_BEGIN
         return makeRange(std::begin(bei), std::end(bei));
     }
 
+    // Convenience function for creating range from [iterable.begin() + nStart, iterable.begin() + nEnd[
+    // Preconditions:
+    //      -nStart and nEnd must be within [0, iterable.size()] 
+    //      -nStart must be less or equal to nEnd 
+    template <class Iterable_T>
+    auto makeRangeFromStartAndEndIndex(Iterable_T&& iterable, const size_t nStart, const size_t nEnd) -> decltype(makeRange(iterable))
+    {
+        DFG_ASSERT_UB(nStart <= nEnd && nEnd <= iterable.size());
+        return makeRange(std::begin(iterable) + nStart, std::begin(iterable) + nEnd);
+    }
+
     // Convenience method for creating range from data() guaranteeing that resulting range
     // is pointer-based.
     template <class Iterable_T>

@@ -174,6 +174,25 @@ TEST(dfgIter, makeRange)
     EXPECT_EQ(31, vals[2]);
 }
 
+TEST(dfgIter, makeRangeFromStartAndEndIndex)
+{
+    using namespace DFG_ROOT_NS;
+
+    {
+        std::vector<int> v{ 1,2,3,4 };
+        const auto range04 = makeRangeFromStartAndEndIndex(v, 0, 4);
+        const auto range13 = makeRangeFromStartAndEndIndex(v, 1, 3);
+        DFGTEST_EXPECT_LEFT(4, range04.size());
+        DFGTEST_EXPECT_LEFT(v.data(), range04.data());
+        DFGTEST_EXPECT_LEFT(true, makeRangeFromStartAndEndIndex(v, 0, 0).empty());
+        DFGTEST_EXPECT_LEFT(true, makeRangeFromStartAndEndIndex(v, 4, 4).empty());
+        DFGTEST_EXPECT_LEFT(2, range13.size());
+        DFGTEST_EXPECT_LEFT(v.data() + 1, range13.data());
+
+        DFGTEST_EXPECT_LEFT(0, makeRangeFromStartAndEndIndex(std::vector<int>(), 0, 0).size());
+    }
+}
+
 TEST(dfgIter, headRange)
 {
     using namespace DFG_ROOT_NS;
