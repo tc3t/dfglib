@@ -406,11 +406,6 @@ namespace DFG_DETAIL_NS {
 
 } // namespace DFG_DETAILS_NS (inside namespace dfg::qt)
 
-const CsvTableView* CsvTableViewSortFilterProxyModel::getTableView() const
-{
-    return qobject_cast<CsvTableView*>(parent());
-}
-
 DFG_OPAQUE_PTR_DEFINE(TableEditor)
 {
     QMap<QModelIndex, QString> m_pendingEdits; // Stores edits done in cell editor which couldn't be applied immediately to be tried later.

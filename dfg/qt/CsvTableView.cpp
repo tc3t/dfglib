@@ -5023,6 +5023,17 @@ void CsvTableView::removeSelectionAnalyzer(const SelectionAnalyzer* pAnalyzer)
         m_selectionAnalyzers.erase(iter);
 }
 
+bool CsvTableView::isRowIndexMappingNeeded() const
+{
+    auto pProxyModel = getProxyModelPtr();
+    if (!pProxyModel)
+        return false; // If there's no proxy model, mapping is not needed.
+    auto pFilterModel = qobject_cast<const CsvTableViewSortFilterProxyModel*>(pProxyModel);
+    if (!pFilterModel)
+        return true; // If there's some custom proxy model, assume mapping is needed as don't know what it does.
+    return pFilterModel->isRowIndexMappingNeeded();
+}
+
 QModelIndex CsvTableView::mapToViewModel(const QModelIndex& index) const
 {
     const auto pIndexModel = index.model();
@@ -6200,6 +6211,27 @@ CsvTableViewSortFilterProxyModel::CsvTableViewSortFilterProxyModel(QWidget* pNon
 }
 
 CsvTableViewSortFilterProxyModel::~CsvTableViewSortFilterProxyModel() = default;
+
+const CsvTableView* CsvTableViewSortFilterProxyModel::getTableView() const
+{
+    return qobject_cast<CsvTableView*>(parent());
+}
+
+bool CsvTableViewSortFilterProxyModel::isRowIndexMappingNeeded() const
+{
+    const auto nSortCol = this->sortColumn();
+    const bool bIsSortActive = (nSortCol >= 0);
+    if (bIsSortActive)
+        return true; // If sort is active, need mapping
+
+    // Getting here means that sorting is not active, checking filter status.
+
+    const auto sFilterRegExp = this->filterRegularExpression().pattern();
+    if ((!DFG_OPAQUE_PTR() || DFG_OPAQUE_PTR()->m_matchers.empty()) && sFilterRegExp.isEmpty())
+        return false; // There are no filters so no mapping needed.
+
+    return true; // Either sorting or filter is active so can't guarantee that row indexes are the same between this and source model.
+}
 
 bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const
 {

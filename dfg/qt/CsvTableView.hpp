@@ -94,6 +94,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         const CsvTableView* getTableView() const;
 
+        // Returns true if row index needs to be mapped to data model, false otherwise. If false is returned, row indexes in this model and underlying model are identical.
+        bool isRowIndexMappingNeeded() const;
+
     protected:
         bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
         bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
@@ -418,6 +421,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void addSelectionAnalyzer(std::shared_ptr<SelectionAnalyzer> spAnalyzer);
 
         void removeSelectionAnalyzer(const SelectionAnalyzer* pAnalyzer);
+
+        // Returns true if row index in view model needs to be mapped to data model, false otherwise. If false is returned, row indexes in view and data models are identical.
+        bool isRowIndexMappingNeeded() const;
 
         // Maps index to view model (i.e. the one returned by model()) assuming that 'index' is either from csvModel() or model().
         QModelIndex mapToViewModel(const QModelIndex& index) const;

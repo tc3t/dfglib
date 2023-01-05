@@ -800,3 +800,18 @@ TEST(dfgQt, qStringToStringUtf8)
     const QString sRoundTrip = QString::fromUtf8(s8.beginRaw(), saturateCast<int>(s8.sizeInRawUnits()));
     EXPECT_EQ(s, sRoundTrip);
 }
+
+TEST(dfgQt, DataQueryDetails_maskHandling)
+{
+    using namespace DFG_MODULE_NS(qt);
+    {
+        DFGTEST_EXPECT_TRUE(DataQueryDetails(DataQueryDetails::DataMaskRows).areOnlyRowsOrNumbersRequested());
+        DFGTEST_EXPECT_TRUE(DataQueryDetails(DataQueryDetails::DataMaskNumerics).areOnlyRowsOrNumbersRequested());
+        DFGTEST_EXPECT_TRUE(DataQueryDetails(DataQueryDetails::DataMaskRows | DataQueryDetails::DataMaskNumerics).areOnlyRowsOrNumbersRequested());
+
+        DFGTEST_EXPECT_FALSE(DataQueryDetails(DataQueryDetails::DataMaskAll).areOnlyRowsOrNumbersRequested());
+        DFGTEST_EXPECT_FALSE(DataQueryDetails(DataQueryDetails::DataMaskStrings).areOnlyRowsOrNumbersRequested());
+        DFGTEST_EXPECT_FALSE(DataQueryDetails(DataQueryDetails::DataMaskRows | DataQueryDetails::DataMaskStrings).areOnlyRowsOrNumbersRequested());
+        DFGTEST_EXPECT_FALSE(DataQueryDetails(DataQueryDetails::DataMaskNumerics | DataQueryDetails::DataMaskStrings).areOnlyRowsOrNumbersRequested());
+    }
+}

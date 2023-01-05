@@ -136,7 +136,7 @@ public:
     SpanT<double>         doubles()     const { return privMakeSpan(m_pDoubleSpan); }
     SpanT<StringViewUtf8> stringViews() const { return privMakeSpan(m_pUtf8ViewSpan); }
 
-    const double*         m_pRowSpan      = nullptr;
+    const double*         m_pRowSpan      = nullptr; // TODO: should be possible to provide rows with (first, last) indexes.
     const double*         m_pDoubleSpan   = nullptr;
     const QVariant*       m_pVariantSpan  = nullptr;
     const StringViewUtf8* m_pUtf8ViewSpan = nullptr;
@@ -189,6 +189,8 @@ public:
     bool areRowsRequested()    const { return (m_dataMask & DataMaskRows)     != 0; }
     bool areNumbersRequested() const { return (m_dataMask & DataMaskNumerics) != 0; }
     bool areStringsRequested() const { return (m_dataMask & DataMaskStrings)  != 0; }
+
+    bool areOnlyRowsOrNumbersRequested() const { return (m_dataMask & (~DataMaskRowsAndNumerics)) == 0; }
 
     DataMaskT m_dataMask = DataMaskRowsAndNumerics;
 };

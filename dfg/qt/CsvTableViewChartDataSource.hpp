@@ -11,6 +11,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "CsvTableView.hpp"
 #include "../cont/MapVector.hpp"
 #include "../cont/ViewableSharedPtr.hpp"
+#include "../OpaquePtr.hpp"
 
 #include <atomic>
 #include <memory>
@@ -70,6 +71,7 @@ public:
     QObject* underlyingSource() override;
 
     void forEachElement_byColumn(DataSourceIndex c, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler) override;
+    void fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails) override;
 
     IndexList columnIndexes() const override;
 
@@ -87,16 +89,23 @@ public:
 
     std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo> privGetSelectionViewer() const;
 
+    bool isCachingForNumbersEnabled() const;
+
 private:
     bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const override;
 
 public slots:
     void onSelectionAnalysisCompleted();
+    void resetCache();
 
+public:
     QPointer<CsvTableView> m_spView;
     ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::SelectionInfo> m_selectionViewer;
     std::shared_ptr<SelectionAnalyzerForGraphing> m_spSelectionAnalyzer;
     GraphDataSource::ColumnDataTypeMap m_columnTypes;
+
+    class DataSourceNumberCache;
+    DFG_OPAQUE_PTR_DECLARE();
 }; // class CsvTableViewChartDataSource
 
 } } // Module namespace
