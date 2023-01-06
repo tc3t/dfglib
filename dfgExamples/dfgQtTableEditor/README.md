@@ -440,6 +440,16 @@ CsvTableView_weekDayNames=mo,tu,we,th,fr,sa,su
 CsvTableView_editMode=readOnly
 
 ; -----------------------------------------------------------
+; CsvTableViewChartDataSource
+
+; Defines whether data source for table selection is allowed to cache data
+;     Caching can significantly improve performance of graphs made from selection, drawback is increased memory usage.
+; Possible values: 0, 1
+; Default value: 1
+; Note: Value is read only on application start, restart is needed to change setting
+CsvTableViewChartDataSource_allowCaching=1
+
+; -----------------------------------------------------------
 ; JsonListWidget
 
 ; Defines font point size as integer.

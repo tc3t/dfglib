@@ -89,7 +89,8 @@ public:
 
     std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo> privGetSelectionViewer() const;
 
-    bool isCachingForNumbersEnabled() const;
+    bool isCachingAllowed() const;
+    void setCachingAllowed(bool bAllowed);
 
 private:
     bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const override;

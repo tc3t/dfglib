@@ -208,6 +208,8 @@ int main(int argc, char *argv[])
     // Setting data sources to chart display.
     {
         std::unique_ptr<dfg::qt::CsvTableViewChartDataSource> selectionSource(new dfg::qt::CsvTableViewChartDataSource(tableEditor.m_spTableView.get()));
+        selectionSource->setCachingAllowed(dfg::qt::QtApplication::getApplicationSettings()->value("dfglib/CsvTableViewChartDataSource_allowCaching", true).toBool());
+
         const auto selectionSourceId = selectionSource->uniqueId();
         graphDisplay.addDataSource(std::move(selectionSource));
         // Setting selection as default source, i.e. when data_source is not specified, ChartObject will query data from selection.

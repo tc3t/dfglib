@@ -202,6 +202,7 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
 DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
 {
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<DataSourceNumberCache> m_cache;
+    bool m_bCachingAllowed = true;
 };
 
 ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::CsvTableViewChartDataSource(CsvTableView* view)
@@ -249,9 +250,14 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::fetchColumnNumberData(Gra
     BaseClass::fetchColumnNumberData(std::move(pipe), nColumn, queryDetails);
 }
 
-bool ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::isCachingForNumbersEnabled() const
+void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setCachingAllowed(const bool bAllowed)
 {
-    return true; // TODO: make optional
+    DFG_OPAQUE_REF().m_bCachingAllowed = bAllowed;
+}
+
+bool ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::isCachingAllowed() const
+{
+    return DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_bCachingAllowed;
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(const DataSourceIndex nColRaw, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler)
@@ -282,7 +288,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
 
     // Checking if string data should be cached as double-data. Note that caching gets done even if row index mapping is needed because in that case
     // cache still makes it possible to omit string-to-double conversion and instead use the already-converted double from the cache.
-    if (this->isCachingForNumbersEnabled() && queryDetails.areNumbersRequested() && (!spCacheView || !spCacheView->hasColumn(nColData)))
+    if (this->isCachingAllowed() && queryDetails.areNumbersRequested() && (!spCacheView || !spCacheView->hasColumn(nColData)))
     {
         // Constructing caches only if selection has single rectangle and it covers over 90 % of rows in the whole table.
         // This is somewhat arbitrary condition - the point is to avoid possible costly caching of millions of rows if user selects just one cell.
