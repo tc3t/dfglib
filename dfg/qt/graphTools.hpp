@@ -10,7 +10,9 @@
 #include "../cont/ViewableSharedPtr.hpp"
 #include "../charts/commonChartTools.hpp"
 #include "../charts/operations.hpp"
+#include "../iter/FunctionValueIterator.hpp"
 #include "../OpaquePtr.hpp"
+#include "../rangeIterator.hpp"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -75,11 +77,81 @@ public:
 using ChartDefinitionViewable = ::DFG_MODULE_NS(cont)::ViewableSharedPtr<ChartDefinition>;
 using ChartDefinitionViewer = ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<ChartDefinition>;
 
+namespace DFG_DETAIL_NS
+{
+    class ColumnDataFeed
+    {
+    public:
+        using ValueIterator = decltype(::DFG_MODULE_NS(iter)::makeIndexIterator(size_t(0)));
+        using ValueRange = RangeIterator_T<ValueIterator>;
+
+        // Copies data to given output range, outputRange must be big enough to receive all elements. If output range is bigger than number of element that needs to be copied, excess output range is left unmodified.
+        template <class Iter_T>
+        void copyDataTo(RangeIterator_T<Iter_T> outputRange) const;
+
+        // Calls given function with data range. Note that given function must accept both Span and ValueRange (e.g. be a generic lambda)
+        template <class Func_T>
+        void doForRange(Func_T func) const;
+
+        bool hasData() const { return m_nSize > 0; }
+        bool hasSpan() const { return !m_span.empty(); }
+        bool hasValueRange() const { return hasData() && !hasSpan(); }
+
+        template <class RowIterable_T>
+        void setData(const RowIterable_T& data);
+
+        void setDataAsIndexSequenceByCountFirst(const size_t nCount, const size_t nFirst);
+
+        Span<const double> asSpan() const { return m_span; }
+        ValueRange asValueRange() const { return makeRange(m_valueIterator, m_valueIterator + m_nSize); }
+
+        size_t m_nSize = 0;
+        ValueIterator m_valueIterator = ::DFG_MODULE_NS(iter)::makeIndexIterator(size_t(0));
+        Span<const double> m_span;
+    }; // class ColumnDataFeed
+
+    template <class RowIterable_T>
+    void ColumnDataFeed::setData(const RowIterable_T& data)
+    {
+        this->m_span = data;
+        this->m_nSize = this->m_span.size();
+    }
+
+    inline void ColumnDataFeed::setDataAsIndexSequenceByCountFirst(const size_t nCount, const size_t nFirst)
+    {
+        m_span = Span<const double>();
+        m_nSize = nCount;
+        m_valueIterator = ::DFG_MODULE_NS(iter)::makeIndexIterator(nFirst);
+    }
+
+
+    template <class Func_T>
+    inline void ColumnDataFeed::doForRange(Func_T func) const
+    {
+        if (this->hasSpan())
+            func(this->asSpan());
+        else
+            func(this->asValueRange());
+    }
+
+    template <class Iter_T>
+    inline void ColumnDataFeed::copyDataTo(RangeIterator_T<Iter_T> outputRange) const
+    {
+        doForRange([&](const auto range)
+            {
+                const auto nSize = Min(outputRange.size(), range.size());
+                std::copy(range.begin(), range.begin() + nSize, outputRange.begin());
+            });
+    }
+
+} // namespace DFG_DETAIL_NS
 
 // Provides a block of data from GraphDataSource, basically a variant of spans of different type.
 class SourceDataSpan
 {
 public:
+    using ColumnDataFeed = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::ColumnDataFeed;
+
     template <class T> using SpanT = RangeIterator_T<const T*>;
 
     void clear()
@@ -87,10 +159,17 @@ public:
         std::memset(this, 0, sizeof(*this));
     }
 
+    void setRowsAsIndexSequenceByCountFirst(const size_t nCount, const size_t nFirst)
+    {
+        DFG_ASSERT(m_nSize == 0 || nCount == size());
+        m_rows.setDataAsIndexSequenceByCountFirst(nCount, nFirst);
+    }
+
     template <class RowIterable_T>
     void setRows(const RowIterable_T& rows)
     {
-        privSetSpan(SpanT<double>(makeRange(rows)), m_pRowSpan);
+        DFG_ASSERT(m_nSize == 0 || rows.size() == size());
+        m_rows.setData(rows);
     }
 
     // Sets values
@@ -132,11 +211,10 @@ public:
         return SpanT<T>(pSource, pSource + ((pSource) ? size() : 0));
     }
 
-    SpanT<double>         rows()        const { return privMakeSpan(m_pRowSpan); }
+    const ColumnDataFeed& rows()        const { return m_rows; }
     SpanT<double>         doubles()     const { return privMakeSpan(m_pDoubleSpan); }
     SpanT<StringViewUtf8> stringViews() const { return privMakeSpan(m_pUtf8ViewSpan); }
-
-    const double*         m_pRowSpan      = nullptr; // TODO: should be possible to provide rows with (first, last) indexes.
+    ColumnDataFeed        m_rows;
     const double*         m_pDoubleSpan   = nullptr;
     const QVariant*       m_pVariantSpan  = nullptr;
     const StringViewUtf8* m_pUtf8ViewSpan = nullptr;

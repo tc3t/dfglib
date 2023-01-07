@@ -452,11 +452,11 @@ void ::DFG_MODULE_NS(qt)::GraphDataSource::fetchColumnNumberData(GraphDataSource
         double* pRows = nullptr;
         double* pDoubles = nullptr;
         pipe.getFillBuffers(inputSpan.size(),
-                            (!inputSpan.rows().empty()) ? &pRows : nullptr,
+                            (inputSpan.rows().hasData()) ? &pRows : nullptr,
                             (!inputSpan.doubles().empty()) ? &pDoubles : nullptr
                             );
         if (pRows)
-            std::copy(inputSpan.rows().begin(), inputSpan.rows().end(), pRows);
+            inputSpan.rows().copyDataTo(makeRange(pRows, pRows + inputSpan.size()));
         if (pDoubles)
             std::copy(inputSpan.doubles().begin(), inputSpan.doubles().end(), pDoubles);
     });
@@ -741,6 +741,9 @@ private:
     template <class Map_T, class Inserter_T>
     bool storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails, Inserter_T inserter);
 
+    template <class RowRange_T, class ValueRange_T, class ValueConverter_T>
+    void pushBackToRowToStringMap(RowToStringMap& rowToStringMap, const RowRange_T& rowRange, const ValueRange_T& valueRange, ValueConverter_T valueConverter);
+
 public:
 
     ColumnToValuesMap m_colToValuesMap;
@@ -889,39 +892,41 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
     const auto inserter = [&](RowToValueMap& values, const SourceDataSpan& sourceData)
     {
         const auto& doubleRange = sourceData.doubles();
-        if (sourceData.rows().empty() && !doubleRange.empty())
+        const auto rows = sourceData.rows();
+        if (!rows.hasData() && !doubleRange.empty())
         {
             // If data has doubles but not rows, generating iota rows.
             auto iter = ::DFG_MODULE_NS(iter)::makeFunctionValueIterator(size_t(values.size()), [](size_t i) { return i; });
             values.pushBackToUnsorted(makeRange(iter, iter + doubleRange.size()), doubleRange);
         }
         else
-            values.pushBackToUnsorted(sourceData.rows(), doubleRange);
+            rows.doForRange([&](const auto& range) { values.pushBackToUnsorted(range, doubleRange); });
     };
     
     return storeColumnFromSourceImpl(m_colToValuesMap, source, nColumn, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics), inserter);
+}
+
+template <class RowRange_T, class ValueRange_T, class ValueConverter_T>
+void DFG_MODULE_NS(qt)::TableSelectionCacheItem::pushBackToRowToStringMap(RowToStringMap& rowToStringMap, const RowRange_T& rowRange, const ValueRange_T& valueRange, ValueConverter_T valueConverter)
+{
+    const auto rowIdentityFunc = [](const double row) { return row; };
+    rowToStringMap.pushBackToUnsorted(rowRange, rowIdentityFunc, valueRange, valueConverter);
 }
 
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource_strings(GraphDataSource& source, const DataSourceIndex nColumn)
 {
     const auto inserter = [&](RowToStringMap& rowToStringMap, const SourceDataSpan& sourceData)
     {
-        const auto rowRange = sourceData.rows();
         const auto stringViews = sourceData.stringViews();
-        const auto rowIdentityFunc = [](const double row) { return row; };
         if (!stringViews.empty())
         {
-            rowToStringMap.pushBackToUnsorted(rowRange, rowIdentityFunc,
-                                              stringViews,
-                                              [](const StringViewUtf8& sv) { return StringUtf8::fromRawString(sv.beginRaw(), sv.endRaw()); });
+            sourceData.rows().doForRange([&](const auto& rows) { pushBackToRowToStringMap(rowToStringMap, rows, stringViews, [](const StringViewUtf8& sv) { return StringUtf8::fromRawString(sv.beginRaw(), sv.endRaw()); }); });
             return;
         }
         const auto values = sourceData.doubles();
         if (!values.empty())
         {
-            rowToStringMap.pushBackToUnsorted(rowRange, rowIdentityFunc,
-                                              values,
-                                              [](const double d) { return ::DFG_MODULE_NS(str)::floatingPointToStr<StringUtf8>(d); });
+            sourceData.rows().doForRange([&](const auto& rows) { pushBackToRowToStringMap(rowToStringMap, rows, values, [](const double d) { return ::DFG_MODULE_NS(str)::floatingPointToStr<StringUtf8>(d); }); });
             return;
         }
     };

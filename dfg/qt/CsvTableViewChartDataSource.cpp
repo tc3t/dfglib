@@ -26,34 +26,23 @@ class CsvTableViewChartDataSource::DataSourceNumberCache
 public:
     using Index = CsvItemModel::Index;
     using NumberContT = ::DFG_MODULE_NS(cont)::ValueVector<double>;
-    using RowContT = NumberContT;
     template <class T> using SharedStorage = std::shared_ptr<T>;
-
-    bool hasRows() const;
 
     bool hasColumn(const ColumnIndex_data col) const;
 
     // Returns new cache object for single column with reserved memory for requested elements, or null-storage if unable to create (e.g. lack of memory)
     SharedStorage<NumberContT> makeNewColumnCacheObject(const Index nReserveCount);
 
-    // Returns true if row cache of requested size exists after the call, false otherwise.
-    bool createRowCacheIfNeeded(const DataSourceIndex nRowCount);
-
     void setColumnCache(const ColumnIndex_data col, SharedStorage<const NumberContT> newData);
-
-    Span<const double> getRowSpan(Index nFirstRow, Index nLastRow) const;
 
     Span<const double> getSpanFromColumn(const ColumnIndex_data col, Index nFirstRow, Index nLastRow) const;
 
     // Returns whole column span
     Span<const double> getSpanFromColumn(const ColumnIndex_data col) const;
         
-    SharedStorage<const RowContT> m_spRows;
     ::DFG_MODULE_NS(cont)::MapVectorSoA<Index, SharedStorage<const NumberContT>> m_mapColToNumbers;
 }; // class CsvTableViewChartDataSource::DataSourceNumberCache
 
-
-bool CsvTableViewChartDataSource::DataSourceNumberCache::hasRows() const { return m_spRows && !m_spRows->empty(); }
 
 bool CsvTableViewChartDataSource::DataSourceNumberCache::hasColumn(const ColumnIndex_data col) const
 {
@@ -76,33 +65,9 @@ auto CsvTableViewChartDataSource::DataSourceNumberCache::makeNewColumnCacheObjec
     }
 }
 
-// Returns true if row cache of requested size exists after the call, false otherwise.
-bool CsvTableViewChartDataSource::DataSourceNumberCache::createRowCacheIfNeeded(const DataSourceIndex nRowCount)
-{
-    if (m_spRows && m_spRows->size() == nRowCount)
-        return true;
-    try
-    {
-        SharedStorage<RowContT> spRows(new RowContT(nRowCount));
-        ::DFG_MODULE_NS(alg)::generateAdjacent(*spRows, Index(CsvItemModel::internalRowIndexToVisible(0)), Index(1));
-        m_spRows = std::move(spRows);
-        return true;
-    }
-    catch (...)
-    {
-        m_spRows.reset();
-        return false;
-    }
-}
-
 void CsvTableViewChartDataSource::DataSourceNumberCache::setColumnCache(const ColumnIndex_data col, SharedStorage<const NumberContT> newData)
 {
     m_mapColToNumbers[col.value()] = std::move(newData);
-}
-
-Span<const double> CsvTableViewChartDataSource::DataSourceNumberCache::getRowSpan(const Index nFirstRow, const Index nLastRow) const
-{
-    return (this->m_spRows) ? Span<const double>(makeRangeFromStartAndEndIndex(*this->m_spRows, nFirstRow, nLastRow + 1)) : Span<const double>();
 }
 
 Span<const double> CsvTableViewChartDataSource::DataSourceNumberCache::getSpanFromColumn(const ColumnIndex_data col, const Index nFirstRow, const Index nLastRow) const
@@ -296,22 +261,18 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
         if (selection.size() == 1 && double(selection.front().height()) / double(pCsvModel->rowCount()) > 0.9)
         {
             std::unique_ptr<DataSourceNumberCache> newCache(new DataSourceNumberCache(spCacheView ? *spCacheView : DataSourceNumberCache()));
-
-            if (newCache->createRowCacheIfNeeded(nTotalRowCount)) // TODO: shouldn't need to have (potentially massive) row cache for trivial iota-indexes; would need some work on the data query protocol, though.
+            auto spColumnCache = newCache->makeNewColumnCacheObject(nTotalRowCount);
+            if (spColumnCache)
             {
-                auto spColumnCache = newCache->makeNewColumnCacheObject(nTotalRowCount);
-                if (spColumnCache)
+                for (CsvItemModel::Index r = 0; r < nTotalRowCount; ++r)
                 {
-                    for (CsvItemModel::Index r = 0; r < nTotalRowCount; ++r)
-                    {
-                        const auto pszData = pCsvModel->rawStringPtrAt(r, nColData.value());
-                        const auto val = cellStringToDoubleImpl(pszData, nColView, m_columnTypes);
-                        spColumnCache->push_back(val);
-                    }
-                    newCache->setColumnCache(nColData, std::move(spColumnCache));
-                    DFG_OPAQUE_REF().m_cache.reset(std::move(newCache));
-                    spCacheView = cacheViewer.view();
+                    const auto pszData = pCsvModel->rawStringPtrAt(r, nColData.value());
+                    const auto val = cellStringToDoubleImpl(pszData, nColView, m_columnTypes);
+                    spColumnCache->push_back(val);
                 }
+                newCache->setColumnCache(nColData, std::move(spColumnCache));
+                DFG_OPAQUE_REF().m_cache.reset(std::move(newCache));
+                spCacheView = cacheViewer.view();
             }
         }
     }
@@ -333,8 +294,9 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
             SourceDataSpan dataSpan;
             const auto nFirstRow = item.top();
             const auto nLastRow = item.bottom();
+            const auto nRowCount = ::DFG_MODULE_NS(math)::numericDistance(nFirstRow, nLastRow) + 1u;
             if (queryDetails.areRowsRequested())
-                dataSpan.setRows(spCacheView->getRowSpan(nFirstRow, nLastRow));
+                dataSpan.setRowsAsIndexSequenceByCountFirst(nRowCount, CsvItemModel::internalRowIndexToVisible(nFirstRow));
             if (queryDetails.areNumbersRequested())
                 dataSpan.set(spCacheView->getSpanFromColumn(nColData, nFirstRow, nLastRow));
             handler(dataSpan);
