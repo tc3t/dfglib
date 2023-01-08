@@ -1,12 +1,12 @@
 # dfglib
 
-Experimental general purpose utility library for C++, which has become mostly a backbone for csv-oriented table editor, [dfgQtTableEditor](dfgExamples/dfgQtTableEditor/README.md/)
+Experimental general purpose utility library for C++ (at least C++17 required), which has become mostly a backbone for csv-oriented table editor, [dfgQtTableEditor](dfgExamples/dfgQtTableEditor/README.md/)
 
 Note: this is *not* a mature library and is not intended or recommended for general use. Libraries such as [Abseil](https://abseil.io/) or [Boost](https://www.boost.org/) provide many of the features in dfglib implemented in a more clear and professional manner. For a comprehensive list of alternatives, see [A list of open source C++ libraries at cppreference.com](https://en.cppreference.com/w/cpp/links/libs) 
 
 ## News
 
-* 2022-10-30: dfglib is no longer tested with MSVC2015, GCC 5.4 and Clang 3.8.0, latest tested commit available as branch: [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4)
+* 2022-10-30: In [481baa71](https://github.com/tc3t/dfglib/commit/481baa717a0cc90fb55813de787ba68fb98b1515) the minimum standard requirement in dfglib changed from C++11 to C++17 and code is no longer tested with MSVC2015, GCC 5.4 and Clang 3.8.0, latest tested commit available as branch: [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4)
 * 2022-10-23, dfgQtTableEditor [version 2.4.0](dfgExamples/dfgQtTableEditor/README.md/#240-2022-10-23) (Multithreaded reading, (x,y,text)-chart, read-only column, fixed crash opening big files...)
 * 2022-05-22, dfgQtTableEditor [version 2.3.0](dfgExamples/dfgQtTableEditor/README.md/#230-2022-05-22) (Numerically sortable columns, 'Change radix'-tool, textFilter chart operation...)
 * 2022-01-18, dfgQtTableEditor [version 2.2.0](dfgExamples/dfgQtTableEditor/README.md/#220-2022-01-18) (Hidable columns, date/time related improvements...)
