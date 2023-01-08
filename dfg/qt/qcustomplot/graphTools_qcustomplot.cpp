@@ -2555,7 +2555,9 @@ static void fillQcpPlottable(ChartObject_T& rChartObject, ValueCont_T&& data)
     //  QCPGraph().data()->set() takes QVector<QCPGraphData> which is the actual storage, this is ValueCont_T
     using DataContainer = typename decltype(rChartObject.data())::value_type;
     QSharedPointer<DataContainer> spData(new DataContainer);
-    std::sort(data.begin(), data.end(), qcpLessThanSortKey<typename ValueCont_T::value_type>);
+    const auto sortFunc = qcpLessThanSortKey<typename ValueCont_T::value_type>;
+    if (!std::is_sorted(data.begin(), data.end(), sortFunc))
+        std::sort(data.begin(), data.end(), sortFunc);
     spData->set(data, true); // Note: if data is not sorted beforehand, sorting in set() will effetively cause a redundant copy to be created.
     rChartObject.setData(std::move(spData));
 }
