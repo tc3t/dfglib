@@ -345,7 +345,7 @@ static void testFileDataSource(const QString& sExtension,
         auto& source = *spSource;
         source.forEachElement_byColumn(c, DataQueryDetails(DataQueryDetails::DataMaskAll), [&](const SourceDataSpan& sourceSpan)
         {
-            rows.insert(rows.end(), sourceSpan.rows().begin(), sourceSpan.rows().end());
+            rows.insert(rows.end(), sourceSpan.rows().asSpan().begin(), sourceSpan.rows().asSpan().end());
             const auto nOldSize = static_cast<uint16>(strings.size());
             strings.resize(nOldSize + sourceSpan.stringViews().size());
             std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), strings.begin() + nOldSize, [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
@@ -388,7 +388,7 @@ static void testFileDataSource(const QString& sExtension,
         auto& source = *spSource;
         source.forEachElement_byColumn(nCol, DataQueryDetails(mask), [&](const SourceDataSpan& sourceSpan)
         {
-            rows.insert(rows.end(), sourceSpan.rows().begin(), sourceSpan.rows().end());
+            rows.insert(rows.end(), sourceSpan.rows().asSpan().begin(), sourceSpan.rows().asSpan().end());
             const auto nOldSize = static_cast<uint16>(strings.size());
             strings.resize(nOldSize + sourceSpan.stringViews().size());
             std::transform(sourceSpan.stringViews().begin(), sourceSpan.stringViews().end(), strings.begin() + nOldSize, [](const StringViewUtf8& sv) { return sv.toString().rawStorage(); });
@@ -422,7 +422,7 @@ static void testFileDataSource(const QString& sExtension,
         spSource->fetchColumnNumberData(DataPipe(&valueMapFetched), nColumn, queryDetails);
         spSource->forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& data)
         {
-            valueMapForEach.pushBackToUnsorted(data.rows(), data.doubles());
+            valueMapForEach.pushBackToUnsorted(data.rows().asSpan(), data.doubles());
         });
         valueMapForEach.setSorting(true);
         EXPECT_EQ(valueMapFetched.m_keyStorage, valueMapForEach.m_keyStorage);

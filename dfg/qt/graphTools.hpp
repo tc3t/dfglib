@@ -97,6 +97,8 @@ namespace DFG_DETAIL_NS
         bool hasSpan() const { return !m_span.empty(); }
         bool hasValueRange() const { return hasData() && !hasSpan(); }
 
+        bool empty() const { return !hasData(); }
+
         template <class RowIterable_T>
         void setData(const RowIterable_T& data);
 
