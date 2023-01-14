@@ -144,7 +144,7 @@ void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::forEachElement_byColumn(con
     }
 }
 
-void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nCol, const DataQueryDetails& queryDetails)
+void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nCol, const DataQueryDetails& queryDetails)
 {
     if (nCol >= this->columnCount() || !queryDetails.areNumbersRequested())
         return;
@@ -163,4 +163,14 @@ void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::fetchColumnNumberData(Graph
     if (pRows)
         ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(pRows, pRows + nTotalRowCount), 0, 1);
     ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(pValues, pValues + nTotalRowCount), first, step);
+
+    pipe.metaData() = this->columnMetaData(nCol);
+}
+
+auto ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::columnMetaData(const DataSourceIndex nColumn) -> std::optional<ColumnMetaData>
+{
+    DFG_UNUSED(nColumn);
+    ColumnMetaData metaData;
+    metaData.efficientlyFetchable(true);
+    return metaData;
 }

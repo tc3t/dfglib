@@ -444,7 +444,7 @@ bool ::DFG_MODULE_NS(qt)::GraphDataSource::isSafeToQueryDataFromThreadImpl(const
     return this->thread() == pThread;
 }
 
-void ::DFG_MODULE_NS(qt)::GraphDataSource::fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
+void ::DFG_MODULE_NS(qt)::GraphDataSource::fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
 {
     // Default implementation using forEachElement_byColumn()
     forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& inputSpan)
@@ -737,6 +737,8 @@ public:
 
     void onDataSourceChanged();
 
+    void storeMetaData(DataSourceIndex nColumn, const std::optional<ColumnMetaData>& metaData);
+
 private:
     template <class Map_T, class Inserter_T>
     bool storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails, Inserter_T inserter);
@@ -750,9 +752,10 @@ public:
     ColumnToStringsMap m_colToStringsMap;
     GraphDataSource::ColumnDataTypeMap m_columnTypes;
     GraphDataSource::ColumnNameMap m_columnNames;
+    GraphDataSource::ColumnMetaDataMap m_columnMetaDatas;
     bool m_bIsValid = false;
     QPointer<GraphDataSource> m_spSource;
-};
+}; // TableSelectionCacheItem
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDatas() const -> std::vector<std::reference_wrapper<const RowToValueMap>>
 {
@@ -832,17 +835,20 @@ void ::DFG_MODULE_NS(qt)::GraphDataSourceDataPipe_MapVectorSoADoubleValueVector:
 namespace DFG_DETAIL_NS
 {
     template <class T>
-    bool handleStoreColumnDirectFetch(const T&, GraphDataSource&, const DataSourceIndex, const DataQueryDetails&)
+    bool handleStoreColumnDirectFetch(TableSelectionCacheItem&, const T&, GraphDataSource&, const DataSourceIndex, const DataQueryDetails&)
     {
         return false;
     }
 
-    bool handleStoreColumnDirectFetch(TableSelectionCacheItem::RowToValueMap& destValues, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
+    bool handleStoreColumnDirectFetch(TableSelectionCacheItem& cacheItem, TableSelectionCacheItem::RowToValueMap& destValues, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
     {
         if (!queryDetails.areStringsRequested())
         {
             DFG_ASSERT(queryDetails.areRowsRequested()); // If there are no rows, destValues.keys() are bogus and data is expected to malfunction in graphs.
-            source.fetchColumnNumberData(TableSelectionCacheItem::DataPipeForTableCache(&destValues), nColumn, queryDetails);
+            ColumnMetaData columnMetaData;
+            TableSelectionCacheItem::DataPipeForTableCache pipe(&destValues);
+            source.fetchColumnNumberData(pipe, nColumn, queryDetails);
+            cacheItem.storeMetaData(nColumn, std::move(pipe.metaData()));
             return true;
         }
         else
@@ -870,9 +876,9 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
 
     insertRv.first->second.setSorting(false); // Disabling sorting while adding
     auto& destValues = insertRv.first->second;
-    if (!DFG_DETAIL_NS::handleStoreColumnDirectFetch(destValues, source, nColumn, queryDetails))
+    if (!DFG_DETAIL_NS::handleStoreColumnDirectFetch(*this, destValues, source, nColumn, queryDetails))
     {
-        // Direct fetch failed/not avaiable, fallback to forEachElement_byColumn().
+        // Direct fetch failed/not available, fallback to forEachElement_byColumn().
         source.forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& sourceData)
         {
             inserter(destValues, sourceData);
@@ -941,12 +947,17 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
     });
     if (iter != m_colToValuesMap.end())
     {
-        if (dynamic_cast<const NumberGeneratorDataSource*>(this->m_spSource.data()) == nullptr)
-            return iter->second; // As there's no mechanism to verify if cacheItem is to be used by someone else, always copying.
-        else // Case: source is number generator. Since generating is cheap, always releasing the content. This effetively means that caching is not used for NumberGenerator even though values are still fetched through cache object.
+        const auto iterMetaData = this->m_columnMetaDatas.find(iter->first);
+        if (iterMetaData != this->m_columnMetaDatas.end() && iterMetaData->second.efficientlyFetchable())
         {
+            // If source has informed that column is efficiently fetchable (e.g. cheap to regenerate or cached already in source), always releasing the content.
+            // This effetively means that TableSelectionCacheItem does not cache this column and acts merely as proxy a interface for querying the data.
             this->m_bIsValid = false; // Data gets moved out so marking this cache item invalid.
             return std::move(iter->second);
+        }
+        else 
+        {
+            return iter->second; // As there's no mechanism to verify if cacheItem is to be used by someone else, always copying.
         }
     }
     else
@@ -986,6 +997,13 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::isVolatileCache() const
     return (!pSource || !pSource->hasChangeSignaling());
 }
 
+void DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeMetaData(const DataSourceIndex nColumn, const std::optional<ColumnMetaData>& metaData)
+{
+    if (metaData.has_value())
+        this->m_columnMetaDatas[nColumn] = metaData.value();
+    else
+        this->m_columnMetaDatas.erase(nColumn);
+}
 
 /*
  * ChartDataCache

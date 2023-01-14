@@ -210,9 +210,9 @@ namespace
     }
 }
 
-void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
+void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
 {
-    BaseClass::fetchColumnNumberData(std::move(pipe), nColumn, queryDetails);
+    BaseClass::fetchColumnNumberData(pipe, nColumn, queryDetails);
 }
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setCachingAllowed(const bool bAllowed)

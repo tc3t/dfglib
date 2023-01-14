@@ -71,7 +71,7 @@ public:
     QObject* underlyingSource() override;
 
     void forEachElement_byColumn(DataSourceIndex c, const DataQueryDetails& queryDetails, ForEachElementByColumHandler handler) override;
-    void fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails) override;
+    void fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails) override;
 
     IndexList columnIndexes() const override;
 

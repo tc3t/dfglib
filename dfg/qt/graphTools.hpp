@@ -16,6 +16,7 @@
 #include <memory>
 #include <vector>
 #include <functional>
+#include <optional>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QWidget>
@@ -76,6 +77,29 @@ public:
 
 using ChartDefinitionViewable = ::DFG_MODULE_NS(cont)::ViewableSharedPtr<ChartDefinition>;
 using ChartDefinitionViewer = ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<ChartDefinition>;
+
+class ColumnMetaData
+{
+    // Helper macro for creating member variable, setter and getter.
+    // Example: DFG_TEMP_DEFINE_MEMBER(int, example, 10) ->
+    //      private:
+    //          int m_example = 10;
+    //      public:
+    //          void example(const int arg) { m_example = arg; }
+    //          int example() const { return m_example; }
+#define DFG_TEMP_DEFINE_MEMBER(TYPE, NAME, INITVAL) \
+private: \
+    TYPE m_##NAME = INITVAL; \
+public: \
+    void NAME(const TYPE arg) { m_##NAME = arg; } \
+    TYPE NAME() const { return m_##NAME; }
+
+    DFG_TEMP_DEFINE_MEMBER(ChartDataType, columnDataType, ChartDataType::unknown);
+    DFG_TEMP_DEFINE_MEMBER(bool, efficientlyFetchable, false);
+    DFG_TEMP_DEFINE_MEMBER(QString, name, QString());
+
+#undef DFG_TEMP_DEFINE_MEMBER
+}; // class ColumnMetaData
 
 namespace DFG_DETAIL_NS
 {
@@ -146,10 +170,19 @@ namespace DFG_DETAIL_NS
             });
     }
 
+    class CommonTableColumnData
+    {
+    public:
+              std::optional<ColumnMetaData>& metaData()       { return m_columnMetaData; }
+        const std::optional<ColumnMetaData>& metaData() const { return m_columnMetaData; }
+
+        std::optional<ColumnMetaData> m_columnMetaData;
+    }; // class CommonColumnData
+
 } // namespace DFG_DETAIL_NS
 
 // Provides a block of data from GraphDataSource, basically a variant of spans of different type.
-class SourceDataSpan
+class SourceDataSpan : public ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::CommonTableColumnData
 {
 public:
     using ColumnDataFeed = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::ColumnDataFeed;
@@ -224,7 +257,7 @@ public:
 }; // class SourceDataSpan
 
 // Helper abstract class making it possible for data source to fill destination buffers directly instead using temporary buffers
-class GraphDataSourceDataPipe
+class GraphDataSourceDataPipe : public ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::CommonTableColumnData
 {
 public:
     virtual ~GraphDataSourceDataPipe() {}
@@ -236,6 +269,8 @@ public:
 class GraphDataSourceDataPipe_MapVectorSoADoubleValueVector : public GraphDataSourceDataPipe
 {
 public:
+    using BaseClass = GraphDataSourceDataPipe;
+
     using ValueVectorD = ::DFG_MODULE_NS(cont)::ValueVector<double>;
     using RowToValueMap = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double, ValueVectorD, ValueVectorD>;
 
@@ -273,7 +308,7 @@ public:
     bool areOnlyRowsOrNumbersRequested() const { return (m_dataMask & (~DataMaskRowsAndNumerics)) == 0; }
 
     DataMaskT m_dataMask = DataMaskRowsAndNumerics;
-};
+}; // DataQueryDetails
 
 
 // Abstract class representing graph data source.
@@ -287,6 +322,7 @@ public:
     using SingleColumnDoubleValuesOptional = std::shared_ptr<const DoubleValueVector>;
     using ColumnDataTypeMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ChartDataType>;
     using ColumnNameMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, String>;
+    using ColumnMetaDataMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ColumnMetaData>;
     using IndexList = ::DFG_MODULE_NS(cont)::ValueVector<DataSourceIndex>;
     using ForEachElementByColumHandler = std::function<void(const SourceDataSpan&)>;
 
@@ -312,7 +348,9 @@ public:
     virtual void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) { DFG_ASSERT_IMPLEMENTED(false); }
 
     // Fills destination with number data from requested column through DataPipe.
-    virtual void fetchColumnNumberData(GraphDataSourceDataPipe&& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails);
+    virtual void fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails);
+
+    virtual std::optional<ColumnMetaData> columnMetaData(const DataSourceIndex /*nColumn*/) { return std::optional<ColumnMetaData>(std::nullopt); }
 
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
     virtual ChartDataType     columnDataType(DataSourceIndex) const;
