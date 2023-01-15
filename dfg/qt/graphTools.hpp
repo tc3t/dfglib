@@ -350,8 +350,6 @@ public:
     // Fills destination with number data from requested column through DataPipe.
     virtual void fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails);
 
-    virtual std::optional<ColumnMetaData> columnMetaData(const DataSourceIndex /*nColumn*/) { return std::optional<ColumnMetaData>(std::nullopt); }
-
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
     virtual ChartDataType     columnDataType(DataSourceIndex) const;
     virtual ColumnNameMap     columnNames()     const { return ColumnNameMap(); }

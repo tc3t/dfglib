@@ -65,6 +65,43 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QTextStream>
     #include <QLineEdit>
 
+// 
+// 2023-01: Notes about caching (using single column xy-graph as an example):
+//      1. DataSource itself can cache data (e.g. CsvTableViewChartDataSource)
+//      2. TableSelectionCacheItem may cache (row, column)-storages for every column
+//      3. prepareDataForXy: releaseOrCopy() either copies storage of TableSelectionCacheItem or gets them by move.
+//      4. refreshXy: setValues() copies datas to (QCustomPlot) storage
+//          -If data was copied in part 3, it gets destroyed as temporary.
+// 
+// So by the time data gets shown in graph:
+//      -Worst case
+//          -Data is duplicated in 3 places: DataSource itself, TableSelectionCacheItem and graph object.
+//          -In temporary peak usage, in 4 places (in addition to ones mentioned above, also the temporary storage created in step 3)
+//      -Best case:
+//          -Only in graph object
+//          -In temporary peak usage in 2 place (extra usage from temporary storage in step 3).
+//          -This case can occur e.g. in NumberGeneratorDataSource, which has no cache in itself and step 3 can use storage in step 2.
+//      -Typical:
+//          -Data is in 2 places: sourceCache/TableSelectionCacheItem and graph object.
+//              -Compared to worst case, reasonable data source is expected to set metadata efficientlyFetchable() == true so that there won't be overlapping
+//               cache both in data source and TableSelectionCacheItem.
+//          -In temporary peak usage in 3 places (extra usage from temporary storage in step 3.
+// 
+// Can duplicate caching or temporary storages be improved?
+//      -More intelligent releaseOrCopy() could avoid some temporary peaks, but it's hard to know if cached data could be reused.
+//      -Getting rid of the temporary storage would benefit all cases, but data type differences are on the way:
+//          -QCustomPlot uses storage QVector<QCPGraphData> that is layout-wise essentially QVector<std::pair<double, double>>.
+//           In order to be able to move the temporary data in step 3 to xy-graph object directly, classes like dfg::charts::XySeries 
+//           and dfg::charts::ChartOperationPipeData would need to be able to use such storage. That would likely require at least type-erasure 
+//           as dfg::charts can't use Qt-types and even if done, handling of operations would get even more complex as it would need special case for 
+//           pair-like storage which doesn't compose well as operation may handle more than 2 axis and operate directly on coordinate-based vectors.
+//      -DataSource itself might be able to use compatible storage, but transferring such data through all layers (cache, operations) sounds
+//       complicated.
+// 
+//   As a conclusion, no obvious ways seen how to reduce duplicating cache/workstorage data further.
+//
+
+
 DFG_END_INCLUDE_QT_HEADERS
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -459,6 +496,8 @@ void ::DFG_MODULE_NS(qt)::GraphDataSource::fetchColumnNumberData(GraphDataSource
             inputSpan.rows().copyDataTo(makeRange(pRows, pRows + inputSpan.size()));
         if (pDoubles)
             std::copy(inputSpan.doubles().begin(), inputSpan.doubles().end(), pDoubles);
+        if (inputSpan.metaData().has_value())
+            pipe.metaData() = inputSpan.metaData();
     });
 }
 
@@ -952,6 +991,7 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
         {
             // If source has informed that column is efficiently fetchable (e.g. cheap to regenerate or cached already in source), always releasing the content.
             // This effetively means that TableSelectionCacheItem does not cache this column and acts merely as proxy a interface for querying the data.
+            // Note that since validity flag is object-wide, cache doesn't support column-specific invalidation.
             this->m_bIsValid = false; // Data gets moved out so marking this cache item invalid.
             return std::move(iter->second);
         }

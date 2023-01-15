@@ -38,7 +38,6 @@ public:
     auto columnDataType(DataSourceIndex nCol) const -> ChartDataType override;
     void forEachElement_byColumn(DataSourceIndex, const DataQueryDetails&, ForEachElementByColumHandler) override;
     void fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails) override;
-    std::optional<ColumnMetaData> columnMetaData(DataSourceIndex nColumn) override;
 private:
     bool isSafeToQueryDataFromThreadImpl(const QThread*) const override { return true; }
 // End interface overloads <--

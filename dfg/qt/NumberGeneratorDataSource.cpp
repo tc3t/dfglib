@@ -164,13 +164,7 @@ void ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::fetchColumnNumberData(Graph
         ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(pRows, pRows + nTotalRowCount), 0, 1);
     ::DFG_MODULE_NS(alg)::generateAdjacent(makeRange(pValues, pValues + nTotalRowCount), first, step);
 
-    pipe.metaData() = this->columnMetaData(nCol);
-}
-
-auto ::DFG_MODULE_NS(qt)::NumberGeneratorDataSource::columnMetaData(const DataSourceIndex nColumn) -> std::optional<ColumnMetaData>
-{
-    DFG_UNUSED(nColumn);
     ColumnMetaData metaData;
     metaData.efficientlyFetchable(true);
-    return metaData;
+    pipe.metaData() = std::move(metaData);
 }

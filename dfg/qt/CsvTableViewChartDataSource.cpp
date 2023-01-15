@@ -279,10 +279,24 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
 
     const bool bIsRowIndexMappingNeeded = m_spView->isRowIndexMappingNeeded();
     const bool bNumberCacheIsAvailable = (spCacheView && spCacheView->hasColumn(nColData));
+    const auto hasSelectionRangeRequestedColumn = [&](const QItemSelectionRange& sr) { return nColView.value() >= sr.left() && nColView.value() <= sr.right(); };
 
-    for (const auto& item : selection)
+    const auto iterSelectionRangeEffectiveEnd = [&]()
+        {
+            auto iterEffectiveEnd = selection.begin();
+            for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+            {
+                if (hasSelectionRangeRequestedColumn(*iter))
+                    iterEffectiveEnd = iter + 1;
+            }
+            return iterEffectiveEnd;
+
+        }();
+
+    for (auto iterSelection = selection.cbegin(); iterSelection != iterSelectionRangeEffectiveEnd; ++iterSelection)
     {
-        if (item.left() > nColView.value() || item.right() < nColView.value())
+        const auto& item = *iterSelection;
+        if (!hasSelectionRangeRequestedColumn(item))
             continue; // Skipping selection item if it does not have requested column.
 
         // Checking if can use cached number directly, requires:
@@ -299,6 +313,14 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
                 dataSpan.setRowsAsIndexSequenceByCountFirst(nRowCount, CsvItemModel::internalRowIndexToVisible(nFirstRow));
             if (queryDetails.areNumbersRequested())
                 dataSpan.set(spCacheView->getSpanFromColumn(nColData, nFirstRow, nLastRow));
+            // If current selection range is the last one, filling column meta data.
+            if (iterSelection + 1 == iterSelectionRangeEffectiveEnd)
+            {
+                ColumnMetaData metaData;
+                metaData.efficientlyFetchable(true);
+                metaData.name(spSelectionViewer->m_columnNames.valueCopyOr(nColView.value()));
+                dataSpan.metaData() = std::move(metaData);
+            }
             handler(dataSpan);
             continue;
         }
