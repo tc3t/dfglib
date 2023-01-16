@@ -1305,7 +1305,9 @@ auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCP
         return nullptr;
     }
     QCPAxisRect* pExistingAxisRect = nullptr;
-    ChartPanel* pChartPanel = dynamic_cast<ChartPanel*>(pLayout->element(nRow, nCol));
+    
+    // Testing existince first as otherwise QCPLayoutGrid::element() causes debug log noise "Invalid row. Row: x Column: y"
+    ChartPanel* pChartPanel = pLayout->hasElement(nRow, nCol) ? dynamic_cast<ChartPanel*>(pLayout->element(nRow, nCol)) : nullptr;
     if (pChartPanel)
         pExistingAxisRect = pChartPanel->axisRect();
     if (!pExistingAxisRect)
@@ -2079,20 +2081,23 @@ void ChartCanvasQCustomPlot::beginUpdateState()
         return;
     }
 
-    m_spUpdateIndicator = new QCPItemText(pQcp); // QCustomPlot-object takes ownership.
-    auto pUpdateIndicator = m_spUpdateIndicator.data();
-    pUpdateIndicator->setClipToAxisRect(false); // If clipToAxisRect is true, text would show only within one axis rect; in practice means that typically works only when there's just one panel.
-    pUpdateIndicator->setText(tr("Updating..."));
-    pUpdateIndicator->setLayer("legend"); // Setting text to legend layer so that it shows above graph stuff (axes etc.).
-    // Placing text in the middle of canvas.
+    if (pQcp->axisRectCount() > 0) // If count was zero, creating QCPItemText would generate debug log noise "invalid axis rect index 0"
     {
-        pUpdateIndicator->position->setType(QCPItemPosition::ptViewportRatio);
-        pUpdateIndicator->position->setCoords(0.5, 0.5);
+        m_spUpdateIndicator = new QCPItemText(pQcp); // QCustomPlot-object takes ownership.
+        auto pUpdateIndicator = m_spUpdateIndicator.data();
+        pUpdateIndicator->setClipToAxisRect(false); // If clipToAxisRect is true, text would show only within one axis rect; in practice means that typically works only when there's just one panel.
+        pUpdateIndicator->setText(tr("Updating..."));
+        pUpdateIndicator->setLayer("legend"); // Setting text to legend layer so that it shows above graph stuff (axes etc.).
+        // Placing text in the middle of canvas.
+        {
+            pUpdateIndicator->position->setType(QCPItemPosition::ptViewportRatio);
+            pUpdateIndicator->position->setCoords(0.5, 0.5);
+        }
+        // Increasing font size
+        adjustWidgetFontProperties(pUpdateIndicator, 15);
+        // Setting text background so that text shows better.
+        pUpdateIndicator->setBrush(QBrush(QColor(255, 255, 255, 200))); // Somewhat transparent white background.
     }
-    // Increasing font size
-    adjustWidgetFontProperties(pUpdateIndicator, 15);
-    // Setting text background so that text shows better.
-    pUpdateIndicator->setBrush(QBrush(QColor(255, 255, 255, 200))); // Somewhat transparent white background.
 
     pQcp->setBackground(QBrush(QColor(240, 240, 240))); // Setting light grey background during update.
     pQcp->replot();
