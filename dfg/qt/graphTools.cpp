@@ -997,7 +997,9 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
         }
         else 
         {
-            return iter->second; // As there's no mechanism to verify if cacheItem is to be used by someone else, always copying.
+            // Copying data: even if it was known that no one would use this cache entry in some particular update round,
+            //               if it was released, some future chart entry might use this and after release would need to requery the data.
+            return iter->second;
         }
     }
     else
@@ -1073,8 +1075,26 @@ class ChartDataCache
 public:
     using CacheEntryKey = QString;
 
+    class TableSelectionOptional : public std::shared_ptr<TableSelectionCacheItem>
+    {
+    public:
+        using BaseClass = std::shared_ptr<TableSelectionCacheItem>;
+        TableSelectionOptional() = default;
+        TableSelectionOptional(std::unique_ptr<TableSelectionCacheItem> spNew)
+            : BaseClass(spNew.release(), deleteLaterDeleter)
+        {
+
+        }
+
+    private:
+        static void deleteLaterDeleter(TableSelectionCacheItem* p)
+        {
+            if (p)
+                p->deleteLater();
+        }
+    }; // class TableSelectionOptional
+
     // Cached types
-    using TableSelectionOptional = std::shared_ptr<TableSelectionCacheItem>;
     using SingleColumnDoubleValuesOptional = GraphDataSource::SingleColumnDoubleValuesOptional;
     using AbstractChartControlItem = ::DFG_MODULE_NS(charts)::AbstractChartControlItem;
 
@@ -1108,9 +1128,9 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
     auto key = this->cacheKey(source, defEntry);
     auto iter = m_tableSelectionDatas.find(key);
     if (iter == m_tableSelectionDatas.end())
-        iter = m_tableSelectionDatas.insert(std::make_pair(key, std::make_shared<TableSelectionCacheItem>())).first;
+        iter = m_tableSelectionDatas.insert(std::make_pair(key, std::make_unique<TableSelectionCacheItem>())).first;
     else if (iter->second && !iter->second->isValid())
-        iter->second = std::make_shared<TableSelectionCacheItem>(); // Cache item existed, but was invalid -> creating a new one.
+        iter->second = std::make_unique<TableSelectionCacheItem>(); // Cache item existed, but was invalid -> creating a new one.
 
     auto& rCacheItem = *iter->second;
 
@@ -2425,7 +2445,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
         }
         auto& opaqueThis = DFG_OPAQUE_REF();
         opaqueThis.m_spThreadDataPreparation = new QThread; // Note: not having 'this' as parent to prevent threading issues when deleting.
-        opaqueThis.m_spThreadDataPreparation->setObjectName("chartDataPreration"); // Sets thread name visible to debugger.
+        opaqueThis.m_spThreadDataPreparation->setObjectName("chartDataPreparation"); // Sets thread name visible to debugger.
         opaqueThis.m_spChartPreparator = new ChartDataPreparator;
         opaqueThis.m_spChartPreparator->moveToThread(opaqueThis.m_spThreadDataPreparation);
         DFG_QT_VERIFY_CONNECT(connect(this, &GraphControlAndDisplayWidget::sigChartDataPreparationNeeded, opaqueThis.m_spChartPreparator.data(), &ChartDataPreparator::prepareData));
