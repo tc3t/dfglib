@@ -187,8 +187,15 @@ DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
     auto pCsvModel = m_spView->csvModel();
     if (pCsvModel)
     {
-        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::dataChanged, this, &CsvTableViewChartDataSource::resetCache)); // Simply reset cache on any change to CsvModel
+        // Simply reset cache on any changes to CsvModel
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::dataChanged, this, &CsvTableViewChartDataSource::resetCache));
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::sigOnNewSourceOpened, this, &CsvTableViewChartDataSource::resetCache));
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::columnsInserted, this, &CsvTableViewChartDataSource::resetCache));
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::columnsRemoved, this, &CsvTableViewChartDataSource::resetCache));
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::columnsMoved, this, &CsvTableViewChartDataSource::resetCache));
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::rowsInserted, this, &CsvTableViewChartDataSource::resetCache));
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::rowsRemoved, this, &CsvTableViewChartDataSource::resetCache));
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::rowsMoved, this, &CsvTableViewChartDataSource::resetCache));
     }
 }
 
