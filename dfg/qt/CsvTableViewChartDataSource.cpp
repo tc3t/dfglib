@@ -33,14 +33,17 @@ public:
     // Returns new cache object for single column with reserved memory for requested elements, or null-storage if unable to create (e.g. lack of memory)
     SharedStorage<NumberContT> makeNewColumnCacheObject(const Index nReserveCount);
 
-    void setColumnCache(const ColumnIndex_data col, SharedStorage<const NumberContT> newData);
+    void setColumnCache(const ColumnIndex_data col, SharedStorage<const NumberContT> newData, ChartDataType dataType);
 
     Span<const double> getSpanFromColumn(const ColumnIndex_data col, Index nFirstRow, Index nLastRow) const;
 
     // Returns whole column span
     Span<const double> getSpanFromColumn(const ColumnIndex_data col) const;
+
+    ChartDataType getColumnDataType(const ColumnIndex_data col) const;
         
     ::DFG_MODULE_NS(cont)::MapVectorSoA<Index, SharedStorage<const NumberContT>> m_mapColToNumbers;
+    GraphDataSource::ColumnDataTypeMap m_mapColToDataTypes;
 }; // class CsvTableViewChartDataSource::DataSourceNumberCache
 
 
@@ -65,9 +68,15 @@ auto CsvTableViewChartDataSource::DataSourceNumberCache::makeNewColumnCacheObjec
     }
 }
 
-void CsvTableViewChartDataSource::DataSourceNumberCache::setColumnCache(const ColumnIndex_data col, SharedStorage<const NumberContT> newData)
+void CsvTableViewChartDataSource::DataSourceNumberCache::setColumnCache(const ColumnIndex_data col, SharedStorage<const NumberContT> newData, const ChartDataType dataType)
 {
     m_mapColToNumbers[col.value()] = std::move(newData);
+    m_mapColToDataTypes[col.value()] = dataType;
+}
+
+auto CsvTableViewChartDataSource::DataSourceNumberCache::getColumnDataType(const ColumnIndex_data col) const -> ChartDataType
+{
+    return m_mapColToDataTypes.valueCopyOr(col.value(), ChartDataType::unknown);
 }
 
 Span<const double> CsvTableViewChartDataSource::DataSourceNumberCache::getSpanFromColumn(const ColumnIndex_data col, const Index nFirstRow, const Index nLastRow) const
@@ -167,6 +176,10 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
 DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
 {
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<DataSourceNumberCache> m_cache;
+    ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<DataSourceNumberCache> m_cacheViewer;
+
+    ::DFG_MODULE_NS(cont)::ViewableSharedPtr<GraphDataSource::ColumnDataTypeMap> m_viewableMapColToDataType;
+    ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<GraphDataSource::ColumnDataTypeMap> m_viewerMapColToDataType;
     bool m_bCachingAllowed = true;
 };
 
@@ -183,6 +196,9 @@ DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
     DFG_QT_VERIFY_CONNECT(connect(m_spSelectionAnalyzer.get(), &CsvTableViewSelectionAnalyzer::sigAnalyzeCompleted, this, &CsvTableViewChartDataSource::onSelectionAnalysisCompleted));
     this->m_bAreChangesSignaled = true;
     m_spView->addSelectionAnalyzer(m_spSelectionAnalyzer);
+
+    DFG_OPAQUE_REF().m_cacheViewer = DFG_OPAQUE_REF().m_cache.createViewer();
+    DFG_OPAQUE_REF().m_viewerMapColToDataType = DFG_OPAQUE_REF().m_viewableMapColToDataType.createViewer();
 
     auto pCsvModel = m_spView->csvModel();
     if (pCsvModel)
@@ -271,13 +287,14 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
             auto spColumnCache = newCache->makeNewColumnCacheObject(nTotalRowCount);
             if (spColumnCache)
             {
+                GraphDataSource::ColumnDataTypeMap mapColToDataType;
                 for (CsvItemModel::Index r = 0; r < nTotalRowCount; ++r)
                 {
                     const auto pszData = pCsvModel->rawStringPtrAt(r, nColData.value());
-                    const auto val = cellStringToDoubleImpl(pszData, nColView, m_columnTypes);
+                    const auto val = cellStringToDoubleImpl(pszData, nColView, mapColToDataType);
                     spColumnCache->push_back(val);
                 }
-                newCache->setColumnCache(nColData, std::move(spColumnCache));
+                newCache->setColumnCache(nColData, std::move(spColumnCache), mapColToDataType.valueCopyOr(nColView.value(), ChartDataType::unknown));
                 DFG_OPAQUE_REF().m_cache.reset(std::move(newCache));
                 spCacheView = cacheViewer.view();
             }
@@ -299,6 +316,15 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
             return iterEffectiveEnd;
 
         }();
+
+    const auto insertColumnMetaData = [&](SourceDataSpan& targetSpan, const bool bEfficientFetchable, const ChartDataType dataType)
+        {
+            ColumnMetaData metaData;
+            metaData.efficientlyFetchable(bEfficientFetchable);
+            metaData.name(spSelectionViewer->m_columnNames.valueCopyOr(nColView.value()));
+            metaData.columnDataType(dataType);
+            targetSpan.metaData() = std::move(metaData);
+        };
 
     for (auto iterSelection = selection.cbegin(); iterSelection != iterSelectionRangeEffectiveEnd; ++iterSelection)
     {
@@ -322,12 +348,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
                 dataSpan.set(spCacheView->getSpanFromColumn(nColData, nFirstRow, nLastRow));
             // If current selection range is the last one, filling column meta data.
             if (iterSelection + 1 == iterSelectionRangeEffectiveEnd)
-            {
-                ColumnMetaData metaData;
-                metaData.efficientlyFetchable(true);
-                metaData.name(spSelectionViewer->m_columnNames.valueCopyOr(nColView.value()));
-                dataSpan.metaData() = std::move(metaData);
-            }
+                insertColumnMetaData(dataSpan, true, spCacheView->getColumnDataType(nColData));
             handler(dataSpan);
             continue;
         }
@@ -335,6 +356,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
         const auto cachedColumn = (spCacheView) ? spCacheView->getSpanFromColumn(nColData) : Span<const double>();
 
         // Getting here means that couldn't satisfy request from cache; visiting rows one-by-one and calling handler with single-row spans.
+        GraphDataSource::ColumnDataTypeMap mapColToDataType;
         for (auto r = item.top(), rBottom = item.bottom(); r <= rBottom; ++r)
         {
             // Note that indexes are view indexes, not source model indexes (e.g. in case of filtered table, row indexes in filtered table)
@@ -352,13 +374,18 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
                 if (isValidIndex(cachedColumn, nSourceModelRow))
                     val = cachedColumn[nSourceModelRow];
                 else
-                    val = cellStringToDoubleImpl(pszData, nColView, m_columnTypes);
+                    val = cellStringToDoubleImpl(pszData, nColView, mapColToDataType);
                 dataSpan.set(makeRange(&val, &val + 1));
             }
             if (queryDetails.areStringsRequested())
             {
                 sv = (pszData) ? pszData : StringViewUtf8();
                 dataSpan.set(makeRange(&sv, &sv + 1));
+            }
+            if (r == rBottom) // On last row, inserting column metadata to dataspan
+            {
+                insertColumnMetaData(dataSpan, false, (bNumberCacheIsAvailable) ? spCacheView->getColumnDataType(nColData) : mapColToDataType.valueCopyOr(nColView.value()));
+                DFG_OPAQUE_REF().m_viewableMapColToDataType.edit([&](auto& rEditable, auto pOld) { DFG_UNUSED(pOld); rEditable = std::move(mapColToDataType); });
             }
             handler(dataSpan);
         }
@@ -414,7 +441,14 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::enable(const bool b)
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnDataTypes() const -> ColumnDataTypeMap
 {
-    return m_columnTypes;
+    auto p = DFG_OPAQUE_PTR();
+    if (!p)
+        return ColumnDataTypeMap();
+    auto spCacheView = p->m_cacheViewer.view();
+    if (spCacheView && !spCacheView->m_mapColToDataTypes.empty())
+        return spCacheView->m_mapColToDataTypes;
+    auto spDataTypeMapView = p->m_viewerMapColToDataType.view();
+    return (spDataTypeMapView) ? *spDataTypeMapView : ColumnDataTypeMap();
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnNames() const -> ColumnNameMap
@@ -436,7 +470,6 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setChartDefinitionViewer(
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::onSelectionAnalysisCompleted()
 {
-    m_columnTypes.clear();
     Q_EMIT sigChanged();
 }
 

@@ -32,8 +32,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 class SelectionAnalyzerForGraphing : public CsvTableViewSelectionAnalyzer
 {
 public:
-    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<double, double> RowToValueMap;
-    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(MapVectorSoA)<int, RowToValueMap> ColumnToValuesMap;
+    typedef ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double> RowToValueMap;
+    typedef ::DFG_MODULE_NS(cont)::MapVectorSoA<int, RowToValueMap> ColumnToValuesMap;
 
     class SelectionInfo : public QItemSelection
     {
@@ -103,7 +103,6 @@ public:
     QPointer<CsvTableView> m_spView;
     ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<SelectionAnalyzerForGraphing::SelectionInfo> m_selectionViewer;
     std::shared_ptr<SelectionAnalyzerForGraphing> m_spSelectionAnalyzer;
-    GraphDataSource::ColumnDataTypeMap m_columnTypes;
 
     class DataSourceNumberCache;
     DFG_OPAQUE_PTR_DECLARE();
