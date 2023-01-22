@@ -635,6 +635,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onSelectionModelChanged(const QItemSelection& selected, const QItemSelection& deselected);
         void onViewModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles);
+        void onViewModelLayoutChanged(const QList<QPersistentModelIndex>& parents, QAbstractItemModel::LayoutChangeHint hint);
 
         // To be triggered when either set of selected cells or content in existing selection changes.
         void onSelectionModelOrContentChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedViewModelItems);

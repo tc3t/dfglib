@@ -1268,7 +1268,10 @@ void CsvTableView::setModel(QAbstractItemModel* pModel)
         DFG_VERIFY(disconnect(pPreviousCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened));
     }
     if (pPreviousViewModel)
-        DFG_VERIFY(disconnect(pPreviousViewModel, &CsvModel::dataChanged, this, &ThisClass::onViewModelDataChanged));
+    {
+        DFG_VERIFY(disconnect(pPreviousViewModel, &QAbstractItemModel::dataChanged, this, &ThisClass::onViewModelDataChanged));
+        DFG_VERIFY(disconnect(pPreviousViewModel, &QAbstractItemModel::layoutChanged, this, &ThisClass::onViewModelLayoutChanged));
+    }
     BaseClass::setModel(pModel);
     auto pCsvModel = csvModel();
     if (m_spUndoStack && pCsvModel)
@@ -1279,7 +1282,10 @@ void CsvTableView::setModel(QAbstractItemModel* pModel)
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvModel::sigOnNewSourceOpened, this, &ThisClass::onNewSourceOpened, Qt::UniqueConnection));
     }
     if (pModel)
-        DFG_QT_VERIFY_CONNECT(connect(pModel, &CsvModel::dataChanged, this, &ThisClass::onViewModelDataChanged, Qt::UniqueConnection));
+    {
+        DFG_QT_VERIFY_CONNECT(connect(pModel, &QAbstractItemModel::dataChanged, this, &ThisClass::onViewModelDataChanged, Qt::UniqueConnection));
+        DFG_QT_VERIFY_CONNECT(connect(pModel, &QAbstractItemModel::layoutChanged, this, &ThisClass::onViewModelLayoutChanged, Qt::UniqueConnection));
+    }
     DFG_QT_VERIFY_CONNECT(connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &ThisClass::onSelectionModelChanged));
 
     // If model is of type QSortFilterProxyModel, updating checked-status of sort case sensitivity.
@@ -4962,6 +4968,13 @@ void CsvTableView::onViewModelDataChanged(const QModelIndex &topLeft, const QMod
     DFG_UNUSED(roles);
     // For now not checking if change actually happened within selection, to be improved later if there are practical cases where content gets changed outside the selection.
     onSelectionModelOrContentChanged(QItemSelection(), QItemSelection(), QItemSelection(topLeft, bottomRight));
+}
+
+void CsvTableView::onViewModelLayoutChanged(const QList<QPersistentModelIndex>& parents, const QAbstractItemModel::LayoutChangeHint hint)
+{
+    DFG_UNUSED(parents);
+    DFG_UNUSED(hint);
+    onSelectionModelOrContentChanged(QItemSelection(), QItemSelection(), getSelection());
 }
 
 void CsvTableView::onSelectionModelOrContentChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedViewModelItems)
