@@ -471,6 +471,12 @@ auto ::DFG_MODULE_NS(qt)::GraphDataSource::columnDataType(const DataSourceIndex 
     return (iter != colTypes.end()) ? iter->second : ChartDataType();
 }
 
+auto ::DFG_MODULE_NS(qt)::GraphDataSource::columnName(const DataSourceIndex nCol) const -> String
+{
+    const auto names = columnNames();
+    return names.valueCopyOr(nCol, QString());
+}
+
 bool ::DFG_MODULE_NS(qt)::GraphDataSource::isSafeToQueryDataFromCallingThread() const
 {
     return isSafeToQueryDataFromThread(QThread::currentThread());
@@ -740,7 +746,7 @@ public:
     using ValueVectorD        = ::DFG_MODULE_NS(charts)::ValueVectorD;
     using RowToValueMap       = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, double, ValueVectorD, ValueVectorD>;
     using RowToStringMap      = ::DFG_MODULE_NS(cont)::MapVectorSoA<double, StringT, ValueVectorD>;
-    using ColumnToValuesMap   = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>;
+    using ColumnToValuesMap   = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToValueMap>; // Note: with this implementation, the same rows can often get cached multiple times.
     using ColumnToStringsMap  = ::DFG_MODULE_NS(cont)::MapVectorSoA<IndexT, RowToStringMap>;
     using DataPipeForTableCache = GraphDataSourceDataPipe_MapVectorSoADoubleValueVector;
 
@@ -789,8 +795,6 @@ public:
 
     ColumnToValuesMap m_colToValuesMap;
     ColumnToStringsMap m_colToStringsMap;
-    GraphDataSource::ColumnDataTypeMap m_columnTypes;
-    GraphDataSource::ColumnNameMap m_columnNames;
     GraphDataSource::ColumnMetaDataMap m_columnMetaDatas;
     bool m_bIsValid = false;
     QPointer<GraphDataSource> m_spSource;
@@ -915,18 +919,29 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
 
     insertRv.first->second.setSorting(false); // Disabling sorting while adding
     auto& destValues = insertRv.first->second;
-    if (!DFG_DETAIL_NS::handleStoreColumnDirectFetch(*this, destValues, source, nColumn, queryDetails))
+    std::optional<ColumnMetaData> columnMetaData;
+    const auto bDirectFetchDone = DFG_DETAIL_NS::handleStoreColumnDirectFetch(*this, destValues, source, nColumn, queryDetails);
+    if (!bDirectFetchDone)
     {
         // Direct fetch failed/not available, fallback to forEachElement_byColumn().
         source.forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& sourceData)
         {
             inserter(destValues, sourceData);
+            if (sourceData.metaData().has_value())
+                columnMetaData = sourceData.metaData();
         });
     }
     
     destValues.setSorting(true, std::is_sorted(destValues.beginKey(), destValues.endKey()));
-    m_columnTypes = source.columnDataTypes();
-    m_columnNames = source.columnNames();
+    if (columnMetaData.has_value())
+        m_columnMetaDatas[nColumn] = std::move(columnMetaData.value());
+    else if (!m_columnMetaDatas.hasKey(nColumn)) // Legacy: if DataSource didn't provide metadatas in query, asking them separately.
+    {
+        // Note: while having no data source locking or snapshotting, there's is no way to guarantee that column data hasn't changed since the data query
+        //       and thus querying column metadata in a separate step may yield data from different source snapshot.
+        m_columnMetaDatas[nColumn].columnDataType(source.columnDataType(nColumn));
+        m_columnMetaDatas[nColumn].name(source.columnName(nColumn));
+    }
     this->m_bIsValid = true;
     return true;
 }
@@ -1018,8 +1033,8 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnToIndex(const RowToValueM
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const RowToValueMap* pColumn) const -> ChartDataType
 {
     const auto nCol = columnToIndex(pColumn);
-    auto iter = m_columnTypes.find(nCol);
-    return (iter != m_columnTypes.end()) ? iter->second : ChartDataType(ChartDataType::unknown);
+    auto iterMetaData = this->m_columnMetaDatas.find(nCol);
+    return (iterMetaData != this->m_columnMetaDatas.cend()) ? iterMetaData->second.columnDataType() : ChartDataType::unknown;
 }
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap* pColumn) const -> QString
@@ -1029,8 +1044,8 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap*
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const DataSourceIndex nCol) const -> QString
 {
-    auto iter = m_columnNames.find(nCol);
-    return (iter != m_columnNames.end()) ? iter->second : QString();
+    auto iterMetaData = this->m_columnMetaDatas.find(nCol);
+    return (iterMetaData != this->m_columnMetaDatas.cend()) ? iterMetaData->second.name() : QString();
 }
 
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::isVolatileCache() const

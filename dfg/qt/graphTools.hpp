@@ -351,8 +351,9 @@ public:
     virtual void fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails);
 
     virtual ColumnDataTypeMap columnDataTypes() const { return ColumnDataTypeMap(); }
-    virtual ChartDataType     columnDataType(DataSourceIndex) const;
+    virtual ChartDataType     columnDataType(DataSourceIndex nCol)  const;
     virtual ColumnNameMap     columnNames()     const { return ColumnNameMap(); }
+    virtual String            columnName(DataSourceIndex nCol)      const;
 
     virtual IndexList       columnIndexes() const                         { return IndexList(); }
     virtual DataSourceIndex columnCount()   const                         { return 0; }
