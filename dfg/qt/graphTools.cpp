@@ -351,7 +351,7 @@ class DefaultNameCreator
 {
 public:
     // pszType must point to valid string for the lifetime of 'this'.
-    DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname = QString(), const QString& sYname = QString());
+    DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname = QString(), const QString& sYname = QString(), const QString& sZname = QString());
 
     DefaultNameCreator(StringUtf8 sName);
 
@@ -360,8 +360,9 @@ public:
     StringUtf8 m_sName;
     const char* m_pszType = nullptr;
     int m_nIndex = -1;
-    QString m_sXname;
-    QString m_sYname;
+    StringUtf8 m_sXname;
+    StringUtf8 m_sYname;
+    StringUtf8 m_sZname;
 };
 
 DefaultNameCreator::DefaultNameCreator(StringUtf8 sName)
@@ -369,11 +370,12 @@ DefaultNameCreator::DefaultNameCreator(StringUtf8 sName)
 {
 }
 
-DefaultNameCreator::DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname, const QString& sYname)
+DefaultNameCreator::DefaultNameCreator(const char* pszType, const int nIndex, const QString& sXname, const QString& sYname, const QString& sZname)
     : m_pszType(pszType)
     , m_nIndex(nIndex)
-    , m_sXname(sXname)
-    , m_sYname(sYname)
+    , m_sXname(SzPtrUtf8(sXname.toUtf8().data()))
+    , m_sYname(SzPtrUtf8(sYname.toUtf8().data()))
+    , m_sZname(SzPtrUtf8(sZname.toUtf8().data()))
 {
 }
 
@@ -381,10 +383,15 @@ auto DefaultNameCreator::operator()() const -> StringUtf8
 {
     if (!m_sName.empty())
         return m_sName;
-    if (!m_sXname.isEmpty() || !m_sYname.isEmpty())
-        return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {} ('{}', '{}')", m_pszType, m_nIndex, m_sXname.toUtf8().data(), m_sYname.toUtf8().data()));
+    if (!m_sXname.empty() || !m_sYname.empty() || !m_sZname.empty())
+    {
+        if (!m_sZname.empty())
+            return StringUtf8::fromRawString(format_fmt("{} {} ('{}', '{}', '{}')", m_pszType, m_nIndex, m_sXname.rawStorage(), m_sYname.rawStorage(), m_sZname.rawStorage()));
+        else
+            return StringUtf8::fromRawString(format_fmt("{} {} ('{}', '{}')", m_pszType, m_nIndex, m_sXname.rawStorage(), m_sYname.rawStorage()));
+    }
     else
-        return DFG_ROOT_NS::StringUtf8::fromRawString(DFG_ROOT_NS::format_fmt("{} {}", m_pszType, m_nIndex));
+        return StringUtf8::fromRawString(format_fmt("{} {}", m_pszType, m_nIndex));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2775,7 +2782,7 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForXy(std::shar
     rv.m_columnDataTypes.push_back(ChartDataType::unknown);
     rv.m_columnNames.push_back(tableData.columnName(pXdata));
     rv.m_columnNames.push_back(tableData.columnName(pYdata));
-    rv.m_columnNames.push_back(tableData.columnName(columnIndexes[2]));
+    rv.m_columnNames.push_back(bZisRowIndex ? tr("<row index>") : tableData.columnName(columnIndexes[2]));
     return rv;
 }
 
@@ -2816,6 +2823,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(RefreshContext& 
     const auto yType = (!bYisRowIndex) ? rawData.columnDataType(1) : ChartDataType(ChartDataType::unknown);
     const auto sXname = (!bXisRowIndex) ? rawData.columnName(0) : QString(szRowIndexName);
     const auto sYname = (!bYisRowIndex) ? rawData.columnName(1) : QString(szRowIndexName);
+    QString sZname; // Filled later in case of txys
     auto spSeries = rChart.createXySeries(XySeriesCreationParam(-1, configParamCreator(), defEntry, xType, yType, qStringToStringUtf8(sXname), qStringToStringUtf8(sYname)));
     if (!spSeries)
     {
@@ -2841,6 +2849,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(RefreshContext& 
                 else
                     return PointMetaData();
             });
+            sZname = rawData.columnName(2);
+            if (sZname.isEmpty())
+                sZname = tr("<unnamed>");
         }
     }
 
@@ -2865,7 +2876,7 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshXy(RefreshContext& 
             rSeries.setPointStyle(configParamCreator().valueStr(ChartObjectFieldIdStr_pointStyle, SzPtrUtf8(ChartObjectPointStyleStr_basic)));
     }
 
-    setCommonChartObjectProperties(context, rSeries, defEntry, configParamCreator, DefaultNameCreator("Graph", getRunningIndexFor(rChart, rSeries, defEntry), sXname, sYname));
+    setCommonChartObjectProperties(context, rSeries, defEntry, configParamCreator, DefaultNameCreator("Graph", getRunningIndexFor(rChart, rSeries, defEntry), sXname, sYname, sZname));
 }
 
 namespace
