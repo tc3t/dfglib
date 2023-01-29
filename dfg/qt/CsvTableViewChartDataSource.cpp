@@ -123,6 +123,8 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
     if (!pView || !m_spSelectionInfo)
         return;
 
+    // Note: there's no CsvTableView read-locking here since parent class handles it.
+
     ChartDefinitionViewer* pViewer = m_apChartDefinitionViewer;
     decltype(pViewer->view()) spChartDefinitionView;
     if (pViewer)
@@ -157,7 +159,7 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
                 for (const auto& item : rSelectionInfo)
                 {
                     for (auto i = item.left(), right = item.right(); i <= right; ++i)
-                        rSelectionInfo.m_columnNames[static_cast<DataSourceIndex>(i)] = pModel->getHeaderName(i);
+                        rSelectionInfo.m_columnNames[static_cast<DataSourceIndex>(i)] = pModel->getHeaderName(pView->columnIndexViewToData(ColumnIndex_view(i)).value());
                 }
             }
         }
