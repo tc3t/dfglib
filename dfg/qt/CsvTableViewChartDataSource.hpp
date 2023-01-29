@@ -87,7 +87,7 @@ public:
 
     void setChartDefinitionViewer(ChartDefinitionViewer) override;
 
-    std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo> privGetSelectionViewer() const;
+    std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo> privGetSelectionView() const;
 
     bool isCachingAllowed() const;
     void setCachingAllowed(bool bAllowed);

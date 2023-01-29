@@ -260,8 +260,8 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
     if (!pCsvModel || !pModel)
         return;
 
-    auto spSelectionViewer = this->privGetSelectionViewer();
-    if (!spSelectionViewer) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
+    auto spSelectionView = this->privGetSelectionView();
+    if (!spSelectionView) // This may happen e.g. if the table is being updated in analyzeImpl() (in another thread). 
         return;
 
     auto readLockReleaser = m_spView->tryLockForRead();
@@ -271,7 +271,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
     auto cacheViewer = DFG_OPAQUE_REF().m_cache.createViewer();
     auto spCacheView = cacheViewer.view();
 
-    const QItemSelection& selection  = *spSelectionViewer;
+    const QItemSelection& selection  = *spSelectionView;
 
     const ColumnIndex_view nColView(saturateCast<CsvTableView::Index>(nColRaw));
     const auto nColData = m_spView->columnIndexViewToData(nColView);
@@ -323,7 +323,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
         {
             ColumnMetaData metaData;
             metaData.efficientlyFetchable(bEfficientFetchable);
-            metaData.name(spSelectionViewer->m_columnNames.valueCopyOr(nColView.value()));
+            metaData.name(spSelectionView->m_columnNames.valueCopyOr(nColView.value()));
             metaData.columnDataType(dataType);
             targetSpan.metaData() = std::move(metaData);
         };
@@ -397,26 +397,26 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnIndexes() const -> IndexList
 {
     IndexList rv;
-    auto spSelectionViewer = privGetSelectionViewer();
-    if (spSelectionViewer)
-        std::transform(spSelectionViewer->m_columnNames.begin(), spSelectionViewer->m_columnNames.end(), std::back_inserter(rv), [](const auto& keyVal) { return keyVal.first; });
+    auto spSelectionView = privGetSelectionView();
+    if (spSelectionView)
+        std::transform(spSelectionView->m_columnNames.begin(), spSelectionView->m_columnNames.end(), std::back_inserter(rv), [](const auto& keyVal) { return keyVal.first; });
     return rv;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnCount() const -> DataSourceIndex
 {
-    auto spSelectionViewer = privGetSelectionViewer();
-    return (spSelectionViewer) ? spSelectionViewer->m_columnNames.size() : 0;
+    auto spSelectionView = privGetSelectionView();
+    return (spSelectionView) ? spSelectionView->m_columnNames.size() : 0;
 }
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnIndexByName(const StringViewUtf8 sv) const -> DataSourceIndex
 {
-    auto spSelectionViewer = privGetSelectionViewer();
-    if (!spSelectionViewer)
+    auto spSelectionView = privGetSelectionView();
+    if (!spSelectionView)
         return invalidIndex();
     const auto sSearch = viewToQString(sv);
     // Linear search from values of (index, column name) map
-    for (const auto& kv : spSelectionViewer->m_columnNames)
+    for (const auto& kv : spSelectionView->m_columnNames)
     {
         if (kv.second == sSearch)
             return kv.first;
@@ -455,11 +455,11 @@ auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnDataTypes() const -
 
 auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::columnNames() const -> ColumnNameMap
 {
-    auto spSelectionViewer = privGetSelectionViewer();
-    return (spSelectionViewer) ? spSelectionViewer->m_columnNames : ColumnNameMap();
+    auto spSelectionView = privGetSelectionView();
+    return (spSelectionView) ? spSelectionView->m_columnNames : ColumnNameMap();
 }
 
-auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::privGetSelectionViewer() const -> std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo>
+auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::privGetSelectionView() const -> std::shared_ptr<const SelectionAnalyzerForGraphing::SelectionInfo>
 {
     return m_selectionViewer.view();
 }
