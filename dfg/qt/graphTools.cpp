@@ -913,6 +913,7 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T
     if (m_spSource && m_spSource != &source)
     {
         DFG_QT_CHART_CONSOLE_WARNING(tr("Internal error: cache item source changed, was '%1', now using '%2'").arg(m_spSource->uniqueId(), source.uniqueId()));
+        m_spSource->disconnect(this); // Disconnects signals from old source to 'this'
         mapIndexToStorage.clear();
     }
     if (m_spSource != &source)
@@ -1041,7 +1042,7 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const RowToValue
 {
     const auto nCol = columnToIndex(pColumn);
     auto iterMetaData = this->m_columnMetaDatas.find(nCol);
-    return (iterMetaData != this->m_columnMetaDatas.cend()) ? iterMetaData->second.columnDataType() : ChartDataType::unknown;
+    return (iterMetaData != this->m_columnMetaDatas.cend()) ? iterMetaData->second.columnDataType() : ChartDataType(ChartDataType::unknown);
 }
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnName(const RowToValueMap* pColumn) const -> QString

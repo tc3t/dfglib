@@ -191,7 +191,7 @@ public:
 
     void clear()
     {
-        std::memset(this, 0, sizeof(*this));
+        *this = SourceDataSpan();
     }
 
     void setRowsAsIndexSequenceByCountFirst(const size_t nCount, const size_t nFirst)
