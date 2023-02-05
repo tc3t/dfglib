@@ -202,14 +202,14 @@ TEST(dfgCont, ViewableSharedPtr)
     int resetNotifier1 = 0;
     int resetNotifier2 = 0;
 
-    DFG_CLASS_NAME(ViewableSharedPtr)<const int> sp(std::make_shared<int>(1));
+    ViewableSharedPtr<const int> sp(std::make_shared<int>(1));
     EXPECT_TRUE(sp);
     EXPECT_EQ(0, sp.getReferrerCount());
     auto viewer0 = sp.createViewer();
     auto viewer1 = sp.createViewer();
     EXPECT_EQ(0, sp.getReferrerCount());
-    sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(&viewer0), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier0; });
-    sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(&viewer1), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier1; });
+    sp.addResetNotifier(SourceResetNotifierId(&viewer0), [&](SourceResetParam) { ++resetNotifier0; });
+    sp.addResetNotifier(SourceResetNotifierId(&viewer1), [&](SourceResetParam) { ++resetNotifier1; });
 
     {
         auto spActiveView = viewer0.view();
@@ -238,7 +238,7 @@ TEST(dfgCont, ViewableSharedPtr)
         EXPECT_EQ(0, sp.getReferrerCount());
         EXPECT_EQ(2, *viewer2.view());
         EXPECT_EQ(0, sp.getReferrerCount());
-        sp.addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId)(&viewer2), [&](DFG_CLASS_NAME(SourceResetParam)) { ++resetNotifier2; });
+        sp.addResetNotifier(SourceResetNotifierId(&viewer2), [&](SourceResetParam) { ++resetNotifier2; });
     }
     sp.reset(std::make_shared<int>(3));
     EXPECT_EQ(0, sp.getReferrerCount());
@@ -270,7 +270,7 @@ TEST(dfgCont, ViewableSharedPtr)
 
     // Testing viewer behaviour when ViewableSharedPtr object is destroyed before viewer.
     {
-        std::unique_ptr<DFG_CLASS_NAME(ViewableSharedPtr)<int>> sp2(new DFG_CLASS_NAME(ViewableSharedPtr)<int>(std::make_shared<int>(1)));
+        std::unique_ptr<ViewableSharedPtr<int>> sp2(new ViewableSharedPtr<int>(std::make_shared<int>(1)));
         auto viewer = sp2->createViewer();
         sp2.reset();
         EXPECT_EQ(nullptr, viewer.view()); // After ViewableSharedPtr() has been destroyed, expecting viewer to return null views.
@@ -281,7 +281,7 @@ TEST(dfgCont, ViewableSharedPtr_editing)
 {
     using namespace DFG_MODULE_NS(cont);
 
-    DFG_CLASS_NAME(ViewableSharedPtr)<int> sp(std::make_shared<int>(1));
+    ViewableSharedPtr<int> sp(std::make_shared<int>(1));
     sp.edit([](int& rEdit, const int* pOld)
     {
         EXPECT_EQ(1, rEdit);
@@ -327,7 +327,7 @@ TEST(dfgCont, ViewableSharedPtr_editingWithThreads)
 {
     using namespace DFG_MODULE_NS(cont);
 
-    DFG_CLASS_NAME(ViewableSharedPtr)<int> sp(std::make_shared<int>(1));
+    ViewableSharedPtr<int> sp(std::make_shared<int>(1));
 
     sp.edit([&](int& rEdit, const int* pOld)
     {

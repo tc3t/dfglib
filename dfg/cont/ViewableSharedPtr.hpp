@@ -15,11 +15,11 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
-    class DFG_CLASS_NAME(SourceResetParam) {};
-    typedef std::function<void(DFG_CLASS_NAME(SourceResetParam))> DFG_CLASS_NAME(SourceResetNotifier);
-    typedef const void* DFG_CLASS_NAME(SourceResetNotifierId);
+    class SourceResetParam {};
+    typedef std::function<void(SourceResetParam)> SourceResetNotifier;
+    typedef const void* SourceResetNotifierId;
 
-    template <class T> class DFG_CLASS_NAME(ViewableSharedPtr);
+    template <class T> class ViewableSharedPtr;
 
     namespace DFG_DETAIL_NS
     {
@@ -28,10 +28,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         class ViewableSharedPtrRouterProxy
         {
         public:
-            typedef std::map<DFG_CLASS_NAME(SourceResetNotifierId), DFG_CLASS_NAME(SourceResetNotifier)> SourceResetNotifierMap;
+            typedef std::map<SourceResetNotifierId, SourceResetNotifier> SourceResetNotifierMap;
             typedef std::mutex MutexT;
             typedef std::lock_guard<MutexT> LockGuardT;
-            typedef DFG_CLASS_NAME(ViewableSharedPtr)<T> ViewableSharedPtrT;
+            typedef ViewableSharedPtr<T> ViewableSharedPtrT;
 
             ViewableSharedPtrRouterProxy(ViewableSharedPtrT& rParent)
                 : m_pObj(&rParent)
@@ -46,7 +46,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 LockGuardT lock(m_mutex);
                 for (auto& notifierItem : m_notifiers)
                 {
-                    notifierItem.second(DFG_CLASS_NAME(SourceResetParam)());
+                    notifierItem.second(SourceResetParam());
                 }
             }
 
@@ -58,13 +58,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             auto view() const -> std::shared_ptr<const T>;
 
-            void addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId) id, DFG_CLASS_NAME(SourceResetNotifier) srn)
+            void addResetNotifier(SourceResetNotifierId id, SourceResetNotifier srn)
             {
                 LockGuardT lock(m_mutex);
                 m_notifiers[id] = srn;
             }
 
-            void removeResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId) id)
+            void removeResetNotifier(SourceResetNotifierId id)
             {
                 LockGuardT lock(m_mutex);
                 m_notifiers.erase(id);
@@ -96,11 +96,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
             ViewableSharedPtrT* m_pObj;
             SourceResetNotifierMap m_notifiers;
-            DFG_CLASS_NAME(SetVector)<const void*> m_viewers;
+            SetVector<const void*> m_viewers;
             mutable MutexT m_mutex;
         };
     } // namespace DFG_DETAIL_NS
 
+    // A viewer object that can be used to create a view to object owned by ViewableSharedPtr
+    // Thread safety: not thread-safe (i.e. using the same viewer-object from different threads is not safe)
     template <class T>
     class ViewableSharedPtrViewer
     {
@@ -143,36 +145,38 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }
 
         std::shared_ptr<RouterT> m_spRouter;
-    };
+    }; // class ViewableSharedPtrViewer
 
 
     /*
     Wrapper for shared_ptr<T> with the following properties:
         -Can create viewers that are automatically and in thread safe manner updated to point to the new object if shared object in 'this' gets reset.
+            -When object is changed, any views that viewers have created remain valid pointing to the old object.
         -Can edit() owned resource in thread safe manner with respect to viewers.
+        -Is thread-safe: different threads can call even non-const functions of the same ViewableSharedPtr object.
     */
     template <class T>
-    class DFG_CLASS_NAME(ViewableSharedPtr)
+    class ViewableSharedPtr
     {
     public:
         typedef DFG_DETAIL_NS::ViewableSharedPtrRouterProxy<T> RouterT;
         typedef std::mutex MutexT; // TODO: should be std::shared_mutex in order implement readwrite locking, shared_mutex is available since C++17 (https://en.cppreference.com/w/cpp/thread/shared_mutex)
         typedef std::unique_lock<MutexT> LockGuardT;
 
-        DFG_CLASS_NAME(ViewableSharedPtr)(std::shared_ptr<T> sp = std::shared_ptr<T>()) :
+        ViewableSharedPtr(std::shared_ptr<T> sp = std::shared_ptr<T>()) :
             m_spObj(std::move(sp))
         {
             m_spRouter = std::make_shared<RouterT>(*this);
         }
 
-        DFG_CLASS_NAME(ViewableSharedPtr)(DFG_CLASS_NAME(ViewableSharedPtr)&& other)
+        ViewableSharedPtr(ViewableSharedPtr&& other)
         {
             LockGuardT lock(other.m_mutex);
             m_spObj = std::move(other.m_spObj);
             m_spRouter = std::move(other.m_spRouter);
         }
 
-        ~DFG_CLASS_NAME(ViewableSharedPtr)()
+        ~ViewableSharedPtr()
         {
             reset(std::shared_ptr<T>());
             m_spRouter->onViewableBeingDestroyed();
@@ -181,6 +185,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         // Creates viewer.
         ViewableSharedPtrViewer<T> createViewer()
         {
+            // Note: this does not need locking: 
+            //       all accesses of m_spRouter in 'this' are through const member functions (e.g. std::shared_ptr<T>::operator->() is const)
+            //       so can copy m_spRouter to constructor of ViewableSharedPtrViewer-object even if other threads are e.g. 
+            //       calling this->addResetNotifier() or even this->reset()
             return ViewableSharedPtrViewer<T>(m_spRouter);
         }
 
@@ -192,14 +200,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             m_spRouter->onViewableReset();
         }
 
-        void addResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId) id, DFG_CLASS_NAME(SourceResetNotifier) srn)
+        void addResetNotifier(SourceResetNotifierId id, SourceResetNotifier srn)
         {
             LockGuardT lock(m_mutex);
             if (m_spRouter)
                 m_spRouter->addResetNotifier(id, srn);
         }
 
-        void removeResetNotifier(DFG_CLASS_NAME(SourceResetNotifierId) id)
+        void removeResetNotifier(SourceResetNotifierId id)
         {
             LockGuardT lock(m_mutex);
             if (m_spRouter)
@@ -207,6 +215,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }
 
         // Returns copy of the underlying shared_ptr.
+        // Note: this is a low-level function returning non-const T and thus bypassing the normal intended use logic: if needed, to be used with care.
         std::shared_ptr<T> sharedPtrCopy()
         {
             LockGuardT lock(m_mutex);
@@ -225,8 +234,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return m_spObj != nullptr;
         }
 
-        // Edits owned object in thread safe manner: if there are no viewers, edits object directly blocking viewer creation while editor is active.
-        // If there are viewers, creates new object and reset()'s it in place when editor is done.
+        // Edits owned object in thread safe manner: if there are no views (use_count() of object is 1), edits object directly blocking view creation while editor is active.
+        // If there are views, creates new object and reset()'s it in place when editor is done.
         // Editor receives two parameters: T to edit and optionally old read-only item (in case that T is newly constructed).
         void edit(std::function<void(T&, const T*)> editor)
         {
@@ -239,7 +248,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 // In this case there are no viewers -> editing existing object. During this new views can't be created from viewers.
                 editor(*m_spObj, nullptr);
             }
-            else // Case: have at least one viewer -> can't edit concurrently -> must create a new object.
+            else // Case: have at least one view -> can't edit concurrently -> must create a new object.
             {
                 lock.unlock(); // Since we're not editing the existing object, don't need to hold the lock anymore -> viewers will be able to obtain view to old data until reset() below.
                 auto spNew = std::make_shared<T>(); // TODO: shouldn't require default constructibility from T
@@ -285,7 +294,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         std::shared_ptr<RouterT> m_spRouter;
         mutable std::mutex m_mutex;
 
-        DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(DFG_CLASS_NAME(ViewableSharedPtr));
+        DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(ViewableSharedPtr);
     };
 
     template <class T>
