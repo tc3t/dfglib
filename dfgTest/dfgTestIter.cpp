@@ -557,15 +557,27 @@ TEST(dfgIter, FunctionValueIterator)
 {
     using namespace ::DFG_MODULE_NS(iter);
 
+    // FuncCat tests
+    {
+        using namespace ::DFG_MODULE_NS(iter)::DFG_DETAIL_NS;
+        const auto statelessLambda = [](size_t i) { return i; };
+        int i = 0;
+        const auto statefullLambda = [&](int n) { return n + i; };
+        using FreeFuncPtr = size_t (*)(size_t);
+        DFGTEST_STATIC_TEST((std::is_same_v<FuncCatStateless,   FuncCat<decltype(statelessLambda)>>));
+        DFGTEST_STATIC_TEST((std::is_same_v<FuncCatFuncPtr,     FuncCat<FreeFuncPtr>>));
+        DFGTEST_STATIC_TEST((std::is_same_v<FuncCatStdFunction, FuncCat<decltype(statefullLambda)>>));
+    }
+
     // Basic test
     {
         const auto func = [](size_t i) { return i; };
         auto iter = makeFunctionValueIterator(size_t(0), func);
-        using FuncPtrT = size_t(*)(size_t);
-        DFGTEST_STATIC_TEST((std::is_same<decltype(iter), FunctionValueIterator<FuncPtrT, size_t, size_t>>::value)); // Making sure that makeFunctionValueIterator() doesn't choose std::function overload.
         std::vector<size_t> vals;
         std::copy(iter, iter + 5, std::back_inserter(vals));
         EXPECT_EQ(std::vector<size_t>({0, 1, 2, 3, 4}), vals);
+        // Captureless lambdas are default constructible only since C++20
+        DFGTEST_STATIC_TEST(!std::is_default_constructible_v<decltype(func)> || sizeof(iter) == sizeof(size_t));
     }
 
     // Testing operators 
@@ -589,7 +601,27 @@ TEST(dfgIter, FunctionValueIterator)
         EXPECT_EQ(2, (iter + 2) - iter);
     }
 
-    // Testing use of std::function
+    // Testing handling of custom functor
+    {
+        struct Functor { int operator()(int i) const { return i * 2; } };
+        auto iter = makeFunctionValueIterator(int(0), Functor());
+        DFGTEST_EXPECT_LEFT(0, *iter++);
+        DFGTEST_EXPECT_LEFT(2, *iter++);
+        DFGTEST_EXPECT_LEFT(4, *iter++);
+        DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(int));
+    }
+
+    // Testing handling of function pointer
+    {
+        using FreeFuncPtr = int (*)(int);
+        FreeFuncPtr p = [](int i) { return i; };
+        auto iter = makeFunctionValueIterator(int(0), p);
+        DFGTEST_EXPECT_LEFT(0, *iter++);
+        DFGTEST_EXPECT_LEFT(1, *iter++);
+        DFGTEST_EXPECT_LEFT(2, *iter++);
+    }
+
+    // Testing use of std::function for stateful lambdas
     {
         double val = 1;
         const auto func = [&](size_t i) { return static_cast<double>(i) + val; };
@@ -597,6 +629,7 @@ TEST(dfgIter, FunctionValueIterator)
         EXPECT_EQ(1, *iter);
         val = 2;
         EXPECT_EQ(2, *iter);
+        DFGTEST_STATIC_TEST(sizeof(iter) > sizeof(size_t));
     }
 
     // makeIndexIterator
@@ -607,6 +640,9 @@ TEST(dfgIter, FunctionValueIterator)
         EXPECT_EQ(std::vector<size_t>({ 0, 1, 2 }), vals);
         std::copy(iter + 10, ((iter + 12) - 5) + 5, std::back_inserter(vals));
         EXPECT_EQ(std::vector<size_t>({ 0, 1, 2, 10, 11 }), vals);
+
+        DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(size_t));
+        DFGTEST_STATIC_TEST(sizeof(decltype(makeIndexIterator(short(0)))) == sizeof(short));
     }
 }
 
