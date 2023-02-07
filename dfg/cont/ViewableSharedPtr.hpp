@@ -50,9 +50,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
                 }
             }
 
-            void onViewableBeingDestroyed()
+            void onResourceOwnerBeingDestroyed()
             {
                 LockGuardT lock(m_mutex);
+                DFG_ASSERT_CORRECTNESS(this->m_notifiers.empty()); // Owner is expected to reset() before calling onResourceOwnerBeingDestroyed().
                 m_pObj = nullptr;
             }
 
@@ -102,7 +103,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     } // namespace DFG_DETAIL_NS
 
     // A viewer object that can be used to create a view to object owned by ViewableSharedPtr
-    // Thread safety: not thread-safe (i.e. using the same viewer-object from different threads is not safe)
+    // Thread safety: not thread-safe in the sense that using the same viewer-object from different threads is not safe,
+    //                but different ViewableSharedPtrViewer's can safely create views to the same resource from different threads.
     template <class T>
     class ViewableSharedPtrViewer
     {
@@ -121,7 +123,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             reset();
         }
 
-        // Returns true if this viewer is not attached to anything.
+        // Returns true if this viewer is not attached to any router. Note that even if attached to a router, it might have no object.
         bool isNull() const
         {
             return m_spRouter.get() == nullptr;
@@ -151,7 +153,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     /*
     Wrapper for shared_ptr<T> with the following properties:
         -Can create viewers that are automatically and in thread safe manner updated to point to the new object if shared object in 'this' gets reset.
-            -When object is changed, any views that viewers have created remain valid pointing to the old object.
+            -When object is changed, any existing views that viewers have created remain valid pointing to the old object, and all newly created views will point to new object.
         -Can edit() owned resource in thread safe manner with respect to viewers.
         -Is thread-safe: different threads can call even non-const functions of the same ViewableSharedPtr object.
     */
@@ -162,6 +164,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef DFG_DETAIL_NS::ViewableSharedPtrRouterProxy<T> RouterT;
         typedef std::mutex MutexT; // TODO: should be std::shared_mutex in order implement readwrite locking, shared_mutex is available since C++17 (https://en.cppreference.com/w/cpp/thread/shared_mutex)
         typedef std::unique_lock<MutexT> LockGuardT;
+
+        ViewableSharedPtr(const ViewableSharedPtr&) = delete;
+        ViewableSharedPtr& operator=(const ViewableSharedPtr&) = delete;
 
         ViewableSharedPtr(std::shared_ptr<T> sp = std::shared_ptr<T>()) :
             m_spObj(std::move(sp))
@@ -179,16 +184,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         ~ViewableSharedPtr()
         {
             reset(std::shared_ptr<T>());
-            m_spRouter->onViewableBeingDestroyed();
+            m_spRouter->onResourceOwnerBeingDestroyed();
         }
 
         // Creates viewer.
         ViewableSharedPtrViewer<T> createViewer()
         {
-            // Note: this does not need locking: 
-            //       all accesses of m_spRouter in 'this' are through const member functions (e.g. std::shared_ptr<T>::operator->() is const)
-            //       so can copy m_spRouter to constructor of ViewableSharedPtrViewer-object even if other threads are e.g. 
-            //       calling this->addResetNotifier() or even this->reset()
             return ViewableSharedPtrViewer<T>(m_spRouter);
         }
 
@@ -202,14 +203,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         void addResetNotifier(SourceResetNotifierId id, SourceResetNotifier srn)
         {
-            LockGuardT lock(m_mutex);
             if (m_spRouter)
                 m_spRouter->addResetNotifier(id, srn);
         }
 
         void removeResetNotifier(SourceResetNotifierId id)
         {
-            LockGuardT lock(m_mutex);
             if (m_spRouter)
                 m_spRouter->removeResetNotifier(id);
         }
@@ -292,9 +291,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
 
         std::shared_ptr<T> m_spObj;
         std::shared_ptr<RouterT> m_spRouter;
-        mutable std::mutex m_mutex;
-
-        DFG_HIDE_COPY_CONSTRUCTOR_AND_COPY_ASSIGNMENT(ViewableSharedPtr);
+        mutable std::mutex m_mutex; // Protects accesses to m_spObj. Note that m_spRouter does not need locking as it has it's own:
+                                    //       all accesses of m_spRouter in 'this' (excluding move constructor) are through const member functions (e.g. std::shared_ptr<T>::operator->() is const)
+                                    //       so for example can copy m_spRouter to constructor of ViewableSharedPtrViewer-object in createViewer()
+                                    //       even if other threads are e.g. calling this->addResetNotifier() or even this->reset() 
     };
 
     template <class T>
