@@ -2017,6 +2017,10 @@ TEST(dfgStr, format_fmt)
     EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(123456789)), "123456789"));
     EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", (long double)(123456789)), "123456789"));
 
+    // Testing that format can take std::string and StringViewSz as format arg
+    DFGTEST_EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt(std::string("{0}"), (long double)(123456789)), "123456789"));
+    DFGTEST_EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt(StringViewSzC("{0}"), (long double)(123456789)), "123456789"));
+
     // TODO: this should work
     //EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(1.23456789e-9)), "1.23456789e"));
 }
