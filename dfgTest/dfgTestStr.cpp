@@ -1373,6 +1373,13 @@ namespace
             EXPECT_EQ(StringView<Char_T>(view.beginRaw(), view.endRaw()), view.asUntypedView());
         }
 
+        // Conversion to std::basic_string_view
+        {
+            const std::basic_string_view<Char_T> stdSv = view;
+            DFGTEST_EXPECT_LEFT(view.dataRaw(), stdSv.data());
+            DFGTEST_EXPECT_LEFT(view.asUntypedView().size(), stdSv.size());
+        }
+
         //DFG_CLASS_NAME(StringViewUtf8)() == DFG_ASCII("a"); // TODO: make this work
 
         const auto isTriviallyIndexable = std::integral_constant<bool, StringView_T::isTriviallyIndexable()>();

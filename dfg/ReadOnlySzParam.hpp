@@ -11,6 +11,7 @@
 #include <limits>
 #include "str/string.hpp"
 #include "build/languageFeatureInfo.hpp"
+#include <string_view>
 
 DFG_ROOT_NS_BEGIN {
 
@@ -226,6 +227,13 @@ namespace DFG_DETAIL_NS
         PtrRawT beginRaw() const
         {
             return toCharPtr_raw(begin());
+        }
+
+    protected:
+        // Conversion to std::basic_string_view. Note that this class doesn't know about the string length, so expected to get it as argument.
+        std::basic_string_view<CharT> toStdStringView(const size_t nSize) const
+        {
+            return std::basic_string_view<CharT>(this->dataRaw(), nSize);
         }
 
         PtrT m_pFirst;          // Pointer to first character.
@@ -548,6 +556,12 @@ public:
         return asUntypedView();
     }
 
+    // Conversion to std::basic_string_view
+    operator std::basic_string_view<Char_T>() const
+    {
+        return this->toStdStringView(this->size());
+    }
+
 }; // class StringView
 
 namespace DFG_DETAIL_NS
@@ -779,6 +793,12 @@ public:
     operator StringView<Char_T>() const
     {
         return StringView<Char_T>(toCharPtr_raw(this->m_pFirst));
+    }
+
+    // Conversion to std::basic_string_view
+    operator std::basic_string_view<Char_T>() const
+    {
+        return this->toStdStringView(this->size());
     }
 
     // Conversion to ReadOnlySzParam for compatibility.
