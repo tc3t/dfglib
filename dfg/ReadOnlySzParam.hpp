@@ -404,6 +404,10 @@ private:
     class NotAvailableClass {};
     using FromUntypedConstructorHelper = typename std::conditional<BaseClass::PtrType == CharPtrTypeUtf16, std::u16string, NotAvailableClass>::type;
 
+    // Helpers for conditionally allowing construction from std::basic_string_view
+    class NoConstructionFromBasicStringView {};
+    using FromUntypedBasicStringViewConstructorHelper = std::conditional_t<std::is_same_v<PtrT, PtrRawT> || BaseClass::PtrType == CharPtrTypeUtf16, std::basic_string_view<CharT>, NoConstructionFromBasicStringView>;
+
 public:
     StringView()
     {
@@ -449,6 +453,11 @@ public:
     StringView(const FromUntypedConstructorHelper& str)
     {
         *this = StringView(str.c_str(), str.size());
+    }
+
+    StringView(const FromUntypedBasicStringViewConstructorHelper& s)
+        : StringView(s.data(), s.size())
+    {
     }
 
 protected:

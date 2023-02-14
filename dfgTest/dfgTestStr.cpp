@@ -1407,19 +1407,34 @@ TEST(dfgStr, StringView)
     // Test that StringViewUtf8 accepts SzPtrAscii.
     {
         auto tpszAscii = SzPtrAscii("abc");
-        const DFG_CLASS_NAME(StringViewUtf8)& svUtf8 = tpszAscii;
+        const StringViewUtf8& svUtf8 = tpszAscii;
         DFG_UNUSED(svUtf8);
     }
 
     // Testing that view can be constructed from (typed) pointer pair
     {
         const char sz[] = "abc";
-        DFG_CLASS_NAME(StringViewC) svc(sz, sz + 2);
-        DFG_CLASS_NAME(StringViewAscii) sva(SzPtrAscii(sz), SzPtrAscii(sz + 2));
-        DFG_CLASS_NAME(StringViewUtf8) svu(SzPtrUtf8(sz), SzPtrUtf8(sz + 2));
+        StringViewC svc(sz, sz + 2);
+        StringViewAscii sva(SzPtrAscii(sz), SzPtrAscii(sz + 2));
+        StringViewUtf8 svu(SzPtrUtf8(sz), SzPtrUtf8(sz + 2));
         EXPECT_TRUE("ab" == svc);
         EXPECT_TRUE(SzPtrAscii("ab") == sva);
         EXPECT_TRUE(DFG_UTF8("ab") == svu);
+    }
+
+    // Construction from std::basic_string_views. Note that can't have the same for StringViewSz since don't know about null-terminator.
+    {
+        using namespace ::DFG_ROOT_NS;
+        DFGTEST_EXPECT_LEFT("abc", StringViewC(std::string_view("abc")));
+        DFGTEST_EXPECT_LEFT(L"abc", StringViewW(std::wstring_view(L"abc")));
+        DFGTEST_EXPECT_LEFT(u"abc", StringView16(std::u16string_view(u"abc")));
+        DFGTEST_EXPECT_LEFT(U"abc", StringView32(std::u32string_view(U"abc")));
+        DFGTEST_EXPECT_LEFT(SzPtrUtf16(u"abc"), (StringViewUtf16(std::u16string_view(u"abc"))));
+
+        // Lines below should fail to compile
+        //StringViewAscii(std::string_view("abc"));
+        //StringViewLatin1(std::string_view("abc"));
+        //StringViewUtf8(std::string_view("abc"));
     }
 
     // Test that can compare views that have compare-compatible types.
