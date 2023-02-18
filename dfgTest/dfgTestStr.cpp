@@ -2045,6 +2045,12 @@ TEST(dfgStr, format_fmt)
 
     // TODO: this should work
     //EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(1.23456789e-9)), "1.23456789e"));
+
+    // StringView arguments
+    {
+        DFGTEST_EXPECT_EQ("abc", format_fmt("{}", StringViewC("abc")));
+        DFGTEST_EXPECT_EQ("abc", format_fmt("{}", StringViewSzC("abc")));
+    }
 }
 
 TEST(dfgStr, toCstr)
