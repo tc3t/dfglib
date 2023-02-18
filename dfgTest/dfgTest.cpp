@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_blockWindow";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_formula";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_passWindow";
+    //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_regexFormat";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_smoothing_indexNb";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_textFilter";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.ChartEntryOperationManager";
@@ -197,6 +198,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_StringViews";
     //::testing::GTEST_FLAG(filter) = "dfgStr.charToPrintable";
     //::testing::GTEST_FLAG(filter) = "dfgStr.floatingPointTypeToSprintfType";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.format_fmt";
     //::testing::GTEST_FLAG(filter) = "dfgStr.intToRadixRepresentation";
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView";

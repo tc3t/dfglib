@@ -747,6 +747,173 @@ TEST(dfgCharts, operations_textFilter)
     }
 }
 
+TEST(dfgCharts, operations_regexFormat)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(charts);
+
+    ChartEntryOperationManager opManager;
+
+    const auto strVecFromUntypedLiterals = [](std::initializer_list<const char*> strings)
+    {
+        ChartOperationPipeData::StringVector s;
+        s.resize(strings.size());
+        std::transform(strings.begin(), strings.end(), s.begin(), [](const char* psz) { return SzPtrUtf8(psz); });
+        return s;
+    };
+
+    // Basic tests 
+    {
+        const auto basicTest = [&](auto&& xVals, const StringViewUtf8 svOperationDef, const std::initializer_list<SzPtrUtf8R>& expectedStrings)
+        {
+            const ValueVectorD yVals = [&]()
+                {
+                    ValueVectorD v(expectedStrings.size());
+                    ::DFG_MODULE_NS(alg)::generateAdjacent(v, 1, 1);
+                    return v;
+                }();
+            ChartOperationPipeData arg(&xVals, &yVals);
+            auto op = opManager.createOperation(svOperationDef);
+            op(arg);
+            DFGTEST_EXPECT_FALSE(op.hasErrors());
+            auto pStrings = arg.constStringsByIndex(0);
+            auto pValues = arg.constValuesByIndex(1);
+            DFGTEST_ASSERT_TRUE(pStrings != nullptr);
+            DFGTEST_ASSERT_TRUE(pValues != nullptr);
+            DFGTEST_ASSERT_LEFT(expectedStrings.size(), pStrings->size());
+            DFGTEST_ASSERT_LEFT(expectedStrings.size(), pValues->size());
+            DFGTEST_EXPECT_TRUE(dfg::cont::isEqualContent(expectedStrings, *pStrings));
+            if (std::is_const_v<std::remove_reference_t<decltype(xVals)>>)
+                DFGTEST_EXPECT_TRUE(&xVals != pStrings);
+            else
+                DFGTEST_EXPECT_TRUE(&xVals == pStrings);
+                
+            DFGTEST_EXPECT_LEFT(&yVals, pValues);
+        };
+
+        // Basic single character capture
+        {
+            auto xVals = strVecFromUntypedLiterals({ "1", "2" });
+            basicTest(xVals, DFG_UTF8(R"(regexFormat(x, (\d), a{1}b{1}))"), { DFG_UTF8("a1b1"), DFG_UTF8("a2b2") });
+        }
+
+        // with const input
+        {
+            const auto xVals = strVecFromUntypedLiterals( { "12", "a34b" });
+            basicTest(xVals, DFG_UTF8(R"(regexFormat(x, .*(\d)(\d).*, {0} -> {2}{1}))"), { DFG_UTF8("12 -> 21"), DFG_UTF8("a34b -> 43") } );
+        }
+        // With non-const input
+        {
+            auto xVals = strVecFromUntypedLiterals({ "11.2.2023", "2/11/2023"});
+            basicTest(xVals, DFG_UTF8(R"(regexFormat(x, "^(\d{1,2})\.(\d{1,2})\.(\d{4})$", {3:4}-{2:0>2}-{1:0>2}))"), { DFG_UTF8("2023-02-11"), DFG_UTF8("")});
+        }
+        // Example from class documentation
+        {
+            auto xVals = strVecFromUntypedLiterals({ "12", "34abc", "ab"});
+            basicTest(xVals, DFG_UTF8(R"(regexFormat(x, "(\d)(\d).*", {2}{1}{0}))"), { DFG_UTF8("2112"), DFG_UTF8("4334abc"), DFG_UTF8("")});
+        }
+    } // Basic tests
+
+    // Test with invalid regex
+    {
+        DFGTEST_EXPECT_FALSE(opManager.createOperation(DFG_UTF8(R"(regexFormat(x, (\d, {0}))")).operator bool());
+    }
+
+    // Invalid argument count
+    {
+        DFGTEST_EXPECT_FALSE(opManager.createOperation(DFG_UTF8(R"(regexFormat(x))")).operator bool());
+        DFGTEST_EXPECT_FALSE(opManager.createOperation(DFG_UTF8(R"(regexFormat(x, (\d)))")).operator bool());
+        DFGTEST_EXPECT_FALSE(opManager.createOperation(DFG_UTF8(R"(regexFormat(x, a, b, c))")).operator bool());
+    }
+
+    // Tests with invalid format
+    {
+        // Syntax error in format
+        {
+            auto op = opManager.createOperation(DFG_UTF8(R"(regexFormat(x, (\d), {0))"));
+            auto xVals = strVecFromUntypedLiterals({ "1" });
+            ChartOperationPipeData arg(&xVals, nullptr);
+            op(arg);
+            DFGTEST_EXPECT_LEFT(DFG_UTF8(""), xVals.front());
+        }
+        // out-of-bounds capture index in format
+        {
+            auto op = opManager.createOperation(DFG_UTF8(R"(regexFormat(x, (\d), {2}))"));
+            auto xVals = strVecFromUntypedLiterals({ "1" });
+            ChartOperationPipeData arg(&xVals, nullptr);
+            op(arg);
+            DFGTEST_EXPECT_LEFT(DFG_UTF8(""), xVals.front());
+        }
+    }
+
+    // No captures
+    {
+        {
+            auto op = opManager.createOperation(DFG_UTF8(R"(regexFormat(x, \d, ab))"));
+            auto xVals = strVecFromUntypedLiterals({ "1" });
+            ChartOperationPipeData arg(&xVals, nullptr);
+            op(arg);
+            DFGTEST_EXPECT_LEFT(DFG_UTF8("ab"), xVals.front());
+        }
+
+        {
+            auto op = opManager.createOperation(DFG_UTF8(R"(regexFormat(x, \d, {}ab))"));
+            auto xVals = strVecFromUntypedLiterals({ "1" });
+            ChartOperationPipeData arg(&xVals, nullptr);
+            op(arg);
+            DFGTEST_EXPECT_LEFT(DFG_UTF8("1ab"), xVals.front());
+        }
+    }
+
+    // Testing simple captures up to too many captures
+    {
+        const std::string sInputTemplate("123456789abcde");
+        std::string sRegex;
+        std::string sFormat = "{0}";
+        for (size_t i = 1; i < 12; ++i)
+        {
+            const auto sInput = sInputTemplate.substr(0, i);
+            ChartOperationPipeData::StringVector xVals(1, StringUtf8::fromRawString(sInput));
+            sRegex += "(.)";
+            sFormat = format_fmt("{{{}}}", i) + sFormat;
+            auto op = opManager.createOperation(StringUtf8::fromRawString(format_fmt(R"(regexFormat(x, {0}, {1}))", sRegex, sFormat)));
+            ChartOperationPipeData arg(&xVals);
+            op(arg);
+            if (i < 11)
+            {
+                std::string sExpected = sInput;
+                std::reverse(sExpected.begin(), sExpected.end());
+                sExpected = sExpected + sInput;
+                DFGTEST_EXPECT_LEFT(sExpected, xVals.front().rawStorage());
+            }
+            else
+            {
+                DFGTEST_EXPECT_TRUE(op.hasError(ChartEntryOperation::error_processingError));
+                DFGTEST_EXPECT_TRUE(xVals.front().empty());
+                break;
+            }
+        }
+    }
+
+    // Strings on y-axis
+    {
+        auto op = opManager.createOperation(DFG_UTF8(R"(regexFormat(y, (\d), {1}ab))"));
+        auto yVals = strVecFromUntypedLiterals({ "1" });
+        ChartOperationPipeData arg(nullptr, &yVals);
+        op(arg);
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("1ab"), yVals.front());
+    }
+
+    // String on z-axis
+    {
+        auto op = opManager.createOperation(DFG_UTF8(R"(regexFormat(z, (\d), {1}ab))"));
+        auto zVals = strVecFromUntypedLiterals({ "1" });
+        ChartOperationPipeData arg(nullptr, nullptr, &zVals);
+        op(arg);
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("1ab"), zVals.front());
+    }
+}
+
 TEST(dfgCharts, ChartEntryOperationManager)
 {
     using namespace ::DFG_ROOT_NS;

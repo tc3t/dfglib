@@ -17,6 +17,8 @@
 #include "../math/FormulaParser.hpp"
 #include "../cont/Flags.hpp"
 
+#include "../str/format_fmt.hpp"
+
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
     // Data object that operations receive and pass on; more or less simply a list of vectors.
@@ -489,8 +491,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
         size_t argCount() const { return Max(m_argList.size(), m_argStrList.size()); }
 
-        double     argAsDouble(const size_t nIndex) const;
-        StringView argAsString(const size_t nIndex) const;
+        double       argAsDouble(const size_t nIndex) const;
+        StringViewSz argAsString(const size_t nIndex) const;
 
         void storeArg(size_t nIndex, double);
         void storeArg(size_t nIndex, const StringView&);
@@ -533,9 +535,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
         return isValidIndex(this->m_argList, nIndex) ? this->m_argList[nIndex] : std::numeric_limits<double>::quiet_NaN();
     }
 
-    inline auto ChartEntryOperation::argAsString(const size_t nIndex) const -> StringView
+    inline auto ChartEntryOperation::argAsString(const size_t nIndex) const -> StringViewSz
     {
-        return isValidIndex(this->m_argStrList, nIndex) ? StringView(this->m_argStrList[nIndex]) : StringView();
+        return isValidIndex(this->m_argStrList, nIndex) ? StringViewSz(this->m_argStrList[nIndex]) : StringViewSz(DFG_UTF8(""));
     }
 
     template <class Cont_T, class T>
@@ -833,7 +835,7 @@ namespace operations
      *      -[2]: pattern type: default is reg_exp, currently it is the only one supported
      *      -[3]: negate: if 1, match will be negated, i.e. normally pattern "a" would keep texts having "a", with negate would keep texts not having "a"
      *  Dependencies
-     *      -[x] or [y] depending on parameter 0
+     *      -[x], [y] or [z] depending on parameter 0
      *  Outputs:
      *      -The same number of vectors as in input
      */
@@ -926,6 +928,142 @@ namespace operations
             return (svNegate) ? !b : b;
         };
         op.privFilterBySingle(arg, axis, filter, pipeAccess);
+    }
+
+    /** Implements RegexFormatOperation that can be used to transform input strings
+    *  Id:
+    *      regexFormat
+    *  Parameters:
+    *      -0: axis, x, y or z
+    *      -1: Regular expression
+    *      -2: result format in fmt-syntax. {i} will be replaced by (i)'th capture of regexp. Maximum index is 10
+    *           -Note that indexing is essentially 1-based, i.e. first parenthesis item has index 1, at index 0 is the full match like in https://en.cppreference.com/w/cpp/regex/match_results
+    *  Dependencies
+    *      -[x], [y] or [z] depending on parameter 0
+    *  Outputs:
+    *      -The same number of vectors as in input
+    *      -Row count is not changed
+    *  Errors (non-exhaustive list):
+    *      -Invalid regex: error_badCreationArgs (only possible if RegexFormatOperation has been created directly, i.e. create() would return empty operation with bad regex)
+    *      -Too many matches in regex: error_processingError
+    *      -Invalid format string: no error is set, but all result strings will be empty
+    *  Details:
+    *      -Handling of encodings: unspecified, expected to have shortcomings e.g. if format string has some type of UTF8
+    *           -https://stackoverflow.com/questions/60600550/force-utf-8-handling-for-stdstring-in-fmt
+    *           -TODO: should have proper specification for this.
+    *      -If regex doesn't match or format string is not valid, result will be an empty string.
+    *  Examples
+    *      -Basic example:
+    *           -0: x
+    *           -1: (\d)(\d).*
+    *           -2: {2}{1}{0}
+    *           -With input x = ["12", "34abc", "ab"], result is ["2112", "4334abc", ""]
+    */
+    class RegexFormatOperation : public ChartEntryOperation
+    {
+    public:
+        using BaseClass = ChartEntryOperation;
+
+        static SzPtrUtf8R id();
+
+        static ChartEntryOperation create(const CreationArgList& argList);
+
+        static void operation(ChartEntryOperation& op, ChartOperationPipeData& arg);
+    }; // RegexFormat
+
+    inline auto RegexFormatOperation::id() -> SzPtrUtf8R
+    {
+        return DFG_UTF8("regexFormat");
+    }
+
+    inline auto RegexFormatOperation::create(const CreationArgList& argList) -> ChartEntryOperation
+    {
+        if (argList.valueCount() != 3)
+            return ChartEntryOperation();
+        const auto axis = axisStrToIndex(argList.value(0));
+        if (axis == static_cast<int>(axisIndex_invalid))
+            return ChartEntryOperation();
+
+        const auto svRegex = argList.value(1);
+        const auto svFormat = argList.value(2);
+
+        // Testing that can create regex from given pattern
+        try
+        {
+            std::regex(svRegex.asUntypedView().toString());
+        }
+        catch (...)
+        {
+            return ChartEntryOperation();
+        }
+
+        ChartEntryOperation op(&RegexFormatOperation::operation);
+
+        op.storeArg(0, axis);
+        op.storeArg(1, svRegex);
+        op.storeArg(2, svFormat);
+        return op;
+    }
+
+    // Executes operation on pipe data.
+    inline void RegexFormatOperation::operation(ChartEntryOperation& op, ChartOperationPipeData& arg)
+    {
+        if (op.argCount() != 3)
+        {
+            op.setError(error_badCreationArgs);
+            return;
+        }
+        const auto axis = op.argAsDouble(0);
+        const auto svRegex = op.argAsString(1);
+        const auto svFormat = op.argAsString(2).asUntypedView();
+
+        std::regex re;
+        try
+        {
+            re.assign(svRegex.asUntypedView().toString()); // TODO: regex is already created in creation phase, should re-use that object.
+        }
+        catch (...)
+        {
+            op.setError(error_badCreationArgs);
+            return;
+        }
+
+        auto pStrings = arg.stringsByIndex(floatAxisValueToAxisIndex(axis)); // Note: this automatically creates and returns an editable copy if input is const
+        const auto toArg = [](const auto& match) { return StringViewC(match.first, match.second); };
+        if (!pStrings) // No strings available
+        {
+            op.setError(error_missingInput);
+            return;
+        }
+        std::string sResultTemp;
+        for (auto& rStr : *pStrings)
+        {
+            std::cmatch bm;
+            const auto bRegExMatch = std::regex_match(rStr.c_str().c_str(), bm, re);
+
+            if (bRegExMatch)
+            {
+                const auto nMatchCount = bm.size();
+
+                switch (nMatchCount)
+                {
+                    case  1: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0])); break;
+                    case  2: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1])); break;
+                    case  3: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2])); break;
+                    case  4: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3])); break;
+                    case  5: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4])); break;
+                    case  6: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5])); break;
+                    case  7: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6])); break;
+                    case  8: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7])); break;
+                    case  9: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7]), toArg(bm[8])); break;
+                    case 10: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7]), toArg(bm[8]), toArg(bm[9])); break;
+                    case 11: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7]), toArg(bm[8]), toArg(bm[9]), toArg(bm[10])); break;
+                    default: op.setError(error_processingError); break;
+                }
+            }
+            rStr.rawStorage() = sResultTemp; // Note: no guarantees whether result preserves UTF8-encoding.
+            sResultTemp.clear();
+        }
     }
 
     /** Implements index neighbour smoothing
@@ -1161,6 +1299,7 @@ inline ChartEntryOperationManager::ChartEntryOperationManager()
     add<operations::Smoothing_indexNb>();
     add<operations::Formula>();
     add<operations::TextFilterOperation>();
+    add<operations::RegexFormatOperation>();
 }
 
 inline auto ChartEntryOperationManager::createOperation(StringViewUtf8 svFuncAndParams) -> ChartEntryOperation
