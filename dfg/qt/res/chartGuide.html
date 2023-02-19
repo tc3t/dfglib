@@ -275,6 +275,23 @@
                 </ul>
             </ul>
 
+            <li><i>regexFormat</i></li>
+            <ul>
+                <li>Applies regular expression -based match-and-format operation to strings</li>
+                <li>Example: "operation_a": "regexFormat(x, \"(\\d)\", a{1}b)". With input ["5"], result is ["a5b"]</li>
+                <li>Example: "operation_a": "regexFormat(x, \"(\\d)(\\d).*\", {2}{1}{0})". With input ["12", "34abc", "ab"], result is ["2112", "4334abc", ""]</li>
+                <li>Notes:</li>
+                <ul>
+                    <li>If input doesn't match or format string is invalid, result is empty string</li>
+                </ul>
+                <li>Parameters</li>
+                <ul>
+                    <li>0: [x,y,z]: coordinate whose value is passed to operation (must have string typed data)</li>
+                    <li>1: Regular expression pattern. Maximum of 10 captures are supported</li>
+                    <li>2: Format string using syntax of <a href="https://github.com/fmtlib/fmt">fmt-library</a>. Capture indexes start from 1, at index 0 is the whole match.</li>
+                </ul>
+            </ul>
+
             <li><i>smoothing_indexNb</i></li>
             <ul>
                 <li>Smoothing by index neighbours: By default replaces y-values y[i] by average values from y[i-n],...,y[i],...,y[i+n]</li>
