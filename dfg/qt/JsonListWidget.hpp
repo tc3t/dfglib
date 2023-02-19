@@ -42,9 +42,14 @@ public:
     void addCommentToSelection();
     void removeCommentFromSelection(); // For every line in selection that starts with a comment, removes one comment.
     void setSelectionCommenting(bool bAdd);
+    void escapeSelectionForJsonField();
 
     SyntaxCheckResult checkSyntax() const;
     static QString formatErrorMessage(const SyntaxCheckResult&);
+
+    static QString escapeStringToJsonField(const QString& sInput);
+
+    std::pair<QStringList, QTextCursor> getLinesInSelection();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* pEvent) override;

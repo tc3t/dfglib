@@ -95,17 +95,25 @@ void ::DFG_MODULE_NS(qt)::JsonListWidget::contextMenuEvent(QContextMenuEvent* pE
         }
     }
 
-    // Comment/uncomment -actions
+    // Content manipulation actions
     {
+        // Comment-action
         {
             auto pAction = spMenu->addAction(tr("Add comment to selection"));
             if (pAction)
                 DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &JsonListWidget::addCommentToSelection));
         }
+        // Uncomment-action
         {
             auto pAction = spMenu->addAction(tr("Remove comment from selection"));
             if (pAction)
                 DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &JsonListWidget::removeCommentFromSelection));
+        }
+        // Escape for json-action
+        {
+            auto pAction = spMenu->addAction(tr("Escape selection for json-field"));
+            if (pAction)
+                DFG_QT_VERIFY_CONNECT(connect(pAction, &QAction::triggered, this, &JsonListWidget::escapeSelectionForJsonField));
         }
     }
 
@@ -134,11 +142,42 @@ void ::DFG_MODULE_NS(qt)::JsonListWidget::removeCommentFromSelection()
     setSelectionCommenting(false);
 }
 
+auto ::DFG_MODULE_NS(qt)::JsonListWidget::escapeStringToJsonField(const QString& sInput) -> QString
+{
+    // Based on https://stackoverflow.com/a/33799784 ('Simple JSON string escape for C++?')
+    QString sOutput;
+    for (const auto& c : sInput)
+    {
+        switch (c.unicode())
+        {
+            case '"' : sOutput += "\\\""; break;
+            case '\\': sOutput += "\\\\"; break;
+            case '\b': sOutput += "\\b";  break;
+            case '\f': sOutput += "\\f";  break;
+            case '\n': sOutput += "\\n";  break;
+            case '\r': sOutput += "\\r";  break;
+            case '\t': sOutput += "\\t";  break;
+            default: sOutput += ('\x00' <= c && c <= '\x1f') ? QString("\\u%1").arg(c.unicode(), 4, 10, QChar('0')) : c; break;
+        }
+    }
+    return sOutput;
+}
+
+void ::DFG_MODULE_NS(qt)::JsonListWidget::escapeSelectionForJsonField()
+{
+    auto [lines, cursor] = getLinesInSelection();
+    if (lines.size() == 0)
+        return;
+
+    for (auto& s : lines)
+        s = escapeStringToJsonField(s);
+
+    cursor.insertText(lines.join('\n'));
+}
+
 void ::DFG_MODULE_NS(qt)::JsonListWidget::setSelectionCommenting(const bool bComment)
 {
-    auto cursor = this->textCursor();
-    const auto sSelectedText = cursor.selectedText();
-    auto lines = sSelectedText.split(QChar(8233)); // If there are line breaks in selection, selectedText() will "contain a Unicode U+2029 paragraph separator character instead of a newline \n character" (Qt 5.13 documentation)
+    auto [lines, cursor] = getLinesInSelection();
     for (auto& s : lines)
     {
         if (bComment)
@@ -147,6 +186,14 @@ void ::DFG_MODULE_NS(qt)::JsonListWidget::setSelectionCommenting(const bool bCom
             s.remove(0, 1);
     }
     cursor.insertText(lines.join('\n'));
+}
+
+auto ::DFG_MODULE_NS(qt)::JsonListWidget::getLinesInSelection() -> std::pair<QStringList, QTextCursor>
+{
+    auto cursor = this->textCursor();
+    const auto sSelectedText = cursor.selectedText();
+    auto lines = sSelectedText.split(QChar(8233)); // If there are line breaks in selection, selectedText() will "contain a Unicode U+2029 paragraph separator character instead of a newline \n character" (Qt 5.13 documentation)
+    return { lines, cursor };
 }
 
 auto ::DFG_MODULE_NS(qt)::JsonListWidget::checkSyntax() const -> std::pair<bool, std::vector<JsonListParseError>>
