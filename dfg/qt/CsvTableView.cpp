@@ -616,7 +616,7 @@ namespace
         return (pAction) ? ActionFlags::fromNumber(pAction->property(gszPropertyActionFlags).toUInt()) : ActionFlags::unknown;
     }
 
-    QMenu* createActionMenu(::DFG_MODULE_NS(qt)::CsvTableView* pParent, const QString& sMenuTitle, const ActionFlags actionFlags, QMenu* pMenu = nullptr)
+    QMenu* createActionMenu(::DFG_MODULE_NS(qt)::CsvTableView* pParent, const QString& sMenuTitle, const ActionFlags actionFlags, QMenu* pMenu = nullptr, QMenu* pParentMenu = nullptr)
     {
         if (!pParent)
             return nullptr;
@@ -627,7 +627,10 @@ namespace
         // Scheduling destruction of menu with the parent action.
         DFG_QT_VERIFY_CONNECT(QObject::connect(pMenuAction, &QObject::destroyed, pMenu, &QObject::deleteLater));
         pMenuAction->setMenu(pMenu); // Does not transfer ownership.
-        pParent->addAction(pMenuAction);
+        if (pParentMenu)
+            pParentMenu->addAction(pMenuAction);
+        else
+            pParent->addAction(pMenuAction);
         return pMenu;
     }
 
@@ -766,10 +769,6 @@ void CsvTableView::addAllActions()
         addSeparatorAction();
     addContentEditActions();
         addSeparatorAction();
-    addSortActions();
-        addSeparatorAction();
-    addHeaderActions();
-        addSeparatorAction();
     addMiscellaneousActions();
 }
 
@@ -819,23 +818,12 @@ void CsvTableView::addOpenSaveActions()
             }
         }
     } // Config menu
+
+    addHeaderActions();
 }
 
 void CsvTableView::addDimensionEditActions()
 {
-    // Header actions
-    {
-        auto pMenu = createActionMenu(this, tr("Header actions"), ActionFlags::unknown);
-        if (pMenu)
-        {
-            // Header/first line move actions
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Move first row to header"), noShortCut, ActionFlags::defaultContentEdit, moveFirstRowToHeader);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Move header to first row"), noShortCut, ActionFlags::defaultContentEdit, moveHeaderToFirstRow);
-
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Select column visibility..."), noShortCut, ActionFlags::viewEdit, showSelectColumnVisibilityDialog);
-        }
-    }
-
     // "Insert row/column"-items
     {
         auto pMenu = createActionMenu(this, tr("Insert row/column"), ActionFlags::defaultStructureEdit);
@@ -899,7 +887,17 @@ void CsvTableView::addFindAndSelectionActions()
             
         }
     } // End of Filter actions
-    
+
+    // Sorting-actions
+    {
+        auto pMenu = createActionMenu(this, tr("Sorting"), ActionFlags::viewEdit);
+        if (pMenu)
+        {
+            DFG_OPAQUE_REF().m_spActSortableColumns = &DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Sortable columns"), noShortCut, ActionFlags::viewEdit, toggleSortingEnabled);
+            DFG_OPAQUE_REF().m_spActSortCaseSensitivity = &DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Case sensitive sorting"), noShortCut, ActionFlags::viewEdit, setCaseSensitiveSorting);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Reset sorting"), noShortCut, ActionFlags::viewEdit, resetSorting);
+        }
+    } // End of sorting-actions
 }
 
 void CsvTableView::addContentEditActions()
@@ -932,24 +930,20 @@ void CsvTableView::addContentEditActions()
     privAddUndoRedoActions();
 }
 
-void CsvTableView::addSortActions()
-{
-    auto pMenu = createActionMenu(this, tr("Sorting"), ActionFlags::viewEdit);
-    if (!pMenu)
-        return;
-
-    DFG_OPAQUE_REF().m_spActSortableColumns     = &DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Sortable columns"),       noShortCut, ActionFlags::viewEdit, setSortingEnabled);
-    DFG_OPAQUE_REF().m_spActSortCaseSensitivity = &DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*pMenu, tr("Case sensitive sorting"), noShortCut, ActionFlags::viewEdit, setCaseSensitiveSorting);
-    DFG_TEMP_ADD_VIEW_ACTION(*pMenu,           tr("Reset sorting"),          noShortCut, ActionFlags::viewEdit, resetSorting);
-}
-
 void CsvTableView::addHeaderActions()
 {
-    auto spMenu = createResizeColumnsMenu();
-    if (!spMenu)
+    auto pMenu = createActionMenu(this, tr("Header actions"), ActionFlags::unknown);
+    if (!pMenu)
         return;
+    // Header/first line move actions
+    DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Move first row to header"), noShortCut, ActionFlags::defaultContentEdit, moveFirstRowToHeader);
+    DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Move header to first row"), noShortCut, ActionFlags::defaultContentEdit, moveHeaderToFirstRow);
 
-    createActionMenu(this, tr("Resize header"), ActionFlags::readOnly, spMenu.release());
+    DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Select column visibility..."), noShortCut, ActionFlags::viewEdit, showSelectColumnVisibilityDialog);
+
+    auto spMenu = createResizeColumnsMenu();
+    if (spMenu)
+        createActionMenu(this, tr("Resize header"), ActionFlags::readOnly, spMenu.release(), pMenu);
 }
 
 void CsvTableView::addMiscellaneousActions()
@@ -5451,6 +5445,14 @@ void CsvTableView::setCaseSensitiveSorting(const bool bCaseSensitive)
     }
     else
         QToolTip::showText(QCursor::pos(), tr("Unable to toggle sort case sensitivity: no suitable proxy model found"));
+}
+
+void CsvTableView::toggleSortingEnabled(const bool bNewStatus)
+{
+    const bool bReset = (bNewStatus == false) && (QMessageBox::question(this, tr("Sorting toggle"), tr("Also reset sorting?")) == QMessageBox::Yes);
+    this->setSortingEnabled(bNewStatus);
+    if (bReset)
+        this->resetSorting();
 }
 
 void CsvTableView::resetSorting()

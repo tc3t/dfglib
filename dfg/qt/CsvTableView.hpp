@@ -627,6 +627,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onFilterFromSelectionRequested();
 
         void setCaseSensitiveSorting(bool bCaseSensitive);
+        void toggleSortingEnabled(bool bNewStatus);
         void resetSorting();
 
         void setFindText(const ::DFG_MODULE_NS(qt)::CsvTableView::StringMatchDef matchDef, const int nCol);
@@ -713,7 +714,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void addDimensionEditActions();
         void addFindAndSelectionActions();
         void addContentEditActions();
-        void addSortActions();
         void addHeaderActions();
         void addMiscellaneousActions();
 
