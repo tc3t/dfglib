@@ -16,6 +16,7 @@
 #include "guid.hpp"
 #include "hash.hpp"
 #include "iterableForRange.hpp"
+#include "logging.hpp"
 #include "memsetZeroSecure.hpp"
 #include "numericTypeTools.hpp"
 #include "OpaquePtr.hpp"

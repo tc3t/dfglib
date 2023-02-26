@@ -935,6 +935,7 @@
     <ClInclude Include="..\dfg\iter\OstreamIterator.hpp" />
     <ClInclude Include="..\dfg\iter\RawStorageIterator.hpp" />
     <ClInclude Include="..\dfg\iter\szIterator.hpp" />
+    <ClInclude Include="..\dfg\logging.hpp" />
     <ClInclude Include="..\dfg\math.hpp" />
     <ClInclude Include="..\dfg\mathAll.hpp" />
     <ClInclude Include="..\dfg\math\constants.hpp" />

@@ -714,6 +714,9 @@
     <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp">
       <Filter>dfg\cont\detail</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\logging.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

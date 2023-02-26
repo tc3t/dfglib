@@ -170,6 +170,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIter.RawStorageIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator_operatorLt";
+    //::testing::GTEST_FLAG(filter) = "dfgLog.basicFmtTests";
     //::testing::GTEST_FLAG(filter) = "dfgMath.absAsUnsigned";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_cmath";

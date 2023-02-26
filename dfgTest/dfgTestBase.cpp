@@ -20,6 +20,7 @@
 #include <dfg/OpaquePtr.hpp>
 #include <dfg/str.hpp>
 #include <dfg/Span.hpp>
+#include <dfg/logging.hpp>
 
 std::tuple<std::string, std::string, std::string> FunctionNameTest()
 {
@@ -1109,6 +1110,41 @@ namespace
 #else
     void noExceptFuncComparison() throw();
 #endif
+}
+
+TEST(dfgLog, basicFmtTests)
+{
+    using namespace DFG_ROOT_NS;
+    {
+        std::string s;
+        size_t nLogCount = 0;
+        Logger logger(LoggingLevel::info, [&](const LogFmtEntryParam& param) { ++nLogCount; s += param.message.toString(); DFGTEST_MESSAGE("Logger test: " << param.message.toString()); });
+        DFG_LOG_FMT_INFO(logger, "abc");
+        DFGTEST_EXPECT_LEFT("abc", s);
+        DFGTEST_EXPECT_LEFT(1, nLogCount);
+        DFGTEST_EXPECT_LEFT(LoggingLevel::info, logger.defaultLevel());
+        logger.setDefaultLevel(LoggingLevel::warning);
+        DFGTEST_EXPECT_LEFT(LoggingLevel::warning, logger.defaultLevel());
+        DFG_LOG_FMT_INFO(logger, "abc");
+        DFGTEST_EXPECT_LEFT("abc", s);
+        DFGTEST_EXPECT_LEFT(1, nLogCount);
+
+        DFG_LOG_FMT_WARNING(logger, "abc{}", "123");
+        DFGTEST_EXPECT_LEFT("abcabc123", s);
+        DFGTEST_EXPECT_LEFT(2, nLogCount);
+
+        // Behaviour with invalid format string
+        {
+            DFG_LOG_FMT_WARNING(logger, "abc{", "123");
+            DFGTEST_EXPECT_LEFT("abcabc123", s); // Currently logging is ignored if format is invalid. This is subject to change.
+            DFGTEST_EXPECT_LEFT(3, nLogCount); // This tests interface: even if format string is invalid, logger callback is expected to be called, message can be unspecified.
+        }
+
+        logger.setDefaultLevel(LoggingLevel::none);
+        DFG_LOG_FMT_ERROR(logger, "abc");
+        DFGTEST_EXPECT_LEFT("abcabc123", s);
+        DFGTEST_EXPECT_LEFT(3, nLogCount);
+    }
 }
 
 TEST(dfgBuild, NOEXCEPT)
