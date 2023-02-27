@@ -314,6 +314,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         using PropertyFetcher = std::function<std::pair<QString, QString>()>;
         using CsvConfig = ::DFG_MODULE_NS(cont)::CsvConfig;
         using Index = int; // Should be identical to CsvItemModel::Index
+        class Logger;
 
         enum class ViewType
         {
@@ -533,6 +534,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setFilterFromSelection(CsvTableViewSelectionFilterFlags flags);
 
     private:
+        bool hasLogger() const;    // Returns true iff 'this' has a logger object attached and it is not disabled.
+        Logger& getLogger() const; // Returns logger if hasLogger() has returned true immediately before this call, otherwise returns dummy logger object. 
+
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
 
@@ -615,6 +619,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void changeRadix(const ::DFG_MODULE_NS(qt)::CsvTableViewActionChangeRadixParams& params);
 
         bool diffWithUnmodified();
+
+        void askLogLevelFromUser();
+        void showLogConsole();
 
         void onGoToCellTriggered();
         void onFindRequested();

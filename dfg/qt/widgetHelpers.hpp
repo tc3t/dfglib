@@ -17,6 +17,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QScreen>
     #include <QString>
     #include <QTimer>
+    #include <QVBoxLayout>
     #include <QWidgetAction>
     #include <QWidget>
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
@@ -207,5 +208,21 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             pWidget->move(xPos, yPos);
         }
     }
+
+    // Simple class for wrapping a widget inside a dialog with automatic resizing
+    class WidgetWrapperDialog : public QDialog
+    {
+    public:
+        using BaseClass = QDialog;
+        WidgetWrapperDialog(const QString& sTitle, QWidget* pChild, QWidget* pParent)
+            : BaseClass(pParent)
+        {
+            auto pLayout = new QVBoxLayout(this);
+            if (pChild)
+                pLayout->addWidget(pChild);
+            this->setWindowTitle(sTitle);
+            removeContextHelpButtonFromDialog(this);
+        }
+    }; // class WidgetWrapperDialog
 
 }} // Module namespace

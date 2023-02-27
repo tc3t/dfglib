@@ -22,6 +22,7 @@
 #include "../func/memFuncMedian.hpp"
 #include "InputDialog.hpp"
 #include "stringConversions.hpp"
+#include "ConsoleDisplay.hpp"
 #include "../cont/Flags.hpp"
 #include "../math/sign.hpp"
 #include "../str.hpp"
@@ -32,6 +33,8 @@
 #include <bitset>
 #include <cctype> // For std::isdigit
 #include <thread>
+
+#include "../logging.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -676,6 +679,58 @@ namespace
 
 DFG_STATIC_ASSERT((std::is_same<CsvTableView::Index, CsvItemModel::Index>::value), "CsvTableView::Index and CsvItemModel::Index differ");
 
+
+#define DFG_CSVTABLEVIEW_CONSOLE_LOG(LEVEL, ...) if (this->hasLogger()) DFG_LOG_FMT(this->getLogger(), LEVEL, __VA_ARGS__)
+#define DFG_CSVTABLEVIEW_CONSOLE_ERROR(...)     DFG_CSVTABLEVIEW_CONSOLE_LOG(LoggingLevel::error,   __VA_ARGS__)
+#define DFG_CSVTABLEVIEW_CONSOLE_WARNING(...)   DFG_CSVTABLEVIEW_CONSOLE_LOG(LoggingLevel::warning, __VA_ARGS__)
+#define DFG_CSVTABLEVIEW_CONSOLE_INFO(...)      DFG_CSVTABLEVIEW_CONSOLE_LOG(LoggingLevel::info,    __VA_ARGS__)
+#define DFG_CSVTABLEVIEW_CONSOLE_DEBUG(...)     DFG_CSVTABLEVIEW_CONSOLE_LOG(LoggingLevel::debug,   __VA_ARGS__)
+
+class CsvTableView::Logger : public ::DFG_ROOT_NS::Logger
+{
+public:
+    using BaseClass = ::DFG_ROOT_NS::Logger;
+
+    Logger()
+        : BaseClass(LoggingLevel::info)
+        , m_spConsoleDisplay(new ConsoleDisplay)
+    {
+    }
+
+    template <class ... Args_T>
+    void logFmt(const EntryMetaData& metaData,
+        const QString& sFormat,
+        const Args_T& ... args)
+    {
+        handleLogMessage(metaData, format_fmt(sFormat.toStdString(), args...));
+    }
+
+    void handleLogMessage(const EntryMetaData& metaData, const StringViewC msg) override
+    {
+        DFG_UNUSED(metaData);
+        addDirectConsoleEntry(QString::fromUtf8(msg.data(), msg.sizeAsInt()));
+    }
+
+    void addDirectConsoleEntry(const QString& s)
+    {
+        m_spConsoleDisplay->addEntry(s);
+    }
+
+    void showLogConsole(CsvTableView* pParent)
+    {
+        if (!m_spConsoleDialog)
+        {
+            m_spConsoleDialog.reset(new WidgetWrapperDialog(tr("CsvTableView Log console"), m_spConsoleDisplay.get(), pParent));
+            addDirectConsoleEntry(tr("Created log console, logging level = %1").arg(defaultLevelAsInt()));
+        }
+        m_spConsoleDialog->show();
+    }
+
+    QObjectStorage<ConsoleDisplay> m_spConsoleDisplay;
+    QObjectStorage<WidgetWrapperDialog> m_spConsoleDialog;
+}; // class CsvTableView::Logger
+
+
 DFG_OPAQUE_PTR_DEFINE(CsvTableView)
 {
 public:
@@ -691,6 +746,7 @@ public:
     QObjectStorage<QCheckBox> m_spFilterCheckBoxCaseSensitive;
     QObjectStorage<QCheckBox> m_spFilterCheckBoxWholeStringMatch;
     QObjectStorage<QCheckBox> m_spFilterCheckBoxColumnMatchByAnd;
+    mutable Logger m_logger;
 };
 
 const char CsvTableView::s_szCsvSaveOption_saveAsShown[] = "CsvTableView_saveAsShown";
@@ -743,6 +799,17 @@ CsvTableView::CsvTableView(TagCreateWithModels, QWidget* pParent, ViewType viewT
     DFG_ASSERT_CORRECTNESS(pCsvModel->parent() == this);
     DFG_ASSERT_CORRECTNESS(pProxyModel->parent() == this);
     this->setModel(pProxyModel);
+}
+
+bool CsvTableView::hasLogger() const
+{
+    return DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_logger.defaultLevel() != LoggingLevel::none;
+}
+
+auto CsvTableView::getLogger() const -> Logger&
+{
+    static Logger dummy;
+    return (DFG_OPAQUE_PTR()) ? DFG_OPAQUE_PTR()->m_logger : dummy;
 }
 
 void CsvTableView::addSeparatorAction()
@@ -953,6 +1020,13 @@ void CsvTableView::addMiscellaneousActions()
     auto& rActReadOnly = DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(*this, tr("Read-only"), noShortCut, ActionFlags::readOnly, setReadOnlyMode);
     rActReadOnly.setChecked(DFG_OPAQUE_REF().m_flags.test(CsvTableViewFlag::readOnly));
     DFG_OPAQUE_REF().m_spActReadOnly = &rActReadOnly;
+
+    auto pAdvancedMenu = createActionMenu(this, tr("Advanced"), ActionFlags::readOnly);
+    if (pAdvancedMenu)
+    {
+        DFG_TEMP_ADD_VIEW_ACTION(*pAdvancedMenu, tr("Set logging level"), noShortCut, ActionFlags::readOnly, askLogLevelFromUser);
+        DFG_TEMP_ADD_VIEW_ACTION(*pAdvancedMenu, tr("Show log console"), noShortCut, ActionFlags::readOnly, showLogConsole);
+    }
 }
 
 CsvTableView::~CsvTableView()
@@ -3883,6 +3957,49 @@ bool CsvTableView::diffWithUnmodified()
     }
 }
 
+void CsvTableView::askLogLevelFromUser()
+{
+    bool bOk = false;
+    const auto currentLevel = DFG_OPAQUE_REF().m_logger.defaultLevel();
+    const auto createItem = [](const QString& s, const LoggingLevel level) { return QString("%1 (%2)").arg(s).arg(static_cast<int>(level)); };
+    const QStringList choices = QStringList()
+        << createItem(tr("Disabled"), LoggingLevel::none)
+        << createItem(tr("Error"),    LoggingLevel::error)
+        << createItem(tr("Warning"),  LoggingLevel::warning)
+        << createItem(tr("Info"),     LoggingLevel::info)
+        << createItem(tr("Debug"),    LoggingLevel::debug);
+
+    const auto s = InputDialog::getItem(this,
+        tr("Set logging level"),
+        tr("Enter new logging level, current is %1").arg(static_cast<int>(currentLevel)),
+        choices,
+        choices.size() - 1, // Initial choice, suggesting last (most verbose) by default as that is probably the most common choice.
+        false, // false = not editable
+        &bOk);
+
+    if (!bOk)
+        return;
+    
+    const auto n = choices.indexOf(s);
+    if (n == -1)
+        return;
+    LoggingLevel newLevel = LoggingLevel::none;
+    switch (n)
+    {
+        case 1: newLevel = LoggingLevel::error; break;
+        case 2: newLevel = LoggingLevel::warning; break;
+        case 3: newLevel = LoggingLevel::info; break;
+        case 4: newLevel = LoggingLevel::debug; break;
+    }
+    DFG_OPAQUE_REF().m_logger.setDefaultLevel(newLevel);
+    DFG_OPAQUE_REF().m_logger.addDirectConsoleEntry(tr("Logging level successfully set to %1").arg(s));
+}
+
+void CsvTableView::showLogConsole()
+{
+    DFG_OPAQUE_REF().m_logger.showLogConsole(this);
+}
+
 bool CsvTableView::getAllowApplicationSettingsUsage() const
 {
     return property(gPropertyIdAllowAppSettingsUsage).toBool();
@@ -4230,6 +4347,8 @@ void CsvTableView::forEachCompleterEnabledColumnIndex(Func_T func)
 
 void CsvTableView::onNewSourceOpened()
 {
+    DFG_CSVTABLEVIEW_CONSOLE_DEBUG("onNewSourceOpened() start");
+
     // Setting completer delegates to columns that have completers enabled.
     forEachCompleterEnabledColumnIndex([&](const int nCol, CsvModel::ColInfo* pColInfo)
     {
@@ -4284,6 +4403,7 @@ void CsvTableView::onNewSourceOpened()
             }
         }
     }
+    DFG_CSVTABLEVIEW_CONSOLE_DEBUG("onNewSourceOpened() end");
 }
 
 namespace
@@ -5257,6 +5377,7 @@ auto CsvTableView::privCreateActionBlockedDueToLockedContentMessage(const QStrin
 void CsvTableView::showStatusInfoTip(const QString& sMsg)
 {
     showInfoTip(sMsg, this);
+    DFG_CSVTABLEVIEW_CONSOLE_INFO(tr("Status tip message: %1").arg(sMsg));
 }
 
 void CsvTableView::privShowExecutionBlockedNotification(const QString& actionname)
