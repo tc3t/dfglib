@@ -1327,6 +1327,11 @@ void CsvTableView::mousePressEvent(QMouseEvent* event)
         setAutoScroll(true);
 }
 
+void CsvTableView::paintEvent(QPaintEvent* event)
+{
+    BaseClass::paintEvent(event);
+}
+
 void CsvTableView::setModel(QAbstractItemModel* pModel)
 {
     const QAbstractItemModel* pPreviousViewModel = model();
@@ -5392,9 +5397,14 @@ void CsvTableView::privShowExecutionBlockedNotification(const QString& actionnam
     showStatusInfoTip(privCreateActionBlockedDueToLockedContentMessage(actionname));
 }
 
-auto CsvTableView::tryLockForEdit() -> LockReleaser
+auto CsvTableView::tryLockForEdit() const -> LockReleaser
 {
     return (m_spEditLock && m_spEditLock->tryLockForWrite()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
+}
+
+auto CsvTableView::tryLockForEditViewModel() const -> LockReleaser
+{
+    return tryLockForEdit();
 }
 
 auto CsvTableView::tryLockForRead() const -> LockReleaser
@@ -5536,7 +5546,17 @@ QVariant CsvTableView::getColumnPropertyByDataModelIndexImpl(int nDataModelCol, 
     // to 'latest known' column info.
     auto lockReleaser = tryLockForRead();
     if (!lockReleaser.isLocked())
+    {
+        // If acquiring read lock failed, trying write lock. This may succeed since CsvTableView may already be holding
+        // write lock and recursive QReadWriteLock only allows multiple locks of the same type in the same thread.
+        // Fixes #151 ('editing filter unhides hidden columns') on Qt 5
+        lockReleaser = tryLockForEditViewModel();
+    }
+    if (!lockReleaser.isLocked())
+    {
+        DFG_CSVTABLEVIEW_CONSOLE_ERROR("Failed to acquire lock for column property query; returning default value '{}'", defaultValue.toString().toStdString());
         return defaultValue;
+    }
     auto pColInfo = getColInfo(*this, nDataModelCol);
     return (pColInfo) ? func(*pColInfo) : defaultValue;
 }
@@ -6426,7 +6446,11 @@ void CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(con
             matcher.m_rows.shift_raw(-CsvItemModel::internalRowToVisibleShift());
             return true;
         });
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+    this->invalidateRowsFilter();
+#else // Case: Qt version < 6.0
     this->invalidateFilter();
+#endif
 }
 
 

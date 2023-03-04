@@ -475,7 +475,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Convenience function, effectively returns selectionModel()->selection();
         QItemSelection getSelection() const;
 
-        DFG_NODISCARD LockReleaser tryLockForEdit(); // Note: edits include both content edit and view edits such as changing filter.
+        DFG_NODISCARD LockReleaser tryLockForEdit() const;          // Note: edits include both content edit and view edits such as changing filter.
+        DFG_NODISCARD LockReleaser tryLockForEditViewModel() const; // Currently functionally equivalent to tryLockForEdit(), but can be used as a placeholder
+                                                                    // to express the intent better guaranteeing that operation does not modify data model.
         DFG_NODISCARD LockReleaser tryLockForRead() const;
 
         TableHeaderView* horizontalTableHeader();
@@ -703,6 +705,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void dragMoveEvent(QDragMoveEvent* pEvent) override;
         void dropEvent(QDropEvent* event) override;
         void mousePressEvent(QMouseEvent* event) override;
+        void paintEvent(QPaintEvent* event) override;
         QModelIndexList selectedIndexes() const override;
 
     private:
