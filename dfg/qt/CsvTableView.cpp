@@ -5612,6 +5612,12 @@ bool CsvTableView::isColumnVisible(const ColumnIndex_data nCol) const
 
 void CsvTableView::invalidateSortFilterProxyModel()
 {
+    auto lockReleaser = tryLockForEditViewModel();
+    if (!lockReleaser.isLocked())
+    {
+        QTimer::singleShot(10, this, [this]() { this->invalidateSortFilterProxyModel(); });
+        return;
+    }
     auto pProxyModel = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
     if (pProxyModel)
         pProxyModel->invalidate();
@@ -5635,10 +5641,7 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible, cons
         return;
 
     if (pColInfo->setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, bVisible) && proxyInvalidation == ProxyModelInvalidation::ifNeeded)
-    {
-        lockReleaser.unlock(); // Must be unlocked before invalidating since UI update may malfunction if holding edit-lock.
         invalidateSortFilterProxyModel();
-    }
 }
 
 auto CsvTableView::getCellEditability(const RowIndex_data nRow, const ColumnIndex_data nCol) const -> CellEditability
@@ -5704,8 +5707,6 @@ void CsvTableView::unhideAllColumns()
             colInfo.setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, true);
         return true;
     });
-
-    lockReleaser.unlock(); // Must be unlocked before invalidating since UI update may malfunction if holding edit-lock.
     invalidateSortFilterProxyModel();
 }
 
@@ -5764,7 +5765,6 @@ void CsvTableView::showSelectColumnVisibilityDialog()
     {
         this->setColumnVisibility(c, visibilityFlags[c], ProxyModelInvalidation::no);
     }
-    lockReleaser.unlock(); // Must be unlocked before invalidating since UI update may malfunction if holding edit-lock.
     invalidateSortFilterProxyModel();
 }
 
