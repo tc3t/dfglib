@@ -419,7 +419,8 @@ static void testFileDataSource(const QString& sExtension,
         valueMapForEach.setSorting(false);
         const auto queryDetails = DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics);
         const auto nColumn = 3;
-        spSource->fetchColumnNumberData(DataPipe(&valueMapFetched), nColumn, queryDetails);
+        DataPipe dataPipe(&valueMapFetched);
+        spSource->fetchColumnNumberData(dataPipe, nColumn, queryDetails);
         spSource->forEachElement_byColumn(nColumn, queryDetails, [&](const SourceDataSpan& data)
         {
             valueMapForEach.pushBackToUnsorted(data.rows().asSpan(), data.doubles());
@@ -653,7 +654,8 @@ TEST(dfgQt, NumberGeneratorDataSource)
         valueMapForEach.setSorting(false);
 
         NumberGeneratorDataSource ds("test", 10, 2);
-        ds.fetchColumnNumberData(DataPipe(&valueMapFetch), 0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics));
+        DataPipe dataPipe(&valueMapFetch);
+        ds.fetchColumnNumberData(dataPipe, 0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics));
         ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics), [&](const SourceDataSpan& data)
         {
             auto iter = ::DFG_MODULE_NS(iter)::makeFunctionValueIterator(valueMapForEach.size(), [](size_t i) { return double(i); } );
