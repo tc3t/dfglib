@@ -1677,9 +1677,8 @@ Qt::ItemFlags CsvItemModel::flags(const QModelIndex& index) const
         if (index.isValid())
             return (f | Qt::ItemIsEditable);
         else
-            return (f | Qt::ItemIsEnabled);
+            return f;
     #endif
-
 }
 
 int CsvItemModel::getRowCountUpperBound() const
@@ -2132,12 +2131,13 @@ bool CsvItemModel::transpose()
     const auto nMaxRowCount = (std::max)(nOldRowCount, nNewRowCount);
     const auto nMaxColumnCount = nMaxRowCount; // This is equal to (std::max)(nOldColumnCount, nNewColumnCount);
 
-    m_bResetting = true;
-    beginResetModel();
-
     insertRows(nOldRowCount, nMaxRowCount - nOldRowCount);
     insertColumns(nOldColumnCount, nMaxColumnCount - nOldColumnCount);
 
+    // Not running row and column inserts and removals inside resetModel() since QAbstractItemModelTester
+    // in Qt 6.4.1 would cause test failures if those were called while in reset-phase.
+    m_bResetting = true;
+    beginResetModel();
     for (Index r = 0; r < nOldRowCount; ++r)
     {
         for (Index c = r + 1; c < nMaxColumnCount; ++c)
@@ -2145,11 +2145,12 @@ bool CsvItemModel::transpose()
             this->table().swapCellContent(r, c, c, r);
         }
     }
+    endResetModel();
+    m_bResetting = false;
+
     removeRows(nNewRowCount, nOldRowCount - nNewRowCount);
     removeColumns(nNewColumnCount, nOldColumnCount - nNewColumnCount);
 
-    endResetModel();
-    m_bResetting = false;
     setModifiedStatus(true);
 
     if (m_pUndoStack)

@@ -427,3 +427,26 @@ TEST(dfgQt, CsvItemModel_cellReadOnly)
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", model.rawStringViewAt(1, 0));
     }
 }
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+
+#include <QAbstractItemModelTester>
+
+TEST(dfgQt, CsvItemModel_QAbstractItemModelTester)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+
+    CsvItemModel model;
+    model.openFile("testfiles/example4.csv"); // Arbitrary choice of example file
+    QAbstractItemModelTester modelTester(&model, QAbstractItemModelTester::FailureReportingMode::Warning);
+    model.setSize(model.rowCount() + 1, model.columnCount() + 1);
+    model.setItem(2, 2, "abc");
+    model.removeColumn(1);
+    model.removeRow(1);
+    model.transpose();
+    model.insertColumns(1, 2);
+    model.insertRows(2, 3);
+}
+
+#endif // Qt >= 5.11.0

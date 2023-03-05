@@ -1,11 +1,13 @@
 #include <dfg/dfgDefs.hpp>
 #include <dfg/os.hpp>
+#include <dfgTest/dfgTest.hpp>
 #include <iostream>
 #include "dfgTestQt_gtestPrinters.hpp"
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
-#include <gtest/gtest.h>
-#include <QApplication>
+    #include <gtest/gtest.h>
+    #include <QApplication>
+    #include <QtMessageHandler>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 #include <dfg/build/buildTimeDetails.hpp> // Note: this must be included after Qt-header in order to have BuildTimeDetail_qtVersion available.
@@ -48,6 +50,15 @@ namespace
     }
 }
 
+void qtMessageHandler(const QtMsgType msgType, const QMessageLogContext& logContext, const QString& msg)
+{
+    using namespace DFG_ROOT_NS;
+    if (msgType == QtMsgType::QtWarningMsg && logContext.category == StringViewC("qt.modeltest"))
+        DFGTEST_EXPECT_LEFT("", QString("Qt message handler: failure '%1'").arg(msg).toStdString());
+    else
+        DFGTEST_MESSAGE("Qt message handler: " << msg.toStdString());
+}
+
 
 int main(int argc, char **argv)
 {
@@ -58,11 +69,17 @@ int main(int argc, char **argv)
     }
 
 	QApplication app(argc, argv);
+
+    // Setting up custom message handler to convert failures reported by
+    // testcase dfgQt.CsvItemModel_QAbstractItemModelTester into Google Test failures.
+    qInstallMessageHandler(qtMessageHandler);
+
 	::testing::InitGoogleTest(&argc, argv);
 
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue_dateHandling";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_QAbstractItemModelTester";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_filterFromSelection";
