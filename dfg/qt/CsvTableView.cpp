@@ -5788,7 +5788,7 @@ auto CsvTableView::columnIndexViewToData(const ColumnIndex_view viewIndex) const
     if (!pProxy)
         return ColumnIndex_data(viewIndex.value());
 
-    const auto mapped = pProxy->mapToSource(pProxy->index(1, viewIndex.value()));
+    const auto mapped = pProxy->mapToSource(pProxy->index(0, viewIndex.value()));
     return (mapped.column() >= 0) ? ColumnIndex_data(mapped.column()) : ColumnIndex_data();
 }
 
