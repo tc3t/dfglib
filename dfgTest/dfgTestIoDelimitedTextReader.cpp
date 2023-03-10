@@ -771,7 +771,7 @@ TEST(DfgIo, DelimitedTextReader_readRowMatrix)
     typedef std::tuple<std::string, std::vector<std::string>> ExpectedResultsT;
     const ExpectedResultsT arrCellExpected[] =
     {
-        ExpectedResultsT(std::move(str), std::move(expectedStrs)),
+        ExpectedResultsT(str, std::move(expectedStrs)),
     };
 
     for(size_t i = 0; i<count(arrCellExpected); ++i)

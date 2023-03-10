@@ -3978,7 +3978,7 @@ void CsvTableView::askLogLevelFromUser()
         tr("Set logging level"),
         tr("Enter new logging level, current is %1").arg(static_cast<int>(currentLevel)),
         choices,
-        choices.size() - 1, // Initial choice, suggesting last (most verbose) by default as that is probably the most common choice.
+        saturateCast<int>(choices.size() - 1), // Initial choice, suggesting last (most verbose) by default as that is probably the most common choice.
         false, // false = not editable
         &bOk);
 

@@ -132,7 +132,7 @@ template <class Range_T, class Func>
 Func forEachFwd(Range_T&& range, Func f)
 {
     DFG_DETAIL_NS::forEachFwdImpl(range, f, std::integral_constant<bool, IsContiguousRange<Range_T>::value>());
-    return std::move(f);
+    return f;
 }
 
 // Like forEachFwd, but takes func by (universal) reference.

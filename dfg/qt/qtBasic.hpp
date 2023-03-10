@@ -10,9 +10,10 @@
 #include <ios> // For std::streamsize
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-#include <QIODevice>
-#include <QString>
-#include <QTextStream>
+    #include <QIODevice>
+    #include <QString>
+    #include <QTextStream>
+    #include <QVariant>
 DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN {
@@ -128,6 +129,17 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt)
         // Alternative implementation using QByteArray temporary.
         //auto bytes = s.toUtf8();
         //return StringUtf8(SzPtrUtf8(bytes.begin()), SzPtrUtf8(bytes.end()));
+    }
+
+    // Qt5/Qt6 transition helper to avoid warnings "'QVariant::type': Use typeId() or metaType()"
+    inline bool isVariantType(const QVariant& var, const QMetaType::Type type)
+    {
+    #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+        return var.typeId() == static_cast<int>(type);
+    #else
+        // Qt 5.15 docs of QVariant::type(): "Although this function is declared as returning QVariant::Type, the return value should be interpreted as QMetaType::Type"
+        return static_cast<int>(var.type()) == static_cast<int>(type);
+    #endif
     }
 
 } } // Module qt

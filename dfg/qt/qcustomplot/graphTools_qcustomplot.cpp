@@ -797,7 +797,10 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
                 i++;
             }
             // Recalculating y-range.
-            minMaxPair = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
+            const auto minMaxIters = ::DFG_MODULE_NS(numeric)::minmaxElement_withNanHandling(yAdjustedData);
+            const auto iterToPointer = [&](const auto iter) { return yAdjustedData.data() + (iter - yAdjustedData.begin()); };
+            minMaxPair.first = iterToPointer(minMaxIters.first);
+            minMaxPair.second = iterToPointer(minMaxIters.second);
             labelRange = adjustedLabels;
             valueRange = yAdjustedData;
         }
@@ -1842,7 +1845,11 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
             else if (toolTipTextForChartObjectAsHtml(pBars, xy, toolTipStream)) {}
         });
 
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+    QToolTip::showText(pEvent->globalPosition().toPoint(), toolTipStream.toPlainText());
+#else
     QToolTip::showText(pEvent->globalPos(), toolTipStream.toPlainText());
+#endif
 }
 
 namespace
@@ -2050,13 +2057,13 @@ void ChartCanvasQCustomPlot::optimizeAllAxesRanges()
                     const auto oldRange = axis.range();
                     auto newRange = oldRange;
                     // Not using setRangeLower/Upper() because if e.g. old range is (-10, 10) and one calls setRangeLower(20), the range ends up being (10, 20)
-                    if (propRangeStart.type() == QMetaType::Double)
+                    if (isVariantType(propRangeStart, QMetaType::Double))
                     {
                         newRange.lower = propRangeStart.toDouble();
                         if (newRange.upper < newRange.lower)
                             newRange.upper = newRange.lower + 1;
                     }
-                    if (propRangeEnd.type() == QMetaType::Double)
+                    if (isVariantType(propRangeEnd, QMetaType::Double))
                     {
                         newRange.upper = propRangeEnd.toDouble();
                         if (newRange.upper < newRange.lower)

@@ -31,7 +31,6 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../str/string.hpp"
 #include "qtBasic.hpp"
 #include "../io/DelimitedTextReader.hpp"
-#include "../io/OfStream.hpp"
 #include "../time/timerCpu.hpp"
 #include "../cont/CsvConfig.hpp"
 #include "../cont/SetVector.hpp"

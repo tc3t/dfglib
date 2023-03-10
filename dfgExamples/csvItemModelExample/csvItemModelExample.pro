@@ -12,6 +12,7 @@ HEADERS += ../../dfg/qt/containerUtils.hpp \
     ../../dfg/qt/CsvTableViewCompleterDelegate.hpp \
     ../../dfg/qt/JsonListWidget.hpp \
     ../../dfg/qt/TableEditor.hpp \
+    ../../dfg/qt/ConsoleDisplay.hpp \
     ../../dfg/math/FormulaParser.hpp \
     ../../dfg/qt/sqlTools.hpp
 
@@ -26,6 +27,7 @@ SOURCES += ../../dfg/os/memoryMappedFile.cpp \
     ../../dfg/qt/sqlTools.cpp \
     ../../dfg/math/FormulaParser.cpp \
     ../../dfg/qt/stringConversions.cpp \
+    ../../dfg/qt/ConsoleDisplay.cpp \
     ../../dfg/str/fmtlib/fmt.cpp \
     ../../dfg/time/DateTime.cpp \
     ./main.cpp

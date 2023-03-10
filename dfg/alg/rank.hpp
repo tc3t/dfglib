@@ -80,7 +80,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
     {
         std::vector<double> ranks;
         rankImpl(src, ranks, rankStrategy, indexOffset);
-        return std::move(ranks);
+        return ranks;
     }
 
     // Template version using user defined index type. Note that if rank strategy needs floating point elements but Index_T is integer, returned vector will be empty.
@@ -89,7 +89,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
     {
         std::vector<Index_T> ranks;
         rankImpl(src, ranks, rankStrategy, indexOffset);
-        return std::move(ranks);
+        return ranks;
     }
 
 } } // module namespace

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "QtApplication.hpp"
+#include "qtBasic.hpp"
 #include <QSettings>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
@@ -19,7 +20,7 @@ template <int ID_T> struct DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CLASS) {};
 // returns comma-joined QString from the list.
 inline QString qStringFromVariantWithQStringListHandling(const QVariant& v)
 {
-    if (v.type() == QVariant::StringList)
+    if (isVariantType(v, QMetaType::Type::QStringList))
         return v.value<QStringList>().join(',');
     else
         return v.value<QString>();

@@ -1643,7 +1643,7 @@ TEST(dfgQt, CsvTableView_filterFromSelection)
     // Testing strict filter (and-columns, case-sensitive, whole string match)
     {
         // Clearing filter
-        viewWidget.sigFilterJsonRequested(QString());
+        Q_EMIT viewWidget.sigFilterJsonRequested(QString());
         DFGTEST_EXPECT_LEFT(nRowCountTotal, viewWidget.getRowCount_viewModel());
 
         // Selecting "h" and "aFb" from row 5

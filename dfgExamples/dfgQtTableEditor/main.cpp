@@ -37,6 +37,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <exception>
 
 static QWidget* gpMainWindow = nullptr;
+static const char gszDiffUrlHandlerSchemeId[] = "dfgdiff";
 
 void DiffUrlHandler::urlHandler(const QUrl& url)
 {
@@ -307,7 +308,7 @@ int main(int argc, char *argv[])
 
         // Adding about-button to TableEditor toolbar.
         {
-            QDesktopServices::setUrlHandler("dfgdiff", &diffDisplay, "urlHandler");
+            QDesktopServices::setUrlHandler(gszDiffUrlHandlerSchemeId, &diffDisplay, "urlHandler");
             auto pButton = new QToolButton(&tableEditor);
             pButton->setToolTip(QApplication::tr("Information about the application"));
             auto pStyle = a.style();
@@ -341,7 +342,13 @@ int main(int argc, char *argv[])
         // Exceptions should not propagate this far, but better to at least catch them here instead of letting application crash 
         try
         {
-            return a.exec();
+            const auto rv = a.exec();
+
+            // Removing url-handler to avoid runtime warnings on Qt 6.4.1
+            //      "Please call QDesktopServices::unsetUrlHandler() before destroying a registered URL handler object."
+            //      "Support for destroying a registered URL handler object is deprecated, and will be removed in Qt 6.6."
+            QDesktopServices::unsetUrlHandler(gszDiffUrlHandlerSchemeId);
+            return rv;
         }
         catch (const std::exception& e)
         {

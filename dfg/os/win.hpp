@@ -48,7 +48,7 @@ template <class Char_T> inline std::basic_string<Char_T> GetTempPathT()
     DFG_STATIC_ASSERT(IsContiguousRange<std::basic_string<Char_T>>::value == true, "Expecting std::basic_string<T> to have contiguous storage.");
     const auto nSize = GetTempPath(nBufferSize, &s[0]);
     s.resize(nSize);
-    return std::move(s);
+    return s;
 }
 
 inline std::string GetTempPathA()

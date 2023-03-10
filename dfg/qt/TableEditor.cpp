@@ -1105,9 +1105,7 @@ bool TableEditor::handleExitConfirmationAndReturnTrueIfCanExit()
         const auto rv = QMessageBox::question(nullptr,
                                                   QCoreApplication::tr("Save to file?"),
                                                   QCoreApplication::tr("Content has been edited, save to file?\n%1").arg(uiPath),
-                                                  QMessageBox::Yes,
-                                                  QMessageBox::No,
-                                                  QMessageBox::Cancel);
+                                                  QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (rv == QMessageBox::Cancel)
             return false;
 

@@ -67,8 +67,8 @@ public:
     using reference         = typename std::add_lvalue_reference<value_type>::type;
 
     FunctionValueIterator(const Index_T nPos, Func_T func)
-        : m_nPos(nPos)
-        , BaseClass(std::move(func))
+        : BaseClass(std::move(func))
+        , m_nPos(nPos)
     {}
 
     auto operator*() const -> value_type
