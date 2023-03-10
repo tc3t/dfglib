@@ -214,6 +214,7 @@ DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::rowsInserted, this, &CsvTableViewChartDataSource::resetCache));
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::rowsRemoved, this, &CsvTableViewChartDataSource::resetCache));
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::rowsMoved, this, &CsvTableViewChartDataSource::resetCache));
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::modelReset, this, &CsvTableViewChartDataSource::resetCache));
     }
 }
 
