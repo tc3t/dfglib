@@ -175,7 +175,7 @@ void ::DFG_MODULE_NS(qt)::SelectionAnalyzerForGraphing::analyzeImpl(const QItemS
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-DFG_OPAQUE_PTR_DEFINE(::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
 {
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<DataSourceNumberCache> m_cache;
     ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<DataSourceNumberCache> m_cacheViewer;
