@@ -15,6 +15,8 @@
 
 #include "containerUtils.hpp"
 
+#define DFG_CSVTABLEVIEW_FILTER_PROXY_AVAILABLE (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QHeaderView>
     #include <QPointer>

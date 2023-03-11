@@ -2889,7 +2889,7 @@ bool CsvTableView::clearSelected()
 
 bool CsvTableView::insertRowImpl(const int insertType)
 {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+#if (DFG_CSVTABLEVIEW_FILTER_PROXY_AVAILABLE == 1)
     auto pProxy = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
     if (pProxy && !pProxy->filterRegularExpression().pattern().isEmpty() && !pProxy->filterRegularExpression().match(QString()).hasMatch())
         showStatusInfoTip(tr("Inserted row was hidden due to filter"));
@@ -6381,12 +6381,16 @@ bool CsvTableViewSortFilterProxyModel::isRowIndexMappingNeeded() const
         return true; // If sort is active, need mapping
 
     // Getting here means that sorting is not active, checking filter status.
-
+#if (DFG_CSVTABLEVIEW_FILTER_PROXY_AVAILABLE == 1)
     const auto sFilterRegExp = this->filterRegularExpression().pattern();
     if ((!DFG_OPAQUE_PTR() || DFG_OPAQUE_PTR()->m_matchers.empty()) && sFilterRegExp.isEmpty())
         return false; // There are no filters so no mapping needed.
 
     return true; // Either sorting or filter is active so can't guarantee that row indexes are the same between this and source model.
+#else
+    // Filter is not available
+    return false;
+#endif
 }
 
 bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const

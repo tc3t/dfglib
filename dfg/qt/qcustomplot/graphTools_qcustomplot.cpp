@@ -1195,7 +1195,11 @@ void ChartCanvasQCustomPlot::createLegends()
                 DFG_QT_CHART_CONSOLE_ERROR(tr("Internal error inserLayout() returned null"));
                 continue;
             }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)) // Not sure is version accurate, introduced for Qt 5.9
             pLayout->addElement(pLegend, Qt::AlignTop | Qt::AlignRight);
+#else
+            pLayout->addElement(pLegend, static_cast<Qt::Alignment>(Qt::AlignTop | Qt::AlignRight));
+#endif
             pLegend->setLayer(QLatin1String("legend"));
         }
         else // Case: default AxisRect, uses existing legend. Would crash if creating another.
@@ -2310,7 +2314,13 @@ GraphDisplayImageExportDialog::GraphDisplayImageExportDialog(QCustomPlot* pCusto
 
     // Help widget
     auto pHelpWidget = new QLabel(this);
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)) // Not sure is version accurate, introduced for Qt 5.9
     pHelpWidget->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+#else
+    pHelpWidget->setTextInteractionFlags(static_cast<Qt::TextInteractionFlags>(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard));
+#endif
+
     pHelpWidget->setText(tr("<h3>Available image types and their parameters</h3>"
         "Note that most parameters are optional, required ones are underlined."
         "<ul>"

@@ -5,6 +5,9 @@ INCLUDEPATH += .
 INCLUDEPATH += ./../../
 INCLUDEPATH += ./../../externals/
 
+include(../../dfg/qt/qmakeTools/dfgQmakeUtil.pri)
+$$dfgSetCppVersion()
+
 HEADERS += ./spectrumColourExample.h \
     ./stdafx.h
 

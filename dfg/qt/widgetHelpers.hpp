@@ -54,7 +54,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         auto font = spLabel->font();
         font.setBold(true);
         spLabel->setFont(font);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)) // Not sure is version accurate, introduced for Qt 5.9
         spLabel->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+#else
+        spLabel->setAlignment(static_cast<Qt::Alignment>(Qt::AlignHCenter | Qt::AlignVCenter));
+#endif
         pAction->setDefaultWidget(spLabel.release()); // Owned by pAction
         pMenu->addAction(pAction);
         pMenu->addSeparator();

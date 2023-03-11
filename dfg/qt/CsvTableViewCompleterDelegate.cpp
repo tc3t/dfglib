@@ -153,7 +153,12 @@ void CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // Default alignment in QStyleOptionViewItem::displayAlignment is Qt::AlignLeft which can cause cell to show empty if it has trailing newlines (#135).
     // In default case adding Qt::AlignTop so that first line will always be shown.
     const auto displayAlignment = index.data(Qt::TextAlignmentRole);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)) // Not sure is version accurate, introduced for Qt 5.9
     option.displayAlignment = (displayAlignment.isNull()) ? Qt::AlignLeft | Qt::AlignTop : Qt::Alignment(displayAlignment.toInt());
+#else
+    option.displayAlignment = (displayAlignment.isNull()) ? static_cast<Qt::Alignment>(Qt::AlignLeft | Qt::AlignTop) : Qt::Alignment(displayAlignment.toInt());
+#endif
+
     const auto doDefaultPaint = [&]()
     {
         auto pCsvModel = (m_spTableView) ? m_spTableView->csvModel() : nullptr;

@@ -599,7 +599,7 @@ TableEditor::TableEditor()
         // Filter panel
         {
             m_spFilterPanel.reset(new DFG_DETAIL_NS::FilterPanelWidget);
-        #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+        #if (DFG_CSVTABLEVIEW_FILTER_PROXY_AVAILABLE == 1)
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onFilterTextChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFilterColumnChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pMatchSyntaxCombobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ThisClass::onFilterColumnChanged));

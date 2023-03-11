@@ -2,6 +2,9 @@ TEMPLATE = app
 TARGET = csvItemModelExample
 QT += core gui widgets sql
 
+include(../../dfg/qt/qmakeTools/dfgQmakeUtil.pri)
+$$dfgSetCppVersion()
+
 INCLUDEPATH += .
 INCLUDEPATH += ./../../
 INCLUDEPATH += ./../../externals/

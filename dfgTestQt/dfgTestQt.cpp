@@ -184,7 +184,7 @@ a,7
     pView->selectColumn(0);
 
     // Manually running event loop in order to trigger handling of signal sigSetValueDisplayString
-    for (int i = 0; i < 10 && sResult.isEmpty(); ++i)
+    for (int i = 0; i < 10 && (sResult.isEmpty() || !sResult.startsWith("Included")); ++i)
     {
         QCoreApplication::processEvents();
         QThread::msleep(10);
