@@ -856,7 +856,7 @@ TEST(dfgMath, FormulaParser_cmath)
 
 #if defined(__cpp_lib_math_special_functions) ||  (defined(__STDCPP_MATH_SPEC_FUNCS__) && (__STDCPP_MATH_SPEC_FUNCS__ >= 201003L))
     DFGTEST_TEMP_TEST_VALUE3(assoc_laguerre, 1, 2, 0.5);
-    DFGTEST_TEMP_TEST_VALUE3(assoc_legendre, 1, 2, 0.5);
+    DFGTEST_TEMP_TEST_VALUE3(assoc_legendre, 2, 1, 0.5);
     DFGTEST_TEMP_TEST_VALUE2(beta, 1, 2);
     DFGTEST_TEMP_TEST_VALUE1(comp_ellint_1, 0.5);
     DFGTEST_TEMP_TEST_VALUE1(comp_ellint_2, 0.5);
@@ -876,7 +876,7 @@ TEST(dfgMath, FormulaParser_cmath)
     DFGTEST_TEMP_TEST_VALUE2(lcm, 23, -75);
     DFGTEST_TEMP_TEST_VALUE1(riemann_zeta, 3);
     DFGTEST_TEMP_TEST_VALUE2(sph_bessel, 1, 3);
-    DFGTEST_TEMP_TEST_VALUE3(sph_legendre, 1, 2, 3);
+    DFGTEST_TEMP_TEST_VALUE3(sph_legendre, 2, 1, 3);
     DFGTEST_TEMP_TEST_VALUE2(sph_neumann, 1, 3);
 
     DFGTEST_EXPECT_NAN(parser.setFormulaAndEvaluateAsDouble("assoc_laguerre(1.5, 2, 3)")); // Non-integer in place where integer is expected -> NaN expected as result
