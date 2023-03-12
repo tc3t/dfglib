@@ -203,7 +203,7 @@ public:
         dateAndTimeMillisecond,
         firstDateNoTzItem = dateOnlyYearMonth,
         lastDateNoTzItem = dateAndTimeMillisecond,
-        // Date with timezone domaiin
+        // Date with timezone domain
         dateAndTimeTz,
         dateAndTimeMillisecondTz,
         firstDateWithTzItem = dateAndTimeTz,

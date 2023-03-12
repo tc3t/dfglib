@@ -140,7 +140,11 @@ namespace DFG_ROOT_NS { namespace DFG_DETAIL_NS
     // This is by no means complete and doesn't seem to work in MinGW 4.8.0
 	#define DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS \
         _Pragma("GCC diagnostic push") \
-        _Pragma("GCC diagnostic ignored \"-Wcpp\"")
+        _Pragma("GCC diagnostic ignored \"-Wcpp\"") \
+        _Pragma("GCC diagnostic ignored \"-Wdeprecated-copy\"") \
+        _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
+        _Pragma("GCC diagnostic ignored \"-Wcast-function-type\"") \
+        _Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
         
 	#define DFG_END_INCLUDE_WITH_DISABLED_WARNINGS \
         _Pragma("GCC diagnostic pop")

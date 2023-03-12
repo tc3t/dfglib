@@ -5,7 +5,7 @@
 #include "CsvTableViewActions.hpp"
 #include "QtApplication.hpp"
 #include "widgetHelpers.hpp"
-#include "../os.hpp"
+#include "../os/fileSize.hpp"
 #include "../os/TemporaryFileStream.hpp"
 #include "PropertyHelper.hpp"
 #include "connectHelper.hpp"
@@ -1940,7 +1940,7 @@ public:
         {
             // Completer columns
             spLayout->addRow(tr("Completer columns"), m_spCompleterColumns.get());
-            CsvItemModel::setCompleterHandlingFromInputSize(m_loadOptions, DFG_MODULE_NS(os)::fileSize(qStringToFileApi8Bit(sFilePath)), nullptr);
+            CsvItemModel::setCompleterHandlingFromInputSize(m_loadOptions, ::DFG_MODULE_NS(os)::fileSize(qStringToFileApi8Bit(sFilePath)), nullptr);
             m_spCompleterColumns->setText(m_loadOptions.getProperty(CsvOptionProperty_completerColumns, "*").c_str());
             m_spCompleterColumns->setToolTip(tr("Comma-separated list of column indexes (1-based index) where completion is available, use * to enable on all."));
 
@@ -3446,6 +3446,7 @@ namespace
         dateFromMilliSecondsUtc
     };
 
+#if DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
     auto sprintfTypeCharToCharsFormat(const char c) -> ::DFG_MODULE_NS(str)::CharsFormat
     {
         using namespace ::DFG_MODULE_NS(str);
@@ -3463,6 +3464,7 @@ namespace
         return CharsFormat::default_fmt;
     #endif
     }
+#endif // DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG == 1
 
     int formatStringToPrecision(const ::DFG_ROOT_NS::StringViewC sv)
     {
@@ -3904,12 +3906,12 @@ bool CsvTableView::diffWithUnmodified()
         bDifferPathWasAsked = true;
     }
 
-    typedef DFG_MODULE_NS(io)::DFG_CLASS_NAME(OfStreamWithEncoding) StreamT;
-    DFG_MODULE_NS(os)::DFG_CLASS_NAME(TemporaryFileStreamT)<StreamT> strmTemp(nullptr, // nullptr = use default temp path
-                                                                              szTempFileNameTemplate,
-                                                                              nullptr, // nullptr = no suffix
-                                                                              ".csv" // extension
-                                                                              );
+    typedef DFG_MODULE_NS(io)::OfStreamWithEncoding StreamT;
+    ::DFG_MODULE_NS(os)::TemporaryFileStreamT<StreamT> strmTemp(nullptr, // nullptr = use default temp path
+                                                                szTempFileNameTemplate,
+                                                                nullptr, // nullptr = no suffix
+                                                                ".csv" // extension
+                                                                );
     strmTemp.setAutoRemove(false); // To not remove the file while it's being used by diff viewer.
     strmTemp.stream().m_streamBuffer.m_encodingBuffer.setEncoding(DFG_MODULE_NS(io)::encodingUnknown);
 
@@ -6404,6 +6406,7 @@ bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, c
         switch (colType)
         {
             case CsvItemModel::ColTypeNumber: return tableCellStringToDouble(pCsvModel->rawStringPtrAt(dataIndexLeft)) < tableCellStringToDouble(pCsvModel->rawStringPtrAt(pView->mapToDataModel(sourceRight)));
+            default: break;
         }
     }
     return BaseClass::lessThan(sourceLeft, sourceRight);

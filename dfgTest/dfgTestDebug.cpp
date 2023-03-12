@@ -9,7 +9,7 @@
 TEST(dfgDebug, AssertImplementation)
 {
 	const int vals[] = { 1, 2 };
-	for (int i = 1; i < DFG_COUNTOF(vals); ++i)
+	for (size_t i = 1; i < DFG_COUNTOF(vals); ++i)
 	{
 		// This failed in debug build in earlier version due to use of loop variable named i in the assert implementation.
 		// Also affected DFG_VERIFY.

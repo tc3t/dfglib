@@ -515,7 +515,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             // TODO: use CSV-reading (current implementation fails on embedded new lines)
             QTextStream strm(&str, QIODevice::ReadOnly);
             QString sLine;
-            for (int nRow = 0; !strm.atEnd(); ++nRow)
+            while (!strm.atEnd())
             {
                 sLine = strm.readLine();
                 m_vecStringsNew.push_back(sLine);

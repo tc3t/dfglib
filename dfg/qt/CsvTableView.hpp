@@ -114,7 +114,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         explicit ColumnIndex_data(const int nCol = -1)
             : m_nCol(nCol)
         {}
-        int value() const { return m_nCol; }
+        int32 value() const { return m_nCol; }
+        uint32 valueAsUint() const { return static_cast<uint32>(m_nCol); }
         int m_nCol;
     };
 
@@ -125,7 +126,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         explicit ColumnIndex_view(const int nCol = -1)
             : m_nCol(nCol)
         {}
-        int value() const { return m_nCol; }
+        int32 value() const { return m_nCol; }
+        uint32 valueAsUint() const { return static_cast<uint32>(m_nCol); }
         int m_nCol;
     };
 

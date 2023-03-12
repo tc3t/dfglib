@@ -9,7 +9,6 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/ViewableSharedPtr.hpp"
 #include "../cont/MapVector.hpp"
 
-#include "../alg.hpp"
 #include "../cont/valueArray.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
@@ -71,12 +70,12 @@ auto CsvTableViewChartDataSource::DataSourceNumberCache::makeNewColumnCacheObjec
 void CsvTableViewChartDataSource::DataSourceNumberCache::setColumnCache(const ColumnIndex_data col, SharedStorage<const NumberContT> newData, const ChartDataType dataType)
 {
     m_mapColToNumbers[col.value()] = std::move(newData);
-    m_mapColToDataTypes[col.value()] = dataType;
+    m_mapColToDataTypes[col.valueAsUint()] = dataType;
 }
 
 auto CsvTableViewChartDataSource::DataSourceNumberCache::getColumnDataType(const ColumnIndex_data col) const -> ChartDataType
 {
-    return m_mapColToDataTypes.valueCopyOr(col.value(), ChartDataType::unknown);
+    return m_mapColToDataTypes.valueCopyOr(col.valueAsUint(), ChartDataType::unknown);
 }
 
 Span<const double> CsvTableViewChartDataSource::DataSourceNumberCache::getSpanFromColumn(const ColumnIndex_data col, const Index nFirstRow, const Index nLastRow) const
@@ -297,7 +296,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
                     const auto val = cellStringToDoubleImpl(pszData, nColView, mapColToDataType);
                     spColumnCache->push_back(val);
                 }
-                newCache->setColumnCache(nColData, std::move(spColumnCache), mapColToDataType.valueCopyOr(nColView.value(), ChartDataType::unknown));
+                newCache->setColumnCache(nColData, std::move(spColumnCache), mapColToDataType.valueCopyOr(nColView.valueAsUint(), ChartDataType::unknown));
                 DFG_OPAQUE_REF().m_cache.reset(std::move(newCache));
                 spCacheView = cacheViewer.view();
             }
@@ -324,7 +323,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
         {
             ColumnMetaData metaData;
             metaData.efficientlyFetchable(bEfficientFetchable);
-            metaData.name(spSelectionView->m_columnNames.valueCopyOr(nColView.value()));
+            metaData.name(spSelectionView->m_columnNames.valueCopyOr(nColView.valueAsUint()));
             metaData.columnDataType(dataType);
             targetSpan.metaData() = std::move(metaData);
         };
@@ -387,7 +386,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
             }
             if (r == rBottom) // On last row, inserting column metadata to dataspan
             {
-                insertColumnMetaData(dataSpan, false, (bNumberCacheIsAvailable) ? spCacheView->getColumnDataType(nColData) : mapColToDataType.valueCopyOr(nColView.value()));
+                insertColumnMetaData(dataSpan, false, (bNumberCacheIsAvailable) ? spCacheView->getColumnDataType(nColData) : mapColToDataType.valueCopyOr(nColView.valueAsUint()));
                 DFG_OPAQUE_REF().m_viewableMapColToDataType.edit([&](auto& rEditable, auto pOld) { DFG_UNUSED(pOld); rEditable = std::move(mapColToDataType); });
             }
             handler(dataSpan);

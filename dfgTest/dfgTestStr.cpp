@@ -1511,9 +1511,9 @@ namespace
             EXPECT_EQ(1, szView1Const.length());
             EXPECT_EQ(3, szView2.size());
             EXPECT_EQ(3, szView2.length());
-            EXPECT_EQ('a', szView2.dataRaw()[0]);
-            EXPECT_EQ('\0', szView2.dataRaw()[1]);
-            EXPECT_EQ('b', szView2.dataRaw()[2]);
+            EXPECT_EQ(Char_T('a'), szView2.dataRaw()[0]);
+            EXPECT_EQ(Char_T('\0'), szView2.dataRaw()[1]);
+            EXPECT_EQ(Char_T('b'), szView2.dataRaw()[2]);
         }
 
         // Testing that can use operator== with non-sz view and typed SzPtr

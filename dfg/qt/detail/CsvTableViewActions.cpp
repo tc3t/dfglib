@@ -71,7 +71,7 @@ namespace DFG_DETAIL_NS
         auto pModel = (pView) ? pView->csvModel() : nullptr;
         if (!pModel)
             return;
-        VisitorParams params = { QModelIndex(), *pModel, *pView };
+        VisitorParams params = { QModelIndex(), *pModel, *pView, StringViewUtf8() };
         looper(params);
         if (pView && pSelectList)
             pView->setSelectedIndexed(*pSelectList, [&](const QModelIndex& index) { return pView->mapToViewModel(index); }); // Selecting the items that were edited by redo.

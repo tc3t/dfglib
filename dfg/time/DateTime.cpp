@@ -25,7 +25,8 @@ DayOfWeek toDayOfWeek(const std::tm& tm)
 DayOfWeek toDayOfWeek(const SYSTEMTIME& st)
 {
     DFG_STATIC_ASSERT(static_cast<uint8>(DayOfWeek::Sunday) == 0, "Implementation assumes sunday == 0");
-    return (st.wDayOfWeek >= 0 && st.wDayOfWeek <= 6) ? static_cast<DayOfWeek>(st.wDayOfWeek) : DayOfWeek::unknown;
+    DFG_STATIC_ASSERT((std::is_unsigned_v<decltype(st.wDayOfWeek)>), "Condition below assumes unsigned wDayOfWeek");
+    return (st.wDayOfWeek <= 6) ? static_cast<DayOfWeek>(st.wDayOfWeek) : DayOfWeek::unknown;
 }
 #endif // _WIN32
 

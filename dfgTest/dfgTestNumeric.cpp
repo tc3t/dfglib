@@ -973,10 +973,10 @@ namespace
     {
         typedef double ValType;
         using namespace DFG_ROOT_NS;
-        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
 #ifdef _DEBUG
         const auto N = 20;
 #else
+        auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
         #if DFGTEST_ENABLE_BENCHMARKS
             //const auto N = 20000;
             const size_t N = 20000 + static_cast<size_t>(2 * DFG_MODULE_NS(rand)::rand(randEng));
