@@ -168,7 +168,7 @@ namespace DFG_DETAIL_NS
         using type = std::conditional_t<
                 std::is_pointer_v<Func_T>,
                 FuncCatFuncPtr,
-                std::conditional_t<std::is_empty_v<Func_T>, FuncCatStateless, FuncCatStdFunction>
+                std::conditional_t<std::is_empty_v<Func_T> && std::is_copy_assignable_v<Func_T>, FuncCatStateless, FuncCatStdFunction> // Stateless lambdas are copy assignable since C++20
                 >;
     };
 
@@ -191,11 +191,11 @@ namespace DFG_DETAIL_NS
     }
 
     template <class Func_T, class Index_T>
-    auto makeFunctionValueIteratorImpl(Index_T i, std::function<Func_T> func, FuncCatStdFunction) -> FunctionValueIterator<std::function<Func_T>, decltype(func(Index_T())), Index_T>
+    auto makeFunctionValueIteratorImpl(Index_T i, Func_T&& func, FuncCatStdFunction) -> FunctionValueIterator<std::function<decltype(func(Index_T())) (Index_T)>, decltype(func(Index_T())), Index_T>
     {
         using ReturnT = decltype(func(Index_T()));
-        using Wrapper = std::function<Func_T>;
-        return FunctionValueIterator<Wrapper, ReturnT, Index_T>(i, func);
+        using Wrapper = std::function<ReturnT (Index_T)>;
+        return FunctionValueIterator<Wrapper, ReturnT, Index_T>(i, Wrapper(func));
     }
 } // namespace DFG_DETAIL_NS
 

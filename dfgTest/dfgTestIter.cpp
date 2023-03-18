@@ -557,27 +557,42 @@ TEST(dfgIter, FunctionValueIterator)
 {
     using namespace ::DFG_MODULE_NS(iter);
 
+    const auto testAssignment = [](const auto& iter)
+    {
+        std::remove_const_t<std::remove_reference_t<decltype(iter)>> iter2 = iter;
+        iter2 = iter;
+        DFG_UNUSED(iter2);
+    };
+
     // FuncCat tests
     {
         using namespace ::DFG_MODULE_NS(iter)::DFG_DETAIL_NS;
-        const auto statelessLambda = [](size_t i) { return i; };
+        auto statelessLambda = [](size_t i) { return i; };
         int i = 0;
         const auto statefullLambda = [&](int n) { return n + i; };
         using FreeFuncPtr = size_t (*)(size_t);
+#if (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_20)
         DFGTEST_STATIC_TEST((std::is_same_v<FuncCatStateless,   FuncCat<decltype(statelessLambda)>>));
+#else // Case: before C++20
+        DFGTEST_STATIC_TEST((std::is_same_v<FuncCatStdFunction, FuncCat<decltype(statelessLambda)>>));
+#endif // (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_20)
+
         DFGTEST_STATIC_TEST((std::is_same_v<FuncCatFuncPtr,     FuncCat<FreeFuncPtr>>));
         DFGTEST_STATIC_TEST((std::is_same_v<FuncCatStdFunction, FuncCat<decltype(statefullLambda)>>));
     }
 
     // Basic test
     {
-        const auto func = [](size_t i) { return i; };
+        auto func = [](size_t i) { return i; };
         auto iter = makeFunctionValueIterator(size_t(0), func);
         std::vector<size_t> vals;
         std::copy(iter, iter + 5, std::back_inserter(vals));
         EXPECT_EQ(std::vector<size_t>({0, 1, 2, 3, 4}), vals);
-        // Captureless lambdas are default constructible only since C++20
-        DFGTEST_STATIC_TEST(!std::is_default_constructible_v<decltype(func)> || sizeof(iter) == sizeof(size_t));
+        // Captureless lambdas are default constructible and copy assignable only since C++20
+#if (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_20)
+        DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(size_t));
+#endif // (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_20)
+        testAssignment(iter);
     }
 
     // Testing operators 
@@ -609,6 +624,7 @@ TEST(dfgIter, FunctionValueIterator)
         DFGTEST_EXPECT_LEFT(2, *iter++);
         DFGTEST_EXPECT_LEFT(4, *iter++);
         DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(int));
+        testAssignment(iter);
     }
 
     // Testing handling of function pointer
@@ -619,6 +635,7 @@ TEST(dfgIter, FunctionValueIterator)
         DFGTEST_EXPECT_LEFT(0, *iter++);
         DFGTEST_EXPECT_LEFT(1, *iter++);
         DFGTEST_EXPECT_LEFT(2, *iter++);
+        testAssignment(iter);
     }
 
     // Testing use of std::function for stateful lambdas
@@ -630,6 +647,7 @@ TEST(dfgIter, FunctionValueIterator)
         val = 2;
         EXPECT_EQ(2, *iter);
         DFGTEST_STATIC_TEST(sizeof(iter) > sizeof(size_t));
+        testAssignment(iter);
     }
 
     // makeIndexIterator
@@ -640,6 +658,7 @@ TEST(dfgIter, FunctionValueIterator)
         EXPECT_EQ(std::vector<size_t>({ 0, 1, 2 }), vals);
         std::copy(iter + 10, ((iter + 12) - 5) + 5, std::back_inserter(vals));
         EXPECT_EQ(std::vector<size_t>({ 0, 1, 2, 10, 11 }), vals);
+        testAssignment(iter);
 
         DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(size_t));
         DFGTEST_STATIC_TEST(sizeof(decltype(makeIndexIterator(short(0)))) == sizeof(short));
