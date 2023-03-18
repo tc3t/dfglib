@@ -658,7 +658,7 @@ TEST(dfgQt, NumberGeneratorDataSource)
         ds.fetchColumnNumberData(dataPipe, 0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics));
         ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics), [&](const SourceDataSpan& data)
         {
-            auto iter = ::DFG_MODULE_NS(iter)::makeFunctionValueIterator(valueMapForEach.size(), [](size_t i) { return double(i); } );
+            auto iter = ::DFG_MODULE_NS(iter)::makeIndexIterator(valueMapForEach.size());
             valueMapForEach.pushBackToUnsorted(makeRange(iter, iter + data.doubles().size()), data.doubles());
         });
         valueMapForEach.setSorting(true);

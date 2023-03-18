@@ -964,7 +964,7 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
         if (!rows.hasData() && !doubleRange.empty())
         {
             // If data has doubles but not rows, generating iota rows.
-            auto iter = ::DFG_MODULE_NS(iter)::makeFunctionValueIterator(size_t(values.size()), [](size_t i) { return i; });
+            auto iter = ::DFG_MODULE_NS(iter)::makeIndexIterator(size_t(values.size()));
             values.pushBackToUnsorted(makeRange(iter, iter + doubleRange.size()), doubleRange);
         }
         else
