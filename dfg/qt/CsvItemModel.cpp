@@ -25,7 +25,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <set>
-#include "../cont/SortedSequence.hpp"
 #include "../dfgBase.hpp"
 #include "../io.hpp"
 #include "../str/string.hpp"

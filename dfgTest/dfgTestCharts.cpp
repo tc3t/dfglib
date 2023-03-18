@@ -782,7 +782,7 @@ TEST(dfgCharts, operations_regexFormat)
             DFGTEST_ASSERT_TRUE(pValues != nullptr);
             DFGTEST_ASSERT_LEFT(expectedStrings.size(), pStrings->size());
             DFGTEST_ASSERT_LEFT(expectedStrings.size(), pValues->size());
-            DFGTEST_EXPECT_TRUE(dfg::cont::isEqualContent(expectedStrings, *pStrings));
+            DFGTEST_EXPECT_TRUE(::DFG_MODULE_NS(cont)::isEqualContent(expectedStrings, *pStrings));
             if (std::is_const_v<std::remove_reference_t<decltype(xVals)>>)
                 DFGTEST_EXPECT_TRUE(&xVals != pStrings);
             else

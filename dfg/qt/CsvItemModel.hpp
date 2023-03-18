@@ -12,6 +12,7 @@
 #include "../numericTypeTools.hpp"
 #include "../CsvFormatDefinition.hpp"
 #include "../cont/detail/tableCsvHelpers.hpp"
+#include "../cont/SortedSequence.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -27,9 +28,6 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont)
 {
-    template <class Cont_T>
-    class SortedSequence;
-
     class CsvConfig;
 } }
 

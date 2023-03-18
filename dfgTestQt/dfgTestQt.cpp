@@ -227,10 +227,14 @@ TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicCustomDetailHandling)
     auto pProductCollector = getCollector("test_product");
 
     if (pSumCollector)
+    {
         DFGTEST_EXPECT_EQ(5, pSumCollector->value());
+    }
 
     if (pProductCollector)
+    {
         DFGTEST_EXPECT_EQ(6, pProductCollector->value());
+    }
 }
 
 TEST(dfgQt, qstringUtils)

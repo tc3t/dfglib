@@ -779,9 +779,9 @@ DFG_ROOT_NS_BEGIN{
                 // Launching read-thread for every additional block handler
                 for (size_t i = 0; i < additionalBlockStarts.size(); ++i)
                 {
-                    threads.push_back(std::thread([i, this, &tables, &strm, &additionalBlockStarts, &conditionReadsDone, &tablePtrs,
+                    threads.push_back(std::thread([i, &tables, &strm, &additionalBlockStarts, &conditionReadsDone,
                                                    &mergeColumns, &conditionCanStartMerge,
-                                                   &nSeedTableOriginalRowCount, blockSize, &formatDef, &additionalBlockCellHanders, streamCreator]()
+                                                   blockSize, &formatDef, &additionalBlockCellHanders, streamCreator]()
                         {
                             auto& table = tables[i];
                             auto strmBlock = streamCreator(strm.beginPtr() + additionalBlockStarts[i], blockSize(i));
