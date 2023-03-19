@@ -1561,9 +1561,9 @@ namespace dfglibAdjustements
         using UT1 = typename std::make_unsigned<T1>::type;
         constexpr auto bLeftIsSigned = std::is_signed<T0>::value;
         constexpr auto bRightIsSigned = std::is_signed<T1>::value;
-        if (bLeftIsSigned == bRightIsSigned)
+        if constexpr (bLeftIsSigned == bRightIsSigned)
             return left == right;
-        else if (bLeftIsSigned)
+        else if constexpr (bLeftIsSigned)
             return left < 0 ? false : UT0(left) == UT1(right);
         else
             return right < 0 ? false : UT0(left) == UT1(right);

@@ -139,13 +139,13 @@ public: \
 //      Defines operators for given enum type created by DFG_DEFINE_SCOPED_ENUM_FLAGS-macro and deletes operations that should not be accepted.
 //
 #define DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(SCOPE_NAME) \
-             constexpr inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) | f2;} \
+    DFG_MAYBE_UNUSED constexpr inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) | f2;} \
     template <class T> inline SCOPE_NAME operator| (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
     template <class T> inline SCOPE_NAME operator| (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
-             constexpr inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) & f2;} \
+    DFG_MAYBE_UNUSED constexpr inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) & f2;} \
     template <class T> inline SCOPE_NAME operator& (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
     template <class T> inline SCOPE_NAME operator& (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
-             constexpr inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) ^ f2;} \
+    DFG_MAYBE_UNUSED constexpr inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2) noexcept { return SCOPE_NAME::Storage(f1) ^ f2;} \
     template <class T> inline SCOPE_NAME operator^ (SCOPE_NAME::Enum f1, T f2) noexcept = delete; \
     template <class T> inline SCOPE_NAME operator^ (T f1, SCOPE_NAME::Enum f2) noexcept = delete; \
     constexpr inline void operator+(SCOPE_NAME::Enum f1, SCOPE_NAME::Enum f2)      noexcept = delete; \

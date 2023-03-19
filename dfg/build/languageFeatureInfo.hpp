@@ -131,6 +131,16 @@ Notes:
 #endif
 
 // DFG_MAYBE_UNUSED (https://en.cppreference.com/w/cpp/language/attributes/maybe_unused)
+// Usage examples adapted from above link:
+//      -Function: DFG_MAYBE_UNUSED void func();
+//      -Function argument: void func(DFG_MAYBE_UNUSED int a)
+//      -class/struct/union: class DFG_MAYBE_UNUSED ClassName;
+//      -typedef, using: DFG_MAYBE_UNUSED typedef S* PS; , using PS DFG_MAYBE_UNUSED = S*;
+//      -Variable or static data member: DFG_MAYBE_UNUSED int x;
+//      -Non-static data member: union U { DFG_MAYBE_UNUSED int n; };
+//      -Enumeration:: enum DFG_MAYBE_UNUSED E {};
+//      -Enumerator: enum { A DFG_MAYBE_UNUSED, B DFG_MAYBE_UNUSED = 42 };
+//      -Structured binding: DFG_MAYBE_UNUSED auto [a, b] = std::make_pair(42, 0.23);
 #if (DFG_CPLUSPLUS >= DFG_CPLUSPLUS_17)
     #define DFG_MAYBE_UNUSED [[maybe_unused]]
 #else

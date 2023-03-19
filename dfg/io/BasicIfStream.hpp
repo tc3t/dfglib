@@ -127,6 +127,7 @@ public:
         #pragma warning(disable : 4996) // This function or variable may be unsafe
 #endif // _MSC_VER
 
+        // Note: can't use fopen_s directly since it can't open file for sharing (broke test case dfgIo.IfStreamWithEncodingReadOnlyFile)
         m_pFile = std::fopen(sPath.c_str(), "rb");
 
 #ifdef _MSC_VER
@@ -142,6 +143,7 @@ public:
         #pragma warning(disable : 4996) // This function or variable may be unsafe
     #endif // _MSC_VER
 
+        // Note: can't use _wfopen_s since it can't open file for sharing (broke test case dfgIo.IfStreamWithEncodingReadOnlyFile)
         m_pFile = _wfopen(sPath.c_str(), L"rb");
 
     #ifdef _MSC_VER

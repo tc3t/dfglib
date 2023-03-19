@@ -662,8 +662,8 @@ TEST(dfgQt, NumberGeneratorDataSource)
         ds.fetchColumnNumberData(dataPipe, 0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics));
         ds.forEachElement_byColumn(0, DataQueryDetails(DataQueryDetails::DataMaskRowsAndNumerics), [&](const SourceDataSpan& data)
         {
-            auto iter = ::DFG_MODULE_NS(iter)::makeIndexIterator(valueMapForEach.size());
-            valueMapForEach.pushBackToUnsorted(makeRange(iter, iter + data.doubles().size()), data.doubles());
+            const auto nStartPos = static_cast<uint32>(valueMapForEach.size());
+            valueMapForEach.pushBackToUnsorted(indexRangeIE(nStartPos, static_cast<uint32>(nStartPos + data.doubles().size())), data.doubles());
         });
         valueMapForEach.setSorting(true);
         valueMapFetch.sort();

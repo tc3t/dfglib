@@ -1104,12 +1104,8 @@ TEST(dfgBuild, DFG_STRING_LITERAL_BY_CHARTYPE)
 
 namespace
 {
-    void noExceptFunc() DFG_NOEXCEPT_TRUE {}
-#if DFG_LANGFEAT_NOEXCEPT == 1
-    void noExceptFuncComparison() noexcept;
-#else
-    void noExceptFuncComparison() throw();
-#endif
+    DFG_MAYBE_UNUSED void noExceptFunc() DFG_NOEXCEPT_TRUE {}
+    DFG_MAYBE_UNUSED void noExceptFuncComparison() noexcept;
 }
 
 TEST(dfgLog, basicFmtTests)

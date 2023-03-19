@@ -679,8 +679,6 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
     const char szPathMatrix200x200[] = "testfiles/matrix_200x200.txt"; // Note: this file has \r\n EOL
     const char szPathMatrix10x10_eol_n[] = "testfiles/matrix_10x10_1to100_eol_n.txt";
     
-    const auto nFileSizeMatrix200x200 = ::DFG_MODULE_NS(os)::fileSize(szPathMatrix200x200);
-    
     // Basic correctness test
     {
         TableT tSingleThreaded;
@@ -805,8 +803,12 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
 
     // Checking read block size handling, e.g. that tiny file with 32 lines won't be spread to be read with multiple threads.
     {
+#if defined(_DEBUG)
+        const char* path = szPathMatrix10x10_eol_n;
+#else
         const char* path = szPathMatrix200x200;
-        const auto nInputSize = nFileSizeMatrix200x200;
+#endif
+        const auto nInputSize = ::DFG_MODULE_NS(os)::fileSize(path);
 
         // By default, expecting single-threaded read since the input file is small
         {
@@ -844,11 +846,12 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         {
             TableT table;
             TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
-            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(8);
+            const uint32 nTargetThreadCount = 6;
+            readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nTargetThreadCount);
             readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0);
             table.readFromFile(path, readOptions);
             const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
-            DFGTEST_EXPECT_LEFT(8, nUsedThreadCount);
+            DFGTEST_EXPECT_LEFT(nTargetThreadCount, nUsedThreadCount);
         }
     }
 }

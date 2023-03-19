@@ -85,7 +85,7 @@ namespace
         size_t m_nIndex;
     };
 
-    std::ostream& operator<<(std::ostream& ostrm, const ThisThreadPrintable& printable)
+    DFG_MAYBE_UNUSED std::ostream& operator<<(std::ostream& ostrm, const ThisThreadPrintable& printable)
     {
         ostrm << printable.m_nIndex << " (" << std::this_thread::get_id() << ")";
         return ostrm;

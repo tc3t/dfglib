@@ -1763,7 +1763,7 @@ namespace
         EXPECT_EQ(4294967296ull, ic32.sizeOfSet());
     }
 
-    void testInt32IntervalBounds(std::false_type) // Case: 32-bit size_t
+    DFG_MAYBE_UNUSED void testInt32IntervalBounds(std::false_type) // Case: 32-bit size_t
     {
     }
 }
