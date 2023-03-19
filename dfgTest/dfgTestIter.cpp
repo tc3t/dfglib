@@ -598,7 +598,7 @@ TEST(dfgIter, FunctionValueIterator)
     // FuncCat tests
     {
         using namespace ::DFG_MODULE_NS(iter)::DFG_DETAIL_NS;
-        auto statelessLambda = [](size_t i) { return i; };
+        const auto statelessLambda = [](size_t i) { return i; };
         int i = 0;
         const auto statefullLambda = [&](int n) { return n + i; };
         using FreeFuncPtr = size_t (*)(size_t);
@@ -614,7 +614,7 @@ TEST(dfgIter, FunctionValueIterator)
 
     // Basic test
     {
-        auto func = [](size_t i) { return i; };
+        const auto func = [](size_t i) { return i; };
         auto iter = makeFunctionValueIterator(size_t(0), func);
         std::vector<size_t> vals;
         std::copy(iter, iter + 5, std::back_inserter(vals));

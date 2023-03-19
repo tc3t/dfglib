@@ -164,7 +164,7 @@ namespace DFG_DETAIL_NS
     template <class FuncRaw_T>
     struct FuncCatImpl
     {
-        using Func_T = std::remove_reference_t<FuncRaw_T>;
+        using Func_T = std::decay_t<FuncRaw_T>;
         using type = std::conditional_t<
                 std::is_pointer_v<Func_T>,
                 FuncCatFuncPtr,
