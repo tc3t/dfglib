@@ -5,6 +5,7 @@
 #include "iter/IsContiguousMemoryIterator.hpp"
 #include "dfgAssert.hpp"
 #include "numericTypeTools.hpp"
+#include "iter/FunctionValueIterator.hpp"
 
 DFG_ROOT_NS_BEGIN
 {
@@ -193,4 +194,13 @@ DFG_ROOT_NS_BEGIN
         std::advance(iterEnd, nCount);
         return Return_T(iterBegin, iterEnd);
     }
-}
+
+    // Makes index range [first, onePastLast[. Behaviour is undefined if not (first <= onePastLast)
+    template <class Index_T>
+    auto indexRangeIE(const Index_T first, const Index_T onePastLast) -> decltype(makeRange(::DFG_MODULE_NS(iter)::makeIndexIterator(Index_T()), ::DFG_MODULE_NS(iter)::makeIndexIterator(Index_T())))
+    {
+        using namespace ::DFG_MODULE_NS(iter);
+        DFG_ASSERT_UB(first <= onePastLast);
+        return makeRange(makeIndexIterator(first), makeIndexIterator(onePastLast));
+    }
+} // namespace DFG_ROOT_NS

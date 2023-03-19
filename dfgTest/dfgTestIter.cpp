@@ -174,6 +174,37 @@ TEST(dfgIter, makeRange)
     EXPECT_EQ(31, vals[2]);
 }
 
+TEST(dfgIter, indexRangeIE)
+{
+    using namespace DFG_ROOT_NS;
+
+    // Usage in range for
+    {
+        size_t nSum = 0;
+
+        for (const auto i : indexRangeIE(1, 1))
+            nSum += i;
+        DFGTEST_EXPECT_LEFT(nSum, 0);
+
+        for (const auto i : indexRangeIE(1, 2))
+            nSum += i;
+        DFGTEST_EXPECT_LEFT(nSum, 1);
+        DFGTEST_STATIC_TEST(sizeof(decltype(indexRangeIE(1, 2))) == 2 * sizeof(int));
+    }
+
+    // Handling of data type max boundary
+    {
+        int nSum = 0;
+        const auto range = indexRangeIE<int8>(int8_min, int8_max);
+        for (const auto i : range)
+            nSum += i;
+        DFGTEST_EXPECT_LEFT(nSum, -128 - 127);
+        DFGTEST_EXPECT_LEFT(255, range.end() - range.begin());
+        DFGTEST_EXPECT_LEFT(255u, range.size());
+        DFGTEST_STATIC_TEST(sizeof(range) == 2 * sizeof(char));
+    }
+}
+
 TEST(dfgIter, makeRangeFromStartAndEndIndex)
 {
     using namespace DFG_ROOT_NS;
