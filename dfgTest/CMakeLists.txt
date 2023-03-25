@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.8) # 3.8 includes support for C++17 in CXX_STANDARD (https://cmake.org/cmake/help/latest/prop_tgt/CXX_STANDARD.html#prop_tgt:CXX_STANDARD)
 
 project (dfgTest)
 
@@ -11,7 +11,19 @@ include_directories ("${PROJECT_SOURCE_DIR}/"
 
 # TODO: Set VC warning level to W4
 
-add_definitions(-std=c++17)
+# Note: if changing the C++ standard requirement, see if also
+#       dfg/qt/qmakeTools/dfgQmakeUtil.pri
+#       needs to be changed.
+set(CMAKE_CXX_STANDARD 17)          # Sets c++17 as minimum standard requirement
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # Prevents 'decaying' to earlier standard if requested standard is not available
+set(CMAKE_CXX_EXTENSIONS OFF)       # Prevents using e.g. -std=gnu++17 instead of -std=c++17
+if(MSVC)
+    # CMAKE_VERBOSE_MAKEFILE doesn't work on MSVC and didn't seem to have similar alternative as of 2023-03, related links:
+    #   https://stackoverflow.com/questions/71353348/how-to-perform-verbose-builds-of-a-cmake-project-with-visual-studio-2019-generat
+    #   https://stackoverflow.com/questions/57168248/show-compiler-command-line-of-cmake-with-visual-studio-2019
+else()
+    set(CMAKE_VERBOSE_MAKEFILE ON)      # Sets more verbose compiler output during build
+endif()
 
 SET(HEADERS
     stdafx.h

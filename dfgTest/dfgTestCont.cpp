@@ -1907,6 +1907,10 @@ template <class T0, class T1> struct ShouldNotCompileOperation
     static auto NAME##Func(...) -> void; \
     using NAME##Type = decltype(NAME##Func(T0(), T1()))
 
+#if defined(__clang__)
+    _Pragma("GCC diagnostic push")
+    _Pragma("GCC diagnostic ignored \"-Wenum-compare\"")
+#endif // defined(__clang__)
     DFGTEST_TEMP_DEFINE_OP(or,         |);
     DFGTEST_TEMP_DEFINE_OP(and,        &);
     DFGTEST_TEMP_DEFINE_OP(xor,        ^);
@@ -1915,6 +1919,10 @@ template <class T0, class T1> struct ShouldNotCompileOperation
     DFGTEST_TEMP_DEFINE_OP(mul,        *);
     DFGTEST_TEMP_DEFINE_OP(equals,    ==);
     DFGTEST_TEMP_DEFINE_OP(notEquals, !=);
+#if defined(__clang__)
+    _Pragma("GCC diagnostic pop")
+#endif // defined(__clang__)
+
 
 #undef DFGTEST_TEMP_DEFINE_OP
 }; // class ShouldNotCompileOperation

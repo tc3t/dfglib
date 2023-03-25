@@ -23,30 +23,30 @@ enum HashType {HashTypeMd5 = CALG_MD5, HashTypeSha1 = CALG_SHA1};
 //			hc.Process(buffer, nbSize);
 //			hc.ToStr<TCHAR>()
 // TODO: test
-class DFG_CLASS_NAME(HashCreator)
+class HashCreator
 //===================================================================
 {
 public:
-    DFG_CLASS_NAME(HashCreator)(HashType hashType) : m_hCryptHash(NULL), m_HashType(hashType)
+    HashCreator(HashType hashType) : m_hCryptHash(0), m_HashType(hashType)
     {
-        if (0 == CryptAcquireContext(&m_hCryptProv,
+        if (FALSE == CryptAcquireContext(&m_hCryptProv,
                                     NULL,
                                     NULL,
                                     PROV_RSA_FULL,
                                     CRYPT_VERIFYCONTEXT))
-            m_hCryptProv = NULL;
+            m_hCryptProv = 0;
         else if (CryptCreateHash(m_hCryptProv, hashType, 0, 0, &m_hCryptHash) != BOOL(TRUE))
-            m_hCryptHash = NULL;
+            m_hCryptHash = 0;
     }
             
-    ~DFG_CLASS_NAME(HashCreator)()
+    ~HashCreator()
     {
         cleanUp();
     }
 
-    DFG_CLASS_NAME(HashCreator)& process(ConstVoidPtr pData, size_t nSize)
+    HashCreator& process(ConstVoidPtr pData, size_t nSize)
     {
-        if (m_hCryptHash != NULL)
+        if (m_hCryptHash != 0)
         {
             // Create hash and if not succesfull, cleanup.
             if ((nSize > maxValueOfType<DWORD>()) || 
@@ -61,7 +61,7 @@ public:
     // Sets nbSize to zero on error.
     void toVal(BYTE* pBytes, DWORD& nbSize)
     {
-        if (m_hCryptHash != NULL)
+        if (m_hCryptHash != 0)
         {
             if (CryptGetHashParam(m_hCryptHash, HP_HASHVAL, pBytes, &nbSize, 0) != BOOL(TRUE))
                 nbSize = 0;
@@ -69,10 +69,10 @@ public:
     }
 
     // Converts hash to hex string. Returned string has length zero if an error occurred.
-    template <class Char_T> DFG_CLASS_NAME(StringFixedCapacity_T)<Char_T, 64> toStr()
+    template <class Char_T> StringFixedCapacity_T<Char_T, 64> toStr()
     {
-        DFG_CLASS_NAME(StringFixedCapacity_T)<Char_T, 64> str;
-        if (m_hCryptHash != NULL)
+        StringFixedCapacity_T<Char_T, 64> str;
+        if (m_hCryptHash != 0)
         {
             BYTE bytes[32]; // For now assume 32 bytes to be enough since MD5 uses 16 and SHA1 20 bytes.
             DWORD nbSize = sizeof(bytes);

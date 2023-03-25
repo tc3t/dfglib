@@ -17,13 +17,13 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(crypt) {
 
     // Class for creating cryptographic random bytes.
     // Typical use is to create object of this class and then call Generate-method.
-    // DFG_CLASS_NAME(CryptRand)().Generate(buffer);
-    // DFG_CLASS_NAME(CryptRand) randCrypt; randCrypt.Generate(buffer, 10);
+    // CryptRand().Generate(buffer);
+    // CryptRand randCrypt; randCrypt.Generate(buffer, 10);
     // TODO: test
-    class DFG_CLASS_NAME(CryptRand)
+    class CryptRand
     {
     public:
-        DFG_CLASS_NAME(CryptRand)()
+        CryptRand()
         {
             if (CryptAcquireContext(
                 &m_hCryptProv,					// A pointer to a handle of a CSP
@@ -32,14 +32,14 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(crypt) {
                 PROV_RSA_FULL,					// Type of provider to acquire
                 CRYPT_VERIFYCONTEXT) == 0)		// Flag values
             {
-                m_hCryptProv = NULL;
+                m_hCryptProv = 0;
                 throw std::runtime_error("CryptAcquireContext failed");
             }
 
         }
-        ~DFG_CLASS_NAME(CryptRand)()
+        ~CryptRand()
         {
-            if (m_hCryptProv != NULL)
+            if (m_hCryptProv != 0)
                 CryptReleaseContext(m_hCryptProv, 0);
         }
 
@@ -50,7 +50,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(crypt) {
         // TODO: test
         bool Generate(void* pDest, const size_t nCount)
         {
-            return ((m_hCryptProv != NULL) && CryptGenRandom(m_hCryptProv, static_cast<DWORD>(nCount), reinterpret_cast<BYTE*>(pDest)) != 0);
+            return ((m_hCryptProv != 0) && CryptGenRandom(m_hCryptProv, static_cast<DWORD>(nCount), reinterpret_cast<BYTE*>(pDest)) != 0);
         }
 
         // Generates cryptographic randombytes using given filter function, which can

@@ -648,8 +648,8 @@ TEST(dfgStr, strTo)
     }
 
     volatile uint32 volVal = 1;
-    strTo("4294967295", volVal);
-    EXPECT_EQ(volVal, uint32_max);
+    DFGTEST_EXPECT_LEFT(strTo("4294967295", volVal), uint32_max);
+    DFGTEST_EXPECT_LEFT(volVal, uint32_max);
 
     EXPECT_EQ(1.0, strTo<long double>("1"));
 
@@ -854,7 +854,8 @@ TEST(dfgStr, toStr)
         const char szFloatMin[]         = "-3.4028235e+38";
         const char szFloatMax[]         = "3.4028235e+38";
         const char szFloatMinPositive[] = "1.1754944e-38";
-#elif (DFG_MSVC_VER != 0 && DFG_MSVC_VER < DFG_MSVC_VER_2015) || defined(__MINGW32__)
+#elif (DFG_MSVC_VER != 0 && DFG_MSVC_VER < DFG_MSVC_VER_2015) || (defined(__MINGW32__) && (__GNUC__ < 8))
+        // Note: MinGW version check might be wrong: this branch is needed on MinGW 7.3, but not on MinGW 11.2 - not sure where it changes.
         const char szFloatMin[]         = "-3.40282347e+038";
         const char szFloatMax[]         = "3.40282347e+038";
         const char szFloatMinPositive[] = "1.17549435e-038";
