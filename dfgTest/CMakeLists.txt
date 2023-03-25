@@ -61,6 +61,10 @@ set(SOURCE
 
 add_executable(dfgTest ${SOURCE} ${HEADERS})
 
+if(MINGW)
+    TARGET_LINK_LIBRARIES(dfgTest shlwapi)
+endif()
+
 if(UNIX)
     TARGET_LINK_LIBRARIES(dfgTest pthread)
 endif()
