@@ -5,6 +5,12 @@ project (dfgTest)
 # Example: line below can be used to set clang++ as compiler e.g. on Ubuntu
 # SET(CMAKE_CXX_COMPILER    "/usr/bin/clang++")
 
+# Example: using libc++ as standard library e.g. on Ubuntu
+#     May need to install these first: sudo apt install libc++-dev libc++abi-dev
+# add_compile_options("-stdlib=libc++")
+#     https://stackoverflow.com/questions/51904938/linker-error-with-cmake-and-libcxx
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
+
 include_directories ("${PROJECT_SOURCE_DIR}/"
 	"${PROJECT_SOURCE_DIR}/../externals/"
 	"${PROJECT_SOURCE_DIR}/../")
@@ -13,7 +19,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/"
 
 # Note: if changing the C++ standard requirement, see if also
 #       dfg/qt/qmakeTools/dfgQmakeUtil.pri
-#       needs to be changed.
+#       and settings in .vcxproj-files need to be changed.
 set(CMAKE_CXX_STANDARD 17)          # Sets c++17 as minimum standard requirement
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Prevents 'decaying' to earlier standard if requested standard is not available
 set(CMAKE_CXX_EXTENSIONS OFF)       # Prevents using e.g. -std=gnu++17 instead of -std=c++17
