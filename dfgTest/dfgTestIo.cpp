@@ -1319,8 +1319,8 @@ namespace
         // Test reading empty sequence.
         {
             std::string output;
-            Strm_T istrm((const char*)nullptr, 0);
-            output.clear();
+            const char* pInput = (std::is_same_v<Strm_T, std::istrstream>) ? "" : nullptr; // istrstream interprets 0 length as "call strlen() to get length" (https://en.cppreference.com/w/cpp/io/strstreambuf/strstreambuf)
+            Strm_T istrm(pInput, std::streamsize(0));
             getThrough(istrm, [&](char ch) { output.push_back(ch); }); 
             EXPECT_EQ(0, output.size());
         }
@@ -1330,11 +1330,11 @@ namespace
 TEST(dfgIo, getThrough)
 {
     using namespace DFG_MODULE_NS(io);
-    DFGTEST_STATIC(DFG_DETAIL_NS::io_hpp::Has_getThrough<DFG_CLASS_NAME(BasicImStream)>::value == true);
+    DFGTEST_STATIC(DFG_DETAIL_NS::io_hpp::Has_getThrough<BasicImStream>::value == true);
     DFGTEST_STATIC(DFG_DETAIL_NS::io_hpp::Has_getThrough<std::ifstream>::value == false);
     DFGTEST_STATIC(DFG_DETAIL_NS::io_hpp::Has_getThrough<std::istrstream>::value == false);
 
-    getThroughImpl<DFG_CLASS_NAME(BasicImStream)>();
+    getThroughImpl<BasicImStream>();
     getThroughImpl<std::istrstream>();
 }
 
