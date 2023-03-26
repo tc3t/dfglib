@@ -517,7 +517,7 @@ TEST(dfgAlg, rank)
 
     {
         const std::array<double, 8> arr0 = { 7, 10, 9, -3, 3, 4, 1, 0 };
-        const std::array<size_t, 8> rankExp0 = { 5, 7, 6, 0, 3, 4, 2, 1 };
+        const std::array<int, 8> rankExp0 = { 5, 7, 6, 0, 3, 4, 2, 1 };
 
         const auto rankArr = rank(arr0);
         EXPECT_EQ(rankExp0.size(), rankArr.size());
