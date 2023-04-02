@@ -131,7 +131,7 @@
 #if defined(DFG_COMPILER_NAME_SIMPLE_MSVC)
     #if defined(__clang__) // Case: clang-cl
         #define DFG_COMPILER_NAME_SIMPLE "clang-cl_" DFG_STRINGIZE(__clang_major__) "." DFG_STRINGIZE(__clang_minor__) "." DFG_STRINGIZE(__clang_patchlevel__) "_" DFG_COMPILER_NAME_SIMPLE_MSVC
-        #define DFG_COMPILER_FULL_VERSION __VERSION__
+        #define DFG_COMPILER_FULL_VERSION __VERSION__ " MSVC " DFG_STRINGIZE(_MSC_FULL_VER)
     #else // Case: pure MSVC
         #define DFG_COMPILER_NAME_SIMPLE     DFG_COMPILER_NAME_SIMPLE_MSVC
         #define DFG_COMPILER_FULL_VERSION    DFG_STRINGIZE(_MSC_FULL_VER)
