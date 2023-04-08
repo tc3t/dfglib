@@ -97,25 +97,33 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status of general unit tests (dfgTest) (as of 2022-10-08 commit [80f2c510](https://github.com/tc3t/dfglib/tree/80f2c5109399493d9904a1891d0e7ffd6a6fdce2), with Boost 1.70.0 unless stated otherwise)
+## Build status of general unit tests (dfgTest) (as of 2023-04-08 commit [181f7aed](https://github.com/tc3t/dfglib/tree/181f7aed))
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
-| Compiler      | Platform      | Config  | Tests (passed/all) | Comment |
-| ------------- | ------------- | -----   | ------  | ------- |
-| Clang 6.0.0   | x86-64        | Release | 100 % (314/314) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| Clang 10.0.0  | x86-64        | Release | 100 % (314/314) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| Clang 12.0.0 (clang-cl, MSVC2019.11)   | x86-64           | Release | 100 % (321/321) | Needed manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9)<br>Build with _/std:c++17_ |
-| GCC 7.5.0     | x86-64        | Release | 100 % (314/314) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| GCC 9.4.0     | x86-64        | Release | 100 % (314/314) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| MinGW 7.3.0   | x86-64        | O2      | 100 % (321/321) | |
-| VC2017.9      | x86           | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
-| VC2017.9      | x86-64        | Release | 99 % (320/321) | Numerical precision related failure in dfgNumeric.transform |
-| VC2019.11     | x86           | Release | 100 % (321/321) | std:c++17 with Conformance mode |
-| VC2019.11     | x86-64        | Release | 100 % (321/321) | std:c++17 with Conformance mode |
-| VC2022.3      | x86           | Release | 100 % (321/321) | std:c++20 with Conformance mode |
-| VC2022.3      | x86-64        | Release | 100 % (321/321) | std:c++20 with Conformance mode |
-||||||
+<!-- Table generated from buildStatus_dfgTest.csv excluding date column
+     with csv2md (https://www.npmjs.com/package/csv2md)
+ -->
+Compiler | Standard library | C++ standard [1] | Platform | Boost | Tests (passed/all) | Comment
+---|---|---|---|---|---|---
+Clang 6.0.0 | libstdc++ 7 | C++17 | x86-64 | 1.65.1 | 100 % (318/318) | Ubuntu 64-bit 18.04
+Clang 10.0.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (318/318) | Ubuntu 64-bit 20.04
+Clang 14.0.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (318/318) | Ubuntu 64-bit 22.04
+Clang 14.0.0 | libc++ 14000 | C++17 | x86-64 | 1.74.0 | 100 % (318/318) | Ubuntu 64-bit 22.04
+clang-cl (Clang 12.0.0, MSVC2019.11) | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (325/325) | See [2]
+clang-cl (Clang 15.0.1, MSVC2022.5) | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (325/325) | 
+GCC 7.5.0 | libstdc++ 7 | C++17 | x86-64 | 1.65.1 | 100 % (318/318) | Ubuntu 64-bit 18.04
+GCC 9.4.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (318/318) | Ubuntu 64-bit 20.04
+GCC 11.3.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (318/318) | Ubuntu 64-bit 22.04
+MinGW 7.3.0 | libstdc++ 7 | C++17 | x86-64 | 1.70.0 | 100 % (325/325) | 
+MinGW 11.2.0 | libstdc++ 11 | C++17 | x86-64 | 1.70.0 | 100 % (325/325) | 
+VC2017.9 | MSVC | C++17 | x86-64 | 1.70.0 | 99 % (324/325) | Numerical precision related failure in dfgNumeric.transform
+VC2019.11 | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (325/325) | std:c++17 with Conformance mode
+VC2022.5 | MSVC | C++20 | x86 | 1.70.0 | 100 % (325/325) | std:c++20 with Conformance mode
+VC2022.5 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (325/325) | std:c++20 with Conformance mode
+
+[1] As reported by *__cplusplus* macro  or equivalent.<br>
+[2] Needed manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9). According to related [MSVC bug ticket](https://developercommunity.visualstudio.com/t/undefined-symbol-wmemchr-in-1660-preview-60-using/1024640#TPIN-N1570352), the "issue belongs to clang and it was fixed in Clang 13"
 
 <br>
 <br>

@@ -1,0 +1,16 @@
+﻿Date,Compiler,Standard library,C++ standard [1],Platform,Boost,Tests (passed/all),Comment
+2023-04-08,Clang 6.0.0,libstdc++ 7,C++17,x86-64,1.65.1,100 % (318/318),Ubuntu 64-bit 18.04
+2023-04-08,Clang 10.0.0,libstdc++ 9,C++17,x86-64,1.71.0,100 % (318/318),Ubuntu 64-bit 20.04
+2023-04-08,Clang 14.0.0,libstdc++ 11,C++17,x86-64,1.74.0,100 % (318/318),Ubuntu 64-bit 22.04
+2023-04-08,Clang 14.0.0,libc++ 14000,C++17,x86-64,1.74.0,100 % (318/318),Ubuntu 64-bit 22.04
+2023-04-08,"clang-cl (Clang 12.0.0, MSVC2019.11)",MSVC,C++17,x86-64,1.70.0,100 % (325/325),See [2]
+2023-04-08,"clang-cl (Clang 15.0.1, MSVC2022.5)",MSVC,C++17,x86-64,1.70.0,100 % (325/325),
+2023-04-08,GCC 7.5.0,libstdc++ 7,C++17,x86-64,1.65.1,100 % (318/318),Ubuntu 64-bit 18.04
+2023-04-08,GCC 9.4.0,libstdc++ 9,C++17,x86-64,1.71.0,100 % (318/318),Ubuntu 64-bit 20.04
+2023-04-08,GCC 11.3.0,libstdc++ 11,C++17,x86-64,1.74.0,100 % (318/318),Ubuntu 64-bit 22.04
+2023-04-08,MinGW 7.3.0,libstdc++ 7,C++17,x86-64,1.70.0,100 % (325/325),
+2023-04-08,MinGW 11.2.0,libstdc++ 11,C++17,x86-64,1.70.0,100 % (325/325),
+2023-04-08,VC2017.9,MSVC,C++17,x86-64,1.70.0,99 % (324/325),Numerical precision related failure in dfgNumeric.transform
+2023-04-08,VC2019.11,MSVC,C++17,x86-64,1.70.0,100 % (325/325),std:c++17 with Conformance mode
+2023-04-08,VC2022.5,MSVC,C++20,x86,1.70.0,100 % (325/325),std:c++20 with Conformance mode
+2023-04-08,VC2022.5,MSVC,C++20,x86-64,1.70.0,100 % (325/325),std:c++20 with Conformance mode
