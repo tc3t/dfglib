@@ -1876,9 +1876,9 @@ void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
 {
     if (!isValidColumn(nCol))
         return;
-    if (sColType == ColInfo::columnTypeAsString(ColTypeText))
+    if (sColType == ColInfo::columnTypeAsString(ColTypeText).asUntypedView())
         setColumnType(nCol, ColTypeText);
-    else if (sColType == ColInfo::columnTypeAsString(ColTypeNumber))
+    else if (sColType == ColInfo::columnTypeAsString(ColTypeNumber).asUntypedView())
         setColumnType(nCol, ColTypeNumber);
     else if (!sColType.empty() && sColType != "default")
     {
