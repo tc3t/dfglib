@@ -2570,14 +2570,17 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                 pProgressWidget->setRange(0, 100);
                 bHasProgress = true;
             }
+            using TimePointT = std::chrono::steady_clock::time_point;
+            // These identifiers are needed only if pProgressWidget is non-null, but are outside of 'if (pProgressWidget)' -scope
+            // for lambda capture lifetime matters.
+            const auto timePointToAtomicType = [](const TimePointT& tp) { return tp.time_since_epoch().count(); };
+            std::atomic<long long> aLastSetValue{timePointToAtomicType(std::chrono::steady_clock::now())};
+            std::atomic<uint32> anLastThreadCount{1};
+
             if (pProgressWidget)
             {
-                using TimePointT = std::chrono::steady_clock::time_point;
-                const auto timePointToAtomicType = [](const TimePointT& tp) { return tp.time_since_epoch().count(); };
-                std::atomic<long long> aLastSetValue{timePointToAtomicType(std::chrono::steady_clock::now())};
-                std::atomic<uint32> anLastThreadCount{1};
                 const QString sOriginalLabel = pProgressWidget->labelText();
-                loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([pProgressWidget, fileSizeDouble, bHasProgress, &sOriginalLabel, &timePointToAtomicType, &aLastSetValue, &anLastThreadCount](const CsvModel::LoadOptions::ProgressControllerParamT param)
+                loadOptions.setProgressController(CsvModel::LoadOptions::ProgressController([pProgressWidget, fileSizeDouble, bHasProgress, sOriginalLabel, &timePointToAtomicType, &aLastSetValue, &anLastThreadCount](const CsvModel::LoadOptions::ProgressControllerParamT param)
                 {
                     const auto nProcessedBytes = param.counter();
                     // Calling setValue for progressWidget; note that using invokeMethod() since progressWidget lives in another thread.

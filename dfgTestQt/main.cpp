@@ -83,6 +83,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_filterFromSelection";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_saveAsShown";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_stringToDouble";
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_filter";
