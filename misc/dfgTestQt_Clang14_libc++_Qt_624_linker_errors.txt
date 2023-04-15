@@ -1,0 +1,12 @@
+:-1: error: CsvItemModel.o: in function `bool QMetaType::registerConverter<QList<int>, QIterable<QMetaSequence>, QtPrivate::QSequentialIterableConvertFunctor<QList<int> > >(QtPrivate::QSequentialIterableConvertFunctor<QList<int> >)':
+dfglib/dfg/qt/CsvItemModel.cpp:-1: error: undefined reference to `QMetaType::registerConverterFunction(std::__1::function<bool (void const*, void*)> const&, QMetaType, QMetaType)'
+:-1: error: CsvItemModel.o: in function `bool QMetaType::registerMutableView<QList<int>, QIterable<QMetaSequence>, QtPrivate::QSequentialIterableMutableViewFunctor<QList<int> > >(QtPrivate::QSequentialIterableMutableViewFunctor<QList<int> >)':
+dfglib/dfg/qt/CsvItemModel.cpp:-1: error: undefined reference to `QMetaType::registerMutableViewFunction(std::__1::function<bool (void*, void*)> const&, QMetaType, QMetaType)'
+:-1: error: moc_CsvTableView.o: in function `bool QMetaType::registerConverter<QList<QPersistentModelIndex>, QIterable<QMetaSequence>, QtPrivate::QSequentialIterableConvertFunctor<QList<QPersistentModelIndex> > >(QtPrivate::QSequentialIterableConvertFunctor<QList<QPersistentModelIndex> >)':
+dfglib/build-dfgTestQt-Desktop_Qt_6_2_4_Clang_libc_64bit-Release/moc_CsvTableView.cpp:-1: error: undefined reference to `QMetaType::registerConverterFunction(std::__1::function<bool (void const*, void*)> const&, QMetaType, QMetaType)'
+:-1: error: moc_CsvTableView.o: in function `bool QMetaType::registerMutableView<QList<QPersistentModelIndex>, QIterable<QMetaSequence>, QtPrivate::QSequentialIterableMutableViewFunctor<QList<QPersistentModelIndex> > >(QtPrivate::QSequentialIterableMutableViewFunctor<QList<QPersistentModelIndex> >)':
+dfglib/build-dfgTestQt-Desktop_Qt_6_2_4_Clang_libc_64bit-Release/moc_CsvTableView.cpp:-1: error: undefined reference to `QMetaType::registerMutableViewFunction(std::__1::function<bool (void*, void*)> const&, QMetaType, QMetaType)'
+:-1: error: linker command failed with exit code 1 (use -v to see invocation)
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+make: *** [Makefile:329: dfgTestQt] Error 1
+:-1: Error while building/deploying project dfgTestQt (kit: Desktop Qt 6.2.4 Clang libc++ 64bit)

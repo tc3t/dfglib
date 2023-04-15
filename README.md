@@ -128,26 +128,33 @@ VC2022.5 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (325/325) | std:c++20 with Con
 <br>
 <br>
 
-## Build status of Qt unit tests (dfgTestQt) (as of 2022-10-08 commit [80f2c510](https://github.com/tc3t/dfglib/tree/80f2c5109399493d9904a1891d0e7ffd6a6fdce2), with Boost 1.70.0 unless stated otherwise)
+## Build status of Qt unit tests (dfgTestQt) (as of 2023-04-15 commit [a7c80ad8](https://github.com/tc3t/dfglib/tree/a7c80ad8f2389596d53dee88553eef0c51541294))
 
-| Compiler      | Qt     | Platform   | Config   | Tests (passed/all) | Comment |
-| ------------- | ------ | ---------- | -------- | ------------------ | ------- |
-| Clang 6.0.0 (libstdc++)  | 5.9    | x86-64     | Release  | 98 % (44/45) | Boost 1.65.1, Ubuntu 64-bit 18.04. Test case dfgQt.CsvTableView_saveAsShown crashed with stack trace operator+(QString const&, char const*) () <- dfg::qt::CsvItemModel::getConfig() const () <- dfg::qt::CsvItemModel::readData(dfg::qt::CsvItemModel::LoadOptions const&, std::function<bool ()>) () <- dfg::qt::CsvItemModel::openFile. This was isolated to access of m_sFilePath member in CsvItemModel::getFilePath(). Did not occur in debug-build and some extra qDebug-logging could fix the crash also in release build. |
-| Clang 10.0.0 (libc++)  | 5.12  | x86-64      | Release | 100 % (46/46) | Boost 1.71.0, Ubuntu 64-bit 20.04, QMAKESPEC = _linux-clang-libc++_ |
-| Clang 10.0.0 (libstdc++)  | 5.12  | x86-64      | Release | 98 % (45/46) | Boost 1.71.0, Ubuntu 64-bit 20.04, QMAKESPEC = _linux-clang_. Test case dfgQt.CsvTableView_saveAsShown crashed like in Clang 6.0.0 case mentioned above. |
-| Clang 12.0.0 (clang-cl, MSVC2019.11)  | 5.13   | x86-64        | Release | 100 % (46/46) | |
-| GCC 7.5.0     | 5.9   | x86-64      | Release | 100 % (45/45) | Boost 1.65.1, Ubuntu 64-bit 18.04 |
-| GCC 9.4.0     | 5.12  | x86-64      | Release | 100 % (46/46) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| GCC 9.4.0     | 6.0   | x86-64      | Release | 100 % (46/46) | Boost 1.71.0, Ubuntu 64-bit 20.04 |
-| MinGW 7.3.0   | 5.13  | x86-64      | Release | 100 % (46/46) | |
-| VC2017.9      | 5.9   | x86-64      | Release | 100 % (45/45) | |
-| VC2017.9      | 5.12  | x86-64      | Release | 100 % (46/46) | |
-| VC2019.11     | 5.15  | x86-64      | Release | 100 % (46/46) | |
-| VC2019.11     | 6.0   | x86-64      | Release | 100 % (46/46) | |
-| VC2022.3      | 6.0   | x86-64      | Release | 100 % (46/46) | |
-||||||
+<!-- Table generated from buildStatus_dfgTestQt.csv excluding date column
+     with csv2md (https://www.npmjs.com/package/csv2md)
+ -->
 
-Note: dfgQt.CsvTableView_paste may fail sporadically at least on Windows.
+
+Status | Compiler | Standard library | C++ standard [1] | Qt | Platform | Boost | Tests (passed/all) | Comment
+---|---|---|---|---|---|---|---|---
+:white_check_mark: | Clang 6.0.0 | libstdc++ 7 | C++17 | 5.9.5 | x86-64 | 1.65.1 | 100 % (49/49) | Ubuntu 64-bit 18.04
+:white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (51/51) | Ubuntu 64-bit 20.04
+:white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (51/51) | Ubuntu 64-bit 20.04
+:white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (51/51) | Ubuntu 64-bit 22.04
+:red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | x86-64 | 1.74.0 | N/A | Ubuntu 64-bit 22.04. Causes linker errors from QMetaType. For details, see error messages in a [separate file](misc/dfgTestQt_Clang14_libc++_Qt_624_linker_errors.txt)
+:white_check_mark: | clang-cl (Clang 15.0.1, MSVC2022.5) | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (51/51) | 
+:white_check_mark: | GCC 7.5.0 | libstdc++ 7 | C++17 | 5.9.5 | x86-64 | 1.65.1 | 100 % (49/49) | Ubuntu 64-bit 18.04
+:white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (51/51) | Ubuntu 64-bit 20.04
+:white_check_mark: | GCC 11.3.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (51/51) | Ubuntu 64-bit 22.04
+:white_check_mark: | MinGW 7.3.0 | libstdc++ 7 | C++17 | 5.13.1 | x86-64 | 1.70.0 | 100 % (51/51) | 
+:white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (51/51) | 
+:white_check_mark: | VC2019.11 | MSVC | C++17 | 5.9.8 | x86-64 | 1.70.0 | 100 % (49/49) | 
+:white_check_mark: | VC2019.11 | MSVC | C++17 | 5.15.2 | x86-64 | 1.70.0 | 100 % (51/51) | 
+:white_check_mark: | VC2022.5 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (51/51) | 
+:white_check_mark: | VC2022.5 | MSVC | C++20 | 6.4.1 | x86-64 | 1.70.0 | 100 % (51/51) | 
+
+[1] As reported by *__cplusplus* macro  or equivalent.<br>
+Note: dfgQt.CsvTableView_paste has been experienced to fail on Windows if VirtualBox is running a virtual machine; Qt logs "Unable to obtain clipboard" during the test case.
 
 <br>
 
