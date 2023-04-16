@@ -5815,6 +5815,11 @@ void CsvTableView::doModalOperation(const QString& sProgressDialogLabel, const P
 
 QColor CsvTableView::getReadOnlyBackgroundColour() const
 {
+    return getReadOnlyBackgroundColourDefault();
+}
+
+QColor CsvTableView::getReadOnlyBackgroundColourDefault()
+{
     return QColor(248, 248, 248);
 }
 

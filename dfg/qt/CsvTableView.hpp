@@ -528,6 +528,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void doModalOperation(const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void(ProgressWidget*)> func);
 
         QColor getReadOnlyBackgroundColour() const;
+        static QColor getReadOnlyBackgroundColourDefault();
 
         QString getAcceptedFileTypeFilter() const; // Returns list of accepted file types in format of QFileDialog filter.
         QString getFilterTextForOpenFileDialog() const;
