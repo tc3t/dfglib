@@ -244,7 +244,7 @@ void ContentGeneratorDialog::setCompleter(const int nTargetRow, const char** pCo
             spCompleter->setModel(new QStringListModel(completerItems, spCompleter.data())); // Model is owned by completer object.
         }
         if (!m_spCompleterDelegateForDistributionParams)
-            m_spCompleterDelegateForDistributionParams.reset(new CsvTableViewCompleterDelegate(this, spCompleter.get()));
+            m_spCompleterDelegateForDistributionParams.reset(new CsvTableViewCompleterDelegate(this->m_spSettingsTable.get(), spCompleter.get()));
         m_spCompleterDelegateForDistributionParams->m_spCompleter = spCompleter.get();
         // Settings delegate for the row in order to enable completer. Note that delegate should not be set for first column, but done here since there seems to be no easy way to set it only
         // for the second cell in row.
