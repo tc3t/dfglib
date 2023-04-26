@@ -4,27 +4,29 @@ csv-oriented table editor based on dfglib using Qt as UI framework. Also include
 
 ## Building
 
-### __Version 2.4.0__:
+### __Version 2.5.0__:
 
-Has been build for x86-64 ([i.e. amd64](https://en.wikipedia.org/wiki/X86-64)) with:
-| Compiler      | C++ standard [1] | Qt | OS | Boost | Charting? (using QCustomPlot) | Notes |
-| ------------- | ---------------- | -- | ---- | -- | -- | -- |
-| Clang 6.0.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No | QMAKESPEC = _linux-clang_ |
-| Clang 10.0.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QMAKESPEC = _linux-clang_ or _linux-clang-libc++_, QCustomPlot 2.0.1
-| Clang 12.0.0 (clang-cl, MSVC2019.10/11) | C++17 | 5.15 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0. Needed a workaround for "lld-link: error: undefined symbol: wmemchr" as described in message of [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9) (e.g. adding wmemchr definition manually to a new .cpp-file and disabling pch)
-| GCC 7.5.0 | C++14 | 5.9 | Ubuntu 18.04 | 1.65.1 | No |  |
-| GCC 9.4.0 | C++17 | 5.12 | Ubuntu 20.04 | 1.71 | Yes | QCustomPlot 2.0.1 |
-| GCC 9.4.0 | C++17 | 6.0 | Ubuntu 20.04 | 1.71 | No |
-| MinGW 7.3.0 | C++17 | 5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2017.9 | C++14 | 5.9 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0.
-| MSVC2017.9 | C++17 | 5.12/5.13 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2019.11 | C++17 | 5.15 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
-| MSVC2022.3 | C++17 | 6.0 | Windows 8.1 | 1.70 | Yes | QCustomPlot 2.1.0
+Build status (all builds are x86-64 i.e. [amd64](https://en.wikipedia.org/wiki/X86-64))
+
+:white_check_mark:
+
+| Status | Compiler      | Standard library | C++ standard [1] | Qt | OS | Boost | Charting? (QCustomPlot version) | Notes |
+| ------ | ------------- | ---------------- | ---------------- | -- | ---- | -- | -- | -- |
+| :white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes (2.0.1) | QMAKESPEC = _linux-clang-libc++_
+| :white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes (2.0.1) | QMAKESPEC = _linux-clang_
+| :red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | Ubuntu 22.04 | 1.74 | Yes (2.1.1) | Fails due to the same linker errors as dfgTestQt
+| :white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | Ubuntu 22.04 | 1.74 | Yes (2.1.1) | 
+| :white_check_mark: | clang-cl (Clang 15.0.1, MSVC2022.5) | MSVC | C++17 | 6.4.1 | Windows 11 | 1.70 | Yes (2.1.1) |
+| :white_check_mark: | GCC 9.4.0  | libstdc++ 9 | C++17 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes (2.0.1) | |
+| :white_check_mark: | GCC 11.3.0 | libstdc++ 11 | C++17 | 6.2.4 | Ubuntu 22.04 | 1.74 | Yes (2.1.1) |
+| :white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | Windows 11 | 1.70 | Yes (2.1.1) | 
+| :white_check_mark: | MSVC2019.11 | MSVC |C++17 | 5.15.2 | Windows 11 | 1.70 | Yes (2.1.1) | 
+| :white_check_mark: | MSVC2022.5 | MSVC | C++17 | 6.4.1 | Windows 11 | 1.70 | Yes (2.1.1) |
 | | | |
 
 [1] As reported by *__cplusplus* macro  or equivalent.
 
-Also expected to build directly or with little changes on MSVC2015; minimum Qt version is 5.8/5.9. While building with Qt 6 is possible, the application itself is untested with Qt 6 so there may be some rough edges. If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. Using QCustomPlot 2.1 and Qt >=6.2 may need additional patch as discussed in [QCustomPlot forums](https://www.qcustomplot.com/index.php/support/forum/2380).
+If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. When using Qt >=6.2, charting requires at least version 2.1.1 of QCustomPlot.
 
 Concrete build steps assuming having compatible Qt version, Qt Creator and compiler available:
 * Open dfgQtTableEditor.pro in Qt Creator
@@ -33,9 +35,48 @@ Concrete build steps assuming having compatible Qt version, Qt Creator and compi
 
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
-To see build chart of older versions, see [readme of 2.3.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.3.0/dfgExamples/dfgQtTableEditor)
+To see build chart of older versions, see [readme of 2.4.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.4.0/dfgExamples/dfgQtTableEditor)
 
 ## Version history
+
+### 2.5.0, 2023-04-26
+* Tag: [2.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.5.0)
+* Highlights: Filter from selection, sort-setting in .conf-file, major performance improvements to charts, regexFormat-operation
+* Build requirements
+    * Building now requires C++17 ([481baa71](https://github.com/tc3t/dfglib/commit/481baa717a0cc90fb55813de787ba68fb98b1515))
+* General
+    * [new] Can now create a filter from selection ([#146](https://github.com/tc3t/dfglib/issues/146))
+    * [new] Sort-settings can now be stored to .conf-file ([#142](https://github.com/tc3t/dfglib/issues/142))
+    * [imp] When overwriting an existing .csv-file, a confirmation is now asked if encoding or EOL would change ([#145](https://github.com/tc3t/dfglib/issues/145), [af8d28f7](https://github.com/tc3t/dfglib/commit/af8d28f70fb03773d802bbf0731963bd0b84bf83))
+    * [imp] Parsing datetimes to doubles now recognizes more formats ([3e7b138a](https://github.com/tc3t/dfglib/commit/3e7b138aabd707993d80a726ce890d65a40905b7))
+    * [imp] Table view now has basic logging console (can be enabled from context menu) ([#152](https://github.com/tc3t/dfglib/issues/152))
+    * [mod] Adjustments to menu items ([60fdf388](https://github.com/tc3t/dfglib/commit/60fdf388d71ef57e58363e9745fb40b7bdcfe173))
+    * [fix] Editing filter while having hidden columns visually unhide all columns ([#151](https://github.com/tc3t/dfglib/issues/151), [187aa245](https://github.com/tc3t/dfglib/commit/187aa24507648751fa34c3c7214d4eb02bcadcb5))
+    * [fix] When opening a big file, there was a long delay before actual reading started ([#147](https://github.com/tc3t/dfglib/issues/147), [ac8f0c0f](https://github.com/tc3t/dfglib/commit/ac8f0c0feb893daa34a3f58895bd0b0bc4381565))
+    * [fix] Column sorting was case-sensitive by default even though related menu-entry was not checked ([513971d6](https://github.com/tc3t/dfglib/commit/513971d62d5c6cf8dacd5f6b47dd702550cb8705))
+    * [fix] Changing row order with sorting didn't trigger update on selection details or charts ([#155](https://github.com/tc3t/dfglib/issues/155), [3d0027e1](https://github.com/tc3t/dfglib/commit/3d0027e1426e69acc48b56657d31ebd1a05fd028))
+    * [fix] Column index mapping in single-row tables was broken ([3bfc670b](https://github.com/tc3t/dfglib/commit/3bfc670b13ab87d90c677de63d2cab274ad7c220))
+    * [fix] Opening content generator dialog would crash at least in clang-cl release build and the dialog would show a non-read-only row with read-only colour ([8fa9eef3](https://github.com/tc3t/dfglib/commit/8fa9eef30905047a2b9da26c68c2aeed78958115), [ac7fb6a3](https://github.com/tc3t/dfglib/commit/ac7fb6a380b2dc51661f6dc3b584cd2b7e288265))
+    * [fix] Can now restore row height back to default ([#144](https://github.com/tc3t/dfglib/issues/144), [2d1755ed](https://github.com/tc3t/dfglib/commit/2d1755ed375c502b1a07bf907bdfba2e6a1db73f))
+* Charts
+    * [imp] Performance improvements e.g. by caching ([#134](https://github.com/tc3t/dfglib/issues/134), [c26470c2](https://github.com/tc3t/dfglib/commit/c26470c27ff4e458ee42cf69c014fb2847e4de7b))
+        * Example of effects with 1e8 x 1 table with random integers when showing xy-graph with all data selected:
+            * |       | Without caching | With caching |
+              | ----  | --------------- | ------------ |
+              | Memory usage with graph shown | 5.9 GB | 5.1 GB |
+              | Memory usage maximum | 7.4 GB | 6.6 GB |
+              | Memory usage after clearing selection | 2.7 GB | 3.5 GB |
+              | Update time after first update by empty-selection -> whole table | 10 s | 2.5 s |
+              | Update time with Apply-button | 2.8 s | 2.9 s |
+    * [new] New operation 'regexFormat' ([#156](https://github.com/tc3t/dfglib/issues/156))
+    * [imp] For graphs of type txys, tooltip now also shows column name of s-column
+([85926293](https://github.com/tc3t/dfglib/commit/85926293a00040fb9cd5a4ce48821ad07ac23b99))
+    * [imp] Added menu item for escaping content in chart definition text field
+([1b4934c7](https://github.com/tc3t/dfglib/commit/1b4934c762bb13c918bcee9b878fe09d6f59cc75))
+    * [fix] Column names could be wrong if view had hidden columns
+([1cc9f90d](https://github.com/tc3t/dfglib/commit/1cc9f90de70ba46a5b49f9694d70682ccabf2af6))
+    * [fix] Fixed a crash candidate in data preparation ([d048d31b](https://github.com/tc3t/dfglib/commit/d048d31b25463dffa471db7da5358fd6191a8275))
+
 
 ### 2.4.0, 2022-10-23
 * Tag: [2.4.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.4.0)
@@ -566,7 +607,7 @@ properties,,,
 
 ## Third party code
 
-Summary of 3rd party code in dfgQtTableEditor (last revised 2022-10-16).
+Summary of 3rd party code in dfgQtTableEditor (last revised 2023-04-26).
 
 | Library      | License  |
 | ------------- | ----- |
