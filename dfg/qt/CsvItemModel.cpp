@@ -1515,18 +1515,23 @@ QVariant CsvItemModel::data(const QModelIndex& index, int role /*= Qt::DisplayRo
     return QVariant();
 }
 
-QVariant CsvItemModel::headerData(int section, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
+QVariant CsvItemModel::headerData(const int section, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
 {
     if (role != Qt::DisplayRole && role != Qt::ToolTipRole)
         return QVariant();
     if (orientation == Qt::Horizontal)
     {
-        if (section >= 0 && section < getColumnCount())
-            return getHeaderName(section);
+        if (!isValidColumn(section))
+            return QVariant();
+        const auto sHeaderName = getHeaderName(section);
+        if (role != Qt::ToolTipRole)
+            return sHeaderName;
         else
-            return "";
+            return tr("%1\n(column %2/%3)")
+            .arg((!sHeaderName.isEmpty()) ? sHeaderName : tr("<unnamed column>"))
+            .arg(internalColumnIndexToVisible(section))
+            .arg(getColumnCount());
     }
-
     else
         return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
 }
