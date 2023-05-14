@@ -30,6 +30,7 @@ DFG_ROOT_NS_BEGIN{
     public:
         using element_type = T;
         using value_type = std::remove_cv_t<T>;
+        using iterator   = element_type*;
 
         Span() = default;
 

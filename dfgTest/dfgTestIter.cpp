@@ -17,6 +17,7 @@
 #include <dfg/iter/CustomAccessIterator.hpp>
 #include <dfg/cont/TrivialPair.hpp>
 #include <dfg/iter/FunctionValueIterator.hpp>
+#include <dfg/Span.hpp>
 
 TEST(dfgIter, RangeIterator)
 {
@@ -282,20 +283,31 @@ TEST(dfgIter, IsContiguousMemoryIterator)
     DFGTEST_STATIC((IsStdArrayContainer<std::vector<int>>::value == false));
     DFGTEST_STATIC((IsStdArrayContainer<std::array<int, 1>>::value == true));
 
+    // There didn't seem to be feature test macro for std::contiguous_iterator, so filtering by C++ standard
+#if DFG_CPLUSPLUS >= DFG_CPLUSPLUS_20
+    #define DFG_TEMP_CPP20_CASES(ELEMTYPE) \
+        DFGTEST_STATIC((IsContiguousMemoryIterator<std::array<ELEMTYPE, 1>::iterator>::value == true)); \
+        DFGTEST_STATIC((IsContiguousMemoryIterator<std::array<ELEMTYPE, 1>::const_iterator>::value == true)); \
+        DFGTEST_STATIC(IsContiguousMemoryIterator<Span<ELEMTYPE>::iterator>::value == true); \
+        DFGTEST_STATIC(IsContiguousMemoryIterator<Span<const ELEMTYPE>::iterator>::value == true);
+#else
+    #define DFG_TEMP_CPP20_CASES(ELEMTYPE)
+#endif
+
 #define TEST_FOR_ALL_CONTS(ELEMTYPE) \
     DFGTEST_STATIC(IsContiguousMemoryIterator<ELEMTYPE*>::value == true); \
     DFGTEST_STATIC(IsContiguousMemoryIterator<const ELEMTYPE*>::value == true); \
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::vector<ELEMTYPE>::const_iterator>::value == true); \
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::vector<ELEMTYPE>::const_iterator>::value == true); \
-    /*DFGTEST_STATIC((IsContiguousMemoryIterator<std::array<ELEMTYPE, 1>::iterator>::value == true));*/ \
-    /*DFGTEST_STATIC((IsContiguousMemoryIterator<std::array<ELEMTYPE, 1>::const_iterator>::value == true));*/ \
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::list<ELEMTYPE>::iterator>::value == false); \
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::list<ELEMTYPE>::const_iterator>::value == false); \
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::deque<ELEMTYPE>::iterator>::value == false); \
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::deque<ELEMTYPE>::const_iterator>::value == false); \
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::set<ELEMTYPE>::iterator>::value == false); \
-    DFGTEST_STATIC(IsContiguousMemoryIterator<std::set<ELEMTYPE>::const_iterator>::value == false);
-    
+    DFGTEST_STATIC(IsContiguousMemoryIterator<std::set<ELEMTYPE>::const_iterator>::value == false); \
+    DFGTEST_STATIC(IsContiguousMemoryIterator<Span<ELEMTYPE>::iterator>::value == true); \
+    DFGTEST_STATIC(IsContiguousMemoryIterator<Span<const ELEMTYPE>::iterator>::value == true); \
+    DFG_TEMP_CPP20_CASES(ELEMTYPE)
 
     TEST_FOR_ALL_CONTS(char);
     TEST_FOR_ALL_CONTS(int);
@@ -306,6 +318,7 @@ TEST(dfgIter, IsContiguousMemoryIterator)
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::string::iterator>::value == true);
     DFGTEST_STATIC(IsContiguousMemoryIterator<std::string::const_iterator>::value == true);
 
+#undef DFG_TEMP_CPP20_CASES
 #undef TEST_FOR_ALL_CONTS
 }
 
