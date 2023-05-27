@@ -167,6 +167,10 @@ msvc {
     QMAKE_LFLAGS_RELEASE += /DEBUG /OPT:REF /OPT:ICF
 }
 
+mingw {
+    # To avoid errors in MinGW debug-build, e.g. "x86_64-w64-mingw32/bin/as.exe: debug\graphTools.o: too many sections (41375)"
+    QMAKE_CXXFLAGS_DEBUG += -Wa,-mbig-obj
+}
 
 SOURCES += \
         main.cpp \
