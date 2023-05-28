@@ -12,6 +12,8 @@
 #include "str/string.hpp"
 #include "build/languageFeatureInfo.hpp"
 #include <string_view>
+#include "alg.hpp"
+#include "Span.hpp"
 
 DFG_ROOT_NS_BEGIN {
 
@@ -182,7 +184,7 @@ protected:
 
 namespace DFG_DETAIL_NS
 {
-    // Base common for both both view and viewSz. Most of the the stuff in StringView and StringViewSz should be here.
+    // Base common for both both view and viewSz. Most of the implementation logics of StringView and StringViewSz should preferably be here.
     template <class Str_T>
     class StringViewCommonBase
     {
@@ -234,6 +236,25 @@ namespace DFG_DETAIL_NS
         std::basic_string_view<CharT> toStdStringView(const size_t nSize) const
         {
             return std::basic_string_view<CharT>(this->dataRaw(), nSize);
+        }
+
+        // Removes every base character from front that match given trim characters, returns the number of base chars trimmed.
+        // Note: this function only adjusts begin pointer, caller is responsible for adjusting size.
+        template <class Sv_T>
+        static size_t trimFrontImpl(Sv_T& rThis, const Span<const CharT>& trimChars)
+        {
+            if (trimChars.empty())
+                return 0;
+            size_t nTrimCount = 0;
+            auto pRaw = toCharPtr_raw(rThis.m_pFirst);
+            const auto trimCharsRange = makeRange(trimChars.begin(), trimChars.end()); // Needed as trimChars doesn't have cbegin() or cend() which contains() uses (https://stackoverflow.com/questions/62757700/why-does-stdspan-lack-cbegin-and-cend-methods)
+            while (!rThis.empty() && ::DFG_MODULE_NS(alg)::contains(trimCharsRange, *pRaw))
+            {
+                ++pRaw;
+                ++nTrimCount;
+            }
+            rThis.m_pFirst = PtrT(pRaw);
+            return nTrimCount;
         }
 
         PtrT m_pFirst;          // Pointer to first character.
@@ -523,6 +544,24 @@ public:
         return DFG_DETAIL_NS::substr_tailByCount(*this, nTailLength);
     }
 
+    // Removes every base character from front that match given trim characters, returns the number of base chars trimmed.
+    // Implementation note: 
+    //      -Trim chars are taken as raw chars as trim implementation currently works with base characters, not with code points.
+    //      -Using typed view with such implementation would lead to unexpected results, for example in case of UTF8:
+    //          -*this is UTF8 with bytes C3 84 C3 85 (two code points)
+    //          -trim chars is UTF8 view C3 85 (single code point)
+    //          -Trim implementation would result to broken 84 C3 85 as it would remove any of {C3, 85} from front
+    //          -From code point perspective one could expect trimFront with two two-byte codepoints to
+    //           work like e.g. trimFront("ab", "a") by removing first code point.
+    //      -
+    size_t trimFront(const Span<const CharT> svTrimChars)
+    {
+        const auto nTrimCount = this->trimFrontImpl(*this, svTrimChars);
+        DFG_ASSERT_UB(nTrimCount <= this->size());
+        this->m_nSize -= nTrimCount;
+        return nTrimCount;
+    }
+
     const_iterator end() const
     {
         return PtrT(toCharPtr_raw(this->m_pFirst) + this->m_nSize);
@@ -677,6 +716,16 @@ public:
     StringViewSz substr_tailByCount(const size_t nTailLength) const
     {
         return DFG_DETAIL_NS::substr_tailByCount(*this, nTailLength);
+    }
+
+    // For documentation, see corresponding function in StringView.
+    size_t trimFront(const Span<CharT> svTrimChars)
+    {
+        const auto nTrimCount = this->trimFrontImpl(*this, svTrimChars);
+        DFG_ASSERT_UB(nTrimCount <= this->lengthNonCaching());
+        if (isLengthCalculated())
+            this->m_nSize -= nTrimCount;
+        return nTrimCount;
     }
 
     // Returns view as untyped.

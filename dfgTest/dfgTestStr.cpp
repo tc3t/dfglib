@@ -1391,6 +1391,39 @@ namespace
 
 }
 
+namespace
+{
+    // Helper for doing some test for every StringView typedef, see existing usages for examples.
+    template <class Handler_T>
+    void forEachStringViewType(Handler_T&& handler)
+    {
+        using namespace DFG_ROOT_NS;
+        handler(StringViewC());
+        handler(StringViewW());
+        handler(StringView16());
+        handler(StringView32());
+        handler(StringViewAscii());
+        handler(StringViewLatin1());
+        handler(StringViewUtf8());
+        handler(StringViewUtf16());
+    }
+
+    // The same as forEachStringViewType but for StringViewSz types.
+    template <class Handler_T>
+    void forEachStringViewSzType(Handler_T&& handler)
+    {
+        using namespace DFG_ROOT_NS;
+        handler(StringViewSzC(""));
+        handler(StringViewSzW(L""));
+        handler(StringViewSz16(u""));
+        handler(StringViewSz32(U""));
+        handler(StringViewSzAscii(SzPtrAscii("")));
+        handler(StringViewSzLatin1(SzPtrLatin1("")));
+        handler(StringViewSzUtf8(SzPtrUtf8("")));
+        handler(StringViewSzUtf16(SzPtrUtf16(u"")));
+    }
+}
+
 TEST(dfgStr, StringView)
 {
     using namespace DFG_ROOT_NS;
@@ -1643,6 +1676,61 @@ TEST(dfgStr, StringView_autoConvToUntyped)
     StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewW), DFG_CLASS_NAME(StringViewW)>(L"abc");
     StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzW), DFG_CLASS_NAME(StringViewSzW)>(L"abc");
     StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzW), DFG_CLASS_NAME(StringViewW)>(L"abc");
+}
+
+namespace
+{
+    template <class Sv_T, class Char_T>
+    void stringView_trimFrontImpl(const Sv_T trimInput, const Sv_T expected, const Char_T* pszTrimChars)
+    {
+        using namespace DFG_ROOT_NS;
+        Sv_T sv = trimInput;
+        const auto nExpectedTrimCount = sv.size() - expected.size();
+        std::vector<Char_T> trimChars;
+        for (auto p = pszTrimChars; *p != '\0'; ++p)
+            trimChars.push_back(static_cast<Char_T>(*p));
+        const auto nTrimCount = sv.trimFront(trimChars);
+        DFGTEST_EXPECT_LEFT(expected, sv);
+        DFGTEST_EXPECT_LEFT(nExpectedTrimCount, nTrimCount);
+        DFGTEST_EXPECT_LEFT(trimInput.size() - nTrimCount, sv.size());
+    }
+
+} // unnamed namespace
+
+TEST(dfgStr, StringView_trimFront)
+{
+    using namespace DFG_ROOT_NS;
+
+#define DFGTEST_TEMP_DEFINE_FUNC(NAME, INPUT, EXPECTED, TRIMCHARS) \
+    const auto testFunc_##NAME = [](auto sv) \
+    { \
+        using SvT = decltype(sv); \
+        using CharT = typename SvT::CharT; \
+        using SzPtrT = typename SvT::SzPtrT; \
+        const auto trimInput = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, INPUT); \
+        const auto expected = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, EXPECTED); \
+        const auto trimChars = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, TRIMCHARS); \
+        stringView_trimFrontImpl<SvT>(SvT(SzPtrT(trimInput)), SvT(SzPtrT(expected)), trimChars); \
+    }
+
+#define DFGTEST_TEMP_DEFAULT_TRIM_CHARS " \r\n\t"
+    DFGTEST_TEMP_DEFINE_FUNC(empty, "", "", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
+    DFGTEST_TEMP_DEFINE_FUNC(ws, " \r \n  \t ", "", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
+    DFGTEST_TEMP_DEFINE_FUNC(abc, " abc ", "abc ", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
+    DFGTEST_TEMP_DEFINE_FUNC(customTrimChars, "abc ", " ", "bac");
+
+    forEachStringViewType(testFunc_empty);
+    forEachStringViewType(testFunc_ws);
+    forEachStringViewType(testFunc_abc);
+    forEachStringViewType(testFunc_customTrimChars);
+
+    forEachStringViewSzType(testFunc_empty);
+    forEachStringViewSzType(testFunc_ws);
+    forEachStringViewSzType(testFunc_abc);
+    forEachStringViewSzType(testFunc_customTrimChars);
+
+#undef DFGTEST_TEMP_DEFINE_FUNC
+#undef DFGTEST_TEMP_DEFAULT_TRIM_CHARS
 }
 
 namespace
