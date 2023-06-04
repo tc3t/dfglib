@@ -1686,38 +1686,72 @@ namespace
         using namespace DFG_ROOT_NS;
         Sv_T sv = trimInput;
         const auto nExpectedTrimCount = sv.size() - expected.size();
-        std::vector<Char_T> trimChars;
-        for (auto p = pszTrimChars; *p != '\0'; ++p)
-            trimChars.push_back(static_cast<Char_T>(*p));
-        const auto nTrimCount = sv.trimFront(trimChars);
+        const auto nTrimCount = sv.trimFront(StringView<Char_T>(pszTrimChars));
         DFGTEST_EXPECT_LEFT(expected, sv);
         DFGTEST_EXPECT_LEFT(nExpectedTrimCount, nTrimCount);
         DFGTEST_EXPECT_LEFT(trimInput.size() - nTrimCount, sv.size());
+        DFGTEST_EXPECT_LEFT(trimInput.endRaw(), sv.endRaw());
     }
 
+    template <class Sv_T, class Char_T>
+    void stringView_trimmed_tailImpl(const Sv_T trimInput, const Sv_T expected, const Char_T* pszTrimChars)
+    {
+        using namespace DFG_ROOT_NS;
+        const auto svTrimmed = trimInput.trimmed_tail(StringView<Char_T>(pszTrimChars));
+        DFGTEST_EXPECT_LEFT(expected, svTrimmed);
+        DFGTEST_EXPECT_LEFT(trimInput.beginRaw(), svTrimmed.beginRaw());
+    }
+
+#define DFGTEST_TRIM_LAMBDA_DEF(NAME, INPUT, EXPECTED, TRIMCHARS, FUNCNAME) \
+     const auto testFunc_##NAME = [](auto sv) \
+     { \
+         using SvT = decltype(sv); \
+         using CharT = typename SvT::CharT; \
+         using SzPtrT = typename SvT::SzPtrT; \
+         const auto trimInput = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, INPUT); \
+         const auto expected = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, EXPECTED); \
+         const auto trimChars = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, TRIMCHARS); \
+         FUNCNAME<SvT>(SvT(SzPtrT(trimInput)), SvT(SzPtrT(expected)), trimChars); \
+     }
 } // unnamed namespace
 
 TEST(dfgStr, StringView_trimFront)
 {
     using namespace DFG_ROOT_NS;
 
-#define DFGTEST_TEMP_DEFINE_FUNC(NAME, INPUT, EXPECTED, TRIMCHARS) \
-    const auto testFunc_##NAME = [](auto sv) \
-    { \
-        using SvT = decltype(sv); \
-        using CharT = typename SvT::CharT; \
-        using SzPtrT = typename SvT::SzPtrT; \
-        const auto trimInput = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, INPUT); \
-        const auto expected = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, EXPECTED); \
-        const auto trimChars = DFG_STRING_LITERAL_BY_CHARTYPE(CharT, TRIMCHARS); \
-        stringView_trimFrontImpl<SvT>(SvT(SzPtrT(trimInput)), SvT(SzPtrT(expected)), trimChars); \
-    }
+    #define DFGTEST_TEMP_DEFINE_FUNC(NAME, INPUT, EXPECTED, TRIMCHARS) DFGTEST_TRIM_LAMBDA_DEF(NAME, INPUT, EXPECTED, TRIMCHARS, stringView_trimFrontImpl)
 
 #define DFGTEST_TEMP_DEFAULT_TRIM_CHARS " \r\n\t"
     DFGTEST_TEMP_DEFINE_FUNC(empty, "", "", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
     DFGTEST_TEMP_DEFINE_FUNC(ws, " \r \n  \t ", "", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
     DFGTEST_TEMP_DEFINE_FUNC(abc, " abc ", "abc ", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
     DFGTEST_TEMP_DEFINE_FUNC(customTrimChars, "abc ", " ", "bac");
+
+    forEachStringViewType(testFunc_empty);
+    forEachStringViewType(testFunc_ws);
+    forEachStringViewType(testFunc_abc);
+    forEachStringViewType(testFunc_customTrimChars);
+
+    forEachStringViewSzType(testFunc_empty);
+    forEachStringViewSzType(testFunc_ws);
+    forEachStringViewSzType(testFunc_abc);
+    forEachStringViewSzType(testFunc_customTrimChars);
+
+#undef DFGTEST_TEMP_DEFINE_FUNC
+#undef DFGTEST_TEMP_DEFAULT_TRIM_CHARS
+}
+
+TEST(dfgStr, StringView_trimmed_tail)
+{
+    using namespace DFG_ROOT_NS;
+
+#define DFGTEST_TEMP_DEFINE_FUNC(NAME, INPUT, EXPECTED, TRIMCHARS) DFGTEST_TRIM_LAMBDA_DEF(NAME, INPUT, EXPECTED, TRIMCHARS, stringView_trimmed_tailImpl)
+
+#define DFGTEST_TEMP_DEFAULT_TRIM_CHARS " \r\n\t"
+    DFGTEST_TEMP_DEFINE_FUNC(empty, "", "", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
+    DFGTEST_TEMP_DEFINE_FUNC(ws, " \r \n  \t ", "", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
+    DFGTEST_TEMP_DEFINE_FUNC(abc, " abc ", " abc", DFGTEST_TEMP_DEFAULT_TRIM_CHARS);
+    DFGTEST_TEMP_DEFINE_FUNC(customTrimChars, " abc", " ", "bac");
 
     forEachStringViewType(testFunc_empty);
     forEachStringViewType(testFunc_ws);

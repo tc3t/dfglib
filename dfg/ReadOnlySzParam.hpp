@@ -562,6 +562,25 @@ public:
         return nTrimCount;
     }
 
+    // Removes every base character from tail that match given trim characters, returns the number of base chars trimmed.
+    // For discussion about behaviour related to base character vs code points, see trimFront()
+    size_t trimTail(const Span<const CharT> trimChars)
+    {
+        const auto trimCharsRange = makeRange(trimChars.begin(), trimChars.end()); // Needed as trimChars doesn't have cbegin() or cend() which contains() uses (https://stackoverflow.com/questions/62757700/why-does-stdspan-lack-cbegin-and-cend-methods)
+        const auto nOrigSize = this->m_nSize;
+        while (!this->empty() && ::DFG_MODULE_NS(alg)::contains(trimCharsRange, *(endRaw() - 1)))
+            --(this->m_nSize);
+        return nOrigSize - this->m_nSize;
+    }
+
+    // Returns a copy of this for which trimTail() has been called.
+    StringView trimmed_tail(const Span<const CharT> trimChars) const
+    {
+        auto svCopy = *this;
+        svCopy.trimTail(trimChars);
+        return svCopy;
+    }
+
     const_iterator end() const
     {
         return PtrT(toCharPtr_raw(this->m_pFirst) + this->m_nSize);
@@ -719,13 +738,20 @@ public:
     }
 
     // For documentation, see corresponding function in StringView.
-    size_t trimFront(const Span<CharT> svTrimChars)
+    size_t trimFront(const Span<const CharT> svTrimChars)
     {
         const auto nTrimCount = this->trimFrontImpl(*this, svTrimChars);
         DFG_ASSERT_UB(nTrimCount <= this->lengthNonCaching());
         if (isLengthCalculated())
             this->m_nSize -= nTrimCount;
         return nTrimCount;
+    }
+
+    // Like StringView::trimmed_tail(), but since for Sz-string can't guarantee null-terminated -property
+    // for tail-trimmed view, returns StringView.
+    StringViewT trimmed_tail(const Span<const CharT> svTrimChars) const
+    {
+        return this->toStringView().trimmed_tail(svTrimChars);
     }
 
     // Returns view as untyped.
