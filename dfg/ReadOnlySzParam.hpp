@@ -12,8 +12,8 @@
 #include "str/string.hpp"
 #include "build/languageFeatureInfo.hpp"
 #include <string_view>
-#include "alg.hpp"
 #include "Span.hpp"
+// Note: This is widely used header so includes need care: e.g. including alg.hpp would break compilation of some examples.
 
 DFG_ROOT_NS_BEGIN {
 
@@ -247,8 +247,7 @@ namespace DFG_DETAIL_NS
                 return 0;
             size_t nTrimCount = 0;
             auto pRaw = toCharPtr_raw(rThis.m_pFirst);
-            const auto trimCharsRange = makeRange(trimChars.begin(), trimChars.end()); // Needed as trimChars doesn't have cbegin() or cend() which contains() uses (https://stackoverflow.com/questions/62757700/why-does-stdspan-lack-cbegin-and-cend-methods)
-            while (!rThis.empty() && ::DFG_MODULE_NS(alg)::contains(trimCharsRange, *pRaw))
+            while (!rThis.empty() && std::any_of(trimChars.begin(), trimChars.end(), [&pRaw](const auto c) { return c == *pRaw; }))
             {
                 ++pRaw;
                 ++nTrimCount;
@@ -566,9 +565,8 @@ public:
     // For discussion about behaviour related to base character vs code points, see trimFront()
     size_t trimTail(const Span<const CharT> trimChars)
     {
-        const auto trimCharsRange = makeRange(trimChars.begin(), trimChars.end()); // Needed as trimChars doesn't have cbegin() or cend() which contains() uses (https://stackoverflow.com/questions/62757700/why-does-stdspan-lack-cbegin-and-cend-methods)
         const auto nOrigSize = this->m_nSize;
-        while (!this->empty() && ::DFG_MODULE_NS(alg)::contains(trimCharsRange, *(endRaw() - 1)))
+        while (!this->empty() && std::any_of(trimChars.begin(), trimChars.end(), [this](const auto c) { return c == (*(this->endRaw() - 1)); }))
             --(this->m_nSize);
         return nOrigSize - this->m_nSize;
     }
