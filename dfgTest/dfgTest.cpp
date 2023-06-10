@@ -210,6 +210,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView_trimFront";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView_trimmed_tail";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewSz";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.StringViewSz_popFrontBaseChar";
     //::testing::GTEST_FLAG(filter) = "dfgStr.strTo";
     //::testing::GTEST_FLAG(filter) = "dfgStr.strTo_bool";
     //::testing::GTEST_FLAG(filter) = "dfgStr.strToByLexCast";

@@ -246,13 +246,11 @@ namespace DFG_DETAIL_NS
             if (trimChars.empty())
                 return 0;
             size_t nTrimCount = 0;
-            auto pRaw = toCharPtr_raw(rThis.m_pFirst);
-            while (!rThis.empty() && std::any_of(trimChars.begin(), trimChars.end(), [&pRaw](const auto c) { return c == *pRaw; }))
+            while (!rThis.empty() && std::any_of(trimChars.begin(), trimChars.end(), [&rThis](const auto c) { return c == *toCharPtr_raw(rThis.m_pFirst); }))
             {
-                ++pRaw;
+                rThis.popFrontBaseChar();
                 ++nTrimCount;
             }
-            rThis.m_pFirst = PtrT(pRaw);
             return nTrimCount;
         }
 
@@ -280,6 +278,16 @@ namespace DFG_DETAIL_NS
         bool empty() const
         {
             return m_nSize == 0;
+        }
+
+        // Removes first base character from view
+        // Precondition: empty() == false
+        // Note: use with care with encodings that can have multiple base characters for a single codepoint.
+        void popFrontBaseChar()
+        {
+            DFG_ASSERT_UB(!this->empty());
+            this->m_pFirst = PtrT(toCharPtr_raw(this->m_pFirst) + 1);
+            this->m_nSize--;
         }
 
         // memcmp() causes undefined behaviour if argument is nullptr even when size argument is 0.
@@ -341,9 +349,7 @@ namespace DFG_DETAIL_NS
         // Precondition: empty() == false
         void pop_front()
         {
-            DFG_ASSERT_UB(!this->empty());
-            ++this->m_pFirst;
-            this->m_nSize--;
+            this->popFrontBaseChar();
         }
 
         // Precondition: empty() == false
@@ -556,8 +562,6 @@ public:
     size_t trimFront(const Span<const CharT> svTrimChars)
     {
         const auto nTrimCount = this->trimFrontImpl(*this, svTrimChars);
-        DFG_ASSERT_UB(nTrimCount <= this->size());
-        this->m_nSize -= nTrimCount;
         return nTrimCount;
     }
 
@@ -636,6 +640,10 @@ namespace DFG_DETAIL_NS
 
 // Like StringView, but guarantees that view is null terminated.
 // Also the string length is not computed on constructor but on demand removing some of the const's.
+// Note about handling of embedded nulls:
+//      View being null-terminated means this->data() can be dereferenced with index this->length() and that result is '\0'
+//      If such null terminated view has embedded nulls, behaviour of StringViewSz varies depending e.g. on used constructor.
+//      For example StringViewSzC("\0\0") results to zero length view, while StringViewSzC("\0\0", 1) to sized one.
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
 class StringViewSz : public DFG_DETAIL_NS::StringViewCommonBase<Str_T>
 {
@@ -735,13 +743,21 @@ public:
         return DFG_DETAIL_NS::substr_tailByCount(*this, nTailLength);
     }
 
+    // Removes first base character from view
+    // Precondition: empty() == false
+    // Note: use with care with encodings that can have multiple base characters for a single codepoint.
+    void popFrontBaseChar()
+    {
+        DFG_ASSERT_UB(!this->empty());
+        this->m_pFirst = PtrT(toCharPtr_raw(this->m_pFirst) + 1);
+        if (isLengthCalculated())
+            --this->m_nSize;
+    }
+
     // For documentation, see corresponding function in StringView.
     size_t trimFront(const Span<const CharT> svTrimChars)
     {
         const auto nTrimCount = this->trimFrontImpl(*this, svTrimChars);
-        DFG_ASSERT_UB(nTrimCount <= this->lengthNonCaching());
-        if (isLengthCalculated())
-            this->m_nSize -= nTrimCount;
         return nTrimCount;
     }
 
@@ -760,7 +776,7 @@ public:
 
     bool empty() const
     {
-        return *toCharPtr_raw(this->m_pFirst) == '\0';
+        return (isLengthCalculated()) ? m_nSize == 0 : *toCharPtr_raw(this->m_pFirst) == '\0';
     }
 
     bool isLengthCalculated() const
@@ -874,7 +890,7 @@ public:
     // Conversion to untyped StringView.
     operator StringView<Char_T>() const
     {
-        return StringView<Char_T>(toCharPtr_raw(this->m_pFirst));
+        return StringView<Char_T>(toCharPtr_raw(this->m_pFirst), this->size());
     }
 
     // Conversion to std::basic_string_view

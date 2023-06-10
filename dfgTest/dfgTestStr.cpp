@@ -1595,6 +1595,24 @@ TEST(dfgStr, StringViewSz)
     // Making sure that StringViewSzC().substr_start() returns StringViewSzC instead of StringViewC.
     DFGTEST_STATIC_TEST((std::is_same<StringViewSzC, decltype(StringViewSzC("").substr_start(0))>::value));
 
+    // Embedded null handling
+    {
+        const StringViewSzC svSz("\0\0"); // Length gets computed with strlen() so will return 0
+        StringViewSzC svSized("\0\0", 1); // Null-terminated view of size 1 with embedded null
+        DFGTEST_EXPECT_LEFT(0, svSz.size());
+        DFGTEST_EXPECT_TRUE(svSz.empty());
+        DFGTEST_EXPECT_LEFT(1, svSized.size());
+        DFGTEST_EXPECT_FALSE(svSized.empty());
+
+        // StringView conversion
+        StringViewC svFromSz(svSz);
+        StringViewC svFromSized(svSized);
+        DFGTEST_EXPECT_LEFT(0, svFromSz.size());
+        DFGTEST_EXPECT_LEFT(svSz.data(), svFromSz.data());
+        DFGTEST_EXPECT_LEFT(1, svFromSized.size());
+        DFGTEST_EXPECT_LEFT(svSized.data(), svFromSized.data());
+    }
+
     // Test that can compare views that have compare-compatible types.
     // TODO: make this work.
     /*
@@ -1603,6 +1621,35 @@ TEST(dfgStr, StringViewSz)
         EXPECT_TRUE(StringViewSzUtf8(DFG_ASCII("abc")) == StringViewSzAscii(DFG_ASCII("abc")));
     }
     */
+}
+
+TEST(dfgStr, StringViewSz_popFrontBaseChar)
+{
+    using namespace DFG_ROOT_NS;
+    {
+        StringViewSzC sv("a\0cd", 4);
+        DFGTEST_ASSERT_LEFT(4, sv.size());
+        sv.popFrontBaseChar();
+        DFGTEST_EXPECT_LEFT(3, sv.size());
+        sv.popFrontBaseChar();
+        DFGTEST_EXPECT_LEFT(2, sv.size());
+        sv.popFrontBaseChar();
+        DFGTEST_EXPECT_LEFT(1, sv.size());
+        sv.popFrontBaseChar();
+        DFGTEST_EXPECT_LEFT(0, sv.size());
+        DFGTEST_EXPECT_LEFT('\0', *sv.c_str());
+    }
+    // View that doesn't have length calculated after constructor
+    {
+        StringViewSzC sv("abc");
+        sv.popFrontBaseChar();
+        DFGTEST_EXPECT_LEFT(2, sv.size());
+        sv.popFrontBaseChar();
+        DFGTEST_EXPECT_LEFT(1, sv.size());
+        sv.popFrontBaseChar();
+        DFGTEST_EXPECT_LEFT(0, sv.size());
+        DFGTEST_EXPECT_LEFT('\0', *sv.c_str());
+    }
 }
 
 namespace
@@ -1680,24 +1727,24 @@ TEST(dfgStr, StringView_autoConvToUntyped)
 
 namespace
 {
-    template <class Sv_T, class Char_T>
-    void stringView_trimFrontImpl(const Sv_T trimInput, const Sv_T expected, const Char_T* pszTrimChars)
+    template <class Sv_T>
+    void stringView_trimFrontImpl(const Sv_T trimInput, const Sv_T expected, const ::DFG_ROOT_NS::StringView<typename Sv_T::CharT> svTrimChars)
     {
         using namespace DFG_ROOT_NS;
         Sv_T sv = trimInput;
         const auto nExpectedTrimCount = sv.size() - expected.size();
-        const auto nTrimCount = sv.trimFront(StringView<Char_T>(pszTrimChars));
+        const auto nTrimCount = sv.trimFront(svTrimChars);
         DFGTEST_EXPECT_LEFT(expected, sv);
         DFGTEST_EXPECT_LEFT(nExpectedTrimCount, nTrimCount);
         DFGTEST_EXPECT_LEFT(trimInput.size() - nTrimCount, sv.size());
         DFGTEST_EXPECT_LEFT(trimInput.endRaw(), sv.endRaw());
     }
 
-    template <class Sv_T, class Char_T>
-    void stringView_trimmed_tailImpl(const Sv_T trimInput, const Sv_T expected, const Char_T* pszTrimChars)
+    template <class Sv_T>
+    void stringView_trimmed_tailImpl(const Sv_T trimInput, const Sv_T expected, const ::DFG_ROOT_NS::StringView<typename Sv_T::CharT> svTrimChars)
     {
         using namespace DFG_ROOT_NS;
-        const auto svTrimmed = trimInput.trimmed_tail(StringView<Char_T>(pszTrimChars));
+        const auto svTrimmed = trimInput.trimmed_tail(svTrimChars);
         DFGTEST_EXPECT_LEFT(expected, svTrimmed);
         DFGTEST_EXPECT_LEFT(trimInput.beginRaw(), svTrimmed.beginRaw());
     }
@@ -1736,6 +1783,18 @@ TEST(dfgStr, StringView_trimFront)
     forEachStringViewSzType(testFunc_ws);
     forEachStringViewSzType(testFunc_abc);
     forEachStringViewSzType(testFunc_customTrimChars);
+
+    {
+        std::string s = "     ";
+        StringViewC sv(s.c_str(), 2);
+        stringView_trimFrontImpl<StringViewC>(sv, "", " ");
+    }
+
+    {
+        std::string s(4, '\0');
+        StringViewSzC sv(s.c_str(), 2);
+        stringView_trimFrontImpl<StringViewC>(sv, "", StringViewC("\0", 1));
+    }
 
 #undef DFGTEST_TEMP_DEFINE_FUNC
 #undef DFGTEST_TEMP_DEFAULT_TRIM_CHARS
