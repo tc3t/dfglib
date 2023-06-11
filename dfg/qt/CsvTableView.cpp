@@ -976,6 +976,7 @@ void CsvTableView::addContentEditActions()
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Generate content..."),          tr("Alt+G"),  ActionFlags::defaultContentEdit, generateContent);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Evaluate selected as formula"), tr("Alt+C"),  ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Change radix..."),              noShortCut,   ActionFlags::defaultContentEdit, onChangeRadixUiAction);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Trim cells"),                   noShortCut,   ActionFlags::defaultContentEdit, onTrimCellsUiAction);
 
     // Insert-menu
     {
@@ -3851,6 +3852,11 @@ namespace
             return false;
         }
     }
+}
+
+void CsvTableView::onTrimCellsUiAction()
+{
+    executeAction<CsvTableViewActionTrimCells>(this);
 }
 
 bool CsvTableView::moveFirstRowToHeader()

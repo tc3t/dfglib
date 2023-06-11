@@ -25,6 +25,14 @@ namespace DFG_DETAIL_NS
         return *this;
     }
 
+    bool SelectionForEachUndoCommand::VisitorParams::setCellString(const StringViewUtf8& svNewData)
+    {
+        auto& rDataModel = this->dataModel();
+        const bool bEdited = rDataModel.setDataNoUndo(m_modelIndex, svNewData);
+        this->m_nEditCount += uint32(bEdited);
+        return bEdited;
+    }
+
     SelectionForEachUndoCommand::SelectionForEachUndoCommand(QString sCommandTitleTemplate, CsvTableView* pView)
         : m_spView(pView)
     {
@@ -515,6 +523,49 @@ bool CsvTableViewActionChangeRadixParams::isValid() const
 bool CsvTableViewActionChangeRadixParams::hasResultAdjustments() const
 {
     return !this->resultPrefix.empty() || !this->resultSuffix.empty();
+}
+
+////////////////////////////////////////////////////////////////////////////
+///
+/// CsvTableViewActionTrimCells
+///
+////////////////////////////////////////////////////////////////////////////
+
+CsvTableViewActionTrimCells::CsvTableViewActionTrimCells(CsvTableView* pView)
+    : BaseClass((pView) ? pView->tr("Trim cells for %1 cell(s)") : QString("bug"), pView)
+{
+
+}
+
+auto CsvTableViewActionTrimCells::createVisitorStatic() -> std::unique_ptr<TrimCellVisitor>
+{
+    return std::unique_ptr<TrimCellVisitor>(new TrimCellVisitor);
+}
+
+auto CsvTableViewActionTrimCells::createVisitor() -> std::unique_ptr<Visitor>
+{
+    return createVisitorStatic();
+}
+
+void CsvTableViewActionTrimCells::TrimCellVisitor::handleCell(VisitorParams& params)
+{
+    const auto svCell = params.stringView();
+    if (svCell.empty())
+        return; // Skipping empty strings.
+
+    const auto nOrigSize = svCell.size();
+    const StringViewC trimChars(" \t"); // Note: trimming multi base chars codepoints such as non-breaking spaces (https://en.wikipedia.org/wiki/Non-breaking_space) in UTF8 is not currently supported.
+    auto sv = svCell.trimmed_tail(trimChars);
+    sv.trimFront(trimChars);
+    if (nOrigSize == sv.size())
+        return; // Nothing was trimmed.
+    params.setCellString(sv);
+}
+
+void CsvTableViewActionTrimCells::TrimCellVisitor::onForEachLoopDone(VisitorParams& params)
+{
+    const auto nEditCount = params.editCount();
+    DFG_LOG_FMT(params.view().getLogger(), LoggingLevel::info, "Trim cells edited {} cell(s)", nEditCount);
 }
 
 }} // namespace dfg::qt

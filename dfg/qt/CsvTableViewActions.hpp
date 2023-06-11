@@ -41,10 +41,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             class VisitorParams
             {
             public:
+                using CountT = CsvItemModel::LinearIndex;
+
                 QModelIndex index() const   { return m_modelIndex; }
                 CsvItemModel& dataModel()   { return m_rDataModel; }
                 CsvTableView& view()        { return m_rView;      }
                 StringViewUtf8 stringView() { return m_svData; }
+                CountT editCount() const    { return m_nEditCount; }
+
+                // Sets string at m_modelIndex to svNewData and increments m_nEditCount if edited.
+                // @return True if cell was edited, false otherwise.
+                bool setCellString(const StringViewUtf8& svNewData);
 
                 VisitorParams& setIndex(const QModelIndex& index);
 
@@ -52,6 +59,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 CsvItemModel& m_rDataModel;
                 CsvTableView& m_rView;
                 StringViewUtf8 m_svData;
+                CountT m_nEditCount = 0;
             };
 
             // Abstract visitor class that implements the actual cell visit behaviour
@@ -793,4 +801,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     private:
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewActionChangeRadix
+
+
+    class CsvTableViewActionTrimCells : public DFG_DETAIL_NS::SelectionForEachUndoCommand
+    {
+    public:
+        using BaseClass = DFG_DETAIL_NS::SelectionForEachUndoCommand;
+
+        class TrimCellVisitor : public Visitor
+        {
+        public:
+            void handleCell(VisitorParams& params) override;
+            void onForEachLoopDone(VisitorParams& params) override;
+        }; // class TrimCellVisitor
+
+        CsvTableViewActionTrimCells(CsvTableView* pView);
+
+        static std::unique_ptr<TrimCellVisitor> createVisitorStatic();
+
+        std::unique_ptr<Visitor> createVisitor() override;
+    }; // CsvTableViewActionTrimCells
 }}

@@ -277,10 +277,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int columnIndex_dataModel(const QPoint& pos) const;
         int columnIndex_viewModel(const QPoint& pos) const;
 
-        // Base class overrides -->
+        // Protected base class overrides -->
+    protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
         // <-- Base class overrides
 
+    public:
         int m_nLatestContextMenuEventColumn_dataModel = -1;
     };
 
@@ -540,10 +542,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void setFilterFromSelection(CsvTableViewSelectionFilterFlags flags);
 
-    private:
         bool hasLogger() const;    // Returns true iff 'this' has a logger object attached and it is not disabled.
         Logger& getLogger() const; // Returns logger if hasLogger() has returned true immediately before this call, otherwise returns dummy logger object. 
 
+    private:
         template <class T, class Param0_T>
         bool executeAction(Param0_T&& p0);
 
@@ -623,6 +625,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void evaluateSelectionAsFormula();
 
         void onChangeRadixUiAction();
+        void onTrimCellsUiAction();
         void changeRadix(const ::DFG_MODULE_NS(qt)::CsvTableViewActionChangeRadixParams& params);
 
         bool diffWithUnmodified();

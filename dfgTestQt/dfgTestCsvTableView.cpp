@@ -1708,6 +1708,41 @@ TEST(dfgQt, CsvTableView_sortSettingsFromConfFile)
 #undef DFG_TEMP_EXPECT
 }
 
+TEST(dfgQt, CsvTableView_trimCells)
+{
+    ::DFG_MODULE_NS(qt)::CsvTableWidget view;
+    auto& rModel = view.getCsvModel();
+    view.resizeTableNoUi(3, 2);
+    rModel.setItem(0, 0, " a  ");
+    rModel.setItem(0, 1, "   b");
+    rModel.setItem(1, 0, "c \t c");
+    rModel.setItem(1, 1, "d   ");
+    rModel.setItem(2, 0, "\te");
+    rModel.setItem(2, 1, " \t f\t\t     \t");
+    DFGTEST_EXPECT_LEFT(3, view.getCsvModel().getRowCount());
+    DFGTEST_EXPECT_LEFT(2, view.getCsvModel().getColumnCount());
+
+    view.setSelectedIndexed({ {0, 0}, {0, 1} });
+    view.onTrimCellsUiAction();
+
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", rModel.rawStringViewAt(0, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", rModel.rawStringViewAt(0, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("c \t c", rModel.rawStringViewAt(1, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("d   ", rModel.rawStringViewAt(1, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("\te", rModel.rawStringViewAt(2, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8(" \t f\t\t     \t", rModel.rawStringViewAt(2, 1));
+
+    view.selectAll();
+    view.onTrimCellsUiAction();
+
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", rModel.rawStringViewAt(0, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", rModel.rawStringViewAt(0, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("c \t c", rModel.rawStringViewAt(1, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("d", rModel.rawStringViewAt(1, 1));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("e", rModel.rawStringViewAt(2, 0));
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("f", rModel.rawStringViewAt(2, 1));
+}
+
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {
     using namespace ::DFG_MODULE_NS(qt);
