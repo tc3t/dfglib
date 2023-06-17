@@ -94,6 +94,33 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 {
+    ItemSelectionSquare::ItemSelectionSquare(const QItemSelectionRange& selectionRange)
+    {
+        this->m_top = selectionRange.top();
+        this->m_left = selectionRange.left();
+        this->m_bottom = selectionRange.bottom();
+        this->m_right = selectionRange.right();
+    }
+
+    QItemSelectionRange ItemSelectionSquare::toQItemSelectionRange(const QAbstractItemModel& model) const
+    {
+        return QItemSelectionRange(model.index(this->m_top, this->m_left), model.index(this->m_bottom, this->m_right));
+    }
+
+    ItemSelection::ItemSelection(const QItemSelection& itemSelection)
+    {
+        for (const auto& itemRange : itemSelection)
+            m_selectionRanges.push_back(ItemSelectionSquare(itemRange));
+    }
+
+    QItemSelection ItemSelection::toQItemSelection(const QAbstractItemModel& model) const
+    {
+        QItemSelection selection;
+        for (const auto& item : m_selectionRanges)
+            selection.push_back(item.toQItemSelectionRange(model));
+        return selection;
+    }
+
     template <class T>
     QString floatToQString(const T val, const FloatToStringParam toStrParam)
     {
@@ -3286,35 +3313,19 @@ bool CsvTableView::generateContent()
     }
 }
 
-auto CsvTableView::storeSelection() const -> SelectionRangeList
+auto CsvTableView::storeSelection() const -> ItemSelection
 {
-    auto selection = this->getSelection();
-    SelectionRangeList list; // Stored as topRow, topCol, bottomRow, bottomCol
-    for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
-    {
-        const auto& topLeft = iter->topLeft();
-        const auto& bottomRight = iter->bottomRight();
-        list.push_back(std::make_tuple(topLeft.row(), topLeft.column(), bottomRight.row(), bottomRight.column()));
-    }
-    return list;
+    return ItemSelection(this->getSelection());
 }
 
-void CsvTableView::restoreSelection(const SelectionRangeList& selection) const
+void CsvTableView::restoreSelection(const ItemSelection& selection) const
 {
     // Reconstructing old selection from stored indexes and setting it.
-    QItemSelection newSelection;
     auto pViewModel = this->model();
-    if (!pViewModel)
-        return;
-    for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
-    {
-        newSelection.push_back(QItemSelectionRange(pViewModel->index(std::get<0>(*iter), std::get<1>(*iter)),
-            pViewModel->index(std::get<2>(*iter), std::get<3>(*iter))));
-    }
-    // Restoring selection.
     auto pSelectionModel = this->selectionModel();
-    if (pSelectionModel)
-        pSelectionModel->select(newSelection, QItemSelectionModel::ClearAndSelect);
+    if (!pViewModel || !pSelectionModel)
+        return;
+    pSelectionModel->select(selection.toQItemSelection(*pViewModel), QItemSelectionModel::ClearAndSelect);
 }
 
 // Calls 'generator' for each cell in target. 

@@ -80,6 +80,39 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             int m_nPrecision;
         };
 
+        // Basically an alternative to QItemSelectionRange using integer indexes instead of QModelIndexes
+        class ItemSelectionSquare
+        {
+        public:
+            using Index = int;
+
+            ItemSelectionSquare() = default;
+            ItemSelectionSquare(const QItemSelectionRange& selectionRange);
+
+            QItemSelectionRange toQItemSelectionRange(const QAbstractItemModel& model) const;
+
+            Index m_top = -1;
+            Index m_left = -1;
+            Index m_bottom = -1;
+            Index m_right = -1;
+        };
+
+        using ItemSelectionRangeList = std::vector<ItemSelectionSquare>;
+
+        // Extended and convenienced QItemSelection, i.e. a class for describing selected items
+        // Differences to QItemSelection:
+        //      -QItemSelection "is basically a list of selection ranges", while ItemSelection abstracts storage details further
+        class ItemSelection
+        {
+        public:
+            ItemSelection() = default;
+            ItemSelection(const QItemSelection& itemSelection);
+
+            QItemSelection toQItemSelection(const QAbstractItemModel& model) const;
+
+            ItemSelectionRangeList m_selectionRanges;
+        }; // class ItemSelection
+
         class ConfFileProperty;
     } // namespace DFG_DETAIL_NS
 
@@ -320,6 +353,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         using PropertyFetcher = std::function<std::pair<QString, QString>()>;
         using CsvConfig = ::DFG_MODULE_NS(cont)::CsvConfig;
         using Index = int; // Should be identical to CsvItemModel::Index
+        using ItemSelectionRangeList = DFG_DETAIL_NS::ItemSelectionRangeList;
+        using ItemSelection = DFG_DETAIL_NS::ItemSelection;
         class Logger;
 
         enum class ViewType
@@ -491,14 +526,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Adds a callback that is called to fetch additional properties for config file when saving
         void addConfigSavePropertyFetcher(PropertyFetcher fetcher);
 
-        using SelectionRangeList = std::vector<std::tuple<int, int, int, int>>;
-
         // Stores current selection so that it can be restored later with restoreSelection()
-        SelectionRangeList storeSelection() const;
+        ItemSelection storeSelection() const;
 
         // Restores selection created by storeSelection()
         // Note: Only supported for case where table internals or geometry (row/column count, model object etc.) does not change between storeSelection() and restoreSelection()
-        void restoreSelection(const SelectionRangeList& selection) const;
+        void restoreSelection(const ItemSelection& selection) const;
 
         bool isReadOnlyMode() const;
 
