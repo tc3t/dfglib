@@ -80,39 +80,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             int m_nPrecision;
         };
 
-        // Basically an alternative to QItemSelectionRange using integer indexes instead of QModelIndexes
-        class ItemSelectionSquare
-        {
-        public:
-            using Index = int;
-
-            ItemSelectionSquare() = default;
-            ItemSelectionSquare(const QItemSelectionRange& selectionRange);
-
-            QItemSelectionRange toQItemSelectionRange(const QAbstractItemModel& model) const;
-
-            Index m_top = -1;
-            Index m_left = -1;
-            Index m_bottom = -1;
-            Index m_right = -1;
-        };
-
-        using ItemSelectionRangeList = std::vector<ItemSelectionSquare>;
-
-        // Extended and convenienced QItemSelection, i.e. a class for describing selected items
-        // Differences to QItemSelection:
-        //      -QItemSelection "is basically a list of selection ranges", while ItemSelection abstracts storage details further
-        class ItemSelection
-        {
-        public:
-            ItemSelection() = default;
-            ItemSelection(const QItemSelection& itemSelection);
-
-            QItemSelection toQItemSelection(const QAbstractItemModel& model) const;
-
-            ItemSelectionRangeList m_selectionRanges;
-        }; // class ItemSelection
-
         class ConfFileProperty;
     } // namespace DFG_DETAIL_NS
 
@@ -131,6 +98,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Returns true if row index needs to be mapped to data model, false otherwise. If false is returned, row indexes in this model and underlying model are identical.
         bool isRowIndexMappingNeeded() const;
+
+        // Returns true if need to map view(row,col) to data(row,col), false if (row, col) pairs are identical in both models.
+        bool isItemIndexMappingNeeded() const;
 
     protected:
         bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
@@ -466,6 +436,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Returns true if row index in view model needs to be mapped to data model, false otherwise. If false is returned, row indexes in view and data models are identical.
         bool isRowIndexMappingNeeded() const;
+
+        // Returns true if need to map view(row,col) to data(row,col), false if (row, col) pairs are identical in both models.
+        bool isItemIndexMappingNeeded() const;
 
         // Maps index to view model (i.e. the one returned by model()) assuming that 'index' is either from csvModel() or model().
         QModelIndex mapToViewModel(const QModelIndex& index) const;

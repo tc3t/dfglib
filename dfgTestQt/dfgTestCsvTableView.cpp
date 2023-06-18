@@ -1618,7 +1618,7 @@ TEST(dfgQt, CsvTableView_filterFromSelection)
     // Testing default filter (or-columns, case-insensitive, substring match)
     {
         const QModelIndexList selection = { viewWidget.model()->index(1, 1), viewWidget.model()->index(3, 1), viewWidget.model()->index(4, 2) };
-        viewWidget.setSelectedIndexed(selection, nullptr);
+        viewWidget.setSelectedIndexes(selection, nullptr);
         DFGTEST_EXPECT_EQ(3, viewWidget.getSelectedItemCount());
 
         viewWidget.onFilterFromSelectionRequested();
@@ -1647,9 +1647,9 @@ TEST(dfgQt, CsvTableView_filterFromSelection)
         DFGTEST_EXPECT_LEFT(nRowCountTotal, viewWidget.getRowCount_viewModel());
 
         // Selecting "h" and "aFb" from row 5
-        viewWidget.clearSelection(); // For some reason without this call setSelectedIndexed() would select 5 cells.
+        viewWidget.clearSelection(); // For some reason without this call setSelectedIndexes() would select 5 cells.
         const QModelIndexList selection = { viewWidget.model()->index(5, 1), viewWidget.model()->index(5, 2) };
-        viewWidget.setSelectedIndexed(selection, nullptr);
+        viewWidget.setSelectedIndexes(selection, nullptr);
         DFGTEST_EXPECT_EQ(2, viewWidget.getSelectedItemCount());
 
         // Creating filter from selection with strict match flags
@@ -1722,7 +1722,7 @@ TEST(dfgQt, CsvTableView_trimCells)
     DFGTEST_EXPECT_LEFT(3, view.getCsvModel().getRowCount());
     DFGTEST_EXPECT_LEFT(2, view.getCsvModel().getColumnCount());
 
-    view.setSelectedIndexed({ {0, 0}, {0, 1} });
+    view.setSelectedIndexes({ {0, 0}, {0, 1} });
     view.onTrimCellsUiAction();
 
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", rModel.rawStringViewAt(0, 0));
@@ -1764,17 +1764,17 @@ TEST(dfgQt, TableView_makeSingleCellSelection)
     EXPECT_EQ(makeSingleCellIndexList(0, 0), pSelectionModel->selectedIndexes());
 }
 
-TEST(dfgQt, TableView_setSelectedIndexed)
+TEST(dfgQt, TableView_setSelectedIndexes)
 {
     ::DFG_MODULE_NS(qt)::CsvTableWidget view;
     view.resizeTableNoUi(2, 2);
-    view.setSelectedIndexed({ view.model()->index(1, 0), view.model()->index(1, 1) }, nullptr);
+    view.setSelectedIndexes({ view.model()->index(1, 0), view.model()->index(1, 1) }, nullptr);
     DFGTEST_EXPECT_LEFT(2, view.getSelectedItemCount());
-    view.setSelectedIndexed({ view.model()->index(1, 0) }, nullptr);
+    view.setSelectedIndexes({ view.model()->index(1, 0) }, nullptr);
     DFGTEST_EXPECT_LEFT(1, view.getSelectedItemCount());
 
     {
-        view.setSelectedIndexed({ { 0, 1 }, { 1, 0} });
+        view.setSelectedIndexes({ { 0, 1 }, { 1, 0} });
         const auto selected = view.getSelectedItemIndexes_dataModel();
         DFGTEST_EXPECT_LEFT(2, selected.size());
         DFGTEST_EXPECT_LEFT(0, selected.value(0).row());

@@ -94,7 +94,7 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 {
-    ItemSelectionSquare::ItemSelectionSquare(const QItemSelectionRange& selectionRange)
+    ItemSelectionRect::ItemSelectionRect(const QItemSelectionRange& selectionRange)
     {
         this->m_top = selectionRange.top();
         this->m_left = selectionRange.left();
@@ -102,15 +102,45 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         this->m_right = selectionRange.right();
     }
 
-    QItemSelectionRange ItemSelectionSquare::toQItemSelectionRange(const QAbstractItemModel& model) const
+    ItemSelectionRect ItemSelectionRect::fromContiguousRowRange(const Index col, const Index rowTop, const Index rowBottom)
+    {
+        ItemSelectionRect rv;
+        rv.m_top = rowTop;
+        rv.m_left = col;
+        rv.m_bottom = rowBottom;
+        rv.m_right = col;
+        return rv;
+    }
+
+    QItemSelectionRange ItemSelectionRect::toQItemSelectionRange(const QAbstractItemModel& model) const
     {
         return QItemSelectionRange(model.index(this->m_top, this->m_left), model.index(this->m_bottom, this->m_right));
     }
 
-    ItemSelection::ItemSelection(const QItemSelection& itemSelection)
+    ItemSelection::ItemSelection(const QItemSelection& itemSelection, std::function<IndexPair(Index, Index)> indexMapper)
     {
-        for (const auto& itemRange : itemSelection)
-            m_selectionRanges.push_back(ItemSelectionSquare(itemRange));
+        if (!indexMapper)
+        {
+            for (const auto& itemRange : itemSelection)
+                m_selectionRanges.push_back(ItemSelectionRect(itemRange));
+        }
+        else // case: have index mapper
+        {
+            // If there's index mapping, can have arbitrarily complex pattern after mapping:
+            // for example simple retangle selection can be discontiguous after mapping
+            // (e.g. single column selection in sorted and filtered table mapped to data model)
+            // Storing contiguous sets per column similar to CsvItemModel::setDataByBatch_noUndo
+            using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<Index, ::DFG_MODULE_NS(cont) ::IntervalSet<Index>>;
+            IntervalContainer intervalsByColumn;
+            const ItemSelection existingSelection(itemSelection);
+            existingSelection.forEachRowColPair([&](const Index r, const Index c)
+                {
+                    const auto mappedIndex = indexMapper(r, c);
+                    if (mappedIndex.first >= 0)
+                        intervalsByColumn[mappedIndex.second].insert(mappedIndex.first);
+                });
+            *this = ItemSelection::fromColumnBasedIntervalSetMap(intervalsByColumn);
+        }
     }
 
     QItemSelection ItemSelection::toQItemSelection(const QAbstractItemModel& model) const
@@ -119,6 +149,14 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         for (const auto& item : m_selectionRanges)
             selection.push_back(item.toQItemSelectionRange(model));
         return selection;
+    }
+
+    void ItemSelection::privAddRowRangeFromIntervalSet(const Index nCol, const ::DFG_MODULE_NS(cont)::IntervalSet<Index>& indexSet)
+    {
+        indexSet.forEachContiguousRange([&](const Index lower, const Index upper)
+        {
+            m_selectionRanges.push_back(ItemSelectionRect::fromContiguousRowRange(nCol, lower, upper));
+        });
     }
 
     template <class T>
@@ -5188,6 +5226,15 @@ bool CsvTableView::isRowIndexMappingNeeded() const
     return pFilterModel->isRowIndexMappingNeeded();
 }
 
+bool CsvTableView::isItemIndexMappingNeeded() const
+{
+    auto pProxyModel = getProxyModelPtr();
+    if (!pProxyModel)
+        return false; // If there's no proxy model, mapping is not needed.
+    auto pFilterModel = qobject_cast<const CsvTableViewSortFilterProxyModel*>(pProxyModel);
+    return (pFilterModel) ? pFilterModel->isItemIndexMappingNeeded() : true; // If there's some custom proxy model, assume mapping is needed as don't know what it does.
+}
+
 QModelIndex CsvTableView::mapToViewModel(const QModelIndex& index) const
 {
     const auto pIndexModel = index.model();
@@ -6418,6 +6465,14 @@ bool CsvTableViewSortFilterProxyModel::isRowIndexMappingNeeded() const
     // Filter is not available
     return false;
 #endif
+}
+
+bool CsvTableViewSortFilterProxyModel::isItemIndexMappingNeeded() const
+{
+    if (isRowIndexMappingNeeded())
+        return true;
+    auto pSourceModel = sourceModel();
+    return (!pSourceModel || pSourceModel->columnCount() != this->columnCount());
 }
 
 bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const

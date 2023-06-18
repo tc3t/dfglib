@@ -82,7 +82,7 @@ namespace DFG_DETAIL_NS
         VisitorParams params = { QModelIndex(), *pModel, *pView, StringViewUtf8() };
         looper(params);
         if (pView && pSelectList)
-            pView->setSelectedIndexed(*pSelectList, [&](const QModelIndex& index) { return pView->mapToViewModel(index); }); // Selecting the items that were edited by redo.
+            pView->setSelectedIndexes(*pSelectList, [&](const QModelIndex& index) { return pView->mapToViewModel(index); }); // Selecting the items that were edited by redo.
     }
 
     class VisitorErrorMessageHandler

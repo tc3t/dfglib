@@ -7,6 +7,12 @@
 #include "../cont/TrivialPair.hpp"
 #include "../rangeIterator.hpp"
 
+DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
+
+    template <class T>
+    class IntervalSet;
+} } // dfg::cont
+
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTableView>
@@ -17,11 +23,107 @@ DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
+    namespace DFG_DETAIL_NS
+    {
+        // Basically an alternative to QItemSelectionRange using integer indexes instead of QModelIndexes
+        class ItemSelectionRect
+        {
+        public:
+            using Index = int;
+            using IndexPair = ::DFG_MODULE_NS(cont)::TrivialPair<int, int>;
+
+            ItemSelectionRect() = default;
+            ItemSelectionRect(const QItemSelectionRange& selectionRange);
+
+            static ItemSelectionRect fromContiguousRowRange(Index col, Index rowTop, Index rowBottom);
+
+            template <class Func_T>
+            void forEachRowColPair(Func_T&& func) const
+            {
+                for (Index c = this->m_left; c <= this->m_right; ++c)
+                {
+                    for (Index r = this->m_top; r <= this->m_bottom; ++r)
+                    {
+                        func(r, c);
+                    }
+                }
+            }
+
+            template <class Func_T>
+            void forEachModelIndex(const QAbstractItemModel& model, Func_T&& func) const
+            {
+                forEachRowColPair([&](const Index r, const Index c)
+                    {
+                        func(model.index(r, c));
+                    });
+            }
+
+            QItemSelectionRange toQItemSelectionRange(const QAbstractItemModel& model) const;
+
+            Index m_top = -1;
+            Index m_left = -1;
+            Index m_bottom = -1;
+            Index m_right = -1;
+        };
+
+        using ItemSelectionRangeList = std::vector<ItemSelectionRect>;
+
+        // Extended and convenienced QItemSelection, i.e. a class for describing selected items
+        // Differences to QItemSelection:
+        //      -QItemSelection "is basically a list of selection ranges", while ItemSelection abstracts storage details further
+        class ItemSelection
+        {
+        public:
+            using Index = ItemSelectionRect::Index;
+            using IndexPair = ItemSelectionRect::IndexPair;
+            ItemSelection() = default;
+            ItemSelection(const QItemSelection& itemSelection, std::function<IndexPair(Index, Index)> indexMapper = nullptr);
+
+            template <class Map_T>
+            static ItemSelection fromColumnBasedIntervalSetMap(const Map_T& mapColToIntervalSet)
+            {
+                ItemSelection selection;
+                for (const auto& item : mapColToIntervalSet)
+                {
+                    selection.privAddRowRangeFromIntervalSet(item.first, item.second);
+                }
+                return selection;
+            }
+
+            template <class Func_T>
+            void forEachRowColPair(Func_T&& func) const
+            {
+                for (const auto& range : this->m_selectionRanges)
+                {
+                    range.forEachRowColPair(func);
+                }
+            }
+
+            template <class Func_T>
+            void forEachModelIndex(const QAbstractItemModel& model, Func_T&& func) const
+            {
+                for (const auto& range : this->m_selectionRanges)
+                {
+                    range.forEachModelIndex(model, func);
+                }
+            }
+
+            void privAddRowRangeFromIntervalSet(const Index nCol, const ::DFG_MODULE_NS(cont)::IntervalSet<Index>& indexSet);
+
+            QItemSelection toQItemSelection(const QAbstractItemModel& model) const;
+
+            ItemSelectionRangeList m_selectionRanges;
+        }; // class ItemSelection
+    }
+
     class TableView : public QTableView
     {
     public:
         typedef TableView ThisClass;
         typedef QTableView BaseClass;
+        using ItemSelection = DFG_DETAIL_NS::ItemSelection;
+        using Index = ItemSelection::Index;
+        using IndexPair = ItemSelection::IndexPair;
 
         TableView(QWidget* pParent) : BaseClass(pParent)
         {
@@ -159,13 +261,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Convenience method: clears existing selection and selects given indexes. If given indexes are not from this->model(),
         // indexMapper should be provided that maps indexes to that model (for example if this->model() is proxy model while given indexes are from underlying source model)
-        void setSelectedIndexed(const QModelIndexList& indexes, std::function<QModelIndex(const QModelIndex&)> indexMapper);
+        void setSelectedIndexes(const QModelIndexList& indexes, std::function<QModelIndex(const QModelIndex&)> indexMapper);
 
-        using IndexPair = ::DFG_MODULE_NS(cont)::TrivialPair<int, int>;
         // Convenience overload for setting selected indexes with index pairs instead of QModelIndexes
-        void setSelectedIndexed(const Span<const IndexPair> indexes);
-        // Convenience overload for setting selected indexes with initalizer list, e.g. setSelectedIndexed({ {1, 2} })
-        void setSelectedIndexed(const std::initializer_list<const IndexPair>& indexes);
+        void setSelectedIndexes(const Span<const IndexPair> indexes);
+        // Convenience overload for setting selected indexes with initalizer list, e.g. setSelectedIndexes({ {1, 2} })
+        void setSelectedIndexes(const std::initializer_list<const IndexPair>& indexes);
 
     protected:
         QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers) override
@@ -214,7 +315,7 @@ inline bool ::DFG_MODULE_NS(qt)::TableView::makeSingleCellSelection(const int r,
     if (!indexes[0].isValid())
         return false;
 
-    setSelectedIndexed(indexes, nullptr);
+    setSelectedIndexes(indexes, nullptr);
     return true;
 }
 
@@ -225,7 +326,7 @@ inline void ::DFG_MODULE_NS(qt)::TableView::selectCell(const int r, const int c)
         scrollTo(pModel->index(r, c));
 }
 
-inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const QModelIndexList& indexes, std::function<QModelIndex (const QModelIndex&)> indexMapper)
+inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexes(const QModelIndexList& indexes, std::function<QModelIndex (const QModelIndex&)> indexMapper)
 {
     QItemSelection selection;
     auto pModel = model();
@@ -247,7 +348,7 @@ inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const QModelIndex
         pSelectionModel->select(selection, QItemSelectionModel::SelectCurrent);
 }
 
-inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const Span<const IndexPair> indexes)
+inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexes(const Span<const IndexPair> indexes)
 {
     auto pModel = this->model();
     if (!pModel)
@@ -258,10 +359,10 @@ inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const Span<const 
     {
         modelIndexes.push_back(pModel->index(item.first, item.second));
     }
-    setSelectedIndexed(modelIndexes, nullptr);
+    setSelectedIndexes(modelIndexes, nullptr);
 }
 
-inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexed(const std::initializer_list<const IndexPair>& indexes)
+inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexes(const std::initializer_list<const IndexPair>& indexes)
 {
-    setSelectedIndexed(makeRange(indexes.begin(), indexes.end()));
+    setSelectedIndexes(makeRange(indexes.begin(), indexes.end()));
 }
