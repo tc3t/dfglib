@@ -7,6 +7,7 @@
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <gtest/gtest.h>
     #include <QApplication>
+    #include <QModelIndex>
     #include <QtMessageHandler>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
@@ -17,6 +18,12 @@ void PrintTo(const QString& s, ::std::ostream* pOstrm)
 {
     if (pOstrm)
         *pOstrm << '"' << qUtf8Printable(s) << '"';
+}
+
+void PrintTo(const QModelIndex& index, ::std::ostream* pOstrm)
+{
+    if (pOstrm)
+        *pOstrm << QString("QModelIndex(%1, %2, 0x%3)").arg(index.row()).arg(index.column()).arg(reinterpret_cast<uintptr_t>(index.model()), 0, 16).toStdString();
 }
 
 namespace
