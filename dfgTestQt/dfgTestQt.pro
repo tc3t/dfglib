@@ -99,6 +99,11 @@ HEADERS += \
 OTHER_FILES += \
     ../dfg/qt/res/chartGuide.html
 
+mingw {
+    # To avoid errors in MinGW debug-build, e.g. "x86_64-w64-mingw32/bin/as.exe: debug\CsvTableView.o: too many sections (41408)"
+    QMAKE_CXXFLAGS_DEBUG += -Wa,-mbig-obj
+}
+
 # PRECOMPILED_HEADER = pch.hpp
 
 # Default rules for deployment.
