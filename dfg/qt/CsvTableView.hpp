@@ -388,6 +388,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<int> getRowsOfSelectedItems(const QAbstractProxyModel* pProxy) const;
 
         // Returns list of selected indexes as model indexes of underlying data model.
+        // Since returned list can be massive in case of big selections, primarily consider
+        // using getSelection_dataModel()
         QModelIndexList getSelectedItemIndexes_dataModel() const;
 
         // Returns list of selected indexes as model indexes from model(). If there is no proxy model,
@@ -442,9 +444,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Maps index to view model (i.e. the one returned by model()) assuming that 'index' is either from csvModel() or model().
         QModelIndex mapToViewModel(const QModelIndex& index) const;
+        IndexPair mapRowColToViewModel(Index r, Index c) const;
 
         // Maps index to data model (i.e. the one returned by csvModel()) assuming that 'index' is either from csvModel() or model().
         QModelIndex mapToDataModel(const QModelIndex& index) const;
+        IndexPair mapRowColToDataModel(Index r, Index c) const;
 
         // Forgets latest find position so that next begins from memoryless situation.
         void forgetLatestFindPosition();
@@ -488,6 +492,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Convenience function, effectively returns selectionModel()->selection();
         QItemSelection getSelection() const;
+
+        // Returns selection of data model items, see also getSelectedItemIndexes_dataModel()
+        ItemSelection getSelection_dataModel() const;
 
         DFG_NODISCARD LockReleaser tryLockForEdit() const;          // Note: edits include both content edit and view edits such as changing filter.
         DFG_NODISCARD LockReleaser tryLockForEditViewModel() const; // Currently functionally equivalent to tryLockForEdit(), but can be used as a placeholder

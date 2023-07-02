@@ -1766,20 +1766,101 @@ TEST(dfgQt, TableView_makeSingleCellSelection)
 
 TEST(dfgQt, TableView_setSelectedIndexes)
 {
-    ::DFG_MODULE_NS(qt)::CsvTableWidget view;
-    view.resizeTableNoUi(2, 2);
-    view.setSelectedIndexes({ view.model()->index(1, 0), view.model()->index(1, 1) }, nullptr);
-    DFGTEST_EXPECT_LEFT(2, view.getSelectedItemCount());
-    view.setSelectedIndexes({ view.model()->index(1, 0) }, nullptr);
-    DFGTEST_EXPECT_LEFT(1, view.getSelectedItemCount());
-
+    using namespace ::DFG_MODULE_NS(qt);
     {
-        view.setSelectedIndexes({ { 0, 1 }, { 1, 0} });
-        const auto selected = view.getSelectedItemIndexes_dataModel();
-        DFGTEST_EXPECT_LEFT(2, selected.size());
-        DFGTEST_EXPECT_LEFT(0, selected.value(0).row());
-        DFGTEST_EXPECT_LEFT(1, selected.value(0).column());
-        DFGTEST_EXPECT_LEFT(1, selected.value(1).row());
-        DFGTEST_EXPECT_LEFT(0, selected.value(1).column());
+        ::DFG_MODULE_NS(qt)::CsvTableWidget view;
+        view.resizeTableNoUi(2, 2);
+        view.setSelectedIndexes({ view.model()->index(1, 0), view.model()->index(1, 1) }, nullptr);
+        DFGTEST_EXPECT_LEFT(2, view.getSelectedItemCount());
+        view.setSelectedIndexes({ view.model()->index(1, 0) }, nullptr);
+        DFGTEST_EXPECT_LEFT(1, view.getSelectedItemCount());
+
+        {
+            view.setSelectedIndexes({ { 0, 1 }, { 1, 0} });
+            const auto selected = view.getSelectedItemIndexes_dataModel();
+            DFGTEST_EXPECT_LEFT(2, selected.size());
+            DFGTEST_EXPECT_LEFT(0, selected.value(0).row());
+            DFGTEST_EXPECT_LEFT(1, selected.value(0).column());
+            DFGTEST_EXPECT_LEFT(1, selected.value(1).row());
+            DFGTEST_EXPECT_LEFT(0, selected.value(1).column());
+        }
+    }
+
+    // TableView::ItemSelection overload
+    {
+        ::DFG_MODULE_NS(qt)::CsvTableWidget viewWidget;
+        viewWidget.getCsvModel().openString(",\nc,2\nd,3\na,4\nb,1");
+        DFGTEST_ASSERT_LEFT(4, viewWidget.getCsvModel().getRowCount());
+        DFGTEST_ASSERT_LEFT(2, viewWidget.getCsvModel().getColumnCount());
+
+        // Basic case: no mapping
+        {
+            viewWidget.setSelectedIndexes({ {1, 1}, {2, 0}, {3, 1} });
+            const auto selectionOrig = viewWidget.getSelection_dataModel();
+            const auto selectedIndexesOrig = viewWidget.getSelectedItemIndexes_viewModel();
+            DFGTEST_EXPECT_LEFT(3, selectedIndexesOrig.size());
+            viewWidget.clearSelection();
+            DFGTEST_EXPECT_TRUE(viewWidget.getSelectedItemIndexes_viewModel().isEmpty());
+            viewWidget.setSelectedIndexes(selectionOrig, nullptr);
+            const auto selectedIndexesResult = viewWidget.getSelectedItemIndexes_viewModel();
+            DFGTEST_EXPECT_LEFT(selectedIndexesOrig, selectedIndexesResult);
+        }
+
+        // Mapping used on selection creation, not used when setting selection
+        {
+            viewWidget.clearSelection();
+            viewWidget.toggleSortingEnabled(true);
+            // Sorting by second column
+            viewWidget.getViewModel().sort(1);
+            viewWidget.setSelectedIndexes({ {0, 0}, {3, 1} });
+            const auto selectionOrig = viewWidget.getSelection_dataModel();
+            const auto selectedIndexesOrig = viewWidget.getSelectedItemIndexes_dataModel();
+            const auto selectedIndexesOrigView = viewWidget.getSelectedItemIndexes_viewModel();
+            DFGTEST_EXPECT_LEFT(2, selectedIndexesOrig.size());
+            DFGTEST_EXPECT_TRUE(selectedIndexesOrigView.value(0).row() == 0 || selectedIndexesOrigView.value(0).row() == 3);
+            // Clearing selection
+            viewWidget.clearSelection();
+            DFGTEST_EXPECT_TRUE(viewWidget.getSelectedItemIndexes_viewModel().isEmpty());
+            // Resetting sorting
+            viewWidget.resetSorting();
+            // Setting selection
+            viewWidget.setSelectedIndexes(selectionOrig, nullptr);
+            const auto selectedIndexesResult = viewWidget.getSelectedItemIndexes_dataModel();
+            const auto selectedIndexesResultView = viewWidget.getSelectedItemIndexes_viewModel();
+            DFGTEST_EXPECT_LEFT(selectedIndexesOrig, selectedIndexesResult);
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", viewWidget.getCsvModel().rawStringViewAt(selectedIndexesResult.value(0)));
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("4", viewWidget.getCsvModel().rawStringViewAt(selectedIndexesResult.value(1)));
+            DFGTEST_EXPECT_LEFT(2, selectedIndexesResultView.size());
+            DFGTEST_EXPECT_TRUE(selectedIndexesResultView.value(0).row() == 2 || selectedIndexesResultView.value(0).row() == 3);
+            
+        }
+
+        // Mapping not used on selection creation, used when setting selection
+        {
+            viewWidget.setSelectedIndexes({ {1, 1}, {2, 0}, {3, 1} });
+            const auto selectionOrig = viewWidget.getSelection_dataModel();
+            const auto selectedIndexesOrig = viewWidget.getSelectedItemIndexes_dataModel();
+            DFGTEST_EXPECT_LEFT(3, selectedIndexesOrig.size());
+            viewWidget.clearSelection();
+            DFGTEST_EXPECT_TRUE(viewWidget.getSelectedItemIndexes_viewModel().isEmpty());
+            // Setting filter that keeps items {2, 0}, {3, 1} from selection
+            viewWidget.getViewModel().setFilterRegularExpression("a|b|c");
+            DFGTEST_EXPECT_LEFT(3, viewWidget.getViewModel().rowCount());
+
+            // Applying selection. Some of the previously selected items are now hidden in view model
+            // so when setting selection, those should be simply ignored.           
+            viewWidget.setSelectedIndexes(selectionOrig, [&](const auto r, const auto c) { return viewWidget.mapRowColToViewModel(r, c); });
+            // Checking that selection is as expected
+            auto selectedIndexesResult = viewWidget.getSelectedItemIndexes_dataModel();
+            auto selectedIndexesResultView = viewWidget.getSelectedItemIndexes_viewModel();
+            DFGTEST_EXPECT_LEFT(2, selectedIndexesResult.size());
+            DFGTEST_EXPECT_LEFT(2, selectedIndexesResultView.size());
+            std::sort(selectedIndexesResult.begin(), selectedIndexesResult.end(), [](const auto& a, const auto& b) { return a.row() < b.row(); });
+            std::sort(selectedIndexesResultView.begin(), selectedIndexesResultView.end(), [](const auto& a, const auto& b) { return a.row() < b.row(); });
+            DFGTEST_EXPECT_LEFT(viewWidget.getViewModel().index(1, 0), selectedIndexesResultView.value(0));
+            DFGTEST_EXPECT_LEFT(viewWidget.getViewModel().index(2, 1), selectedIndexesResultView.value(1));
+            DFGTEST_EXPECT_LEFT(viewWidget.getCsvModel().index(2, 0), selectedIndexesResult.value(0));
+            DFGTEST_EXPECT_LEFT(viewWidget.getCsvModel().index(3, 1), selectedIndexesResult.value(1));
+        }
     }
 }

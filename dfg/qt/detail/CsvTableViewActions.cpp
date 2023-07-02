@@ -44,13 +44,12 @@ namespace DFG_DETAIL_NS
         auto& rModel = *pModel;
 
         size_t nCellCount = 0;
-        rView.forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
+        m_initialSelection = rView.getSelection_dataModel();
+        m_initialSelection.forEachRowColPair([&](const auto r, const auto c)
             {
-                m_cellMemoryUndo.setElement(index.row(), index.column(), rModel.rawStringPtrAt(index));
+                m_cellMemoryUndo.setElement(r, c, rModel.rawStringPtrAt(r, c));
                 ++nCellCount;
-                m_initialSelection.push_back(index);
             });
-
         setText(sCommandTitleTemplate.arg(nCellCount));
     }
 
@@ -64,25 +63,48 @@ namespace DFG_DETAIL_NS
     void SelectionForEachUndoCommand::redo()
     {
         auto spGenerator = this->createVisitor();
-        if (!spGenerator)
+        auto pDataModel = (m_spView) ? m_spView->csvModel() : nullptr;
+        if (!spGenerator || !pDataModel)
             return;
-        privDirectRedoImpl(this->m_spView, &this->m_initialSelection, [&](VisitorParams& params)
+        auto& rGenerator = *spGenerator;
+        const auto pSelection = (m_nRedoCounter > 0) ? &this->m_initialSelection : nullptr; // On first redo, don't need to set selection
+        privDirectRedoImpl(this->m_spView, pSelection, [&](VisitorParams& params)
             {
-                for (const auto& index : qAsConst(this->m_initialSelection))
-                    spGenerator->handleCell(params.setIndex(index));
-                spGenerator->onForEachLoopDone(params.setIndex(QModelIndex()));
+                this->m_initialSelection.forEachModelIndex(*pDataModel, [&](const QModelIndex& index)
+                    {
+                        rGenerator.handleCell(params.setIndex(index));
+                    });
+                rGenerator.onForEachLoopDone(params.setIndex(QModelIndex()));
             });
+        ++m_nRedoCounter;
     }
 
-    void SelectionForEachUndoCommand::privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelectList, std::function<void(VisitorParams&)> looper)
+    template <class Selection_T, class Mapper_T>
+    void SelectionForEachUndoCommand::privDirectRedoImpl(CsvTableView* pView, Selection_T* pSelection, std::function<void(VisitorParams&)>& looper, Mapper_T&& mapper)
     {
         auto pModel = (pView) ? pView->csvModel() : nullptr;
         if (!pModel)
             return;
         VisitorParams params = { QModelIndex(), *pModel, *pView, StringViewUtf8() };
         looper(params);
-        if (pView && pSelectList)
-            pView->setSelectedIndexes(*pSelectList, [&](const QModelIndex& index) { return pView->mapToViewModel(index); }); // Selecting the items that were edited by redo.
+
+        if (!pView || !pSelection)
+            return;
+        // Selecting the items that were edited by redo.
+        if (pView->isItemIndexMappingNeeded())
+            pView->setSelectedIndexes(*pSelection, mapper);
+        else
+            pView->setSelectedIndexes(*pSelection, nullptr);
+    }
+
+    void SelectionForEachUndoCommand::privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelection, std::function<void(VisitorParams&)> looper)
+    {
+        privDirectRedoImpl(pView, pSelection, looper, [=](const QModelIndex& index) { return pView->mapToViewModel(index); });
+    }
+
+    void SelectionForEachUndoCommand::privDirectRedoImpl(CsvTableView* pView, const CsvTableView::ItemSelection* pSelection, std::function<void(VisitorParams&)> looper)
+    {
+        privDirectRedoImpl(pView, pSelection, looper, [=](const auto r, const auto c) { return pView->mapRowColToViewModel(r, c); });
     }
 
     class VisitorErrorMessageHandler

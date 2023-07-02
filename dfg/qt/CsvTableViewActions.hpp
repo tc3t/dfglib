@@ -94,7 +94,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 auto spGenerator = Impl_T::createVisitorStatic(args...);
                 if (!spGenerator)
                     return;
-                privDirectRedoImpl(pView, nullptr, [&](VisitorParams& params)
+                privDirectRedoImpl(pView, static_cast<const QModelIndexList*>(nullptr), [&](VisitorParams& params)
                     {
                         pView->forEachCsvModelIndexInSelection([&](const QModelIndex& index, bool& /*rbContinue*/)
                             {
@@ -105,14 +105,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             }
 
             static void privDirectRedoImpl(CsvTableView* pView, const QModelIndexList* pSelectList, std::function<void(VisitorParams&)> looper);
+            static void privDirectRedoImpl(CsvTableView* pView, const CsvTableView::ItemSelection* pSelectList, std::function<void(VisitorParams&)> looper);
 
         private:
             virtual std::unique_ptr<Visitor> createVisitor() = 0;
 
+            template <class Selection_T, class Mapper_T>
+            static void privDirectRedoImpl(CsvTableView* pView, Selection_T* pSelection, std::function<void(VisitorParams&)>& looper, Mapper_T&& mapper);
+
         private:
             QPointer<CsvTableView> m_spView;
-            QModelIndexList m_initialSelection; // Stores CsvModel indexes to which operation is to be done.
+            CsvTableView::ItemSelection m_initialSelection; // Stores CsvModel indexes to which operation is to be done.
             CellMemory m_cellMemoryUndo;        // Stores cell content before the operation.
+            uint32 m_nRedoCounter = 0;          // Counts number of redos, used to avoid selection handling on first redo (i.e. when action is applied for the first time).
         }; // SelectionForEachUndoCommand
 
     } // namespace DFG_DETAIL_NS

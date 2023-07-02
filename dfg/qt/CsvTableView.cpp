@@ -117,8 +117,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
         return QItemSelectionRange(model.index(this->m_top, this->m_left), model.index(this->m_bottom, this->m_right));
     }
 
-    ItemSelection::ItemSelection(const QItemSelection& itemSelection, std::function<IndexPair(Index, Index)> indexMapper)
+    ItemSelection::ItemSelection(const QItemSelection& itemSelection, const QAbstractItemModel* pModel, std::function<IndexPair(Index, Index)> indexMapper)
     {
+        // Setting model pointer
+        m_spModel = pModel;
+        // If model not given, extracting it from itemSelection
+        if (!m_spModel)
+        {
+            for (const auto& range : itemSelection)
+            {
+                m_spModel = range.model();
+                if (m_spModel)
+                    break;
+            }
+        }
+
         if (!indexMapper)
         {
             for (const auto& itemRange : itemSelection)
@@ -139,12 +152,18 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
                     if (mappedIndex.first >= 0)
                         intervalsByColumn[mappedIndex.second].insert(mappedIndex.first);
                 });
-            *this = ItemSelection::fromColumnBasedIntervalSetMap(intervalsByColumn);
+            *this = ItemSelection::fromColumnBasedIntervalSetMap(intervalsByColumn, this->m_spModel.data());
         }
+    }
+
+    QItemSelection ItemSelection::toQItemSelection() const
+    {
+        return (this->m_spModel) ? toQItemSelection(*m_spModel) : QItemSelection();
     }
 
     QItemSelection ItemSelection::toQItemSelection(const QAbstractItemModel& model) const
     {
+        DFG_ASSERT_CORRECTNESS(&model == m_spModel.data());
         QItemSelection selection;
         for (const auto& item : m_selectionRanges)
             selection.push_back(item.toQItemSelectionRange(model));
@@ -1508,6 +1527,19 @@ int CsvTableView::getRowCount_viewModel() const
 {
     auto pModel = this->model();
     return (pModel) ? pModel->rowCount() : 0;
+}
+
+auto CsvTableView::getSelection_dataModel() const -> ItemSelection
+{
+    const auto pProxyModel = getProxyModelPtr();
+    if (pProxyModel && this->isItemIndexMappingNeeded())
+    {
+        return ItemSelection(getSelection(), this->csvModel(), [&](const Index r, const Index c) { return this->mapRowColToDataModel(r, c); });
+    }
+    else // Model proxy does not affect index mapping -> can return item selection as such
+    {
+        return ItemSelection(getSelection(), this->csvModel());
+    }
 }
 
 QModelIndexList CsvTableView::getSelectedItemIndexes_dataModel() const
@@ -3353,7 +3385,7 @@ bool CsvTableView::generateContent()
 
 auto CsvTableView::storeSelection() const -> ItemSelection
 {
-    return ItemSelection(this->getSelection());
+    return getSelection_dataModel();
 }
 
 void CsvTableView::restoreSelection(const ItemSelection& selection) const
@@ -3363,7 +3395,13 @@ void CsvTableView::restoreSelection(const ItemSelection& selection) const
     auto pSelectionModel = this->selectionModel();
     if (!pViewModel || !pSelectionModel)
         return;
-    pSelectionModel->select(selection.toQItemSelection(*pViewModel), QItemSelectionModel::ClearAndSelect);
+    if (selection.model() != this->csvModel())
+    {
+        DFG_CSVTABLEVIEW_CONSOLE_ERROR("Unexpected selection model in CsvTableView::restoreSelection(), unable to restore");
+        return;
+    }
+    const ItemSelection viewSelection(selection.toQItemSelection(), pViewModel, [&](const auto r, const auto c) { return this->mapRowColToViewModel(r, c); });
+    pSelectionModel->select(viewSelection.toQItemSelection(), QItemSelectionModel::ClearAndSelect);
 }
 
 // Calls 'generator' for each cell in target. 
@@ -5246,6 +5284,15 @@ QModelIndex CsvTableView::mapToViewModel(const QModelIndex& index) const
         return QModelIndex();
 }
 
+auto CsvTableView::mapRowColToViewModel(const Index r, const Index c) const -> IndexPair
+{
+    auto pDataModel = this->csvModel();
+    if (!pDataModel)
+        return IndexPair();
+    const auto viewIndex = mapToViewModel(pDataModel->index(r, c));
+    return { viewIndex.row(), viewIndex.column() };
+}
+
 QModelIndex CsvTableView::mapToDataModel(const QModelIndex& index) const
 {
     const auto pIndexModel = index.model();
@@ -5255,6 +5302,15 @@ QModelIndex CsvTableView::mapToDataModel(const QModelIndex& index) const
         return getProxyModelPtr()->mapToSource(index);
     else
         return QModelIndex();
+}
+
+auto CsvTableView::mapRowColToDataModel(const Index r, const Index c) const -> IndexPair
+{
+    auto pViewModel = this->model();
+    if (!pViewModel)
+        return IndexPair();
+    const auto dataIndex = mapToDataModel(pViewModel->index(r, c));
+    return { dataIndex.row(), dataIndex.column() };
 }
 
 void CsvTableView::forgetLatestFindPosition()
