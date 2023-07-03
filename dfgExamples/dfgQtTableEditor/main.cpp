@@ -26,15 +26,18 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/qt/TableEditor.hpp>
 #include <dfg/qt/QtApplication.hpp>
 #include <dfg/qt/qtBasic.hpp>
-#include <dfg/qt/graphTools.hpp>
-#include <dfg/qt/CsvTableViewChartDataSource.hpp>
-#include <dfg/qt/CsvItemModelChartDataSource.hpp>
 #include <dfg/build/buildTimeDetails.hpp>
 #include <dfg/debug/structuredExceptionHandling.h>
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/widgetHelpers.hpp>
 #include <dfg/qt/CsvItemModel.hpp>
 #include <exception>
+
+#if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
+    #include <dfg/qt/graphTools.hpp>
+    #include <dfg/qt/CsvTableViewChartDataSource.hpp>
+    #include <dfg/qt/CsvItemModelChartDataSource.hpp>
+#endif // defined(DFG_ALLOW_QCUSTOMPLOT) && DFG_ALLOW_QCUSTOMPLOT == 1
 
 static QWidget* gpMainWindow = nullptr;
 static const char gszDiffUrlHandlerSchemeId[] = "dfgdiff";

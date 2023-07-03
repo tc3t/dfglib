@@ -3,7 +3,6 @@
 #include "connectHelper.hpp"
 #include "widgetHelpers.hpp"
 #include "ConsoleDisplay.hpp"
-#include "ConsoleDisplay.cpp"
 #include "JsonListWidget.hpp"
 #include "PropertyHelper.hpp"
 #include "stringConversions.hpp"

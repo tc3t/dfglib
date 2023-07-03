@@ -26,9 +26,7 @@ DFGQTE_USING_PCH = 1
 # -------------------------------------------------------
 # Setting modules
 
-QT       = core gui sql
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT       = core gui sql widgets
 
 # Checking whether to use QCustomPlot
 exists( $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp ) {
@@ -180,23 +178,25 @@ SOURCES += \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableEditor.cpp \
         $$_PRO_FILE_PWD_/../../dfg/os/memoryMappedFile.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewCompleterDelegate.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/stringConversions.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/ConsoleDisplay.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/str/fmtlib/fmt.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/time/DateTime.cpp
+
+equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
+    SOURCES += \
+        $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/graphTools_qcustomplot.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewChartDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/FileDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/CsvFileDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.cpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/NumberGeneratorDataSource.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/stringConversions.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/str/fmtlib/fmt.cpp \
-        $$_PRO_FILE_PWD_/../../dfg/time/DateTime.cpp
-
-equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
-        SOURCES += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.cpp
-        SOURCES += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/graphTools_qcustomplot.cpp
+        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.cpp
 }
 
 HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
@@ -209,16 +209,9 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/StringMatchDefinition.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/tableViewUndoCommands.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/widgetHelpers.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/containerUtils.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/TableView.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/ConsoleDisplay.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewChartDataSource.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/FileDataSource.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/CsvFileDataSource.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/qt/NumberGeneratorDataSource.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/JsonListWidget.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/sqlTools.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/PatternMatcher.hpp \
@@ -226,14 +219,22 @@ HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModel.hpp \
         $$_PRO_FILE_PWD_/../../dfg/qt/stringConversions.hpp \
         $$_PRO_FILE_PWD_/../../dfg/math/FormulaParser.hpp \
         $$_PRO_FILE_PWD_/../../dfg/CsvFormatDefinition.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/charts/operations.hpp \
-        $$_PRO_FILE_PWD_/../../dfg/chartsAll.hpp \
         main.h
 
 equals(DFGQTE_USING_QCUSTOMPLOT, "1") {
-        HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.h
-        HEADERS += $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/graphTools_qcustomplot.hpp
+    HEADERS += \
+        $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/qcustomplot.h \
+        $$_PRO_FILE_PWD_/../../dfg/qt/qcustomplot/graphTools_qcustomplot.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/graphTools.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvTableViewChartDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvItemModelChartDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/FileDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/CsvFileDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/SQLiteFileDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/qt/NumberGeneratorDataSource.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/charts/commonChartTools.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/charts/operations.hpp \
+        $$_PRO_FILE_PWD_/../../dfg/chartsAll.hpp
 }
 
 equals(DFGQTE_USING_PCH, "1") {
