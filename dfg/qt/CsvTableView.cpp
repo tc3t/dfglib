@@ -923,8 +923,8 @@ void CsvTableView::addAllActions()
     addMiscellaneousActions();
 }
 
-#define DFG_TEMP_ADD_VIEW_ACTION(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, false, &ThisClass::HANDLER)
-#define DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, true, &ThisClass::HANDLER)
+#define DFG_TEMP_ADD_VIEW_ACTION(          OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, false, &ThisClass::HANDLER)
+#define DFG_TEMP_ADD_VIEW_ACTION_CHECKABLE(OBJ, NAME, SHORTCUT, ACTIONFLAGS, HANDLER) addViewAction(*this, OBJ, NAME, SHORTCUT, ACTIONFLAGS, true,  &ThisClass::HANDLER)
 
 void CsvTableView::addOpenSaveActions()
 {
@@ -1060,7 +1060,8 @@ void CsvTableView::addContentEditActions()
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Generate content..."),          tr("Alt+G"),  ActionFlags::defaultContentEdit, generateContent);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Evaluate selected as formula"), tr("Alt+C"),  ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Change radix..."),              noShortCut,   ActionFlags::defaultContentEdit, onChangeRadixUiAction);
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Trim cells"),                   noShortCut,   ActionFlags::defaultContentEdit, onTrimCellsUiAction);
+    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Trim cells"),                   noShortCut,   ActionFlags::defaultContentEdit, onTrimCellsUiAction)
+        .setToolTip(tr("Removes leading and trailing whitespaces (regular space and tab) from selected cells"));
 
     // Insert-menu
     {
@@ -1333,6 +1334,7 @@ void CsvTableView::contextMenuEvent(QContextMenuEvent* pEvent)
 
     QMenu menu;
     menu.addActions(actions());
+    menu.setToolTipsVisible(true);
     menu.exec(QCursor::pos());
 
     //BaseClass::contextMenuEvent(pEvent);
