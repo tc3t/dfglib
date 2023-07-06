@@ -15,6 +15,9 @@
 #include <dfg/cont.hpp>
 #include <dfg/utf.hpp>
 #include <dfg/iter/szIterator.hpp>
+#if DFGTEST_ENABLE_BENCHMARKS == 1
+    #include <dfg/time/timerCpu.hpp>
+#endif // DFGTEST_ENABLE_BENCHMARKS == 1
 
 TEST(dfgStr, strLen)
 {
@@ -2453,6 +2456,154 @@ TEST(dfgStr, utf16)
         EXPECT_EQ(s16, s16_2);
     }
 #endif
+}
+
+TEST(dfgStr, replaceSubStrsInplace)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
+    // Basic test
+    {
+        std::string s = "abc def ghi";
+        replaceSubStrsInplace(s, "def", "123456789");
+        DFGTEST_EXPECT_LEFT("abc 123456789 ghi", s);
+    }
+
+    // Null handling
+    {
+        const char sz[] = "a\0b";
+        std::string s(sz, sz + 3);
+        replaceSubStrsInplace(s, std::string(1, '\0'), std::string(2, '\0'));
+        DFGTEST_EXPECT_LEFT(StringViewC("a\0\0b", 4), s);
+    }
+
+    // Empty input string 
+    {
+        std::string s;
+        replaceSubStrsInplace(s, "abc", "def");
+        DFGTEST_EXPECT_TRUE(s.empty());
+    }
+
+    // Whole string replace
+    {
+        std::string s("abc");
+        replaceSubStrsInplace(s, "abc", "def");
+        DFGTEST_EXPECT_LEFT("def", s);
+    }
+
+    // StringView as replacing argument
+    {
+        std::string s = "abcd";
+        replaceSubStrsInplace(s, "bc", StringViewC("BC"));
+        DFGTEST_EXPECT_LEFT("aBCd", s);
+    }
+
+    // Arguments as const char*
+    {
+        std::string s = "abcd";
+        const char* pszFind = "abc";
+        const char* pszReplace = "d";
+        replaceSubStrsInplace(s, pszFind, pszReplace);
+        DFGTEST_EXPECT_LEFT("dd", s);
+    }
+
+    // Empty replacement handling
+    {
+        std::string s = "aaaaa";
+        replaceSubStrsInplace(s, "a", "");
+        DFGTEST_EXPECT_TRUE(s.empty());
+    }
+
+    // Tail handling
+    {
+        std::string s = "abababcde";
+        replaceSubStrsInplace(s, "ba", "BA");
+        DFGTEST_EXPECT_LEFT("aBABAbcde", s);
+    }
+
+    // Multiple matches in shrinking replace
+    {
+        std::string s = "abcdd1234dd5678dd90";
+        replaceSubStrsInplace(s, "dd", "d");
+        DFGTEST_EXPECT_LEFT("abcd1234d5678d90", s);
+    }
+
+    // Multiple matches in expanding replace
+    {
+        std::string s = "abcdd1234dd5678dd90";
+        replaceSubStrsInplace(s, "dd", "ddd");
+        DFGTEST_EXPECT_LEFT("abcddd1234ddd5678ddd90", s);
+    }
+
+    // Not found -handling
+    {
+        std::string s = "aaa";
+        replaceSubStrsInplace(s, "aaaa", "");
+        DFGTEST_EXPECT_LEFT("aaa", s);
+    }
+
+    // Testing that find doesn't touch part of the string already handled
+    {
+        {
+            std::string s = "aaaaa";
+            replaceSubStrsInplace(s, "aa", "a");
+            DFGTEST_EXPECT_LEFT("aaa", s);
+        }
+        {
+            std::string s = "aaaaa";
+            replaceSubStrsInplace(s, "aa", "aaaa");
+            DFGTEST_EXPECT_LEFT("aaaaaaaaa", s);
+        }
+    }
+
+    // Implementation detail: helper string handling in expanding case
+    {
+        std::string s = "abcabca";
+        std::string sHelper;
+        sHelper.reserve(64);
+        const auto pHelperData = sHelper.data();
+        const auto nOrigCapacity = sHelper.capacity();
+        ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::replaceSubStrsInplace_expanding(s, "bc", "123456789", &sHelper);
+        DFGTEST_EXPECT_LEFT("a123456789a123456789a", s);
+        DFGTEST_EXPECT_LEFT("abcabca", sHelper);
+        DFGTEST_EXPECT_LEFT(pHelperData, s.data());
+        DFGTEST_EXPECT_LEFT(nOrigCapacity, s.capacity());
+    }
+
+#if DFGTEST_ENABLE_BENCHMARKS == 1
+    // Performance in shrinking case
+    {
+        const size_t nPairs = 500000;
+        std::string s;
+        s.resize(nPairs * 2);
+        for (size_t i = 0; i < s.size(); i += 2)
+        {
+            s[i] = 'a';
+            s[i + 1] = 'b';
+        }
+        ::DFG_MODULE_NS(time)::TimerCpu timer;
+        replaceSubStrsInplace(s, "ab", "c");
+        DFGTEST_MESSAGE(timer.elapsedWallSeconds());
+        DFGTEST_EXPECT_LEFT(std::string(nPairs, 'c'), s);
+    }
+
+    // Performance in expanding case
+    {
+        const size_t nOrigSize = 1000000;
+        std::string s(nOrigSize, 'a');
+        ::DFG_MODULE_NS(time)::TimerCpu timer;
+        replaceSubStrsInplace(s, "a", "bc");
+        DFGTEST_MESSAGE(timer.elapsedWallSeconds());
+        std::string sExpectedResult(nOrigSize * 2, ' ');
+        for (size_t i = 0; i < sExpectedResult.size(); i += 2)
+        {
+            sExpectedResult[i] = 'b';
+            sExpectedResult[i + 1] = 'c';
+        }
+        DFGTEST_EXPECT_LEFT(sExpectedResult, s);
+    }
+#endif // DFGTEST_ENABLE_BENCHMARKS == 1
 }
 
 #endif

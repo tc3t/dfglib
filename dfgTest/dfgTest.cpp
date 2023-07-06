@@ -202,6 +202,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.floatingPointTypeToSprintfType";
     //::testing::GTEST_FLAG(filter) = "dfgStr.format_fmt";
     //::testing::GTEST_FLAG(filter) = "dfgStr.intToRadixRepresentation";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.replaceSubStrsInplace";
     //::testing::GTEST_FLAG(filter) = "dfgStr.String";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView";
     //::testing::GTEST_FLAG(filter) = "dfgStr.StringView_autoConvToUntyped";
