@@ -823,6 +823,7 @@
     <ClInclude Include="..\dfg\alg\find.hpp" />
     <ClInclude Include="..\dfg\alg\generateAdjacent.hpp" />
     <ClInclude Include="..\dfg\alg\rank.hpp" />
+    <ClInclude Include="..\dfg\alg\replaceSubarrays.hpp" />
     <ClInclude Include="..\dfg\alg\sortMultiple.hpp" />
     <ClInclude Include="..\dfg\alg\sortSingleItem.hpp" />
     <ClInclude Include="..\dfg\baseConstructorDelegate.hpp" />

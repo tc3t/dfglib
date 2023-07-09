@@ -7,6 +7,7 @@
 #include <dfg/alg/sortMultiple.hpp>
 #include <dfg/alg/rank.hpp>
 #include <dfg/alg/sortSingleItem.hpp>
+#include <dfg/alg/replaceSubarrays.hpp>
 #include <vector>
 #include <list>
 #include <map>
@@ -20,6 +21,7 @@
 #include <dfg/numeric/algNumeric.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/math.hpp>
+#include <dfg/Span.hpp>
 #include <functional>
 #include <memory>
 #include <complex>
@@ -898,6 +900,109 @@ TEST(dfgAlg, nearestRangeInSorted)
         EXPECT_EQ(std::begin(arr) + 2, rv.nearest());
         EXPECT_EQ(std::begin(arr) + 1, rv.begin());
         EXPECT_EQ(std::end(arr), rv.end());
+    }
+}
+
+TEST(dfgAlg, replaceSubarrays)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(alg);
+
+    // Basic one-to-one replacement
+    {
+        std::vector<int> v{ 1,2,3 };
+        const auto oldS = { 1 };
+        const auto newS = { 4 };
+        auto nReplaceCount = replaceSubarrays(v, oldS, newS);
+        DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{4, 2, 3}), v);
+
+        // Testing that initializer list arguments are accepted
+        {
+            nReplaceCount = replaceSubarrays(v, { 2 }, oldS);
+            DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+            DFGTEST_EXPECT_LEFT((std::vector<int>{4, 1, 3}), v);
+
+            nReplaceCount = replaceSubarrays(v, oldS, { 5 });
+            DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+            DFGTEST_EXPECT_LEFT((std::vector<int>{4, 5, 3}), v);
+
+            nReplaceCount = replaceSubarrays(v, { 4 }, { 1 });
+            DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+            DFGTEST_EXPECT_LEFT((std::vector<int>{1, 5, 3}), v);
+        }
+    }
+
+    // Basic shrinking replacement
+    {
+        std::vector<int> v{ 1,2,3 };
+        const auto nReplaceCount = replaceSubarrays(v, { 1, 2 }, { 4 });
+        DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{4, 3}), v);
+    }
+
+    // More complex shrinking replacement
+    {
+        std::vector<int> v{ 0,1,2,3,4,5,1,2,6,7,1,2 };
+        const auto nReplaceCount = replaceSubarrays(v, { 1, 2 }, { 9 });
+        DFGTEST_EXPECT_LEFT(3, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{0,9,3,4,5,9,6,7,9}), v);
+    }
+
+    // Identical replacement in size-preserving replacement
+    {
+        std::vector<int> v{ 1,2,3,4 };
+        const auto nReplaceCount = replaceSubarrays(v, { 2 }, { 2 });
+        DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{1, 2, 3, 4}), v);
+    }
+
+    // Size-preserving function should work even if container is not resizable
+    {
+        std::array<int, 4> a{ 1, 2, 3, 4 };
+        const auto oldS = { 2 };
+        const auto newS = { 6 };
+        const auto nReplaceCount = replaceSubarrays_sizeEqual(a, oldS, newS);
+        DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::array<int, 4>{1, 6, 3, 4}), a);
+    }
+
+    // Basic expanding test
+    {
+        std::vector<int> v{ 1,2,2,3,2,4,5,6,2 };
+        const auto nReplaceCount = replaceSubarrays(v, { 2 }, {7,8,9});
+        DFGTEST_EXPECT_LEFT(4, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{1,7,8,9,7,8,9,3,7,8,9,4,5,6,7,8,9}), v);
+    }
+
+    // Basic test with non-contiguous container
+    {
+        std::list<int> c{ 1,2,3 };
+        const auto nReplaceCount = replaceSubarrays(c, { 1, 2 }, { 4 });
+        DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::list<int>{4, 3}), c);
+    }
+
+    // Heterogenous argument types
+    {
+        std::list<int> c{ 1,2,3 };
+        const auto nReplaceCount = replaceSubarrays(c, std::deque<int>{ 1, 2 }, Span<const int>(std::vector<int>{4}));
+        DFGTEST_EXPECT_LEFT(1, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::list<int>{4, 3}), c);
+    }
+
+    // Helper container handling in expanding case
+    {
+        std::vector<int> v{1,2,3,1,2,3,1};
+        std::vector<int> vHelper;
+        vHelper.reserve(64);
+        const auto pHelperData = vHelper.data();
+        const auto nOrigCapacity = vHelper.capacity();
+        replaceSubarrays_expanding(v, std::array<int, 2>{2, 3}, std::array<int, 9>{1,2,3,4,5,6,7,8,9}, &vHelper);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1}), v);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{1, 2, 3, 1, 2, 3, 1}), vHelper);
+        DFGTEST_EXPECT_LEFT(pHelperData, v.data());
+        DFGTEST_EXPECT_LEFT(nOrigCapacity, v.capacity());
     }
 }
 
