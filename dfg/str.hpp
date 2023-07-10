@@ -13,6 +13,8 @@
 #include <algorithm>
 #include "preprocessor/compilerInfoMsvc.hpp"
 #include "str/strTo.hpp"
+#include "alg/replaceSubarrays.hpp"
+#include "cont/elementType.hpp"
 
 #if DFG_BUILD_OPT_USE_BOOST==1
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -521,157 +523,27 @@ std::wstring toStrW(const T& obj)
 template <size_t N> inline char*    strCpy(char     (&dest)[N], NonNullCStr pszSrc)     { return strcpy(dest, pszSrc); }
 template <size_t N> inline wchar_t* strCpy(wchar_t  (&dest)[N], NonNullCStrW pszSrc)    { return wcscpy(dest, pszSrc); }
 
-namespace DFG_DETAIL_NS
-{
-    // Implementation function for shrinking replace, i.e. replacing string is shorter.
-    // Precondition: strLen(sNewSub) < strLen(sOldSub)
-    template <class Str_T, class StrOld_T, class StrNew_T>
-    void replaceSubStrsInplace_shrinking(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub)
-    {
-        const auto nOrigSize = str.size();
-        const auto nOldSubSize = strLen(sOldSub);
-        const auto nNewSubSize = strLen(sNewSub);
-        DFG_ASSERT_UB(nNewSubSize < nOldSubSize);
-        const auto pNewSubBegin = (nNewSubSize > 0) ? &sNewSub[0] : nullptr;
-        const auto pBegin = str.data();
-        size_t iReadPos = 0;
-        size_t iWritePos = 0;
-        size_t nMatchCount = 0;
-        for (; iReadPos < nOrigSize;)
-        {
-            auto iNextMatch = str.find(sOldSub, iReadPos);
-            const bool bMatchFound = isValidIndex(str, iNextMatch);
-            if (bMatchFound)
-                ++nMatchCount;
-            else
-                iNextMatch = nOrigSize;
-            const auto nCopyCount = iNextMatch - iReadPos;
-            // Copying bytes until found sub string start (only needed if read and write pos differ).
-            if (iWritePos < iReadPos  && nCopyCount > 0)
-                std::copy(pBegin + iReadPos, pBegin + iReadPos + nCopyCount, pBegin + iWritePos);
-            iWritePos += nCopyCount;
-            // Replacing matching substring with sNewSub
-            if (bMatchFound)
-            {
-                std::copy(pNewSubBegin, pNewSubBegin + nNewSubSize, pBegin + iWritePos); // Note: can't use std::end(sNewSub) since it can be char[] string literal and begin()/end() would include null terminator.
-                iWritePos += nNewSubSize;
-                iReadPos = iNextMatch + nOldSubSize;
-            }
-            else
-                iReadPos = iNextMatch;
-        }
-        str.resize(iWritePos);
-        DFG_ASSERT_CORRECTNESS(str.size() == nOrigSize - nMatchCount * (nOldSubSize - nNewSubSize));
-    }
-
-    // Implementation function for size-preserving replace, i.e. replacing string has the same length as to-be-replaced string.
-    // Precondition: strLen(sNewSub) == strLen(sOldSub)
-    template <class Str_T, class StrOld_T, class StrNew_T>
-    void replaceSubStrsInplace_sizeEqual(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub)
-    {
-        const auto nOldSubSize = strLen(sOldSub);
-        const auto nNewSubSize = strLen(sNewSub);
-        DFG_ASSERT_UB(nNewSubSize == nOldSubSize);
-        for (size_t i = 0; i < str.length();)
-        {
-            i = str.find(sOldSub, i);
-            if (isValidIndex(str, i))
-            {
-                str.replace(i, nOldSubSize, sNewSub);
-                i += nNewSubSize;
-            }
-        }
-    }
-
-    // Implementation function for expanding replace, i.e. replacing string is longer.
-    // Precondition: strLen(sNewSub) > strLen(sOldSub)
-    // If psHelper is given, it's allocated capacity may get used for the final string and on return it will hold original contents of str.
-    template <class Str_T, class StrOld_T, class StrNew_T>
-    void replaceSubStrsInplace_expanding(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub, Str_T* psHelper = nullptr)
-    {
-        const auto nOrigSize = str.size();
-        const auto nOldSubSize = strLen(sOldSub);
-        const auto nNewSubSize = strLen(sNewSub);
-        DFG_ASSERT_UB(nNewSubSize > nOldSubSize);
-        const auto pNewSubBegin = (nNewSubSize > 0) ? &sNewSub[0] : nullptr;
-
-        // First counting matches so that can allocate result string with single allocation
-        size_t nMatchCount = 0;
-        for (size_t i = 0; i < str.length();)
-        {
-            i = str.find(sOldSub, i);
-            if (isValidIndex(str, i))
-            {
-                nMatchCount++;
-                i += nOldSubSize;
-            }
-        }
-        if (nMatchCount == 0)
-            return; // No substring found -> nothing to do
-        const size_t nNewSize = nOrigSize + nMatchCount * (nNewSubSize - nOldSubSize);
-        // Below is almost identical algorithm to shrinking case: has not been refactored into common code since 
-        // optimal expanding case might not need to use temporary string but instead resize original and start
-        // filling from back.
-        size_t iReadPos = 0;
-        size_t iWritePos = 0;
-        Str_T sNewHelper;
-        auto& sNew = (psHelper) ? *psHelper : sNewHelper;
-        sNew.resize(nNewSize);
-        const auto pBegin = str.data();
-        const auto pWriteBegin = sNew.data();
-        for (; iReadPos < nOrigSize; )
-        {
-            auto iNextMatch = str.find(sOldSub, iReadPos);
-            const bool bMatchFound = isValidIndex(str, iNextMatch);
-            if (!bMatchFound)
-                iNextMatch = nOrigSize;
-            const auto nCopyCount = iNextMatch - iReadPos;
-            // Copying bytes until found sub string start
-            if (nCopyCount > 0)
-                std::memcpy(pWriteBegin + iWritePos, pBegin + iReadPos, nCopyCount);
-            iWritePos += nCopyCount;
-            // Replacing matching substring with sNewSub
-            if (bMatchFound)
-            {
-                DFG_ASSERT_UB(iWritePos + nNewSubSize <= sNew.size());
-                std::copy(pNewSubBegin, pNewSubBegin + nNewSubSize, pWriteBegin + iWritePos); // Note: can't use std::end(sNewSub) since it can be char[] string literal and begin()/end() would include null terminator.
-                iWritePos += nNewSubSize;
-                iReadPos = iNextMatch + nOldSubSize;
-            }
-            else
-                iReadPos = iNextMatch;
-        }
-        str.swap(sNew);
-    }
-} // namespace DFG_DETAIL_NS
 
 // Replaces occurrences of 'sOldSub' with 'sNewSub' in given string.
-// Note: Behaviour is undefined if substrings overlap with 'str'.
+// @note: Behaviour is undefined if substrings overlap with 'str'.
+// @return The number of substrings replaced
 template <class Str_T, class StrOld_T, class StrNew_T>
-void replaceSubStrsInplaceImpl(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub)
+size_t replaceSubStrsInplace(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub)
 {
-    const auto nOldSubSize = strLen(sOldSub);
-    const auto nNewSubSize = strLen(sNewSub);
-    if (nNewSubSize < nOldSubSize)
-        DFG_DETAIL_NS::replaceSubStrsInplace_shrinking(str, sOldSub, sNewSub);
-    else if (nNewSubSize == nOldSubSize)
-        DFG_DETAIL_NS::replaceSubStrsInplace_sizeEqual(str, sOldSub, sNewSub);
-    else
-        DFG_DETAIL_NS::replaceSubStrsInplace_expanding(str, sOldSub, sNewSub);
+    using ElemT = typename ::DFG_MODULE_NS(cont)::template ElementType<Str_T>::type;
+    return ::DFG_MODULE_NS(alg)::replaceSubarrays(str, StringView<ElemT>(sOldSub), StringView<ElemT>(sNewSub));
 }
 
-// See replaceSubStrsInplaceImpl
-template <class StrTOld, class StrTNew>
-void replaceSubStrsInplace(std::string& str, const StrTOld& sOldSub, const StrTNew& sNewSub)
+// Implementation function for expanding replace, i.e. replacing string is longer.
+// Precondition: strLen(sNewSub) > strLen(sOldSub) and those in replaceSubStrsInplace()
+// If psHelper is given, it's allocated capacity may get used for the final string and
+// when > 0 is returning, it will hold original contents of str.
+// @return The number of substrings replaced
+template <class Str_T, class StrOld_T, class StrNew_T>
+size_t replaceSubStrsInplace_expanding(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub, Str_T* psHelper = nullptr)
 {
-    replaceSubStrsInplaceImpl(str, sOldSub, sNewSub);
-}
-
-// See replaceSubStrsInplaceImpl
-template <class StrTOld, class StrTNew>
-void replaceSubStrsInplace(std::wstring& str, const StrTOld& sOldSub, const StrTNew& sNewSub)
-{
-    replaceSubStrsInplaceImpl(str, sOldSub, sNewSub);
+    using ElemT = typename ::DFG_MODULE_NS(cont)::template ElementType<Str_T>::type;
+    return ::DFG_MODULE_NS(alg)::replaceSubarrays_expanding(str, StringView<ElemT>(sOldSub), StringView<ElemT>(sNewSub), psHelper);
 }
 
 // Replaces occurrences of 'sOldSub' with 'sNewSub' and returns the new string.

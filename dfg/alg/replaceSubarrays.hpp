@@ -12,7 +12,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays_shrinking(Cont_T& cont, const OldSeq_T& oldSub, const NewSeq_T& newSub)
 {
-    const auto nOrigSize = std::size(cont);
+    DFG_MAYBE_UNUSED const auto nOrigSize = std::size(cont);
     const auto nOldSubSize = std::size(oldSub);
     const auto nNewSubSize = std::size(newSub);
     if (nNewSubSize >= nOldSubSize)

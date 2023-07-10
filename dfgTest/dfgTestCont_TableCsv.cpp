@@ -788,7 +788,7 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
     // Testing \r handling
     {
         auto bytes = ::DFG_MODULE_NS(io)::fileToByteContainer<std::string>(szPathMatrix200x200);
-        ::DFG_MODULE_NS(str)::replaceSubStrsInplaceImpl(bytes, "\r\n", "\r");
+        ::DFG_MODULE_NS(str)::replaceSubStrsInplace(bytes, "\r\n", "\r");
         TableCsvReadWriteOptions readOptions = basicReadOptionsForMt;
         readOptions.eolType(::DFG_MODULE_NS(io)::EndOfLineTypeR);
         readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nThreadCountRequest);

@@ -2552,19 +2552,21 @@ TEST(dfgStr, replaceSubStrsInplace)
         }
         {
             std::string s = "aaaaa";
-            replaceSubStrsInplace(s, "aa", "aaaa");
+            const auto nReplaceCount = replaceSubStrsInplace(s, "aa", "aaaa");
+            DFGTEST_EXPECT_LEFT(2, nReplaceCount);
             DFGTEST_EXPECT_LEFT("aaaaaaaaa", s);
         }
     }
 
-    // Implementation detail: helper string handling in expanding case
+    // Helper string handling in expanding case
     {
         std::string s = "abcabca";
         std::string sHelper;
         sHelper.reserve(64);
         const auto pHelperData = sHelper.data();
         const auto nOrigCapacity = sHelper.capacity();
-        ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::replaceSubStrsInplace_expanding(s, "bc", "123456789", &sHelper);
+        const auto nReplaceCount = replaceSubStrsInplace_expanding(s, "bc", "123456789", &sHelper);
+        DFGTEST_EXPECT_LEFT(2, nReplaceCount);
         DFGTEST_EXPECT_LEFT("a123456789a123456789a", s);
         DFGTEST_EXPECT_LEFT("abcabca", sHelper);
         DFGTEST_EXPECT_LEFT(pHelperData, s.data());
