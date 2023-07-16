@@ -8,7 +8,18 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
 
 // Shrinking replace, i.e. replacing sequence is shorter.
+// @param cont Iterable from which subarrays are replaced and that has erase() member function that can be used to erase tail.
+// @param oldSub Iterable that represents subarray to replace in 'cont'. Note: must not overlap with 'cont'
+// @param newSub Iterable that represents subarray that is to replace 'oldSub'. Note: must not overlap with modifiable part of 'cont'
 // Precondition: std::size(newSub) < std::size(oldSub)
+// Precondition: 'oldSub' and 'newSub' must not overlap with modifiable part of 'cont'
+//     -In practice this means 
+//          -'oldSub' must not overlap with 'cont'
+//          -'newSub' can overlap with 'cont' only if it is before first occurrence of 'oldSub' and doesn't overlap with it
+//          -'oldSub' and 'newSub' can overlap
+// Algorithmic properties
+//      Time: O(N)
+//      Space: replace is guaranteed to be done in-place without memory allocations. Memory characteristics on erase() depend on container.
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays_shrinking(Cont_T& cont, const OldSeq_T& oldSub, const NewSeq_T& newSub)
 {
@@ -61,8 +72,15 @@ size_t replaceSubarrays_shrinking(Cont_T& cont, const OldSeq_T& oldSub, const Ne
 }
 
 // Size-preserving replace, i.e. replacing sequence has the same length as to-be-replaced sequence.
+// @param cont Iterable from which subarrays are replaced.
+// @param oldSub Iterable that represents subarray to replace in 'cont'. Note: must not overlap with 'cont'
+// @param newSub Iterable that represents subarray that is to replace 'oldSub'. Note: must not overlap with modifiable part of 'cont'
 // Precondition: std::size(oldSub) == std::size(newSub)
+// Precondition: 'oldSub' and 'newSub' must not overlap with modifiable part of 'cont'
 // @note: unlike size changing replaces, this function can be used with ranges that don't have resize-capability (e.g. std::array)
+// Algorithmic properties
+//      Time: O(N)
+//      Space: replace is guaranteed to be done in-place without memory allocations.
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays_sizeEqual(Cont_T& cont, const OldSeq_T& oldSub, const NewSeq_T& newSub)
 {
@@ -94,9 +112,19 @@ size_t replaceSubarrays_sizeEqual(Cont_T& cont, const OldSeq_T& oldSub, const Ne
 }
 
 // Expanding replace, i.e. replacing sequence is longer.
+// @param cont Iterable from which subarrays are replaced and that has resize() and swap() member functions.
+// @param oldSub Iterable that represents subarray to replace in 'cont'.
+// @param newSub Iterable that represents subarray that is to replace 'oldSub'.
+// @param pHelperCont If given, all temporary writing will be done to this container and it will be swap()'ed with 'cont' when the result is ready.
+//                    Thus if matches were found, on return it will hold original contents of 'cont'.
 // Precondition: std::size(newSub) > std::size(oldSub)
-// If pHelperCont is given, it's allocated capacity may get used for the final container and if matches were found,
-// on return it will hold original contents of cont.
+// Precondition: If 'pHelperCont' is not given, 'oldSub' and 'newSub' must not overlap with 'cont'
+//      -Currently iterables can overlap even if not given since helper container is always used, but this is an implementation detail
+//       that can change.
+// Algorithmic properties
+//      Time: O(N)
+//      Space: Allocates memory at most for helper container big enough to contain result. If sufficiently large 'pHelperCont'
+//             is given, guarantees to not allocate if resize() and swap() behave like in typical std containers.
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays_expanding(Cont_T& cont, const OldSeq_T& oldSub, const NewSeq_T& newSub, Cont_T* pHelperCont = nullptr)
 {
@@ -189,9 +217,11 @@ namespace DFG_DETAIL_NS
 // Given a sequence A [a0, a1...], range B [b0, b1..] and replacing range C [c0, c1...],
 // replaces every subarray in A matching range B by range C using forward search. 
 // For example if A = "aaa", B = "aa" and C = "c", result is guaranteed to be "ca"
-// TODO: overlap documentation
-// TODO: cont requirements (resize, erase).
-// @note Term 'subarray' is used here to mean simply contiguous subsequence, doesn't need to be an array in memory layout -sense
+// Precondition: conditions are different between shrinking, size preserving and expanding replaces, refer to those implementations for details
+// Guarantees at most O(N) time in all cases with respect to shrinking/size-preserving/expanding cases.
+// @note Since this is essentially a proxy for choosing correct branch from shrinking/size-preserving/expanding cases,
+//       'cont' must have member functions needs by any of those, refer to those implementations for details.
+// @note Term 'subarray' is used here to mean simply index-wise contiguous subsequence, none of the iterables need to be an array in memory layout -sense
 // @return Number of occurences replaced
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays(Cont_T& cont, const OldSeq_T& oldSeq, const NewSeq_T& newSeq)
@@ -199,21 +229,21 @@ size_t replaceSubarrays(Cont_T& cont, const OldSeq_T& oldSeq, const NewSeq_T& ne
     return DFG_DETAIL_NS::replaceSubarraysImpl(cont, oldSeq, newSeq);
 }
 
-// Boilerplate overloads to allow usage of initializer lists as oldSeq/newSeq
+// Boilerplate overload to allow usage of initializer lists as oldSeq/newSeq
 template <class Cont_T, class T, class NewSeq_T>
 size_t replaceSubarrays(Cont_T& cont, const std::initializer_list<T>& oldSeq, const NewSeq_T& newSeq)
 {
     return DFG_DETAIL_NS::replaceSubarraysImpl(cont, oldSeq, newSeq);
 }
 
-// Boilerplate overloads to allow usage of initializer lists as oldSeq/newSeq
+// Boilerplate overload to allow usage of initializer lists as oldSeq/newSeq
 template <class Cont_T, class OldSeq_T, class T>
 size_t replaceSubarrays(Cont_T& cont, const OldSeq_T& oldSeq, const std::initializer_list<T>& newSeq)
 {
     return DFG_DETAIL_NS::replaceSubarraysImpl(cont, oldSeq, newSeq);
 }
 
-// Boilerplate overloads to allow usage of initializer lists as oldSeq/newSeq
+// Boilerplate overload to allow usage of initializer lists as oldSeq/newSeq
 template <class Cont_T, class T>
 size_t replaceSubarrays(Cont_T& cont, const std::initializer_list<T>& oldSeq, const std::initializer_list<T>& newSeq)
 {

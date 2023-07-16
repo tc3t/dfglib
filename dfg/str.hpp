@@ -524,9 +524,12 @@ template <size_t N> inline char*    strCpy(char     (&dest)[N], NonNullCStr pszS
 template <size_t N> inline wchar_t* strCpy(wchar_t  (&dest)[N], NonNullCStrW pszSrc)    { return wcscpy(dest, pszSrc); }
 
 
-// Replaces occurrences of 'sOldSub' with 'sNewSub' in given string.
-// @note: Behaviour is undefined if substrings overlap with 'str'.
-// @return The number of substrings replaced
+// Replaces occurrences of 'sOldSub' with 'sNewSub' in given string 'str'.
+// Essentially calls dfg::alg::replaceSubarrays() so refer to that for documentation.
+// As a functional difference, this function allows string literals to be used as 'sOldSub' and 'sNewSub'.
+// Related code
+//      -std::regex_replace (https://en.cppreference.com/w/cpp/regex/regex_replace)
+//      -boost string algorithms: https://www.boost.org/doc/libs/1_82_0/doc/html/string_algo/usage.html#id-1.3.3.5.7
 template <class Str_T, class StrOld_T, class StrNew_T>
 size_t replaceSubStrsInplace(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub)
 {
@@ -535,10 +538,8 @@ size_t replaceSubStrsInplace(Str_T& str, const StrOld_T& sOldSub, const StrNew_T
 }
 
 // Implementation function for expanding replace, i.e. replacing string is longer.
-// Precondition: strLen(sNewSub) > strLen(sOldSub) and those in replaceSubStrsInplace()
-// If psHelper is given, it's allocated capacity may get used for the final string and
-// when > 0 is returning, it will hold original contents of str.
-// @return The number of substrings replaced
+// Essentially calls dfg::alg::replaceSubarrays_expanding() so refer to that for documentation.
+// As a functional difference, this function allows string literals to be used as 'sOldSub' and 'sNewSub'.
 template <class Str_T, class StrOld_T, class StrNew_T>
 size_t replaceSubStrsInplace_expanding(Str_T& str, const StrOld_T& sOldSub, const StrNew_T& sNewSub, Str_T* psHelper = nullptr)
 {

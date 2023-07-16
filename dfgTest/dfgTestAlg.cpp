@@ -991,6 +991,15 @@ TEST(dfgAlg, replaceSubarrays)
         DFGTEST_EXPECT_LEFT((std::list<int>{4, 3}), c);
     }
 
+    // Testing that replacing range can overlap with original container (given it's an acceptable overlap)
+    {
+        std::vector<int> v{1,2,3,4,5,6,7,4,5,6,8};
+        const auto replacingRange = makeRange(v.begin() + 1, v.begin() + 3);
+        const auto nReplaceCount = replaceSubarrays(v, { 4, 5, 6 }, replacingRange);
+        DFGTEST_EXPECT_LEFT(2, nReplaceCount);
+        DFGTEST_EXPECT_LEFT((std::vector<int>{1, 2, 3, 2, 3, 7, 2, 3, 8}), v);
+    }
+
     // Helper container handling in expanding case
     {
         std::vector<int> v{1,2,3,1,2,3,1};
