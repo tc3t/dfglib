@@ -17,9 +17,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg) {
 //          -'oldSub' must not overlap with 'cont'
 //          -'newSub' can overlap with 'cont' only if it is before first occurrence of 'oldSub' and doesn't overlap with it
 //          -'oldSub' and 'newSub' can overlap
-// Algorithmic properties
-//      Time: O(N)
-//      Space: replace is guaranteed to be done in-place without memory allocations. Memory characteristics on erase() depend on container.
+// Algorithmic properties:
+//      Time:
+//          Search : At most O(N * S) (N = size(cont), S = size(oldSub))
+//          Replace: At most O(R * K) (R = replace count <= floor(N / S), K = size(newSub))
+//      Space: replace is guaranteed to be done in-place. Searching may use helper buffer (depending on implementation of std::search()) and memory characteristics on erase() depend on container.
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays_shrinking(Cont_T& cont, const OldSeq_T& oldSub, const NewSeq_T& newSub)
 {
@@ -78,9 +80,11 @@ size_t replaceSubarrays_shrinking(Cont_T& cont, const OldSeq_T& oldSub, const Ne
 // Precondition: std::size(oldSub) == std::size(newSub)
 // Precondition: 'oldSub' and 'newSub' must not overlap with modifiable part of 'cont'
 // @note: unlike size changing replaces, this function can be used with ranges that don't have resize-capability (e.g. std::array)
-// Algorithmic properties
-//      Time: O(N)
-//      Space: replace is guaranteed to be done in-place without memory allocations.
+// Algorithmic properties:
+//      Time:
+//          Search : At most O(N * S) (N = size(cont), S = size(oldSub))
+//          Replace: At most O(R * K) (R = replace count <= floor(N / S), K = size(newSub))
+//      Space: replace is guaranteed to be done in-place. Searching may use helper buffer (depending on implementation of std::search()).
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays_sizeEqual(Cont_T& cont, const OldSeq_T& oldSub, const NewSeq_T& newSub)
 {
@@ -121,10 +125,12 @@ size_t replaceSubarrays_sizeEqual(Cont_T& cont, const OldSeq_T& oldSub, const Ne
 // Precondition: If 'pHelperCont' is not given, 'oldSub' and 'newSub' must not overlap with 'cont'
 //      -Currently iterables can overlap even if not given since helper container is always used, but this is an implementation detail
 //       that can change.
-// Algorithmic properties
-//      Time: O(N)
-//      Space: Allocates memory at most for helper container big enough to contain result. If sufficiently large 'pHelperCont'
-//             is given, guarantees to not allocate if resize() and swap() behave like in typical std containers.
+// Algorithmic properties:
+//      Time:
+//          Search : At most O(N * S) (N = size(cont), S = size(oldSub))
+//          Replace: At most O(R * K) (R = replace count <= floor(N / S), K = size(newSub))
+//      Space: In addition to possible space allocated by std::search(), allocates memory at most for helper container big enough to contain result. If sufficiently large 'pHelperCont'
+//             is given, guarantees to not allocate for helper container if resize() and swap() behave like in typical std-containers.
 template <class Cont_T, class OldSeq_T, class NewSeq_T>
 size_t replaceSubarrays_expanding(Cont_T& cont, const OldSeq_T& oldSub, const NewSeq_T& newSub, Cont_T* pHelperCont = nullptr)
 {
