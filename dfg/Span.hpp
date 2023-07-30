@@ -52,6 +52,11 @@ DFG_ROOT_NS_BEGIN{
             , m_nSize(N_T)
         {}
 
+        Span(T* p, const size_t nSize)
+            : m_pData(p)
+            , m_nSize(nSize)
+        {}
+
         constexpr T* begin() const noexcept { return data(); }
         constexpr T* end() const noexcept { return data() + size(); }
 

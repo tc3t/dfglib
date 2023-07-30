@@ -992,6 +992,14 @@ TEST(dfg, Span)
         DFGTEST_STATIC_TEST((std::is_same_v<Span<const int>::element_type, const int>));
         DFGTEST_STATIC_TEST((std::is_same_v<Span<const int>::value_type, int>));
     }
+
+    // (ptr, size) constructor
+    {
+        int arr[3] = { 1,2,3 };
+        Span<int> sa(arr, 2);
+        DFGTEST_EXPECT_LEFT(arr, sa.data());
+        DFGTEST_EXPECT_LEFT(2, sa.size());
+    }
 }
 
 TEST(dfgTypeTraits, IsTrueTrait)
