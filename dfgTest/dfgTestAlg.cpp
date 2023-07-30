@@ -1015,4 +1015,70 @@ TEST(dfgAlg, replaceSubarrays)
     }
 }
 
+TEST(dfgAlg, detail_areContiguousByTypeAndOverlappingRanges)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(alg);
+    using namespace ::DFG_MODULE_NS(alg)::DFG_DETAIL_NS;
+
+    // Tests with array
+    {
+        int arr[5] = { 0, 1, 2, 3, 4 };
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(arr, arr));
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(arr, Span<int>(arr)));
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(arr, Span<int>(arr + 4, 1)));
+        // Empty range overlapping
+        {
+            const auto emptyStartRange = Span<int>(arr, 0);
+            DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(emptyStartRange, emptyStartRange)); // Both empty with identical address
+            DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(arr, emptyStartRange)); // Only one is empty
+        }
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(Span<int>(arr + 0, 2), Span<int>(arr + 2, 2)));
+    }
+    // Tests with std::vector
+    {
+        std::vector<int> v = { 1,2,3,4 };
+        auto& v2 = v;
+        auto v3 = v;
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(v, v));
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(v, v2));
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(v, Span<const int>(v.data() + 1, 1)));
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(v, v3));
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(v, makeRange(v.begin(), v.begin())));
+
+    }
+    // Tests with std::list
+    {
+        std::list<int> stdList = { 1,2,3,4 };
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(stdList, stdList));
+        const auto iterFirst = stdList.begin();
+        const auto iterSecond = [&]() { auto iter = stdList.begin(); return ++iter; }();
+        const auto iterThird = [&]() { auto iter = iterSecond; return ++iter; }();
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(makeRange(iterFirst, iterFirst), makeRange(iterFirst, iterFirst)));
+        // Single element ranges are considered contiguous even if container is not contiguous
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(makeRange(iterFirst, iterSecond), makeRange(iterFirst, iterSecond)));
+        // With two elements should not get contiguous range anymore.
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(makeRange(iterFirst, iterThird), makeRange(iterFirst, iterThird)));
+
+        const std::list<int> singleList = { 1 };
+        const auto singleListCopy = singleList;
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(singleList, singleList));
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(singleList, singleListCopy));
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(singleListCopy, singleList));
+    }
+
+    // Ranges of different types
+    {
+        std::vector<int> v = { 0, 1, 2, 3, 4 };
+        const char* pBegin = reinterpret_cast<const char*>(v.data());
+        const char* pLast = reinterpret_cast<const char*>(v.data() + 4);
+        const char* pEnd = pLast + sizeof(int);
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(v, makeRange(pBegin, pLast)));
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(makeRange(pBegin, pLast), v));
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(v, makeRange(pLast, pEnd)));
+        DFGTEST_EXPECT_TRUE(areContiguousByTypeAndOverlappingRanges(makeRange(pLast, pEnd), v));
+        DFGTEST_EXPECT_FALSE(areContiguousByTypeAndOverlappingRanges(v, makeRange(pEnd, pEnd)));
+    }
+}
+
 #endif

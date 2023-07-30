@@ -62,6 +62,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfg.ScopedCaller";
     //::testing::GTEST_FLAG(filter) = "dfg.Span";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.arrayCopy";
+    //::testing::GTEST_FLAG(filter) = "dfgAlg.detail_areContiguousByTypeAndOverlappingRanges";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.floatIndexInSorted";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.nearestRangeInSorted";
     //::testing::GTEST_FLAG(filter) = "dfgAlg.replaceSubarrays";
@@ -169,6 +170,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIter.CustomAccessIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.FunctionValueIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.RangeIterator";
+    //::testing::GTEST_FLAG(filter) = "dfgIter.RangeIterator_isSizeOne";
     //::testing::GTEST_FLAG(filter) = "dfgIter.RawStorageIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator";
     //::testing::GTEST_FLAG(filter) = "dfgIter.szIterator_operatorLt";
