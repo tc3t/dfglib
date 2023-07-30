@@ -28,6 +28,8 @@ DFG_ROOT_NS_BEGIN
             iterator cend() const	{ return end(); }
             size_t size() const		{ return std::distance(begin(), end()); }
             int sizeAsInt() const   { return saturateCast<int>(size()); } // Returns saturateCast<int>(size())
+            // Convenience function for checking if size is one guaranteeing O(1) even if iterator has O(N) distance()
+            bool isSizeOne() const  { if (!empty()) { auto iter = begin(); ++iter; return (iter == end()); } else return false; }
             bool empty() const      { return m_iterBegin == m_iterEnd; }
                   value_type& front()       { return *begin(); } // Precondition: !empty()
             const value_type& front() const { return *begin(); } // Precondition: !empty()

@@ -141,6 +141,22 @@ TEST(dfgIter, RangeIterator)
     }
 }
 
+TEST(dfgIter, RangeIterator_isSizeOne)
+{
+    using namespace DFG_ROOT_NS;
+    {
+        std::vector<int> v1 = { 1 };
+        std::vector<int> v2 = { 1, 2 };
+        std::list<int> l1 = { 1 };
+        std::list<int> l2 = { 1, 2 };
+        DFGTEST_EXPECT_FALSE(makeRange<int*>(nullptr, nullptr).isSizeOne());
+        DFGTEST_EXPECT_TRUE(makeRange(v1).isSizeOne());
+        DFGTEST_EXPECT_FALSE(makeRange(v2).isSizeOne());
+        DFGTEST_EXPECT_TRUE(makeRange(l1).isSizeOne());
+        DFGTEST_EXPECT_FALSE(makeRange(l2).isSizeOne());
+    }
+}
+
 TEST(dfgIter, makeRange)
 {
     using namespace DFG_ROOT_NS;
