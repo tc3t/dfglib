@@ -159,21 +159,23 @@ namespace DFG_DETAIL_NS
 
 } // namespace DFG_DETAIL_NS
 
-double stringToDouble(const QString& s)
+double stringToDouble(const QString& s, const double returnValueOnConversionFailure)
 {
     bool b;
     const auto v = s.toDouble(&b);
-    return (b) ? v : std::numeric_limits<double>::quiet_NaN();
+    return (b) ? v : returnValueOnConversionFailure;
 }
 
-double stringToDouble(const StringViewSzC& sv)
+double stringToDouble(const StringViewSzC& sv, const double returnValueOnConversionFailure)
 {
     bool bOk;
     auto rv = ::DFG_MODULE_NS(str)::strTo<double>(sv, &bOk);
-    return (bOk) ? rv : std::numeric_limits<double>::quiet_NaN();
+    return (bOk) ? rv : returnValueOnConversionFailure;
 }
 
-double tableCellStringToDouble(const StringViewSzUtf8& svUtf8, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType)
+double tableCellStringToDouble(const StringViewSzUtf8& svUtf8,
+    ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType,
+    const double returnValueOnConversionFailure)
 {
     using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
 
@@ -263,12 +265,12 @@ double tableCellStringToDouble(const StringViewSzUtf8& svUtf8, ::DFG_MODULE_NS(c
     }
 
     if (!::DFG_MODULE_NS(alg)::contains(s, ','))
-        return stringToDouble(svUtf8.asUntypedView()); // Not using s directly because at the time of writing it caused redundant string-object to be created due to shortcomings in strTo().
+        return stringToDouble(svUtf8.asUntypedView(), returnValueOnConversionFailure); // Not using s directly because at the time of writing it caused redundant string-object to be created due to shortcomings in strTo().
     else
     {
         auto s2 = viewToQString(s);
         s2.replace(',', '.'); // Hack: to make comma-localized values such as "1,2" be interpreted as 1.2
-        return stringToDouble(s2);
+        return stringToDouble(s2, returnValueOnConversionFailure);
     }
 }
 

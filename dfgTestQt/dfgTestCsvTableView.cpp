@@ -1249,7 +1249,7 @@ TEST(dfgQt, CsvTableView_sorting)
     saveFormat.bomWriting(false);
     saveFormat.setProperty(CsvTableView::s_szCsvSaveOption_saveAsShown, "1");
 
-    const auto saveToString = [&]() -> std::string
+    const auto saveToString = [saveFormat](CsvTableView& view) -> std::string
     {
         const char szFilePath[] = "testfiles/generated/dfgQt_CsvTableView_sorting.csv";
         view.saveToFileImpl(szFilePath, saveFormat);
@@ -1262,21 +1262,42 @@ TEST(dfgQt, CsvTableView_sorting)
 
     // Text sorting by first column
     view.sortByColumn(0, Qt::AscendingOrder);
-    DFGTEST_EXPECT_LEFT(",\n-1,50\n-10,8\n2,7\n", saveToString());
+    DFGTEST_EXPECT_LEFT(",\n-1,50\n-10,8\n2,7\n", saveToString(view));
 
     // Text sorting by second column
     view.sortByColumn(1, Qt::AscendingOrder);
-    DFGTEST_EXPECT_LEFT(",\n-1,50\n2,7\n-10,8\n", saveToString());
+    DFGTEST_EXPECT_LEFT(",\n-1,50\n2,7\n-10,8\n", saveToString(view));
 
     // Number sorting by first column
     csvModel.setColumnType(0, CsvItemModel::ColTypeNumber);
     view.sortByColumn(0, Qt::AscendingOrder);
-    DFGTEST_EXPECT_LEFT(",\n-10,8\n-1,50\n2,7\n", saveToString());
+    DFGTEST_EXPECT_LEFT(",\n-10,8\n-1,50\n2,7\n", saveToString(view));
 
     // Number sorting by second column
     csvModel.setColumnType(1, CsvItemModel::ColTypeNumber);
     view.sortByColumn(1, Qt::AscendingOrder);
-    DFGTEST_EXPECT_LEFT(",\n2,7\n-10,8\n-1,50\n", saveToString());
+    DFGTEST_EXPECT_LEFT(",\n2,7\n-10,8\n-1,50\n", saveToString(view));
+
+    // Handling of empty cells, non-numbers and numerically equal cells with number sorting
+    {
+        CsvTableWidget tableWidget;
+        tableWidget.resizeTableNoUi(8, 1);
+        auto& model = tableWidget.getCsvModel();
+        model.setDataNoUndo(0, 0, DFG_UTF8("1.00"));
+        model.setDataNoUndo(1, 0, DFG_UTF8("2.00"));
+        model.setDataNoUndo(2, 0, DFG_UTF8("a"));
+        model.setDataNoUndo(3, 0, DFG_UTF8("1.000"));
+        model.setDataNoUndo(4, 0, DFG_UTF8("2.000"));
+        model.setDataNoUndo(5, 0, DFG_UTF8(""));
+        model.setDataNoUndo(6, 0, DFG_UTF8("1.0"));
+        model.setDataNoUndo(7, 0, DFG_UTF8("2.0"));
+        model.setColumnType(0, CsvItemModel::ColTypeNumber);
+        tableWidget.setSortingEnabled(true);
+        tableWidget.sortByColumn(0, Qt::AscendingOrder);
+        DFGTEST_EXPECT_LEFT("\na\n\n1.00\n1.000\n1.0\n2.00\n2.000\n2.0\n", saveToString(tableWidget));
+        tableWidget.sortByColumn(0, Qt::DescendingOrder);
+        DFGTEST_EXPECT_LEFT("\n2.0\n2.000\n2.00\n1.0\n1.000\n1.00\n\na\n", saveToString(tableWidget));
+    }
 }
 
 TEST(dfgQt, CsvTableView_populateCsvConfig)

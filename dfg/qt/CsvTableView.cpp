@@ -6543,7 +6543,21 @@ bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, c
         const auto colType = pCsvModel->getColType(dataIndexLeft.column());
         switch (colType)
         {
-            case CsvItemModel::ColTypeNumber: return tableCellStringToDouble(pCsvModel->rawStringPtrAt(dataIndexLeft)) < tableCellStringToDouble(pCsvModel->rawStringPtrAt(pView->mapToDataModel(sourceRight)));
+            case CsvItemModel::ColTypeNumber:
+            {
+                const auto dataIndexRight = pView->mapToDataModel(sourceRight);
+                const auto extractNumber = [pCsvModel](const QModelIndex& dataIndex)
+                {
+                    const auto str = pCsvModel->rawStringPtrAt(dataIndex);
+                    return tableCellStringToDouble(str, nullptr, -1 * std::numeric_limits<double>::infinity());
+                };
+                const auto leftVal = extractNumber(dataIndexLeft);
+                const auto rightVal = extractNumber(dataIndexRight);
+                if (leftVal == rightVal) // Numerically equal values are sorted by data model row index
+                    return dataIndexLeft.row() < dataIndexRight.row();
+                else
+                    return leftVal < rightVal;
+            }
             default: break;
         }
     }

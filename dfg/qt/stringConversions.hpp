@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "../ReadOnlySzParam.hpp"
+#include <limits>
 
 class QDateTime;
 class QTime;
@@ -20,8 +21,11 @@ namespace DFG_DETAIL_NS
     double tableCellTimeToDouble(const QTime& t);
 }
 
-double stringToDouble(const QString& s);
-double stringToDouble(const StringViewSzC& sv);
-double tableCellStringToDouble(const StringViewSzUtf8& sv, ::DFG_MODULE_NS(charts)::ChartDataType * pInterpretedInputDataType = nullptr);
+double stringToDouble(const QString& s, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN());
+double stringToDouble(const StringViewSzC& sv, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN());
+double tableCellStringToDouble(
+    const StringViewSzUtf8& sv,
+    ::DFG_MODULE_NS(charts)::ChartDataType * pInterpretedInputDataType = nullptr,
+    double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN());
 
 } } // module qt
