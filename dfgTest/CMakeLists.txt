@@ -71,6 +71,7 @@ set(SOURCE
     dfgTestPhysics.cpp
     dfgTestRand.cpp
     dfgTestStr.cpp
+    dfgTestStr_StringViews.cpp
     dfgTestTime.cpp
     dfgTestUtf.cpp
     stdafx.cpp
