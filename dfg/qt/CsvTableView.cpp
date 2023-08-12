@@ -1058,10 +1058,18 @@ void CsvTableView::addContentEditActions()
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Paste"),                        tr("Ctrl+V"), ActionFlags::defaultContentEdit, paste);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Clear selected cell(s)"),       tr("Del"),    ActionFlags::defaultContentEdit, clearSelected);
     DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Generate content..."),          tr("Alt+G"),  ActionFlags::defaultContentEdit, generateContent);
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Evaluate selected as formula"), tr("Alt+C"),  ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Change radix..."),              noShortCut,   ActionFlags::defaultContentEdit, onChangeRadixUiAction);
-    DFG_TEMP_ADD_VIEW_ACTION(*this, tr("Trim cells"),                   noShortCut,   ActionFlags::defaultContentEdit, onTrimCellsUiAction)
-        .setToolTip(tr("Removes leading and trailing whitespaces (regular space and tab) from selected cells"));
+
+    // Cell operations
+    {
+        auto pMenu = createActionMenu(this, tr("Operations"), ActionFlags::defaultContentEdit);
+        if (pMenu)
+        {
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Change radix..."),              noShortCut,  ActionFlags::defaultContentEdit, onChangeRadixUiAction);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Evaluate selected as formula"), tr("Alt+C"), ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Trim cells"),                   noShortCut,  ActionFlags::defaultContentEdit, onTrimCellsUiAction)
+                .setToolTip(tr("Removes leading and trailing whitespaces (regular space and tab) from selected cells"));
+        }
+    } // End of 'Cell operations'-items
 
     // Insert-menu
     {
