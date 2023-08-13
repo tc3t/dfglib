@@ -1850,6 +1850,7 @@ bool CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition
         using Index = std::remove_const<decltype(nRowCount)>::type;
         for (Index c = 0; c < nColCount; ++c)
         {
+            saveAsShownModel.setColumnName(c, pViewModel->headerData(c, Qt::Horizontal).toString());
             for (Index r = 0; r < nRowCount; ++r)
             {
                 const auto viewIndex = pViewModel->index(r, c);

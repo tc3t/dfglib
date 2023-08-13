@@ -634,22 +634,28 @@ TEST(dfgQt, CsvTableView_stringToDouble)
 TEST(dfgQt, CsvTableView_saveAsShown)
 {
     using namespace ::DFG_MODULE_NS(qt);
-    CsvItemModel csvModel;
-    CsvTableView view(nullptr, nullptr);
-    QSortFilterProxyModel viewModel;
-    viewModel.setSourceModel(&csvModel);
-    viewModel.setDynamicSortFilter(true);
-    view.setModel(&viewModel);
+    CsvTableWidget view;
+    auto& csvModel = view.getCsvModel();
+    auto& viewModel = view.getViewModel();
 
     ASSERT_TRUE(csvModel.openString(
-    "a,4\n"
-    "bc,3\n"
-    "c,2\n"
-    "d,1\n"
+    "Col1,Col2,Col3,Col4\n"
+    "a,4,h,o\n"
+    "bc,3,i,p\n"
+    "c,2,j,q\n"
+    "d,1,k,r\n"
     ));
 
+    DFGTEST_EXPECT_LEFT("Col1", csvModel.getHeaderName(0));
+    DFGTEST_EXPECT_LEFT("Col2", csvModel.getHeaderName(1));
+    DFGTEST_EXPECT_LEFT("Col3", csvModel.getHeaderName(2));
+    DFGTEST_EXPECT_LEFT("Col4", csvModel.getHeaderName(3));
+    DFGTEST_EXPECT_LEFT(4, csvModel.getRowCount());
+    DFGTEST_EXPECT_LEFT(4, csvModel.getColumnCount());
+    view.setColumnVisibility(2, false);
     viewModel.setFilterWildcard("*c");
     viewModel.sort(1);
+
     ::DFG_MODULE_NS(os)::TemporaryFileStream tempFile;
     tempFile.setAutoRemove(false);
     CsvItemModel::SaveOptions saveOptions(&csvModel);
@@ -661,12 +667,17 @@ TEST(dfgQt, CsvTableView_saveAsShown)
     view.createNewTable();
     view.openFile(sTempPath);
 
+    DFGTEST_EXPECT_LEFT("Col1", view.getColumnName(ColumnIndex_view(0)));
+    DFGTEST_EXPECT_LEFT("Col2", view.getColumnName(ColumnIndex_view(1)));
+    DFGTEST_EXPECT_LEFT("Col4", view.getColumnName(ColumnIndex_view(2)));
     EXPECT_EQ(2, viewModel.rowCount());
-    EXPECT_EQ(2, viewModel.columnCount());
+    EXPECT_EQ(3, viewModel.columnCount());
     EXPECT_EQ("c", viewModel.data(viewModel.index(0, 0)));
     EXPECT_EQ("2", viewModel.data(viewModel.index(0, 1)));
+    EXPECT_EQ("q", viewModel.data(viewModel.index(0, 2)));
     EXPECT_EQ("bc", viewModel.data(viewModel.index(1, 0)));
     EXPECT_EQ("3", viewModel.data(viewModel.index(1, 1)));
+    EXPECT_EQ("p", viewModel.data(viewModel.index(1, 2)));
     EXPECT_TRUE(QFile::remove(sTempPath));
 }
 
