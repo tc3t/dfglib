@@ -834,7 +834,8 @@ TEST(dfgCharts, operations_regexFormat)
             auto xVals = strVecFromUntypedLiterals({ "1" });
             ChartOperationPipeData arg(&xVals, nullptr);
             op(arg);
-            DFGTEST_EXPECT_LEFT(DFG_UTF8(""), xVals.front());
+            // Note: only tests implementation detail: content is unspecified if format-string is invalid
+            DFGTEST_EXPECT_LEFT(DFG_UTF8("<Format error with '{0': 'missing '}' in format string'>"), xVals.front());
         }
         // out-of-bounds capture index in format
         {
@@ -842,7 +843,8 @@ TEST(dfgCharts, operations_regexFormat)
             auto xVals = strVecFromUntypedLiterals({ "1" });
             ChartOperationPipeData arg(&xVals, nullptr);
             op(arg);
-            DFGTEST_EXPECT_LEFT(DFG_UTF8(""), xVals.front());
+            // Note: only tests implementation detail: content is unspecified if format-string is invalid
+            DFGTEST_EXPECT_LEFT(DFG_UTF8("<Format error with '{2}': 'argument index out of range'>"), xVals.front());
         }
     }
 

@@ -946,7 +946,7 @@ namespace operations
     *  Errors (non-exhaustive list):
     *      -Invalid regex: error_badCreationArgs (only possible if RegexFormatOperation has been created directly, i.e. create() would return empty operation with bad regex)
     *      -Too many matches in regex: error_processingError
-    *      -Invalid format string: no error is set, but all result strings will be empty
+    *      -Invalid format string: no error is set and all result strings will have unspecified content
     *  Details:
     *      -Handling of encodings: unspecified, expected to have shortcomings e.g. if format string has some type of UTF8
     *           -https://stackoverflow.com/questions/60600550/force-utf-8-handling-for-stdstring-in-fmt

@@ -1465,13 +1465,27 @@ TEST(dfgStr, format_fmt)
     DFGTEST_EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt(std::string("{0}"), (long double)(123456789)), "123456789"));
     DFGTEST_EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt(StringViewSzC("{0}"), (long double)(123456789)), "123456789"));
 
-    // TODO: this should work
+    // TODO: this should work, in VC2022 format_fmt returned "1.2345678899999999e-09"
     //EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(1.23456789e-9)), "1.23456789e"));
 
     // StringView arguments
     {
         DFGTEST_EXPECT_EQ("abc", format_fmt("{}", StringViewC("abc")));
         DFGTEST_EXPECT_EQ("abc", format_fmt("{}", StringViewSzC("abc")));
+    }
+
+    // wchar_t usage
+    {
+        {
+            const auto s = format_fmtT<std::wstring>(L"a{0}b", 1);
+            DFGTEST_EXPECT_LEFT(L"a1b", s);
+        }
+        // Invalid format
+        {
+            const auto s = format_fmtT<std::wstring>(L"{2}", 1);
+            // Note: this tests implementation detail: content in case of invalid format string is unspecified
+            DFGTEST_EXPECT_LEFT(L"<Format error: 'argument index out of range'>", s);
+        }
     }
 }
 
