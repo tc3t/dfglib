@@ -17,6 +17,7 @@
 #include <dfg/iter/szIterator.hpp>
 #if DFGTEST_ENABLE_BENCHMARKS == 1
     #include <dfg/time/timerCpu.hpp>
+    #include <regex>
 #endif // DFGTEST_ENABLE_BENCHMARKS == 1
 
 TEST(dfgStr, strLen)
@@ -1826,6 +1827,9 @@ TEST(dfgStr, replaceSubStrsInplace)
 
 #if DFGTEST_ENABLE_BENCHMARKS == 1
     // Performance in shrinking case
+    // Example results from VC2022 x86_64 release build:
+    //      replaceSubStrsInplace:   1 ms
+    //      std::regex_replace   : 125 ms
     {
         const size_t nPairs = 500000;
         std::string s;
@@ -1835,19 +1839,48 @@ TEST(dfgStr, replaceSubStrsInplace)
             s[i] = 'a';
             s[i + 1] = 'b';
         }
-        ::DFG_MODULE_NS(time)::TimerCpu timer;
-        replaceSubStrsInplace(s, "ab", "c");
-        DFGTEST_MESSAGE(timer.elapsedWallSeconds());
-        DFGTEST_EXPECT_LEFT(std::string(nPairs, 'c'), s);
-    }
+        auto s2 = s;
+
+        // replaceSubStrsInplace()
+        {
+            ::DFG_MODULE_NS(time)::TimerCpu timer;
+            replaceSubStrsInplace(s, "ab", "c");
+            DFGTEST_MESSAGE("Shrinking replace, replaceSubStrsInplace(): " << timer.elapsedWallSeconds() << " s");
+            DFGTEST_EXPECT_LEFT(std::string(nPairs, 'c'), s);
+        }
+
+        // std::regex_replace
+        {
+            ::DFG_MODULE_NS(time)::TimerCpu timer2;
+            s2 = std::regex_replace(s2, std::regex("ab"), "c");
+            DFGTEST_MESSAGE("Shrinking replace, std::regex_replace     : " << timer2.elapsedWallSeconds() << " s");
+            DFGTEST_EXPECT_LEFT(std::string(nPairs, 'c'), s2);
+        }
+    } // End of shrinking replace
 
     // Performance in expanding case
+    // Example results from VC2022 x86_64 release build:
+    //      replaceSubStrsInplace:   4 ms
+    //      std:regex_replace    : 251 ms
     {
         const size_t nOrigSize = 1000000;
         std::string s(nOrigSize, 'a');
-        ::DFG_MODULE_NS(time)::TimerCpu timer;
-        replaceSubStrsInplace(s, "a", "bc");
-        DFGTEST_MESSAGE(timer.elapsedWallSeconds());
+        auto s2 = s;
+
+        // replaceSubStrsInplace()
+        {
+            ::DFG_MODULE_NS(time)::TimerCpu timer;
+            replaceSubStrsInplace(s, "a", "bc");
+            DFGTEST_MESSAGE("Expanding replace, replaceSubStrsInplace(): " << timer.elapsedWallSeconds() << " s");
+        }
+
+        // std::regex_replace
+        {
+            ::DFG_MODULE_NS(time)::TimerCpu timer;
+            s2 = std::regex_replace(s2, std::regex("a"), "bc");
+            DFGTEST_MESSAGE("Expanding replace, std::regex_replace     : " << timer.elapsedWallSeconds() << " s");
+        }
+
         std::string sExpectedResult(nOrigSize * 2, ' ');
         for (size_t i = 0; i < sExpectedResult.size(); i += 2)
         {
@@ -1855,7 +1888,8 @@ TEST(dfgStr, replaceSubStrsInplace)
             sExpectedResult[i + 1] = 'c';
         }
         DFGTEST_EXPECT_LEFT(sExpectedResult, s);
-    }
+        DFGTEST_EXPECT_LEFT(sExpectedResult, s2);
+    } // End of expanding replace
 #endif // DFGTEST_ENABLE_BENCHMARKS == 1
 }
 
