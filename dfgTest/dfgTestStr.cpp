@@ -11,6 +11,7 @@
 #include <dfg/dfgBaseTypedefs.hpp>
 #include <dfg/str/stringLiteralCharToValue.hpp>
 #include <dfg/str/format_fmt.hpp>
+#include <dfg/str/format_regexFmt.hpp>
 #include <dfg/preprocessor/compilerInfoMsvc.hpp>
 #include <dfg/cont.hpp>
 #include <dfg/utf.hpp>
@@ -1487,6 +1488,36 @@ TEST(dfgStr, format_fmt)
             // Note: this tests implementation detail: content in case of invalid format string is unspecified
             DFGTEST_EXPECT_LEFT(L"<Format error: 'argument index out of range'>", s);
         }
+    }
+}
+
+TEST(dfgStr, format_regexFmt)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+
+    using RegexFmtRv = decltype(format_regexFmt("", std::regex(), ""));
+
+    // Basic test
+    DFGTEST_EXPECT_LEFT(RegexFmtRv("12cbba_abbc34", FormatTo_regexFmt_returnValue::formatApplied), format_regexFmt("abbc", std::regex("(a)(b+)(c)"), "12{3}{2}{1}_{0}34"));
+
+    // Note: more advanced use cases are tested by dfgCharts.operations_regexFormat
+
+    // No match
+    DFGTEST_EXPECT_LEFT(RegexFmtRv(std::string(), FormatTo_regexFmt_returnValue::noRegexMatch), format_regexFmt("aa", std::regex("b"), "{0}{1}"));
+    // Excess match count
+    DFGTEST_EXPECT_LEFT(RegexFmtRv(std::string(), FormatTo_regexFmt_returnValue::matchCountOverflow), format_regexFmt("aaaaaaaaaaa", std::regex("(a)(a)(a)(a)(a)(a)(a)(a)(a)(a)(a)"), "{0}{1}"));
+    // Invalid argument string (currently tests implementation detail, can change if return value gets less coarse-grained)
+    DFGTEST_EXPECT_LEFT(RegexFmtRv(std::string(), FormatTo_regexFmt_returnValue::noRegexMatch), format_regexFmt("ab", std::regex("a"), "{5}"));
+
+    // Testing that formatTo_regexFmt() clears input string in case of error
+    {
+        std::string s = "aaa";
+        DFGTEST_EXPECT_LEFT(FormatTo_regexFmt_returnValue::noRegexMatch, formatTo_regexFmt(s, "aa", std::regex("b"), "{0}{1}"));
+        DFGTEST_EXPECT_TRUE(s.empty());
+        s = "aaa";
+        DFGTEST_EXPECT_LEFT(FormatTo_regexFmt_returnValue::matchCountOverflow, formatTo_regexFmt(s, "aaaaaaaaaaa", std::regex("(a)(a)(a)(a)(a)(a)(a)(a)(a)(a)(a)"), "{0}{1}"));
+        DFGTEST_EXPECT_TRUE(s.empty());
     }
 }
 

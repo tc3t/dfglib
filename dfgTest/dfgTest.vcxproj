@@ -1042,6 +1042,7 @@
     <ClInclude Include="..\dfg\strAll.hpp" />
     <ClInclude Include="..\dfg\str\fmtlib\format.h" />
     <ClInclude Include="..\dfg\str\format_fmt.hpp" />
+    <ClInclude Include="..\dfg\str\format_regexFmt.hpp" />
     <ClInclude Include="..\dfg\str\hex.hpp" />
     <ClInclude Include="..\dfg\str\strCat.hpp" />
     <ClInclude Include="..\dfg\str\strCmp.hpp" />

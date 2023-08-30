@@ -17,7 +17,7 @@
 #include "../math/FormulaParser.hpp"
 #include "../cont/Flags.hpp"
 
-#include "../str/format_fmt.hpp"
+#include "../str/format_regexFmt.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts) {
 
@@ -1035,32 +1035,15 @@ namespace operations
             op.setError(error_missingInput);
             return;
         }
+
         std::string sResultTemp;
         for (auto& rStr : *pStrings)
         {
-            std::cmatch bm;
-            const auto bRegExMatch = std::regex_match(rStr.c_str().c_str(), bm, re);
-
-            if (bRegExMatch)
-            {
-                const auto nMatchCount = bm.size();
-
-                switch (nMatchCount)
-                {
-                    case  1: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0])); break;
-                    case  2: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1])); break;
-                    case  3: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2])); break;
-                    case  4: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3])); break;
-                    case  5: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4])); break;
-                    case  6: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5])); break;
-                    case  7: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6])); break;
-                    case  8: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7])); break;
-                    case  9: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7]), toArg(bm[8])); break;
-                    case 10: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7]), toArg(bm[8]), toArg(bm[9])); break;
-                    case 11: formatTo_fmt(sResultTemp, svFormat, toArg(bm[0]), toArg(bm[1]), toArg(bm[2]), toArg(bm[3]), toArg(bm[4]), toArg(bm[5]), toArg(bm[6]), toArg(bm[7]), toArg(bm[8]), toArg(bm[9]), toArg(bm[10])); break;
-                    default: op.setError(error_processingError); break;
-                }
-            }
+            // Development note: unit testing of dfg::str::format_regexFmt assumes that tests of RegexFormatOperation cover basic functionality
+            //                   -> if changing implementation, see if unit tests need to be revamped.
+            const auto rv = ::DFG_MODULE_NS(str)::formatTo_regexFmt(sResultTemp, rStr.rawStorage(), re, svFormat);
+            if (rv == ::DFG_MODULE_NS(str)::FormatTo_regexFmt_returnValue::matchCountOverflow)
+                op.setError(error_processingError);
             rStr.rawStorage() = sResultTemp; // Note: no guarantees whether result preserves UTF8-encoding.
             sResultTemp.clear();
         }

@@ -28,6 +28,9 @@
     <Filter Include="dfg\alg">
       <UniqueIdentifier>{58f5b4c7-d18a-48fb-8a79-fcb5d1136a1a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="dfg\str">
+      <UniqueIdentifier>{619551cc-2a51-4958-8682-6ad7b3d7b45a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -722,6 +725,9 @@
     </ClInclude>
     <ClInclude Include="..\dfg\alg\replaceSubarrays.hpp">
       <Filter>dfg\alg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\format_regexFmt.hpp">
+      <Filter>dfg\str</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
