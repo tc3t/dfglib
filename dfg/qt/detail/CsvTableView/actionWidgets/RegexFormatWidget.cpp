@@ -9,6 +9,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QPalette>
     #include <QPlainTextEdit>
     #include <QRadioButton>
+    #include <QScrollBar>
 DFG_END_INCLUDE_QT_HEADERS
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace CsvTableViewActionWidgets {
