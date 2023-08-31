@@ -67,6 +67,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class CsvTableViewBasicSelectionAnalyzerPanel;
 
     class CsvTableViewActionChangeRadixParams;
+    class CsvTableViewActionRegexFormatParams;
 
     namespace DFG_DETAIL_NS
     {
@@ -134,7 +135,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         int m_nCol;
     };
 
+    // TODO: better implementation for these
     using RowIndex_data = int;
+    using RowIndex_view = int;
 
     // Analyzes item selection
     class CsvTableViewSelectionAnalyzer : public QObject
@@ -401,6 +404,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Convenience method for returning row count of visible model (i.e. the number of visible rows).
         int getRowCount_viewModel() const;
 
+        QString getCellString(RowIndex_view r, ColumnIndex_view c) const; // Convenience function to return model()->data(model()->index(r, c)).toString()
         QString getColumnName(ColumnIndex_data index) const;
         QString getColumnName(ColumnIndex_view index) const;
 
@@ -635,11 +639,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool generateContent();
 
+        // Cell operations
         void evaluateSelectionAsFormula();
-
         void onChangeRadixUiAction();
+        void onRegexFormatUiAction();
         void onTrimCellsUiAction();
-        void changeRadix(const ::DFG_MODULE_NS(qt)::CsvTableViewActionChangeRadixParams& params);
+
+        void changeRadix(const CsvTableViewActionChangeRadixParams& params);
+        void applyRegexFormat(const CsvTableViewActionRegexFormatParams& params);
 
         bool diffWithUnmodified();
 

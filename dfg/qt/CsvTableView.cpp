@@ -29,6 +29,7 @@
 #include "../str/format_fmt.hpp"
 #include "detail/CsvTableView/SelectionDetailCollector.hpp"
 #include "detail/CsvTableView/ContentGeneratorDialog.hpp"
+#include "detail/CsvTableView/actionWidgets/RegexFormatWidget.hpp"
 #include <chrono>
 #include <bitset>
 #include <cctype> // For std::isdigit
@@ -1066,6 +1067,7 @@ void CsvTableView::addContentEditActions()
         {
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Change radix..."),              noShortCut,  ActionFlags::defaultContentEdit, onChangeRadixUiAction);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Evaluate selected as formula"), tr("Alt+C"), ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Format with regEx..."),         noShortCut,  ActionFlags::defaultContentEdit, onRegexFormatUiAction);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Trim cells"),                   noShortCut,  ActionFlags::defaultContentEdit, onTrimCellsUiAction)
                 .setToolTip(tr("Removes leading and trailing whitespaces (regular space and tab) from selected cells"));
         }
@@ -3287,7 +3289,7 @@ void CsvTableView::onChangeRadixUiAction()
 {
     if (!isSelectionNonEmpty())
     {
-        this->showStatusInfoTip(tr("Selection is empty"));
+        this->showStatusInfoTip(tr("Selection is empty")); // TODO: action could be disabled altogether when selection is empty
         return;
     }
 
@@ -3339,6 +3341,48 @@ void CsvTableView::onChangeRadixUiAction()
 void CsvTableView::changeRadix(const CsvTableViewActionChangeRadixParams& params)
 {
     executeAction<CsvTableViewActionChangeRadix>(this, params);
+}
+
+void CsvTableView::onRegexFormatUiAction()
+{
+    if (!isSelectionNonEmpty())
+    {
+        this->showStatusInfoTip(tr("Selection is empty")); // TODO: action could be disabled altogether when selection is empty
+        return;
+    }
+
+    // Constructing input example from selection
+    QStringList inputExample;
+    const auto selection = this->getSelection();
+    for (const auto& selRange : selection)
+    {
+        if (inputExample.size() > 10) // TODO: from settings?
+            break;
+        for (int r = selRange.top(); r <= selRange.bottom() && (inputExample.size() <= 10); ++r)
+        {
+            for (int c = selRange.left(); c <= selRange.right() && (inputExample.size() <= 10); ++c)
+            {
+               inputExample.push_back(this->getCellString(RowIndex_view(r), ColumnIndex_view(c)));
+            }
+        }
+    }
+
+    // Reusing single widget so that params are preserved between dialog opens
+    auto pRegexFormatWidget = this->findChild<CsvTableViewActionWidgets::RegexFormatWidget*>();
+    if (!pRegexFormatWidget)
+        pRegexFormatWidget = new CsvTableViewActionWidgets::RegexFormatWidget(this);
+    pRegexFormatWidget->setPreviewInput(inputExample);
+
+    const auto rv = pRegexFormatWidget->exec();
+    if (rv != QDialog::Accepted)
+        return;
+
+    applyRegexFormat(pRegexFormatWidget->getParams());
+}
+
+void CsvTableView::applyRegexFormat(const CsvTableViewActionRegexFormatParams& params)
+{
+    executeAction<CsvTableViewActionRegexFormat>(this, params);
 }
 
 void CsvTableView::evaluateSelectionAsFormula()
@@ -5928,6 +5972,15 @@ auto CsvTableView::columnIndexViewToData(const ColumnIndex_view viewIndex) const
     return (mapped.column() >= 0) ? ColumnIndex_data(mapped.column()) : ColumnIndex_data();
 }
 
+QString CsvTableView::getCellString(const RowIndex_view r, const ColumnIndex_view c) const
+{
+    auto pViewModel = this->model();
+    if (pViewModel)
+        return pViewModel->data(pViewModel->index(r, c.value())).toString();
+    else
+        return QString();
+}
+
 QString CsvTableView::getColumnName(const ColumnIndex_data dataIndex) const
 {
     auto pCsvModel = csvModel();
@@ -6628,3 +6681,4 @@ void CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(con
 #include "detail/CsvTableViewActions.cpp"
 #include "detail/CsvTableView/SelectionDetailCollector.cpp"
 #include "detail/CsvTableView/ContentGeneratorDialog.cpp"
+#include "detail/CsvTableView/actionWidgets/RegexFormatWidget.cpp"

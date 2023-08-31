@@ -1,6 +1,7 @@
 #include "../CsvTableViewActions.hpp"
 #include "../../str/format_fmt.hpp"
 #include "../../str.hpp"
+#include "../../str/format_regexFmt.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QMap>
@@ -545,6 +546,115 @@ bool CsvTableViewActionChangeRadixParams::isValid() const
 bool CsvTableViewActionChangeRadixParams::hasResultAdjustments() const
 {
     return !this->resultPrefix.empty() || !this->resultSuffix.empty();
+}
+
+////////////////////////////////////////////////////////////////////////////
+///
+/// CsvTableViewActionRegexFormat
+///
+////////////////////////////////////////////////////////////////////////////
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionRegexFormat)
+{
+    Params m_params;
+};
+
+DFG_OPAQUE_PTR_DEFINE(CsvTableViewActionRegexFormat::RegexFormatVisitor)
+{
+    DFG_DETAIL_NS::VisitorErrorMessageHandler m_errorMessageHandler;
+    StringUtf8 m_buffer;
+    Params m_regexFormatParams;
+};
+
+CsvTableViewActionRegexFormat::RegexFormatVisitor::RegexFormatVisitor(Params params)
+{
+    DFG_OPAQUE_REF().m_regexFormatParams = params;
+}
+
+void CsvTableViewActionRegexFormat::RegexFormatVisitor::handleCell(VisitorParams& params)
+{
+    using namespace ::DFG_MODULE_NS(str);
+    auto& rOpaq = DFG_OPAQUE_REF();
+    const auto regexParams = rOpaq.m_regexFormatParams;
+
+    const auto svOrigStr = params.stringView();
+    const auto svOrigStrUntyped = params.stringView().asUntypedView();
+    auto& sDst = rOpaq.m_buffer;
+    sDst.rawStorage().assign(svOrigStrUntyped.begin(), svOrigStrUntyped.end());
+    if (!regexParams.m_optRegex.has_value())
+    {
+        rOpaq.m_errorMessageHandler.handleError(params.view(), svOrigStr, params.index(), maxFailureMessageCount(),
+            [&]() { return params.view().tr("Failed: no regex object"); });
+        return;
+    }
+
+    const auto bSetCellString = applyToSingle(
+        sDst.rawStorage(),
+        svOrigStrUntyped,
+        regexParams.m_optRegex.value(),
+        regexParams.m_sFormat.rawStorage(),
+        regexParams.m_nonMatchBehaviour,
+        [&](const int errVal) { rOpaq.m_errorMessageHandler.handleError(params.view(), svOrigStr, params.index(), maxFailureMessageCount(),
+            [&]() { return params.view().tr("Failed: regexFormat failed at (%2, %3) with error %1").arg(errVal).arg(params.indexRow_visible()).arg(params.indexCol_visible()); }); });
+    if (bSetCellString)
+        params.setCellString(sDst);
+}
+
+bool CsvTableViewActionRegexFormat::applyToSingle(
+    std::string& sDst,
+    StringViewC svInput,
+    const std::regex& re,
+    StringViewSzC svFormat,
+    const Params::NonMatchBehaviour nonMatchBehaviour,
+    std::function<void(int)> errorHandler
+    )
+{
+    using namespace ::DFG_MODULE_NS(str);
+    const auto rv = formatTo_regexFmt(sDst, svInput, re, svFormat);
+    if (rv != FormatTo_regexFmt_returnValue::formatApplied && rv != FormatTo_regexFmt_returnValue::noRegexMatch && errorHandler)
+        errorHandler(static_cast<int>(rv));
+    const bool bMayEdit = (rv != FormatTo_regexFmt_returnValue::noRegexMatch || nonMatchBehaviour != Params::NonMatchBehaviour::keep);
+    return (bMayEdit && svInput != sDst);
+}
+
+void CsvTableViewActionRegexFormat::RegexFormatVisitor::onForEachLoopDone(VisitorParams& params)
+{
+    DFG_OPAQUE_REF().m_errorMessageHandler.showErrorMessageIfAvailable(params.view(), maxFailureMessageCount());
+}
+
+CsvTableViewActionRegexFormat::CsvTableViewActionRegexFormat(CsvTableView* pView, Params params)
+    : BaseClass((pView) ? pView->tr("Regex format for %1 cell(s)") : QString("bug"), pView)
+{
+    DFG_OPAQUE_REF().m_params = params;
+}
+
+auto CsvTableViewActionRegexFormat::createVisitorStatic(Params params) -> std::unique_ptr<RegexFormatVisitor>
+{
+    return std::unique_ptr<RegexFormatVisitor>(new RegexFormatVisitor(params));
+}
+
+auto CsvTableViewActionRegexFormat::createVisitor() -> std::unique_ptr<Visitor>
+{
+    return createVisitorStatic(DFG_OPAQUE_REF().m_params);
+}
+
+CsvTableViewActionRegexFormatParams::CsvTableViewActionRegexFormatParams(StringUtf8 sRegex, StringUtf8 sFormat, const NonMatchBehaviour nonMatchBehaviour)
+    : m_sRegex(std::move(sRegex))
+    , m_sFormat(std::move(sFormat))
+    , m_nonMatchBehaviour(nonMatchBehaviour)
+{
+    try
+    {
+        m_optRegex = std::regex(this->m_sRegex.rawStorage());
+    }
+    catch (...)
+    {
+    }
+}
+
+bool CsvTableViewActionRegexFormatParams::isValid() const
+{
+    return this->m_optRegex.has_value();
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -5,6 +5,8 @@
 #include "CsvItemModel.hpp"
 #include "qtIncludeHelpers.hpp"
 #include "../OpaquePtr.hpp"
+#include <optional>
+#include <regex>
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractProxyModel>
@@ -42,8 +44,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
             public:
                 using CountT = CsvItemModel::LinearIndex;
+                using Index = CsvItemModel::Index;
 
                 QModelIndex index() const   { return m_modelIndex; }
+                Index indexRow_visible() const { return CsvItemModel::internalRowIndexToVisible(this->index().row()); }
+                Index indexCol_visible() const { return CsvItemModel::internalColumnIndexToVisible(this->index().column()); }
                 CsvItemModel& dataModel()   { return m_rDataModel; }
                 CsvTableView& view()        { return m_rView;      }
                 StringViewUtf8 stringView() { return m_svData; }
@@ -779,7 +784,33 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         StringUtf8 resultPrefix;
         StringUtf8 resultSuffix;
         QString resultDigits;
+    }; // class CsvTableViewActionChangeRadixParams
+
+    enum class CsvTableViewActionRegexFormatNonMatchBehaviour
+    {
+        keep,       // Keeps old content when regex doesn't match
+        clear       // Clears old content when regex doesn't match
     };
+
+    // Provides parameters for regexFormat actions
+    // Parameters:
+    //      -Regular expression pattern.
+    //      -Format string using syntax of fmt-library.Capture indexes start from 1, at index 0 is the whole match.
+    //      -Behaviour on non-match
+    class CsvTableViewActionRegexFormatParams
+    {
+    public:
+        using NonMatchBehaviour = CsvTableViewActionRegexFormatNonMatchBehaviour;
+        CsvTableViewActionRegexFormatParams() = default;
+        CsvTableViewActionRegexFormatParams(StringUtf8 sRegex, StringUtf8 sFormat, NonMatchBehaviour nonMatchBehaviour);
+
+        bool isValid() const;
+
+        StringUtf8 m_sRegex;
+        StringUtf8 m_sFormat;
+        NonMatchBehaviour m_nonMatchBehaviour = NonMatchBehaviour::clear;
+        std::optional<std::regex> m_optRegex;
+    }; // CsvTableViewActionRegexFormatParams
 
     class CsvTableViewActionChangeRadix : public DFG_DETAIL_NS::SelectionForEachUndoCommand
     {
@@ -807,6 +838,41 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewActionChangeRadix
 
+    // Applies regexFormat to selected cells, see CsvTableViewActionRegexFormatParams for documentation about params
+    class CsvTableViewActionRegexFormat : public DFG_DETAIL_NS::SelectionForEachUndoCommand
+    {
+    public:
+        using BaseClass = DFG_DETAIL_NS::SelectionForEachUndoCommand;
+        using Params = CsvTableViewActionRegexFormatParams;
+
+        CsvTableViewActionRegexFormat(CsvTableView* pView, Params params);
+
+        class RegexFormatVisitor : public Visitor
+        {
+        public:
+            RegexFormatVisitor(Params params);
+            void handleCell(VisitorParams& params) override;
+            void onForEachLoopDone(VisitorParams& params) override;
+
+            DFG_OPAQUE_PTR_DECLARE();
+        };
+
+        static std::unique_ptr<RegexFormatVisitor> createVisitorStatic(Params params);
+
+        std::unique_ptr<Visitor> createVisitor() override;
+
+        static bool applyToSingle(
+            std::string& sDst,
+            StringViewC svInput,
+            const std::regex& re,
+            StringViewSzC svFormat,
+            const Params::NonMatchBehaviour nonMatchBehaviour,
+            std::function<void(int)> errorHandler
+        );
+
+    private:
+        DFG_OPAQUE_PTR_DECLARE();
+    }; // class CsvTableViewActionRegexFormat
 
     class CsvTableViewActionTrimCells : public DFG_DETAIL_NS::SelectionForEachUndoCommand
     {

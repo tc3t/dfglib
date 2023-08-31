@@ -101,6 +101,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         return nullptr;
     }
 
+    // Convenience function for returning string of child widget.
+    // Currently only supports widgets that have text() member function.
+    // In successful case returns pParent->findChild<T>(sChildName)->text();
+    template <class T>
+    QString getChildWidgetString(const QWidget* pParent, const QString& sChildName)
+    {
+        if (!pParent)
+            return QString();
+        auto pChild = pParent->findChild<T>(sChildName);
+        return (pChild) ? pChild->text() : QString();
+    }
+
     // Adjusts font of given QWidget-like object that has setFont() and font() members that behave like those of QWidget.
     // Note: currently only integer sizes are supported; argument is rounded to closest integer.
     template <class WidgetLike_T>

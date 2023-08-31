@@ -1557,6 +1557,52 @@ TEST(dfgQt, CsvTableView_changeRadix)
     DFGTEST_EXPECT_FALSE(CsvTableViewActionChangeRadixParams({ { idToStr(JsonId::fromRadix), 10}, { idToStr(JsonId::toRadix), 63 } }).isValid());
 }
 
+TEST(dfgQt, CsvTableView_regexFormat)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(qt);
+
+    {
+        CsvTableWidget tableWidget;
+        auto& rModel = tableWidget.getCsvModel();
+        tableWidget.resizeTableNoUi(3, 1);
+        rModel.setDataNoUndo(0, 0, DFG_UTF8("2023-08-13"));
+        rModel.setDataNoUndo(1, 0, DFG_UTF8("2023-08-14"));
+        rModel.setDataNoUndo(2, 0, DFG_UTF8("2023-08-15"));
+        tableWidget.selectAll();
+        using Param = CsvTableViewActionRegexFormatParams;
+        using NonMatchBehaviour = Param::NonMatchBehaviour;
+        tableWidget.applyRegexFormat(Param(StringUtf8(DFG_UTF8("(.*)-(.*)-(.*)")), StringUtf8(DFG_UTF8("{3}.{2}.{1} = {0}")), NonMatchBehaviour::clear));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("13.08.2023 = 2023-08-13", rModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("14.08.2023 = 2023-08-14", rModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("15.08.2023 = 2023-08-15", rModel.rawStringViewAt(2, 0));
+
+        // With invalid regex should do nothing
+        tableWidget.applyRegexFormat(Param(StringUtf8(DFG_UTF8("(.*")), StringUtf8(DFG_UTF8("{3}.{2}.{1} = {0}")), NonMatchBehaviour::clear));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("13.08.2023 = 2023-08-13", rModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("14.08.2023 = 2023-08-14", rModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("15.08.2023 = 2023-08-15", rModel.rawStringViewAt(2, 0));
+
+        // Non-matching cells should remain untouched with keep-flag
+        tableWidget.applyRegexFormat(Param(StringUtf8(DFG_UTF8("(abc)")), StringUtf8(DFG_UTF8("d = {1}")), NonMatchBehaviour::keep));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("13.08.2023 = 2023-08-13", rModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("14.08.2023 = 2023-08-14", rModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("15.08.2023 = 2023-08-15", rModel.rawStringViewAt(2, 0));
+
+        // Non-matching cells should get emptied with clear-flag
+        tableWidget.applyRegexFormat(Param(StringUtf8(DFG_UTF8(".*-(.*3)$")), StringUtf8(DFG_UTF8("d = {1}")), NonMatchBehaviour::clear));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("d = 13", rModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", rModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", rModel.rawStringViewAt(2, 0));
+
+        // With invalid format string should get unspecified error string (testing it to verify that implementation works as expected)
+        tableWidget.applyRegexFormat(Param(StringUtf8(DFG_UTF8("(.*)")), StringUtf8(DFG_UTF8("{")), NonMatchBehaviour::clear));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'missing '}' in format string'>", rModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'missing '}' in format string'>", rModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'missing '}' in format string'>", rModel.rawStringViewAt(2, 0));
+    }
+}
+
 TEST(dfgQt, CsvTableView_cellEditability)
 {
     using namespace ::DFG_MODULE_NS(qt);
