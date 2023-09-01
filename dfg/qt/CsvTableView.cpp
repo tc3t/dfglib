@@ -531,6 +531,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) { namespace DFG_DETAIL_NS
 // Start of dfg::qt namespace
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
 
+
+DFG_STATIC_ASSERT((std::is_same_v<ColumnIndex_data::Index, CsvTableView::Index>), "Unexpected Index types"); // Just testing one index since it should cover all given common template implementation.
+
 namespace
 {
     enum CsvTableViewPropertyId
@@ -5837,7 +5840,7 @@ auto CsvTableView::getCellEditability(const RowIndex_data nRow, const ColumnInde
         return CellEditability::blocked_tableReadOnly;
     else if (getColumnPropertyByDataModelIndex(nCol.value(), CsvItemModelColumnProperty::readOnly, false).toBool())
         return CellEditability::blocked_columnReadOnly;
-    else if (csvModel() != nullptr && !csvModel()->isCellEditable(nRow, nCol.value()))
+    else if (csvModel() != nullptr && !csvModel()->isCellEditable(nRow.value(), nCol.value()))
         return CellEditability::blocked_cellReadOnly;
     else
         return CellEditability::editable;
@@ -5983,7 +5986,7 @@ QString CsvTableView::getCellString(const RowIndex_view r, const ColumnIndex_vie
 {
     auto pViewModel = this->model();
     if (pViewModel)
-        return pViewModel->data(pViewModel->index(r, c.value())).toString();
+        return pViewModel->data(pViewModel->index(r.value(), c.value())).toString();
     else
         return QString();
 }

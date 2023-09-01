@@ -81,6 +81,22 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             int m_nPrecision;
         };
 
+        // Helper class for defining typed indexes for data and view indexes.
+        // Intention is to reduce chance for accidentally using view-index when data-index
+        // should be used and vice versa.
+        template <int Id_T>
+        class TypedTableIndex
+        {
+        public:
+            using Index = int; // Should be identical to CsvTableView::Index
+            explicit TypedTableIndex(const Index nIndex = -1)
+                : m_nIndex(nIndex)
+            {}
+            int32 value() const { return m_nIndex; }
+            uint32 valueAsUint() const { return static_cast<uint32>(m_nIndex); }
+            Index m_nIndex;
+        }; // class TypedTableIndex
+
         class ConfFileProperty;
     } // namespace DFG_DETAIL_NS
 
@@ -111,33 +127,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewSortFilterProxyModel
 
-    // Typed column index representing index of data model
-    class ColumnIndex_data
-    {
-    public:
-        explicit ColumnIndex_data(const int nCol = -1)
-            : m_nCol(nCol)
-        {}
-        int32 value() const { return m_nCol; }
-        uint32 valueAsUint() const { return static_cast<uint32>(m_nCol); }
-        int m_nCol;
-    };
+    using ColumnIndex_data = DFG_DETAIL_NS::TypedTableIndex<'c'>;
+    using ColumnIndex_view = DFG_DETAIL_NS::TypedTableIndex<'C'>;
 
-    // Typed column index representing index of view model
-    class ColumnIndex_view
-    {
-    public:
-        explicit ColumnIndex_view(const int nCol = -1)
-            : m_nCol(nCol)
-        {}
-        int32 value() const { return m_nCol; }
-        uint32 valueAsUint() const { return static_cast<uint32>(m_nCol); }
-        int m_nCol;
-    };
-
-    // TODO: better implementation for these
-    using RowIndex_data = int;
-    using RowIndex_view = int;
+    using RowIndex_data = DFG_DETAIL_NS::TypedTableIndex<'r'>;
+    using RowIndex_view = DFG_DETAIL_NS::TypedTableIndex<'R'>;
 
     // Analyzes item selection
     class CsvTableViewSelectionAnalyzer : public QObject
