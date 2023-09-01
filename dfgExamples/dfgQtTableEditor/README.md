@@ -480,6 +480,13 @@ CsvTableView_weekDayNames=mo,tu,we,th,fr,sa,su
 ; Possible values: readOnly, readWrite
 CsvTableView_editMode=readOnly
 
+; Defines default limit for preview size for actions that offer preview in widgets
+;     * For example if doing operation for million cells, for performance reasons
+;       preview should not offer preview for all.
+; Default value: 50
+; Possible values: integer
+CsvTableView_actionInputPreviewLimit=10
+
 ; -----------------------------------------------------------
 ; CsvTableViewChartDataSource
 

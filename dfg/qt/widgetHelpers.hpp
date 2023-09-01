@@ -13,6 +13,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QDialogButtonBox>
     #include <QGuiApplication>
     #include <QLabel>
+    #include <QLineEdit>
     #include <QMenu>
     #include <QScreen>
     #include <QString>
@@ -240,5 +241,73 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             removeContextHelpButtonFromDialog(this);
         }
     }; // class WidgetWrapperDialog
+
+    class LineEditWithValidityHighlighting : public QLineEdit
+    {
+    public:
+        class ValidityInfo
+        {
+        public:
+            ValidityInfo() = default;
+            ValidityInfo(const bool bValid, const QString& sToolTip = QString())
+                : m_bValid(bValid)
+                , m_toolTipText(sToolTip)
+            {}
+            bool isValid() const { return m_bValid; }
+            QString toolTipText() const { return m_toolTipText; }
+
+            bool m_bValid = true;
+            QString m_toolTipText;
+        }; // ValidityInfo
+
+        using BaseClass = QLineEdit;
+        using ValidityChecker = std::function<ValidityInfo(const QString&)>;
+
+        LineEditWithValidityHighlighting() {}
+        LineEditWithValidityHighlighting(ValidityChecker validityChecker, QWidget* pParent)
+            : BaseClass(pParent)
+            , m_validityChecker(validityChecker)
+        {
+            connect(this, &QLineEdit::textChanged, this, &LineEditWithValidityHighlighting::onTextChanged);
+            m_defaultBaseColor = BaseClass().palette().color(QPalette::Base);
+        }
+
+        void onTextChanged(const QString& sText)
+        {
+            setValidity((m_validityChecker) ? m_validityChecker(sText) : ValidityInfo());
+        }
+
+        void setValidity(const ValidityInfo& validityInfo)
+        {
+            // If content is not valid, setting reddish background
+            QPalette palette = this->palette();
+            const auto bgColor = (validityInfo.isValid()) ? defaultBaseColour() : QColor(255, 0, 0, 32);
+            palette.setColor(QPalette::Base, bgColor);
+            this->setPalette(palette);
+            this->setToolTip(validityInfo.toolTipText());
+        }
+
+        QColor defaultBaseColour()
+        {
+            return m_defaultBaseColor;
+        }
+
+        template <class Constructor_T>
+        static ValidityInfo validityChecker_throwingConstructor(const QString& s, Constructor_T&& constructor)
+        {
+            try
+            {
+                auto obj = constructor(s);
+                return LineEditWithValidityHighlighting::ValidityInfo(true);
+            }
+            catch (const std::exception& e)
+            {
+                return LineEditWithValidityHighlighting::ValidityInfo(false, tr("Invalid syntax: '%1'").arg(e.what()));
+            }
+        }
+
+        ValidityChecker m_validityChecker;
+        QColor m_defaultBaseColor;
+    }; // class LineEditWithValidityHighlighting
 
 }} // Module namespace

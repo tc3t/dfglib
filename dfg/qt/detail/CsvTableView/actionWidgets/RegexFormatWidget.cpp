@@ -19,11 +19,19 @@ RegexFormatWidget::RegexFormatWidget(QWidget* pParent)
 {
     auto pLayout = new QGridLayout(this);
 
-    auto pRegexLineEdit = new QLineEdit(this);
+    const auto regexConstructor = [](const QString& s)
+    {
+        return std::regex(s.toStdString());
+    };
+
+    using LineEditVH = LineEditWithValidityHighlighting;
+    auto pRegexLineEdit = new LineEditVH([&](const QString& s) { return LineEditVH::validityChecker_throwingConstructor(s, regexConstructor); }, this);
     pRegexLineEdit->setObjectName("regexInput");
+    pRegexLineEdit->setText("(.*)");
 
     auto pFormatLineEdit = new QLineEdit(this);
     pFormatLineEdit->setObjectName("formatInput");
+    pFormatLineEdit->setText("Example match = '{1}'");
 
     auto pInputPreview = new QPlainTextEdit(this);
     pInputPreview->setObjectName("inputPreviewWidget");
@@ -33,9 +41,14 @@ RegexFormatWidget::RegexFormatWidget(QWidget* pParent)
     pOutputPreview->setReadOnly(true);
 
     int nRow = 0;
-    pLayout->addWidget(new QLabel(tr("Format with regular expression allows matching content by regular expression and use up to 10 subexpressions (capturing groups) "
-        "as arguments to fmt-style format string.\n"
-        "Example: regex = '^(a)(b)(.*)', format = '{0} transformed into {3}{2}{1}'. With input 'ab123', result is 'ab123 transformed to 123ba'"), this), nRow, 0, 1, 2);
+    auto pDescriptionText = new QLabel(tr("Regex format provides advanced string transformations by regular expression matching "
+        "and using up to 10 capturing groups as arguments to fmt-style format string.\n\n"
+        "Example:\n"
+        "    regex = '^(a)(b)(.*)'\n"
+        "    format = '{0} transformed into {3}{2:b>3}{1}'\n"
+        "    With input 'ab123', result is 'ab123 transformed into 123bbba'\n"), this); // Deletion by parent
+    pDescriptionText->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    pLayout->addWidget(pDescriptionText, nRow, 0, 1, 2);
     ++nRow;
     pLayout->addWidget(new QLabel(tr("Regular expression"), this), nRow, 0);
     pLayout->addWidget(pRegexLineEdit, nRow, 1);
@@ -43,18 +56,6 @@ RegexFormatWidget::RegexFormatWidget(QWidget* pParent)
     pLayout->addWidget(new QLabel(tr("Format string"), this), nRow, 0);
     pLayout->addWidget(pFormatLineEdit, nRow, 1);
     ++nRow;
-
-    // Creating sublayout for input/output previews
-    {
-        auto spPreviewLayout = std::make_unique<QGridLayout>();
-        spPreviewLayout->addWidget(new QLabel(tr("Preview input"), this), 0, 0);
-        spPreviewLayout->addWidget(new QLabel(tr("Preview output"), this), 0, 2);
-        spPreviewLayout->addWidget(pInputPreview, 1, 0);
-        spPreviewLayout->addWidget(pOutputPreview, 1, 2);
-        spPreviewLayout->setColumnMinimumWidth(1, 20); // Adds space between input and output widgets
-        pLayout->addLayout(spPreviewLayout.release(), nRow, 0, 1, 2); // Sublayout becomes child of pLayout
-        ++nRow;
-    }
 
     // Controls for non-match behaviour
     {
@@ -72,11 +73,23 @@ RegexFormatWidget::RegexFormatWidget(QWidget* pParent)
         ++nRow;
     }
 
+    // Creating sublayout for input/output previews
+    {
+        auto spPreviewLayout = std::make_unique<QGridLayout>();
+        spPreviewLayout->addWidget(new QLabel(tr("Preview input"), this), 0, 0);
+        spPreviewLayout->addWidget(new QLabel(tr("Preview output"), this), 0, 2);
+        spPreviewLayout->addWidget(pInputPreview, 1, 0);
+        spPreviewLayout->addWidget(pOutputPreview, 1, 2);
+        spPreviewLayout->setColumnMinimumWidth(1, 20); // Adds space between input and output widgets
+        pLayout->addLayout(spPreviewLayout.release(), nRow, 0, 1, 2); // Sublayout becomes child of pLayout
+        ++nRow;
+    }
+
     pLayout->addWidget(addOkCancelButtonBoxToDialog(this), nRow, 1);
     ++nRow;
 
     removeContextHelpButtonFromDialog(this);
-    this->setWindowTitle(tr("Format with regular expression"));
+    this->setWindowTitle(tr("Regex format"));
 
     // Setting scroll bars so that sliding input preview vertical slider automatically moves output scroll position
     {
@@ -89,25 +102,8 @@ RegexFormatWidget::RegexFormatWidget(QWidget* pParent)
     // Connecting textChanged-signals to update UI as needed
     {
         const auto defaultLineEditBackgroundColor = pRegexLineEdit->palette().color(QPalette::Base);
-        // Changing regex triggers syntax check for it and updates output preview.
-        connect(pRegexLineEdit, &QLineEdit::textChanged, this, [=](const QString& sText)
-            {
-                bool bIsValid = true;
-                try
-                {
-                    std::regex(sText.toStdString());
-                }
-                catch (...)
-                {
-                    bIsValid = false;
-                }
-                QPalette palette = pRegexLineEdit->palette();
-                // If regex is invalid, setting reddish background
-                palette.setColor(QPalette::Base, (bIsValid) ? defaultLineEditBackgroundColor : QColor(255, 0, 0, 32));
-                pRegexLineEdit->setPalette(palette);
-                updatePreviewOutput();
-            });
-
+        // Changing regex triggers output preview update.
+        connect(pRegexLineEdit, &QLineEdit::textChanged, this, &RegexFormatWidget::updatePreviewOutput);
         // Changing format string triggers output preview update
         connect(pFormatLineEdit, &QLineEdit::textChanged, this, &RegexFormatWidget::updatePreviewOutput);
         // Changing preview input triggers output preview update

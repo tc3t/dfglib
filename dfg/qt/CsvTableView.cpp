@@ -542,7 +542,8 @@ namespace
         CsvTableViewPropertyId_dateFormat,
         CsvTableViewPropertyId_dateTimeFormat,
         CsvTableViewPropertyId_editMode,
-        CsvTableViewPropertyId_weekDayNames
+        CsvTableViewPropertyId_weekDayNames,
+        CsvTableViewPropertyId_actionInputPreviewLimit
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
@@ -584,6 +585,7 @@ namespace
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "dateTimeFormat", CsvTableView, CsvTableViewPropertyId_dateTimeFormat, QString, []() { return QString("yyyy-MM-dd hh:mm:ss.zzz"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "editMode", CsvTableView, CsvTableViewPropertyId_editMode, QString, []() { return QString(); });
     DFG_QT_DEFINE_OBJECT_PROPERTY_QSTRING(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "weekDayNames", CsvTableView, CsvTableViewPropertyId_weekDayNames, QString, []() { return QString("mo,tu,we,th,fr,sa,su"); });
+    DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "actionInputPreviewLimit", CsvTableView, CsvTableViewPropertyId_actionInputPreviewLimit, int, []() { return 50; });
 
     const int gnDefaultRowHeight = 21; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
 
@@ -1067,7 +1069,7 @@ void CsvTableView::addContentEditActions()
         {
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Change radix..."),              noShortCut,  ActionFlags::defaultContentEdit, onChangeRadixUiAction);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Evaluate selected as formula"), tr("Alt+C"), ActionFlags::defaultContentEdit, evaluateSelectionAsFormula);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Format with regEx..."),         noShortCut,  ActionFlags::defaultContentEdit, onRegexFormatUiAction);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Regex format..."),              noShortCut,  ActionFlags::defaultContentEdit, onRegexFormatUiAction);
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Trim cells"),                   noShortCut,  ActionFlags::defaultContentEdit, onTrimCellsUiAction)
                 .setToolTip(tr("Removes leading and trailing whitespaces (regular space and tab) from selected cells"));
         }
@@ -3354,13 +3356,14 @@ void CsvTableView::onRegexFormatUiAction()
     // Constructing input example from selection
     QStringList inputExample;
     const auto selection = this->getSelection();
+    const auto nPreviewLimit = getCsvTableViewProperty<CsvTableViewPropertyId_actionInputPreviewLimit>(this);
     for (const auto& selRange : selection)
     {
-        if (inputExample.size() > 10) // TODO: from settings?
+        if (inputExample.size() > nPreviewLimit)
             break;
-        for (int r = selRange.top(); r <= selRange.bottom() && (inputExample.size() <= 10); ++r)
+        for (int r = selRange.top(); r <= selRange.bottom() && (inputExample.size() <= nPreviewLimit); ++r)
         {
-            for (int c = selRange.left(); c <= selRange.right() && (inputExample.size() <= 10); ++c)
+            for (int c = selRange.left(); c <= selRange.right() && (inputExample.size() <= nPreviewLimit); ++c)
             {
                inputExample.push_back(this->getCellString(RowIndex_view(r), ColumnIndex_view(c)));
             }
@@ -3368,9 +3371,13 @@ void CsvTableView::onRegexFormatUiAction()
     }
 
     // Reusing single widget so that params are preserved between dialog opens
-    auto pRegexFormatWidget = this->findChild<CsvTableViewActionWidgets::RegexFormatWidget*>();
+    // Note: without name, findChild() could return some other child that has common base class with RegexFormatWidget (for details, see commit cfe0b1e6)
+    auto pRegexFormatWidget = this->findChild<CsvTableViewActionWidgets::RegexFormatWidget*>("CsvTableView_RegexFormatWidget");
     if (!pRegexFormatWidget)
+    {
         pRegexFormatWidget = new CsvTableViewActionWidgets::RegexFormatWidget(this);
+        pRegexFormatWidget->setObjectName("CsvTableView_RegexFormatWidget");
+    }
     pRegexFormatWidget->setPreviewInput(inputExample);
 
     const auto rv = pRegexFormatWidget->exec();
