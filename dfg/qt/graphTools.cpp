@@ -1613,11 +1613,14 @@ void GraphDefinitionWidget::onActionButtonClicked()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static const char gszGraphControlPanel_defWidgetObjectName[] = "GraphDefinitionWidget";
+
 
 DFG_MODULE_NS(qt)::GraphControlPanel::GraphControlPanel(QWidget *pParent) : BaseClass(pParent)
 {
     auto pLayout = new QGridLayout(this);
     m_spGraphDefinitionWidget.reset(new GraphDefinitionWidget(this));
+    m_spGraphDefinitionWidget->setObjectName(gszGraphControlPanel_defWidgetObjectName);
 
     // Creating console display.
     {
@@ -3283,12 +3286,12 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setDefaultDataSourceId(con
 
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() -> GraphDefinitionWidget*
 {
-    return (m_spControlPanel) ? m_spControlPanel->findChild<GraphDefinitionWidget*>() : nullptr;
+    return (m_spControlPanel) ? m_spControlPanel->findChild<GraphDefinitionWidget*>(gszGraphControlPanel_defWidgetObjectName) : nullptr;
 }
 
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() const -> const GraphDefinitionWidget*
 {
-    return (m_spControlPanel) ? m_spControlPanel->findChild<const GraphDefinitionWidget*>() : nullptr;
+    return (m_spControlPanel) ? m_spControlPanel->findChild<const GraphDefinitionWidget*>(gszGraphControlPanel_defWidgetObjectName) : nullptr;
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()
