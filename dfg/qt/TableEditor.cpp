@@ -178,28 +178,6 @@ namespace
         return getProperty<DFG_QT_OBJECT_PROPERTY_CLASS_NAME(TableEditor)<ID>>(editor);
     }
 
-    class HighlightTextEdit : public QLineEdit
-    {
-    public:
-        typedef QLineEdit BaseClass;
-        HighlightTextEdit() {}
-        HighlightTextEdit(QWidget* pParent) :
-            BaseClass(pParent)
-        {}
-
-        QColor defaultTextColour()
-        {
-            return QLineEdit().palette().color(QPalette::WindowText);
-        }
-
-        void setTextColour(const QColor& color)
-        {
-            QPalette pal = this->palette();
-            pal.setColor(QPalette::Text, color);
-            this->setPalette(pal);
-        }
-    };
-
     static int setChartPanelWidth(QSplitter* pSplitter, const int nParentWidth, const WindowExtentProperty& wep)
     {
         if (!pSplitter)
@@ -230,6 +208,8 @@ namespace DFG_DETAIL_NS {
     class FindPanelWidget : public QWidget
     {
     public:
+        using HighlightTextEdit = LineEditWithValidityHighlighting;
+
         FindPanelWidget(const QString& label, const bool bAllowJsonSyntax = false)
             : m_pTextEdit(nullptr)
             , m_pColumnSelector(nullptr)
@@ -330,16 +310,14 @@ namespace DFG_DETAIL_NS {
         {
             if (!m_pTextEdit)
                 return;
-            m_pTextEdit->setTextColour(m_pTextEdit->defaultTextColour());
-            m_pTextEdit->setToolTip(QString());
+            m_pTextEdit->setValidity(HighlightTextEdit::ValidityInfo(true));
         }
 
         void setSyntaxIndicator_bad(const QString& sErrorText)
         {
             if (!m_pTextEdit)
                 return;
-            m_pTextEdit->setTextColour(Qt::red);
-            m_pTextEdit->setToolTip(sErrorText);
+            m_pTextEdit->setValidity(HighlightTextEdit::ValidityInfo(false, sErrorText));
         }
 
         // Returned object is owned by 'this' and lives until the destruction of 'this'.

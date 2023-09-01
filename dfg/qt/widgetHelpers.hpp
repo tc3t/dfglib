@@ -263,13 +263,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         using BaseClass = QLineEdit;
         using ValidityChecker = std::function<ValidityInfo(const QString&)>;
 
-        LineEditWithValidityHighlighting() {}
+        LineEditWithValidityHighlighting(QWidget* pParent)
+            : BaseClass(pParent)
+        {}
         LineEditWithValidityHighlighting(ValidityChecker validityChecker, QWidget* pParent)
             : BaseClass(pParent)
             , m_validityChecker(validityChecker)
         {
             connect(this, &QLineEdit::textChanged, this, &LineEditWithValidityHighlighting::onTextChanged);
-            m_defaultBaseColor = BaseClass().palette().color(QPalette::Base);
         }
 
         void onTextChanged(const QString& sText)
@@ -289,7 +290,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         QColor defaultBaseColour()
         {
-            return m_defaultBaseColor;
+            // Implementation note: originally this was queried in constructor and stored to a member variable,
+            // but it didn't seem to work correctly when used from TableEditor (color was black instead of expected white).
+            return BaseClass().palette().color(QPalette::Base);
         }
 
         template <class Constructor_T>
@@ -307,7 +310,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         }
 
         ValidityChecker m_validityChecker;
-        QColor m_defaultBaseColor;
     }; // class LineEditWithValidityHighlighting
 
 }} // Module namespace
