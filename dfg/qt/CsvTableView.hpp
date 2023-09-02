@@ -280,6 +280,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Protected base class overrides -->
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        void initStyleOptionForIndex(QStyleOptionHeader* option, int logicalIndex) const override;
+#endif
         // <-- Base class overrides
 
     public:

@@ -6364,6 +6364,9 @@ TableHeaderView::TableHeaderView(CsvTableView* pParent) :
     BaseClass(Qt::Horizontal, pParent)
 {
     setSectionsClickable(true); // Without this clicking header didn't select column
+    // Setting default alignment to Left | VCenter instead of Qt-default HCenter | VCenter (changed by ticket #165),
+    // horizontal alignment is adjusted if needed in initStyleOptionForIndex()
+    this->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 }
 
 CsvTableView* TableHeaderView::tableView()
@@ -6501,6 +6504,29 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
     if (!menu.actions().isEmpty())
         menu.exec(QCursor::pos());
 }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void TableHeaderView::initStyleOptionForIndex(QStyleOptionHeader* option, const int logicalIndex) const
+{
+    BaseClass::initStyleOptionForIndex(option, logicalIndex);
+    // Tweaks to implement horizontal alignment as follows (ticket #165):
+    //      -Text fits to section -> align to center
+    //      -Otherwise align left
+    // Rationale is that center alignment looks a bit better when text fits,
+    // but when section is smaller than text, left align seems more appropriate since it deterministically
+    // shows the beginning part of the name instead of an arbitrary part from the middle.
+    if (option)
+    {
+        const auto nHa = option->fontMetrics.horizontalAdvance(option->text);
+        const auto nSectSize = this->sectionSize(logicalIndex);
+        if (nHa < nSectSize)
+        {
+            option->textAlignment.setFlag(Qt::AlignLeft, false);
+            option->textAlignment.setFlag(Qt::AlignHCenter);
+        }
+    }
+}
+#endif
 
 namespace DFG_DETAIL_NS
 {
