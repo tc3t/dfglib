@@ -73,10 +73,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_chartPanelWidth[]          = "chartPanelWidth"; // Chart panel width to use with the associated document; see TableEditor_chartPanelWidth for format documentation.
     const char CsvOptionProperty_readThreadBlockSizeMinimum[] = "readThreadBlockSizeMinimum"; // Sets TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum
     const char CsvOptionProperty_readThreadCountMaximum[]   = "readThreadCountMaximum"; // Sets TableCsvReadWriteOptions::PropertyId::readOpt_threadCount
-    const char CsvOptionProperty_windowHeight[]             = "windowHeight";    // Window height to request for use with the associated document; see TableEditor_chartPanelWidth for format documentation.
-    const char CsvOptionProperty_windowWidth[]              = "windowWidth";     // Window width to request for use with the associated document; see TableEditor_chartPanelWidth for format documentation.
-    const char CsvOptionProperty_windowPosX[]               = "windowPosX";      // Window x position to request for use with the associated document.
-    const char CsvOptionProperty_windowPosY[]               = "windowPosY";      // Window y position to request for use with the associated document.
+    const char CsvOptionProperty_windowHeight[]             = "windowHeight";    // Window height to request for use with the associated document, ignored if windowMaximized is true; see TableEditor_chartPanelWidth for format documentation.
+    const char CsvOptionProperty_windowWidth[]              = "windowWidth";     // Window width to request for use with the associated document, ignored if windowMaximized is true; see TableEditor_chartPanelWidth for format documentation.
+    const char CsvOptionProperty_windowPosX[]               = "windowPosX";      // Window x position to request for use with the associated document, ignored if windowMaximized is true.
+    const char CsvOptionProperty_windowPosY[]               = "windowPosY";      // Window y position to request for use with the associated document, ignored if windowMaximized is true.
+    const char CsvOptionProperty_windowMaximized[]          = "windowMaximized"; // Defines whether window should be maximized.
     const char CsvOptionProperty_sqlQuery[]                 = "sqlQuery";        // Defines SQL-query to use when opening a SQLite file.
     const char CsvOptionProperty_editMode[]                 = "editMode";        // Defines edit mode (e.g. read-only) for document.
     const char CsvOptionProperty_selectionDetails[]         = "selectionDetails";// Defines list of selection details to show in TableEditor

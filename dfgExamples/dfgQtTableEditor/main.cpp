@@ -244,6 +244,8 @@ int main(int argc, char *argv[])
 
         tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/windowPosX"), QString::number(mainWindow.pos().x())); });
         tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/windowPosY"), QString::number(mainWindow.pos().y())); });
+
+        tableEditor.m_spTableView->addConfigSavePropertyFetcher([&]() { return std::make_pair(QString("properties/windowMaximized"), QString::number(mainWindow.isMaximized())); });
     }
 #endif
 
