@@ -1,6 +1,7 @@
 #include "CsvItemModelChartDataSource.hpp"
 #include "connectHelper.hpp"
 #include "../cont/valueArray.hpp"
+#include "detail//CsvItemModel/chartDoubleAccesser.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 
@@ -48,23 +49,31 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
     if (!handler)
         return;
 
-    auto tablePtrAndLockReleaser = privGetDataTable();
-    if (!tablePtrAndLockReleaser.first)
+    auto [pCsvModel, lockReleaser] = privGetCsvModel();
+
+    if (!pCsvModel)
         return;
 
-    const auto& rTable = *tablePtrAndLockReleaser.first;
+    const auto& rCsvModel = *pCsvModel;
+    const auto& rTable = pCsvModel->m_table;
+    using CellIndex = CsvItemModel::Index;
+    const auto nColCellIndex = static_cast<CellIndex>(c);
+
+    using ModelDoubleAccesser = DFG_DETAIL_NS::CsvItemModelChartDoubleAccesser;
 
     // Peeking at the data to determine type of current column.
-    bool bFound = false;
-    m_columnTypes.erase(c); // Erasing old type to make sure that it won't break detection.
-    auto whileFunc = [&](const int) { return !bFound; };
-    rTable.forEachFwdRowInColumnWhile(static_cast<int>(c), whileFunc, [&](const int /*r*/, const SzPtrUtf8R psz)
     {
-        const auto val = (psz) ? GraphDataSource::cellStringToDouble(psz, c, &m_columnTypes) : std::numeric_limits<double>::quiet_NaN();
-        if (!::DFG_MODULE_NS(math)::isNan(val))
-            bFound = true;
-        // Simply taking column type from first recognized type.
-    });
+        bool bFound = false;
+        m_columnTypes.erase(c); // Erasing old type to make sure that it won't break detection.
+        auto whileFunc = [&](const int) { return !bFound; };
+        rTable.forEachFwdRowInColumnWhile(nColCellIndex, whileFunc, [&](const CellIndex r, const SzPtrUtf8R psz)
+            {
+                const auto val = ModelDoubleAccesser(r, nColCellIndex, rCsvModel, m_columnTypes, c)(psz);
+                if (!::DFG_MODULE_NS(math)::isNan(val))
+                    bFound = true;
+                // Simply taking column type from first recognized type.
+            });
+    }
 
     const auto colType = m_columnTypes[c];
 
@@ -112,10 +121,11 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::forEachElement_byColumn(c
             rows.push_back(static_cast<double>(CsvItemModel::internalRowIndexToVisible(r)));
         if (queryDetails.areNumbersRequested())
         {
+            // When colType is unknown (double) and it has no comma, parsing string directly as double...
             if (colType == ChartDataType::unknown && std::strchr(psz.c_str(), ',') == nullptr)
                 vals.push_back(stringToDouble(StringViewSzC(psz.c_str())));
-            else
-                vals.push_back(cellStringToDouble(psz, c, &m_columnTypes));
+            else // ...otherwise getting it through model access with datetime etc. parsing capabilities.
+                vals.push_back(ModelDoubleAccesser(r, nColCellIndex, rCsvModel, m_columnTypes, c)(psz));
         }
         if (queryDetails.areStringsRequested())
             stringViews.push_back(psz);

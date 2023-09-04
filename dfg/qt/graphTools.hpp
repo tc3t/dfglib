@@ -381,13 +381,14 @@ public:
 
     static DataSourceIndex invalidIndex() { return NumericTraits<DataSourceIndex>::maxValue; }
 
-    // Static helpers fro converting different types to double value.
+    // Static helpers for converting different types to double value.
+    using StringToDoubleConverter = std::function<double(const StringViewSzUtf8&, ChartDataType*, double)>;
     static double dateToDouble(QDateTime&& dt);
     static double timeToDouble(const QTime& t);
     static double stringToDouble(const String& s);
     static double stringToDouble(const StringViewSzC& sv);
     static double cellStringToDouble(const StringViewSzUtf8& sv);
-    static double cellStringToDouble(const StringViewSzUtf8& sv, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap);
+    static double cellStringToDouble(const StringViewSzUtf8& sv, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap, StringToDoubleConverter customConverter = nullptr);
 
 signals:
     void sigChanged(); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.

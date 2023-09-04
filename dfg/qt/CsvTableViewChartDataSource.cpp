@@ -10,6 +10,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/MapVector.hpp"
 
 #include "../cont/valueArray.hpp"
+#include "detail/CsvItemModel/chartDoubleAccesser.hpp"
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -229,9 +230,15 @@ QObject* ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::underlyingSource()
 
 namespace
 {
-    static double cellStringToDoubleImpl(::DFG_ROOT_NS::SzPtrUtf8R pszData, const ::DFG_MODULE_NS(qt)::ColumnIndex_view nColView, ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap& rColumnTypes)
+    static double cellStringToDoubleImpl(
+        const ::DFG_MODULE_NS(qt)::CsvItemModel& rModel,
+        const ::DFG_MODULE_NS(qt)::RowIndex_data nDataRow,
+        const ::DFG_MODULE_NS(qt)::ColumnIndex_data nDataCol,
+        ::DFG_ROOT_NS::SzPtrUtf8R pszData,
+        const ::DFG_MODULE_NS(qt)::ColumnIndex_view nColView,
+        ::DFG_MODULE_NS(qt)::GraphDataSource::ColumnDataTypeMap& rColumnTypes)
     {
-        return (pszData) ? ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(pszData, nColView.value(), &rColumnTypes) : std::numeric_limits<double>::quiet_NaN();
+        return ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::CsvItemModelChartDoubleAccesser(nDataRow.value(), nDataCol.value(), rModel, rColumnTypes, nColView.value())(pszData);
     }
 }
 
@@ -293,7 +300,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
                 for (CsvItemModel::Index r = 0; r < nTotalRowCount; ++r)
                 {
                     const auto pszData = pCsvModel->rawStringPtrAt(r, nColData.value());
-                    const auto val = cellStringToDoubleImpl(pszData, nColView, mapColToDataType);
+                    const auto val = cellStringToDoubleImpl(*pCsvModel, RowIndex_data(r), nColData, pszData, nColView, mapColToDataType);
                     spColumnCache->push_back(val);
                 }
                 newCache->setColumnCache(nColData, std::move(spColumnCache), mapColToDataType.valueCopyOr(nColView.valueAsUint(), ChartDataType::unknown));
@@ -376,7 +383,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::forEachElement_byColumn(c
                 if (isValidIndex(cachedColumn, nSourceModelRow))
                     val = cachedColumn[nSourceModelRow];
                 else
-                    val = cellStringToDoubleImpl(pszData, nColView, mapColToDataType);
+                    val = cellStringToDoubleImpl(*pCsvModel, RowIndex_data(nSourceModelRow), nColData, pszData, nColView, mapColToDataType);
                 dataSpan.set(makeRange(&val, &val + 1));
             }
             if (queryDetails.areStringsRequested())

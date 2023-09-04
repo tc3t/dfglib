@@ -456,10 +456,10 @@ double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringView
 }
 
 // Return value in case of invalid input as GIGO, in most cases returns NaN. Also in case of invalid input typeMap's value at nCol is unspecified.
-double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringViewSzUtf8& svUtf8, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap)
+double ::DFG_MODULE_NS(qt)::GraphDataSource::cellStringToDouble(const StringViewSzUtf8& svUtf8, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap, StringToDoubleConverter customStrToDoubleImpl)
 {
     ChartDataType dataType;
-    const auto rv = ::DFG_MODULE_NS(qt)::tableCellStringToDouble(svUtf8, &dataType);
+    const auto rv = (customStrToDoubleImpl) ? customStrToDoubleImpl(svUtf8, &dataType, std::numeric_limits<double>::quiet_NaN()) : ::DFG_MODULE_NS(qt)::tableCellStringToDouble(svUtf8, &dataType);
 
     if (pTypeMap && dataType != ChartDataType::unknown)
     {

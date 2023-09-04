@@ -41,6 +41,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "../cont/IntervalSetSerialization.hpp"
 #include "StringMatchDefinition.hpp"
 #include "sqlTools.hpp"
+#include "stringConversions.hpp"
 
 /////////////////////////////////
 // Start of dfg::qt namespace
@@ -1482,6 +1483,27 @@ auto CsvItemModel::rawStringViewAt(const int nRow, const int nCol) const -> Stri
 auto CsvItemModel::rawStringViewAt(const QModelIndex& index) const -> StringViewUtf8
 {
     return rawStringViewAt(index.row(), index.column());
+}
+
+double CsvItemModel::cellDataAsDouble(const QModelIndex& modelIndex, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure) const
+{
+    return (modelIndex.isValid())
+        ? cellDataAsDouble(modelIndex.row(), modelIndex.column(), pInterpretedInputDataType, returnValueOnConversionFailure)
+        : returnValueOnConversionFailure;
+}
+
+double CsvItemModel::cellDataAsDouble(const Index nRow, const Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure) const
+{
+    auto sv = rawStringPtrAt(nRow, nCol);
+    return tableCellStringToDouble(sv, pInterpretedInputDataType, returnValueOnConversionFailure);
+}
+
+double CsvItemModel::cellDataAsDouble(StringViewSzUtf8 sv, const Index nRow, const Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure) const
+{
+    DFG_UNUSED(nRow);
+    DFG_UNUSED(nCol);
+    DFG_ASSERT_CORRECTNESS(rawStringViewAt(nRow, nCol) == sv);
+    return tableCellStringToDouble(sv, pInterpretedInputDataType, returnValueOnConversionFailure);
 }
 
 QVariant CsvItemModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const

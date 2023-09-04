@@ -36,6 +36,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io)
     class OfStreamWithEncoding;
 } }
 
+DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts)
+{
+    class ChartDataType;
+} } // module charts
+
 class QUndoStack;
 class QCompleter;
 class QFile;
@@ -526,6 +531,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         SzPtrUtf8R rawStringPtrAt(const QModelIndex& index) const;
         StringViewUtf8 rawStringViewAt(const int nRow, const int nCol) const;
         StringViewUtf8 rawStringViewAt(const QModelIndex& index) const;
+
+        double cellDataAsDouble(const QModelIndex& modelIndex, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
+        double cellDataAsDouble(Index nRow, Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
+        // Overload for case where string has already been fetched. Precondition: rawStringViewAt(nRow, nCol) == sv
+        double cellDataAsDouble(StringViewSzUtf8 sv, Index nRow, Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
 
         // Sets cell strings in column @p nCol to those given in @p vecStrings.
         void setColumnCells(const int nCol, const std::vector<QString>& vecStrings);

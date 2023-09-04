@@ -6635,19 +6635,22 @@ bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, c
 {
     auto pView = getTableView();
     auto pCsvModel = (pView) ? pView->csvModel() : nullptr;
+
     if (pCsvModel)
     {
         const auto dataIndexLeft = pView->mapToDataModel(sourceLeft);
         const auto colType = pCsvModel->getColType(dataIndexLeft.column());
+
         switch (colType)
         {
             case CsvItemModel::ColTypeNumber:
+                [[fallthrough]];
+            case CsvItemModel::ColTypeDate:
             {
                 const auto dataIndexRight = pView->mapToDataModel(sourceRight);
                 const auto extractNumber = [pCsvModel](const QModelIndex& dataIndex)
                 {
-                    const auto str = pCsvModel->rawStringPtrAt(dataIndex);
-                    return tableCellStringToDouble(str, nullptr, -1 * std::numeric_limits<double>::infinity());
+                    return pCsvModel->cellDataAsDouble(dataIndex, nullptr, -1 * std::numeric_limits<double>::infinity());
                 };
                 const auto leftVal = extractNumber(dataIndexLeft);
                 const auto rightVal = extractNumber(dataIndexRight);
