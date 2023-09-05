@@ -8,6 +8,7 @@
 #include <dfg/qt/PatternMatcher.hpp>
 #include <dfg/iter/FunctionValueIterator.hpp>
 #include <dfg/os/TemporaryFileStream.hpp>
+#include <dfg/charts/commonChartTools.hpp>
 #include "../dfgTest/dfgTest.hpp"
 #include "dfgTestQt_gtestPrinters.hpp"
 
@@ -403,7 +404,7 @@ TEST(dfgQt, CsvItemModel_cellReadOnly)
     using namespace DFG_MODULE_NS(qt);
     {
         CsvItemModel model;
-        // Setting size to 1x1
+        // Setting size to 2x4
         model.setSize(2, 4);
         // Setting cell (1, 0) to "a"
         DFGTEST_EXPECT_TRUE(model.setDataNoUndo(1, 0, DFG_UTF8("a")));
@@ -425,6 +426,77 @@ TEST(dfgQt, CsvItemModel_cellReadOnly)
         // Writing new content to (1, 0).
         DFGTEST_EXPECT_TRUE(model.setDataNoUndo(1, 0, DFG_UTF8("b")));
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", model.rawStringViewAt(1, 0));
+    }
+}
+
+TEST(dfgQt, CsvItemModel_cellDataAsDouble)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+    using namespace DFG_MODULE_NS(str);
+
+    {
+        CsvItemModel model;
+        model.setSize(6, 1);
+        constexpr auto doubleMax = std::numeric_limits<double>::max();
+        constexpr auto doubleInf = std::numeric_limits<double>::infinity();
+
+        // Setting values
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(0, 0, DFG_UTF8("1.25")));
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(1, 0, DFG_UTF8("inf")));
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(2, 0, DFG_UTF8("-inf")));
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(3, 0, DFG_UTF8("nan")));
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(4, 0, DFG_UTF8("non-value")));
+        DFGTEST_EXPECT_TRUE(model.setDataNoUndo(5, 0, StringUtf8::fromRawString(toStrC(doubleMax))));
+
+        // Testing that get expected results
+        DFGTEST_EXPECT_LEFT(1.25, model.cellDataAsDouble(0, 0));
+        DFGTEST_EXPECT_FALSE(doubleInf > model.cellDataAsDouble(1, 0));
+        DFGTEST_EXPECT_FALSE(-doubleInf < model.cellDataAsDouble(2, 0));
+        DFGTEST_EXPECT_NAN(model.cellDataAsDouble(3, 0));
+        DFGTEST_EXPECT_NAN(model.cellDataAsDouble(3, 0, nullptr, 1));
+        DFGTEST_EXPECT_NAN(model.cellDataAsDouble(4, 0));
+        DFGTEST_EXPECT_LEFT(1, model.cellDataAsDouble(4, 0, nullptr, 1));
+        DFGTEST_EXPECT_LEFT(doubleMax, model.cellDataAsDouble(5, 0));
+
+        using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
+        // Installing custom parser
+        model.setColumnStringToDoubleParser(0, [](CsvItemModel::ColInfo::StringToDoubleParserParam param)
+            {
+                const auto sv = param.view();
+                if (sv == DFG_UTF8("1.25"))
+                {
+                    param.setInterpretedChartType(ChartDataType::DataType::dateAndTimeMillisecondTz);
+                    return 10.0;
+                }
+                else if (sv == DFG_UTF8("inf"))
+                {
+                    param.setInterpretedChartType(ChartDataType::DataType::dayTimeMillisecond);
+                    return 20.0;
+                }
+                else if (sv == DFG_UTF8("-inf"))
+                {
+                    param.setInterpretedChartType(ChartDataType::DataType::dayTime);
+                    return 30.0;
+                }
+                else
+                {
+                    param.setInterpretedChartType(ChartDataType::DataType::unknown);
+                    return param.conversionErrorReturnValue();
+                }
+            });
+        ChartDataType dataType;
+        DFGTEST_EXPECT_LEFT(10, model.cellDataAsDouble(0, 0, &dataType));
+        DFGTEST_EXPECT_LEFT(ChartDataType::dateAndTimeMillisecondTz, dataType);
+
+        DFGTEST_EXPECT_LEFT(20, model.cellDataAsDouble(1, 0, &dataType));
+        DFGTEST_EXPECT_LEFT(ChartDataType::dayTimeMillisecond, dataType);
+
+        DFGTEST_EXPECT_LEFT(30, model.cellDataAsDouble(2, 0, &dataType));
+        DFGTEST_EXPECT_LEFT(ChartDataType::dayTime, dataType);
+
+        DFGTEST_EXPECT_LEFT(123, model.cellDataAsDouble(3, 0, &dataType, 123));
+        DFGTEST_EXPECT_LEFT(ChartDataType::unknown, dataType);
     }
 }
 

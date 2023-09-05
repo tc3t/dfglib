@@ -19,6 +19,7 @@ namespace DFG_DETAIL_NS
 {
     double tableCellDateToDouble(QDateTime&& dt);
     double tableCellTimeToDouble(const QTime& t);
+    double tableCellDateToDoubleWithColumnTypeHandling(QDateTime&& dt, const ::DFG_MODULE_NS(charts)::ChartDataType& dataTypeHint, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType);
 }
 
 double stringToDouble(const QString& s, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN());

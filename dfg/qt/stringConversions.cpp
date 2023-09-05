@@ -45,10 +45,11 @@ namespace DFG_DETAIL_NS
             *pInterpretedInputDataType = dataType;
     };
 
-    double dateToDoubleAndColumnTypeHandling(QDateTime&& dt, ::DFG_MODULE_NS(charts)::ChartDataType dataTypeHint, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType)
+    double tableCellDateToDoubleWithColumnTypeHandling(QDateTime&& dt, const ::DFG_MODULE_NS(charts)::ChartDataType& dataTypeHintInit, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType)
     {
         using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
         const auto& time = dt.time();
+        ChartDataType dataTypeHint = dataTypeHintInit;
         if (dataTypeHint.isDateNoTzType() && time.msecsSinceStartOfDay() == 0 && dataTypeHint != ChartDataType::dateOnlyYearMonth)
             dataTypeHint = ChartDataType::dateOnly;
         else if (time.msec() == 0)
@@ -60,7 +61,7 @@ namespace DFG_DETAIL_NS
         }
         setInterpretedDataType(dataTypeHint, pInterpretedInputDataType);
         return DFG_DETAIL_NS::tableCellDateToDouble(std::move(dt));
-    };
+    }
 
     // Tries to parse datetime of format [ww] [d]d.[m]m.yyyy[ [h]h:mm[:ss][.zzz]]
     // Returns pair (parse success flag, date value as double).
@@ -120,7 +121,7 @@ namespace DFG_DETAIL_NS
             else
                 return rvInvalid;
         }
-        return std::pair(true, dateToDoubleAndColumnTypeHandling(QDateTime(datePart, timePart), dataType, pInterpretedInputDataType));
+        return std::pair(true, DFG_DETAIL_NS::tableCellDateToDoubleWithColumnTypeHandling(QDateTime(datePart, timePart), dataType, pInterpretedInputDataType));
     }
 
     std::pair<bool, double> tryHhMmSsParseImpl(const StringViewC sv, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, const QString& sFormat, ::DFG_MODULE_NS(charts)::ChartDataType dataType)
@@ -191,25 +192,9 @@ double tableCellStringToDouble(const StringViewSzUtf8& svUtf8,
     if (pInterpretedInputDataType)
         *pInterpretedInputDataType = ChartDataType::unknown;
 
-    const auto setInterpretedDataType = [=](const ChartDataType& dataType)
-    {
-        DFG_DETAIL_NS::setInterpretedDataType(dataType, pInterpretedInputDataType);
-    };
-
     const auto dateToDoubleAndColumnTypeHandling = [&](QDateTime&& dt, ChartDataType dataTypeHint)
     {
-        const auto& time = dt.time();
-        if (dataTypeHint.isDateNoTzType() && time.msecsSinceStartOfDay() == 0 && dataTypeHint != ChartDataType::dateOnlyYearMonth)
-            dataTypeHint = ChartDataType::dateOnly;
-        else if (time.msec() == 0)
-        {
-            if (dataTypeHint == ChartDataType::dateAndTimeMillisecond)
-                dataTypeHint = ChartDataType::dateAndTime;
-            else if (dataTypeHint == ChartDataType::dateAndTimeMillisecondTz)
-                dataTypeHint = ChartDataType::dateAndTimeTz;
-        }
-        setInterpretedDataType(dataTypeHint);
-        return DFG_DETAIL_NS::tableCellDateToDouble(std::move(dt));
+        return DFG_DETAIL_NS::tableCellDateToDoubleWithColumnTypeHandling(std::move(dt), dataTypeHint, pInterpretedInputDataType);
     };
 
     const auto viewToQString = [&](const StringViewC& sv) { return ::DFG_MODULE_NS(qt)::viewToQString(StringViewUtf8(SzPtrUtf8(sv.begin()), SzPtrUtf8(sv.end()))); };

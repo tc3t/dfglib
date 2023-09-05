@@ -42,6 +42,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "StringMatchDefinition.hpp"
 #include "sqlTools.hpp"
 #include "stringConversions.hpp"
+#include "../charts/commonChartTools.hpp"
 
 /////////////////////////////////
 // Start of dfg::qt namespace
@@ -1495,15 +1496,21 @@ double CsvItemModel::cellDataAsDouble(const QModelIndex& modelIndex, ::DFG_MODUL
 double CsvItemModel::cellDataAsDouble(const Index nRow, const Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure) const
 {
     auto sv = rawStringPtrAt(nRow, nCol);
-    return tableCellStringToDouble(sv, pInterpretedInputDataType, returnValueOnConversionFailure);
+    return cellDataAsDouble(sv, nRow, nCol, pInterpretedInputDataType, returnValueOnConversionFailure);
 }
 
 double CsvItemModel::cellDataAsDouble(StringViewSzUtf8 sv, const Index nRow, const Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure) const
 {
     DFG_UNUSED(nRow);
     DFG_UNUSED(nCol);
+    using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
     DFG_ASSERT_CORRECTNESS(rawStringViewAt(nRow, nCol) == sv);
-    return tableCellStringToDouble(sv, pInterpretedInputDataType, returnValueOnConversionFailure);
+    auto pColInfo = this->getColInfo(nCol);
+    auto customColParser = (pColInfo) ? pColInfo->getCustomStringToDoubleParser() : nullptr;
+    if (customColParser)
+        return customColParser(ColInfo::StringToDoubleParserParam(sv, pInterpretedInputDataType, returnValueOnConversionFailure));
+    else
+        return tableCellStringToDouble(sv, pInterpretedInputDataType, returnValueOnConversionFailure);
 }
 
 QVariant CsvItemModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
@@ -1913,6 +1920,13 @@ void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
     }
 }
 
+void CsvItemModel::setColumnStringToDoubleParser(const Index nCol, ColInfo::StringToDoubleParser parser)
+{
+    auto pColInfo = getColInfo(nCol);
+    if (pColInfo)
+        pColInfo->m_customStringToDoubleParser = parser;
+}
+
 QVariant CsvItemModel::getColumnProperty(const Index nCol, const CsvItemModelColumnProperty propertyId, QVariant defaultValue)
 {
     auto pColInfo = getColInfo(nCol);
@@ -2250,6 +2264,11 @@ auto CsvItemModel::ColInfo::index() const -> Index
     return static_cast<Index>(iter - pModel->m_vecColInfo.begin());
 }
 
+auto CsvItemModel::ColInfo::getCustomStringToDoubleParser() const -> StringToDoubleParser
+{
+    return this->m_customStringToDoubleParser;
+}
+
 QVariant CsvItemModel::ColInfo::getProperty(const CsvItemModelColumnProperty propertyId, const QVariant& defaultVal) const
 {
     auto pOpaq = DFG_OPAQUE_PTR();
@@ -2313,6 +2332,17 @@ auto CsvItemModel::ColInfo::columnTypeAsString(const ColType colType) -> StringV
         case ColTypeNumber: return DFG_UTF8("number");
         default           : return DFG_UTF8("text");
     }
+}
+
+bool CsvItemModel::ColInfo::StringToDoubleParserParam::setInterpretedChartType(const ChartDataType& dt)
+{
+    if (m_pInterpretedChartType)
+    {
+        *m_pInterpretedChartType = dt;
+        return true;
+    }
+    else
+        return false;
 }
 
 void CsvItemModel::setCellReadOnlyStatus(const Index nRow, const Index nCol, const bool bReadOnly)

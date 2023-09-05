@@ -224,6 +224,31 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         class ColInfo
         {
         public:
+            class StringToDoubleParserParam
+            {
+            public:
+                using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
+                StringToDoubleParserParam() = default;
+                StringToDoubleParserParam(const StringViewSzUtf8& sv, ChartDataType* pInterpretedChartType, const double returnValueOnConversionError)
+                    : m_sv(sv)
+                    , m_pInterpretedChartType(pInterpretedChartType)
+                    , m_returnValueOnConversionError(returnValueOnConversionError)
+                {}
+
+                StringViewSzUtf8 view() const { return m_sv; }
+                // Returns true iff chart data type was set.
+                bool setInterpretedChartType(const ChartDataType& dt);
+
+                double conversionErrorReturnValue() const { return m_returnValueOnConversionError; }
+
+            private:
+                StringViewSzUtf8 m_sv;
+                ::DFG_MODULE_NS(charts)::ChartDataType* m_pInterpretedChartType = nullptr;
+                double m_returnValueOnConversionError = std::numeric_limits<double>::quiet_NaN();
+            }; // class StringToDoubleParserParam
+
+            using StringToDoubleParser = std::function<double(StringToDoubleParserParam)>;
+
             struct CompleterDeleter
             {
                 void operator()(QCompleter* ptr) const;
@@ -239,6 +264,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             Index index() const;
 
             QString name() const;
+
+            // If this column has custom string-to-double parser, returns functor that does the conversion, otherwise empty functor.
+            StringToDoubleParser getCustomStringToDoubleParser() const;
 
             // Returns a column property.
             QVariant getProperty(const CsvItemModelColumnProperty propertyId, const QVariant& defaultVal = QVariant()) const;
@@ -264,6 +292,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             QString m_name;
             ColType m_type;
             CompleterType m_completerType;
+            StringToDoubleParser m_customStringToDoubleParser;
             std::unique_ptr<QCompleter, CompleterDeleter> m_spCompleter;
 
             DFG_OPAQUE_PTR_DECLARE();
@@ -532,16 +561,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         StringViewUtf8 rawStringViewAt(const int nRow, const int nCol) const;
         StringViewUtf8 rawStringViewAt(const QModelIndex& index) const;
 
-        double cellDataAsDouble(const QModelIndex& modelIndex, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
-        double cellDataAsDouble(Index nRow, Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
+        double cellDataAsDouble(const QModelIndex& modelIndex, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType = nullptr, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
+        double cellDataAsDouble(Index nRow, Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType = nullptr, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
         // Overload for case where string has already been fetched. Precondition: rawStringViewAt(nRow, nCol) == sv
-        double cellDataAsDouble(StringViewSzUtf8 sv, Index nRow, Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
+        double cellDataAsDouble(StringViewSzUtf8 sv, Index nRow, Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType = nullptr, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
 
         // Sets cell strings in column @p nCol to those given in @p vecStrings.
         void setColumnCells(const int nCol, const std::vector<QString>& vecStrings);
 
-        void setColumnType(const Index nCol, const ColType colType);
-        void setColumnType(const Index nCol, const StringViewC sColType); // sColType must one of: <empty> (=type not changed), "text", "number".
+        void setColumnType(Index nCol, ColType colType);
+        void setColumnType(Index nCol, StringViewC sColType); // sColType must one of: <empty> (=type not changed), "text", "number".
+        void setColumnStringToDoubleParser(Index nCol, ColInfo::StringToDoubleParser parser);
         QVariant getColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant defaultValue = QVariant());
         void setColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant value);
 
