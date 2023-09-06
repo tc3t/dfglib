@@ -174,6 +174,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         readOnly // Whether cells in column or column name can be edited. Note that this does not make column completely immutable: for example can remove rows or even completely remove the column.
     };
 
+    enum class CsvItemModelColumnType
+    {
+        text,
+        number,
+        date
+    }; // enum class CsvItemModelColumnType
+
     class CsvItemModel : public QAbstractTableModel
     {
         Q_OBJECT
@@ -193,12 +200,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_MODULE_NS(qt)::StringMatchDefinition StringMatchDefinition;
         class OpaqueTypeDefs;
 
-        enum ColType
-        {
-            ColTypeText,
-            ColTypeNumber,
-            ColTypeDate
-        };
+        using ColType = CsvItemModelColumnType;
+        // For compatibility, don't use these in new code.
+        static constexpr auto ColTypeText = ColType::text;
+        static constexpr auto ColTypeNumber = ColType::number;
+
         enum CompleterType
         {
             CompleterTypeNone,
@@ -254,7 +260,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 void operator()(QCompleter* ptr) const;
             };
 
-            ColInfo(CsvItemModel* pModel, QString sName = QString(), ColType type = ColTypeText, CompleterType complType = CompleterTypeNone);
+            ColInfo(CsvItemModel* pModel, QString sName = QString(), ColType type = ColType::text, CompleterType complType = CompleterTypeNone);
 
             bool hasCompleter() const { return m_spCompleter.get() != nullptr; }
 
@@ -520,7 +526,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QStringList getColumnNames() const;
         const QString& getHeaderName(const int nCol) const { return (isValidColumn(nCol)) ? m_vecColInfo[nCol].m_name : s_sEmpty; }
 
-        ColType getColType(const Index nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_type : ColTypeText); }
+        ColType getColType(const Index nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_type : ColType::text); }
         StringViewUtf8 getColTypeAsString(const Index nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].columnTypeAsString() : StringViewUtf8()); }
         CompleterType getColCompleterType(const Index nCol) const { return (isValidColumn(nCol) ? m_vecColInfo[nCol].m_completerType : CompleterTypeNone); }
 
@@ -569,9 +575,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Sets cell strings in column @p nCol to those given in @p vecStrings.
         void setColumnCells(const int nCol, const std::vector<QString>& vecStrings);
 
-        void setColumnType(Index nCol, ColType colType);
-        void setColumnType(Index nCol, StringViewC sColType); // sColType must one of: <empty> (=type not changed), "text", "number".
-        void setColumnStringToDoubleParser(Index nCol, ColInfo::StringToDoubleParser parser);
+        void setColumnType(Index nCol, ColType colType); // Sets column type for given column. @note If column has custom string-to-double parser, it will be cleared.
+        void setColumnType(Index nCol, StringViewC sColType); // Converts string to ColType and calls setColumnType() with ColType-data, sColType must one of: <empty> (=type not changed), "text", "number", "date".
+        void setColumnStringToDoubleParser(Index nCol, ColInfo::StringToDoubleParser parser); // Sets custom string-to-double parser for given column.
         QVariant getColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant defaultValue = QVariant());
         void setColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant value);
 

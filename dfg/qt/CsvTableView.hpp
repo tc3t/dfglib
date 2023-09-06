@@ -61,6 +61,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
     class CsvItemModel;
     enum class CsvItemModelColumnProperty;
+    enum class CsvItemModelColumnType;
     class CsvTableView;
     class SelectionDetailCollectorContainer;
 
@@ -691,8 +692,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Column header action handlers
         void setColumnNames();
-        void setColumnVisibility(int nCol, bool bVisible, ::DFG_MODULE_NS(qt)::CsvTableView::ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
-        void setColumnReadOnly(const ::DFG_MODULE_NS(qt)::ColumnIndex_data nCol, const bool bReadOnly);
+        void setColumnVisibility(Index nCol, bool bVisible, ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
+        void setColumnReadOnly(ColumnIndex_data nCol, const bool bReadOnly);
+        void setColumnType(ColumnIndex_data nCol, CsvItemModelColumnType newType);
         void unhideAllColumns();
         void showSelectColumnVisibilityDialog();
 

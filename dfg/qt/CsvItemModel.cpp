@@ -1029,7 +1029,7 @@ void CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvConfig& config) const
             const auto nVisibleColumnIndex = internalColumnIndexToVisible(c);
             formatToBuffer("columnsByIndex/%d/datatype", nVisibleColumnIndex);
             // Adding only if differs from default or if existing config already has the field)
-            if (this->getColType(c) != CsvItemModel::ColTypeText || existingConfig.contains(SzPtrUtf8(szBuffer)))
+            if (this->getColType(c) != CsvItemModel::ColType::text || existingConfig.contains(SzPtrUtf8(szBuffer)))
             {
                 config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), this->getColTypeAsString(c).toString());
             }
@@ -1902,6 +1902,7 @@ void CsvItemModel::setColumnType(const Index nCol, const ColType colType)
     if (!pColInfo || pColInfo->m_type == colType)
         return;
     pColInfo->m_type = colType;
+    pColInfo->m_customStringToDoubleParser = nullptr;
     setModifiedStatus(true);
     Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
 }
@@ -1910,10 +1911,12 @@ void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
 {
     if (!isValidColumn(nCol))
         return;
-    if (sColType == ColInfo::columnTypeAsString(ColTypeText).asUntypedView())
-        setColumnType(nCol, ColTypeText);
-    else if (sColType == ColInfo::columnTypeAsString(ColTypeNumber).asUntypedView())
-        setColumnType(nCol, ColTypeNumber);
+    if (sColType == ColInfo::columnTypeAsString(ColType::text).asUntypedView())
+        setColumnType(nCol, ColType::text);
+    else if (sColType == ColInfo::columnTypeAsString(ColType::number).asUntypedView())
+        setColumnType(nCol, ColType::number);
+    else if (sColType == ColInfo::columnTypeAsString(ColType::date).asUntypedView())
+        setColumnType(nCol, ColType::date);
     else if (!sColType.empty() && sColType != "default")
     {
         DFG_ASSERT_INVALID_ARGUMENT(false, "Unexpected column type");
@@ -1924,7 +1927,11 @@ void CsvItemModel::setColumnStringToDoubleParser(const Index nCol, ColInfo::Stri
 {
     auto pColInfo = getColInfo(nCol);
     if (pColInfo)
+    {
         pColInfo->m_customStringToDoubleParser = parser;
+        setModifiedStatus(true);
+        Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
+    }
 }
 
 QVariant CsvItemModel::getColumnProperty(const Index nCol, const CsvItemModelColumnProperty propertyId, QVariant defaultValue)
@@ -2329,8 +2336,10 @@ auto CsvItemModel::ColInfo::columnTypeAsString(const ColType colType) -> StringV
 {
     switch (colType)
     {
-        case ColTypeNumber: return DFG_UTF8("number");
-        default           : return DFG_UTF8("text");
+        case ColType::number: return DFG_UTF8("number");
+        case ColType::date  : return DFG_UTF8("date");
+        case ColType::text  : return DFG_UTF8("text");
+        default             : DFG_ASSERT_IMPLEMENTED(false); return StringViewUtf8();
     }
 }
 

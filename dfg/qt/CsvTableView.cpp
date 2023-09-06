@@ -36,6 +36,7 @@
 #include <thread>
 
 #include "../logging.hpp"
+#include "../charts/commonChartTools.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QMenu>
@@ -5879,6 +5880,13 @@ void CsvTableView::setColumnReadOnly(const ColumnIndex_data nCol, const bool bRe
     pColInfo->setProperty(CsvItemModelColumnProperty::readOnly, bReadOnly);
 }
 
+void CsvTableView::setColumnType(const ColumnIndex_data nCol, const CsvItemModelColumnType newType)
+{
+    auto pModel = this->csvModel();
+    if (pModel)
+        pModel->setColumnType(nCol.value(), newType);
+}
+
 void CsvTableView::unhideAllColumns()
 {
     auto lockReleaser = this->tryLockForEdit();
@@ -6484,18 +6492,47 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
             auto pTypeMenu = menu.addMenu(tr("Data type"));
             if (pTypeMenu)
             {
-                pTypeMenu->setToolTip(tr("Type can be used to change sorting behaviour. Does not affect underlying storage"));
-                const auto funcSetType = [=](const CsvItemModel::ColType colType)
-                {
-                    auto pModel = pView->csvModel();
-                    if (pModel)
-                        pModel->setColumnType(m_nLatestContextMenuEventColumn_dataModel, colType);
-                };
+                pTypeMenu->setToolTip(tr("Type can be used to change sorting behaviour. Does not affect underlying storage")); // TODO: custom datejen kanssa voi vaikuttaa ainakin chartteihin
                 const auto currentType = pCsvModel->getColType(m_nLatestContextMenuEventColumn_dataModel);
                 const bool bIsTextType = (currentType == CsvItemModel::ColTypeText);
                 const bool bIsNumberType = (currentType == CsvItemModel::ColTypeNumber);
-                addViewAction(rView, *pTypeMenu, tr("Text")  , noShortCut, ActionFlags::confEdit, { true, bIsTextType }  , [=]() { funcSetType(CsvItemModel::ColTypeText);   });
-                addViewAction(rView, *pTypeMenu, tr("Number"), noShortCut, ActionFlags::confEdit, { true, bIsNumberType }, [=]() { funcSetType(CsvItemModel::ColTypeNumber); });
+                const bool bIsDateCustom = (currentType == CsvItemModel::ColType::date);
+                QPointer<CsvTableView> spView = pView;
+                const ColumnIndex_data nColIndexData(m_nLatestContextMenuEventColumn_dataModel);
+                const auto columnTypeSetter = [=](const CsvItemModelColumnType newColType)
+                {
+                    if (spView)
+                        spView->setColumnType(nColIndexData, newColType);
+                };
+                addViewAction(rView, *pTypeMenu, tr("Text")  , noShortCut, ActionFlags::confEdit, { true, bIsTextType }  , [=]() { columnTypeSetter(CsvItemModelColumnType::text); });
+                addViewAction(rView, *pTypeMenu, tr("Number"), noShortCut, ActionFlags::confEdit, { true, bIsNumberType }, [=]() { columnTypeSetter(CsvItemModelColumnType::number); });
+                addViewAction(rView, *pTypeMenu, tr("Date/Time (custom)..."), noShortCut, ActionFlags::confEdit, { true, bIsDateCustom }, [=]()
+                    {
+                        if (!spView)
+                            return;
+                        bool bOk = false;
+                        const auto sFormat = InputDialog::getText(
+                            this,
+                            tr("Column type date/time (custom)"),
+                            tr("Enter date format which is used to parse date/time, see documentation of QDateTime for format specification<br>"
+                               "Note: Format specifier is not currently stored to csv or conf-file"),
+                                QLineEdit::Normal,
+                                QString(),
+                                &bOk);
+                        if (!bOk)
+                            return; // Not setting column type if dialog was cancelled.
+                        columnTypeSetter(CsvItemModel::ColType::date);
+                        pCsvModel->setColumnStringToDoubleParser(nColIndexData.value(), [=](CsvItemModel::ColInfo::StringToDoubleParserParam param)
+                            {
+                                using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
+                                ChartDataType interpretedDataType = ChartDataType::unknown;
+                                const auto rv = DFG_DETAIL_NS::tableCellDateToDoubleWithColumnTypeHandling(
+                                    QDateTime::fromString(viewToQString(param.view()), sFormat),
+                                    ChartDataType::dateAndTimeMillisecond, &interpretedDataType);
+                                param.setInterpretedChartType(interpretedDataType);
+                                return rv;
+                            });
+                    });
             }
         }
     }
@@ -6643,9 +6680,9 @@ bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, c
 
         switch (colType)
         {
-            case CsvItemModel::ColTypeNumber:
+            case CsvItemModel::ColType::number:
                 [[fallthrough]];
-            case CsvItemModel::ColTypeDate:
+            case CsvItemModel::ColType::date:
             {
                 const auto dataIndexRight = pView->mapToDataModel(sourceRight);
                 const auto extractNumber = [pCsvModel](const QModelIndex& dataIndex)
