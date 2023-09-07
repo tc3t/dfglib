@@ -2409,6 +2409,11 @@ namespace DFG_DETAIL_NS
         return impl()(nRow, nCol);
     }
 
+    auto CsvItemModelTable::viewAt(const Index nRow, const Index nCol) const -> StringViewUtf8
+    {
+        return StringViewUtf8((*this)(nRow, nCol));
+    }
+
     void CsvItemModelTable::setElement(Index nRow, Index nCol, StringViewUtf8 sv)
     {
         impl().setElement(nRow, nCol, sv);
