@@ -461,7 +461,7 @@ TEST(dfgQt, CsvItemModel_cellDataAsDouble)
 
         using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
         // Installing custom parser
-        model.setColumnStringToDoubleParser(0, [](CsvItemModel::ColInfo::StringToDoubleParserParam param)
+        model.setColumnStringToDoubleParser(0, CsvItemModel::ColInfo::StringToDoubleParser(QString(), [](CsvItemModel::ColInfo::StringToDoubleParserParam param, const QString&)
             {
                 const auto sv = param.view();
                 if (sv == DFG_UTF8("1.25"))
@@ -484,7 +484,7 @@ TEST(dfgQt, CsvItemModel_cellDataAsDouble)
                     param.setInterpretedChartType(ChartDataType::DataType::unknown);
                     return param.conversionErrorReturnValue();
                 }
-            });
+            }));
         ChartDataType dataType;
         DFGTEST_EXPECT_LEFT(10, model.cellDataAsDouble(0, 0, &dataType));
         DFGTEST_EXPECT_LEFT(ChartDataType::dateAndTimeMillisecondTz, dataType);

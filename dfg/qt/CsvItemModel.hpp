@@ -253,7 +253,42 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 double m_returnValueOnConversionError = std::numeric_limits<double>::quiet_NaN();
             }; // class StringToDoubleParserParam
 
-            using StringToDoubleParser = std::function<double(StringToDoubleParserParam)>;
+            class StringToDoubleParser
+            {
+            public:
+                using ParserParam = ColInfo::StringToDoubleParserParam;
+                using ParserFunc = std::function<double(ParserParam&, const QString&)>;
+
+                StringToDoubleParser() = default;
+                StringToDoubleParser(nullptr_t) {}
+                StringToDoubleParser(QString sDefitinionString, ParserFunc parserFunc)
+                    : m_parserFunc(parserFunc)
+                    , m_sDefString(std::move(sDefitinionString))
+                {}
+
+                static StringToDoubleParser createQDateTimeParser(QString sFormat)
+                {
+                    return StringToDoubleParser(std::move(sFormat), &StringToDoubleParser::qDateTimeConverter);
+                }
+
+                explicit operator bool() const
+                {
+                    return m_parserFunc.operator bool();
+                }
+
+                QString getDefinitionString() const { return m_sDefString; }
+
+                double operator()(ParserParam param) const
+                {
+                    return (m_parserFunc) ? m_parserFunc(param, m_sDefString) : std::numeric_limits<double>::quiet_NaN();
+                }
+
+                static double qDateTimeConverter(ParserParam& param, const QString& sDefString);
+
+            private:
+                ParserFunc m_parserFunc;
+                QString m_sDefString;
+            }; // class StringToDoubleParser
 
             struct CompleterDeleter
             {
@@ -578,6 +613,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setColumnType(Index nCol, ColType colType); // Sets column type for given column. @note If column has custom string-to-double parser, it will be cleared.
         void setColumnType(Index nCol, StringViewC sColType); // Converts string to ColType and calls setColumnType() with ColType-data, sColType must one of: <empty> (=type not changed), "text", "number", "date".
         void setColumnStringToDoubleParser(Index nCol, ColInfo::StringToDoubleParser parser); // Sets custom string-to-double parser for given column.
+        QString getColumnStringToDoubleParserDefinition(Index nCol) const; // Returns definition string of current custom string-to-double parser if such is defined, empty otherwise.
         QVariant getColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant defaultValue = QVariant());
         void setColumnProperty(Index nCol, CsvItemModelColumnProperty propertyId, QVariant value);
 
@@ -719,11 +755,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         static CsvFormatDefinition peekCsvFormatFromFile(const QString& sPath, const size_t nPeekLimitAsBaseChars = 512);
 
+        using ColumnNumberDataInterpretationChangedParam = int; // Placeholder
+
     signals:
         void sigModifiedStatusChanged(bool bNewStatus);
         void sigOnNewSourceOpened();
         void sigSourcePathChanged();
         void sigOnSaveToFileCompleted(bool, double);
+        // Emitted when the way how content is interpreted as numbers has changed (e.g. column type or custom string-to-double parser has changed)
+        // Parameter is currently not used.
+        void sigColumnNumberDataInterpretationChanged(Index nCol, ColumnNumberDataInterpretationChangedParam);
 
     protected:
         // Clears internal data. Caller should make sure this call

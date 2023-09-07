@@ -1905,6 +1905,7 @@ void CsvItemModel::setColumnType(const Index nCol, const ColType colType)
     pColInfo->m_customStringToDoubleParser = nullptr;
     setModifiedStatus(true);
     Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
+    Q_EMIT sigColumnNumberDataInterpretationChanged(nCol, ColumnNumberDataInterpretationChangedParam());
 }
 
 void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
@@ -1931,7 +1932,14 @@ void CsvItemModel::setColumnStringToDoubleParser(const Index nCol, ColInfo::Stri
         pColInfo->m_customStringToDoubleParser = parser;
         setModifiedStatus(true);
         Q_EMIT headerDataChanged(Qt::Horizontal, nCol, nCol);
+        Q_EMIT sigColumnNumberDataInterpretationChanged(nCol, ColumnNumberDataInterpretationChangedParam());
     }
+}
+
+QString CsvItemModel::getColumnStringToDoubleParserDefinition(const Index nCol) const
+{
+    auto pColInfo = getColInfo(nCol);
+    return (pColInfo) ? pColInfo->m_customStringToDoubleParser.getDefinitionString() : QString();
 }
 
 QVariant CsvItemModel::getColumnProperty(const Index nCol, const CsvItemModelColumnProperty propertyId, QVariant defaultValue)
@@ -2352,6 +2360,17 @@ bool CsvItemModel::ColInfo::StringToDoubleParserParam::setInterpretedChartType(c
     }
     else
         return false;
+}
+
+double CsvItemModel::ColInfo::StringToDoubleParser::qDateTimeConverter(ParserParam& param, const QString& sFormat)
+{
+    using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
+    ChartDataType interpretedDataType = ChartDataType::unknown;
+    const auto rv = DFG_DETAIL_NS::tableCellDateToDoubleWithColumnTypeHandling(
+        QDateTime::fromString(viewToQString(param.view()), sFormat),
+        ChartDataType::dateAndTimeMillisecond, &interpretedDataType);
+    param.setInterpretedChartType(interpretedDataType);
+    return rv;
 }
 
 void CsvItemModel::setCellReadOnlyStatus(const Index nRow, const Index nCol, const bool bReadOnly)

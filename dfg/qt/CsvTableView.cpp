@@ -6492,10 +6492,11 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
             auto pTypeMenu = menu.addMenu(tr("Data type"));
             if (pTypeMenu)
             {
-                pTypeMenu->setToolTip(tr("Type can be used to change sorting behaviour. Does not affect underlying storage")); // TODO: custom datejen kanssa voi vaikuttaa ainakin chartteihin
+                pTypeMenu->setToolTip(tr("Type can be used to change sorting behaviour and it may also affect how data gets converted into numbers.\n"
+                    "Does not affect underlying storage, so type can be changed without affecting the way how data is saved to file or loaded from file."));
                 const auto currentType = pCsvModel->getColType(m_nLatestContextMenuEventColumn_dataModel);
-                const bool bIsTextType = (currentType == CsvItemModel::ColTypeText);
-                const bool bIsNumberType = (currentType == CsvItemModel::ColTypeNumber);
+                const bool bIsTextType = (currentType == CsvItemModel::ColType::text);
+                const bool bIsNumberType = (currentType == CsvItemModel::ColType::number);
                 const bool bIsDateCustom = (currentType == CsvItemModel::ColType::date);
                 QPointer<CsvTableView> spView = pView;
                 const ColumnIndex_data nColIndexData(m_nLatestContextMenuEventColumn_dataModel);
@@ -6511,27 +6512,19 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
                         if (!spView)
                             return;
                         bool bOk = false;
+                        const auto sCurrentCustomParserDef = (bIsDateCustom) ? pCsvModel->getColumnStringToDoubleParserDefinition(nColIndexData.value()) : QString();
                         const auto sFormat = InputDialog::getText(
                             this,
                             tr("Column type date/time (custom)"),
                             tr("Enter date format which is used to parse date/time, see documentation of QDateTime for format specification<br>"
                                "Note: Format specifier is not currently stored to csv or conf-file"),
                                 QLineEdit::Normal,
-                                QString(),
+                                sCurrentCustomParserDef,
                                 &bOk);
                         if (!bOk)
                             return; // Not setting column type if dialog was cancelled.
                         columnTypeSetter(CsvItemModel::ColType::date);
-                        pCsvModel->setColumnStringToDoubleParser(nColIndexData.value(), [=](CsvItemModel::ColInfo::StringToDoubleParserParam param)
-                            {
-                                using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
-                                ChartDataType interpretedDataType = ChartDataType::unknown;
-                                const auto rv = DFG_DETAIL_NS::tableCellDateToDoubleWithColumnTypeHandling(
-                                    QDateTime::fromString(viewToQString(param.view()), sFormat),
-                                    ChartDataType::dateAndTimeMillisecond, &interpretedDataType);
-                                param.setInterpretedChartType(interpretedDataType);
-                                return rv;
-                            });
+                        pCsvModel->setColumnStringToDoubleParser(nColIndexData.value(), CsvItemModel::ColInfo::StringToDoubleParser::createQDateTimeParser(std::move(sFormat)));
                     });
             }
         }

@@ -31,11 +31,13 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::setChangeSignaling(const 
     {
         DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, &GraphDataSource::sigChanged));
     }
     else
     {
         DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
         DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, &GraphDataSource::sigChanged));
     }
 }
 
