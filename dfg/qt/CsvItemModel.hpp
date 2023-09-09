@@ -181,7 +181,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                    //    -------------------------- | -----------------
         text,      //    Text comparison            | Built-in or custom
         number,    //    Double comparison          | Built-in or custom
-        date       //    Double comparison          | Built-in or custom (typically QDateTime parser with user-provided format)
+        datetime   //    Double comparison          | Built-in or custom (typically QDateTime parser with user-provided format)
     }; // enum class CsvItemModelColumnType
 
     class CsvItemModel : public QAbstractTableModel

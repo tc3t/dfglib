@@ -1320,7 +1320,7 @@ TEST(dfgQt, CsvTableView_sorting)
             "3,3|1|2020\n"
             "4,4|1|2022\n"
         ));
-        tableWidget.setColumnType(ColumnIndex_data(1), CsvItemModelColumnType::date);
+        tableWidget.setColumnType(ColumnIndex_data(1), CsvItemModelColumnType::datetime);
         tableWidget.getCsvModel().setColumnStringToDoubleParser(
             1,
             CsvItemModel::ColInfo::StringToDoubleParser::createQDateTimeParser("d|M|yyyy")

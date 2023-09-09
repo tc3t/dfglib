@@ -872,12 +872,12 @@ bool CsvItemModel::readData(const LoadOptions& options, std::function<bool()> ta
         {
             const auto colType = this->getColType(c);
             const auto sDefAsQString = QString::fromUtf8(sCustomStringToDoubleParserDef.c_str());
-            if (colType == ColType::date)
+            if (colType == ColType::datetime)
                 this->setColumnStringToDoubleParser(c, ColInfo::StringToDoubleParser::createQDateTimeParser(sDefAsQString));
             else
             {
                 m_messagesFromLatestOpen <<
-                    tr("Warning: Ignored custom string-to-double parser definition '%1', it is only supported for date-typed column, but current type is '%2'.")
+                    tr("Warning: Ignored custom string-to-double parser definition '%1', it is only supported for datetime-typed column, but current type is '%2'.")
                     .arg(sDefAsQString, viewToQString(ColInfo::columnTypeAsString(colType)));
             }
         }
@@ -1936,8 +1936,8 @@ void CsvItemModel::setColumnType(const Index nCol, const StringViewC sColType)
         setColumnType(nCol, ColType::text);
     else if (sColType == ColInfo::columnTypeAsString(ColType::number).asUntypedView())
         setColumnType(nCol, ColType::number);
-    else if (sColType == ColInfo::columnTypeAsString(ColType::date).asUntypedView())
-        setColumnType(nCol, ColType::date);
+    else if (sColType == ColInfo::columnTypeAsString(ColType::datetime).asUntypedView())
+        setColumnType(nCol, ColType::datetime);
     else if (!sColType.empty() && sColType != "default")
     {
         DFG_ASSERT_INVALID_ARGUMENT(false, "Unexpected column type");
@@ -2364,10 +2364,10 @@ auto CsvItemModel::ColInfo::columnTypeAsString(const ColType colType) -> StringV
 {
     switch (colType)
     {
-        case ColType::number: return DFG_UTF8("number");
-        case ColType::date  : return DFG_UTF8("date");
-        case ColType::text  : return DFG_UTF8("text");
-        default             : DFG_ASSERT_IMPLEMENTED(false); return StringViewUtf8();
+        case ColType::number      : return DFG_UTF8("number");
+        case ColType::datetime    : return DFG_UTF8("datetime");
+        case ColType::text        : return DFG_UTF8("text");
+        default                   : DFG_ASSERT_IMPLEMENTED(false); return StringViewUtf8();
     }
 }
 

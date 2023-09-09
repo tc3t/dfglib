@@ -2794,7 +2794,7 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     {
         const QString sInfoPart = (!pModel->m_messagesFromLatestOpen.isEmpty()) ? tr("\n%1").arg(pModel->m_messagesFromLatestOpen.join('\n')) : QString();
         if (!sInfoPart.isEmpty())
-            QMessageBox::information(this, tr("Open messages"), tr("Opening file\n%1\ngenerated the following messages.%2").arg(sPath, sInfoPart));
+            QMessageBox::information(this, tr("Open messages"), tr("Opening file\n%1\ngenerated the following messages:\n%2").arg(sPath, sInfoPart));
         onNewSourceOpened();
     }
     else
@@ -6498,7 +6498,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
                 const auto currentType = pCsvModel->getColType(m_nLatestContextMenuEventColumn_dataModel);
                 const bool bIsTextType = (currentType == CsvItemModel::ColType::text);
                 const bool bIsNumberType = (currentType == CsvItemModel::ColType::number);
-                const bool bIsDateCustom = (currentType == CsvItemModel::ColType::date);
+                const bool bIsDateCustom = (currentType == CsvItemModel::ColType::datetime);
                 QPointer<CsvTableView> spView = pView;
                 const ColumnIndex_data nColIndexData(m_nLatestContextMenuEventColumn_dataModel);
                 const auto columnTypeSetter = [=](const CsvItemModelColumnType newColType)
@@ -6525,7 +6525,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
                                 &bOk);
                         if (!bOk)
                             return; // Not setting column type if dialog was cancelled.
-                        columnTypeSetter(CsvItemModel::ColType::date);
+                        columnTypeSetter(CsvItemModel::ColType::datetime);
                         if (!sFormat.isEmpty())
                             pCsvModel->setColumnStringToDoubleParser(nColIndexData.value(), CsvItemModel::ColInfo::StringToDoubleParser::createQDateTimeParser(std::move(sFormat)));
                         else
@@ -6680,7 +6680,7 @@ bool CsvTableViewSortFilterProxyModel::lessThan(const QModelIndex& sourceLeft, c
         {
             case CsvItemModel::ColType::number:
                 [[fallthrough]];
-            case CsvItemModel::ColType::date:
+            case CsvItemModel::ColType::datetime:
             {
                 const auto dataIndexRight = pView->mapToDataModel(sourceRight);
                 const auto extractNumber = [pCsvModel](const QModelIndex& dataIndex)
