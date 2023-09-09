@@ -2791,7 +2791,12 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
     }
 
     if (bSuccess)
+    {
+        const QString sInfoPart = (!pModel->m_messagesFromLatestOpen.isEmpty()) ? tr("\n%1").arg(pModel->m_messagesFromLatestOpen.join('\n')) : QString();
+        if (!sInfoPart.isEmpty())
+            QMessageBox::information(this, tr("Open messages"), tr("Opening file\n%1\ngenerated the following messages.%2").arg(sPath, sInfoPart));
         onNewSourceOpened();
+    }
     else
     {
         const QString sInfoPart = (!pModel->m_messagesFromLatestOpen.isEmpty()) ? tr("\nThe following message(s) were generated:\n%1").arg(pModel->m_messagesFromLatestOpen.join('\n')) : tr("\nThere are no details about the problem available.");
@@ -3842,20 +3847,18 @@ namespace
         return false;
     }
 
-    static double cellValueAsDouble(::DFG_MODULE_NS(qt)::CsvItemModel::DataTable* pTable, const double rowDouble, const double colDouble)
+    static double cellValueAsDouble(const ::DFG_MODULE_NS(qt)::CsvItemModel* pModel, const double rowDouble, const double colDouble)
     {
         using namespace ::DFG_MODULE_NS(math);
         using namespace ::DFG_MODULE_NS(qt);
-        if (!pTable)
+        if (!pModel)
             return std::numeric_limits<double>::quiet_NaN();
-        int r, c;
-        if (!isFloatConvertibleTo<int>(rowDouble, &r) || !isFloatConvertibleTo(colDouble, &c))
+        CsvItemModel::Index r, c;
+        if (!isFloatConvertibleTo(rowDouble, &r) || !isFloatConvertibleTo(colDouble, &c))
             return std::numeric_limits<double>::quiet_NaN();
-        r = ::DFG_MODULE_NS(qt)::CsvItemModel::visibleRowIndexToInternal(r);
-        c = ::DFG_MODULE_NS(qt)::CsvItemModel::visibleRowIndexToInternal(c);
-        const auto tpsz = (*pTable)(r, c);
-        const auto rv = (tpsz) ? tableCellStringToDouble(tpsz) : std::numeric_limits<double>::quiet_NaN();
-        return rv;
+        r = CsvItemModel::visibleRowIndexToInternal(r);
+        c = CsvItemModel::visibleRowIndexToInternal(c);
+        return pModel->cellDataAsDouble(r, c);
     }
 } // unnamed namespace
 
@@ -3934,8 +3937,7 @@ bool CsvTableView::generateContentImpl(const CsvModel& settingsModel)
         double tc = std::numeric_limits<double>::quiet_NaN();
         const double rowCount = rModel.rowCount();
         const double colCount = rModel.columnCount();
-        CsvItemModel::DataTable* pTable = nullptr;
-        if (!parser.defineFunctor("cellValue", [&](double r, double c) { return cellValueAsDouble(pTable, r, c); }, false)
+        if (!parser.defineFunctor("cellValue", [&](double r, double c) { return cellValueAsDouble(pModel, r, c); }, false)
             || !parser.defineVariable("trow", &tr)
             || !parser.defineVariable("tcol", &tc)
             || !parser.defineConstant("rowcount", rowCount)
@@ -3947,7 +3949,6 @@ bool CsvTableView::generateContentImpl(const CsvModel& settingsModel)
         const auto formatType = adjustFormatAndGetType(pszFormat);
         const auto generator = [&](CsvItemModel::DataTable& table, const int r, const int c, size_t)
         {
-            pTable = &table;
             tr = CsvItemModel::internalRowIndexToVisible(r);
             tc = CsvItemModel::internalColumnIndexToVisible(c);
             const auto val = parser.evaluateFormulaAsDouble();
@@ -6513,18 +6514,22 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
                             return;
                         bool bOk = false;
                         const auto sCurrentCustomParserDef = (bIsDateCustom) ? pCsvModel->getColumnStringToDoubleParserDefinition(nColIndexData.value()) : QString();
-                        const auto sFormat = InputDialog::getText(
+                        auto sFormat = InputDialog::getText(
                             this,
-                            tr("Column type date/time (custom)"),
-                            tr("Enter date format which is used to parse date/time, see documentation of QDateTime for format specification<br>"
-                               "Note: Format specifier is not currently stored to csv or conf-file"),
+                            tr("Column type date/time"),
+                            tr("Enter date format which is used to parse date/time, see documentation of QDateTime for format specification.<br>"
+                               "If format is left empty, text is parsed with built-in parser.<br><br>"
+                               "Note: to store the format permanently, it needs to be saved to config-file"),
                                 QLineEdit::Normal,
                                 sCurrentCustomParserDef,
                                 &bOk);
                         if (!bOk)
                             return; // Not setting column type if dialog was cancelled.
                         columnTypeSetter(CsvItemModel::ColType::date);
-                        pCsvModel->setColumnStringToDoubleParser(nColIndexData.value(), CsvItemModel::ColInfo::StringToDoubleParser::createQDateTimeParser(std::move(sFormat)));
+                        if (!sFormat.isEmpty())
+                            pCsvModel->setColumnStringToDoubleParser(nColIndexData.value(), CsvItemModel::ColInfo::StringToDoubleParser::createQDateTimeParser(std::move(sFormat)));
+                        else
+                            pCsvModel->setColumnStringToDoubleParser(nColIndexData.value(), CsvItemModel::ColInfo::StringToDoubleParser());
                     });
             }
         }

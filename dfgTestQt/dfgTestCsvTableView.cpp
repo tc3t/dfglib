@@ -1309,6 +1309,25 @@ TEST(dfgQt, CsvTableView_sorting)
         tableWidget.sortByColumn(0, Qt::DescendingOrder);
         DFGTEST_EXPECT_LEFT("\n2.0\n2.000\n2.00\n1.0\n1.000\n1.00\n\na\n", saveToString(tableWidget));
     }
+
+    // Date sorting with custom date/time parser
+    {
+        CsvTableWidget tableWidget;
+        DFGTEST_EXPECT_TRUE(tableWidget.getCsvModel().openString(
+            ",\n"
+            "1,1|1|2021\n"
+            "2,2|1|2023\n"
+            "3,3|1|2020\n"
+            "4,4|1|2022\n"
+        ));
+        tableWidget.setColumnType(ColumnIndex_data(1), CsvItemModelColumnType::date);
+        tableWidget.getCsvModel().setColumnStringToDoubleParser(
+            1,
+            CsvItemModel::ColInfo::StringToDoubleParser::createQDateTimeParser("d|M|yyyy")
+        );
+        tableWidget.sortByColumn(1, Qt::AscendingOrder);
+        DFGTEST_EXPECT_LEFT(",\n3,3|1|2020\n1,1|1|2021\n4,4|1|2022\n2,2|1|2023\n", saveToString(tableWidget));
+    }
 }
 
 TEST(dfgQt, CsvTableView_populateCsvConfig)

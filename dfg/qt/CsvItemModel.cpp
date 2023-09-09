@@ -866,6 +866,22 @@ bool CsvItemModel::readData(const LoadOptions& options, std::function<bool()> ta
         // Setting column type
         this->setColumnType(c, getConfigColumnPropertyC("datatype"));
 
+        // Setting custom string-to-double parser if such is present in config
+        const auto sCustomStringToDoubleParserDef = getConfigColumnPropertyC("stringToDoubleParserDefinition");
+        if (!sCustomStringToDoubleParserDef.empty())
+        {
+            const auto colType = this->getColType(c);
+            const auto sDefAsQString = QString::fromUtf8(sCustomStringToDoubleParserDef.c_str());
+            if (colType == ColType::date)
+                this->setColumnStringToDoubleParser(c, ColInfo::StringToDoubleParser::createQDateTimeParser(sDefAsQString));
+            else
+            {
+                m_messagesFromLatestOpen <<
+                    tr("Warning: Ignored custom string-to-double parser definition '%1', it is only supported for date-typed column, but current type is '%2'.")
+                    .arg(sDefAsQString, viewToQString(ColInfo::columnTypeAsString(colType)));
+            }
+        }
+
         // Setting read-only mode
         {
             const auto sReadOnly = getConfigColumnPropertyC("readOnly");
@@ -1023,8 +1039,8 @@ void CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvConfig& config) const
     {
         const auto existingConfig = getConfig();
         char szBuffer[64];
-        const auto formatToBuffer = [&](const char* pszFormat, const int nCol) { ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), pszFormat, nCol); };
-        for (int c = 0, nCount = this->columnCount(); c < nCount; ++c)
+        const auto formatToBuffer = [&](const char* pszFormat, const Index nCol) { ::DFG_MODULE_NS(str)::DFG_DETAIL_NS::sprintf_s(szBuffer, sizeof(szBuffer), pszFormat, nCol); };
+        for (Index c = 0, nCount = this->columnCount(); c < nCount; ++c)
         {
             const auto nVisibleColumnIndex = internalColumnIndexToVisible(c);
             formatToBuffer("columnsByIndex/%d/datatype", nVisibleColumnIndex);
@@ -1033,6 +1049,10 @@ void CsvItemModel::populateConfig(DFG_MODULE_NS(cont)::CsvConfig& config) const
             {
                 config.setKeyValue(StringUtf8(SzPtrUtf8(szBuffer)), this->getColTypeAsString(c).toString());
             }
+            // Adding custom string-to-double parser definition if it's non-empty.
+            const auto strToDoubleParserDef = this->getColumnStringToDoubleParserDefinition(c);
+            if (!strToDoubleParserDef.isEmpty())
+                config.setKeyValue(StringUtf8::fromRawString(format_fmt("columnsByIndex/{}/stringToDoubleParserDefinition", nVisibleColumnIndex)), qStringToStringUtf8(strToDoubleParserDef));
         }
     }
 }
