@@ -725,6 +725,7 @@ namespace
             pParentMenu->addAction(pMenuAction);
         else
             pParent->addAction(pMenuAction);
+        pMenu->setToolTipsVisible(true);
         return pMenu;
     }
 
