@@ -947,7 +947,10 @@ void CsvTableView::addOpenSaveActions()
         if (pMenu)
         {
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Open file with options..."), noShortCut, ActionFlags::unknown, openFromFileWithOptions);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Reload from file"),          noShortCut, ActionFlags::unknown, reloadFromFile);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Reload from file"),          noShortCut, ActionFlags::unknown, reloadFromFileFromScratch);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Reload from file (reuse previous load settings)"), noShortCut, ActionFlags::unknown, reloadFromFileWithPreviousLoadOptions)
+                .setToolTip(tr("This reload style e.g. reuses previously used settings if file was opened with 'Open file with options'.\n"
+                 "Note that changes done to config file after previous open won't be taken into account if reloading with this action"));
         }
     }
 
@@ -2884,7 +2887,17 @@ bool CsvTableView::openFromFileWithOptions()
     return openFile(sPath, loadOptions);
 }
 
-auto CsvTableView::reloadFromFile() -> bool
+bool CsvTableView::reloadFromFileFromScratch()
+{
+    return reloadFromFileImpl(false);
+}
+
+bool CsvTableView::reloadFromFileWithPreviousLoadOptions()
+{
+    return reloadFromFileImpl(true);
+}
+
+bool CsvTableView::reloadFromFileImpl(const bool bUseOldLoadOptions)
 {
     auto pCsvModel = csvModel();
     const auto sPath = (pCsvModel) ? pCsvModel->getFilePath() : QString();
@@ -2897,7 +2910,8 @@ auto CsvTableView::reloadFromFile() -> bool
     if (!getProceedConfirmationFromUserIfInModifiedState(tr("reload table from file")))
         return false;
     
-    if (!sPath.isEmpty() && openFile(sPath, pCsvModel->getOpenTimeLoadOptions())) // Note: using old open time load options, which is needed e.g. to keep filter options in case of "open with options", means that if one changes .conf-file, it won't be taken into account on reload.
+    const bool bOpenSuccessful = !sPath.isEmpty() && ((bUseOldLoadOptions) ? openFile(sPath, pCsvModel->getOpenTimeLoadOptions()) : openFile(sPath));
+    if (bOpenSuccessful)
         return true;
     else
     {

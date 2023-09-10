@@ -603,7 +603,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool createNewTableFromClipboard();
         bool openFromFile();
         bool openFromFileWithOptions();
-        bool reloadFromFile();
+        bool reloadFromFileFromScratch();
+        bool reloadFromFileWithPreviousLoadOptions();
         bool mergeFilesToCurrent();
         bool save();
         bool saveToFile();
@@ -772,6 +773,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString getFilePathFromFileDialog(const QString& sCaption);
 
         void forEachUserInsertableConfFileProperty(std::function<void(const DFG_DETAIL_NS::ConfFileProperty&)> propHandler) const;
+
+        bool reloadFromFileImpl(bool bUseOldLoadOptions);
 
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;
