@@ -432,6 +432,7 @@ TableEditor::TableEditor()
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFindActivated, this, &ThisClass::onFindRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterActivated, this, &ThisClass::onFilterRequested));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterJsonRequested, this, &ThisClass::setFilterJson));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterToColumnRequested, this, &ThisClass::setFilterToColumn));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigReadOnlyModeChanged, this, &ThisClass::onViewReadOnlyModeChanged));
     // Setting default selection details from app settings.
     setSelectionDetailsFromIni(getTableEditorProperty<TableEditorPropertyId_selectionDetails>(this));
@@ -1185,6 +1186,56 @@ void TableEditor::setFilterJson(const QString& sJson)
     m_spFilterPanel->m_pTextEdit->setText(sJson);
 }
 
+void TableEditor::setFilterToColumn(const Index nDataCol, const QVariantMap& filterDef)
+{
+    if (!m_spFilterPanel)
+        return;
+    const auto sPattern = m_spFilterPanel->getPattern().trimmed();
+    const auto syntaxType = m_spFilterPanel->getPatternSyntax();
+    const auto sNewItem = QJsonDocument::fromVariant(filterDef).toJson(QJsonDocument::Compact);
+    auto sNewText = sNewItem;
+    if (syntaxType == PatternMatcher::PatternSyntax::Json)
+    {
+        // When already have json-typed filter, need to check if there is existing filter for this column
+        // so that setting new filter doesn't create a duplicate entry.
+        // Also removing all non-column filters here.
+        auto jsonBytes = sPattern.toUtf8();
+        convertSpaceSeparatedJsonListToNewLineSeparated(jsonBytes, nullptr);
+        auto jsonItems = jsonBytes.split('\n');
+        const auto sVisibleColumnIndex = QString::number(CsvItemModel::internalColumnIndexToVisible(nDataCol));
+        const QString sAndGroup = TableStringMatchDefinition::makeColumnFilterAndGroupId();
+        auto nExistingItem = jsonItems.size();
+        std::vector<bool> keepFlags(static_cast<size_t>(jsonItems.size()) + 1u, true);
+        for (decltype(nExistingItem) i = 0; i < jsonItems.size(); ++i)
+        {
+            QJsonParseError parseError;
+            const auto jsonObj = QJsonDocument::fromJson(jsonItems[i], &parseError).object();
+            if (parseError.error != QJsonParseError::NoError)
+            {
+                keepFlags[i] = false; // Marking invalid items for removal
+                continue;
+            }
+            if (jsonObj.value(StringMatchDefinitionField_andGroup).toString() == sAndGroup)
+            {
+                if (jsonObj.value(StringMatchDefinitionField_applyColumns).toString() == sVisibleColumnIndex)
+                    nExistingItem = i;
+            }
+            else
+                keepFlags[i] = false; // Marking items that are not column filters for removal
+        }
+        if (isValidIndex(jsonItems, nExistingItem))
+            jsonItems[nExistingItem] = sNewItem;
+        else
+            jsonItems.push_back(sNewItem);
+
+        ::DFG_MODULE_NS(alg)::keepByFlags(jsonItems, keepFlags);
+
+        sNewText = jsonItems.join(' ');
+    }
+
+    setFilterJson(QString::fromUtf8(sNewText));
+}
+
 void TableEditor::onFilterTextChanged(const QString& text)
 {
     if (!m_spFilterPanel)
@@ -1275,7 +1326,7 @@ namespace
     }
 }
 
-void TableEditor::onFindColumnChanged(const int newCol)
+void TableEditor::onFindColumnChanged(const Index newCol)
 {
     // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(newCol);
@@ -1287,7 +1338,7 @@ void TableEditor::onFindColumnChanged(const int newCol)
     onHighlightTextChanged(m_spFindPanel->m_pTextEdit->text());
 }
 
-void TableEditor::onFilterColumnChanged(const int nNewCol)
+void TableEditor::onFilterColumnChanged(const Index nNewCol)
 {
     // Note: changing syntax type also calls this so if planning to take nNewCol into use, introduce separate handler for that.
     DFG_UNUSED(nNewCol);

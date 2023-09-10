@@ -148,6 +148,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
     public:
         using BaseClass = StringMatchDefinition;
+        using Index = int; // Should be identical to CsvItemModel::Index
         using IntervalSet = ::DFG_MODULE_NS(cont)::IntervalSet<int>;
 
         TableStringMatchDefinition(BaseClass&& base) :
@@ -155,6 +156,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {}
 
         static QString jsonExampleFullSingle() { return R"({"text": "match string", "type": "reg_exp", "case_sensitive": true, "apply_rows":"1:3;5", "apply_columns":"1;4;6", "and_group":"a"})"; }
+        static QString makeColumnFilterAndGroupId() { return QString("__column_filters"); }
 
         // Returns TableStringMatchDefinition and id of and_group.
         static std::pair<TableStringMatchDefinition, std::string> fromJson(const StringViewUtf8& sv, const int nUserToInternalRowOffset, const int nUserToInternalColumnOffset)
@@ -264,6 +266,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         constexpr char StringMatchDefinitionFieldValue_type_regExp[]       = "reg_exp";
     constexpr char StringMatchDefinitionField_case[]    = "case_sensitive";
     constexpr char StringMatchDefinitionField_text[]    = "text";
+    constexpr char StringMatchDefinitionField_applyColumns[]    = "apply_columns";
+    constexpr char StringMatchDefinitionField_andGroup[]        = "and_group";
 
 }} // Module namespace
 

@@ -55,6 +55,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef CsvItemModel ModelClass;
         typedef CsvTableViewSortFilterProxyModel ProxyModelClass;
         typedef CsvTableView ViewClass;
+        using Index = int; // Should be identical to CsvItemModel::Index
 
         enum ColumnResizeStyle
         {
@@ -126,11 +127,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void handlePendingEdits();
         void onHighlightTextChanged(const QString& text);
         void onFilterTextChanged(const QString& text);
-        void onFindColumnChanged(int newCol);
-        void onFilterColumnChanged(int nNewCol);
+        void onFindColumnChanged(Index newCol);
+        void onFilterColumnChanged(Index nNewCol);
         void onFindRequested();
         void onFilterRequested();
         void setFilterJson(const QString& sJson);
+        void setFilterToColumn(Index nDataCol, const QVariantMap& filterDef);
         void onHighlightTextCaseSensitivityChanged(bool);
         void onFilterCaseSensitivityChanged(bool);
         void onViewReadOnlyModeChanged(bool);

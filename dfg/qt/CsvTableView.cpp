@@ -4307,6 +4307,32 @@ void CsvTableView::setFilterFromSelection(const CsvTableViewSelectionFilterFlags
     Q_EMIT sigFilterJsonRequested(sFilter);
 }
 
+void CsvTableView::onFilterToColumnRequested(const Index nDataCol)
+{
+    const QMetaMethod signalMetaMethod = QMetaMethod::fromSignal(&ThisClass::sigFilterToColumnRequested);
+    if (!isSignalConnected(signalMetaMethod))
+    {
+        showStatusInfoTip(tr("Sorry, standalone filter is not implemented."));
+        return;
+    }
+    const auto nUserColumn = CsvItemModel::internalColumnIndexToVisible(nDataCol);
+    QVariantMap jsonFields;
+    bool bOk = false;
+    jsonFields[StringMatchDefinitionField_text] = InputDialog::getText(
+        this,
+        tr("Set filter to column"),
+        tr("Enter filter to column %1 ('%2')\nin regular expression syntax.").arg(nUserColumn).arg(this->getColumnName(ColumnIndex_data(nDataCol))),
+        QLineEdit::Normal,
+        QString(), // TODO: if there's existing filter on this column, could put it here.
+        &bOk);
+    if (!bOk)
+        return;
+    jsonFields[StringMatchDefinitionField_type] = StringMatchDefinitionFieldValue_type_regExp;
+    jsonFields[StringMatchDefinitionField_applyColumns] = QString::number(nUserColumn);
+    jsonFields[StringMatchDefinitionField_andGroup] = TableStringMatchDefinition::makeColumnFilterAndGroupId();
+    Q_EMIT sigFilterToColumnRequested(nDataCol, jsonFields);
+}
+
 void CsvTableView::onGoToCellTriggered()
 {
     auto pModel = model();
@@ -6437,6 +6463,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
     if (!pEvent)
         return;
     m_nLatestContextMenuEventColumn_dataModel = columnIndex_dataModel(pEvent->pos());
+    const auto nLocalEventColumn_dataModel = m_nLatestContextMenuEventColumn_dataModel;
 
     auto pView = tableView();
     if (!pView)
@@ -6487,6 +6514,7 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
         // Column specific entries (not necessarily present e.g. if click happened outside columns)
         if (m_nLatestContextMenuEventColumn_dataModel != -1)
         {
+            QPointer<CsvTableView> spView = pView;
             addSectionEntryToMenu(&menu, tr("Column  %1 ('%2')")
                 .arg(CsvItemModel::internalColumnIndexToVisible(m_nLatestContextMenuEventColumn_dataModel))
                 .arg(pCsvModel->getHeaderName(m_nLatestContextMenuEventColumn_dataModel).left(32)));
@@ -6505,6 +6533,9 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
                 const bool bReadOnly = rView.getColumnPropertyByDataModelIndex(m_nLatestContextMenuEventColumn_dataModel, CsvItemModelColumnProperty::readOnly, false).toBool();
                 addViewAction(rView, menu, tr("Read-only"), noShortCut, ActionFlags::readOnly, { true, bReadOnly }, funcReadOnlyHandler);
             }
+            // Filter
+            addViewAction(rView, menu, tr("Set filter..."), noShortCut, ActionFlags::viewEdit, false, [=]() { if (spView) spView->onFilterToColumnRequested(nLocalEventColumn_dataModel); });
+                
             auto pTypeMenu = menu.addMenu(tr("Data type"));
             if (pTypeMenu)
             {
@@ -6514,7 +6545,6 @@ void TableHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
                 const bool bIsTextType = (currentType == CsvItemModel::ColType::text);
                 const bool bIsNumberType = (currentType == CsvItemModel::ColType::number);
                 const bool bIsDateCustom = (currentType == CsvItemModel::ColType::datetime);
-                QPointer<CsvTableView> spView = pView;
                 const ColumnIndex_data nColIndexData(m_nLatestContextMenuEventColumn_dataModel);
                 const auto columnTypeSetter = [=](const CsvItemModelColumnType newColType)
                 {

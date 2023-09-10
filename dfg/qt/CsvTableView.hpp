@@ -661,6 +661,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onFilterRequested();
         void onFilterFromSelectionRequested();
+        void onFilterToColumnRequested(Index nDataCol);
 
         void setCaseSensitiveSorting(bool bCaseSensitive);
         void toggleSortingEnabled(bool bNewStatus);
@@ -723,6 +724,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void sigFindActivated();
         void sigFilterActivated();
         void sigFilterJsonRequested(QString);
+        void sigFilterToColumnRequested(Index, const QVariantMap&); // First argument is column data index and second is filter definition.
         void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedItems);
         void sigOnAllowApplicationSettingsUsageChanged(bool);
         void sigReadOnlyModeChanged(bool);
