@@ -5650,6 +5650,11 @@ auto CsvTableView::horizontalTableHeader() -> TableHeaderView*
     return qobject_cast<TableHeaderView*>(horizontalHeader());
 }
 
+auto CsvTableView::horizontalTableHeader() const -> const TableHeaderView*
+{
+    return qobject_cast<const TableHeaderView*>(horizontalHeader());
+}
+
 void CsvTableView::setColumnNames()
 {
     auto pCsvModel = this->csvModel();
@@ -6028,8 +6033,16 @@ auto CsvTableView::columnIndexViewToData(const ColumnIndex_view viewIndex) const
     if (!pProxy)
         return ColumnIndex_data(viewIndex.value());
 
-    const auto mapped = pProxy->mapToSource(pProxy->index(0, viewIndex.value()));
-    return (mapped.column() >= 0) ? ColumnIndex_data(mapped.column()) : ColumnIndex_data();
+    if (pProxy->rowCount() > 0) // Mapping through proxy model works only when there are rows
+    {
+        const auto mapped = pProxy->mapToSource(pProxy->index(0, viewIndex.value()));
+        return (mapped.column() >= 0) ? ColumnIndex_data(mapped.column()) : ColumnIndex_data();
+    }
+    else // When there no rows in proxy, need to map differently
+    {
+        auto pHeaderView = this->horizontalTableHeader();
+        return (pHeaderView) ? pHeaderView->columnIndex_dataModel(viewIndex) : ColumnIndex_data();
+    }
 }
 
 QString CsvTableView::getCellString(const RowIndex_view r, const ColumnIndex_view c) const
@@ -6431,14 +6444,19 @@ const CsvTableView* TableHeaderView::tableView() const
 
 int TableHeaderView::columnIndex_dataModel(const QPoint& pos) const
 {
-    const auto viewColumn = columnIndex_viewModel(pos);
+    return columnIndex_dataModel(ColumnIndex_view(columnIndex_viewModel(pos))).value();
+}
+
+auto TableHeaderView::columnIndex_dataModel(const ColumnIndex_view nViewCol) const -> ColumnIndex_data
+{
+    const auto viewColumn = nViewCol.value();
     if (viewColumn == -1)
-        return -1;
+        return ColumnIndex_data();
 
     auto pView = tableView();
     auto pCsvModel = (pView) ? pView->csvModel() : nullptr;
     if (!pCsvModel)
-        return -1;
+        return ColumnIndex_data();
 
     auto& rView = *pView;
     // Not an optimal way to determine column index when there are lots of columns
@@ -6448,9 +6466,9 @@ int TableHeaderView::columnIndex_dataModel(const QPoint& pos) const
         if (bVisible)
             ++nVisibleColumn;
         if (nVisibleColumn == viewColumn)
-            return nModelColumn;
+            return ColumnIndex_data(nModelColumn);
     }
-    return -1;
+    return ColumnIndex_data();
 }
 
 int TableHeaderView::columnIndex_viewModel(const QPoint& pos) const

@@ -276,6 +276,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         const CsvTableView* tableView() const;
 
         int columnIndex_dataModel(const QPoint& pos) const;
+        ColumnIndex_data columnIndex_dataModel(ColumnIndex_view nViewCol) const;
         int columnIndex_viewModel(const QPoint& pos) const;
 
         // Protected base class overrides -->
@@ -503,7 +504,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                                                                     // to express the intent better guaranteeing that operation does not modify data model.
         DFG_NODISCARD LockReleaser tryLockForRead() const;
 
-        TableHeaderView* horizontalTableHeader();
+              TableHeaderView* horizontalTableHeader();
+        const TableHeaderView* horizontalTableHeader() const;
 
         // Adds a callback that is called to fetch additional properties for config file when saving
         void addConfigSavePropertyFetcher(PropertyFetcher fetcher);

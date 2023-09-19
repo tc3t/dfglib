@@ -1007,6 +1007,38 @@ TEST(dfgQt, CsvTableView_columnIndexMappingWithHiddenColumns)
     }
 }
 
+TEST(dfgQt, CsvTableView_columnIndexMappingWithEmptyFilteredTable)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    CsvTableWidget view;
+    // Opening table with two rows and two columns
+    DFGTEST_ASSERT_TRUE(view.getCsvModel().openString("\na,1\nb,2"));
+    // Testing that column mapping works as expected
+    DFGTEST_EXPECT_LEFT(0, view.columnIndexViewToData(ColumnIndex_view(0)).value());
+    // Filtering out one row and testing that column mapping works as expected
+    view.getViewModel().setFilterFixedString("1");
+    DFGTEST_EXPECT_LEFT(0, view.columnIndexViewToData(ColumnIndex_view(0)).value());
+    DFGTEST_EXPECT_LEFT(1, view.columnIndexViewToData(ColumnIndex_view(1)).value());
+    // Filtering out both rows
+    view.getViewModel().setFilterFixedString("3");
+    DFGTEST_EXPECT_LEFT(0, view.columnIndexViewToData(ColumnIndex_view(0)).value());
+    DFGTEST_EXPECT_LEFT(1, view.columnIndexViewToData(ColumnIndex_view(1)).value());
+    // Hiding first column
+    view.setColumnVisibility(0, false);
+    DFGTEST_EXPECT_LEFT(1, view.columnIndexViewToData(ColumnIndex_view(0)).value());
+    // Removing filter
+    view.getViewModel().setFilterWildcard("*");
+    DFGTEST_EXPECT_LEFT(1, view.columnIndexViewToData(ColumnIndex_view(0)).value());
+    // Unhiding first column
+    view.unhideAllColumns();
+    DFGTEST_EXPECT_LEFT(0, view.columnIndexViewToData(ColumnIndex_view(0)).value());
+    DFGTEST_EXPECT_LEFT(1, view.columnIndexViewToData(ColumnIndex_view(1)).value());
+
+    // Note: there are no similar tests for rows because if view model is empty due to filter,
+    //       view model typically still has columns so there is a view column to map from/to.
+    //       But since there no rows, there is no valid view row index to map.
+}
+
 TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue)
 {
     using namespace ::DFG_MODULE_NS(qt);
