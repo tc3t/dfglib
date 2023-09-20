@@ -7,6 +7,7 @@
 #include <memory>
 #include <atomic>
 #include <functional>
+#include <optional>
 #include <tuple>
 #include "../OpaquePtr.hpp"
 #include "../cont/Flags.hpp"
@@ -101,6 +102,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         class ConfFileProperty;
     } // namespace DFG_DETAIL_NS
 
+    using ColumnIndex_data = DFG_DETAIL_NS::TypedTableIndex<'c'>;
+    using ColumnIndex_view = DFG_DETAIL_NS::TypedTableIndex<'C'>;
+
+    using RowIndex_data = DFG_DETAIL_NS::TypedTableIndex<'r'>;
+    using RowIndex_view = DFG_DETAIL_NS::TypedTableIndex<'R'>;
+
     class CsvTableViewSortFilterProxyModel : public QSortFilterProxyModel
     {
         Q_OBJECT
@@ -120,6 +127,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Returns true if need to map view(row,col) to data(row,col), false if (row, col) pairs are identical in both models.
         bool isItemIndexMappingNeeded() const;
 
+        std::optional<QString> getColumnFilterText(ColumnIndex_data nCol) const;
+
     protected:
         bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
         bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
@@ -127,12 +136,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableViewSortFilterProxyModel
-
-    using ColumnIndex_data = DFG_DETAIL_NS::TypedTableIndex<'c'>;
-    using ColumnIndex_view = DFG_DETAIL_NS::TypedTableIndex<'C'>;
-
-    using RowIndex_data = DFG_DETAIL_NS::TypedTableIndex<'r'>;
-    using RowIndex_view = DFG_DETAIL_NS::TypedTableIndex<'R'>;
 
     // Analyzes item selection
     class CsvTableViewSelectionAnalyzer : public QObject
@@ -419,6 +422,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QAbstractProxyModel* getProxyModelPtr();
         const QAbstractProxyModel* getProxyModelPtr() const;
 
+              CsvTableViewSortFilterProxyModel* getProxySortFilterModelPtr();
+        const CsvTableViewSortFilterProxyModel* getProxySortFilterModelPtr() const;
+
         bool saveToFileImpl(const QString& path, const CsvFormatDefinition& formatDef);
         bool saveToFileImpl(const CsvFormatDefinition& formatDef);
 
@@ -580,6 +586,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         template <class T, class Param0_T, class Param1_T, class Param2_T>
         void pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2);
+
+        template <class T, class This_T>
+        static T* getProxyModelAs(This_T& rThis);
 
     public:
         template <class This_T, class Func_T>

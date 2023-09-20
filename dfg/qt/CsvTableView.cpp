@@ -4044,14 +4044,30 @@ bool CsvTableView::moveHeaderToFirstRow()
         return false;
 }
 
+template <class T, class This_T>
+T* CsvTableView::getProxyModelAs(This_T& rThis)
+{
+    return qobject_cast<T*>(rThis.model());
+}
+
 QAbstractProxyModel* CsvTableView::getProxyModelPtr()
 {
-    return qobject_cast<QAbstractProxyModel*>(model());
+    return getProxyModelAs<QAbstractProxyModel>(*this);
 }
 
 const QAbstractProxyModel* CsvTableView::getProxyModelPtr() const
 {
-    return qobject_cast<const QAbstractProxyModel*>(model());
+    return getProxyModelAs<const QAbstractProxyModel>(*this);
+}
+
+auto CsvTableView::getProxySortFilterModelPtr() -> CsvTableViewSortFilterProxyModel*
+{
+    return getProxyModelAs<CsvTableViewSortFilterProxyModel>(*this);
+}
+
+auto CsvTableView::getProxySortFilterModelPtr() const -> const CsvTableViewSortFilterProxyModel*
+{
+    return getProxyModelAs<const CsvTableViewSortFilterProxyModel>(*this);
 }
 
 bool CsvTableView::diffWithUnmodified()
@@ -4318,12 +4334,14 @@ void CsvTableView::onFilterToColumnRequested(const Index nDataCol)
     const auto nUserColumn = CsvItemModel::internalColumnIndexToVisible(nDataCol);
     QVariantMap jsonFields;
     bool bOk = false;
+    auto pProxy = this->getProxySortFilterModelPtr();
     jsonFields[StringMatchDefinitionField_text] = InputDialog::getText(
         this,
         tr("Set filter to column"),
-        tr("Enter filter to column %1 ('%2')\nin regular expression syntax.").arg(nUserColumn).arg(this->getColumnName(ColumnIndex_data(nDataCol))),
+        tr("Enter filter to column %1 ('%2')\nin regular expression syntax.\n"
+            "Entering empty text clears filter.").arg(nUserColumn).arg(this->getColumnName(ColumnIndex_data(nDataCol))),
         QLineEdit::Normal,
-        QString(), // TODO: if there's existing filter on this column, could put it here.
+        (pProxy) ? pProxy->getColumnFilterText(ColumnIndex_data(nDataCol)).value_or(QString()) : QString(),
         &bOk);
     if (!bOk)
         return;
@@ -6613,15 +6631,28 @@ void TableHeaderView::initStyleOptionForIndex(QStyleOptionHeader* option, const 
     // Rationale is that center alignment looks a bit better when text fits,
     // but when section is smaller than text, left align seems more appropriate since it deterministically
     // shows the beginning part of the name instead of an arbitrary part from the middle.
-    if (option)
+    if (!option)
+        return;
+
+    auto pView = this->tableView();
+    auto pProxyModel = pView->getProxySortFilterModelPtr();
+    if (pProxyModel)
     {
-        const auto nHa = option->fontMetrics.horizontalAdvance(option->text);
-        const auto nSectSize = this->sectionSize(logicalIndex);
-        if (nHa < nSectSize)
-        {
-            option->textAlignment.setFlag(Qt::AlignLeft, false);
-            option->textAlignment.setFlag(Qt::AlignHCenter);
-        }
+        const auto nDataCol = pView->columnIndexViewToData(ColumnIndex_view(logicalIndex));
+        const auto optColFilter = pProxyModel->getColumnFilterText(nDataCol);
+        if (optColFilter.has_value())
+            option->text += tr(" (filter '%1')").arg(optColFilter.value());
+    }
+    // If would like to change the implementation to show the filter text on a dedicated widget,
+    // https://stackoverflow.com/questions/27000484/add-custom-widgets-as-qtablewidget-horizontalheader
+    // https://blog.qt.io/blog/2012/09/28/qt-support-weekly-27-widgets-on-a-header/
+    // might provide hints further.
+    const auto nHa = option->fontMetrics.horizontalAdvance(option->text);
+    const auto nSectSize = this->sectionSize(logicalIndex);
+    if (nHa < nSectSize)
+    {
+        option->textAlignment.setFlag(Qt::AlignLeft, false);
+        option->textAlignment.setFlag(Qt::AlignHCenter);
     }
 }
 #endif
@@ -6809,6 +6840,24 @@ void CsvTableViewSortFilterProxyModel::setFilterFromNewLineSeparatedJsonList(con
 #else // Case: Qt version < 6.0
     this->invalidateFilter();
 #endif
+}
+
+std::optional<QString> CsvTableViewSortFilterProxyModel::getColumnFilterText(const ColumnIndex_data nCol) const
+{
+    auto pImpl = DFG_OPAQUE_PTR();
+    if (!pImpl || pImpl->m_matchers.empty() || nCol.value() == ColumnIndex_data().value())
+        return std::nullopt;
+
+
+    auto iterColFilterGroup = pImpl->m_matchers.m_matchers.find(TableStringMatchDefinition::makeColumnFilterAndGroupId().toStdString());
+    if (iterColFilterGroup == pImpl->m_matchers.m_matchers.end())
+        return std::nullopt;
+    for (const auto& matcher : iterColFilterGroup->second)
+    {
+        if (matcher.isApplyColumn(nCol.value()))
+            return matcher.matchString();
+    }
+    return std::nullopt;
 }
 
 
