@@ -129,6 +129,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         std::optional<QString> getColumnFilterText(ColumnIndex_data nCol) const;
 
+        QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
     protected:
         bool filterAcceptsColumn(int sourceRow, const QModelIndex& sourceParent) const override;
         bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;

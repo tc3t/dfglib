@@ -6634,15 +6634,6 @@ void TableHeaderView::initStyleOptionForIndex(QStyleOptionHeader* option, const 
     if (!option)
         return;
 
-    auto pView = this->tableView();
-    auto pProxyModel = pView->getProxySortFilterModelPtr();
-    if (pProxyModel)
-    {
-        const auto nDataCol = pView->columnIndexViewToData(ColumnIndex_view(logicalIndex));
-        const auto optColFilter = pProxyModel->getColumnFilterText(nDataCol);
-        if (optColFilter.has_value())
-            option->text += tr(" (filter '%1')").arg(optColFilter.value());
-    }
     // If would like to change the implementation to show the filter text on a dedicated widget,
     // https://stackoverflow.com/questions/27000484/add-custom-widgets-as-qtablewidget-horizontalheader
     // https://blog.qt.io/blog/2012/09/28/qt-support-weekly-27-widgets-on-a-header/
@@ -6858,6 +6849,38 @@ std::optional<QString> CsvTableViewSortFilterProxyModel::getColumnFilterText(con
             return matcher.matchString();
     }
     return std::nullopt;
+}
+
+QVariant CsvTableViewSortFilterProxyModel::headerData(const int section, const Qt::Orientation orientation, const int role) const
+{
+    // Overall logics:
+    //  1. Get header data from BaseClass implementation.
+    //  2. If vertical header, or (role is not DisplayRole and not ToolTipRole), return default data.
+    //  3. Otherwise check if column has filter and if yes, add info about it to header data
+    auto rv = BaseClass::headerData(section, orientation, role);
+    if (orientation != Qt::Horizontal || (role != Qt::DisplayRole && role != Qt::ToolTipRole))
+        return rv;
+    auto pView = getTableView();
+    if (!pView)
+        return rv;
+    const auto nDataCol = pView->columnIndexViewToData(ColumnIndex_view(section));
+    const auto optColFilter = this->getColumnFilterText(nDataCol);
+
+    if (!optColFilter.has_value())
+        return rv;
+    
+    QString sAddition;
+    if (role == Qt::DisplayRole)
+        sAddition = tr(" (filter '%1')").arg(optColFilter.value());
+    else if (role == Qt::ToolTipRole)
+        sAddition = tr("\nFilter: '%1'").arg(optColFilter.value());
+    else
+    {
+        DFG_ASSERT_IMPLEMENTED(false);
+    }
+        
+    rv = QString(rv.toString() + sAddition);
+    return rv;
 }
 
 
