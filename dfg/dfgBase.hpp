@@ -24,9 +24,11 @@
 DFG_ROOT_NS_BEGIN
 {
 
-// Returns the size of given container.
-template<class ContT> size_t count(const ContT& cont) {return cont.size();}
-template<class T, size_t N> size_t count(const T (&)[N]) {return N;}
+// Returns element count (i.e. size) of given container or array.
+// @note When used with string literals, count() includes null terminator and result differs from strlen()
+//       e.g. count("abc") == 4 and strlen("abc") == 3
+//       If need constexpr strlen() with literals, can used DFG_COUNTOF_SZ() or std::char_traits<char>::length()
+template<class ContT> constexpr size_t count(const ContT& cont) { return std::size(cont); }
 
 template<class Iterable_T>  bool isEmpty(const Iterable_T& iterable) { return iterable.empty(); }
 template<class T, size_t N> bool isEmpty(const T(&)[N])              { return N == 0;           }

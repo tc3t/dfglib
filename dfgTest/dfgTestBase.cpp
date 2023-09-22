@@ -326,11 +326,14 @@ TEST(dfg, sizeInBytes)
         EXPECT_EQ(sizeof(VALUE_TYPE) * vec.size(), sizeInBytes(vec)); \
         EXPECT_EQ(sizeof(VALUE_TYPE) * stdArr.size(), sizeInBytes(stdArr)); \
         EXPECT_EQ(sizeof(VALUE_TYPE) * count(plainArray), sizeInBytes(plainArray)); \
+        DFGTEST_STATIC_TEST(DFG_COUNTOF(plainArray) == count(plainArray)); \
+        DFGTEST_STATIC_TEST(stdArr.size() == count(stdArr)); \
     }
 
     TEST_SIZE_IN_BYTES(char);
     TEST_SIZE_IN_BYTES(double);
     TEST_SIZE_IN_BYTES(std::string);
+    DFGTEST_STATIC_TEST(count("abc") == 4);
 
 #undef TEST_SIZE_IN_BYTES
 }
