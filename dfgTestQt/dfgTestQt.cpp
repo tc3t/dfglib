@@ -196,6 +196,21 @@ a,7
     DFGTEST_EXPECT_LEFT(0, sResult.indexOf(QRegularExpression(szExpectedRegExp)));
 }
 
+TEST(dfgQt, TableEditor_findPanelSettingsFromConfFile)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    TableEditor tableEditor;
+    auto& view = *tableEditor.tableView();
+
+    DFGTEST_EXPECT_TRUE(view.openFile("testfiles/TableEditor_confFile.csv"));
+
+    const auto settings = tableEditor.getFindPanelSettings();
+    DFGTEST_EXPECT_LEFT("abc", settings[CsvOptionProperty_findText].toString());
+    DFGTEST_EXPECT_LEFT("1", settings[CsvOptionProperty_findCaseSensitive].toString());
+    DFGTEST_EXPECT_LEFT("Regular expression", settings[CsvOptionProperty_findSyntaxType].toString());
+    DFGTEST_EXPECT_LEFT("1", settings[CsvOptionProperty_findColumn].toString());
+}
+
 TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicCustomDetailHandling)
 {
     using namespace ::DFG_MODULE_NS(qt);

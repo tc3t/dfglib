@@ -96,6 +96,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_columnSortingColumnIndex[]   = "columnSortingColumnIndex";   // Defines which column is sorted (1-based column index)
     const char CsvOptionProperty_columnSortingOrder[]         = "columnSortingOrder";         // Defines sort order for column defined by columnSortingColumnIndex (A or D, default is A)
 
+    const char CsvOptionProperty_findText[]          = "findText";          // Defines find-text for find panel
+    const char CsvOptionProperty_findCaseSensitive[] = "findCaseSensitive"; // Defines whether find is case-sensitive
+    const char CsvOptionProperty_findSyntaxType[]    = "findSyntaxType";    // Defines find syntax type, for recognized values, see PatternMatcher::patternSyntaxName_untranslated
+    const char CsvOptionProperty_findColumn[]        = "findColumn";        // Defines find-column index (1-based column index, value 0 is interpreted as "any")
+
     namespace DFG_DETAIL_NS
     {
         class HighlightDefinition

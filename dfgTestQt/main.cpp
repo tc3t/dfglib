@@ -98,6 +98,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_trimCells";
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_filter";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_findPanelSettingsFromConfFile";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_setSelectedIndexes";
 
     const auto rv = RUN_ALL_TESTS();

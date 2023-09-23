@@ -306,6 +306,15 @@ namespace DFG_DETAIL_NS {
             return static_cast<PatternMatcher::PatternSyntax>(currentData.toUInt());
         }
 
+        void setPatternSyntax(const PatternMatcher::PatternSyntax syntax)
+        {
+            if (!m_pMatchSyntaxCombobox)
+                return;
+            const auto i = m_pMatchSyntaxCombobox->findData(static_cast<int>(syntax));
+            if (i >= 0)
+                m_pMatchSyntaxCombobox->setCurrentIndex(i);
+        }
+
         void setSyntaxIndicator_good()
         {
             if (!m_pTextEdit)
@@ -320,8 +329,14 @@ namespace DFG_DETAIL_NS {
             m_pTextEdit->setValidity(HighlightTextEdit::ValidityInfo(false, sErrorText));
         }
 
+        void forEachConfigProperty(std::function<void(const CsvTableView::PropertyFetcher)>) const;
+
+        void setPropertiesFromLoadOptions(const CsvItemModel::LoadOptions& loadOptions);
+
         // Returned object is owned by 'this' and lives until the destruction of 'this'.
         QCheckBox* getCaseSensivitivyCheckBox() { return m_pCaseSensitivityCheckBox; }
+
+        int getColumnIndex() const { return (m_pColumnSelector) ? m_pColumnSelector->value() : -1; }
 
         HighlightTextEdit* m_pTextEdit;
         QObjectStorage<QLabel> m_spColumnLabel;
@@ -329,7 +344,38 @@ namespace DFG_DETAIL_NS {
         QCheckBox* m_pCaseSensitivityCheckBox;
         QComboBox* m_pMatchSyntaxCombobox;
         QObjectStorage<QToolButton> m_spJsonInsertButton;
-    };
+    }; // class FindPanelWidget
+
+    void FindPanelWidget::forEachConfigProperty(std::function<void(CsvTableView::PropertyFetcher)> func) const
+    {
+        if (!func)
+            return;
+        using Pfp = CsvTableView::PropertyFetcherPair;
+        QPointer<const FindPanelWidget> spThis = this;
+#define DFG_TEMP_ADD_ITEM(PROP, ACCESS) func([spThis, this]() { return Pfp(QString("properties/%1").arg(PROP), (spThis) ? ACCESS : QString()); })
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_findText,          this->getPattern());
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_findCaseSensitive, QString::number(this->getCaseSensitivity()));
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_findSyntaxType,    PatternMatcher::patternSyntaxName_untranslated(this->getPatternSyntax()));
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_findColumn,        QString::number(this->getColumnIndex()));
+#undef DFG_TEMP_ADD_ITEM
+    }
+
+    void FindPanelWidget::setPropertiesFromLoadOptions(const CsvItemModel::LoadOptions& loadOptions)
+    {
+        if (this->m_pTextEdit)
+            this->m_pTextEdit->setText(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_findText, this->m_pTextEdit->text().toStdString())));
+        if (this->m_pCaseSensitivityCheckBox)
+            this->m_pCaseSensitivityCheckBox->setChecked(loadOptions.getPropertyThroughStrTo<bool>(CsvOptionProperty_findCaseSensitive, this->m_pCaseSensitivityCheckBox->isChecked()));
+        if (this->m_pMatchSyntaxCombobox)
+        {
+            const auto existingSyntax = this->getPatternSyntax();
+            const auto patternSyntaxAsString = PatternMatcher::patternSyntaxName_untranslated(existingSyntax);
+            const auto syntax = PatternMatcher::patternSyntaxNameToEnum(loadOptions.getProperty(CsvOptionProperty_findSyntaxType, patternSyntaxAsString), existingSyntax);
+            this->setPatternSyntax(syntax);
+        }
+        if (this->m_pColumnSelector)
+            this->m_pColumnSelector->setValue(loadOptions.getPropertyThroughStrTo<bool>(CsvOptionProperty_findColumn, this->m_pColumnSelector->value()));
+    }
 
     class FilterPanelWidget : public FindPanelWidget
     {
@@ -593,6 +639,11 @@ TableEditor::TableEditor()
             spLayout->addWidget(m_spFilterPanel.get(), row++, 0);
         }
 
+        // Adding config properties fetchers for find panel
+        {
+            this->m_spFindPanel->forEachConfigProperty([&](const auto& propertyFetcher) { m_spTableView->addConfigSavePropertyFetcher(propertyFetcher); });
+        }
+
         spLayout->addWidget(m_spSelectionAnalyzerPanel.get(), row++, 0);
         spLayout->addWidget(m_spStatusBar.get(), row++, 0);
 
@@ -851,6 +902,21 @@ void TableEditor::updateFileInfoToolTip()
     updateFileInfoToolTipImpl(DFG_OPAQUE_REF().m_spFileInfoButton.get(), this->m_spTableModel.get());
 }
 
+QVariantMap TableEditor::getFindPanelSettings() const
+{
+    auto pFindPanel = this->m_spFindPanel.get();
+    if (!pFindPanel)
+        return QVariantMap();
+    QVariantMap items;
+    pFindPanel->forEachConfigProperty([&](const auto& fetcher)
+        {
+            auto kv = fetcher();
+            DFG_ASSERT_CORRECTNESS(kv.first.startsWith("properties/"));
+            items.insert(kv.first.mid(11), kv.second);
+        });
+    return items;
+}
+
 void TableEditor::onCopyFileInfoToClipboard()
 {
     const auto sInfoText = createFileInfoText(DFG_OPAQUE_REF().m_spFileInfoButton.get(), m_spTableModel.get(), FileInfoFormatType::clipboard);
@@ -943,6 +1009,10 @@ void TableEditor::onNewSourceOpened()
 
     // Setting selection details
     setSelectionDetails(loadOptions.getProperty(CsvOptionProperty_selectionDetails, ""), loadOptions.getPropertyThroughStrTo<int>(CsvOptionProperty_selectionDetailsPrecision, -2));
+
+    // Setting find options
+    if (this->m_spFindPanel)
+        this->m_spFindPanel->setPropertiesFromLoadOptions(loadOptions);
 }
 
 void TableEditor::onSaveCompleted(const bool success, const double saveTimeInSeconds)

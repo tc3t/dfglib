@@ -37,6 +37,7 @@ public:
     bool isMatchingWith(const QString& s) const;
 
     static const char* patternSyntaxName_untranslated(const PatternSyntax patternSyntax);
+    static PatternSyntax patternSyntaxNameToEnum(const StringViewC& svName, PatternSyntax defaultReturn);
 
     static const char* shortDescriptionForPatternSyntax_untranslated(const PatternSyntax patternSyntax);
 
@@ -154,6 +155,23 @@ inline const char* PatternMatcher::patternSyntaxName_untranslated(const PatternS
     case Json:           return QT_TR_NOOP("Json");
     default:             return "";
     }
+}
+
+inline auto PatternMatcher::patternSyntaxNameToEnum(const StringViewC& svName, const PatternSyntax defaultReturn) -> PatternSyntax
+{
+    auto rv = defaultReturn;
+    bool bFound = false;
+    forEachPatternSyntax([&](const int, const PatternSyntax& en)
+        {
+            if (bFound)
+                return;
+            if (svName == patternSyntaxName_untranslated(en))
+            {
+                rv = en;
+                bFound = true;
+            }
+        });
+    return rv;
 }
 
 inline const char* PatternMatcher::shortDescriptionForPatternSyntax_untranslated(const PatternSyntax patternSyntax)

@@ -327,7 +327,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef CsvItemModel CsvModel;
         typedef StringMatchDefinition StringMatchDef;
         typedef CsvTableViewSelectionAnalyzer SelectionAnalyzer;
-        using PropertyFetcher = std::function<std::pair<QString, QString>()>;
+        using PropertyFetcherPair = std::pair<QString, QString>;
+        using PropertyFetcher = std::function<PropertyFetcherPair()>;
         using CsvConfig = ::DFG_MODULE_NS(cont)::CsvConfig;
         using Index = int; // Should be identical to CsvItemModel::Index
         using ItemSelectionRangeList = DFG_DETAIL_NS::ItemSelectionRangeList;

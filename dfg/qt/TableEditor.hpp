@@ -107,6 +107,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void updateFileInfoToolTip();
 
+        // Returns variant map of find panel settings where keys are strings defined by CsvOptionProperty_find* -entries.
+        QVariantMap getFindPanelSettings() const;
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 
