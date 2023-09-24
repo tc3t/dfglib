@@ -329,9 +329,9 @@ namespace DFG_DETAIL_NS {
             m_pTextEdit->setValidity(HighlightTextEdit::ValidityInfo(false, sErrorText));
         }
 
-        void forEachConfigProperty(std::function<void(const CsvTableView::PropertyFetcher)>) const;
+        virtual void forEachConfigProperty(std::function<void(const CsvTableView::PropertyFetcher)>) const;
 
-        void setPropertiesFromLoadOptions(const CsvItemModel::LoadOptions& loadOptions);
+        virtual void setPropertiesFromLoadOptions(const CsvItemModel::LoadOptions& loadOptions);
 
         // Returned object is owned by 'this' and lives until the destruction of 'this'.
         QCheckBox* getCaseSensivitivyCheckBox() { return m_pCaseSensitivityCheckBox; }
@@ -401,7 +401,41 @@ namespace DFG_DETAIL_NS {
             if (m_spJsonInsertButton)
                 m_spJsonInsertButton->setVisible(bIsJson);
         }
-    };
+
+        void setPropertiesFromLoadOptions(const CsvItemModel::LoadOptions& loadOptions) override;
+        void forEachConfigProperty(std::function<void(const CsvTableView::PropertyFetcher)>) const override;
+    }; // class FilterPanelWidget
+
+    void FilterPanelWidget::setPropertiesFromLoadOptions(const CsvItemModel::LoadOptions& loadOptions)
+    {
+        if (this->m_pCaseSensitivityCheckBox)
+            this->m_pCaseSensitivityCheckBox->setChecked(loadOptions.getPropertyThroughStrTo<bool>(CsvOptionProperty_filterCaseSensitive, this->m_pCaseSensitivityCheckBox->isChecked()));
+        if (this->m_pMatchSyntaxCombobox)
+        {
+            const auto existingSyntax = this->getPatternSyntax();
+            const auto patternSyntaxAsString = PatternMatcher::patternSyntaxName_untranslated(existingSyntax);
+            const auto syntax = PatternMatcher::patternSyntaxNameToEnum(loadOptions.getProperty(CsvOptionProperty_filterSyntaxType, patternSyntaxAsString), existingSyntax);
+            this->setPatternSyntax(syntax);
+        }
+        if (this->m_pColumnSelector)
+            this->m_pColumnSelector->setValue(loadOptions.getPropertyThroughStrTo<bool>(CsvOptionProperty_filterColumn, this->m_pColumnSelector->value()));
+        if (this->m_pTextEdit)
+            this->m_pTextEdit->setText(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_filterText, this->m_pTextEdit->text().toStdString())));
+    }
+
+    void FilterPanelWidget::forEachConfigProperty(std::function<void(const CsvTableView::PropertyFetcher)> func) const
+    {
+        if (!func)
+            return;
+        using Pfp = CsvTableView::PropertyFetcherPair;
+        QPointer<const FilterPanelWidget> spThis = this;
+#define DFG_TEMP_ADD_ITEM(PROP, ACCESS) func([spThis, this]() { return Pfp(QString("properties/%1").arg(PROP), (spThis) ? ACCESS : QString()); })
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_filterText,           this->getPattern());
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_filterSyntaxType,     PatternMatcher::patternSyntaxName_untranslated(this->getPatternSyntax()));
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_filterCaseSensitive,  QString::number(this->getCaseSensitivity()));
+        DFG_TEMP_ADD_ITEM(CsvOptionProperty_filterColumn,         QString::number(this->getColumnIndex()));
+#undef DFG_TEMP_ADD_ITEM
+    }
 
     class FileInfoToolButton : public QToolButton
     {
@@ -639,9 +673,10 @@ TableEditor::TableEditor()
             spLayout->addWidget(m_spFilterPanel.get(), row++, 0);
         }
 
-        // Adding config properties fetchers for find panel
+        // Adding config property fetchers for find and filter panels
         {
             this->m_spFindPanel->forEachConfigProperty([&](const auto& propertyFetcher) { m_spTableView->addConfigSavePropertyFetcher(propertyFetcher); });
+            this->m_spFilterPanel->forEachConfigProperty([&](const auto& propertyFetcher) { m_spTableView->addConfigSavePropertyFetcher(propertyFetcher); });
         }
 
         spLayout->addWidget(m_spSelectionAnalyzerPanel.get(), row++, 0);
@@ -902,19 +937,28 @@ void TableEditor::updateFileInfoToolTip()
     updateFileInfoToolTipImpl(DFG_OPAQUE_REF().m_spFileInfoButton.get(), this->m_spTableModel.get());
 }
 
-QVariantMap TableEditor::getFindPanelSettings() const
+QVariantMap TableEditor::getFindFilterPanelSettingsImpl(const DFG_DETAIL_NS::FindPanelWidget& rWidget) const
 {
-    auto pFindPanel = this->m_spFindPanel.get();
-    if (!pFindPanel)
-        return QVariantMap();
     QVariantMap items;
-    pFindPanel->forEachConfigProperty([&](const auto& fetcher)
+    rWidget.forEachConfigProperty([&](const auto& fetcher)
         {
             auto kv = fetcher();
             DFG_ASSERT_CORRECTNESS(kv.first.startsWith("properties/"));
             items.insert(kv.first.mid(11), kv.second);
         });
     return items;
+}
+
+QVariantMap TableEditor::getFindPanelSettings() const
+{
+    auto pFindPanel = this->m_spFindPanel.get();
+    return (pFindPanel) ? getFindFilterPanelSettingsImpl(*pFindPanel) : QVariantMap();
+}
+
+QVariantMap TableEditor::getFilterPanelSettings() const
+{
+    auto pFilterPanel = this->m_spFilterPanel.get();
+    return (pFilterPanel) ? getFindFilterPanelSettingsImpl(*pFilterPanel) : QVariantMap();
 }
 
 void TableEditor::onCopyFileInfoToClipboard()
@@ -1010,9 +1054,18 @@ void TableEditor::onNewSourceOpened()
     // Setting selection details
     setSelectionDetails(loadOptions.getProperty(CsvOptionProperty_selectionDetails, ""), loadOptions.getPropertyThroughStrTo<int>(CsvOptionProperty_selectionDetailsPrecision, -2));
 
-    // Setting find options
-    if (this->m_spFindPanel)
-        this->m_spFindPanel->setPropertiesFromLoadOptions(loadOptions);
+    // Setting find and filter options. using QTimer to let CsvTableView initialize itself properly.
+    {
+        if (this->m_spFindPanel)
+            this->m_spFindPanel->setPropertiesFromLoadOptions(loadOptions);
+        if (this->m_spFilterPanel)
+            this->m_spFilterPanel->setPropertiesFromLoadOptions(loadOptions);
+        auto pView = this->tableView();
+        // Hack: if proxy model is null, view might not have initialized itself properly yet and filter might not be effective,
+        //       so triggering a manual update a bit later.
+        if (pView && pView->getProxyModelPtr() == nullptr)
+            QTimer::singleShot(50, this, [&]() { if (this->m_spFilterPanel) this->onFilterTextChanged(this->m_spFilterPanel->getPattern()); });
+    }
 }
 
 void TableEditor::onSaveCompleted(const bool success, const double saveTimeInSeconds)

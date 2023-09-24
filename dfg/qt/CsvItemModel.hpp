@@ -101,6 +101,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     const char CsvOptionProperty_findSyntaxType[]    = "findSyntaxType";    // Defines find syntax type, for recognized values, see PatternMatcher::patternSyntaxName_untranslated
     const char CsvOptionProperty_findColumn[]        = "findColumn";        // Defines find-column index (1-based column index, value 0 is interpreted as "any")
 
+    const char CsvOptionProperty_filterText[]          = "filterText";          // Defines filter-text for filter panel
+    const char CsvOptionProperty_filterCaseSensitive[] = "filterCaseSensitive"; // Defines whether filter is case-sensitive
+    const char CsvOptionProperty_filterSyntaxType[]    = "filterSyntaxType";    // Defines filter syntax type, for recognized values, see PatternMatcher::patternSyntaxName_untranslated
+    const char CsvOptionProperty_filterColumn[]        = "filterColumn";        // Defines filter-column index (1-based column index, value 0 is interpreted as "any")
+
     namespace DFG_DETAIL_NS
     {
         class HighlightDefinition

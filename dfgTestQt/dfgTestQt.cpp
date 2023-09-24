@@ -196,6 +196,22 @@ a,7
     DFGTEST_EXPECT_LEFT(0, sResult.indexOf(QRegularExpression(szExpectedRegExp)));
 }
 
+TEST(dfgQt, TableEditor_filterPanelSettingsFromConfFile)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    {
+        TableEditor tableEditor;
+        auto& view = *tableEditor.tableView();
+        DFGTEST_EXPECT_TRUE(view.openFile("testfiles/TableEditor_confFile.csv"));
+
+        const auto settings = tableEditor.getFilterPanelSettings();
+        DFGTEST_EXPECT_LEFT(R"({"apply_columns":"1","text":"c","type":"reg_exp"})", settings[CsvOptionProperty_filterText].toString());
+        DFGTEST_EXPECT_LEFT("0",    settings[CsvOptionProperty_filterCaseSensitive].toString());
+        DFGTEST_EXPECT_LEFT("Json", settings[CsvOptionProperty_filterSyntaxType].toString());
+        DFGTEST_EXPECT_LEFT("0",    settings[CsvOptionProperty_filterColumn].toString());
+    }
+}
+
 TEST(dfgQt, TableEditor_findPanelSettingsFromConfFile)
 {
     using namespace ::DFG_MODULE_NS(qt);
