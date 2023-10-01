@@ -216,6 +216,15 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::rowsMoved, this, &CsvTableViewChartDataSource::resetCache));
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::modelReset, this, &CsvTableViewChartDataSource::resetCache));
         DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, &CsvTableViewChartDataSource::resetCache));
+
+        // Since column name changes may affect charts, bluntly simulating selection change by pushing current selection to
+        // analyzer queue, which causes chart to update if needed.
+        DFG_QT_VERIFY_CONNECT(connect(pCsvModel, &CsvItemModel::headerDataChanged, m_spSelectionAnalyzer.get(), [&]()
+            {
+                auto spView = this->privGetSelectionView();
+                if (spView)
+                    m_spSelectionAnalyzer->addSelectionToQueue(*spView);
+            }));
     }
 }
 
