@@ -1,12 +1,3 @@
-/////////////////////////////////////////////////////////
-// 
-//
-// NOTE: THIS IS MODIFIED VERSION OF THE ORIGINAL FILE
-//      Modifications are marked with tag DFGLIB_CHANGE
-//
-//
-/////////////////////////////////////////////////////////
-
 // Copyright 2006-2016 Nemanja Trifunovic
 
 /*
@@ -51,7 +42,7 @@ namespace utf8
         uint32_t cp;
     public:
         invalid_code_point(uint32_t codepoint) : cp(codepoint) {}
-        virtual const char* what() const throw() { return "Invalid code point"; }
+        virtual const char* what() const UTF_CPP_NOEXCEPT UTF_CPP_OVERRIDE { return "Invalid code point"; }
         uint32_t code_point() const {return cp;}
     };
 
@@ -59,7 +50,8 @@ namespace utf8
         uint8_t u8;
     public:
         invalid_utf8 (uint8_t u) : u8(u) {}
-        virtual const char* what() const throw() { return "Invalid UTF-8"; }
+        invalid_utf8 (char c) : u8(static_cast<uint8_t>(c)) {}
+        virtual const char* what() const UTF_CPP_NOEXCEPT UTF_CPP_OVERRIDE { return "Invalid UTF-8"; }
         uint8_t utf8_octet() const {return u8;}
     };
 
@@ -67,13 +59,13 @@ namespace utf8
         uint16_t u16;
     public:
         invalid_utf16 (uint16_t u) : u16(u) {}
-        virtual const char* what() const throw() { return "Invalid UTF-16"; }
+        virtual const char* what() const UTF_CPP_NOEXCEPT UTF_CPP_OVERRIDE { return "Invalid UTF-16"; }
         uint16_t utf16_word() const {return u16;}
     };
 
     class not_enough_room : public exception {
     public:
-        virtual const char* what() const throw() { return "Not enough space"; }
+        virtual const char* what() const UTF_CPP_NOEXCEPT UTF_CPP_OVERRIDE { return "Not enough space"; }
     };
 
     /// The library API - functions intended to be called by the users
@@ -84,24 +76,7 @@ namespace utf8
         if (!utf8::internal::is_code_point_valid(cp))
             throw invalid_code_point(cp);
 
-        if (cp < 0x80)                        // one octet
-            *(result++) = static_cast<uint8_t>(cp);
-        else if (cp < 0x800) {                // two octets
-            *(result++) = static_cast<uint8_t>((cp >> 6)            | 0xc0);
-            *(result++) = static_cast<uint8_t>((cp & 0x3f)          | 0x80);
-        }
-        else if (cp < 0x10000) {              // three octets
-            *(result++) = static_cast<uint8_t>((cp >> 12)           | 0xe0);
-            *(result++) = static_cast<uint8_t>(((cp >> 6) & 0x3f)   | 0x80);
-            *(result++) = static_cast<uint8_t>((cp & 0x3f)          | 0x80);
-        }
-        else {                                // four octets
-            *(result++) = static_cast<uint8_t>((cp >> 18)           | 0xf0);
-            *(result++) = static_cast<uint8_t>(((cp >> 12) & 0x3f)  | 0x80);
-            *(result++) = static_cast<uint8_t>(((cp >> 6) & 0x3f)   | 0x80);
-            *(result++) = static_cast<uint8_t>((cp & 0x3f)          | 0x80);
-        }
-        return result;
+        return internal::append(cp, result);
     }
 
     template <typename octet_iterator, typename output_iterator>
@@ -157,7 +132,7 @@ namespace utf8
             case internal::INVALID_LEAD :
             case internal::INCOMPLETE_SEQUENCE :
             case internal::OVERLONG_SEQUENCE :
-                throw invalid_utf8(*it);
+                throw invalid_utf8(static_cast<uint8_t>(*it));
             case internal::INVALID_CODE_POINT :
                 throw invalid_code_point(cp);
         }
@@ -273,19 +248,15 @@ namespace utf8
     // The iterator class
     template <typename octet_iterator>
     class iterator {
-
       octet_iterator it;
       octet_iterator range_start;
       octet_iterator range_end;
       public:
- 
-      // DFGLIB_CHANGE: removed inheritance from std::iterator and defined typedefs directly.
-      typedef std::bidirectional_iterator_tag     iterator_category;
-      typedef uint32_t                            value_type;
-      typedef ptrdiff_t                           difference_type;
-      typedef uint32_t*                           pointer;
-      typedef uint32_t&                           reference;
-
+      typedef uint32_t value_type;
+      typedef uint32_t* pointer;
+      typedef uint32_t& reference;
+      typedef std::ptrdiff_t difference_type;
+      typedef std::bidirectional_iterator_tag iterator_category;
       iterator () {}
       explicit iterator (const octet_iterator& octet_it,
                          const octet_iterator& rangestart,
@@ -337,6 +308,12 @@ namespace utf8
     }; // class iterator
 
 } // namespace utf8
+
+#if UTF_CPP_CPLUSPLUS >= 201703L // C++ 17 or later
+#include "cpp17.h"
+#elif UTF_CPP_CPLUSPLUS >= 201103L // C++ 11 or later
+#include "cpp11.h"
+#endif // C++ 11 or later
 
 #endif //header guard
 

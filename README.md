@@ -73,7 +73,7 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2023-04-26).
+Summary of 3rd party code in dfglib (last revised 2023-04-26, UTF8-CPP -entry updated 2023-10-01).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
@@ -88,7 +88,7 @@ Summary of 3rd party code in dfglib (last revised 2023-04-26).
 | [muparser](https://github.com/beltoforion/muparser) (version 2.3.3, commit [5ccc8878](https://github.com/beltoforion/muparser/tree/5ccc887864381aeacf1277062fcbb76475623a02), 2022-01-13) with some edits | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
 | [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Versions 2.0.1 and 2.1.0 are known to work as of dfgQtTableEditor version 2.4.0.
 | [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Unit tests (dfgTestQt) have been build with various versions 5.9 - 6.4, for details, see dfgTestQt status table.
-| [UTF8-CPP](https://github.com/nemtrif/utfcpp) (version 3.1 with [some edits](https://github.com/tc3t/dfglib/commits/master/dfg/utf/utf8_cpp)) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
+| [UTF8-CPP](https://github.com/nemtrif/utfcpp) ([version 3.2.5](https://github.com/nemtrif/utfcpp/releases/tag/v3.2.5) with [some adjustments](https://github.com/tc3t/dfglib/commit/b8e948d6430a74c0efd186f520853c0585fec11a)) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:
 * c: All or some code from the library comes with dfglib (possibly modified), but is not directly used (i.e. related code can be removed without breaking any features in dfglib).

@@ -47,24 +47,7 @@ namespace utf8
         template <typename octet_iterator>
         octet_iterator append(uint32_t cp, octet_iterator result)
         {
-            if (cp < 0x80)                        // one octet
-                *(result++) = static_cast<uint8_t>(cp);
-            else if (cp < 0x800) {                // two octets
-                *(result++) = static_cast<uint8_t>((cp >> 6)          | 0xc0);
-                *(result++) = static_cast<uint8_t>((cp & 0x3f)        | 0x80);
-            }
-            else if (cp < 0x10000) {              // three octets
-                *(result++) = static_cast<uint8_t>((cp >> 12)         | 0xe0);
-                *(result++) = static_cast<uint8_t>(((cp >> 6) & 0x3f) | 0x80);
-                *(result++) = static_cast<uint8_t>((cp & 0x3f)        | 0x80);
-            }
-            else {                                // four octets
-                *(result++) = static_cast<uint8_t>((cp >> 18)         | 0xf0);
-                *(result++) = static_cast<uint8_t>(((cp >> 12) & 0x3f)| 0x80);
-                *(result++) = static_cast<uint8_t>(((cp >> 6) & 0x3f) | 0x80);
-                *(result++) = static_cast<uint8_t>((cp & 0x3f)        | 0x80);
-            }
-            return result;
+            return internal::append(cp, result);
         }
 
         template <typename octet_iterator, typename output_iterator>
@@ -182,7 +165,9 @@ namespace utf8
         {
             while (start != end) {
                 uint32_t cp = utf8::internal::mask16(*start++);
-            // Take care of surrogate pairs first
+                if (start == end)
+                    return result;
+                // Take care of surrogate pairs first
                 if (utf8::internal::is_lead_surrogate(cp)) {
                     uint32_t trail_surrogate = utf8::internal::mask16(*start++);
                     cp = (cp << 10) + trail_surrogate + internal::SURROGATE_OFFSET;
@@ -227,18 +212,14 @@ namespace utf8
 
         // The iterator class
         template <typename octet_iterator>
-          class iterator { 
-
+          class iterator {
             octet_iterator it;
             public:
-
-            // DFGLIB_CHANGE: removed inheritance from std::iterator and defined typedefs directly.
-            typedef std::bidirectional_iterator_tag     iterator_category;
-            typedef uint32_t                            value_type;
-            typedef ptrdiff_t                           difference_type;
-            typedef uint32_t*                           pointer;
-            typedef uint32_t&                           reference;
-
+            typedef uint32_t value_type;
+            typedef uint32_t* pointer;
+            typedef uint32_t& reference;
+            typedef std::ptrdiff_t difference_type;
+            typedef std::bidirectional_iterator_tag iterator_category;
             iterator () {}
             explicit iterator (const octet_iterator& octet_it): it(octet_it) {}
             // the default "big three" are OK
