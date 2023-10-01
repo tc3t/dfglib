@@ -546,6 +546,14 @@ Available keys:
 | properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
 | properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
 | properties/editMode | Defines edit mode when opened | _readOnly_, _readWrite_<br>If empty, handled as if property was not present at all. | Since 2.1.0 |
+| properties/filterText | Defines filter text to be set to UI filter controls |  | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/filterCaseSensitive | Defines case sensitivity setting to be set to UI filter controls | _0_, _1_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/filterSyntaxType | Defines syntax type to be set to UI filter controls | _Wildcard_, _Simple string_, _Regular expression_, _Json_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/filterColumn | Defines filter column to be set to UI filter controls | 1-based column index, 0 means _any_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findText | Defines find text to be set to UI find controls |  | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findCaseSensitive | Defines case sensitivity setting to be set to UI find controls | _0_, _1_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findSyntaxType | Defines syntax type to be set to UI find controls | _Wildcard_, _Simple string_, _Regular expression_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findColumn | Defines find column to be set to UI find controls | 1-based column index, 0 means _any_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
 | properties/includeRows | Limits rows which are read from file by row index (0-based index, typically header is on row 0) |  | Since 1.5.0 |
 | properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
 | properties/initialScrollPosition | file-specific setting for CsvTableView_initialScrollPosition. | | Since 2.4.0 ([#130](https://github.com/tc3t/dfglib/issues/130))
