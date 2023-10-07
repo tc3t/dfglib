@@ -234,6 +234,7 @@ public:
 
     // Returns ChartPanel on which given (mouse) cursor is.
     ChartPanel* getChartPanel(const QPoint& pos); // pos is as available in mouseMoveEvent() pEvent->pos()
+    const ChartPanel* getChartPanel(const QPoint& pos) const; // const overload
     ChartPanel* getChartPanel(const StringViewUtf8& svPanelId);
     ChartPanel* getChartPanelByAxis(const QCPAxis* pAxis); // Returns chart panel that has given axis, nullptr if not found.
 
@@ -335,12 +336,21 @@ private:
     template <class Func_T> void forEachAxisRect(Func_T&& func) const;
 
     template <class Func_T> void forEachChartPanelUntil(Func_T&& func); // Func shall return true to continue loop, false to break.
+    template <class Func_T> void forEachChartPanelUntil(Func_T&& func) const; // Const overload
+    template <class This_T, class Func_T>
+    static void forEachChartPanelUntil(This_T& rThis, Func_T&& func);
+
+    template <class This_T>
+    static auto getChartPanelImpl(This_T& rThis, const QPoint& pos) -> std::conditional_t<std::is_const_v<This_T>, const ChartPanel*, ChartPanel*>;
 
     // Returns true if operations were successfully created from given definition list, false otherwise.
     bool applyChartOperationsTo(QCPAbstractPlottable* pPlottable, const QStringList& definitionList);
     void applyChartOperationsTo(QCPAbstractPlottable* pPlottable, ChartEntryOperationList& operations);
     ::DFG_MODULE_NS(charts)::ChartOperationPipeData createOperationPipeData(QCPAbstractPlottable* pPlottable);
 
+    // Private virtual overrides -->
+    StringUtf8 createToolTipTextAtImpl(int x, int y, ToolTipTextRequestFlags flags) const override;
+    // <-- private virtual overrides
 public:
 
     QObjectStorage<QCustomPlot> m_spChartView;
@@ -367,13 +377,14 @@ public:
     QString getPanelId() const { return m_panelId; }
 
     // Returns (x, y) pair from pixelToCoord() of primary axes.
-    PairT pixelToCoord_primaryAxis(const QPoint& pos);
+    PairT pixelToCoord_primaryAxis(const QPoint& pos) const;
 
-    void forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler);
+    void forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler) const;
 
           AxisT* primaryXaxis();
     const AxisT* primaryXaxis() const;
-    AxisT* primaryYaxis();
+          AxisT* primaryYaxis();
+    const AxisT* primaryYaxis() const;
     AxisT* secondaryXaxis();
     AxisT* secondaryYaxis();
 

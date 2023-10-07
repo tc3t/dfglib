@@ -63,6 +63,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QVariantMap>
     #include <QTextStream>
     #include <QLineEdit>
+    #include <QClipboard>
+DFG_END_INCLUDE_QT_HEADERS
 
 // 
 // 2023-01: Notes about caching (using single column xy-graph as an example):
@@ -99,9 +101,6 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 // 
 //   As a conclusion, no obvious ways seen how to reduce duplicating cache/workstorage data further.
 //
-
-
-DFG_END_INCLUDE_QT_HEADERS
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <boost/version.hpp>
@@ -1778,7 +1777,18 @@ DFG_MODULE_NS(qt)::GraphDisplay::GraphDisplay(QWidget *pParent) : BaseClass(pPar
         pLayout->addWidget(pWidget);
         // Setting context menu handling. Note that pWidget->setContextMenuPolicy(Qt::NoContextMenu) doesn't work because QCustomPlot overrides mousePressEvent().
         // Using pWidget->setAttribute(Qt::WA_TransparentForMouseEvents) would make context menu work, but also disables e.g. QCustomPlot's zoom controls.
-        DFG_QT_VERIFY_CONNECT(connect(pWidget, &QCustomPlot::mousePress, this, [=](QMouseEvent* pEvent) { if (pEvent && pEvent->button() == Qt::RightButton) contextMenuEvent(nullptr); }));
+        const auto handler = [this](QMouseEvent* pEvent)
+            {
+                if (!pEvent || pEvent->button() != Qt::RightButton)
+                    return;
+                #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                    auto cme = QContextMenuEvent(QContextMenuEvent::Reason::Mouse, pEvent->pos(), pEvent->globalPosition().toPoint());
+                #else
+                    auto cme = QContextMenuEvent(QContextMenuEvent::Reason::Mouse, pEvent->pos(), pEvent->globalPos());
+                #endif
+                this->contextMenuEvent(&cme);
+            };
+        DFG_QT_VERIFY_CONNECT(connect(pWidget, &QCustomPlot::mousePress, this, handler));
     }
     m_spChartCanvas.reset(pChartCanvas);
 #else // Case: no graph display implementation available, creating a placeholder widget.
@@ -1846,9 +1856,26 @@ void DFG_MODULE_NS(qt)::GraphDisplay::contextMenuEvent(QContextMenuEvent* pEvent
 
         if (m_spChartCanvas->isToolTipSupported())
         {
-            auto pToggleToolTipAction = menu.addAction(tr("Show tooltip"), pParentGraphWidget, [&](bool b) { this->m_spChartCanvas->enableToolTip(b); });
-            pToggleToolTipAction->setCheckable(true);
-            pToggleToolTipAction->setChecked(m_spChartCanvas->isToolTipEnabled());
+            // 'Enable tooltip' -action
+            {
+                auto pToggleToolTipAction = menu.addAction(tr("Show tooltip"), pParentGraphWidget, [&](bool b) { this->m_spChartCanvas->enableToolTip(b); });
+                pToggleToolTipAction->setCheckable(true);
+                pToggleToolTipAction->setChecked(m_spChartCanvas->isToolTipEnabled());
+            }
+
+            // 'Copy tooltip text to clipboard' -action
+            {
+                const auto eventPos = (pEvent) ? pEvent->pos() : QPoint();
+                menu.addAction(tr("Copy tooltip text to clipboard"), this, [this, eventPos]()
+                    {
+                        if (!this->m_spChartCanvas)
+                            return;
+                        const auto s = this->m_spChartCanvas->createToolTipTextAt(eventPos.x(), eventPos.y(), ChartCanvas::ToolTipTextRequestFlags::plainText);
+                        auto pClipboard = QApplication::clipboard();
+                        if (pClipboard)
+                            pClipboard->setText(viewToQString(s));
+                    });
+            }
         }
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)

@@ -2,6 +2,12 @@
 #include "../connectHelper.hpp"
 #include "../widgetHelpers.hpp"
 #include "../qtBasic.hpp"
+#include "../../str.hpp"
+#include "../qtIncludeHelpers.hpp"
+
+DFG_BEGIN_INCLUDE_QT_HEADERS
+    #include <QTextDocument>
+DFG_END_INCLUDE_QT_HEADERS
 
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
@@ -1276,22 +1282,35 @@ void ChartCanvasQCustomPlot::forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func)
     }
 }
 
-template <class Func_T>
-void ChartCanvasQCustomPlot::forEachChartPanelUntil(Func_T&& func)
+template <class This_T, class Func_T>
+void ChartCanvasQCustomPlot::forEachChartPanelUntil(This_T& rThis, Func_T&& func)
 {
-    auto pCustomPlot = getWidget();
+    auto pCustomPlot = rThis.getWidget();
     auto pMainLayout = (pCustomPlot) ? pCustomPlot->plotLayout() : nullptr;
     if (!pMainLayout)
         return;
     const auto nElemCount = pMainLayout->elementCount();
+    using ChartPanelPtr = std::conditional_t<std::is_const_v<This_T>, const ChartPanel*, ChartPanel*>;
     for (int i = 0; i < nElemCount; ++i)
     {
         auto pElement = pMainLayout->elementAt(i);
-        auto pPanel = dynamic_cast<ChartPanel*>(pElement);
+        auto pPanel = dynamic_cast<ChartPanelPtr>(pElement);
         if (pPanel)
             if (!func(*pPanel))
                 break;
     }
+}
+
+template <class Func_T>
+void ChartCanvasQCustomPlot::forEachChartPanelUntil(Func_T&& func)
+{
+    forEachChartPanelUntil(*this, std::forward<Func_T>(func));
+}
+
+template <class Func_T>
+void ChartCanvasQCustomPlot::forEachChartPanelUntil(Func_T&& func) const
+{
+    forEachChartPanelUntil(*this, std::forward<Func_T>(func));
 }
 
 auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCPAxisRect*
@@ -1334,15 +1353,17 @@ auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCP
     return pExistingAxisRect;
 }
 
-auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) -> ChartPanel*
+template <class This_T>
+static auto ChartCanvasQCustomPlot::getChartPanelImpl(This_T& rThis, const QPoint& pos) -> std::conditional_t<std::is_const_v<This_T>, const ChartPanel*, ChartPanel*>
 {
-    const auto isWithinAxisRange = [](QCPAxis* pAxis, const double val)
+    const auto isWithinAxisRange = [](const QCPAxis* pAxis, const double val)
     {
         return (pAxis) ? pAxis->range().contains(val) : false;
     };
 
-    ChartPanel* pPanel = nullptr;
-    forEachChartPanelUntil([&](ChartPanel& panel)
+    using ChartPanelPtr = std::conditional_t<std::is_const_v<This_T>, const ChartPanel*, ChartPanel*>;
+    ChartPanelPtr pPanel = nullptr;
+    rThis.forEachChartPanelUntil([&](decltype(*ChartPanelPtr())& panel)
         {
             auto pXaxis1 = panel.primaryXaxis();
             auto pYaxis1 = panel.primaryYaxis();
@@ -1356,6 +1377,16 @@ auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) -> ChartPanel*
             return pPanel == nullptr;
         });
     return pPanel;
+}
+
+auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) -> ChartPanel*
+{
+    return getChartPanelImpl(*this, pos);
+}
+
+auto ChartCanvasQCustomPlot::getChartPanel(const QPoint& pos) const -> const ChartPanel*
+{
+    return getChartPanelImpl(*this, pos);
 }
 
 auto ChartCanvasQCustomPlot::getChartPanel(const StringViewUtf8& svPanelId) -> ChartPanel*
@@ -1775,17 +1806,15 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const BarStack* pBa
     return true;
 }
 
-void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
+auto ChartCanvasQCustomPlot::createToolTipTextAtImpl(const int x, const int y, const ToolTipTextRequestFlags flags) const -> StringUtf8
 {
-    if (!pEvent || !m_bToolTipEnabled)
-        return;
-
-    const auto cursorPos = pEvent->pos();
-
+    if (!flags.testFlag(ToolTipTextRequestFlags::html) && !flags.testFlag(ToolTipTextRequestFlags::plainText))
+        return StringUtf8(); // Caller required an unsupported type -> return empty.
+    const QPoint cursorPos(x, y);
     auto pPanel = getChartPanel(cursorPos);
 
     if (!pPanel)
-        return;
+        return StringUtf8();
 
     const auto xy = pPanel->pixelToCoord_primaryAxis(cursorPos);
 
@@ -1848,11 +1877,31 @@ void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
             else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPCurve*>(&plottable), xy, toolTipStream)) {}
             else if (toolTipTextForChartObjectAsHtml(pBars, xy, toolTipStream)) {}
         });
+    auto sToolTip = toolTipStream.toPlainText();
+    if (!flags.testFlag(ChartCanvas::ToolTipTextRequestFlags::html))
+    {
+        // If caller requested plain text, converting generated HTML to such using QTextDocument
+        QTextDocument document;
+        document.setHtml(sToolTip);
+        sToolTip = document.toPlainText();
+    }
+    return qStringToStringUtf8(sToolTip);
+}
 
+void ChartCanvasQCustomPlot::mouseMoveEvent(QMouseEvent* pEvent)
+{
+    if (!pEvent || !m_bToolTipEnabled)
+        return;
+
+    const auto cursorPos = pEvent->pos();
+
+    const auto sText = createToolTipTextAt(cursorPos.x(), cursorPos.y());
+
+    const auto sQStringText = viewToQString(sText);
 #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-    QToolTip::showText(pEvent->globalPosition().toPoint(), toolTipStream.toPlainText());
+    QToolTip::showText(pEvent->globalPosition().toPoint(), sQStringText);
 #else
-    QToolTip::showText(pEvent->globalPos(), toolTipStream.toPlainText());
+    QToolTip::showText(pEvent->globalPos(), sQStringText);
 #endif
 }
 
@@ -2161,10 +2210,8 @@ auto ChartPanel::axis(AxisT::AxisType axisType) const -> const AxisT* { return C
 auto ChartPanel::primaryXaxis()       -> AxisT* { return axis(AxisT::atBottom); }
 auto ChartPanel::primaryXaxis() const -> const AxisT* { return axis(AxisT::atBottom); }
 
-auto ChartPanel::primaryYaxis() -> AxisT*
-{
-    return axis(AxisT::atLeft);
-}
+auto ChartPanel::primaryYaxis()       ->       AxisT* { return axis(AxisT::atLeft); }
+auto ChartPanel::primaryYaxis() const -> const AxisT* { return axis(AxisT::atLeft); }
 
 auto ChartPanel::secondaryXaxis() -> AxisT*
 {
@@ -2218,7 +2265,7 @@ void ChartPanel::setTitle(StringViewUtf8 svTitle, StringViewUtf8 svColor)
     }
 }
 
-auto ChartPanel::pixelToCoord_primaryAxis(const QPoint& pos) -> PairT
+auto ChartPanel::pixelToCoord_primaryAxis(const QPoint& pos) const -> PairT
 {
     auto pXaxis = primaryXaxis();
     auto pYaxis = primaryYaxis();
@@ -2227,7 +2274,7 @@ auto ChartPanel::pixelToCoord_primaryAxis(const QPoint& pos) -> PairT
     return PairT(x, y);
 }
 
-void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler)
+void ChartPanel::forEachChartObject(std::function<void(const QCPAbstractPlottable&)> handler) const
 {
     if (!m_pQcp || !handler)
         return;

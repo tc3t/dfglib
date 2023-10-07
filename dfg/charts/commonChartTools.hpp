@@ -14,6 +14,7 @@
 #include "../io/DelimitedTextReader.hpp"
 #include "../cont/valueArray.hpp"
 #include "../cont/IntervalSetSerialization.hpp"
+#include "../cont/Flags.hpp"
 
 /*
 Terminology used in dfglib:
@@ -837,6 +838,15 @@ public:
     template <class T> using ChartObjectHolder = ::DFG_MODULE_NS(charts)::ChartObjectHolder<T>;
     using ArgList = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
 
+    DFG_DEFINE_SCOPED_ENUM_FLAGS(ToolTipTextRequestFlags, int,
+        html            = 0x1,      // Request tooltip in HTML-format
+        plainText       = 0x2,      // Request tooltip in plain text -format
+        json_compact    = 0x4,      // Request tooltip in compact json-format
+        json_indented   = 0x8,      // Request tooltip in intented json-format
+        csv             = 0x10,     // Request tooltip in csv-format
+        any             = html | plainText | json_compact | json_indented | csv
+    )
+
     virtual ~ChartCanvas() {}
 
     virtual bool hasChartObjects() const = 0;
@@ -865,6 +875,8 @@ public:
     virtual bool isToolTipSupported() const { return false; }
     virtual bool isLegendEnabled() const { return false; }
     virtual bool isToolTipEnabled() const { return false; }
+
+    StringUtf8 createToolTipTextAt(int x, int y, ToolTipTextRequestFlags flags = ToolTipTextRequestFlags::any) const { return createToolTipTextAtImpl(x, y, flags); } // Creates tooltip text at implementation specific canvas coordinates.
     virtual bool enableLegend(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
     virtual bool enableToolTip(bool) { return false; } // Returns true if enabled, false otherwise (e.g. if not supported)
     virtual void createLegends() {}
@@ -884,6 +896,9 @@ public:
 
     // Request to repaint canvas. Naming as repaintCanvas() instead of simply repaint() to avoid mixing with QWidget::repaint()
     virtual void repaintCanvas() = 0;
+    
+private:
+    virtual StringUtf8 createToolTipTextAtImpl(int, int, ToolTipTextRequestFlags) const { return StringUtf8(); }
 
 }; // class ChartCanvas
 
