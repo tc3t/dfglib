@@ -319,7 +319,7 @@ public:
 
     // Returns true if got non-null object as argument.
     static bool toolTipTextForChartObjectAsHtml(const QCPGraph* pGraph, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
-    static bool toolTipTextForChartObjectAsHtml(const QCPCurve* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
+    bool toolTipTextForChartObjectAsHtml(const QCPCurve* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream) const;
     static bool toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
     static bool toolTipTextForChartObjectAsHtml(const BarStack* pBarStack, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
 
