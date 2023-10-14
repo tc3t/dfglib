@@ -883,7 +883,7 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         {
             // Existing label not found -> adding new
             labels.push_back(std::move(sqNewLabel));
-            ticks.push_back(static_cast<double>(ticks.size() + 1));
+            ticks.push_back(static_cast<double>(ticks.size() + 1)); // Note: other parts of code rely on this 1-based indexing; To find dependent code, search for BARS_INDEX_1
             xValues.push_back(ticks.back());
         }
         else
@@ -1955,6 +1955,43 @@ namespace
         pipeData.setValueVectorsAsData();
         return pipeData;
     }
+
+    auto createOperationPipeDataForBars(QCPBars& bars) -> ::DFG_MODULE_NS(charts)::ChartOperationPipeData
+    {
+        using namespace ::DFG_MODULE_NS(charts);
+
+        auto pLabelAxis = bars.keyAxis();
+        // Note: casting to non-const since there's no const-overload for QCPAxisTickerText::ticks().
+        auto pLabelTicker = dynamic_cast<QCPAxisTickerText*>((pLabelAxis) ? pLabelAxis->ticker().data() : nullptr);
+        if (!pLabelTicker)
+            return ChartOperationPipeData();
+        auto pData = bars.data().data();
+        if (!pData)
+            return ChartOperationPipeData();
+
+        const auto& mapXvalueToLabelStr = pLabelTicker->ticks();
+
+        ChartOperationPipeData pipeData;
+        auto px = pipeData.editableStringsByIndex(0);
+        auto py = pipeData.editableValuesByIndex(1);
+        if (!px || !py)
+        {
+            DFG_ASSERT(false); // Not expected to ever end up here.
+            return pipeData;
+        }
+        const auto nSize = static_cast<size_t>(pData->size());
+        px->resize(nSize);
+        py->resize(nSize);
+        size_t i = 0;
+        for (auto xy : *pData)
+        {
+            (*px)[i] = qStringToStringUtf8(mapXvalueToLabelStr.value(xy.key, QString()));
+            (*py)[i] = xy.value;
+            i++;
+        }
+        pipeData.setDataRefs(px, py);
+        return pipeData;
+    }
 }
 
 auto ChartCanvasQCustomPlot::createOperationPipeData(QCPAbstractPlottable* pPlottable) -> ::DFG_MODULE_NS(charts)::ChartOperationPipeData
@@ -1970,7 +2007,12 @@ auto ChartCanvasQCustomPlot::createOperationPipeData(QCPAbstractPlottable* pPlot
         return createOperationPipeDataImpl(pCurve->data());
     auto pBars = qobject_cast<QCPBars*>(pPlottable);
     if (pBars)
-        return createOperationPipeDataImpl(pBars->data());
+    {
+        if (pPlottable->property("chartEntryType").toString() == ChartObjectChartTypeStr_bars)
+            return createOperationPipeDataForBars(*pBars);
+        else
+            return createOperationPipeDataImpl(pBars->data());
+    }
     DFG_ASSERT_IMPLEMENTED(false);
     return ChartOperationPipeData();
 }
@@ -1985,12 +2027,9 @@ void ChartCanvasQCustomPlot::applyChartOperationTo(QPointer<QCPAbstractPlottable
     QString sOperationDefinition;
     // Asking arguments from user
     {
-        const QString sAdditionInfo = (qobject_cast<QCPBars*>(pPlottable) != nullptr)
-            ? tr("\nNote: bar chart string labels are not passed to operation")
-            : QString();
         sOperationDefinition = QInputDialog::getText(this->m_spChartView.data(),
             tr("Applying operation"),
-            tr("Define operation for '%1'\nUsage: %2%3").arg(pPlottable->name(), getOperationDefinitionUsageGuide(svOperationId), sAdditionInfo),
+            tr("Define operation for '%1'\nUsage: %2").arg(pPlottable->name(), getOperationDefinitionUsageGuide(svOperationId)),
             QLineEdit::Normal,
             getOperationDefinitionPlaceholder(svOperationId));
         if (sOperationDefinition.isEmpty())
@@ -2070,6 +2109,9 @@ void ChartCanvasQCustomPlot::applyChartOperationsTo(QCPAbstractPlottable* pPlott
     if (!pPlottable || operations.empty())
         return;
 
+    // Note: could use less coarse-grained implementation here for better performance: currently fills pipe data for all axes
+    //       even if operations use only some. For example with bars transforms all ticker QStrings to StringUtf8 vector
+    //       and later back to ticker QStrings even if operations only changes y-values.
     auto pipeData = createOperationPipeData(pPlottable);
     if (pipeData.vectorCount() == 0)
     {
@@ -2092,6 +2134,34 @@ void ChartCanvasQCustomPlot::applyChartOperationsTo(QCPAbstractPlottable* pPlott
             tr("Errors in operations"),
             tr("There were errors applying operations, changes were not applied to chart object '%1'\n\nList of errors:\n%2").arg(pPlottable->name(), sErrors));
         return;
+    }
+
+    auto pBars = qobject_cast<QCPBars*>(pPlottable);
+    // If dealing with bars, must handle x-axis and labels separately.
+    if (pBars && pPlottable->property("chartEntryType").toString() == ChartObjectChartTypeStr_bars)
+    {
+        // fillQcpPlottable() expects to have numbers in both x and y pipes, but for bars x-pipe should have strings at this point.
+        // Constructing number-valued x-pipe and reconstructing ticker labels.
+        auto pLabelAxis = pBars->keyAxis();
+        auto pLabelTicker = dynamic_cast<QCPAxisTickerText*>((pLabelAxis) ? pLabelAxis->ticker().data() : nullptr);
+        if (pLabelTicker)
+        {
+            QMap<double, QString> newTicks;
+            auto pStrings = pipeData.constStringsByIndex(0);
+            auto pPipeXvals = pipeData.editableValuesByIndex(0);
+            if (pStrings && pPipeXvals)
+            {
+                pPipeXvals->resize(pStrings->size());
+                for (size_t i = 0; i < pStrings->size(); ++i)
+                {
+                    const double xVal = static_cast<double>(i + 1); // Bars are created starting with index 1, so that why +1. To find dependent code, search for BARS_INDEX_1
+                    newTicks.insert(xVal, viewToQString((*pStrings)[i]));
+                    (*pPipeXvals)[i] = xVal;
+                }
+                pipeData.setValueVectorsAsData();
+            }
+            pLabelTicker->setTicks(newTicks);
+        }
     }
 
     fillQcpPlottable(pPlottable, pipeData);
