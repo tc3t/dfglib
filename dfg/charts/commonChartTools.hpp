@@ -170,10 +170,12 @@ constexpr char ChartObjectFieldIdStr_axisLabelColour[] = "axis_label_colour";
 //          -label_colour
 //          -range_start
 //          -range_end
+//          -tick_label_format
 // Example: "axis_properties_y": "(line_colour, red, label_colour, green, range_start, 10, range_end, 20)"
 constexpr char ChartObjectFieldIdStr_axisProperties[] = "axis_properties_";
 constexpr char ChartObjectFieldIdStr_axisProperty_lineColour[]  = "line_colour";
 constexpr char ChartObjectFieldIdStr_axisProperty_labelColour[] = "label_colour";
+constexpr char ChartObjectFieldIdStr_axisProperty_tickLabelFormat[] = "tick_label_format";
 constexpr char ChartObjectFieldIdStr_axisProperty_rangeStart[]  = "range_start";
 constexpr char ChartObjectFieldIdStr_axisProperty_rangeEnd[]    = "range_end";
 

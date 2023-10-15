@@ -578,6 +578,7 @@ namespace
     void setAxisTicker(QCPAxis& rAxis, const ChartDataType type)
     {
         // TODO: should use the same date format as in input data and/or have the format customisable.
+        // TODO: if there are multiple graphs in the same panel, identical axis may get recreated several times.
         if (type == ChartDataType::dateAndTimeMillisecondTz)
             createDateTimeTicker(rAxis, QLatin1String("yyyy-MM-dd\nhh:mm:ss.zzzZ")); // TODO: should show in the same timezone as input
         else if (type == ChartDataType::dateAndTimeMillisecond)
@@ -1104,6 +1105,7 @@ void ChartCanvasQCustomPlot::setAxisProperties(const StringViewUtf8& svPanelId, 
         const auto svPropId = args.value(i);
         const auto svPropIdUntyped = svPropId.asUntypedView();
         const auto svPropValue = args.value(i + 1);
+        const auto svPropValueUntyped = svPropValue.asUntypedView();
 
         if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_lineColour)
             setPanelAxisColour(*pAxis, QColor(viewToQString(svPropValue)));
@@ -1113,6 +1115,27 @@ void ChartCanvasQCustomPlot::setAxisProperties(const StringViewUtf8& svPanelId, 
             setRangeHelper("dfglib_range_start", svPropValue);
         else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_rangeEnd)
             setRangeHelper("dfglib_range_end", svPropValue);
+        else if (svPropIdUntyped == ChartObjectFieldIdStr_axisProperty_tickLabelFormat)
+        {
+            const auto nColonPos = ::DFG_MODULE_NS(alg)::indexOf(svPropValueUntyped, ':');
+            const auto svFormatType = (isValidIndex(svPropValueUntyped, nColonPos)) ? svPropValueUntyped.substr_startCount(0, nColonPos) : svPropValueUntyped;
+            const auto svFormatDetail = (isValidIndex(svPropValueUntyped, nColonPos)) ? svPropValueUntyped.substr_start(nColonPos + 1) : StringViewC();
+            if (svFormatType == "number")
+            {
+                setAxisTicker(*pAxis, ChartDataType::unknown);
+                if (!svFormatDetail.empty())
+                    DFG_QT_CHART_CONSOLE_INFO(tr("Number format specifier in '%1' is currently ignored (axis '%2' in panel '%3')").
+                        arg(viewToQString(svPropValue), viewToQString(svAxisId), viewToQString(svPanelId)));
+                // QCPAxis has following functions readily available for controlling number format: setNumberFormat(), setNumberPrecision()
+            }
+            else if (svFormatType == "datetime")
+            {
+                createDateTimeTicker(*pAxis, QLatin1String(svFormatDetail.data(), svFormatDetail.sizeAsInt()));
+            }
+            else
+                DFG_QT_CHART_CONSOLE_WARNING(tr("Unrecognized %4 '%1' for axis '%2' in panel '%3'")
+                    .arg(viewToQString(svPropValue), viewToQString(svAxisId), viewToQString(svPanelId), ChartObjectFieldIdStr_axisProperty_tickLabelFormat));
+        }
         else
             DFG_QT_CHART_CONSOLE_WARNING(tr("Unrecognized axis property '%1' for axis '%2' in panel '%3'").arg(viewToQString(svPropId), viewToQString(svAxisId), viewToQString(svPanelId)));
     }

@@ -187,6 +187,11 @@
                     <li><i>label_colour</i>: Sets axis label text colour </li>
                     <li><i>range_start</i>: Sets value from which shown axis starts from</li>
                     <li><i>range_end</i>: Sets value to which shown axis ends to</li>
+                    <li><i>tick_label_format</i>: Sets tick label format. Supported values:</li>
+                    <ul>
+                        <li><i>number</i>: Labels are formatted as plain numbers even if input would e.g. be of date-format</li>
+                        <li><i>datetime:format</i>: Labels are formatted as datetime using given format. For available format specifiers, see documentation of <a href="https://doc.qt.io/qt-6/qdatetime.html">QDateTime</a></li>
+                    </ul>
                 </ul></li>
                 <li>Note: key, value list must be in parenthesis</li>
                 <li>Example: "axis_properties_x": "(line_colour, blue, label_colour, #112233, range_start, 10, range_end, 20)"</li>
