@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../OpaquePtr.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QPointer>
@@ -58,11 +59,17 @@ public:
     void setChangeSignaling(bool bEnable);
 
 private:
+    // Begin: implementation overloads -->
     bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const override;
+    std::optional<GraphDataSourceSnapshotId> snapshotIdImpl() const override;
+    // End implementation overloads <--
+
+    void onModelChanged();
 
 public:
     QPointer<const CsvItemModel> m_spModel;
     ColumnDataTypeMap m_columnTypes;
+    DFG_OPAQUE_PTR_DECLARE();
 }; // class CsvItemModelChartDataSource
 
 

@@ -1287,6 +1287,24 @@ bool ChartDefinition::isSourceUsed(const GraphDataSourceId& sourceId, bool* pHas
     return bFound;
 }
 
+auto ChartDefinition::generateSourceSnapshotIdTable(DataSourceContainer& sources) const -> GraphDataSourceSnapshotIdMap
+{
+    GraphDataSourceSnapshotIdMap mapSourceIdToSnapshotId;
+    this->forEachEntry([&](const GraphDefinitionEntry& entry)
+    {
+        const auto sSourceId = entry.sourceId(this->m_defaultSourceId);
+        const bool bUsed = this->isSourceUsed(sSourceId);
+        auto iterSource = (bUsed) ? sources.findById(sSourceId) : sources.end();
+        if (iterSource != sources.end())
+        {
+            const auto optSid = sources.iterToRef(iterSource).snapshotId();
+            if (optSid.has_value())
+                mapSourceIdToSnapshotId.insert(sSourceId, optSid.value());
+        }
+    });
+    return mapSourceIdToSnapshotId;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -1985,6 +2003,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefr
 public:
     ChartDefinition m_chartDefinition;
     DataSourceContainer m_sources;
+    GraphDataSourceSnapshotIdMap m_mapSourceIdToSnapshotIds;
     ::DFG_MODULE_NS(cont)::MapVectorSoA<int, ChartData> m_preparedData; // Index refers to index in m_chartDefinition.
     std::shared_ptr<ChartDataCache> m_spCache;
     bool m_bTerminated = false;
@@ -2001,6 +2020,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartData
 
 void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartDataPreparator::prepareData(ChartRefreshParamPtr spParam)
 {
+    // This is the place where chart data is prepared (generated) for sources that allow
+    // generation from worker thread.
     DFG_OPAQUE_REF().m_terminateFlag = false;
     if (spParam)
     {
@@ -2080,6 +2101,8 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget)
     DFG_OPAQUE_REF().m_chartDefinition = chartDefinition;
     DFG_OPAQUE_REF().m_sources = std::move(sources);
     DFG_OPAQUE_REF().m_spCache = std::move(spCache);
+    DFG_OPAQUE_REF().m_mapSourceIdToSnapshotIds = chartDefinition.generateSourceSnapshotIdTable(DFG_OPAQUE_REF().m_sources);
+
 }
 
 auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::chartDefinition() const -> const ChartDefinition&
@@ -2091,6 +2114,11 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::chart
 auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::dataSources() -> DataSourceContainer&
 {
     return DFG_OPAQUE_REF().m_sources;
+}
+
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::initialDataSourceSnapshotIds() const -> GraphDataSourceSnapshotIdMap
+{
+    return (DFG_OPAQUE_PTR()) ? DFG_OPAQUE_PTR()->m_mapSourceIdToSnapshotIds : GraphDataSourceSnapshotIdMap();
 }
 
 void ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParam::storePreparedData(const GraphDefinitionEntry& defEntry, ChartData chartData)
@@ -2415,6 +2443,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
                 pPreparedData = &dummy; // Setting pPreparedData to dummy data to prevent refreshX calls from starting to compute data.
             try
             {
+                // Note: if chart data for an entry couldn't be generated in preparation phase in worker thread, 
+                //       it can take place here in refresh-calls.
                 if (sEntryType == ChartObjectChartTypeStr_xy || sEntryType == ChartObjectChartTypeStr_txy || sEntryType == ChartObjectChartTypeStr_txys)
                     refreshXy(context, rChart, configParamCreator, source, defEntry, pPreparedData);
                 else if (sEntryType == ChartObjectChartTypeStr_histogram)
@@ -2433,7 +2463,35 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
                 DFG_QT_CHART_CONSOLE_ERROR(tr("Creating chart object for entry '%1' failed due to memory allocation failure, there may be more chart data than what can be handled. bad_alloc.what() = '%2'").arg(defEntry.index()).arg(e.what()));
             }
         });
-    });
+    }); // for each entry
+
+    // Checking whether data sources changed during the process and generating console warnings if yes.
+    // Note that this is somewhat coarse-grained since it can generate redundant warnings, e.g.
+    //     1. Source snapshot ID's are generated
+    //     2. Entry 1 using source S is prepared
+    //     3. Source S changes
+    //     4. Rest of entries none of which use source S are prepared
+    //     5. Source snapshot ID's are generated
+    //     -> Get warning about changed source even though it can't have affected resulting data.
+    {
+        const auto initialSnapshots = param.initialDataSourceSnapshotIds();
+        const auto currentSnapshots = param.chartDefinition().generateSourceSnapshotIdTable(this->m_dataSources);
+        for (const auto& originalItem : initialSnapshots)
+        {
+            const auto iterCurrent = currentSnapshots.find(originalItem.first);
+            const bool bCurrentExists = (iterCurrent != currentSnapshots.end());
+            const QString sErrorType = (bCurrentExists) 
+                ? ((originalItem.second != iterCurrent->second) ? tr("was changed") : QString())
+                : tr("disappeared");
+            if (!sErrorType.isEmpty())
+            {
+                const auto sMsg = tr("Source '%1' %2 during chart creation, entries using that source may be inconsistent. "
+                    "Original snapshot ID: %3%4").arg(originalItem.first, sErrorType, originalItem.second.toString(),
+                        (bCurrentExists) ? tr(", final snapshot ID: %1").arg(iterCurrent->second.toString()) : QString());
+                DFG_QT_CHART_CONSOLE_WARNING(sMsg);
+            }
+        }
+    }
 
     rChart.optimizeAllAxesRanges();
 

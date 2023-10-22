@@ -93,7 +93,10 @@ public:
     void setCachingAllowed(bool bAllowed);
 
 private:
+    // Begin: implementation overloads -->
     bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const override;
+    std::optional<GraphDataSourceSnapshotId> snapshotIdImpl() const override;
+    // End implementation overloads <--
 
 public slots:
     void onSelectionAnalysisCompleted();

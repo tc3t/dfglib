@@ -183,6 +183,7 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvTableViewChartDataSource)
     ::DFG_MODULE_NS(cont)::ViewableSharedPtr<GraphDataSource::ColumnDataTypeMap> m_viewableMapColToDataType;
     ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<GraphDataSource::ColumnDataTypeMap> m_viewerMapColToDataType;
     bool m_bCachingAllowed = true;
+    std::atomic<uint64> m_anChangeCounter{ 0 };
 };
 
 ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::CsvTableViewChartDataSource(CsvTableView* view)
@@ -489,6 +490,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setChartDefinitionViewer(
 
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::onSelectionAnalysisCompleted()
 {
+    DFG_OPAQUE_REF().m_anChangeCounter++;
     Q_EMIT sigChanged();
 }
 
@@ -497,7 +499,13 @@ bool ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::isSafeToQueryDataFromThre
     return true;
 }
 
+auto ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::snapshotIdImpl() const -> std::optional<GraphDataSourceSnapshotId>
+{
+    return DFG_OPAQUE_PTR() ? GraphDataSourceSnapshotId(DFG_OPAQUE_PTR()->m_anChangeCounter) : std::optional<GraphDataSourceSnapshotId>();
+}
+
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::resetCache()
 {
+    DFG_OPAQUE_REF().m_anChangeCounter++;
     DFG_OPAQUE_REF().m_cache.reset(); // TODO: make less coarse-grained; this bluntly wipes out all caches without retaining any of the allocated memory, which often could be reused for future caching.
 }

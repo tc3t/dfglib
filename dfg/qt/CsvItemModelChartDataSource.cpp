@@ -9,6 +9,11 @@ DFG_END_INCLUDE_QT_HEADERS
 
 #include "../alg.hpp"
 
+DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvItemModelChartDataSource)
+{
+    std::atomic<uint64> m_anChangeCounter{ 0 };
+};
+
 ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::CsvItemModelChartDataSource(CsvItemModel* pModel, QString sId)
     : m_spModel(pModel)
 {
@@ -27,19 +32,20 @@ DFG_END_INCLUDE_QT_HEADERS
 
 void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::setChangeSignaling(const bool bEnable)
 {
+    const auto changeHandler = &CsvItemModelChartDataSource::onModelChanged;
     if (bEnable)
     {
-        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
-        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::headerDataChanged, this, &GraphDataSource::sigChanged));
-        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
-        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, &GraphDataSource::sigChanged));
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, changeHandler));
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::headerDataChanged, this, changeHandler));
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::modelReset, this, changeHandler));
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, changeHandler));
     }
     else
     {
-        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::dataChanged, this, &GraphDataSource::sigChanged));
-        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::headerDataChanged, this, &GraphDataSource::sigChanged));
-        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::modelReset, this, &GraphDataSource::sigChanged));
-        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, &GraphDataSource::sigChanged));
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::dataChanged, this, changeHandler));
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::headerDataChanged, this, changeHandler));
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::modelReset, this, changeHandler));
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, changeHandler));
     }
 }
 
@@ -204,4 +210,15 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::privGetDataTable() const 
 bool ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::isSafeToQueryDataFromThreadImpl(const QThread*) const
 {
     return true;
+}
+
+auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::snapshotIdImpl() const -> std::optional<SnapshotId>
+{
+    return (DFG_OPAQUE_PTR()) ? SnapshotId(DFG_OPAQUE_PTR()->m_anChangeCounter) : std::optional<SnapshotId>(std::nullopt);
+}
+
+void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::onModelChanged()
+{
+    DFG_OPAQUE_REF().m_anChangeCounter++;
+    Q_EMIT sigChanged();
 }

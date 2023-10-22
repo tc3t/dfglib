@@ -37,6 +37,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
 typedef QString GraphDataSourceId;
 typedef std::size_t DataSourceIndex;
+class GraphDataSourceSnapshotId;
+class GraphDataSourceSnapshotIdMap;
+class DataSourceContainer;
 class GraphDefinitionWidget;
 class GraphDefinitionEntry;
 class ChartDataCache;
@@ -71,9 +74,11 @@ public:
 
     bool isSourceUsed(const GraphDataSourceId& sourceId, bool* pHasErrorEntries = nullptr) const;
 
+    auto generateSourceSnapshotIdTable(DataSourceContainer& sources) const -> GraphDataSourceSnapshotIdMap;
+
     QStringList m_controlEntries;
     GraphDataSourceId m_defaultSourceId;
-};
+}; // class ChartDefinition
 
 using ChartDefinitionViewable = ::DFG_MODULE_NS(cont)::ViewableSharedPtr<ChartDefinition>;
 using ChartDefinitionViewer = ::DFG_MODULE_NS(cont)::ViewableSharedPtrViewer<ChartDefinition>;
@@ -311,6 +316,45 @@ public:
 }; // DataQueryDetails
 
 
+// Class for representing a GraphDataSource snapshot ID. If data source provides snapshot ID's, they must fulfill the following requirements:
+//      -Comparing snapshot IDs is defined only if ID's were returned by the same data source object.
+//      -If snapshot ID at time t1 is equal to snapshot ID at time t2, any data query between those times must have resulted to identical results.
+//      -Different snapshot ID's is not a guarantee of change, so in simple terms:
+//          -Identical snapshot ID's must be a guarantee of identical data, but different ID's is not a guarantee of different data.
+//      -List of all ID's given during a context of a process must not contain duplicates, i.e. an earlier ID must not be later reused for snapshot even if actual data is identical to old.
+//          -This is to prevent ABA-problem: if ID could be strictly data based (e.g. hash), the following could occur:
+//              1. Source user stores snapshot ID
+//              2. Source is used
+//              3. Source is changed
+//              4. Source is used
+//              5. Source is changed back to original
+//              6. Source user stores snapshot ID
+//              If ID was based only on data content, user would see identical ID at step 1 and 6, even though steps 2 and 4 used possibly different data.
+//              By requiring that snapshots ID's must not be re-used, ID at step 6 is guaranteed to be different than ID at step 1.
+class GraphDataSourceSnapshotId
+{
+public:
+    // Currently only supporting integer counter-based ID
+    GraphDataSourceSnapshotId() = default;
+    explicit GraphDataSourceSnapshotId(uint64 id) : m_id(id) {}
+
+    bool operator==(const GraphDataSourceSnapshotId& rOther) const { return this->m_id == rOther.m_id; }
+    bool operator!=(const GraphDataSourceSnapshotId& rOther) const { return !(*this == rOther); }
+    
+    // Returns string represenation of the ID
+    QString toString() const
+    {
+        return QString::number(m_id);
+    }
+
+    int64 m_id = 0;
+}; // class GraphDataSourceSnapshotId
+
+class GraphDataSourceSnapshotIdMap : public ::DFG_MODULE_NS(cont)::MapVectorSoA<GraphDataSourceId, GraphDataSourceSnapshotId>
+{
+}; // class GraphDataSourceSnapshotIdMap
+
+
 // Abstract class representing graph data source.
 class GraphDataSource : public QObject
 {
@@ -325,10 +369,14 @@ public:
     using ColumnMetaDataMap = ::DFG_MODULE_NS(cont)::MapVectorAoS<DataSourceIndex, ColumnMetaData>;
     using IndexList = ::DFG_MODULE_NS(cont)::ValueVector<DataSourceIndex>;
     using ForEachElementByColumHandler = std::function<void(const SourceDataSpan&)>;
+    using SnapshotId = GraphDataSourceSnapshotId;
+    using SnapshotIdMap = GraphDataSourceSnapshotIdMap;
 
     virtual ~GraphDataSource() {}
 
     GraphDataSourceId uniqueId() const { return m_uniqueId; }
+
+    std::optional<SnapshotId> snapshotId() const { return snapshotIdImpl(); }
 
     GraphDataSourceType dataType() const { return GraphDataSourceType_tableSelection; }
 
@@ -402,6 +450,7 @@ private:
     // Default implementation returns true iff given thread is the same as this->thread().
     // Note: Implementation must be thread safe.
     virtual bool isSafeToQueryDataFromThreadImpl(const QThread* pThread) const;
+    virtual std::optional<SnapshotId> snapshotIdImpl() const { return std::nullopt; }
 
 public:
     GraphDataSourceId m_uniqueId; // Unique ID by which data source can be queried with.
@@ -633,6 +682,7 @@ public:
         ~ChartRefreshParam();
         const ChartDefinition& chartDefinition() const;
         DataSourceContainer& dataSources();
+        auto initialDataSourceSnapshotIds() const -> GraphDataSourceSnapshotIdMap;
 
         void storePreparedData(const GraphDefinitionEntry& defEntry, ChartData chartData);
         ChartData* preparedDataForEntry(const GraphDefinitionEntry& defEntry);
