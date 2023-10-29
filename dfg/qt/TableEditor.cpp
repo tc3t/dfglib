@@ -1424,7 +1424,7 @@ void TableEditor::onFilterTextChanged(const QString& text)
     // Forcing visual update of column headers since filter change may affect those.
     // Hack: Since it would take bit of work to figure out which columns were affected (if any), for now simply using coarse-grained
     //       implementation by signaling header data change on all columns.
-    pProxy->headerDataChanged(Qt::Horizontal, 0, pProxy->columnCount() - 1);
+    Q_EMIT pProxy->headerDataChanged(Qt::Horizontal, 0, pProxy->columnCount() - 1);
 
     // If there was at least one item before applying filter, trying to keep that visible after filter change.
     // This tries to make especially filter clearing be more user friendly: view resetting always to top/bottom after filter clear is often a bit inconvenient.

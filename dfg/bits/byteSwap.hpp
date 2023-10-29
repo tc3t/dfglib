@@ -1,6 +1,10 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
+#include <type_traits>
+#if defined(_MSC_VER)
+	#include <stdlib.h> // For _byteswap_*
+#endif
 
 #include <boost/predef/other/endian.h>
 

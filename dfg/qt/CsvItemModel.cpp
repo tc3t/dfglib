@@ -6,6 +6,7 @@
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QUndoStack>
 //#include <QFileDialog>
+#include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -1523,7 +1524,6 @@ double CsvItemModel::cellDataAsDouble(StringViewSzUtf8 sv, const Index nRow, con
 {
     DFG_UNUSED(nRow);
     DFG_UNUSED(nCol);
-    using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
     DFG_ASSERT_CORRECTNESS(rawStringViewAt(nRow, nCol) == sv);
     auto pColInfo = this->getColInfo(nCol);
     auto customColParser = (pColInfo) ? pColInfo->getCustomStringToDoubleParser() : nullptr;

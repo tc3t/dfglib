@@ -658,8 +658,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onRegexFormatUiAction();
         void onTrimCellsUiAction();
 
-        void changeRadix(const CsvTableViewActionChangeRadixParams& params);
-        void applyRegexFormat(const CsvTableViewActionRegexFormatParams& params);
+        void changeRadix(const ::DFG_MODULE_NS(qt)::CsvTableViewActionChangeRadixParams& params);
+        void applyRegexFormat(const ::DFG_MODULE_NS(qt)::CsvTableViewActionRegexFormatParams& params);
 
         bool diffWithUnmodified();
 
@@ -675,7 +675,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         void onFilterRequested();
         void onFilterFromSelectionRequested();
-        void onFilterToColumnRequested(Index nDataCol);
+        void onFilterToColumnRequested(::DFG_MODULE_NS(qt)::CsvTableView::Index nDataCol);
 
         void setCaseSensitiveSorting(bool bCaseSensitive);
         void toggleSortingEnabled(bool bNewStatus);
@@ -708,9 +708,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Column header action handlers
         void setColumnNames();
-        void setColumnVisibility(Index nCol, bool bVisible, ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
-        void setColumnReadOnly(ColumnIndex_data nCol, const bool bReadOnly);
-        void setColumnType(ColumnIndex_data nCol, CsvItemModelColumnType newType);
+        void setColumnVisibility(::DFG_MODULE_NS(qt)::CsvTableView::Index nCol, bool bVisible, ::DFG_MODULE_NS(qt)::CsvTableView::ProxyModelInvalidation = ProxyModelInvalidation::ifNeeded);
+        void setColumnReadOnly(::DFG_MODULE_NS(qt)::ColumnIndex_data nCol, const bool bReadOnly);
+        void setColumnType(::DFG_MODULE_NS(qt)::ColumnIndex_data nCol, ::DFG_MODULE_NS(qt)::CsvItemModelColumnType newType);
         void unhideAllColumns();
         void showSelectColumnVisibilityDialog();
 
@@ -738,7 +738,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void sigFindActivated();
         void sigFilterActivated();
         void sigFilterJsonRequested(QString);
-        void sigFilterToColumnRequested(Index, const QVariantMap&); // First argument is column data index and second is filter definition.
+        void sigFilterToColumnRequested(::DFG_MODULE_NS(qt)::CsvTableView::Index, const QVariantMap&); // First argument is column data index and second is filter definition.
         void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedItems);
         void sigOnAllowApplicationSettingsUsageChanged(bool);
         void sigReadOnlyModeChanged(bool);

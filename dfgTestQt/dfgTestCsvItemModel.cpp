@@ -438,7 +438,7 @@ TEST(dfgQt, CsvItemModel_cellDataAsDouble)
     {
         CsvItemModel model;
         model.setSize(6, 1);
-        constexpr auto doubleMax = std::numeric_limits<double>::max();
+        constexpr auto doubleMax = (std::numeric_limits<double>::max)();
         constexpr auto doubleInf = std::numeric_limits<double>::infinity();
 
         // Setting values

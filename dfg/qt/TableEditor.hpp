@@ -134,12 +134,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void handlePendingEdits();
         void onHighlightTextChanged(const QString& text);
         void onFilterTextChanged(const QString& text);
-        void onFindColumnChanged(Index newCol);
-        void onFilterColumnChanged(Index nNewCol);
+        void onFindColumnChanged(::DFG_MODULE_NS(qt)::TableEditor::Index newCol);
+        void onFilterColumnChanged(::DFG_MODULE_NS(qt)::TableEditor::Index nNewCol);
         void onFindRequested();
         void onFilterRequested();
         void setFilterJson(const QString& sJson);
-        void setFilterToColumn(Index nDataCol, const QVariantMap& filterDef);
+        void setFilterToColumn(::DFG_MODULE_NS(qt)::TableEditor::Index nDataCol, const QVariantMap& filterDef);
         void onHighlightTextCaseSensitivityChanged(bool);
         void onFilterCaseSensitivityChanged(bool);
         void onViewReadOnlyModeChanged(bool);

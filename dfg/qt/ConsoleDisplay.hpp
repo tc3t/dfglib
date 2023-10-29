@@ -44,10 +44,10 @@ public:
     void clear();
 
 signals:
-    void sigAddEntry(const QString& s, ConsoleDisplayEntryType entryType);
+    void sigAddEntry(const QString& s, ::DFG_MODULE_NS(qt)::ConsoleDisplayEntryType entryType);
 
 public slots:
-    void addEntryDirect(const QString& s, ConsoleDisplayEntryType entryType);
+    void addEntryDirect(const QString& s, ::DFG_MODULE_NS(qt)::ConsoleDisplayEntryType entryType);
 
 protected:
     void contextMenuEvent(QContextMenuEvent* pEvent) override;

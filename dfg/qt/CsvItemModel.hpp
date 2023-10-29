@@ -247,7 +247,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             {
             public:
                 using ChartDataType = ::DFG_MODULE_NS(charts)::ChartDataType;
-                StringToDoubleParserParam() = default;
                 StringToDoubleParserParam(const StringViewSzUtf8& sv, ChartDataType* pInterpretedChartType, const double returnValueOnConversionError)
                     : m_sv(sv)
                     , m_pInterpretedChartType(pInterpretedChartType)
@@ -273,7 +272,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 using ParserFunc = std::function<double(ParserParam&, const QString&)>;
 
                 StringToDoubleParser() = default;
-                StringToDoubleParser(nullptr_t) {}
+                StringToDoubleParser(std::nullptr_t) {}
                 StringToDoubleParser(QString sDefitinionString, ParserFunc parserFunc)
                     : m_parserFunc(parserFunc)
                     , m_sDefString(std::move(sDefitinionString))
@@ -777,7 +776,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void sigOnSaveToFileCompleted(bool, double);
         // Emitted when the way how content is interpreted as numbers has changed (e.g. column type or custom string-to-double parser has changed)
         // Parameter is currently not used.
-        void sigColumnNumberDataInterpretationChanged(Index nCol, ColumnNumberDataInterpretationChangedParam);
+        void sigColumnNumberDataInterpretationChanged(::DFG_MODULE_NS(qt)::CsvItemModel::Index nCol, ::DFG_MODULE_NS(qt)::CsvItemModel::ColumnNumberDataInterpretationChangedParam);
 
     protected:
         // Clears internal data. Caller should make sure this call

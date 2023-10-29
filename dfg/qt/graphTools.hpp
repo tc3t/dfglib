@@ -706,7 +706,7 @@ public:
     void onChartDataPreparationReady(ChartRefreshParamPtr spParam);
 
 signals:
-    void sigChartDataPreparationNeeded(ChartRefreshParamPtr);
+    void sigChartDataPreparationNeeded(::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParamPtr);
 
 public:
     QObjectStorage<QSplitter> m_spSplitter;
@@ -733,8 +733,8 @@ public:
     void terminatePreparation(); // Request to terminate current preparation.
 
 signals:
-    void sigOnEntryPrepared(EntryPreparedParam);
-    void sigPreparationFinished(ChartRefreshParamPtr spParam);
+    void sigOnEntryPrepared(::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::EntryPreparedParam);
+    void sigPreparationFinished(::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::ChartRefreshParamPtr spParam);
 
 private:
     DFG_OPAQUE_PTR_DECLARE();

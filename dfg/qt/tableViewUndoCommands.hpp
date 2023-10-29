@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../numericTypeTools.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTableView>

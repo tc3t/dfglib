@@ -1964,6 +1964,7 @@ TEST(dfgQt, TableView_setSelectedIndexes)
             
         }
 
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
         // Mapping not used on selection creation, used when setting selection
         {
             viewWidget.setSelectedIndexes({ {1, 1}, {2, 0}, {3, 1} });
@@ -1991,5 +1992,6 @@ TEST(dfgQt, TableView_setSelectedIndexes)
             DFGTEST_EXPECT_LEFT(viewWidget.getCsvModel().index(2, 0), selectedIndexesResult.value(0));
             DFGTEST_EXPECT_LEFT(viewWidget.getCsvModel().index(3, 1), selectedIndexesResult.value(1));
         }
+        #endif // QT_VERSION >= 5.12.0
     }
 }

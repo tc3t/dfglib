@@ -1029,7 +1029,6 @@ namespace operations
         }
 
         auto pStrings = arg.stringsByIndex(floatAxisValueToAxisIndex(axis)); // Note: this automatically creates and returns an editable copy if input is const
-        const auto toArg = [](const auto& match) { return StringViewC(match.first, match.second); };
         if (!pStrings) // No strings available
         {
             op.setError(error_missingInput);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
+#include "qtBasic.hpp" // This must be included before DelimitedTextReader.hpp gets included, otherwise might see get compiler errors.
 #include "CsvTableView.hpp"
 #include "CsvItemModel.hpp"
 #include "qtIncludeHelpers.hpp"

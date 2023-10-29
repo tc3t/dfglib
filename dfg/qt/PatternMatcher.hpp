@@ -4,6 +4,7 @@
 #include "qtIncludeHelpers.hpp"
 #include "../dfgAssert.hpp"
 #include <functional>
+#include "../ReadOnlySzParam.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QRegularExpression>

@@ -6447,7 +6447,11 @@ TableHeaderView::TableHeaderView(CsvTableView* pParent) :
     setSectionsClickable(true); // Without this clicking header didn't select column
     // Setting default alignment to Left | VCenter instead of Qt-default HCenter | VCenter (changed by ticket #165),
     // horizontal alignment is adjusted if needed in initStyleOptionForIndex()
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
     this->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+#else
+    this->setDefaultAlignment(static_cast<Qt::Alignment>(Qt::AlignLeft | Qt::AlignVCenter));
+#endif
 }
 
 CsvTableView* TableHeaderView::tableView()

@@ -47,7 +47,11 @@ RegexFormatWidget::RegexFormatWidget(QWidget* pParent)
         "    regex = '^(a)(b)(.*)'\n"
         "    format = '{0} transformed into {3}{2:b>3}{1}'\n"
         "    With input 'ab123', result is 'ab123 transformed into 123bbba'\n"), this); // Deletion by parent
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
     pDescriptionText->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+#else
+    pDescriptionText->setTextInteractionFlags(static_cast<Qt::TextInteractionFlags>(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard));
+#endif
     pLayout->addWidget(pDescriptionText, nRow, 0, 1, 2);
     ++nRow;
     pLayout->addWidget(new QLabel(tr("Regular expression"), this), nRow, 0);
@@ -101,7 +105,6 @@ RegexFormatWidget::RegexFormatWidget(QWidget* pParent)
 
     // Connecting textChanged-signals to update UI as needed
     {
-        const auto defaultLineEditBackgroundColor = pRegexLineEdit->palette().color(QPalette::Base);
         // Changing regex triggers output preview update.
         connect(pRegexLineEdit, &QLineEdit::textChanged, this, &RegexFormatWidget::updatePreviewOutput);
         // Changing format string triggers output preview update
