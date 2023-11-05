@@ -1377,7 +1377,7 @@ auto ChartCanvasQCustomPlot::getAxisRect(const StringViewUtf8& svPanelId) -> QCP
 }
 
 template <class This_T>
-static auto ChartCanvasQCustomPlot::getChartPanelImpl(This_T& rThis, const QPoint& pos) -> std::conditional_t<std::is_const_v<This_T>, const ChartPanel*, ChartPanel*>
+auto ChartCanvasQCustomPlot::getChartPanelImpl(This_T& rThis, const QPoint& pos) -> std::conditional_t<std::is_const_v<This_T>, const ChartPanel*, ChartPanel*>
 {
     const auto isWithinAxisRange = [](const QCPAxis* pAxis, const double val)
     {
