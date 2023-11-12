@@ -223,13 +223,6 @@ template <class T> auto deRef(T& p) -> decltype(*p)
     return *p;
 }
 
-class DFG_CLASS_NAME(Dummy)
-{
-public:
-    template <class T>
-    constexpr DFG_CLASS_NAME(Dummy)(const T&) {}
-};
-
 // stringLiteralByCharType(): helper for DFG_STRING_LITERAL_BY_CHARTYPE
 template <class T> inline const T* stringLiteralByCharType(const char*, const wchar_t*, const char16_t*, const char32_t*)                 { DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(T, "stringLiteralByCharType is not implemented for given type") }
 template <> inline const char*     stringLiteralByCharType<char>(const char* psz, const wchar_t*, const char16_t*, const char32_t*)       { return psz; }

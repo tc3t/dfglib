@@ -195,6 +195,17 @@ namespace DFG_ROOT_NS
 #define DFG_COUNTOF_CSL(x) (DFG_COUNTOF(x) - 1)
 #define DFG_COUNTOF_SZ(x) (DFG_COUNTOF(x) - 1)
 
+namespace DFG_ROOT_NS
+{
 
+// Empty placeholder class that can be used e.g. in function parameter list for an argument that is not used.
+class Dummy
+{
+public:
+	template <class T>
+	constexpr Dummy(const T&) {}
+}; // class Dummy
+
+} // namespace DFG_ROOT_NS
 
 #endif // include guard
