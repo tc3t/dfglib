@@ -2,7 +2,9 @@
 
 #include "../dfgDefs.hpp"
 #include "../dfgBase.hpp" // For DFG_STRING_LITERAL_BY_CHARTYPE
-#include "fmtlib/format.h"
+DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+    #include "fmtlib/format.h"
+DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #include "../ReadOnlySzParam.hpp"
 #include "../cont/elementType.hpp"
 #include <string>
