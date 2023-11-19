@@ -441,9 +441,8 @@ DFG_ROOT_NS_BEGIN
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(math) {
 
 // From http://isocpp.org/wiki/faq/intrinsic-types#is-power-of-2
-// TODO: test
 template <class T>
-inline bool isPowerOf2(T i)
+inline constexpr bool isPowerOf2(const T i)
 {
     return i > 0 && (i & (i - 1)) == 0;
 }

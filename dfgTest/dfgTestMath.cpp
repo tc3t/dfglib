@@ -600,6 +600,30 @@ TEST(dfgMath, numericDistance)
     EXPECT_EQ(uint8(127), numericDistance(int8(-128), int8(-1)));
 }
 
+TEST(dfgMath, isPowerOf2)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(math);
+    DFGTEST_STATIC_TEST(isPowerOf2(-2) == false);
+    DFGTEST_STATIC_TEST(isPowerOf2(0) == false);
+    DFGTEST_STATIC_TEST(isPowerOf2(1));
+    DFGTEST_STATIC_TEST(isPowerOf2(8));
+    for (size_t i = 0; i < 8 * sizeof(uint64); ++i)
+    {
+        DFGTEST_EXPECT_TRUE(isPowerOf2(uint64(1) << i));
+        if (i != 1)
+        {
+            DFGTEST_EXPECT_FALSE(isPowerOf2((uint64(1) << i) - 1));
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// FormulaParser tests
+//
+//////////////////////////////////////////////////////////////////////////////
+
 namespace
 {
     static int globalValue = 0;
@@ -986,4 +1010,4 @@ TEST(dfgMath, FormulaParser_time_ISOdateTo)
     }
 }
 
-#endif
+#endif // on/off switch
