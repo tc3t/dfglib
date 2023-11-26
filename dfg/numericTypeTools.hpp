@@ -49,20 +49,20 @@ DFG_ROOT_NS_BEGIN
     template <> struct IntegerTypeBySizeAndSign<8, true>    { typedef int64  type; };
     template <> struct IntegerTypeBySizeAndSign<8, false>   { typedef uint64 type; };
 
-    // Returns minimum value of given integer type.
+    // Returns minimum finite value of given integer or floating point type.
     template <class T> inline constexpr T minValueOfType()
     {
-        DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true, "Only interger types are allowed.");
-        return (std::numeric_limits<T>::min)();
+        DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true || std::is_floating_point_v<T>, "Only integer or floating point types are allowed");
+        return (std::numeric_limits<T>::lowest)();
     }
     // Overload to allow easy checking based on existing object:
     // minValueOfType(val); instead of minValueOfType<decltype(val)>();
     template <class T> inline constexpr T minValueOfType(const T&) { return minValueOfType<T>(); }
 
-    // Returns maximum value of given integer type.
+    // Returns maximum finite value of given integer or floating point type.
     template <class T> inline constexpr T maxValueOfType()
     {
-        DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true, "Only integer types are allowed.");
+        DFG_STATIC_ASSERT(std::numeric_limits<T>::is_integer == true || std::is_floating_point_v<T>, "Only integer or floating point types are allowed");
         return (std::numeric_limits<T>::max)();
     }
 

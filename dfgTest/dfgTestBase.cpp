@@ -607,6 +607,14 @@ TEST(dfg, saturateCast)
     DFGTEST_STATIC_TEST(minValueOfType<int16>() == (std::numeric_limits<int16>::min)());
     DFGTEST_STATIC_TEST(maxValueOfType<int16>() == (std::numeric_limits<int16>::max)());
 
+    // min/maxValueOfType for floating point types
+    DFGTEST_STATIC_TEST(minValueOfType<float>() == (std::numeric_limits<float>::lowest)());
+    DFGTEST_STATIC_TEST(minValueOfType<double>() == (std::numeric_limits<double>::lowest)());
+    DFGTEST_STATIC_TEST(minValueOfType<long double>() == (std::numeric_limits<long double>::lowest)());
+    DFGTEST_STATIC_TEST(maxValueOfType<float>() == (std::numeric_limits<float>::max)());
+    DFGTEST_STATIC_TEST(maxValueOfType<double>() == (std::numeric_limits<double>::max)());
+    DFGTEST_STATIC_TEST(maxValueOfType<long double>() == (std::numeric_limits<long double>::max)());
+
     // The same unsigned src and dst
     EXPECT_EQ(maxValueOfType<uint16>(), saturateCast<uint16>(maxValueOfType<uint16>()));
     EXPECT_EQ(maxValueOfType<uint32>(), saturateCast<uint32>(maxValueOfType<uint32>()));
