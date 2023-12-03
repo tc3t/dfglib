@@ -598,6 +598,18 @@ TEST(dfgMath, numericDistance)
     EXPECT_EQ(uint8(10), numericDistance(int8(12), int8(2)));
     EXPECT_EQ(uint8(127), numericDistance(int8(127), int8(0)));
     EXPECT_EQ(uint8(127), numericDistance(int8(-128), int8(-1)));
+
+    // floating point types
+    {
+        constexpr float floatMax = (std::numeric_limits<float>::max)();
+        constexpr double doubleMax = (std::numeric_limits<double>::max)();
+        DFGTEST_EXPECT_LEFT(floatMax, numericDistance(floatMax, 0.0f));
+        DFGTEST_EXPECT_LEFT(floatMax, numericDistance(0.0f, floatMax));
+        DFGTEST_EXPECT_LEFT(doubleMax, numericDistance(doubleMax, 0.0));
+        DFGTEST_EXPECT_LEFT(doubleMax, numericDistance(0.0, doubleMax));
+        DFGTEST_EXPECT_TRUE(numericDistance(0.0, std::numeric_limits<double>::infinity()) > doubleMax);
+        DFGTEST_EXPECT_TRUE(numericDistance(std::numeric_limits<double>::infinity(), 0.0) > doubleMax);
+    }
 }
 
 TEST(dfgMath, isPowerOf2)

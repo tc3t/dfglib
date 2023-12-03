@@ -59,38 +59,4 @@ auto logOfBase(const Value_T x, const Base_T base) -> typename std::conditional<
     return static_cast<ReturnValueType>(DFG_DETAIL_NS::logOfBaseImpl(static_cast<CommonType>(x), static_cast<CommonType>(base)));
 }
 
-namespace DFG_DETAIL_NS
-{
-    template <class T>
-    typename std::make_unsigned<T>::type numericDistanceImpl(const T lesser, const T greater, std::true_type) // case: T is signed
-    {
-        using UnsignedT = typename std::make_unsigned<T>::type;
-        if (greater < 0 || lesser >= 0)
-        {
-            // Both negative or both non-negative, can't overflow, even if lesser is NumericTraits<T>::minValue (according to answers in below link)
-            // https://stackoverflow.com/questions/19015444/is-int-min-subtracted-from-any-integer-considered-undefined-behavior
-            return UnsignedT(greater - lesser);
-        }
-        else
-            return UnsignedT(greater) + ::DFG_ROOT_NS::absAsUnsigned(lesser); // Different signs, adding as unsigned.
-    }
-
-    template <class T>
-    typename std::make_unsigned<T>::type numericDistanceImpl(const T lesser, const T greater, std::false_type) // case: T is unsigned
-    {
-        return greater - lesser; // T is unsigned.
-    }
-}
-
-// Returns distance of two integer values as unsigned guaranteed to be done in overflow (undefined behaviour) safe manner.
-// Rationale: given two signed values lesser and greater, computing their distance can't generally be done greater - lesser, because that may overflow.
-template <class T>
-typename std::make_unsigned<T>::type numericDistance(const T a, const T b)
-{
-    DFG_STATIC_ASSERT(std::is_integral<T>::value, "numericDistance() expects integer type"); // This doesn't seems to get shown for floats since std::make_unsigned<T>::type already fails.
-    const auto lesser = Min(a, b);
-    const auto greater = Max(a, b);
-    return DFG_DETAIL_NS::numericDistanceImpl(lesser, greater, std::is_signed<T>());
-}
-
 }} // module math

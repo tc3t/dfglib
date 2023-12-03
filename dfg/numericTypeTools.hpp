@@ -663,4 +663,51 @@ bool isFloatConvertibleTo(const Float_T f, Target_T* pTarget = nullptr)
     return DFG_DETAIL_NS::isFloatConvertibleToImpl(f, pTarget, std::is_same<Target_T, Float_T>(), std::is_integral<Target_T>());
 }
 
+namespace DFG_DETAIL_NS
+{
+    template <class T>
+    typename std::make_unsigned<T>::type numericDistanceIntegerImpl(const T lesser, const T greater, std::true_type) // case: T is signed
+    {
+        using UnsignedT = typename std::make_unsigned<T>::type;
+        if (greater < 0 || lesser >= 0)
+        {
+            // Both negative or both non-negative, can't overflow, even if lesser is NumericTraits<T>::minValue (according to answers in below link)
+            // https://stackoverflow.com/questions/19015444/is-int-min-subtracted-from-any-integer-considered-undefined-behavior
+            return UnsignedT(greater - lesser);
+        }
+        else
+            return UnsignedT(greater) + ::DFG_ROOT_NS::absAsUnsigned(lesser); // Different signs, adding as unsigned.
+    }
+
+    template <class T>
+    typename std::make_unsigned<T>::type numericDistanceIntegerImpl(const T lesser, const T greater, std::false_type) // case: T is unsigned
+    {
+        return greater - lesser; // T is unsigned.
+    }
+
+    template <class T> struct NumericDistanceReturnType       { using type = std::make_unsigned_t<T>; };
+    template <> struct NumericDistanceReturnType<float>       { using type = float; };
+    template <> struct NumericDistanceReturnType<double>      { using type = double; };
+    template <> struct NumericDistanceReturnType<long double> { using type = long double; };
+}
+
+// Returns distance of two numbers:
+//      -For floating point values return abs(a - b)
+//      -For integers returns distance as unsigned integer guaranteed to be computed in overflow (undefined behaviour) safe manner.
+// Rationale: given two signed integer values lesser and greater, computing their distance can't generally be done greater - lesser, because that may overflow.
+template <class T>
+auto numericDistance(const T a, const T b) -> typename DFG_DETAIL_NS::NumericDistanceReturnType<T>::type
+{
+    if constexpr (std::is_integral<T>())
+    {
+        const auto lesser = Min(a, b);
+        const auto greater = Max(a, b);
+        return DFG_DETAIL_NS::numericDistanceIntegerImpl(lesser, greater, std::is_signed<T>());
+    }
+    else
+    {
+        return std::abs(a - b);
+    }
+}
+
 } } // namespace dfg::math
