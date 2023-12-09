@@ -962,7 +962,7 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
         if (!rows.hasData() && !doubleRange.empty())
         {
             // If data has doubles but not rows, generating iota rows.
-            auto iter = ::DFG_MODULE_NS(iter)::makeIndexIterator(size_t(values.size()));
+            auto iter = ::DFG_MODULE_NS(iter)::makeIndexIterator(double(values.size()));
             values.pushBackToUnsorted(makeRange(iter, iter + doubleRange.size()), doubleRange);
         }
         else
@@ -975,7 +975,7 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSource(GraphData
 template <class RowRange_T, class ValueRange_T, class ValueConverter_T>
 void DFG_MODULE_NS(qt)::TableSelectionCacheItem::pushBackToRowToStringMap(RowToStringMap& rowToStringMap, const RowRange_T& rowRange, const ValueRange_T& valueRange, ValueConverter_T valueConverter)
 {
-    const auto rowIdentityFunc = [](const double row) { return row; };
+    const auto rowIdentityFunc = [](const auto row) { return static_cast<double>(row); };
     rowToStringMap.pushBackToUnsorted(rowRange, rowIdentityFunc, valueRange, valueConverter);
 }
 

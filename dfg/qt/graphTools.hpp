@@ -111,7 +111,7 @@ namespace DFG_DETAIL_NS
     class ColumnDataFeed
     {
     public:
-        using ValueIterator = decltype(::DFG_MODULE_NS(iter)::makeIndexIterator(size_t(0)));
+        using ValueIterator = decltype(::DFG_MODULE_NS(iter)::makeIndexIterator(double(0)));
         using ValueRange = RangeIterator_T<ValueIterator>;
 
         // Copies data to given output range, outputRange must be big enough to receive all elements. If output range is bigger than number of element that needs to be copied, excess output range is left unmodified.
@@ -137,7 +137,7 @@ namespace DFG_DETAIL_NS
         ValueRange asValueRange() const { return makeRange(m_valueIterator, m_valueIterator + m_nSize); }
 
         size_t m_nSize = 0;
-        ValueIterator m_valueIterator = ::DFG_MODULE_NS(iter)::makeIndexIterator(size_t(0));
+        ValueIterator m_valueIterator = ::DFG_MODULE_NS(iter)::makeIndexIterator(double(0));
         Span<const double> m_span;
     }; // class ColumnDataFeed
 
@@ -152,7 +152,7 @@ namespace DFG_DETAIL_NS
     {
         m_span = Span<const double>();
         m_nSize = nCount;
-        m_valueIterator = ::DFG_MODULE_NS(iter)::makeIndexIterator(nFirst);
+        m_valueIterator = ::DFG_MODULE_NS(iter)::makeIndexIterator(static_cast<double>(nFirst));
     }
 
 
