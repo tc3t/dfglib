@@ -1,9 +1,12 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
+#include "../dfgAssert.hpp"
+#include "../numericTypeTools.hpp"
 #include <iterator>
 #include <type_traits>
 #include <functional>
+#include <cmath>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(iter) {
 
@@ -50,6 +53,7 @@ namespace DFG_DETAIL_NS
 
 /*
 Iterator for iterating values of a function that takes Index_T as argument.
+Index_T can also be floating point type, but values must be integers in suitable value range, otherwise behaviour is undefined.
 */
 template <class Func_T, class Result_T, class Index_T = size_t>
 class FunctionValueIterator : std::conditional_t<DFG_DETAIL_NS::isFuncStorageNeeded<Func_T>(),
@@ -69,7 +73,12 @@ public:
     FunctionValueIterator(const Index_T nPos, Func_T func)
         : BaseClass(std::move(func))
         , m_nPos(nPos)
-    {}
+    {
+        if constexpr (!std::is_integral_v<Index_T>)
+        {
+            DFG_ASSERT(::DFG_MODULE_NS(math)::template isFloatConvertibleTo<difference_type>(m_nPos));
+        }
+    }
 
     auto operator*() const -> value_type
     {
@@ -93,21 +102,53 @@ public:
 
     FunctionValueIterator operator-(const difference_type nDiff) const
     {
-        return makeNewWithPos(this->m_nPos - nDiff);
+        auto iterNew = *this;
+        iterNew -= nDiff;
+        DFG_ASSERT(*this - iterNew == nDiff);
+        return iterNew;
     }
 
     difference_type operator-(const FunctionValueIterator& other) const
     {
-        return this->m_nPos - other.m_nPos;
+        if constexpr (std::is_integral_v<Index_T>)
+        {
+            const auto nDistance = ::DFG_MODULE_NS(math)::numericDistance(this->m_nPos, other.m_nPos);
+            if (this->m_nPos >= other.m_nPos)
+            {
+                DFG_ASSERT(isValWithinLimitsOfType<difference_type>(nDistance));
+                return static_cast<difference_type>(nDistance);
+            }
+            else // Return value is negative
+            {
+                constexpr auto nDiffTypeMin = (std::numeric_limits<difference_type>::min)();
+                const auto nDiffTypeMinAbs = absAsUnsigned(nDiffTypeMin);
+                DFG_ASSERT(nDistance <= nDiffTypeMinAbs);
+                DFG_ASSERT(isValWithinLimitsOfType<difference_type>(nDiffTypeMinAbs - nDistance));
+                return nDiffTypeMin + static_cast<difference_type>(nDiffTypeMinAbs - nDistance);
+            }
+        }
+        else // Index_T is not integer
+        {
+            const auto diff = this->m_nPos - other.m_nPos;
+            DFG_ASSERT(isValWithinLimitsOfType<difference_type>(diff));
+            return static_cast<difference_type>(diff);
+        }
     }
 
     FunctionValueIterator operator+(const difference_type nDiff) const
     {
-        return makeNewWithPos(this->m_nPos + nDiff);
+        auto iterNew = *this;
+        iterNew += nDiff;
+        DFG_ASSERT(iterNew - *this == nDiff);
+        return iterNew;
     }
 
     FunctionValueIterator& operator++()
     {
+        if constexpr (std::is_floating_point_v<Index_T>)
+        {
+            DFG_ASSERT(std::nextafter(this->m_nPos, std::numeric_limits<Index_T>::infinity()) - this->m_nPos <= 1);
+        }
         ++this->m_nPos;
         return *this;
     }
@@ -121,6 +162,10 @@ public:
 
     FunctionValueIterator& operator--()
     {
+        if constexpr (std::is_floating_point_v<Index_T>)
+        {
+            DFG_ASSERT(this->m_nPos - std::nextafter(this->m_nPos, -std::numeric_limits<Index_T>::infinity()) <= 1);
+        }
         --this->m_nPos;
         return *this;
     }
@@ -132,25 +177,28 @@ public:
         return iter;
     }
 
-    FunctionValueIterator& operator+=(difference_type nDiff)
+    FunctionValueIterator& operator+=(const difference_type nDiff)
     {
-        this->m_nPos += nDiff;
+        const auto nResult = this->m_nPos + nDiff;
+        DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
+        this->m_nPos = static_cast<Index_T>(nResult);
         return *this;
     }
 
-    FunctionValueIterator& operator-=(difference_type nDiff)
+    FunctionValueIterator& operator-=(const difference_type nDiff)
     {
-        this->m_nPos -= nDiff;
+        const auto nResult = this->m_nPos - nDiff;
+        DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
+        this->m_nPos = static_cast<Index_T>(nResult);
         return *this;
+    }
+
+    Index_T index() const
+    {
+        return m_nPos;
     }
 
 private:
-    FunctionValueIterator makeNewWithPos(const Index_T val) const
-    {
-        auto newIter = *this;
-        newIter.m_nPos = val;
-        return newIter;
-    }
 
     Index_T m_nPos;
 }; // class FunctionValueIterator

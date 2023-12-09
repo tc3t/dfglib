@@ -613,6 +613,36 @@ TEST(dfgIter, CustomAccessIterator)
     }   
 }
 
+namespace
+{
+    // Tests integer arithmetics, e.g. that negative shifts behave reasonably when Index_T is unsigned
+    template <class Int_T>
+    void testFunctionValueIteratorArithmetic()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(iter);
+        using namespace ::DFG_MODULE_NS(math);
+        auto iter = makeIndexIterator(Int_T(21));
+        iter -= (-2);
+        iter += (-3);
+        DFGTEST_EXPECT_LEFT(20, iter.index());
+        DFGTEST_EXPECT_LEFT(10, (iter + (-10)).index());
+        DFGTEST_EXPECT_LEFT(30, (iter - (-10)).index());
+
+        DFGTEST_EXPECT_LEFT(-2, makeIndexIterator(Int_T(1)) - makeIndexIterator(Int_T(3)));
+        using diffT = typename decltype(iter)::difference_type;
+        if constexpr (sizeof(Int_T) < sizeof(diffT))
+        {
+            const auto maxVal = maxValueOfType<Int_T>();
+            const auto minVal = minValueOfType<Int_T>();
+            DFGTEST_EXPECT_LEFT(numericDistance(maxVal, minVal), makeIndexIterator(maxVal) - makeIndexIterator(minVal));
+            DFGTEST_EXPECT_LEFT(absAsUnsigned(minVal), makeIndexIterator(Int_T(0)) - makeIndexIterator(minVal));
+            DFGTEST_EXPECT_LEFT(diffT(-1) * maxVal, makeIndexIterator(Int_T(0)) - makeIndexIterator(maxVal));
+            DFGTEST_EXPECT_LEFT(diffT(minVal) - diffT(maxVal), makeIndexIterator(minVal) - makeIndexIterator(maxVal));
+        }
+    }
+}
+
 TEST(dfgIter, FunctionValueIterator)
 {
     using namespace ::DFG_MODULE_NS(iter);
@@ -681,8 +711,13 @@ TEST(dfgIter, FunctionValueIterator)
         struct Functor { int operator()(int i) const { return i * 2; } };
         auto iter = makeFunctionValueIterator(int(0), Functor());
         DFGTEST_EXPECT_LEFT(0, *iter++);
+        DFGTEST_EXPECT_LEFT(1, iter.index());
         DFGTEST_EXPECT_LEFT(2, *iter++);
+        DFGTEST_EXPECT_LEFT(2, iter.index());
         DFGTEST_EXPECT_LEFT(4, *iter++);
+        DFGTEST_EXPECT_LEFT(3, iter.index());
+        DFGTEST_EXPECT_LEFT(13, (iter + 10).index());
+        DFGTEST_EXPECT_LEFT(0, (iter - 3).index());
         DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(int));
         testAssignment(iter);
     }
@@ -722,6 +757,41 @@ TEST(dfgIter, FunctionValueIterator)
 
         DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(size_t));
         DFGTEST_STATIC_TEST(sizeof(decltype(makeIndexIterator(short(0)))) == sizeof(short));
+    }
+
+    // signed/unsigned handling
+    {
+        using namespace ::DFG_ROOT_NS;
+        testFunctionValueIteratorArithmetic<uint16>();
+        testFunctionValueIteratorArithmetic<int16>();
+        testFunctionValueIteratorArithmetic<uint32>();
+        testFunctionValueIteratorArithmetic<int32>();
+        testFunctionValueIteratorArithmetic<size_t>();
+        testFunctionValueIteratorArithmetic<uint64>();
+        testFunctionValueIteratorArithmetic<int64>();
+    }
+
+    // makeIndexIterator() with double
+    {
+        auto iter = makeIndexIterator(double(0));
+        std::vector<double> vals;
+        std::copy(iter, iter + 3, std::back_inserter(vals));
+        DFGTEST_EXPECT_LEFT(std::vector<double>({ 0, 1, 2 }), vals);
+        std::copy(iter + 10, ((iter + 12) - 5) + 5, std::back_inserter(vals));
+        DFGTEST_EXPECT_LEFT(std::vector<double>({ 0, 1, 2, 10, 11 }), vals);
+        testAssignment(iter);
+        DFGTEST_EXPECT_LEFT(iter.index() + 10, (iter + 10).index());
+        DFGTEST_EXPECT_LEFT(iter.index() + 3, ((iter + 5) - 2).index());
+        const auto nIndex1 = iter.index();
+        iter += 2;
+        DFGTEST_EXPECT_LEFT(nIndex1 + 2, iter.index());
+        iter -= 1;
+        DFGTEST_EXPECT_LEFT(nIndex1 + 1, iter.index());
+        DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(double));
+
+        // These should trigger a failing assert
+        //makeIndexIterator(double(HUGE_VAL));
+        //makeIndexIterator(std::numeric_limits<double>::quiet_NaN());
     }
 }
 
