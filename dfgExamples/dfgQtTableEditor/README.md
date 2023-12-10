@@ -4,25 +4,30 @@ csv-oriented table editor based on dfglib using Qt as UI framework. Also include
 
 ## Building
 
-### __Version 2.5.0__:
+### __Version 2.6.0__:
+
+<!-- Table generated from buildStatus_dfgQtTableEditor.csv excluding date column
+     with csv2md (https://www.npmjs.com/package/csv2md)
+ -->
 
 Build status (all builds are x86-64 i.e. [amd64](https://en.wikipedia.org/wiki/X86-64))
 
-:white_check_mark:
-
-| Status | Compiler      | Standard library | C++ standard [1] | Qt | OS | Boost | Charting? (QCustomPlot version) | Notes |
-| ------ | ------------- | ---------------- | ---------------- | -- | ---- | -- | -- | -- |
-| :white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes (2.0.1) | QMAKESPEC = _linux-clang-libc++_
-| :white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes (2.0.1) | QMAKESPEC = _linux-clang_
-| :red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | Ubuntu 22.04 | 1.74 | Yes (2.1.1) | Fails due to the same linker errors as dfgTestQt
-| :white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | Ubuntu 22.04 | 1.74 | Yes (2.1.1) | 
-| :white_check_mark: | clang-cl (Clang 15.0.1, MSVC2022.5) | MSVC | C++17 | 6.4.1 | Windows 11 | 1.70 | Yes (2.1.1) |
-| :white_check_mark: | GCC 9.4.0  | libstdc++ 9 | C++17 | 5.12.8 | Ubuntu 20.04 | 1.71 | Yes (2.0.1) | |
-| :white_check_mark: | GCC 11.3.0 | libstdc++ 11 | C++17 | 6.2.4 | Ubuntu 22.04 | 1.74 | Yes (2.1.1) |
-| :white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | Windows 11 | 1.70 | Yes (2.1.1) | 
-| :white_check_mark: | MSVC2019.11 | MSVC |C++17 | 5.15.2 | Windows 11 | 1.70 | Yes (2.1.1) | 
-| :white_check_mark: | MSVC2022.5 | MSVC | C++17 | 6.4.1 | Windows 11 | 1.70 | Yes (2.1.1) |
-| | | |
+Status | Compiler | Standard library | C++ standard [1] | Qt | Platform | Boost | Charting? (QCustomPlot version) | Comment
+---|---|---|---|---|---|---|---|---
+:white_check_mark: | Clang 6.0.0 | libstdc++ 7 | C++17 | 5.9.5 | x86-64 | 1.65.1 | No | Ubuntu 64-bit 18.04
+:white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | x86-64 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
+:white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
+:white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04
+:red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | x86-64 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04. Causes linker errors from QMetaType. For details, see error messages in a [separate file](misc/dfgTestQt_Clang14_libc++_Qt_624_linker_errors.txt)
+:white_check_mark: | clang-cl (Clang 16.0.5, MSVC2022.5) | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | Yes (2.1.1) | May need to disable PCH with DFGQTE_USING_PCH=0
+:white_check_mark: | GCC 7.5.0 | libstdc++ 7 | C++17 | 5.9.5 | x86-64 | 1.65.1 | No | Ubuntu 64-bit 18.04
+:white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
+:white_check_mark: | GCC 11.4.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04
+:white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | x86-64 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | VC2019.11 | MSVC | C++17 | 5.9.8 | x86-64 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | VC2019.11 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | VC2022.8 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | VC2022.8 | MSVC | C++20 | 6.4.1 | x86-64 | 1.70.0 | Yes (2.1.1) | 
 
 [1] As reported by *__cplusplus* macro  or equivalent.
 
