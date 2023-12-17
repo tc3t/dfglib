@@ -3,7 +3,7 @@
 2023-12-10,:white_check_mark:,Clang 10.0.0,libc++ 10000,C++17,5.12.8,x86-64,1.71.0,Yes (2.0.1),Ubuntu 64-bit 20.04
 2023-12-10,:white_check_mark:,Clang 10.0.0,libstdc++ 9,C++17,5.12.8,x86-64,1.71.0,Yes (2.0.1),Ubuntu 64-bit 20.04
 2023-12-10,:white_check_mark:,Clang 14.0.0,libstdc++ 11,C++17,6.2.4,x86-64,1.74.0,Yes (2.1.1),Ubuntu 64-bit 22.04
-2023-12-10,:red_circle:,Clang 14.0.0,libc++ 14000,C++17,6.2.4,x86-64,1.74.0,Yes (2.1.1),"Ubuntu 64-bit 22.04. Causes linker errors from QMetaType. For details, see error messages in a [separate file](misc/dfgTestQt_Clang14_libc++_Qt_624_linker_errors.txt)"
+2023-12-10,:red_circle:,Clang 14.0.0,libc++ 14000,C++17,6.2.4,x86-64,1.74.0,Yes (2.1.1),"Ubuntu 64-bit 22.04. Causes linker errors from QMetaType, for details, see notes in dfgTestQt table."
 2023-12-10,:white_check_mark:,"clang-cl (Clang 16.0.5, MSVC2022.5)",MSVC,C++17,6.4.1,x86-64,1.70.0,Yes (2.1.1),May need to disable PCH with DFGQTE_USING_PCH=0
 2023-12-10,:white_check_mark:,GCC 7.5.0,libstdc++ 7,C++17,5.9.5,x86-64,1.65.1,No,Ubuntu 64-bit 18.04
 2023-12-10,:white_check_mark:,GCC 9.4.0,libstdc++ 9,C++17,5.12.8,x86-64,1.71.0,Yes (2.0.1),Ubuntu 64-bit 20.04

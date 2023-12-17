@@ -18,7 +18,7 @@ Status | Compiler | Standard library | C++ standard [1] | Qt | Platform | Boost 
 :white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | x86-64 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
 :white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
 :white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04
-:red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | x86-64 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04. Causes linker errors from QMetaType. For details, see error messages in a [separate file](misc/dfgTestQt_Clang14_libc++_Qt_624_linker_errors.txt)
+:red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | x86-64 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04. Causes linker errors from QMetaType. For details, see notes in dfgTestQt table.
 :white_check_mark: | clang-cl (Clang 16.0.5, MSVC2022.5) | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | Yes (2.1.1) | May need to disable PCH with DFGQTE_USING_PCH=0
 :white_check_mark: | GCC 7.5.0 | libstdc++ 7 | C++17 | 5.9.5 | x86-64 | 1.65.1 | No | Ubuntu 64-bit 18.04
 :white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
@@ -40,9 +40,44 @@ Concrete build steps assuming having compatible Qt version, Qt Creator and compi
 
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
-To see build chart of older versions, see [readme of 2.4.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.4.0/dfgExamples/dfgQtTableEditor)
+To see build chart of older versions, see [readme of 2.5.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.5.0/dfgExamples/dfgQtTableEditor)
 
 ## Version history
+
+### 2.6.0, 2023-12-17
+* Tag: [2.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.6.0)
+* Highlights: Column filter from header context menu, CsvTableView regexFormat, chart improvements
+* General
+    * [new] Support for custom datetime types for columns ([#153](https://github.com/tc3t/dfglib/issues/153))
+    * [new] Added trim-operation ([#159](https://github.com/tc3t/dfglib/issues/159), [4775eb45](https://github.com/tc3t/dfglib/commit/4775eb452c3704ba9c42651e8ad9832c010199b5))
+    * [new] Added Regex format-operation ([#160](https://github.com/tc3t/dfglib/issues/160))
+    * [new] Can now define column filter from column header context menu ([#163](https://github.com/tc3t/dfglib/issues/163))
+    * [imp/mod] Fixes and improvements to sorting of number-type columns
+ ([cdc6ec7d](https://github.com/tc3t/dfglib/commit/cdc6ec7d50374aa0142b2da6ada4255d08039f34))
+    * [imp] Performance improvements to selection handling ([ed4d70f8](https://github.com/tc3t/dfglib/commit/ed4d70f8609fb23024983183a6098bd863398c3a))
+    * [imp] find&filter -panel settings can now be stored to .conf-file ([#148](https://github.com/tc3t/dfglib/issues/148))
+    * [imp] Performance improvements to string replace ([1ada8dfe](https://github.com/tc3t/dfglib/commit/1ada8dfed3026e92305f247e22665a497af17385))
+    * [imp] Column header now includes column index and tooltip is shown also for unnamed columns ([#161](https://github.com/tc3t/dfglib/issues/161), [e8eb528b](https://github.com/tc3t/dfglib/commit/e8eb528ba03312d216de3a2d2d911af804d50c40))
+    * [imp] Enabled tooltips in CsvTableView context menu ([6f8f6a17](https://github.com/tc3t/dfglib/commit/6f8f6a17ab0d803f557dc44adb3b8dfafe7c3605))
+    * [imp] Maximized window position is now stored properly to .conf-file ([#149](https://github.com/tc3t/dfglib/issues/149), [8d6e0926](https://github.com/tc3t/dfglib/commit/8d6e09268264c9a989b45cb48b7d5ddee1b4e30d))
+    * [imp] Added new flavour of "Reload from file" ([#158](https://github.com/tc3t/dfglib/issues/158), [8066a336](https://github.com/tc3t/dfglib/commit/8066a3364d3e103f9493df9f9cf558c6f50fa409))
+    * [mod] Adjusted column header text alignment ([#165](https://github.com/tc3t/dfglib/issues/165), [d042cc94](https://github.com/tc3t/dfglib/commit/d042cc948a5961d63e0296ab23a8db229722ccea))
+    * [mod] Moved some CsvTableView context menu items to submenus to keep menu smaller
+ ([da0473aa](https://github.com/tc3t/dfglib/commit/da0473aa1036666381cbc7a205b79cddfdd1d9b1))
+    * [mod] json-filter now shows invalid json slightly differently
+ ([e6a7d19d](https://github.com/tc3t/dfglib/commit/e6a7d19da7112c20db771637095d5723675745fe))
+    * [fix] saveAsShown didn't store column names
+ ([28654fc0](https://github.com/tc3t/dfglib/commit/28654fc048643def5c346c046ba6fa6de68824c6))
+* Charts
+    * [imp] added 'copy tooltip text to clipboard' -functionality to chart context menu ([#162](https://github.com/tc3t/dfglib/issues/162), [219c516d](https://github.com/tc3t/dfglib/commit/219c516d6be8da70870e9c9d6bb645e51ca8fa97))
+    * [imp] Manual chart operations can now be done for bars-chart string-axis ([#166](https://github.com/tc3t/dfglib/issues/166), [583dd4ae](https://github.com/tc3t/dfglib/commit/583dd4ae63480d1c27cde51c38455f193aaf5d30))
+    * [imp] Axis tick label format can now be defined through panel_config ([#167](https://github.com/tc3t/dfglib/issues/167), [a9059807](https://github.com/tc3t/dfglib/commit/a90598074b8c0fe096cc289a9aa2313133661ac6))
+    * [imp] If chart data source changes during chart preparation, a warning is now generated to log since resulting graphs might not be consistent (e.g. some graphs might be created from older data and some from newer) ([#168](https://github.com/tc3t/dfglib/issues/168), [4c0b036f](https://github.com/tc3t/dfglib/commit/4c0b036f652dff73e81474c8280b3cfe55c81406))
+    * [mod] Operations: if regexFormat-operations encounters errors, previously it resulted to empty string, now results to an error message
+ ([b02f9903](https://github.com/tc3t/dfglib/commit/b02f9903fbcf9ed35963600f6b92017f3edb0a0c))
+    * [mod] Changed tooltip distance metric for txy and txys types ([#164](https://github.com/tc3t/dfglib/issues/164), [54c2561e](https://github.com/tc3t/dfglib/commit/54c2561e92d3eb1d9ef9acb6ac310bee669f2538))
+    * [fix] Changing column name in table didn't update charts ([#157](https://github.com/tc3t/dfglib/issues/157), [4bfa33c3](https://github.com/tc3t/dfglib/commit/4bfa33c37b9866c9364f77923cfac3c1737bd813))
+
 
 ### 2.5.0, 2023-04-26
 * Tag: [2.5.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.5.0)
