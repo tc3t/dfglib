@@ -4,6 +4,10 @@ csv-oriented table editor based on dfglib using Qt as UI framework. Also include
 
 ## Building
 
+### __Version > 2.6.0__:
+
+Otherwise like 2.6.0, but GCC 7.5, Clang 6.0.0 and Qt 5.9 is no longer tested. For Qt, 5.12 is the minimum.
+
 ### __Version 2.6.0__:
 
 <!-- Table generated from buildStatus_dfgQtTableEditor.csv excluding date column

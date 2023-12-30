@@ -6,6 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2023-12-30: Code is no longer tested with GCC 7.5 and Clang 6.0.0, and for Qt-module, 5.12 is now considered minimum. Latest tested commit available in branch: [legacy_GCC_7.5_Clang_6.0_Qt_5.9](https://github.com/tc3t/dfglib/tree/legacy_GCC_7.5_Clang_6.0_Qt_5.9)
 * 2023-12-17, dfgQtTableEditor [version 2.6.0](dfgExamples/dfgQtTableEditor/README.md/#260-2023-12-17) (Column filter from header context menu, CsvTableView regexFormat...)
 * 2023-04-26, dfgQtTableEditor [version 2.5.0](dfgExamples/dfgQtTableEditor/README.md/#250-2023-04-26) (Filter from selection, major performance improvements to charts...)
 * 2022-10-30: In [481baa71](https://github.com/tc3t/dfglib/commit/481baa717a0cc90fb55813de787ba68fb98b1515) the minimum standard requirement in dfglib changed from C++11 to C++17 and code is no longer tested with MSVC2015, GCC 5.4 and Clang 3.8.0, latest tested commit available as branch: [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4)
@@ -88,7 +89,7 @@ Summary of 3rd party code in dfglib (last revised 2023-12-10).
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) | Qt-related utilities
 | [muparser](https://github.com/beltoforion/muparser) (version 2.3.3, commit [5ccc8878](https://github.com/beltoforion/muparser/tree/5ccc887864381aeacf1277062fcbb76475623a02), 2022-01-13) with some edits | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from mu to dfg_mu.
 | [QCustomPlot](https://www.qcustomplot.com/) | oi (in parts of dfg/qt) | [GPLv3/commercial](https://www.qcustomplot.com/) | Used in data visualization (charts) in dfgQtTableEditor. Versions 2.0.1 and 2.1.1 are known to work as of dfgQtTableEditor version 2.6.0.
-| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Unit tests (dfgTestQt) have been build with various versions 5.9 - 6.4, for details, see dfgTestQt status table.
+| [Qt 5/6](https://www.qt.io/) | i (only for components in dfg/qt) | [Various](http://doc.qt.io/qt-5/licensing.html) | Unit tests (dfgTestQt) have been build with various versions 5.9 - 6.4 in commit [9adba1ac](https://github.com/tc3t/dfglib/tree/9adba1ac991b7eb092632faba558b0fe74acaf77) (2023-12-17), but after that 5.12 is considered minimum. For details, see dfgTestQt status table.
 | [UTF8-CPP](https://github.com/nemtrif/utfcpp) ([version 3.2.5](https://github.com/nemtrif/utfcpp/releases/tag/v3.2.5) with [some adjustments](https://github.com/tc3t/dfglib/commit/b8e948d6430a74c0efd186f520853c0585fec11a)) | m (utf handling) | [Boost software license](dfg/utf/utf8_cpp/utf8.h) |
 
 Usage types:
@@ -158,10 +159,13 @@ Note: dfgQt.CsvTableView_paste has been experienced to fail on Windows if Virtua
 
 <br>
 
-### Phased out compilers:
+### Phased out compilers/libraries:
 
-| Compiler | Untested since | Support branch |
+| Compiler/library | Untested since | Support branch |
 | -------- | --------------- | --------------------- |
+| GCC 7.5 | 2023-12-30 | [legacy_GCC_7.5_Clang_6.0_Qt_5.9](https://github.com/tc3t/dfglib/tree/legacy_GCC_7.5_Clang_6.0_Qt_5.9) |
+| Clang 6.0.0 | 2023-12-30 | [legacy_GCC_7.5_Clang_6.0_Qt_5.9](https://github.com/tc3t/dfglib/tree/legacy_GCC_7.5_Clang_6.0_Qt_5.9) |
+| Qt 5.9 | 2023-12-30 | [legacy_GCC_7.5_Clang_6.0_Qt_5.9](https://github.com/tc3t/dfglib/tree/legacy_GCC_7.5_Clang_6.0_Qt_5.9) |
 | MSVC2015 | 2022-10-30 | [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4) |
 | GCC 5.4  | 2022-10-30 | [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4) |
 | Clang 3.8.0  | 2022-10-30 | [legacy_msvc_2015_GCC_5.4](https://github.com/tc3t/dfglib/tree/legacy_msvc_2015_GCC_5.4) |
