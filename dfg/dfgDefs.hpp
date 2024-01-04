@@ -30,7 +30,8 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
     #define DFG_CPLUSPLUS __cplusplus
 #endif
 
-// __cplusplus values for different standards, https://stackoverflow.com/a/7132549
+// __cplusplus values for different standards, https://en.cppreference.com/w/cpp/preprocessor/replace#Predefined_macros, https://stackoverflow.com/a/7132549
+#define DFG_CPLUSPLUS_23      202302L
 #define DFG_CPLUSPLUS_20      202002L
 #define DFG_CPLUSPLUS_17      201703L
 #define DFG_CPLUSPLUS_14      201402L

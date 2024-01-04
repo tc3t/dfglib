@@ -1065,7 +1065,9 @@ TEST(dfgBuild, buildTimeDetails)
 #endif
 
     // C++ standard version
-    #if DFG_CPLUSPLUS == 202002L
+    #if DFG_CPLUSPLUS == 202302L
+        DFGTEST_EXPECT_STREQ("C++23 (202302L)", vals[BuildTimeDetail_cppStandardVersion]);
+    #elif DFG_CPLUSPLUS == 202002L
         DFGTEST_EXPECT_STREQ("C++20 (202002L)", vals[BuildTimeDetail_cppStandardVersion]);
     #elif DFG_CPLUSPLUS == 201703L
         DFGTEST_EXPECT_STREQ("C++17 (201703L)", vals[BuildTimeDetail_cppStandardVersion]);
