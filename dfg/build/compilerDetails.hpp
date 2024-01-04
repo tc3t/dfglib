@@ -147,12 +147,8 @@
     #endif
 #endif
 
-#if defined(_MSC_VER)
-    #ifdef _DEBUG
-        #define DFG_BUILD_DEBUG_RELEASE_TYPE    "debug"
-    #else
-        #define DFG_BUILD_DEBUG_RELEASE_TYPE    "release"
-    #endif
-#else // On non-MSVC, not knowing about the build type so defining as empty.
-    #define DFG_BUILD_DEBUG_RELEASE_TYPE    ""
+#if (defined(_MSC_VER) && defined(_DEBUG)) || (!defined(_MSC_VER) && !defined(NDEBUG))
+    #define DFG_BUILD_DEBUG_RELEASE_TYPE    "debug"
+#else
+    #define DFG_BUILD_DEBUG_RELEASE_TYPE    "release"
 #endif

@@ -40,7 +40,7 @@ enum BuildTimeDetail
     BuildTimeDetail_compilerFullVersion,     // Full compiler version
     BuildTimeDetail_cppStandardVersion,      // C++ version in use (e.g. "C++11 (201103L)")
     BuildTimeDetail_standardLibrary,         // Standard library identifier in unspecified format or empty is not available, currently MSVC, libstdc++ and libc++ are detected.
-    BuildTimeDetail_buildDebugReleaseType,   // Debug/release type. TODO: more precise definition especially on Non-Windows
+    BuildTimeDetail_buildDebugReleaseType,   // On MSVC, "debug" if using debug runtime, otherwise "release". On others, "debug" if NDEBUG is not defined, else "release"
     BuildTimeDetail_architecture,            // Build architecture
     BuildTimeDetail_endianness,              // Architecture endianess
     BuildTimeDetail_boostVersion,            // Boost version
@@ -196,9 +196,7 @@ inline void getBuildTimeDetailStrs(Func&& func)
     DFG_TEMP_DO_FOR_BUILD_DETAIL(compilerFullVersion);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(cppStandardVersion);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(standardLibrary);
-#ifdef _MSC_VER
     DFG_TEMP_DO_FOR_BUILD_DETAIL(buildDebugReleaseType);
-#endif
     DFG_TEMP_DO_FOR_BUILD_DETAIL(architecture);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(endianness);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(boostVersion);
