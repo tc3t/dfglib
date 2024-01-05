@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_ITER) && DFGTEST_BUILD_MODULE_ITER == 1) || (!defined(DFGTEST_BUILD_MODULE_ITER) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/rangeIterator.hpp>
 #include <dfg/func/memFunc.hpp>

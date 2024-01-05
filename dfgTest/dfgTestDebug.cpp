@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#if (DFGTEST_BUILD_MODULE_DEFAULT == 1)
+#if (defined(DFGTEST_BUILD_MODULE_DEBUG) && DFGTEST_BUILD_MODULE_DEBUG == 1) || (!defined(DFGTEST_BUILD_MODULE_DEBUG) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
 #include <dfg/debugAll.hpp>
 #include <dfg/dfgAssert.hpp>
@@ -14,7 +14,7 @@ TEST(dfgDebug, AssertImplementation)
 		// This failed in debug build in earlier version due to use of loop variable named i in the assert implementation.
 		// Also affected DFG_VERIFY.
 		DFG_ASSERT(vals[i] == 2);
-#ifndef _DEBUG // Generated warning in debug-build; just disable it.
+#if (DFG_DEBUG_ENABLE_ASSERTS == 1)
 		int j = 0;
 		DFG_VERIFY((j = vals[i]));
 		EXPECT_EQ(2, j);
@@ -46,7 +46,7 @@ TEST(dfgDebug, AssertImplementation)
 	{
 		int val = 0;
 		DFG_ASSERT(++val);
-#ifdef _DEBUG
+#if (DFG_DEBUG_ENABLE_ASSERTS == 1)
 		const auto expected = 1;
 #else
 		const auto expected = 0;

@@ -41,9 +41,11 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 //#define DFGTEST_BUILD_MODULE_CONT_TABLES                  1
 //#define DFGTEST_BUILD_MODULE_CONT_TABLE_CSV               1
 #define DFGTEST_BUILD_MODULE_CSV_BENCHMARK                0
+//#define DFGTEST_BUILD_MODULE_DEBUG                        1
 //#define DFGTEST_BUILD_MODULE_FUNC                         1
 //#define DFGTEST_BUILD_MODULE_IO                           1
 //#define DFGTEST_BUILD_MODULE_IO_DELIM_READER              1
+//#define DFGTEST_BUILD_MODULE_ITER                         1
 //#define DFGTEST_BUILD_MODULE_MATH                         1
 //#define DFGTEST_BUILD_MODULE_NUMERIC                      1
 //#define DFGTEST_BUILD_MODULE_OS                           1

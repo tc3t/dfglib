@@ -15,6 +15,9 @@ Note: Due to the nature of the file, includes are to be avoided.
 Preprocessor options of user
 DFG_BUILD_OPT_USE_BOOST_OVERRIDE: Define to 1 / 0 / DFG_BUILD_OPT_USE_BOOST_DEFAULT to control whether dfglib can use (external) Boost includes.
                                   Note: currently a placeholder, setting to false is not supported.
+DFG_DEBUG_ENABLE_ASSERTS        : Master macro switch for enabling library asserts (either 0 or 1). If undefined, this file defines it as follows:
+                                      1: MSVC: defined(_DEBUG)). Non-MSVC: !defined(NDEBUG)
+                                      0: otherwise
 
 Macros for controlling usage of external dependencies (internal implementation details):
 DFG_BUILD_OPT_USE_<NAME>           // Internal. Either 1 or 0 (i.e. must have value, not just definition).
@@ -67,6 +70,16 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
 // MSVC specific: Auto detect console apps.
 #if defined(_MSC_VER) && defined(_CONSOLE) && !defined(DFG_CONSOLE_APP)
 	#define DFG_CONSOLE_APP 1
+#endif
+
+// DFG_DEBUG_ENABLE_ASSERTS
+#ifndef DFG_DEBUG_ENABLE_ASSERTS
+    // In MSVC, _DEBUG is defined when building against debug runtime (https://learn.microsoft.com/en-us/cpp/c-runtime-library/debug)
+    #if (defined(_MSC_VER) && defined(_DEBUG)) || (!defined(_MSC_VER) && !defined(NDEBUG))
+        #define DFG_DEBUG_ENABLE_ASSERTS 1
+    #else
+        #define DFG_DEBUG_ENABLE_ASSERTS 0
+    #endif
 #endif
 
 // DFG_STRINGIZE makes a string of given argument. If used with #defined value,

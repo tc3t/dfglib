@@ -11,11 +11,11 @@
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
 
-    class DFG_CLASS_NAME(ExceptionRequire) : public std::runtime_error
+    class ExceptionRequire : public std::runtime_error
     {
     public:
         typedef std::runtime_error BaseClass;
-        DFG_CLASS_NAME(ExceptionRequire)(const char* psz) : BaseClass(psz) {}
+        ExceptionRequire(const char* psz) : BaseClass(psz) {}
     };
 
     inline void onAssertFailure(const char* const pszFile, const int nLine, const char* const pszMsg)
@@ -67,7 +67,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
         inline void requireImpl(const bool b, const char* pszExp)
         {
             if (!b)
-                throw DFG_CLASS_NAME(ExceptionRequire)(pszExp);
+                throw ExceptionRequire(pszExp);
         }
     }
 
@@ -80,7 +80,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
     DFG_MODULE_NS(debug)::DFG_DETAIL_NS::assertImpl((exp) != 0, __FILE__, __LINE__, DFG_CURRENT_FUNCTION_NAME, msgAssertType, #exp)
 
 
-#ifdef _DEBUG
+#if (DFG_DEBUG_ENABLE_ASSERTS == 1)
 #define DFG_IMPLEMENTATION_ASSERT(exp, msgAssertType) \
         DFG_IMPLEMENTATION_ASSERT_DEBUG_IMPL(exp, msgAssertType)
 #else
@@ -112,7 +112,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
 
 // Like MFC VERIFY: In debug version evaluates the expression and causes error message if x is not true.
 //                  In release version evaluates the expression but does not check the value.
-#if defined(_DEBUG)
+#if (DFG_DEBUG_ENABLE_ASSERTS == 1)
     #define DFG_VERIFY(x) DFG_ASSERT(x)
     #define DFG_VERIFY_WITH_MSG(x,msg) DFG_ASSERT_WITH_MSG(x,msg)
 #else
@@ -122,7 +122,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
 
 
 
-// Checks given expression and if not true, throws expection of type DFG_MODULE_NS(debug)::DFG_CLASS_NAME(ExceptionRequire).
+// Checks given expression and if not true, throws expection of type DFG_MODULE_NS(debug)::ExceptionRequire.
 #define DFG_REQUIRE(exp) \
     DFG_MODULE_NS(debug)::DFG_DETAIL_NS::requireImpl((exp), #exp);
 
