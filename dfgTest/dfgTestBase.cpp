@@ -1030,11 +1030,7 @@ TEST(dfgBuild, buildTimeDetails)
         vals[btd] = psz;
     });
 
-#ifdef _MSC_VER
     const size_t nExpectedCount = DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs);
-#else
-    const size_t nExpectedCount = DFG_COUNTOF(DFG_DETAIL_NS::buildTimeDetailStrs) - 1;
-#endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
     EXPECT_TRUE((::DFG_MODULE_NS(str)::beginsWith(DFG_COMPILER_NAME_SIMPLE, "MSVC_")));
