@@ -235,19 +235,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgUtf.windows1252charToCp";
 
     auto rv = RUN_ALL_TESTS();
-    {
-        using namespace ::DFG_ROOT_NS;
-        std::cout << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
-            << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << "), "
-            << getBuildTimeDetailStr<BuildTimeDetail_cppStandardVersion>()
-            << ", " << getBuildTimeDetailStr<BuildTimeDetail_standardLibrary>()
-            << ", " << getBuildTimeDetailStr<BuildTimeDetail_architecture>()
-#if defined(_MSC_VER)
-            << ", " << getBuildTimeDetailStr<BuildTimeDetail_buildDebugReleaseType>()
-#endif
-            << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>()
-            << "\n";
-    }
+    dfgtest::printPostTestDetailSummary(std::cout);
 #ifdef __MINGW32__
     // Pause with MinGW because when run from Visual Studio, without pause the console closes immediately after running tests.
     // TODO: add check to pause only if tests seems to be run from Visual Studio (=parent process is devenv.exe)

@@ -1,8 +1,5 @@
-#include <dfg/dfgDefs.hpp>
-#include <dfg/os.hpp>
-#include <dfgTest/dfgTest.hpp>
-#include <iostream>
 #include "dfgTestQt_gtestPrinters.hpp"
+#include <dfg/dfgDefs.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <gtest/gtest.h>
@@ -11,7 +8,11 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <QtMessageHandler>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
+#include <dfg/os.hpp>
+#include <dfgTest/dfgTest.hpp>
+#include <iostream>
 #include <dfg/build/buildTimeDetails.hpp> // Note: this must be included after Qt-header in order to have BuildTimeDetail_qtVersion available.
+#include <dfg/str.hpp>
 
 
 void PrintTo(const QString& s, ::std::ostream* pOstrm)
@@ -105,17 +106,16 @@ int main(int argc, char **argv)
     const auto rv = RUN_ALL_TESTS();
     {
         using namespace ::DFG_ROOT_NS;
-        std::cout << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
-            << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << "), "
-            <<         getBuildTimeDetailStr<BuildTimeDetail_cppStandardVersion>()
-            << ", " << getBuildTimeDetailStr<BuildTimeDetail_standardLibrary>()
-            << ", " << getBuildTimeDetailStr<BuildTimeDetail_architecture>()
-#if defined(_MSC_VER)
-            << ", " << getBuildTimeDetailStr<BuildTimeDetail_buildDebugReleaseType>()
-#endif
-            << ", Qt version (build time) " << getBuildTimeDetailStr<BuildTimeDetail_qtVersion>()
-            << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>()
-            << "\n";
+        dfgtest::printPostTestDetailSummary(std::cout, [](std::ostream& ostrm) { 
+            ostrm << ", Qt version (build time) " << getBuildTimeDetailStr<BuildTimeDetail_qtVersion>();
+        });
     }
     return rv;
+}
+
+TEST(dfgQt, testExistenceOfQtVersionBuildTimeDetail)
+{
+    using namespace ::DFG_ROOT_NS;
+    const auto qtVersion = getBuildTimeDetailStr<BuildTimeDetail_qtVersion>();
+    DFGTEST_EXPECT_FALSE(::DFG_MODULE_NS(str)::isEmptyStr(qtVersion));
 }

@@ -152,3 +152,28 @@ namespace DFG_ROOT_NS
     }
 
 } // namespace DFG_ROOT_NS
+
+#include <dfg/build/buildTimeDetails.hpp>
+#include <functional>
+
+namespace dfgtest
+{
+    // Prints general information such as compiler details to given ostream.
+    inline void printPostTestDetailSummary(std::ostream& ostrm, std::function<void (std::ostream&)> additionalPrinter = nullptr)
+    {
+        using namespace ::DFG_ROOT_NS;
+        const bool bHaveAsserts = (DFG_DEBUG_ENABLE_ASSERTS == 1);
+        ostrm << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
+            << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << ")"
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_cppStandardVersion>()
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_standardLibrary>()
+            << ", " << getBuildTimeDetailStr<BuildTimeDetail_architecture>()
+            << ", " << "build type = " << getBuildTimeDetailStr<BuildTimeDetail_buildDebugReleaseType>()
+            << ", ASSERTs " << ((bHaveAsserts) ? "enabled" : "disabled")
+            << ((bHaveAsserts) ? ((DFG_DEBUG_ASSERT_WITH_THROW == 1) ? " (throwing)" : " (non-throwing)") : "")
+            << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>();
+            if (additionalPrinter)
+                additionalPrinter(ostrm);
+            ostrm << "\n";
+    }
+} // namespace dfgtest
