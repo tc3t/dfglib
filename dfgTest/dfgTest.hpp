@@ -39,6 +39,26 @@
 // For testing cases where left is string literal and rigth utf8, for example: DFGTEST_EXPECT_EQ_LITERAL_UTF8("abc", functionThatReturnsUtf8())
 #define DFGTEST_EXPECT_EQ_LITERAL_UTF8(x, y) EXPECT_EQ(x, ::DFG_ROOT_NS::StringViewUtf8(y).asUntypedView())
 
+#include <dfg/dfgDefs.hpp>
+
+#if (DFG_DEBUG_ENABLE_ASSERTS == 1)
+    #if (DFG_DEBUG_ASSERT_WITH_THROW == 1)
+        #define DFGTEST_EXPECT_ASSERT_FAILURE(expr) \
+            try { \
+                (expr); \
+                DFGTEST_EXPECT_STREQ("Expected failing assert from " #expr, "Did not get one"); \
+            } \
+            catch (const ::DFG_MODULE_NS(debug)::ExceptionAssertFailure&) { \
+                DFGTEST_EXPECT_STREQ("Got failed assert as expected", "Got failed assert as expected"); \
+            }
+    #else
+        #define DFGTEST_EXPECT_ASSERT_FAILURE static_assert(false, "Using DFGTEST_EXPECT_ASSERT_FAILURE with asserts enabled requires DFG_DEBUG_ASSERT_WITH_THROW to be defined as 1");
+    #endif
+  
+#else // Case: Asserts not enabled. In this case DFGTEST_EXPECT_ASSERT_FAILURE is no-op
+    #define DFGTEST_EXPECT_ASSERT_FAILURE(expr)
+#endif
+
 
 // Defining StringView printers for GoogleTest. Note that while these also provide clearer output to test console,
 // it is not just about convenience, e.g. comparison of StringViewUtf8 fails to compile without these.

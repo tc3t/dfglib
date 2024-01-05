@@ -31,6 +31,11 @@ else()
     set(CMAKE_VERBOSE_MAKEFILE ON)      # Sets more verbose compiler output during build
 endif()
 
+# In debug-builds, using throwing asserts to be able to test expected assert failures.
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDFG_DEBUG_ASSERT_WITH_THROW=1)
+endif()
+
 SET(HEADERS
     stdafx.h
     dfgTest.hpp

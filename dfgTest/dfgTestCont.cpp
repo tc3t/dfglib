@@ -1931,12 +1931,14 @@ template <class T0, class T1> struct ShouldNotCompileOperation
     DFGTEST_STATIC_TEST((std::is_same<void, ShouldNotCompileOperation<T0, T1>::OP##Type>::value == true)); \
     DFGTEST_STATIC_TEST((std::is_same<void, ShouldNotCompileOperation<T1, T0>::OP##Type>::value == true))
 
-#define DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(OP) \
-    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, FlagsTestClass::Enums, OP); \
-    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), decltype(FlagsTestClass::Enums::a), OP); \
-    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, int, OP); \
-    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), int, OP); \
-    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), uint16, OP)
+// Note that the variadic macro is trickery based on https://stackoverflow.com/questions/57870022/can-you-feed-a-macro-to-another-macro-as-an-argument-without-the-initial-macro
+// to avoid issues when and/or etc. are macros defined as &&/||.
+#define DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION_SET(OP, ...) \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, FlagsTestClass::Enums, OP##__VA_ARGS__); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), decltype(FlagsTestClass::Enums::a), OP##__VA_ARGS__); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(TestFlags, int, OP##__VA_ARGS__); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), int, OP##__VA_ARGS__); \
+    DFGTEST_TEMP_TEST_SHOULD_NOT_COMPILE_ENUM_OPERATION(decltype(TestFlags::one), uint16, OP##__VA_ARGS__)
 
 TEST(dfgCont, Flags)
 {

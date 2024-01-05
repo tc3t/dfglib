@@ -18,8 +18,21 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
         ExceptionRequire(const char* psz) : BaseClass(psz) {}
     };
 
+#if (DFG_DEBUG_ASSERT_WITH_THROW == 1)
+    class ExceptionAssertFailure
+    {
+    public:
+        ExceptionAssertFailure(const char* const /*pszFile*/, const int /*nLine*/, const char* const /*pszMsg*/)
+        {
+        }
+    }; // class AssertFailureExpection
+#endif // (DFG_DEBUG_ASSERT_WITH_THROW == 1)
+
     inline void onAssertFailure(const char* const pszFile, const int nLine, const char* const pszMsg)
     {
+#if (DFG_DEBUG_ASSERT_WITH_THROW == 1)
+        throw ExceptionAssertFailure(pszFile, nLine, pszMsg);
+#else
         #if defined(_MSC_VER) && defined(_DEBUG) // _CrtDbgReport seems to be defined only in debug-config.
             const auto rv = _CrtDbgReport(_CRT_ASSERT, pszFile, nLine, NULL, "%s", pszMsg);
             if (rv == 1) // If retry-is pressed (rv == 1), break.
@@ -36,6 +49,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
             #endif
             throw std::runtime_error(pszMsg);
         #endif
+#endif
     }
 
     namespace DFG_DETAIL_NS

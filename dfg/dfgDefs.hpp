@@ -18,6 +18,10 @@ DFG_BUILD_OPT_USE_BOOST_OVERRIDE: Define to 1 / 0 / DFG_BUILD_OPT_USE_BOOST_DEFA
 DFG_DEBUG_ENABLE_ASSERTS        : Master macro switch for enabling library asserts (either 0 or 1). If undefined, this file defines it as follows:
                                       1: MSVC: defined(_DEBUG)). Non-MSVC: !defined(NDEBUG)
                                       0: otherwise
+DFG_DEBUG_ASSERT_WITH_THROW     : If defined as 1, failing asserts are guaranteed to throw exception of type ::DFG_MODULE_NS(debug)::ExceptionAssertFailure
+                                    without any user interface notifications. Otherwise failing asserts may or may not trigger some platform-specific notification.
+                                    This macro is meaningful only if DFG_DEBUG_ENABLE_ASSERTS == 1
+                                    If DFG_DEBUG_ASSERT_WITH_THROW is not defined, this file defines it as 0
 
 Macros for controlling usage of external dependencies (internal implementation details):
 DFG_BUILD_OPT_USE_<NAME>           // Internal. Either 1 or 0 (i.e. must have value, not just definition).
@@ -80,6 +84,11 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
     #else
         #define DFG_DEBUG_ENABLE_ASSERTS 0
     #endif
+#endif
+
+// DFG_DEBUG_ASSERT_WITH_THROW
+#ifndef DFG_DEBUG_ASSERT_WITH_THROW
+    #define DFG_DEBUG_ASSERT_WITH_THROW 0
 #endif
 
 // DFG_STRINGIZE makes a string of given argument. If used with #defined value,

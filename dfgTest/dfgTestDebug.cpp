@@ -64,6 +64,11 @@ TEST(dfgDebug, AssertImplementation)
 		DFG_ASSERT(true); // Intented to test potential syntax error.
 }
 
+TEST(dfgDebug, assertWithExceptionThrowing)
+{
+    const auto testFunc = []() { DFG_ASSERT(false); };
+    DFGTEST_EXPECT_ASSERT_FAILURE(testFunc());
+}
 
 TEST(dfgDebug, printToDebugDisplay)
 {

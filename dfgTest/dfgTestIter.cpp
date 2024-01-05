@@ -790,8 +790,8 @@ TEST(dfgIter, FunctionValueIterator)
         DFGTEST_STATIC_TEST(sizeof(iter) == sizeof(double));
 
         // These should trigger a failing assert
-        //makeIndexIterator(double(HUGE_VAL));
-        //makeIndexIterator(std::numeric_limits<double>::quiet_NaN());
+        DFGTEST_EXPECT_ASSERT_FAILURE(makeIndexIterator(std::numeric_limits<double>::infinity()));
+        DFGTEST_EXPECT_ASSERT_FAILURE(makeIndexIterator(std::numeric_limits<double>::quiet_NaN()));
     }
 }
 
