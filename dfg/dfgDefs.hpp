@@ -187,6 +187,19 @@ namespace DFG_ROOT_NS { namespace DFG_DETAIL_NS
 #endif
 //
 
+// Helper macros to disable warnings in enclosed codeblock
+// Note: implementation is lacking, not all warnings are disabled.
+// Note: use with care, when need to silence warnings without touching code,
+//       is disabling _all_ warnings really the intent?
+// Example
+// {
+//		DFG_BEGIN_WARNINGS_DISABLED_BLOCK
+//		<some code here>
+//		DFG_END_WARNINGS_DISABLED_BLOCK
+// } 
+#define DFG_BEGIN_WARNINGS_DISABLED_BLOCK  DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
+#define DFG_END_WARNINGS_DISABLED_BLOCK    DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
+
 #define DFG_HIDE_COPY_CONSTRUCTOR(CLASS) \
 	private: \
 	CLASS(const CLASS&);
