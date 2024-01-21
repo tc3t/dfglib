@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="dfg::TypedCharPtrT&lt;*&gt;">
+		<DisplayString>{m_p} (TypedCharPtr)</DisplayString>
+	</Type>
+
+	<Type Name="dfg::TypedCharPtrT&lt;char const, 2&gt;">
+		<DisplayString>{m_p, s8} (TypedCharPtr UTF8)</DisplayString>
+	</Type>
+
+	<Type Name="dfg::StringView&lt;*&gt;">
+		<DisplayString>{m_pFirst,[m_nSize]}</DisplayString>
+	</Type>
+
+	<Type Name="dfg::StringViewSz&lt;*&gt;">
+		<DisplayString Condition="m_nSize == 4294967295">{m_pFirst}</DisplayString>
+		<DisplayString Condition="m_nSize == 18446744073709551615">{m_pFirst}</DisplayString>
+		<DisplayString>{m_pFirst, [m_nSize]}</DisplayString>
+	</Type>
+
+	<Type Name="dfg::StringTyped&lt;2&gt;">
+		<DisplayString>{m_s, [m_s._Mypair._Myval2._Mysize]s8} (UTF8)</DisplayString>
+	</Type>
+
+</AutoVisualizer>

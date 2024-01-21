@@ -36,8 +36,45 @@ namespace
     }
 }
 
+#if 0
+
+#include <dfg/utf.hpp>
+
+void natvisTesting()
+{
+    using namespace ::DFG_ROOT_NS;
+
+    const auto ptrAscii  = TypedCharPtrAsciiR("abc");
+    const auto ptrLatin1 = TypedCharPtrLatin1R("abc");
+    const auto ptrU8     = TypedCharPtrUtf8R("abc\xe2\x82\xac"); // Byte sequence is euro-sign in UTF8
+    const auto ptrU16    = TypedCharPtrUtf16R(u"abc\x20AC");     // // Byte sequence is euro-sign in UTF16
+
+    const auto szptrAscii  = SzPtrAscii("abc");
+    const auto szptrLatin1 = SzPtrLatin1("abc");
+    const auto szptrU8     = SzPtrUtf8("abc\xe2\x82\xac");
+    const auto szptrU16    = SzPtrUtf16(u"abc\x20AC");
+
+    StringViewC svCnull(nullptr);
+    StringViewC svC("abc");
+    StringViewC svCNonSz("abc", 2);
+    StringViewC svEmbeddedNull("ab\0c", 4);
+    StringViewSzC svSzCnull(nullptr);
+    StringViewSzC svSzC("abc");
+    StringViewSzC svSzCEmbeddedNull("ab\0c", 4); // SzView with embedded null
+    StringViewUtf8 svUtf8(SzPtrUtf8("ab\xe2\x82\xac" "d")); // Byte sequence is euro-sign
+    StringViewSzUtf8 svSzUtf8(SzPtrUtf8("ab\xe2\x82\xac")); // Byte sequence is euro-sign
+    StringViewW sCW(L"abc");
+    StringView16 sv16(u"abc\x20AC");
+    StringView32 sv32(U"abc");
+
+    StringUtf8 sUtf8(szptrU8);
+}
+
+#endif // natvis testing
+
 int main(int argc, char **argv)
 {
+    //natvisTesting();
     ::testing::InitGoogleTest(&argc, argv);
     if (!setWorkingDirectory())
     {
