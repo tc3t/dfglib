@@ -22,4 +22,8 @@
 		<DisplayString>{m_s, [m_s._Mypair._Myval2._Mysize]s8} (UTF8)</DisplayString>
 	</Type>
 
+	<Type Name="dfg::io::BasicImStream_T&lt;char&gt;">
+		<DisplayString>Total size = {m_streamBuffer.m_pEnd - m_streamBuffer.m_pBegin}, Remaining = {m_streamBuffer.m_pEnd - m_streamBuffer.m_pCurrent}, Current = {m_streamBuffer.m_pCurrent, [m_streamBuffer.m_pEnd - m_streamBuffer.m_pCurrent]na}, Start = {m_streamBuffer.m_pBegin, [m_streamBuffer.m_pEnd - m_streamBuffer.m_pBegin]na}</DisplayString>
+	</Type>
+
 </AutoVisualizer>
