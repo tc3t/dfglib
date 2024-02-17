@@ -1318,6 +1318,12 @@ bool CsvItemModel::openFile(QString sDbFilePath, LoadOptions loadOptions)
             const auto sIncludeColumns = loadOptions.getProperty(CsvOptionProperty_includeColumns, "");
             const auto sFilterItems = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
             const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
+
+            // If encoding is not given and there is not BOM in file, trying to read as UTF8
+            if (loadOptions.textEncoding() == ::DFG_MODULE_NS(io)::encodingUnknown &&
+                ::DFG_MODULE_NS(io)::checkBOMFromFile(qStringToFileApi8Bit(sDbFilePath)) == ::DFG_MODULE_NS(io)::encodingUnknown)
+                loadOptions.textEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
+
             if (loadOptions.isFilteredRead(sIncludeRows, sIncludeColumns, sFilterItems))
             {
                 // Case: filtered read

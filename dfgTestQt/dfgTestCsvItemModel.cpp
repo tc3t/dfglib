@@ -500,6 +500,34 @@ TEST(dfgQt, CsvItemModel_cellDataAsDouble)
     }
 }
 
+TEST(dfgQt, CsvItemModel_defaultInputEncoding)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+    {
+        CsvItemModel modelUtf8Bom;
+        CsvItemModel modelUtf8NoBom;
+        CsvItemModel modelWin1252;
+        modelUtf8Bom.openFile("testfiles/example5_UTF8_BOM.csv");
+        modelUtf8NoBom.openFile("testfiles/example5_UTF8_no_BOM.csv");
+        modelWin1252.openFile("testfiles/example5_Windows1252.csv");
+        DFGTEST_EXPECT_LEFT(QString(QChar(0x20AC)), viewToQString(modelUtf8Bom.rawStringViewAt(0, 0)));
+        DFGTEST_EXPECT_LEFT(QString(QChar(0xB5)), viewToQString(modelUtf8Bom.rawStringViewAt(0, 1)));
+
+        DFGTEST_EXPECT_LEFT(QString(QChar(0x20AC)), viewToQString(modelUtf8NoBom.rawStringViewAt(0, 0)));
+        DFGTEST_EXPECT_LEFT(QString(QChar(0xB5)), viewToQString(modelUtf8NoBom.rawStringViewAt(0, 1)));
+
+        // When reading Windows-1252 as UTF8, it will contain bytes that are not valid UTF8 so QString is expected to get
+        // 0xFFFD == Replacement character (https://en.wikipedia.org/wiki/Specials_(Unicode_block)#Replacement_character)
+        DFGTEST_EXPECT_LEFT(QString(QChar(0xFFFD)), viewToQString(modelWin1252.rawStringViewAt(0, 0)));
+        DFGTEST_EXPECT_LEFT(QString(QChar(0xFFFD)), viewToQString(modelWin1252.rawStringViewAt(0, 1)));
+        DFGTEST_ASSERT_LEFT(1, modelWin1252.rawStringViewAt(0, 0).size());
+        DFGTEST_ASSERT_LEFT(1, modelWin1252.rawStringViewAt(0, 0).size());
+        DFGTEST_EXPECT_LEFT(0x80, static_cast<unsigned char>(modelWin1252.rawStringViewAt(0, 0).asUntypedView()[0]));
+        DFGTEST_EXPECT_LEFT(0xb5, static_cast<unsigned char>(modelWin1252.rawStringViewAt(0, 1).asUntypedView()[0]));
+    }
+}
+
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
 
 #include <QAbstractItemModelTester>
