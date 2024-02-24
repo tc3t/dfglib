@@ -6,10 +6,23 @@
 
 	<Type Name="dfg::TypedCharPtrT&lt;char const, 2&gt;">
 		<DisplayString>{m_p, s8} (TypedCharPtr UTF8)</DisplayString>
+		<Expand>
+			<Item Name="[m_p] (raw bytes)" ExcludeView="simple">m_p</Item>
+		</Expand>
 	</Type>
 
+	<!-- Default StringView -->
 	<Type Name="dfg::StringView&lt;*&gt;">
 		<DisplayString>{m_pFirst,[m_nSize]}</DisplayString>
+	</Type>
+
+	<!-- Typed StringView with 'char'-character type -->
+	<Type Name="dfg::StringView&lt;char,*&gt;">
+		<DisplayString>{m_pFirst,[m_nSize]}</DisplayString>
+		<Expand>
+			<Item Name="[size] (code units)" ExcludeView="simple">m_nSize</Item>
+			<Item Name="[raw bytes]" ExcludeView="simple">m_pFirst.m_p,[m_nSize]</Item>
+		</Expand>
 	</Type>
 
 	<Type Name="dfg::StringViewSz&lt;*&gt;">
