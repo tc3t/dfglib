@@ -1,34 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	
+	<!-- Notes:
+		-To access template args, can use {&quot;$T1&quot;}, {&quot;$T2&quot;})
+			-e.g. <DisplayString>1. template arg = {&quot;$T1&quot;}, 2. template arg = {&quot;$T2&quot;})</DisplayString>
+				-Example output: 1. template arg = "char", 2. template arg = "dfg::StringTyped<2>")
+	--> 	
+	
 	<Type Name="dfg::TypedCharPtrT&lt;*&gt;">
 		<DisplayString>{m_p} (TypedCharPtr)</DisplayString>
 	</Type>
 
 	<Type Name="dfg::TypedCharPtrT&lt;char const, 2&gt;">
-		<DisplayString>{m_p, s8} (TypedCharPtr UTF8)</DisplayString>
+		<DisplayString>{m_p, s8} (UTF8)</DisplayString>
 		<Expand>
 			<Item Name="[m_p] (raw bytes)" ExcludeView="simple">m_p</Item>
 		</Expand>
 	</Type>
 
-	<!-- Default StringView -->
+	<!-- StringView -->
 	<Type Name="dfg::StringView&lt;*&gt;">
-		<DisplayString>{m_pFirst,[m_nSize]}</DisplayString>
-	</Type>
-
-	<!-- Typed StringView with 'char'-character type -->
-	<Type Name="dfg::StringView&lt;char,*&gt;">
-		<DisplayString>{m_pFirst,[m_nSize]}</DisplayString>
+		<DisplayString>{m_pFirst,[m_nSize]} (code unit size = {m_nSize})</DisplayString>
+		<!-- Embedded nulls and encodings aren't handled correctly in StringView-widget -->
+		<StringView Optional="true">m_pFirst.m_p,[m_nSize]</StringView>
+		<StringView Optional="true">m_pFirst,[m_nSize]</StringView>
 		<Expand>
 			<Item Name="[size] (code units)" ExcludeView="simple">m_nSize</Item>
-			<Item Name="[raw bytes]" ExcludeView="simple">m_pFirst.m_p,[m_nSize]</Item>
+			<Item Name="[raw bytes]" ExcludeView="simple" Optional="true">m_pFirst.m_p,[m_nSize]</Item>
 		</Expand>
 	</Type>
 
+	<!-- StringViewSz -->
 	<Type Name="dfg::StringViewSz&lt;*&gt;">
-		<DisplayString Condition="m_nSize == 4294967295">{m_pFirst}</DisplayString>
-		<DisplayString Condition="m_nSize == 18446744073709551615">{m_pFirst}</DisplayString>
-		<DisplayString>{m_pFirst, [m_nSize]}</DisplayString>
+		<DisplayString Condition="m_nSize == 4294967295">{m_pFirst} (sz-sized)</DisplayString>
+		<DisplayString Condition="m_nSize == 18446744073709551615">{m_pFirst} (sz-sized)</DisplayString>
+		<DisplayString>{m_pFirst, [m_nSize]} (code unit size = {m_nSize})</DisplayString>
+		<!-- Embedded nulls and encodings aren't handled correctly in StringView-widget -->
+		<StringView Optional="true">m_pFirst.m_p</StringView>
+		<StringView Optional="true">m_pFirst</StringView>
+		<Expand>
+			<Item Name="[size] (code units)" ExcludeView="simple" Condition="m_nSize == 4294967295">"(sz-sized)"</Item>
+			<Item Name="[size] (code units)" ExcludeView="simple" Condition="m_nSize == 18446744073709551615">"(sz-sized)"</Item>
+			<Item Name="[size] (code units)" ExcludeView="simple" Condition="m_nSize &lt; 4294967295">m_nSize</Item>
+			<Item Name="[raw bytes]" ExcludeView="simple" Condition="m_nSize == 4294967295" Optional="true">m_pFirst.m_p</Item>
+			<Item Name="[raw bytes]" ExcludeView="simple" Condition="m_nSize == 18446744073709551615" Optional="true">m_pFirst.m_p</Item>
+			<Item Name="[raw bytes]" ExcludeView="simple" Condition="m_nSize &lt; 4294967295" Optional="true">m_pFirst.m_p,[m_nSize]</Item>
+		</Expand>
 	</Type>
 
 	<Type Name="dfg::StringTyped&lt;2&gt;">
