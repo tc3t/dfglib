@@ -50,10 +50,12 @@
 
 	<Type Name="dfg::StringTyped&lt;2&gt;">
 		<DisplayString>{m_s, [m_s._Mypair._Myval2._Mysize]s8} (UTF8)</DisplayString>
+		<StringView>m_s,s8</StringView>
 	</Type>
 
 	<Type Name="dfg::StringTyped&lt;3&gt;">
 		<DisplayString>{m_s, [m_s._Mypair._Myval2._Mysize]su} (UTF16)</DisplayString>
+		<StringView>m_s,su</StringView>
 	</Type>
 
 	<Type Name="dfg::io::BasicImStream_T&lt;char&gt;">
