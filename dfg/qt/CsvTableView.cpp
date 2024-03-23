@@ -856,6 +856,7 @@ CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWid
 
     this->setHorizontalHeader(new TableHeaderView(this));
 
+    this->setVerticalHeader(new TableVerticalHeaderView(this));
     auto pVertHdr = verticalHeader();
     if (pVertHdr)
     {
@@ -6651,6 +6652,59 @@ void TableHeaderView::initStyleOptionForIndex(QStyleOptionHeader* option, const 
     }
 }
 #endif
+
+//////////////////////////////////////////////////////////////////////////
+//
+// class TableVerticalHeaderView
+//
+//////////////////////////////////////////////////////////////////////////
+
+TableVerticalHeaderView::TableVerticalHeaderView(CsvTableView* pParent)
+    : BaseClass(Qt::Vertical, pParent)
+{
+    this->setSectionsClickable(true);
+}
+
+auto TableVerticalHeaderView::tableView() -> CsvTableView*
+{
+    return qobject_cast<CsvTableView*>(parent());
+}
+
+auto TableVerticalHeaderView::tableView() const -> const CsvTableView*
+{
+    return qobject_cast<const CsvTableView*>(parent());
+}
+
+void TableVerticalHeaderView::contextMenuEvent(QContextMenuEvent* pEvent)
+{
+    if (!pEvent)
+        return;
+
+    const auto nViewRow = this->logicalIndexAt(pEvent->pos());
+
+    if (nViewRow < 0)
+        return;
+
+    auto pTableView = tableView();
+    if (!pTableView)
+        return;
+    const auto nRowModel = pTableView->mapRowColToDataModel(nViewRow, 0).first;
+    const auto nRowUser = CsvItemModel::internalRowIndexToVisible(nRowModel);
+
+    QMenu menu;
+    {
+        auto pAct = menu.addAction(tr("Copy row number '%1' to clipboard").arg(nRowUser));
+        if (pAct)
+            connect(pAct, &QAction::triggered, this, [nRowUser]()
+                {
+                    auto pClipboard = QApplication::clipboard();
+                    if (pClipboard)
+                        pClipboard->setText(QString::number(nRowUser));
+                });
+    }
+
+    menu.exec(QCursor::pos());
+}
 
 namespace DFG_DETAIL_NS
 {

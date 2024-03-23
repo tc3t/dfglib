@@ -294,7 +294,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
     public:
         int m_nLatestContextMenuEventColumn_dataModel = -1;
-    };
+    }; // class TableHeaderView
+
+    class TableVerticalHeaderView : public QHeaderView
+    {
+        Q_OBJECT
+    public:
+        using BaseClass = QHeaderView;
+        TableVerticalHeaderView(CsvTableView* pParent);
+
+              CsvTableView* tableView();
+        const CsvTableView* tableView() const;
+
+        // Protected base class overrides -->
+    protected:
+        void contextMenuEvent(QContextMenuEvent* pEvent) override;
+        // <-- Base class overrides
+
+    }; // class TableVerticalHeaderView
 
     class ProgressWidget : public QProgressDialog
     {
