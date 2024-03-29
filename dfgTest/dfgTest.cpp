@@ -227,6 +227,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.minmaxElement_withNanHandling";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.percentileRange_and_percentile_ceilElem";
+    //::testing::GTEST_FLAG(filter) = "dfgOs.getMemoryUsage_process";
     //::testing::GTEST_FLAG(filter) = "dfgOs.MemoryMappedFile";
     //::testing::GTEST_FLAG(filter) = "dfgOs.OutputFile_completeOrNone";
     //::testing::GTEST_FLAG(filter) = "dfgOs.TemporaryFile";
@@ -238,6 +239,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith";
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_TypedStrings";
     //::testing::GTEST_FLAG(filter) = "dfgStr.beginsWith_StringViews";
+    //::testing::GTEST_FLAG(filter) = "dfgStr.ByteCountFormatter_metric";
     //::testing::GTEST_FLAG(filter) = "dfgStr.charToPrintable";
     //::testing::GTEST_FLAG(filter) = "dfgStr.floatingPointTypeToSprintfType";
     //::testing::GTEST_FLAG(filter) = "dfgStr.format_fmt";

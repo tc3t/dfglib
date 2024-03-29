@@ -2,6 +2,7 @@
 
 #include "os.hpp"
 #include "os/fileSize.hpp"
+#include "os/memoryInfo.hpp"
 #include "os/memoryMappedFile.hpp"
 #include "os/OutputFile.hpp"
 #include "os/removeFile.hpp"

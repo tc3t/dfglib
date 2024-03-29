@@ -16,6 +16,7 @@
 #include <dfg/cont.hpp>
 #include <dfg/utf.hpp>
 #include <dfg/iter/szIterator.hpp>
+#include <dfg/str/byteCountFormatter.hpp>
 #if DFGTEST_ENABLE_BENCHMARKS == 1
     #include <dfg/time/timerCpu.hpp>
     #include <regex>
@@ -1922,6 +1923,67 @@ TEST(dfgStr, replaceSubStrsInplace)
         DFGTEST_EXPECT_LEFT(sExpectedResult, s2);
     } // End of expanding replace
 #endif // DFGTEST_ENABLE_BENCHMARKS == 1
+}
+
+TEST(dfgStr, ByteCountFormatter_metric)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(str);
+    using MetricFormat = ByteCountFormatter_metric;
+
+    DFGTEST_STATIC_TEST(MetricFormat(0)       == MetricFormat::privFromRawMembers(0, 0, 0, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(9)       == MetricFormat::privFromRawMembers(9, 0, 0, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(10)      == MetricFormat::privFromRawMembers(10, 0, 0, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(99)      == MetricFormat::privFromRawMembers(99, 0, 0, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(100)     == MetricFormat::privFromRawMembers(100, 0, 0, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(999)     == MetricFormat::privFromRawMembers(999, 0, 0, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(1000)    == MetricFormat::privFromRawMembers(1, 0, 3, 0)); // 1 kB
+    DFGTEST_STATIC_TEST(MetricFormat(1001)    == MetricFormat::privFromRawMembers(1, 1, 3, 3));
+    DFGTEST_STATIC_TEST(MetricFormat(1123)    == MetricFormat::privFromRawMembers(1, 123, 3, 3));
+    DFGTEST_STATIC_TEST(MetricFormat(123000)  == MetricFormat::privFromRawMembers(123, 0, 3, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(123009)  == MetricFormat::privFromRawMembers(123, 0, 3, 0));
+    DFGTEST_STATIC_TEST(MetricFormat(123999)  == MetricFormat::privFromRawMembers(123, 9, 3, 1)); // Note: uses floor rounding.
+    DFGTEST_STATIC_TEST(MetricFormat(999999)  == MetricFormat::privFromRawMembers(999, 9, 3, 1));
+    DFGTEST_STATIC_TEST(MetricFormat(1000000) == MetricFormat::privFromRawMembers(1, 0, 6, 0)); // 1 MB
+    DFGTEST_STATIC_TEST(MetricFormat(999400000)     == MetricFormat::privFromRawMembers(999, 4, 6, 1));
+    DFGTEST_STATIC_TEST(MetricFormat(999400000)     == MetricFormat::privFromRawMembers(999, 4, 6, 1));
+    DFGTEST_STATIC_TEST(MetricFormat(1000000000)    == MetricFormat::privFromRawMembers(1, 0, 9, 0)); // 1 GB
+    DFGTEST_STATIC_TEST(MetricFormat(5003000009)    == MetricFormat::privFromRawMembers(5, 3, 9, 3));
+    DFGTEST_STATIC_TEST(MetricFormat(5123000000)    == MetricFormat::privFromRawMembers(5, 123, 9, 3));
+    DFGTEST_STATIC_TEST(MetricFormat(999999999999)  == MetricFormat::privFromRawMembers(999, 9, 9, 1));
+    DFGTEST_STATIC_TEST(MetricFormat(1000000000000) == MetricFormat::privFromRawMembers(1, 0, 12, 0)); // 1 TB
+    DFGTEST_STATIC_TEST(MetricFormat(1000000000000000ull)    == MetricFormat::privFromRawMembers(1, 0, 15, 0)); // 1 PB
+    DFGTEST_STATIC_TEST(MetricFormat(1000000000000000000ull) == MetricFormat::privFromRawMembers(1, 0, 18, 0)); // 1 EB
+    DFGTEST_STATIC_TEST(MetricFormat(1000000000000099999ull) == MetricFormat::privFromRawMembers(1, 0, 18, 0)); // 1 EB and a bit more.
+    DFGTEST_STATIC_TEST(MetricFormat(uint64_max)             == MetricFormat::privFromRawMembers(18, 44, 18, 2)); // 18446744073709551615
+
+    DFGTEST_EXPECT_LEFT("0 B",      MetricFormat(0).toString());
+    DFGTEST_EXPECT_LEFT("1 B",      MetricFormat(1).toString());
+    DFGTEST_EXPECT_LEFT("999 B",    MetricFormat(999).toString());
+    DFGTEST_EXPECT_LEFT("1 kB",     MetricFormat(1000).toString());
+    DFGTEST_EXPECT_LEFT("1.002 kB", MetricFormat(1002).toString());
+    DFGTEST_EXPECT_LEFT("1.034 kB", MetricFormat(1034).toString());
+    DFGTEST_EXPECT_LEFT("123 kB",   MetricFormat(123009).toString());
+    DFGTEST_EXPECT_LEFT("1.567 kB", MetricFormat(1567).toString());
+    DFGTEST_EXPECT_LEFT("999.9 kB", MetricFormat(999999).toString());
+    DFGTEST_EXPECT_LEFT("1 MB",     MetricFormat(1000000).toString());
+    DFGTEST_EXPECT_LEFT("1.001 MB", MetricFormat(1001000).toString());
+    DFGTEST_EXPECT_LEFT("1.01 MB",  MetricFormat(1010000).toString());
+    DFGTEST_EXPECT_LEFT("1.999 MB", MetricFormat(1999999).toString());
+    DFGTEST_EXPECT_LEFT("999.1 MB", MetricFormat(999123456).toString());
+    DFGTEST_EXPECT_LEFT("1 GB",     MetricFormat(1000000000).toString());
+    DFGTEST_EXPECT_LEFT("4.294 GB", MetricFormat(uint32_max).toString());
+    DFGTEST_EXPECT_LEFT("1.234 TB", MetricFormat(1234000000000).toString());
+    DFGTEST_EXPECT_LEFT("18.44 EB", MetricFormat(uint64_max).toString());
+#if 0
+    std::cout << MetricFormat(1) << '\n';
+    std::cout << MetricFormat(999) << '\n';
+    std::cout << MetricFormat(1000) << '\n';
+    std::cout << MetricFormat(1001) << '\n';
+    std::cout << MetricFormat(1010) << '\n';
+    std::cout << MetricFormat(1100) << '\n';
+    std::cout << MetricFormat(uint64_max) << '\n';
+#endif
 }
 
 #endif

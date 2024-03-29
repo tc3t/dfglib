@@ -154,7 +154,9 @@ namespace DFG_ROOT_NS
 } // namespace DFG_ROOT_NS
 
 #include <dfg/build/buildTimeDetails.hpp>
+#include <dfg/os/memoryInfo.hpp>
 #include <functional>
+#include <dfg/str/byteCountFormatter.hpp>
 
 namespace dfgtest
 {
@@ -162,7 +164,10 @@ namespace dfgtest
     inline void printPostTestDetailSummary(std::ostream& ostrm, std::function<void (std::ostream&)> additionalPrinter = nullptr)
     {
         using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
         const bool bHaveAsserts = (DFG_DEBUG_ENABLE_ASSERTS == 1);
+        const auto memInfo = ::DFG_MODULE_NS(os)::getMemoryUsage_process();
+        const auto optPeakMemUsage = memInfo.workingSetPeakSize();
         ostrm << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
             << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << ")"
             << ", " << getBuildTimeDetailStr<BuildTimeDetail_cppStandardVersion>()
@@ -172,6 +177,8 @@ namespace dfgtest
             << ", ASSERTs " << ((bHaveAsserts) ? "enabled" : "disabled")
             << ((bHaveAsserts) ? ((DFG_DEBUG_ASSERT_WITH_THROW == 1) ? " (throwing)" : " (non-throwing)") : "")
             << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>();
+            if (optPeakMemUsage.has_value())
+                ostrm << ", Peak memory usage " << ByteCountFormatter_metric(*optPeakMemUsage);
             if (additionalPrinter)
                 additionalPrinter(ostrm);
             ostrm << "\n";

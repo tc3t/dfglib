@@ -1,6 +1,7 @@
 #pragma once
 
 #include "str.hpp"
+#include "str/byteCountFormatter.hpp"
 #include "str/hex.hpp"
 #include "str/format_fmt.hpp"
 #include "str/format_regexFmt.hpp"

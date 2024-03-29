@@ -997,6 +997,7 @@
     <ClInclude Include="..\dfg\os.hpp" />
     <ClInclude Include="..\dfg\osAll.hpp" />
     <ClInclude Include="..\dfg\os\fileSize.hpp" />
+    <ClInclude Include="..\dfg\os\memoryInfo.hpp" />
     <ClInclude Include="..\dfg\os\memoryMappedFile.hpp" />
     <ClInclude Include="..\dfg\os\OutputFile.hpp" />
     <ClInclude Include="..\dfg\os\removeFile.hpp" />
@@ -1040,6 +1041,7 @@
     <ClInclude Include="..\dfg\stdcpp\stdversion.hpp" />
     <ClInclude Include="..\dfg\str.hpp" />
     <ClInclude Include="..\dfg\strAll.hpp" />
+    <ClInclude Include="..\dfg\str\byteCountFormatter.hpp" />
     <ClInclude Include="..\dfg\str\fmtlib\format.h" />
     <ClInclude Include="..\dfg\str\format_fmt.hpp" />
     <ClInclude Include="..\dfg\str\format_regexFmt.hpp" />

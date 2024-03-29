@@ -9,6 +9,7 @@
 #include <dfg/alg.hpp>
 #include <dfg/dfgBase.hpp>
 #include <dfg/io/OfStream.hpp>
+#include <dfg/os/memoryInfo.hpp>
 
 #ifdef _WIN32
 TEST(dfgOs, pathFindExtension)
@@ -326,5 +327,24 @@ TEST(dfgOs, OutputFile_completeOrNone)
         EXPECT_STREQ(L"dfgTest.exe", DFG_MODULE_NS(os)::pathFilename(sPathW.c_str()));
     }
 #endif // _WIN32
+
+TEST(dfgOs, getMemoryUsage_process)
+{
+    const auto memUsage = ::DFG_MODULE_NS(os)::getMemoryUsage_process();
+#ifdef _WIN32
+    #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC) \
+        DFGTEST_ASSERT_TRUE(FUNC().has_value()); \
+        DFGTEST_MESSAGE("Memory usage, " #FUNC " = " << FUNC().value())
+#else // Memory details are not implemented on other platforms so expecting that getters return nullopt.
+    #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC) \
+        DFGTEST_STATIC_TEST(FUNC() == ::DFG_MODULE_NS(os)::ProcessMemoryInfo::ByteCountOpt{});
+#endif
+    DFG_TEMP_EXPECT_MEM_ITEM(memUsage.pageFaultCount);
+    DFG_TEMP_EXPECT_MEM_ITEM(memUsage.workingSetPeakSize);
+    DFG_TEMP_EXPECT_MEM_ITEM(memUsage.workingSetSize);
+
+#undef DFG_TEMP_EXPECT_MEM_ITEM
+
+}
 
 #endif
