@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../dfgDefs.hpp"
+#include "../dfgBaseTypedefs.hpp"
 #include <string>
 #include <ostream>
 

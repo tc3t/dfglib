@@ -1,12 +1,14 @@
 #pragma once
 
+#include "../dfgDefs.hpp"
+
 DFG_ROOT_NS_BEGIN {
 
 
 	// Fixed Capacity string. Has internal character array which can't be exceeded.
 	// Aimed as a lightweight return type for functions that return string whose maximum 
 	// length limit is known. This avoids (redundant) memory allocation that might occur if using string objects.
-	template <class Char_T, size_t MaxStrLength_T> class DFG_CLASS_NAME(StringFixedCapacity_T)
+	template <class Char_T, size_t MaxStrLength_T> class StringFixedCapacity_T
 	{
 	public:
 		static const size_t s_nMaxStrLength = MaxStrLength_T;
@@ -22,9 +24,9 @@ DFG_ROOT_NS_BEGIN {
 		static size_t capacity() {return s_nMaxStrLength;}
 		const Char_T* c_str() const {return m_sz;}
 
-		DFG_CLASS_NAME(StringFixedCapacity_T)() {m_sz[0] = 0;}
+		StringFixedCapacity_T() {m_sz[0] = 0;}
 	private:
 		CharBuffer m_sz;
 	};
 
-} // namespace
+} // namespace DFG_ROOT_NS
