@@ -381,6 +381,102 @@ TEST(dfg, isValWithinLimitsOfType)
 
 namespace
 {
+    template <size_t Radix_T, class Int_T>
+    void integerDigitAtPos_impl2(const Int_T val)
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(str);
+        using namespace ::DFG_MODULE_NS(math);
+        char szBuf[96] = "";
+        toStr(val, szBuf, sizeof(szBuf), Radix_T);
+        const auto nLen = std::strlen(szBuf);
+        for (size_t i = 0; i < ((val >= 0) ? nLen : nLen - 1u); ++i)
+        {
+            DFGTEST_EXPECT_LEFT(szBuf[nLen - i - 1u], integerDigitAtPos(val, i, Radix_T));
+        }
+        DFGTEST_EXPECT_LEFT('0', integerDigitAtPos(val, int32_max, Radix_T));
+    }
+
+    template <size_t Radix_T>
+    void integerDigitAtPos_impl()
+    {
+        using namespace ::DFG_ROOT_NS;
+        integerDigitAtPos_impl2<Radix_T>(int8_max);
+        integerDigitAtPos_impl2<Radix_T>(int8_min);
+        integerDigitAtPos_impl2<Radix_T>(uint8_max);
+        integerDigitAtPos_impl2<Radix_T>(int16_max);
+        integerDigitAtPos_impl2<Radix_T>(int16_min);
+        integerDigitAtPos_impl2<Radix_T>(uint16_max);
+        integerDigitAtPos_impl2<Radix_T>(int32_max);
+        integerDigitAtPos_impl2<Radix_T>(int32_min);
+        integerDigitAtPos_impl2<Radix_T>(uint32_max);
+        integerDigitAtPos_impl2<Radix_T>(int64_max);
+        integerDigitAtPos_impl2<Radix_T>(int64_min);
+        integerDigitAtPos_impl2<Radix_T>(uint64_max);
+    }
+} // unnamed namespace
+
+TEST(dfg, integerDigitAtPos)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(math);
+    integerDigitAtPos_impl<2>();
+    integerDigitAtPos_impl<3>();
+    integerDigitAtPos_impl<4>();
+    integerDigitAtPos_impl<5>();
+    integerDigitAtPos_impl<6>();
+    integerDigitAtPos_impl<7>();
+    integerDigitAtPos_impl<8>();
+    integerDigitAtPos_impl<9>();
+    integerDigitAtPos_impl<10>();
+    integerDigitAtPos_impl<11>();
+    integerDigitAtPos_impl<12>();
+    integerDigitAtPos_impl<13>();
+    integerDigitAtPos_impl<14>();
+    integerDigitAtPos_impl<15>();
+    integerDigitAtPos_impl<16>();
+    integerDigitAtPos_impl<36>();
+
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(0, 0, 2)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(0, 0, 10)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(0, 0, 36)));
+
+    DFGTEST_STATIC_TEST(('?' == integerDigitAtPos(int8_max, 0, 1)));
+    DFGTEST_STATIC_TEST(('?' == integerDigitAtPos(int8_max, 0, 37)));
+
+    DFGTEST_STATIC_TEST(('1' == integerDigitAtPos(int8_max, 2)));
+    DFGTEST_STATIC_TEST(('2' == integerDigitAtPos(int8_max, 1)));
+    DFGTEST_STATIC_TEST(('7' == integerDigitAtPos(int8_max, 0)));
+
+    DFGTEST_STATIC_TEST(('1' == integerDigitAtPos(int8_min, 2)));
+    DFGTEST_STATIC_TEST(('2' == integerDigitAtPos(int8_min, 1)));
+    DFGTEST_STATIC_TEST(('8' == integerDigitAtPos(int8_min, 0)));
+
+    DFGTEST_STATIC_TEST(('2' == integerDigitAtPos(uint8_max, 2)));
+    DFGTEST_STATIC_TEST(('5' == integerDigitAtPos(uint8_max, 1)));
+    DFGTEST_STATIC_TEST(('5' == integerDigitAtPos(uint8_max, 0)));
+
+    // int64_max  ==  9223372036854775807 == 7fffffffffffffff
+    // uint64_max == 18446744073709551615 == ffffffffffffffff
+    DFGTEST_STATIC_TEST(('7' == integerDigitAtPos(int64_max, 0)));
+    DFGTEST_STATIC_TEST(('9' == integerDigitAtPos(int64_max, 18)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(int64_max, 19)));
+    DFGTEST_STATIC_TEST(('f' == integerDigitAtPos(int64_max, 0, 16)));
+    DFGTEST_STATIC_TEST(('7' == integerDigitAtPos(int64_max, 15, 16)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(int64_max, 16, 16)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(int64_max, int32_max)));
+
+    DFGTEST_STATIC_TEST(('5' == integerDigitAtPos(uint64_max, 0)));
+    DFGTEST_STATIC_TEST(('1' == integerDigitAtPos(uint64_max, 19)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(uint64_max, 20)));
+    DFGTEST_STATIC_TEST(('f' == integerDigitAtPos(uint64_max, 0, 16)));
+    DFGTEST_STATIC_TEST(('f' == integerDigitAtPos(uint64_max, 15, 16)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(uint64_max, 16, 16)));
+    DFGTEST_STATIC_TEST(('0' == integerDigitAtPos(uint64_max, int32_max)));
+}
+
+namespace
+{
     void funcAscii(DFG_ROOT_NS::SzPtrAsciiR psz)
     {
         EXPECT_STREQ("abcd", psz.c_str());

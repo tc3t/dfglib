@@ -91,6 +91,7 @@ int main(int argc, char **argv)
     //      -Output test results to xml:  dfgTest --gtest_output=xml
     // For more details, see              dfgTest --help
 
+    //::testing::GTEST_FLAG(filter) = "dfg.integerDigitAtPos";
     //::testing::GTEST_FLAG(filter) = "dfg.isEmpty";
     //::testing::GTEST_FLAG(filter) = "dfg.isValidIndex";
     //::testing::GTEST_FLAG(filter) = "dfg.OpaquePtr";

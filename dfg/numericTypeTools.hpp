@@ -571,6 +571,39 @@ inline bool isIntegerValued(const Val_T val)
     return DFG_DETAIL_NS::isIntegerValuedImpl(val, std::is_integral<Val_T>());
 }
 
+// Given an integer and radix, returns digit character for multiplier of nRadix^nPos.
+// For example with 'nRadix' == 10 and 'n' == 456:
+//      'nPos == 0' -> '6'
+//      'nPos == 1' -> '5'
+//      'nPos == 2' -> '4',
+//      'nPos  > 2' -> '0'
+// @param n Integer to extract digit from
+// @param nPos zero-based index which digit to returns, 0 is little end
+// @param nRadix Radix whose representation to use, valid range is [2, 36]
+// @return Digit at given pos or if nRadix is invalid, returns '?'. Characters for non-numbers are lower case.
+template <class Int_T>
+constexpr char integerDigitAtPos(const Int_T n, const size_t nPos, const size_t nRadix = 10)
+{
+    DFG_STATIC_ASSERT(std::is_integral_v<Int_T>, "Int_T must be an integer");
+    if (nRadix < 2 || nRadix > 36)
+        return '?';
+    constexpr char digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+    using UIntT = std::make_unsigned_t<Int_T>;
+    const auto nUnsignedN = absAsUnsigned(n);
+    UIntT nExpInt = 1;
+    for (size_t i = 0; i <= nPos; ++i)
+    {
+        if ((std::numeric_limits<UIntT>::max)() / nRadix < nExpInt)
+            return (i == nPos) ? digits[nUnsignedN / nExpInt] : '0';
+        nExpInt *= static_cast<UIntT>(nRadix);
+    }
+    // Getting rid of high digits, e.g. with radix 10 when extrating pos 2 from 123456 (i.e. '4'),
+    // nExpInt == 1000 -> nRemainder = 123456 % 1000 = 456
+    const auto nRemainder = nUnsignedN % nExpInt;
+    const auto nDigit = nRemainder / (nExpInt / nRadix); // With 456, pos 2 and radix 10, this is floor(456 / 100) = 4.
+    return digits[nDigit];
+}
+
 namespace DFG_DETAIL_NS
 {
     // Implementation for case where source and target types are the same.
