@@ -125,14 +125,14 @@ DFG_ROOT_NS_BEGIN
     namespace DFG_DETAIL_NS
     {
         template <class Int_T>
-        inline auto absAsUnsigned(const Int_T val, std::true_type) -> typename std::make_unsigned<Int_T>::type
+        inline constexpr auto absAsUnsigned(const Int_T val, std::true_type) -> typename std::make_unsigned<Int_T>::type
         {
             DFG_STATIC_ASSERT(std::is_unsigned<Int_T>::value, "absAsUnsigned: usage error - unsigned version called for signed ");
             return val;
         }
 
         template <class Int_T>
-        inline auto absAsUnsigned(const Int_T val, std::false_type) -> typename std::make_unsigned<Int_T>::type
+        inline constexpr auto absAsUnsigned(const Int_T val, std::false_type) -> typename std::make_unsigned<Int_T>::type
         {
             typedef typename std::make_unsigned<Int_T>::type UnsignedType;
             if (val >= 0)
@@ -151,7 +151,7 @@ DFG_ROOT_NS_BEGIN
     //      -Return value is unsigned type
     //      -Return value is mathematically correct even when called with value std::numeric_limits<Int_T>::min();
     template <class Int_T>
-    auto absAsUnsigned(const Int_T val) -> typename std::make_unsigned<Int_T>::type
+    constexpr auto absAsUnsigned(const Int_T val) -> typename std::make_unsigned<Int_T>::type
     {
         return DFG_DETAIL_NS::absAsUnsigned(val, typename std::is_unsigned<Int_T>::type());
     }

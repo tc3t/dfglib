@@ -326,6 +326,9 @@ TEST(dfgMath, absAsUnsigned)
     absUnsignedImpl<uint32>(0);
     absUnsignedImpl<int64>(static_cast<uint64>(NumericTraits<int64>::maxValue) + 1u);
     absUnsignedImpl<uint64>(0);
+
+    // Testing compile-time evaluation
+    DFGTEST_STATIC_TEST(absAsUnsigned(-10) == 10);
 }
 
 TEST(dfgMath, logOfBase)
