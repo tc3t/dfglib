@@ -282,6 +282,7 @@ TEST(dfgIo, BasicIfStream)
 
     const size_t nSumExpected = 12997224;
     const char szFilePath[] = "testfiles/matrix_200x200.txt";
+    const size_t nFileSize = 271040; // Size of file in szFilePath
     typedef DFG_MODULE_NS(time)::TimerCpu Timer;
 
     {
@@ -321,7 +322,7 @@ TEST(dfgIo, BasicIfStream)
     Timer timer;
     size_t sum = 0;
     std::ifstream istrm(szFilePath, std::ios_base::in | std::ios_base::binary);
-    std::vector<char> buffer(6778362);
+    std::vector<char> buffer(nFileSize);
     istrm.read(buffer.data(), buffer.size());
     DFG_ROOT_NS::DFG_SUB_NS_NAME(alg)::forEachFwd(buffer, [&](char c) {sum += c;});
     std::cout << "std::ifstream to buffer elapsed: " << timer.elapsedWallSeconds() << '\n';
@@ -332,7 +333,7 @@ TEST(dfgIo, BasicIfStream)
     Timer timer;
     size_t sum = 0;
     DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::BasicIfStream istrm(szFilePath);
-    std::vector<char> buffer(6778362);
+    std::vector<char> buffer(nFileSize);
     istrm.read(buffer.data(), buffer.size());
     DFG_ROOT_NS::DFG_SUB_NS_NAME(alg)::forEachFwd(buffer, [&](char c) {sum += c;});
     std::cout << "BasicIfStream to buffer elapsed: " << timer.elapsedWallSeconds() << '\n';
