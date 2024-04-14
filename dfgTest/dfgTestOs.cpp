@@ -330,11 +330,17 @@ TEST(dfgOs, OutputFile_completeOrNone)
 
 TEST(dfgOs, getMemoryUsage_process)
 {
+    using namespace ::DFG_ROOT_NS;
     const auto memUsage = ::DFG_MODULE_NS(os)::getMemoryUsage_process();
-#ifdef _WIN32
+#if defined(_WIN32)
     #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC) \
         DFGTEST_ASSERT_TRUE(FUNC().has_value()); \
         DFGTEST_MESSAGE("Memory usage, " #FUNC " = " << FUNC().value())
+#elif defined(__linux__)
+    #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC) \
+        DFGTEST_ASSERT_TRUE((StringViewC("memUsage.virtualMemoryPeak") == #FUNC) == FUNC().has_value()); \
+        if (FUNC().has_value()) \
+            DFGTEST_MESSAGE("Memory usage, " #FUNC " = " << FUNC().value())
 #else // Memory details are not implemented on other platforms so expecting that getters return nullopt.
     #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC) \
         DFGTEST_STATIC_TEST(FUNC() == ::DFG_MODULE_NS(os)::ProcessMemoryInfo::ByteCountOpt{});
@@ -342,6 +348,7 @@ TEST(dfgOs, getMemoryUsage_process)
     DFG_TEMP_EXPECT_MEM_ITEM(memUsage.pageFaultCount);
     DFG_TEMP_EXPECT_MEM_ITEM(memUsage.workingSetPeakSize);
     DFG_TEMP_EXPECT_MEM_ITEM(memUsage.workingSetSize);
+    DFG_TEMP_EXPECT_MEM_ITEM(memUsage.virtualMemoryPeak);
 
 #undef DFG_TEMP_EXPECT_MEM_ITEM
 
