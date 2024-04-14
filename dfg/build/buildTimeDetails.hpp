@@ -19,7 +19,7 @@
 #include "../dfgBaseTypedefs.hpp"
 #include "compilerDetails.hpp"
 
-#if __cplusplus < 202002L // <ciso646> "header is removed in C++20. " (https://en.cppreference.com/w/cpp/header/ciso646)
+#if DFG_CPLUSPLUS < 202002L // <ciso646> "header is removed in C++20. " (https://en.cppreference.com/w/cpp/header/ciso646)
     #include <ciso646> // For detection macros, https://en.cppreference.com/w/cpp/header/ciso646
 #else
     #include <version>
