@@ -167,7 +167,7 @@ namespace dfgtest
         using namespace ::DFG_MODULE_NS(str);
         const bool bHaveAsserts = (DFG_DEBUG_ENABLE_ASSERTS == 1);
         const auto memInfo = ::DFG_MODULE_NS(os)::getMemoryUsage_process();
-        const auto optPeakMemUsage = memInfo.workingSetPeakSize();
+        const auto optVmPeak = memInfo.virtualMemoryPeak();
         ostrm << "Done running tests build " << getBuildTimeDetailStr<BuildTimeDetail_dateTime>()
             << " on " << getBuildTimeDetailStr<BuildTimeDetail_compilerAndShortVersion>() << " (" << getBuildTimeDetailStr<BuildTimeDetail_compilerFullVersion>() << ")"
             << ", " << getBuildTimeDetailStr<BuildTimeDetail_cppStandardVersion>()
@@ -177,8 +177,8 @@ namespace dfgtest
             << ", ASSERTs " << ((bHaveAsserts) ? "enabled" : "disabled")
             << ((bHaveAsserts) ? ((DFG_DEBUG_ASSERT_WITH_THROW == 1) ? " (throwing)" : " (non-throwing)") : "")
             << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>();
-            if (optPeakMemUsage.has_value())
-                ostrm << ", Peak memory usage " << ByteCountFormatter_metric(*optPeakMemUsage);
+            if (optVmPeak.has_value())
+                ostrm << ", Peak virtual memory usage " << ByteCountFormatter_metric(*optVmPeak);
             if (additionalPrinter)
                 additionalPrinter(ostrm);
             ostrm << "\n";
