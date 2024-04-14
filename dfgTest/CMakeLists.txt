@@ -31,8 +31,15 @@ else()
     set(CMAKE_VERBOSE_MAKEFILE ON)      # Sets more verbose compiler output during build
 endif()
 
+if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+    message("CMAKE_BUILD_TYPE not defined, defaulting to 'Debug'")
+    set(CMAKE_BUILD_TYPE "Debug")
+endif()
+
 # In debug-builds, using throwing asserts to be able to test expected assert failures.
+message("CMAKE_BUILD_TYPE = " ${CMAKE_BUILD_TYPE})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message("    Debug-build -> adding definition DFG_DEBUG_ASSERT_WITH_THROW=1")
     add_definitions(-DDFG_DEBUG_ASSERT_WITH_THROW=1)
 endif()
 
@@ -83,12 +90,12 @@ set(SOURCE
    ../externals/gtest/gtest-all.cc
 )
 
-add_executable(dfgTest ${SOURCE} ${HEADERS})
+add_executable(dfgTestCmake ${SOURCE} ${HEADERS})
 
 if(MINGW)
-    TARGET_LINK_LIBRARIES(dfgTest shlwapi)
+    TARGET_LINK_LIBRARIES(dfgTestCmake shlwapi)
 endif()
 
 if(UNIX)
-    TARGET_LINK_LIBRARIES(dfgTest pthread)
+    TARGET_LINK_LIBRARIES(dfgTestCmake pthread)
 endif()
