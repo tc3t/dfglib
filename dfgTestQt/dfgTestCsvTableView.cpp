@@ -1799,6 +1799,37 @@ TEST(dfgQt, CsvTableView_filterFromSelection)
         const auto szExpectedFilter = R"STR({"apply_columns":"2","case_sensitive":true,"text":"^h$","type":"reg_exp"} {"apply_columns":"3","case_sensitive":true,"text":"^aFb$","type":"reg_exp"} )STR";
         DFGTEST_EXPECT_LEFT(szExpectedFilter, viewWidget.m_sReceivedFilter);
     }
+
+    // Negate-filter
+    {
+        // Clearing filter
+        Q_EMIT viewWidget.sigFilterJsonRequested(QString());
+        DFGTEST_EXPECT_LEFT(nRowCountTotal, viewWidget.getRowCount_viewModel());
+
+        // Selecting "1" and "4" and "7"
+        viewWidget.clearSelection(); // For some reason without this call setSelectedIndexes() would select 5 cells.
+        const QModelIndexList selection = { viewWidget.model()->index(0, 0), viewWidget.model()->index(1, 0), viewWidget.model()->index(2, 0) };
+        viewWidget.setSelectedIndexes(selection, nullptr);
+        DFGTEST_EXPECT_EQ(3, viewWidget.getSelectedItemCount());
+
+        // Creating negate-filter
+        using namespace ::DFG_MODULE_NS(qt);
+        viewWidget.setFilterFromSelection(
+            CsvTableViewSelectionFilterFlags::Enum::negate
+        );
+
+        DFGTEST_EXPECT_EQ(4, viewWidget.model()->rowCount());
+
+        DFGTEST_TEMP_TEST_ROW(0, "a", "b", "c");
+        DFGTEST_TEMP_TEST_ROW(1, "d", "e", "f");
+        DFGTEST_TEMP_TEST_ROW(2, "g", "h", "aFb");
+        DFGTEST_TEMP_TEST_ROW(3, "f", "i", "j");
+
+        // Testing filter format. This mostly tests against unintended changed in filter so if test fails just due to intentional format changes
+        // (or unintentional ones that don't change filter behaviour), simply adjust test string.
+        const auto szExpectedFilter = R"STR({"apply_columns":"1","negate":true,"text":"1|4|7","type":"reg_exp"} )STR";
+        DFGTEST_EXPECT_LEFT(QString(szExpectedFilter), viewWidget.m_sReceivedFilter);
+    }
 #undef DFGTEST_TEMP_TEST_CELL
 #undef DFGTEST_TEMP_TEST_ROW
 }

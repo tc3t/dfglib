@@ -330,7 +330,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     DFG_DEFINE_SCOPED_ENUM_FLAGS_WITH_OPERATORS(CsvTableViewSelectionFilterFlags, int,
         caseSensitive         = 0x1, // When not set: case-insensitive
         columnMatchByAnd      = 0x2, // When not set: columns are matches with or-logics
-        wholeStringMatch      = 0x4  // When not set: substring match
+        wholeStringMatch      = 0x4, // When not set: substring match
+        negate                = 0x8  // When not set: normal match
     ); // CsvTableViewSelectionFilterFlags
 
     // View for showing CsvItemModel.

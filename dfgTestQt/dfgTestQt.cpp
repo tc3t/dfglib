@@ -281,13 +281,17 @@ TEST(dfgQt, StringMatchDefinition)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(qt);
-#define DFGTEST_TEMP_VERIFY(JSON_STR, EXPECTED_STR, EXPECTED_CASE, EXPECTED_SYNTAX) \
+#define DFGTEST_TEMP_VERIFY2(JSON_STR, EXPECTED_STR, EXPECTED_CASE, EXPECTED_SYNTAX, EXPECTED_NEGATE) \
     { \
         const auto smd = StringMatchDefinition::fromJson(DFG_UTF8(JSON_STR)).first; \
-        EXPECT_EQ(EXPECTED_STR, smd.matchString()); \
-        EXPECT_EQ(EXPECTED_CASE, smd.caseSensitivity()); \
-        EXPECT_EQ(EXPECTED_SYNTAX, smd.patternSyntax()); \
+        DFGTEST_EXPECT_LEFT(EXPECTED_STR, smd.matchString()); \
+        DFGTEST_EXPECT_LEFT(EXPECTED_CASE, smd.caseSensitivity()); \
+        DFGTEST_EXPECT_LEFT(EXPECTED_SYNTAX, smd.patternSyntax()); \
+        DFGTEST_EXPECT_LEFT(EXPECTED_NEGATE, smd.isNegated()); \
     }
+
+#define DFGTEST_TEMP_VERIFY(JSON_STR, EXPECTED_STR, EXPECTED_CASE, EXPECTED_SYNTAX) \
+    DFGTEST_TEMP_VERIFY2(JSON_STR, EXPECTED_STR, EXPECTED_CASE, EXPECTED_SYNTAX, false)
 
     DFGTEST_TEMP_VERIFY("non_json", "*", Qt::CaseInsensitive, PatternMatcher::Wildcard);
     DFGTEST_TEMP_VERIFY("{}", "", Qt::CaseInsensitive, PatternMatcher::Wildcard);
@@ -297,8 +301,10 @@ TEST(dfgQt, StringMatchDefinition)
     DFGTEST_TEMP_VERIFY(R"( { "type": "fixed" } )", "", Qt::CaseInsensitive, PatternMatcher::FixedString);
     DFGTEST_TEMP_VERIFY(R"( { "type": "reg_exp" } )", "", Qt::CaseInsensitive, PatternMatcher::RegExp);
     DFGTEST_TEMP_VERIFY(R"( { "text": "a|B", "case_sensitive":true, "type": "reg_exp" } )", "a|B", Qt::CaseSensitive, PatternMatcher::RegExp);
+    DFGTEST_TEMP_VERIFY2(R"( { "negate": true } )", "", Qt::CaseInsensitive, PatternMatcher::Wildcard, true);
 
 #undef DFGTEST_TEMP_VERIFY
+#undef DFGTEST_TEMP_VERIFY2
 
     // Tests with Wildcard
     {
@@ -325,6 +331,12 @@ TEST(dfgQt, StringMatchDefinition)
         // Testing that characters that are special in wildcard and regular expression are handled correctly.
         EXPECT_TRUE(StringMatchDefinition("*", Qt::CaseInsensitive, PatternMatcher::FixedString).isMatchWith(QString("a?*b")));
         EXPECT_FALSE(StringMatchDefinition("*", Qt::CaseInsensitive, PatternMatcher::FixedString).isMatchWith(QString("a?b")));
+    }
+
+    // negate-tests
+    {
+        DFGTEST_EXPECT_TRUE( StringMatchDefinition("abc", Qt::CaseInsensitive, PatternMatcher::FixedString, false).isMatchWith(QString("abc")));
+        DFGTEST_EXPECT_FALSE(StringMatchDefinition("abc", Qt::CaseInsensitive, PatternMatcher::FixedString, true).isMatchWith(QString("abc")));
     }
 }
 

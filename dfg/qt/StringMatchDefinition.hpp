@@ -29,12 +29,15 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     public:
         typedef ::DFG_ROOT_NS::StringUtf8 Utf8String;
 
-        explicit StringMatchDefinition(QString matchString,
-                                       Qt::CaseSensitivity caseSensitivity,
-                                       PatternMatcher::PatternSyntax patternSyntax)
+        explicit StringMatchDefinition(
+            QString matchString,
+            Qt::CaseSensitivity caseSensitivity,
+            PatternMatcher::PatternSyntax patternSyntax,
+            const bool bNegate = false)
           : m_matchString(std::move(matchString))
           , m_caseSensitivity(caseSensitivity)
           , m_patternSyntax(patternSyntax)
+          , m_bNegate(bNegate)
         {
             initCache();
         }
@@ -53,6 +56,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
          *      "text": filter text
          *              Defines actual filter text whose meaning depends on filter type
          *              Default: empty
+         *      "negate": {false, true}
+         *              Defines whether matching is negated, i.e. with negate true-match is false and false-match is true.
+         *              Default: false
+         * 
          * @return StringMatchDefinition based on given json.
          */
         static StringMatchDefinition fromJson(const QJsonObject& jsonObject);
@@ -79,7 +86,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool isMatchWith(const QString& s) const
         {
-            return !m_matchString.isEmpty() && m_regExp.isMatchingWith(s);
+            return applyNegateIfNeeded(!m_matchString.isEmpty() && m_regExp.isMatchingWith(s));
         }
 
         bool isMatchWith(const StringViewUtf8 sv) const
@@ -87,11 +94,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             if (!m_sSimpleSubStringMatch.empty())
             {
                 const auto& rawSubString = m_sSimpleSubStringMatch.rawStorage();
-                return rawSubString.size() <= sv.size()
+                const bool b = rawSubString.size() <= sv.size()
                        &&
                        std::search(sv.beginRaw(), sv.endRaw(),
                                    rawSubString.cbegin(), rawSubString.cend()
                                     ) != sv.endRaw();
+                return applyNegateIfNeeded(b);
             }
             else
                 return isMatchWith(QString::fromUtf8(sv.dataRaw(), static_cast<int>(sv.length())));
@@ -112,7 +120,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return m_patternSyntax;
         }
 
+        bool isNegated() const
+        {
+            return m_bNegate;
+        }
+
     private:
+        bool applyNegateIfNeeded(const bool b) const
+        {
+            return (m_bNegate) ? !b : b;
+        }
+
         void initCache()
         {
             m_regExp = PatternMatcher(m_matchString, m_caseSensitivity, m_patternSyntax);
@@ -139,6 +157,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         Qt::CaseSensitivity m_caseSensitivity;
         PatternMatcher::PatternSyntax m_patternSyntax;
         PatternMatcher m_regExp;
+        bool m_bNegate = false;
         Utf8String m_sSimpleSubStringMatch; // Stores the utf8-encoded substring to search if applicable. This is an optimization to avoid creating redundant QString-objects.
     }; // class StringMatchDefinition
 
@@ -155,7 +174,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             BaseClass(std::move(base))
         {}
 
-        static QString jsonExampleFullSingle() { return R"({"text": "match string", "type": "reg_exp", "case_sensitive": true, "apply_rows":"1:3;5", "apply_columns":"1;4;6", "and_group":"a"})"; }
+        static QString jsonExampleFullSingle() { return R"({"text": "match string", "type": "reg_exp", "case_sensitive": true, "negate": false, "apply_rows":"1:3;5", "apply_columns":"1;4;6", "and_group":"a"})"; }
         static QString makeColumnFilterAndGroupId() { return QString("__column_filters"); }
 
         // Returns TableStringMatchDefinition and id of and_group.
@@ -266,6 +285,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         constexpr char StringMatchDefinitionFieldValue_type_regExp[]       = "reg_exp";
     constexpr char StringMatchDefinitionField_case[]    = "case_sensitive";
     constexpr char StringMatchDefinitionField_text[]    = "text";
+    constexpr char StringMatchDefinitionField_negate[]  = "negate";
     constexpr char StringMatchDefinitionField_applyColumns[]    = "apply_columns";
     constexpr char StringMatchDefinitionField_andGroup[]        = "and_group";
 
@@ -293,6 +313,7 @@ inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::fromJson(const QJsonObje
     const auto sType = jsonObject.value(QLatin1String(StringMatchDefinitionField_type)).toString();
     const auto bCase = jsonObject.value(QLatin1String(StringMatchDefinitionField_case)).toBool(false);
     const auto sText = jsonObject.value(QLatin1String(StringMatchDefinitionField_text)).toString();
+    const auto bNegate = jsonObject.value(QLatin1String(StringMatchDefinitionField_negate)).toBool(false);
 
     auto patternSyntax = PatternMatcher::Wildcard;
 
@@ -314,6 +335,6 @@ inline auto ::DFG_MODULE_NS(qt)::StringMatchDefinition::fromJson(const QJsonObje
     // Settings case sensitivity
     const Qt::CaseSensitivity caseSensitity = (bCase) ? Qt::CaseSensitive : Qt::CaseInsensitive;
 
-    return StringMatchDefinition(sText, caseSensitity, patternSyntax);
+    return StringMatchDefinition(sText, caseSensitity, patternSyntax, bNegate);
 }
 

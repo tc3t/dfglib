@@ -838,6 +838,7 @@ public:
     QObjectStorage<QCheckBox> m_spFilterCheckBoxCaseSensitive;
     QObjectStorage<QCheckBox> m_spFilterCheckBoxWholeStringMatch;
     QObjectStorage<QCheckBox> m_spFilterCheckBoxColumnMatchByAnd;
+    QObjectStorage<QCheckBox> m_spFilterCheckBoxNegate;
     mutable Logger m_logger;
 };
 
@@ -1045,6 +1046,7 @@ void CsvTableView::addFindAndSelectionActions()
             pMenu->addAction(createFilterOptionItem(DFG_OPAQUE_REF().m_spFilterCheckBoxCaseSensitive, tr("Case-sensitive"), false));
             pMenu->addAction(createFilterOptionItem(DFG_OPAQUE_REF().m_spFilterCheckBoxWholeStringMatch, tr("Whole string match"), false));
             pMenu->addAction(createFilterOptionItem(DFG_OPAQUE_REF().m_spFilterCheckBoxColumnMatchByAnd, tr("'and'-matching across columns"), false));
+            pMenu->addAction(createFilterOptionItem(DFG_OPAQUE_REF().m_spFilterCheckBoxNegate, tr("Negate"), false));
 
             DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Create filter from selection"), noShortCut, ActionFlags::viewEdit, onFilterFromSelectionRequested);
             
@@ -4250,11 +4252,13 @@ void CsvTableView::onFilterFromSelectionRequested()
     const auto bCaseSensitive = getOption(DFG_OPAQUE_REF().m_spFilterCheckBoxCaseSensitive);
     const auto bWholeStringMatch = getOption(DFG_OPAQUE_REF().m_spFilterCheckBoxWholeStringMatch);
     const auto bColumnMatchByAnd = getOption(DFG_OPAQUE_REF().m_spFilterCheckBoxColumnMatchByAnd);
+    const auto bNegate = getOption(DFG_OPAQUE_REF().m_spFilterCheckBoxNegate);
 
     CsvTableViewSelectionFilterFlags flags;
     flags.setFlag(CsvTableViewSelectionFilterFlags::Enum::caseSensitive, bCaseSensitive);
     flags.setFlag(CsvTableViewSelectionFilterFlags::Enum::wholeStringMatch, bWholeStringMatch);
     flags.setFlag(CsvTableViewSelectionFilterFlags::Enum::columnMatchByAnd, bColumnMatchByAnd);
+    flags.setFlag(CsvTableViewSelectionFilterFlags::Enum::negate, bNegate);
     setFilterFromSelection(flags);
 }
 
@@ -4312,6 +4316,8 @@ void CsvTableView::setFilterFromSelection(const CsvTableViewSelectionFilterFlags
         jsonFields["apply_columns"] = QString::number(nUserColumn);
         if (flags.testFlag(CsvTableViewSelectionFilterFlags::Enum::caseSensitive))
             jsonFields["case_sensitive"] = true;
+        if (flags.testFlag(CsvTableViewSelectionFilterFlags::Enum::negate))
+            jsonFields["negate"] = true;
         if (!flags.testFlag(CsvTableViewSelectionFilterFlags::Enum::columnMatchByAnd) && columnItems.size() > 1)
         {
             const QString sAndGroup = QString("col_%1").arg(nUserColumn);
