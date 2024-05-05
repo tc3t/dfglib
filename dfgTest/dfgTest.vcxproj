@@ -867,6 +867,9 @@
     <ClInclude Include="..\dfg\colour.hpp" />
     <ClInclude Include="..\dfg\colour\defs.hpp" />
     <ClInclude Include="..\dfg\colour\specRendJw.hpp" />
+    <ClInclude Include="..\dfg\concurrencyAll.hpp" />
+    <ClInclude Include="..\dfg\concurrency\ConditionCounter.hpp" />
+    <ClInclude Include="..\dfg\concurrency\ThreadList.hpp" />
     <ClInclude Include="..\dfg\console.hpp" />
     <ClInclude Include="..\dfg\cont.hpp" />
     <ClInclude Include="..\dfg\contAll.hpp" />
@@ -970,6 +973,16 @@
     <ClInclude Include="..\dfg\math\FormulaParser.hpp" />
     <ClInclude Include="..\dfg\math\interpolationLinear.hpp" />
     <ClInclude Include="..\dfg\math\interval.hpp" />
+    <ClInclude Include="..\dfg\math\muparser\muParser.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserBase.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserBytecode.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserCallback.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserDef.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserError.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserFixes.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserTemplateMagic.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserToken.h" />
+    <ClInclude Include="..\dfg\math\muparser\muParserTokenReader.h" />
     <ClInclude Include="..\dfg\math\pdf.hpp" />
     <ClInclude Include="..\dfg\math\pow.hpp" />
     <ClInclude Include="..\dfg\math\roundedUpToMultiple.hpp" />
@@ -1013,18 +1026,33 @@
     <ClInclude Include="..\dfg\preprocessor\compilerInfoMsvc.hpp" />
     <ClInclude Include="..\dfg\ptrToContiguousMemory.hpp" />
     <ClInclude Include="..\dfg\qt\connectHelper.hpp" />
+    <ClInclude Include="..\dfg\qt\ConsoleDisplay.hpp" />
+    <ClInclude Include="..\dfg\qt\containerUtils.hpp" />
+    <ClInclude Include="..\dfg\qt\CsvFileDataSource.hpp" />
     <ClInclude Include="..\dfg\qt\CsvItemModel.hpp" />
+    <ClInclude Include="..\dfg\qt\CsvItemModelChartDataSource.hpp" />
     <ClInclude Include="..\dfg\qt\CsvTableView.hpp" />
     <ClInclude Include="..\dfg\qt\CsvTableViewActions.hpp" />
+    <ClInclude Include="..\dfg\qt\CsvTableViewChartDataSource.hpp" />
     <ClInclude Include="..\dfg\qt\CsvTableViewCompleterDelegate.hpp" />
+    <ClInclude Include="..\dfg\qt\detail\CsvItemModel\chartDoubleAccesser.hpp" />
+    <ClInclude Include="..\dfg\qt\detail\CsvTableView\actionWidgets\RegexFormatWidget.hpp" />
+    <ClInclude Include="..\dfg\qt\detail\CsvTableView\ContentGeneratorDialog.hpp" />
+    <ClInclude Include="..\dfg\qt\detail\CsvTableView\SelectionDetailCollector.hpp" />
+    <ClInclude Include="..\dfg\qt\FileDataSource.hpp" />
+    <ClInclude Include="..\dfg\qt\graphTools.hpp" />
+    <ClInclude Include="..\dfg\qt\InputDialog.hpp" />
+    <ClInclude Include="..\dfg\qt\JsonListWidget.hpp" />
+    <ClInclude Include="..\dfg\qt\NumberGeneratorDataSource.hpp" />
+    <ClInclude Include="..\dfg\qt\PatternMatcher.hpp" />
     <ClInclude Include="..\dfg\qt\PropertyHelper.hpp" />
+    <ClInclude Include="..\dfg\qt\qcustomplot\graphTools_qcustomplot.hpp" />
     <ClInclude Include="..\dfg\qt\QtApplication.hpp" />
     <ClInclude Include="..\dfg\qt\qtBasic.hpp" />
     <ClInclude Include="..\dfg\qt\qtIncludeHelpers.hpp" />
-    <ClInclude Include="..\dfg\qt\qxt\core\qxtglobal.h" />
-    <ClInclude Include="..\dfg\qt\qxt\core\qxtnamespace.h" />
-    <ClInclude Include="..\dfg\qt\qxt\gui\qxtspanslider.h" />
-    <ClInclude Include="..\dfg\qt\qxt\gui\qxtspanslider_p.h" />
+    <ClInclude Include="..\dfg\qt\SQLiteFileDataSource.hpp" />
+    <ClInclude Include="..\dfg\qt\sqlTools.hpp" />
+    <ClInclude Include="..\dfg\qt\stringConversions.hpp" />
     <ClInclude Include="..\dfg\qt\StringMatchDefinition.hpp" />
     <ClInclude Include="..\dfg\qt\TableEditor.hpp" />
     <ClInclude Include="..\dfg\qt\TableView.hpp" />
@@ -1070,6 +1098,8 @@
     <ClInclude Include="..\dfg\utf\utf8_cpp\utf8.h" />
     <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\checked.h" />
     <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\core.h" />
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\cpp11.h" />
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\cpp17.h" />
     <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\unchecked.h" />
     <ClInclude Include="..\dfg\utf\utfBom.hpp" />
     <ClInclude Include="..\externals\gtest\gtest.h" />
@@ -1181,6 +1211,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\dfg\qt\qmakeTools\dfgQmakeUtil.pri" />
     <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>

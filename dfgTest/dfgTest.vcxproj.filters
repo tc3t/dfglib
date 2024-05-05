@@ -19,17 +19,128 @@
     <Filter Include="dfg">
       <UniqueIdentifier>{4db20e1f-f002-4e8f-92b2-413e25b8afb7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="dfg\alg">
+      <UniqueIdentifier>{58f5b4c7-d18a-48fb-8a79-fcb5d1136a1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\bits">
+      <UniqueIdentifier>{8ac1ba40-b03e-40e3-a9ae-96c5ef3da7b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\build">
+      <UniqueIdentifier>{f8b9ba71-e7dd-47dc-be3c-a3ecc0457152}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\charts">
+      <UniqueIdentifier>{df27be30-6369-4c18-8dea-1d853f976f02}</UniqueIdentifier>
+    </Filter>
     <Filter Include="dfg\cont">
       <UniqueIdentifier>{ebd42e43-a48b-4732-a142-e83d429f0a15}</UniqueIdentifier>
     </Filter>
     <Filter Include="dfg\cont\detail">
       <UniqueIdentifier>{84642c10-9fa4-420f-9499-e425ffedbc0a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="dfg\alg">
-      <UniqueIdentifier>{58f5b4c7-d18a-48fb-8a79-fcb5d1136a1a}</UniqueIdentifier>
+    <Filter Include="dfg\dataAnalysis">
+      <UniqueIdentifier>{e031de87-6fb6-4be7-bb72-8fdbd33b5bb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\io">
+      <UniqueIdentifier>{56e21d80-6e21-4db3-a1d0-3d2418717e62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\io\fast-cpp-csv-parser">
+      <UniqueIdentifier>{eb5007c5-0d43-427c-a010-4e64129542c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\io\cppcsv_ph">
+      <UniqueIdentifier>{c65f0b46-8e67-4445-bde0-4aa9a4060f82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\iter">
+      <UniqueIdentifier>{1ad59854-b634-4475-a4d1-d27292246e9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\math">
+      <UniqueIdentifier>{8cdcc913-f3ae-44a7-bb50-17c622da3b4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\colour">
+      <UniqueIdentifier>{6e98c55b-bf44-4a3e-be03-7b476a02a124}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\concurrency">
+      <UniqueIdentifier>{5ea3c219-d94f-4599-b498-8f7790187670}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\debug">
+      <UniqueIdentifier>{3abd01a0-f3ab-4034-9d82-9d02f7521dc5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\func">
+      <UniqueIdentifier>{33b21b04-5b34-4788-9306-734ec7116f7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\net">
+      <UniqueIdentifier>{492c109a-fff2-4bbe-a39e-ba35739e027d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\time">
+      <UniqueIdentifier>{cb4b6e75-5285-4482-92e2-668456c3afac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\thread">
+      <UniqueIdentifier>{5241feb7-5ef1-44a8-9d85-c2a6903afc68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\stdcpp">
+      <UniqueIdentifier>{9ef98a65-0da6-420a-8dce-9cef42f083b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\root">
+      <UniqueIdentifier>{e0397674-8cc6-4acc-ab4e-68c567318550}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\reflection">
+      <UniqueIdentifier>{e8ac0bb0-8a6c-4310-a588-6271cf36b667}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\rand">
+      <UniqueIdentifier>{8c3ae93e-65a9-4dce-967d-f9aa8e63e1c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\numeric">
+      <UniqueIdentifier>{ee56aba8-37e7-41e0-9add-bc40db7837eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\os">
+      <UniqueIdentifier>{5b005d19-3a74-454d-bfef-0347dcd867c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\physics">
+      <UniqueIdentifier>{3890c713-9115-44dd-8aae-17226fd05b0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\preprocessor">
+      <UniqueIdentifier>{6acc4c83-f0e2-4f35-a656-3249042203be}</UniqueIdentifier>
     </Filter>
     <Filter Include="dfg\str">
       <UniqueIdentifier>{619551cc-2a51-4958-8682-6ad7b3d7b45a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\utf">
+      <UniqueIdentifier>{e4ebe5a4-e069-4453-9169-0eb4330e344b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\utf\utf8_cpp">
+      <UniqueIdentifier>{934aba06-5f7e-4d81-84db-e260f02d219b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\math\muparser">
+      <UniqueIdentifier>{359f8cf1-db98-4756-9aec-2d909268dfab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\os\boost">
+      <UniqueIdentifier>{9ecc0167-81c8-41a4-a12a-f793515ec13f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\str\fmtlib">
+      <UniqueIdentifier>{641ec745-630f-4108-8e05-cd446436106a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\utf\utf8_cpp\utf8">
+      <UniqueIdentifier>{4f0d2f6e-e788-47b5-8148-f4b2fbff9bc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\qt">
+      <UniqueIdentifier>{f86a5b71-be31-4473-a103-c8949d8feecc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\qt\detail">
+      <UniqueIdentifier>{1c9054ed-e739-4315-b597-32cd952713df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\qt\detail\CsvItemModel">
+      <UniqueIdentifier>{a0017ac2-8d1c-4346-84ad-b7eb25efae0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\qt\detail\CsvTableView">
+      <UniqueIdentifier>{a38edb0d-a428-40c6-99cf-5f374fecb14d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\qt\detail\CsvTableView\actionWidgets">
+      <UniqueIdentifier>{92eff7e3-caed-4ea7-8184-06ae3827ccbf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\qt\qcustomplot">
+      <UniqueIdentifier>{67ae50de-7c8a-4d5e-b768-7949c1bc3e8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dfg\qt\qmakeTools">
+      <UniqueIdentifier>{f4825a60-cfc7-4558-8852-7ebe059bdfeb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -42,199 +153,508 @@
     <ClInclude Include="..\externals\gtest\gtest.h">
       <Filter>gtest</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\numeric\rescale.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="dfgTest.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\root\rootIncludeHelpers.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\cont\detail\tableCsvHelpers.hpp">
+      <Filter>dfg\cont\detail</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\math\roundedUpToMultiple.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\cont\detail\keyContainerUtils.hpp">
+      <Filter>dfg\cont\detail</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\scopedCaller.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp">
+      <Filter>dfg\cont\detail</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\io\seekFwdToLine.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\alg\replaceSubarrays.hpp">
+      <Filter>dfg\alg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\net\serverHttp.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\os\memoryInfo.hpp">
+      <Filter>dfg\os</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\thread\setThreadName.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\alg\arrayCopy.hpp">
+      <Filter>dfg\alg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\cont\SetVector.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\alg\eraseByTailSwap.hpp">
+      <Filter>dfg\alg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\math\sign.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\alg\find.hpp">
+      <Filter>dfg\alg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\dataAnalysis\smoothWithNeighbourAverages.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\alg\generateAdjacent.hpp">
+      <Filter>dfg\alg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\dataAnalysis\smoothWithNeighbourMedians.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\SortedSequence.hpp">
-      <Filter>dfg</Filter>
+    <ClInclude Include="..\dfg\alg\rank.hpp">
+      <Filter>dfg\alg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\alg\sortMultiple.hpp">
-      <Filter>dfg</Filter>
+      <Filter>dfg\alg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\alg\sortSingleItem.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\colour\specRendJw.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\staticMap.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\strAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\strCat.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\strCmp.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\StreamBufferMem.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\string.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\stringFixedCapacity.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\stringLiteralCharToValue.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\StringMatchDefinition.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\strLen.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\strTo.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\debug\structuredExceptionHandling.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\iter\szIterator.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\SzPtr.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\SzPtrTypes.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\table.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\tableCsv.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\TableEditor.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\TableView.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\tableViewUndoCommands.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\os\TemporaryFileStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\textEncodingTypes.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\textualLogic.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\threadAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\time.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\timeAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\time\timerCpu.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\TorRef.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\numeric\trimByPercentileRange.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\TrivialPair.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\typeTraits.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\unchecked.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\UniqueResourceHolder.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\utf.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\utfAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\utf\utfBom.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\build\utils.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\valueArray.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\Vector.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\vectorFixedCapacity.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\numeric\vectorizingLoop.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\vectorSso.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\widePathStrToFstreamFriendlyNonWide.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\widgetHelpers.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\ViewableSharedPtr.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\os\win.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\math\zeroPosPol1.hpp">
-      <Filter>dfg</Filter>
+      <Filter>dfg\alg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\numeric\accumulate.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\arrayWrapper.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\algNumeric.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\average.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\build\buildTimeDetails.hpp">
+      <Filter>dfg\build</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\bits\byteSwap.hpp">
+      <Filter>dfg\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\charts\commonChartTools.hpp">
+      <Filter>dfg\charts</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\build\compilerDetails.hpp">
+      <Filter>dfg\build</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\preprocessor\compilerInfoMsvc.hpp">
+      <Filter>dfg\preprocessor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\physics\constants.hpp">
+      <Filter>dfg\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\constants.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\dataAnalysis\correlation.hpp">
+      <Filter>dfg\dataAnalysis</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\contAlg.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\fast-cpp-csv-parser\csv.h">
+      <Filter>dfg\io\fast-cpp-csv-parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\cppcsv_ph\csvbase.hpp">
+      <Filter>dfg\io\cppcsv_ph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\CsvConfig.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\cppcsv_ph\csvparser.hpp">
+      <Filter>dfg\io\cppcsv_ph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\CustomAccessIterator.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\percentileRange.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\percentile.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\median.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\integration.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\vectorizingLoop.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\trimByPercentileRange.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\rescale.hpp">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\numeric\integrate_function_adapt_simpson.h">
+      <Filter>dfg\numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\build\languageFeatureInfo.hpp">
+      <Filter>dfg\build</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\build\utils.hpp">
+      <Filter>dfg\build</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\build\inlineTools.hpp">
+      <Filter>dfg\build</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\charts\operations.hpp">
+      <Filter>dfg\charts</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\colour\defs.hpp">
+      <Filter>dfg\colour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\colour\specRendJw.hpp">
+      <Filter>dfg\colour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\concurrency\ConditionCounter.hpp">
+      <Filter>dfg\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\concurrency\ThreadList.hpp">
+      <Filter>dfg\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\Vector.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\vectorFixedCapacity.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\vectorSso.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\ViewableSharedPtr.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\table.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\tableCsv.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\tableUtils.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\TorRef.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\TrivialPair.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\UniqueResourceHolder.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\valueArray.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\MapVector.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\SetVector.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\SortedSequence.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\MapToStringViews.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\elementType.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\Flags.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\interleavedXsortedTwoChannelWrapper.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\IntervalSet.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont\IntervalSetSerialization.hpp">
+      <Filter>dfg\cont</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\dataAnalysis\smoothWithNeighbourAverages.hpp">
+      <Filter>dfg\dataAnalysis</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\dataAnalysis\smoothWithNeighbourMedians.hpp">
+      <Filter>dfg\dataAnalysis</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\debug\debugAssert.hpp">
+      <Filter>dfg\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\debug\printToDebugDisplay.hpp">
+      <Filter>dfg\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\debug\structuredExceptionHandling.h">
+      <Filter>dfg\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\func\memFunc.hpp">
+      <Filter>dfg\func</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\func\memFuncMedian.hpp">
+      <Filter>dfg\func</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\IfmmStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\IfStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\ImcByteStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\ImStreamWithEncoding.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\nullOutputStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\OfStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\OmcByteStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\OmcStreamWithEncoding.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\openOfStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\readBinary.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\seekFwdToLine.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\StreamBufferMem.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\textEncodingTypes.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\widePathStrToFstreamFriendlyNonWide.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\BasicIfStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\BasicImStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\BasicIStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\BasicIStreamCRTP.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\BasicOmcByteStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\checkBom.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\createInputStream.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\cstdio.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\DelimitedTextReader.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\DelimitedTextWriter.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\EndOfLineTypes.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\io\fileToByteContainer.hpp">
+      <Filter>dfg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\IsContiguousMemoryIterator.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\iteratorTemplate.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\OstreamIterator.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\RawStorageIterator.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\szIterator.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\FunctionValueIterator.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\iter\interleavedIterator.hpp">
+      <Filter>dfg\iter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserBase.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserBytecode.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserCallback.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserDef.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserError.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserFixes.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserTemplateMagic.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserToken.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParserTokenReader.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\muparser\muParser.h">
+      <Filter>dfg\math\muparser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\interval.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\pdf.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\pow.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\roundedUpToMultiple.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\sign.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\zeroPosPol1.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\evalPolynomial.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\FormulaParser.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\math\interpolationLinear.hpp">
+      <Filter>dfg\math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\net\serverHttp.hpp">
+      <Filter>dfg\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\os\OutputFile.hpp">
+      <Filter>dfg\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\os\removeFile.hpp">
+      <Filter>dfg\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\os\renameFileOrDirectory.hpp">
+      <Filter>dfg\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\os\TemporaryFileStream.hpp">
+      <Filter>dfg\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\os\win.hpp">
+      <Filter>dfg\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\os\fileSize.hpp">
+      <Filter>dfg\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\os\memoryMappedFile.hpp">
+      <Filter>dfg\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\rand\distributionHelpers.hpp">
+      <Filter>dfg\rand</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\reflection\hasMemberFunction.hpp">
+      <Filter>dfg\reflection</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\root\rootIncludeHelpers.hpp">
+      <Filter>dfg\root</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\stdcpp\stdversion.hpp">
+      <Filter>dfg\stdcpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\fmtlib\format.h">
+      <Filter>dfg\str\fmtlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\strCat.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\strCmp.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\string.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\stringFixedCapacity.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\stringLiteralCharToValue.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\strLen.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\strTo.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\byteCountFormatter.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\format_fmt.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\format_regexFmt.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\str\hex.hpp">
+      <Filter>dfg\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\thread\setThreadName.hpp">
+      <Filter>dfg\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\time\DateTime.hpp">
+      <Filter>dfg\time</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\time\timerCpu.hpp">
+      <Filter>dfg\time</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf\utfBom.hpp">
+      <Filter>dfg\utf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\cpp11.h">
+      <Filter>dfg\utf\utf8_cpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\cpp17.h">
+      <Filter>dfg\utf\utf8_cpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\unchecked.h">
+      <Filter>dfg\utf\utf8_cpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\checked.h">
+      <Filter>dfg\utf\utf8_cpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\core.h">
+      <Filter>dfg\utf\utf8_cpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8.h">
+      <Filter>dfg\utf\utf8_cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\chartsAll.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\colour.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\concurrencyAll.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\console.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\cont.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\contAll.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\crypt.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\CsvFormatDefinition.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\alg.hpp">
@@ -243,34 +663,7 @@
     <ClInclude Include="..\dfg\algAll.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\numeric\algNumeric.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\alg\arrayCopy.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\arrayWrapper.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\numeric\average.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\baseConstructorDelegate.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\BasicIfStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\BasicImStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\BasicIStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\BasicIStreamCRTP.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\BasicOmcByteStream.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\bits.hpp">
@@ -279,109 +672,13 @@
     <ClInclude Include="..\dfg\buildConfig.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\build\buildTimeDetails.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\bits\byteSwap.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\checkBom.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\checked.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\colour.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\build\compilerDetails.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\preprocessor\compilerInfoMsvc.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\connectHelper.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\console.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\math\constants.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\physics\constants.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\contAlg.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\contAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\utf\utf8_cpp\utf8\core.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\dataAnalysis\correlation.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\createInputStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\crypt.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\cstdio.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\fast-cpp-csv-parser\csv.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\cppcsv_ph\csvbase.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\CsvConfig.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\CsvItemModel.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\cppcsv_ph\csvparser.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\CsvTableView.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\CsvTableViewActions.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\CsvTableViewCompleterDelegate.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\dataAnalysisAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\time\DateTime.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\debug.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\debugAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\debug\debugAssert.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\colour\defs.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\DelimitedTextReader.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\DelimitedTextWriter.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\dfgAll.hpp">
@@ -402,40 +699,10 @@
     <ClInclude Include="..\dfg\dfgSimple.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\cont\elementType.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\EndOfLineTypes.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\alg\eraseByTailSwap.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\math\evalPolynomial.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\os\fileSize.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\fileToByteContainer.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\alg\find.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\fmtlib\format.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\format_fmt.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\func.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\funcAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\alg\generateAdjacent.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\guid.hpp">
@@ -444,52 +711,10 @@
     <ClInclude Include="..\dfg\hash.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\reflection\hasMemberFunction.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\str\hex.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\IfmmStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\IfStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\ImcByteStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\ImStreamWithEncoding.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\build\inlineTools.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\numeric\integrate_function_adapt_simpson.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\numeric\integration.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\iter\interleavedIterator.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\interleavedXsortedTwoChannelWrapper.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\math\interpolationLinear.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\math\interval.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\io.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\ioAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\iter\IsContiguousMemoryIterator.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\isValidIndex.hpp">
@@ -504,13 +729,7 @@
     <ClInclude Include="..\dfg\iterAll.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\iter\iteratorTemplate.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\build\languageFeatureInfo.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\MapVector.hpp">
+    <ClInclude Include="..\dfg\logging.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\math.hpp">
@@ -519,22 +738,10 @@
     <ClInclude Include="..\dfg\mathAll.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\numeric\median.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\func\memFunc.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\func\memFuncMedian.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\memory.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\memoryAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\os\memoryMappedFile.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\memsetZeroSecure.hpp">
@@ -546,9 +753,6 @@
     <ClInclude Include="..\dfg\netAll.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\io\nullOutputStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\numeric.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
@@ -558,16 +762,7 @@
     <ClInclude Include="..\dfg\numericTypeTools.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\io\OfStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\OmcByteStream.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\OmcStreamWithEncoding.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\openOfStream.hpp">
+    <ClInclude Include="..\dfg\OpaquePtr.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\os.hpp">
@@ -576,61 +771,16 @@
     <ClInclude Include="..\dfg\osAll.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\iter\OstreamIterator.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\os\OutputFile.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\math\pdf.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\numeric\percentile.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\numeric\percentileRange.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\physics.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\physicsAll.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\math\pow.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\preprocessorAll.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\debug\printToDebugDisplay.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\PropertyHelper.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\ptrToContiguousMemory.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\QtApplication.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\qtBasic.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\qtIncludeHelpers.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\qxt\core\qxtglobal.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\qxt\core\qxtnamespace.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\qxt\gui\qxtspanslider.h">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\qt\qxt\gui\qxtspanslider_p.h">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\rand.hpp">
@@ -642,92 +792,149 @@
     <ClInclude Include="..\dfg\rangeIterator.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\alg\rank.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\iter\RawStorageIterator.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\io\readBinary.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
     <ClInclude Include="..\dfg\ReadOnlySzParam.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\os\removeFile.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\os\renameFileOrDirectory.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\rand\distributionHelpers.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\chartsAll.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\charts\commonChartTools.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\IntervalSet.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\IntervalSetSerialization.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\MapToStringViews.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\charts\operations.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\iter\CustomAccessIterator.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\math\FormulaParser.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\OpaquePtr.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\iter\FunctionValueIterator.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\stdcpp\stdversion.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="dfgTest.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\CsvFormatDefinition.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\tableUtils.hpp">
-      <Filter>dfg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\Flags.hpp">
+    <ClInclude Include="..\dfg\scopedCaller.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
     <ClInclude Include="..\dfg\Span.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\cont\detail\tableCsvHelpers.hpp">
-      <Filter>dfg\cont\detail</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\detail\keyContainerUtils.hpp">
-      <Filter>dfg\cont\detail</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\cont\detail\MapBlockIndex.hpp">
-      <Filter>dfg\cont\detail</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dfg\logging.hpp">
+    <ClInclude Include="..\dfg\staticMap.hpp">
       <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\alg\replaceSubarrays.hpp">
-      <Filter>dfg\alg</Filter>
+    <ClInclude Include="..\dfg\str.hpp">
+      <Filter>dfg</Filter>
     </ClInclude>
-    <ClInclude Include="..\dfg\str\format_regexFmt.hpp">
-      <Filter>dfg\str</Filter>
+    <ClInclude Include="..\dfg\strAll.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\SzPtr.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\SzPtrTypes.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\textualLogic.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\threadAll.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\time.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\timeAll.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\typeTraits.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utf.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\utfAll.hpp">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\detail\CsvItemModel\chartDoubleAccesser.hpp">
+      <Filter>dfg\qt\detail\CsvItemModel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\detail\CsvTableView\ContentGeneratorDialog.hpp">
+      <Filter>dfg\qt\detail\CsvTableView</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\detail\CsvTableView\SelectionDetailCollector.hpp">
+      <Filter>dfg\qt\detail\CsvTableView</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\detail\CsvTableView\actionWidgets\RegexFormatWidget.hpp">
+      <Filter>dfg\qt\detail\CsvTableView\actionWidgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\qcustomplot\graphTools_qcustomplot.hpp">
+      <Filter>dfg\qt\qcustomplot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\ConsoleDisplay.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\containerUtils.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\CsvFileDataSource.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\CsvItemModel.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\CsvItemModelChartDataSource.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\CsvTableView.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\CsvTableViewActions.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\CsvTableViewChartDataSource.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\CsvTableViewCompleterDelegate.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\FileDataSource.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\graphTools.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\InputDialog.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\JsonListWidget.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\NumberGeneratorDataSource.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\PatternMatcher.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\PropertyHelper.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\QtApplication.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\qtBasic.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\qtIncludeHelpers.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\SQLiteFileDataSource.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\sqlTools.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\stringConversions.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\StringMatchDefinition.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\TableEditor.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\TableView.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\tableViewUndoCommands.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\widgetHelpers.hpp">
+      <Filter>dfg\qt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\qt\connectHelper.hpp">
+      <Filter>dfg\qt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -848,6 +1055,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
+    <None Include="..\dfg\qt\qmakeTools\dfgQmakeUtil.pri">
+      <Filter>dfg\qt\qmakeTools</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="dfglib.natvis" />
