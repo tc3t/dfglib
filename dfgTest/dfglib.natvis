@@ -61,5 +61,9 @@
 	<Type Name="dfg::io::BasicImStream_T&lt;char&gt;">
 		<DisplayString>Total size = {m_streamBuffer.m_pEnd - m_streamBuffer.m_pBegin}, Remaining = {m_streamBuffer.m_pEnd - m_streamBuffer.m_pCurrent}, Current = {m_streamBuffer.m_pCurrent, [m_streamBuffer.m_pEnd - m_streamBuffer.m_pCurrent]na}, Start = {m_streamBuffer.m_pBegin, [m_streamBuffer.m_pEnd - m_streamBuffer.m_pBegin]na}</DisplayString>
 	</Type>
+	
+	<Type Name="dfg::cont::TrivialPair&lt;*&gt;">
+		<DisplayString>{{{first}, {second}}}</DisplayString>
+	</Type>
 
 </AutoVisualizer>
