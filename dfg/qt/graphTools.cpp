@@ -2552,8 +2552,9 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::startChartDataFetching()
         static bool bIsMetaTypeRegistered = false;
         if (!bIsMetaTypeRegistered)
         {
-            qRegisterMetaType<EntryPreparedParam>("EntryPreparedParam"); // Note: format matters, e.g. may break if string has namespace qualifiers.
-            qRegisterMetaType<ChartRefreshParamPtr>("ChartRefreshParamPtr"); // Note: format matters, e.g. may break if string has namespace qualifiers.
+            // Note: string format matters, for example having plain "EntryPreparedParam" would work in Qt6, but not in Qt5.
+            qRegisterMetaType<EntryPreparedParam>("::dfg::qt::GraphControlAndDisplayWidget::EntryPreparedParam");
+            qRegisterMetaType<ChartRefreshParamPtr>("::dfg::qt::GraphControlAndDisplayWidget::ChartRefreshParamPtr");
             bIsMetaTypeRegistered = true;
         }
         auto& opaqueThis = DFG_OPAQUE_REF();
