@@ -145,6 +145,15 @@ public:
     QPointer<QCPBars> m_spBars; // QCPBars is owned by QCustomPlot, not by *this.
 }; // Class HistogramQCustomPlot
 
+class StatisticalBoxQCustomPlot : public ::DFG_MODULE_NS(charts)::StatisticalBox
+{
+public:
+    StatisticalBoxQCustomPlot(QCPStatisticalBox* pStatBox);
+    ~StatisticalBoxQCustomPlot() override;
+
+    QPointer<QCPStatisticalBox> m_spStatBox; // QCPStatisticalBox is owned by QCustomPlot, not by *this. (https://www.qcustomplot.com/documentation/classQCPStatisticalBox.html)
+}; // Class StatisticalBoxQCustomPlot
+
 class ChartPanel;
 
 using PointXy = ::DFG_MODULE_NS(cont)::TrivialPair<double, double>;
@@ -211,6 +220,7 @@ public:
     ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam& param)   override;
     ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam& param) override;
     std::vector<ChartObjectHolder<BarSeries>> createBarSeries(const BarSeriesCreationParam& param) override;
+    std::vector<ChartObjectHolder<StatisticalBox>> createStatisticalBox(const StatisticalBoxCreationParam& param) override;
 
     void setAxisLabel(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 axisLabel) override;
     void setAxisTickLabelDirection(StringViewUtf8 sPanelId, StringViewUtf8 axisId, StringViewUtf8 value) override;
@@ -322,6 +332,7 @@ public:
     bool toolTipTextForChartObjectAsHtml(const QCPCurve* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream) const;
     static bool toolTipTextForChartObjectAsHtml(const QCPBars* pBars, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
     static bool toolTipTextForChartObjectAsHtml(const BarStack* pBarStack, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
+    static bool toolTipTextForChartObjectAsHtml(const QCPStatisticalBox* pStatBox, const PointXy& cursorXy, ToolTipTextStream& toolTipStream);
 
     template <class Func_T> static void forEachAxis(QCPAxisRect* pAxisRect, Func_T&& func);
 
@@ -396,6 +407,9 @@ public:
     template <class Func_T> void forEachAxis(Func_T&& func);
 
     uint32 countOf(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const override;
+
+    // Finds existing object in panel with given type and if found, return one. If there are multiple, it's unspecified which one is returned.
+    QCPAbstractPlottable* findExistingOfType(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const;
 
 private:
     template <class This_T>

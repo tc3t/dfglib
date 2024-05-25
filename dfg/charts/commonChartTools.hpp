@@ -59,6 +59,9 @@ constexpr char ChartObjectFieldIdStr_errorString[] = "error_string"; // If for e
     constexpr char ChartObjectChartTypeStr_bars[] = "bars";
         // bars-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
+    constexpr char ChartObjectChartTypeStr_statBox[] = "stat_box";
+        // stat_box has properties: see list defined in forEachUnrecognizedPropertyId()
+
     constexpr char ChartObjectChartTypeStr_panelConfig[] = "panel_config";
         // panel_config-type has properties: see list defined in forEachUnrecognizedPropertyId()
 
@@ -525,7 +528,8 @@ enum class ChartObjectType
     unknown,
     xySeries,
     histogram,
-    barSeries
+    barSeries,
+    statisticalBox // aka 'box plot' or 'box-and-whisker plot' (https://en.wikipedia.org/wiki/Box_plot)
 };
 
 // Abstract base for items in chart.
@@ -643,6 +647,16 @@ protected:
 public:
     virtual ~BarSeries() {}
 }; // Class BarSeries
+
+class StatisticalBox : public ChartObject
+{
+public:
+    using BaseClass = ChartObject;
+protected:
+    StatisticalBox() : BaseClass(ChartObjectType::statisticalBox) {}
+public:
+    virtual ~StatisticalBox() {}
+}; // Class StatisticalBox
 
 template <class T>
 using ChartObjectHolder = std::shared_ptr<T>;
@@ -815,6 +829,35 @@ inline BarSeriesCreationParam::BarSeriesCreationParam(ChartConfigParam configPar
 
 }
 
+/**
+    Parameters for creating StatisticalBox-chart objects
+*/
+class StatisticalBoxCreationParam : public ChartObjectCreationParam
+{
+public:
+    using BaseClass = ChartObjectCreationParam;
+    StatisticalBoxCreationParam(
+        ChartConfigParam configParam,
+        const AbstractChartControlItem& defEntry,
+        InputSpan<StringUtf8> argLabelRange,
+        Span<InputSpan<double>> values
+    );
+
+    InputSpan<StringUtf8> labelRange;
+    Span<InputSpan<double>> valueRanges;
+}; // class StatisticalBoxCreationParam
+
+inline StatisticalBoxCreationParam::StatisticalBoxCreationParam(
+    ChartConfigParam configParam,
+    const AbstractChartControlItem& defEntry,
+    InputSpan<StringUtf8> argLabelRange,
+    Span<InputSpan<double>> values)
+    : BaseClass(configParam, defEntry)
+    , labelRange(argLabelRange)
+    , valueRanges(values)
+{
+}
+
 class ChartPanel
 {
 public:
@@ -833,10 +876,12 @@ public:
     using XySeries = ::DFG_MODULE_NS(charts)::XySeries;
     using Histogram = ::DFG_MODULE_NS(charts)::Histogram;
     using BarSeries = ::DFG_MODULE_NS(charts)::BarSeries;
+    using StatisticalBox = ::DFG_MODULE_NS(charts)::StatisticalBox;
     using ChartObjectCreationParam = ::DFG_MODULE_NS(charts)::ChartObjectCreationParam;
     using XySeriesCreationParam = ::DFG_MODULE_NS(charts)::XySeriesCreationParam;
     using HistogramCreationParam = ::DFG_MODULE_NS(charts)::HistogramCreationParam;
     using BarSeriesCreationParam = ::DFG_MODULE_NS(charts)::BarSeriesCreationParam;
+    using StatisticalBoxCreationParam = ::DFG_MODULE_NS(charts)::StatisticalBoxCreationParam;
     template <class T> using ChartObjectHolder = ::DFG_MODULE_NS(charts)::ChartObjectHolder<T>;
     using ArgList = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
 
@@ -891,6 +936,8 @@ public:
     virtual ChartObjectHolder<XySeries>  createXySeries(const XySeriesCreationParam&)   { return nullptr; }
     virtual ChartObjectHolder<Histogram> createHistogram(const HistogramCreationParam&) { return nullptr; }
     virtual std::vector<ChartObjectHolder<BarSeries>> createBarSeries(const BarSeriesCreationParam&) { return std::vector<ChartObjectHolder<BarSeries>>(); }
+    // Returns a number of statistical box objects depending on input data.
+    virtual std::vector<ChartObjectHolder<StatisticalBox>> createStatisticalBox(const StatisticalBoxCreationParam&) { return std::vector<ChartObjectHolder<StatisticalBox>>(); }
 
     virtual void setAxisLabel(StringViewUtf8 /*panelId*/, StringViewUtf8 /*axisId*/, StringViewUtf8 /*axisLabel*/) {}
 
@@ -988,6 +1035,22 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_mergeIdenticalLabels,
             ChartObjectFieldIdStr_stackOnExistingLabels,
             ChartObjectFieldIdStr_barLabel,
+            ChartObjectFieldIdStr_operation
+            });
+    }
+    else if (isType(ChartObjectChartTypeStr_statBox))
+    {
+        checkForUnrecongnizedProperties(controlItem, func, {
+            ChartObjectFieldIdStr_enabled,
+            ChartObjectFieldIdStr_logLevel,
+            ChartObjectFieldIdStr_name,
+            ChartObjectFieldIdStr_panelId,
+            ChartObjectFieldIdStr_yAxisId,
+            ChartObjectFieldIdStr_lineColour,
+            ChartObjectFieldIdStr_fillColour,
+            ChartObjectFieldIdStr_dataSource,
+            ChartObjectFieldIdStr_xSource,
+            ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_operation
             });
     }

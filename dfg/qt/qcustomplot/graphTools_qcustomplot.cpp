@@ -4,6 +4,7 @@
 #include "../qtBasic.hpp"
 #include "../../str.hpp"
 #include "../qtIncludeHelpers.hpp"
+#include "../../func/memFuncMedian.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QTextDocument>
@@ -12,6 +13,11 @@ DFG_END_INCLUDE_QT_HEADERS
 using namespace DFG_MODULE_NS(charts)::fieldsIds;
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
+
+namespace qcpObjectPropertyIds
+{
+    constexpr char statBoxCount[] = "dfglib_statbox_count_map";
+}
 
 template <class ChartObject_T, class ValueCont_T>
 static void fillQcpPlottable(ChartObject_T & rChartObject, ValueCont_T && yVals);
@@ -35,11 +41,10 @@ static void createNearestPointToolTipList(Cont_T & cont, const PointXy & xy, Too
 
 static QString axisTypeToToolTipString(const QCPAxis::AxisType axisType);
 
-template <class Data_T>
-class PointToTextConverter
+class PointToTextConverterBase
 {
 public:
-    PointToTextConverter(const QCPAbstractPlottable& plottable)
+    PointToTextConverterBase(const QCPAbstractPlottable& plottable)
     {
         const auto axisTicker = [](QCPAxis* pAxis) { return (pAxis) ? pAxis->ticker() : nullptr; };
         auto spXticker = axisTicker(plottable.keyAxis());
@@ -49,20 +54,9 @@ public:
         m_pXtextTicker = dynamic_cast<QCPAxisTickerText*>(spXticker.data());
     }
 
-    QString operator()(const Data_T& data, const ToolTipTextStream& toolTipStream) const
+    QString xNumberText(const double val) const
     {
-        DFG_UNUSED(toolTipStream);
-        return QString("(%1, %2)").arg(xText(data), yText(data));
-    }
-
-    QString xText(const Data_T& data) const
-    {
-        return ToolTipTextStream::numberToText(data.key, m_pXdateTicker, m_pXtextTicker);
-    }
-
-    QString yText(const Data_T& data) const
-    {
-        return ToolTipTextStream::numberToText(data.value, m_pYdateTicker);
+        return ToolTipTextStream::numberToText(val, m_pXdateTicker, m_pXtextTicker);
     }
 
     static QString tr(const char* psz)
@@ -74,6 +68,63 @@ public:
     const QCPAxisTickerDateTime* m_pYdateTicker = nullptr;
     QCPAxisTickerText* m_pXtextTicker = nullptr; // Not const because of reasons noted in ToolTipTextStream::numberToText()
 }; // PointToTextConverter
+
+template <class Data_T>
+class PointToTextConverter : public PointToTextConverterBase
+{
+public:
+    using BaseClass = PointToTextConverterBase;
+    PointToTextConverter(const QCPAbstractPlottable& plottable)
+        : BaseClass(plottable)
+    {
+    }
+
+    QString operator()(const Data_T& data, const ToolTipTextStream& toolTipStream) const
+    {
+        DFG_UNUSED(toolTipStream);
+        return QString("(%1, %2)").arg(xText(data), yText(data));
+    }
+
+    QString xText(const Data_T& data) const
+    {
+        return xNumberText(data.key);
+    }
+
+    QString yText(const Data_T& data) const
+    {
+        return ToolTipTextStream::numberToText(data.value, m_pYdateTicker);
+    }
+}; // PointToTextConverter
+
+template <>
+class PointToTextConverter<QCPStatisticalBoxData> : public PointToTextConverterBase
+{
+public:
+    using DataT = QCPStatisticalBoxData;
+    using BaseClass = PointToTextConverterBase;
+    PointToTextConverter<QCPStatisticalBoxData>(const QCPStatisticalBox& plottable)
+        : BaseClass(plottable)
+    {
+        m_countMap = plottable.property(qcpObjectPropertyIds::statBoxCount).toMap();
+    }
+
+    QString operator()(const DataT& data, const ToolTipTextStream& toolTipStream) const
+    {
+        DFG_UNUSED(toolTipStream);
+        const auto nCount = m_countMap.value(QString::number(data.key), (std::numeric_limits<size_t>::max)()).toULongLong();
+        const QString sCount = (nCount != (std::numeric_limits<size_t>::max)()) ? QString(", count: %1").arg(nCount) : QString();
+        return QString("(%1; me: %2, mi: %3, ma: %4, lq: %5, uq: %6%7)")
+            .arg(xNumberText(data.key))
+            .arg(data.median)
+            .arg(data.minimum)
+            .arg(data.maximum)
+            .arg(data.lowerQuartile)
+            .arg(data.upperQuartile)
+            .arg(sCount);
+    }
+
+    QVariantMap m_countMap;
+}; // PointToTextConverter<QCPStatisticalBoxData>
 
 namespace
 {
@@ -390,6 +441,25 @@ BarSeriesQCustomPlot::BarSeriesQCustomPlot(QCPBars* pBars)
 }
 
 BarSeriesQCustomPlot::~BarSeriesQCustomPlot()
+{
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// StatisticalBoxQCustomPlot
+//
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+StatisticalBoxQCustomPlot::StatisticalBoxQCustomPlot(QCPStatisticalBox* pStatBox)
+{
+    m_spStatBox = pStatBox;
+    if (!m_spStatBox)
+        return;
+    setBaseImplementation<ChartObjectQCustomPlot>(m_spStatBox.data());
+}
+
+StatisticalBoxQCustomPlot::~StatisticalBoxQCustomPlot()
 {
 }
 
@@ -940,6 +1010,106 @@ auto ChartCanvasQCustomPlot::createBarSeries(const BarSeriesCreationParam& param
         }
         return rv;
     }
+}
+
+auto ChartCanvasQCustomPlot::createStatisticalBox(const StatisticalBoxCreationParam& param) -> std::vector<ChartObjectHolder<StatisticalBox>>
+{
+    if (param.labelRange.size() != param.valueRanges.size())
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create Statistical box: internal error, label and value range size mismatch'"));
+        return {};
+    }
+
+    if (param.labelRange.empty())
+        return {};
+
+    auto pXaxis = getXAxis(param);
+    auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
+
+    if (!pXaxis || !pYaxis)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create Statistical box, no suitable target panel found'"));
+        return {};
+    }
+
+    const auto pChartPanel = this->getChartPanelByAxis(pXaxis);
+
+    // Checking if panel already has QCPStatisticalBox and if yes, adding new item to that instead of creating a new.
+    // Or in other words, stat boxes in the same panel are automatically assigned to the same QCPStatisticalBox-object
+    auto pEffectiveQCPStatBox = qobject_cast<QCPStatisticalBox*>(pChartPanel->findExistingOfType(param.definitionEntry().graphTypeStr()));
+
+    const double xPosOffset = (pEffectiveQCPStatBox) ? pEffectiveQCPStatBox->dataCount() : 0;
+
+    std::unique_ptr<QCPStatisticalBox> spQCPStatBox;
+    if (!pEffectiveQCPStatBox)
+    {
+        spQCPStatBox.reset(new QCPStatisticalBox(pXaxis, pYaxis));
+        setTypeToQcpObjectProperty(spQCPStatBox.get(), ChartObjectChartTypeStr_statBox);
+        pEffectiveQCPStatBox = spQCPStatBox.get();
+    }
+     
+    QCPAxisTickerText* pEffectiveTextTicker = dynamic_cast<QCPAxisTickerText*>(pXaxis->ticker().data());
+    QSharedPointer<QCPAxisTickerText> spNewTextTicker;
+    if (pEffectiveTextTicker == nullptr)
+    {
+        spNewTextTicker.reset(new QCPAxisTickerText);
+        pEffectiveTextTicker = spNewTextTicker.data();
+    }
+
+    QVector<double> keys;
+    QVector<double> minimums;
+    QVector<double> lowerQuartiles;
+    QVector<double> medians;
+    QVector<double> upperQuartiles;
+    QVector<double> maximums;
+
+    auto countMap = pEffectiveQCPStatBox->property(qcpObjectPropertyIds::statBoxCount).toMap();
+
+    for (size_t i = 0; i < param.labelRange.size(); ++i)
+    {
+        const auto valueRange = param.valueRanges[i];
+        using namespace ::DFG_MODULE_NS(func);
+        MemFuncPercentile_enclosingElem<double> memFuncQuart25(25);
+        MemFuncMedian<double> memFuncQuart50;
+        MemFuncPercentile_enclosingElem<double> memFuncQuart75(75);
+        MemFuncMinMax<double> memFuncMinMax;
+        size_t nCounter = 0;
+        for (auto d : valueRange)
+        {
+            if (::DFG_MODULE_NS(math)::isNan(d))
+                continue; // Skipping NaN's
+            memFuncQuart25(d);
+            memFuncQuart50(d);
+            memFuncQuart75(d);
+            memFuncMinMax(d);
+            ++nCounter;
+        }
+
+        const double xPosNumber = xPosOffset + static_cast<double>(i);
+        keys.push_back(xPosNumber);
+        minimums.push_back(memFuncMinMax.minValue());
+        lowerQuartiles.push_back(memFuncQuart25.percentile());
+        medians.push_back(memFuncQuart50.median());
+        upperQuartiles.push_back(memFuncQuart75.percentile());
+        maximums.push_back(memFuncMinMax.maxValue());
+        countMap.insert(QString::number(xPosNumber), nCounter);
+
+        pEffectiveTextTicker->addTick(xPosNumber, viewToQString(param.labelRange[i]));
+    }
+
+    pEffectiveQCPStatBox->addData(keys, minimums, lowerQuartiles, medians, upperQuartiles, maximums);
+    if (spQCPStatBox.get() != nullptr)
+        spQCPStatBox->setName(tr("Stat box 1"));
+    if (spNewTextTicker)
+        pXaxis->setTicker(spNewTextTicker);
+    
+    pEffectiveQCPStatBox->setProperty(qcpObjectPropertyIds::statBoxCount, countMap);
+    std::vector<ChartObjectHolder<StatisticalBox>> rv;
+    if (spQCPStatBox)
+        rv.push_back(ChartObjectHolder<StatisticalBox>(new StatisticalBoxQCustomPlot(spQCPStatBox.release())));
+    else
+        rv.push_back(ChartObjectHolder<StatisticalBox>(new StatisticalBoxQCustomPlot(pEffectiveQCPStatBox)));
+    return rv;
 }
 
 void ChartCanvasQCustomPlot::setAxisLabel(StringViewUtf8 svPanelId, StringViewUtf8 svAxisId, StringViewUtf8 svAxisLabel)
@@ -1849,6 +2019,23 @@ bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const BarStack* pBa
     return true;
 }
 
+bool ChartCanvasQCustomPlot::toolTipTextForChartObjectAsHtml(const QCPStatisticalBox* pStatBox, const PointXy& cursorXy, ToolTipTextStream& toolTipStream)
+{
+    if (!pStatBox)
+        return false;
+
+    auto& rStatBox = *pStatBox;
+    const auto spData = rStatBox.data();
+    if (!spData)
+        return true;
+
+    toolTipStream << tr("<br>Box count: %1").arg(rStatBox.dataCount());
+
+    PointToTextConverter<QCPStatisticalBoxData> pointToText(*pStatBox);
+    createNearestPointToolTipList(*spData, cursorXy, toolTipStream, pointToText);
+    return true;
+}
+
 auto ChartCanvasQCustomPlot::createToolTipTextAtImpl(const int x, const int y, const ToolTipTextRequestFlags flags) const -> StringUtf8
 {
     if (!flags.testFlag(ToolTipTextRequestFlags::html) && !flags.testFlag(ToolTipTextRequestFlags::plainText))
@@ -1919,6 +2106,7 @@ auto ChartCanvasQCustomPlot::createToolTipTextAtImpl(const int x, const int y, c
             if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPGraph*>(&plottable), xy, toolTipStream)) {}
             else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPCurve*>(&plottable), xy, toolTipStream)) {}
             else if (toolTipTextForChartObjectAsHtml(pBars, xy, toolTipStream)) {}
+            else if (toolTipTextForChartObjectAsHtml(qobject_cast<const QCPStatisticalBox*>(&plottable), xy, toolTipStream)) {}
         });
     auto sToolTip = toolTipStream.toPlainText();
     if (!flags.testFlag(ChartCanvas::ToolTipTextRequestFlags::html))
@@ -2417,6 +2605,23 @@ auto ChartPanel::countOf(::DFG_MODULE_NS(charts)::AbstractChartControlItem::Fiel
     return nCount;
 }
 
+auto ChartPanel::findExistingOfType(::DFG_MODULE_NS(charts)::AbstractChartControlItem::FieldIdStrViewInputParam type) const -> QCPAbstractPlottable*
+{
+    auto pPrimaryX = primaryXaxis();
+    if (!pPrimaryX)
+        return 0;
+    const auto sQstringType = QString::fromUtf8(type.data(), type.sizeAsInt());
+    const auto plottables = pPrimaryX->plottables();
+    for (const auto& pPlottable : plottables)
+    {
+        if (!pPlottable)
+            continue;
+        if (pPlottable->property("chartEntryType").toString() == sQstringType)
+            return pPlottable;
+    }
+    return nullptr;
+}
+
 template <class This_T>
 auto ChartPanel::axisImpl(This_T& rThis, AxisT::AxisType axisType) -> decltype(rThis.axis(axisType))
 {
@@ -2848,7 +3053,7 @@ template <class Cont_T>
 class QCPContWrapper
 {
 public:
-    using value_type = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
+    using value_type = typename ::DFG_MODULE_NS(cont)::ElementType<typename std::remove_reference<typename std::remove_cv<decltype(Cont_T().begin())>::type>::type>::type;
 
     QCPContWrapper(Cont_T& ref) : m_r(ref) {}
 
@@ -2871,21 +3076,20 @@ public:
 template <class Cont_T, class PointToText_T>
 static void createNearestPointToolTipList(Cont_T& cont, const PointXy& xy, ToolTipTextStream& toolTipStream, PointToText_T pointToText) // Note: QCPDataContainer doesn't seem to have const begin()/end() so must take cont by non-const reference.
 {
-    using DataT = typename ::DFG_MODULE_NS(cont)::ElementType<Cont_T>::type;
-    const auto nearestItems = ::DFG_MODULE_NS(alg)::nearestRangeInSorted(QCPContWrapper<Cont_T>(cont), xy.first, 5, [](const DataT& dp) { return dp.key; });
+    const auto nearestItems = ::DFG_MODULE_NS(alg)::nearestRangeInSorted(QCPContWrapper<Cont_T>(cont), xy.first, 5, [](const auto& dp) { return dp.key; });
     if (nearestItems.empty())
         return;
 
     toolTipStream << pointToText.tr("<br>Nearest by x-value:");
     // Adding items left of nearest
-    for (const DataT& dp : nearestItems.leftRange())
+    for (const auto& dp : nearestItems.leftRange())
     {
         toolTipStream << QString("<br>%1").arg(pointToText(dp, toolTipStream));
     }
     // Adding nearest item in bold
     toolTipStream << QString("<br><b>%1</b>").arg(pointToText(*nearestItems.nearest(), toolTipStream));
     // Adding items right of nearest
-    for (const DataT& dp : nearestItems.rightRange())
+    for (const auto& dp : nearestItems.rightRange())
     {
         toolTipStream << QString("<br>%1").arg(pointToText(dp, toolTipStream));
     }

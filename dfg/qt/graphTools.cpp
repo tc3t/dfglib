@@ -1424,6 +1424,7 @@ void GraphDefinitionWidget::addJsonWidgetContextMenuEntries(JsonListWidget& rJso
         addInsertAction(tr("Insert basic 'txys'"),      R"({ "type":"txys" })");
         addInsertAction(tr("Insert basic 'bars'"),      R"({ "type":"bars" })");
         addInsertAction(tr("Insert basic 'histogram'"), R"({ "type":"histogram" })");
+        addInsertAction(tr("Insert basic 'stat_box' (experimental)"),  R"({ "type":"stat_box" })");
         addInsertAction(tr("Insert basic 'panel_config'"),
             R"({"type": "panel_config", "title": "Panel title", "x_label": "x label", "y_label": "y label"})");
         addInsertAction(tr("Insert basic 'global_config'"),
@@ -2451,6 +2452,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onChartDataPreparationRead
                     refreshHistogram(context, rChart, configParamCreator, source, defEntry, pPreparedData);
                 else if (sEntryType == ChartObjectChartTypeStr_bars)
                     refreshBars(context, rChart, configParamCreator, source, defEntry, pPreparedData);
+                else if (sEntryType == ChartObjectChartTypeStr_statBox)
+                    refreshStatisticalBox(context, rChart, configParamCreator, source, defEntry, pPreparedData);
                 else
                 {
                     if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::error))
@@ -2730,6 +2733,8 @@ auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareData(std::shared_pt
             return prepareDataForHistogram(spCache, source, defEntry);
         else if (sEntryType == ChartObjectChartTypeStr_bars)
             return prepareDataForBars(spCache, source, defEntry);
+        else if (sEntryType == ChartObjectChartTypeStr_statBox)
+            return prepareDataForStatisticalBox(spCache, source, defEntry);
         else
             return ChartData();
     }
@@ -3281,6 +3286,109 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshBars(RefreshContext
             setCommonChartObjectProperties(context, *spBarSeries, defEntry, configParamCreator, defaultNameCreator);
             ++nIndexOffset;
         }
+    }
+}
+
+auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForStatisticalBox(
+    std::shared_ptr<ChartDataCache>& spCache,
+    GraphDataSource& source,
+    const GraphDefinitionEntry& defEntry) -> ChartData
+{
+    using namespace ::DFG_MODULE_NS(charts);
+    const auto nColumnCount = source.columnCount();
+    if (nColumnCount < 1)
+        return ChartData();
+
+    if (!spCache)
+        spCache.reset(new ChartDataCache);
+
+    std::array<DataSourceIndex, 3> columnIndexes;
+    std::array<bool, 3> rowFlags;
+    auto optTableData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
+
+    if (!optTableData || optTableData->columnCount() < 1)
+        return ChartData();
+
+    auto pCacheColumn = optTableData->columnDataByIndex(columnIndexes[0]);
+
+    if (!pCacheColumn)
+        return ChartData();
+
+    TableSelectionCacheItem::RowToValueMap singleColumnCopy;
+    const TableSelectionCacheItem::RowToValueMap* pRowToValues = pCacheColumn;
+
+    if (!handleXrows(defEntry, pRowToValues, singleColumnCopy))
+        return ChartData();
+
+    auto valueRange = makeRange(pRowToValues->m_valueStorage);
+
+    ValueVectorD xVals;
+    ValueVectorD yVals;
+    xVals = pRowToValues->m_keyStorage;
+    yVals = pRowToValues->m_valueStorage;
+
+    // Applying operations
+    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&xVals, &yVals);
+    defEntry.applyOperations(operationData);
+
+    auto pValues = operationData.constValuesByIndex(1);
+    if (!pValues || pValues->empty())
+    {
+        if (!pValues && defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
+            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
+        return ChartData();
+    }
+
+    ChartData rv;
+    *rv.editableValuesByIndex(0) = std::move(yVals);
+    rv.setValueVectorsAsData();
+    rv.m_columnDataTypes.push_back(optTableData->columnDataType(pCacheColumn));
+    rv.m_columnNames.push_back(optTableData->columnName(pCacheColumn));
+    return rv;
+}
+
+void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::refreshStatisticalBox(
+    RefreshContext& context,
+    ChartCanvas& rChart,
+    ConfigParamCreator configParamCreator,
+    GraphDataSource& source,
+    const GraphDefinitionEntry& defEntry,
+    ChartData* pPreparedData)
+{
+    using namespace ::DFG_MODULE_NS(charts);
+
+    auto rawData = (pPreparedData) ? std::move(*pPreparedData) : prepareDataForStatisticalBox(m_spCache, source, defEntry);
+
+    std::vector<StringUtf8> labels;
+    std::vector<InputSpan<double>> valueSpans;
+    for (size_t i = 0; i < rawData.vectorCount(); ++i)
+    {
+        auto pValue = rawData.constValuesByIndex(i);
+        if (!pValue)
+            continue;
+        if (defEntry.hasField(ChartObjectFieldIdStr_name))
+            labels.push_back(defEntry.fieldValueStr(ChartObjectFieldIdStr_name));
+        else
+            labels.push_back(qStringToStringUtf8(rawData.columnName(i)));
+        valueSpans.push_back(*pValue);
+    }
+
+    auto statBoxes = rChart.createStatisticalBox(StatisticalBoxCreationParam(
+        configParamCreator(),
+        defEntry,
+        labels,
+        valueSpans)
+    );
+
+    const auto nFirstIndex = (!statBoxes.empty() && statBoxes[0] != nullptr) ? getRunningIndexFor(rChart, *statBoxes[0], defEntry) - statBoxes.size() : 0;
+    uint32 nIndexOffset = 0;
+    for (auto& spStatBox : statBoxes)
+    {
+        auto sName = spStatBox->name();
+        auto defaultNameCreator = (!sName.empty()) ? DefaultNameCreator(sName.release()) : DefaultNameCreator("Stat box", -1);
+        defaultNameCreator.m_nIndex = saturateCast<int>(1u + nFirstIndex + nIndexOffset);
+        setCommonChartObjectProperties(context, *spStatBox, defEntry, configParamCreator, defaultNameCreator);
+        ++nIndexOffset;
     }
 }
 
