@@ -111,8 +111,9 @@ public:
     QString operator()(const DataT& data, const ToolTipTextStream& toolTipStream) const
     {
         DFG_UNUSED(toolTipStream);
-        const auto nCount = m_countMap.value(QString::number(data.key), (std::numeric_limits<size_t>::max)()).toULongLong();
-        const QString sCount = (nCount != (std::numeric_limits<size_t>::max)()) ? QString(", count: %1").arg(nCount) : QString();
+        const qulonglong nDefaultValue = uint64_max;
+        const auto nCount = m_countMap.value(QString::number(data.key), nDefaultValue).toULongLong();
+        const QString sCount = (nCount != nDefaultValue) ? QString(", count: %1").arg(nCount) : QString();
         return QString("(%1; me: %2, mi: %3, ma: %4, lq: %5, uq: %6%7)")
             .arg(xNumberText(data.key))
             .arg(data.median)
@@ -1092,7 +1093,7 @@ auto ChartCanvasQCustomPlot::createStatisticalBox(const StatisticalBoxCreationPa
         medians.push_back(memFuncQuart50.median());
         upperQuartiles.push_back(memFuncQuart75.percentile());
         maximums.push_back(memFuncMinMax.maxValue());
-        countMap.insert(QString::number(xPosNumber), nCounter);
+        countMap.insert(QString::number(xPosNumber), qulonglong(nCounter));
 
         pEffectiveTextTicker->addTick(xPosNumber, viewToQString(param.labelRange[i]));
     }
