@@ -131,6 +131,7 @@ constexpr char ChartObjectFieldIdStr_xSource[] = "x_source";
 constexpr char ChartObjectFieldIdStr_ySource[] = "y_source";
 constexpr char ChartObjectFieldIdStr_zSource[] = "z_source";
     constexpr char ChartObjectSourceTypeStr_columnName[]    = "column_name";
+    constexpr char ChartObjectSourceTypeStr_columnIndexes[] = "column_indexes";
     constexpr char ChartObjectSourceTypeStr_rowIndex[]      = "row_index"; // Value is to be taken from row index of another column.
 
 // panel_id: defines panel to which ChartObject is to be assigned to.
@@ -1049,9 +1050,9 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_lineColour,
             ChartObjectFieldIdStr_fillColour,
             ChartObjectFieldIdStr_dataSource,
-            ChartObjectFieldIdStr_xSource,
-            ChartObjectFieldIdStr_xRows,
-            ChartObjectFieldIdStr_operation
+            ChartObjectFieldIdStr_ySource,
+            ChartObjectFieldIdStr_xRows
+            //ChartObjectFieldIdStr_operation // Not yet supported
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))

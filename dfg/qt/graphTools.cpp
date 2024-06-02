@@ -774,6 +774,7 @@ public:
     bool hasColumnIndex(const IndexT nCol) const;
 
     ChartDataType columnDataType(const RowToValueMap* pColumn) const;
+    ChartDataType columnDataType(DataSourceIndex nColumn) const;
     QString columnName(const RowToValueMap* pColumn) const;
     QString columnName(DataSourceIndex nColumn) const;
 
@@ -1038,7 +1039,11 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnToIndex(const RowToValueM
 
 auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const RowToValueMap* pColumn) const -> ChartDataType
 {
-    const auto nCol = columnToIndex(pColumn);
+    return columnDataType(columnToIndex(pColumn));
+}
+
+auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::columnDataType(const DataSourceIndex nCol) const -> ChartDataType
+{
     auto iterMetaData = this->m_columnMetaDatas.find(nCol);
     return (iterMetaData != this->m_columnMetaDatas.cend()) ? iterMetaData->second.columnDataType() : ChartDataType(ChartDataType::unknown);
 }
@@ -1121,6 +1126,7 @@ public:
 
     // Maps
     using CacheKeyToTableSelectionaMap = std::map<CacheEntryKey, TableSelectionOptional>;
+    using CacheItemKeyValuePair = CacheKeyToTableSelectionaMap::value_type;
     using CacheKeyToColumnDoubleValuesMap = std::map<CacheEntryKey, SingleColumnDoubleValuesOptional>;
 
     CacheEntryKey cacheKey(const GraphDataSource& source, const AbstractChartControlItem& defEntry) const;
@@ -1135,9 +1141,29 @@ public:
      */
     TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 3>& rColumnIndexes, std::array<bool, 3>& rRowFlags);
 
+    /**
+     *   Simpler fetcher interface for getting arbitrary number of columns in cases where different columns can be treated independently and row flags are not supported.
+     */
+    TableSelectionOptional getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+
+private:
+    // Helper function to get cache item for (source, defEntry), new cache item is created if missing or invalid.
+    CacheItemKeyValuePair& getCacheItemKeyValuePair_createIfMissing(const GraphDataSource& source, const GraphDefinitionEntry& defEntry);
+
+public:
     CacheKeyToTableSelectionaMap m_tableSelectionDatas;
 }; // ChartDataCache
 
+auto DFG_MODULE_NS(qt)::ChartDataCache::getCacheItemKeyValuePair_createIfMissing(const GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> CacheItemKeyValuePair&
+{
+    auto key = this->cacheKey(source, defEntry);
+    auto iter = m_tableSelectionDatas.find(key);
+    if (iter == m_tableSelectionDatas.end())
+        iter = m_tableSelectionDatas.insert(std::make_pair(key, std::make_unique<TableSelectionCacheItem>())).first;
+    else if (iter->second && !iter->second->isValid())
+        iter->second = std::make_unique<TableSelectionCacheItem>(); // Cache item existed, but was invalid -> creating a new one.
+    return *iter;
+}
 
 auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry, std::array<DataSourceIndex, 3>& rColumnIndexes, std::array<bool, 3>& rRowFlags) -> TableSelectionOptional
 {
@@ -1146,14 +1172,10 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
     const auto columns = source.columnIndexes();
     if (columns.empty())
         return TableSelectionOptional();
-    auto key = this->cacheKey(source, defEntry);
-    auto iter = m_tableSelectionDatas.find(key);
-    if (iter == m_tableSelectionDatas.end())
-        iter = m_tableSelectionDatas.insert(std::make_pair(key, std::make_unique<TableSelectionCacheItem>())).first;
-    else if (iter->second && !iter->second->isValid())
-        iter->second = std::make_unique<TableSelectionCacheItem>(); // Cache item existed, but was invalid -> creating a new one.
 
-    auto& rCacheItem = *iter->second;
+    auto& keyValueItem = getCacheItemKeyValuePair_createIfMissing(source, defEntry);
+
+    auto& rCacheItem = *keyValueItem.second;
 
     const auto nLastColumnIndex = columns.back();
     const auto nDefaultValue = nLastColumnIndex + 1;
@@ -1212,9 +1234,27 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
         bZsuccess = (!bStringsNeededForZ || rCacheItem.storeColumnFromSource_strings(source, zColumnIndex));
 
     if (bXsuccess && bYsuccess && bZsuccess)
-        return iter->second;
+        return keyValueItem.second;
     else
         return TableSelectionOptional(); // Failed to read columns
+}
+
+auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(GraphDataSource& source, const GraphDefinitionEntry& defEntry) -> TableSelectionOptional
+{
+    const auto columns = source.columnIndexes();
+    if (columns.empty())
+        return TableSelectionOptional();
+
+    auto& keyValueItem = getCacheItemKeyValuePair_createIfMissing(source, defEntry);
+
+    auto& rCacheItem = *keyValueItem .second;
+
+    for (const auto& nCol : columns)
+    {
+        if (!rCacheItem.storeColumnFromSource(source, nCol))
+            return TableSelectionOptional(); // If fetching any column fails, returning empty instead of partial result.
+    }
+    return keyValueItem.second;
 }
 
 void DFG_MODULE_NS(qt)::ChartDataCache::removeInvalidCaches()
@@ -3303,48 +3343,63 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForStatistica
     if (!spCache)
         spCache.reset(new ChartDataCache);
 
-    std::array<DataSourceIndex, 3> columnIndexes;
-    std::array<bool, 3> rowFlags;
-    auto optTableData = spCache->getTableSelectionData_createIfMissing(source, defEntry, columnIndexes, rowFlags);
+    
+    auto optTableData = spCache->getTableSelectionData_createIfMissing(source, defEntry);
 
     if (!optTableData || optTableData->columnCount() < 1)
-        return ChartData();
+        return ChartData(); // No columns in source.
 
-    auto pCacheColumn = optTableData->columnDataByIndex(columnIndexes[0]);
-
-    if (!pCacheColumn)
-        return ChartData();
-
-    TableSelectionCacheItem::RowToValueMap singleColumnCopy;
-    const TableSelectionCacheItem::RowToValueMap* pRowToValues = pCacheColumn;
-
-    if (!handleXrows(defEntry, pRowToValues, singleColumnCopy))
-        return ChartData();
-
-    auto valueRange = makeRange(pRowToValues->m_valueStorage);
-
-    ValueVectorD xVals;
-    ValueVectorD yVals;
-    xVals = pRowToValues->m_keyStorage;
-    yVals = pRowToValues->m_valueStorage;
-
-    // Applying operations
-    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&xVals, &yVals);
-    defEntry.applyOperations(operationData);
-
-    auto pValues = operationData.constValuesByIndex(1);
-    if (!pValues || pValues->empty())
+    const auto sSource = defEntry.fieldValueStr(ChartObjectFieldIdStr_ySource, [] { return StringUtf8(); });
+    const ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem items(sSource);
+    if (!sSource.empty() && items.key() != SzPtrUtf8(ChartObjectSourceTypeStr_columnIndexes))
     {
-        if (!pValues && defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
-            defEntry.log(GraphDefinitionEntry::LogLevel::warning, tr("no values available after operations"));
-        return ChartData();
+        if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
+            defEntry.log(GraphDefinitionEntry::LogLevel::warning, defEntry.tr("Unknown %1 specifier, got '%2', only '%3' is supported")
+                .arg(ChartObjectFieldIdStr_ySource, viewToQString(items.key()), ChartObjectSourceTypeStr_columnIndexes));
+        return ChartData{};
     }
 
+    auto wholeSourceColRange = optTableData->columnRange();
+    std::vector<TableSelectionCacheItem::IndexT> yCols(wholeSourceColRange.begin(), wholeSourceColRange.end());
+
+    if (!sSource.empty())
+    {
+        yCols.clear();
+        for (const auto& item : items)
+            yCols.push_back(::DFG_MODULE_NS(str)::strTo<TableSelectionCacheItem::IndexT>(item.c_str()) - 1); // 1-based index
+    }
+
+    std::vector<const TableSelectionCacheItem::RowToValueMap*> dataColumns(yCols.size());
+    std::vector<TableSelectionCacheItem::RowToValueMap> xRowFilterCopyStorage(yCols.size());
+
+    for (TableSelectionCacheItem::IndexT i = 0; i < yCols.size(); ++i)
+    {
+        auto pRowToValueMap = optTableData->columnDataByIndex(yCols[i]);
+        if (!pRowToValueMap)
+            return ChartData();
+        dataColumns[i] = pRowToValueMap;
+        if (!handleXrows(defEntry, dataColumns[i], xRowFilterCopyStorage[i]))
+            return ChartData();
+    }
+
+    // Applying operations
+    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData;
+    operationData.m_vectorRefs.resize(dataColumns.size());
+    for (size_t i = 0; i < dataColumns.size(); ++i)
+    {
+        operationData.m_vectorRefs[i] = &dataColumns[i]->m_valueStorage;
+    }
+#if 0   // Needs rework, code below would treat only the second column as y, but y-operations should apply to every column.
+    defEntry.applyOperations(operationData);
+#endif
+
     ChartData rv;
-    *rv.editableValuesByIndex(0) = std::move(yVals);
-    rv.setValueVectorsAsData();
-    rv.m_columnDataTypes.push_back(optTableData->columnDataType(pCacheColumn));
-    rv.m_columnNames.push_back(optTableData->columnName(pCacheColumn));
+    rv.copyOrMoveDataFrom(operationData);
+    for (size_t i = 0; i < dataColumns.size(); ++i)
+    {
+        rv.m_columnDataTypes.push_back(optTableData->columnDataType(yCols[i]));
+        rv.m_columnNames.push_back(optTableData->columnName(yCols[i]));
+    }
     return rv;
 }
 

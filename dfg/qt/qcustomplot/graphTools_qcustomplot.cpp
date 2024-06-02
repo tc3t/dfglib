@@ -1026,20 +1026,34 @@ auto ChartCanvasQCustomPlot::createStatisticalBox(const StatisticalBoxCreationPa
 
     auto pXaxis = getXAxis(param);
     auto pYaxis = (pXaxis) ? getYAxis(param) : nullptr;
+    const auto pChartPanel = this->getChartPanelByAxis(pXaxis);
 
-    if (!pXaxis || !pYaxis)
+    if (!pXaxis || !pYaxis || !pChartPanel)
     {
         DFG_QT_CHART_CONSOLE_WARNING(tr("Failed to create Statistical box, no suitable target panel found'"));
         return {};
     }
+    
+    const auto nInitialStatBoxCount = pChartPanel->countOf(ChartObjectChartTypeStr_statBox);
 
-    const auto pChartPanel = this->getChartPanelByAxis(pXaxis);
+    QCPStatisticalBox* pEffectiveQCPStatBox = nullptr;
 
-    // Checking if panel already has QCPStatisticalBox and if yes, adding new item to that instead of creating a new.
-    // Or in other words, stat boxes in the same panel are automatically assigned to the same QCPStatisticalBox-object
-    auto pEffectiveQCPStatBox = qobject_cast<QCPStatisticalBox*>(pChartPanel->findExistingOfType(param.definitionEntry().graphTypeStr()));
-
-    const double xPosOffset = (pEffectiveQCPStatBox) ? pEffectiveQCPStatBox->dataCount() : 0;
+    const double xPosOffset = [&]()
+        {
+            // Taking initial x from biggest x of existing stat boxes + 1.
+            ::DFG_MODULE_NS(func)::MemFuncMax<double> xMax(0);
+            pChartPanel->forEachChartObject([&](const QCPAbstractPlottable& rPlottable)
+                {
+                    const auto pStatBox = qobject_cast<const QCPStatisticalBox*>(&rPlottable);
+                    if (!pStatBox)
+                        return;
+                    const auto spData = pStatBox->data();
+                    if (!spData || spData->isEmpty())
+                        return;
+                    xMax(spData->at(spData->size() - 1)->key);
+                });
+            return xMax.value() + 1;
+        }();
 
     std::unique_ptr<QCPStatisticalBox> spQCPStatBox;
     if (!pEffectiveQCPStatBox)
@@ -1100,7 +1114,7 @@ auto ChartCanvasQCustomPlot::createStatisticalBox(const StatisticalBoxCreationPa
 
     pEffectiveQCPStatBox->addData(keys, minimums, lowerQuartiles, medians, upperQuartiles, maximums);
     if (spQCPStatBox.get() != nullptr)
-        spQCPStatBox->setName(tr("Stat box 1"));
+        spQCPStatBox->setName(tr("Stat box ") + QString::number(nInitialStatBoxCount + 1));
     if (spNewTextTicker)
         pXaxis->setTicker(spNewTextTicker);
     
