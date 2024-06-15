@@ -1051,8 +1051,8 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_fillColour,
             ChartObjectFieldIdStr_dataSource,
             ChartObjectFieldIdStr_ySource,
-            ChartObjectFieldIdStr_xRows
-            //ChartObjectFieldIdStr_operation // Not yet supported
+            ChartObjectFieldIdStr_xRows,
+            ChartObjectFieldIdStr_operation
             });
     }
     else if (isType(ChartObjectChartTypeStr_panelConfig))

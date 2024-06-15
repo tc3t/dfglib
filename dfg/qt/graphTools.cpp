@@ -3382,24 +3382,24 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForStatistica
             return ChartData();
     }
 
-    // Applying operations
-    ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData;
-    operationData.m_vectorRefs.resize(dataColumns.size());
-    for (size_t i = 0; i < dataColumns.size(); ++i)
-    {
-        operationData.m_vectorRefs[i] = &dataColumns[i]->m_valueStorage;
-    }
-#if 0   // Needs rework, code below would treat only the second column as y, but y-operations should apply to every column.
-    defEntry.applyOperations(operationData);
-#endif
-
     ChartData rv;
-    rv.copyOrMoveDataFrom(operationData);
+    // Applying operations. Data is fed in column pairs so that operations that support only (x, y) pairs
+    // work. x-column gets row indexes.
     for (size_t i = 0; i < dataColumns.size(); ++i)
     {
+        ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData;
+        operationData.m_vectorRefs.resize(2);
+        operationData.m_vectorRefs[0] = &dataColumns[i]->m_keyStorage;
+        operationData.m_vectorRefs[1] = &dataColumns[i]->m_valueStorage;
+        defEntry.applyOperations(operationData);
+        auto pValues = operationData.valuesByIndex(1);
+        if (pValues)
+            *rv.editableValuesByIndex(i) = std::move(*pValues);
+
         rv.m_columnDataTypes.push_back(optTableData->columnDataType(yCols[i]));
         rv.m_columnNames.push_back(optTableData->columnName(yCols[i]));
     }
+    rv.setValueVectorsAsData();
     return rv;
 }
 
