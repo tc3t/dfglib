@@ -16,7 +16,27 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(qt) {
 
 namespace qcpObjectPropertyIds
 {
-    constexpr char statBoxCount[] = "dfglib_statbox_count_map";
+    constexpr char statBoxCount[]                   = "dfglib_statbox_count_map";
+    constexpr char graphOperationsSupported[]       = "dfglib_graph_operations_supported";  // Note that this is about applying
+                                                                                            // manual operations to existing graph items, not about
+                                                                                            // whether definition entry supports operations.
+}
+
+template <class T>
+T getQcpObjectProperty(const QCPAbstractPlottable* pPlottable, const char* pszPropertyName, const T defaultVal)
+{
+    if (!pPlottable)
+        return defaultVal;
+    const auto var = pPlottable->property(pszPropertyName);
+    return (!var.isNull() && var.canConvert<T>()) ? var.value<T>() : defaultVal;
+}
+
+template <class T>
+void setQcpObjectProperty(QCPAbstractPlottable* pPlottable, const char* pszPropertyName, const T value)
+{
+    if (!pPlottable)
+        return;
+    pPlottable->setProperty(pszPropertyName, value);
 }
 
 template <class ChartObject_T, class ValueCont_T>
@@ -105,7 +125,7 @@ public:
     PointToTextConverter<QCPStatisticalBoxData>(const QCPStatisticalBox& plottable)
         : BaseClass(plottable)
     {
-        m_countMap = plottable.property(qcpObjectPropertyIds::statBoxCount).toMap();
+        m_countMap = getQcpObjectProperty(&plottable, qcpObjectPropertyIds::statBoxCount, QVariantMap());
     }
 
     QString operator()(const DataT& data, const ToolTipTextStream& toolTipStream) const
@@ -568,7 +588,8 @@ void ChartCanvasQCustomPlot::addContextMenuEntriesForChartObjects(void* pMenuHan
         // Adding remove-entry
         pSubMenu->addAction(tr("Remove"), m_spChartView.get(), [=]() { m_spChartView->removePlottable(pPlottable); repaintCanvas(); });
 
-        // Adding operations-menu
+        // Adding operations-menu if plottable supports those
+        if (getQcpObjectProperty(pPlottable, qcpObjectPropertyIds::graphOperationsSupported, true))
         {
             auto pOperationsMenu = pSubMenu->addMenu(tr("Operations"));
             if (pOperationsMenu)
@@ -1078,7 +1099,7 @@ auto ChartCanvasQCustomPlot::createStatisticalBox(const StatisticalBoxCreationPa
     QVector<double> upperQuartiles;
     QVector<double> maximums;
 
-    auto countMap = pEffectiveQCPStatBox->property(qcpObjectPropertyIds::statBoxCount).toMap();
+    auto countMap = getQcpObjectProperty(pEffectiveQCPStatBox, qcpObjectPropertyIds::statBoxCount, QVariantMap());
 
     for (size_t i = 0; i < param.labelRange.size(); ++i)
     {
@@ -1118,7 +1139,8 @@ auto ChartCanvasQCustomPlot::createStatisticalBox(const StatisticalBoxCreationPa
     if (spNewTextTicker)
         pXaxis->setTicker(spNewTextTicker);
     
-    pEffectiveQCPStatBox->setProperty(qcpObjectPropertyIds::statBoxCount, countMap);
+    setQcpObjectProperty(pEffectiveQCPStatBox, qcpObjectPropertyIds::statBoxCount, countMap);
+    setQcpObjectProperty(pEffectiveQCPStatBox, qcpObjectPropertyIds::graphOperationsSupported, false);
     std::vector<ChartObjectHolder<StatisticalBox>> rv;
     if (spQCPStatBox)
         rv.push_back(ChartObjectHolder<StatisticalBox>(new StatisticalBoxQCustomPlot(spQCPStatBox.release())));
@@ -2238,6 +2260,12 @@ auto ChartCanvasQCustomPlot::createOperationPipeData(QCPAbstractPlottable* pPlot
             return createOperationPipeDataForBars(*pBars);
         else
             return createOperationPipeDataImpl(pBars->data());
+    }
+    auto pStatBox = qobject_cast<QCPStatisticalBox*>(pPlottable);
+    if (pStatBox)
+    {
+        DFG_QT_CHART_CONSOLE_WARNING(pStatBox->tr("Operations are not available for existing stat_box items"));
+        return ChartOperationPipeData();
     }
     DFG_ASSERT_IMPLEMENTED(false);
     return ChartOperationPipeData();
