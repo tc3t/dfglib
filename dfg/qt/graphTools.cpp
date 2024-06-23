@@ -3362,11 +3362,29 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForStatistica
     auto wholeSourceColRange = optTableData->columnRange();
     std::vector<TableSelectionCacheItem::IndexT> yCols(wholeSourceColRange.begin(), wholeSourceColRange.end());
 
+    using LogLevel = AbstractChartControlItem::LogLevel;
+
     if (!sSource.empty())
     {
         yCols.clear();
         for (const auto& item : items)
-            yCols.push_back(::DFG_MODULE_NS(str)::strTo<TableSelectionCacheItem::IndexT>(item.c_str()) - 1); // 1-based index
+        {
+            bool bOk = false;
+            const auto nItem = ::DFG_MODULE_NS(str)::strTo<TableSelectionCacheItem::IndexT>(item.c_str(), &bOk);
+            if (!bOk)
+            {
+                if (defEntry.isLoggingAllowedForLevel(LogLevel::error))
+                    defEntry.log(LogLevel::error, tr("Unable to convert column index '%1' to number").arg(viewToQString(item)));
+                return ChartData();
+            }
+            if (nItem < 1)
+            {
+                if (defEntry.isLoggingAllowedForLevel(LogLevel::error))
+                    defEntry.log(LogLevel::error, tr("Invalid column index '%1'").arg(nItem));
+                return ChartData();
+            }
+            yCols.push_back(nItem - 1); // Minus one to convert 1-based index to internal 0-based.
+        }
     }
 
     std::vector<const TableSelectionCacheItem::RowToValueMap*> dataColumns(yCols.size());
@@ -3376,7 +3394,11 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForStatistica
     {
         auto pRowToValueMap = optTableData->columnDataByIndex(yCols[i]);
         if (!pRowToValueMap)
+        {
+            if (defEntry.isLoggingAllowedForLevel(LogLevel::error))
+                defEntry.log(LogLevel::error, tr("Unable to find column with index '%1'").arg(yCols[i] + 1));
             return ChartData();
+        }
         dataColumns[i] = pRowToValueMap;
         if (!handleXrows(defEntry, dataColumns[i], xRowFilterCopyStorage[i]))
             return ChartData();
