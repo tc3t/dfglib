@@ -198,13 +198,36 @@ void ChartObjectQCustomPlot::setColourImpl(ChartObjectStringView svColour, std::
         DFG_QT_CHART_CONSOLE_WARNING(m_spPlottable->tr("Unable to parse colour with definition %1").arg(s));
 }
 
+namespace
+{
+    template <class Plottable_T, class Getter_T, class Setter_T>
+    void setPlottablePenColor(Plottable_T& plottable,
+        const QColor& color,
+        Getter_T penGetter,
+        Setter_T penSetter)
+    {
+        auto pen = std::invoke(penGetter, plottable);
+        pen.setColor(color);
+        std::invoke(penSetter, plottable, pen);
+    }
+} // unnamed namespace
+
 void ChartObjectQCustomPlot::setLineColourImpl(ChartObjectStringView svLineColour)
 {
     setColourImpl(svLineColour, [](QCPAbstractPlottable& plottable, const QColor& color)
         {
-            auto pen = plottable.pen();
-            pen.setColor(color);
-            plottable.setPen(pen);
+            setPlottablePenColor(plottable, color, &QCPAbstractPlottable::pen, &QCPAbstractPlottable::setPen);
+
+            // For box-plot, apply line colour also to stat_box -specific elements, setPen() affects only frame around box
+            {
+                auto pStatBox = qobject_cast<QCPStatisticalBox*>(&plottable);
+                if (pStatBox)
+                {
+                    setPlottablePenColor(*pStatBox, color, &QCPStatisticalBox::medianPen, &QCPStatisticalBox::setMedianPen);
+                    setPlottablePenColor(*pStatBox, color, &QCPStatisticalBox::whiskerPen, &QCPStatisticalBox::setWhiskerPen);
+                    setPlottablePenColor(*pStatBox, color, &QCPStatisticalBox::whiskerBarPen, &QCPStatisticalBox::setWhiskerBarPen);
+                }
+            }
         });
 }
 
