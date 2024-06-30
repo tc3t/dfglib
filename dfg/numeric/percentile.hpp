@@ -25,13 +25,14 @@ auto percentileInSorted_enclosingElemIndex(const Cont_T& contSorted, double perc
 }
 
 // Returns element corresponding to index returned by percentileInSorted_enclosingElemIndex().
-// Remarks: Returned value is guaranteed to be an element of 'cont' (given it is non-empty). For empty range the return value is unspecified.
+// Remarks: Returned value is guaranteed to be an element of 'cont' (given it is non-empty).
+//          For empty range, with floating point type return value is quiet_NaN, non-floats return value is unspecified.
 template <class Cont_T>
-auto percentileInSorted_enclosingElem(const Cont_T& contSorted, const double percentile) -> typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type
+auto percentileInSorted_enclosingElem(const Cont_T& contSorted, const double percentile) -> typename DFG_MODULE_NS(cont)::ElementType<Cont_T>::type
 {
-    typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type ElemT;
-    if (count(contSorted) == 0) // TODO: use generalized empty().
-        return ElemT(); // TODO: better return value (e.g. NaN for floating points).
+    typedef typename DFG_MODULE_NS(cont)::ElementType<Cont_T>::type ElemT;
+    if (isEmpty(contSorted))
+        return (std::numeric_limits<ElemT>::has_quiet_NaN) ? std::numeric_limits<ElemT>::quiet_NaN() : ElemT();
     return contSorted[percentileInSorted_enclosingElemIndex(contSorted, percentile)];
 }
 

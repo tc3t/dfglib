@@ -1276,6 +1276,19 @@ TEST(dfgNumeric, percentileRange_and_percentile_ceilElem)
 
     using PercentileMemFuncD = MemFuncPercentile_enclosingElem<double>;
 
+    // No elements
+    {
+        // Behaviour for float-types is specified to return NaN
+        DFGTEST_EXPECT_NAN(percentileInSorted_enclosingElem(std::vector<double>(), 0));
+        DFGTEST_EXPECT_NAN(percentileInSorted_enclosingElem(std::vector<double>(), 50));
+        DFGTEST_EXPECT_NAN(percentileInSorted_enclosingElem(std::vector<double>(), 100));
+        DFGTEST_EXPECT_NAN(percentileInSorted_enclosingElem(std::vector<float>(), 50));
+        DFGTEST_EXPECT_NAN(percentileInSorted_enclosingElem(std::vector<long double>(), 50));
+
+        // For non-floats, behaviour for empty range is unspecified, but testing current implementation.
+        DFGTEST_EXPECT_LEFT(0, percentileInSorted_enclosingElem(std::vector<int>(), 50));
+    }
+
     // Test single element
     {
         const double arr[] = { 1 };
