@@ -4,7 +4,8 @@
 #include "../qtBasic.hpp"
 #include "../../str.hpp"
 #include "../qtIncludeHelpers.hpp"
-#include "../../func/memFuncMedian.hpp"
+#include "../../func/memFunc.hpp"
+#include "../../numeric/percentile.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QTextDocument>
@@ -1128,29 +1129,32 @@ auto ChartCanvasQCustomPlot::createStatisticalBox(const StatisticalBoxCreationPa
     {
         const auto valueRange = param.valueRanges[i];
         using namespace ::DFG_MODULE_NS(func);
-        MemFuncPercentile_enclosingElem<double> memFuncQuart25(25);
-        MemFuncMedian<double> memFuncQuart50;
-        MemFuncPercentile_enclosingElem<double> memFuncQuart75(75);
-        MemFuncMinMax<double> memFuncMinMax;
+        ::DFG_MODULE_NS(cont)::ValueVector<double> values;
         size_t nCounter = 0;
+
+        values.reserve(valueRange.size());
         for (auto d : valueRange)
         {
             if (::DFG_MODULE_NS(math)::isNan(d))
                 continue; // Skipping NaN's
-            memFuncQuart25(d);
-            memFuncQuart50(d);
-            memFuncQuart75(d);
-            memFuncMinMax(d);
+            values.push_back(d);
             ++nCounter;
         }
 
         const double xPosNumber = xPosOffset + static_cast<double>(i);
         keys.push_back(xPosNumber);
-        minimums.push_back(memFuncMinMax.minValue());
-        lowerQuartiles.push_back(memFuncQuart25.percentile());
-        medians.push_back(memFuncQuart50.median());
-        upperQuartiles.push_back(memFuncQuart75.percentile());
-        maximums.push_back(memFuncMinMax.maxValue());
+
+        // Fill in data indicators (min, max, quartiles, median)
+        {
+            using ::DFG_MODULE_NS(numeric)::percentileInSorted_enclosingElem;
+            std::sort(values.begin(), values.end());
+            minimums.push_back((!values.empty()) ? values.front() : std::numeric_limits<double>::quiet_NaN());
+            maximums.push_back((!values.empty()) ? values.back() : std::numeric_limits<double>::quiet_NaN());
+            lowerQuartiles.push_back(percentileInSorted_enclosingElem(values, 25));
+            upperQuartiles.push_back(percentileInSorted_enclosingElem(values, 75));
+            medians.push_back(percentileInSorted_enclosingElem(values, 50));
+        }
+
         countMap.insert(QString::number(xPosNumber), qulonglong(nCounter));
 
         pEffectiveTextTicker->addTick(xPosNumber, viewToQString(param.labelRange[i]));
