@@ -1464,7 +1464,7 @@ void GraphDefinitionWidget::addJsonWidgetContextMenuEntries(JsonListWidget& rJso
         addInsertAction(tr("Insert basic 'txys'"),      R"({ "type":"txys" })");
         addInsertAction(tr("Insert basic 'bars'"),      R"({ "type":"bars" })");
         addInsertAction(tr("Insert basic 'histogram'"), R"({ "type":"histogram" })");
-        addInsertAction(tr("Insert basic 'stat_box' (experimental)"),  R"({ "type":"stat_box" })");
+        addInsertAction(tr("Insert basic 'stat_box'"),  R"({ "type":"stat_box" })");
         addInsertAction(tr("Insert basic 'panel_config'"),
             R"({"type": "panel_config", "title": "Panel title", "x_label": "x label", "y_label": "y label"})");
         addInsertAction(tr("Insert basic 'global_config'"),
