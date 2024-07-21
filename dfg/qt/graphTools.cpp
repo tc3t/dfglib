@@ -3475,8 +3475,8 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setCommonChartObjectProper
     DFG_UNUSED(context);
     using namespace ::DFG_MODULE_NS(charts);
 
-    //const char* defaultColours[] = { "red",     "blue",    "black",   "cyan",    "magenta",  "green",   "orange" };
-    const char* defaultColours[] =   { "#ff0000", "#0000ff", "#000000", "#00ffff", "#ff00ff",  "#008000", "#ffa500" };
+    //const char* defaultColours[] = { "red",     "black",   "blue",    "cyan",    "magenta",  "green",   "orange" };
+    const char* defaultColours[] =   { "#ff0000", "#000000", "#0000ff", "#00ffff", "#ff00ff",  "#008000", "#ffa500" };
 
     rObject.setName(defEntry.fieldValueStr(ChartObjectFieldIdStr_name, defaultNameCreator));
     const auto defaultColour = SzPtrUtf8(elementByModuloIndex(defaultColours, defaultNameCreator.m_nIndex));
