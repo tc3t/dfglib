@@ -23,6 +23,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QGuiApplication>
 #include <QCloseEvent>
 #include <QScreen>
+#include <QDesktopServices>
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QJsonDocument>
@@ -546,6 +547,7 @@ TableEditor::TableEditor()
             };
 
             addMenuItem(tr("Copy file info to clipboard"), QString(), &TableEditor::onCopyFileInfoToClipboard);
+            addMenuItem(tr("Open directory in file manager"), QString(), &TableEditor::onOpenFileDirectoryInOsFileManager);
             pButton->setMenu(pMenu); // Does not transfer ownership
         }
 
@@ -967,6 +969,18 @@ void TableEditor::onCopyFileInfoToClipboard()
     auto pClipboard = QApplication::clipboard();
     if (pClipboard)
         pClipboard->setText(sInfoText);
+}
+
+void TableEditor::onOpenFileDirectoryInOsFileManager()
+{
+    auto pModel = m_spTableModel.get();
+    if (!pModel)
+        return;
+    auto& model = *pModel;
+    const auto sFilePath = model.getFilePath();
+    if (sFilePath.isEmpty())
+        return;
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(sFilePath).absolutePath()));
 }
 
 void TableEditor::onNewSourceOpened()
