@@ -22,6 +22,7 @@
 #include "vectorSso.hpp"
 #include "detail/tableCsvHelpers.hpp"
 #include "../time/timerCpu.hpp"
+#include "../Span.hpp"
 
 #include "../concurrency/ConditionCounter.hpp"
 #include "../concurrency/ThreadList.hpp"
@@ -533,9 +534,19 @@ DFG_ROOT_NS_BEGIN{
                 readFromMemory(pData, nSize, this->defaultReadFormat());
             }
 
+            void readFromMemory(const Span<const char> bytes)
+            {
+                readFromMemory(bytes.data(), bytes.size());
+            }
+
             void readFromMemory(const char* const pData, const size_t nSize, const CsvFormatDefinition& formatDef)
             {
                 readFromMemory(pData, nSize, formatDef, defaultCellHandler());
+            }
+
+            void readFromMemory(const Span<const char> bytes, const CsvFormatDefinition& formatDef)
+            {
+                readFromMemory(bytes.data(), bytes.size(), formatDef);
             }
 
             void readFromString(const StringViewC& sv)

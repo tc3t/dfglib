@@ -171,7 +171,7 @@ TEST(dfgCont, TableCsv)
 
         const DFG_CLASS_NAME(CsvFormatDefinition) formatDef(',', '"', EndOfLineTypeN, encodingUTF8);
         tableWithBomExplictEncoding.readFromMemory(utf8WithBom.data(), utf8WithBom.size(), formatDef);
-        tableWithBomAutoDetectedEncoding.readFromMemory(utf8WithBom.data(), utf8WithBom.size());
+        tableWithBomAutoDetectedEncoding.readFromMemory(utf8WithBom);
         tableWithoutBom.readFromMemory(utf8Bomless.data(), utf8Bomless.size(), formatDef);
 
         EXPECT_TRUE(tableWithBomExplictEncoding.isContentAndSizesIdenticalWith(tableWithBomAutoDetectedEncoding));
@@ -794,7 +794,7 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
         readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadCount>(nThreadCountRequest);
         readOptions.setPropertyT<TableCsvReadWriteOptions::PropertyId::readOpt_threadBlockSizeMinimum>(0); // Reducing block size to allow threaded reading even for small files.
         TableT table;
-        table.readFromMemory(bytes.data(), bytes.size(), readOptions);
+        table.readFromMemory(bytes, readOptions);
         DFGTEST_EXPECT_LEFT(200, table.rowCountByMaxRowIndex());
         DFGTEST_EXPECT_LEFT(200, table.colCountByMaxColIndex());
         const auto nUsedThreadCount = table.readFormat().getReadStat<TableCsvReadStat::threadCount>();
