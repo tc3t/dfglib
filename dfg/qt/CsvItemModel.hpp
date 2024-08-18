@@ -13,6 +13,7 @@
 #include "../CsvFormatDefinition.hpp"
 #include "../cont/detail/tableCsvHelpers.hpp"
 #include "../cont/SortedSequence.hpp"
+#include "../Span.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -545,6 +546,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool openStream(QTextStream& strm, const LoadOptions& loadOptions);
         bool openString(const QString& str);
         bool openString(const QString& str, const LoadOptions& loadOptions);
+        bool openFromMemory(const Span<const char> bytes, LoadOptions loadOptions);
         bool openFromMemory(const char* data, const size_t nSize, LoadOptions loadOptions);
 
         // Implementation level function.

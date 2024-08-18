@@ -20,6 +20,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <QFile>
     #include <QFileInfo>
     #include <QDialog>
+    #include <QTextCodec>
     #include <QThread>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
@@ -525,6 +526,34 @@ TEST(dfgQt, CsvItemModel_defaultInputEncoding)
         DFGTEST_ASSERT_LEFT(1, modelWin1252.rawStringViewAt(0, 0).size());
         DFGTEST_EXPECT_LEFT(0x80, static_cast<unsigned char>(modelWin1252.rawStringViewAt(0, 0).asUntypedView()[0]));
         DFGTEST_EXPECT_LEFT(0xb5, static_cast<unsigned char>(modelWin1252.rawStringViewAt(0, 1).asUntypedView()[0]));
+
+        // Testing that openFromMemory() reads BOM-less UTF8 in the same way as openFile()
+        {
+            using namespace ::DFG_MODULE_NS(io);
+            const auto noBomUtf8Bytes = fileToMemory_readOnly(qStringToFileApi8Bit(modelUtf8NoBom.getFilePath())).asContainer<std::string>();
+            CsvItemModel modelFromMemory;
+            modelFromMemory.openFromMemory(noBomUtf8Bytes, modelFromMemory.getLoadOptionsForFile(modelUtf8NoBom.getFilePath()));
+            DFGTEST_ASSERT_LEFT(modelUtf8NoBom.saveToByteString(), modelFromMemory.saveToByteString());
+        }
+
+        // Invalid UTF8 bytes are lost in load-save roundtrip.
+        // Below making sure that saving file that had invalid UTF-8 results
+        // to valid UTF8, how invalid UTF gets written is unspecified.
+        {
+            using namespace ::DFG_MODULE_NS(io);
+            const auto sSavedWin1252Bytes = modelWin1252.saveToByteString();
+            const auto sSavePath = "testfiles/generated/example5_Windows1252_saved.csv";
+            modelWin1252.saveToFile(sSavePath);
+            const auto sSavedFileBytes = fileToMemory_readOnly(sSavePath).asContainer<std::string>();
+            // First checking that saving to file and saveToByteString() produce the same result.
+            DFGTEST_EXPECT_EQ(sSavedWin1252Bytes, sSavedFileBytes);
+
+            QTextCodec::ConverterState state;
+            QTextCodec* codec = QTextCodec::codecForName("UTF-8");
+            DFGTEST_ASSERT_TRUE(codec != nullptr);
+            QString text = codec->toUnicode(sSavedWin1252Bytes.c_str(), saturateCast<int>(sSavedWin1252Bytes.size()), &state);
+            DFGTEST_EXPECT_LEFT(0, state.invalidChars);
+        }
     }
 }
 

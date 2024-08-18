@@ -805,6 +805,11 @@ bool CsvItemModel::openFromMemory(const char* data, const size_t nSize, LoadOpti
     });
 }
 
+bool CsvItemModel::openFromMemory(const Span<const char> bytes, LoadOptions loadOptions)
+{
+    return openFromMemory(bytes.data(), bytes.size(), std::move(loadOptions));
+}
+
 bool CsvItemModel::readData(const LoadOptions& options, std::function<bool()> tableFiller)
 {
     ::DFG_MODULE_NS(time)::TimerCpu readTimer;
@@ -1086,6 +1091,11 @@ auto CsvItemModel::getLoadOptionsForFile(const QString& sFilePath, const CsvItem
             const auto s8bitPath = qStringToFileApi8Bit(sFilePath);
             const auto peekedFormat = peekCsvFormatFromFile(sFilePath, Min(1024, saturateCast<int>(::DFG_MODULE_NS(os)::fileSize(s8bitPath))));
             loadOptions.eolType(peekedFormat.eolType());
+
+            // If encoding is not given and there is no BOM in file, trying to read as UTF8
+            using namespace ::DFG_MODULE_NS(io);
+            if (loadOptions.textEncoding() == encodingUnknown && checkBOMFromFile(s8bitPath) == encodingUnknown)
+                loadOptions.textEncoding(encodingUTF8);
         }
         return loadOptions;
     }
@@ -1319,7 +1329,7 @@ bool CsvItemModel::openFile(QString sDbFilePath, LoadOptions loadOptions)
             const auto sFilterItems = loadOptions.getProperty(CsvOptionProperty_readFilters, "");
             const auto sReadPath = qStringToFileApi8Bit(sDbFilePath);
 
-            // If encoding is not given and there is not BOM in file, trying to read as UTF8
+            // If encoding is not given and there is no BOM in file, trying to read as UTF8
             if (loadOptions.textEncoding() == ::DFG_MODULE_NS(io)::encodingUnknown &&
                 ::DFG_MODULE_NS(io)::checkBOMFromFile(qStringToFileApi8Bit(sDbFilePath)) == ::DFG_MODULE_NS(io)::encodingUnknown)
                 loadOptions.textEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
