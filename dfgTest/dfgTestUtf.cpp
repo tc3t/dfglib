@@ -172,12 +172,22 @@ TEST(DfgUtf, cpToUtfToCp)
 	using namespace DFG_MODULE_NS(utf);
 
 	std::basic_string<char32_t> cpExpected;
-#ifdef _DEBUG // 70000 takes seconds in debug run so don't go that far.
-	for (uint32 i = 0; i < 5000; ++i)
+#ifdef _DEBUG
+	// Whole range can take a few seconds in debug-builds, so testing a smaller one.
+	const auto nMaxCp = 5000u;
 #else
-	for (uint32 i = 0; i < utf8::internal::LEAD_SURROGATE_MIN; ++i) // Note: utf16 won't work if upper limit is > LEAD_SURROGATE_MIN
+	const auto nMaxCp = utf8::internal::CODE_POINT_MAX; // CODE_POINT_MAX == 0x0010ffffu == 1114111
 #endif
+	// Adding code points in two ranges given that utf8::internal::is_code_point_valid(u32 cp) is defined as
+	//     cp <= CODE_POINT_MAX && !(cp >= LEAD_SURROGATE_MIN && cp <= TRAIL_SURROGATE_MAX)
+	for (uint32 i = 0; i <= Min(nMaxCp, utf8::internal::LEAD_SURROGATE_MIN - 1u); ++i) // LEAD_SURROGATE_MIN == 0xd800u == 55296
+	{
 		cpExpected.push_back(i);
+	}
+	for (uint32 i = utf8::internal::TRAIL_SURROGATE_MAX + 1; i <= nMaxCp; ++i) // TRAIL_SURROGATE_MAX == 0xdfffu == 57343
+	{
+		cpExpected.push_back(i);
+	}
 
 	std::string sUtf8;
 	std::basic_string<char16_t> sUtf16Le;
@@ -191,26 +201,23 @@ TEST(DfgUtf, cpToUtfToCp)
 	auto inserterUtf32Le = std::back_inserter(sUtf32Le);
 	auto inserterUtf32Be = std::back_inserter(sUtf32Be);
 
+	// Adding all test code points to strings using different UTF encodings.
 	for (size_t i = 0; i < cpExpected.size(); ++i)
 	{
-		cpToEncoded(cpExpected[i], inserterUtf8, encodingUTF8);
-		cpToEncoded(cpExpected[i], inserterUtf16Le, encodingUTF16Le);
-		cpToEncoded(cpExpected[i], inserterUtf16Be, encodingUTF16Be);
-		cpToEncoded(cpExpected[i], inserterUtf32Le, encodingUTF32Le);
-		cpToEncoded(cpExpected[i], inserterUtf32Be, encodingUTF32Be);
+		DFGTEST_EXPECT_LEFT(cpExpected[i], cpToEncoded(cpExpected[i], inserterUtf8, encodingUTF8));
+		DFGTEST_EXPECT_LEFT(cpExpected[i], cpToEncoded(cpExpected[i], inserterUtf16Le, encodingUTF16Le));
+		DFGTEST_EXPECT_LEFT(cpExpected[i], cpToEncoded(cpExpected[i], inserterUtf16Be, encodingUTF16Be));
+		DFGTEST_EXPECT_LEFT(cpExpected[i], cpToEncoded(cpExpected[i], inserterUtf32Le, encodingUTF32Le));
+		DFGTEST_EXPECT_LEFT(cpExpected[i], cpToEncoded(cpExpected[i], inserterUtf32Be, encodingUTF32Be));
 	}
 
-	const auto cpFromUtf8 = utf8ToFixedChSizeStr<char32_t>(sUtf8);
-	const auto cpFromUtf16Le = utf16ToFixedChSizeStr<char32_t>(sUtf16Le, ByteOrderLittleEndian);
-	const auto cpFromUtf16Be = utf16ToFixedChSizeStr<char32_t>(sUtf16Be, ByteOrderBigEndian);
-	const auto cpFromUtf32Le = utf32ToFixedChSizeStr<char32_t>(sUtf32Le, ByteOrderLittleEndian);
-	const auto cpFromUtf32Be = utf32ToFixedChSizeStr<char32_t>(sUtf32Be, ByteOrderBigEndian);
-
-	EXPECT_EQ(cpExpected, cpFromUtf8);
-	EXPECT_EQ(cpExpected, cpFromUtf16Le);
-	EXPECT_EQ(cpExpected, cpFromUtf16Be);
-	EXPECT_EQ(cpExpected, cpFromUtf32Le);
-	EXPECT_EQ(cpExpected, cpFromUtf32Be);
+	// Reading code points back to fixed size storage that can hold any code point with single base char
+	// and checking that code points after round-trip are identical to original.
+	DFGTEST_EXPECT_LEFT(cpExpected, utf8ToFixedChSizeStr<char32_t>(sUtf8));
+	DFGTEST_EXPECT_LEFT(cpExpected, utf16ToFixedChSizeStr<char32_t>(sUtf16Le, ByteOrderLittleEndian));
+	DFGTEST_EXPECT_LEFT(cpExpected, utf16ToFixedChSizeStr<char32_t>(sUtf16Be, ByteOrderBigEndian));
+	DFGTEST_EXPECT_LEFT(cpExpected, utf32ToFixedChSizeStr<char32_t>(sUtf32Le, ByteOrderLittleEndian));
+	DFGTEST_EXPECT_LEFT(cpExpected, utf32ToFixedChSizeStr<char32_t>(sUtf32Be, ByteOrderBigEndian));
 }
 
 TEST(DfgUtf, cpToEncoded)
@@ -218,6 +225,9 @@ TEST(DfgUtf, cpToEncoded)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(utf);
     using namespace DFG_MODULE_NS(io);
+
+	constexpr auto replacementAscii = ::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii;
+	constexpr auto replacementUtf = ::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
 
     std::vector<uint8> sLatin1;
     const uint32 nCharCount = 300;
@@ -228,8 +238,18 @@ TEST(DfgUtf, cpToEncoded)
         if (i < 256)
             EXPECT_EQ(i, sLatin1.back());
         else
-            EXPECT_EQ(DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii, sLatin1.back());
+            EXPECT_EQ(replacementAscii, sLatin1.back());
     }
+
+	// Behaviour in case of invalid cp
+	{
+		std::string s;
+		DFGTEST_EXPECT_LEFT(replacementAscii, cpToEncoded(uint32_max, std::back_inserter(s), encodingLatin1));
+		DFGTEST_ASSERT_TRUE(s.size() == 1);
+		DFGTEST_EXPECT_LEFT(replacementAscii, s.back());
+		DFGTEST_EXPECT_LEFT(replacementUtf, cpToEncoded(uint32_max, std::back_inserter(s), encodingUTF8));
+		DFGTEST_EXPECT_LEFT(codePointsToUtf8(std::basic_string<char32_t>(1, replacementUtf)), s.substr(1, 3));
+	}
 }
 
 TEST(DfgUtf, bomSizeInBytes)

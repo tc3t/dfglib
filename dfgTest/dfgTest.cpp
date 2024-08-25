@@ -272,6 +272,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgTime.DateTime_toSYSTEMTIME";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToEncoded";
+    //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToUtfToCp";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.windows1252charToCp";
 
     auto rv = RUN_ALL_TESTS();

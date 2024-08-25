@@ -154,21 +154,32 @@ uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
     return cp;
 }
 
+// Returns true iff given codepoint is valid.
+inline bool isCodePointValid(const uint32 cp)
+{
+    return utf8::internal::is_code_point_valid(cp);
+}
+
 // Code point to UTF-8
 // TODO: test, especially the byte order handling
 template <typename IterUtf_T>
-void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 8>, ByteOrder boDest = ByteOrderHost)
+uint32 cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 8>, ByteOrder boDest = ByteOrderHost)
 {
     DFG_UNUSED(boDest);
     auto outputCharSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
     if (outputCharSize == 1)
+    {
         utf8::unchecked::append(cp, result);
+        return cp;
+    }
+    else
+        return INVALID_CODE_POINT;
 }
 
 // Code point to UTF-16
 // TODO: test, especially the byte order handling
 template <typename IterUtf_T>
-void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 16>, ByteOrder boDest)
+uint32 cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 16>, ByteOrder boDest)
 {
 #ifdef _MSC_VER
     #pragma warning(push)
@@ -185,10 +196,12 @@ void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 1
         }
         else
             *result++ = byteSwap(static_cast<uint16_t>(cp), ByteOrderHost, boDest);
+        return cp;
     }
     else
     {
         DFG_ASSERT_WITH_MSG(false, "Iterator value type should be two bytes wide.");
+        return INVALID_CODE_POINT;
     }
 #ifdef _MSC_VER
     #pragma warning(pop)
@@ -198,7 +211,7 @@ void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 1
 // Code point to UTF-32
 // TODO: test, especially the byte order handling
 template <typename IterUtf_T>
-void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 32>, ByteOrder boDest)
+uint32 cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 32>, ByteOrder boDest)
 {
 #ifdef _MSC_VER
     #pragma warning(push)
@@ -210,10 +223,14 @@ void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 3
     const auto outputCharSize = sizeof(OutputT);
     //DFG_STATIC_ASSERT(outputCharSize == 4, "Iterator value type should be four bytes wide.");
     if (outputCharSize == 4)
+    {
         *result++ = static_cast<OutputT>(byteSwap(cp, ByteOrderHost, boDest));
+        return cp;
+    }
     else
     {
         DFG_ASSERT_WITH_MSG(false, "Iterator value type should be four bytes wide.");
+        return INVALID_CODE_POINT;
     }
 #ifdef _MSC_VER
     #pragma warning(pop)
@@ -221,63 +238,79 @@ void cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 3
 }
 
 template <typename IterUtf_T>
-void cpToUtf(const uint32 cp, IterUtf_T result, size_t encodedChSize, ByteOrder boDest)
+uint32 cpToUtf(const uint32 cp, IterUtf_T result, const size_t encodedChSize, ByteOrder boDest)
 {
     size_t outputTypeSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
     if (outputTypeSize != 1 && outputTypeSize != encodedChSize)
     {
         DFG_ASSERT_WITH_MSG(false, "This function expects either byte output or output whose character size matches with encoding.");
-        return;
+        return INVALID_CODE_POINT;
     }
 
+    if (!utf8::internal::is_code_point_valid(cp))
+        return cpToUtf(DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf, result, encodedChSize, boDest);
+
     if (encodedChSize == 1)
-        cpToUtf(cp, result, std::integral_constant<size_t, 8>(), boDest);
+        return cpToUtf(cp, result, std::integral_constant<size_t, 8>(), boDest);
     else if (encodedChSize == 2)
     {
         if (outputTypeSize == 2)
-            cpToUtf(cp, result, std::integral_constant<size_t, 16>(), boDest);
+            return cpToUtf(cp, result, std::integral_constant<size_t, 16>(), boDest);
         else // byte output
         {
             std::vector<uint16> vec; // TODO: replace with static capacity version.
-            cpToUtf(cp, std::back_inserter(vec), std::integral_constant<size_t, 16>(), boDest);
+            const auto rv = cpToUtf(cp, std::back_inserter(vec), std::integral_constant<size_t, 16>(), boDest);
             for (size_t i = 0; i < vec.size() * sizeof(uint16); ++i)
             {
                 *result++ = *(reinterpret_cast<const char*>(vec.data()) + i);
             }
+            return rv;
         }
     }
     else if (encodedChSize == 4)
     {
         if (outputTypeSize == 4)
-            cpToUtf(cp, result, std::integral_constant<size_t, 32>(), boDest);
+            return cpToUtf(cp, result, std::integral_constant<size_t, 32>(), boDest);
         else // byte output
         {
             uint32 val;
-            cpToUtf(cp, &val, std::integral_constant<size_t, 32>(), boDest);
+            const auto rv = cpToUtf(cp, &val, std::integral_constant<size_t, 32>(), boDest);
             auto p = reinterpret_cast<const char*>(&val);
             *result++ = *p++;
             *result++ = *p++;
             *result++ = *p++;
             *result++ = *p++;
+            return rv;
         }
     }
     else
     {
         DFG_ASSERT(false); // Should not reach here.
+        return INVALID_CODE_POINT;
     }
 }
 
 template <typename IterUtf_T>
-void cpToLatin1(const uint32 cp, IterUtf_T result, const uint8 unrepresentableFiller = DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii)
+uint32 cpToLatin1(const uint32 cp, IterUtf_T result, const uint8 unrepresentableFiller = DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii)
 {
-    if (cp < 256)
-        *result++ = static_cast<uint8>(cp);
-    else
-        *result++ = unrepresentableFiller;
+    const auto cpEffective = (cp < 256) ? static_cast<uint8>(cp) : unrepresentableFiller;
+    *result++ = cpEffective;
+    return cpEffective;
 }
-
+ 
+/**
+ * Writes given unicode codepoint to output iterator using given encoding.
+ * @param cp Unicode codepoint
+ * @param result Output iterator to write given character to.
+ * @param encoding Encoding to use when writing codepoint to output iterator.
+ *        Supported encodings:
+ *            -All UTF encodings
+ *            -Latin1
+ * @return Returns codepoint that was written or if nothing was written, INVALID_CODE_POINT
+ * @note If 'cp' is not a valid codepoint, an unspecified replacement character valid in chosen encoding will be written.
+ */
 template <typename IterUtf_T>
-void cpToEncoded(const uint32 cp, IterUtf_T result, DFG_MODULE_NS(io)::TextEncoding encoding)
+uint32 cpToEncoded(const uint32 cp, IterUtf_T result, const ::DFG_MODULE_NS(io)::TextEncoding encoding)
 {
     using namespace DFG_MODULE_NS(io);
 
@@ -285,20 +318,19 @@ void cpToEncoded(const uint32 cp, IterUtf_T result, DFG_MODULE_NS(io)::TextEncod
 
     if (encoding == encodingLatin1)
     {
-        cpToLatin1(cp, result);
-        return;
+        return cpToLatin1(cp, result);
     }
 
     if (!isUtfEncoding(encoding))
     {
         DFG_ASSERT_IMPLEMENTED(false);
-        return;
+        return INVALID_CODE_POINT;
     }
 
     const ByteOrder bo = (isBigEndianEncoding(encoding)) ? ByteOrderBigEndian : ByteOrderLittleEndian;
     const auto baseChSize = baseCharacterSize(encoding);
 
-    cpToUtf(cp, result, baseChSize, bo);
+    return cpToUtf(cp, result, baseChSize, bo);
 }
 
 
