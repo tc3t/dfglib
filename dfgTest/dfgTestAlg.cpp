@@ -176,9 +176,9 @@ TEST(dfgAlg, forEachFwd)
         if (randVal % 2 == 0)
             randVal++; // Make uneven so that char array won't be full of null's at some point.
 
-        #if DFGTEST_ENABLE_BENCHMARKS && !defined(_DEBUG)
+        #if DFGTEST_ENABLE_BENCHMARKS && !defined(DFG_BUILD_TYPE_DEBUG)
             const size_t nLoopCount = 10000 + static_cast<size_t>(3 * randImpl());
-        #elif DFGTEST_ENABLE_BENCHMARKS && defined(_DEBUG)
+        #elif DFGTEST_ENABLE_BENCHMARKS && defined(DFG_BUILD_TYPE_DEBUG)
             const size_t nLoopCount = 100 + static_cast<size_t>(3 * randImpl());
         #else
             const size_t nLoopCount = 1 + static_cast<size_t>(3 * randImpl());

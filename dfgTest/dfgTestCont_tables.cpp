@@ -654,13 +654,13 @@ TEST(dfgCont, TableSz_insertToFrontPerformance)
     typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) TimerType;
     typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(TableCsv)<char, uint32> Table;
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     const uint32 nInitialBeginIndex = 100;
     const uint32 nEndIndex = 200;
 #else
     const uint32 nInitialBeginIndex = 25000;
     const uint32 nEndIndex = 50000;
-#endif // _DEBUG
+#endif // DFG_BUILD_TYPE_DEBUG
     Table table;
     // Adding some content.
     for (uint32 r = nInitialBeginIndex; r < nEndIndex; ++r)
@@ -1257,7 +1257,7 @@ Example run with MinGW 7.3 O2 x64 2021-04-17
 */
 TEST(dfgCont, MapBlockIndex_benchmarks)
 {
-#if defined(_DEBUG) || DFGTEST_ENABLE_BENCHMARKS != 1
+#if defined(DFG_BUILD_TYPE_DEBUG) || DFGTEST_ENABLE_BENCHMARKS != 1
     DFGTEST_MESSAGE("MapBlockIndex_benchmarks skipped due to build settings");
 #else
     {

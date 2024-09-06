@@ -474,7 +474,7 @@ TEST(dfgCont, MapVectorPerformance)
     using namespace DFG_MODULE_NS(str);
     const int randEngSeed = 12345678;
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     const auto nCount = 1000;
 #else
     const auto nCount = 50000;
@@ -750,7 +750,7 @@ TEST(dfgCont, MapPerformanceComparisonWithStdStringKeyAndConstCharLookUp)
     //const size_t nMapSize = 1000;
     const auto nContainerCount = 9;
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     const size_t nFindCount = Max<size_t>(10, 100 / nMapSize);
 #else
     const size_t nFindCount = static_cast<size_t>((nMapSize <= 20) ? 100000000LL / nMapSize : 10000000000LL / nMapSize);
@@ -825,7 +825,7 @@ TEST(dfgCont, VectorInsertPerformance)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(str);
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     const int nCount = 100;
 #else
     const int nCount = 50000;

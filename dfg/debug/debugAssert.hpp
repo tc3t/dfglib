@@ -12,7 +12,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
 // TODO: Test
 inline void breakToDebuggerInDebugBuild(int expr)
 {
-	#ifdef _DEBUG
+	#ifdef DFG_BUILD_TYPE_DEBUG
 		if (expr == 0) __debugbreak();
 	#else
 		DFG_UNUSED(expr);

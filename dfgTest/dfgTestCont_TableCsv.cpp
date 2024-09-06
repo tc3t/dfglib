@@ -803,7 +803,7 @@ TEST(dfgCont, TableCsv_multiThreadedRead)
 
     // Checking read block size handling, e.g. that tiny file with 32 lines won't be spread to be read with multiple threads.
     {
-#if defined(_DEBUG)
+#if defined(DFG_BUILD_TYPE_DEBUG)
         const char* path = szPathMatrix10x10_eol_n;
 #else
         const char* path = szPathMatrix200x200;

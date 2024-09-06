@@ -424,7 +424,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             bool isTimeToUpdateProgress(const size_t nRow, const size_t nCol) const
             {
                 DFG_UNUSED(nCol);
-#if defined(_MSC_VER) && defined(_DEBUG)
+#if defined(_MSC_VER) && defined(DFG_BUILD_TYPE_DEBUG)
                 return (nRow % 1024) == 0; // Some adjustment for debug builds on MSVC
 #else
                 return (nRow % 8192) == 0; // This is a pretty coarse condition: compile-time constant not taking things like column count into account.

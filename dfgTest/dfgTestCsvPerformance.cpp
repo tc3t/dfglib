@@ -45,7 +45,7 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 namespace
 {
-    #ifndef _DEBUG
+    #ifndef DFG_BUILD_TYPE_DEBUG
         // Release
         const size_t gnRowCount = 4000000;
     #else

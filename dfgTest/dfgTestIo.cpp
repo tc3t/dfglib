@@ -343,7 +343,7 @@ TEST(dfgIo, BasicIfStream)
 
 TEST(dfgIo, StdIStrStreamPerformance)
 {
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     auto buffer = DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::fileToVector("testfiles/matrix_200x200.txt", 271040);
     const size_t nSumExpected = 12997224;
 #else
@@ -1456,7 +1456,7 @@ TEST(dfgIo, ostreamPerformance)
     DFGTEST_MESSAGE("ostreamPerformance skipped due to build settings");
 #else
     using namespace DFG_ROOT_NS;
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     const auto nRowCount = 10000;
 #else
     const auto nRowCount = 1000000;

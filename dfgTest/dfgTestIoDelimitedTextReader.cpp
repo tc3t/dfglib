@@ -105,7 +105,7 @@ void createTestFileCsvRandomData(const std::string& sFile)
     const char cEnc = '"';
     const char cEol = '\n';
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     const size_t nRowCount = DFG_COUNTOF(nColSizes) + 1;
 #else
     const size_t nRowCount = 600;
@@ -950,7 +950,7 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
 
     const size_t matSizes[] = {3, 200, 1000};
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
     const bool matActive[] = {true, false, false};
 #else
     const bool matActive[] = {true, true, true};
@@ -1018,7 +1018,7 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestTextCells)
 {
     using namespace DFG_ROOT_NS;
 
-#ifndef _DEBUG // Takes too much time in debug-build.
+#ifndef DFG_BUILD_TYPE_DEBUG // Took too much time in MSVC debug-build.
     const auto sFile = "testfiles/testfile_200x200.txt";
 
     auto vec = DFG_SUB_NS_NAME(io)::fileToByteContainer<std::vector<char>>(sFile,

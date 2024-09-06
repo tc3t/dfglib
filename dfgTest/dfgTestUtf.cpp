@@ -172,7 +172,7 @@ TEST(DfgUtf, cpToUtfToCp)
 	using namespace DFG_MODULE_NS(utf);
 
 	std::basic_string<char32_t> cpExpected;
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
 	// Whole range can take a few seconds in debug-builds, so testing a smaller one.
 	const auto nMaxCp = 5000u;
 #else

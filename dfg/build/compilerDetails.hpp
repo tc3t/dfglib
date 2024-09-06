@@ -156,7 +156,7 @@
     #endif
 #endif
 
-#if (defined(_MSC_VER) && defined(_DEBUG)) || (!defined(_MSC_VER) && !defined(NDEBUG))
+#if (defined(DFG_BUILD_TYPE_DEBUG))
     #define DFG_BUILD_DEBUG_RELEASE_TYPE    "debug"
 #else
     #define DFG_BUILD_DEBUG_RELEASE_TYPE    "release"

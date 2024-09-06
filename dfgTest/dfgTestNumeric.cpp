@@ -718,7 +718,7 @@ TEST(dfgNumeric, basicAlgs)
             v2[i] = DFG_MODULE_NS(rand)::rand();
         }
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
         const size_t nLoopCount = 100000;
 #else
         const size_t nLoopCount = 1000000;
@@ -769,7 +769,7 @@ TEST(dfgNumeric, basicAlgs)
             v2[i] = DFG_MODULE_NS(rand)::rand();
         }
 
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
         const size_t nLoopCount = 1000;
 #else
         const size_t nLoopCount = 10000;
@@ -973,7 +973,7 @@ namespace
     {
         typedef double ValType;
         using namespace DFG_ROOT_NS;
-#ifdef _DEBUG
+#ifdef DFG_BUILD_TYPE_DEBUG
         const auto N = 20;
 #else
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();

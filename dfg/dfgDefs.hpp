@@ -71,6 +71,12 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
 
 #define DFG_STATIC_ASSERT(EXPR, MSG) static_assert(EXPR, MSG)
 
+// DFG_BUILD_TYPE_DEBUG: defined if build seems to be a debug-build
+// In MSVC, _DEBUG is defined when building against debug runtime (https://learn.microsoft.com/en-us/cpp/c-runtime-library/debug)
+#if ((defined(_MSC_VER) && defined(_DEBUG)) || (!defined(_MSC_VER) && !defined(NDEBUG)))
+	#define DFG_BUILD_TYPE_DEBUG
+#endif
+
 // MSVC specific: Auto detect console apps.
 #if defined(_MSC_VER) && defined(_CONSOLE) && !defined(DFG_CONSOLE_APP)
 	#define DFG_CONSOLE_APP 1
@@ -78,8 +84,8 @@ DFG_BUILD_OPT_USE_<NAME>_OVERRIDE  // User-definable. Define this to 1 / 0 / DFG
 
 // DFG_DEBUG_ENABLE_ASSERTS
 #ifndef DFG_DEBUG_ENABLE_ASSERTS
-    // In MSVC, _DEBUG is defined when building against debug runtime (https://learn.microsoft.com/en-us/cpp/c-runtime-library/debug)
-    #if (defined(_MSC_VER) && defined(_DEBUG)) || (!defined(_MSC_VER) && !defined(NDEBUG))
+    
+    #if (defined(DFG_BUILD_TYPE_DEBUG))
         #define DFG_DEBUG_ENABLE_ASSERTS 1
     #else
         #define DFG_DEBUG_ENABLE_ASSERTS 0
