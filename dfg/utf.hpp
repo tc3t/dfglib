@@ -166,14 +166,10 @@ template <typename IterUtf_T>
 uint32 cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t, 8>, ByteOrder boDest = ByteOrderHost)
 {
     DFG_UNUSED(boDest);
-    auto outputCharSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
-    if (outputCharSize == 1)
-    {
-        utf8::unchecked::append(cp, result);
-        return cp;
-    }
-    else
-        return INVALID_CODE_POINT;
+    constexpr auto outputCharSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
+    DFG_STATIC_ASSERT(outputCharSize == 1, "Iterator value type should be one byte wide.");
+    utf8::unchecked::append(cp, result);
+    return cp;
 }
 
 // Code point to UTF-16
@@ -186,23 +182,18 @@ uint32 cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t,
     #pragma warning(disable:4244) // Conversion warnings.
     #pragma warning(disable:4127) // Conditional expression is constant
 #endif
+
     const auto outputCharSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
-    if (outputCharSize == 2)
+    DFG_STATIC_ASSERT(outputCharSize == 2, "Iterator value type should be two bytes wide.");
+    if (cp > 0xffff) //make a surrogate pair
     {
-        if (cp > 0xffff) //make a surrogate pair
-        {
-            *result++ = byteSwap(static_cast<uint16_t>((cp >> 10) + utf8::internal::LEAD_OFFSET), ByteOrderHost, boDest);
-            *result++ = byteSwap(static_cast<uint16_t>((cp & 0x3ff) + utf8::internal::TRAIL_SURROGATE_MIN), ByteOrderHost, boDest);
-        }
-        else
-            *result++ = byteSwap(static_cast<uint16_t>(cp), ByteOrderHost, boDest);
-        return cp;
+        *result++ = byteSwap(static_cast<uint16_t>((cp >> 10) + utf8::internal::LEAD_OFFSET), ByteOrderHost, boDest);
+        *result++ = byteSwap(static_cast<uint16_t>((cp & 0x3ff) + utf8::internal::TRAIL_SURROGATE_MIN), ByteOrderHost, boDest);
     }
     else
-    {
-        DFG_ASSERT_WITH_MSG(false, "Iterator value type should be two bytes wide.");
-        return INVALID_CODE_POINT;
-    }
+        *result++ = byteSwap(static_cast<uint16_t>(cp), ByteOrderHost, boDest);
+    return cp;
+
 #ifdef _MSC_VER
     #pragma warning(pop)
 #endif
@@ -221,17 +212,10 @@ uint32 cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t,
 #endif
     using OutputT = typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type;
     const auto outputCharSize = sizeof(OutputT);
-    //DFG_STATIC_ASSERT(outputCharSize == 4, "Iterator value type should be four bytes wide.");
-    if (outputCharSize == 4)
-    {
-        *result++ = static_cast<OutputT>(byteSwap(cp, ByteOrderHost, boDest));
-        return cp;
-    }
-    else
-    {
-        DFG_ASSERT_WITH_MSG(false, "Iterator value type should be four bytes wide.");
-        return INVALID_CODE_POINT;
-    }
+    DFG_STATIC_ASSERT(outputCharSize == 4, "Iterator value type should be four bytes wide.");
+    *result++ = static_cast<OutputT>(byteSwap(cp, ByteOrderHost, boDest));
+    return cp;
+
 #ifdef _MSC_VER
     #pragma warning(pop)
 #endif
@@ -240,26 +224,39 @@ uint32 cpToUtf(const uint32 cp, IterUtf_T result, std::integral_constant<size_t,
 template <typename IterUtf_T>
 uint32 cpToUtf(const uint32 cp, IterUtf_T result, const size_t encodedChSize, ByteOrder boDest)
 {
-    size_t outputTypeSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
-    if (outputTypeSize != 1 && outputTypeSize != encodedChSize)
+    constexpr size_t outputTypeSize = sizeof(typename DFG_DETAIL_NS::EffectiveIteratorValueType<IterUtf_T>::type);
+    if constexpr (outputTypeSize != 1)
     {
-        DFG_ASSERT_WITH_MSG(false, "This function expects either byte output or output whose character size matches with encoding.");
-        return INVALID_CODE_POINT;
+        if (outputTypeSize != encodedChSize)
+        {
+            DFG_ASSERT_WITH_MSG(false, "This function expects either byte output or output whose character size matches with encoding.");
+            return INVALID_CODE_POINT;
+        }
     }
 
     if (!utf8::internal::is_code_point_valid(cp))
         return cpToUtf(DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf, result, encodedChSize, boDest);
 
     if (encodedChSize == 1)
-        return cpToUtf(cp, result, std::integral_constant<size_t, 8>(), boDest);
+    {
+        if constexpr (outputTypeSize == 1)
+            return cpToUtf(cp, result, std::integral_constant<size_t, 8>(), boDest);
+        else
+        {
+            DFG_ASSERT_WITH_MSG(false, "cpToUtf: mismatching data type sizes");
+            return INVALID_CODE_POINT;
+        }
+    }
     else if (encodedChSize == 2)
     {
-        if (outputTypeSize == 2)
+        if constexpr (outputTypeSize == 2)
             return cpToUtf(cp, result, std::integral_constant<size_t, 16>(), boDest);
         else // byte output
         {
             std::vector<uint16> vec; // TODO: replace with static capacity version.
             const auto rv = cpToUtf(cp, std::back_inserter(vec), std::integral_constant<size_t, 16>(), boDest);
+            if (rv == INVALID_CODE_POINT)
+                return INVALID_CODE_POINT;
             for (size_t i = 0; i < vec.size() * sizeof(uint16); ++i)
             {
                 *result++ = *(reinterpret_cast<const char*>(vec.data()) + i);
@@ -269,12 +266,14 @@ uint32 cpToUtf(const uint32 cp, IterUtf_T result, const size_t encodedChSize, By
     }
     else if (encodedChSize == 4)
     {
-        if (outputTypeSize == 4)
+        if constexpr (outputTypeSize == 4)
             return cpToUtf(cp, result, std::integral_constant<size_t, 32>(), boDest);
         else // byte output
         {
             uint32 val;
             const auto rv = cpToUtf(cp, &val, std::integral_constant<size_t, 32>(), boDest);
+            if (rv == INVALID_CODE_POINT)
+                return INVALID_CODE_POINT;
             auto p = reinterpret_cast<const char*>(&val);
             *result++ = *p++;
             *result++ = *p++;
