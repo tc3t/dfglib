@@ -16,6 +16,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
         encodingUTF32Le,
         encodingUTF32Be,
         encodingLatin1, // ASCII + Latin1, https://en.wikipedia.org/wiki/Latin-1_Supplement_(Unicode_block)
+                        // Note that there is some potentially confusing terminology: searching for "latin1"
+                        // in Wikipedia lead to page about "ISO/IEC 8859-1" https://en.wikipedia.org/wiki/ISO/IEC_8859-1,
+                        // which notes (as of 2024-08) that ranges such as [0x00, 0x1f] are "Undefined".
+                        // But as commented in https://stackoverflow.com/questions/12794825/is-iso-8859-1-a-unicode-charset
+                        // in practice latin1 is often interpreted as ISO/IEC 8859-1 "supplemented with the C0 and C1 control codes from ISO/IEC 6429"
+                        // "ISO-8859-1 is the IANA preferred name for this standard when supplemented with the C0 and C1 control codes from ISO/IEC 6429"
+                        // (quote from wikipedia https://en.wikipedia.org/w/index.php?title=ISO/IEC_8859-1&oldid=1240566855)
         encodingUCS2Le,
         encodingUCS2Be,
         encodingUCS4Le,
