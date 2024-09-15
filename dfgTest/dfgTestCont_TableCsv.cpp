@@ -18,6 +18,7 @@
 #include <dfg/rand.hpp>
 #include <dfg/typeTraits.hpp>
 #include <dfg/io/BasicOmcByteStream.hpp>
+#include <dfg/io/DelimitedTextWriter.hpp>
 #include <dfg/io/OmcByteStream.hpp>
 #include <dfg/iter/szIterator.hpp>
 #include <dfg/cont/contAlg.hpp>
@@ -1064,18 +1065,29 @@ TEST(dfgCont, CsvConfig_uriPart)
 TEST(dfgCont, CsvFormatDefinition)
 {
     using namespace ::DFG_ROOT_NS;
+
+    // fromReadTemplate_commaQuoteEolNUtf8()
     {
-        const auto csvf = CsvFormatDefinition::fromReadTemplate_commaQuoteEolNUtf8();
+        auto csvf = CsvFormatDefinition::fromReadTemplate_commaQuoteEolNUtf8();
         DFGTEST_EXPECT_LEFT(',', csvf.separatorChar());
         DFGTEST_EXPECT_LEFT('"', csvf.enclosingChar());
         DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::EndOfLineTypeN, csvf.eolType());
         DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::encodingUTF8, csvf.textEncoding());
+
+        // Setting non-existent enclosing char should set EnclosementBehaviour::EbNoEnclose
+        {
+            csvf.enclosingChar(CsvFormatDefinition::metaCharNone());
+            DFGTEST_EXPECT_LEFT(CsvFormatDefinition::metaCharNone(), csvf.enclosingChar());
+            DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose, csvf.enclosementBehaviour());
+        }
     }
 
+    // fromReadTemplate_commaNoEnclosingEolNUtf8()
     {
         const auto csvf = CsvFormatDefinition::fromReadTemplate_commaNoEnclosingEolNUtf8();
         DFGTEST_EXPECT_LEFT(',', csvf.separatorChar());
         DFGTEST_EXPECT_LEFT(CsvFormatDefinition::metaCharNone(), csvf.enclosingChar());
+        DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose, csvf.enclosementBehaviour());
         DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::EndOfLineTypeN, csvf.eolType());
         DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::encodingUTF8, csvf.textEncoding());
     }
@@ -1083,21 +1095,35 @@ TEST(dfgCont, CsvFormatDefinition)
 
 TEST(dfgCont, CsvFormatDefinition_FromCsvConfig)
 {
-    DFG_MODULE_NS(cont)::CsvConfig config;
-    config.loadFromFile("testfiles/csvConfigTest_0.csv");
-    DFG_ROOT_NS::CsvFormatDefinition format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
-    format.bomWriting(false);
-    format.fromConfig(config);
-    EXPECT_EQ(DFG_MODULE_NS(io)::encodingUTF8, format.textEncoding());
-    EXPECT_EQ('"', format.enclosingChar());
-    EXPECT_EQ(',', format.separatorChar());
-    EXPECT_EQ(DFG_MODULE_NS(io)::EndOfLineTypeN, format.eolType());
-    EXPECT_EQ(true, format.bomWriting());
-    EXPECT_EQ("abc", format.getProperty("property_one", ""));
-    EXPECT_EQ("def", format.getProperty("property_two", ""));
+    {
+        DFG_MODULE_NS(cont)::CsvConfig config;
+        config.loadFromFile("testfiles/csvConfigTest_0.csv");
+        DFG_ROOT_NS::CsvFormatDefinition format('a', 'b', DFG_MODULE_NS(io)::EndOfLineTypeRN, DFG_MODULE_NS(io)::encodingUnknown);
+        format.bomWriting(false);
+        format.fromConfig(config);
+        EXPECT_EQ(DFG_MODULE_NS(io)::encodingUTF8, format.textEncoding());
+        EXPECT_EQ('"', format.enclosingChar());
+        EXPECT_EQ(',', format.separatorChar());
+        EXPECT_EQ(DFG_MODULE_NS(io)::EndOfLineTypeN, format.eolType());
+        EXPECT_EQ(true, format.bomWriting());
+        EXPECT_EQ("abc", format.getProperty("property_one", ""));
+        EXPECT_EQ("def", format.getProperty("property_two", ""));
 
-    DFGTEST_EXPECT_LEFT(123, format.getPropertyThroughStrTo<int>("property_three", -1));
-    DFGTEST_EXPECT_LEFT(-1, format.getPropertyThroughStrTo<int>("non-existent property", -1));
+        DFGTEST_EXPECT_LEFT(123, format.getPropertyThroughStrTo<int>("property_three", -1));
+        DFGTEST_EXPECT_LEFT(-1, format.getPropertyThroughStrTo<int>("non-existent property", -1));
+    }
+
+    // Handling of empty enclosing char in CsvConfig
+    {
+        using CsvFormatDefinition = ::DFG_ROOT_NS::CsvFormatDefinition;
+        using CsvConfig = ::DFG_MODULE_NS(cont)::CsvConfig;
+        auto csvf = CsvFormatDefinition::fromReadTemplate_commaQuoteEolNUtf8();
+        CsvConfig conf;
+        conf.setKeyValue(DFG_UTF8("enclosing_char"), DFG_UTF8(""));
+        csvf.fromConfig(conf);
+        DFGTEST_EXPECT_LEFT(CsvFormatDefinition::metaCharNone(), csvf.enclosingChar());
+        DFGTEST_EXPECT_LEFT(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose, csvf.enclosementBehaviour());
+    }
 }
 
 TEST(dfgCont, CsvFormatDefinition_ToConfig)

@@ -29,7 +29,7 @@ public:
         m_cEnc(cEnc),
         m_eolType(eol),
         m_textEncoding(encoding),
-        m_enclosementBehaviour(DFG_MODULE_NS(io)::EbEncloseIfNeeded),
+        m_enclosementBehaviour((::DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(cEnc)) ? ::DFG_MODULE_NS(io)::EbNoEnclose : ::DFG_MODULE_NS(io)::EbEncloseIfNeeded),
         m_bWriteHeader(true),
         m_bWriteBom(true)
     {}
@@ -61,7 +61,7 @@ public:
     void separatorChar(int32 cSep) { m_cSep = cSep; }
     std::string separatorCharAsString() const;
     int32 enclosingChar() const { return m_cEnc; }
-    void enclosingChar(int32 cEnc) { m_cEnc = cEnc; }
+    void enclosingChar(int32 cEnc);
     std::string enclosingCharAsString() const;
     int32 eolCharFromEndOfLineType() const { return ::DFG_MODULE_NS(io)::eolCharFromEndOfLineType(eolType()); }
 
@@ -128,6 +128,14 @@ public:
     bool m_bWriteBom;
     ::DFG_MODULE_NS(cont)::MapVectorAoS<std::string, std::string> m_genericProperties; // Generic properties (e.g. if implementation needs specific flags)
 }; // CsvFormatDefinition
+
+inline void CsvFormatDefinition::enclosingChar(const int32 cEnc)
+{ 
+    m_cEnc = cEnc;
+    // If new enclosing char is meta char, setting EbNoEnclose
+    if (::DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(m_cEnc))
+        enclosementBehaviour(::DFG_MODULE_NS(io)::EbNoEnclose);
+}
 
 inline void CsvFormatDefinition::fromConfig(const DFG_MODULE_NS(cont)::CsvConfig& config)
 {
