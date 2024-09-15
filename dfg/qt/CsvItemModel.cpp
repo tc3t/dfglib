@@ -212,8 +212,19 @@ void CsvItemModel::SaveOptions::initFromItemModelPtr(const CsvItemModel* pItemMo
             // Encoding is not supported, fallback to UTF-8.
             textEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
         }
-        if (::DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(this->enclosingChar()))
-            enclosementBehaviour(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose);
+
+        // Enclosing char handling:
+        //     if conf file has explicitly set invalid enclosing char, then set EbNoEnclose,
+        //     otherwise use EbEncloseIfNeeded
+        const auto loadConfig = pItemModel->getLoadOptionsFromConfFile();
+        if (::DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(loadConfig.enclosingChar()))
+            this->enclosementBehaviour(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose);
+        else
+        {
+            if (::DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(this->enclosingChar()))
+                this->enclosingChar(defaultSaveOptions(pItemModel).enclosingChar());
+            this->enclosementBehaviour(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbEncloseIfNeeded);
+        }
     }
 }
 
