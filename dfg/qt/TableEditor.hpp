@@ -105,6 +105,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Sets window to resize/move if document requests to use specific window size/position. If not set, requests are ignored.
         void setResizeWindow(QWidget* pWindow);
 
+        /** Returns fields used by file info tooltip.
+         *  @note Fields are user visible, possibly translated texts and are not guaranteed to be stable.
+         */
+        QVector<QPair<QString, QString>> getToolTipFileInfoFields() const;
         void updateFileInfoToolTip();
 
         // Returns variant map of find panel settings where keys are strings defined by CsvOptionProperty_find* -entries.

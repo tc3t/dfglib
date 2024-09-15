@@ -31,6 +31,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
 #include <QSqlQuery>
 #include <QSqlRecord>
 #include <QGridLayout>
+#include <QtGlobal>
 #include <QThread>
 #include <dfg/qt/qxt/gui/qxtspanslider.h>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
@@ -225,6 +226,46 @@ TEST(dfgQt, TableEditor_findPanelSettingsFromConfFile)
     DFGTEST_EXPECT_LEFT("1", settings[CsvOptionProperty_findCaseSensitive].toString());
     DFGTEST_EXPECT_LEFT("Regular expression", settings[CsvOptionProperty_findSyntaxType].toString());
     DFGTEST_EXPECT_LEFT("1", settings[CsvOptionProperty_findColumn].toString());
+}
+
+TEST(dfgQt, TableEditor_fileInfo)
+{
+    using namespace ::DFG_MODULE_NS(qt);
+    TableEditor tableEditor;
+    auto& view = *tableEditor.tableView();
+
+    {
+        DFGTEST_EXPECT_TRUE(view.openFile("testfiles/TableEditor_confFile.csv"));
+
+        const auto fields = tableEditor.getToolTipFileInfoFields();
+        DFGTEST_EXPECT_LEFT(12, fields.size()); // If this fails after adding fields, simply adjusts expected count.
+
+        QMap<QString, QString> expected;
+        //expected["File path"] = ;
+        expected["File size"] = "13 bytes (13 bytes)";
+        //expected["Created"] = ;
+        //expected["Last modified"] = ;
+        expected["Hidden"] = "no";
+        expected["Writable"] = "yes";
+        expected["File encoding"] = "UTF8";
+        expected["Save separator char"] = ",";
+        expected["Save enclosing behaviour"] = "If needed";
+        expected["Save enclosing char"] = "\"";
+        expected["Save EOL"] = "\\n";
+        expected["Save encoding"] = "UTF8";
+
+        for (const auto field : fields)
+        {
+            const auto expectedIter = expected.find(field.first);
+            if (expectedIter == expected.end())
+                continue;
+            DFGTEST_EXPECT_LEFT(expectedIter.value(), field.second);
+            expected.erase(expectedIter);
+        }
+        DFGTEST_EXPECT_TRUE(expected.empty()); // If this fails, not all expected fields were found.
+    }
+
+    // TODO: add more cases (symbolic links, disabled enclosing etc.)
 }
 
 TEST(dfgQt, CsvTableViewBasicSelectionAnalyzerPanel_basicCustomDetailHandling)

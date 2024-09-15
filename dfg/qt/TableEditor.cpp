@@ -852,6 +852,74 @@ namespace
         tooltip
     };
 
+    static QVector<QPair<QString, QString>> getFileInfoFields(const QObject& trObj, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass& model)
+    {
+        const auto sFilePath = model.getFilePath();
+        const auto dateTimeToString = [](const QDateTime& dateTime) { return dateTime.toString("yyyy-MM-dd hh:mm:ss"); };
+        if (sFilePath.isEmpty())
+            return QVector<QPair<QString, QString>>();
+        const QFileInfo fi(sFilePath);
+        const auto fileEncoding = model.getFileEncoding();
+        const auto yesNoText = [&](const bool b) { return (b) ? trObj.tr("yes") : trObj.tr("no"); };
+        const QString sEncoding = (fileEncoding != ::DFG_MODULE_NS(io)::encodingUnknown) ? ::DFG_MODULE_NS(io)::encodingToStrId(fileEncoding) : trObj.tr("unknown (note: detection is based only on UTF BOM)");
+        const QFileInfo targetFileInfo = (fi.isSymLink()) ? QFileInfo(fi.symLinkTarget()) : fi;
+
+        QVector<QPair<QString, QString>> fields;
+        const auto addField = [&](const QString& sKey, const QString& sValue)
+            {
+                fields.push_back(qMakePair(sKey, sValue));
+            };
+        if (fi.isSymLink())
+        {
+            fields.push_back(qMakePair(trObj.tr("Symlink path"), fi.absoluteFilePath()));
+            fields.push_back(qMakePair(trObj.tr("Target file path"), targetFileInfo.absoluteFilePath()));
+        }
+        else
+        {
+            fields.push_back(qMakePair(trObj.tr("File path"), targetFileInfo.absoluteFilePath()));
+        }
+
+        fields.push_back(qMakePair(trObj.tr("File size"), trObj.tr("%1 (%2 bytes)").arg(formattedDataSize(targetFileInfo.size(), 2), QString::number(targetFileInfo.size()))));
+        fields.push_back(qMakePair(trObj.tr("Created"),
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
+            dateTimeToString(targetFileInfo.birthTime())));
+#else
+            dateTimeToString(targetFileInfo.created())));
+#endif
+        fields.push_back(qMakePair(trObj.tr("Last modified"), dateTimeToString(targetFileInfo.lastModified())));
+        fields.push_back(qMakePair(trObj.tr("Hidden"), yesNoText(targetFileInfo.isHidden())));
+        fields.push_back(qMakePair(trObj.tr("Writable"), yesNoText(targetFileInfo.isWritable())));
+        fields.push_back(qMakePair(trObj.tr("File encoding"), sEncoding));
+
+        // Fields describing save format
+        {
+            const auto saveOptions = model.getSaveOptions();
+            addField(trObj.tr("Save separator char"), QString::fromStdString(saveOptions.separatorCharAsString()));
+            const auto enclosementBehaviour = saveOptions.enclosementBehaviour();
+            //using enum ::DFG_MODULE_NS(io)::EnclosementBehaviour; // Requires >= C++20
+            QString enclosementStr;
+            switch (enclosementBehaviour)
+            {
+                case ::DFG_MODULE_NS(io)::EnclosementBehaviour::EbEnclose:
+                    enclosementStr = trObj.tr("Always");       break;
+                case ::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose:
+                    enclosementStr = trObj.tr("Disabled (note: if table content is not compatible with this setting, saving may produce malformed file)"); break;
+                case ::DFG_MODULE_NS(io)::EnclosementBehaviour::EbEncloseIfNeeded:
+                    enclosementStr = trObj.tr("If needed");    break;
+                case ::DFG_MODULE_NS(io)::EnclosementBehaviour::EbEncloseIfNonEmpty:
+                    enclosementStr = trObj.tr("If non-empty"); break;
+                default:
+                    enclosementStr = trObj.tr("Unknown"); DFG_ASSERT_IMPLEMENTED(false); break;
+            }
+            addField(trObj.tr("Save enclosing behaviour"), enclosementStr);
+            if (enclosementBehaviour != ::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose)
+                addField(trObj.tr("Save enclosing char"), QString::fromStdString(saveOptions.enclosingCharAsString()));
+            addField(trObj.tr("Save EOL"), untypedViewToQStringAsUtf8(saveOptions.eolTypeAsString()));
+            addField(trObj.tr("Save encoding"), untypedViewToQStringAsUtf8(saveOptions.textEncodingAsString()));
+        }
+        return fields;
+    }
+
     static QString createFileInfoText(const QObject* pTrObj, const ::DFG_MODULE_NS(qt)::TableEditor::ModelClass* pModel, const FileInfoFormatType formatType)
     {
         if (!pTrObj || !pModel)
@@ -863,37 +931,10 @@ namespace
 
         if (!sFilePath.isEmpty())
         {
-            const auto dateTimeToString = [&](const QDateTime& dateTime) { return dateTime.toString("yyyy-MM-dd hh:mm:ss"); };
             const QFileInfo fi(sFilePath);
             if (fi.exists())
             {
-                const auto fileEncoding = model.getFileEncoding();
-                const auto yesNoText = [&](const bool b) { return (b) ? trObj.tr("yes") : trObj.tr("no"); };
-                const QString sEncoding = (fileEncoding != ::DFG_MODULE_NS(io)::encodingUnknown) ? ::DFG_MODULE_NS(io)::encodingToStrId(fileEncoding) : trObj.tr("unknown (note: detection is based only on UTF BOM)");
-                const QFileInfo targetFileInfo = (fi.isSymLink()) ? QFileInfo(fi.symLinkTarget()) : fi;
-
-                QVector<QPair<QString, QString>> fields;
-                if (fi.isSymLink())
-                {
-                    fields.push_back(qMakePair(trObj.tr("Symlink path"), fi.absoluteFilePath()));
-                    fields.push_back(qMakePair(trObj.tr("Target file path"), targetFileInfo.absoluteFilePath()));
-                }
-                else
-                {
-                    fields.push_back(qMakePair(trObj.tr("File path"), targetFileInfo.absoluteFilePath()));
-                }
-
-                fields.push_back(qMakePair(trObj.tr("File size"), trObj.tr("%1 (%2 bytes)").arg(formattedDataSize(targetFileInfo.size(), 2), QString::number(targetFileInfo.size()))));
-                fields.push_back(qMakePair(trObj.tr("Created"),
-                    #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
-                        dateTimeToString(targetFileInfo.birthTime())));
-                    #else
-                        dateTimeToString(targetFileInfo.created())));
-                    #endif
-                fields.push_back(qMakePair(trObj.tr("Last modified"), dateTimeToString(targetFileInfo.lastModified())));
-                fields.push_back(qMakePair(trObj.tr("Hidden"), yesNoText(targetFileInfo.isHidden())));
-                fields.push_back(qMakePair(trObj.tr("Writable"), yesNoText(targetFileInfo.isWritable())));
-                fields.push_back(qMakePair(trObj.tr("Encoding"), sEncoding));
+                const auto fields = getFileInfoFields(trObj, model);
 
                 if (formatType == FileInfoFormatType::tooltip)
                 {
@@ -933,6 +974,14 @@ namespace
         pButton->setToolTip(sToolTipText);
     }
 } // unnamed namespace
+
+QVector<QPair<QString, QString>> TableEditor::getToolTipFileInfoFields() const
+{
+    auto pModel = this->m_spTableModel.get();
+    if (!pModel)
+        return {};
+    return getFileInfoFields(*this, *pModel);
+}
 
 void TableEditor::updateFileInfoToolTip()
 {
