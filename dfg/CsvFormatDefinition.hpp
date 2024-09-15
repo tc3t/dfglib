@@ -144,7 +144,10 @@ inline void CsvFormatDefinition::fromConfig(const DFG_MODULE_NS(cont)::CsvConfig
         if (p)
         {
             if (p->empty())
+            {
                 enclosingChar(metaCharNone());
+                this->enclosementBehaviour(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose);
+            }
             else
             {
                 auto rv = DFG_MODULE_NS(str)::stringLiteralCharToValue<int32>(p->rawStorage());

@@ -44,6 +44,7 @@ DFG_END_INCLUDE_QT_HEADERS
 #include "sqlTools.hpp"
 #include "stringConversions.hpp"
 #include "../charts/commonChartTools.hpp"
+#include "../utf.hpp"
 
 /////////////////////////////////
 // Start of dfg::qt namespace
@@ -211,6 +212,8 @@ void CsvItemModel::SaveOptions::initFromItemModelPtr(const CsvItemModel* pItemMo
             // Encoding is not supported, fallback to UTF-8.
             textEncoding(::DFG_MODULE_NS(io)::encodingUTF8);
         }
+        if (::DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(this->enclosingChar()))
+            enclosementBehaviour(::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose);
     }
 }
 
@@ -666,7 +669,10 @@ bool CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions& options)
     m_messagesFromLatestSave.clear();
 
     const QChar cSep = (DFG_MODULE_NS(io)::DelimitedTextReader::isMetaChar(options.separatorChar())) ? QChar(',') : QChar(options.separatorChar());
-    const QChar cEnc(options.enclosingChar());
+    DFG_ASSERT_CORRECTNESS(options.enclosementBehaviour() == ::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose ||
+        ::DFG_MODULE_NS(utf)::isCodePointValid(options.enclosingChar()));
+
+    const QChar cEnc((options.enclosingChar() >= 0) ? options.enclosingChar() : 0);
     const QChar cEol = DFG_MODULE_NS(io)::eolCharFromEndOfLineType(options.eolType());
     const auto sEol = DFG_MODULE_NS(io)::eolStrFromEndOfLineType(options.eolType());
 
