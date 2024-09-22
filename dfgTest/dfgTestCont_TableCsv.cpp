@@ -75,7 +75,7 @@ TEST(dfgCont, TableCsv)
             }
         }
     }
-    typedef DFG_CLASS_NAME(TableCsv)<char, size_t> Table;
+    typedef TableCsv<char, size_t> Table;
     std::vector<std::unique_ptr<Table>> tables;
     tables.resize(paths.size());
 
@@ -98,7 +98,7 @@ TEST(dfgCont, TableCsv)
 
         // ...write to memory using the same encoding as in file...
         std::string bytes;
-        DFG_CLASS_NAME(OmcByteStream)<std::string> ostrm(&bytes);
+        OmcByteStream<std::string> ostrm(&bytes);
         auto writeFormat = table.m_readFormat;
         writeFormat.eolType(eolTypes[i]);
         {
@@ -123,7 +123,7 @@ TEST(dfgCont, TableCsv)
         // Check also that saving without BOM works.
         {
             std::string nonBomBytes;
-            DFG_CLASS_NAME(OmcByteStream)<std::string> ostrmNonBom(&nonBomBytes);
+            OmcByteStream<std::string> ostrmNonBom(&nonBomBytes);
             auto csvFormat = table.m_readFormat;
             csvFormat.bomWriting(false);
             csvFormat.eolType(eolTypes[i]);
@@ -139,8 +139,8 @@ TEST(dfgCont, TableCsv)
     // Test that results are the same as with DelimitedTextReader.
     {
         std::wstring sFromFile;
-        DFG_CLASS_NAME(IfStreamWithEncoding) istrm(paths.front());
-        DFG_CLASS_NAME(DelimitedTextReader)::read<wchar_t>(istrm, ',', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
+        IfStreamWithEncoding istrm(paths.front());
+        DelimitedTextReader::read<wchar_t>(istrm, ',', '"', '\n', [&](const size_t nRow, const size_t nCol, const wchar_t* const p, const size_t nSize)
         {
             std::wstring sUtfConverted;
             auto inputRange = DFG_ROOT_NS::makeSzRange((*tables.front())(nRow, nCol).c_str());
@@ -166,11 +166,11 @@ TEST(dfgCont, TableCsv)
         const auto bomBytes = encodingToBom(encodingUTF8);
         utf8WithBom.insert(utf8WithBom.begin(), bomBytes.cbegin(), bomBytes.cend());
 
-        DFG_CLASS_NAME(TableCsv)<char, uint32> tableWithBomExplictEncoding;
-        DFG_CLASS_NAME(TableCsv)<char, uint32> tableWithBomAutoDetectedEncoding;
-        DFG_CLASS_NAME(TableCsv)<char, uint32> tableWithoutBom;
+        TableCsv<char, uint32> tableWithBomExplictEncoding;
+        TableCsv<char, uint32> tableWithBomAutoDetectedEncoding;
+        TableCsv<char, uint32> tableWithoutBom;
 
-        const DFG_CLASS_NAME(CsvFormatDefinition) formatDef(',', '"', EndOfLineTypeN, encodingUTF8);
+        const CsvFormatDefinition formatDef(',', '"', EndOfLineTypeN, encodingUTF8);
         tableWithBomExplictEncoding.readFromMemory(utf8WithBom.data(), utf8WithBom.size(), formatDef);
         tableWithBomAutoDetectedEncoding.readFromMemory(utf8WithBom);
         tableWithoutBom.readFromMemory(utf8Bomless.data(), utf8Bomless.size(), formatDef);
@@ -180,8 +180,8 @@ TEST(dfgCont, TableCsv)
         ASSERT_EQ(1, tableWithBomAutoDetectedEncoding.rowCountByMaxRowIndex());
         ASSERT_EQ(2, tableWithBomAutoDetectedEncoding.colCountByMaxColIndex());
 
-        DFG_CLASS_NAME(StringUtf8) sItem00(tableWithBomExplictEncoding(0, 0));
-        DFG_CLASS_NAME(StringUtf8) sItem01(tableWithBomExplictEncoding(0, 1));
+        StringUtf8 sItem00(tableWithBomExplictEncoding(0, 0));
+        StringUtf8 sItem01(tableWithBomExplictEncoding(0, 1));
         ASSERT_EQ(4, sItem00.sizeInRawUnits());
         ASSERT_EQ(1, sItem01.sizeInRawUnits());
         EXPECT_EQ('a', utf8ToFixedChSizeStr<wchar_t>(sItem00.rawStorage()).front());
@@ -191,9 +191,9 @@ TEST(dfgCont, TableCsv)
 
     // Test unknown encoding handling, i.e. that bytes are read as specified as Latin-1.
     {
-        DFG_CLASS_NAME(TableCsv)<char, uint32> table;
+        TableCsv<char, uint32> table;
         std::array<unsigned char, 255> data;
-        DFG_CLASS_NAME(StringUtf8) dataAsUtf8;
+        StringUtf8 dataAsUtf8;
         for (size_t i = 0; i < data.size(); ++i)
         {
             unsigned char val = (i + 1 != DFG_U8_CHAR('\n')) ? static_cast<unsigned char>(i + 1) : DFG_U8_CHAR('a'); // Don't write '\n' to get single cell table.
@@ -201,8 +201,8 @@ TEST(dfgCont, TableCsv)
             cpToEncoded(data[i], std::back_inserter(dataAsUtf8.rawStorage()), encodingUTF8);
         }
         EXPECT_EQ(127 + 2*128, dataAsUtf8.sizeInRawUnits());
-        const auto metaCharNone = DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
-        table.readFromMemory(reinterpret_cast<const char*>(data.data()), data.size(), DFG_CLASS_NAME(CsvFormatDefinition)(metaCharNone,
+        const auto metaCharNone = DelimitedTextReader::s_nMetaCharNone;
+        table.readFromMemory(reinterpret_cast<const char*>(data.data()), data.size(), CsvFormatDefinition(metaCharNone,
                                                                                                                           metaCharNone,
                                                                                                                           EndOfLineTypeN,
                                                                                                                           encodingUnknown));
@@ -218,7 +218,7 @@ TEST(dfgCont, TableCsv)
         const std::array<EnclosementBehaviour, nExpectedCount> enclosementItems = { EbEncloseIfNeeded, EbEncloseIfNonEmpty };
         const std::array<std::string, nExpectedCount> expected = {  DFG_ASCII("a,b,,\"c,d\",\"e\nf\",g\n,,r1c2,,,\n").c_str(),
                                                                     DFG_ASCII("\"a\",\"b\",,\"c,d\",\"e\nf\",\"g\"\n,,\"r1c2\",,,\n").c_str() };
-        DFG_CLASS_NAME(TableCsv)<char, uint32> table;
+        TableCsv<char, uint32> table;
         table.setElement(0, 0, DFG_UTF8("a"));
         table.setElement(0, 1, DFG_UTF8("b"));
         //table.setElement(0, 2, DFG_UTF8(""));
@@ -228,7 +228,7 @@ TEST(dfgCont, TableCsv)
         table.setElement(1, 2, DFG_UTF8("r1c2"));
         for (size_t i = 0; i < nExpectedCount; ++i)
         {
-            DFG_CLASS_NAME(OmcByteStream)<> ostrm;
+            OmcByteStream<> ostrm;
             auto writePolicy = table.createWritePolicy<decltype(ostrm)>();
             writePolicy.m_format.enclosementBehaviour(enclosementItems[i]);
             writePolicy.m_format.bomWriting(false);
@@ -271,7 +271,7 @@ TEST(dfgCont, TableCsv_memStreamTypes)
         for (int r = 0; r < nRowCount; ++r)
             table.setElement(r, c, DFG_UTF8("a"));
 
-    typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(Vector)<char> VectorT;
+    typedef DFG_MODULE_NS(cont)::Vector<char> VectorT;
     VectorT bytesStd;
     VectorT bytesOmc;
     VectorT bytesBasicOmc;
@@ -287,7 +287,7 @@ TEST(dfgCont, TableCsv_memStreamTypes)
 
     // OmcByteStream
     {
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<> omcStrm;
+        DFG_MODULE_NS(io)::OmcByteStream<> omcStrm;
         table.writeToStream(omcStrm);
         bytesOmc = omcStrm.releaseData();
     }
@@ -920,6 +920,26 @@ TEST(dfgCont, TableCsv_multiThreadedReadPerformance)
         DFGTEST_EXPECT_TRUE(tSingleThreaded.readFormat().isFormatMatchingWith(tMultiThreaded.readFormat()));
     }
 #endif // DFGTEST_ENABLE_BENCHMARKS
+}
+
+TEST(dfgCont, TableCsv_invalidUtfWrite)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+    using TableT = TableCsv<char, uint32>;
+
+    {
+        TableT table;
+        const char szInvalidUtf8[] = { 'a', -32, 'b', '\0' };
+        table.setElement(0, 0, SzPtrUtf8(szInvalidUtf8));
+        auto saveFormat = table.saveFormat();
+        saveFormat.bomWriting(false);
+        table.saveFormat(saveFormat);
+        ::DFG_MODULE_NS(io)::BasicOmcByteStream strm;
+        table.writeToStream(strm);
+        const auto writtenData = strm.releaseData();
+        DFGTEST_EXPECT_LEFT("a?b\n", StringViewC(writtenData.data(), writtenData.size()));
+    }
 }
 
 TEST(dfgCont, CsvConfig)

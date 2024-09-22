@@ -911,15 +911,26 @@ DFG_ROOT_NS_BEGIN{
                     using namespace DFG_MODULE_NS(io);
                     if (pData == nullptr)
                         return;
-                    utf8::unchecked::iterator<const char*> inputIter(pData);
-                    utf8::unchecked::iterator<const char*> inputIterEnd(pData + std::strlen(pData));
+
+                    std::string tempBuffer; // If data is not valid UTF-8, gets content transformed through utf8::replace_invalid()
+                    Span<const char> writeRange(pData, std::strlen(pData)); // Range to write to output
+                    // Checking whether data is valid UTF-8
+                    if (!utf8::is_valid(writeRange.begin(), writeRange.end()))
+                    {
+                        // Data is not valid UTF-8 -> replace invalid with '?'
+                        utf8::replace_invalid(writeRange.begin(), writeRange.end(), std::back_inserter(tempBuffer), '?');
+                        writeRange = Span<const char>(tempBuffer.c_str(), tempBuffer.size());
+                    }
+                    DFG_ASSERT_CORRECTNESS(utf8::is_valid(writeRange.begin(), writeRange.end()));
+                    utf8::unchecked::iterator<const char*> inputIter(writeRange.data());
+                    utf8::unchecked::iterator<const char*> inputIterEnd(writeRange.data() + writeRange.size());
                     DelimitedTextCellWriter::writeCellFromStrIter(strm,
-                                                                                 makeRange(inputIter, inputIterEnd),
-                                                                                 uint32(m_format.separatorChar()),
-                                                                                 uint32(m_format.enclosingChar()),
-                                                                                 uint32(eolCharFromEndOfLineType(m_format.eolType())),
-                                                                                 m_format.enclosementBehaviour(),
-                                                                                 [&](Stream_T& strm, int c) {this->writeItemFunc(strm, c); });
+                        makeRange(inputIter, inputIterEnd),
+                        uint32(m_format.separatorChar()),
+                        uint32(m_format.enclosingChar()),
+                        uint32(eolCharFromEndOfLineType(m_format.eolType())),
+                        m_format.enclosementBehaviour(),
+                        [&](Stream_T& strm, int c) {this->writeItemFunc(strm, c); });
                 }
 
                 void writeSeparator(Stream_T& strm, const Index_T /*nRow*/, const Index_T /*nCol*/)
