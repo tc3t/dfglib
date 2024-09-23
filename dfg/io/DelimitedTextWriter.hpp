@@ -18,9 +18,31 @@ enum EnclosementBehaviour
     EbEncloseIfNonEmpty
 };
 
-class DFG_CLASS_NAME(DelimitedTextCellWriter)
+class DelimitedTextCellWriter
 {
 public:
+
+    template <class InputRange_T, class Char_T>
+    static bool isEnclosementNeeded(
+        const InputRange_T& input,
+        const Char_T& cSep,
+        const Char_T& cEnc,
+        const Char_T& cEol)
+    {
+        bool bNeeded = false;
+        for (auto iter = input.begin(), iterEnd = input.end(); !isAtEnd(iter, iterEnd); ++iter)
+        {
+            const auto c = *iter;
+            // TODO: enclose if has leading whitespaces?
+            if (c == cEol || c == cEnc || c == cSep)
+            {
+                bNeeded = true;
+                break;
+            }
+        }
+        return bNeeded;
+    }
+
     template <class Output_T, class InputRange_T, class Char_T, class WriteOne_T>
     static void writeCellFromStrIter(Output_T& output,
                                     const InputRange_T& input,
@@ -32,23 +54,11 @@ public:
     {
         bool bEnclose = (eb == EbEnclose || eb == EbEncloseIfNonEmpty);
         if (!bEnclose && eb == EbEncloseIfNeeded)
-        {
-            // TODO: use any_of-like algorithm.
-            for (auto iter = input.begin(), iterEnd = input.end(); !isAtEnd(iter, iterEnd); ++iter)
-            {
-                const auto c = *iter;
-                // TODO: enclose if has leading whitespaces?
-                if (c == cEol || c == cEnc || c == cSep)
-                {
-                    bEnclose = true;
-                    break;
-                }
-            }
-        }
+            bEnclose = isEnclosementNeeded(input, cSep, cEnc, cEol);
         if (!bEnclose)
         {
             const auto iterEnd = input.cend();
-            for (auto iter = input.cbegin(); iter != iterEnd; ++iter)
+            for (auto iter = input.cbegin(); !isAtEnd(iter, iterEnd); ++iter)
                 writeItem(output, *iter);
         }
         else
@@ -131,7 +141,7 @@ public:
 
     template <class OutputIter_T>
     static void writeItemImpl(OutputIter_T iterOut,
-        const DFG_CLASS_NAME(StringViewC)& sv,
+        const StringViewC& sv,
         const char cSep,
         const char cEnc,
         const char cEol,
@@ -142,7 +152,7 @@ public:
 
     template <class OutputIter_T>
     static void writeItemImpl(OutputIter_T iterOut,
-        const DFG_CLASS_NAME(StringViewSzC)& sv,
+        const StringViewSzC& sv,
         const char cSep,
         const char cEnc,
         const char cEol,
@@ -175,7 +185,7 @@ public:
 
     template <class OutputIter_T>
     static void writeItemImpl(OutputIter_T iterOut,
-        const DFG_CLASS_NAME(StringViewW)& sv,
+        const StringViewW& sv,
         const char cSep,
         const char cEnc,
         const char cEol,
@@ -186,7 +196,7 @@ public:
 
     template <class OutputIter_T>
     static void writeItemImpl(OutputIter_T iterOut,
-        const DFG_CLASS_NAME(StringViewSzW)& sv,
+        const StringViewSzW& sv,
         const char cSep,
         const char cEnc,
         const char cEol,
@@ -218,7 +228,7 @@ public:
 
 };
 
-class DFG_CLASS_NAME(DelimitedTextWriter)
+class DelimitedTextWriter
 {
 public:
     // TODO: test
@@ -235,7 +245,7 @@ public:
                         cSep,
                         [&](Stream_T& strm, const typename Cont_T::value_type& item)
                         {
-                            DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(strm,
+                            DelimitedTextCellWriter::writeCellStrm(strm,
                                                                  item,
                                                                  cSep,
                                                                  cEnc,
@@ -245,9 +255,6 @@ public:
         //strm << cEol;
     }
 
-}; // DFG_CLASS_NAME(DelimitedTextWriter)
-
-
-
+}; // DelimitedTextWriter
 
 }} // module namespace

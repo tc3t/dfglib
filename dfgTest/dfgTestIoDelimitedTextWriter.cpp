@@ -12,8 +12,14 @@ namespace
 {
     static void DelimitedTextCellWriterStr_impl(const char* pszExpected, const wchar_t* pwszExpected, const char* psz, const wchar_t* pwsz, const DFG_MODULE_NS(io)::EnclosementBehaviour eb)
     {
+        using DelimitedTextCellWriter = ::DFG_MODULE_NS(io)::DelimitedTextCellWriter;
+        using StringViewC   = ::DFG_ROOT_NS::StringViewC;
+        using StringViewW   = ::DFG_ROOT_NS::StringViewW;
+        using StringViewSzC = ::DFG_ROOT_NS::StringViewSzC;
+        using StringViewSzW = ::DFG_ROOT_NS::StringViewSzW;
+
         std::ostringstream ostrm;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrm,
+        DelimitedTextCellWriter::writeCellStrm(ostrm,
             std::string(psz),
             ',',
             '"',
@@ -21,23 +27,23 @@ namespace
             eb);
         EXPECT_EQ(pszExpected, ostrm.str());
         std::ostringstream ostrm2;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrm2,
-            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)(psz),
+        DelimitedTextCellWriter::writeCellStrm(ostrm2,
+            StringViewC(psz),
             ',',
             '"',
             '\n',
             eb);
         EXPECT_EQ(pszExpected, ostrm2.str());
         std::ostringstream ostrm3;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrm3,
-            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewSzC)(psz),
+        DelimitedTextCellWriter::writeCellStrm(ostrm3,
+            StringViewSzC(psz),
             ',',
             '"',
             '\n',
             eb);
         EXPECT_EQ(pszExpected, ostrm3.str());
         std::string sOutput;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::string>(sOutput),
+        DelimitedTextCellWriter::writeCellIter(std::back_inserter<std::string>(sOutput),
             std::string(psz),
             ',',
             '"',
@@ -45,7 +51,7 @@ namespace
             eb);
         EXPECT_EQ(pszExpected, sOutput);
         std::string sOutput2;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::string>(sOutput2),
+        DelimitedTextCellWriter::writeCellIter(std::back_inserter<std::string>(sOutput2),
             psz,
             ',',
             '"',
@@ -53,8 +59,8 @@ namespace
             eb);
         EXPECT_EQ(pszExpected, sOutput2);
         std::string sOutput3;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::string>(sOutput3),
-            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewC)(psz),
+        DelimitedTextCellWriter::writeCellIter(std::back_inserter<std::string>(sOutput3),
+            StringViewC(psz),
             ',',
             '"',
             '\n',
@@ -62,7 +68,7 @@ namespace
         EXPECT_EQ(pszExpected, sOutput3);
 
         std::wostringstream owstrm;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(owstrm,
+        DelimitedTextCellWriter::writeCellStrm(owstrm,
             std::wstring(pwsz),
             ',',
             '"',
@@ -71,8 +77,8 @@ namespace
         EXPECT_EQ(pwszExpected, owstrm.str());
 
         std::wostringstream owstrm2;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(owstrm2,
-            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewW)(pwsz),
+        DelimitedTextCellWriter::writeCellStrm(owstrm2,
+            StringViewW(pwsz),
             ',',
             '"',
             '\n',
@@ -80,8 +86,8 @@ namespace
         EXPECT_EQ(pwszExpected, owstrm2.str());
 
         std::wostringstream owstrm3;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(owstrm3,
-            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewSzW)(pwsz),
+        DelimitedTextCellWriter::writeCellStrm(owstrm3,
+            StringViewSzW(pwsz),
             ',',
             '"',
             '\n',
@@ -89,7 +95,7 @@ namespace
         EXPECT_EQ(pwszExpected, owstrm3.str());
 
         std::wstring swOutput;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::wstring>(swOutput),
+        DelimitedTextCellWriter::writeCellIter(std::back_inserter<std::wstring>(swOutput),
             std::wstring(pwsz),
             ',',
             '"',
@@ -97,7 +103,7 @@ namespace
             eb);
         EXPECT_EQ(pwszExpected, swOutput);
         std::wstring swOutput2;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::wstring>(swOutput2),
+        DelimitedTextCellWriter::writeCellIter(std::back_inserter<std::wstring>(swOutput2),
             pwsz,
             ',',
             '"',
@@ -106,8 +112,8 @@ namespace
         EXPECT_EQ(pwszExpected, swOutput2);
 
         std::wstring swOutput3;
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellIter(std::back_inserter<std::wstring>(swOutput3),
-            DFG_ROOT_NS::DFG_CLASS_NAME(StringViewW)(pwsz),
+        DelimitedTextCellWriter::writeCellIter(std::back_inserter<std::wstring>(swOutput3),
+            StringViewW(pwsz),
             ',',
             '"',
             '\n',
@@ -116,7 +122,7 @@ namespace
     }
 } // unnamed namespace
 
-TEST(DfgIo, DelimitedTextCellWriterStr)
+TEST(dfgIo, DelimitedTextCellWriterStr)
 {
     #define TEST_STRING(EXPECTED, STR, EB) DelimitedTextCellWriterStr_impl(EXPECTED, L##EXPECTED, STR, L##STR, DFG_MODULE_NS(io)::EB)
 
@@ -146,10 +152,10 @@ TEST(DfgIo, DelimitedTextCellWriterStr)
 
     using namespace DFG_MODULE_NS(io);
     std::string s;
-    DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcStreamWithEncoding)<std::string> ostrmEncodingStream(&s, DFG_MODULE_NS(io)::encodingUTF16Le);
+    DFG_MODULE_NS(io)::OmcStreamWithEncoding<std::string> ostrmEncodingStream(&s, DFG_MODULE_NS(io)::encodingUTF16Le);
     const char szExample[4] = { 'a', -28, 'b', '\0' };
-    //DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrmEncodingStream, std::string(szExample), ',', '"', '\n', EbEncloseIfNeeded);
-    DFG_CLASS_NAME(DelimitedTextCellWriter)::writeCellStrm(ostrmEncodingStream, szExample, ',', '"', '\n', EbEncloseIfNeeded);
+    //DelimitedTextCellWriter::writeCellStrm(ostrmEncodingStream, std::string(szExample), ',', '"', '\n', EbEncloseIfNeeded);
+    DelimitedTextCellWriter::writeCellStrm(ostrmEncodingStream, szExample, ',', '"', '\n', EbEncloseIfNeeded);
     EXPECT_EQ(6, s.size());
     if (s.size() == 6)
     {
@@ -164,14 +170,14 @@ TEST(DfgIo, DelimitedTextCellWriterStr)
 #undef TEST_STRING
 }
 
-TEST(DfgIo, DelimitedTextCellWriterWriteLine)
+TEST(dfgIo, DelimitedTextCellWriterWriteLine)
 {
     using namespace DFG_MODULE_NS(io);
 
 #define TEST_STRING(EXPECTED, CONT, EB) \
         { \
         std::basic_ostringstream<char /*TODO: use char type of EXPECTED */> ostrm; \
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextWriter)::writeMultiple(ostrm, \
+        DFG_MODULE_NS(io)::DelimitedTextWriter::writeMultiple(ostrm, \
                                                                             CONT, \
                                                                             ',', \
                                                                             '"', \
@@ -194,6 +200,33 @@ TEST(DfgIo, DelimitedTextCellWriterWriteLine)
     
 
 #undef TEST_STRING
+}
+
+TEST(dfgIo, DelimitedTextCellWriter_isEnclosementNeeded)
+{
+    using DelimitedTextCellWriter = ::DFG_MODULE_NS(io)::DelimitedTextCellWriter;
+    using Sv = ::DFG_ROOT_NS::StringViewC;
+    DFGTEST_EXPECT_FALSE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("")  , ',', '"' , '\n'));
+    DFGTEST_EXPECT_FALSE(DelimitedTextCellWriter::isEnclosementNeeded(Sv(" ") , ',', '"' , '\n'));
+    DFGTEST_EXPECT_FALSE(DelimitedTextCellWriter::isEnclosementNeeded(Sv(" a"), ',', '"' , '\n'));
+    DFGTEST_EXPECT_TRUE (DelimitedTextCellWriter::isEnclosementNeeded(Sv(",") , ',', '"' , '\n'));
+    DFGTEST_EXPECT_FALSE(DelimitedTextCellWriter::isEnclosementNeeded(Sv(",") , ';', '"' , '\n'));
+    DFGTEST_EXPECT_TRUE (DelimitedTextCellWriter::isEnclosementNeeded(Sv("\""), ',', '"' , '\n'));
+    DFGTEST_EXPECT_FALSE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("\""), ';', '\'', '\n'));
+    DFGTEST_EXPECT_TRUE (DelimitedTextCellWriter::isEnclosementNeeded(Sv("\n"), ',', '"' , '\n'));
+    DFGTEST_EXPECT_FALSE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("\n"), ';', '\'', '\r'));
+
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("a,"),  ',', '"', '\n'));
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv(",a"),  ',', '"', '\n'));
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("a,b"), ',', '"', '\n'));
+
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("a\""),  ',', '"', '\n'));
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("\"a"),  ',', '"', '\n'));
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("a\"b"), ',', '"', '\n'));
+
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("a\n"),  ',', '"', '\n'));
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("\na"),  ',', '"', '\n'));
+    DFGTEST_EXPECT_TRUE(DelimitedTextCellWriter::isEnclosementNeeded(Sv("a\nb"), ',', '"', '\n'));
 }
 
 #endif

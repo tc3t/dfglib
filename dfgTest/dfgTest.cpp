@@ -147,6 +147,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_exceptionHandling";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_filterCellHandler";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_invalidUtfWrite";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_memStreamTypes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_multiThreadedRead";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_multiThreadedReadPerformance";
@@ -185,7 +186,8 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readRowConsecutiveSeparators";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readTableToContainer";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_rnTranslation";
-    //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextCellWriterStr";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.DelimitedTextCellWriter_isEnclosementNeeded";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.DelimitedTextCellWriterStr";
     //::testing::GTEST_FLAG(filter) = "dfgIo.encodingStrIds";
     //::testing::GTEST_FLAG(filter) = "dfgIo.endOfLineTypeFromStr";
     //::testing::GTEST_FLAG(filter) = "dfgIo.fileToByteContainer";
