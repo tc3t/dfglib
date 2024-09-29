@@ -12,6 +12,7 @@
 DFG_ROOT_NS_BEGIN{
 
 #if defined(__cpp_lib_span)
+
     template <class T, size_t Extent_T = std::dynamic_extent>
     class Span : public std::span<T, Extent_T>
     {
@@ -21,7 +22,25 @@ DFG_ROOT_NS_BEGIN{
         Span(BaseClass other)
             : BaseClass(other)
         {}
-    }; // class Spans
+
+#if DFG_CPLUSPLUS < DFG_CPLUSPLUS_23
+        auto cbegin() const
+        {
+            if constexpr (requires { BaseClass::cbegin(); })
+                return BaseClass::cbegin();
+            else
+                return static_cast<const T*>(this->data());
+        }
+
+        auto cend() const
+        {
+            if constexpr (requires { BaseClass::cend(); })
+                return BaseClass::cend();
+            else
+                return static_cast<const T*>(this->data() + this->size());
+        }
+#endif // DFG_CPLUSPLUS < DFG_CPLUSPLUS_23
+    }; // class Span
 #else // Case: not defined(__cpp_lib_span)
     // A barebones alternative when not having std::span available.
     template <class T>
@@ -31,6 +50,7 @@ DFG_ROOT_NS_BEGIN{
         using element_type = T;
         using value_type = std::remove_cv_t<T>;
         using iterator   = element_type*;
+        using const_iterator = const element_type*;
 
         Span() = default;
 
@@ -57,8 +77,10 @@ DFG_ROOT_NS_BEGIN{
             , m_nSize(nSize)
         {}
 
-        constexpr T* begin() const noexcept { return data(); }
-        constexpr T* end() const noexcept { return data() + size(); }
+        constexpr iterator        begin() const noexcept { return data(); }
+        constexpr const_iterator cbegin() const noexcept { return data(); }
+        constexpr iterator        end()   const noexcept { return data() + size(); }
+        constexpr const_iterator cend()   const noexcept { return data() + size(); }
 
         constexpr T* data() const noexcept { return m_pData; }
 

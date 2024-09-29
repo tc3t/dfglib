@@ -1042,14 +1042,21 @@ namespace
         if (!span.empty())
             DFGTEST_EXPECT_LEFT(cont[0], span[0]);
 
-        // Tests availalibity of begin()/end() with range-for
+        // Tests availability of begin()/end() with range-for
         {
             size_t i = 0;
-            for (const auto& item : span) 
+            for (const auto& item : span)
             {
                 DFGTEST_EXPECT_LEFT(item, cont[i]);
                 ++i;
             }
+        }
+
+        // cbegin()/cend() (in std::span available since C++23)
+        {
+            if (!span.empty())
+                DFGTEST_EXPECT_LEFT(cont[0], *span.cbegin());
+            DFGTEST_EXPECT_LEFT(span.size(), static_cast<size_t>(span.cend() - span.cbegin()));
         }
     }
 }
