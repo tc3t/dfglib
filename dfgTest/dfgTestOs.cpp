@@ -321,10 +321,11 @@ TEST(dfgOs, OutputFile_completeOrNone)
 
     TEST(dfgOs, getExecutableFilePath)
     {
+        using namespace ::DFG_ROOT_NS;
         const auto sPathC = DFG_MODULE_NS(os)::getExecutableFilePath<char>();
         const auto sPathW = DFG_MODULE_NS(os)::getExecutableFilePath<wchar_t>();
-        EXPECT_STREQ("dfgTest.exe", DFG_MODULE_NS(os)::pathFilename(sPathC.c_str()));
-        EXPECT_STREQ(L"dfgTest.exe", DFG_MODULE_NS(os)::pathFilename(sPathW.c_str()));
+        DFGTEST_EXPECT_TRUE(StringViewC("dfgTest.exe") == DFG_MODULE_NS(os)::pathFilename(sPathC.c_str())  || StringViewC("dfgTestCmake.exe") == DFG_MODULE_NS(os)::pathFilename(sPathC.c_str()));
+        DFGTEST_EXPECT_TRUE(StringViewW(L"dfgTest.exe") == DFG_MODULE_NS(os)::pathFilename(sPathW.c_str()) || StringViewW(L"dfgTestCmake.exe") == DFG_MODULE_NS(os)::pathFilename(sPathW.c_str()));
     }
 #endif // _WIN32
 
