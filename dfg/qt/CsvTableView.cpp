@@ -1847,6 +1847,20 @@ bool CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition
                     "Note: only encoding and end-of-line changes are detected.").arg(path.toHtmlEscaped(), sFormatChangeNotification)))
                 return false;
         }
+        const auto saveOptions = pModel->getSaveOptions();
+        if (saveOptions.enclosementBehaviour() == ::DFG_MODULE_NS(io)::EnclosementBehaviour::EbNoEnclose)
+        {
+            if (QMessageBox::Yes != QMessageBox::question(
+                this,
+                tr("Confirm save"),
+                tr("Saving to file<br>"
+                    "%1<br>"
+                    "is configured to not use enclosing even if needed. If table has cells that would need to be enclosed (e.g. separator characters in cell content), "
+                    "resulting file may be malformed and no longer open correctly.<br><br>"
+                    "Continue nevertheless?"
+                    ).arg(path.toHtmlEscaped())))
+                return false;
+        }
     }
 
     CsvItemModel saveAsShownModel; // Temporary model used if saving as shown.
