@@ -1897,6 +1897,19 @@ public:
 };
 DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(FlagsTestClass::Enums)
 
+template <class T>
+class FlagsTestClassTemplate
+{
+public:
+    DFG_DEFINE_SCOPED_ENUM_FLAGS(Flags, ::DFG_ROOT_NS::uint16,
+        testFlag1 = 0x1,
+        testFlag2 = 0x2,
+        testFlag3 = 0x4,
+    );
+};
+
+DFG_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(FlagsTestClassTemplate<int>::Flags)
+
 // Some SFINAE-magic to test that certain operations do not compile for given types.
 // Typedefs 'OPtype' as void if operation is not available, otherwise the operation type.
 // For example if T0() | T1() is not available, 'orType' is typedef for void.
@@ -2085,6 +2098,14 @@ TEST(dfgCont, Flags)
         DFGTEST_STATIC_TEST(2 == FlagsTestClass::Enums::b);
         DFGTEST_EXPECT_LEFT(3, (FlagsTestClass::Enums::a | FlagsTestClass::Enums::b).toNumber());
         DFGTEST_EXPECT_LEFT(0, (FlagsTestClass::Enums::a & FlagsTestClass::Enums::b).toNumber());
+    }
+
+    // Flags defined in template class
+    {
+        using FlagT = FlagsTestClassTemplate<int>::Flags;
+        const auto flags = FlagT::testFlag1 | FlagT::testFlag3;
+        DFGTEST_EXPECT_LEFT(FlagT::testFlag1 | FlagT::testFlag3, flags);
+        DFGTEST_EXPECT_LEFT(FlagT(FlagT::testFlag1), flags & (FlagT::testFlag1 | FlagT::testFlag2));
     }
 }
 
