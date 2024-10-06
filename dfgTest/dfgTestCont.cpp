@@ -104,7 +104,7 @@ TEST(dfgCont, ArrayWrapper)
     const auto wrapVec = ArrayWrapper::createArrayWrapper(vec);
     const auto wrapcVec = ArrayWrapper::createArrayWrapper(cvec);
     const auto wrapStdArr = ArrayWrapper::createArrayWrapper(stdArr);
-    //const auto wrapStr = ArrayWrapper::createArrayWrapper(str); // TODO: this should work, but for now commented out as it doesn't compile.
+    const auto wrapStr = ArrayWrapper::createArrayWrapper(str);
     const auto wrapStrConst = ArrayWrapper::createArrayWrapper(strConst);
     DFG_UNUSED(wrapStrConst);
     EXPECT_EQ(count(arr), wrapArr.size());

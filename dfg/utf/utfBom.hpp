@@ -3,7 +3,7 @@
 #include "../dfgDefs.hpp"
 #include "../io/textEncodingTypes.hpp"
 #include "../dfgBaseTypedefs.hpp"
-#include "../cont/arrayWrapper.hpp"
+#include "../Span.hpp"
 
 #define DFG_UTF_BOM_STR_UTF8    "\xEF" "\xBB" "\xBF"
 
@@ -30,10 +30,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
 		}
 	}
 
-	inline DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT<const char>) encodingToBom(DFG_SUB_NS_NAME(io)::TextEncoding encoding)
+	inline auto encodingToBom(const ::DFG_MODULE_NS(io)::TextEncoding encoding) -> Span<const char>
 	{
-		using namespace DFG_MODULE_NS(io);
-		typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ArrayWrapperT<const char>) ReturnType;
+		using namespace ::DFG_MODULE_NS(io);
+		using ReturnType = Span<const char>;
 		#define CREATE_RETURN_VALUE(ITEM) ReturnType(reinterpret_cast<const char*>(&ITEM), DFG_COUNTOF(ITEM));
 		switch (encoding)
 		{
@@ -42,7 +42,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(utf) {
 		case encodingUTF16Be: return CREATE_RETURN_VALUE(bomUTF16Be);
 		case encodingUTF32Le: return CREATE_RETURN_VALUE(bomUTF32Le);
 		case encodingUTF32Be: return CREATE_RETURN_VALUE(bomUTF32Be);
-		default: return ReturnType(nullptr, 0);
+		default: return ReturnType();
 		}
 #undef CREATE_RETURN_VALUE
 	}
