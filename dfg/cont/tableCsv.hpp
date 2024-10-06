@@ -23,6 +23,7 @@
 #include "detail/tableCsvHelpers.hpp"
 #include "../time/timerCpu.hpp"
 #include "../Span.hpp"
+#include "Flags.hpp"
 
 #include "../concurrency/ConditionCounter.hpp"
 #include "../concurrency/ThreadList.hpp"
@@ -882,6 +883,11 @@ DFG_ROOT_NS_BEGIN{
             class WritePolicySimple
             {
             public:
+                DFG_DEFINE_SCOPED_ENUM_FLAGS(WriteReturnFlags, ::DFG_ROOT_NS::uint16,
+                    nullInput           = 0x1,
+                    invalidReplaced     = 0x2,
+                );
+
                 WritePolicySimple(const CsvFormatDefinition& csvFormat) :
                     m_format(csvFormat)
                 {
@@ -906,11 +912,13 @@ DFG_ROOT_NS_BEGIN{
                     DFG_MODULE_NS(io)::writeBinary(strm, ptrToContiguousMemory(m_workBytes), m_workBytes.size());
                 }
 
-                void write(Stream_T& strm, const char* pData, const Index_T/*nRow*/, const Index_T/*nCol*/)
+                WriteReturnFlags write(Stream_T& strm, const char* pData, const Index_T/*nRow*/, const Index_T/*nCol*/)
                 {
                     using namespace DFG_MODULE_NS(io);
                     if (pData == nullptr)
-                        return;
+                        return WriteReturnFlags::nullInput;
+
+                    WriteReturnFlags rv;
 
                     std::string tempBuffer; // If data is not valid UTF-8, gets content transformed through utf8::replace_invalid()
                     Span<const char> writeRange(pData, std::strlen(pData)); // Range to write to output
@@ -920,6 +928,7 @@ DFG_ROOT_NS_BEGIN{
                         // Data is not valid UTF-8 -> replace invalid with '?'
                         utf8::replace_invalid(writeRange.begin(), writeRange.end(), std::back_inserter(tempBuffer), '?');
                         writeRange = Span<const char>(tempBuffer.c_str(), tempBuffer.size());
+                        rv |= WriteReturnFlags::invalidReplaced;
                     }
                     DFG_ASSERT_CORRECTNESS(utf8::is_valid(writeRange.begin(), writeRange.end()));
                     utf8::unchecked::iterator<const char*> inputIter(writeRange.data());
@@ -931,6 +940,7 @@ DFG_ROOT_NS_BEGIN{
                         uint32(eolCharFromEndOfLineType(m_format.eolType())),
                         m_format.enclosementBehaviour(),
                         [&](Stream_T& strm, int c) {this->writeItemFunc(strm, c); });
+                    return rv;
                 }
 
                 void writeSeparator(Stream_T& strm, const Index_T /*nRow*/, const Index_T /*nCol*/)

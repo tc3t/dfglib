@@ -541,9 +541,12 @@ TEST(dfgQt, CsvItemModel_defaultInputEncoding)
         // to valid UTF8, how invalid UTF gets written is unspecified.
         {
             using namespace ::DFG_MODULE_NS(io);
+            DFGTEST_EXPECT_LEFT(0, modelWin1252.m_messagesFromLatestSave.size());
             const auto sSavedWin1252Bytes = modelWin1252.saveToByteString();
+            DFGTEST_EXPECT_LEFT(2, modelWin1252.m_messagesFromLatestSave.size());
             const auto sSavePath = "testfiles/generated/example5_Windows1252_saved.csv";
             modelWin1252.saveToFile(sSavePath);
+            DFGTEST_EXPECT_LEFT(2, modelWin1252.m_messagesFromLatestSave.size());
             const auto sSavedFileBytes = fileToMemory_readOnly(sSavePath).asContainer<std::string>();
             // First checking that saving to file and saveToByteString() produce the same result.
             DFGTEST_EXPECT_EQ(sSavedWin1252Bytes, sSavedFileBytes);

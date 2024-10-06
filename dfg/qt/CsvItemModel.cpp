@@ -654,8 +654,8 @@ namespace
         void write(Strm_T& strm, const char* pData, const int nRow, const int nCol)
         {
             DFG_STATIC_ASSERT(CsvItemModel::internalEncoding() == ::DFG_MODULE_NS(io)::encodingUTF8, "");
-            BaseClass::write(strm, pData, nRow, nCol);
-            if (!utf8::is_valid(pData, pData + std::strlen(pData)))
+            const auto rv = BaseClass::write(strm, pData, nRow, nCol);
+            if (rv.testFlag(BaseClass::WriteReturnFlags::invalidReplaced))
             {
                 if (!::DFG_ROOT_NS::isValidIndex(this->m_colToInvalidContentRowList, nCol))
                     m_colToInvalidContentRowList.resize(nCol + 1);
