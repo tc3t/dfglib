@@ -20,7 +20,11 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <QFile>
     #include <QFileInfo>
     #include <QDialog>
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+    #include <QStringConverter>
+#else
     #include <QTextCodec>
+#endif // QT_VERSION
     #include <QThread>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
@@ -551,11 +555,17 @@ TEST(dfgQt, CsvItemModel_defaultInputEncoding)
             // First checking that saving to file and saveToByteString() produce the same result.
             DFGTEST_EXPECT_EQ(sSavedWin1252Bytes, sSavedFileBytes);
 
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+            auto decoder = QStringDecoder(QStringDecoder::Utf8);
+            const QString asQString = decoder(sSavedWin1252Bytes.c_str()).operator QString(); // Note: just calling decoder is not enough to get possible errors, needs conversion to QString.
+            DFGTEST_ASSERT_FALSE(decoder.hasError());
+#else
             QTextCodec::ConverterState state;
             QTextCodec* codec = QTextCodec::codecForName("UTF-8");
             DFGTEST_ASSERT_TRUE(codec != nullptr);
             QString text = codec->toUnicode(sSavedWin1252Bytes.c_str(), saturateCast<int>(sSavedWin1252Bytes.size()), &state);
             DFGTEST_EXPECT_LEFT(0, state.invalidChars);
+#endif
         }
     }
 }

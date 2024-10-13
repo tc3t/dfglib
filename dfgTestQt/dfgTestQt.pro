@@ -4,6 +4,11 @@
 #
 #-------------------------------------------------
 
+message("----------------------------------------------------------------------------------------------------")
+message("Starting handling of dfgTestQt.pro")
+message("QT_VERSION is " $$QT_VERSION)
+message("QMAKESPEC is " $$QMAKESPEC)
+
 QT       += core gui sql testlib
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -23,11 +28,23 @@ INCLUDEPATH += \
     ../externals/ \
     ../
 
-# Below is the original Qt-originated comment related to QT_DISABLE_DEPRECATED_BEFORE -macro
-#     You can also make your code fail to compile if you use deprecated APIs.
-#     In order to do so, uncomment the following line.
-#     You can also select to disable deprecated APIs only up to a certain version of Qt.
-DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+disable_deprecated_apis = 1
+isEqual(QT_MAJOR_VERSION, 6): lessThan(QT_MINOR_VERSION, 4) {
+    disable_deprecated_apis = 0
+    # Undeprecation done in https://code.qt.io/cgit/qt/qtbase.git/commit/src/gui/kernel/qaction.h?id=8fed0a6aa66bf2a78d7e00b60b1ff27979873b86
+    message("Allowing deprecated Qt APIs due to QAction setMenu() deprecate&undeprecate round-trip to avoid build issues in versions where it was deprecated")
+}
+
+isEqual(disable_deprecated_apis, 1) {
+    greaterThan(QT_MAJOR_VERSION, 5) {
+        message("Disabling Qt APIs deprecated before 6.0.0")
+        # Below is the original Qt-originated comment related to QT_DISABLE_DEPRECATED_BEFORE -macro
+        #     You can also make your code fail to compile if you use deprecated APIs.
+        #     In order to do so, uncomment the following line.
+        #     You can also select to disable deprecated APIs only up to a certain version of Qt.
+        DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+    }
+}
 
 # Sets default C++ standard version.
 # If no argument is given, sets default defined in dfgQmakeUtil.pri

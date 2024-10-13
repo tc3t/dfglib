@@ -244,7 +244,7 @@ TEST(DfgUtf, cpToEncoded)
 	// Behaviour in case of invalid cp
 	{
 		std::string s;
-		DFGTEST_EXPECT_LEFT(replacementAscii, cpToEncoded(uint32_max, std::back_inserter(s), encodingLatin1));
+		DFGTEST_EXPECT_LEFT(uint32(replacementAscii), cpToEncoded(uint32_max, std::back_inserter(s), encodingLatin1));
 		DFGTEST_ASSERT_TRUE(s.size() == 1);
 		DFGTEST_EXPECT_LEFT(replacementAscii, s.back());
 		DFGTEST_EXPECT_LEFT(replacementUtf, cpToEncoded(uint32_max, std::back_inserter(s), encodingUTF8));

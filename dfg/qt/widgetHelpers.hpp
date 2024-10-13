@@ -82,7 +82,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return QLocale(QLocale::English).formattedDataSize(nSizeInBytes, nPrecision, QLocale::DataSizeIecFormat);
         #else
             // Fallback for older Qt's; not a pretty output.
-            return QString("%1 B").arg(QString::number(static_cast<double>(nSizeInBytes), 'g', nPrecision));
+            return QString("%1 bytes").arg(QString::number(static_cast<double>(nSizeInBytes), 'g', nPrecision));
         #endif
     }
 
