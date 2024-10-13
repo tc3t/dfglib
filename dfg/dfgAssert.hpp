@@ -33,7 +33,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(debug) {
 #if (DFG_DEBUG_ASSERT_WITH_THROW == 1)
         throw ExceptionAssertFailure(pszFile, nLine, pszMsg);
 #else
-        #if defined(DFG_BUILD_TYPE_DEBUG) // _CrtDbgReport seems to be defined only in debug-config.
+        #if defined(_MSC_VER) && defined(DFG_BUILD_TYPE_DEBUG) // _CrtDbgReport seems to be defined only in debug-config.
             const auto rv = _CrtDbgReport(_CRT_ASSERT, pszFile, nLine, NULL, "%s", pszMsg);
             if (rv == 1) // If retry-is pressed (rv == 1), break.
                 _CrtDbgBreak();
