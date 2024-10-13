@@ -728,7 +728,12 @@ namespace
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
 
-        char buffer[3 * sizeof(Int_T)] = "";
+        //char buffer[3 * sizeof(Int_T)] = ""; // Test case ImStreamWithEncoding_unalignedSource would crash on Clang 18.1.3 & libc++ ver 180100
+        //                                        and on closer look commenting everything else out in this function but this line still caused a crash when both
+        //                                        uint16 and uint32 specializations were called in actual test function. Commenting out uint32-call
+        //                                        fixed the crash as did workaround of not initializing buffer in declaration line.
+        char buffer[3 * sizeof(Int_T)];
+        memsetZero(buffer);
         char* p = &buffer[0];
         while (reinterpret_cast<uintptr_t>(p) % sizeof(Int_T) != 1)
             p++;
