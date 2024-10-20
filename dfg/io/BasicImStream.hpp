@@ -62,6 +62,9 @@ public:
 
     size_t readBytes(char* p, const size_t nCount)
     {
+        if (p == nullptr || m_pCurrent == nullptr) // Needed to avoid UB in memcpy since "If either dest or src is an invalid or null pointer, the behavior is undefined, even if count is zero." (https://en.cppreference.com/w/cpp/string/byte/memcpy)
+            return 0u;
+
         const auto nRemainingCharCount = countInCharsRemaining();
         const auto nRequestedCharCount = nCount / sizeof(char_type); // Note: In case of nCount not being multiple of sizeof(char_type), using floor value.
 
