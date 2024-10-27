@@ -63,6 +63,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+# Semantics of CONFIG are a bit obscure:
+#   https://stackoverflow.com/questions/18164490/qmake-config-function-and-active-configuration
+#   https://stackoverflow.com/questions/5134245/how-to-set-different-qmake-configuration-depending-on-debug-release
+#   https://stackoverflow.com/questions/16961866/qmake-how-exactly-does-qmake-interpret-the-configdebug-debugrelease-synta
+debug_release_type = ""
+CONFIG(release, debug|release) {
+    message("Config type is release")
+    debug_release_type = "release"
+}
+CONFIG(debug, debug|release) {
+    message("Config type is debug" )
+    debug_release_type = "debug"
+}
+
 # Commands: chosen time to unix time: date --date='yyyy-mm-ddT08:00:00Z' +%s
 #           Unix time to ISO date: date -u --date='@<unix time here>' +%Y-%m-%dT%H:%M:%S
 version_time_epoch_start=1703664000 # 2023-12-27T08:00:00
@@ -163,6 +177,17 @@ msvc {
     #   -Set optimization settings to defaults in Visual Studio Release builds (/OPT:REF /OPT:ICF)
     QMAKE_CXXFLAGS_RELEASE += /Zi
     QMAKE_LFLAGS_RELEASE += /DEBUG /OPT:REF /OPT:ICF
+} else {
+    # At least in GCC/MinGW/Clang, release build through qmake (as of Qt 6.4) does not define NDEBUG
+    # and consequently BuildTimeDetail_buildDebugReleaseType could treat release build as debug build
+    # -> defining NDEBUG manually
+    # https://stackoverflow.com/questions/29308589/does-qt-no-debug-cause-a-definition-of-ndebug
+
+    # Having this in non-MSVC branch (instead of e.g. "gcc or mingw or clang") is coarse-grained.
+    isEqual(debug_release_type, "release") {
+        message("Build type is release -> adding NDEBUG to DEFINES")
+        DEFINES += NDEBUG
+    }
 }
 
 mingw {
@@ -269,16 +294,18 @@ win32 {
 RESOURCES += \
     dfgqttableeditor.qrc
 
-message("Using modules: " $$QT)
-message("TARGET is " $$TARGET)
-message("CONFIG is " $$CONFIG)
-message("DEFINES is " $$DEFINES)
-message("QMAKE_CXXFLAGS is " $$QMAKE_CXXFLAGS)
-message("QMAKE_CXXFLAGS_DEBUG is " $$QMAKE_CXXFLAGS_DEBUG)
-message("QMAKE_CXXFLAGS_RELEASE is " $$QMAKE_CXXFLAGS_RELEASE)
-message("QMAKE_LFLAGS is " $$QMAKE_LFLAGS)
-message("QMAKE_LFLAGS_DEBUG is " $$QMAKE_LFLAGS_DEBUG)
-message("QMAKE_LFLAGS_RELEASE is " $$QMAKE_LFLAGS_RELEASE)
-message("QMAKE_CXXFLAGS_WARN_ON is " $$QMAKE_CXXFLAGS_WARN_ON)
+message("Using modules:             " $$QT)
+message("debug/release type is      " $$debug_release_type)
+message("TARGET is                  " $$TARGET)
+message("CONFIG is                  " $$CONFIG)
+message("DEFINES is                 " $$DEFINES)
+message("QMAKE_CXX (=compiler) is   " $$QMAKE_CXX)
+message("QMAKE_CXXFLAGS is          " $$QMAKE_CXXFLAGS)
+message("QMAKE_CXXFLAGS_DEBUG is    " $$QMAKE_CXXFLAGS_DEBUG)
+message("QMAKE_CXXFLAGS_RELEASE is  " $$QMAKE_CXXFLAGS_RELEASE)
+message("QMAKE_LFLAGS is            " $$QMAKE_LFLAGS)
+message("QMAKE_LFLAGS_DEBUG is      " $$QMAKE_LFLAGS_DEBUG)
+message("QMAKE_LFLAGS_RELEASE is    " $$QMAKE_LFLAGS_RELEASE)
+message("QMAKE_CXXFLAGS_WARN_ON is  " $$QMAKE_CXXFLAGS_WARN_ON)
 message("QMAKE_CXXFLAGS_WARN_OFF is " $$QMAKE_CXXFLAGS_WARN_OFF)
 message("^^^^^Done with dfgQtTableEditor.pro handling^^^^^^")
