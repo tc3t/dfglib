@@ -100,6 +100,7 @@ DFG_ROOT_NS_BEGIN
     template <class To_T, class From_T>
     constexpr bool isValWithinLimitsOfType(const From_T& val)
     {
+        DFG_STATIC_ASSERT(std::is_integral_v<To_T> && std::is_integral_v<From_T>, "isValWithinLimitsOfType() supports integer types only, isFloatConvertibleTo() can be used for checking float -> integer conversions");
         return isValWithinLimitsOfType<To_T>(val, std::is_unsigned<To_T>(), std::is_unsigned<From_T>());
     }
 

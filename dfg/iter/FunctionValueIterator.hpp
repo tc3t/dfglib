@@ -130,7 +130,7 @@ public:
         else // Index_T is not integer
         {
             const auto diff = this->m_nPos - other.m_nPos;
-            DFG_ASSERT(isValWithinLimitsOfType<difference_type>(diff));
+            DFG_ASSERT(::DFG_MODULE_NS(math)::isFloatConvertibleTo<difference_type>(diff));
             return static_cast<difference_type>(diff);
         }
     }
@@ -180,7 +180,10 @@ public:
     FunctionValueIterator& operator+=(const difference_type nDiff)
     {
         const auto nResult = this->m_nPos + nDiff;
-        DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
+        if constexpr (std::is_floating_point_v<Index_T>)
+            DFG_ASSERT(nResult - this->m_nPos == static_cast<Index_T>(nDiff));
+        else
+            DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
         this->m_nPos = static_cast<Index_T>(nResult);
         return *this;
     }
@@ -188,7 +191,10 @@ public:
     FunctionValueIterator& operator-=(const difference_type nDiff)
     {
         const auto nResult = this->m_nPos - nDiff;
-        DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
+        if constexpr (std::is_floating_point_v<Index_T>)
+            DFG_ASSERT(this->m_nPos - nResult == static_cast<Index_T>(nDiff));
+        else
+            DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
         this->m_nPos = static_cast<Index_T>(nResult);
         return *this;
     }

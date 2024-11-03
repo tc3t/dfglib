@@ -377,6 +377,29 @@ TEST(dfg, isValWithinLimitsOfType)
     EXPECT_FALSE(isValWithinLimitsOfType<uint64>(int64(-1)));
     EXPECT_TRUE(isValWithinLimitsOfType<uint64>(uint8(255)));
     EXPECT_TRUE(isValWithinLimitsOfType<uint8>(uint64(255)));
+
+
+#if 0
+    // Some test stubs if isValWithinLimitsOfType() starts supporting floating point values.
+    // It initially supported them, but it didn't work correctly, for example code
+    //     const double floatOverInt64Max = 9223372036854775808; // > int64_max
+    //     DFGTEST_EXPECT_TRUE(isValWithinLimitsOfType<int64>(floatOverInt64Max) == ::DFG_MODULE_NS(math)::isFloatConvertibleTo<int64>(floatOverInt64Max));
+    // would fail. Was found with clang which gave warning:
+    //     numericTypeTools.hpp:80:57: warning: implicit conversion from 'long' to 'double' changes value from 9223372036854775807 to 9223372036854775808 [-Wimplicit-int-float-conversion]
+    //     return (val >= minValueOfType<To_T>() && val <= maxValueOfType<To_T>());
+
+    //                  int64_max == 9223372036854775807
+    const double floatOverInt64Max = 9223372036854775808; // > int64_max
+    DFGTEST_EXPECT_FALSE(::DFG_MODULE_NS(math)::isFloatConvertibleTo<int64>(floatOverInt64Max));
+    DFGTEST_EXPECT_TRUE(isValWithinLimitsOfType<int64>(floatOverInt64Max) == ::DFG_MODULE_NS(math)::isFloatConvertibleTo<int64>(floatOverInt64Max));
+
+    DFGTEST_EXPECT_TRUE(isValWithinLimitsOfType<int32>(double(int32_max)));
+    DFGTEST_EXPECT_FALSE(isValWithinLimitsOfType<int32>(double(int32_max) + 0.5));
+    DFGTEST_EXPECT_TRUE(isValWithinLimitsOfType<int32>(double(int32_max) - 0.5));
+    DFGTEST_EXPECT_TRUE(isValWithinLimitsOfType<int32>(double(int32_min)));
+    DFGTEST_EXPECT_FALSE(isValWithinLimitsOfType<int32>(double(int32_min) - 0.5));
+    DFGTEST_EXPECT_TRUE(isValWithinLimitsOfType<int32>(double(int32_min) + 0.5));
+#endif
 }
 
 namespace
