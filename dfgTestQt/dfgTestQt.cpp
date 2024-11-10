@@ -254,7 +254,7 @@ TEST(dfgQt, TableEditor_fileInfo)
         expected["Save EOL"] = "\\n";
         expected["Save encoding"] = "UTF8";
 
-        for (const auto field : fields)
+        for (const auto& field : fields)
         {
             const auto expectedIter = expected.find(field.first);
             if (expectedIter == expected.end())

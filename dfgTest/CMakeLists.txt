@@ -11,6 +11,9 @@ project (dfgTest)
 #     https://stackoverflow.com/questions/51904938/linker-error-with-cmake-and-libcxx
 # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
 
+message("Compiler         = " ${CMAKE_CXX_COMPILER})
+message("Compiler version = " ${CMAKE_CXX_COMPILER_VERSION})
+
 include_directories ("${PROJECT_SOURCE_DIR}/"
 	"${PROJECT_SOURCE_DIR}/../externals/"
 	"${PROJECT_SOURCE_DIR}/../")
@@ -93,7 +96,16 @@ set(SOURCE
 add_executable(dfgTestCmake ${SOURCE} ${HEADERS})
 
 if(MINGW)
-    TARGET_LINK_LIBRARIES(dfgTestCmake shlwapi)
+    set(MinGW_libs "shlwapi")
+    # In MinGW 7.3.0 not having psapi caused "error: undefined reference to `GetProcessMemoryInfo'" during linking,
+    # but error did not occur on MinGW 11.2.0.
+    # -> when building on MinGW 7.x, adding psapi.
+    if ("${CMAKE_CXX_COMPILER_VERSION}" MATCHES "^7.")
+        message("Adding psapi-library for linking due to old MinGW version")
+        set(MinGW_libs ${MinGW_libs} "psapi")
+    endif()
+
+    TARGET_LINK_LIBRARIES(dfgTestCmake ${MinGW_libs})
 endif()
 
 if(UNIX)
