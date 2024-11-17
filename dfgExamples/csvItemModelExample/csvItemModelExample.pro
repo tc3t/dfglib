@@ -4,6 +4,7 @@ QT += core gui widgets sql
 
 include(../../dfg/qt/qmakeTools/dfgQmakeUtil.pri)
 $$dfgSetCppVersion()
+$$dfgSetBuildTypeMacros()
 
 INCLUDEPATH += .
 INCLUDEPATH += ./../../

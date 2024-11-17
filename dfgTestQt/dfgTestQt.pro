@@ -51,6 +51,8 @@ isEqual(disable_deprecated_apis, 1) {
 $$dfgSetCppVersion()
 #$$dfgSetCppVersion("c++20") # Example how to set C++20
 
+$$dfgSetBuildTypeMacros()
+
 CONFIG += console
 
 SOURCES += \

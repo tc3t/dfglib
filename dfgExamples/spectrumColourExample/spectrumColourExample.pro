@@ -7,6 +7,7 @@ INCLUDEPATH += ./../../externals/
 
 include(../../dfg/qt/qmakeTools/dfgQmakeUtil.pri)
 $$dfgSetCppVersion()
+$$dfgSetBuildTypeMacros()
 
 HEADERS += ./spectrumColourExample.h \
     ./stdafx.h
