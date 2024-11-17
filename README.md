@@ -100,29 +100,29 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status of general unit tests (dfgTest) (as of 2023-12-09 commit [55440f33](https://github.com/tc3t/dfglib/tree/55440f332876878e756ce4045cfdd36746561048))
+## Build status of general unit tests (dfgTest) (as of 2024-11-17 commit [ff4942dc](https://github.com/tc3t/dfglib/tree/ff4942dc4af75439221cadc3d9e6ef8222a1e71a))
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
-<!-- Table generated from buildStatus_dfgTest.csv excluding date column
+<!-- Table generated from buildStatus_dfgTest.csv excluding date and commit columns
      with csv2md (https://www.npmjs.com/package/csv2md)
  -->
 Compiler | Standard library | C++ standard [1] | Platform | Boost | Tests (passed/all) | Comment
 ---|---|---|---|---|---|---
-Clang 6.0.0 | libstdc++ 7 | C++17 | x86-64 | 1.65.1 | 100 % (327/327) | Ubuntu 64-bit 18.04
-Clang 10.0.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (327/327) | Ubuntu 64-bit 20.04
-Clang 14.0.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (327/327) | Ubuntu 64-bit 22.04
-Clang 14.0.0 | libc++ 14000 | C++17 | x86-64 | 1.74.0 | 100 % (327/327) | Ubuntu 64-bit 22.04
-clang-cl (Clang 16.0.5, MSVC2022.8) | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (334/334) | See [2]
-GCC 7.5.0 | libstdc++ 7 | C++17 | x86-64 | 1.65.1 | 100 % (327/327) | Ubuntu 64-bit 18.04
-GCC 9.4.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (327/327) | Ubuntu 64-bit 20.04
-GCC 11.4.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (327/327) | Ubuntu 64-bit 22.04
-MinGW 7.3.0 | libstdc++ 7 | C++17 | x86-64 | 1.70.0 | 100 % (334/334) | 
-MinGW 11.2.0 | libstdc++ 11 | C++17 | x86-64 | 1.70.0 | 100 % (334/334) | 
-VC2017.9 | MSVC | C++17 | x86-64 | 1.70.0 | 99 % (333/334) | Numerical precision related failure in dfgNumeric.transform
-VC2019.11 | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (334/334) | std:c++17 with Conformance mode
-VC2022.8 | MSVC | C++20 | x86 | 1.70.0 | 100 % (334/334) | std:c++20 with Conformance mode
-VC2022.8 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (334/334) | std:c++20 with Conformance mode
+Clang 10.0.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (333/333) | Ubuntu 64-bit 20.04
+Clang 14.0.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (333/333) | Ubuntu 64-bit 22.04
+Clang 14.0.0 | libc++ 14000 | C++17 | x86-64 | 1.74.0 | 100 % (333/333) | Ubuntu 64-bit 22.04
+Clang 18.1.3 | libc++ 180100 | C++17 | x86-64 | 1.83.0 | 100 % (333/333) | Ubuntu 64-bit 24.04
+clang-cl (Clang 17.0.3, MSVC2022.11) | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | If building with Clang < 13, see [2]
+GCC 9.4.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (333/333) | Ubuntu 64-bit 20.04
+GCC 11.4.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (333/333) | Ubuntu 64-bit 22.04
+GCC 13.2.0 | libstdc++ 13 | C++17 | x86-64 | 1.83.0 | 100 % (333/333) | Ubuntu 64-bit 24.04
+MinGW 7.3.0 | libstdc++ 7 | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | 
+MinGW 11.2.0 | libstdc++ 11 | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | 
+VC2017.9 | MSVC | C++17 | x86-64 | 1.70.0 | 99 % (339/340) | Numerical precision related failure in dfgNumeric.transform
+VC2019.11 | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | std:c++17 with Conformance mode
+VC2022.11 | MSVC | C++20 | x86 | 1.70.0 | 100 % (340/340) | std:c++20 with Conformance mode
+VC2022.11 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (340/340) | std:c++20 with Conformance mode
 
 [1] As reported by *__cplusplus* macro  or equivalent.<br>
 [2] If building with Clang < 13, need manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9). According to related [MSVC bug ticket](https://developercommunity.visualstudio.com/t/undefined-symbol-wmemchr-in-1660-preview-60-using/1024640#TPIN-N1570352), the "issue belongs to clang and it was fixed in Clang 13"
