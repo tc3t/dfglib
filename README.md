@@ -130,32 +130,30 @@ VC2022.11 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (340/340) | std:c++20 with Co
 <br>
 <br>
 
-## Build status of Qt unit tests (dfgTestQt) (as of 2023-12-09 commit [55440f33](https://github.com/tc3t/dfglib/tree/55440f332876878e756ce4045cfdd36746561048))
+## Build status of Qt unit tests (dfgTestQt) (as of 2024-11-24 commit [9b992b88](https://github.com/tc3t/dfglib/tree/9b992b88ebe9db0e265e7bacd3a257e95c760195))
 
-<!-- Table generated from buildStatus_dfgTestQt.csv excluding date column
+<!-- Table generated from buildStatus_dfgTestQt.csv excluding commit and date columns
      with csv2md (https://www.npmjs.com/package/csv2md)
  -->
 
 
 Status | Compiler | Standard library | C++ standard [1] | Qt | Platform | Boost | Tests (passed/all) | Comment
 ---|---|---|---|---|---|---|---|---
-:white_check_mark: | Clang 6.0.0 | libstdc++ 7 | C++17 | 5.9.5 | x86-64 | 1.65.1 | 100 % (55/55) | Ubuntu 64-bit 18.04
-:white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (57/57) | Ubuntu 64-bit 20.04
-:white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (57/57) | Ubuntu 64-bit 20.04
-:white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (57/57) | Ubuntu 64-bit 22.04
+:white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (60/60) | Ubuntu 64-bit 20.04
+:white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (60/60) | Ubuntu 64-bit 20.04
+:white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (60/60) | Ubuntu 64-bit 22.04
 :red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | x86-64 | 1.74.0 | N/A | Ubuntu 64-bit 22.04. Causes linker errors from QMetaType. For details, see error messages in a [separate file](misc/dfgTestQt_Clang14_libc++_Qt_624_linker_errors.txt)
-:white_check_mark: | clang-cl (Clang 16.0.5, MSVC2022.5) | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (57/57) | 
-:white_check_mark: | GCC 7.5.0 | libstdc++ 7 | C++17 | 5.9.5 | x86-64 | 1.65.1 | 100 % (55/55) | Ubuntu 64-bit 18.04
-:white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (57/57) | Ubuntu 64-bit 20.04
-:white_check_mark: | GCC 11.4.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (57/57) | Ubuntu 64-bit 22.04
-:white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (57/57) | 
-:white_check_mark: | VC2019.11 | MSVC | C++17 | 5.15.2 | x86-64 | 1.70.0 | 100 % (57/57) | 
-:white_check_mark: | VC2019.11 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (57/57) | 
-:white_check_mark: | VC2022.8 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (57/57) | 
-:white_check_mark: | VC2022.8 | MSVC | C++20 | 6.4.1 | x86-64 | 1.70.0 | 100 % (57/57) | 
+:white_check_mark: | clang-cl (Clang 17.0.3, MSVC2022.5) | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
+:white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (60/60) | Ubuntu 64-bit 20.04
+:white_check_mark: | GCC 11.4.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (60/60) | Ubuntu 64-bit 22.04
+:white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
+:white_check_mark: | VC2019.11 | MSVC | C++17 | 5.15.2 | x86-64 | 1.70.0 | 100 % (60/60) | 
+:white_check_mark: | VC2019.11 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
+:white_check_mark: | VC2022.11 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
+:white_check_mark: | VC2022.11 | MSVC | C++20 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
 
 [1] As reported by *__cplusplus* macro  or equivalent.<br>
-Note: dfgQt.CsvTableView_paste has been experienced to fail on Windows if VirtualBox is running a virtual machine; Qt logs "Unable to obtain clipboard" during the test case.
+Note: dfgQt.CsvTableView_paste has been experienced to fail on Windows if VirtualBox is simultaneously running a virtual machine; Qt logs "Unable to obtain clipboard" during the test case.
 
 <br>
 
