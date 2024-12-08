@@ -6683,6 +6683,7 @@ TableVerticalHeaderView::TableVerticalHeaderView(CsvTableView* pParent)
     : BaseClass(Qt::Vertical, pParent)
 {
     this->setSectionsClickable(true);
+    this->setHighlightSections(true);
 }
 
 auto TableVerticalHeaderView::tableView() -> CsvTableView*
