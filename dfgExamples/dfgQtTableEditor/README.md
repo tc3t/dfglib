@@ -2,6 +2,93 @@
 
 csv/dsv-oriented ("comma/delimiter-separated values") table editor based on dfglib using Qt as UI framework. Also includes ability to open SQLite3-files and optionally visualization using [QCustomPlot](https://www.qcustomplot.com/).
 
+## Features
+
+* Separator auto-detection: instead of e.g. relying on list separator defined in OS settings (like done by some spreadsheet applications), by default uses heuristics to determine separator character. Auto-detection supports comma (,), semicolon (;), tab (\t) and unit separator (\x1F).
+* Text-oriented: content is shown as read, no data type interpretations are made.
+* Basic SQLite3 support (since version 1.7.0)
+    * Read: either from UI-based "pick table and columns" or custom query.
+    * Write: rudimentary export support
+* Easy to use basic filtering: Alt+F -> type filter string -> view shows only rows whose content (on any column) match with filter string. Matching syntax supports for example wildcard and regular expression.
+* Filtered reading: Allows parts of csv-file to be read (since 1.5.0)
+    * Row index filtering (to read only given rows by index)
+    * Column index filtering (to read only given columns by index)
+    * Content filter: Arbitrary number of and/or combinations of text matchers similar to filter in UI.
+* Diffing using 3rd party diff tool (manual configuration).
+* Support for per-file configurations that can be used for example to define format characters and column widths in UI. Can also be used with SQLite3 files e.g. to define query and chart entries. For details, see [File specific configuration](#file-specific-configuration).
+* When saving to csv-file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
+* Charting support using [QCustomPlot](https://www.qcustomplot.com/) (since version 1.5.0)
+    * xy-graphs, histograms, bar charts and statistical boxes (a.k.a. [box plot](https://en.wikipedia.org/wiki/Box_plot)).
+    * json-based chart definition.
+    * Has been tested to work with 50 million row, single column xy-graph. In a test machine chart update times in 50M line case were 65 s in non-cached case (=first creation of chart) and 6 s in cached case; corresponding numbers in case of 1M lines were 2 s and 0.2 s.
+    * Multiple data source options:
+        * Selection in table editor (e.g. selecting column automatically creates visualization of the data)
+        * Table open in table editor
+        * csv-file in file system (since 1.7.0)
+        * SQLite3-file in file system using user-supplied query (since 1.7.0)
+        * Number generator (since 1.9.0)
+            * Can be used e.g. to print function graphs
+    * Data transforms:
+        * _blockWindow_ & _passWindow_: filters out values inside/outside of given range. (since 1.7.0)
+        * _formula_: arbitrary arithmetic element-wise transform (e.g. shifts and scaling can be implemented with this) (since 1.7.0)
+        * _regexFormat_: regex&fmt based tool for string transformation (since 2.5.0)
+        * _smoothing_indexNb_: basic smoothing (since 1.7.0)
+        * _textFilter_: Similar to passWindow but works on strings (since 2.3.0)
+    * UI includes [guide](../../dfg/qt/res/chartGuide.html) providing examples and detailed documentation.
+    * Charting is disabled by default due to licensing issues (GPL).
+* No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for concrete examples. Underlying data structure is optimized for in-order walk through column content.
+* Somewhat reasonable performance:
+    * Speed of CSV parser itself depends on various details, but is reasonably fast by default, and when specifying format as unquoted UTF-8, the fastest one tested in [csvPerformanceRuns.csv](../../misc/csvPerformanceRuns.csv) as of 2021-09.
+    * opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor 1.0.0 default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same machine read took over 30 seconds.
+    * Since opening huge files is not a priority, limits of opening such files hasn't been thoroughly examined, but some examples for concreteness:
+        * With version 1.5.0 and a rather ordinary Windows desktop machine (Intel i5 desktop CPU launched in 2013), opening a 1 GB file with 50 million rows and three 3 columns with content "abcdef" in every cell, lasted (in warm cache case) about 10 seconds with default options, about 6 seconds if using manual read options. When opened, application used about 3.0 GB of memory. With earlier version 1.1.0 figures were 16s / 8s / 4.2 GB.
+        * Opening a 3 GB, 1e6 x 1024 file with content ab in each cell lasted about 105 s with peak memory consumption of 14 GB on a machine that had 32 GB of RAM (in version 1.5.0).
+        * Note also that with filtered read, it's possible to have read-only view to parts of a huge file that would not be practical to open as whole.
+* Supported encodings:
+    * Read: UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252
+        * When file has no BOM, reading assumes UTF-8 (since 2.7.0, before that assumed Latin-1)
+    * Write: UTF-8, Latin-1
+* Undo & redo and detailed undo control.
+* Auto-completion (column-specific)
+* Formula parser (since 1.9.0)
+    * Cell content can be evaluated as formula, replaces cell content. Available from context menu and with shortcut Alt+C.
+* Content generation
+    * Most of C++11 defined random number distribution available (since 1.1.0)
+    * Formula-based generation with ability to refer to other cells (since 1.8.0)
+        * When build with C++17 support, most of [C++17 mathematical special functions](https://en.cppreference.com/w/cpp/numeric/special_functions) can be used in formulas (since 1.9.0)
+        * Supports formatting values as dates (since 1.9.0)
+
+### Notes about CSV format support
+
+As dfgQtTableEditor aims to be more of a DSV-editor instead pure CSV-editor, it's not a goal to strictly follow [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180). However as CSV is a special case of DSV, the editor should allow handling CSV-files in RFC 4180 -compliant manner. Below is a table comparing how the editor behaves with respect to RFC 4180 requirements (note: items in RFC 4180 -column are interpretations of dfgQtTableEditor author)
+
+<!-- Table generated from format_support_table.csv with csv2md (https://www.npmjs.com/package/csv2md) --->
+
+RFC 4180 section | Property | dfgQtTableEditor | [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180) | RFC 4180 compliance | Notes
+---|---|---|---|---|---
+2.1 | Line break | LF (default), CRLF, CR. Editor tries to use the same line break when writing that was present in read file. | CRLF | Deviates: allows other line breaks than just CRLF | 
+2.2 | Last record line break | Either style accepted on read, on write line break is written | May or may not have an ending line break | :white_check_mark: | 
+2.3 | Header | On read, first line is always treated as header, but can be manually moved to first row after load. On write, header is written by default, option to disable writing is in advanced save options. | Header is optional, but it "should contain the same number of fields as the records in the rest of the file" | Deviates: when reading, header is not required to have the same number of columns as records (number of columns in table is simply taken from maximum column count from all records), but written files have the same number of headers on all records. | 
+2.4.1 | Multiple fields separated by commas | Several field separators are supported by default (comma (,), semi-colon (;), tab (\t) and unit separator (\x1f)). Additionally other single-char separators can be used with advanced read and write options. | "Within the header and each record, there may be one or more fields, separated by commas" | Deviates: allows other separators in addition to comma (,) | 
+2.4.2 | Equal field number | Equal field count is not required in records, a record with less fields than some other record is interpreted as having empty fields at the the end. When writing, all records will have the same number of fields even if input file had differing counts. | "Each line should contain the same number of fields throughout the file" | Deviates: similar to section 2.3: not required on read, but column counts will be identical in written files. | 
+2.4.3 | Spaces in field | Spaces are preserved. With enclosed cells, enclosing char must appear as the first char in field, otherwise field enclosing chars are not interpreted as such. Also any trailing chars after enclosed field are ignored. | "Spaces are considered part of a field and should not be ignored" | :white_check_mark: | Reader back end (DelimitedTextReader) has option to ignore leading whitespaces ('rfSkipLeadingWhitespaces'), but not used in dfgQtTableEditor
+2.4.4 | Trailing comma | Last field is not followed by separator | "The last field in the record must not be followed by a comma" | :white_check_mark: | 
+2.5.1 | Enclosing with double quotes | Enclosed fields supported on both read and write; when writing, fields are by default enclosed only if needed. Default enclosing char is double quote (0x22), but can be customised. | "Each field may or may not be enclosed in double quotes" | Deviates: supports also different enclosing characters | 
+2.5.2 | Double quotes without enclosed field | If enclosing chars appear in field but field doesn't begin with such, enclosing chars are treated as regular field content. | "If fields are not enclosed with double quotes, then double quotes may not appear inside the fields" | Deviates: can read fields that are not enclosed, but still contain enclosing character. Written files are compliant. | 
+2.6 | Requirements when field needs to be enclosed | Supported in generalized sense: fields are enclosed when needed, i.e. if they contain line break, enclosing char or separator char. | "Fields containing line breaks (CRLF), double quotes, and commas should be enclosed in double-quotes" | :white_check_mark: | 
+2.7 | Escaping enclosing char | Enclosing chars within fields are escaped by doubling the char | "Fields containing line breaks (CRLF), double quotes, and commas should be enclosed in double-quotes" | :white_check_mark: | 
+3 | MIME type registration | Not used | Describes requirements for MIME handling | N/A | 
+N/A | Encoding | Read: UTF-8 (default), UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252. Write: UTF-8 (default), Latin-1 | N/A (encoding requirements not mentioned) | N/A | 
+N/A | Pre-header lines | Not supported (as of 2.7.0). For read-only purpose, read filter may be used to filter out the pre-header lines | N/A (not mentioned) | N/A | Some dsv-like files may have content before actual header row
+N/A | Comment lines | Not supported (as of 2.7.0). For read-only purpose, read filter may be used to filter out lines that e.g. start with certain letter. | N/A (not mentioned) | N/A | 
+N/A | Delimiter merging | Not supported (as of 2.7.0) | N/A (not mentioned) | N/A | For example LibreOffice offers such functionality when opening csv-file.
+
+## Tips
+
+* For optimal read speed
+    * Input should be in UTF-8 encoding and application should know this e.g. through file having BOM or through UI.
+    * File should have no enclosing characters (i.e. quoting) and read options should have enclosing character as none and completer columns should be empty.
+
 ## Building
 
 ### __Version 2.7.0__:
@@ -39,7 +126,308 @@ Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended 
 
 To see build chart of older versions, see [readme of 2.6.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.6.0/dfgExamples/dfgQtTableEditor)
 
+## Configuration options
+
+### Application configuration
+
+Stored in ini-file with path \<executable path\>.ini
+Example file with comments describing the setting.
+<pre>
+[dfglib]
+
+; -----------------------------------------------------------
+; General settings
+
+; Windows-specific: if set, application tries to create crash dump in case of crash.
+; Default: false
+enableAutoDumps=1
+
+; Path of executable to use when diffing.
+; Default: empty
+diffProgPath=C:/Program Files/TortoiseSVN/bin/TortoiseMerge.exe
+
+; -----------------------------------------------------------
+; TableEditor
+
+; Defines height of single cell editor widget.
+; If value is plain integer, defines absolute height.
+; If starts with %, defines height in percents of parent windows height.
+; Default: 50
+TableEditor_cellEditorHeight=%20
+
+; Defines font size in cell editor widget
+TableEditor_cellEditorFontPointSize=13
+
+; Defines width of chart panel either as pixel width or percentage of parent widget width.
+; Default: %35
+; Note that the value is a request that might not be fulfilled e.g. if it would result
+; to width smaller than minimum widget width.
+TableEditor_chartPanelWidth = %50
+; TableEditor_chartPanelWidth = 200 ; This would set panel width to 200 pixels
+
+; Defines application level default for selection details as a list of space-separated json-objects.
+; For details, see documentation of properties/selectionDetails in 'File specific configuration'
+TableEditorPropertyId_selectionDetails = {\"id\":\"avg\"} {\"id\":\"max\"}
+
+; Defines application level default for numeric precision of selection detail results.
+; Default: -1 ( =roundtrippable precision )
+TableEditorPropertyId_selectionDetailsResultPrecision = 6
+
+; -----------------------------------------------------------
+; CsvItemModel
+
+; Columns for which to use auto-completion feature.
+; To enable for all columns, use *
+; To enable for selected columns, provide comma-separator list of column indexes (1-based index)
+; To disable, leave value empty
+; Note: In many cases it probably makes more sense to define this as file-specific property.
+; Default: empty (=completer is disabled)
+CsvItemModel_completerEnabledColumnIndexes=*
+
+; Size limit for enabling completer: files larger than this value will be loaded with disabled completer even if completer is enabled by CsvItemModel_completerEnabledColumnIndexes
+; Default value: 10000000 (10 MB)
+CsvItemModel_completerEnabledSizeLimit=10000000
+
+; Advanced write performance tuning: defines the maximum file below which files are written to memory before writing to file.
+; Omit setting or use value -1 to let application decide.
+CsvItemModel_maxFileSizeForMemoryStreamWrite=100000000
+
+; Separator char to use when saving new files.
+; Default: x\1f  (unit separator)
+; Note: needs quotes for comma in order to be parsed correctly.
+CsvItemModel_defaultFormatSeparator=","
+
+; Enclosing char to use when saving new files.
+; Default: "
+; Note: needs escaping for " in order to be parsed correctly.
+CsvItemModel_defaultFormatEnclosingChar=\"
+
+; End-of-line type to use when saving new files.
+; Default: \n
+; Available types: \n, \r, \r\n
+CsvItemModel_defaultFormatEndOfLine=\n
+
+; Defines minimum block size in bytes for read thread. Every read thread should
+; have block size at least of this size in order to spread reading to separate threads.
+; To allow multithreaded reading regardless of file size, set value to 0.
+; To prevent multithreaded reading, instead of using this property consider setting CsvItemModel_defaultReadThreadCountMaximum to 1
+; For file-specific control, see file specific configuration property readThreadBlockSizeMinimum
+CsvItemModel_defaultReadThreadBlockSizeMinimum
+
+; Defines default maximum count of read threads to be used when reading files, or with 0 to let implementation decide. In practice fewer threads may be used depending on factors such as file size and value of CsvItemModel_defaultReadThreadBlockSizeMinimum.
+; For file-specific control, see file specific configuration property readThreadCountMaximum
+CsvItemModel_defaultReadThreadCountMaximum
+
+; -----------------------------------------------------------
+; CsvTableView
+             
+; Defines the initial scroll position after loading a file.
+; Currently 'bottom' is the only recognized option
+; Default behaviour: scroll position is top.
+CsvTableView_initialScrollPosition=bottom
+
+; Defines the minimum width for columns.
+; Default: 5
+; Note: affects only some resize schemes.
+CsvTableView_minimumVisibleColumnWidth=15
+
+; Defines time format for time stamps available through insert-actions.
+; Value is passed to QTime::toString() so check it's documentation for details.
+; Default value: hh:mm:ss.zzz
+CsvTableView_timeFormat=hh:mm:ss
+
+; Defines date format for date stamps available through insert-actions.
+; Value is passed to QDate::toString() so check it's documentation for details.
+; Default value: yyyy-MM-dd
+CsvTableView_dateFormat=yyyy-MM-dd
+
+; Defines datetime format for datetime stamps available through insert-actions.
+; Value is passed to QDateTime::toString() so check it's documentation for details.
+; Default value: yyyy-MM-dd hh:mm:ss.zzz
+CsvTableView_dateTimeFormat=yyyy-MM-dd hh:mm:ss.zzz
+
+; Defines default weekday names to use with 'WD' date format specifier.
+; For details, see documentation of properties/weekDayNames in 'File specific configuration'
+; Default value: "mo,tu,we,th,fr,sa,su"
+CsvTableView_weekDayNames=mo,tu,we,th,fr,sa,su
+
+; Defines default edit mode after start up
+; Possible values: readOnly, readWrite
+CsvTableView_editMode=readOnly
+
+; Defines default limit for preview size for actions that offer preview in widgets
+;     * For example if doing operation for million cells, for performance reasons
+;       preview should not offer preview for all.
+; Default value: 50
+; Possible values: integer
+CsvTableView_actionInputPreviewLimit=10
+
+; -----------------------------------------------------------
+; CsvTableViewChartDataSource
+
+; Defines whether data source for table selection is allowed to cache data
+;     Caching can significantly improve performance of graphs made from selection, drawback is increased memory usage.
+; Possible values: 0, 1
+; Default value: 1
+; Note: Value is read only on application start, restart is needed to change setting
+CsvTableViewChartDataSource_allowCaching=1
+
+; -----------------------------------------------------------
+; JsonListWidget
+
+; Defines font point size as integer.
+; Default: 10
+JsonListWidget_fontPointSize = 12
+
+; Defines whether lines are wrapped
+; Default: 1 (true)
+JsonListWidget_lineWrapping = 0
+</pre>
+
+### File specific configuration
+
+File specific configuration can be used for example to:
+* Read the file correctly (e.g. in case of less common csv format)
+* Optimize the read speed by disabling unneeded parsing features
+* Set UI column widths so that content shows in preferred way.
+* Define charts that get shown automatically after opening
+* Define read filters
+
+Note that while most of the settings are csv-file specific, configuration file can also be used with SQLite-file.
+
+Configuration is defined through a .conf file in path \<file path\>.conf. File can be generated from table view context menu from "Config" -> "Save config file...". The .conf file is a key-value map encoded into a csv-file:
+
+* Supports URI-like lookup, where depth is implemented by increasing column index for key-item.
+* Key is the combination of first item in a row and if not on the first column, prepended by most recent key in preceding column.
+
+Available keys:
+
+| Key (URI)      | Purpose  | Possible values | Notes |
+| -------------  | -----    | ------          | ----- |
+| columnsByIndex/\<1-based columnIndex\>/datatype | Defines how to interpret content in some operations, as of 2.3.0 only affects column sorting behaviour | _text_ (default), _number_, _datetime_ (since 2.6.0) | Since 2.3.0 |
+| columnsByIndex/\<1-based columnIndex\>/width_pixels | Defines column width in pixels for given column | integer | |
+| columnsByIndex/\<1-based columnIndex\>/visible | Defines whether column is visible | 0 or 1, default is 1 | Since 2.2.0 |
+| columnsByIndex/\<1-based columnIndex\>/readOnly | Defines whether column is read-only | 0 or 1, default is 0 | Since 2.4.0 ([#129](https://github.com/tc3t/dfglib/issues/129)) |
+| columnsByIndex/\<1-based columnIndex\>/stringToDoubleParserDefinition | Defines custom parser definition for string-to-double conversions, currently available only for datetime-typed columns | Format accepted by QDateTime | Since 2.6.0 ([#153](https://github.com/tc3t/dfglib/issues/153)) |
+| encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |
+| enclosing_char | File is read interpreting the given character as enclosing character | ASCII-character as such or escaped format, e.g. \t or \x1f | |
+| separator_char | File is read interpreting the given character as separator character | Like for enclosing_char | |
+| end_of_line_type | File is read using end-of-line type | \n, \r\n, \r | |
+| bom_writing | Whether to write BOM on save | 0, 1 | |
+| properties/columnSortingCaseSensitive | Defines whether column sorting is case-sensitive | 0 or 1, default is 0 | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
+| properties/columnSortingColumnIndex | Defines which column is sorted (1-based column index) | Valid column index | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
+| properties/columnSortingEnabled | Defines whether columns can be sorted | 0 or 1, default is 0 | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
+| properties/columnSortingOrder | Defines sort order for column defined by columnSortingColumnIndex | A or D (Ascending/Descending), default is A | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
+| properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
+| properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
+| properties/editMode | Defines edit mode when opened | _readOnly_, _readWrite_<br>If empty, handled as if property was not present at all. | Since 2.1.0 |
+| properties/filterText | Defines filter text to be set to UI filter controls |  | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/filterCaseSensitive | Defines case sensitivity setting to be set to UI filter controls | _0_, _1_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/filterSyntaxType | Defines syntax type to be set to UI filter controls | _Wildcard_, _Simple string_, _Regular expression_, _Json_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/filterColumn | Defines filter column to be set to UI filter controls | 1-based column index, 0 means _any_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findText | Defines find text to be set to UI find controls |  | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findCaseSensitive | Defines case sensitivity setting to be set to UI find controls | _0_, _1_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findSyntaxType | Defines syntax type to be set to UI find controls | _Wildcard_, _Simple string_, _Regular expression_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/findColumn | Defines find column to be set to UI find controls | 1-based column index, 0 means _any_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
+| properties/includeRows | Limits rows which are read from file by row index (0-based index, typically header is on row 0) |  | Since 1.5.0 |
+| properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
+| properties/initialScrollPosition | file-specific setting for CsvTableView_initialScrollPosition. | | Since 2.4.0 ([#130](https://github.com/tc3t/dfglib/issues/130))
+| properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
+| properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, see [guide](../../dfg/qt/res/chartGuide.html) for detail | Since 1.6.0 |
+| properties/chartPanelWidth | If dfgQtTableEditor is built with chart feature, defines chart panel width to be used with the associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 1.8.1 ([#60](https://github.com/tc3t/dfglib/issues/60))
+| properties/readThreadBlockSizeMinimum | file-specific setting for CsvItemModel_readThreadBlockSizeMinimum | non-negative integers | Since 2.4.0 ([#138](https://github.com/tc3t/dfglib/issues/138))
+| properties/readThreadCountMaximum | file-specific setting for CsvItemModel_readThreadCountMaximum | non-negative integers | Since 2.4.0 ([#138](https://github.com/tc3t/dfglib/issues/138))
+| properties/windowHeight | Defines request for window height when opening associated document, ignored if _windowMaximized_ is true. | Height value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/windowWidth | Defines request for window width when opening associated document, ignored if _windowMaximized_ is true. | Width value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/windowPosX | Defines request for window x position when opening associated document, only taken into account if either windowHeight or windowWidth is defined, and _windowMaximized_ is false. | x pixel position of top left corner, 0 for left. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/windowPosY | Defines request for window y position when opening associated document, only taken into account if either windowHeight or windowWidth is defined, and _windowMaximized_ is false. | y pixel position of top left corner, 0 for top. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
+| properties/windowMaximized | Defines whether window should be maximized. | Since 2.6.0 ([#149](https://github.com/tc3t/dfglib/issues/149))
+| properties/sqlQuery | For SQLite files, defines the query whose result is populated to table. | Valid SQLite query | Since 1.6.1 (commit [24c1ad78](https://github.com/tc3t/dfglib/commit/24c1ad78eac2a6f74b6ee1be0dede0d5645fef07)) |
+| properties/selectionDetails | Defines selection details which are shown for every selection; i.e. basic indicators describing a selection such minimum and maximum value. Details are defined with a list of single line json-objects, where *id* field defines the detail. | Available built-in detail id's:<br>*average*, *cell_count_excluded*, *cell_count_included*, *is_sorted_num*, *median*, *max*, *min*, *sum*, *stddev_population*, *stddev_sample*, *variance*.<br>Since version 2.2.0 can also define custom details, for details see section [Custom selection details](#custom-selection-details) | Since 2.1.0 (commit [2d1c1d1b](https://github.com/tc3t/dfglib/commit/2d1c1d1b230a4d0f6dd8c18633a2af5ac20ea288)) |
+| properties/selectionDetailsResultPrecision | Defines default for numeric precision of selection detail results. | [-1, 999]. Value -1 means default roundtrippable precision | Since 2.3.0 ([#123](https://github.com/tc3t/dfglib/issues/123)) |
+| properties/weekDayNames | Defines list of weekday names to use with weekday specifier 'WD' in date formats. | Comma-separated list starting from Monday. For example "mo,tu,we,th,fr,sa,su" | Since 2.2.0 ([#99](https://github.com/tc3t/dfglib/issues/99)) |
+| properties/timeFormat | File-specific version of CsvTableView_timeFormat | See documentation of CsvTableView_timeFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
+| properties/dateFormat | File-specific version of CsvTableView_dateFormat | See documentation of CsvTableView_dateFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
+| properties/dateTimeFormat | File-specific version of CsvTableView_dateTimeFormat | See documentation of CsvTableView_dateTimeFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
+
+<br>
+
+#### Custom selection details
+Since version 2.2.0, it is possible to define custom formula-based accumulators as selection details, which can be added to both .conf-file and to application .ini-config using similar json-definition object as for built-in ones. For details, see [selection_details_example.csv.conf](examples/selection_details_example.csv.conf) and instructions in UI ("Details -> Add..").
+
+<br>
+
+#### Example .conf-file for csv-file (might look better when opened in a csv-editor)
+<pre>
+bom_writing,1,,
+columnsByIndex,,,
+,1,,
+,,width_pixels,400
+,2,,
+,,visible,0
+,3,,
+,,width_pixels,200
+enclosing_char,,,
+encoding,UTF8,,
+end_of_line_type,\n,,
+separator_char,",",,
+properties,,,
+,completerColumns,"1,3",
+,completerEnabledSizeLimit,10000000,
+,editMode,readOnly
+,includeRows,100:200
+,includeColumns,1:6
+,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"
+,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
+,chartPanelWidth,%50
+,windowHeight,%50
+,windowWidth,%100
+,windowPosX,0
+,windowPosY,500
+,selectionDetails,"{ ""id"": ""sum"",""result_precision"":""2"" }
+{""id"":""max""}
+{""description"":""Example for sum of squares"",""formula"":""acc + value^2"",""initial_value"":""0"",""type"":""accumulator"",""ui_name_long"":""Sum of squares"",""ui_name_short"":""Sum x^2""}"
+,weekDayNames,"mo,tu,we,th,fr,sa,su"
+</pre>
+
+#### Example .conf-file for SQLite-file (might look better when opened in a csv-editor)
+<pre>
+properties,,,
+,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
+,sqlQuery,SELECT * FROM some_table LIMIT 1000;,
+</pre>
+
+## Third party code
+
+Summary of 3rd party code in dfgQtTableEditor (last revised 2023-04-26).
+
+| Library      | License  |
+| ------------- | ----- |
+| [Boost](http://www.boost.org/) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
+| [fmtlib](https://github.com/fmtlib/fmt) | [BSD-2](../../dfg/str/fmtlib/format.h) |
+| [muparser](https://github.com/beltoforion/muparser) | [BSD-2](../../dfg/math/muparser/muParser.h) | 
+| [QCustomPlot](https://www.qcustomplot.com/) (disabled by default) | [GPLv3/commercial](https://www.qcustomplot.com/) |
+| [Qt](https://www.qt.io/) | [Various](http://doc.qt.io/qt-5/licensing.html) |
+| [UTF8-CPP](https://github.com/nemtrif/utfcpp) | [Boost software license](../../dfg/utf/utf8_cpp/utf8.h) |
+
 ## Version history
+
+### 2.7.0, 2024-12-15
+* Tag: [2.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.7.0)
+* Highlights: Statistical box -graph type, default encoding for read files is now UTF-8, default graph line colour changed from blue to black
+* General
+    * [mod] When reading file without known encoding, now assuming UTF-8 ([3a278a36](https://github.com/tc3t/dfglib/commit/3a278a36))
+    * [imp] Can now copy row number to clipboard from row header context menu ([c0e1b4b0](https://github.com/tc3t/dfglib/commit/c0e1b4b03248b9c12aaf40df212f2d0f3a7a763a))
+    * [imp] Added support for negate-field for json-filters ([7c8e89e9](https://github.com/tc3t/dfglib/commit/7c8e89e99bcbda359f1fbf8204afbce29ba00fcd))
+    * [fix] Having empty enclosing char in .conf-file could put invalid UTF-8 to saved file ([3cbf43e1](https://github.com/tc3t/dfglib/commit/3cbf43e1ebfd30c393626f02686c3f1739d5aade))
+    * [fix] Saving a table that had invalid UTF-8 could cause a crash ([cdba78c9](https://github.com/tc3t/dfglib/commit/cdba78c9ac3ca2857f7d4a25cb4c4375f8c38221))
+    * [imp] File info tip now has details about save format ([ea0fca1a](https://github.com/tc3t/dfglib/commit/ea0fca1a72680e5fcba9705fdca6572d5c2a6912))
+    * [imp] File info icon now has "Open directory in file manager" -action ([52dc3935](https://github.com/tc3t/dfglib/commit/52dc3935648ad1576789291780e0fbc5eb31d776))
+    * [imp] A confirmation dialog is now shown if trying to save a file with enclosing disabled. ([360bc4e7](https://github.com/tc3t/dfglib/commit/360bc4e7f084ec446e46891e12e7487873a52002))
+* Charts
+    * [new] New chart type: statistical box ([486b27e6](https://github.com/tc3t/dfglib/commit/486b27e6cf8e357faa9a16cee649d8a5baf8a221) et al)
+    * [mod] Changed default chart object colour from blue to black. ([ff92e27d](https://github.com/tc3t/dfglib/commit/ff92e27d))
+
 
 ### 2.6.0, 2023-12-17
 * Tag: [2.6.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.6.0)
@@ -329,371 +717,3 @@ To see build chart of older versions, see [readme of 2.6.0](https://github.com/t
 
 ### 1.0.0, 2019-09-05
 * Tag: [1.0.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_1.0.0.0)
-
-## Features
-
-* Separator auto-detection: instead of e.g. relying on list separator defined in OS settings (like done by some spreadsheet applications), uses heuristics to determine separator character. Auto-detection supports comma (,), semicolon (;), tab (\t) and unit separator (\x1F).
-* Text-oriented: content is shown as read, no data type interpretations are made.
-* Import from SQLite3 (since version 1.7.0)
-    * Either from UI-based "pick table and columns" or custom query.
-* Easy to use basic filtering: Alt+F -> type filter string -> view shows only rows whose content (on any column) match with filter string. Matching syntax supports for example wildcard and regular expression.
-* Filtered reading: Allows parts of csv-file to be read (since 1.5.0)
-    * Row index filtering (to read only given rows by index)
-    * Column index filtering (to read only given columns by index)
-    * Content filter: Arbitrary number of and/or combinations of text matchers similar to filter in UI.
-* Diffing using 3rd party diff tool (manual configuration).
-* Support for per-file configurations that can be used for example to define format characters and column widths in UI. Can also be used with SQLite3 files e.g. to define query and chart entries. For details, see [File specific configuration](#file-specific-configuration).
-* When saving to csv-file, tries to use the same format as what was used when reading the file (e.g. use the same separator character)
-* Rudimentary SQLite3 export support (since version 1.7.0)
-* Charting support using [QCustomPlot](https://www.qcustomplot.com/) (since version 1.5.0)
-    * xy-graphs, histograms and bar charts are supported.
-    * json-based chart definition.
-    * Has been tested to work with 50 million row, single column xy-graph. In a test machine chart update times in 50M line case were 65 s in non-cached case (=first creation of chart) and 6 s in cached case; corresponding numbers in case of 1M lines were 2 s and 0.2 s.
-    * Multiple data source options:
-        * Selection in table editor (e.g. selecting column automatically creates visualization of the data)
-        * Table open in table editor
-        * csv-file in file system (since 1.7.0)
-        * SQLite3-file in file system using user-supplied query (since 1.7.0)
-        * Number generator (since 1.9.0)
-    * Data transforms:
-        * _blockWindow_ & _passWindow_: filters out values inside/outside of given range. (since 1.7.0)
-        * _formula_: arbitrary arithmetic element-wise transform (e.g. shifts and scaling can be implemented with this) (since 1.7.0)
-        * _smoothing_indexNb_: basic smoothing (since 1.7.0)
-    * UI includes [guide](../../dfg/qt/res/chartGuide.html) providing examples and detailed documentation.
-    * Disabled by default due to licensing issues (GPL).
-* No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for concrete examples. Underlying data structure is optimized for in-order walk through column content.
-* Somewhat reasonable performance:
-    * Speed of CSV parser itself depends on various details, but is reasonably fast by default, and when specifying format as unquoted UTF-8, the fastest one tested in [csvPerformanceRuns.csv](../../misc/csvPerformanceRuns.csv) as of 2021-09.
-    * opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor 1.0.0 default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same machine read took over 30 seconds.
-    * Since opening huge files is not a priority, limits of opening such files hasn't been thoroughly examined, but some examples for concreteness:
-        * With version 1.5.0 and a rather ordinary Windows desktop machine (Intel i5 desktop CPU launched in 2013), opening a 1 GB file with 50 million rows and three 3 columns with content "abcdef" in every cell, lasted (in warm cache case) about 10 seconds with default options, about 6 seconds if using manual read options. When opened, application used about 3.0 GB of memory. With earlier version 1.1.0 figures were 16s / 8s / 4.2 GB.
-        * Opening a 3 GB, 1e6 x 1024 file with content ab in each cell lasted about 105 s with peak memory consumption of 14 GB on a machine that had 32 GB of RAM (in version 1.5.0).
-* Supported encodings:
-    * Read: UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252
-        * Note: when file has no BOM, reading assumes Latin-1
-    * Write: UTF-8, Latin-1
-* Undo & redo and detailed undo control.
-* Auto-completion (column-specific)
-* Formula parser (since 1.9.0)
-    * Cell content can be evaluated as formula, replaces cell content. Available from context menu and with shortcut Alt+C.
-* Content generation
-    * Most of C++11 defined random number distribution available (since 1.1.0)
-    * Formula-based generation with ability to refer to other cells (since 1.8.0)
-        * When build with C++17 support, most of [C++17 mathematical special functions](https://en.cppreference.com/w/cpp/numeric/special_functions) can be used in formulas (since 1.9.0)
-        * Supports formatting values as dates (since 1.9.0)
-
-### Notes about CSV format support
-
-As dfgQtTableEditor aims to be more of a DSV-editor instead pure CSV-editor, it's not a goal to strictly follow [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180). However as CSV is a special case of DSV, the editor should allow handling CSV-files in RFC 4180 -compliant manner. Below is a table comparing how the editor behaves with respect to RFC 4180 requirements (note: items in RFC 4180 -column are interpretations of dfgQtTableEditor author)
-
-<!-- Table generated from format_support_table.csv with csv2md (https://www.npmjs.com/package/csv2md) --->
-
-RFC 4180 section | Property | dfgQtTableEditor | [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180) | RFC 4180 compliance | Notes
----|---|---|---|---|---
-2.1 | Line break | LF (default), CRLF, CR. Editor tries to use the same line break when writing that was present in read file. | CRLF | Deviates: allows other line breaks than just CRLF | 
-2.2 | Last record line break | Either style accepted on read, on write line break is written | May or may not have an ending line break | :white_check_mark: | 
-2.3 | Header | On read, first line is always treated as header, but can be manually moved to first row after load. On write, header is written by default, option to disable writing is in advanced save options. | Header is optional, but it "should contain the same number of fields as the records in the rest of the file" | Deviates: when reading, header is not required to have the same number of columns as records (number of columns in table is simply taken from maximum column count from all records), but written files have the same number of headers on all records. | 
-2.4.1 | Multiple fields separated by commas | Several field separators are supported by default (comma (,), semi-colon (;), tab (\t) and unit separator (\x1f)). Additionally other single-char separators can be used with advanced read and write options. | "Within the header and each record, there may be one or more fields, separated by commas" | Deviates: allows other separators in addition to comma (,) | 
-2.4.2 | Equal field number | Equal field count is not required in records, a record with less fields than some other record is interpreted as having empty fields at the the end. When writing, all records will have the same number of fields even if input file had differing counts. | "Each line should contain the same number of fields throughout the file" | Deviates: similar to section 2.3: not required on read, but column counts will be identical in written files. | 
-2.4.3 | Spaces in field | Spaces are preserved. With enclosed cells, enclosing char must appear as the first char in field, otherwise field enclosing chars are not interpreted as such. Also any trailing chars after enclosed field are ignored. | "Spaces are considered part of a field and should not be ignored" | :white_check_mark: | Reader back end (DelimitedTextReader) has option to ignore leading whitespaces ('rfSkipLeadingWhitespaces'), but not used in dfgQtTableEditor
-2.4.4 | Trailing comma | Last field is not followed by separator | "The last field in the record must not be followed by a comma" | :white_check_mark: | 
-2.5.1 | Enclosing with double quotes | Enclosed fields supported on both read and write; when writing, fields are by default enclosed only if needed. Default enclosing char is double quote (0x22), but can be customised. | "Each field may or may not be enclosed in double quotes" | Deviates: supports also different enclosing characters | 
-2.5.2 | Double quotes without enclosed field | If enclosing chars appear in field but field doesn't begin with such, enclosing chars are treated as regular field content. | "If fields are not enclosed with double quotes, then double quotes may not appear inside the fields" | Deviates: can read fields that are not enclosed, but still contain enclosing character. Written files are compliant. | 
-2.6 | Requirements when field needs to be enclosed | Supported in generalized sense: fields are enclosed when needed, i.e. if they contain line break, enclosing char or separator char. | "Fields containing line breaks (CRLF), double quotes, and commas should be enclosed in double-quotes" | :white_check_mark: | 
-2.7 | Escaping enclosing char | Enclosing chars within fields are escaped by doubling the char | "Fields containing line breaks (CRLF), double quotes, and commas should be enclosed in double-quotes" | :white_check_mark: | 
-3 | MIME type registration | Not used | Describes requirements for MIME handling | N/A | 
-N/A | Encoding | Read: UTF-8 (default), UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, Latin-1, Windows-1252. Write: UTF-8 (default), Latin-1 | N/A (encoding requirements not mentioned) | N/A | 
-N/A | Pre-header lines | Not supported (as of 2.7.0). For read-only purpose, read filter may be used to filter out the pre-header lines | N/A (not mentioned) | N/A | Some dsv-like files may have content before actual header row
-N/A | Comment lines | Not supported (as of 2.7.0). For read-only purpose, read filter may be used to filter out lines that e.g. start with certain letter. | N/A (not mentioned) | N/A | 
-N/A | Delimiter merging | Not supported (as of 2.7.0) | N/A (not mentioned) | N/A | For example LibreOffice offers such functionality when opening csv-file.
-
-## Tips
-
-* For optimal read speed
-    * Input should be in UTF-8 encoding and application should know this e.g. through file having BOM or through UI.
-    * File should have no enclosing characters (i.e. quoting) and read options should have enclosing character as none and completer columns should be empty.
-
-## Configuration options
-
-### Application configuration
-
-Stored in ini-file with path \<executable path\>.ini
-Example file with comments describing the setting.
-<pre>
-[dfglib]
-
-; -----------------------------------------------------------
-; General settings
-
-; Windows-specific: if set, application tries to create crash dump in case of crash.
-; Default: false
-enableAutoDumps=1
-
-; Path of executable to use when diffing.
-; Default: empty
-diffProgPath=C:/Program Files/TortoiseSVN/bin/TortoiseMerge.exe
-
-; -----------------------------------------------------------
-; TableEditor
-
-; Defines height of single cell editor widget.
-; If value is plain integer, defines absolute height.
-; If starts with %, defines height in percents of parent windows height.
-; Default: 50
-TableEditor_cellEditorHeight=%20
-
-; Defines font size in cell editor widget
-TableEditor_cellEditorFontPointSize=13
-
-; Defines width of chart panel either as pixel width or percentage of parent widget width.
-; Default: %35
-; Note that the value is a request that might not be fulfilled e.g. if it would result
-; to width smaller than minimum widget width.
-TableEditor_chartPanelWidth = %50
-; TableEditor_chartPanelWidth = 200 ; This would set panel width to 200 pixels
-
-; Defines application level default for selection details as a list of space-separated json-objects.
-; For details, see documentation of properties/selectionDetails in 'File specific configuration'
-TableEditorPropertyId_selectionDetails = {\"id\":\"avg\"} {\"id\":\"max\"}
-
-; Defines application level default for numeric precision of selection detail results.
-; Default: -1 ( =roundtrippable precision )
-TableEditorPropertyId_selectionDetailsResultPrecision = 6
-
-; -----------------------------------------------------------
-; CsvItemModel
-
-; Columns for which to use auto-completion feature.
-; To enable for all columns, use *
-; To enable for selected columns, provide comma-separator list of column indexes (1-based index)
-; To disable, leave value empty
-; Note: In many cases it probably makes more sense to define this as file-specific property.
-; Default: empty (=completer is disabled)
-CsvItemModel_completerEnabledColumnIndexes=*
-
-; Size limit for enabling completer: files larger than this value will be loaded with disabled completer even if completer is enabled by CsvItemModel_completerEnabledColumnIndexes
-; Default value: 10000000 (10 MB)
-CsvItemModel_completerEnabledSizeLimit=10000000
-
-; Advanced write performance tuning: defines the maximum file below which files are written to memory before writing to file.
-; Omit setting or use value -1 to let application decide.
-CsvItemModel_maxFileSizeForMemoryStreamWrite=100000000
-
-; Separator char to use when saving new files.
-; Default: x\1f  (unit separator)
-; Note: needs quotes for comma in order to be parsed correctly.
-CsvItemModel_defaultFormatSeparator=","
-
-; Enclosing char to use when saving new files.
-; Default: "
-; Note: needs escaping for " in order to be parsed correctly.
-CsvItemModel_defaultFormatEnclosingChar=\"
-
-; End-of-line type to use when saving new files.
-; Default: \n
-; Available types: \n, \r, \r\n
-CsvItemModel_defaultFormatEndOfLine=\n
-
-; Defines minimum block size in bytes for read thread. Every read thread should
-; have block size at least of this size in order to spread reading to separate threads.
-; To allow multithreaded reading regardless of file size, set value to 0.
-; To prevent multithreaded reading, instead of using this property consider setting CsvItemModel_defaultReadThreadCountMaximum to 1
-; For file-specific control, see file specific configuration property readThreadBlockSizeMinimum
-CsvItemModel_defaultReadThreadBlockSizeMinimum
-
-; Defines default maximum count of read threads to be used when reading files, or with 0 to let implementation decide. In practice fewer threads may be used depending on factors such as file size and value of CsvItemModel_defaultReadThreadBlockSizeMinimum.
-; For file-specific control, see file specific configuration property readThreadCountMaximum
-CsvItemModel_defaultReadThreadCountMaximum
-
-; -----------------------------------------------------------
-; CsvTableView
-             
-; Defines the initial scroll position after loading a file.
-; Currently 'bottom' is the only recognized option
-; Default behaviour: scroll position is top.
-CsvTableView_initialScrollPosition=bottom
-
-; Defines the minimum width for columns.
-; Default: 5
-; Note: affects only some resize schemes.
-CsvTableView_minimumVisibleColumnWidth=15
-
-; Defines time format for time stamps available through insert-actions.
-; Value is passed to QTime::toString() so check it's documentation for details.
-; Default value: hh:mm:ss.zzz
-CsvTableView_timeFormat=hh:mm:ss
-
-; Defines date format for date stamps available through insert-actions.
-; Value is passed to QDate::toString() so check it's documentation for details.
-; Default value: yyyy-MM-dd
-CsvTableView_dateFormat=yyyy-MM-dd
-
-; Defines datetime format for datetime stamps available through insert-actions.
-; Value is passed to QDateTime::toString() so check it's documentation for details.
-; Default value: yyyy-MM-dd hh:mm:ss.zzz
-CsvTableView_dateTimeFormat=yyyy-MM-dd hh:mm:ss.zzz
-
-; Defines default weekday names to use with 'WD' date format specifier.
-; For details, see documentation of properties/weekDayNames in 'File specific configuration'
-; Default value: "mo,tu,we,th,fr,sa,su"
-CsvTableView_weekDayNames=mo,tu,we,th,fr,sa,su
-
-; Defines default edit mode after start up
-; Possible values: readOnly, readWrite
-CsvTableView_editMode=readOnly
-
-; Defines default limit for preview size for actions that offer preview in widgets
-;     * For example if doing operation for million cells, for performance reasons
-;       preview should not offer preview for all.
-; Default value: 50
-; Possible values: integer
-CsvTableView_actionInputPreviewLimit=10
-
-; -----------------------------------------------------------
-; CsvTableViewChartDataSource
-
-; Defines whether data source for table selection is allowed to cache data
-;     Caching can significantly improve performance of graphs made from selection, drawback is increased memory usage.
-; Possible values: 0, 1
-; Default value: 1
-; Note: Value is read only on application start, restart is needed to change setting
-CsvTableViewChartDataSource_allowCaching=1
-
-; -----------------------------------------------------------
-; JsonListWidget
-
-; Defines font point size as integer.
-; Default: 10
-JsonListWidget_fontPointSize = 12
-
-; Defines whether lines are wrapped
-; Default: 1 (true)
-JsonListWidget_lineWrapping = 0
-</pre>
-
-### File specific configuration
-
-File specific configuration can be used for example to:
-* Read the file correctly (e.g. in case of less common csv format)
-* Optimize the read speed by disabling unneeded parsing features
-* Set UI column widths so that content shows in preferred way.
-* Define charts that get shown automatically after opening
-* Define read filters
-
-Note that while most of the settings are csv-file specific, configuration file can also be used with SQLite-file.
-
-Configuration is defined through a .conf file in path \<file path\>.conf. File can be generated from table view context menu from "Config" -> "Save config file...". The .conf file is a key-value map encoded into a csv-file:
-
-* Supports URI-like lookup, where depth is implemented by increasing column index for key-item.
-* Key is the combination of first item in a row and if not on the first column, prepended by most recent key in preceding column.
-
-Available keys:
-
-| Key (URI)      | Purpose  | Possible values | Notes |
-| -------------  | -----    | ------          | ----- |
-| columnsByIndex/\<1-based columnIndex\>/datatype | Defines how to interpret content in some operations, as of 2.3.0 only affects column sorting behaviour | _text_ (default), _number_, _datetime_ (since 2.6.0) | Since 2.3.0 |
-| columnsByIndex/\<1-based columnIndex\>/width_pixels | Defines column width in pixels for given column | integer | |
-| columnsByIndex/\<1-based columnIndex\>/visible | Defines whether column is visible | 0 or 1, default is 1 | Since 2.2.0 |
-| columnsByIndex/\<1-based columnIndex\>/readOnly | Defines whether column is read-only | 0 or 1, default is 0 | Since 2.4.0 ([#129](https://github.com/tc3t/dfglib/issues/129)) |
-| columnsByIndex/\<1-based columnIndex\>/stringToDoubleParserDefinition | Defines custom parser definition for string-to-double conversions, currently available only for datetime-typed columns | Format accepted by QDateTime | Since 2.6.0 ([#153](https://github.com/tc3t/dfglib/issues/153)) |
-| encoding | When set, file is read assuming it to be of given encoding. | Latin1, UTF8, UTF16BE, UTF16LE, UTF32BE, UTF32LE, windows-1252 | This setting is used even if file has a BOM that indicates different encoding |
-| enclosing_char | File is read interpreting the given character as enclosing character | ASCII-character as such or escaped format, e.g. \t or \x1f | |
-| separator_char | File is read interpreting the given character as separator character | Like for enclosing_char | |
-| end_of_line_type | File is read using end-of-line type | \n, \r\n, \r | |
-| bom_writing | Whether to write BOM on save | 0, 1 | |
-| properties/columnSortingCaseSensitive | Defines whether column sorting is case-sensitive | 0 or 1, default is 0 | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
-| properties/columnSortingColumnIndex | Defines which column is sorted (1-based column index) | Valid column index | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
-| properties/columnSortingEnabled | Defines whether columns can be sorted | 0 or 1, default is 0 | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
-| properties/columnSortingOrder | Defines sort order for column defined by columnSortingColumnIndex | A or D (Ascending/Descending), default is A | Since 2.5.0 ([#142](https://github.com/tc3t/dfglib/issues/142)) |
-| properties/completerColumns | see CsvItemModel_completerEnabledColumnIndexes | | |
-| properties/completerEnabledSizeLimit | see CsvItemModel_completerEnabledSizeLimit | | |
-| properties/editMode | Defines edit mode when opened | _readOnly_, _readWrite_<br>If empty, handled as if property was not present at all. | Since 2.1.0 |
-| properties/filterText | Defines filter text to be set to UI filter controls |  | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/filterCaseSensitive | Defines case sensitivity setting to be set to UI filter controls | _0_, _1_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/filterSyntaxType | Defines syntax type to be set to UI filter controls | _Wildcard_, _Simple string_, _Regular expression_, _Json_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/filterColumn | Defines filter column to be set to UI filter controls | 1-based column index, 0 means _any_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/findText | Defines find text to be set to UI find controls |  | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/findCaseSensitive | Defines case sensitivity setting to be set to UI find controls | _0_, _1_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/findSyntaxType | Defines syntax type to be set to UI find controls | _Wildcard_, _Simple string_, _Regular expression_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/findColumn | Defines find column to be set to UI find controls | 1-based column index, 0 means _any_ | Since 2.6.0 ([#148](https://github.com/tc3t/dfglib/issues/148))
-| properties/includeRows | Limits rows which are read from file by row index (0-based index, typically header is on row 0) |  | Since 1.5.0 |
-| properties/includeColumns | Like includeRows, but for columns | | Since 1.5.0 |
-| properties/initialScrollPosition | file-specific setting for CsvTableView_initialScrollPosition. | | Since 2.4.0 ([#130](https://github.com/tc3t/dfglib/issues/130))
-| properties/readFilters | Defines content filters for read, i.e. ability to filter read rows by content. For example only rows that match a regular expression in certain column(s). | The same syntax as in UI, syntax guide is available from UI tooltip | Since 1.5.0 |
-| properties/chartControls | If dfgQtTableEditor is built with chart feature, defines chart controls that are taken into use after load. | The same syntax as in UI, see [guide](../../dfg/qt/res/chartGuide.html) for detail | Since 1.6.0 |
-| properties/chartPanelWidth | If dfgQtTableEditor is built with chart feature, defines chart panel width to be used with the associated document. | Width value, see syntax from TableEditor_chartPanelWidth | Since 1.8.1 ([#60](https://github.com/tc3t/dfglib/issues/60))
-| properties/readThreadBlockSizeMinimum | file-specific setting for CsvItemModel_readThreadBlockSizeMinimum | non-negative integers | Since 2.4.0 ([#138](https://github.com/tc3t/dfglib/issues/138))
-| properties/readThreadCountMaximum | file-specific setting for CsvItemModel_readThreadCountMaximum | non-negative integers | Since 2.4.0 ([#138](https://github.com/tc3t/dfglib/issues/138))
-| properties/windowHeight | Defines request for window height when opening associated document, ignored if _windowMaximized_ is true. | Height value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
-| properties/windowWidth | Defines request for window width when opening associated document, ignored if _windowMaximized_ is true. | Width value, see syntax from TableEditor_chartPanelWidth | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
-| properties/windowPosX | Defines request for window x position when opening associated document, only taken into account if either windowHeight or windowWidth is defined, and _windowMaximized_ is false. | x pixel position of top left corner, 0 for left. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
-| properties/windowPosY | Defines request for window y position when opening associated document, only taken into account if either windowHeight or windowWidth is defined, and _windowMaximized_ is false. | y pixel position of top left corner, 0 for top. | Since 2.0.0 ([#86](https://github.com/tc3t/dfglib/issues/86))
-| properties/windowMaximized | Defines whether window should be maximized. | Since 2.6.0 ([#149](https://github.com/tc3t/dfglib/issues/149))
-| properties/sqlQuery | For SQLite files, defines the query whose result is populated to table. | Valid SQLite query | Since 1.6.1 (commit [24c1ad78](https://github.com/tc3t/dfglib/commit/24c1ad78eac2a6f74b6ee1be0dede0d5645fef07)) |
-| properties/selectionDetails | Defines selection details which are shown for every selection; i.e. basic indicators describing a selection such minimum and maximum value. Details are defined with a list of single line json-objects, where *id* field defines the detail. | Available built-in detail id's:<br>*average*, *cell_count_excluded*, *cell_count_included*, *is_sorted_num*, *median*, *max*, *min*, *sum*, *stddev_population*, *stddev_sample*, *variance*.<br>Since version 2.2.0 can also define custom details, for details see section [Custom selection details](#custom-selection-details) | Since 2.1.0 (commit [2d1c1d1b](https://github.com/tc3t/dfglib/commit/2d1c1d1b230a4d0f6dd8c18633a2af5ac20ea288)) |
-| properties/selectionDetailsResultPrecision | Defines default for numeric precision of selection detail results. | [-1, 999]. Value -1 means default roundtrippable precision | Since 2.3.0 ([#123](https://github.com/tc3t/dfglib/issues/123)) |
-| properties/weekDayNames | Defines list of weekday names to use with weekday specifier 'WD' in date formats. | Comma-separated list starting from Monday. For example "mo,tu,we,th,fr,sa,su" | Since 2.2.0 ([#99](https://github.com/tc3t/dfglib/issues/99)) |
-| properties/timeFormat | File-specific version of CsvTableView_timeFormat | See documentation of CsvTableView_timeFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
-| properties/dateFormat | File-specific version of CsvTableView_dateFormat | See documentation of CsvTableView_dateFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
-| properties/dateTimeFormat | File-specific version of CsvTableView_dateTimeFormat | See documentation of CsvTableView_dateTimeFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
-
-<br>
-
-#### Custom selection details
-Since version 2.2.0, it is possible to define custom formula-based accumulators as selection details, which can be added to both .conf-file and to application .ini-config using similar json-definition object as for built-in ones. For details, see [selection_details_example.csv.conf](examples/selection_details_example.csv.conf) and instructions in UI ("Details -> Add..").
-
-<br>
-
-#### Example .conf-file for csv-file (might look better when opened in a csv-editor)
-<pre>
-bom_writing,1,,
-columnsByIndex,,,
-,1,,
-,,width_pixels,400
-,2,,
-,,visible,0
-,3,,
-,,width_pixels,200
-enclosing_char,,,
-encoding,UTF8,,
-end_of_line_type,\n,,
-separator_char,",",,
-properties,,,
-,completerColumns,"1,3",
-,completerEnabledSizeLimit,10000000,
-,editMode,readOnly
-,includeRows,100:200
-,includeColumns,1:6
-,readFilters,"{""text"":""abc"", ""apply_columns"":""2""}"
-,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
-,chartPanelWidth,%50
-,windowHeight,%50
-,windowWidth,%100
-,windowPosX,0
-,windowPosY,500
-,selectionDetails,"{ ""id"": ""sum"",""result_precision"":""2"" }
-{""id"":""max""}
-{""description"":""Example for sum of squares"",""formula"":""acc + value^2"",""initial_value"":""0"",""type"":""accumulator"",""ui_name_long"":""Sum of squares"",""ui_name_short"":""Sum x^2""}"
-,weekDayNames,"mo,tu,we,th,fr,sa,su"
-</pre>
-
-#### Example .conf-file for SQLite-file (might look better when opened in a csv-editor)
-<pre>
-properties,,,
-,chartControls,"{""type"":""xy"",""data_source"":""table"",""x_source"":""column_name(date)"",""y_source"":""column_name(temperature)""}"
-,sqlQuery,SELECT * FROM some_table LIMIT 1000;,
-</pre>
-
-## Third party code
-
-Summary of 3rd party code in dfgQtTableEditor (last revised 2023-04-26).
-
-| Library      | License  |
-| ------------- | ----- |
-| [Boost](http://www.boost.org/) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
-| [fmtlib](https://github.com/fmtlib/fmt) | [BSD-2](../../dfg/str/fmtlib/format.h) |
-| [muparser](https://github.com/beltoforion/muparser) | [BSD-2](../../dfg/math/muparser/muParser.h) | 
-| [QCustomPlot](https://www.qcustomplot.com/) (disabled by default) | [GPLv3/commercial](https://www.qcustomplot.com/) |
-| [Qt](https://www.qt.io/) | [Various](http://doc.qt.io/qt-5/licensing.html) |
-| [UTF8-CPP](https://github.com/nemtrif/utfcpp) | [Boost software license](../../dfg/utf/utf8_cpp/utf8.h) |
-
