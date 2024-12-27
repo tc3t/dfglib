@@ -304,6 +304,7 @@ int main(int argc, char *argv[])
             addMenuItem(mainWindow.tr("Maximize window horizontally"),              ":/resources/maximizeHorizontally.png", [&]() { dfg::qt::maximizeHorizontally(&mainWindow); });
             addMenuItem(mainWindow.tr("Maximize window vertically"),                ":/resources/maximizeVertically.png"  , [&]() { dfg::qt::maximizeVertically(&mainWindow); });
             addMenuItem(mainWindow.tr("Reset window to default size and position"), ":/resources/defaultSize.png"         , [&]() { mainWindow.setDefaultGeometry(); });
+            addMenuItem(mainWindow.tr("Toggle cell editor visibility"),             ":/resources/toggleCellEditorVisibility.png", [&tableEditor]() { tableEditor.toggleCellEditorVisibility(); });
 
             pButton->setMenu(pMenu); // Does not transfer ownership
             pButton->setIcon(QIcon(":/resources/actionsButton.png"));

@@ -45,6 +45,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QVector>
 DFG_END_INCLUDE_QT_HEADERS
 
+#define DFG_TABLEEDITOR_LOG_DEBUG(x)   // Placeholder for logging debug-level message
 #define DFG_TABLEEDITOR_LOG_WARNING(x) // Placeholder for logging warning
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt) {
@@ -766,6 +767,14 @@ void TableEditor::onSourcePathChanged()
 void TableEditor::setResizeWindow(QWidget* pWindow)
 {
     DFG_OPAQUE_REF().m_spResizeWindow = pWindow;
+}
+
+bool TableEditor::toggleCellEditorVisibility()
+{
+    if (!m_spCellEditorDockWidget)
+        return false;
+    m_spCellEditorDockWidget->setVisible(!m_spCellEditorDockWidget->isVisible());
+    return m_spCellEditorDockWidget->isVisible();
 }
 
 namespace

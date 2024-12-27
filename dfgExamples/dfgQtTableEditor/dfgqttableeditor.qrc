@@ -7,5 +7,6 @@
         <file>resources/maximizeHorizontally.png</file>
         <file>resources/maximizeVertically.png</file>
         <file>resources/defaultSize.png</file>
+        <file>resources/toggleCellEditorVisibility.png</file>
     </qresource>
 </RCC>
