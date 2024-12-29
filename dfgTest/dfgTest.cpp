@@ -224,7 +224,9 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_time_epochMsec";
     //::testing::GTEST_FLAG(filter) = "dfgMath.FormulaParser_time_ISOdateTo";
     //::testing::GTEST_FLAG(filter) = "dfgMath.isFloatConvertibleTo";
+    //::testing::GTEST_FLAG(filter) = "dfgMath.isNumberConvertibleTo";
     //::testing::GTEST_FLAG(filter) = "dfgMath.isIntegerValued";
+    //::testing::GTEST_FLAG(filter) = "dfgMath.largestContiguousFloatInteger";
     //::testing::GTEST_FLAG(filter) = "dfgMath.logOfBase";
     //::testing::GTEST_FLAG(filter) = "dfgMath.numericDistance";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.accumulate";

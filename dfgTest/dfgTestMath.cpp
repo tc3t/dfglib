@@ -15,6 +15,7 @@
 #include <dfg/alg.hpp>
 #include <dfg/str.hpp>
 #include <dfg/cont/contAlg.hpp>
+#include <dfg/str/format_fmt.hpp>
 #include <numeric>
 #include <thread>
 
@@ -558,6 +559,103 @@ TEST(dfgMath, isFloatConvertibleTo)
             d = std::nextafter(d, 0);
             EXPECT_FALSE(isFloatConvertibleTo(d, &f));
         }
+    }
+}
+
+namespace
+{
+    template <class T>
+    static void largestContiguousFloatIntegerImpl()
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(math);
+        // float : std::numeric_limits<float>::digits  == 24 -> expected value is 1 << 24 == 16777216         ~ 1.7e7.
+        // double: std::numeric_limits<dobule>::digits == 53 -> expected value is 1 << 53 == 9007199254740992 ~ 9.0e15.
+
+        if constexpr (std::numeric_limits<T>::digits > 63)
+        {
+            DFGTEST_MESSAGE(format_fmt("Type '{}' is too many digits ({}) for current test implementation, unit test skipped", typeid(T).name(), std::numeric_limits<T>::digits));
+            return;
+        }
+
+        const auto nMaxInt = (uint64(1) << std::numeric_limits<T>::digits);
+        DFGTEST_STATIC_TEST(largestContiguousFloatInteger<T>() == static_cast<T>(nMaxInt));
+        DFGTEST_STATIC_TEST(largestContiguousFloatInteger<T>() - 1 == static_cast<T>(nMaxInt - 1));
+        DFGTEST_STATIC_TEST(static_cast<uint64>(largestContiguousFloatInteger<T>()) + 1 != static_cast<uint64>(static_cast<T>(nMaxInt + 1)));
+    }
+}
+
+TEST(dfgMath, largestContiguousFloatInteger)
+{
+    largestContiguousFloatIntegerImpl<float>();
+    largestContiguousFloatIntegerImpl<double>();
+    largestContiguousFloatIntegerImpl<long double>();
+}
+
+namespace
+{
+    template <class T>
+    static void isNumberConvertibleToFloatImpl()
+    {
+        using namespace ::DFG_ROOT_NS;
+        using namespace ::DFG_MODULE_NS(math);
+        
+        for (int i = 0; i < 64; ++i)
+        {
+            T converted;
+            const uint64 srcInt = uint64(1) << i;
+            DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<T>(srcInt, &converted));
+            DFGTEST_ASSERT_LEFT(srcInt, static_cast<uint64>(converted));
+        }
+
+        if constexpr (std::numeric_limits<T>::digits > 63)
+        {
+            DFGTEST_MESSAGE(format_fmt("Type '{}' has too many digits ({}) for current test implementation, unit test skipped", typeid(T).name(), std::numeric_limits<T>::digits));
+            return;
+        }
+        const auto digits = std::numeric_limits<T>::digits;
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<T>(uint64_max << (64 - digits))); // Bit pattern 11...1100...00, where the number of leading zeroes is defined by 'digits'
+    }
+}
+
+TEST(dfgMath, isNumberConvertibleTo)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(math);
+
+    // Integer -> float tests
+    {
+        isNumberConvertibleToFloatImpl<float>();
+        isNumberConvertibleToFloatImpl<double>();
+        isNumberConvertibleToFloatImpl<long double>();
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<float>(int32_max));
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<double>(int32_max));
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<float>(int32_min));
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<double>(int32_min));
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<float>(int64_max));
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<double>(int64_max));
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<float>(int64_min));
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<double>(int64_min));
+    }
+
+    // floating point - floating point: basic sanity tests, functional tests are in isFloatConvertibleTo-tests
+    {
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<float>(1.25));
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<double>(1.25f));
+    }
+
+    // Integer - integer
+    {
+        uint8 u8 = 0;
+        int32 i32 = 0;
+        uint32 u32 = 0;
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<uint32>(uint16_max, &u32) && u32 == uint16_max);
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<uint64>(uint32_max));
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<uint64>(uint8_max));
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<uint8>(uint64(uint8_max), &u8) && u8 == uint8_max);
+        DFGTEST_ASSERT_TRUE(isNumberConvertibleTo<int32>(int16_min, &i32) && i32 == int16_min);
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<uint32>(-1));
+        DFGTEST_ASSERT_FALSE(isNumberConvertibleTo<int32>(int64_min));
     }
 }
 

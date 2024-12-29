@@ -506,6 +506,21 @@ inline bool isNan(const T t)
     return DFG_DETAIL_NS::isNanImpl(t, std::integral_constant<bool, std::numeric_limits<T>::has_quiet_NaN>());
 }
 
+// Given floating point type T, returns largest integer-valued float such that (value - 1) can be presented as floating point type,
+// but (value + 1) can't be. Or in other words every integer up to returned value can be stored to given floating point type
+// without loss of precision.
+// Related discussion:
+//      https://stackoverflow.com/questions/1848700/biggest-integer-that-can-be-stored-in-a-double
+template <class T>
+constexpr T largestContiguousFloatInteger()
+{
+    DFG_STATIC_ASSERT(std::is_floating_point_v<T>, "Type must be floating point");
+    DFG_STATIC_ASSERT(std::numeric_limits<T>::is_iec559, "largestContiguousFloatInteger() probably requires IEC 559 (IEEE 754) floating points");
+    DFG_STATIC_ASSERT(std::numeric_limits<T>::digits < std::numeric_limits<uint64>::digits, "Implementation logic assumes that float digits is less than digits of uint64");
+
+    return (uint64(1) << std::numeric_limits<T>::digits);
+}
+
 namespace DFG_DETAIL_NS
 {
     template <class Val_T>
@@ -687,7 +702,7 @@ namespace DFG_DETAIL_NS
     }
 } // namespace DFG_DETAIL_NS
 
-// Returns true if floating point value can be represent exactly as given type. If pTarget is given and return value is true, it receives the value as Target_T.
+// Returns true if floating point value can be converted to target type without loss of numeric information. If pTarget is given and return value is true, it receives the value as Target_T.
 // Notes: 
 //      -NaN's are considered convertible to target only when both types are identical.
 //      -inf's are convertible.
@@ -695,6 +710,67 @@ template <class Target_T, class Float_T>
 bool isFloatConvertibleTo(const Float_T f, Target_T* pTarget = nullptr)
 {
     return DFG_DETAIL_NS::isFloatConvertibleToImpl(f, pTarget, std::is_same<Target_T, Float_T>(), std::is_integral<Target_T>());
+}
+
+// Returns true if number value can be converted to target type without loss of numeric information. If non-null pTarget is given and return value is true, it receives the value as Target_T.
+// Notes: 
+//      -If source type is floating point, this function is equivalent to isFloatConvertibleTo()
+//      -If source type is integer and target floating point, in case of true-return returned floating point is not guaranteed 
+//       to be from contiguous integer range in the sense of largestContiguousFloatInteger().
+template <class Target_T, class Source_T>
+bool isNumberConvertibleTo(const Source_T src, Target_T* pTarget = nullptr)
+{
+    DFG_STATIC_ASSERT((std::is_floating_point_v<Source_T> || std::is_integral_v<Source_T>), "Source type must be numeric type");
+    if constexpr (std::is_floating_point_v<Source_T>)
+        return isFloatConvertibleTo(src, pTarget);
+    else if constexpr (std::is_integral_v<Source_T> && std::is_integral_v<Target_T>) // Case: both are integers
+    {
+        if (isValWithinLimitsOfType<Target_T>(src))
+        {
+            if (pTarget)
+            {
+                *pTarget = static_cast<Target_T>(src);
+                DFG_ASSERT_CORRECTNESS(static_cast<Source_T>(*pTarget) == src);
+            }
+            return true;
+        }
+        else
+            return false;
+    }
+    else // Case: integer -> float
+    {
+        // integer-to-float conversion rules according to cppreference (2024-11-17, https://en.cppreference.com/mwiki/index.php?title=cpp/language/implicit_conversion&oldid=177680)
+        /*
+            Floating–integral conversions
+            ...
+            A prvalue of integer or unscoped enumeration type can be converted to a prvalue of any floating-point type. The result is exact if possible.
+                1. If the value can fit into the destination type but cannot be represented exactly, it is implementation defined whether the closest higher
+                    or the closest lower representable value will be selected, although if IEEE arithmetic is supported, rounding defaults to nearest.
+                2. If the value cannot fit into the destination type, the behavior is undefined.
+                3. If the source type is bool, the value false is converted to zero, and the value true is converted to one.
+        */
+        // Related discussion: // https://www.reddit.com/r/cpp/comments/1bf4hjz/convert_integral_floating_point_safely/
+
+        // First checking conditions of bullet 2.
+        Source_T maxFloatAsSourceInt{};
+        if (isFloatConvertibleTo((std::numeric_limits<Target_T>::max)(), &maxFloatAsSourceInt) && src > maxFloatAsSourceInt)
+            return false; // Source integer is greater than maximum of float value -> can't convert
+        Source_T minFloatAsSourceInt{};
+        if (isFloatConvertibleTo((std::numeric_limits<Target_T>::lowest)(), &minFloatAsSourceInt) && src < minFloatAsSourceInt)
+            return false; // Source integer is less than lowest of float value -> can't convert
+
+        // Getting here means that source value is within target float type [lowest, highest]
+        // -> i.e. bullet 2 is not true -> conversion to float is defined.
+        const auto floatCandidate = static_cast<Target_T>(src);
+        Source_T floatCandidateAsInt{};
+        if (isFloatConvertibleTo(floatCandidate, &floatCandidateAsInt) && floatCandidateAsInt == src)
+        {
+            if (pTarget)
+                *pTarget = floatCandidate;
+            return true;
+        }
+        return false;
+    }
 }
 
 namespace DFG_DETAIL_NS
