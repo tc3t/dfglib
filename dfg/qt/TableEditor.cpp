@@ -43,6 +43,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QSplitter>
 #include <QTimer>
 #include <QVector>
+#include <QInputDialog>
 DFG_END_INCLUDE_QT_HEADERS
 
 #define DFG_TABLEEDITOR_LOG_DEBUG(x)   // Placeholder for logging debug-level message
@@ -149,7 +150,7 @@ namespace
                                               TableEditor,
                                               TableEditorPropertyId_cellEditorHeight,
                                               WindowExtentProperty,
-                                              [] { return WindowExtentProperty(50); },
+                                              [] { return WindowExtentProperty(50); }, // Note: used also as default minimum cell editor size
                                               WindowExtentProperty);
     DFG_QT_DEFINE_OBJECT_PROPERTY("TableEditor_cellEditorFontPointSize",
                                               TableEditor,
@@ -558,7 +559,7 @@ TableEditor::TableEditor()
 
     }
 
-    // Cell Editor and it's container widget
+    // Cell editor, its container and title bar widgets
     {
         m_spCellEditorDockWidget.reset(new QDockWidget(this));
         m_spCellEditorDockWidget->setFeatures(QDockWidget::NoDockWidgetFeatures);
@@ -568,10 +569,84 @@ TableEditor::TableEditor()
         m_spCellEditor->setDisabled(true);
         m_spCellEditor->setFontPointSizeF(getTableEditorProperty<TableEditorPropertyId_cellEditorFontPointSize>(this));
 
+        // Creating custom title bar that has buttons.
+        {
+            auto pTitleBarWidget = new QWidget(this); // Deletion by parenthood
+            auto pTitleBarLayout = new QBoxLayout(QBoxLayout::Direction::LeftToRight, pTitleBarWidget); // Deletion by parenthood
+            pTitleBarLayout->setContentsMargins(0, 0, 0, 0);
+            // Tweaking title bar colour a bit (getting colour of default title bar widget didn't seem to be too easy -> tweaking/hacking the colour manually)
+            {
+                auto titleWidgetPalette = pTitleBarWidget->palette();
+                const auto defaultWindowColour = titleWidgetPalette.color(QPalette::Window);
+                pTitleBarWidget->setStyleSheet(QString("background-color: %1;").arg(defaultWindowColour.darker(110).name()));
+            }
+
+            auto pTextLabel = new QLabel(tr("Cell edit"), this);
+            pTextLabel->setContentsMargins(0, 0, 0, 0);
+
+            // Layout in title bar (horizontal):
+            //    text label, spacer, buttons
+            pTitleBarLayout->addWidget(pTextLabel);
+            pTitleBarLayout->addStretch();
+
+            QPointer<QBoxLayout> spTitleBarLayout = pTitleBarLayout;
+            const auto addButton = [this, &spTitleBarLayout](const QString& sIconPathOrText, const QString sToolTip, auto clickHandler)
+                {
+                    if (!spTitleBarLayout)
+                        return;
+                    auto pButton = new QPushButton(m_spCellEditorDockWidget.get()); // Deletion by parenthood
+                    DFG_QT_VERIFY_CONNECT(connect(pButton, &QPushButton::clicked, m_spCellEditorDockWidget.get(), clickHandler));
+                    if (sIconPathOrText.startsWith(":/"))
+                        pButton->setIcon(QIcon(sIconPathOrText));
+                    else
+                        pButton->setText(sIconPathOrText);
+                    pButton->setContentsMargins(0, 0, 0, 0);
+                    pButton->setToolTip(sToolTip);
+                    pButton->setMaximumWidth(25);
+                    spTitleBarLayout->addWidget(pButton);
+                };
+            // Default size -button
+            addButton(":/resources/defaultSize.png", tr("Set default cell editor height"), [this]()
+                {
+                    DFG_TABLEEDITOR_LOG_DEBUG("CellEditor 'default size'-action triggered");
+                    const auto defaultHeight = getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(this);
+                    setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), this->height(), defaultHeight);
+                    this->update();
+                });
+            // Resize-button
+            addButton("rz", tr("Set custom cell editor height"), [this]()
+                {
+                    DFG_TABLEEDITOR_LOG_DEBUG("CellEditor 'resize'-action triggered");
+                    if (!m_spCellEditorDockWidget || !m_spTableView)
+                        return;
+                    const auto nCurrentHeight = m_spCellEditorDockWidget->height();
+                    const auto nMinimumSize = getTableEditorProperty<TableEditorPropertyId_cellEditorHeight>(nullptr).toAbsolute(0);
+                    const auto nTableAndEditorHeights = m_spTableView->height() + m_spCellEditorDockWidget->height();
+                    // Note: if want to set height to more than half of tableview+cellEditor, probably need to go through layout.
+                    const auto nMaximumSize = nTableAndEditorHeights / 2;
+                    bool bOk = false;
+                    const auto nNewSize = QInputDialog::getInt(this,
+                        tr("Cell editor height"),
+                        tr("New cell editor height, in range [%1, %2]").arg(nMinimumSize).arg(nMaximumSize),
+                        nCurrentHeight,
+                        nMinimumSize,
+                        nMaximumSize,
+                        1,
+                        &bOk);
+                    if (!bOk)
+                        return;
+                    setWidgetMaximumHeight(m_spCellEditorDockWidget.get(), 0, WindowExtentProperty(nNewSize));
+                    this->update();
+                });
+            pTitleBarWidget->setContentsMargins(0, 0, 0, 0);
+            pTitleBarWidget->setFixedHeight(21);
+            m_spCellEditorDockWidget->setTitleBarWidget(pTitleBarWidget); // Does not take ownership.
+        }
+
         m_spCellEditorDockWidget->setWidget(m_spCellEditor.get());
 
         DFG_QT_VERIFY_CONNECT(connect(m_spCellEditor.get(), &QPlainTextEdit::textChanged, this, &ThisClass::onCellEditorTextChanged));
-    }
+    } // Cell editor widgets
 
     // Status bar
     {
