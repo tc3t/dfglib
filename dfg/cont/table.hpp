@@ -663,10 +663,17 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         }
         bool isBlockSizeFixed() const { return m_bAllowStringsLongerThanBlockSize; }
 
+        // Sets string at (nRow, nCol) to given 'sSrc', returns true iff successful.
         template <class Str_T>
-        DFG_TABLESZ_INLINING bool setElement(size_t nRow, size_t nCol, const Str_T& sSrc)
+        bool setElement(const size_t nRow, const size_t nCol, const Str_T& sSrc)
         {
-            return addString(sSrc, static_cast<Index_T>(nRow), static_cast<Index_T>(nCol));
+            using namespace ::DFG_MODULE_NS(math);
+            Index_T r = 0, c = 0;
+            if (!isNumberConvertibleTo<Index_T>(nRow, &r) || !isNumberConvertibleTo<Index_T>(nCol, &c))
+            {
+                return false;
+            }
+            return addString(sSrc, r, c);
         }
 
         // Sets element to (nRow, nCol). This does not invalidate any previous pointers returned by operator()(), but after this call all pointers returned for (nRow, nCol)

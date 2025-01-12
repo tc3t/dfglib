@@ -694,6 +694,23 @@ TEST(dfgCont, TableSz_indexHandling)
         table.addString("a", 0, -2);
         EXPECT_EQ(0, table.cellCountNonEmpty());
     }
+
+    // Testing 'past last index'-handling in setElement()
+    {
+        TableSz<char, int8> tablei8;
+        const auto nMaxRowCount = tablei8.maxRowCount();
+        const auto nMaxColCount = tablei8.maxColumnCount();
+        DFGTEST_EXPECT_LEFT(127, nMaxRowCount);
+        DFGTEST_EXPECT_FALSE(tablei8.setElement(nMaxRowCount, 0, "test"));
+        DFGTEST_EXPECT_FALSE(tablei8.setElement(nMaxRowCount + 1, 0, "test"));
+        DFGTEST_EXPECT_FALSE(tablei8.setElement(0, nMaxColCount, "test"));
+        DFGTEST_EXPECT_FALSE(tablei8.setElement(256, 0, "test"));
+        DFGTEST_EXPECT_FALSE(tablei8.setElement(0, 257, "test"));
+        DFGTEST_EXPECT_LEFT(0, tablei8.cellCountNonEmpty());
+
+        DFGTEST_EXPECT_FALSE(table.setElement(table.maxRowCount(), 0, "a"));
+        DFGTEST_EXPECT_FALSE(table.setElement(0, table.maxColumnCount(), "a"));
+    }
 }
 
 TEST(dfgCont, TableSz_swapCellContent)
