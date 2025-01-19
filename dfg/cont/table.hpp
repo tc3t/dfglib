@@ -644,6 +644,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         typedef typename InterfaceTypes_T::StringT StringT;
         using StringViewT = typename InterfaceTypes_T::StringViewT;
 
+        // Type that is guaranteed to be able to hold the number of non-empty cells.
+        using LinearIndexT = IntegerTypeBySizeAndSign<Min(sizeof(size_t), 2 * sizeof(Index_T)), false>::type;
+
         TableSz() : 
             m_emptyString('\0'),
             m_nBlockSize(2048),
@@ -1077,9 +1080,9 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         // Returns the number of non-empty cells in the table.
         // Note: if number does not fit to IndexT, return value is unspecified.
-        Index_T cellCountNonEmpty() const
+        LinearIndexT cellCountNonEmpty() const
         {
-            typename std::make_unsigned<IndexT>::type nCount = 0;
+            LinearIndexT nCount = 0;
             forEachFwdColumnIndex([&](Index_T col)
             {
                 forEachFwdRowInColumn(col, [&](const Index_T, const SzPtrR psz)
@@ -1088,7 +1091,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                         nCount++;
                 });
             });
-            return saturateCast<IndexT>(nCount);
+            return nCount;
         }
 
         // Returns content storage size in bytes. Note that returned value includes nulls and possibly content from removed cells.

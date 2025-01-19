@@ -713,6 +713,28 @@ TEST(dfgCont, TableSz_indexHandling)
     }
 }
 
+TEST(dfgCont, TableSz_cellCountNonEmpty)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(cont);
+
+    {
+        TableSz<char, int8> tablei8;
+        TableSz<char, uint8> tableu8;
+        for (int r = 0; r < 256; ++r)
+        {
+            for (int c = 0; c < 256; ++c)
+            {
+                tablei8.setElement(r, c, "a");
+                tableu8.setElement(r, c, "a");
+            }
+        }
+        // Maximum of index type is not valid, so expecting 127*127 / 255*255 instead of 128*128 / 256*256.
+        DFGTEST_EXPECT_LEFT(127 * 127, tablei8.cellCountNonEmpty());
+        DFGTEST_EXPECT_LEFT(255 * 255, tableu8.cellCountNonEmpty());
+    }
+}
+
 TEST(dfgCont, TableSz_swapCellContent)
 {
     using namespace DFG_MODULE_NS(cont);
