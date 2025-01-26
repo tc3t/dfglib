@@ -31,6 +31,9 @@ DFG_END_INCLUDE_QT_HEADERS
 #include <dfg/qt/CsvTableView.hpp>
 #include <dfg/qt/widgetHelpers.hpp>
 #include <dfg/qt/CsvItemModel.hpp>
+#include <dfg/os/memoryInfo.hpp>
+#include <dfg/str/byteCountFormatter.hpp>
+
 #include <exception>
 
 #if defined(DFG_ALLOW_QCUSTOMPLOT) && (DFG_ALLOW_QCUSTOMPLOT == 1)
@@ -78,9 +81,12 @@ static void onShowAboutBox()
     const auto sSettingsPath = dfg::qt::QtApplication::getApplicationSettingsPath();
     const bool bSettingFileExists = QFileInfo::exists(sSettingsPath);
 
+    const auto tr = [](const char* psz) { return QApplication::tr(psz); };
+    const auto addLine = [&s](const QString& sKey, const QString& sValue) { return s += QString("<b>%1</b>: %2<br>").arg(sKey, sValue); };
+
     s += QString("<b>Application path</b>: <a href=%1>%2</a><br>"
          "<b>Settings file path</b>: %3<br>"
-         "<b>Application PID</b>: %4<br>"
+         "<b>Process ID (PID)</b>: %4<br>"
          "<b>Qt runtime version</b>: %5<br>")
             .arg(QApplication::applicationDirPath())
             .arg(QApplication::applicationFilePath())
@@ -89,12 +95,26 @@ static void onShowAboutBox()
             .arg(qVersion());
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
-    s += QString("<b>OS</b>: %1<br><br>").arg(QSysInfo::prettyProductName());
-#else
-    s += "<br>";
+    addLine("OS", QSysInfo::prettyProductName());
 #endif
 
-    s += "Build details:<br><br>";
+    // Memory details
+    {
+        const auto memoryInfo = dfg::os::getMemoryUsage_process();
+        const auto addMemItem = [&addLine](const QString& sName, auto accessFunc)
+            {
+                const auto& optValue = accessFunc();
+                if (optValue.has_value())
+                {
+                    addLine(sName, QString::fromStdString(::dfg::str::ByteCountFormatter_metric(optValue.value()).toString()));
+                }
+            };
+        addMemItem(tr("Memory usage, working set"), [&memoryInfo]() { return memoryInfo.workingSetSize(); });
+        addMemItem(tr("Memory usage, working set peak"), [&memoryInfo]() { return memoryInfo.workingSetPeakSize(); });
+        addMemItem(tr("Memory usage, virtual mem peak"), [&memoryInfo]() { return memoryInfo.virtualMemoryPeak(); });
+    }
+
+    s += "<br>Build details:<br><br>";
 
     getBuildTimeDetailStrs([&](const BuildTimeDetail detailId, const char* psz)
     {
