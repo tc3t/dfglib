@@ -35,6 +35,16 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
         class FindPanelWidget;
         class FilterPanelWidget;
+
+        class CellEditorWidgetTitleBarImpl : public QWidget
+        {
+            Q_OBJECT;
+        public:
+            using BaseClass = QWidget;
+            using BaseClass::BaseClass;
+
+            void setTitleText(const QString& sText);
+        }; // class CellEditorWidgetTitleBar
     }
 
     class TableEditorStatusBar : public QStatusBar
@@ -55,6 +65,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef CsvItemModel ModelClass;
         typedef CsvTableViewSortFilterProxyModel ProxyModelClass;
         typedef CsvTableView ViewClass;
+        using CellEditorWidgetTitleBar = DFG_DETAIL_NS::CellEditorWidgetTitleBarImpl;
         using Index = int; // Should be identical to CsvItemModel::Index
 
         enum ColumnResizeStyle
@@ -63,17 +74,24 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             ColumnResizeStyle_auto = ColumnResizeStyle_evenlyDistributed    // Lets TableEditor choose style (note: implementation may change).
         };
 
-        class CellEditor : public QPlainTextEdit
+        class CellTextEditor : public QPlainTextEdit
         {
         public:
            typedef QPlainTextEdit BaseClass;
-           CellEditor(QWidget* parent) :
+           CellTextEditor(QWidget* parent) :
                BaseClass(parent)
            {
            }
 
            void setFontPointSizeF(qreal pointSize);
-        };
+        }; // class CellTextEditor
+
+        class CellEditorWidget : public QWidget
+        {
+        public:
+            using BaseClass = QWidget;
+            using BaseClass::BaseClass;
+        }; // class CellEditorWidget
 
         TableEditor();
         ~TableEditor() DFG_OVERRIDE_DESTRUCTOR;
@@ -160,7 +178,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QObjectStorage<QLineEdit> m_spLineEditSourcePath;
         QObjectStorage<TableEditorStatusBar> m_spStatusBar;
         QObjectStorage<QLabel> m_spSelectionStatusInfo;
-        QObjectStorage<CellEditor> m_spCellEditor;
+        QObjectStorage<CellTextEditor> m_spCellEditor;
         QObjectStorage<QDockWidget> m_spCellEditorDockWidget;
         QObjectStorage<DFG_DETAIL_NS::FindPanelWidget> m_spFindPanel;
         QObjectStorage<DFG_DETAIL_NS::FilterPanelWidget> m_spFilterPanel;

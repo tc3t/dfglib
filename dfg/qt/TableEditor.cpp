@@ -193,14 +193,22 @@ namespace
         return sizes[1];
     }
 
-    static void setCellEditorTitle(QWidget* pWidget, const QString& sAdditionalInfo = QString(), const bool bReadOnly = false)
+    static void setCellEditorTitle(QDockWidget* pWidget, const QString& sAdditionalInfo = QString(), const bool bReadOnly = false)
     {
         if (!pWidget)
             return;
         auto sTitle = pWidget->tr("Cell edit%1").arg((bReadOnly) ? pWidget->tr(" (read-only)") : "");
         if (!sAdditionalInfo.isEmpty())
             sTitle += sAdditionalInfo;
-        pWidget->setWindowTitle(sTitle);
+        auto pTitleBarWidget = qobject_cast<TableEditor::CellEditorWidgetTitleBar*>(pWidget->titleBarWidget());
+        if (pTitleBarWidget)
+        {
+            pTitleBarWidget->setTitleText(sTitle);
+        }
+        else
+        {
+            DFG_ASSERT_CORRECTNESS(false); // Not expected to reach this branch.
+        }
     }
 
 } // unnamed namespace
@@ -475,7 +483,7 @@ DFG_OPAQUE_PTR_DEFINE(TableEditor)
     QObjectStorage<QToolButton> m_spFileInfoButton;
 };
 
-void TableEditor::CellEditor::setFontPointSizeF(const qreal pointSize)
+void TableEditor::CellTextEditor::setFontPointSizeF(const qreal pointSize)
 {
     if (pointSize <= 0)
     {
@@ -487,6 +495,16 @@ void TableEditor::CellEditor::setFontPointSizeF(const qreal pointSize)
     setFont(font);
 }
 
+void DFG_DETAIL_NS::CellEditorWidgetTitleBarImpl::setTitleText(const QString& sText)
+{
+    auto pLabel = findChild<QLabel*>();
+    if (pLabel)
+        pLabel->setText(sText);
+    else
+    {
+        DFG_ASSERT_IMPLEMENTED(false);
+    }
+}
 
 TableEditor::TableEditor()
 {
@@ -565,13 +583,13 @@ TableEditor::TableEditor()
         m_spCellEditorDockWidget->setFeatures(QDockWidget::NoDockWidgetFeatures);
         m_spCellEditorDockWidget->setObjectName("Cell edit");
 
-        m_spCellEditor.reset(new CellEditor(this));
+        m_spCellEditor.reset(new CellTextEditor(this));
         m_spCellEditor->setDisabled(true);
         m_spCellEditor->setFontPointSizeF(getTableEditorProperty<TableEditorPropertyId_cellEditorFontPointSize>(this));
 
         // Creating custom title bar that has buttons.
         {
-            auto pTitleBarWidget = new QWidget(this); // Deletion by parenthood
+            auto pTitleBarWidget = new CellEditorWidgetTitleBar(this); // Deletion by parenthood
             auto pTitleBarLayout = new QBoxLayout(QBoxLayout::Direction::LeftToRight, pTitleBarWidget); // Deletion by parenthood
             pTitleBarLayout->setContentsMargins(0, 0, 0, 0);
             // Tweaking title bar colour a bit (getting colour of default title bar widget didn't seem to be too easy -> tweaking/hacking the colour manually)
@@ -585,9 +603,9 @@ TableEditor::TableEditor()
             pTextLabel->setContentsMargins(0, 0, 0, 0);
 
             // Layout in title bar (horizontal):
-            //    text label, spacer, buttons
+            //    text label, buttons
             pTitleBarLayout->addWidget(pTextLabel);
-            pTitleBarLayout->addStretch();
+            //pTitleBarLayout->addStretch(); // This can be used to add spacer between label and buttons.
 
             QPointer<QBoxLayout> spTitleBarLayout = pTitleBarLayout;
             const auto addButton = [this, &spTitleBarLayout](const QString& sIconPathOrText, const QString sToolTip, auto clickHandler)
@@ -761,7 +779,7 @@ TableEditor::TableEditor()
         spLayout->addWidget(m_spStatusBar.get(), row++, 0);
 
         spLayout->setSpacing(0);
-        auto pEditorWidget = new QWidget(this);
+        auto pEditorWidget = new CellEditorWidget(this);
         delete pEditorWidget->layout();
         pEditorWidget->setLayout(spLayout.release());
         m_spMainSplitter->addWidget(pEditorWidget);
