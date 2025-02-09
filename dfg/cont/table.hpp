@@ -645,7 +645,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         using StringViewT = typename InterfaceTypes_T::StringViewT;
 
         // Type that is guaranteed to be able to hold the number of non-empty cells.
-        using LinearIndexT = IntegerTypeBySizeAndSign<Min(sizeof(size_t), 2 * sizeof(Index_T)), false>::type;
+        using LinearIndexT = typename IntegerTypeBySizeAndSign<Min(sizeof(size_t), 2 * sizeof(Index_T)), false>::type;
 
         TableSz() : 
             m_emptyString('\0'),
