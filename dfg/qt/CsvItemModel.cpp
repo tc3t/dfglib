@@ -2492,8 +2492,10 @@ namespace DFG_DETAIL_NS
         return impl().colCountByMaxColIndex();
     }
 
-    auto CsvItemModelTable::cellCountNonEmpty() const -> Index
+    auto CsvItemModelTable::cellCountNonEmpty() const -> LinearIndex
     {
+        using DataTable = std::remove_reference_t<decltype(impl())>;
+        DFG_STATIC_ASSERT((std::is_same_v<LinearIndex, DataTable::LinearIndexT>), "Type of LinearIndex does not match implementation");
         return impl().cellCountNonEmpty();
     }
 

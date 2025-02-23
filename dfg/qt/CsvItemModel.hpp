@@ -153,6 +153,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         {
         public:
             using Index = int32;
+            using LinearIndex = uint64;
 
             CsvItemModelTable();
             ~CsvItemModelTable();
@@ -169,7 +170,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
             Index colCountByMaxColIndex() const;
 
-            Index cellCountNonEmpty() const;
+            LinearIndex cellCountNonEmpty() const;
 
             class TableRef;
 
