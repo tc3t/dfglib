@@ -24,7 +24,7 @@ template <class Key_T, class Search_T> struct KeySearchTypeToInternalSearchType 
 
 // When searching const char* from std::string's, especially with linear search there can be a massive performance difference if using const char* instead of std::string or string view, because const char*
 // does not have it's length information readily available, so the comparison can't use size() != size() the determine inequality.
-template <> struct KeySearchTypeToInternalSearchType<std::string, const char*>      { typedef DFG_CLASS_NAME(StringViewC) type; };
+template <> struct KeySearchTypeToInternalSearchType<std::string, const char*>      { typedef StringViewC type; };
 
 // TODO: add specializations to std::wstring & const wchar_t*, typed strings...
 

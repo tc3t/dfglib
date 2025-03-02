@@ -36,7 +36,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         template <class T> struct SetVectorTraits
         { 
             typedef T                                   key_type;
-            typedef std::vector<key_type>               container; // TODO: use DFG_CLASS_NAME(Vector).
+            typedef std::vector<key_type>               container; // TODO: use Vector.
             typedef typename container::iterator        iterator;
             typedef typename container::const_iterator  const_iterator;
             typedef iterator                            key_iterator;
@@ -45,7 +45,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
     }
 
     template <class Key_T>
-    class DFG_CLASS_NAME(SetVector) : public DFG_DETAIL_NS::KeyContainerBase<DFG_DETAIL_NS::SetVectorTraits<Key_T>>
+    class SetVector : public DFG_DETAIL_NS::KeyContainerBase<DFG_DETAIL_NS::SetVectorTraits<Key_T>>
     {
     public:
         typedef DFG_DETAIL_NS::KeyContainerBase<DFG_DETAIL_NS::SetVectorTraits<Key_T>> BaseClass;
@@ -59,28 +59,28 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         typedef key_type                                                    value_type;
         typedef size_t                                                      size_type;
 
-        DFG_CLASS_NAME(SetVector)()
+        SetVector()
         {}
 
 #if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
-        DFG_CLASS_NAME(SetVector)(DFG_CLASS_NAME(SetVector)&& other)
+        SetVector(SetVector&& other)
         {
             operator=(std::move(other));
         }
 
-        DFG_CLASS_NAME(SetVector)(const DFG_CLASS_NAME(SetVector)& other)
+        SetVector(const SetVector& other)
         {
             operator=(other);
         }
 
-        DFG_CLASS_NAME(SetVector)& operator=(const DFG_CLASS_NAME(SetVector)& other)
+        SetVector& operator=(const SetVector& other)
         {
             this->m_bSorted = other.m_bSorted;
             m_storage = other.m_storage;
             return *this;
         }
 
-        DFG_CLASS_NAME(SetVector)& operator=(DFG_CLASS_NAME(SetVector)&& other)
+        SetVector& operator=(SetVector&& other)
         {
             this->m_bSorted = other.m_bSorted;
             m_storage = std::move(other.m_storage);
@@ -227,7 +227,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             this->m_bSorted = bSort;
         }
 
-        bool operator==(const DFG_CLASS_NAME(SetVector)& other) const
+        bool operator==(const SetVector& other) const
         {
             if (size() != other.size())
                 return false;
@@ -244,7 +244,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
             return true;
         }
 
-        bool operator!=(const DFG_CLASS_NAME(SetVector)& other) const
+        bool operator!=(const SetVector& other) const
         {
             return !(*this == other);
         }

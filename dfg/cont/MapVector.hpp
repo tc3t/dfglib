@@ -401,17 +401,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(cont) {
         }; // class MapVectorCrtp
 
         //template <class T> struct DefaultMapVectorContainerType { typedef std::vector<T> type; };
-        template <class T> struct DefaultMapVectorContainerType { typedef DFG_CLASS_NAME(Vector)<T> type; };
+        template <class T> struct DefaultMapVectorContainerType { typedef Vector<T> type; };
 
     } // namespace DFG_DETAIL_NS
 
     
 
 template <class Key_T, class Value_T, class KeyStorage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<Key_T>::type, class ValueStorage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<Value_T>::type>
-class DFG_CLASS_NAME(MapVectorSoA) : public DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T>>
+class MapVectorSoA : public DFG_DETAIL_NS::MapVectorCrtp<MapVectorSoA<Key_T, Value_T>>
 {
 public:
-    typedef DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T>>  BaseClass;
+    typedef DFG_DETAIL_NS::MapVectorCrtp<MapVectorSoA<Key_T, Value_T>>  BaseClass;
     typedef typename BaseClass::iterator                iterator;
     typedef typename BaseClass::const_iterator          const_iterator;
     typedef typename BaseClass::key_iterator            key_iterator;
@@ -423,20 +423,20 @@ public:
     typedef typename BaseClass::size_type               size_type;
 
 #if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
-    DFG_CLASS_NAME(MapVectorSoA)()
+    MapVectorSoA()
     {}
 
-    DFG_CLASS_NAME(MapVectorSoA)(DFG_CLASS_NAME(MapVectorSoA) && other)
+    MapVectorSoA(MapVectorSoA && other)
     {
         operator=(std::move(other));
     }
 
-    DFG_CLASS_NAME(MapVectorSoA)(const DFG_CLASS_NAME(MapVectorSoA)& other)
+    MapVectorSoA(const MapVectorSoA& other)
     {
         operator=(other);
     }
 
-    DFG_CLASS_NAME(MapVectorSoA)& operator=(const DFG_CLASS_NAME(MapVectorSoA)& other)
+    MapVectorSoA& operator=(const MapVectorSoA& other)
     {
         this->m_bSorted = other.m_bSorted;
         m_keyStorage = other.m_keyStorage;
@@ -444,7 +444,7 @@ public:
         return *this;
     }
 
-    DFG_CLASS_NAME(MapVectorSoA)& operator=(DFG_CLASS_NAME(MapVectorSoA)&& other)
+    MapVectorSoA& operator=(MapVectorSoA&& other)
     {
         this->m_bSorted = other.m_bSorted;
         m_keyStorage = std::move(other.m_keyStorage);
@@ -552,12 +552,12 @@ public:
 
 
 //template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<std::pair<Key_T, Value_T>>::type>
-template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<DFG_CLASS_NAME(TrivialPair)<Key_T, Value_T>>::type>
-class DFG_CLASS_NAME(MapVectorAoS) : public DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>
+template <class Key_T, class Value_T, class Storage_T = typename DFG_DETAIL_NS::DefaultMapVectorContainerType<TrivialPair<Key_T, Value_T>>::type>
+class MapVectorAoS : public DFG_DETAIL_NS::MapVectorCrtp<MapVectorAoS<Key_T, Value_T>>
 {
 public:
-    typedef DFG_DETAIL_NS::MapVectorCrtp<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>      BaseClass;
-    typedef DFG_DETAIL_NS::MapVectorTraits<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>>    TraitsType;
+    typedef DFG_DETAIL_NS::MapVectorCrtp<MapVectorAoS<Key_T, Value_T>>      BaseClass;
+    typedef DFG_DETAIL_NS::MapVectorTraits<MapVectorAoS<Key_T, Value_T>>    TraitsType;
     
     typedef Storage_T                                           StorageType;
     typedef typename StorageType::value_type                    value_type;
@@ -572,27 +572,27 @@ public:
     typedef typename BaseClass::size_type                       size_type;
     
 #if !DFG_LANGFEAT_AUTOMATIC_MOVE_CTOR_AND_ASSIGNMENT
-    DFG_CLASS_NAME(MapVectorAoS)()
+    MapVectorAoS()
     {}
 
-    DFG_CLASS_NAME(MapVectorAoS)(DFG_CLASS_NAME(MapVectorAoS)&& other)
+    MapVectorAoS(MapVectorAoS&& other)
     {
         operator=(std::move(other));
     }
 
-    DFG_CLASS_NAME(MapVectorAoS)(const DFG_CLASS_NAME(MapVectorAoS)& other)
+    MapVectorAoS(const MapVectorAoS& other)
     {
         operator=(other);
     }
 
-    DFG_CLASS_NAME(MapVectorAoS)& operator=(const DFG_CLASS_NAME(MapVectorAoS)& other)
+    MapVectorAoS& operator=(const MapVectorAoS& other)
     {
         this->m_bSorted = other.m_bSorted;
         m_storage = other.m_storage;
         return *this;
     }
 
-    DFG_CLASS_NAME(MapVectorAoS)& operator=(DFG_CLASS_NAME(MapVectorAoS)&& other)
+    MapVectorAoS& operator=(MapVectorAoS&& other)
     {
         this->m_bSorted = other.m_bSorted;
         m_storage = std::move(other.m_storage);
@@ -660,9 +660,9 @@ public:
 namespace DFG_DETAIL_NS
 {
     template <class Key_T, class Value_T, class KeyStorage_T, class ValueStorage_T>
-    struct MapVectorTraits<DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T, KeyStorage_T, ValueStorage_T>>
+    struct MapVectorTraits<MapVectorSoA<Key_T, Value_T, KeyStorage_T, ValueStorage_T>>
     {
-        typedef DFG_CLASS_NAME(MapVectorSoA)<Key_T, Value_T>            ImplT;
+        typedef MapVectorSoA<Key_T, Value_T>            ImplT;
         typedef Key_T                                                   key_type;
         typedef Value_T                                                 mapped_type;
         typedef IteratorMapVectorSoa<Key_T, Value_T, ImplT>             iterator;
@@ -674,9 +674,9 @@ namespace DFG_DETAIL_NS
     };
 
     template <class Key_T, class Value_T, class Storage_T>
-    struct MapVectorTraits<DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T, Storage_T>>
+    struct MapVectorTraits<MapVectorAoS<Key_T, Value_T, Storage_T>>
     {
-        typedef DFG_CLASS_NAME(MapVectorAoS)<Key_T, Value_T>            ImplT;
+        typedef MapVectorAoS<Key_T, Value_T>            ImplT;
         typedef Key_T                                                   key_type;
         typedef Value_T                                                 mapped_type;
         typedef typename Storage_T::iterator                            iterator;
