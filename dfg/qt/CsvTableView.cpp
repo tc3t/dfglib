@@ -591,7 +591,13 @@ namespace
     DFG_QT_DEFINE_OBJECT_PROPERTY_QSTRING(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "weekDayNames", CsvTableView, CsvTableViewPropertyId_weekDayNames, QString, []() { return QString("mo,tu,we,th,fr,sa,su"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "actionInputPreviewLimit", CsvTableView, CsvTableViewPropertyId_actionInputPreviewLimit, int, []() { return 50; });
 
-    const int gnDefaultRowHeight = 21; // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
+    // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
+    // Also row height affects the number of rows that can be shown in the table as discussed in https://stackoverflow.com/questions/78958330/how-do-i-enable-hundreds-of-millions-of-rows-in-qts-qabstracttablemodel
+    // Qt seems to freeze if rowHeight * rowCount > int32_max (or in case of non-uniform heights, probably if sum of row heights > int32_max)
+    // Some example maximums (tested on Qt 6.4, freeze occurs if adding one more row, or increasing row header height even for one row):
+    //      -Row height 21 -> maximum row count 102 million (102261126)
+    //      -Row height 30 -> maximum row count 71 million (71582788)
+    const int gnDefaultRowHeight = 21;
 
     class UndoViewWidget : public QDialog
     {

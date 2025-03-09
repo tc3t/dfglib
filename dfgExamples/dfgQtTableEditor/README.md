@@ -36,11 +36,18 @@ csv/dsv-oriented ("comma/delimiter-separated values") table editor based on dfgl
         * _textFilter_: Similar to passWindow but works on strings (since 2.3.0)
     * UI includes [guide](../../dfg/qt/res/chartGuide.html) providing examples and detailed documentation.
     * Charting is disabled by default due to licensing issues (GPL).
-* No artificial row/column count restrictions. Note, though, that data structures and implementation in general are not designed for huge files, see below for concrete examples. Underlying data structure is optimized for in-order walk through column content.
+* Maximum number of rows the application can read and show is about 102 million (102261126)
+    * Limitations comes from Qt and curiously is affected by row height, 102 million is for default height 21.
+        * For details, see
+            * https://stackoverflow.com/questions/78958330/how-do-i-enable-hundreds-of-millions-of-rows-in-qts-qabstracttablemodel
+            * Some huge table improvements with fix version Qt 6.9.0: https://bugreports.qt.io/browse/QTBUG-128179
+* Maximum number of columns is less clear cut, but in practice limit is much lower than for rows
+    * For example in version 2.7.0, transposing a table would warn if resulting table would have more than 10000 columns
+* While data structures and implementation is aimed to be somewhat scalable also to huge files, the application is not specifically designed for huge files. For concrete examples of the limits, see below. Underlying data structure is optimized for in-order walk through column content.
 * Somewhat reasonable performance:
     * Speed of CSV parser itself depends on various details, but is reasonably fast by default, and when specifying format as unquoted UTF-8, the fastest one tested in [csvPerformanceRuns.csv](../../misc/csvPerformanceRuns.csv) as of 2021-09.
     * opening a 140 MB, 1000000 x 20 test csv-file with content "abcdef" in every cell, lasted less than 3 seconds with dfgQtTableEditor 1.0.0 default read options (and little over 1 second with manually given read options, most importantly disabled quote parsing), in LibreOffice 6.1.6.3 on the same machine read took over 30 seconds.
-    * Since opening huge files is not a priority, limits of opening such files hasn't been thoroughly examined, but some examples for concreteness:
+    * Since huge file support is not a priority, limits of opening such files hasn't been thoroughly examined, but some examples for concreteness:
         * With version 1.5.0 and a rather ordinary Windows desktop machine (Intel i5 desktop CPU launched in 2013), opening a 1 GB file with 50 million rows and three 3 columns with content "abcdef" in every cell, lasted (in warm cache case) about 10 seconds with default options, about 6 seconds if using manual read options. When opened, application used about 3.0 GB of memory. With earlier version 1.1.0 figures were 16s / 8s / 4.2 GB.
         * Opening a 3 GB, 1e6 x 1024 file with content ab in each cell lasted about 105 s with peak memory consumption of 14 GB on a machine that had 32 GB of RAM (in version 1.5.0).
         * Note also that with filtered read, it's possible to have read-only view to parts of a huge file that would not be practical to open as whole.
