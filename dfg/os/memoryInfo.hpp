@@ -30,12 +30,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
             using ByteCountOpt = std::optional<uint64>;
 
             // Returns the total non-virtual memory in system (in bytes) or empty optional if not available.
-            ByteCountOpt total()                    const { return ByteCountOpt{}; }
+            static constexpr ByteCountOpt total()                    { return ByteCountOpt{}; }
             // Returns available memory in bytes or empty optional if not available.
             // Exact meaning of "available" may be somewhat platforms-specific.
-            ByteCountOpt available()                const { return ByteCountOpt{}; }
+            static constexpr ByteCountOpt available()                { return ByteCountOpt{}; }
             // Returns used memory percentage as int 0-100 (rounding is unspecified) or empty optional if not available.
-            ByteCountOpt usedPercentageInt()        const { return ByteCountOpt{}; }
+            static constexpr ByteCountOpt usedPercentageInt()        { return ByteCountOpt{}; }
         }; // class SystemMemoryInfoBase
 
         class ProcessMemoryInfoBase

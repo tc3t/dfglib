@@ -574,14 +574,16 @@ namespace
 
         if constexpr (std::numeric_limits<T>::digits > 63)
         {
-            DFGTEST_MESSAGE(format_fmt("Type '{}' is too many digits ({}) for current test implementation, unit test skipped", typeid(T).name(), std::numeric_limits<T>::digits));
+            DFGTEST_MESSAGE(format_fmt("Type '{}' has too many digits ({}) for current test implementation, unit test skipped", typeid(T).name(), std::numeric_limits<T>::digits));
             return;
         }
-
-        const auto nMaxInt = (uint64(1) << std::numeric_limits<T>::digits);
-        DFGTEST_STATIC_TEST(largestContiguousFloatInteger<T>() == static_cast<T>(nMaxInt));
-        DFGTEST_STATIC_TEST(largestContiguousFloatInteger<T>() - 1 == static_cast<T>(nMaxInt - 1));
-        DFGTEST_STATIC_TEST(static_cast<uint64>(largestContiguousFloatInteger<T>()) + 1 != static_cast<uint64>(static_cast<T>(nMaxInt + 1)));
+        else
+        {
+            const auto nMaxInt = (uint64(1) << std::numeric_limits<T>::digits);
+            DFGTEST_STATIC_TEST(largestContiguousFloatInteger<T>() == static_cast<T>(nMaxInt));
+            DFGTEST_STATIC_TEST(largestContiguousFloatInteger<T>() - 1 == static_cast<T>(nMaxInt - 1));
+            DFGTEST_STATIC_TEST(static_cast<uint64>(largestContiguousFloatInteger<T>()) + 1 != static_cast<uint64>(static_cast<T>(nMaxInt + 1)));
+        }
     }
 }
 
