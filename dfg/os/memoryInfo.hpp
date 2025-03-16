@@ -24,6 +24,20 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
     */
     namespace DFG_DETAIL_NS
     {
+        class SystemMemoryInfoBase
+        {
+        public:
+            using ByteCountOpt = std::optional<uint64>;
+
+            // Returns the total non-virtual memory in system (in bytes) or empty optional if not available.
+            ByteCountOpt total()                    const { return ByteCountOpt{}; }
+            // Returns available memory in bytes or empty optional if not available.
+            // Exact meaning of "available" may be somewhat platforms-specific.
+            ByteCountOpt available()                const { return ByteCountOpt{}; }
+            // Returns used memory percentage as int 0-100 (rounding is unspecified) or empty optional if not available.
+            ByteCountOpt usedPercentageInt()        const { return ByteCountOpt{}; }
+        }; // class SystemMemoryInfoBase
+
         class ProcessMemoryInfoBase
         {
         public:
@@ -38,6 +52,37 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
     } // namespace DFG_DETAIL_NS
 
 #if defined(_WIN32)
+
+    class SystemMemoryInfo : public DFG_DETAIL_NS::SystemMemoryInfoBase
+    {
+    public:
+        SystemMemoryInfo();
+
+        ByteCountOpt total()                    const { return (m_memoryInfo.has_value() ? m_memoryInfo.value().ullTotalPhys : ByteCountOpt{}); }
+        ByteCountOpt available()                const { return (m_memoryInfo.has_value() ? m_memoryInfo.value().ullAvailPhys : ByteCountOpt{}); }
+        ByteCountOpt usedPercentageInt()        const { return (m_memoryInfo.has_value() ? m_memoryInfo.value().dwMemoryLoad : ByteCountOpt{}); }
+
+        // Related WinApi functionality: GetPerformanceInfo() / PERFORMANCE_INFORMATION
+        std::optional<MEMORYSTATUSEX> m_memoryInfo;
+        DWORD m_nLastError = ERROR_SUCCESS; // If retrieving memory information fails, GetLastError() is stored here. 
+    }; // class SystemMemoryInfo
+
+    inline SystemMemoryInfo::SystemMemoryInfo()
+    {
+        m_memoryInfo = MEMORYSTATUSEX();
+        auto& memInfo = m_memoryInfo.value();
+        ZeroMemory(&memInfo, sizeof(memInfo));
+        memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+        if (GlobalMemoryStatusEx(&memInfo))
+            return;
+        else
+        {
+            m_nLastError = GetLastError();
+            m_memoryInfo.reset();
+            return;
+        }
+    }
+
     class ProcessMemoryInfo : public DFG_DETAIL_NS::ProcessMemoryInfoBase
     {
     public:
@@ -64,6 +109,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
         }
     }
 #elif defined(__linux__)
+
+    using SystemMemoryInfo = DFG_DETAIL_NS::SystemMemoryInfoBase;
 
     class ProcessMemoryInfo : public DFG_DETAIL_NS::ProcessMemoryInfoBase
     {
@@ -141,16 +188,27 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
         }
     }
 #else // Case: other than Windows and Linux, not implemented so using default empty implementation
+    using SystemMemoryInfo = DFG_DETAIL_NS::SystemMemoryInfoBase;
     using ProcessMemoryInfo = DFG_DETAIL_NS::ProcessMemoryInfoBase;
 #endif // Platform
 
 // Returns memory info snapshot for current process
 //      -Windows: provides all details available in ProcessMemoryInfo
-//      -Others: not implemented (all functions will returns nullopt)
+//      -Linux: only virtualMemoryPeak() is implemented
+//      -Others: not implemented (all functions return nullopt)
 // @note To format byte counts for easier readability, see dfg/str/byteCountFormatter.hpp
 inline ProcessMemoryInfo getMemoryUsage_process()
 {
     return ProcessMemoryInfo{};
+}
+
+// Returns memory info snapshot for system
+//      -Windows: provides all details available in SystemMemoryInfo
+//      -Others: none of the fields are implemented (all functions return nullopt)
+// @note To format byte counts for easier readability, see dfg/str/byteCountFormatter.hpp
+inline SystemMemoryInfo getMemoryUsage_system()
+{
+    return SystemMemoryInfo{};
 }
 
 } } // namespace dfg::os

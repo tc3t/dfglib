@@ -10,6 +10,7 @@
 #include <dfg/dfgBase.hpp>
 #include <dfg/io/OfStream.hpp>
 #include <dfg/os/memoryInfo.hpp>
+#include <dfg/str/byteCountFormatter.hpp>
 
 #ifdef _WIN32
 TEST(dfgOs, pathFindExtension)
@@ -353,6 +354,35 @@ TEST(dfgOs, getMemoryUsage_process)
 
 #undef DFG_TEMP_EXPECT_MEM_ITEM
 
+}
+
+TEST(dfgOs, getMemoryUsage_system)
+{
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(str);
+
+    const auto memUsage = ::DFG_MODULE_NS(os)::getMemoryUsage_system();
+    
+#if defined(_WIN32)
+    #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC, TITLE, IS_MEM_BYTES) \
+        DFGTEST_ASSERT_TRUE(FUNC().has_value()); \
+        if constexpr (IS_MEM_BYTES) { \
+            DFGTEST_MESSAGE(TITLE << ": " << ByteCountFormatter_metric(FUNC().value()) << " (" << FUNC().value() << ")"); \
+        } else { \
+            DFGTEST_MESSAGE(TITLE << ": " << FUNC().value()); \
+        }
+#else // Non-windows
+    // Memory info has not been implemented on other platforms, but still
+    // check that expected functions are defined and return empty optional.
+    #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC, TITLE, IS_MEM_BYTES) \
+        DFGTEST_STATIC_TEST(FUNC() == ::DFG_MODULE_NS(os)::SystemMemoryInfo::ByteCountOpt{});
+#endif
+
+    DFG_TEMP_EXPECT_MEM_ITEM(memUsage.total, "System total memory", true);
+    DFG_TEMP_EXPECT_MEM_ITEM(memUsage.available, "System available memory", true);
+    DFG_TEMP_EXPECT_MEM_ITEM(memUsage.usedPercentageInt, "System memory usage percentage", false);
+
+#undef DFG_TEMP_EXPECT_MEM_ITEM
 }
 
 #endif

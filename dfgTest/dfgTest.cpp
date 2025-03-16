@@ -234,6 +234,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.minmaxElement_withNanHandling";
     //::testing::GTEST_FLAG(filter) = "dfgNumeric.percentileRange_and_percentile_ceilElem";
     //::testing::GTEST_FLAG(filter) = "dfgOs.getMemoryUsage_process";
+    //::testing::GTEST_FLAG(filter) = "dfgOs.getMemoryUsage_system";
     //::testing::GTEST_FLAG(filter) = "dfgOs.MemoryMappedFile";
     //::testing::GTEST_FLAG(filter) = "dfgOs.OutputFile_completeOrNone";
     //::testing::GTEST_FLAG(filter) = "dfgOs.TemporaryFile";
