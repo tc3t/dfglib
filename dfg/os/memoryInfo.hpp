@@ -12,6 +12,7 @@
     #include "../io/BasicIfStream.hpp"
     #include "../str/strTo.hpp"
     #include <string>
+    #include <sys/sysinfo.h>
 #endif // Platform
 
 
@@ -58,9 +59,18 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
     public:
         SystemMemoryInfo();
 
-        ByteCountOpt total()                    const { return (m_memoryInfo.has_value() ? m_memoryInfo.value().ullTotalPhys : ByteCountOpt{}); }
-        ByteCountOpt available()                const { return (m_memoryInfo.has_value() ? m_memoryInfo.value().ullAvailPhys : ByteCountOpt{}); }
-        ByteCountOpt usedPercentageInt()        const { return (m_memoryInfo.has_value() ? m_memoryInfo.value().dwMemoryLoad : ByteCountOpt{}); }
+        template <class Member_T>
+        ByteCountOpt valueByMemberPtr(const Member_T memberPtr) const
+        {
+            if (m_memoryInfo.has_value())
+                return m_memoryInfo.value().*memberPtr;
+            else
+                return ByteCountOpt();
+        }
+
+        ByteCountOpt total()                    const { return valueByMemberPtr(&MEMORYSTATUSEX::ullTotalPhys); }
+        ByteCountOpt available()                const { return valueByMemberPtr(&MEMORYSTATUSEX::ullAvailPhys); }
+        ByteCountOpt usedPercentageInt()        const { return valueByMemberPtr(&MEMORYSTATUSEX::dwMemoryLoad); }
 
         // Related WinApi functionality: GetPerformanceInfo() / PERFORMANCE_INFORMATION
         std::optional<MEMORYSTATUSEX> m_memoryInfo;
@@ -110,7 +120,38 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(os) {
     }
 #elif defined(__linux__)
 
-    using SystemMemoryInfo = DFG_DETAIL_NS::SystemMemoryInfoBase;
+    class SystemMemoryInfo : public DFG_DETAIL_NS::SystemMemoryInfoBase
+    {
+    public:
+        using SysInfo = struct sysinfo; // Note: both the struct and the access function have identical name sysinfo.
+
+        SystemMemoryInfo();
+
+        template <class Member_T>
+        ByteCountOpt valueByMemberPtr(Member_T memberPtr) const
+        {
+            if (m_sysInfo.has_value())
+                return m_sysInfo.value().*memberPtr * uint64(m_sysInfo.value().mem_unit);
+            else
+                return ByteCountOpt();
+        }
+
+        ByteCountOpt total()                    const { return valueByMemberPtr(&SysInfo::totalram); }
+        ByteCountOpt available()                const { return valueByMemberPtr(&SysInfo::freeram); }
+
+        std::optional<SysInfo> m_sysInfo;
+        int m_nErrno = 0; // If getting sysinfo fails, stores associated errno-value.
+    }; // class SystemMemoryInfo
+
+    inline SystemMemoryInfo::SystemMemoryInfo()
+    {
+        m_sysInfo = SysInfo{};
+        if (sysinfo(&m_sysInfo.value()) != 0)
+        {
+            m_sysInfo.reset();
+            m_nErrno = errno;
+        }
+    }
 
     class ProcessMemoryInfo : public DFG_DETAIL_NS::ProcessMemoryInfoBase
     {

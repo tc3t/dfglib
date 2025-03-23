@@ -371,7 +371,18 @@ TEST(dfgOs, getMemoryUsage_system)
         } else { \
             DFGTEST_MESSAGE(TITLE << ": " << FUNC().value()); \
         }
-#else // Non-windows
+#elif defined(__linux__)
+    #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC, TITLE, IS_MEM_BYTES) \
+        DFGTEST_ASSERT_TRUE(FUNC().has_value() || (StringViewC("memUsage.usedPercentageInt") == #FUNC)); \
+        if (FUNC().has_value()) \
+        { \
+            if constexpr (IS_MEM_BYTES) { \
+                DFGTEST_MESSAGE(TITLE << ": " << ByteCountFormatter_metric(FUNC().value()) << " (" << FUNC().value() << ")"); \
+            } else { \
+                DFGTEST_MESSAGE(TITLE << ": " << FUNC().value()); \
+            } \
+        }
+#else // Not Windows or Linux
     // Memory info has not been implemented on other platforms, but still
     // check that expected functions are defined and return empty optional.
     #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC, TITLE, IS_MEM_BYTES) \
