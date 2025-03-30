@@ -333,11 +333,13 @@ TEST(dfgOs, OutputFile_completeOrNone)
 TEST(dfgOs, getMemoryUsage_process)
 {
     using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(str);
     const auto memUsage = ::DFG_MODULE_NS(os)::getMemoryUsage_process();
 #if defined(_WIN32)
     #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC) \
+        DFGTEST_STATIC_TEST((std::char_traits<char>::length(#FUNC) <= 27)); \
         DFGTEST_ASSERT_TRUE(FUNC().has_value()); \
-        DFGTEST_MESSAGE("Memory usage, " #FUNC " = " << FUNC().value())
+        DFGTEST_MESSAGE("Memory usage, " #FUNC << std::string(27u - strlen(#FUNC), ' ') << " = " << ByteCountFormatter_metric(FUNC().value()) << " (" << FUNC().value() << ")")
 #elif defined(__linux__)
     #define DFG_TEMP_EXPECT_MEM_ITEM(FUNC) \
         DFGTEST_ASSERT_TRUE((StringViewC("memUsage.virtualMemoryPeak") == #FUNC) == FUNC().has_value()); \

@@ -292,7 +292,7 @@ TEST(dfgIo, BasicIfStream)
     int ch;
     while((ch = istrm.get()) != istrm.eofVal())
         sum += ch;
-    std::cout << "BasicIfStream elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("BasicIfStream elapsed: " << timer.elapsedWallSeconds());
     EXPECT_EQ(nSumExpected, sum);
     }
 
@@ -303,7 +303,7 @@ TEST(dfgIo, BasicIfStream)
     int ch;
     while((ch = istrm.get()) != std::ifstream::traits_type::eof())
         sum += ch;
-    std::cout << "std::ifstream elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("std::ifstream elapsed: " << timer.elapsedWallSeconds());
     EXPECT_EQ(nSumExpected, sum);
     }
 
@@ -314,7 +314,7 @@ TEST(dfgIo, BasicIfStream)
     int ch;
     while((ch = istrm.get()) != EOF)
         sum += ch;
-    std::cout << "boost::iostreams::stream<file_source> elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("boost::iostreams::stream<file_source> elapsed: " << timer.elapsedWallSeconds());
     EXPECT_EQ(nSumExpected, sum);
     }
 
@@ -325,7 +325,7 @@ TEST(dfgIo, BasicIfStream)
     std::vector<char> buffer(nFileSize);
     istrm.read(buffer.data(), buffer.size());
     DFG_ROOT_NS::DFG_SUB_NS_NAME(alg)::forEachFwd(buffer, [&](char c) {sum += c;});
-    std::cout << "std::ifstream to buffer elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("std::ifstream to buffer elapsed: " << timer.elapsedWallSeconds());
     EXPECT_EQ(nSumExpected, sum);
     }
 
@@ -336,7 +336,7 @@ TEST(dfgIo, BasicIfStream)
     std::vector<char> buffer(nFileSize);
     istrm.read(buffer.data(), buffer.size());
     DFG_ROOT_NS::DFG_SUB_NS_NAME(alg)::forEachFwd(buffer, [&](char c) {sum += c;});
-    std::cout << "BasicIfStream to buffer elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("BasicIfStream to buffer elapsed: " << timer.elapsedWallSeconds());
     EXPECT_EQ(nSumExpected, sum);
     }
 }
@@ -368,7 +368,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     Timer timer;
     size_t sum = 0;
     DFG_ROOT_NS::DFG_SUB_NS_NAME(alg)::forEachFwd(buffer, [&](char c) {sum += c;});
-    std::cout << "Direct memory read elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("Direct memory read elapsed: " << timer.elapsedWallSeconds());
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
@@ -378,7 +378,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     Timer timer;
     size_t sum = 0;
     sum = std::accumulate(buffer.cbegin(), buffer.cend(), sum);
-    std::cout << "Direct memory read with std::accumulate elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("Direct memory read with std::accumulate elapsed: " << timer.elapsedWallSeconds());
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
@@ -391,7 +391,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     int ch;
     while((ch = istrm.get()) != EOF)
         sum += ch;
-    std::cout << "std::istrstream with get elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("std::istrstream with get elapsed: " << timer.elapsedWallSeconds());
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
@@ -404,7 +404,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     char ch;
     while(istrm.read(&ch, 1))
         sum += ch;
-    std::cout << "std::istrstream with read elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("std::istrstream with read elapsed: " << timer.elapsedWallSeconds());
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
@@ -413,11 +413,11 @@ TEST(dfgIo, StdIStrStreamPerformance)
     {
     Timer timer;
     size_t sum = 0;
-    DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(BasicImStream) istrm(buffer.data(), buffer.size());
+    DFG_ROOT_NS::DFG_SUB_NS_NAME(io)::BasicImStream istrm(buffer.data(), buffer.size());
     int ch;
     while((ch = istrm.get()) != istrm.eofVal())
         sum += ch;
-    std::cout << "BasicImStream with get elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("BasicImStream with get elapsed: " << timer.elapsedWallSeconds());
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }
@@ -430,7 +430,7 @@ TEST(dfgIo, StdIStrStreamPerformance)
     int ch;
     while((ch = istrm.get()) != EOF)
         sum += ch;
-    std::cout << "boost::iostreams::stream<boost::iostreams::array_source> with get elapsed: " << timer.elapsedWallSeconds() << '\n';
+    DFGTEST_MESSAGE("boost::iostreams::stream<boost::iostreams::array_source> with get elapsed: " << timer.elapsedWallSeconds());
     strmSumPrint << "Sum: " << sum << '\n';
     EXPECT_EQ(nSumExpected, sum);
     }

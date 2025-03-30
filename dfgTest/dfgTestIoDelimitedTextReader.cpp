@@ -959,7 +959,7 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
     const size_t expectedDiagSums[] = {85427, 5109601, 25037701};
     const size_t expectedBackDiagSums[] = {90465, 5023154, 25140301};
 
-    typedef DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) Timer;
+    typedef DFG_MODULE_NS(time)::TimerCpu Timer;
 
     for(int i = 0; i < static_cast<int>(DFG_COUNTOF(matSizes)); ++i)
     {
@@ -975,11 +975,11 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
         Timer timer;
         auto vec = DFG_SUB_NS_NAME(io)::fileToByteContainer<std::vector<char>>(	fnStrm.str().c_str(),
                                                                         512);
-        std::cout << "Matrix size " << matSize << " fileToByteContainer time: " << timer.elapsedWallSeconds() << '\n';
+        DFGTEST_MESSAGE("Matrix size " << matSize << " fileToByteContainer time: " << timer.elapsedWallSeconds());
         EXPECT_EQ(false, vec.empty());
         // Runtime difference between std::istrstream ja BasicImStream was about 2.3 s vs. 0.75 s
         //std::istrstream istrm(vec.data(), vec.size());
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(BasicImStream) istrm(vec.data(), vec.size());
+        DFG_SUB_NS_NAME(io)::BasicImStream istrm(vec.data(), vec.size());
         // imbue didn't seem to work on istrstream (based on one test).
         //istrm.imbue(std::locale(istrm.getloc(), new std::codecvt_utf8<char, 0xffff, std::consume_header>));
 #else
@@ -994,9 +994,9 @@ TEST(DfgIo, DelimitedTextReader_csvReaderTestIntMatrixes)
         size_t diag = 0;
         size_t backDiag = 0;
 
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::CellData<char> cellDataHandler(',', '"', '\n');
-        auto reader = DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::createReader(istrm, cellDataHandler);
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::read(reader, [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& rCell)
+        DFG_SUB_NS_NAME(io)::DelimitedTextReader::CellData<char> cellDataHandler(',', '"', '\n');
+        auto reader = DFG_SUB_NS_NAME(io)::DelimitedTextReader::createReader(istrm, cellDataHandler);
+        DFG_SUB_NS_NAME(io)::DelimitedTextReader::read(reader, [&](const size_t nRow, const size_t nCol, const decltype(cellDataHandler)& rCell)
         {
             if (nRow == nCol) // Diagonal
                 diag += ::DFG_MODULE_NS(str)::strTo<size_t>(rCell.getBuffer().toView());

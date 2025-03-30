@@ -58,60 +58,62 @@ namespace
         T valForEach = 0;
         T valForEachFwd = 0;
 
+        using Timer = ::DFG_MODULE_NS(time)::TimerCpu;
+
         {
-            DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+            Timer timer;
 
             for (size_t i = 0; i < nLoopCount; ++i)
                 forEachFwd(vals, func);
             const auto elapsedForEach = timer.elapsedWallSeconds();
             valForEachFwd = firstOf(vals);
-            std::cout << typeid(T).name() << ": alg::forEachFwd elapsed : " << 1000 * elapsedForEach << " ms\n";
+            DFGTEST_MESSAGE(typeid(T).name() << ": alg::forEachFwd elapsed : " << 1000 * elapsedForEach << " ms");
         }
         filler(vals);
         {
-            DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+            Timer timer;
 
             for (size_t i = 0; i < nLoopCount; ++i)
                 std::for_each(vals.begin(), vals.end(), func);
             const auto elapsedForEach = timer.elapsedWallSeconds();
             valForEach = firstOf(vals);
-            std::cout << typeid(T).name() << ": std::for_each elapsed: " << 1000 * elapsedForEach << " ms\n";
+            DFGTEST_MESSAGE(typeid(T).name() << ": std::for_each elapsed: " << 1000 * elapsedForEach << " ms");
         }
         filler(vals);
         {
-            DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+            Timer timer;
 
             for (size_t i = 0; i < nLoopCount; ++i)
                 ptrForEachFwd(vals, func, FlagCallPtrForEach());
             const auto elapsedForEach = timer.elapsedWallSeconds();
-            std::cout << typeid(T).name() << ": ptrForEachFwd elapsed: " << 1000 * elapsedForEach << " ms\n";
+            DFGTEST_MESSAGE(typeid(T).name() << ": ptrForEachFwd elapsed: " << 1000 * elapsedForEach << " ms");
         }
         filler(vals);
         {
-            DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+            Timer timer;
 
             for (size_t i = 0; i < nLoopCount; ++i)
                 std::for_each(vals.begin(), vals.end(), func);
             const auto elapsedForEach = timer.elapsedWallSeconds();
-            std::cout << typeid(T).name() << ": std::for_each elapsed: " << 1000 * elapsedForEach << " ms\n";
+            DFGTEST_MESSAGE(typeid(T).name() << ": std::for_each elapsed: " << 1000 * elapsedForEach << " ms");
         }
         filler(vals);
         {
-            DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+            Timer timer;
 
             for (size_t i = 0; i < nLoopCount; ++i)
                 ::DFG_MODULE_NS(alg)::DFG_DETAIL_NS::forEachFwdImpl(vals, func, std::false_type());
             const auto elapsedForEach = timer.elapsedWallSeconds();
-            std::cout << typeid(T).name() << ": alg::forEachFwdImpl non-ptr impl elapsed: " << 1000 * elapsedForEach << " ms\n";
+            DFGTEST_MESSAGE(typeid(T).name() << ": alg::forEachFwdImpl non-ptr impl elapsed: " << 1000 * elapsedForEach << " ms");
         }
         filler(vals);
         {
-            DFG_MODULE_NS(time)::DFG_CLASS_NAME(TimerCpu) timer;
+            Timer timer;
 
             for (size_t i = 0; i < nLoopCount; ++i)
                 forEachFwd(vals, func);
             const auto elapsedForEach = timer.elapsedWallSeconds();
-            std::cout << typeid(T).name() << ": alg::forEachFwd elapsed: " << 1000 * elapsedForEach << " ms\n";
+            DFGTEST_MESSAGE(typeid(T).name() << ": alg::forEachFwd elapsed: " << 1000 * elapsedForEach << " ms");
         }
 
         EXPECT_EQ(valForEach, valForEachFwd);
