@@ -19,7 +19,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(concurrency) {
 //      -Unblock N worker threads when a condition is satisfied (alternatively could be done e.g. with std::shared_future)
 //          -Create ConditionCounterT(1)
 //          -Launch worker threads and call waitCounter()
-//          -call decrementCounter() to unblock all workr threads
+//          -call decrementCounter() to unblock all worker threads
 template <class Int_T>
 class ConditionCounterT
 {
@@ -49,6 +49,17 @@ public:
         std::unique_lock<std::mutex> lock(m_mutex);
         if (m_nCounter > 0)
             m_condVar.wait(lock, [&] { return m_nCounter == 0; });
+    }
+
+    // Waits counter for given time, returns true if counter reached zero (or was zero already), false on timeout.
+    template <class Duration_T>
+    bool waitCounterFor(const Duration_T duration)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_nCounter > 0)
+            return m_condVar.wait_for(lock, duration, [&] { return m_nCounter == 0; });
+        else
+            return true;
     }
 
     Int_T m_nCounter;

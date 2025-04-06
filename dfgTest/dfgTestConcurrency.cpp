@@ -166,4 +166,37 @@ TEST(dfgConcurrency, ConditionCounter)
     }
 }
 
+TEST(dfgConcurrency, ConditionCounter_waitFor)
+{
+    using namespace ::DFG_MODULE_NS(concurrency);
+
+    {
+        ConditionCounter waitCondition(1);
+        const size_t nThreadCount = 2;
+        std::atomic<size_t> anFailedWaitFors{ 0 };
+        std::atomic<size_t> anUnblockCounter{ 0 };
+        ThreadList threads;
+        DebugStream strm(std::cout);
+        for (size_t i = 0; i < nThreadCount; ++i)
+        {
+            threads.push_back(std::thread([&waitCondition, i, &strm, &anUnblockCounter, &anFailedWaitFors]()
+                {
+                    strm << "Entered thread " << ThisThreadPrintable(i) << '\n';
+                    anFailedWaitFors += size_t(waitCondition.waitCounterFor(std::chrono::milliseconds(1)) == false);
+                    anFailedWaitFors += size_t(waitCondition.waitCounterFor(std::chrono::milliseconds(1)) == false);
+                    anFailedWaitFors += size_t(waitCondition.waitCounterFor(std::chrono::milliseconds(1000)) == false);
+                    waitCondition.waitCounter();
+                    anUnblockCounter.fetch_add(1);
+                }));
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(40)); // Semi-arbitrary, lower value like 15 ms seemed to be too low since anFailedWaitFors would vary between runs.
+        waitCondition.decrementCounter();
+        threads.joinAllAndClear();
+        DFGTEST_EXPECT_LEFT(0, waitCondition.m_nCounter);
+        DFGTEST_EXPECT_TRUE(waitCondition.waitCounterFor(std::chrono::milliseconds(0)));
+        DFGTEST_EXPECT_LEFT(nThreadCount, anUnblockCounter.load());
+        DFGTEST_EXPECT_LEFT(2 * nThreadCount, anFailedWaitFors.load());
+    }
+}
+
 #endif // On/off switch
