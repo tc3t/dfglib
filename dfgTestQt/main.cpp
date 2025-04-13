@@ -84,25 +84,35 @@ int main(int argc, char **argv)
 
 	::testing::InitGoogleTest(&argc, argv);
 
+    // CsvItemModel
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel";
-    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue";
-    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue_dateHandling";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_cellDataAsDouble";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_defaultInputEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_QAbstractItemModelTester";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
+
+    // CsvTableView
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_columnIndexMappingWithEmptyFilteredTable";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_defaultMaximumRowCount";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_filterFromSelection";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue_dateHandling";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_regexFormat";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_saveAsShown";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_stringToDouble";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_trimCells";
+
+    // Miscellaneous
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";
+    
+    // TableEditor
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_fileInfo";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_filter";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_filterPanelSettingsFromConfFile";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_findPanelSettingsFromConfFile";
+
+    // TableView
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_setSelectedIndexes";
 
     const auto rv = RUN_ALL_TESTS();

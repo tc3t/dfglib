@@ -19,6 +19,9 @@
 #include <dfg/os/TemporaryFileStream.hpp>
 #include "../dfgTest/dfgTest.hpp"
 #include "dfgTestQt_gtestPrinters.hpp"
+#include <dfg/os/memoryInfo.hpp>
+#include <dfg/str/byteCountFormatter.hpp>
+#include <dfg/concurrency/ConditionCounter.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <gtest/gtest.h>
@@ -35,6 +38,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <QGridLayout>
     #include <QSortFilterProxyModel>
     #include <QThread>
+    #include <QTimer>
     #include <QUndoStack>
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
@@ -1866,6 +1870,58 @@ TEST(dfgQt, CsvTableView_sortSettingsFromConfFile)
     DFG_TEMP_EXPECT("3" , 5, 0);
     DFG_TEMP_EXPECT("cc", 5, 1);
 #undef DFG_TEMP_EXPECT
+}
+
+// Testing that CsvTableView doesn't freeze when showing expected maximum row count.
+TEST(dfgQt, CsvTableView_defaultMaximumRowCount)
+{
+#if defined(DFG_BUILD_TYPE_DEBUG)
+    DFGTEST_SKIP_TEST() << "Test is not available in debug-builds due to heavy resource use";
+#else
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(qt);
+
+    const auto systemMemUsage = ::DFG_MODULE_NS(os)::getMemoryUsage_system();
+    // On MSVC 2022 & Qt 5.15, test case would take around 3.2 GB of memory. That's much less than 16 GB required below,
+    // but having a much higher limit so that test only gets run on systems where can allocate 3 GB without
+    // consuming too much of available memory.
+    const auto nRequiredAvailableMemory = uint64(16000000000);
+    if (systemMemUsage.available().value_or(0) < nRequiredAvailableMemory)
+    {
+        if (systemMemUsage.available().has_value())
+            DFGTEST_SKIP_TEST() << "Skipped test case because less than " << ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(nRequiredAvailableMemory) << " memory available";
+        else
+            DFGTEST_SKIP_TEST() << "Skipped test case because couldn't query system memory info";
+    }
+
+    CsvTableWidget tableWidget;
+    auto pRowHeader = tableWidget.verticalHeader();
+    DFGTEST_ASSERT_TRUE(pRowHeader != nullptr);
+    const auto nDefaultRowHeight = pRowHeader->defaultSectionSize();
+    DFGTEST_ASSERT_LEFT(21, nDefaultRowHeight);
+    const auto nExpectedMaxRowCount = int32_max / 21; // floor(int32_max / 21) = 102261126
+    tableWidget.insertColumn();
+    tableWidget.resizeTableNoUi(nExpectedMaxRowCount, 1);
+    //tableWidget.resizeTableNoUi(nExpectedMaxRowCount + 1, 1); // Uncommenting this should cause a freeze
+
+    std::atomic_bool m_abUpdateDone = false;
+    ::DFG_MODULE_NS(concurrency)::ConditionCounter cc(1);
+    std::thread threadFreezeGuard([&cc]()
+        {
+            if (!cc.waitCounterFor(std::chrono::seconds(10)))
+            {
+                DFGTEST_MESSAGE("Test case CsvTableView_defaultMaximumRowCount is taking too long, throwing exception");
+                throw std::runtime_error("Updating CsvTableView seemed to freeze");
+            }
+        });
+
+    tableWidget.show(); // This was needed for freeze to occur.
+    QEventLoop eloop;
+    QTimer::singleShot(50, &tableWidget, [&]() { eloop.exit(0); });
+    eloop.exec();
+    cc.decrementCounter();
+    threadFreezeGuard.join();
+#endif
 }
 
 TEST(dfgQt, CsvTableView_trimCells)

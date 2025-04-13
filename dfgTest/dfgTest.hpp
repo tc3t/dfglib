@@ -58,6 +58,23 @@
 #else // Case: Asserts not enabled. In this case DFGTEST_EXPECT_ASSERT_FAILURE is no-op
     #define DFGTEST_EXPECT_ASSERT_FAILURE(expr)
 #endif
+ 
+/*
+* DFGTEST_SKIP_TEST can be used to skip a test
+* 
+* Usage example:
+*   TEST(dfg, some_test_case)
+*   {
+*   #if defined(DFG_BUILD_TYPE_DEBUG)
+*       DFGTEST_SKIP_TEST() << "Test is available only in release-builds";
+*   #else
+*       // Actual test case here.
+*       // ...
+*   #endif
+*   }
+*/ 
+
+#define DFGTEST_SKIP_TEST GTEST_SKIP
 
 
 // Defining StringView printers for GoogleTest. Note that while these also provide clearer output to test console,
