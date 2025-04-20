@@ -6058,6 +6058,14 @@ void CsvTableView::showSelectColumnVisibilityDialog()
     invalidateSortFilterProxyModel();
 }
 
+void CsvTableView::privOnCellDelegateTextChanged(const QModelIndex idxDataModel, const QString sNewText)
+{
+    CsvTableViewCellEditorTextChangedDetails params;
+    params["modelIndex"] = mapToDataModel(idxDataModel);
+    params["newText"] = sNewText;
+    Q_EMIT sigCellDelegateTextChanged(params);
+}
+
 auto CsvTableView::columnIndexDataToView(const ColumnIndex_data dataIndex) const -> ColumnIndex_view
 {
     auto pProxy = getProxyModelPtr();

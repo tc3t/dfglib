@@ -59,6 +59,8 @@ CsvTableViewDelegate::CsvTableViewDelegate(QWidget* pParent)
     : BaseClass(pParent)
     , m_spTableView(qobject_cast<CsvTableView*>(pParent))
 {
+    if (m_spTableView)
+        DFG_QT_VERIFY_CONNECT(connect(this, &QAbstractItemDelegate::closeEditor, m_spTableView.data(), &CsvTableView::sigCellEditorClosed));
 }
 
 bool CsvTableViewDelegate::checkCellEditability(const QModelIndex& index) const
@@ -99,11 +101,35 @@ QWidget* CsvTableViewDelegate::createEditor(QWidget* parent, const QStyleOptionV
     DFG_UNUSED(option);
     const auto sText = index.data(Qt::EditRole).toString();
     QWidget* pEditor = nullptr;
+
+    auto spTableView = m_spTableView;
+
     // If cell has no newlines, using LineEditCtrl...
     if (sText.indexOf('\n') == -1 && sText.indexOf(QChar::SpecialCharacter::LineSeparator) == -1)
-        pEditor = createEditorImpl<DFG_DETAIL_NS::LineEditCtrl>(parent, sText, index);
+    {
+        auto pEditorConcrete = createEditorImpl<DFG_DETAIL_NS::LineEditCtrl>(parent, sText, index);
+        DFG_QT_VERIFY_CONNECT(connect(pEditorConcrete, &DFG_DETAIL_NS::LineEditCtrl::textEdited, [spTableView, index](const QString& text)
+            {
+                if (spTableView)
+                    spTableView->privOnCellDelegateTextChanged(index, text);
+            }));
+        pEditor = pEditorConcrete;
+    }
     else // ...otherwise MultiLineEditor without completer-functionality.
-        pEditor = createEditorImpl<DFG_DETAIL_NS::MultiLineEditor>(parent, sText, index);
+    {
+        auto pEditorConcrete = createEditorImpl<DFG_DETAIL_NS::MultiLineEditor>(parent, sText, index);
+        QPointer<QPlainTextEdit> spPlainTextEdit = pEditorConcrete->m_spPlainTextEdit.get();
+        if (spPlainTextEdit)
+        {
+            DFG_QT_VERIFY_CONNECT(connect(pEditorConcrete->m_spPlainTextEdit.get(), &QPlainTextEdit::textChanged, [spTableView, index, spPlainTextEdit]()
+                {
+                    if (spTableView)
+                        spTableView->privOnCellDelegateTextChanged(index, spPlainTextEdit->toPlainText());
+                }));
+        }
+        pEditor = pEditorConcrete;
+    }
+
     return pEditor;
 }
 

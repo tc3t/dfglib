@@ -30,6 +30,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     class CsvTableView;
     class CsvItemModel;
     class CsvTableViewSortFilterProxyModel;
+    using CsvTableViewCellEditorTextChangedDetails = QVariantMap; // Assuming this definition as can't forward declare a 'using'-type.
 
     namespace DFG_DETAIL_NS
     {
@@ -84,6 +85,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
            }
 
            void setFontPointSizeF(qreal pointSize);
+           void setShownCellDetails(const QModelIndex& index);
         }; // class CellTextEditor
 
         class CellEditorWidget : public QWidget
@@ -168,6 +170,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void onHighlightTextCaseSensitivityChanged(bool);
         void onFilterCaseSensitivityChanged(bool);
         void onViewReadOnlyModeChanged(bool);
+        void onViewCellEditorTextEdited(const CsvTableViewCellEditorTextChangedDetails& details);
+        void onViewCellEditorClosed();
         void onCopyFileInfoToClipboard();
         void onOpenFileDirectoryInOsFileManager();
 

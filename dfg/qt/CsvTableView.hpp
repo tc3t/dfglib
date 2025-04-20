@@ -102,6 +102,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         class ConfFileProperty;
     } // namespace DFG_DETAIL_NS
 
+    using CsvTableViewCellEditorTextChangedDetails = QVariantMap; // Note: if converting to a dedicated class, may need to handle qRegisterMetaType
+
     using ColumnIndex_data = DFG_DETAIL_NS::TypedTableIndex<'c'>;
     using ColumnIndex_view = DFG_DETAIL_NS::TypedTableIndex<'C'>;
 
@@ -518,6 +520,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString privCreateActionBlockedDueToLockedContentMessage(const QString& actionname);
         void privShowExecutionBlockedNotification(const QString& actionname);
 
+        // CsvTableViewDelegate calls this functions when text in cell editor delegate has changed.
+        // and this function signals sigCellDelegateTextChanged()
+        void privOnCellDelegateTextChanged(QModelIndex idxDataModel, QString sNewText);
+
         QString makeClipboardStringForCopy(QChar cDelim = '\t');
 
         // Convenience function, effectively returns selectionModel()->selection();
@@ -760,6 +766,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void sigSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected, const QItemSelection& editedItems);
         void sigOnAllowApplicationSettingsUsageChanged(bool);
         void sigReadOnlyModeChanged(bool);
+        void sigCellDelegateTextChanged(CsvTableViewCellEditorTextChangedDetails);
+        void sigCellEditorClosed(QWidget*, QAbstractItemDelegate::EndEditHint);
 
     protected:
         void contextMenuEvent(QContextMenuEvent* pEvent) override;

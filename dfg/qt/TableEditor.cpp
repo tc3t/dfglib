@@ -211,6 +211,8 @@ namespace
         }
     }
 
+    const char celLEditorObjectProperty_shownModelIndex[] = "shown_model_index";
+
 } // unnamed namespace
 
 namespace DFG_DETAIL_NS {
@@ -480,6 +482,7 @@ DFG_OPAQUE_PTR_DEFINE(TableEditor)
     QMap<QModelIndex, QString> m_pendingEdits; // Stores edits done in cell editor which couldn't be applied immediately to be tried later.
     QPointer<QWidget> m_spResizeWindow;        // Defines widget to resize/move if document requests such.
     bool m_bIgnoreOnSelectionChanged = false;
+    bool m_bIgnoreCellEditorTextChanged = false; // If true, onCellEditorTextChanged() will return without doing anything.
     QObjectStorage<QToolButton> m_spFileInfoButton;
 };
 
@@ -493,6 +496,11 @@ void TableEditor::CellTextEditor::setFontPointSizeF(const qreal pointSize)
     auto font = this->font();
     font.setPointSizeF(pointSize);
     setFont(font);
+}
+
+void TableEditor::CellTextEditor::setShownCellDetails(const QModelIndex& index)
+{
+    this->setProperty(celLEditorObjectProperty_shownModelIndex, index);
 }
 
 void DFG_DETAIL_NS::CellEditorWidgetTitleBarImpl::setTitleText(const QString& sText)
@@ -535,6 +543,9 @@ TableEditor::TableEditor()
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterJsonRequested, this, &ThisClass::setFilterJson));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigFilterToColumnRequested, this, &ThisClass::setFilterToColumn));
     DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigReadOnlyModeChanged, this, &ThisClass::onViewReadOnlyModeChanged));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigCellDelegateTextChanged, this, &ThisClass::onViewCellEditorTextEdited));
+    DFG_QT_VERIFY_CONNECT(connect(m_spTableView.get(), &ViewClass::sigCellEditorClosed, this, &ThisClass::onViewCellEditorClosed));
+
     // Setting default selection details from app settings.
     setSelectionDetailsFromIni(getTableEditorProperty<TableEditorPropertyId_selectionDetails>(this));
     m_spTableView->setAcceptDrops(true);
@@ -1277,6 +1288,7 @@ void TableEditor::onSelectionChanged(const QItemSelection& selected, const QItem
             const auto bReadOnly = m_spTableView->isReadOnlyMode() || !model.isCellEditable(index);
             setCellEditorTitle(m_spCellEditorDockWidget.get(), sAddInfo, bReadOnly);
             m_spCellEditor->setReadOnly(bReadOnly);
+            m_spCellEditor->setShownCellDetails(index);
         }
         else
         {
@@ -1284,11 +1296,13 @@ void TableEditor::onSelectionChanged(const QItemSelection& selected, const QItem
             // where view row count and table row count has not been the same.
             DFG_ASSERT_CORRECTNESS(false);
             setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get(), m_spTableView->isReadOnlyMode());
+            m_spCellEditor->setShownCellDetails(QModelIndex());
         }
     }
     else
     {
         setCellEditorToNoSelectionState(m_spCellEditor.get(), m_spCellEditorDockWidget.get(), (m_spTableView) ? m_spTableView->isReadOnlyMode() : true);
+        m_spCellEditor->setShownCellDetails(QModelIndex());
     }
 
     // Update status bar
@@ -1431,7 +1445,7 @@ void TableEditor::handlePendingEdits()
 
 void TableEditor::onCellEditorTextChanged()
 {
-    if (!m_spTableView)
+    if (!m_spTableView || DFG_OPAQUE_REF().m_bIgnoreCellEditorTextChanged)
         return;
     const auto& indexes = (m_spTableView->getSelectedItemCount() == 1) ? m_spTableView->getSelectedItemIndexes_dataModel() : QModelIndexList();
     if (m_spTableModel && m_spCellEditor && indexes.size() == 1)
@@ -1714,6 +1728,28 @@ void TableEditor::onViewReadOnlyModeChanged(const bool bReadOnly)
     setCellEditorTitle(m_spCellEditorDockWidget.get(), QString(), bReadOnly);
     if (m_spCellEditor)
         m_spCellEditor->setReadOnly(bReadOnly);
+}
+
+void TableEditor::onViewCellEditorTextEdited(const CsvTableViewCellEditorTextChangedDetails& details)
+{
+    if (m_spCellEditorDockWidget && m_spCellEditorDockWidget->isVisible() &&
+        m_spCellEditor && m_spCellEditor->property(celLEditorObjectProperty_shownModelIndex).toModelIndex() == details["modelIndex"].toModelIndex())
+    {
+        // Note: without setting  m_bIgnoreCellEditorTextChanged, onCellEditorTextChanged() would set cell content when text was edited directly in table cell.
+        //       This would break the behaviour of esc-key reverting changes.
+        const auto oldFlag = DFG_OPAQUE_REF().m_bIgnoreCellEditorTextChanged;
+        auto flagHandler = makeScopedCaller([&] { DFG_OPAQUE_REF().m_bIgnoreCellEditorTextChanged = true; }, [=] { DFG_OPAQUE_REF().m_bIgnoreCellEditorTextChanged = oldFlag; });
+        m_spCellEditor->setPlainText(details["newText"].toString());
+    }
+}
+
+void TableEditor::onViewCellEditorClosed()
+{
+    // Reloading text to CellEditor widget to make sure it's up-to-date
+    // In particular if editing was cancelled, CellEditor text should be reverted back to what is was before mirroring
+    // live changes from CsvTableView editor delegate.
+    if (m_spCellEditor)
+        onSelectionChanged(QItemSelection(), QItemSelection(), QItemSelection());
 }
 
 } } // namespace dfg::qt
