@@ -13,7 +13,7 @@ DFG_END_INCLUDE_QT_HEADERS
     : BaseClass(pParent)
 {
     setReadOnly(true);
-    qRegisterMetaType<ConsoleDisplayEntryType>("ConsoleDisplayEntryType");
+    qRegisterMetaType<ConsoleDisplayEntryType>("::dfg::qt::ConsoleDisplayEntryType");
     DFG_QT_VERIFY_CONNECT(connect(this, &ConsoleDisplay::sigAddEntry, this, &ConsoleDisplay::addEntryDirect));
 }
 
