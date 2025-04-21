@@ -1097,10 +1097,10 @@ void CsvTableView::addContentEditActions()
         auto pMenu = createActionMenu(this, tr("Insert"), ActionFlags::defaultContentEdit);
         if (pMenu)
         {
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date"),          tr("Alt+Q"),       ActionFlags::defaultContentEdit, insertDate);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Time"),          tr("Alt+W"),       ActionFlags::defaultContentEdit, insertTime);
-            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date and time"), tr("Shift+Alt+Q"), ActionFlags::defaultContentEdit, insertDateTime);
-
+            // Note: Shortcuts should align with those defined in TableEditor for the same insert actions.
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date"),          tr("Alt+Q"),       ActionFlags::defaultContentEdit, insertDate).setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Time"),          tr("Alt+W"),       ActionFlags::defaultContentEdit, insertTime).setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+            DFG_TEMP_ADD_VIEW_ACTION(*pMenu, tr("Date and time"), tr("Shift+Alt+Q"), ActionFlags::defaultContentEdit, insertDateTime).setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         }
     } // End of "Insert row/column"-items
 
@@ -1751,21 +1751,21 @@ void CsvTableView::insertGeneric(const QString& s, const QString& sOperationUiNa
 auto CsvTableView::insertDate() -> QDate
 {
     const auto date = QDate::currentDate();
-    insertGeneric(dateTimeToString(date, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateFormat>(this)), tr("Insert date"));
+    insertGeneric(dateTimeToString(date), tr("Insert date"));
     return date;
 }
 
 auto CsvTableView::insertTime() -> QTime
 {
     const auto t = QTime::currentTime();
-    insertGeneric(dateTimeToString(t, getCsvModelOrViewProperty<CsvTableViewPropertyId_timeFormat>(this)), tr("Insert time"));
+    insertGeneric(dateTimeToString(t), tr("Insert time"));
     return t;
 }
 
 auto CsvTableView::insertDateTime() -> QDateTime
 {
     const auto dt = QDateTime::currentDateTime();
-    insertGeneric(dateTimeToString(dt, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this)), tr("Insert DateTime"));
+    insertGeneric(dateTimeToString(dt), tr("Insert DateTime"));
     return dt;
 }
 
@@ -5787,6 +5787,21 @@ auto CsvTableView::dateTimeToString(const QDate& date, const QString& sFormat) c
 auto CsvTableView::dateTimeToString(const QTime& qtime, const QString& sFormat) const -> QString
 {
     return qtime.toString(sFormat);
+}
+
+QString CsvTableView::dateTimeToString(const QDateTime& dateTime) const
+{
+    return dateTimeToString(dateTime, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateTimeFormat>(this));
+}
+
+QString CsvTableView::dateTimeToString(const QDate& date) const
+{
+    return dateTimeToString(date, getCsvModelOrViewProperty<CsvTableViewPropertyId_dateFormat>(this));
+}
+
+QString CsvTableView::dateTimeToString(const QTime& qtime) const
+{
+    return dateTimeToString(qtime, getCsvModelOrViewProperty<CsvTableViewPropertyId_timeFormat>(this));
 }
 
 namespace

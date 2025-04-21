@@ -598,6 +598,33 @@ TableEditor::TableEditor()
         m_spCellEditor->setDisabled(true);
         m_spCellEditor->setFontPointSizeF(getTableEditorProperty<TableEditorPropertyId_cellEditorFontPointSize>(this));
 
+        // Shortcut handling
+        if (m_spTableView)
+        {
+            const auto addAction = [&](QWidget& rAddActionTargetAndParent,
+                const QString& sShortCut,
+                auto&& slot) -> QAction&
+                {
+                    auto pAction = new QAction(&rAddActionTargetAndParent);
+                    if (!sShortCut.isEmpty())
+                        pAction->setShortcut(sShortCut);
+                    DFG_QT_VERIFY_CONNECT(QObject::connect(pAction, &QAction::triggered, &rAddActionTargetAndParent, slot));
+                    pAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+                    rAddActionTargetAndParent.addAction(pAction); // Ownership of pAction is not transferred to rAddActionTargetAndParent.
+                    return *pAction;
+                };
+                
+            auto *pCe = m_spCellEditor.get();
+#define DFG_TEMP_ADD_ACTION(SHORTCUT, DATA_FUNC) \
+                addAction(*pCe, SHORTCUT, [pCe, this]() { if (m_spTableView) pCe->insertPlainText(m_spTableView->dateTimeToString(DATA_FUNC())); })
+
+            // Note: Shortcuts should align with those defined in CsvTableView for the same insert actions.
+            DFG_TEMP_ADD_ACTION(tr("Alt+Q"), QDate::currentDate);
+            DFG_TEMP_ADD_ACTION(tr("Alt+W"), QTime::currentTime);
+            DFG_TEMP_ADD_ACTION(tr("Shift+Alt+Q"), QDateTime::currentDateTime);
+#undef DFG_TEMP_ADD_ACTION
+        }
+
         // Creating custom title bar that has buttons.
         {
             auto pTitleBarWidget = new CellEditorWidgetTitleBar(this); // Deletion by parenthood

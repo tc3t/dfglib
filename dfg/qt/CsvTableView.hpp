@@ -565,6 +565,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString dateTimeToString(const QDate& date, const QString& sFormat) const;
         QString dateTimeToString(const QTime& qtime, const QString& sFormat) const;
 
+        // Convenience overloads using default format
+        QString dateTimeToString(const QDateTime& dateTime) const;
+        QString dateTimeToString(const QDate& date) const;
+        QString dateTimeToString(const QTime& qtime) const;
+
         QDate insertDate(); // Returns QDate that was used for creating the inserted string.
         QTime insertTime(); // Returns QTime that was used for creating the inserted string.
         QDateTime insertDateTime(); // Returns QDateTime that was used for creating the inserted string.
