@@ -85,9 +85,9 @@ win32 {
 
 } else {
     version_time = $$system(current_time=$(date +%s); echo $((($current_time-$$version_time_epoch_start)/$$version_time_step)))
-    version_time_epoch_start_readable = $$system(date -u --date='@$$version_time_epoch_start' +%Y-%m-%dT%H:%m:%S)
+    version_time_epoch_start_readable = $$system(date -u --date='@$$version_time_epoch_start' +%Y-%m-%dT%H:%M:%S)
     qmake_run_time = $$system(date +%s)
-    qmake_run_time_readable = $$system(date -u --date='@$$qmake_run_time' +%Y-%m-%dT%H:%m:%S)
+    qmake_run_time_readable = $$system(date -u --date='@$$qmake_run_time' +%Y-%m-%dT%H:%M:%S)
 }
 
 message("qmake run at " $$qmake_run_time_readable)
