@@ -116,6 +116,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCharts.operations_textFilter";
     //::testing::GTEST_FLAG(filter) = "dfgCharts.ChartEntryOperationManager";
     //::testing::GTEST_FLAG(filter) = "dfgConcurrency.ConditionCounter";
+    //::testing::GTEST_FLAG(filter) = "dfgConcurrency.ConditionCounter_waitFor";
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg";
     //::testing::GTEST_FLAG(filter) = "dfgCont.contAlg_equal";
     //::testing::GTEST_FLAG(filter) = "dfgCont.CsvConfig";
@@ -183,6 +184,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_autoDetectCsvSeparator";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_read";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readCell";
+    //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readCellPastEnclosedCell";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readRow";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readRowConsecutiveSeparators";
     //::testing::GTEST_FLAG(filter) = "DfgIo.DelimitedTextReader_readTableToContainer";

@@ -297,6 +297,23 @@ TEST(DfgIo, DelimitedTextReader_CharsetANSI_Read)
 
 namespace
 {
+    template <class CharBuffer_T>
+    class ParsingWithPastEnclosedHandling : public ::DFG_MODULE_NS(io)::DelimitedTextReader::GenericParsingImplementations<CharBuffer_T>
+    {
+    public:
+        template <class Char_T>
+        static void onPastEnclosedCellCharacter(CharBuffer_T& rBuffer, const Char_T c)
+        {
+            rBuffer.appendChar(c);
+        }
+
+        static void onEnclosedCellRead(typename CharBuffer_T::Buffer& rBuffer, const int cEnc)
+        {
+            DFG_UNUSED(rBuffer);
+            DFG_UNUSED(cEnc);
+        }
+    }; // class ParsingWithPastEnclosedHandling
+
     template <class CharBuffer_T, class CharAppender_T, size_t N>
     void DelimitedTextReader_readCellImpl(const std::tuple<std::string, std::string, int> (&arrCellExpected)[N])
     {
@@ -309,6 +326,33 @@ namespace
 
             DelimitedTextReader::CellData<char, char, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
             auto reader = DelimitedTextReader::createReader(strm, cellDataHandler);
+
+            DelimitedTextReader::readCell(reader);
+            const auto chNext = strm.get();
+
+            std::string sDest;
+            sDest.assign(cellDataHandler.getBuffer().begin(), cellDataHandler.getBuffer().end());
+            EXPECT_EQ(std::get<1>(expected), sDest);
+            EXPECT_EQ(std::get<2>(expected), chNext);
+        }
+    }
+
+    template <class CharBuffer_T, class CharAppender_T, size_t N>
+    void DelimitedTextReader_readCellPastEnclosedCell(const std::tuple<std::string, std::string, int>(&arrCellExpected)[N])
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(io);
+        for (size_t i = 0; i < count(arrCellExpected); ++i)
+        {
+            const auto& expected = arrCellExpected[i];
+            BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
+
+            DelimitedTextReader::CellData<char, char, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
+            DelimitedTextReader::CellReader<
+                decltype(cellDataHandler),
+                decltype(strm),
+                ParsingWithPastEnclosedHandling<decltype(cellDataHandler)>
+            > reader(strm, cellDataHandler);
 
             DelimitedTextReader::readCell(reader);
             const auto chNext = strm.get();
@@ -382,6 +426,25 @@ TEST(DfgIo, DelimitedTextReader_readCell)
 
     DelimitedTextReader_readCellImpl<DelimitedTextReader::CharBuffer<char>, DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<char>, char>>(arrCellExpected);
     DelimitedTextReader_readCellImpl<DelimitedTextReader::StringViewCBufferWithEnclosedCellSupport, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport>(arrCellExpected);
+}
+
+TEST(DfgIo, DelimitedTextReader_readCellPastEnclosedCell)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(io);
+
+    // text, expected parsed text, expected next char from stream.
+    typedef std::tuple<std::string, std::string, int> ExpectedResultsT;
+    const auto eofGetVal = std::istream::traits_type::eof();
+    const ExpectedResultsT arrCellExpected[] =
+    {
+        ExpectedResultsT("\"ab\"cd", "abcd", eofGetVal) // Not really the result that would like to have, but currently test class ParsingWithPastEnclosedHandling handles it like this.
+        //ExpectedResultsT("\"ab\"cd", "ab\"cd", eofGetVal), // TODO: probably would like to get this
+        //ExpectedResultsT("\"a\"\"b\"cd", "ab\"\"cd", eofGetVal) // TODO: how should double enclosing items be handled: should "a""b"cd" result to "a"b"cd" or "a""b"cd"?
+    };
+
+    DelimitedTextReader_readCellPastEnclosedCell<DelimitedTextReader::CharBuffer<char>, DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<char>, char>>(arrCellExpected);
+    // TODO: support for StringView-based buffers.
 }
 
 TEST(DfgIo, DelimitedTextReader_readRow)

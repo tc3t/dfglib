@@ -861,6 +861,9 @@ public:
             buffer.onEnclosedCellRead(cEnc);
         }
 
+        template <class Char_T>
+        static void onPastEnclosedCellCharacter(CellBuffer&, const Char_T) {}
+
         template <class T, class T2>
         static void onDoubleClosingItemFoundImpl(T& controller, const T2&)
         {
@@ -981,8 +984,9 @@ public:
             // Barebones parsing does not support return values.
         }
 
-        // Barebones parsing does not support enclosed cells so this should never get called.
+        // Barebones parsing does not support enclosed cells so these should never get called.
         template <class T> static DFG_FORCEINLINE void onEnclosedCellRead(const T&, const int) { DFG_ASSERT_CORRECTNESS(false); }
+        template <class T> static DFG_FORCEINLINE void onPastEnclosedCellCharacter(CellBuffer&, const T&)   { DFG_ASSERT_CORRECTNESS(false); }
 
         // Specialization for whole stream reading when handling untranslated stream with StringViewCBuffer (i.e. can use StringView to source bytes).
         // TODO: test
@@ -1245,9 +1249,12 @@ public:
                         if (!ParsingImplementations::separatorChecker(reader.m_readState, reader.getCellBuffer()) &&
                             !ParsingImplementations::eolChecker(reader.m_readState, reader.getCellBuffer()))
                         {
+                            // Something else than cell end found after enclosing item.
                             rs = rsPastEnclosedCell;
+                            const auto cFirstAfterEnclosing = buffer.back();
                             buffer.popLastChar(); // Pop whatever came after enclosing
                             buffer.popLastChar(); // Pop ending enclosing
+                            ParsingImplementations::onPastEnclosedCellCharacter(buffer, cFirstAfterEnclosing);
 
                             // Skipping remaining chars after ending enclosing char.
                             decltype(readOne(reader.getStream())) c = '\0';
@@ -1255,7 +1262,14 @@ public:
                             {
                                 if (ParsingImplementations::separatorChecker(reader.m_readState, buffer.getFormatDefInfo(), c) ||
                                     ParsingImplementations::eolChecker(reader.m_readState, buffer.getFormatDefInfo(), c))
+                                {
                                     break;
+                                }
+                                else
+                                {
+                                    ParsingImplementations::onPastEnclosedCellCharacter(buffer, c);
+                                }
+
                             }
                             if (!reader.isStreamGood())
                                 reader.m_readState |= rsEndOfStream;
