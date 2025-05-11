@@ -297,20 +297,59 @@ TEST(DfgIo, DelimitedTextReader_CharsetANSI_Read)
 
 namespace
 {
-    template <class CharBuffer_T>
-    class ParsingWithPastEnclosedHandling : public ::DFG_MODULE_NS(io)::DelimitedTextReader::GenericParsingImplementations<CharBuffer_T>
+    using DefaultCellDataHandlerForChar = ::DFG_MODULE_NS(io)::DelimitedTextReader::CellData<
+        char,
+        char,
+        ::DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<char>,
+        ::DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderDefault<::DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<char>, char>>;
+
+    // Hack parser to demonstrate ability to store past-enclosed cell characters.
+    // Highly dependent on implementation details of StringViewCBufferWithEnclosedCellSupport
+    template <class CellController_T>
+    class ParsingWithPastEnclosedHandling : public ::DFG_MODULE_NS(io)::DelimitedTextReader::GenericParsingImplementations<CellController_T>
     {
     public:
+        using BaseClass = ::DFG_MODULE_NS(io)::DelimitedTextReader::GenericParsingImplementations<CellController_T>;
+
         template <class Char_T>
-        static void onPastEnclosedCellCharacter(CharBuffer_T& rBuffer, const Char_T c)
+        static void onPastEnclosedCellCharacter(CellController_T& rCellController, const Char_T c)
         {
-            rBuffer.appendChar(c);
+            using namespace ::DFG_MODULE_NS(io);
+            if constexpr (std::is_same_v<CellController_T, DefaultCellDataHandlerForChar>)
+                rCellController.appendChar(c);
+            else // Case: assuming else-branch to mean StringViewCBufferWithEnclosedCellSupport
+            {
+                // Copying characters past enclosed cell to temporary buffer which will later be used
+                // in onEnclosedCellRead().
+                auto& rTempBuffer = rCellController.getBuffer().m_temporaryBuffer;
+                DelimitedTextReader::CharAppenderDefault<decltype(rTempBuffer), char>()(rTempBuffer, c);
+            }
         }
 
-        static void onEnclosedCellRead(typename CharBuffer_T::Buffer& rBuffer, const int cEnc)
+        static void onEnclosedCellRead(typename CellController_T::Buffer& rBuffer, const int cEnc)
         {
-            DFG_UNUSED(rBuffer);
-            DFG_UNUSED(cEnc);
+            if constexpr (std::is_same_v<CellController_T, DefaultCellDataHandlerForChar>)
+            {
+                DFG_UNUSED(rBuffer);
+                DFG_UNUSED(cEnc);
+            }
+            else
+            {
+                auto& rTempBuffer = rBuffer.m_temporaryBuffer;
+                if (rTempBuffer.empty())
+                    BaseClass::onEnclosedCellRead(rBuffer, cEnc); // No 'past enclosed cell' -characters found -> normal handling.
+                else
+                {
+                    auto excessBuffer = rTempBuffer; // Takes copy of current past-enclosed cell characters
+                    rTempBuffer.clear(); // Clears temporary buffer to make sure normal handler won't misuse temp buffer content.
+                    BaseClass::onEnclosedCellRead(rBuffer, cEnc);
+                    if (rTempBuffer.empty()) // If temp buffer is empty, need to copy current content, otherwise buffer is already using temp buffer.
+                        rTempBuffer.assign(rBuffer.begin(), rBuffer.end());
+                    std::copy(excessBuffer.begin(), excessBuffer.end(), std::back_inserter(rTempBuffer)); // Copies past-enclosed to current buffer.
+                    rBuffer.reset(rTempBuffer.data(), rTempBuffer.size()); // Sets buffer to manually tweaked content.
+                }
+            }
+
         }
     }; // class ParsingWithPastEnclosedHandling
 
@@ -438,13 +477,16 @@ TEST(DfgIo, DelimitedTextReader_readCellPastEnclosedCell)
     const auto eofGetVal = std::istream::traits_type::eof();
     const ExpectedResultsT arrCellExpected[] =
     {
-        ExpectedResultsT("\"ab\"cd", "abcd", eofGetVal) // Not really the result that would like to have, but currently test class ParsingWithPastEnclosedHandling handles it like this.
-        //ExpectedResultsT("\"ab\"cd", "ab\"cd", eofGetVal), // TODO: probably would like to get this
-        //ExpectedResultsT("\"a\"\"b\"cd", "ab\"\"cd", eofGetVal) // TODO: how should double enclosing items be handled: should "a""b"cd" result to "a"b"cd" or "a""b"cd"?
+        ExpectedResultsT("\"ab\"cd", "abcd", eofGetVal), // It's not obvious what result "should" be: "ab"cd, abcd, ab (cd) ..., but using abcd here.
+        ExpectedResultsT("\"a\"\"b\"cd", "a\"bcd", eofGetVal) // Like in previous, it's not clear what result should be, but using the same logic: excess content is simply appended.
     };
 
-    DelimitedTextReader_readCellPastEnclosedCell<DelimitedTextReader::CharBuffer<char>, DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<char>, char>>(arrCellExpected);
-    // TODO: support for StringView-based buffers.
+    DelimitedTextReader_readCellPastEnclosedCell<
+        DelimitedTextReader::CharBuffer<char>,
+        DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<char>, char>>(arrCellExpected);
+    DelimitedTextReader_readCellPastEnclosedCell<
+        DelimitedTextReader::StringViewCBufferWithEnclosedCellSupport,
+        DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport>(arrCellExpected);
 }
 
 TEST(DfgIo, DelimitedTextReader_readRow)
