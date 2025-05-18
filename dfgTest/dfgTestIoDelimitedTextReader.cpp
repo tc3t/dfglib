@@ -297,62 +297,6 @@ TEST(DfgIo, DelimitedTextReader_CharsetANSI_Read)
 
 namespace
 {
-    using DefaultCellDataHandlerForChar = ::DFG_MODULE_NS(io)::DelimitedTextReader::CellData<
-        char,
-        char,
-        ::DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<char>,
-        ::DFG_MODULE_NS(io)::DelimitedTextReader::CharAppenderDefault<::DFG_MODULE_NS(io)::DelimitedTextReader::CharBuffer<char>, char>>;
-
-    // Hack parser to demonstrate ability to store past-enclosed cell characters.
-    // Highly dependent on implementation details of StringViewCBufferWithEnclosedCellSupport
-    template <class CellController_T>
-    class ParsingWithPastEnclosedHandling : public ::DFG_MODULE_NS(io)::DelimitedTextReader::GenericParsingImplementations<CellController_T>
-    {
-    public:
-        using BaseClass = ::DFG_MODULE_NS(io)::DelimitedTextReader::GenericParsingImplementations<CellController_T>;
-
-        template <class Char_T>
-        static void onPastEnclosedCellCharacter(CellController_T& rCellController, const Char_T c)
-        {
-            using namespace ::DFG_MODULE_NS(io);
-            if constexpr (std::is_same_v<CellController_T, DefaultCellDataHandlerForChar>)
-                rCellController.appendChar(c);
-            else // Case: assuming else-branch to mean StringViewCBufferWithEnclosedCellSupport
-            {
-                // Copying characters past enclosed cell to temporary buffer which will later be used
-                // in onEnclosedCellRead().
-                auto& rTempBuffer = rCellController.getBuffer().m_temporaryBuffer;
-                DelimitedTextReader::CharAppenderDefault<decltype(rTempBuffer), char>()(rTempBuffer, c);
-            }
-        }
-
-        static void onEnclosedCellRead(typename CellController_T::Buffer& rBuffer, const int cEnc)
-        {
-            if constexpr (std::is_same_v<CellController_T, DefaultCellDataHandlerForChar>)
-            {
-                DFG_UNUSED(rBuffer);
-                DFG_UNUSED(cEnc);
-            }
-            else
-            {
-                auto& rTempBuffer = rBuffer.m_temporaryBuffer;
-                if (rTempBuffer.empty())
-                    BaseClass::onEnclosedCellRead(rBuffer, cEnc); // No 'past enclosed cell' -characters found -> normal handling.
-                else
-                {
-                    auto excessBuffer = rTempBuffer; // Takes copy of current past-enclosed cell characters
-                    rTempBuffer.clear(); // Clears temporary buffer to make sure normal handler won't misuse temp buffer content.
-                    BaseClass::onEnclosedCellRead(rBuffer, cEnc);
-                    if (rTempBuffer.empty()) // If temp buffer is empty, need to copy current content, otherwise buffer is already using temp buffer.
-                        rTempBuffer.assign(rBuffer.begin(), rBuffer.end());
-                    std::copy(excessBuffer.begin(), excessBuffer.end(), std::back_inserter(rTempBuffer)); // Copies past-enclosed to current buffer.
-                    rBuffer.reset(rTempBuffer.data(), rTempBuffer.size()); // Sets buffer to manually tweaked content.
-                }
-            }
-
-        }
-    }; // class ParsingWithPastEnclosedHandling
-
     template <class CharBuffer_T, class CharAppender_T, size_t N>
     void DelimitedTextReader_readCellImpl(const std::tuple<std::string, std::string, int> (&arrCellExpected)[N])
     {
@@ -390,7 +334,7 @@ namespace
             DelimitedTextReader::CellReader<
                 decltype(cellDataHandler),
                 decltype(strm),
-                ParsingWithPastEnclosedHandling<decltype(cellDataHandler)>
+                DelimitedTextReader::GenericParsingWithPastEnclosedHandling<decltype(cellDataHandler)>
             > reader(strm, cellDataHandler);
 
             DelimitedTextReader::readCell(reader);

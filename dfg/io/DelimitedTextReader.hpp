@@ -921,6 +921,53 @@ public:
         }
     }; // class GenericParsingImplementations
 
+
+    // Extension of GenericParsingImplementations supporting handling of past-enclosed-cell characters.
+    template <class CellController_T>
+    class GenericParsingWithPastEnclosedHandling : public GenericParsingImplementations<CellController_T>
+    {
+    public:
+        using BaseClass = GenericParsingImplementations<CellController_T>;
+        using Buffer = typename CellController_T::Buffer;
+        using BufferChar = typename CellController_T::BufferChar;
+
+        template <class Char_T>
+        static void onPastEnclosedCellCharacter(CellController_T& rCellController, const Char_T c)
+        {
+            if constexpr (std::is_same_v<Buffer, StringViewCBufferWithEnclosedCellSupport>)
+            {
+                // Copying characters past enclosed cell to temporary buffer which will later be used
+                // in onEnclosedCellRead().
+                auto& rTempBuffer = rCellController.getBuffer().m_temporaryBuffer;
+                CharAppenderDefault<decltype(rTempBuffer), char>()(rTempBuffer, c);
+            }
+            else
+            {
+                rCellController.appendChar(c);
+            }
+        }
+
+        static void onEnclosedCellRead(typename Buffer& rBuffer, const int cEnc)
+        {
+            if constexpr (std::is_same_v<Buffer, StringViewCBufferWithEnclosedCellSupport>)
+            {
+                auto& rTempBuffer = rBuffer.m_temporaryBuffer;
+                if (rTempBuffer.empty())
+                    BaseClass::onEnclosedCellRead(rBuffer, cEnc); // No 'past enclosed cell' -characters found -> normal handling.
+                else // Case: there are past-enclosed characters, appending them after the actual content.
+                {
+                    auto excessBuffer = rTempBuffer; // Takes copy of current past-enclosed cell characters
+                    rTempBuffer.clear(); // Clears temporary buffer to make sure normal handler won't misuse temp buffer content.
+                    BaseClass::onEnclosedCellRead(rBuffer, cEnc);
+                    if (rTempBuffer.empty()) // If temp buffer is empty, need to copy current content, otherwise buffer is already using temp buffer.
+                        rTempBuffer.assign(rBuffer.begin(), rBuffer.end());
+                    std::copy(excessBuffer.begin(), excessBuffer.end(), std::back_inserter(rTempBuffer)); // Copies past-enclosed to current buffer.
+                    rBuffer.reset(rTempBuffer.data(), rTempBuffer.size()); // Sets buffer to manually tweaked content.
+                }
+            }
+        }
+    }; // class GenericParsingWithPastEnclosedHandling
+
     /* Basic parsing implementations that may yield better read performance with the following restrictions:
      *      -No pre-cell or post-cell trimming (e.g. in case of ', a' pre-cell trimming could remove leading whitespaces and read cell as "a" instead of " a")
      *      -No enclosed cell support (e.g. can't have separators or new lines within cells and enclosing characters will be read like any other non-control character)
