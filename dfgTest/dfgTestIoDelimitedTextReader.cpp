@@ -297,40 +297,45 @@ TEST(DfgIo, DelimitedTextReader_CharsetANSI_Read)
 
 namespace
 {
-    template <class CharBuffer_T, class CharAppender_T, size_t N>
-    void DelimitedTextReader_readCellImpl(const std::tuple<std::string, std::string, int> (&arrCellExpected)[N])
+
+    template <class CharBuffer_T, class CharAppender_T, class ParsingImplFunc_T>
+    void DelimitedTextReader_readCellImpl(ParsingImplFunc_T fpParsingImpl, const std::vector<::DFG_ROOT_NS::Span<const std::tuple<std::string, std::string, int>>> vecSpanExpected)
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
-        for (size_t i = 0; i < count(arrCellExpected); ++i)
+        for (const auto span : vecSpanExpected)
         {
-            const auto& expected = arrCellExpected[i];
-            BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
+            for (size_t i = 0; i < count(span); ++i)
+            {
+                const auto& expected = span[i];
+                BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
 
-            DelimitedTextReader::CellData<char, char, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
-            auto reader = DelimitedTextReader::createReader(strm, cellDataHandler);
+                DelimitedTextReader::CellData<char, char, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
+                auto reader = DelimitedTextReader::CellReader<decltype(cellDataHandler), decltype(strm), decltype(fpParsingImpl(cellDataHandler))>(strm, cellDataHandler);
 
-            DelimitedTextReader::readCell(reader);
-            const auto chNext = strm.get();
+                DelimitedTextReader::readCell(reader);
+                const auto chNext = strm.get();
 
-            std::string sDest;
-            sDest.assign(cellDataHandler.getBuffer().begin(), cellDataHandler.getBuffer().end());
-            EXPECT_EQ(std::get<1>(expected), sDest);
-            EXPECT_EQ(std::get<2>(expected), chNext);
+                std::string sDest;
+                sDest.assign(cellDataHandler.getBuffer().begin(), cellDataHandler.getBuffer().end());
+                EXPECT_EQ(std::get<1>(expected), sDest);
+                EXPECT_EQ(std::get<2>(expected), chNext);
+            }
         }
     }
 
-    template <class CharBuffer_T, class CharAppender_T, size_t N>
-    void DelimitedTextReader_readCellPastEnclosedCell(const std::tuple<std::string, std::string, int>(&arrCellExpected)[N])
+    template <class CharBuffer_T, class CharAppender_T, class Case_T>
+    void DelimitedTextReader_readCellPastEnclosedCell(const ::DFG_ROOT_NS::Span<const Case_T> arrCellExpected)
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
+        using CharT = std::remove_const_t<std::remove_reference_t<decltype(CharBuffer_T()[0])>>;
         for (size_t i = 0; i < count(arrCellExpected); ++i)
         {
             const auto& expected = arrCellExpected[i];
-            BasicImStream strm(std::get<0>(expected).data(), std::get<0>(expected).size());
+            BasicImStream_T<CharT> strm(std::get<0>(expected).data(), std::get<0>(expected).size());
 
-            DelimitedTextReader::CellData<char, char, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
+            DelimitedTextReader::CellData<CharT, CharT, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
             DelimitedTextReader::CellReader<
                 decltype(cellDataHandler),
                 decltype(strm),
@@ -340,7 +345,7 @@ namespace
             DelimitedTextReader::readCell(reader);
             const auto chNext = strm.get();
 
-            std::string sDest;
+            std::basic_string<CharT> sDest;
             sDest.assign(cellDataHandler.getBuffer().begin(), cellDataHandler.getBuffer().end());
             EXPECT_EQ(std::get<1>(expected), sDest);
             EXPECT_EQ(std::get<2>(expected), chNext);
@@ -372,21 +377,11 @@ TEST(DfgIo, DelimitedTextReader_readCell)
         ExpectedResultsT("\"asd\"\"\"\"asd\"", "asd\"\"asd", eofGetVal),
         ExpectedResultsT("\"asd\"\"\"\"asd\"\"\"", "asd\"\"asd\"", eofGetVal),
         ExpectedResultsT("\"  asd\"\"asd\"", "  asd\"asd", eofGetVal),
-        ExpectedResultsT("  \" asd\"\"asd\"  ", " asd\"asd", eofGetVal),
-        ExpectedResultsT("  \"as,d,\"\",asd\"  ", "as,d,\",asd", eofGetVal),
         ExpectedResultsT("  \"as,d,\"\",a s  d\",", "as,d,\",a s  d", eofGetVal),
-        ExpectedResultsT("  \"as,d,\"\",asd\"  ,", "as,d,\",asd", eofGetVal),
         ExpectedResultsT("a b,c", "a b", 'c'),
 
         ExpectedResultsT("a b,    c", "a b", ' '),
         ExpectedResultsT("\"a b\",c", "a b", 'c'),
-
-        ExpectedResultsT("  \"a b\"   , c", "a b", ' '),
-        ExpectedResultsT("  \"a b\"   ,  c", "a b", ' '),
-        ExpectedResultsT("  \"a b  \"   ,  c", "a b  ", ' '),
-        ExpectedResultsT("  \"a,\"\",b\"   ,tc", "a,\",b", 't'),
-        ExpectedResultsT("  \"a,\"\",\r,\n,\r\n,b\"   ,tc", "a,\",\r,\n,\r\n,b", 't'),
-        ExpectedResultsT("\"a \r\" \na", "a \r", 'a'), // Testing that \r\n translation doesn't get confused if last in enclosed cell is \r and there are skipped items before cell ending \n.
 
         ExpectedResultsT("abc\ndef", "abc", 'd'),
         ExpectedResultsT("abc\r\ndef", "abc", 'd'),
@@ -401,14 +396,60 @@ TEST(DfgIo, DelimitedTextReader_readCell)
         ExpectedResultsT("\"\"", "", eofGetVal),
         ExpectedResultsT("\"\", ", "", ' '),
         ExpectedResultsT("   ", "", eofGetVal),
+    };
 
+    // Test cases for parsing which is expected to ignore content past enclosed cell, i.e. "ab"cd,ef (part 'cd' is past enclosed)
+    const ExpectedResultsT arrCellExpectedIgnoredPastEnclosed[] =
+    {
         ExpectedResultsT("\" \"", " ", eofGetVal),
         ExpectedResultsT("\" \"ab,b", " ", 'b'), // Malformed cell " "ab  Simply ignore trailing chars.
         ExpectedResultsT("\"\"ab,b", "", 'b'), // Malformed cell ""ab     Simply ignore trailing chars.
+        ExpectedResultsT("  \"a b  \"   ,  c", "a b  ", ' '),
+        ExpectedResultsT("  \" asd\"\"asd\"  ", " asd\"asd", eofGetVal),
+        ExpectedResultsT("  \"as,d,\"\",asd\"  ,", "as,d,\",asd", eofGetVal),
+        ExpectedResultsT("  \"as,d,\"\",asd\"  ", "as,d,\",asd", eofGetVal),
+        ExpectedResultsT("  \"a b\"   , c", "a b", ' '),
+        ExpectedResultsT("  \"a b\"   ,  c", "a b", ' '),
+        ExpectedResultsT("  \"a,\"\",b\"   ,tc", "a,\",b", 't'),
+        ExpectedResultsT("  \"a,\"\",\r,\n,\r\n,b\"   ,tc", "a,\",\r,\n,\r\n,b", 't'),
+        ExpectedResultsT("\"a \r\" \na", "a \r", 'a'), // Testing that \r\n translation doesn't get confused if last in enclosed cell is \r and there are skipped items before cell ending \n.
     };
 
-    DelimitedTextReader_readCellImpl<DelimitedTextReader::CharBuffer<char>, DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<char>, char>>(arrCellExpected);
-    DelimitedTextReader_readCellImpl<DelimitedTextReader::StringViewCBufferWithEnclosedCellSupport, DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport>(arrCellExpected);
+    using Dtr = DelimitedTextReader;
+    using DefBuffer = Dtr::CharBuffer<char>;
+    using SvcBuffer = Dtr::StringViewCBufferWithEnclosedCellSupport;
+    using DefAppender = Dtr::CharAppenderDefault<DefBuffer, char>;
+    using SvcAppender = Dtr::CharAppenderStringViewCBufferWithEnclosedCellSupport;
+    const auto defaultParsing = [](auto&& cellData) { return Dtr::GenericParsingImplementations<std::remove_reference_t<decltype(cellData)>>(); };
+    const auto pastEnclosedCellParsing = [](auto&& cellData) { return Dtr::GenericParsingWithPastEnclosedHandling<std::remove_reference_t<decltype(cellData)>>(); };
+
+    DelimitedTextReader_readCellImpl<DefBuffer, DefAppender>(defaultParsing, { arrCellExpected, arrCellExpectedIgnoredPastEnclosed });
+    DelimitedTextReader_readCellImpl<SvcBuffer, SvcAppender>(defaultParsing, { arrCellExpected, arrCellExpectedIgnoredPastEnclosed });
+    DelimitedTextReader_readCellImpl<DefBuffer, DefAppender>(pastEnclosedCellParsing, { arrCellExpected });
+    DelimitedTextReader_readCellImpl<SvcBuffer, SvcAppender>(pastEnclosedCellParsing, { arrCellExpected });
+}
+
+namespace
+{
+    template <class Char_T> using CellParseTestCaseDef = std::tuple<std::basic_string<Char_T>, std::basic_string<Char_T>, ::DFG_ROOT_NS::int64>;
+
+    template <class Char_T>
+    auto getCellParseTestCases() -> auto
+    {
+        using namespace ::DFG_MODULE_NS(io);
+        using CaseDef = CellParseTestCaseDef<Char_T>;
+        const auto eofGetVal = BasicImStream_T<Char_T>::eofVal();
+#define DFG_TEMP_STRDEF(STR) DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, STR)
+        const std::array<CaseDef, 4> arrCellExpected =
+        {
+            CaseDef(DFG_TEMP_STRDEF("\"ab\"cd"), DFG_TEMP_STRDEF("abcd"), eofGetVal), // It's not obvious what result "should" be: "ab"cd, abcd, ab (cd) ..., but using abcd here.
+            CaseDef(DFG_TEMP_STRDEF("\"a\"\"b\"cd"), DFG_TEMP_STRDEF("a\"bcd"), eofGetVal), // Like in previous, it's not clear what result should be, but using the same logic: excess content is simply appended.
+            CaseDef(DFG_TEMP_STRDEF("\"ab \" \t "), DFG_TEMP_STRDEF("ab  \t "), eofGetVal),
+            CaseDef(DFG_TEMP_STRDEF("\"ab\r\"\n"), DFG_TEMP_STRDEF("ab\r"), eofGetVal),
+        };
+        return arrCellExpected;
+#undef DFG_TEMP_STRDEF
+    }
 }
 
 TEST(DfgIo, DelimitedTextReader_readCellPastEnclosedCell)
@@ -416,21 +457,22 @@ TEST(DfgIo, DelimitedTextReader_readCellPastEnclosedCell)
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(io);
 
-    // text, expected parsed text, expected next char from stream.
-    typedef std::tuple<std::string, std::string, int> ExpectedResultsT;
-    const auto eofGetVal = std::istream::traits_type::eof();
-    const ExpectedResultsT arrCellExpected[] =
-    {
-        ExpectedResultsT("\"ab\"cd", "abcd", eofGetVal), // It's not obvious what result "should" be: "ab"cd, abcd, ab (cd) ..., but using abcd here.
-        ExpectedResultsT("\"a\"\"b\"cd", "a\"bcd", eofGetVal) // Like in previous, it's not clear what result should be, but using the same logic: excess content is simply appended.
-    };
+#define DFG_TEMP_DEFAULT_CASE(CHAR) \
+    DelimitedTextReader_readCellPastEnclosedCell< \
+        DelimitedTextReader::CharBuffer<CHAR>, \
+        DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<CHAR>, CHAR>, \
+        CellParseTestCaseDef<CHAR>>(getCellParseTestCases<CHAR>())
+
+    DFG_TEMP_DEFAULT_CASE(char);
+    DFG_TEMP_DEFAULT_CASE(char16_t);
+    DFG_TEMP_DEFAULT_CASE(char32_t);
 
     DelimitedTextReader_readCellPastEnclosedCell<
-        DelimitedTextReader::CharBuffer<char>,
-        DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<char>, char>>(arrCellExpected);
-    DelimitedTextReader_readCellPastEnclosedCell<
         DelimitedTextReader::StringViewCBufferWithEnclosedCellSupport,
-        DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport>(arrCellExpected);
+        DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport,
+        CellParseTestCaseDef<char>>(getCellParseTestCases<char>());
+
+#undef DFG_TEMP_DEFAULT_CASE
 }
 
 TEST(DfgIo, DelimitedTextReader_readRow)

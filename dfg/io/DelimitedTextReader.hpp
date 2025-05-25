@@ -965,6 +965,11 @@ public:
                     rBuffer.reset(rTempBuffer.data(), rTempBuffer.size()); // Sets buffer to manually tweaked content.
                 }
             }
+            else
+            {
+                DFG_UNUSED(rBuffer);
+                DFG_UNUSED(cEnc);
+            }
         }
     }; // class GenericParsingWithPastEnclosedHandling
 
@@ -1276,7 +1281,7 @@ public:
                 rs = rsInEnclosedCell;
                 while (!reader.isReadStateEndOfCell() && reader.readChar())
                 {
-                    if (ParsingImplementations::isEmptyGivenSuccessfulReadCharCall(buffer) || buffer.back() != buffer.getFormatDefInfo().getEnc())
+                    if (ParsingImplementations::isEmptyGivenSuccessfulReadCharCall(buffer) || bufferCharToInternal(buffer.back()) != buffer.getFormatDefInfo().getEnc())
                         continue;
                     // Found enclosing char; reading next char to determine if it was ending one.
                     if (!reader.readChar(buffer, rsLookingForNewData)) // Using explicitly set read state to avoid separator auto detection being ignored in case of separator following ending enclosing (test cases in DelimitedTextReader_autoDetectCsvSeparator)
@@ -1286,7 +1291,7 @@ public:
                         reader.m_readState |= rsEndOfStream;
                         break;
                     }
-                    if (buffer.back() == buffer.getFormatDefInfo().getEnc())
+                    if (bufferCharToInternal(buffer.back()) == buffer.getFormatDefInfo().getEnc())
                     {
                         // Found double enclosing, handling it and continuing cell reading.
                         ParsingImplementations::onDoubleClosingItemFound(buffer);
