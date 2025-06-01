@@ -16,6 +16,7 @@
 #include <dfg/time/timerCpu.hpp>
 #include <dfg/cont/tableCsv.hpp>
 #include <dfg/str.hpp>
+#include <dfg/utf.hpp>
 
 namespace
 {
@@ -324,8 +325,8 @@ namespace
         }
     }
 
-    template <class CharBuffer_T, class CharAppender_T, class Case_T>
-    void DelimitedTextReader_readCellPastEnclosedCell(const ::DFG_ROOT_NS::Span<const Case_T> arrCellExpected)
+    template <class CharBuffer_T, class CharAppender_T, class Case_T, class StrmGen_T>
+    void DelimitedTextReader_readCellPastEnclosedCell(const ::DFG_ROOT_NS::Span<const Case_T> arrCellExpected, StrmGen_T strmGen)
     {
         using namespace DFG_ROOT_NS;
         using namespace DFG_MODULE_NS(io);
@@ -333,7 +334,7 @@ namespace
         for (size_t i = 0; i < count(arrCellExpected); ++i)
         {
             const auto& expected = arrCellExpected[i];
-            BasicImStream_T<CharT> strm(std::get<0>(expected).data(), std::get<0>(expected).size());
+            auto strm = strmGen(std::get<0>(expected));
 
             DelimitedTextReader::CellData<CharT, CharT, CharBuffer_T, CharAppender_T> cellDataHandler(',', '"', '\n');
             DelimitedTextReader::CellReader<
@@ -413,6 +414,7 @@ TEST(DfgIo, DelimitedTextReader_readCell)
         ExpectedResultsT("  \"a,\"\",b\"   ,tc", "a,\",b", 't'),
         ExpectedResultsT("  \"a,\"\",\r,\n,\r\n,b\"   ,tc", "a,\",\r,\n,\r\n,b", 't'),
         ExpectedResultsT("\"a \r\" \na", "a \r", 'a'), // Testing that \r\n translation doesn't get confused if last in enclosed cell is \r and there are skipped items before cell ending \n.
+        ExpectedResultsT("\"ab\"\xe2\x82\xac", "ab", eofGetVal), // Multibyte UTF-8 as past-enclosed-cell.
     };
 
     using Dtr = DelimitedTextReader;
@@ -434,21 +436,58 @@ namespace
     template <class Char_T> using CellParseTestCaseDef = std::tuple<std::basic_string<Char_T>, std::basic_string<Char_T>, ::DFG_ROOT_NS::int64>;
 
     template <class Char_T>
-    auto getCellParseTestCases() -> auto
+    auto getCellParsePastEnclosedTestCases() -> auto
     {
         using namespace ::DFG_MODULE_NS(io);
         using CaseDef = CellParseTestCaseDef<Char_T>;
         const auto eofGetVal = BasicImStream_T<Char_T>::eofVal();
 #define DFG_TEMP_STRDEF(STR) DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, STR)
-        const std::array<CaseDef, 4> arrCellExpected =
+        const std::array<CaseDef, 6> arrCellExpected =
         {
             CaseDef(DFG_TEMP_STRDEF("\"ab\"cd"), DFG_TEMP_STRDEF("abcd"), eofGetVal), // It's not obvious what result "should" be: "ab"cd, abcd, ab (cd) ..., but using abcd here.
             CaseDef(DFG_TEMP_STRDEF("\"a\"\"b\"cd"), DFG_TEMP_STRDEF("a\"bcd"), eofGetVal), // Like in previous, it's not clear what result should be, but using the same logic: excess content is simply appended.
             CaseDef(DFG_TEMP_STRDEF("\"ab \" \t "), DFG_TEMP_STRDEF("ab  \t "), eofGetVal),
             CaseDef(DFG_TEMP_STRDEF("\"ab\r\"\n"), DFG_TEMP_STRDEF("ab\r"), eofGetVal),
+            CaseDef(DFG_TEMP_STRDEF("\"a\xe2\x82\xac""b\"\xe2\x82\xac"), DFG_TEMP_STRDEF("a\xe2\x82\xac""b\xe2\x82\xac"), eofGetVal),
+            CaseDef(DFG_TEMP_STRDEF("\"a\xe2\x82\xac""b\"\xe2\x82\xac""\xe2\x82\xac"), DFG_TEMP_STRDEF("a\xe2\x82\xac""b\xe2\x82\xac""\xe2\x82\xac"), eofGetVal),
         };
         return arrCellExpected;
 #undef DFG_TEMP_STRDEF
+    }
+
+    template <class Char_T>
+    auto getCellParsePastEnclosedTestCasesUtf8() -> auto
+    {
+        using namespace ::DFG_MODULE_NS(io);
+        using CaseDef = CellParseTestCaseDef<Char_T>;
+        const auto eofGetVal = BasicImStream_T<Char_T>::eofVal();
+        const auto baseSet = getCellParsePastEnclosedTestCases<Char_T>();
+        std::vector< CaseDef> testCases(baseSet.begin(), baseSet.end());
+        
+#define DFG_TEMP_STRDEF(STR) DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, STR)
+        // One 1-byte codepoint after enclosing
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"a\xe2\x82\xac""b\"c"), DFG_TEMP_STRDEF("a\xe2\x82\xac""bc"), eofGetVal));
+
+        // One 2-byte codepoint after enclosing
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"a\xe2\x82\xac""b\"\xc3\xa4"), DFG_TEMP_STRDEF("a\xe2\x82\xac""b\xc3\xa4"), eofGetVal));
+        // One 3-bytes codepoint after enclosing
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"a\xe2\x82\xac""b\"\xe2\x82\xac"), DFG_TEMP_STRDEF("a\xe2\x82\xac""b\xe2\x82\xac"), eofGetVal));
+        // Two 3-bytes codepoint after enclosing
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"a\xe2\x82\xac""b\"\xe2\x82\xac""\xe2\x82\xac"), DFG_TEMP_STRDEF("a\xe2\x82\xac""b\xe2\x82\xac""\xe2\x82\xac"), eofGetVal));
+        // Mixture of characters after enclosing
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"c\xc3\xa4\xe2\x82\xac"), DFG_TEMP_STRDEF("abc\xc3\xa4\xe2\x82\xac"), eofGetVal));
+
+        // Start byte that indicates byte sequence longer than remaining input, expect to get replacement character.
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"\xE0"), DFG_TEMP_STRDEF("ab\xef\xbf\xbd"), eofGetVal));
+
+        // Start byte that indicates byte sequence longer than remaining cell
+        // At the time of writing UTF stream didn't detect trailing input as invalid, so expected string is more of a
+        // test for how it works, not how it should work. But this is not a parser issue as it works on characters
+        // that stream gives it.
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"\xE0,cd"), DFG_TEMP_STRDEF("ab\xe0\xac\xa3""d"), eofGetVal));
+
+#undef DFG_TEMP_STRDEF
+        return testCases;
     }
 }
 
@@ -456,21 +495,40 @@ TEST(DfgIo, DelimitedTextReader_readCellPastEnclosedCell)
 {
     using namespace DFG_ROOT_NS;
     using namespace DFG_MODULE_NS(io);
+    getCellParsePastEnclosedTestCases<char>();
+
+    using Dtr = DelimitedTextReader;
 
 #define DFG_TEMP_DEFAULT_CASE(CHAR) \
     DelimitedTextReader_readCellPastEnclosedCell< \
-        DelimitedTextReader::CharBuffer<CHAR>, \
-        DelimitedTextReader::CharAppenderDefault<DelimitedTextReader::CharBuffer<CHAR>, CHAR>, \
-        CellParseTestCaseDef<CHAR>>(getCellParseTestCases<CHAR>())
+        Dtr::CharBuffer<CHAR>, \
+        Dtr::CharAppenderDefault<Dtr::CharBuffer<CHAR>, CHAR>, \
+        CellParseTestCaseDef<CHAR>>( \
+            getCellParsePastEnclosedTestCases<CHAR>(), \
+            [](const auto& data) { return BasicImStream_T<CHAR>(data); } )
 
+    // Default appender with different char types
     DFG_TEMP_DEFAULT_CASE(char);
     DFG_TEMP_DEFAULT_CASE(char16_t);
     DFG_TEMP_DEFAULT_CASE(char32_t);
 
+    // StringViewC buffer
     DelimitedTextReader_readCellPastEnclosedCell<
-        DelimitedTextReader::StringViewCBufferWithEnclosedCellSupport,
-        DelimitedTextReader::CharAppenderStringViewCBufferWithEnclosedCellSupport,
-        CellParseTestCaseDef<char>>(getCellParseTestCases<char>());
+        Dtr::StringViewCBufferWithEnclosedCellSupport,
+        Dtr::CharAppenderStringViewCBufferWithEnclosedCellSupport,
+        CellParseTestCaseDef<char>>(
+            getCellParsePastEnclosedTestCases<char>(),
+            [](const auto& data) { return BasicImStream_T<char>(data); }
+        );
+
+    // UtfAppender with UTF-8
+    DelimitedTextReader_readCellPastEnclosedCell<
+        Dtr::CharBuffer<char>,
+        Dtr::CharAppenderUtf<Dtr::CharBuffer<char>>,
+        CellParseTestCaseDef<char>>(
+            getCellParsePastEnclosedTestCasesUtf8<char>(),
+            [](const auto& data) { return ImStreamWithEncoding(data.data(), data.size(), encodingUTF8); }
+        );
 
 #undef DFG_TEMP_DEFAULT_CASE
 }

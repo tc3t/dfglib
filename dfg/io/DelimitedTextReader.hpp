@@ -33,10 +33,10 @@ namespace DFG_DETAIL_NS
     struct IsStreamStringViewCCompatible { enum { value = false }; };
 
     template <>
-    struct IsStreamStringViewCCompatible<DFG_CLASS_NAME(BasicImStream)> { enum { value = true }; };
+    struct IsStreamStringViewCCompatible<BasicImStream> { enum { value = true }; };
 }
 
-class DFG_CLASS_NAME(DelimitedTextReader)
+class DelimitedTextReader
 {
 public:
     typedef int CharType;
@@ -287,6 +287,7 @@ public:
 
         // If true, calling operator() is guaranteed to append, i.e. size_before_operator() < size_after_operator().
         static const bool s_isAppendOperatorGuaranteedToIncrementSize = true;
+        static constexpr bool s_hasTrivialPopBack = true;
 
         template <class Char_T>
         void operator()(Buffer_T& buffer, const Char_T& ch)
@@ -381,6 +382,7 @@ public:
         typedef StringViewCBuffer BufferType;
 
         static const bool s_isAppendOperatorGuaranteedToIncrementSize = true;
+        static constexpr bool s_hasTrivialPopBack = true;
 
         void operator()(StringViewCBuffer& sv, const char* p)
         {
@@ -439,6 +441,7 @@ public:
     public:
         typedef StringViewCBufferWithEnclosedCellSupport BufferType;
         static const bool s_isAppendOperatorGuaranteedToIncrementSize = true;
+        static constexpr bool s_hasTrivialPopBack = true;
     }; // Class CharAppenderStringViewCBufferWithEnclosedCellSupport
 
     template <class Buffer_T>
@@ -446,13 +449,15 @@ public:
     {
     public:
         typedef Buffer_T BufferType;
+        using BufferChar = typename ::DFG_MODULE_NS(cont)::ElementType<BufferType>::type;
 
         static const bool s_isAppendOperatorGuaranteedToIncrementSize = false; // TODO: revise.
+        static constexpr bool s_hasTrivialPopBack = false;
 
         template <class Char_T>
         void operator()(Buffer_T& buffer, const Char_T& ch)
         {
-            DFG_MODULE_NS(utf)::cpToUtf(ch, std::back_inserter(buffer), sizeof(typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<decltype(buffer)>::type), DFG_ROOT_NS::ByteOrderHost);
+            DFG_MODULE_NS(utf)::cpToUtf(ch, std::back_inserter(buffer), sizeof(BufferChar), DFG_ROOT_NS::ByteOrderHost);
         }
 
         // Reads *p.
@@ -463,6 +468,29 @@ public:
             typedef typename std::remove_reference<decltype(*p)>::type PlainType;
             typedef typename std::make_unsigned<PlainType>::type UnsignedCharT;
             operator()(buffer, UnsignedCharT(*p)); // With std-streams, negative char-values gets passed as positive ints so to maintain the behaviour, translate to unsigned.
+        }
+
+        InternalCharType popLastChar(Buffer_T& buffer)
+        {
+            if (buffer.empty())
+                return DelimitedTextReader::s_nMetaCharNone;
+            if constexpr (sizeof(BufferChar) == 1)
+            {
+                auto iter = buffer.end() - 1;
+                for (; iter != buffer.begin(); --iter)
+                {
+                    const auto nLeading = ((*iter & 0xff) >> 6);
+                    if (nLeading != 2)
+                        break;
+                }
+                const auto c = utf8::unchecked::peek_next(iter);
+                buffer.erase(iter, buffer.end());
+                return saturateCast<InternalCharType>(c);
+            }
+            else
+            {
+                DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(BufferChar, "test");
+            }
         }
     }; // Class CharAppenderUtf
 
@@ -551,10 +579,17 @@ public:
         }
 
         // Precondition: !empty()
-        void popLastChar()
+        InternalCharType popLastChar()
         {
             DFG_ASSERT_UB(!m_buffer.empty());
-            m_buffer.pop_back();
+            if constexpr (m_charAppender.s_hasTrivialPopBack)
+            {
+                const auto c = m_buffer.back();
+                m_buffer.pop_back();
+                return bufferCharToInternal(c);
+            }
+            else
+                return m_charAppender.popLastChar(m_buffer);
         }
 
         // Precondition: !empty()
@@ -1303,8 +1338,7 @@ public:
                         {
                             // Something else than cell end found after enclosing item.
                             rs = rsPastEnclosedCell;
-                            const auto cFirstAfterEnclosing = buffer.back();
-                            buffer.popLastChar(); // Pop whatever came after enclosing
+                            const auto cFirstAfterEnclosing = buffer.popLastChar(); // Pop whatever came after enclosing
                             buffer.popLastChar(); // Pop ending enclosing
                             ParsingImplementations::onPastEnclosedCellCharacter(buffer, cFirstAfterEnclosing);
 
@@ -1457,7 +1491,7 @@ public:
         ItemHandlerFunc_T ihFunc)
     {
         const auto pData = DFG_ROOT_NS::ptrToContiguousMemory(input);
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream_T)<Char_T> strm(pData, input.size());
+        DFG_MODULE_NS(io)::BasicImStream_T<Char_T> strm(pData, input.size());
         readRow<Char_T>(strm, cSeparator, cEnclosing, s_nMetaCharNone, ihFunc);
     }
 
@@ -1470,9 +1504,9 @@ public:
         tokenizeLine<Char_T>(input, cSeparator, cEnclosing, [&](const size_t /*nCol*/, const Char_T* const p, const size_t nSize)
         {
 #if defined(_MSC_VER) && (_MSC_VER <= DFG_MSVC_VER_2010)
-            typedef DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type ElemType;
+            typedef DFG_MODULE_NS(cont)::ElementType<Cont_T>::type ElemType;
 #else
-            typedef typename DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ElementType)<Cont_T>::type ElemType;
+            typedef typename DFG_MODULE_NS(cont)::ElementType<Cont_T>::type ElemType;
 #endif
             std::inserter(cont, cont.end()) = ElemType(p, p + nSize);
         });
@@ -1607,7 +1641,7 @@ public:
     template <class CellHandler, class CellDataT>
     static void readFromMemory(const char* p, const size_t nSize, CellDataT& cd, CellHandler&& cellHandler, const TextEncoding encoding = encodingUnknown)
     {
-        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(p, nSize, encoding);
+        ImStreamWithEncoding istrm(p, nSize, encoding);
         CellReader<CellDataT, std::istream> reader(istrm, cd);
         return read(reader, cellHandler);
     }
@@ -1631,9 +1665,9 @@ public:
     {
         DFG_UNUSED(notImplemented);
         CellData<Char_T> cellDataHandler(s_nMetaCharAutoDetect, cEnc, cEol);
-        DFG_MODULE_NS(io)::DFG_CLASS_NAME(BasicImStream_T)<Char_T> strm(psz, DFG_MODULE_NS(str)::strLen(psz));
+        DFG_MODULE_NS(io)::BasicImStream_T<Char_T> strm(psz, DFG_MODULE_NS(str)::strLen(psz));
         auto reader = createReader(strm, cellDataHandler);
-        DFG_SUB_NS_NAME(io)::DFG_CLASS_NAME(DelimitedTextReader)::readCell(reader);
+        DFG_SUB_NS_NAME(io)::DelimitedTextReader::readCell(reader);
         const auto cSep = cellDataHandler.getFormatDefInfo().getSep();
         return (isMetaChar(cSep)) ? s_nMetaCharNone : cSep;
     }
