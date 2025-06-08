@@ -122,36 +122,63 @@ uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
     if (it == itEnd)
         return INVALID_CODE_POINT;
     uint32_t cp = mask8(*it);
-    typename std::iterator_traits<octet_iterator>::difference_type length = sequence_length(it);
+    const auto length = sequence_length(it);
+    if (length == 0)
+    {
+        // Getting here means that lead byte was not valid ->
+        // simply skip to next code unit and return replacement char.
+        ++it;
+        return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
+    }
     if (std::distance(it, itEnd) < length)
     {
         it = itEnd;
         return INVALID_CODE_POINT;
     }
+    uint32 nMask = 0x80;
+    uint32 nExpectedMaskResult = 0;
+    uint32 nSequenceValue = cp;
     switch (length) {
     case 1:
         break;
     case 2:
         it++;
         cp = ((cp << 6) & 0x7ff) + ((*it) & 0x3f);
+        nSequenceValue <<= 8; nSequenceValue += mask8(*it);
+        nMask = 0xE0C0;               // 11100000 11000000
+        nExpectedMaskResult = 0xC080; // 11000000 10000000
         break;
     case 3:
         ++it;
         cp = ((cp << 12) & 0xffff) + ((mask8(*it) << 6) & 0xfff);
+        nSequenceValue <<= 8; nSequenceValue += mask8(*it);
         ++it;
         cp += (*it) & 0x3f;
+        nSequenceValue <<= 8; nSequenceValue += mask8(*it);
+        nMask = 0xF0C0C0;               // 11110000 11000000 11000000
+        nExpectedMaskResult = 0xE08080; // 11100000 10000000 10000000
         break;
     case 4:
         ++it;
         cp = ((cp << 18) & 0x1fffff) + ((mask8(*it) << 12) & 0x3ffff);
+        nSequenceValue <<= 8; nSequenceValue += mask8(*it);
         ++it;
         cp += (mask8(*it) << 6) & 0xfff;
+        nSequenceValue <<= 8; nSequenceValue += mask8(*it);
         ++it;
         cp += (*it) & 0x3f;
+        nSequenceValue <<= 8; nSequenceValue += mask8(*it);
+        nMask = 0xF8C0C0C0;               // 11111000 11000000 11000000 11000000
+        nExpectedMaskResult = 0xF0808080; // 11110000 10000000 10000000 10000000
         break;
     }
     ++it;
-    return cp;
+    // Checking that sequence had proper form.
+    // Note: overlong encodings are not detected.
+    if ((nSequenceValue & nMask) == nExpectedMaskResult)
+        return cp;
+    else
+        return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
 }
 
 // Returns true iff given codepoint is valid.
@@ -384,6 +411,14 @@ template <typename CharIterator, typename BswapFunc>
 uint32_t readUtfCharAndAdvance(CharIterator& start, const CharIterator end, BswapFunc bswap)
 {
     return readUtfCharAndAdvanceImpl(start, end, bswap, std::integral_constant<int, sizeof(*start)>());
+}
+
+template <typename CharIterator>
+uint32_t readUtfCharAndAdvance(CharIterator& start, const CharIterator end)
+{
+    constexpr auto baseCharSize = sizeof(*start);
+    DFG_STATIC_ASSERT(baseCharSize == 1, "This overload is available only for 8-bit base characters");
+    return readUtfCharAndAdvance(start, end, []() {});
 }
 
 // Converts given iterable of utf8 values to Latin-1 representation. When code point is out of range [0, 255],

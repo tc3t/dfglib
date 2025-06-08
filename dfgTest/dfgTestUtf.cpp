@@ -4,6 +4,12 @@
 
 #include <dfg/utf.hpp>
 
+namespace
+{
+	constexpr auto replacementAscii = ::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii;
+	constexpr auto replacementUtf = ::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
+}
+
 TEST(DfgUtf, utfGeneral)
 {
 	using namespace DFG_ROOT_NS;
@@ -226,9 +232,6 @@ TEST(DfgUtf, cpToEncoded)
     using namespace DFG_MODULE_NS(utf);
     using namespace DFG_MODULE_NS(io);
 
-	constexpr auto replacementAscii = ::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementAscii;
-	constexpr auto replacementUtf = ::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
-
     std::vector<uint8> sLatin1;
     const uint32 nCharCount = 300;
     for (uint32 i = 0; i < nCharCount; ++i)
@@ -343,5 +346,74 @@ TEST(DfgUtf, utfIteratorIncrement)
 		EXPECT_TRUE(true);
 	}
 }
+
+TEST(DfgUtf, readUtfCharAndAdvance)
+{
+	using namespace DFG_ROOT_NS;
+	using namespace DFG_MODULE_NS(utf);
+	// UTF-8
+	{
+		// Invalid lead byte
+		{
+			const std::string sInvalidStart = "\x80""abc";
+			auto iter = sInvalidStart.begin();
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(sInvalidStart.begin() + 1, iter);
+			DFGTEST_EXPECT_LEFT('a', readUtfCharAndAdvance(iter, sInvalidStart.end()));
+		}
+		// Two invalid leading
+		{
+			const std::string sInvalidStart = "\x80\x80""abc";
+			auto iter = sInvalidStart.begin();
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(sInvalidStart.begin() + 2, iter);
+			DFGTEST_EXPECT_LEFT('a', readUtfCharAndAdvance(iter, sInvalidStart.end()));
+		}
+		// Multiple invalid leading
+		{
+			const std::string sInvalidStart = "\x80\x80\x80\x80\x80""abc";
+			auto iter = sInvalidStart.begin();
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, sInvalidStart.end()));
+			DFGTEST_EXPECT_LEFT(sInvalidStart.begin() + 5, iter);
+			DFGTEST_EXPECT_LEFT('a', readUtfCharAndAdvance(iter, sInvalidStart.end()));
+		}
+		// Invalid second byte in two-byte sequence
+		{
+			const std::string s = "\xC0""a";
+			auto iter = s.begin();
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(s.end(), iter);
+		}
+		// Invalid second byte in three-byte sequence
+		{
+			const std::string s = "\xE0""ab";
+			auto iter = s.begin();
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(s.end(), iter);
+		}
+		// Invalid second byte in four-byte sequence
+		{
+			const std::string s = "\xF0""abc";
+			auto iter = s.begin();
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(s.end(), iter);
+		}
+		// Example from https://en.wikipedia.org/w/index.php?title=UTF-8&oldid=1293513065
+		// Note that this behaviour does not comply with the 'best practice' mentioned in the article.
+		{
+			const std::string s = "\xE1\xA0\x20";
+			auto iter = s.begin();
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(s.end(), iter);
+		}
+
+	}
+}
+
 
 #endif

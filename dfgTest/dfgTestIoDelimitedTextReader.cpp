@@ -477,14 +477,16 @@ namespace
         // Mixture of characters after enclosing
         testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"c\xc3\xa4\xe2\x82\xac"), DFG_TEMP_STRDEF("abc\xc3\xa4\xe2\x82\xac"), eofGetVal));
 
+        // Invalid UTF byte sequence after enclosing
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"\x80"), DFG_TEMP_STRDEF("ab\xef\xbf\xbd"), eofGetVal));
+
         // Start byte that indicates byte sequence longer than remaining input, expect to get replacement character.
         testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"\xE0"), DFG_TEMP_STRDEF("ab\xef\xbf\xbd"), eofGetVal));
 
         // Start byte that indicates byte sequence longer than remaining cell
-        // At the time of writing UTF stream didn't detect trailing input as invalid, so expected string is more of a
-        // test for how it works, not how it should work. But this is not a parser issue as it works on characters
-        // that stream gives it.
-        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"\xE0,cd"), DFG_TEMP_STRDEF("ab\xe0\xac\xa3""d"), eofGetVal));
+        // Expected string is more of a test for how it works, not how it should work.
+        // But this is not a parser issue as it works on character that stream gives it.
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"ab\"\xE0,cd"), DFG_TEMP_STRDEF("ab\xef\xbf\xbd""d"), eofGetVal));
 
 #undef DFG_TEMP_STRDEF
         return testCases;
