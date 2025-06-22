@@ -411,7 +411,30 @@ TEST(DfgUtf, readUtfCharAndAdvance)
 			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
 			DFGTEST_EXPECT_LEFT(s.end(), iter);
 		}
-
+		// Overlong encodings
+		{
+			// Single byte codepoint 0x61 in two bytes
+			{
+				const std::string s = "\xC1\xA1";
+				auto iter = s.begin();
+				DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+				DFGTEST_EXPECT_LEFT(s.end(), iter);
+			}
+			// Two byte codepoint 0xE4 in three bytes
+			{
+				const std::string s = "\xE0\x83\xA4";
+				auto iter = s.begin();
+				DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+				DFGTEST_EXPECT_LEFT(s.end(), iter);
+			}
+			// Three byte codepoint 0x20AC in four bytes
+			{
+				const std::string s = "\xF0\x82\x82\xAC";
+				auto iter = s.begin();
+				DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+				DFGTEST_EXPECT_LEFT(s.end(), iter);
+			}
+		}
 	}
 }
 

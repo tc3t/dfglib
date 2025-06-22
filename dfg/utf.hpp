@@ -137,6 +137,7 @@ uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
     }
     uint32 nMask = 0x80;
     uint32 nExpectedMaskResult = 0;
+    uint32 nMinValue = 0;
     uint32 nSequenceValue = cp;
     switch (length) {
     case 1:
@@ -147,6 +148,7 @@ uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
         nSequenceValue <<= 8; nSequenceValue += mask8(*it);
         nMask = 0xE0C0;               // 11100000 11000000
         nExpectedMaskResult = 0xC080; // 11000000 10000000
+        nMinValue = 128;
         break;
     case 3:
         ++it;
@@ -157,6 +159,7 @@ uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
         nSequenceValue <<= 8; nSequenceValue += mask8(*it);
         nMask = 0xF0C0C0;               // 11110000 11000000 11000000
         nExpectedMaskResult = 0xE08080; // 11100000 10000000 10000000
+        nMinValue = 0x800;
         break;
     case 4:
         ++it;
@@ -170,12 +173,14 @@ uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
         nSequenceValue <<= 8; nSequenceValue += mask8(*it);
         nMask = 0xF8C0C0C0;               // 11111000 11000000 11000000 11000000
         nExpectedMaskResult = 0xF0808080; // 11110000 10000000 10000000 10000000
+        nMinValue = 0x10000;
         break;
     }
     ++it;
-    // Checking that sequence had proper form.
-    // Note: overlong encodings are not detected.
-    if ((nSequenceValue & nMask) == nExpectedMaskResult)
+
+    // Checking that sequence had proper form and is not overlong encoding
+    if ((nSequenceValue & nMask) == nExpectedMaskResult &&
+        cp >= nMinValue)
         return cp;
     else
         return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
