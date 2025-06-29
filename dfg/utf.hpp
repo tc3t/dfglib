@@ -115,6 +115,12 @@ sequence_length(octet_iterator lead_it)
         return 0;
 }
 
+// Returns true iff given codepoint is valid.
+inline bool isCodePointValid(const uint32 cp)
+{
+    return utf8::internal::is_code_point_valid(cp);
+}
+
 template <typename octet_iterator>
 uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
 {
@@ -180,16 +186,10 @@ uint32_t next(octet_iterator& it, const octet_iterator& itEnd)
 
     // Checking that sequence had proper form and is not overlong encoding
     if ((nSequenceValue & nMask) == nExpectedMaskResult &&
-        cp >= nMinValue)
+        cp >= nMinValue && isCodePointValid(cp))
         return cp;
     else
         return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
-}
-
-// Returns true iff given codepoint is valid.
-inline bool isCodePointValid(const uint32 cp)
-{
-    return utf8::internal::is_code_point_valid(cp);
 }
 
 // Code point to UTF-8

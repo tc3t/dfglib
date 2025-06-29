@@ -435,6 +435,38 @@ TEST(DfgUtf, readUtfCharAndAdvance)
 				DFGTEST_EXPECT_LEFT(s.end(), iter);
 			}
 		}
+		// Value over maximum codepoint
+		{
+			std::string s;
+			s += "a";
+			utf8::unchecked::append(utf8::internal::CODE_POINT_MAX, std::back_inserter(s));
+			utf8::unchecked::append(utf8::internal::CODE_POINT_MAX + 1, std::back_inserter(s));
+			s += "b";
+			auto iter = s.begin();
+			DFGTEST_EXPECT_LEFT('a', readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(utf8::internal::CODE_POINT_MAX, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT('b', readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(s.end(), iter);
+		}
+
+		// Surrogate handling: according to https://en.wikipedia.org/w/index.php?title=UTF-8&oldid=1297678698#Surrogates
+		//     > Since RFC 3629 (November 2003), the high and low surrogates used by UTF-16 (U+D800 through U+DFFF) are not
+		//     > legal Unicode values, and their UTF-8 encodings must be treated as an invalid byte sequence.
+		//     > These encodings all start with 0xED followed by 0xA0 or higher.
+		{
+			std::string s;
+			utf8::unchecked::append(0xD800 - 1, std::back_inserter(s));
+			utf8::unchecked::append(0xD800, std::back_inserter(s)); // Lowest surrogate
+			utf8::unchecked::append(0xDFFF, std::back_inserter(s)); // Highest surrogate
+			utf8::unchecked::append(0xDFFF + 1, std::back_inserter(s));
+			auto iter = s.begin();
+			DFGTEST_EXPECT_LEFT(0xD800 - 1, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(replacementUtf, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(0xDFFF + 1, readUtfCharAndAdvance(iter, s.end()));
+			DFGTEST_EXPECT_LEFT(s.end(), iter);
+		}
 	}
 }
 
