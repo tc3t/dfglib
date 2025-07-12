@@ -595,25 +595,25 @@ namespace
 TEST(dfgStr, StringView_autoConvToUntyped)
 {
     using namespace DFG_ROOT_NS;
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewC), DFG_CLASS_NAME(StringViewC)>("abc");
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzC), DFG_CLASS_NAME(StringViewSzC)>("abc");
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzC), DFG_CLASS_NAME(StringViewC)>("abc");
+    StringView_autoConvToUntyped_impl<StringViewC, StringViewC>("abc");
+    StringView_autoConvToUntyped_impl<StringViewSzC, StringViewSzC>("abc");
+    StringView_autoConvToUntyped_impl<StringViewSzC, StringViewC>("abc");
 
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewAscii), DFG_CLASS_NAME(StringViewC)>(DFG_ASCII("abc"));
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzAscii), DFG_CLASS_NAME(StringViewSzC)>(DFG_ASCII("abc"));
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzAscii), DFG_CLASS_NAME(StringViewC)>(DFG_ASCII("abc"));
+    StringView_autoConvToUntyped_impl<StringViewAscii, StringViewC>(DFG_ASCII("abc"));
+    StringView_autoConvToUntyped_impl<StringViewSzAscii, StringViewSzC>(DFG_ASCII("abc"));
+    StringView_autoConvToUntyped_impl<StringViewSzAscii, StringViewC>(DFG_ASCII("abc"));
 
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewLatin1), DFG_CLASS_NAME(StringViewC)>(SzPtrLatin1("abc"));
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzLatin1), DFG_CLASS_NAME(StringViewSzC)>(SzPtrLatin1("abc"));
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzLatin1), DFG_CLASS_NAME(StringViewC)>(SzPtrLatin1("abc"));
+    StringView_autoConvToUntyped_impl<StringViewLatin1, StringViewC>(SzPtrLatin1("abc"));
+    StringView_autoConvToUntyped_impl<StringViewSzLatin1, StringViewSzC>(SzPtrLatin1("abc"));
+    StringView_autoConvToUntyped_impl<StringViewSzLatin1, StringViewC>(SzPtrLatin1("abc"));
 
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewUtf8), DFG_CLASS_NAME(StringViewC)>(DFG_UTF8("ab\xC3" "\xA4" "c"));
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzUtf8), DFG_CLASS_NAME(StringViewSzC)>(DFG_UTF8("ab\xC3" "\xA4" "c"));
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzUtf8), DFG_CLASS_NAME(StringViewC)>(DFG_UTF8("ab\xC3" "\xA4" "c"));
+    StringView_autoConvToUntyped_impl<StringViewUtf8, StringViewC>(DFG_UTF8("ab\u00E4" "\u00F6" "c"));
+    StringView_autoConvToUntyped_impl<StringViewSzUtf8, StringViewSzC>(DFG_UTF8("ab\u00E4" "\u00F6" "c"));
+    StringView_autoConvToUntyped_impl<StringViewSzUtf8, StringViewC>(DFG_UTF8("ab\u00E4" "\u00F6" "c"));
 
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewW), DFG_CLASS_NAME(StringViewW)>(L"abc");
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzW), DFG_CLASS_NAME(StringViewSzW)>(L"abc");
-    StringView_autoConvToUntyped_impl<DFG_CLASS_NAME(StringViewSzW), DFG_CLASS_NAME(StringViewW)>(L"abc");
+    StringView_autoConvToUntyped_impl<StringViewW, StringViewW>(L"abc");
+    StringView_autoConvToUntyped_impl<StringViewSzW, StringViewSzW>(L"abc");
+    StringView_autoConvToUntyped_impl<StringViewSzW, StringViewW>(L"abc");
 }
 
 namespace
