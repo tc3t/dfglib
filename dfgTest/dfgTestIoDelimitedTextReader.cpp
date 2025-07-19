@@ -422,6 +422,7 @@ TEST(DfgIo, DelimitedTextReader_readCell)
     using SvcBuffer = Dtr::StringViewCBufferWithEnclosedCellSupport;
     using DefAppender = Dtr::CharAppenderDefault<DefBuffer, char>;
     using SvcAppender = Dtr::CharAppenderStringViewCBufferWithEnclosedCellSupport;
+    using UtfAppender = Dtr::CharAppenderUtf<DefBuffer>;
     const auto defaultParsing = [](auto&& cellData) { return Dtr::GenericParsingImplementations<std::remove_reference_t<decltype(cellData)>>(); };
     const auto pastEnclosedCellParsing = [](auto&& cellData) { return Dtr::GenericParsingWithPastEnclosedHandling<std::remove_reference_t<decltype(cellData)>>(); };
 
@@ -429,6 +430,9 @@ TEST(DfgIo, DelimitedTextReader_readCell)
     DelimitedTextReader_readCellImpl<SvcBuffer, SvcAppender>(defaultParsing, { arrCellExpected, arrCellExpectedIgnoredPastEnclosed });
     DelimitedTextReader_readCellImpl<DefBuffer, DefAppender>(pastEnclosedCellParsing, { arrCellExpected });
     DelimitedTextReader_readCellImpl<SvcBuffer, SvcAppender>(pastEnclosedCellParsing, { arrCellExpected });
+    // UtfAppender
+    DelimitedTextReader_readCellImpl<UtfAppender::BufferType, UtfAppender>(defaultParsing, { arrCellExpected, arrCellExpectedIgnoredPastEnclosed });
+    DelimitedTextReader_readCellImpl<UtfAppender::BufferType, UtfAppender>(pastEnclosedCellParsing, { arrCellExpected });
 }
 
 namespace
