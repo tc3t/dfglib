@@ -452,7 +452,7 @@ public:
         using BufferChar = typename ::DFG_MODULE_NS(cont)::ElementType<BufferType>::type;
 
         static const bool s_isAppendOperatorGuaranteedToIncrementSize = false; // TODO: revise.
-        static constexpr bool s_hasTrivialPopBack = false;
+        static constexpr bool s_hasTrivialPopBack = (sizeof(BufferChar) == 4);
 
         template <class Char_T>
         void operator()(Buffer_T& buffer, const Char_T& ch)
@@ -487,9 +487,27 @@ public:
                 buffer.erase(iter, buffer.end());
                 return saturateCast<InternalCharType>(c);
             }
+            else if constexpr (sizeof(BufferChar) == 2)
+            {
+                auto baseChar = *(buffer.end() - 1);
+                buffer.pop_back();
+                if (!utf8::internal::is_trail_surrogate(baseChar))
+                    return bufferCharToInternal(baseChar);
+
+                std::array<char16_t, 2> u16buf;
+                u16buf[1] = baseChar;
+                DFG_ASSERT_CORRECTNESS(!buffer.empty() && utf8::internal::is_lead_surrogate(buffer.back()));
+                if (buffer.empty())
+                    return ::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf; // Should not happen for valid input.
+                u16buf[0] = *(buffer.end() - 1);
+                buffer.pop_back();
+                uint32_t trail_surrogate = utf8::internal::mask16(u16buf[1]);
+                const auto cp = (u16buf[0] << 10) + trail_surrogate + utf8::internal::SURROGATE_OFFSET;
+                return bufferCharToInternal(cp);
+            }
             else
             {
-                DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(BufferChar, "test");
+                DFG_BUILD_GENERATE_FAILURE_IF_INSTANTIATED(BufferChar, "Only buffer char sizes 1 and 2 are supported");
             }
         }
     }; // Class CharAppenderUtf

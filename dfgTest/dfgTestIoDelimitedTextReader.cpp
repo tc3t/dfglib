@@ -495,6 +495,47 @@ namespace
 #undef DFG_TEMP_STRDEF
         return testCases;
     }
+
+    template <class Char_T>
+    auto getCellParsePastEnclosedTestCasesUtf16() -> auto
+    {
+        using namespace ::DFG_MODULE_NS(io);
+        
+        using CaseDef = CellParseTestCaseDef<Char_T>;
+        const auto eofGetVal = ImStreamWithEncoding::eofValue();
+        const auto baseSet = getCellParsePastEnclosedTestCases<Char_T>();
+        std::vector<CaseDef> testCases(baseSet.begin(), baseSet.end());
+        for (auto& item : testCases)
+            std::get<2>(item) = eofGetVal; // Fix correct eof to test cases.
+
+#define DFG_TEMP_STRDEF(STR) DFG_STRING_LITERAL_BY_CHARTYPE(Char_T, STR)
+
+        // One single code unit codepoint after enclosing
+        testCases.push_back(CaseDef(DFG_TEMP_STRDEF("\"a""b\"c"), DFG_TEMP_STRDEF("abc"), eofGetVal));
+
+        // One two code unit codepoint after enclosing
+        {
+            std::basic_string<wchar_t> s;
+            dfg::utf::cpToEncoded(0x10000, std::back_inserter(s), hostNativeUtfEncodingFromCharType(2));
+            testCases.push_back(CaseDef(L"\"ab\"" + s, L"ab" + s, eofGetVal));
+        }
+
+        // Invalid byte sequence after enclosing, lead surrogate without further bytes
+        testCases.push_back(CaseDef(L"\"ab\"\xD800", L"ab\x0FFFD", eofGetVal));
+
+        // Invalid byte sequence after enclosing, lead surrogate with invalid trailing
+        // TODO
+        //testCases.push_back(CaseDef(L"\"ab\"\xD800""c", L"ab\xfffd", eofGetVal));
+
+        // Invalid byte sequence after enclosing, trail surrogate without further bytes
+        testCases.push_back(CaseDef(L"\"ab\"\xDC00", L"ab\x0FFFD", eofGetVal));
+
+        // Invalid byte sequence after enclosing, trail surrogate followed by valid code unit.
+        testCases.push_back(CaseDef(L"\"ab\"\xDC00""c", L"ab\x0FFFD""c", eofGetVal));
+
+#undef DFG_TEMP_STRDEF
+        return testCases;
+    }
 }
 
 TEST(DfgIo, DelimitedTextReader_readCellPastEnclosedCell)
@@ -535,6 +576,18 @@ TEST(DfgIo, DelimitedTextReader_readCellPastEnclosedCell)
             getCellParsePastEnclosedTestCasesUtf8<char>(),
             [](const auto& data) { return ImStreamWithEncoding(data.data(), data.size(), encodingUTF8); }
         );
+
+    // UtfAppender with UTF-16
+    if constexpr (sizeof(wchar_t) == 2)
+    {
+        DelimitedTextReader_readCellPastEnclosedCell<
+            Dtr::CharBuffer<wchar_t>,
+            Dtr::CharAppenderUtf<Dtr::CharBuffer<wchar_t>>,
+            CellParseTestCaseDef<wchar_t>>(
+                getCellParsePastEnclosedTestCasesUtf16<wchar_t>(),
+                [](const auto& data) { return ImStreamWithEncoding(data.data(), data.size(), hostNativeUtfEncodingFromCharType(sizeof(wchar_t))); }
+                );
+    }
 
 #undef DFG_TEMP_DEFAULT_CASE
 }
