@@ -347,7 +347,7 @@ TEST(DfgUtf, utfIteratorIncrement)
 	}
 }
 
-TEST(DfgUtf, readUtfCharAndAdvance)
+TEST(DfgUtf, readUtfCharAndAdvanceUtf8)
 {
 	using namespace DFG_ROOT_NS;
 	using namespace DFG_MODULE_NS(utf);
@@ -468,6 +468,75 @@ TEST(DfgUtf, readUtfCharAndAdvance)
 			DFGTEST_EXPECT_LEFT(s.end(), iter);
 		}
 	}
+}
+
+TEST(DfgUtf, readUtfCharAndAdvanceUtf16)
+{
+	using namespace DFG_ROOT_NS;
+	using namespace DFG_MODULE_NS(utf);
+
+#define DFG_TEMP_CALL_READER() readUtfCharAndAdvance(iter, s.end(), [](const auto t) { return t;})
+
+	// Empty
+	{
+		const std::u16string s;
+		auto iter = s.begin();
+		DFGTEST_EXPECT_LEFT(INVALID_CODE_POINT, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(s.end(), iter);
+	}
+
+	// Simple case
+	{
+		const std::u16string s = u"ab\x20ac""cd";
+		auto iter = s.begin();
+
+		DFGTEST_EXPECT_LEFT(0x61 /* a */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(0x62 /* b */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(0x20ac /* euro-sign */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(0x63 /* c */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(0x64 /* d */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(s.end(), iter);
+
+	}
+
+	// Lead surrogate without next code unit
+	{
+		std::u16string s;
+		auto iter = s.begin();
+		s.push_back(0x61);
+		s.push_back(0xD800);
+		DFGTEST_EXPECT_LEFT(0x61 /* a */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(INVALID_CODE_POINT, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(s.end(), iter);
+	}
+
+	// Lead surrogate without trail surrogate
+	{
+		std::u16string s;
+		auto iter = s.begin();
+		s.push_back(0x61);
+		s.push_back(0xD800);
+		s.push_back(0x62);
+		DFGTEST_EXPECT_LEFT(0x61 /* a */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(replacementUtf, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(s.end(), iter);
+	}
+
+	// Start by trail surrogate
+	{
+		std::u16string s;
+		auto iter = s.begin();
+		s.push_back(0x61);
+		s.push_back(0xDC00);
+		s.push_back(0x62);
+		DFGTEST_EXPECT_LEFT(0x61 /* a */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(replacementUtf, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(0x62 /* b */, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(s.end(), iter);
+	}
+
+#undef DFG_TEMP_CALL_READER
+
 }
 
 

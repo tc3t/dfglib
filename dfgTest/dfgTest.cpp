@@ -281,7 +281,8 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "DfgUtf.utfGeneral";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToEncoded";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.cpToUtfToCp";
-    //::testing::GTEST_FLAG(filter) = "DfgUtf.readUtfCharAndAdvance";
+    //::testing::GTEST_FLAG(filter) = "DfgUtf.readUtfCharAndAdvanceUtf8";
+    //::testing::GTEST_FLAG(filter) = "DfgUtf.readUtfCharAndAdvanceUtf16";
     //::testing::GTEST_FLAG(filter) = "DfgUtf.windows1252charToCp";
 
     auto rv = RUN_ALL_TESTS();

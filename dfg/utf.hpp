@@ -378,10 +378,13 @@ uint32_t readUtf16CharAndAdvance(u16bit_iterator& start, const u16bit_iterator e
     {
         if (start == end)
             return INVALID_CODE_POINT;
-        uint32_t trail_surrogate = utf8::internal::mask16(bswap(*start++));
-        cp = (cp << 10) + trail_surrogate + utf8::internal::SURROGATE_OFFSET;
+        const uint32_t trail_surrogate = utf8::internal::mask16(bswap(*start++));
+        if (utf8::internal::is_trail_surrogate(trail_surrogate))
+            cp = (cp << 10) + trail_surrogate + utf8::internal::SURROGATE_OFFSET;
+        else // Case: have lead surrogate but no trail surrogate, simply treat the whole pair as invalid.
+            cp = DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
     }
-    return cp;
+    return (isCodePointValid(cp)) ? cp : DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
 }
 
 template <typename u32bit_iterator, typename BswapFunc>
