@@ -785,9 +785,10 @@ TEST(dfgIo, ImStreamWithEncoding_unalignedSource)
         memcpy(buffer, s.data(), 7);
         const char* pStart = reinterpret_cast<const char*>(buffer);
         const char* const pEnd = pStart + 7;
-        DFG_CLASS_NAME(ImStreamWithEncoding) istrm(pStart, pEnd - pStart, hostNativeUtfEncodingFromCharType(sizeof(char16_t)));
+        ImStreamWithEncoding istrm(pStart, pEnd - pStart, hostNativeUtfEncodingFromCharType(sizeof(char16_t)));
         EXPECT_EQ(70000, istrm.get()); // First item should read ok
-        EXPECT_EQ(DFG_MODULE_NS(utf)::INVALID_CODE_POINT, istrm.get()); // Code point consists of 4 bytes, but only three is in input -> expecting INVALID_CODE_POINT.
+        EXPECT_EQ(::DFG_MODULE_NS(utf)::DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf,
+            istrm.get()); // Code point consists of 4 bytes, but only three is in input -> expecting replacement char.
         EXPECT_EQ(std::char_traits<char>::eof(), istrm.get());
         EXPECT_TRUE(istrm.eof());
     }

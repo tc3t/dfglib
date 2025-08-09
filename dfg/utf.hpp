@@ -377,7 +377,7 @@ uint32_t readUtf16CharAndAdvance(u16bit_iterator& start, const u16bit_iterator e
     if (utf8::internal::is_lead_surrogate(cp))
     {
         if (start == end)
-            return INVALID_CODE_POINT;
+            return DFG_DETAIL_NS::gDefaultUnrepresentableCharReplacementUtf;
         const uint32_t trail_surrogate = utf8::internal::mask16(bswap(*start++));
         if (utf8::internal::is_trail_surrogate(trail_surrogate))
             cp = (cp << 10) + trail_surrogate + utf8::internal::SURROGATE_OFFSET;

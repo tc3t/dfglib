@@ -506,7 +506,7 @@ TEST(DfgUtf, readUtfCharAndAdvanceUtf16)
 		s.push_back(0x61);
 		s.push_back(0xD800);
 		DFGTEST_EXPECT_LEFT(0x61 /* a */, DFG_TEMP_CALL_READER());
-		DFGTEST_EXPECT_LEFT(INVALID_CODE_POINT, DFG_TEMP_CALL_READER());
+		DFGTEST_EXPECT_LEFT(replacementUtf, DFG_TEMP_CALL_READER());
 		DFGTEST_EXPECT_LEFT(s.end(), iter);
 	}
 
