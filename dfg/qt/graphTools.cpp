@@ -3557,12 +3557,20 @@ void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::setDefaultDataSourceId(con
 
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() -> GraphDefinitionWidget*
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+    return (m_spControlPanel) ? dynamic_cast<GraphDefinitionWidget*>(m_spControlPanel->findChild<QWidget*>(gszGraphControlPanel_defWidgetObjectName)) : nullptr;
+#else
     return (m_spControlPanel) ? m_spControlPanel->findChild<GraphDefinitionWidget*>(gszGraphControlPanel_defWidgetObjectName) : nullptr;
+#endif
 }
 
 auto DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::getDefinitionWidget() const -> const GraphDefinitionWidget*
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+    return (m_spControlPanel) ? dynamic_cast<const GraphDefinitionWidget*>(m_spControlPanel->findChild<const QWidget*>(gszGraphControlPanel_defWidgetObjectName)) : nullptr;
+#else
     return (m_spControlPanel) ? m_spControlPanel->findChild<const GraphDefinitionWidget*>(gszGraphControlPanel_defWidgetObjectName) : nullptr;
+#endif
 }
 
 void DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::onDataSourceChanged()

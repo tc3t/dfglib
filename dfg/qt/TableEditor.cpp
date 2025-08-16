@@ -1245,13 +1245,23 @@ void TableEditor::onNewSourceOpened()
             {
                 const int nWidth = setChartPanelWidth(m_spMainSplitter.get(), this->width(), WindowExtentProperty(sChartPanelWidth.c_str()));
                 // Enabling charting if width is non-zero, disabling if zero.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+                DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartingEnabledState", Qt::QueuedConnection, Q_ARG(bool, nWidth != 0)));
+#else
                 DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartingEnabledState", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(bool, nWidth != 0)));
+#endif
             }
         }
 
         const auto chartControls = loadOptions.getProperty(CsvOptionProperty_chartControls, "none");
         if (chartControls != "none")
+        {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+            DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartControls", Qt::QueuedConnection, Q_ARG(QString, QString::fromUtf8(chartControls.c_str()))));
+#else
             DFG_VERIFY(QMetaObject::invokeMethod(m_spChartDisplay.data(), "setChartControls", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(QString, QString::fromUtf8(chartControls.c_str()))));
+#endif
+        }
     }
 
     // Setting selection details

@@ -119,7 +119,8 @@ int main(int argc, char **argv)
     {
         using namespace ::DFG_ROOT_NS;
         dfgtest::printPostTestDetailSummary(std::cout, [](std::ostream& ostrm) { 
-            ostrm << ", Qt version (build time) " << getBuildTimeDetailStr<BuildTimeDetail_qtVersion>();
+            ostrm << ", Qt version (build time) " << getBuildTimeDetailStr<BuildTimeDetail_qtVersion>()
+                  << ", Qt version (runtime) " << qVersion();
         });
     }
     return rv;

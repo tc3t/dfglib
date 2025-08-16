@@ -157,7 +157,7 @@ auto ::DFG_MODULE_NS(qt)::JsonListWidget::escapeStringToJsonField(const QString&
             case '\n': sOutput += "\\n";  break;
             case '\r': sOutput += "\\r";  break;
             case '\t': sOutput += "\\t";  break;
-            default: sOutput += ('\x00' <= c && c <= '\x1f') ? QString("\\u%1").arg(c.unicode(), 4, 10, QChar('0')) : c; break;
+            default: sOutput += ('\x00' <= c && c <= '\x1f') ? QString("\\u%1").arg(int(c.unicode()), 4, 10, QChar('0')) : c; break;
         }
     }
     return sOutput;

@@ -1723,7 +1723,18 @@ void CsvTableView::setReadOnlyMode(const bool bReadOnly)
 
     // Enabling/disabling undo buffer windows so that they can't be used to trigger undo
     {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+        const auto widgets = this->findChildren<QWidget*>();
+        QList<UndoViewWidget*> undoWidgets;
+        for (auto w : widgets)
+        {
+			auto p = dynamic_cast<UndoViewWidget*>(w);
+            if (p)
+				undoWidgets.push_back(p);
+        }
+#else
         const auto undoWidgets = this->findChildren<UndoViewWidget*>();
+#endif
         for (auto pUndoWidget : undoWidgets) if (pUndoWidget)
             pUndoWidget->setDisabled(bReadOnly);
     }
@@ -2736,13 +2747,21 @@ bool CsvTableView::openFile(const QString& sPath, const DFG_ROOT_NS::CsvFormatDe
                         if (bHasProgress && !bCancelled)
                         {
                             const auto nProgressPercentage = ::DFG_ROOT_NS::round<int>(100.0 * static_cast<double>(nProcessedBytes) / fileSizeDouble);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+                            DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, Q_ARG(int, nProgressPercentage)));
+#else
                             DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setValue", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(int, nProgressPercentage)));
+#endif
                             // If thread count used in the operation changed, updating label text.
                             const auto nThreadCount = param.threadCount();
                             if (anLastThreadCount.load(std::memory_order_relaxed) != nThreadCount)
                             {
                                 QString sLabel = tr("%1\nUsing %2 threads").arg(sOriginalLabel).arg(nThreadCount);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+                                DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setLabelText", Qt::QueuedConnection, Q_ARG(QString, sLabel)));
+#else
                                 DFG_VERIFY(QMetaObject::invokeMethod(pProgressWidget, "setLabelText", Qt::QueuedConnection, QGenericReturnArgument(), Q_ARG(QString, sLabel)));
+#endif
                             }
                         }
                         aLastSetValue.store(timePointToAtomicType(steadyNow), std::memory_order_relaxed);
@@ -3419,7 +3438,12 @@ void CsvTableView::onRegexFormatUiAction()
 
     // Reusing single widget so that params are preserved between dialog opens
     // Note: without name, findChild() could return some other child that has common base class with RegexFormatWidget (for details, see commit cfe0b1e6)
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+    auto pRegexFormatWidget = dynamic_cast<CsvTableViewActionWidgets::RegexFormatWidget*>(this->findChild<QWidget*>("CsvTableView_RegexFormatWidget"));
+#else
     auto pRegexFormatWidget = this->findChild<CsvTableViewActionWidgets::RegexFormatWidget*>("CsvTableView_RegexFormatWidget");
+#endif
     if (!pRegexFormatWidget)
     {
         pRegexFormatWidget = new CsvTableViewActionWidgets::RegexFormatWidget(this);
@@ -3456,7 +3480,11 @@ bool CsvTableView::generateContent()
     // Note: in search below, findChild<ContentGeneratorDialog*>(); (without name specifier) would returns UndoViewWidget if had been created (in Qt 5.13.2)
     //       According to https://stackoverflow.com/questions/35869441/why-is-qobject-findchildren-returning-children-with-a-common-base-class
     //       this is expected to be caused by lack of Q_OBJECT in these helper dialogs.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
+    auto pGeneratorDialog = dynamic_cast<ContentGeneratorDialog*>(this->findChild<QWidget*>("ContentGeneratorDialog"));
+#else
     auto pGeneratorDialog = findChild<ContentGeneratorDialog*>("ContentGeneratorDialog");
+#endif
     if (!pGeneratorDialog)
     {
         pGeneratorDialog = new ContentGeneratorDialog(this);
