@@ -12,6 +12,9 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
     #include <QDateTime>
     #include <QString>
     #include <QTime>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    #include <QTimeZone>
+#endif
 DFG_END_INCLUDE_QT_HEADERS
 
 
@@ -25,9 +28,15 @@ namespace DFG_DETAIL_NS
     {
         if (dt.isValid())
         {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+            const auto timeZone = dt.timeZone();
+            if (timeZone.id() == QTimeZone::systemTimeZone().id())
+                dt.setTimeZone(QTimeZone::UTC);
+#else
             const auto timeSpec = dt.timeSpec();
             if (timeSpec == Qt::LocalTime)
                 dt.setTimeSpec(Qt::UTC);
+#endif
             return static_cast<double>(dt.toMSecsSinceEpoch()) / 1000.0;
         }
         else

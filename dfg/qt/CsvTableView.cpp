@@ -78,6 +78,7 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 DFG_END_INCLUDE_QT_HEADERS
 
 #include <map>
+#include <optional>
 #include "../alg.hpp"
 #include "../cont/SortedSequence.hpp"
 #include "../math.hpp"
@@ -1603,7 +1604,7 @@ std::vector<int> CsvTableView::getRowsOfSelectedItems(const QAbstractProxyModel*
     QModelIndexList listSelected = (!pProxy) ? getSelectedItemIndexes_viewModel() : getSelectedItemIndexes_dataModel();
 
     ::DFG_MODULE_NS(cont)::SetVector<int> rows;
-    for (const auto& listIndex : qAsConst(listSelected))
+    for (const auto& listIndex : std::as_const(listSelected))
     {
         if (listIndex.isValid())
             rows.insert(listIndex.row());
@@ -3785,14 +3786,22 @@ namespace
                 return;
             }
             QString sResult;
-            Qt::TimeSpec timeSpec = Qt::TimeZone; // Using Qt::TimeZone as "not set"-value
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+            std::optional<decltype(QTimeZone::LocalTime)> timeSpec;
+            constexpr auto localTime = QTimeZone::LocalTime;
+            constexpr auto utc = QTimeZone::UTC;
+#else
+            std::optional<Qt::TimeSpec> timeSpec;
+            constexpr auto localTime = Qt::LocalTime;
+            constexpr auto utc = Qt::UTC;
+#endif
             if (type == GeneratorFormatType::dateFromSecondsLocal || type == GeneratorFormatType::dateFromMilliSecondsLocal)
-                timeSpec = Qt::LocalTime;
+                timeSpec = localTime;
             else if (type == GeneratorFormatType::dateFromSecondsUtc || type == GeneratorFormatType::dateFromMilliSecondsUtc)
-                timeSpec = Qt::UTC;
+                timeSpec = utc;
 
-            if (timeSpec != Qt::TimeZone)
-                sResult = rView.dateTimeToString(QDateTime::fromMSecsSinceEpoch(i64, timeSpec), pFormat);
+            if (timeSpec.has_value())
+                sResult = rView.dateTimeToString(QDateTime::fromMSecsSinceEpoch(i64, timeSpec.value()), pFormat);
             else
             {
                 DFG_ASSERT_IMPLEMENTED(false);

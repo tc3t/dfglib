@@ -741,7 +741,7 @@ bool isNumberConvertibleTo(const Source_T src, Target_T* pTarget = nullptr)
     {
         // integer-to-float conversion rules according to cppreference (2024-11-17, https://en.cppreference.com/mwiki/index.php?title=cpp/language/implicit_conversion&oldid=177680)
         /*
-            Floating–integral conversions
+            Floating-integral conversions
             ...
             A prvalue of integer or unscoped enumeration type can be converted to a prvalue of any floating-point type. The result is exact if possible.
                 1. If the value can fit into the destination type but cannot be represented exactly, it is implementation defined whether the closest higher

@@ -1112,7 +1112,12 @@ TEST(dfgQt, CsvTableView_generateContentByFormula_cellValue_dateHandling)
     view.setModel(&csvModel);
 
     // 2021-11-25T10:01:02Z = 1637834462 s
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    const QString sExpectedLocal = [] { auto dt = QDateTime::fromMSecsSinceEpoch(1637834462125); dt.setTimeZone(QTimeZone::LocalTime); return dt; }().toString("yyyy-MM-dd hh:mm:ss.zzz");
+#else
     const QString sExpectedLocal = [] { auto dt = QDateTime::fromMSecsSinceEpoch(1637834462125); dt.setTimeSpec(Qt::LocalTime); return dt;}().toString("yyyy-MM-dd hh:mm:ss.zzz");
+#endif
+    
 
     DFGTEST_ASSERT_FALSE(sExpectedLocal.isEmpty());
 

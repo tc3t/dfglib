@@ -786,7 +786,11 @@ TableEditor::TableEditor()
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onHighlightTextChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFindColumnChanged));
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->m_pMatchSyntaxCombobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ThisClass::onFindColumnChanged));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->getCaseSensivitivyCheckBox(), &QCheckBox::checkStateChanged, this, &ThisClass::onHighlightTextCaseSensitivityChanged));
+#else
         DFG_QT_VERIFY_CONNECT(connect(m_spFindPanel->getCaseSensivitivyCheckBox(), &QCheckBox::stateChanged, this, &ThisClass::onHighlightTextCaseSensitivityChanged));
+#endif
         spLayout->addWidget(m_spFindPanel.get(), row++, 0);
 
         // Filter panel
@@ -796,7 +800,11 @@ TableEditor::TableEditor()
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pTextEdit, &QLineEdit::textChanged, this, &ThisClass::onFilterTextChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pColumnSelector, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &ThisClass::onFilterColumnChanged));
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->m_pMatchSyntaxCombobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ThisClass::onFilterColumnChanged));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+            DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->getCaseSensivitivyCheckBox(), &QCheckBox::checkStateChanged, this, &ThisClass::onFilterCaseSensitivityChanged));
+#else
             DFG_QT_VERIFY_CONNECT(connect(m_spFilterPanel->getCaseSensivitivyCheckBox(), &QCheckBox::stateChanged, this, &ThisClass::onFilterCaseSensitivityChanged));
+#endif
         #else
             m_spFilterPanel->m_pTextEdit->setText(tr("Not available; requires building with Qt >= 5.12"));
             m_spFilterPanel->m_pTextEdit->setEnabled(false);
@@ -1079,7 +1087,7 @@ namespace
                 if (formatType == FileInfoFormatType::tooltip)
                 {
                     sInfoText += "<table>";
-                    for (const auto& item : qAsConst(fields))
+                    for (const auto& item : std::as_const(fields))
                     {
                         sInfoText.append(QString("<tr><td>%1</td><td>%2</td></tr>").arg(item.first, item.second));
                     }
@@ -1088,7 +1096,7 @@ namespace
                 else if (formatType == FileInfoFormatType::clipboard)
                 {
                     // For clipboard formatting as CSV
-                    for (const auto& item : qAsConst(fields))
+                    for (const auto& item : std::as_const(fields))
                     {
                         sInfoText.append(QString("%1\t%2\n").arg(item.first, item.second));
                     }
