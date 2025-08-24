@@ -44,6 +44,7 @@ DFG_END_INCLUDE_QT_HEADERS
 
 static QWidget* gpMainWindow = nullptr;
 static const char gszDiffUrlHandlerSchemeId[] = "dfgdiff";
+static QDateTime gpProcessStartTime;
 
 void DiffUrlHandler::urlHandler(const QUrl& url)
 {
@@ -87,11 +88,13 @@ static void onShowAboutBox()
     s += QString("<b>Application path</b>: <a href=%1>%2</a><br>"
          "<b>Settings file path</b>: %3<br>"
          "<b>Process ID (PID)</b>: %4<br>"
-         "<b>Qt runtime version</b>: %5<br>")
+         "<b>Process start time</b>: %5<br>"
+         "<b>Qt runtime version</b>: %6<br>")
             .arg(QApplication::applicationDirPath())
             .arg(QApplication::applicationFilePath())
             .arg((bSettingFileExists) ? QString("<a href=%1>%1</a>").arg(sSettingsPath) : QString("(file doesn't exist)"))
             .arg(QCoreApplication::applicationPid())
+            .arg(gpProcessStartTime.toString())
             .arg(qVersion());
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
@@ -186,6 +189,7 @@ void MainWindow::setDefaultGeometry()
 
 int main(int argc, char *argv[])
 {
+    gpProcessStartTime = QDateTime::currentDateTime(); // Would get more precise answer from OS, but this will do.
     QApplication a(argc, argv);
     dfg::qt::QtApplication::m_sSettingsPath = a.applicationFilePath() + ".ini";
     a.setApplicationVersion(DFG_QT_TABLE_EDITOR_VERSION_STRING);
