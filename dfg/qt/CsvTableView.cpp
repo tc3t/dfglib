@@ -548,7 +548,8 @@ namespace
         CsvTableViewPropertyId_dateTimeFormat,
         CsvTableViewPropertyId_editMode,
         CsvTableViewPropertyId_weekDayNames,
-        CsvTableViewPropertyId_actionInputPreviewLimit
+        CsvTableViewPropertyId_actionInputPreviewLimit,
+        CsvTableViewPropertyId_formulaEvaluatorResultDecimalPrecision
     };
 
     DFG_QT_DEFINE_OBJECT_PROPERTY_CLASS(CsvTableView)
@@ -562,7 +563,7 @@ namespace
     template <CsvTableViewPropertyId ID>
     QString getCsvModelOrViewProperty(const CsvTableView* pView)
     {
-        auto pCsvModel = pView->csvModel();
+        auto pCsvModel = (pView) ? pView->csvModel() : nullptr;
         if (pCsvModel)
         {
             const ::DFG_ROOT_NS::StringViewC svId = DFG_QT_OBJECT_PROPERTY_CLASS_NAME(CsvTableView)<ID>::getStrId();
@@ -572,7 +573,10 @@ namespace
             if (s.size() != 1 || s[0] != '\0')
                 return QString::fromUtf8(s.c_str());
         }
-        return getCsvTableViewProperty<ID>(pView);
+        if constexpr (std::is_same_v<typename CsvTableViewPropertyDefinition<ID>::PropertyType, QString>)
+            return getCsvTableViewProperty<ID>(pView);
+        else
+            return QString::fromStdString(::DFG_MODULE_NS(str)::toStrC(getCsvTableViewProperty<ID>(pView)));
     }
 
     template <CsvTableViewPropertyId ID>
@@ -591,6 +595,7 @@ namespace
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "editMode", CsvTableView, CsvTableViewPropertyId_editMode, QString, []() { return QString(); });
     DFG_QT_DEFINE_OBJECT_PROPERTY_QSTRING(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "weekDayNames", CsvTableView, CsvTableViewPropertyId_weekDayNames, QString, []() { return QString("mo,tu,we,th,fr,sa,su"); });
     DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "actionInputPreviewLimit", CsvTableView, CsvTableViewPropertyId_actionInputPreviewLimit, int, []() { return 50; });
+    DFG_QT_DEFINE_OBJECT_PROPERTY(DFG_CSVTABLEVIEW_PROPERTY_PREFIX "formulaEvaluatorResultDecimalPrecision", CsvTableView, CsvTableViewPropertyId_formulaEvaluatorResultDecimalPrecision, int, []() { return -1; });
 
     // Default row height seems to be 30, which looks somewhat wasteful so make it smaller.
     // Also row height affects the number of rows that can be shown in the table as discussed in https://stackoverflow.com/questions/78958330/how-do-i-enable-hundreds-of-millions-of-rows-in-qts-qabstracttablemodel
@@ -6261,6 +6266,7 @@ void CsvTableView::forEachUserInsertableConfFileProperty(std::function<void(cons
     DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_initialScrollPosition, getCsvTableViewProperty<CsvTableViewPropertyId_initialScrollPosition>(this));
     DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_timeFormat,            getCsvTableViewProperty<CsvTableViewPropertyId_timeFormat>(this));
     DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_weekDayNames,          getCsvTableViewProperty<CsvTableViewPropertyId_weekDayNames>(this));
+    DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_formulaEvaluatorResultDecimalPrecision, getCsvModelOrViewProperty<CsvTableViewPropertyId_formulaEvaluatorResultDecimalPrecision>(this));
 
     // These properties don't have application defaults so using hard coded ones.
     DFG_TEMP_CALL_IF_NEEDED(CsvOptionProperty_columnSortingEnabled, "0");

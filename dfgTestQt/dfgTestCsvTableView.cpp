@@ -516,6 +516,44 @@ TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula)
     }
 }
 
+TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula_precision)
+{
+    using Ri = ::DFG_MODULE_NS(qt)::RowIndex_view;
+    using Ci = ::DFG_MODULE_NS(qt)::ColumnIndex_view;
+
+    const auto evaluateAndTest = [](auto& view, const int nExpectedCol) -> int
+        {
+            const auto nRowCount = view.getRowCount_dataModel();
+            for (int r = 0; r < nRowCount; ++r)
+            {
+                view.selectCell(r, 0);
+                view.evaluateSelectionAsFormula();
+            }
+            for (int r = 0; r < nRowCount; ++r)
+            {
+                DFGTEST_EXPECT_LEFT(view.getCellString(Ri(r), Ci(nExpectedCol)), view.getCellString(Ri(r), Ci(0)));
+            }
+            return nRowCount;
+        };
+
+
+    {
+        ::DFG_MODULE_NS(qt)::CsvTableWidget view;
+        view.openFile("testfiles/CsvTableView_evaluateSelectionAsFormula_precision.csv");
+        const auto sOriginal = view.csvModel()->saveToByteString();
+        const auto nRowCount0 = evaluateAndTest(view, 1);
+        DFGTEST_ASSERT_TRUE(nRowCount0 > 0);
+        
+        // Opening new file from the same content (but without the custom evaluation precision)
+        // and making sure that precision settings are reset back to default.
+        view.csvModel()->setModifiedStatus(false); // To prevent confirmation messagebox from blocking.
+        view.createNewTable();
+        view.csvModel()->openFromMemory(sOriginal, {});
+        const auto nRowCount1 = evaluateAndTest(view, 2);
+        DFGTEST_EXPECT_EQ(nRowCount0, nRowCount1);
+    }
+}
+
 TEST(dfgQt, CsvTableView_stringToDouble)
 {
     using namespace ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS;

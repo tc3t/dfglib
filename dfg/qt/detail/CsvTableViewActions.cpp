@@ -259,7 +259,35 @@ void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::handleCell(Vi
     {
         auto& rModel = params.dataModel();
         auto& szBuffer = DFG_OPAQUE_REF().szBuffer;
-        rModel.setDataNoUndo(index, SzPtrUtf8(::DFG_MODULE_NS(str)::toStr(val, szBuffer)));
+        ::DFG_MODULE_NS(str)::toStr(val, szBuffer);
+        bool bOk = false;
+        const auto nDecimalPrecision = getCsvModelOrViewProperty<CsvTableViewPropertyId_formulaEvaluatorResultDecimalPrecision>(&params.view()).toInt(&bOk);
+        
+        // If there is a custom precision defined and value is finite but non-integer, try limited precision conversion.
+        if (bOk && nDecimalPrecision >= 0 && ::DFG_MODULE_NS(math)::isFinite(val) && !::DFG_MODULE_NS(math)::isIntegerValued(val))
+        {
+            char szBufferCustom[std::size(szBuffer)];
+            ::DFG_MODULE_NS(str)::floatingPointToStr(val, szBufferCustom, nDecimalPrecision, ::DFG_MODULE_NS(str)::CharsFormat::fixed);
+            // Trimming trailing zeros
+            if (*szBufferCustom != '\0')
+            {
+                const char* const pStart = &szBufferCustom[0];
+                char* p = szBufferCustom + std::strlen(szBufferCustom) - 1;
+                for (; *p == '0' && p != pStart; --p)
+                {
+                    *p = '\0';
+                }
+                // If all trailing zeros got trimmed, trim trailing dot as well
+                // e.g. "12.00" -> "12" (instead of "12.")
+                if (p != pStart && *p == '.')
+                {
+                    *p = '\0';
+                    --p;
+                }
+            }
+            ::DFG_MODULE_NS(str)::strCpyAllThatFit(szBuffer, szBufferCustom);
+        }
+        rModel.setDataNoUndo(index, SzPtrUtf8(szBuffer));
     }
     else
         DFG_OPAQUE_REF().m_errorMessageHandler.handleError(params.view(), svCell, index, maxFailureMessageCount());

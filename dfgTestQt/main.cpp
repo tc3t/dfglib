@@ -102,6 +102,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_saveAsShown";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_stringToDouble";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_trimCells";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula_precision";
 
     // Miscellaneous
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";
