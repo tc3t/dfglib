@@ -4773,11 +4773,50 @@ std::unique_ptr<WidgetPair> WidgetPair::createHorizontalLabelLineEditPair(QWidge
     return createHorizontalPair(pParent, pLabel, pLineEdit);
 }
 
+// Wrapper for CollectorContainerPtr to avoid deprecation warnings generated if
+// using std::atomic_store/load on std::shared_ptr with C++20
+class CollectorContainerPtrStorage
+{
+public:
+    using CcPtr = CsvTableViewBasicSelectionAnalyzerPanel::CollectorContainerPtr;
+
+    void reset(CcPtr sp);
+    auto load() const -> CcPtr;
+
+#if __cpp_lib_atomic_shared_ptr
+    std::atomic<CcPtr> m_spPtr;
+#else
+    CcPtr m_spPtr;
+#endif
+}; // class CollectorContainerPtrStorage
+
+#if __cpp_lib_atomic_shared_ptr
+    void CollectorContainerPtrStorage::reset(CcPtr sp)
+    {
+        m_spPtr.store(std::move(sp));
+    }
+
+    auto CollectorContainerPtrStorage::load() const -> CcPtr
+    {
+        return m_spPtr.load();
+    }
+#else
+    void CollectorContainerPtrStorage::reset(CcPtr sp)
+    {
+        std::atomic_store(&m_spPtr, std::move(sp));
+    }
+
+    auto CollectorContainerPtrStorage::load() const -> CcPtr
+    {
+        return std::atomic_load(&m_spPtr);
+    }
+#endif
+
 } // unnamed namespace
 
 DFG_OPAQUE_PTR_DEFINE(CsvTableViewBasicSelectionAnalyzerPanel)
 {
-    CsvTableViewBasicSelectionAnalyzerPanel::CollectorContainerPtr m_spCollectors;
+    CollectorContainerPtrStorage m_spCollectors;
 
     static void addDetailMenuEntry(CsvTableViewBasicSelectionAnalyzerPanel& rPanel, SelectionDetailCollector& rCollector, QMenu& rMenu)
     {
@@ -4871,7 +4910,7 @@ CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel
         auto pMenu = new QMenu(this); // Deletion through parentship
         using DetailCollector = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector;
         const auto defaultFlags = DetailCollector::defaultEnableFlags();
-        DFG_OPAQUE_REF().m_spCollectors = std::make_shared<SelectionDetailCollectorContainer>();
+        DFG_OPAQUE_REF().m_spCollectors.reset(std::make_shared<SelectionDetailCollectorContainer>());
 
         // Generic items such as enable/disable all
         {
@@ -4895,9 +4934,11 @@ CsvTableViewBasicSelectionAnalyzerPanel::CsvTableViewBasicSelectionAnalyzerPanel
         {
             // https://stackoverflow.com/questions/2050462/prevent-a-qmenu-from-closing-when-one-of-its-qaction-is-triggered
 
-            DFG_OPAQUE_REF().m_spCollectors->push_back(std::make_shared<SelectionDetailCollector>(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::builtInDetailToStrId(id).toString()));
+            auto spCollectors = collectors();
+            DFG_REQUIRE(spCollectors != nullptr);
+            spCollectors->push_back(std::make_shared<SelectionDetailCollector>(::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::builtInDetailToStrId(id).toString()));
 
-            auto pCollector = DFG_OPAQUE_REF().m_spCollectors->back().get();
+            auto pCollector = spCollectors->back().get();
             const auto bEnabled = DetailCollector::isEnabled(defaultFlags, id);
             pCollector->enable(bEnabled);
             pCollector->setProperty("ui_name_short", DetailCollector::uiName_short(id));
@@ -5178,10 +5219,11 @@ bool CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items
     //      [result_precision]: Numerical precision of string representation of collector's result
     // Example : { "id": "square_sum", "type": "accumulator", "initial_value": "0", "formula": "acc + value^2", "ui_name_short": "Sum^2", "ui_name_long": "Sum of squares", "description": "This detail shows the sum of squared values" }
 
-    if (!DFG_OPAQUE_REF().m_spCollectors)
+    auto spCollectors = collectors();
+    if (!spCollectors)
         return false;
 
-    auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
+    auto& collectors = *spCollectors;
 
     auto idQString = items.value("id").toString();
     if (idQString.isEmpty())
@@ -5280,7 +5322,7 @@ bool CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items
 
         auto spNewCollectorSet = std::make_shared<SelectionDetailCollectorContainer>(collectors);
         spNewCollectorSet->push_back(std::move(spNewCollector));
-        std::atomic_store(&DFG_OPAQUE_REF().m_spCollectors, std::move(spNewCollectorSet));
+        DFG_OPAQUE_REF().m_spCollectors.reset(std::move(spNewCollectorSet));
     }
     else
         return false;
@@ -5290,10 +5332,11 @@ bool CsvTableViewBasicSelectionAnalyzerPanel::addDetail(const QVariantMap& items
 
 bool CsvTableViewBasicSelectionAnalyzerPanel::deleteDetail(const StringViewUtf8& id)
 {
-    if (!DFG_OPAQUE_REF().m_spCollectors)
+    auto spCollectors = collectors();
+    if (!spCollectors)
         return false;
 
-    auto& collectors = *DFG_OPAQUE_REF().m_spCollectors;
+    auto& collectors = *spCollectors;
 
     auto pExisting = collectors.find(id);
 
@@ -5311,7 +5354,7 @@ bool CsvTableViewBasicSelectionAnalyzerPanel::deleteDetail(const StringViewUtf8&
         if (pMenu)
             DFG_OPAQUE_REF().removeDetailMenuEntry(*pExisting, *pMenu);
 
-        std::atomic_store(&DFG_OPAQUE_REF().m_spCollectors, std::move(spNewCollectorSet));
+        DFG_OPAQUE_REF().m_spCollectors.reset(std::move(spNewCollectorSet));
         return true;
     }
     else
@@ -5320,10 +5363,14 @@ bool CsvTableViewBasicSelectionAnalyzerPanel::deleteDetail(const StringViewUtf8&
 
 void CsvTableViewBasicSelectionAnalyzerPanel::setDefaultDetails()
 {
-    if (!DFG_OPAQUE_REF().m_spCollectors)
+    auto spCollectors = collectors();
+    if (!spCollectors)
         return;
+
+    auto& collectors = *spCollectors;
+
     const auto defaultFlags = ::DFG_MODULE_NS(qt)::DFG_DETAIL_NS::BasicSelectionDetailCollector::defaultEnableFlags();
-    for (auto& spItem : *DFG_OPAQUE_REF().m_spCollectors)
+    for (auto& spItem : collectors)
     {
         if (!spItem)
             continue;
@@ -5350,7 +5397,7 @@ auto CsvTableViewBasicSelectionAnalyzerPanel::collectors() const -> CollectorCon
     auto pOpaq = DFG_OPAQUE_PTR();
     if (!pOpaq)
         return nullptr;
-    return std::atomic_load(&pOpaq->m_spCollectors);
+    return pOpaq->m_spCollectors.load();
 }
 
 auto CsvTableViewBasicSelectionAnalyzerPanel::detailConfigsToString() const -> QString
