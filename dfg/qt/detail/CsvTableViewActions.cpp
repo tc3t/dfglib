@@ -266,7 +266,7 @@ void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::handleCell(Vi
         // If there is a custom precision defined and value is finite but non-integer, try limited precision conversion.
         if (bOk && nDecimalPrecision >= 0 && ::DFG_MODULE_NS(math)::isFinite(val) && !::DFG_MODULE_NS(math)::isIntegerValued(val))
         {
-            char szBufferCustom[std::size(szBuffer)];
+            char szBufferCustom[DFG_COUNTOF(szBuffer)];
             ::DFG_MODULE_NS(str)::floatingPointToStr(val, szBufferCustom, nDecimalPrecision, ::DFG_MODULE_NS(str)::CharsFormat::fixed);
             // Trimming trailing zeros
             if (*szBufferCustom != '\0')
