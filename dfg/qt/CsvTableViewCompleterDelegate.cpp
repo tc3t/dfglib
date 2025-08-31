@@ -46,6 +46,18 @@ namespace DFG_DETAIL_NS
 
         QObjectStorage<QPlainTextEdit> m_spPlainTextEdit;
     }; // class MultiLineEditor
+
+    bool isStyleWindows11(const QWidget& rWidget)
+    {
+#if defined(Q_OS_WIN) && (QT_VERSION >= QT_VERSION_CHECK(6, 1, 0)) // QStyle::name() was introduced in 6.1
+        auto pStyle = rWidget.style();
+        const auto sStyleName = (pStyle) ? pStyle->name() : QString();
+        return (sStyleName == "windows11");
+#else
+        DFG_UNUSED(rWidget);
+        return false;
+#endif
+    }
 } // namespace DFG_DETAIL_NS
 
 namespace EditorPropertyIds
@@ -179,11 +191,17 @@ void CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // Default alignment in QStyleOptionViewItem::displayAlignment is Qt::AlignLeft which can cause cell to show empty if it has trailing newlines (#135).
     // In default case adding Qt::AlignTop so that first line will always be shown.
     const auto displayAlignment = index.data(Qt::TextAlignmentRole);
+
+    // With windows11 style in Qt 6.9 having the aligment options caused content of multiline cells to leak to below
+    // cells in some cases, so not applying them in that case.
+    if (!option.widget || !DFG_DETAIL_NS::isStyleWindows11(*option.widget))
+    {
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)) // Not sure is version accurate, introduced for Qt 5.9
-    option.displayAlignment = (displayAlignment.isNull()) ? Qt::AlignLeft | Qt::AlignTop : Qt::Alignment(displayAlignment.toInt());
+        option.displayAlignment = (displayAlignment.isNull()) ? Qt::AlignLeft | Qt::AlignTop : Qt::Alignment(displayAlignment.toInt());
 #else
-    option.displayAlignment = (displayAlignment.isNull()) ? static_cast<Qt::Alignment>(Qt::AlignLeft | Qt::AlignTop) : Qt::Alignment(displayAlignment.toInt());
+        option.displayAlignment = (displayAlignment.isNull()) ? static_cast<Qt::Alignment>(Qt::AlignLeft | Qt::AlignTop) : Qt::Alignment(displayAlignment.toInt());
 #endif
+    }
 
     const auto doDefaultPaint = [&]()
     {
@@ -229,6 +247,7 @@ void CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     }
 }
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 7, 0))
 void CsvTableViewDelegate::drawDisplay(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text) const
 {
     // Checking if adjustments are needed for better multiline visualization (#135)
@@ -259,6 +278,7 @@ void CsvTableViewDelegate::drawDisplay(QPainter* painter, const QStyleOptionView
     }
     BaseClass::drawDisplay(painter, option, rect, text);
 }
+#endif
 
 bool CsvTableViewDelegate::eventFilter(QObject* editor, QEvent* event)
 {
@@ -376,6 +396,15 @@ MultiLineEditor::MultiLineEditor(QWidget* pParent)
     DFG_QT_VERIFY_CONNECT(QObject::connect(this, &QDialog::rejected, this, &QObject::deleteLater));
     DFG_QT_VERIFY_CONNECT(QObject::connect(this, &QDialog::accepted, this, &QObject::deleteLater));
     setResult(QDialog::Accepted);
+
+    if (DFG_DETAIL_NS::isStyleWindows11(*this))
+    {
+        // Hack: with windows11 style in Qt 6.9.1, editor background seemed to be transparent messing display visually
+        // -> setting base-color manually to make it opaque.
+        auto newPalette = this->palette();
+        newPalette.setColor(QPalette::ColorRole::Base, Qt::white);
+        this->setPalette(newPalette);
+    }
 }
 
 MultiLineEditor::~MultiLineEditor()

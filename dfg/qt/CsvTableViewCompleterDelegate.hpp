@@ -4,8 +4,12 @@
 #include "qtIncludeHelpers.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
-    #include <QItemDelegate>
     #include <QPointer>
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
+    #include <QStyledItemDelegate>
+#else
+    #include <QItemDelegate>
+#endif
 DFG_END_INCLUDE_QT_HEADERS
 
 class QCompleter;
@@ -13,14 +17,25 @@ class QCompleter;
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
 
+namespace DFG_DETAIL_NS
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    // On Windows, style 'windows11' is the default since Qt 6.7 and there were quite many visual issues
+    // when using QItemDelegate with that style, so using QStyledItemDelegate on newer Qt versions.
+    using CsvTableViewDelegateBaseClass = QStyledItemDelegate;
+#else
+    using CsvTableViewDelegateBaseClass = QItemDelegate;
+#endif
+}
+
 class CsvTableView;
 
 // Item delegate (=cell editor handler) for CsvTableView.
 // This takes CsvTableView's edit lock into account; i.e. setModelData() will fail if unable to acquire lock for editing.
-class CsvTableViewDelegate : public QItemDelegate
+class CsvTableViewDelegate : public DFG_DETAIL_NS::CsvTableViewDelegateBaseClass
 {
 public:
-    using BaseClass = QItemDelegate;
+    using BaseClass = DFG_DETAIL_NS::CsvTableViewDelegateBaseClass;
 
     CsvTableViewDelegate(QWidget* pParent);
 
@@ -38,7 +53,9 @@ private:
 
 protected:
     bool checkCellEditability(const QModelIndex& index) const;
+#if (QT_VERSION < QT_VERSION_CHECK(6, 7, 0))
     void drawDisplay(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text) const override;
+#endif
     bool eventFilter(QObject* editor, QEvent* event) override;
 
 public:
