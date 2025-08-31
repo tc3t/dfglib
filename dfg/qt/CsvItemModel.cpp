@@ -332,6 +332,9 @@ DFG_OPAQUE_PTR_DEFINE(CsvItemModel)
 {
     std::shared_ptr<QReadWriteLock> m_spReadWriteLock;
     ::DFG_MODULE_NS(cont)::SetVector<IndexPairInteger> m_readOnlyCells;
+    QStringList m_rowNames; // Stores row labels similar to column names. Intended only for allowing transpose
+                            // to be round-trippable, there is no logics to make this work with row
+                            // inserts/deletes etc.
     // Note: if adding members, check if it needs to be handled in clear()
 };
 
@@ -799,6 +802,7 @@ void CsvItemModel::clear()
         m_pUndoStack->clear();
 
     DFG_OPAQUE_REF().m_readOnlyCells.clear();
+    DFG_OPAQUE_REF().m_rowNames.clear();
 }
 
 bool CsvItemModel::openStream(QTextStream& strm)
@@ -1520,6 +1524,23 @@ auto CsvItemModel::getColumnNames() const -> QStringList
     return names;
 }
 
+void CsvItemModel::setColumnNames(const QStringList& columnNames)
+{
+    const auto nColCount = getColumnCount();
+    for (int c = 0; c < nColCount; ++c)
+    {
+        auto pColInfo = getColInfo(c);
+        if (!pColInfo)
+            continue;
+        if (isValidIndex(columnNames, c))
+            pColInfo->m_name = columnNames[c];
+        else
+            pColInfo->m_name.clear();
+    }
+    if (nColCount > 0)
+        Q_EMIT headerDataChanged(Qt::Horizontal, 0, nColCount - 1);
+}
+
 auto CsvItemModel::rawStringPtrAt(const int nRow, const int nCol) const -> SzPtrUtf8R
 {
     return SzPtrUtf8R(table()(nRow, nCol));
@@ -1614,8 +1635,26 @@ QVariant CsvItemModel::headerData(const int section, Qt::Orientation orientation
             .arg(internalColumnIndexToVisible(section))
             .arg(getColumnCount());
     }
-    else
-        return QVariant(QString("%1").arg(internalRowIndexToVisible(section)));
+    else // Case: vertical header
+    {
+        auto pOpaq = DFG_OPAQUE_PTR();
+        const auto bHaveCustomName = (pOpaq && isValidIndex(pOpaq->m_rowNames, section) && !pOpaq->m_rowNames[section].isEmpty());
+        if (bHaveCustomName)
+        {
+            const QString sBaseName = pOpaq->m_rowNames[section];
+            if (role != Qt::ToolTipRole)
+                return sBaseName;
+            else
+                return tr("%1\n(row %2/%3)")
+                .arg(sBaseName)
+                .arg(internalRowIndexToVisible(section))
+                .arg(this->getRowCount());
+        }
+        else // Case: no custom name
+        {
+            return QString::number(internalRowIndexToVisible(section));
+        }
+    }
 }
 
 void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)
@@ -2238,6 +2277,10 @@ bool CsvItemModel::transpose()
     const auto nMaxRowCount = (std::max)(nOldRowCount, nNewRowCount);
     const auto nMaxColumnCount = nMaxRowCount; // This is equal to (std::max)(nOldColumnCount, nNewColumnCount);
 
+    // Storing column and row names
+    auto oldColumnNames = this->getColumnNames();
+    auto oldRowNames = DFG_OPAQUE_REF().m_rowNames;
+
     insertRows(nOldRowCount, nMaxRowCount - nOldRowCount);
     insertColumns(nOldColumnCount, nMaxColumnCount - nOldColumnCount);
 
@@ -2257,6 +2300,12 @@ bool CsvItemModel::transpose()
 
     removeRows(nNewRowCount, nOldRowCount - nNewRowCount);
     removeColumns(nNewColumnCount, nOldColumnCount - nNewColumnCount);
+
+    // Setting old column names to row names and vice versa.
+    DFG_OPAQUE_REF().m_rowNames = std::move(oldColumnNames);
+    if (getRowCount() > 0)
+        Q_EMIT headerDataChanged(Qt::Vertical, 0, getRowCount() - 1);
+    this->setColumnNames(oldRowNames);
 
     setModifiedStatus(true);
 

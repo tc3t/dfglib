@@ -665,6 +665,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool privSetDataToTable(Index nRow, Index nCol, StringViewUtf8 sv);
 
         void setColumnName(const int nCol, const QString& sName);
+        void setColumnNames(const QStringList& columnNames);
 
         template <class Cont_T>
         void removeRows(const Cont_T& indexesAscSorted) { removeRows(::DFG_MODULE_NS(cont)::ArrayWrapper::createArrayWrapper(indexesAscSorted)); }

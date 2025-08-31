@@ -980,6 +980,42 @@ TEST(dfgQt, CsvTableView_transpose)
     populateTable(17, 8);
     DFGTEST_EXPECT_TRUE(view.transpose());
     verifyTable(8, 17);
+
+    // Column name round-trip: transposing twice must preserve column names
+    {
+        populateTable(2, 3);
+        csvModel.setColumnName(0, "Col1");
+        csvModel.setColumnName(2, "Col3");
+
+        const auto iritv = [](const auto r) { return CsvItemModel::internalRowIndexToVisible(r); };
+        const auto rname = [&](const auto r, const Qt::ItemDataRole role = Qt::ItemDataRole::DisplayRole)
+            { return csvModel.headerData(r, Qt::Vertical, role).toString(); };
+
+        // First tranpose
+        DFGTEST_EXPECT_TRUE(view.transpose());
+        // Column names
+        DFGTEST_EXPECT_TRUE(csvModel.getHeaderName(0).isEmpty());
+        DFGTEST_EXPECT_TRUE(csvModel.getHeaderName(1).isEmpty());
+        DFGTEST_EXPECT_TRUE(csvModel.getHeaderName(2).isEmpty());
+        // Row names
+        DFGTEST_EXPECT_LEFT("Col1", rname(0));
+        DFGTEST_EXPECT_LEFT(QString::number(iritv(1)), rname(1));
+        DFGTEST_EXPECT_LEFT("Col3", rname(2));
+        // Row tooltips
+        DFGTEST_EXPECT_LEFT(QString("Col1\n(row %1/3)").arg(iritv(0)), rname(0, Qt::ItemDataRole::ToolTipRole));
+        DFGTEST_EXPECT_LEFT(QString::number(iritv(1)), rname(1, Qt::ItemDataRole::ToolTipRole));
+        DFGTEST_EXPECT_LEFT(QString("Col3\n(row %1/3)").arg(iritv(2)), rname(2, Qt::ItemDataRole::ToolTipRole));
+        verifyTable(3, 2);
+
+        // Second tranpose
+        DFGTEST_EXPECT_TRUE(view.transpose());
+        DFGTEST_EXPECT_LEFT("Col1", csvModel.getHeaderName(0));
+        DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(1));
+        DFGTEST_EXPECT_LEFT("Col3", csvModel.getHeaderName(2));
+        DFGTEST_EXPECT_LEFT(QString::number(iritv(0)), rname(0));
+        DFGTEST_EXPECT_LEFT(QString::number(iritv(1)), rname(1));
+        DFGTEST_EXPECT_LEFT(QString::number(iritv(2)), rname(2));
+    }
 }
 
 TEST(dfgQt, CsvTableView_contextMenuSize)
