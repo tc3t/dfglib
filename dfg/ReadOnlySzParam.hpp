@@ -644,6 +644,8 @@ namespace DFG_DETAIL_NS
 //      View being null-terminated means this->data() can be dereferenced with index this->length() and that result is '\0'
 //      If such null terminated view has embedded nulls, behaviour of StringViewSz varies depending e.g. on used constructor.
 //      For example StringViewSzC("\0\0") results to zero length view, while StringViewSzC("\0\0", 1) to sized one.
+// Related:
+//    - zstring_view: (https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3655r2.html)
 template <class Char_T, class Str_T = std::basic_string<Char_T>>
 class StringViewSz : public DFG_DETAIL_NS::StringViewCommonBase<Str_T>
 {
@@ -916,7 +918,7 @@ inline bool operator==(const SzPtrT<const Char_T, Type_T>& psz, const StringView
 }
 
 template <class Char_T, class Str_T>
-inline bool operator==(const Char_T* psz, const StringView<Char_T, Str_T>& right) { return right == psz; }
+inline bool operator==(const typename StringView<Char_T, Str_T>::PtrT psz, const StringView<Char_T, Str_T>& right) { return right == psz; }
 
 template<class Char_T, class Str_T>
 inline bool operator==(const Str_T& s, const StringView<Char_T, Str_T>& right)
