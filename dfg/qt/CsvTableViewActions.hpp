@@ -481,13 +481,13 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     {
     public:
         CsvTableViewActionDeleteColumn(CsvTableView* pView, const int nCol)
-            : m_pView(pView),
-                m_nWhere(nCol)
+            : m_pView(pView)
+            , m_nWhere(nCol)
         {
             auto pModel = (m_pView) ? m_pView->csvModel() : nullptr;
             if (!pModel)
                 return;
-            m_sColumnName = pModel->headerData(nCol, Qt::Horizontal).toString();
+            m_sColumnName = pModel->getHeaderName(nCol);
             QString sDesc;
             sDesc = QString("Delete column %1, \"%2\"").arg(m_nWhere).arg(m_sColumnName);
             setText(sDesc);
@@ -637,7 +637,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             const auto nColCount = pModel->columnCount();
             for (int i = 0; i < nColCount; ++i)
             {
-                m_vecHdrStrings.push_back(pModel->headerData(i, Qt::Horizontal).toString());
+                m_vecHdrStrings.push_back(m_pView->getColumnName(ColumnIndex_view(i)));
                 m_vecFirstRowStrings.push_back(pModel->data(pModel->index(0, i)).toString());
             }
             QString sDesc = (m_bInverted) ? m_pView->tr("Move header to first row") : m_pView->tr("Move first row to header");

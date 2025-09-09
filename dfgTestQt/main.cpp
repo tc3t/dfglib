@@ -87,6 +87,7 @@ int main(int argc, char **argv)
     // CsvItemModel
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_cellDataAsDouble";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_defaultColumnName";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_defaultInputEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_QAbstractItemModelTester";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
@@ -95,15 +96,17 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_columnIndexMappingWithEmptyFilteredTable";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_defaultMaximumRowCount";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula_precision";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_filterFromSelection";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_generateContentByFormula_cellValue_dateHandling";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_headerFirstRowOperations";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_regexFormat";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_saveAsShown";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_stringToDouble";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_transpose";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_trimCells";
-    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula_precision";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_undoAfterRemoveColumns";
 
     // Miscellaneous
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";

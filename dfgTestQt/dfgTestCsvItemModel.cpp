@@ -42,9 +42,9 @@ TEST(dfgQt, CsvItemModel)
             break;
         }
 
-        DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) model;
+        ::DFG_MODULE_NS(qt)::CsvItemModel model;
 
-        DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::LoadOptions loadOptions;
+        ::DFG_MODULE_NS(qt)::CsvItemModel::LoadOptions loadOptions;
         if (i == 3) // Example 3 needs non-native eol-settings.
             loadOptions.separatorChar('\t');
         if (i == 4)
@@ -53,7 +53,7 @@ TEST(dfgQt, CsvItemModel)
         const auto bOpenSuccess = model.openFile(sInputPath, loadOptions);
         EXPECT_EQ(true, bOpenSuccess);
 
-        DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::SaveOptions saveOptions(&model);
+        ::DFG_MODULE_NS(qt)::CsvItemModel::SaveOptions saveOptions(&model);
         if (i == 3)
             saveOptions = loadOptions;
         if (i == 4)
@@ -74,7 +74,7 @@ TEST(dfgQt, CsvItemModel)
 
         // Test in-memory saving
         {
-            DFG_MODULE_NS(io)::DFG_CLASS_NAME(OmcByteStream)<std::vector<char>> strm;
+            ::DFG_MODULE_NS(io)::OmcByteStream<std::vector<char>> strm;
             model.save(strm, saveOptions);
             const auto& outputBytesMc = strm.container();
             EXPECT_EQ(inputBytesWithAddedEol, outputBytesMc);
@@ -97,7 +97,7 @@ TEST(dfgQt, CsvItemModel)
 
 TEST(dfgQt, CsvItemModel_removeRows)
 {
-    DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel) model;
+    ::DFG_MODULE_NS(qt)::CsvItemModel model;
 
     model.insertColumns(0, 1);
     model.insertRows(0, 10);
@@ -269,7 +269,7 @@ namespace
     struct CsvItemModelReadFormatTestCase
     {
         const char* m_pszInput;
-        DFG_MODULE_NS(qt)::DFG_CLASS_NAME(CsvItemModel)::LoadOptions m_loadOptions;
+        ::DFG_MODULE_NS(qt)::CsvItemModel::LoadOptions m_loadOptions;
     };
 }
 
@@ -592,3 +592,28 @@ TEST(dfgQt, CsvItemModel_QAbstractItemModelTester)
 }
 
 #endif // Qt >= 5.11.0
+
+TEST(dfgQt, CsvItemModel_defaultColumnName)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+
+    CsvItemModel model;
+    model.setSize(2, 3);
+    model.setColumnName(1, "Column 2");
+    const auto getColDisplayName = [&](const int nCol)
+        {
+            return model.headerData(nCol, Qt::Horizontal).toString();
+        };
+    DFGTEST_EXPECT_LEFT("1", getColDisplayName(0));
+    DFGTEST_EXPECT_LEFT("Column 2", getColDisplayName(1));
+    DFGTEST_EXPECT_LEFT("3", getColDisplayName(2));
+    DFGTEST_EXPECT_LEFT("", getColDisplayName(3));
+    model.setSize(2, 4);
+    DFGTEST_EXPECT_LEFT("1", getColDisplayName(0));
+    DFGTEST_EXPECT_LEFT("Column 2", getColDisplayName(1));
+    DFGTEST_EXPECT_LEFT("3", getColDisplayName(2));
+    DFGTEST_EXPECT_LEFT("4", getColDisplayName(3));
+    model.setColumnName(1, QString());
+    DFGTEST_EXPECT_LEFT("2", getColDisplayName(1));
+}

@@ -105,6 +105,33 @@ TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
     EXPECT_EQ(QString("d"), model.data(model.index(3, 1)).toString());
 }
 
+TEST(dfgQt, CsvTableView_undoAfterRemoveColumns)
+{
+    {
+        ::DFG_MODULE_NS(qt)::CsvTableWidget view;
+        auto& csvModel = view.getCsvModel();
+        view.resizeTableNoUi(3, 2);
+        csvModel.setDataNoUndo(0, 0, DFG_UTF8("a"));
+        csvModel.setDataNoUndo(0, 1, DFG_UTF8("b"));
+        csvModel.setDataNoUndo(1, 0, DFG_UTF8("c"));
+        csvModel.setDataNoUndo(1, 1, DFG_UTF8("d"));
+        csvModel.setDataNoUndo(2, 0, DFG_UTF8("e"));
+        csvModel.setDataNoUndo(2, 1, DFG_UTF8("f"));
+        view.deleteCurrentColumn(1);
+        DFGTEST_EXPECT_LEFT(1, csvModel.columnCount());
+        view.undo();
+        DFGTEST_EXPECT_LEFT(2, csvModel.columnCount());
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", csvModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", csvModel.rawStringViewAt(0, 1));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", csvModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("d", csvModel.rawStringViewAt(1, 1));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("e", csvModel.rawStringViewAt(2, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("f", csvModel.rawStringViewAt(2, 1));
+        DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(0));
+        DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(1));
+    }
+}
+
 TEST(dfgQt, CsvTableView_undoAfterResize)
 {
     ::DFG_MODULE_NS(qt)::CsvItemModel csvModel;
@@ -681,7 +708,7 @@ TEST(dfgQt, CsvTableView_saveAsShown)
     auto& viewModel = view.getViewModel();
 
     ASSERT_TRUE(csvModel.openString(
-    "Col1,Col2,Col3,Col4\n"
+    "Col1,,Col3,Col4\n"
     "a,4,h,o\n"
     "bc,3,i,p\n"
     "c,2,j,q\n"
@@ -689,7 +716,7 @@ TEST(dfgQt, CsvTableView_saveAsShown)
     ));
 
     DFGTEST_EXPECT_LEFT("Col1", csvModel.getHeaderName(0));
-    DFGTEST_EXPECT_LEFT("Col2", csvModel.getHeaderName(1));
+    DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(1));
     DFGTEST_EXPECT_LEFT("Col3", csvModel.getHeaderName(2));
     DFGTEST_EXPECT_LEFT("Col4", csvModel.getHeaderName(3));
     DFGTEST_EXPECT_LEFT(4, csvModel.getRowCount());
@@ -710,7 +737,7 @@ TEST(dfgQt, CsvTableView_saveAsShown)
     view.openFile(sTempPath);
 
     DFGTEST_EXPECT_LEFT("Col1", view.getColumnName(ColumnIndex_view(0)));
-    DFGTEST_EXPECT_LEFT("Col2", view.getColumnName(ColumnIndex_view(1)));
+    DFGTEST_EXPECT_LEFT("", view.getColumnName(ColumnIndex_view(1)));
     DFGTEST_EXPECT_LEFT("Col4", view.getColumnName(ColumnIndex_view(2)));
     EXPECT_EQ(2, viewModel.rowCount());
     EXPECT_EQ(3, viewModel.columnCount());
@@ -2037,6 +2064,47 @@ TEST(dfgQt, CsvTableView_trimCells)
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("e", rModel.rawStringViewAt(2, 0));
     DFGTEST_EXPECT_EQ_LITERAL_UTF8("f", rModel.rawStringViewAt(2, 1));
 }
+
+TEST(dfgQt, CsvTableView_headerFirstRowOperations)
+{
+    // 2x3 case with two non-empty names and one empty.
+    {
+        ::DFG_MODULE_NS(qt)::CsvTableWidget view;
+        auto& csvModel = view.getCsvModel();
+        view.resizeTableNoUi(2, 3);
+        csvModel.setColumnName(0, "Column 1");
+        csvModel.setColumnName(2, "Column 3");
+        DFGTEST_EXPECT_LEFT(2, view.getRowCount_viewModel());
+
+        view.moveHeaderToFirstRow();
+        DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(0));
+        DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(1));
+        DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(2));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("Column 1", csvModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", csvModel.rawStringViewAt(0, 1));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("Column 3", csvModel.rawStringViewAt(0, 2));
+
+        DFGTEST_EXPECT_LEFT(3, view.getRowCount_viewModel());
+
+        view.moveFirstRowToHeader();
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", csvModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", csvModel.rawStringViewAt(0, 1));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", csvModel.rawStringViewAt(0, 2));
+        
+        DFGTEST_EXPECT_LEFT("Column 1", csvModel.getHeaderName(0));
+        DFGTEST_EXPECT_LEFT("", csvModel.getHeaderName(1));
+        DFGTEST_EXPECT_LEFT("Column 3", csvModel.getHeaderName(2));
+
+        DFGTEST_EXPECT_LEFT(2, view.getRowCount_viewModel());
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// TableView tests
+//
+///////////////////////////////////////////////////////////////////////////////
+
 
 TEST(dfgQt, TableView_makeSingleCellSelection)
 {

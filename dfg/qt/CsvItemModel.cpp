@@ -1620,23 +1620,48 @@ QVariant CsvItemModel::data(const QModelIndex& index, int role /*= Qt::DisplayRo
 
 QVariant CsvItemModel::headerData(const int section, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
 {
-    if (role != Qt::DisplayRole && role != Qt::ToolTipRole)
-        return QVariant();
     if (orientation == Qt::Horizontal)
     {
         if (!isValidColumn(section))
             return QVariant();
-        const auto sHeaderName = getHeaderName(section);
+
+        if (role == Qt::FontRole)
+        {
+            const auto& sHeaderName = getHeaderName(section);
+            if (!sHeaderName.isEmpty())
+                return QVariant();
+            else
+            {
+                // If column name is empty, using italic-font to indicate that using a generated name.
+                QFont font;
+                font.setItalic(true);
+                return font;
+            }
+        }
+        if (role == Qt::ForegroundRole)
+        {
+            // If column name is empty, using non-default colour to indicate that using a generated name.
+            const auto& sHeaderName = getHeaderName(section);
+            return (!sHeaderName.isEmpty()) ? QVariant() : QBrush(Qt::darkGray);
+        }
+        
+        if (role != Qt::DisplayRole && role != Qt::ToolTipRole)
+            return QVariant();
+
+        const auto& sHeaderName = getHeaderName(section);
+        const auto nColIndex = internalColumnIndexToVisible(section);
         if (role != Qt::ToolTipRole)
-            return sHeaderName;
+            return (!sHeaderName.isEmpty()) ? sHeaderName : QString::number(nColIndex);
         else
             return tr("%1\n(column %2/%3)")
             .arg((!sHeaderName.isEmpty()) ? sHeaderName : tr("<unnamed column>"))
-            .arg(internalColumnIndexToVisible(section))
+            .arg(nColIndex)
             .arg(getColumnCount());
     }
-    else // Case: vertical header
+    else if (orientation == Qt::Vertical)
     {
+        if (role != Qt::DisplayRole && role != Qt::ToolTipRole)
+            return QVariant();
         auto pOpaq = DFG_OPAQUE_PTR();
         const auto bHaveCustomName = (pOpaq && isValidIndex(pOpaq->m_rowNames, section) && !pOpaq->m_rowNames[section].isEmpty());
         if (bHaveCustomName)
@@ -1655,6 +1680,7 @@ QVariant CsvItemModel::headerData(const int section, Qt::Orientation orientation
             return QString::number(internalRowIndexToVisible(section));
         }
     }
+    return QVariant();
 }
 
 void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)

@@ -1902,7 +1902,7 @@ bool CsvTableView::saveToFileImpl(const QString& path, const CsvFormatDefinition
         using Index = std::remove_const<decltype(nRowCount)>::type;
         for (Index c = 0; c < nColCount; ++c)
         {
-            saveAsShownModel.setColumnName(c, pViewModel->headerData(c, Qt::Horizontal).toString());
+            saveAsShownModel.setColumnName(c, this->getColumnName(ColumnIndex_view(c)));
             for (Index r = 0; r < nRowCount; ++r)
             {
                 const auto viewIndex = pViewModel->index(r, c);
@@ -2264,7 +2264,7 @@ public:
 
         if (isLoadDialog())
         {
-            m_loadOptions.m_cEnc = (!sEnc.isEmpty()) ? enc.second : ::DFG_MODULE_NS(io)::DFG_CLASS_NAME(DelimitedTextReader)::s_nMetaCharNone;
+            m_loadOptions.m_cEnc = (!sEnc.isEmpty()) ? enc.second : ::DFG_MODULE_NS(io)::DelimitedTextReader::s_nMetaCharNone;
             m_loadOptions.m_cSep = sep.second;
             m_loadOptions.m_eolType = eolType;
             m_loadOptions.setProperty(CsvOptionProperty_completerColumns, m_spCompleterColumns->text().toStdString());
@@ -3010,7 +3010,7 @@ bool CsvTableView::executeAction(Param0_T&& p0)
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0));
     else
-        DFG_CLASS_NAME(UndoCommand)::directRedo<T>(std::forward<Param0_T>(p0));
+        UndoCommand::directRedo<T>(std::forward<Param0_T>(p0));
 
     return true;
 }
@@ -3023,7 +3023,7 @@ bool CsvTableView::executeAction(Param0_T&& p0, Param1_T&& p1)
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
     else
-        DFG_CLASS_NAME(UndoCommand)::directRedo<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
+        UndoCommand::directRedo<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1));
 
     return true;
 }
@@ -3036,7 +3036,7 @@ bool CsvTableView::executeAction(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
     if (m_spUndoStack && m_bUndoEnabled)
         pushToUndoStack<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
     else
-        DFG_CLASS_NAME(UndoCommand)::directRedo<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
+        UndoCommand::directRedo<T>(std::forward<Param0_T>(p0), std::forward<Param1_T>(p1), std::forward<Param2_T>(p2));
 
     return true;
 }
@@ -3072,7 +3072,7 @@ void CsvTableView::pushToUndoStack(Param0_T&& p0, Param1_T&& p1, Param2_T&& p2)
 
 bool CsvTableView::clearSelected()
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionDelete)>(*this, getProxyModelPtr(), false /*false = not row mode*/);
+    return executeAction<CsvTableViewActionDelete>(*this, getProxyModelPtr(), false /*false = not row mode*/);
 }
 
 bool CsvTableView::insertRowImpl(const int insertType)
@@ -3098,14 +3098,14 @@ bool CsvTableView::insertRowAfterCurrent()
 bool CsvTableView::insertColumn()
 {
     const auto nCol = currentIndex().column();
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionInsertColumn)>(csvModel(), nCol);
+    return executeAction<CsvTableViewActionInsertColumn>(csvModel(), nCol);
 }
 
 bool CsvTableView::insertColumnAfterCurrent()
 {
     const auto nCol = currentIndex().column();
     if (nCol >= 0)
-        return executeAction<DFG_CLASS_NAME(CsvTableViewActionInsertColumn)>(csvModel(), nCol + 1);
+        return executeAction<CsvTableViewActionInsertColumn>(csvModel(), nCol + 1);
     else
         return false;
 }
@@ -3286,7 +3286,7 @@ bool CsvTableView::copy()
 
 bool CsvTableView::paste()
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionPaste)>(this);
+    return executeAction<CsvTableViewActionPaste>(this);
 }
 
 bool CsvTableView::deleteCurrentColumn()
@@ -3301,12 +3301,12 @@ bool CsvTableView::deleteCurrentColumn()
 
 bool CsvTableView::deleteCurrentColumn(const int nCol)
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionDeleteColumn)>(this, nCol);
+    return executeAction<CsvTableViewActionDeleteColumn>(this, nCol);
 }
 
 bool CsvTableView::deleteSelectedRow()
 {
-    return executeAction<DFG_CLASS_NAME(CsvTableViewActionDelete)>(*this, getProxyModelPtr(), true /*row mode*/);
+    return executeAction<CsvTableViewActionDelete>(*this, getProxyModelPtr(), true /*row mode*/);
 }
 
 bool CsvTableView::resizeTable()
@@ -3897,7 +3897,7 @@ namespace
         return false;
     }
 
-    bool generateRandomReal(const ContentGeneratorDialog::TargetType target, DFG_CLASS_NAME(CsvTableView)& view, RandQStringArgs& params, const char* pszFormat)
+    bool generateRandomReal(const ContentGeneratorDialog::TargetType target, CsvTableView& view, RandQStringArgs& params, const char* pszFormat)
     {
         if (params.isEmpty())
             return false;
@@ -5038,7 +5038,7 @@ void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationStarting_myThread(cons
     }
 }
 
-void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded(const double timeInSeconds, const DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus completionStatus)
+void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded(const double timeInSeconds, const CsvTableViewSelectionAnalyzer::CompletionStatus completionStatus)
 {
     Q_EMIT sigEvaluationEndedHandleRequest(timeInSeconds, static_cast<int>(completionStatus));
 }
@@ -5050,7 +5050,7 @@ void CsvTableViewBasicSelectionAnalyzerPanel::onEvaluationEnded_myThread(const d
         m_spProgressBar->setRange(0, 1); // Deactivates generic 'something is happening' indicator.
         m_spProgressBar->setValue(m_spProgressBar->maximum());
         m_spProgressBar->setFormat(QString("%1 s").arg(timeInSeconds));
-        if (completionStatus != static_cast<int>(DFG_CLASS_NAME(CsvTableViewSelectionAnalyzer)::CompletionStatus_completed))
+        if (completionStatus != static_cast<int>(CsvTableViewSelectionAnalyzer::CompletionStatus_completed))
         {
             // When work gets interrupted, set color to red.
             m_spProgressBar->setStyleSheet("QProgressBar::chunk { background-color: #FF0000; text-align: left; }");
@@ -5582,7 +5582,7 @@ void CsvTableView::onColumnResizeAction_toViewContentAware()
 
     const auto minSectionSize = pHeader->minimumSectionSize();
 
-    DFG_MODULE_NS(cont)::DFG_CLASS_NAME(ValueVector)<int> sizes;
+    DFG_MODULE_NS(cont)::ValueVector<int> sizes;
     sizes.reserve(static_cast<size_t>(numHeader));
     for (int i = 0; i < numHeader; ++i)
     {
