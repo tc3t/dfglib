@@ -12,7 +12,6 @@
 #include "../utf.hpp"
 #include "../cont/contAlg.hpp"
 #include "../cont/elementType.hpp"
-#include "../cont/vectorSso.hpp"
 #include "../build/inlineTools.hpp"
 #include "../preprocessor/compilerInfoMsvc.hpp"
 
@@ -321,19 +320,13 @@ public:
     // This is inefficient in this use pattern and with this custom buffer chars can be pushed back without handling the null terminator. Null terminator can be set when the
     // the cell is read completely.
     template <class Char_T, size_t SsoBufferSize_T = 32>
-#ifdef _MSC_VER // Using std::vector only in MSVC because in CsvReadPerformance basicReader-test slowed down 0.4 -> 0.6 in MinGW
     class CharBuffer : public std::vector<Char_T>
-#else
-    class CharBuffer : public DFG_MODULE_NS(cont)::VectorSso<Char_T, SsoBufferSize_T>
-#endif
     {
     public:
-#ifdef _MSC_VER
         CharBuffer()
         {
             this->reserve(SsoBufferSize_T);
         }
-#endif
 
         std::basic_string<Char_T> toStr() const
         {
@@ -1000,7 +993,7 @@ public:
             }
         }
 
-        static void onEnclosedCellRead(typename Buffer& rBuffer, const int cEnc)
+        static void onEnclosedCellRead(Buffer& rBuffer, const int cEnc)
         {
             if constexpr (std::is_same_v<Buffer, StringViewCBufferWithEnclosedCellSupport>)
             {

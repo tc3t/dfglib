@@ -26,6 +26,7 @@
 #include <dfg/cont/TorRef.hpp>
 #include <dfg/cont/TrivialPair.hpp>
 #include <dfg/cont/UniqueResourceHolder.hpp>
+#include <dfg/cont/vectorSso.hpp>
 #include <dfg/rand.hpp>
 #include <dfg/typeTraits.hpp>
 #include <dfg/io/BasicOmcByteStream.hpp>
