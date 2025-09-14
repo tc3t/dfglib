@@ -134,6 +134,8 @@ constexpr char ChartObjectFieldIdStr_zSource[] = "z_source";
     constexpr char ChartObjectSourceTypeStr_columnIndexes[] = "column_indexes";
     constexpr char ChartObjectSourceTypeStr_rowIndex[]      = "row_index"; // Value is to be taken from row index of another column.
 
+constexpr char ChartObjectFieldIdStr_extraColumns[] = "extra_columns";
+
 // panel_id: defines panel to which ChartObject is to be assigned to.
 //      Possible values:
 //          -grid(r, c): instructs to put chart object to position row = r, column = c on a panel grid. Indexing is 1-based. Value (1,1) means top left corner.
@@ -954,7 +956,7 @@ private:
 
 namespace DFG_DETAIL_NS
 {
-    static inline void checkForUnrecongnizedProperties(const AbstractChartControlItem& controlItem, std::function<void(AbstractChartControlItem::StringView)> func, const std::array<const char*, 15> knownItems)
+    static inline void checkForUnrecongnizedProperties(const AbstractChartControlItem& controlItem, std::function<void(AbstractChartControlItem::StringView)> func, const std::array<const char*, 16> knownItems)
     {
         controlItem.forEachPropertyId([&](StringViewUtf8 sv)
         {
@@ -1032,6 +1034,7 @@ inline void forEachUnrecognizedPropertyId(const AbstractChartControlItem& contro
             ChartObjectFieldIdStr_dataSource,
             ChartObjectFieldIdStr_xSource,
             ChartObjectFieldIdStr_ySource,
+            ChartObjectFieldIdStr_extraColumns,
             ChartObjectFieldIdStr_xRows,
             ChartObjectFieldIdStr_mergeIdenticalLabels,
             ChartObjectFieldIdStr_stackOnExistingLabels,

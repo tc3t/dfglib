@@ -317,6 +317,70 @@ namespace DFG_DETAIL_NS
         }
     }
 
+    // Helper for handling of ChartObjectFieldIdStr_extraColumns
+    class ExtraColumnInfo
+    {
+    public:
+        auto getColIndex(const GraphDataSource& source) const -> GraphDataSource::DataSourceIndex;
+        StringUtf8 itemDefinitionString() const;
+
+        std::optional<::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem> m_optRawDef;
+    };
+
+    inline auto ExtraColumnInfo::getColIndex(const GraphDataSource& source) const -> GraphDataSource::DataSourceIndex
+    {
+        auto nCol = GraphDataSource::invalidIndex();
+        if (!m_optRawDef.has_value())
+            return nCol;
+        if (m_optRawDef->key() == DFG_UTF8("index"))
+        {
+            bool bSuccess = false;
+            const auto nColTemp = m_optRawDef->valueAs<int>(0, &bSuccess);
+            if (bSuccess)
+                nCol = nColTemp;
+        }
+        else if (m_optRawDef->key() == DFG_UTF8("name"))
+        {
+            nCol = source.columnIndexByName(m_optRawDef->value(0).toStringView());
+        }
+        return nCol;
+    }
+
+    inline StringUtf8 ExtraColumnInfo::itemDefinitionString() const
+    {
+        if (!m_optRawDef.has_value())
+            return StringUtf8();
+        std::string s;
+        s += m_optRawDef->key().toString().rawStorage();
+        s += "(";
+        size_t nAdded = 0;
+        for (const auto item : *m_optRawDef)
+        {
+            if (nAdded > 0)
+                s += ",";
+            s += item.rawStorage();
+        }
+        s += ")";
+        return StringUtf8::fromRawString(std::move(s));
+    }
+
+    template <class Func_T>
+    void forEachExtraColumn(const ::DFG_MODULE_NS(charts)::AbstractChartControlItem& defEntry, Func_T func)
+    {
+        using namespace DFG_ROOT_NS;
+        const auto sExtraColumns = defEntry.fieldValueStr(ChartObjectFieldIdStr_extraColumns, [] { return StringUtf8(); });
+        if (!sExtraColumns.empty())
+        {
+            auto items = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem::fromStableView(sExtraColumns);
+            for (const auto& item : items)
+            {
+                ExtraColumnInfo eci;
+                eci.m_optRawDef = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem::fromStableView(item);
+                func(eci);
+            }
+        }
+    }
+
 } // namespace DFG_DETAIL_NS
 
 void ChartController::refresh()
@@ -909,6 +973,8 @@ namespace DFG_DETAIL_NS
 template <class Map_T, class Insert_T>
 bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::storeColumnFromSourceImpl(Map_T& mapIndexToStorage, GraphDataSource& source, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails, Insert_T inserter)
 {
+    if (nColumn == GraphDataSource::invalidIndex())
+        return false;
     if (m_spSource && m_spSource != &source)
     {
         DFG_QT_CHART_CONSOLE_WARNING(tr("Internal error: cache item source changed, was '%1', now using '%2'").arg(m_spSource->uniqueId(), source.uniqueId()));
@@ -1232,6 +1298,19 @@ auto DFG_MODULE_NS(qt)::ChartDataCache::getTableSelectionData_createIfMissing(Gr
         bYsuccess = (bStringsNeededForY) ? rCacheItem.storeColumnFromSource_strings(source, yColumnIndex) : rCacheItem.storeColumnFromSource(source, yColumnIndex);
     if (bYsuccess)
         bZsuccess = (!bStringsNeededForZ || rCacheItem.storeColumnFromSource_strings(source, zColumnIndex));
+
+    DFG_DETAIL_NS::forEachExtraColumn(defEntry, [&](const DFG_DETAIL_NS::ExtraColumnInfo& item)
+        {
+            const auto nCol = item.getColIndex(source);
+            if (nCol != GraphDataSource::invalidIndex())
+                rCacheItem.storeColumnFromSource(source, nCol);
+            else
+            {
+                if (defEntry.isLoggingAllowedForLevel(GraphDefinitionEntry::LogLevel::warning))
+                    defEntry.log(GraphDefinitionEntry::LogLevel::warning,
+                                 QObject::tr("Didn't find extra column '%1'").arg(viewToQString(item.itemDefinitionString())));
+            }
+        });
 
     if (bXsuccess && bYsuccess && bZsuccess)
         return keyValueItem.second;
@@ -3270,21 +3349,41 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(std::
     auto pFirstCol = optTableData->columnStringsByIndex(columnIndexes[0]);
     auto pSecondCol = optTableData->columnDataByIndex(columnIndexes[1]);
 
+    std::vector<const TableSelectionCacheItem::RowToValueMap*> extraColumns;
+    // Extra columns
+    DFG_DETAIL_NS::forEachExtraColumn(defEntry, [&](const DFG_DETAIL_NS::ExtraColumnInfo& item)
+        {
+            const auto nCol = item.getColIndex(source);
+            const auto pData = optTableData->columnDataByIndex(nCol);
+            if (pData)
+                extraColumns.push_back(pData);
+        });
+
     if (!pFirstCol || !pSecondCol)
         return ChartData();
 
     TableSelectionCacheItem::RowToStringMap labelColumnCopy;
     TableSelectionCacheItem::RowToValueMap valueColumnCopy;
+    std::vector<TableSelectionCacheItem::RowToValueMap> extraColumnCopies(extraColumns.size());
     // Applying x_rows filter if defined
     {
         if (!handleXrows(defEntry, pFirstCol, labelColumnCopy))
             return ChartData();
         if (!handleXrows(defEntry, pSecondCol, valueColumnCopy))
             return ChartData();
+        for (size_t i = 0; i < extraColumns.size(); ++i)
+        {
+            if (!handleXrows(defEntry, extraColumns[i], extraColumnCopies[i]))
+                return ChartData();
+            
+        }
     }
 
     // Applying operations
     ::DFG_MODULE_NS(charts)::ChartOperationPipeData operationData(&pFirstCol->m_valueStorage, &pSecondCol->m_valueStorage);
+    for (const auto& extraCol : extraColumns)
+         operationData.m_vectorRefs.push_back(ChartOperationPipeData::DataVectorRef(&extraCol->m_valueStorage));
+
     defEntry.applyOperations(operationData);
 
     ChartData rawData;
