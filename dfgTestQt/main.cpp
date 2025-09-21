@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_stringToDouble";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_transpose";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_trimCells";
-    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_undoAfterRemoveColumns";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_undoAfterDeleteColumn";
 
     // Miscellaneous
     //::testing::GTEST_FLAG(filter) = "dfgQt.NumericGeneratorDataSource";

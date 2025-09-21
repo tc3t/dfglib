@@ -610,7 +610,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Populates @p vecStrings with strings from given column. If nCol is not valid,
         // @p vecStrings will be empty.
-        void columnToStrings(const int nCol, std::vector<QString>& vecStrings);
+        void columnToStrings(const Index nCol, std::vector<QString>& vecStrings);
 
         // Returns typed string pointer. Prefer to use rawStringViewAt() as first choice as returning null-terminated string pointers need assumption about underlying implementation.
         SzPtrUtf8R rawStringPtrAt(const int nRow, const int nCol) const;

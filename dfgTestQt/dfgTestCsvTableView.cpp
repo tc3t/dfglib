@@ -105,24 +105,24 @@ TEST(dfgQt, CsvTableView_undoAfterRemoveRows)
     EXPECT_EQ(QString("d"), model.data(model.index(3, 1)).toString());
 }
 
-TEST(dfgQt, CsvTableView_undoAfterRemoveColumns)
+TEST(dfgQt, CsvTableView_undoAfterDeleteColumn)
 {
     {
         ::DFG_MODULE_NS(qt)::CsvTableWidget view;
         auto& csvModel = view.getCsvModel();
         view.resizeTableNoUi(3, 2);
-        csvModel.setDataNoUndo(0, 0, DFG_UTF8("a"));
-        csvModel.setDataNoUndo(0, 1, DFG_UTF8("b"));
+        // Note: first row is left empty on purpose: originally undo failed when it was empty
+        //       so this tests that it works correctly.
         csvModel.setDataNoUndo(1, 0, DFG_UTF8("c"));
         csvModel.setDataNoUndo(1, 1, DFG_UTF8("d"));
         csvModel.setDataNoUndo(2, 0, DFG_UTF8("e"));
         csvModel.setDataNoUndo(2, 1, DFG_UTF8("f"));
         view.deleteCurrentColumn(1);
         DFGTEST_EXPECT_LEFT(1, csvModel.columnCount());
+
         view.undo();
+
         DFGTEST_EXPECT_LEFT(2, csvModel.columnCount());
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("a", csvModel.rawStringViewAt(0, 0));
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("b", csvModel.rawStringViewAt(0, 1));
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("c", csvModel.rawStringViewAt(1, 0));
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("d", csvModel.rawStringViewAt(1, 1));
         DFGTEST_EXPECT_EQ_LITERAL_UTF8("e", csvModel.rawStringViewAt(2, 0));

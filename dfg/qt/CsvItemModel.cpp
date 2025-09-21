@@ -1979,16 +1979,20 @@ void CsvItemModel::removeRows(const ::DFG_MODULE_NS(cont)::ArrayWrapperT<const i
     }
 }
 
-void CsvItemModel::columnToStrings(const int nCol, std::vector<QString>& vecStrings)
+void CsvItemModel::columnToStrings(const Index nCol, std::vector<QString>& vecStrings)
 {
     vecStrings.clear();
     if (!isValidColumn(nCol))
         return;
-    vecStrings.reserve(static_cast<size_t>(getColumnCount()));
-    table().forEachFwdRowInColumn(nCol, [&](const int /*row*/, const SzPtrUtf8R tpsz)
+    vecStrings.resize(static_cast<size_t>(getRowCount()));
+    table().forEachFwdRowInColumn(nCol, [&](const Index nRow, const SzPtrUtf8R tpsz)
     {
-        vecStrings.push_back(QString::fromUtf8(tpsz.c_str()));
-
+        if (isValidIndex(vecStrings, nRow))
+            vecStrings[nRow] = QString::fromUtf8(tpsz.c_str());
+        else
+        {
+            DFG_ASSERT_CORRECTNESS(false); // Not expected to get row index outside [0, getRowCount()[
+        }
     });
 }
 
