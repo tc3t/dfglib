@@ -147,7 +147,7 @@ public:
             nEndPos = m_data.size();
             handleNullTerminator(std::integral_constant<bool, StringStorageType_T != StringStorageType::sizeOnly>());
         }
-        m_keyToStringDetails[key] = StringDetail(static_cast<size_type>(nStartPos), static_cast<size_type>(nEndPos));
+        insertImpl(key, StringDetail(static_cast<size_type>(nStartPos), static_cast<size_type>(nEndPos)));
     }
 
     // Low level access that provides ability to write directly through InsertIterator
@@ -187,8 +187,8 @@ public:
             }
             handleNullTerminator(std::integral_constant<bool, StringStorageType_T != StringStorageType::sizeOnly>());
         }
-        
-        m_keyToStringDetails[key] = StringDetail(static_cast<size_type>(nStartPos), static_cast<size_type>(nEndPos));
+
+        insertImpl(key, StringDetail(static_cast<size_type>(nStartPos), static_cast<size_type>(nEndPos)));
         return true;
     }
 
@@ -271,6 +271,23 @@ private:
     void handleNullTerminator(std::true_type)
     {
         m_data.push_back('\0');
+    }
+
+    void insertImpl(const Key_T& key, StringDetail&& sd)
+    {
+        if constexpr (std::is_integral_v<Key_T>)
+        {
+            // For integers, applying optimization that if key is greater than last key,
+            // calling insertNonExistingTo() to avoid redundant but costly key lookup.
+            if (m_keyToStringDetails.empty() || key > m_keyToStringDetails.backKey())
+                m_keyToStringDetails.insertNonExistingTo(key, std::move(sd), m_keyToStringDetails.end());
+            else
+                m_keyToStringDetails[key] = std::move(sd);
+        }
+        else
+        {
+            m_keyToStringDetails[key] = std::move(sd);
+        }
     }
 
 public:
