@@ -1996,6 +1996,17 @@ void CsvItemModel::columnToStrings(const Index nCol, std::vector<QString>& vecSt
     });
 }
 
+void CsvItemModel::columnToStrings(const Index nCol, ColumnContentStorage& strings)
+{
+    strings.clear_noDealloc();
+    if (!isValidColumn(nCol))
+        return;
+    table().forEachFwdRowInColumn(nCol, [&](const Index nRow, const SzPtrUtf8R tpsz)
+    {
+        strings.insert(nRow, tpsz);
+    });
+}
+
 void CsvItemModel::setColumnCells(const int nCol, const std::vector<QString>& vecStrings)
 {
     if (!isValidColumn(nCol))
@@ -2007,6 +2018,25 @@ void CsvItemModel::setColumnCells(const int nCol, const std::vector<QString>& ve
     }
     if (!m_bResetting)
         Q_EMIT dataChanged(this->index(0, nCol), this->index(getRowCount()-1, nCol));
+}
+
+void CsvItemModel::setColumnCells(const Index nCol, const ColumnContentStorage& strings)
+{
+    if (!isValidColumn(nCol))
+        return;
+    const auto nRowCount = getRowCount();
+    Index r = 0;
+    for (const auto& item : strings)
+    {
+        // First clear all cells where there's no item in strings.
+        for (; r < item.first; ++r)
+            setItem(r, nCol, StringViewUtf8()); // TODO: Null or empty?
+        DFG_ASSERT_CORRECTNESS(r == item.first);
+        setItem(r, nCol, item.second(strings).toStringView());
+        ++r;
+    }
+    if (!m_bResetting)
+        Q_EMIT dataChanged(this->index(0, nCol), this->index(nRowCount - 1, nCol));
 }
 
 void CsvItemModel::setModifiedStatus(const bool bMod /*= true*/)

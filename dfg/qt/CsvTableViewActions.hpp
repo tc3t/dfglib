@@ -18,7 +18,6 @@ DFG_END_INCLUDE_QT_HEADERS
 
 #include "../io/DelimitedTextReader.hpp"
 #include "../alg.hpp"
-#include "qtBasic.hpp"
 #include "tableViewUndoCommands.hpp"
 #include "../math/FormulaParser.hpp"
 
@@ -489,9 +488,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                 return;
             m_sColumnName = pModel->getHeaderName(nCol);
             QString sDesc;
-            sDesc = QString("Delete column %1, \"%2\"").arg(m_nWhere).arg(m_sColumnName);
+            sDesc = pView->tr("Delete column %1, \"%2\"").arg(m_nWhere).arg(m_sColumnName);
             setText(sDesc);
-            pModel->columnToStrings(nCol, m_vecStrings);
+            pModel->columnToStrings(nCol, m_strings);
         }
 
         void undo()
@@ -500,7 +499,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             if (!pModel)
                 return;
             pModel->insertColumn(m_nWhere);
-            pModel->setColumnCells(m_nWhere, m_vecStrings);
+            pModel->setColumnCells(m_nWhere, m_strings);
             pModel->setColumnName(m_nWhere, m_sColumnName);
 
         }
@@ -514,10 +513,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
     private:
         CsvTableView* m_pView;
         int m_nWhere;
-        std::vector<QString> m_vecStrings;
+        CsvItemModel::ColumnContentStorage m_strings;
         QString m_sColumnName;
     };
 
+#if 0 // Commented out as this wasn't used or tested anywhere as of 2025-10
     class CsvTableViewHeaderActionPasteColumn : public UndoCommand
     {
     public:
@@ -583,7 +583,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         std::vector<QString> m_vecStringsOld;
         std::vector<QString> m_vecStringsNew;
     };
+#endif
 
+#if 0 // Commented out as this wasn't used or tested anywhere as of 2025-10
     class CsvTableViewHeaderActionRenameColumn : public UndoCommand
     {
     public:
@@ -622,6 +624,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString m_sColumnNameNew;
 
     };
+#endif
 
     class CsvTableViewActionMoveFirstRowToHeader : public UndoCommand
     {

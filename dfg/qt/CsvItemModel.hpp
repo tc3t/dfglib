@@ -14,6 +14,7 @@
 #include "../cont/detail/tableCsvHelpers.hpp"
 #include "../cont/SortedSequence.hpp"
 #include "../Span.hpp"
+#include "../cont/MapToStringViews.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QAbstractTableModel>
@@ -215,6 +216,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         typedef DFG_DETAIL_NS::HighlightDefinition HighlightDefinition;
         typedef DFG_MODULE_NS(qt)::StringMatchDefinition StringMatchDefinition;
         class OpaqueTypeDefs;
+
+        // Interface helper defining a data structure for storing content from one column
+        // Logically can be thought as map row -> string.
+        // Ideally this could be some sort of shared pointer to read-only structure used in table, but for now using
+        // a dedicated owning storage.
+        using ColumnContentStorage = ::DFG_MODULE_NS(cont)::MapToStringViews<Index, StringUtf8, ::DFG_MODULE_NS(cont)::StringStorageType::szSized>;
 
         using ColType = CsvItemModelColumnType;
         // For compatibility, don't use these in new code.
@@ -610,7 +617,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         // Populates @p vecStrings with strings from given column. If nCol is not valid,
         // @p vecStrings will be empty.
-        void columnToStrings(const Index nCol, std::vector<QString>& vecStrings);
+        void columnToStrings(Index nCol, std::vector<QString>& vecStrings);
+        void columnToStrings(Index nCol, ColumnContentStorage& strings);
 
         // Returns typed string pointer. Prefer to use rawStringViewAt() as first choice as returning null-terminated string pointers need assumption about underlying implementation.
         SzPtrUtf8R rawStringPtrAt(const int nRow, const int nCol) const;
@@ -624,7 +632,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         double cellDataAsDouble(StringViewSzUtf8 sv, Index nRow, Index nCol, ::DFG_MODULE_NS(charts)::ChartDataType* pInterpretedInputDataType = nullptr, double returnValueOnConversionFailure = std::numeric_limits<double>::quiet_NaN()) const;
 
         // Sets cell strings in column @p nCol to those given in @p vecStrings.
-        void setColumnCells(const int nCol, const std::vector<QString>& vecStrings);
+        void setColumnCells(Index nCol, const std::vector<QString>& vecStrings);
+        // Sets cell strings in column @p nCol to strings in given container up to last row index in it.
+        // Rows not present in @p strings and not greater than biggest row in @p strings are cleared.
+        void setColumnCells(Index nCol, const ColumnContentStorage& strings);
 
         void setColumnType(Index nCol, ColType colType); // Sets column type for given column. @note If column has custom string-to-double parser, it will be cleared.
         void setColumnType(Index nCol, StringViewC sColType); // Converts string to ColType and calls setColumnType() with ColType-data, sColType must one of: <empty> (=type not changed), "text", "number", "date".
