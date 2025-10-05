@@ -784,7 +784,7 @@ namespace
 DFG_STATIC_ASSERT((std::is_same<CsvTableView::Index, CsvItemModel::Index>::value), "CsvTableView::Index and CsvItemModel::Index differ");
 
 
-#define DFG_CSVTABLEVIEW_CONSOLE_LOG(LEVEL, ...) if (this->hasLogger()) DFG_LOG_FMT(this->getLogger(), LEVEL, __VA_ARGS__)
+#define DFG_CSVTABLEVIEW_CONSOLE_LOG(LEVEL, ...) if (this->hasLogger()) DFG_LOG_FMT(static_cast<Logger&>(this->getLogger()), LEVEL, __VA_ARGS__)
 #define DFG_CSVTABLEVIEW_CONSOLE_ERROR(...)     DFG_CSVTABLEVIEW_CONSOLE_LOG(LoggingLevel::error,   __VA_ARGS__)
 #define DFG_CSVTABLEVIEW_CONSOLE_WARNING(...)   DFG_CSVTABLEVIEW_CONSOLE_LOG(LoggingLevel::warning, __VA_ARGS__)
 #define DFG_CSVTABLEVIEW_CONSOLE_INFO(...)      DFG_CSVTABLEVIEW_CONSOLE_LOG(LoggingLevel::info,    __VA_ARGS__)
@@ -912,7 +912,7 @@ bool CsvTableView::hasLogger() const
     return DFG_OPAQUE_PTR() && DFG_OPAQUE_PTR()->m_logger.defaultLevel() != LoggingLevel::none;
 }
 
-auto CsvTableView::getLogger() const -> Logger&
+auto CsvTableView::getLogger() const -> ::DFG_ROOT_NS::Logger&
 {
     static Logger dummy;
     return (DFG_OPAQUE_PTR()) ? DFG_OPAQUE_PTR()->m_logger : dummy;

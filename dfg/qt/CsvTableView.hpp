@@ -11,6 +11,7 @@
 #include <tuple>
 #include "../OpaquePtr.hpp"
 #include "../cont/Flags.hpp"
+#include "../logging.hpp"
 
 #include "qtIncludeHelpers.hpp"
 
@@ -598,7 +599,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setFilterFromSelection(CsvTableViewSelectionFilterFlags flags);
 
         bool hasLogger() const;    // Returns true iff 'this' has a logger object attached and it is not disabled.
-        Logger& getLogger() const; // Returns logger if hasLogger() has returned true immediately before this call, otherwise returns dummy logger object. 
+        ::DFG_ROOT_NS::Logger& getLogger() const; // Returns logger if hasLogger() has returned true immediately before this call, otherwise returns dummy logger object. 
 
     private:
         template <class T, class Param0_T>
