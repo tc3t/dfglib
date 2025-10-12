@@ -156,6 +156,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_appendTablesWithMove";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertToFrontPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_cellCountNonEmpty";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_clearCell";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_contentStorageSizeInBytes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_addRemoveColumns";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertRowsAt";
@@ -202,6 +203,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgIo.ImcByteStream";
     //::testing::GTEST_FLAG(filter) = "dfgIo.ImStreamWithEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgIo.ImStreamWithEncoding_UCS";
+    //::testing::GTEST_FLAG(filter) = "dfgIo.ImStreamWithEncoding_unalignedSource";
     //::testing::GTEST_FLAG(filter) = "dfgIo.isBigEndianEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgIo.IStreamWithEncoding_Windows1252";
     //::testing::GTEST_FLAG(filter) = "dfgIo.isUtfEncoding";

@@ -922,6 +922,46 @@ TEST(dfgCont, TableSz_appendTablesWithMove)
     }
 }
 
+TEST(dfgCont, TableSz_clearCell)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+
+    using TableT = TableSz<char>;
+
+    // Basic test
+    {
+        TableT t;
+        t.setElement(0, 0, "a");
+        t.setElement(1, 0, "b");
+        t.setElement(2, 0, "c");
+
+        t.setElement(0, 0, nullptr);
+        t.clearCell(1, 0);
+        t.setElement(2, 0, nullptr);
+        DFGTEST_EXPECT_LEFT(3, t.rowCountByMaxRowIndex());
+        t.clearCell(2, 0);
+        DFGTEST_EXPECT_LEFT(1, t.rowCountByMaxRowIndex());
+        t.clearCell(0, 0);
+        DFGTEST_EXPECT_LEFT(0, t.rowCountByMaxRowIndex());
+        
+    }
+
+    // Handling across block size
+    {
+        TableT t;
+        constexpr auto nBlockSize = TableT::RowToContentMap::blockSize();
+        t.setElement(1, 0, "a");
+        t.setElement(nBlockSize - 1, 0, "b");
+        t.setElement(nBlockSize + 1, 0, "c");
+        DFGTEST_EXPECT_LEFT(nBlockSize + 2, t.rowCountByMaxRowIndex());
+        t.clearCell(nBlockSize - 1, 0);
+        DFGTEST_EXPECT_LEFT(nBlockSize + 2, t.rowCountByMaxRowIndex());
+        t.clearCell(nBlockSize + 1, 0);
+        DFGTEST_EXPECT_LEFT(2, t.rowCountByMaxRowIndex());
+    }
+}
+
 namespace
 {
 

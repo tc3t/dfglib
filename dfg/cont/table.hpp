@@ -450,7 +450,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
         // Row storage based on MapBlockIndex.
         // -Memory usage per cell (64-bit build): ~8 bytes
-        // -Memory usage if setting one cell at row N (64-bit build): (N/4096)*16 + 8 * 4096
+        // -Memory usage if setting one cell at row N (64-bit build): floor(N/blockSize)*16 + keySize * blockSize
+        //     (=number of empty blocks * size_of_empty_block + memory for one non-empty block)
         // -Content access by row: O(1)
         template <class Row_T, class Char_T, size_t BlockSize_T>
         class RowToContentMapBlockIndex : public DFG_DETAIL_NS::MapBlockIndex<const char*, BlockSize_T>
@@ -1114,6 +1115,14 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             m_colToRows.clear();
         }
 
+        void clearCell(const IndexT nRow, const IndexT nCol)
+        {
+            if (!isValidIndex(m_colToRows, nCol))
+                return;
+            // Simply clearing mapping without clearing the string content.
+            m_colToRows[nCol].clearMapping(nRow);
+        }
+
         // Swap strings at (r0, c0) and (r1, c1).
         void swapCellContent(const IndexT r0, const IndexT c0, const IndexT r1, const IndexT c1)
         {
@@ -1125,7 +1134,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
             {
                 // Note that can't simply swap cell pointers because it would make cell to point to storage of another column,
                 // which would cause handle to go invalid if columns gets removed.
-                // If target string length larger or equal to source, it might be reasonable to just reuse the existing storage,
+                // If target string length is larger or equal to source, it might be reasonable to just reuse the existing storage,
                 // but that would require storage to be mutable.
                 // So in effect there is not much to optimize here, simply doing a simple swap.
                 auto tpsz0 = (*this)(r0, c0);
