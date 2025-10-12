@@ -757,16 +757,22 @@ bool CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions& options)
     return strm.good();
 }
 
-bool CsvItemModel::setItem(const int nRow, const int nCol, const StringViewUtf8& sv)
+bool CsvItemModel::setItem(const Index nRow, const Index nCol, const StringViewUtf8& sv)
 {
     const auto bRv = table().addString(sv, nRow, nCol);
     DFG_ASSERT(bRv); // Triggering ASSERT means that string couldn't be added to table.
     return bRv;
 }
 
-bool CsvItemModel::setItem(const int nRow, const int nCol, const QString& str)
+bool CsvItemModel::setItem(const Index nRow, const Index nCol, const QString& str)
 {
     return setItem(nRow, nCol, SzPtrUtf8R(str.toUtf8()));
+}
+
+bool CsvItemModel::clearItem(const Index nRow, const Index nCol)
+{
+    table().clearCell(nRow, nCol);
+    return true;
 }
 
 void CsvItemModel::setRow(const int nRow, QString sLine)
@@ -2028,9 +2034,9 @@ void CsvItemModel::setColumnCells(const Index nCol, const ColumnContentStorage& 
     Index r = 0;
     for (const auto& item : strings)
     {
-        // First clear all cells where there's no item in strings.
+        // First clearing all cells where there's no item in strings.
         for (; r < item.first; ++r)
-            setItem(r, nCol, StringViewUtf8()); // TODO: Null or empty?
+            clearItem(r, nCol);
         DFG_ASSERT_CORRECTNESS(r == item.first);
         setItem(r, nCol, item.second(strings).toStringView());
         ++r;

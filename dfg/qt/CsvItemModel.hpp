@@ -656,8 +656,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setRow(const int nRow, QString sLine);
 
         // Returns true if item was set, false otherwise.
-        bool setItem(const int nRow, const int nCol, const QString& str);
-        bool setItem(const int nRow, const int nCol, const StringViewUtf8& sv);
+        bool setItem(Index nRow, Index nCol, const QString& str);
+        bool setItem(Index nRow, Index nCol, const StringViewUtf8& sv);
+
+        // Clears item at given index.
+        // Note: this is different from setting cell to empty string.
+        bool clearItem(Index nRow, Index nCol);
 
         // Sets data of given index without triggering undo, returns return value of privSetDataToTable()
         // Note: Given model index must be valid; this function does not check it.
