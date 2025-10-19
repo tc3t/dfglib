@@ -282,14 +282,19 @@ void CsvTableViewDelegate::drawDisplay(QPainter* painter, const QStyleOptionView
 
 bool CsvTableViewDelegate::eventFilter(QObject* editor, QEvent* event)
 {
-    // Special handling for MultiLineEditor Ok-button: clicking OK-button didn't trigger the same handling as clicking mouse outside the editor
-    // so handling it separately. Note that Hide-event from Cancel-button didn't seem to get here at all.
+    // Special handling for MultiLineEditor Ok- and Cancel -buttons: clicking OK-button didn't trigger the same handling as clicking mouse outside the editor
+    // so handling it separately, and Cancel didn't send closeEditor() event like Esc-key.
     if (event && event->type() == QEvent::Hide)
     {
         auto pMultiLineEditor = qobject_cast<QDialog*>(editor);
         if (pMultiLineEditor && pMultiLineEditor->result() == QDialog::Accepted)
         {
             Q_EMIT commitData(pMultiLineEditor);
+            return true;
+        }
+        else if (pMultiLineEditor && pMultiLineEditor->result() == QDialog::Rejected)
+        {
+            Q_EMIT closeEditor(pMultiLineEditor);
             return true;
         }
     }    
