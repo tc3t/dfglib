@@ -22,12 +22,6 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 
 #include "dfgTest.hpp"
 
-#if !defined(_DEBUG) && !defined(__MINGW32__)
-    #define DFGTEST_ENABLE_BENCHMARKS	0
-#else
-    #define DFGTEST_ENABLE_BENCHMARKS	0
-#endif
-
 // Flags for controlling what gets included in the build.
 
 // Default value to use if build flag is not set explicitly 
@@ -53,3 +47,11 @@ DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 //#define DFGTEST_BUILD_MODULE_TIME                         1
 // 
 //#define DFGTEST_BUILD_MODULE_
+
+#if !defined(_DEBUG) && !defined(__MINGW32__)
+    // Non-debug and not MinGW
+    #define DFGTEST_ENABLE_BENCHMARKS	0
+#else
+    // Debug or MinGW
+    #define DFGTEST_ENABLE_BENCHMARKS	0
+#endif

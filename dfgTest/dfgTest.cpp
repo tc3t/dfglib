@@ -144,6 +144,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapVector_valueCopyOr";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SetVector";
     //::testing::GTEST_FLAG(filter) = "dfgCont.MapToStringViews";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.MapToStringViews_benchmarkInOrderInsertEmptyString";
     //::testing::GTEST_FLAG(filter) = "dfgCont.SortedSequence";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableCsv_exceptionHandling";

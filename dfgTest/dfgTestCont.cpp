@@ -35,6 +35,7 @@
 #include <dfg/cont/contAlg.hpp>
 #include <dfg/io/cstdio.hpp>
 #include <dfg/time/timerCpu.hpp>
+#include <dfg/str/format_fmt.hpp>
 
 #if (DFG_LANGFEAT_MUTEX_11 == 1)
     DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
@@ -782,6 +783,124 @@ TEST(dfgCont, MapToStringViews)
         }
     }
 }
+
+namespace
+{
+#if DFGTEST_ENABLE_BENCHMARKS == 1
+    void MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+        auto&& contCreator,
+        auto&& inserter,
+        const char* const pszDesc)
+    {
+        using namespace DFG_ROOT_NS;
+        using Timer = ::DFG_MODULE_NS(time)::TimerCpu;
+        const auto getMemUsage = []() { return ::DFG_MODULE_NS(os)::getMemoryUsage_process().workingSetSize().value_or(0); };
+        {
+
+#if !defined(DFG_BUILD_TYPE_DEBUG)
+            constexpr uint32 nInsertCount = 50000000;
+#elif defined(DFG_BUILD_TYPE_DEBUG)
+            constexpr size_t nInsertCount = 50000;
+#endif
+            auto cont = contCreator(nInsertCount);
+            Timer timer;
+            const auto sTime = ::DFG_MODULE_NS(str)::floatingPointToStr<StringUtf8>(timer.elapsedWallSeconds(), 4);
+            const auto memUsageBefore = getMemUsage();
+            //std::string s;
+            for (uint32 i = 0; i < nInsertCount; ++i)
+            {
+                inserter(cont, i, "");
+                //inserter(cont, i, s);
+
+            }
+            const auto insertTime = timer.elapsedWallSeconds();
+            const auto memUsageAfter = getMemUsage();
+            DFGTEST_MESSAGE(format_fmt("Insert of {} empty strings to {} took {} s, mem usage increased by {}",
+                nInsertCount,
+                pszDesc,
+                ::DFG_MODULE_NS(str)::floatingPointToStr<StringUtf8>(insertTime, 4).rawStorage(),
+                ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(memUsageAfter - memUsageBefore).toString()
+            ));
+        }
+    }
+#endif // DFGTEST_ENABLE_BENCHMARKS
+} // unnamed namespace
+
+#if DFGTEST_ENABLE_BENCHMARKS == 1
+
+TEST(dfgCont, MapToStringViews_benchmarkInOrderInsertEmptyString)
+{
+    using namespace DFG_ROOT_NS;
+    using Timer = ::DFG_MODULE_NS(time)::TimerCpu;
+    {
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto) { return std::vector<std::string>(); },
+            [](auto&& cont, const auto, auto&& str) { cont.push_back(std::forward<decltype(str)>(str)); },
+            "std::vector<std::string> (not reserved)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto nInsertCount) { std::vector<std::string> v; v.reserve(nInsertCount); return v; },
+            [](auto&& cont, const auto, auto&& str) { cont.push_back(std::forward<decltype(str)>(str)); },
+            "std::vector<std::string> (reserved)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto nInsertCount) { std::vector<std::string> v; v.reserve(nInsertCount); return v; },
+            [](auto&& cont, const auto, auto&& str) { if (cont.empty()) cont.insert(cont.begin(), cont.capacity(), std::string(std::forward<decltype(str)>(str))); },
+            "std::vector<std::string> (reserved, single insert)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto) { return std::map<uint32, std::string>(); },
+            [](auto&& cont, const auto i, auto&& str) { cont.insert(std::pair(i, std::forward<decltype(str)>(str))); },
+            "std::map<uint32, std::string>"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto) { return std::unordered_map<uint32, std::string>(); },
+            [](auto&& cont, const auto i, auto&& str) { cont.insert(std::pair(i, std::forward<decltype(str)>(str))); },
+            "std::unordered_map<uint32, std::string>"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto nInsertCount) { ::DFG_MODULE_NS(cont)::SetVector<std::string> m; m.reserve(nInsertCount); return m; },
+            [](auto&& cont, const auto, auto&& str) { cont.insert(std::forward<decltype(str)>(str)); },
+            "SetVector<std::string> (reserved)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto nInsertCount) { ::DFG_MODULE_NS(cont)::MapVectorAoS<uint32, std::string> m; m.reserve(nInsertCount); return m; },
+            [](auto&& cont, const auto i, auto&& str) { cont.insert(i, std::forward<decltype(str)>(str)); },
+            "MapVectorAoS<uint32, std::string> (reserved)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto nInsertCount) { ::DFG_MODULE_NS(cont)::MapVectorSoA<uint32, std::string> m; m.reserve(nInsertCount); return m; },
+            [](auto&& cont, const auto i, auto&& str) { cont.insert(i, std::forward<decltype(str)>(str)); },
+            "MapVectorSoA<uint32, std::string> (reserved)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto ) { return ::DFG_MODULE_NS(cont)::MapToStringViews<uint32, std::string, DFG_MODULE_NS(cont)::StringStorageType::szSized>(); },
+            [](auto&& cont, const auto i, auto&& str) { cont.insert(i, std::forward<decltype(str)>(str)); },
+            "MapToStringViews<uint32> (szSized)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto nInsertCount) { ::DFG_MODULE_NS(cont)::MapToStringViews<uint32, std::string, DFG_MODULE_NS(cont)::StringStorageType::szSized> m; m.m_keyToStringDetails.reserve(nInsertCount); return m; },
+            [](auto&& cont, const auto i, auto&& str) { cont.insert(i, std::forward<decltype(str)>(str)); },
+            "MapToStringViews<uint32> (key storage reserve, szSized)"
+        );
+
+        MapToStringViews_benchmarkInOrderInsertEmptyStringImpl(
+            [](const auto nInsertCount) { ::DFG_MODULE_NS(cont)::MapToStringViews<uint32, std::string, DFG_MODULE_NS(cont)::StringStorageType::sizeAndNullTerminated> m; m.m_keyToStringDetails.reserve(nInsertCount); return m; },
+            [](auto&& cont, const auto i, auto&& str) { cont.insert(i, std::forward<decltype(str)>(str)); },
+            "MapToStringViews<uint32> (key storage reserve, sizeAndNullTerminated)"
+        );
+    }
+}
+#endif // DFGTEST_ENABLE_BENCHMARKS
 
 TEST(dfgCont, SortedSequence)
 {
