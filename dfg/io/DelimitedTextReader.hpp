@@ -593,7 +593,7 @@ public:
         InternalCharType popLastChar()
         {
             DFG_ASSERT_UB(!m_buffer.empty());
-            if constexpr (m_charAppender.s_hasTrivialPopBack)
+            if constexpr (CharAppender::s_hasTrivialPopBack)
             {
                 const auto c = m_buffer.back();
                 m_buffer.pop_back();
