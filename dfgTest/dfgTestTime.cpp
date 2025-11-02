@@ -136,11 +136,11 @@ TEST(dfgTime, DateTime_systemTime_local)
 
     std::tm tm0, tm1, tm2;
     localtime_s(&tm0, &t);
-    _putenv_s("TZ", "GST-1GDT");
+    _putenv_s("TZ", "GMT0");
     _tzset(); // Applies TZ environment variable to globals that e.g. localtime use.
     const auto dt1 = DateTime::systemTime_local();
     localtime_s(&tm1, &t);
-    _putenv_s("TZ", "GST-2GDT");
+    _putenv_s("TZ", "CET-1");
     _tzset();
     localtime_s(&tm2, &t);
     EXPECT_EQ((tm1.tm_hour + 1) % 24, tm2.tm_hour); // Value returned by localtime_s is affected by TZ environment variable.
