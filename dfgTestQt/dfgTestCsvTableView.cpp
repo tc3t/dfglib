@@ -424,6 +424,8 @@ TEST(dfgQt, CsvTableView_clear)
     const int nColCount = 4;
     populateModelWithRowColumnIndexStrings(csvModel, nRowCount, nColCount);
 
+    // Signal count tests check that get expect number of dataChanged-signals, for example if clearing
+    // all cells in a column, expecting one signal covering whole column instead of signal for every cell.
     size_t nSignalCount = 0;
     DFG_QT_VERIFY_CONNECT(QObject::connect(&csvModel, &CsvItemModel::dataChanged, [&]() { ++nSignalCount; }));
 
@@ -2035,12 +2037,12 @@ TEST(dfgQt, CsvTableView_trimCells)
     ::DFG_MODULE_NS(qt)::CsvTableWidget view;
     auto& rModel = view.getCsvModel();
     view.resizeTableNoUi(3, 2);
-    rModel.setItem(0, 0, " a  ");
-    rModel.setItem(0, 1, "   b");
-    rModel.setItem(1, 0, "c \t c");
-    rModel.setItem(1, 1, "d   ");
-    rModel.setItem(2, 0, "\te");
-    rModel.setItem(2, 1, " \t f\t\t     \t");
+    rModel.setDataNoUndo(0, 0, " a  ");
+    rModel.setDataNoUndo(0, 1, "   b");
+    rModel.setDataNoUndo(1, 0, "c \t c");
+    rModel.setDataNoUndo(1, 1, "d   ");
+    rModel.setDataNoUndo(2, 0, "\te");
+    rModel.setDataNoUndo(2, 1, " \t f\t\t     \t");
     DFGTEST_EXPECT_LEFT(3, view.getCsvModel().getRowCount());
     DFGTEST_EXPECT_LEFT(2, view.getCsvModel().getColumnCount());
 

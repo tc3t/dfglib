@@ -757,19 +757,19 @@ bool CsvItemModel::saveImpl(Stream_T& strm, const SaveOptions& options)
     return strm.good();
 }
 
-bool CsvItemModel::setItem(const Index nRow, const Index nCol, const StringViewUtf8& sv)
+bool CsvItemModel::setItem_noDataChangedSig(const Index nRow, const Index nCol, const StringViewUtf8& sv)
 {
     const auto bRv = table().addString(sv, nRow, nCol);
     DFG_ASSERT(bRv); // Triggering ASSERT means that string couldn't be added to table.
     return bRv;
 }
 
-bool CsvItemModel::setItem(const Index nRow, const Index nCol, const QString& str)
+bool CsvItemModel::setItem_noDataChangedSig(const Index nRow, const Index nCol, const QString& str)
 {
-    return setItem(nRow, nCol, SzPtrUtf8R(str.toUtf8()));
+    return setItem_noDataChangedSig(nRow, nCol, SzPtrUtf8R(str.toUtf8()));
 }
 
-bool CsvItemModel::clearItem(const Index nRow, const Index nCol)
+bool CsvItemModel::clearItem_noDataChangedSig(const Index nRow, const Index nCol)
 {
     table().clearCell(nRow, nCol);
     return true;
@@ -786,7 +786,7 @@ void CsvItemModel::setRow(const int nRow, QString sLine)
     DFG_MODULE_NS(io)::DelimitedTextReader::readRow<wchar_t>(strm, cSeparator, cEnclosing, L'\n', [&](const size_t nCol, const wchar_t* const p, const size_t nDataLength)
     {
         const auto nSize = (nDataLength > NumericTraits<int>::maxValue) ? NumericTraits<int>::maxValue : static_cast<int>(nDataLength);
-        setItem(nRow, static_cast<int>(nCol), QString::fromWCharArray(p, nSize));
+        setItem_noDataChangedSig(nRow, static_cast<int>(nCol), QString::fromWCharArray(p, nSize));
     });
 
     if (!m_bResetting)
@@ -1756,7 +1756,7 @@ bool CsvItemModel::privSetDataToTable(const int nRow, const int nCol, const Stri
     if (svExisting == sv)
         return false;
 
-    return setItem(nRow, nCol, sv);
+    return setItem_noDataChangedSig(nRow, nCol, sv);
 }
 
 bool CsvItemModel::setDataNoUndo(const Index nRow, const Index nCol, const StringViewUtf8 sv)
@@ -2020,7 +2020,7 @@ void CsvItemModel::setColumnCells(const int nCol, const std::vector<QString>& ve
     const auto nRowCount = Min(getRowCount(), static_cast<int>(vecStrings.size()));
     for (int r = 0; r<nRowCount; ++r)
     {
-        setItem(r, nCol, vecStrings[static_cast<size_t>(r)]);
+        setItem_noDataChangedSig(r, nCol, vecStrings[static_cast<size_t>(r)]);
     }
     if (!m_bResetting)
         Q_EMIT dataChanged(this->index(0, nCol), this->index(getRowCount()-1, nCol));
@@ -2036,9 +2036,9 @@ void CsvItemModel::setColumnCells(const Index nCol, const ColumnContentStorage& 
     {
         // First clearing all cells where there's no item in strings.
         for (; r < item.first; ++r)
-            clearItem(r, nCol);
+            clearItem_noDataChangedSig(r, nCol);
         DFG_ASSERT_CORRECTNESS(r == item.first);
-        setItem(r, nCol, item.second(strings).toStringView());
+        setItem_noDataChangedSig(r, nCol, item.second(strings).toStringView());
         ++r;
     }
     if (!m_bResetting)

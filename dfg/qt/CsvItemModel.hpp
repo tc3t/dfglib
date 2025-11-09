@@ -655,14 +655,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // as cells of given row @p nRow.
         void setRow(const int nRow, QString sLine);
 
-        // Returns true if item was set, false otherwise.
-        bool setItem(Index nRow, Index nCol, const QString& str);
-        bool setItem(Index nRow, Index nCol, const StringViewUtf8& sv);
-
-        // Clears item at given index.
-        // Note: this is different from setting cell to empty string.
-        bool clearItem(Index nRow, Index nCol);
-
         // Sets data of given index without triggering undo, returns return value of privSetDataToTable()
         // Note: Given model index must be valid; this function does not check it.
         bool setDataNoUndo(const QModelIndex& index, const QString& str);
@@ -816,6 +808,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         template <class This_T, class Func_T>
         static bool forEachColInfoWhileImpl(This_T& rThis, const LockReleaser& lockReleaser, Func_T&& func);
+
+        // Returns true if item was set, false otherwise.
+        bool setItem_noDataChangedSig(Index nRow, Index nCol, const QString& str);
+        bool setItem_noDataChangedSig(Index nRow, Index nCol, const StringViewUtf8& sv);
+
+        // Clears item at given index.
+        // Note: this is different from setting cell to empty string.
+        bool clearItem_noDataChangedSig(Index nRow, Index nCol);
 
     public:
         QUndoStack* m_pUndoStack;

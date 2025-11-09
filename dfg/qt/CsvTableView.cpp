@@ -2515,13 +2515,13 @@ bool CsvTableView::saveConfigFileWithOptions()
     int nRow = 0;
     config.forEachKeyValue([&](const StringViewUtf8& svKey, const StringViewUtf8& svValue)
     {
-        configModel.setItem(nRow, 0, svKey);
-        configModel.setItem(nRow, 1, svValue);
+        configModel.setDataNoUndo(nRow, 0, svKey);
+        configModel.setDataNoUndo(nRow, 1, svValue);
         if (bHasExistingConfPath)
         {
             const auto bOldConfigHasKey = existingConfig.contains(svKey);
             const auto existingValue = existingConfig.value(svKey);
-            configModel.setItem(nRow, 2, existingValue);
+            configModel.setDataNoUndo(nRow, 2, existingValue);
             if (bOldConfigHasKey && existingValue != svValue) // If existing value is different from proposed value, highlighting old value in red.
                 configModel.setHighlighter(CsvItemModel::HighlightDefinition(QString("diffHighlighter_%1").arg(nRow), nRow, 2, StringMatchDefinition::makeMatchEverythingMatcher(), QBrush(QColor(255, 0, 0, 64), Qt::SolidPattern)));
         }

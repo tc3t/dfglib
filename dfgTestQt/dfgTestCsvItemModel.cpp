@@ -583,7 +583,7 @@ TEST(dfgQt, CsvItemModel_QAbstractItemModelTester)
     model.openFile("testfiles/example4.csv"); // Arbitrary choice of example file
     QAbstractItemModelTester modelTester(&model, QAbstractItemModelTester::FailureReportingMode::Warning);
     model.setSize(model.rowCount() + 1, model.columnCount() + 1);
-    model.setItem(2, 2, "abc");
+    model.setDataNoUndo(2, 2, "abc");
     model.removeColumn(1);
     model.removeRow(1);
     model.transpose();
