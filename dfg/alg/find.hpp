@@ -30,6 +30,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(alg)
     template <class Iter_T, class Key_T, class IterValueTypeToComparable_T>
     Iter_T findInsertPosBinary(const Iter_T& iterBegin, const Iter_T& iterEnd, const Key_T& key, IterValueTypeToComparable_T valToComparable)
     {
+        // If range is empty or last key is less than new key, iterEnd is the answer.
+        if (iterBegin == iterEnd || valToComparable(*(iterEnd - 1)) < key)
+            return iterEnd;
         auto iter = std::lower_bound(iterBegin, iterEnd, key, [&](decltype(*iterBegin)& iterVal, const Key_T& searchKey)
         {
             return valToComparable(iterVal) < searchKey;
