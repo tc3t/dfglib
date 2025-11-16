@@ -49,16 +49,16 @@
       <Configuration>Debug_VC2019</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug_VC2022_c++latest|MinGW">
-      <Configuration>Debug_VC2022_c++latest</Configuration>
+    <ProjectConfiguration Include="Debug_VC2026_c++latest|MinGW">
+      <Configuration>Debug_VC2026_c++latest</Configuration>
       <Platform>MinGW</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug_VC2022_c++latest|Win32">
-      <Configuration>Debug_VC2022_c++latest</Configuration>
+    <ProjectConfiguration Include="Debug_VC2026_c++latest|Win32">
+      <Configuration>Debug_VC2026_c++latest</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug_VC2022_c++latest|x64">
-      <Configuration>Debug_VC2022_c++latest</Configuration>
+    <ProjectConfiguration Include="Debug_VC2026_c++latest|x64">
+      <Configuration>Debug_VC2026_c++latest</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug_VC2022|MinGW">
@@ -71,6 +71,14 @@
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug_VC2022|x64">
       <Configuration>Debug_VC2022</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_VC2026_c++23|MinGW">
+      <Configuration>Debug_VC2026_c++23</Configuration>
+      <Platform>MinGW</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_VC2026_c++23|x64">
+      <Configuration>Debug_VC2026_c++23</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="MinGW|MinGW">
@@ -109,16 +117,16 @@
       <Configuration>Release_VC2019</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_VC2022_c++latest|MinGW">
-      <Configuration>Release_VC2022_c++latest</Configuration>
+    <ProjectConfiguration Include="Release_VC2026_c++latest|MinGW">
+      <Configuration>Release_VC2026_c++latest</Configuration>
       <Platform>MinGW</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_VC2022_c++latest|Win32">
-      <Configuration>Release_VC2022_c++latest</Configuration>
+    <ProjectConfiguration Include="Release_VC2026_c++latest|Win32">
+      <Configuration>Release_VC2026_c++latest</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_VC2022_c++latest|x64">
-      <Configuration>Release_VC2022_c++latest</Configuration>
+    <ProjectConfiguration Include="Release_VC2026_c++latest|x64">
+      <Configuration>Release_VC2026_c++latest</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release_VC2022|MinGW">
@@ -133,11 +141,20 @@
       <Configuration>Release_VC2022</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_VC2026_c++23|MinGW">
+      <Configuration>Release_VC2026_c++23</Configuration>
+      <Platform>MinGW</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_VC2026_c++23|x64">
+      <Configuration>Release_VC2026_c++23</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FD23B569-6215-43C5-AA06-63F9ADFEA257}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>csvExample</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2017|Win32'" Label="Configuration">
@@ -158,16 +175,16 @@
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Clang_debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2017|MinGW'" Label="Configuration">
@@ -188,7 +205,7 @@
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|MinGW'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|MinGW'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
@@ -233,10 +250,10 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -268,7 +285,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|MinGW'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|MinGW'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
@@ -291,8 +308,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022|x64'" Label="Configuration">
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|x64'" Label="Configuration">
-    <PlatformToolset>v143</PlatformToolset>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|x64'" Label="Configuration">
+    <PlatformToolset>v145</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Clang_debug|x64'" Label="Configuration">
     <PlatformToolset>v142</PlatformToolset>
@@ -309,11 +326,17 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022|x64'" Label="Configuration">
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|x64'" Label="Configuration">
-    <PlatformToolset>v143</PlatformToolset>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|x64'" Label="Configuration">
+    <PlatformToolset>v145</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Clang_release|x64'" Label="Configuration">
     <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++23|x64'">
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++23|x64'">
+    <PlatformToolset>v145</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -327,7 +350,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Clang_debug|Win32'" Label="PropertySheets">
@@ -342,7 +365,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022|MinGW'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|MinGW'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|MinGW'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Clang_debug|MinGW'" Label="PropertySheets">
@@ -363,7 +386,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Clang_release|Win32'" Label="PropertySheets">
@@ -378,7 +401,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022|MinGW'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|MinGW'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|MinGW'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Clang_release|MinGW'" Label="PropertySheets">
@@ -397,7 +420,7 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
@@ -417,7 +440,7 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|MinGW'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|MinGW'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
@@ -446,7 +469,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
@@ -466,7 +489,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|MinGW'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|MinGW'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VCInstallDir)include;$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
@@ -483,7 +506,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Clang_release|x64'">
@@ -498,7 +521,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\externals;..\..\</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Clang_debug|x64'">
@@ -548,7 +571,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
@@ -570,7 +593,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -617,7 +640,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|MinGW'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|MinGW'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
@@ -737,7 +760,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -826,7 +849,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|MinGW'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|MinGW'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -872,7 +895,7 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|x64'">
     <ClCompile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
@@ -896,7 +919,7 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|x64'">
     <ClCompile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
@@ -918,30 +941,40 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++23|x64'">
+    <ClCompile>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++23|x64'">
+    <ClCompile>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\dfg\os\memoryMappedFile.cpp" />
     <ClCompile Include="csvExample.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2017|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2019|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Clang_debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2017|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2019|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022|MinGW'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2022_c++latest|MinGW'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_VC2026_c++latest|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Clang_debug|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='MinGW|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='MinGW|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2017|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2019|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2022|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Clang_release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2017|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2019|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2022|MinGW'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2022_c++latest|MinGW'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_VC2026_c++latest|MinGW'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Clang_release|MinGW'">NotUsing</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
