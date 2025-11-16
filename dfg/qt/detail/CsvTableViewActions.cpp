@@ -260,6 +260,8 @@ void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::handleCell(Vi
         auto& rModel = params.dataModel();
         auto& szBuffer = DFG_OPAQUE_REF().szBuffer;
         ::DFG_MODULE_NS(str)::toStr(val, szBuffer);
+
+#if (DFG_STRTO_RADIX_SUPPORT == 1)
         bool bOk = false;
         const auto nDecimalPrecision = getCsvModelOrViewProperty<CsvTableViewPropertyId_formulaEvaluatorResultDecimalPrecision>(&params.view()).toInt(&bOk);
         
@@ -287,6 +289,7 @@ void CsvTableViewActionEvaluateSelectionAsFormula::FormulaVisitor::handleCell(Vi
             }
             ::DFG_MODULE_NS(str)::strCpyAllThatFit(szBuffer, szBufferCustom);
         }
+#endif
         rModel.setDataNoUndo(index, SzPtrUtf8(szBuffer));
     }
     else

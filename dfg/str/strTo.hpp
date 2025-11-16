@@ -22,7 +22,7 @@
 // This is coarse check that needs to be manually updated when std::from_chars() become available on other compilers.
 // TODO: improve std::to_chars() detection, currently enabled only on MSVC
 // Note: std::to_chars() overload for floating point with precision argument doesn't seem to be available MSVC2017.9 (15.9) so using another flag for that.
-#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L)
+#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L) || (defined(__GNUG__) && (__GNUC__ >= 11))
     #define DFG_STRTO_USING_FROM_CHARS 1
     #define DFG_STRTO_RADIX_SUPPORT    1
     #define DFG_TOSTR_USING_TO_CHARS   1
