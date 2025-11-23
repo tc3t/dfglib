@@ -354,7 +354,7 @@ namespace DFG_DETAIL_NS
         s += m_optRawDef->key().toString().rawStorage();
         s += "(";
         size_t nAdded = 0;
-        for (const auto item : *m_optRawDef)
+        for (const auto& item : *m_optRawDef)
         {
             if (nAdded > 0)
                 s += ",";

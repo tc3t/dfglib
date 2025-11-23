@@ -181,9 +181,13 @@ public:
     {
         const auto nResult = this->m_nPos + nDiff;
         if constexpr (std::is_floating_point_v<Index_T>)
+        {
             DFG_ASSERT(nResult - this->m_nPos == static_cast<Index_T>(nDiff));
+        }
         else
+        {
             DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
+        }
         this->m_nPos = static_cast<Index_T>(nResult);
         return *this;
     }
@@ -192,9 +196,13 @@ public:
     {
         const auto nResult = this->m_nPos - nDiff;
         if constexpr (std::is_floating_point_v<Index_T>)
+        {
             DFG_ASSERT(this->m_nPos - nResult == static_cast<Index_T>(nDiff));
+        }
         else
+        {
             DFG_ASSERT(isValWithinLimitsOfType<Index_T>(nResult));
+        }
         this->m_nPos = static_cast<Index_T>(nResult);
         return *this;
     }
