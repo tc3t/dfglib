@@ -20,13 +20,20 @@
 // Note that using _MSVC_LANG below instead of __cplusplus because of reason listed here: https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
 //      -i.e getting correct __cplusplus value needs a non-default build flag.
 // This is coarse check that needs to be manually updated when std::from_chars() become available on other compilers.
-// TODO: improve std::to_chars() detection, currently enabled only on MSVC
+// TODO: improve std::to_chars() detection, currently enabled only on MSVC and GCC
+//      -In MinGW 11.1 there was std::from_chars for integer, but not for double, in GCC 11.1 both compiled.
 // Note: std::to_chars() overload for floating point with precision argument doesn't seem to be available MSVC2017.9 (15.9) so using another flag for that.
-#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L) || (defined(__GNUG__) && (__GNUC__ >= 11))
+#if ((DFG_MSVC_VER >= DFG_MSVC_VER_2019_4 || (DFG_MSVC_VER < DFG_MSVC_VER_VC16_0 && DFG_MSVC_VER >= DFG_MSVC_VER_2017_8)) && _MSVC_LANG >= 201703L) || (defined(__GNUG__) && !defined(__MINGW32__) && (__GNUC__ >= 11))
     #define DFG_STRTO_USING_FROM_CHARS 1
     #define DFG_STRTO_RADIX_SUPPORT    1
     #define DFG_TOSTR_USING_TO_CHARS   1
-    #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG (DFG_MSVC_VER >= DFG_MSVC_VER_2019_4)
+    #if defined(_MSC_VER)
+        #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG (DFG_MSVC_VER >= DFG_MSVC_VER_2019_4)
+    #elif defined(__GNUG__)
+        #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG (__GNUC__ >= 11)
+    #else
+        #define DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG 0
+    #endif
     #include <charconv>
 #else
     #define DFG_STRTO_USING_FROM_CHARS 0

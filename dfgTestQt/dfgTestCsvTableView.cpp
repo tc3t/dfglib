@@ -547,6 +547,9 @@ TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula)
 
 TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula_precision)
 {
+#if (DFG_TOSTR_USING_TO_CHARS_WITH_FLOAT_PREC_ARG != 1)
+    DFGTEST_SKIP_TEST() << "Precision control disabled due to (possibly) too old standard library";
+#else
     using Ri = ::DFG_MODULE_NS(qt)::RowIndex_view;
     using Ci = ::DFG_MODULE_NS(qt)::ColumnIndex_view;
 
@@ -581,6 +584,7 @@ TEST(dfgQt, CsvTableView_evaluateSelectionAsFormula_precision)
         const auto nRowCount1 = evaluateAndTest(view, 2);
         DFGTEST_EXPECT_EQ(nRowCount0, nRowCount1);
     }
+#endif
 }
 
 TEST(dfgQt, CsvTableView_stringToDouble)
