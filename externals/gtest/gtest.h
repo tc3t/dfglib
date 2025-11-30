@@ -1572,7 +1572,7 @@ namespace dfglibAdjustements
     template <class T0, class T1>
     bool IsEqualHelper(const T0& left, const T1& right)
     {
-        return IsEqualHelperImpl(left, right, std::integral_constant<bool, std::is_integral<T0>::value&& std::is_integral<T1>::value && (sizeof(left) > 1) && (sizeof(right) > 1)>());
+        return IsEqualHelperImpl(left, right, std::integral_constant<bool, std::is_integral<T0>::value && std::is_integral<T1>::value && !std::is_same_v<bool, T0> && !std::is_same_v<bool, T1>>());
     }
 
 } // namespace dfglibAdjustements
