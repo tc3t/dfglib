@@ -807,8 +807,16 @@ namespace
             DFGTEST_EXPECT_STREQ("1.25", floatingPointToStr(T(1.25), buffer, -1, CharsFormat::fixed));
             DFGTEST_EXPECT_STREQ("1.250000", floatingPointToStr(T(1.25), buffer, 6, CharsFormat::fixed));
             DFGTEST_EXPECT_TRUE(isAnyOf(floatingPointToStr(T(1.25), buffer, -1, CharsFormat::scientific), { "1.25e+00", "1.25e+000" }));
-            DFGTEST_EXPECT_STREQ("1.4p+0", floatingPointToStr(T(1.25), buffer, -1, CharsFormat::hex));
-            DFGTEST_EXPECT_STREQ("1.400p+0", floatingPointToStr(T(1.25), buffer, 3, CharsFormat::hex));
+            if constexpr (sizeof(T) <= sizeof(double))
+            {
+                DFGTEST_EXPECT_STREQ("1.4p+0", floatingPointToStr(T(1.25), buffer, -1, CharsFormat::hex));
+                DFGTEST_EXPECT_STREQ("1.400p+0", floatingPointToStr(T(1.25), buffer, 3, CharsFormat::hex));
+            }
+            else // case: long double when larger than double
+            {
+                DFGTEST_EXPECT_STREQ("ap-3", floatingPointToStr(T(1.25), buffer, -1, CharsFormat::hex));
+                DFGTEST_EXPECT_STREQ("a.000p-3", floatingPointToStr(T(1.25), buffer, 3, CharsFormat::hex));
+            }
 
             if (NumLim::max() > 1e128)
             {
@@ -872,7 +880,12 @@ TEST(dfgStr, toStr)
 #endif
         toStrCommonFloatingPointTests<float>(szFloatMin, szFloatMax, szFloatMinPositive);
         toStrCommonFloatingPointTests<double>("-1.7976931348623157e+308", "1.7976931348623157e+308", "2.2250738585072014e-308");
-        toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
+        if constexpr (sizeof(double) == sizeof(long double))
+            toStrCommonFloatingPointTests<long double>("-1.7976931348623157e+308", "1.7976931348623157e+308", "2.2250738585072014e-308");
+        else if constexpr (sizeof(long double) == 16)
+            toStrCommonFloatingPointTests<long double>("-1.189731495357231765e+4932", "1.189731495357231765e+4932", "3.3621031431120935063e-4932");
+        else
+            toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
     }
 
     // bool conversions are not implemented

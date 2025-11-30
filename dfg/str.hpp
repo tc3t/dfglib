@@ -262,9 +262,12 @@ inline Str_T floatingPointToStr(const T val, const int nPrecision, const CharsFo
         return Str_T(SzPtrAscii(szBuf));
     else // Didn't fit to 32 chars, trying bigger buffers. TODO: calculate needed buffer size.
     {
-        std::string s(128, '\0');
-        for (; s[0] == '\0' && s.size() <= 1024; s.resize(s.size() * 2))
+        std::string s;
+        s.reserve(64);
+        s.resize(32, '\0');
+        for (; s[0] == '\0' && s.size() <= 4096;)
         {
+            s.resize(s.size() * 2);
             floatingPointToStr(val, &s[0], s.size(), nPrecision, charsFormat);
         }
         return Str_T(SzPtrAscii(s.c_str()));
