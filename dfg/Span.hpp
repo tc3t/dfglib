@@ -2,6 +2,7 @@
 
 #include "dfgDefs.hpp"
 #include <cstddef> // For size_t
+#include "stdcpp/stdversion.hpp"
 
 #if defined(__cpp_lib_span)
     #include <span>
