@@ -883,7 +883,13 @@ TEST(dfgStr, toStr)
         if constexpr (sizeof(double) == sizeof(long double))
             toStrCommonFloatingPointTests<long double>("-1.7976931348623157e+308", "1.7976931348623157e+308", "2.2250738585072014e-308");
         else if constexpr (sizeof(long double) == 16)
-            toStrCommonFloatingPointTests<long double>("-1.189731495357231765e+4932", "1.189731495357231765e+4932", "3.3621031431120935063e-4932");
+        {
+            #if (DFG_TOSTR_USING_TO_CHARS == 1)
+                toStrCommonFloatingPointTests<long double>("-1.189731495357231765e+4932", "1.189731495357231765e+4932", "3.3621031431120935063e-4932");
+            #else
+                toStrCommonFloatingPointTests<long double>("-1.18973149535723176502e+4932", "1.18973149535723176502e+4932", "3.36210314311209350626e-4932");
+            #endif
+        }
         else
             toStrCommonFloatingPointTests<long double>(nullptr, nullptr, nullptr);
     }
