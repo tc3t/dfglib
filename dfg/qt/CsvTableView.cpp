@@ -2506,11 +2506,6 @@ bool CsvTableView::saveConfigFileWithOptions()
     configModel.insertColumns(0, (bHasExistingConfPath) ? 3 : 2);
     configModel.setColumnName(0, tr("Key"));
     configModel.setColumnName(1, tr("Value"));
-    if (bHasExistingConfPath)
-    {
-        configModel.setColumnName(2, tr("Existing value"));
-        configModel.setColumnProperty(2, CsvItemModelColumnProperty::readOnly, true);
-    }
 
     int nRow = 0;
     config.forEachKeyValue([&](const StringViewUtf8& svKey, const StringViewUtf8& svValue)
@@ -2527,6 +2522,12 @@ bool CsvTableView::saveConfigFileWithOptions()
         }
         ++nRow;
     });
+
+    if (bHasExistingConfPath)
+    {
+        configModel.setColumnName(2, tr("Existing value"));
+        configModel.setColumnProperty(2, CsvItemModelColumnProperty::readOnly, true);
+    }
 
     viewDlg.setModel(&configModel);
 
