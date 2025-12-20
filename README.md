@@ -101,7 +101,7 @@ Usage types:
 * t: Used in test code without (external) include dependency (i.e. the needed code comes with dfglib).
 * ti: Used in test code with include dependency.
 
-## Build status of general unit tests (dfgTest) (as of 2024-11-17 commit [ff4942dc](https://github.com/tc3t/dfglib/tree/ff4942dc4af75439221cadc3d9e6ef8222a1e71a))
+## Build status of general unit tests (dfgTest) (as of 2025-12-14 commit [69525298](https://github.com/tc3t/dfglib/tree/695252987883854eb74cab07a153a66e84bf2b99))
 
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/89v23h19mvv9k5u3/branch/master?svg=true)](https://ci.appveyor.com/project/tc3t/dfglib/branch/master) -->
 
@@ -110,20 +110,21 @@ Usage types:
  -->
 Compiler | Standard library | C++ standard [1] | Platform | Boost | Tests (passed/all) | Comment
 ---|---|---|---|---|---|---
-Clang 10.0.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (333/333) | Ubuntu 64-bit 20.04
-Clang 14.0.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (333/333) | Ubuntu 64-bit 22.04
-Clang 14.0.0 | libc++ 14000 | C++17 | x86-64 | 1.74.0 | 100 % (333/333) | Ubuntu 64-bit 22.04
-Clang 18.1.3 | libc++ 180100 | C++17 | x86-64 | 1.83.0 | 100 % (333/333) | Ubuntu 64-bit 24.04
-clang-cl (Clang 17.0.3, MSVC2022.11) | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | If building with Clang < 13, see [2]
-GCC 9.4.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (333/333) | Ubuntu 64-bit 20.04
-GCC 11.4.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (333/333) | Ubuntu 64-bit 22.04
-GCC 13.2.0 | libstdc++ 13 | C++17 | x86-64 | 1.83.0 | 100 % (333/333) | Ubuntu 64-bit 24.04
-MinGW 7.3.0 | libstdc++ 7 | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | 
-MinGW 11.2.0 | libstdc++ 11 | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | 
-VC2017.9 | MSVC | C++17 | x86-64 | 1.70.0 | 99 % (339/340) | Numerical precision related failure in dfgNumeric.transform
-VC2019.11 | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (340/340) | std:c++17 with Conformance mode
-VC2022.11 | MSVC | C++20 | x86 | 1.70.0 | 100 % (340/340) | std:c++20 with Conformance mode
-VC2022.11 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (340/340) | std:c++20 with Conformance mode
+Clang 10.0.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (342/342) | Ubuntu 64-bit 20.04, WSL
+Clang 14.0.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (342/342) | Ubuntu 64-bit 22.04, WSL
+Clang 14.0.0 | libc++ 14000 | C++17 | x86-64 | 1.74.0 | 100 % (342/342) | Ubuntu 64-bit 22.04, WSL
+Clang 18.1.3 | libc++ 180100 | C++20 | x86-64 | 1.83.0 | 100 % (342/342) | Ubuntu 64-bit 24.04, WSL
+clang-cl (Clang 20.1.8, MSVC2026.0) | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (349/349) | If building with Clang < 13, see [2]
+GCC 9.4.0 | libstdc++ 9 | C++17 | x86-64 | 1.71.0 | 100 % (342/342) | Ubuntu 64-bit 20.04, WSL
+GCC 11.4.0 | libstdc++ 11 | C++17 | x86-64 | 1.74.0 | 100 % (342/342) | Ubuntu 64-bit 22.04, WSL
+GCC 13.3.0 | libstdc++ 13 | C++17 | x86-64 | 1.83.0 | 100 % (342/342) | Ubuntu 64-bit 24.04, WSL
+GCC 13.3.0 | libstdc++ 13 | C++20 | x86-64 | 1.83.0 | 100 % (342/342) | Ubuntu 64-bit 24.04, WSL
+MinGW 11.2.0 | libstdc++ 11 | C++17 | x86-64 | 1.70.0 | 100 % (349/349) | 
+VC2017.9 | MSVC | C++17 | x86-64 | 1.70.0 | 99 % (348/349) | Numerical precision related failure in dfgNumeric.transform
+VC2019.11 | MSVC | C++17 | x86-64 | 1.70.0 | 100 % (349/349) | std:c++17 with Conformance mode
+VC2022.14 | MSVC | C++20 | x86 | 1.70.0 | 100 % (349/349) | std:c++20 with Conformance mode
+VC2022.14 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (349/349) | std:c++20 with Conformance mode
+VC2026.0 | MSVC | C++23 | x86-64 | 1.70.0 | 100 % (349/349) | std:c++23 with Conformance mode
 
 [1] As reported by *__cplusplus* macro  or equivalent.<br>
 [2] If building with Clang < 13, need manual definition of wmemchr to build; for details, see notes in commit message [c29dbe37](https://github.com/tc3t/dfglib/commit/c29dbe379615d65af663c95b659b68ea57ea9ca9). According to related [MSVC bug ticket](https://developercommunity.visualstudio.com/t/undefined-symbol-wmemchr-in-1660-preview-60-using/1024640#TPIN-N1570352), the "issue belongs to clang and it was fixed in Clang 13"
@@ -131,7 +132,7 @@ VC2022.11 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (340/340) | std:c++20 with Co
 <br>
 <br>
 
-## Build status of Qt unit tests (dfgTestQt) (as of 2024-11-24 commit [9b992b88](https://github.com/tc3t/dfglib/tree/9b992b88ebe9db0e265e7bacd3a257e95c760195))
+## Build status of Qt unit tests (dfgTestQt) (as of 2025-12-14 commit [69525298](https://github.com/tc3t/dfglib/tree/695252987883854eb74cab07a153a66e84bf2b99))
 
 <!-- Table generated from buildStatus_dfgTestQt.csv excluding commit and date columns
      with csv2md (https://www.npmjs.com/package/csv2md)
@@ -140,18 +141,17 @@ VC2022.11 | MSVC | C++20 | x86-64 | 1.70.0 | 100 % (340/340) | std:c++20 with Co
 
 Status | Compiler | Standard library | C++ standard [1] | Qt | Platform | Boost | Tests (passed/all) | Comment
 ---|---|---|---|---|---|---|---|---
-:white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (60/60) | Ubuntu 64-bit 20.04
-:white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (60/60) | Ubuntu 64-bit 20.04
-:white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (60/60) | Ubuntu 64-bit 22.04
+:white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (63/63) | Ubuntu 64-bit 22.04
 :red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | x86-64 | 1.74.0 | N/A | Ubuntu 64-bit 22.04. Causes linker errors from QMetaType. For details, see error messages in a [separate file](misc/dfgTestQt_Clang14_libc++_Qt_624_linker_errors.txt)
-:white_check_mark: | clang-cl (Clang 17.0.3, MSVC2022.5) | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
-:white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (60/60) | Ubuntu 64-bit 20.04
-:white_check_mark: | GCC 11.4.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (60/60) | Ubuntu 64-bit 22.04
-:white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
-:white_check_mark: | VC2019.11 | MSVC | C++17 | 5.15.2 | x86-64 | 1.70.0 | 100 % (60/60) | 
-:white_check_mark: | VC2019.11 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
-:white_check_mark: | VC2022.11 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
-:white_check_mark: | VC2022.11 | MSVC | C++20 | 6.4.1 | x86-64 | 1.70.0 | 100 % (60/60) | 
+:white_check_mark: | clang-cl (Clang 19.1.5, MSVC2022.5) | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (65/65) | 
+:white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | x86-64 | 1.71.0 | 100 % (64/64) | Ubuntu 64-bit 20.04, WSL
+:white_check_mark: | GCC 11.4.0 | libstdc++ 11 | C++17 | 6.2.4 | x86-64 | 1.74.0 | 100 % (64/64) | Ubuntu 64-bit 22.04, VM
+:white_check_mark: | GCC 13.3.0 | libstdc++ 13 | C++17 | 6.4.2 | x86-64 | 1.18.3 | 100 % (65/65) | Ubuntu 64-bit 24.04, WSL
+:white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (64/64) | 
+:white_check_mark: | VC2019.11 | MSVC | C++17 | 5.15.2 | x86-64 | 1.70.0 | 100 % (65/65) | 
+:white_check_mark: | VC2022.14 | MSVC | C++17 | 6.4.1 | x86-64 | 1.70.0 | 100 % (65/65) | 
+:white_check_mark: | VC2022.14 | MSVC | C++20 | 6.4.1 | x86-64 | 1.70.0 | 100 % (65/65) | 
+:white_check_mark: | VC2022.14 | MSVC | C++20 | 6.9.1 | x86-64 | 1.70.0 | 100 % (65/65) | 
 
 [1] As reported by *__cplusplus* macro  or equivalent.<br>
 Note: dfgQt.CsvTableView_paste has been experienced to fail on Windows if VirtualBox is simultaneously running a virtual machine; Qt logs "Unable to obtain clipboard" during the test case.

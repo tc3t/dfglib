@@ -98,7 +98,7 @@ N/A | Delimiter merging | Not supported (as of 2.7.0) | N/A (not mentioned) | N/
 
 ## Building
 
-### __Version 2.7.0__:
+### __Version 2.8.0__:
 
 <!-- Table generated from buildStatus_dfgQtTableEditor.csv excluding date column
      with csv2md (https://www.npmjs.com/package/csv2md)
@@ -109,20 +109,21 @@ Build status (all builds are x86-64 i.e. [amd64](https://en.wikipedia.org/wiki/X
 Status | Compiler | Standard library | C++ standard [1] | Qt | Boost | Charting? (QCustomPlot version) | Comment
 ---|---|---|---|---|---|---|---
 :white_check_mark: | Clang 10.0.0 | libc++ 10000 | C++17 | 5.12.8 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
-:white_check_mark: | Clang 10.0.0 | libstdc++ 9 | C++17 | 5.12.8 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
 :white_check_mark: | Clang 14.0.0 | libstdc++ 11 | C++17 | 6.2.4 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04
 :red_circle: | Clang 14.0.0 | libc++ 14000 | C++17 | 6.2.4 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04. Causes linker errors from QMetaType, for details, see notes in dfgTestQt table.
-:white_check_mark: | clang-cl (Clang 17.0.3, MSVC2022.5) | MSVC | C++17 | 6.4.1 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | clang-cl (Clang 19.1.5, MSVC2022.5) | MSVC | C++17 | 6.4.1 | 1.70.0 | Yes (2.1.1) | 
 :white_check_mark: | GCC 9.4.0 | libstdc++ 9 | C++17 | 5.12.8 | 1.71.0 | Yes (2.0.1) | Ubuntu 64-bit 20.04
 :white_check_mark: | GCC 11.4.0 | libstdc++ 11 | C++17 | 6.2.4 | 1.74.0 | Yes (2.1.1) | Ubuntu 64-bit 22.04
+:white_check_mark: | GCC 13.3.0 | libstdc++ 13 | C++17 | 6.4.2 | 1.83.0 | Yes (2.1.1) | Ubuntu 64-bit 24.04
 :white_check_mark: | MinGW 11.2.0 | libstdc++ 11 | C++17 | 6.4.1 | 1.70.0 | Yes (2.1.1) | 
 :white_check_mark: | VC2019.11 | MSVC | C++17 | 5.15.2 | 1.70.0 | Yes (2.1.1) | 
-:white_check_mark: | VC2022.11 | MSVC | C++17 | 6.4.1 | 1.70.0 | Yes (2.1.1) | 
-:white_check_mark: | VC2022.11 | MSVC | C++20 | 6.4.1 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | VC2022.14 | MSVC | C++17 | 6.4.1 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | VC2022.14 | MSVC | C++20 | 6.4.1 | 1.70.0 | Yes (2.1.1) | 
+:white_check_mark: | VC2022.14 | MSVC | C++20 | 6.9.1 | 1.70.0 | Yes (2.1.1) | 
 
 [1] As reported by *__cplusplus* macro  or equivalent.
 
-If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. When using Qt >=6.2, charting requires at least version 2.1.1 of QCustomPlot.
+If building with QCustomPlot charting, histogram chart type requires Boost >= 1.70. When using Qt >= 6.2, charting requires at least version 2.1.1 of QCustomPlot.
 
 Concrete build steps assuming having compatible Qt version, Qt Creator and compiler available:
 * Open dfgQtTableEditor.pro in Qt Creator
@@ -131,7 +132,7 @@ Concrete build steps assuming having compatible Qt version, Qt Creator and compi
 
 Note that in Qt versions 5.10-5.12.3, keyboard shortcuts won't show as intended in context menu (for further details, see [QTBUG-61181](https://bugreports.qt.io/browse/QTBUG-61181), [QTBUG-71471](https://bugreports.qt.io/browse/QTBUG-71471)).
 
-To see build chart of older versions, see [readme of 2.6.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.6.0/dfgExamples/dfgQtTableEditor)
+To see build chart of older versions, see [readme of 2.7.0](https://github.com/tc3t/dfglib/tree/dfgQtTableEditor_2.7.0/dfgExamples/dfgQtTableEditor)
 
 ## Configuration options
 
@@ -356,6 +357,7 @@ Available keys:
 | properties/timeFormat | File-specific version of CsvTableView_timeFormat | See documentation of CsvTableView_timeFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
 | properties/dateFormat | File-specific version of CsvTableView_dateFormat | See documentation of CsvTableView_dateFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
 | properties/dateTimeFormat | File-specific version of CsvTableView_dateTimeFormat | See documentation of CsvTableView_dateTimeFormat | Since 2.2.0 ([1dfe3691](https://github.com/tc3t/dfglib/commit/1dfe36917580c7c8fc69dbb23e845175f2e5613e)) |
+| properties/formulaEvaluatorResultDecimalPrecision | Decimal precision for formula evaluator | Non-negative integer or -1 for default behaviour (full precision) | Since 2.8.0 (not available if build with some compilers, e.g GCC 9) ([e0774fd7](https://github.com/tc3t/dfglib/commit/e0774fd7adef8c8416f779c642c0d9476b688a4a)) |
 
 <br>
 
