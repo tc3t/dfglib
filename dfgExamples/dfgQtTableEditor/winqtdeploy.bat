@@ -78,6 +78,8 @@ copy examples\bars_example_qcp_bar_chart_demo_mimic.csv %PACKAGE_OUTPUT_PATH%\ex
 copy examples\bars_example_qcp_bar_chart_demo_mimic.csv.conf %PACKAGE_OUTPUT_PATH%\examples\
 copy examples\number_generator_example.csv %PACKAGE_OUTPUT_PATH%\examples\
 copy examples\number_generator_example.csv.conf %PACKAGE_OUTPUT_PATH%\examples\
+copy examples\extra_column_filter.csv %PACKAGE_OUTPUT_PATH%\examples\
+copy examples\extra_column_filter.csv.conf %PACKAGE_OUTPUT_PATH%\examples\
 
 @echo --------------------------------
 @echo Copying guide
