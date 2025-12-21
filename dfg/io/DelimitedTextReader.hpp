@@ -509,6 +509,7 @@ public:
     {
     public:
         static const bool s_isAppendOperatorGuaranteedToIncrementSize = false;
+        static constexpr bool s_hasTrivialPopBack = true;
 
         template <class Buffer_T, class Char_T>
         void operator()(Buffer_T&, const Char_T&)
