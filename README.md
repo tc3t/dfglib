@@ -6,6 +6,7 @@ Note: this is *not* a mature library and is not intended or recommended for gene
 
 ## News
 
+* 2025-12-21, dfgQtTableEditor [version 2.8.0](dfgExamples/dfgQtTableEditor/README.md/#280-2025-12-21) (Round-trippable transpose, filter column for bars-chart, cell editor improvements...)
 * 2024-12-15, dfgQtTableEditor [version 2.7.0](dfgExamples/dfgQtTableEditor/README.md/#270-2024-12-15) (Statistical box -graphs, UTF-8 as default read encoding, default graph line colour to black...)
 * 2023-12-30: Code is no longer tested with GCC 7.5 and Clang 6.0.0, and for Qt-module, 5.12 is now considered minimum. Latest tested commit available in branch: [legacy_GCC_7.5_Clang_6.0_Qt_5.9](https://github.com/tc3t/dfglib/tree/legacy_GCC_7.5_Clang_6.0_Qt_5.9)
 * 2023-12-17, dfgQtTableEditor [version 2.6.0](dfgExamples/dfgQtTableEditor/README.md/#260-2023-12-17) (Column filter from header context menu, CsvTableView regexFormat...)

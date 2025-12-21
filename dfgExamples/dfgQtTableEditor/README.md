@@ -421,6 +421,36 @@ Summary of 3rd party code in dfgQtTableEditor (last revised 2023-04-26).
 
 ## Version history
 
+### 2.8.0, 2025-12-21
+* Tag: [2.8.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.8.0)
+* Highlights: Round-trippable transpose, filter column for bars-chart, cell editor improvements
+* General
+    * [imp] Transposing will now swap column and row names ([7f1ff40f](https://github.com/tc3t/dfglib/commit/7f1ff40f2a06f885c74c61e4511efb1ba5bdf923))
+        * In particular can now transpose twice without losing column names.
+        * Handling of row headers is basic, doesn't play well with row inserts etc. - intended only for simple cases like temporary transposing from better visiblity.
+    * [imp] Column headers now display column index by default (instead of being empty) ([c5bf8c55](https://github.com/tc3t/dfglib/commit/c5bf8c557ce20794333fd16f5db33a82d2bb3fcd))
+    * [imp] Can now hide Cell editor from Operations -menu ([9e819f9e](https://github.com/tc3t/dfglib/commit/9e819f9e3a3beb3488a27bd4606c7d94d7b8fbe6))
+    * [imp] Can now control decimal precision of formula evaluator result ([e0774fd7](https://github.com/tc3t/dfglib/commit/e0774fd7adef8c8416f779c642c0d9476b688a4a))
+    * [imp] Can now control cell editor size ([eb717890](https://github.com/tc3t/dfglib/commit/eb71789083b4f4000165548f07e713c746eff9d9))
+    * [Imp] About -dialog now shows memory usage ([0ff85cdf](https://github.com/tc3t/dfglib/commit/0ff85cdf6e463fc77a88f5b398b758ea4bbaea9f))
+    * [imp] About -dialog now shows process start time ([faf46da6](https://github.com/tc3t/dfglib/commit/faf46da6d6390a3fd2d1027c277dc8f5fd760c65))
+    * [imp] When cell is edited directly from table view, changes are now live-reflected to cell editor ([a53aa34c](https://github.com/tc3t/dfglib/commit/a53aa34c7e4be71e6eb8078d5c17d692d6d37974))
+    * [imp] Optimization for column deletion ([134fc981](https://github.com/tc3t/dfglib/commit/134fc98180d5f117db9373adbba785ece21db9c1), [5c9f892f](https://github.com/tc3t/dfglib/commit/5c9f892f498ec9b3b6bb2457c51dea53457f027a))
+    * [imp] Some robustness improvements in parser, may affect some corner case handling (e.g. [44db4953](https://github.com/tc3t/dfglib/commit/44db4953c4e75dc75b89e2894316ea8488dee8dd))
+    * [mod] Changed behaviour of insert date/time/datetime shortcuts ([f80947f5](https://github.com/tc3t/dfglib/commit/f80947f55478870d5158ea97fcdb27b66a139779))
+        * In table view shortcuts are no longer active outside the actual widget
+            * Previously for example if clicking shortcut in TableEditor Find text edit, insert command was triggered.
+        * In TableEditor CellEditor, shortcuts now insert text to current text field (instead of overriding the whole cell)
+    * [fix] In some cases undoing column delete would put cell texts to wrong rows ([4d01dc26](https://github.com/tc3t/dfglib/commit/4d01dc263d7bf663d528fc559fc3555dd2204d45))
+    * [fix] Cancel-button for multiline cell edit didn't restore text in cell editor ([8501efa3](https://github.com/tc3t/dfglib/commit/8501efa3a1ff1aa2b859dc107bfb16d0db4807f7))
+    * [fix] Fixes to visual issues in Qt >= 6.7 ([62cc325a](https://github.com/tc3t/dfglib/commit/62cc325aaca9bfb66ee7c43f2dbec93b73b82180))
+    * [fix] Various fixes for windows11 -style ([d5fc3ee6](https://github.com/tc3t/dfglib/commit/d5fc3ee6e3224d1163ae6c348add07bc5124fe57))
+
+* Charts
+    * [new] For bars-type, can now have hidden extra columns that can be used e.g. for filtering ([9288d4fe](https://github.com/tc3t/dfglib/commit/9288d4fe80281288fcf0b164fd12da5b31784665))
+        * In practice only one extra column is currently supported
+    * [doc] Guide: added documentation about stat_box tooltip abbreviations([1ec526f5](https://github.com/tc3t/dfglib/commit/1ec526f5015b47fe11dceda3a04afab0206e19ec))
+
 ### 2.7.0, 2024-12-15
 * Tag: [2.7.0](https://github.com/tc3t/dfglib/releases/tag/dfgQtTableEditor_2.7.0)
 * Highlights: Statistical box -graph type, default encoding for read files is now UTF-8, default graph line colour changed from blue to black

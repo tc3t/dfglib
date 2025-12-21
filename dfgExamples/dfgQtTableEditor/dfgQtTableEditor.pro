@@ -68,7 +68,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 # Commands: chosen time to unix time: date --date='yyyy-mm-ddT08:00:00Z' +%s
 #           Unix time to ISO date: date -u --date='@<unix time here>' +%Y-%m-%dT%H:%M:%S
-version_time_epoch_start=1734336000 # 2024-12-16T08:00:00Z
+version_time_epoch_start=1766304000 # 2025-12-21T08:00:00Z
 version_time_step=86400 # For now using days (60*60*24) to avoid overflow in VERSION-option (see below)
 
 win32 {
@@ -145,9 +145,9 @@ isEmpty(git_commit) {
 # Third: unspecified
 # Last: Time since version_time_epoch_start. Currently whole days since, but may change in the future.
 # On Windows VERSION triggers auto-generation of rc-file, https://doc.qt.io/qt-5/qmake-variable-reference.html#version
-VERSION = 2.7.1.$$version_time # Note: when changing version, remember to update version_time_epoch_start
+VERSION = 2.8.0.0 # Note: when changing version, remember to update version_time_epoch_start
 DEFINES += DFG_QT_TABLE_EDITOR_VERSION_STRING=\\\"$${VERSION}\\\"
-message("Version time epoch start is " $$version_time_epoch_start_readable " (" $$version_time_epoch_start ")")
+message("Version time is " $$version_time " , epoch start " $$version_time_epoch_start_readable " (" $$version_time_epoch_start ")")
 message("Version is " $$VERSION)
 
 $$dfgSetCppVersion()
