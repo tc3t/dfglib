@@ -97,6 +97,14 @@ static void onShowAboutBox()
             .arg(gpProcessStartTime.toString())
             .arg(qVersion());
 
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 1, 0))
+    {
+        const auto style = QApplication::style();
+        const auto sStyleName = (style) ? style->name() : tr("<unknown>");
+        addLine(tr("Qt style"), sStyleName);
+    }
+#endif
+
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
     addLine("OS", QSysInfo::prettyProductName());
 #endif
@@ -190,18 +198,35 @@ void MainWindow::setDefaultGeometry()
 int main(int argc, char *argv[])
 {
     gpProcessStartTime = QDateTime::currentDateTime(); // Would get more precise answer from OS, but this will do.
+
+#if defined(Q_OS_WIN)
+    // As of 2025-08, CsvTableView doesn't work well with windows11 style, which is default since Qt 6.7
+    //      -https://www.qt.io/blog/qt-6.7-released
+    //      -https://forum.qt.io/topic/157706/styled-delegate-broke-in-qt-6-7-0-draws-while-editing
+    // so setting windowsvista-style for now.
+    // Problems were mostly related to various parts of widgets being transparent causing visual issues.
+    // 
+    // Note: according to documentation (Qt 5.14) of setStyle():
+    //       "Warning: To ensure that the application's style is set correctly, it is best to call this
+    //        function before the QApplication constructor, if possible."
+    const char szStyleName[] = "windowsvista";
+    const bool bSetStyleSucceeded = (QApplication::setStyle(szStyleName) != nullptr);
+#endif
+
     QApplication a(argc, argv);
     dfg::qt::QtApplication::m_sSettingsPath = a.applicationFilePath() + ".ini";
     a.setApplicationVersion(DFG_QT_TABLE_EDITOR_VERSION_STRING);
 
-#ifdef _WIN32
+#if defined(Q_OS_WIN)
+    if (!bSetStyleSucceeded) // QMessageBox can be shown only after creating QApplication-instance.
+        QMessageBox::warning(nullptr, QObject::tr("Style error"), QObject::tr("Unable to set intended UI-style '%1', UI may malfunction.").arg(szStyleName));
     if (dfg::qt::QtApplication::getApplicationSettings()->value("dfglib/enableAutoDumps", false).toBool())
     {
         // Note: crash dump time stamp is for now taken here, around app start time, rather than from crash time.
         const QString sCrashDumpPath = a.applicationDirPath() + QString("/crashdump_%1.dmp").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmsszzz"));
         dfg::debug::structuredExceptionHandling::enableAutoDumps(dfg::qt::qStringToFileApi8Bit(sCrashDumpPath).c_str());
     }
-#endif // _WIN32, structuredExceptionHandling
+#endif // Q_OS_WIN, structuredExceptionHandling
 
     MainWindow mainWindow;
     gpMainWindow = &mainWindow;
@@ -292,16 +317,6 @@ int main(int argc, char *argv[])
 #if 0
     const auto bytes = dfg::io::fileToVector(TODO_path_to_stylesheet_file);
     a.setStyleSheet(QByteArray(bytes.data(), static_cast<int>(bytes.size())));
-#endif
-
-#if defined(Q_OS_WIN)
-    // As of 2025-08, CsvTableView doesn't work well with windows11 style, which is default since Qt 6.7
-    //      -https://www.qt.io/blog/qt-6.7-released
-    //      -https://forum.qt.io/topic/157706/styled-delegate-broke-in-qt-6-7-0-draws-while-editing
-    // so setting windowsvista-style for now.
-    // Problems were mostly related to various parts of widgets being transparent causing visual issues.
-    if (a.setStyle("windowsvista") == nullptr)
-        QMessageBox::warning(nullptr, a.tr("Style error"), a.tr("Unable to set intended UI-style, UI may malfunction"));
 #endif
 
     if (args.size() >= 2)
