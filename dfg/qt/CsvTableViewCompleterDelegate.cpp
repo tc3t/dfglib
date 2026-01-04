@@ -247,7 +247,7 @@ void CsvTableViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     }
 }
 
-#if (QT_VERSION < QT_VERSION_CHECK(6, 7, 0))
+#if (DFG_CSVTABLEVIEWDELEGATE_USE_STYLEDDELEGATE != 1)
 void CsvTableViewDelegate::drawDisplay(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text) const
 {
     // Checking if adjustments are needed for better multiline visualization (#135)

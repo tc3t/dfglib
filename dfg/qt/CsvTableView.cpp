@@ -878,6 +878,9 @@ CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWid
         pVertHdr->setDefaultSectionSize(gnDefaultRowHeight); // TODO: make customisable
     }
 
+    if constexpr (!CsvTableViewDelegate::isWordWrapSupported())
+        setWordWrap(false);
+
     // TODO: make customisable.
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 
