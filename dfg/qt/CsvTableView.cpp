@@ -30,6 +30,7 @@
 #include "detail/CsvTableView/SelectionDetailCollector.hpp"
 #include "detail/CsvTableView/ContentGeneratorDialog.hpp"
 #include "detail/CsvTableView/actionWidgets/RegexFormatWidget.hpp"
+#include "detail/CsvTableView/UndoViewWidget.hpp"
 #include <chrono>
 #include <bitset>
 #include <cctype> // For std::isdigit
@@ -604,53 +605,6 @@ namespace
     //      -Row height 21 -> maximum row count 102 million (102261126)
     //      -Row height 30 -> maximum row count 71 million (71582788)
     const int gnDefaultRowHeight = 21;
-
-    class UndoViewWidget : public QDialog
-    {
-    public:
-        typedef QDialog BaseClass;
-        UndoViewWidget(CsvTableView* pParent)
-            : BaseClass(pParent)
-            , m_spTableView(pParent)
-        {
-            setAttribute(Qt::WA_DeleteOnClose, true);
-            removeContextHelpButtonFromDialog(this);
-            if (!pParent || !pParent->m_spUndoStack)
-                return;
-            auto pLayout = new QHBoxLayout(this);
-            m_spUndoView.reset(new QUndoView(&pParent->m_spUndoStack.get()->item(), this));
-            const auto children = m_spUndoView->children();
-            m_spUndoView->installEventFilter(this);
-            for (auto pChild : children) if (pChild)
-                pChild->installEventFilter(this);
-            pLayout->addWidget(m_spUndoView.get());
-        }
-
-        // Hack: Because QUndoView handles undo stack directly, it will bypass CsvTableView read/edit lock when used. To prevent this,
-        //       using event filter to check if lock is available before allowing events that possibly trigger undo stack.
-        //       While hacky, this should address at least most cases. Window will also be left in disabled state after operation ends,
-        //       but can be re-enabled simply be clicking.
-        bool eventFilter(QObject* pObj, QEvent* pEvent) override
-        {
-            const auto eventType = (pEvent) ? pEvent->type() : QEvent::None;
-            if ((eventType == QEvent::KeyPress || eventType == QEvent::MouseButtonPress) && (m_spTableView && m_spUndoView))
-            {
-                auto lockReleaser = m_spTableView->tryLockForEdit();
-                const auto bEnable = lockReleaser.isLocked();
-                m_spUndoView->setEnabled(bEnable);
-                if (!bEnable)
-                    return true; // Returning true means that child doesn't get the event. 
-            }
-            return BaseClass::eventFilter(pObj, pEvent);
-        }
-
-        ~UndoViewWidget()
-        {
-        }
-
-        QPointer<CsvTableView> m_spTableView;
-        QObjectStorage<QUndoView> m_spUndoView;
-    }; // Class UndoViewWidget
 
     static void doModalOperation(QWidget* pParent, const QString& sProgressDialogLabel, const ProgressWidget::IsCancellable isCancellable, const QString& sThreadName, std::function<void (ProgressWidget*)> func)
     {
@@ -1232,7 +1186,7 @@ void CsvTableView::showUndoWindow()
 {
     if (!m_spUndoStack)
         return;
-    auto pUndoWidget = new UndoViewWidget(this);
+    auto pUndoWidget = new DFG_DETAIL_NS::UndoViewWidget(this);
     pUndoWidget->show();
 }
 
@@ -1734,15 +1688,15 @@ void CsvTableView::setReadOnlyMode(const bool bReadOnly)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // Probably need adjustment, didn't examine what is the actual version where compilation started failing.
         const auto widgets = this->findChildren<QWidget*>();
-        QList<UndoViewWidget*> undoWidgets;
+        QList<DFG_DETAIL_NS::UndoViewWidget*> undoWidgets;
         for (auto w : widgets)
         {
-			auto p = dynamic_cast<UndoViewWidget*>(w);
+			auto p = dynamic_cast<DFG_DETAIL_NS::UndoViewWidget*>(w);
             if (p)
 				undoWidgets.push_back(p);
         }
 #else
-        const auto undoWidgets = this->findChildren<UndoViewWidget*>();
+        const auto undoWidgets = this->findChildren<DFG_DETAIL_NS::UndoViewWidget*>();
 #endif
         for (auto pUndoWidget : undoWidgets) if (pUndoWidget)
             pUndoWidget->setDisabled(bReadOnly);
@@ -7101,3 +7055,4 @@ QVariant CsvTableViewSortFilterProxyModel::headerData(const int section, const Q
 #include "detail/CsvTableView/SelectionDetailCollector.cpp"
 #include "detail/CsvTableView/ContentGeneratorDialog.cpp"
 #include "detail/CsvTableView/actionWidgets/RegexFormatWidget.cpp"
+#include "detail/CsvTableView/UndoViewWidget.cpp"
