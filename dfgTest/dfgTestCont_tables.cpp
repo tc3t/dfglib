@@ -962,6 +962,269 @@ TEST(dfgCont, TableSz_clearCell)
     }
 }
 
+TEST(dfgCont, TableSz_clearBlock)
+{
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(cont);
+
+    constexpr int16 nBlockSize = 9;
+
+    using TableT = TableSz<
+        char,
+        int16,
+        ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown,
+        ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::TableInterfaceTypes<char, ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown>,
+        nBlockSize
+    >;
+
+    using IndexT = int16;
+    constexpr IndexT nColCount = 40;
+    constexpr IndexT nRowCount = 50;
+    constexpr IndexT nTotalCellCount = nColCount * nRowCount;
+
+    const auto initTable = [=](TableT& t)
+        {
+            t.clear();
+            for (IndexT c = 0; c < nColCount; ++c)
+            {
+                for (IndexT r = 0; r < nRowCount; ++r)
+                {
+                    t.setElement(r, c, format_fmt("{},{}", r, c));
+                }
+            }
+        };
+
+    // Helper to avoid warnings when sizeof(Index) < sizeof(int)
+    const auto mip = [](const int r, const int c) -> std::pair<IndexT, IndexT>
+        {
+            return { IndexT(r), IndexT(c) };
+        };
+
+    // Empty block
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock( mip(1, 1), mip(0, 0) );
+        DFGTEST_EXPECT_LEFT(nTotalCellCount, t.cellCountNonEmpty());
+    }
+
+    // Block left of indexes
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(0, -2), mip(1, -1));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount, t.cellCountNonEmpty());
+    }
+
+    // Block above indexes
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(-2, 0), mip(-1, 1));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount, t.cellCountNonEmpty());
+    }
+
+    // Block right of indexes
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(0, nColCount), mip(1, nColCount + 1));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount, t.cellCountNonEmpty());
+    }
+
+    // Block below indexes
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(nRowCount, 0), mip(nRowCount + 1, 2));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount, t.cellCountNonEmpty());
+    }
+
+    // Whole table
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(0, 0), mip(nRowCount - 1, nColCount - 1));
+        DFGTEST_EXPECT_LEFT(0, t.cellCountNonEmpty());
+    }
+
+    // Partially on table, top left corner
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(-1, -1), mip(1, 2));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - 6, t.cellCountNonEmpty());
+    }
+
+    // Partially on table, top right corner
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(-2, nColCount - 2), mip(1, nColCount + 3));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - 4, t.cellCountNonEmpty());
+    }
+
+    // Partially on table, bottom right corner
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(nRowCount - 4, nColCount - 2), mip(nRowCount + 4, nColCount + 3));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - 8, t.cellCountNonEmpty());
+    }
+
+    // Partially on table, bottom left corner
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(nRowCount - 3, -2), mip(nRowCount + 4, 2));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - 9, t.cellCountNonEmpty());
+    }
+
+    // First column
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(0, 0), mip(nRowCount - 1, 0) );
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - nRowCount, t.cellCountNonEmpty());
+    }
+
+    // Last column
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(0, nColCount - 1), mip(nRowCount - 1, nColCount - 1));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - nRowCount, t.cellCountNonEmpty());
+        // Clearing last row doesn't affect column count.
+        DFGTEST_EXPECT_LEFT(nColCount, t.colCountByMaxColIndex());
+    }
+
+    // First row
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(0, 0), mip(0, nColCount - 1));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - nColCount, t.cellCountNonEmpty());
+    }
+
+    // Last row
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(nRowCount - 1, 0), mip(nRowCount - 1, nColCount - 1));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - nColCount, t.cellCountNonEmpty());
+        DFGTEST_EXPECT_LEFT(nRowCount - 1, t.rowCountByMaxRowIndex());
+    }
+
+    // Clearing across block boundary.
+    {
+        TableT t;
+        initTable(t);
+        t.clearBlock(mip(nBlockSize - 2, 1), mip(nBlockSize + 2 * nBlockSize + 2, 3));
+        DFGTEST_EXPECT_LEFT(nTotalCellCount - 3 * (2 * nBlockSize + 5), t.cellCountNonEmpty());
+    }
+
+    // Removal at maximum index.
+    {
+        TableT t;
+        const auto nMaxRowIndex = t.maxRowIndex();
+        const auto nMaxColIndex = t.maxColumnIndex();
+        t.addString("a", nMaxRowIndex, nMaxColIndex);
+        DFGTEST_EXPECT_LEFT(1, t.cellCountNonEmpty());
+        t.clearBlock({ nMaxRowIndex, nMaxColIndex }, { nMaxRowIndex, nMaxColIndex });
+        DFGTEST_EXPECT_LEFT(0, t.cellCountNonEmpty());
+    }
+
+    // Start in empty block
+    {
+        TableT t;
+        t.addString("def", nBlockSize, 0);
+        t.clearBlock( mip(nBlockSize / 2, 0), mip(nBlockSize, 0));
+        DFGTEST_EXPECT_LEFT(0, t.cellCountNonEmpty());
+    }
+
+    // Start in sparse block
+    {
+        TableT t;
+        t.addString("abc", nBlockSize / 2, 0);
+        t.addString("def", nBlockSize, 0);
+        t.clearBlock(mip(nBlockSize / 2, 0), mip(nBlockSize, 0) );
+        DFGTEST_EXPECT_LEFT(0, t.cellCountNonEmpty());
+    }
+
+    // Checking that last + block size won't overflow even with crafted block size.
+    // Commented out because MapBlockIndex uses hardcoded uint32 as index
+#if 0
+    {
+        const int16 nBlockSize = 20000;
+        using TableTCraftedBlock = TableSz<
+            char,
+            int16,
+            ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown,
+            ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::TableInterfaceTypes<char, ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown>,
+            nBlockSize
+        >;
+        TableTCraftedBlock t;
+        t.addString("abc", nBlockSize, 0);
+        t.clearCell(nBlockSize, 0);
+        t.clearBlock(mip(0, 0), mip(nBlockSize + 1, 0));
+    }
+#endif
+
+    // Checking that last + block size won't overflow even with crafted block size.
+    // Note that MapBlockIndex uses hard coded uin32 index, so need quite a block size to test this.
+#if defined(DFG_BUILD_TYPE_DEBUG)
+    DFGTEST_MESSAGE("Skipped block overflow test, is available only in non-debug builds");
+#else
+    {
+        const auto memInfo = ::DFG_MODULE_NS(os)::getMemoryUsage_system();
+        const uint64 nBlockIndexOverflowMemLimit = uint64(20000000000); // 20 GB
+        const auto nMemAvailable = memInfo.available().value_or(0);
+        if (nMemAvailable > nBlockIndexOverflowMemLimit)
+        {
+            const uint32 nBlock = 2500000000; // 2.5 G
+            using TableTCraftedBlock = TableSz<
+                char,
+                uint32,
+                ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown,
+                ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::TableInterfaceTypes<char, ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown>,
+                nBlock
+            >;
+            // This checks handling of empty blocks
+            {
+                TableTCraftedBlock t;
+                t.addString("abc", nBlock, 0);
+                t.clearCell(nBlock, 0);
+
+                t.clearBlock({ 0, 0 }, { TableTCraftedBlock::MapBlockIndexT::maxKey() + 1, 0 });
+            }
+            // This checks handling of non-empty blocks
+            {
+                TableTCraftedBlock t;
+                t.addString("abc", nBlock, 0);
+                t.clearBlock({ 0, 0 }, { nBlock + 1, 0 });
+            }
+        }
+        else
+        {
+            DFGTEST_MESSAGE(
+                format_fmt("Skipped block overflow test due to having only {} memory available, "
+                    "requiring at least {}.",
+                    ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(nMemAvailable).toString(),
+                    ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(nBlockIndexOverflowMemLimit).toString()
+            ));
+        }
+    }
+#endif
+
+    // Making sure that implementation assumptions hold about column index limits.
+    {
+        TableT t;
+        using TableIndex = TableT::IndexT;
+        DFGTEST_EXPECT_TRUE(TableIndex(maxValueOfType<TableIndex>() - TableIndex(1)) >= t.maxColumnIndex());
+    }
+
+}
+
 namespace
 {
 

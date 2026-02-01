@@ -533,7 +533,8 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
     template <class Char_T, 
               class Index_T = uint32,
               DFG_MODULE_NS(io)::TextEncoding InternalEncoding_T = DFG_MODULE_NS(io)::encodingUnknown,
-              class InterfaceTypes_T = DFG_DETAIL_NS::TableInterfaceTypes<Char_T, InternalEncoding_T>>
+              class InterfaceTypes_T = DFG_DETAIL_NS::TableInterfaceTypes<Char_T, InternalEncoding_T>,
+              size_t BlockSize_T = 2048>
     class TableSz
     {
     public:
@@ -634,7 +635,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
         using IndexT = Index_T;
         //typedef DFG_DETAIL_NS::RowToContentMapAoS<Index_T, Char_T> RowToContentMap; // Map-based, good for sparse content.
         //typedef DFG_DETAIL_NS::RowToContentMapVector<Index_T, Char_T> RowToContentMap; // Vector-based, good for dense.
-        using MapBlockIndexT = DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T, 2048>;
+        using MapBlockIndexT = DFG_DETAIL_NS::RowToContentMapBlockIndex<Index_T, Char_T, BlockSize_T>;
         using RowToContentMap = MapBlockIndexT; // "Block-vector", dedicated structure made for TableSz
 
         typedef std::vector<RowToContentMap> TableIndexContainer;
@@ -1121,6 +1122,35 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
                 return;
             // Simply clearing mapping without clearing the string content.
             m_colToRows[nCol].clearMapping(nRow);
+        }
+
+        // Clears cells in given rectangular block, where (0, 0) is top left.
+        // For example with arguments (0, 0), (2, 1) would clear cells (0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)
+        void clearBlock(const std::pair<IndexT, IndexT> topLeft, const std::pair<IndexT, IndexT> bottomRight)
+        {
+            const auto cl = std::get<1>(topLeft);
+            const auto cr = std::get<1>(bottomRight);
+            const auto nColCount = colCountByMaxColIndex();
+            if (nColCount == 0 ||
+                cl >= nColCount || // Block first column is right of table?
+                cr < 0         // Block last column is left of table?
+                )
+                return;
+
+            const auto rtRaw = std::get<0>(topLeft);
+            const auto rbRaw = std::get<0>(bottomRight);
+            // Bottom row before top row or bottom row above first?
+            if (rtRaw > rbRaw || rbRaw < 0)
+                return;
+            
+            const auto nFirstCol = Max(cl, IndexT(0));
+            const auto nLastCol = Min(cr,  IndexT(this->colCountByMaxColIndex() - IndexT(1)));
+            const auto rt =  Max(rtRaw, IndexT(0));
+            const auto rb = Max(rbRaw, IndexT(0));
+            for (auto c = nFirstCol; c <= nLastCol; ++c) // Note: can't overflow because nLastCol is one less than maximum IndexT (tested in unit test)
+            {
+                m_colToRows[c].clearMappingRange(rt, rb);
+            }
         }
 
         // Swap strings at (r0, c0) and (r1, c1).

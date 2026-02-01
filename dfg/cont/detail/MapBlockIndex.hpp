@@ -158,6 +158,25 @@ public:
             }
         }
 
+        void clearMappingRange(IndexT nFirst, IndexT nLast)
+        {
+            if (nLast < nFirst || m_nEffectiveBlockSize <= 0)
+                return;
+            if (nFirst < 0)
+                nFirst = 0;
+            if (nLast > m_nEffectiveBlockSize - 1)
+                nLast = m_nEffectiveBlockSize - 1;
+            if (nFirst == 0 && nLast + 1 >= m_nEffectiveBlockSize)
+            {
+                // Wanted to clear the whole block -> simply set mapping count to zero
+                m_nEffectiveBlockSize = 0;
+                return;
+            }
+            // Getting here means that clearing a sub range, simply clear one by one
+            for (auto i = nFirst; i <= nLast; ++i)
+                clearMapping(i);
+        }
+
         // Sets mapping at given subinex.
         // Precondition: nIndex >= 0 && nindex < BlockSize_T
         // Precondition: val != defaultValue()
@@ -194,7 +213,7 @@ public:
             return (iter != cend()) ? static_cast<IndexT>(iter - begin()) : nBlockSize;
         }
 
-        // Returns next mapped index from given index. If such does not exist, returns BlockSize_T
+        // Returns next mapped index from given index. If such does not exist, returns nBlockSize
         IndexT nextIndex(IndexT nIndex, const IndexT nBlockSize) const
         {
             DFG_ASSERT_CORRECTNESS(nIndex < nBlockSize);
@@ -343,6 +362,36 @@ public:
         if (nBlockIndex >= blockCount())
             return;
         m_blocks[nBlockIndex].clearMapping(subIndex(key));
+    }
+
+    // Clears mapping range from [start, last] (i.e. inclusive range)
+    void clearMappingRange(const KeyT start, const KeyT last)
+    {
+        if (last < start)
+            return;
+        if (blockIndex(start) >= blockCount())
+            return;
+        const auto nLastBlockIndex = this->blockIndex(last);
+        for (KeyT movingStart = start; movingStart <= last; )
+        {
+            const auto nBlockIndex = this->blockIndex(movingStart);
+            if (!isValidIndex(m_blocks, nBlockIndex))
+                break;
+            auto& block = m_blocks[nBlockIndex];
+
+            const auto nStartSubIndex = this->subIndex(movingStart);
+            if (!block.empty())
+            {
+                const auto nLastSubIndex = (nBlockIndex < nLastBlockIndex)
+                    ? block.blockSize() - 1
+                    : this->subIndex(last);
+                
+                block.clearMappingRange(nStartSubIndex, nLastSubIndex);
+            }
+            if (maxKey() - this->blockSize() < movingStart - nStartSubIndex) // Overflow check
+                return;
+            movingStart += (this->blockSize() - nStartSubIndex);
+        }
     }
 
     // Removes keys having two effects:

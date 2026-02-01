@@ -157,6 +157,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_appendTablesWithMove";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_insertToFrontPerformance";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_cellCountNonEmpty";
+    //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_clearBlock";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_clearCell";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_contentStorageSizeInBytes";
     //::testing::GTEST_FLAG(filter) = "dfgCont.TableSz_addRemoveColumns";
