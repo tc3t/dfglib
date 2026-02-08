@@ -46,6 +46,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(charts)
 class QUndoStack;
 class QCompleter;
 class QFile;
+class QItemSelection;
 class QTextStream;
 class QReadWriteLock;
 
@@ -654,6 +655,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Tokenizes properly formatted text line and sets the data
         // as cells of given row @p nRow.
         void setRow(const int nRow, QString sLine);
+
+        void clearItemsByChunks_noUndo(const QItemSelection& selection);
 
         // Sets data of given index without triggering undo, returns return value of privSetDataToTable()
         // Note: Given model index must be valid; this function does not check it.

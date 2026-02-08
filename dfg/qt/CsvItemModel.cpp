@@ -18,6 +18,8 @@ DFG_BEGIN_INCLUDE_QT_HEADERS
 #include <QTextStream>
 #include <QStringListModel>
 
+#include <QItemSelection>
+
 // SQL includes
 #include <QSqlQuery>
 #include <QSqlRecord>
@@ -2548,6 +2550,16 @@ void CsvItemModel::setCellReadOnlyStatus(const Index nRow, const Index nCol, con
         DFG_OPAQUE_REF().m_readOnlyCells.insert(key);
     else
         DFG_OPAQUE_REF().m_readOnlyCells.erase(key);
+}
+
+void CsvItemModel::clearItemsByChunks_noUndo(const QItemSelection &selection)
+{
+    auto& table = this->table();
+    for (auto iter = selection.cbegin(); iter != selection.cend(); ++iter)
+    {       
+        table.clearBlock({iter->top(), iter->left() }, { iter->bottom(), iter->right()});
+        Q_EMIT dataChanged(this->index(iter->top(), iter->left()), this->index(iter->bottom(), iter->right()));
+    }
 }
 
 namespace DFG_DETAIL_NS
