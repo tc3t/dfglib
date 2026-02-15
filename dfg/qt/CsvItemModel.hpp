@@ -656,6 +656,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // as cells of given row @p nRow.
         void setRow(const int nRow, QString sLine);
 
+        // Similar to setDataByBatch_noUndo, but instead of setting content, clears cells that are present in given table.
+        void clearItemsByBatch_noUndo(const RawDataTable& table, std::function<bool()> isCancelledFunc = std::function<bool()>());
+
         void clearItemsByChunks_noUndo(const QItemSelection& selection);
 
         // Sets data of given index without triggering undo, returns return value of privSetDataToTable()
@@ -811,6 +814,14 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         template <class This_T, class Func_T>
         static bool forEachColInfoWhileImpl(This_T& rThis, const LockReleaser& lockReleaser, Func_T&& func);
+
+        // Sets data to cells from given 'table' using function 'setter'
+        // @param table Cells present in this table are passed to setter-function
+        // @param setter Function that is called for every element in 'table' and gets three arguments, (row, column, string at table(row, column))
+        //               Function should return true if cell was edited, false otherwise.
+        // @param isCancelledFunc If given, implementation polls the function if batch edit should be terminated, should return true to stop editing, false to continue.
+        template <class Setter_T>
+        void setDataByBatch_noUndoImpl(const RawDataTable& table, Setter_T setter, std::function<bool()> isCancelledFunc = std::function<bool()>());
 
         // Returns true if item was set, false otherwise.
         bool setItem_noDataChangedSig(Index nRow, Index nCol, const QString& str);

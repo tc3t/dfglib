@@ -777,6 +777,20 @@ bool CsvItemModel::clearItem_noDataChangedSig(const Index nRow, const Index nCol
     return true;
 }
 
+void CsvItemModel::clearItemsByBatch_noUndo(const RawDataTable& table, std::function<bool()> isCancelledFunc)
+{
+    const auto setter = [&](const Index r, const Index c, const SzPtrUtf8R psz)
+        {
+            if (psz != nullptr)
+            {
+                this->clearItem_noDataChangedSig(r, c);
+                return true;
+            }
+            return false;
+        };
+    setDataByBatch_noUndoImpl(table, setter, isCancelledFunc);
+}
+
 void CsvItemModel::setRow(const int nRow, QString sLine)
 {
     if (!this->isValidRow(nRow))
@@ -1691,7 +1705,8 @@ QVariant CsvItemModel::headerData(const int section, Qt::Orientation orientation
     return QVariant();
 }
 
-void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)
+template <class Setter_T>
+void CsvItemModel::setDataByBatch_noUndoImpl(const RawDataTable& table, Setter_T setter, std::function<bool()> isCancelledFunc)
 {
     using IntervalContainer = ::DFG_MODULE_NS(cont)::MapVectorSoA<Index, ::DFG_MODULE_NS(cont) ::IntervalSet<Index>>;
     IntervalContainer intervalsByColumn; 
@@ -1703,8 +1718,7 @@ void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrU
         {
             if (isCancelledFunc && isCancelledFunc())
                 return; // TODO: should break loop
-            auto tpszEffective = (pFill) ? pFill : tpsz;
-            if (tpszEffective && privSetDataToTable(r, c, tpszEffective))
+            if (setter(r, c, tpsz))
                 intervalsByColumn[c].insert(r);
         });
     });
@@ -1724,6 +1738,16 @@ void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrU
     }
     
     setModifiedStatus(true);
+}
+
+void CsvItemModel::setDataByBatch_noUndo(const RawDataTable& table, const SzPtrUtf8R pFill, std::function<bool()> isCancelledFunc)
+{
+    auto setter = [&](const Index r, const Index c, const SzPtrUtf8R tpsz)
+        {
+            auto tpszEffective = (pFill) ? pFill : tpsz;
+            return (tpszEffective && privSetDataToTable(r, c, tpszEffective));
+        };
+    setDataByBatch_noUndoImpl(table, setter, isCancelledFunc);
 }
 
 bool CsvItemModel::isReadOnlyColumn(Index c) const

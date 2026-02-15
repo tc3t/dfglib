@@ -276,13 +276,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
                     QAbstractItemModel* pViewModel = (m_pProxyModel) ? static_cast<QAbstractItemModel*>(m_pProxyModel) : m_pCsvModel;
                     m_pView->selectionModel()->setCurrentIndex(pViewModel->index(nNewSelectedRow, m_pView->currentIndex().column()), QItemSelectionModel::Select);
                 }
-                
             }
             else
             {
                 if (!m_pCsvModel)
                     return;
-                m_pCsvModel->setDataByBatch_noUndo(m_cellMemory, DFG_UTF8(""));
+                m_pCsvModel->clearItemsByBatch_noUndo(m_cellMemory);
             }
         }
 
