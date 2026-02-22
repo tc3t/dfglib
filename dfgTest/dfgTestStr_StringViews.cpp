@@ -383,19 +383,13 @@ TEST(dfgStr, StringView)
 namespace
 {
     template <class StringView_T, class Ptr_T>
-    void TestStringViewSzNullptrHandling(Ptr_T pNull, std::true_type)
+    void TestStringViewSzNullptrHandling(Ptr_T pNull)
     {
         using namespace ::DFG_ROOT_NS;
         StringView_T svFromNull(pNull);
         DFGTEST_EXPECT_TRUE(svFromNull.empty());
         DFGTEST_EXPECT_LEFT(0, svFromNull.size());
         DFGTEST_EXPECT_LEFT('\0', *toCharPtr_raw(svFromNull.c_str()));
-    }
-
-    template <class StringView_T>
-    void TestStringViewSzNullptrHandling(::DFG_ROOT_NS::Dummy, std::false_type)
-    {
-        // nullptr handling is UB for non-one-sized char types so no tests here.
     }
 
     template <class StringView_T, class Char_T, class Str_T, class RawToTypedConv>
@@ -465,7 +459,7 @@ namespace
         }
 
         // Testing construction from nullptr
-        TestStringViewSzNullptrHandling<StringView_T>(conv(nullptr), std::integral_constant<bool, sizeof(Char_T) == 1>());
+        TestStringViewSzNullptrHandling<StringView_T>(conv(nullptr));
     }
 }
 

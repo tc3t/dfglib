@@ -636,9 +636,17 @@ public:
 namespace DFG_DETAIL_NS
 {
     static const size_t gnStringViewSzSizeNotCalculated = NumericTraits<size_t>::maxValue;
+    
+    template <class Char_T>
+    struct EmptyStringLiteral { };
+
+    template <> struct EmptyStringLiteral<char>     { static const char*     emptyString() { return  ""; } };
+    template <> struct EmptyStringLiteral<wchar_t>  { static const wchar_t*  emptyString() { return L""; } };
+    template <> struct EmptyStringLiteral<char16_t> { static const char16_t* emptyString() { return u""; } };
+    template <> struct EmptyStringLiteral<char32_t> { static const char32_t* emptyString() { return U""; } };
 }
 
-// Like StringView, but guarantees that view is null terminated.
+// Like StringView, but guarantees that view is null terminated even if constructed with nullptr.
 // Also the string length is not computed on constructor but on demand removing some of the const's.
 // Note about handling of embedded nulls:
 //      View being null-terminated means this->data() can be dereferenced with index this->length() and that result is '\0'
@@ -674,7 +682,7 @@ public:
         DFG_ASSERT_CORRECTNESS(this->m_pFirst != nullptr);
     }
 
-    // Constructs from null-terminated string or if sizeof(CharT) == 1, psz can also be a nullptr. If sizeof(CharT) != 1 and psz == nullptr, behaviour is undefined.
+    // Constructs from null-terminated string or from nullptr; in latter case StringViewSz points to unspecified null-terminated empty string.
     StringViewSz(SzPtrT psz) :
         BaseClass(psz),
         m_nSize(DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated)
@@ -683,8 +691,8 @@ public:
             initFromNull();
     }
 
-    // Constructs StringViewSz and optionally sets size requiring psz[nCount] == '\0' or that (psz == nullptr && nCount == 0 && sizeof(CharT) == 1)
-    // Precondition: (psz != nullptr && (nCount == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || psz[nCount] == '\0')) || (psz == nullptr && nCount == 0 && sizeof(CharT) == 1)
+    // Constructs StringViewSz and optionally sets size requiring psz[nCount] == '\0' or that (psz == nullptr && nCount == 0)
+    // Precondition: (psz != nullptr && (nCount == DFG_DETAIL_NS::gnStringViewSzSizeNotCalculated || psz[nCount] == '\0')) || (psz == nullptr && nCount == 0)
     StringViewSz(SzPtrT psz, const size_t nCount) :
         BaseClass(psz),
         m_nSize(nCount)
@@ -718,10 +726,8 @@ protected:
 
     void initFromNull()
     {
-        DFG_ASSERT_UB(sizeof(Char_T) == 1); // If sizeof Char_T is not 1 (assuming it to mean that Char_T* can be treated as if char* with respect to aliasing),
-                                            // accessing m_nSize through this->m_pFirst (i.e. a const Char_T*) is UB (e.g. https://stackoverflow.com/a/29676395)
         m_nSize = 0;
-        this->m_pFirst = PtrT(reinterpret_cast<PtrRawT>(&m_nSize)); // Making m_pFirst to point to length which is zero and thus provides a null terminator.
+        this->m_pFirst = PtrT(DFG_DETAIL_NS::EmptyStringLiteral<Char_T>::emptyString());
     }
 
 public:
