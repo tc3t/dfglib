@@ -1139,6 +1139,46 @@ TEST(dfg, Span)
     }
 }
 
+TEST(dfg, isNull)
+{
+    using namespace DFG_ROOT_NS;
+
+    // nullptr
+    {
+        DFGTEST_EXPECT_TRUE(isNull(nullptr));
+        DFGTEST_EXPECT_FALSE(isNonNull(nullptr));
+    }
+
+    // Plain pointer
+    {
+        int a = 0;
+        DFGTEST_EXPECT_FALSE(isNull(&a));
+        DFGTEST_EXPECT_TRUE(isNonNull(&a));
+    }
+
+    // unique_ptr
+    {
+        std::unique_ptr<int> up;
+        DFGTEST_EXPECT_TRUE(isNull(up));
+        DFGTEST_EXPECT_FALSE(isNonNull(up));
+        up.reset(new int(1));
+        DFGTEST_EXPECT_FALSE(isNull(up));
+        DFGTEST_EXPECT_TRUE(isNonNull(up));
+    }
+
+	// shared_ptr
+    {
+        std::shared_ptr<int> sp;
+        DFGTEST_EXPECT_TRUE(isNull(sp));
+        DFGTEST_EXPECT_FALSE(isNonNull(sp));
+        sp.reset(new int(1));
+        DFGTEST_EXPECT_FALSE(isNull(sp));
+        DFGTEST_EXPECT_TRUE(isNonNull(sp));
+    }
+
+    // isNull/isNonNull doesn't work with std::weak_ptr
+}
+
 TEST(dfgTypeTraits, IsTrueTrait)
 {
     using namespace DFG_ROOT_NS;

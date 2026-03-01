@@ -113,11 +113,8 @@ template <class ContT> const typename ContT::value_type& elementBeforeLast(const
     //return cont[count(cont) - 1 - nFromLast];
 }
 
-// Rounds value to closest integer and in case of halfway cases, rounds away from zero.
-// The halfway behaviour is that mentioned in
-// cppreference.com (http://en.cppreference.com/w/cpp/numeric/math/round)
-// for std::round.
-inline double round(const double& val) {return (val >= 0) ? std::floor(val + 0.5) : std::ceil(val - 0.5);}
+// Equivalent to std::round()
+inline double round(double val) { return std::round(val); }
 
 // Returns floor-value casted to integer type Int_T.
 // TODO: test
@@ -194,16 +191,22 @@ enum CaseSensitivity
 };
 
 // Test pointer or 'pointer-like'-object for nullness.
-// TODO: test
 template <class T> bool isNonNull(const T& obj)
 {
-    DFG_STATIC_ASSERT(std::is_pointer<decltype(obj.get())>::value, "Implementation expect object to have get-function that returns pointer-type.");
-    return isNonNull(obj.get());
+    if constexpr (std::is_pointer_v<T>)
+        return obj != nullptr;
+    else
+    {
+        DFG_STATIC_ASSERT(
+            std::is_pointer_v<decltype(obj.get())>, "Implementation expect object to have get-function that returns pointer-type.");
+        return isNonNull(obj.get());
+    }
 }
-template <class T> bool isNonNull(const T* p) {return p != nullptr;}
 
-template <class T> bool isNull(const T& obj) {return !IsNonNull(obj);}
-template <class T> bool isNull(const T* p) {return !IsNonNull(p);}
+template <class T> bool isNonNull(const T* p) {return p != nullptr;}
+template <> constexpr bool isNonNull(const std::nullptr_t&) { return false; }
+
+template <class T> bool isNull(const T& obj) { return !isNonNull(obj); }
 
 // TODO: test
 // TODO: add policies
