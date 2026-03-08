@@ -513,6 +513,13 @@ TEST(dfgIo, BasicImStream)
         getTest<BasicImStream>();
         getTest<std::istrstream>();
     }
+
+    // Handling of nullptr when read size is zero
+    {
+        BasicImStream istrm(szData, sizeof(szData));
+        istrm.read(nullptr, 0);
+        DFGTEST_EXPECT_LEFT(istrm.sizeInCharacters(), istrm.countOfRemainingElems());
+    }
 }
 
 TEST(dfgIo, BasicImStream_T_wcharT)

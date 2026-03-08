@@ -55,6 +55,11 @@ public:
 
     void read(char_type* p, const size_t nCharCount)
     {
+        if (!p)
+        {
+            DFG_ASSERT_INVALID_ARGUMENT(nCharCount == 0, "size must be zero if destination is null");
+            return;
+        }
         const auto nReadCharCount = Min(nCharCount, countInCharsRemaining());
         memcpy(p, m_pCurrent, nReadCharCount * sizeof(char_type));
         m_pCurrent += nReadCharCount;
