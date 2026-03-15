@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BasicIStreamCRTP.hpp"
+#include <cstring>
 
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(io) {
 
@@ -77,7 +78,7 @@ public:
 
         const auto nReadByteCount = nReadCharCount * sizeof(char_type);
 
-        memcpy(p, m_pCurrent, nReadByteCount);
+        std::memcpy(p, m_pCurrent, nReadByteCount);
         m_pCurrent += nReadCharCount;
         return nReadByteCount;
     }

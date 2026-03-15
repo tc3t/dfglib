@@ -72,8 +72,17 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(io) {
             {
                 if (!m_spFileStream->good())
                     return;
-                const auto nRemained = m_spStreamBufferCont->readBytes(m_fallback.data(), m_fallback.size());
+                const auto nRemained = m_spStreamBufferCont->countInBytesRemaining();
+                if (m_spStreamBufferCont->m_pBegin != nullptr)
+                {
+                    // Moving remaining bytes to beginning of buffer
+                    DFG_ASSERT_UB(this->m_fallback.data() == m_spStreamBufferCont->m_pBegin);
+                    DFG_ASSERT_UB(this->m_fallback.size() >= 3);
+                    std::memmove(this->m_fallback.data(), m_spStreamBufferCont->m_pCurrent, nRemained);
+                }
+                // Reading new bytes from filestream to container
                 const auto nRead = m_spFileStream->readBytes(m_fallback.data() + nRemained, m_fallback.size() - nRemained);
+                // Setting container as membuffer source.
                 m_spStreamBufferCont->setSource(m_fallback.data(), nRemained + nRead);
             }
         }
