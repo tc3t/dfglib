@@ -61,6 +61,8 @@ public:
             DFG_ASSERT_INVALID_ARGUMENT(nCharCount == 0, "size must be zero if destination is null");
             return;
         }
+        if (!m_pCurrent)
+            return;
         const auto nReadCharCount = Min(nCharCount, countInCharsRemaining());
         memcpy(p, m_pCurrent, nReadCharCount * sizeof(char_type));
         m_pCurrent += nReadCharCount;

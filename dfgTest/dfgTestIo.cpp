@@ -520,6 +520,15 @@ TEST(dfgIo, BasicImStream)
         istrm.read(nullptr, 0);
         DFGTEST_EXPECT_LEFT(istrm.sizeInCharacters(), istrm.countOfRemainingElems());
     }
+
+    // Testing reading from empty
+    {
+        BasicImStream istrm(nullptr, 0);
+        char buf[1] = { 'a' };
+        istrm.read(buf, sizeof(buf));
+        DFGTEST_EXPECT_LEFT(0u, istrm.tellg());
+        DFGTEST_EXPECT_LEFT('a', buf[0]);
+    }
 }
 
 TEST(dfgIo, BasicImStream_T_wcharT)
