@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 3.8) # 3.8 includes support for C++17 in CXX_STA
 
 project (dfgTest)
 
+option(DFG_USE_ASAN "Enable ASAN" ON)
+option(DFG_USE_UBSAN "Enable UBSAN" ON)
+
 # Example: line below can be used to set clang++ as compiler e.g. on Ubuntu
 # SET(CMAKE_CXX_COMPILER    "/usr/bin/clang++")
 
@@ -45,6 +48,34 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("    Debug-build -> adding definition DFG_DEBUG_ASSERT_WITH_THROW=1")
     add_definitions(-DDFG_DEBUG_ASSERT_WITH_THROW=1)
 endif()
+
+if(MSVC)
+    set(DFG_USE_UBSAN OFF) # As of 2026-04 MSVC2026 didn't seem to have UBSAN
+    if(MSVC_VERSION LESS_EQUAL 1929)
+        message("    Disabling ASAN due to MSVC 2019 or earlier")
+        set(DFG_USE_ASAN OFF)
+    endif()
+endif()
+
+# Based quick test with an installation of MinGW 11.x, using ASAN and UBSAN caused build failure with
+#   cannot find -lasan
+#   cannot find -lubsan
+# So disabling on MinGW
+if(MINGW)
+    message("    Disabling ASAN due to MinGW")
+    set(DFG_USE_ASAN OFF)
+    set(DFG_USE_UBSAN OFF)
+endif()
+
+if(DFG_USE_ASAN)
+    message("    Using ASAN")
+    add_compile_options("-fsanitize=address")
+endif()
+if(DFG_USE_UBSAN)
+    message("    Using UBSAN")
+    add_compile_options("-fsanitize=undefined")
+endif()
+
 
 SET(HEADERS
     stdafx.h
@@ -94,6 +125,13 @@ set(SOURCE
 )
 
 add_executable(dfgTestCmake ${SOURCE} ${HEADERS})
+
+if(DFG_USE_ASAN AND NOT MSVC)
+    target_link_options(dfgTestCmake PUBLIC -fsanitize=address)
+endif()
+if(DFG_USE_UBSAN)
+    target_link_options(dfgTestCmake PUBLIC -fsanitize=undefined)
+endif()
 
 if(MINGW)
     set(MinGW_libs "shlwapi")
