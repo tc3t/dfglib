@@ -10,6 +10,7 @@ DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 // Placeholder for properly implemented SSO-vector (=vector with internal buffer).
 // NOTE: this is a very quick draft with loads of missing functionality and restricting assumptions so use with caution.
 // Related implementations:
+//    -std::inplace_vector (https://en.cppreference.com/w/cpp/container/inplace_vector.html, since C++26)
 //    -LLVM_SmallVector
 //    -QVarLengthArray
 template <class T, size_t StaticSize_T>

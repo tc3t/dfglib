@@ -592,6 +592,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QString getFilterTextForOpenFileDialog() const;
 
         // If mimedata has exactly one file path and it has acceptable suffix, returns it's path, otherwise returns empty.
+        // If mimedata path is a shortcut, behaves as if the target path was given.
         QString getAcceptableFilePathFromMimeData(const QMimeData* pMimeData) const;
 
         void scrollToDefaultPosition();
