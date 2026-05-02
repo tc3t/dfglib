@@ -93,6 +93,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
 
     // CsvTableView
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_clear";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_columnIndexMappingWithEmptyFilteredTable";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_defaultMaximumRowCount";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
@@ -118,7 +119,9 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableEditor_findPanelSettingsFromConfFile";
 
     // TableView
+    //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_makeSingleCellSelection";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_setSelectedIndexes";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_moveCursor";
 
     const auto rv = RUN_ALL_TESTS();
     {

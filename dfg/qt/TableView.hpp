@@ -268,6 +268,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Convenience method: calls makeSingleCellSelection() and scrolls to selection like selectRow()
         void selectCell(int r, int c);
 
+        bool isSelected(Index r, Index c);
+        bool isSelected(Index r, Index c, QAbstractItemModel& rModel);
+
         // Convenience method: clears existing selection and selects given indexes. If given indexes are not from this->model(),
         // indexMapper should be provided that maps indexes to that model (for example if this->model() is proxy model while given indexes are from underlying source model)
         // @note This should not be used for big index lists: for example with list of size 50000,
@@ -342,6 +345,19 @@ inline void ::DFG_MODULE_NS(qt)::TableView::selectCell(const int r, const int c)
     if (pModel && makeSingleCellSelection(r, c))
         scrollTo(pModel->index(r, c));
 }
+
+inline bool ::DFG_MODULE_NS(qt)::TableView::isSelected(const Index r, const Index c, QAbstractItemModel& rModel)
+{
+    auto sm = this->selectionModel();
+    return (sm && sm->isSelected(rModel.index(r, c)));
+}
+
+inline bool ::DFG_MODULE_NS(qt)::TableView::isSelected(const Index r, const Index c)
+{
+    auto pModel = this->model();
+    return (pModel) ? isSelected(r, c, *pModel) : false;
+}
+
 
 inline void ::DFG_MODULE_NS(qt)::TableView::setSelectedIndexes(const QModelIndexList& indexes, std::function<QModelIndex (const QModelIndex&)> indexMapper)
 {

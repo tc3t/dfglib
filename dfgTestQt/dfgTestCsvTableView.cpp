@@ -37,6 +37,7 @@ DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <QSqlRecord>
     #include <QGridLayout>
     #include <QSortFilterProxyModel>
+    #include <QTest>
     #include <QThread>
     #include <QTimer>
     #include <QUndoStack>
@@ -2233,5 +2234,94 @@ TEST(dfgQt, TableView_setSelectedIndexes)
             DFGTEST_EXPECT_LEFT(viewWidget.getCsvModel().index(3, 1), selectedIndexesResult.value(1));
         }
         #endif // QT_VERSION >= 5.12.0
+    }
+}
+
+TEST(dfgQt, TableView_moveCursor)
+{
+    // TODO: add tests for Key_Up, Key_Left and Key_Right
+
+    using namespace ::DFG_ROOT_NS;
+    using namespace ::DFG_MODULE_NS(qt);
+    using namespace ::DFG_MODULE_NS(cont);
+    {
+        ::DFG_MODULE_NS(qt)::CsvTableWidget view;
+
+        DFGTEST_ASSERT_TRUE(view.openFile("testfiles/TableView_moveCursor.csv"));
+        auto& model = view.getCsvModel();
+
+        using IdxPair = TrivialPair<TableView::Index, TableView::Index>;
+
+        const TableView::Index nLastRow = model.getRowCount() - 1;
+        //const TableView::Index nLastColumn = model.getColumnCount() - 1;
+
+        const auto checkSelectedCells = [&](const Span<IdxPair> expected)
+            {
+                const auto selected = view.getSelectedItemIndexes_viewModel();
+                DFGTEST_EXPECT_LEFT(expected.size(), selected.size());
+                const auto pViewModel = view.model();
+                if (!pViewModel)
+                    return;
+                for (const auto rc : expected)
+                    DFGTEST_EXPECT_TRUE(view.isSelected(rc.first, rc.second, *pViewModel));
+            };
+
+        const auto testMove = [&](const IdxPair startPos,
+            Qt::Key keyPress,
+            const Qt::KeyboardModifiers modifiers,
+            const TableView::Index nFirstSelected,
+            const TableView::Index nLasttSelected,
+            const TableView::Index nFixedIndex)
+            {
+                view.setCurrentIndex(view.model()->index(startPos.first, startPos.second));
+                QTest::keyClick(&view, keyPress, modifiers);
+                Vector<IdxPair> expectedIndexes;
+                for (auto i = nFirstSelected; i <= nLasttSelected; ++i)
+                    expectedIndexes.push_back(IdxPair(i, nFixedIndex));
+                checkSelectedCells(expectedIndexes);
+                view.clearSelection();
+            };
+
+        // Full column
+        {
+            const TableView::Index nCol = 0;
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::NoModifier, 1, 1, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, nLastRow, nLastRow, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, nLastRow, nCol);
+        }
+
+        // Empty column
+        {
+            const TableView::Index nCol = 1;
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::NoModifier, 1, 1, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, nLastRow, nLastRow, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, nLastRow, nCol);
+        }
+
+        // Alternating column (non-empty, empty, non-empty...)
+        {
+            const TableView::Index nCol = 2;
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::NoModifier, 1, 1, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, 2, 2, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, 0, nCol);
+        }
+
+        // One empty cell in the middle
+        {
+            const TableView::Index nCol = 3;
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, 2, 2, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, 1, nCol);
+            testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier, 3, 3, nCol);
+            testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 2, 2, nCol);
+        }
+
+        // One non-empty cell in the middle
+        {
+            const TableView::Index nCol = 4;
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, 2, 2, nCol);
+            testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, 1, nCol);
+            testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier, nLastRow, nLastRow, nCol);
+            testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 2, 2, nCol);
+        }
     }
 }
