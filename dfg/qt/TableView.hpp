@@ -7,6 +7,8 @@
 #include "../cont/TrivialPair.hpp"
 #include "../rangeIterator.hpp"
 
+#include <optional>
+
 DFG_ROOT_NS_BEGIN { DFG_SUB_NS(cont) {
 
     template <class T>
@@ -168,6 +170,19 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             return selectedCount;
         }
 
+        struct TargetCellOnCtrlArrowParam
+        {
+            int nStartIndex = -1;
+            int nTraverseLimit = -1;
+            int nStep = -1;
+            int nFixedIndex = -1;
+            bool bStartEmpty = false;
+            bool bTraverseRows = true;
+
+            int row() const { return (bTraverseRows) ? nStartIndex : nFixedIndex; }
+            int column() const { return (bTraverseRows) ? nFixedIndex : nStartIndex; }
+        }; // struct TargetCellOnCtrlArrowParam
+
         // Implements ctrl+arrow key moving similar to spreadsheet applications. Behaviour:
         //  -Current cell is non-empty and next cell is empty:
         //      -ctrl only : advances to next non-empty (or end).
@@ -178,11 +193,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         //  -Current cell is empty:
         //      -ctrl-only : advances to next non-empty (or end).
         //      -ctrl+shift: selects all empty cells from start to last empty in move direction.
-        template <class ToModelIndex_T>
         QModelIndex targetCellOnCtrlArrow(decltype(&QAbstractItemModel::rowCount) mfpTraverseDimCount,
                                           decltype(&QModelIndex::row) mfpTraverseDimAccess,
                                           decltype(&QModelIndex::row) mfpFixDimAccess,
-                                          ToModelIndex_T toModelIndex,
+                                          const bool bTraverseRows,
                                           const bool bPositiveStep,
                                           const QAbstractItemView::CursorAction cursorAction,
                                           const Qt::KeyboardModifiers modifiers)
@@ -192,46 +206,52 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             if (pModel && pModel->rowCount() > 0 && pModel->columnCount() > 0 && startIndex.isValid() && (modifiers & Qt::KeyboardModifier::ControlModifier))
             {
                 const auto isEmptyCell = [&](const QModelIndex& index)
-                            {
-                                return !pModel->data(index).isValid();
-                            };
-                const auto nFixed = (startIndex.*mfpFixDimAccess)();
-                const auto nTraverseLimit = (bPositiveStep) ? (pModel->*mfpTraverseDimCount)(QModelIndex()) : -1;
-                auto bStartEmpty = isEmptyCell(startIndex);
-                const auto nStep = (bPositiveStep) ? 1 : -1;
-                auto nStartIndex = (startIndex.*mfpTraverseDimAccess)();
+                    {
+                        return !pModel->data(index).isValid(); // TODO: this essentially makes CsvItemModel-specific assumption about empty cell presentation.
+                    };
+                TargetCellOnCtrlArrowParam param;
+                param.bStartEmpty = isEmptyCell(startIndex);
+                param.nFixedIndex = (startIndex.*mfpFixDimAccess)();
+                param.nStartIndex = (startIndex.*mfpTraverseDimAccess)();
+                param.nStep = (bPositiveStep) ? 1 : -1;
+                param.nTraverseLimit = (bPositiveStep) ? (pModel->*mfpTraverseDimCount)(QModelIndex()) : -1;
+                param.bTraverseRows = bTraverseRows;
                 const auto bHasShiftModifier = (modifiers & Qt::KeyboardModifier::ShiftModifier) != 0;
                 // If next is empty and shift is not pressed, traverse to next non-empty by starting from the following empty cell.
                 // Rationale of having shift modifier adjustment is that when selecting, one probably usually wants to select the set of non-empty (or empty) items while in the case of just moving cursor,
                 // often might be seeking the next cell to edit.
-                if (!bStartEmpty && !bHasShiftModifier && nStartIndex + nStep != nTraverseLimit && isEmptyCell(toModelIndex(*pModel, nStartIndex + nStep, nFixed)))
+                const auto nNextCellRow = (bTraverseRows) ? param.row() + param.nStep : param.row();
+                const auto nNextCellCol = (bTraverseRows) ? param.column() : param.column() + param.nStep;
+                if (!param.bStartEmpty && !bHasShiftModifier &&
+                    param.nStartIndex + param.nStep != param.nTraverseLimit &&
+                    isEmptyCell(pModel->index(nNextCellRow, nNextCellCol)))
                 {
-                    bStartEmpty = true;
-                    nStartIndex += nStep;
+                    param.bStartEmpty = true;
+                    param.nStartIndex += param.nStep;
                 }
-                // TODO: traversing could be implemented much more efficiently for CsvTableView: every call to isEmptyCell() check involves virtual function call that does binary search.
-                //       For example when traversing a column (i.e. up/down arrow) on a table with N rows with no empty cells, ctrl+down on first row is O(N*log(N)), but if searched directly
-                //       from TableCsv data structure, it would be O(N).
-                for (auto nTraverse = nStartIndex; nTraverse != nTraverseLimit; nTraverse += nStep)
+                const auto found_opt = targetCellOnCtrlArrowImpl(param);
+                if (found_opt.has_value())
                 {
-                    if (bStartEmpty != isEmptyCell(toModelIndex(*pModel, nTraverse, nFixed)))
-                    {
-                        // When having shift modifier, don't extent selection to trailing cell (see rationale above)
-                        return (bHasShiftModifier && nTraverse != nStartIndex) ? toModelIndex(*pModel, nTraverse - nStep, nFixed) : toModelIndex(*pModel, nTraverse, nFixed);
-                    }
+                    const int nModifier = (bHasShiftModifier && found_opt.value() != param.nStartIndex) ? -param.nStep : 0;
+                    const auto nTraversed = found_opt.value() + nModifier;
+                    const auto nRow = (bTraverseRows) ? nTraversed : param.nFixedIndex;
+                    const auto nCol = (bTraverseRows) ? param.nFixedIndex : nTraversed;
+                    return pModel->index(nRow, nCol);
                 }
-                // Ending up here means that limit (i.e. start or end) has been reached.
-                return toModelIndex(*pModel, (bPositiveStep) ? nTraverseLimit - 1 : 0, nFixed);
+                else
+                    return (param.bTraverseRows)
+                        ? pModel->index((bPositiveStep) ? param.nTraverseLimit - 1 : 0, param.nFixedIndex)
+                        : pModel->index(param.nFixedIndex, (bPositiveStep) ? param.nTraverseLimit - 1 : 0);
             }
             else
                 return BaseClass::moveCursor(cursorAction, modifiers);
         }
 
-#define DFG_TEMP_IMPL_CTRL_MOVE(MOVE_DIRECTION, TRAVERSE_COUNT, TRAVERSE_INDEX, FIXED_INDEX, STEP_DIR, ROW_ITEM, COLUMN_ITEM) \
+#define DFG_TEMP_IMPL_CTRL_MOVE(MOVE_DIRECTION, TRAVERSE_COUNT, TRAVERSE_INDEX, FIXED_INDEX, STEP_DIR, ROW_ITEM, COLUMN_ITEM, TRAVERSE_ROWS) \
     return targetCellOnCtrlArrow(&QAbstractItemModel::TRAVERSE_COUNT, \
                                  &QModelIndex::TRAVERSE_INDEX, \
                                  &QModelIndex::FIXED_INDEX, \
-                                 [](QAbstractItemModel& model, const int nTraverse, const int nFix) { return model.index(ROW_ITEM, COLUMN_ITEM); }, \
+                                 TRAVERSE_ROWS, \
                                  STEP_DIR, \
                                  QAbstractItemView::MOVE_DIRECTION, \
                                  modifiers)
@@ -239,25 +259,25 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Returns next focussed model index when user presses ctrl+down arrow
         QModelIndex targetCellOnCtrlArrowDown(const Qt::KeyboardModifiers modifiers)
         {
-            DFG_TEMP_IMPL_CTRL_MOVE(MoveDown, rowCount, row, column, true, nTraverse, nFix);
+            DFG_TEMP_IMPL_CTRL_MOVE(MoveDown, rowCount, row, column, true, nTraverse, nFix, true);
         }
 
         // Returns next focussed model index when user presses ctrl+right arrow
         QModelIndex targetCellOnCtrlArrowRight(const Qt::KeyboardModifiers modifiers)
         {
-            DFG_TEMP_IMPL_CTRL_MOVE(MoveRight, columnCount, column, row, true, nFix, nTraverse);
+            DFG_TEMP_IMPL_CTRL_MOVE(MoveRight, columnCount, column, row, true, nFix, nTraverse, false);
         }
 
         // Returns next focussed model index when user presses ctrl+up arrow
         QModelIndex targetCellOnCtrlArrowUp(const Qt::KeyboardModifiers modifiers)
         {
-            DFG_TEMP_IMPL_CTRL_MOVE(MoveUp, rowCount, row, column, false, nTraverse, nFix);
+            DFG_TEMP_IMPL_CTRL_MOVE(MoveUp, rowCount, row, column, false, nTraverse, nFix, true);
         }
 
         // Returns next focussed model index when user presses ctrl+left arrow
         QModelIndex targetCellOnCtrlArrowLeft(const Qt::KeyboardModifiers modifiers)
         {
-            DFG_TEMP_IMPL_CTRL_MOVE(MoveLeft, columnCount, column, row, false, nFix, nTraverse);
+            DFG_TEMP_IMPL_CTRL_MOVE(MoveLeft, columnCount, column, row, false, nFix, nTraverse, false);
         }
 
 #undef DFG_TEMP_IMPL_CTRL_MOVE
@@ -269,7 +289,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void selectCell(int r, int c);
 
         bool isSelected(Index r, Index c);
-        bool isSelected(Index r, Index c, QAbstractItemModel& rModel);
+        bool isSelected(Index r, Index c, const QAbstractItemModel& rModel);
 
         // Convenience method: clears existing selection and selects given indexes. If given indexes are not from this->model(),
         // indexMapper should be provided that maps indexes to that model (for example if this->model() is proxy model while given indexes are from underlying source model)
@@ -323,8 +343,32 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             }
             return BaseClass::selectionCommand(index, event);
         }
+
+    protected:
+        virtual std::optional<int> targetCellOnCtrlArrowImpl(const TargetCellOnCtrlArrowParam& param);
     }; // TableView
 }}
+
+inline auto ::DFG_MODULE_NS(qt)::TableView::targetCellOnCtrlArrowImpl(const TargetCellOnCtrlArrowParam& param) -> std::optional<int>
+{
+    auto nRow = param.row();;
+    auto nCol = param.column();
+    auto& nTraverse = (param.bTraverseRows) ? nRow : nCol;
+    auto pModel = this->model();
+    if (!pModel)
+        return {};
+    
+    const auto isEmptyCell = [&](const QModelIndex& index)
+        {
+            return !pModel->data(index).isValid(); // TODO: this essentially makes CsvItemModel-specific assumption about empty cell presentation.
+        };
+    for (; nTraverse != param.nTraverseLimit; nTraverse += param.nStep)
+    {
+        if (param.bStartEmpty != isEmptyCell(pModel->index(nRow, nCol)))
+            return nTraverse;
+    }
+    return {};
+}
 
 inline bool ::DFG_MODULE_NS(qt)::TableView::makeSingleCellSelection(const int r, const int c)
 {
@@ -346,7 +390,7 @@ inline void ::DFG_MODULE_NS(qt)::TableView::selectCell(const int r, const int c)
         scrollTo(pModel->index(r, c));
 }
 
-inline bool ::DFG_MODULE_NS(qt)::TableView::isSelected(const Index r, const Index c, QAbstractItemModel& rModel)
+inline bool ::DFG_MODULE_NS(qt)::TableView::isSelected(const Index r, const Index c, const QAbstractItemModel& rModel)
 {
     auto sm = this->selectionModel();
     return (sm && sm->isSelected(rModel.index(r, c)));

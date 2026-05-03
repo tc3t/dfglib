@@ -2239,7 +2239,7 @@ TEST(dfgQt, TableView_setSelectedIndexes)
 
 TEST(dfgQt, TableView_moveCursor)
 {
-    // TODO: add tests for Key_Up, Key_Left and Key_Right
+    // Note: not much coverage for Key_Left and Key_Right moves
 
     using namespace ::DFG_ROOT_NS;
     using namespace ::DFG_MODULE_NS(qt);
@@ -2288,6 +2288,10 @@ TEST(dfgQt, TableView_moveCursor)
             testMove({ 0, nCol }, Qt::Key_Down, Qt::NoModifier, 1, 1, nCol);
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, nLastRow, nLastRow, nCol);
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, nLastRow, nCol);
+
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::NoModifier, nLastRow - 1, nLastRow - 1, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier, 0, 0, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, 0, nLastRow, nCol);
         }
 
         // Empty column
@@ -2296,14 +2300,22 @@ TEST(dfgQt, TableView_moveCursor)
             testMove({ 0, nCol }, Qt::Key_Down, Qt::NoModifier, 1, 1, nCol);
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, nLastRow, nLastRow, nCol);
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, nLastRow, nCol);
+
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::NoModifier, nLastRow - 1, nLastRow - 1, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier, 0, 0, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, 0, nLastRow, nCol);
         }
 
-        // Alternating column (non-empty, empty, non-empty...)
+        // Alternating column (non-empty, empty, non-empty..., non-empty)
         {
             const TableView::Index nCol = 2;
             testMove({ 0, nCol }, Qt::Key_Down, Qt::NoModifier, 1, 1, nCol);
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier, 2, 2, nCol);
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, 0, nCol);
+
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::NoModifier, nLastRow - 1, nLastRow - 1, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier, 2, 2, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, nLastRow, nLastRow, nCol);
         }
 
         // One empty cell in the middle
@@ -2313,6 +2325,11 @@ TEST(dfgQt, TableView_moveCursor)
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, 1, nCol);
             testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier, 3, 3, nCol);
             testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 2, 2, nCol);
+
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier, 2, 2, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, 3, nLastRow, nCol);
+            testMove({ 2, nCol }, Qt::Key_Up, Qt::ControlModifier, 1, 1, nCol);
+            testMove({ 2, nCol }, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, 2, 2, nCol);
         }
 
         // One non-empty cell in the middle
@@ -2322,6 +2339,18 @@ TEST(dfgQt, TableView_moveCursor)
             testMove({ 0, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 0, 1, nCol);
             testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier, nLastRow, nLastRow, nCol);
             testMove({ 2, nCol }, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, 2, 2, nCol);
+
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier, 2, 2, nCol);
+            testMove({ nLastRow, nCol }, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, 3, nLastRow, nCol);
+            testMove({ 2, nCol }, Qt::Key_Up, Qt::ControlModifier, 0, 0, nCol);
+            testMove({ 2, nCol }, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, 2, 2, nCol);
+        }
+
+        // ctrl+left/right on row "a    <empty>    a    <empty>    a"
+        {
+            const TableView::Index nRow = 2;
+            testMove({ nRow, 0 }, Qt::Key_Right, Qt::ControlModifier, nRow, nRow, 2);
+            testMove({ nRow, 2 }, Qt::Key_Left, Qt::ControlModifier, nRow, nRow, 0);
         }
     }
 }

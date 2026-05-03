@@ -825,6 +825,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         bool reloadFromFileImpl(bool bUseOldLoadOptions);
 
+        std::optional<int> targetCellOnCtrlArrowImpl(const TargetCellOnCtrlArrowParam& param) override;
+
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;
         QStringList m_tempFilePathsToRemoveOnExit;

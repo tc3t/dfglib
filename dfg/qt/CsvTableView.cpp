@@ -6292,6 +6292,27 @@ void CsvTableView::forEachUserInsertableConfFileProperty(std::function<void(cons
 #undef DFG_TEMP_CALL_IF_NEEDED
 }
 
+std::optional<int> CsvTableView::targetCellOnCtrlArrowImpl(const TargetCellOnCtrlArrowParam& param)
+{
+    // If there's non-trivial mapping, falling back to default implementation for simplicity.
+    if (this->isItemIndexMappingNeeded())
+        return BaseClass::targetCellOnCtrlArrowImpl(param);
+
+    auto pModel = this->csvModel();
+    if (!pModel)
+        return {};
+
+    auto nRow = param.row();
+    auto nCol = param.column();
+    auto& nTraverse = (param.bTraverseRows) ? nRow : nCol;
+
+    for (; nTraverse != param.nTraverseLimit; nTraverse += param.nStep)
+    {
+        if (param.bStartEmpty != pModel->rawStringViewAt(nRow, nCol).empty())
+            return nTraverse;
+    }
+    return {};
+}
 
 //////////////////////////////////////////////////////////////////////////
 //
