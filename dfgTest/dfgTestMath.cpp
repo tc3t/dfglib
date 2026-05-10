@@ -101,6 +101,11 @@ TEST(dfgMath, Interval)
     EXPECT_TRUE(Interval_T<uint32>(0, uint32_max).isInRangeII(0));
     EXPECT_TRUE(Interval_T<uint32>(4524, uint32_max).isInRangeII(uint32_max));
     EXPECT_FALSE(Interval_T<uint32>(452, uint32_max - 1).isInRangeII(uint32_max));
+
+    DFGTEST_EXPECT_TRUE(Interval_T<int8>(-127, 127) == Interval_T<int8>(-127, 127));
+    DFGTEST_EXPECT_FALSE(Interval_T<int8>(-127, 127) != Interval_T<int8>(-127, 127));
+    DFGTEST_EXPECT_FALSE(Interval_T<int8>(-127, 127) == Interval_T<int8>(-128, 127));
+    DFGTEST_EXPECT_TRUE(Interval_T<int8>(-127, 127) != Interval_T<int8>(-128, 127));
 }
 
 namespace

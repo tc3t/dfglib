@@ -16,7 +16,7 @@ public:
 
 	T length() const {return m_upper - m_lower;}
 
-	bool operator==(const Interval_T& other) const {return (this->lower == other.lower && this->upper == other.upper);}
+	bool operator==(const Interval_T& other) const {return (this->m_lower == other.m_lower && this->m_upper == other.m_upper);}
 	bool operator!=(const Interval_T& other) const {return !((*this) == other);}
 	bool isInRangeII(const T& val) const
 	{
