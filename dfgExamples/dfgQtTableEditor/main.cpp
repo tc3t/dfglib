@@ -173,7 +173,9 @@ static void onShowAboutBox()
 class MainWindow : public QMainWindow
 {
 public:
-    void setDefaultGeometry(); // Moves and resizes mainwindow to default position and size.
+    void setDefaultGeometry_app();  // Moves and resizes mainwindow to application default position and size.
+    void setDefaultGeometry_file(); // Moves and resizes mainwindow to file default position and size.
+                                    // If file does not have geometry options, does nothing.
 
     // QWidget interface
 protected:
@@ -190,9 +192,17 @@ void MainWindow::closeEvent(QCloseEvent* event)
         event->ignore();
 }
 
-void MainWindow::setDefaultGeometry()
+void MainWindow::setDefaultGeometry_app()
 {
+    this->showNormal();
     dfg::qt::centreAndResizeToScreen(this, 0.8, 0.8);
+}
+
+void MainWindow::setDefaultGeometry_file()
+{
+    auto pTableEditor = this->findChild<dfg::qt::TableEditor*>();
+    if (pTableEditor)
+        pTableEditor->resizeWindowByLoadOptions();
 }
 
 int main(int argc, char *argv[])
@@ -352,7 +362,8 @@ int main(int argc, char *argv[])
 
             addMenuItem(mainWindow.tr("Maximize window horizontally"),              ":/resources/maximizeHorizontally.png", [&]() { dfg::qt::maximizeHorizontally(&mainWindow); });
             addMenuItem(mainWindow.tr("Maximize window vertically"),                ":/resources/maximizeVertically.png"  , [&]() { dfg::qt::maximizeVertically(&mainWindow); });
-            addMenuItem(mainWindow.tr("Reset window to default size and position"), ":/resources/defaultSize.png"         , [&]() { mainWindow.setDefaultGeometry(); });
+            addMenuItem(mainWindow.tr("Reset window to file default size and position"), ":/resources/defaultSize.png"    , [&]() { mainWindow.setDefaultGeometry_file(); });
+            addMenuItem(mainWindow.tr("Reset window to app default size and position"), ":/resources/defaultSize.png"     , [&]() { mainWindow.setDefaultGeometry_app(); });
             addMenuItem(mainWindow.tr("Toggle cell editor visibility"),             ":/resources/toggleCellEditorVisibility.png", [&tableEditor]() { tableEditor.toggleCellEditorVisibility(); });
 
             pButton->setMenu(pMenu); // Does not transfer ownership
@@ -390,7 +401,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    mainWindow.setDefaultGeometry();
+    mainWindow.setDefaultGeometry_app();
 
     while (true)
     {

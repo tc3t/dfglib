@@ -1180,6 +1180,58 @@ void TableEditor::onOpenFileDirectoryInOsFileManager()
     QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(sFilePath).absolutePath()));
 }
 
+void TableEditor::resizeWindowByLoadOptions()
+{
+    if (!m_spTableModel)
+        return;
+	resizeWindowByLoadOptions(m_spTableModel->getOpenTimeLoadOptions());
+}
+
+template <class LoadOptions_T>
+void TableEditor::resizeWindowByLoadOptions(const LoadOptions_T& loadOptions)
+{
+    auto pResizeWindow = DFG_OPAQUE_REF().m_spResizeWindow.data();
+	if (!pResizeWindow)
+        return;
+    auto pPrimaryScreen = QGuiApplication::primaryScreen();
+    const bool bMaximize = loadOptions.getPropertyThroughStrTo(CsvOptionProperty_windowMaximized, false);
+
+    if (bMaximize)
+        pResizeWindow->showMaximized();
+    else
+    {
+        const auto screenRect = pPrimaryScreen->geometry();
+        const WindowExtentProperty heightRequest(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_windowHeight, "")));
+        const WindowExtentProperty widthRequest(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_windowWidth, "")));
+        const auto nMaxHeight = screenRect.height();
+        const auto nMaxWidth = screenRect.width();
+        auto nNewHeight = Min(heightRequest.toAbsolute(nMaxHeight), nMaxHeight);
+        auto nNewWidth = Min(widthRequest.toAbsolute(nMaxWidth), nMaxWidth);
+
+        if (nNewWidth > 0 || nNewHeight > 0)
+        {
+            const auto posFunc = [&](const char* pszId, const int nNewExtent, const int nWindowExtent, const int pos)
+                {
+                    const auto sPos = loadOptions.getProperty(pszId, "");
+                    if (sPos.empty())
+                        return (nNewExtent > 0) ? (nWindowExtent - nNewExtent) / 2 : pos;
+                    else
+                        return Min(nWindowExtent, Max(0, ::DFG_MODULE_NS(str)::strTo<int>(sPos)));
+                };
+
+            const auto xPos = posFunc(CsvOptionProperty_windowPosX, nNewWidth, screenRect.width(), pResizeWindow->pos().x());
+            const auto yPos = posFunc(CsvOptionProperty_windowPosY, nNewHeight, screenRect.height(), pResizeWindow->pos().y());
+
+            if (nNewWidth == 0)
+                nNewWidth = pResizeWindow->width();
+            if (nNewHeight == 0)
+                nNewHeight = pResizeWindow->height();
+            pResizeWindow->resize(nNewWidth, nNewHeight);
+            pResizeWindow->move(xPos, yPos);
+        }
+    }
+}
+
 void TableEditor::onNewSourceOpened()
 {
     if (!m_spTableModel)
@@ -1194,50 +1246,7 @@ void TableEditor::onNewSourceOpened()
     const auto loadOptions = model.getOpenTimeLoadOptions();
 
     // Checking if window resize is allowed and requested; if yes, maximizing or resizing & repositioning window.
-    auto pResizeWindow = DFG_OPAQUE_REF().m_spResizeWindow.data();
-    if (pResizeWindow)
-    {
-        auto pPrimaryScreen = QGuiApplication::primaryScreen();
-        if (pPrimaryScreen)
-        {
-            const bool bMaximize = loadOptions.getPropertyThroughStrTo(CsvOptionProperty_windowMaximized, false);
-
-            if (bMaximize)
-                pResizeWindow->showMaximized();
-            else
-            {
-                const auto screenRect = pPrimaryScreen->geometry();
-                const WindowExtentProperty heightRequest(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_windowHeight, "")));
-                const WindowExtentProperty widthRequest(QString::fromStdString(loadOptions.getProperty(CsvOptionProperty_windowWidth, "")));
-                const auto nMaxHeight = screenRect.height();
-                const auto nMaxWidth = screenRect.width();
-                auto nNewHeight = Min(heightRequest.toAbsolute(nMaxHeight), nMaxHeight);
-                auto nNewWidth = Min(widthRequest.toAbsolute(nMaxWidth), nMaxWidth);
-
-                if (nNewWidth > 0 || nNewHeight > 0)
-                {
-                    const auto posFunc = [&](const char* pszId, const int nNewExtent, const int nWindowExtent, const int pos)
-                    {
-                        const auto sPos = loadOptions.getProperty(pszId, "");
-                        if (sPos.empty())
-                            return (nNewExtent > 0) ? (nWindowExtent - nNewExtent) / 2 : pos;
-                        else
-                            return Min(nWindowExtent, Max(0, ::DFG_MODULE_NS(str)::strTo<int>(sPos)));
-                    };
-
-                    const auto xPos = posFunc(CsvOptionProperty_windowPosX, nNewWidth, screenRect.width(), pResizeWindow->pos().x());
-                    const auto yPos = posFunc(CsvOptionProperty_windowPosY, nNewHeight, screenRect.height(), pResizeWindow->pos().y());
-
-                    if (nNewWidth == 0)
-                        nNewWidth = pResizeWindow->width();
-                    if (nNewHeight == 0)
-                        nNewHeight = pResizeWindow->height();
-                    pResizeWindow->resize(nNewWidth, nNewHeight);
-                    pResizeWindow->move(xPos, yPos);
-                }
-            }
-        }
-    }
+	resizeWindowByLoadOptions(loadOptions);
 
     resizeColumnsToView();
     updateWindowTitle();

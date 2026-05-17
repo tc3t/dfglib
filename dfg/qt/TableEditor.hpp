@@ -140,6 +140,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Returns variant map of filter panel settings where keys are strings defined by CsvOptionProperty_filter* -entries.
         QVariantMap getFilterPanelSettings() const;
 
+        // Resize window by LoadOptions
+        void resizeWindowByLoadOptions();
+
     protected:
         void closeEvent(QCloseEvent* event) override;
 
@@ -147,6 +150,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         void setSelectionDetails(const StringViewC& sv, int nResultPrecision = -2);
         void setSelectionDetailsFromIni(const QString& sv);
         QVariantMap getFindFilterPanelSettingsImpl(const DFG_DETAIL_NS::FindPanelWidget& rWidget) const;
+
+        template <class LoadOptions_T>
+        void resizeWindowByLoadOptions(const LoadOptions_T& options);
 
     signals:
         void sigModifiedStatusChanged(bool);
