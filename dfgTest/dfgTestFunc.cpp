@@ -14,7 +14,7 @@ TEST(dfgFunc, MemFuncMinMax)
 {
     using namespace DFG_ROOT_NS;
 
-    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<double> mfMinMax;
+    DFG_MODULE_NS(func)::MemFuncMinMax<double> mfMinMax;
     EXPECT_FALSE(mfMinMax.isValid());
 
     EXPECT_EQ(mfMinMax.minValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMin<double>());
@@ -22,14 +22,14 @@ TEST(dfgFunc, MemFuncMinMax)
     EXPECT_GT(std::numeric_limits<double>::lowest(), mfMinMax.maxValue());
     EXPECT_LT(std::numeric_limits<double>::max(), mfMinMax.minValue());
 
-    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<double> mfMinMaxFloat;
+    DFG_MODULE_NS(func)::MemFuncMinMax<double> mfMinMaxFloat;
     EXPECT_FALSE(mfMinMaxFloat.isValid());
     EXPECT_EQ(mfMinMaxFloat.minValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMin<float>());
     EXPECT_EQ(mfMinMaxFloat.maxValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMax<float>());
     EXPECT_GT(std::numeric_limits<float>::lowest(), mfMinMaxFloat.maxValue());
     EXPECT_LT(std::numeric_limits<float>::max(), mfMinMaxFloat.minValue());
 
-    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<long double> mfMinMaxLd;
+    DFG_MODULE_NS(func)::MemFuncMinMax<long double> mfMinMaxLd;
     EXPECT_EQ(mfMinMaxLd.minValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMin<long double>());
     EXPECT_EQ(mfMinMaxLd.maxValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMax<long double>());
     EXPECT_GT(std::numeric_limits<long double>::lowest(), mfMinMaxLd.maxValue());
@@ -43,7 +43,7 @@ TEST(dfgFunc, MemFuncMinMax)
     EXPECT_EQ(mfMinMax.minValue(), -5.78);
     EXPECT_EQ(mfMinMax.maxValue(), 1e9);
 
-    DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncMinMax)<uint64> mfMinMaxUint64;
+    DFG_MODULE_NS(func)::MemFuncMinMax<uint64> mfMinMaxUint64;
     EXPECT_EQ(mfMinMaxUint64.minValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMin<uint64>());
     EXPECT_EQ(mfMinMaxUint64.maxValue(), DFG_MODULE_NS(func)::DFG_DETAIL_NS::initialValueForMax<uint64>());
     EXPECT_EQ(std::numeric_limits<uint64>::lowest(), mfMinMaxUint64.maxValue());
@@ -60,9 +60,9 @@ TEST(dfgFunc, MemFuncAvg)
 {
     // Test return value for empty.
     {
-        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<int> avgI;
-        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<float> avgF;
-        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<double> avgD;
+        DFG_MODULE_NS(func)::MemFuncAvg<int> avgI;
+        DFG_MODULE_NS(func)::MemFuncAvg<float> avgF;
+        DFG_MODULE_NS(func)::MemFuncAvg<double> avgD;
         EXPECT_EQ(int(), avgI.average());
         EXPECT_TRUE(DFG_MODULE_NS(math)::isNan(avgF.average()));
         EXPECT_TRUE(DFG_MODULE_NS(math)::isNan(avgD.average()));
@@ -70,14 +70,14 @@ TEST(dfgFunc, MemFuncAvg)
 
     {
         const double vals[] = { 1, 2, 3, 4, 5 };
-        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<double> avg;
+        DFG_MODULE_NS(func)::MemFuncAvg<double> avg;
         DFG_MODULE_NS(alg)::forEachFwdFuncRef(vals, avg);
         EXPECT_EQ(avg.average(), 3);
     }
 
     {
         const int valsInt[] = { 1, 2 };
-        DFG_MODULE_NS(func)::DFG_CLASS_NAME(MemFuncAvg)<int, double> avg;
+        DFG_MODULE_NS(func)::MemFuncAvg<int, double> avg;
         DFG_MODULE_NS(alg)::forEachFwdFuncRef(valsInt, avg);
         EXPECT_EQ(1.5, avg.average());
     }
@@ -91,14 +91,14 @@ TEST(dfgFunc, MemFuncMedian)
     using namespace DFG_MODULE_NS(numeric);
 
     {
-        DFG_CLASS_NAME(MemFuncMedian)<double> mfMedian;
+        MemFuncMedian<double> mfMedian;
         const std::array<double, 5> arr = { 9, 6, 3, 5, 1 };
         const std::array<double, 5> expectedMedian = { 9, 7.5, 6, 5.5, 5 };
-        EXPECT_TRUE(isNan(mfMedian.median()));
+        DFGTEST_EXPECT_TRUE(isNan(mfMedian.median()));
         for (size_t i = 0; i < arr.size(); ++i)
         {
             mfMedian(arr[i]);
-            EXPECT_EQ(expectedMedian[i], mfMedian.median());
+            DFGTEST_EXPECT_LEFT(expectedMedian[i], mfMedian.median());
         }
     }
 
@@ -107,12 +107,40 @@ TEST(dfgFunc, MemFuncMedian)
         auto randEng = DFG_MODULE_NS(rand)::createDefaultRandEngineUnseeded();
         const size_t nSize = 501;
         std::vector<double> vals;
-        DFG_CLASS_NAME(MemFuncMedian)<double> mfMedian;
+        MemFuncMedian<double> mfMedian;
         for (size_t i = 0; i < nSize; ++i)
         {
             vals.push_back(DFG_MODULE_NS(rand)::rand(randEng, -200.0, 50.0));
             mfMedian(vals.back());
-            EXPECT_EQ(median(vals), mfMedian.median());
+            DFGTEST_EXPECT_EQ(median(vals), mfMedian.median());
+        }
+    }
+
+    // NaN handling, expecting NaN's to be ignored.
+    {
+        MemFuncMedian<double> mfMedian;
+        constexpr auto nan = std::numeric_limits<double>::quiet_NaN();
+        const std::array<double, 5> arr = { 9, 6, nan, 3, 5};
+        const std::array<double, 5> expectedMedian = { 9, 7.5, 7.5, 6, 5.5 };
+        DFGTEST_EXPECT_TRUE(isNan(mfMedian.median()));
+        for (size_t i = 0; i < arr.size(); ++i)
+        {
+            mfMedian(arr[i]);
+            DFGTEST_EXPECT_LEFT(expectedMedian[i], mfMedian.median());
+        }
+    }
+
+    // int as data type.
+    {
+        using IntType = int;
+        MemFuncMedian<IntType> mfMedian;
+        const std::array<IntType, 2> arr = { 1, 2 };
+        const std::array<double, 2> expectedMedian = { 1, 1.5 };
+        DFGTEST_EXPECT_TRUE(isNan(mfMedian.median()));
+        for (size_t i = 0; i < arr.size(); ++i)
+        {
+            mfMedian(arr[i]);
+            DFGTEST_EXPECT_LEFT(expectedMedian[i], mfMedian.median());
         }
     }
 }
@@ -125,6 +153,7 @@ TEST(dfgFunc, MemFuncPercentile_enclosingElem)
 
     {
         MemFuncPercentile_enclosingElem<double> mf(26);
+        DFGTEST_EXPECT_NAN(mf.percentile());
         mf(3);
         DFGTEST_EXPECT_LEFT(3, mf.percentile());
         mf(1);
@@ -139,6 +168,7 @@ TEST(dfgFunc, MemFuncPercentile_enclosingElem)
         mf(3);
         mf(1);
         mf(0.5);
+        mf(std::numeric_limits<double>::quiet_NaN());
         mf(2);
         DFGTEST_EXPECT_LEFT(0.5, mf.percentile());
         mf(5);
@@ -151,6 +181,22 @@ TEST(dfgFunc, MemFuncPercentile_enclosingElem)
         DFGTEST_EXPECT_LEFT(0.5, mf.percentile());
         mf(-0.5);
         DFGTEST_EXPECT_LEFT(0, mf.percentile());
+    }
+
+    // With integer data
+    {
+        MemFuncPercentile_enclosingElem<int> mf(26);
+        DFGTEST_EXPECT_LEFT(std::numeric_limits<int>::lowest(), mf.percentile());
+        mf(4);
+        DFGTEST_EXPECT_LEFT(4, mf.percentile());
+        mf(1);
+        DFGTEST_EXPECT_LEFT(1, mf.percentile());
+        mf(2);
+        DFGTEST_EXPECT_LEFT(1, mf.percentile());
+        mf(3);
+        DFGTEST_EXPECT_LEFT(2, mf.percentile());
+
+        DFGTEST_EXPECT_LEFT(26, mf.percentage());
     }
 }
 
@@ -170,11 +216,11 @@ TEST(dfgFunc, MultiUnaryCaller)
 
     
     
-    DFG_CLASS_NAME(MultiUnaryCaller)<std::tuple<DFG_CLASS_NAME(MemFuncSum)<int, int>,
-                                                DFG_CLASS_NAME(MemFuncMax)<int>,
-                                                DFG_CLASS_NAME(MemFuncMin)<int>,
-                                                DFG_CLASS_NAME(MemFuncSquareSum)<int, int>>,
-                                                int> compo;
+    MultiUnaryCaller<std::tuple<MemFuncSum<int, int>,
+                                MemFuncMax<int>,
+                                MemFuncMin<int>,
+                                MemFuncSquareSum<int, int>>,
+                                int> compo;
     std::vector<int> a;
     a.push_back(5);
     a.push_back(8);

@@ -29,18 +29,18 @@ namespace DFG_DETAIL_NS
 
 /** Functor that remembers the maximum value of it's call parameters.
 * Example: maximum value of N rand calls.
-* DFG_CLASS_NAME(MemFuncMax)<double> mfMax;
+* MemFuncMax<double> mfMax;
 * for(int i = 0; i<N; ++i)
 *	mfMax(rand());
 * auto maxVal = mfMax.value();
 */
 // TODO: Test
-template <class DataT> class DFG_CLASS_NAME(MemFuncMax)
+template <class DataT> class MemFuncMax
 {
 public:
-    DFG_CLASS_NAME(MemFuncMax)() : m_max(dfDetail::initialValueForMax<DataT>())
+    MemFuncMax() : m_max(dfDetail::initialValueForMax<DataT>())
     {}
-    DFG_CLASS_NAME(MemFuncMax)(const DataT& initValue) : m_max(initValue)
+    MemFuncMax(const DataT& initValue) : m_max(initValue)
     {}
     void operator()(const DataT& val)
     {
@@ -53,11 +53,11 @@ public:
 
 // Functor that remembers the minimum value of it's call parameters.
 // TODO: Test
-template <class DataT> struct DFG_CLASS_NAME(MemFuncMin)
+template <class DataT> struct MemFuncMin
 {
-    DFG_CLASS_NAME(MemFuncMin)() : m_min(dfDetail::initialValueForMin<DataT>())
+    MemFuncMin() : m_min(dfDetail::initialValueForMin<DataT>())
     {}
-    DFG_CLASS_NAME(MemFuncMin)(const DataT& initValue) : m_min(initValue)
+    MemFuncMin(const DataT& initValue) : m_min(initValue)
     {}
     void operator()(const DataT& val)
     {
@@ -69,11 +69,11 @@ template <class DataT> struct DFG_CLASS_NAME(MemFuncMin)
 
 // Functor that remembers the minimum and maximum value of it's call parameters.
 // TODO: Test
-template <class DataT> struct DFG_CLASS_NAME(MemFuncMinMax)
+template <class DataT> struct MemFuncMinMax
 {
-    DFG_CLASS_NAME(MemFuncMinMax)()
+    MemFuncMinMax()
     {}
-    DFG_CLASS_NAME(MemFuncMinMax)(const DataT& initValueMin, const DataT& initValueMax) :
+    MemFuncMinMax(const DataT& initValueMin, const DataT& initValueMax) :
         m_mfMin(initValueMin),
         m_mfMax(initValueMax)
     {}
@@ -90,15 +90,15 @@ template <class DataT> struct DFG_CLASS_NAME(MemFuncMinMax)
     DataT maxValue() const {return m_mfMax.value();}
     bool isValid() const { return maxValue() >= minValue(); } // Returns maxValue() >= minValue(), which should be false if and only if no operator() has been called.
 
-    DFG_CLASS_NAME(MemFuncMin)<DataT> m_mfMin;
-    DFG_CLASS_NAME(MemFuncMax)<DataT> m_mfMax;
+    MemFuncMin<DataT> m_mfMin;
+    MemFuncMax<DataT> m_mfMax;
 };
 
 // Functor that remembers the sum of it's call parameters.
 // TODO: Test
-template <class DataT, class SumT = DataT> struct DFG_CLASS_NAME(MemFuncSum)
+template <class DataT, class SumT = DataT> struct MemFuncSum
 {
-    DFG_CLASS_NAME(MemFuncSum)(const SumT& initValue = 0) : m_sum(initValue)
+    MemFuncSum(const SumT& initValue = 0) : m_sum(initValue)
     {}
     void operator()(const DataT& val)
     {
@@ -111,9 +111,9 @@ template <class DataT, class SumT = DataT> struct DFG_CLASS_NAME(MemFuncSum)
 
 // Functor that remembers the sum of it's call parameters squared.
 // TODO: Test
-template <class DataT, class SumT = DataT> struct DFG_CLASS_NAME(MemFuncSquareSum)
+template <class DataT, class SumT = DataT> struct MemFuncSquareSum
 {
-    DFG_CLASS_NAME(MemFuncSquareSum)(const SumT& initValue = 0) : m_sum(initValue)
+    MemFuncSquareSum(const SumT& initValue = 0) : m_sum(initValue)
     {}
     void operator()(const DataT& val)
     {
@@ -126,9 +126,9 @@ template <class DataT, class SumT = DataT> struct DFG_CLASS_NAME(MemFuncSquareSu
 
 // Functor that remembers the sum of it's call parameters and the number of calls made.
 // TODO: Test
-template <class DataT, class SumT = DataT, class CountT = size_t> struct DFG_CLASS_NAME(MemFuncAvg)
+template <class DataT, class SumT = DataT, class CountT = size_t> struct MemFuncAvg
 {
-    DFG_CLASS_NAME(MemFuncAvg)(const SumT& initValue = 0) : m_mfSum(initValue), m_nCalls(0)
+    MemFuncAvg(const SumT& initValue = 0) : m_mfSum(initValue), m_nCalls(0)
     {}
 
     void operator()(const DataT& val)
@@ -142,7 +142,7 @@ template <class DataT, class SumT = DataT, class CountT = size_t> struct DFG_CLA
     }
     void clear()
     {
-        *this = DFG_CLASS_NAME(MemFuncAvg)();
+        *this = MemFuncAvg();
     }
 
     static SumT privAverageValueForEmptyByHasNan(const std::true_type) { return std::numeric_limits<SumT>::quiet_NaN(); }
@@ -159,7 +159,7 @@ template <class DataT, class SumT = DataT, class CountT = size_t> struct DFG_CLA
     CountT callCount() const {return m_nCalls;}
 
 private:
-    DFG_CLASS_NAME(MemFuncSum)<DataT, SumT> m_mfSum;
+    MemFuncSum<DataT, SumT> m_mfSum;
     CountT m_nCalls;
 };
 

@@ -176,6 +176,8 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourAverages";
     //::testing::GTEST_FLAG(filter) = "dfgDataAnalysis.smoothWithNeighbourMedians";
     //::testing::GTEST_FLAG(filter) = "dfgDebug.SehExceptionHandler";
+    //::testing::GTEST_FLAG(filter) = "dfgFunc.MemFuncMedian";
+    //::testing::GTEST_FLAG(filter) = "dfgFunc.MemFuncPercentile_enclosingElem";
     //::testing::GTEST_FLAG(filter) = "dfgIo.areAsciiBytesValidContentInEncoding";
     //::testing::GTEST_FLAG(filter) = "dfgIo.baseCharacterSize";
     //::testing::GTEST_FLAG(filter) = "dfgIo.BasicIfStream";

@@ -4,6 +4,7 @@
 #include "../dfgBase.hpp"
 #include "../dfgAssert.hpp"
 #include "../numeric/average.hpp"
+#include "../numericTypeTools.hpp"
 #include "memFunc.hpp"
 #include <limits>
 #include <vector>
@@ -13,14 +14,22 @@
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
 
     // Functor that remembers the median of it's call parameters.
-    // TODO: test with integer Data_T.
-    template <class Data_T, class MedianVal_T = Data_T, class Cont_T = std::vector<Data_T>>
+    template <class Data_T,
+        class MedianVal_T = std::conditional_t<std::is_floating_point_v<Data_T>, Data_T, double>,
+        class Cont_T = std::vector<Data_T>>
     class MemFuncMedian
     {
     public:
         void operator()(const Data_T& val)
         {
+            DFG_STATIC_ASSERT(std::is_floating_point_v<MedianVal_T>, "MedianVal_T is expected to be floating point type");
+
             DFG_ASSERT_CORRECTNESS(m_contGreater.size() >= m_contSmaller.size() && m_contGreater.size() - m_contSmaller.size() <= 1);
+
+            // NaN's are ignored.
+            if (::DFG_MODULE_NS(math)::isNan(val))
+                return;
+
             if (m_contGreater.empty())
             {
                 DFG_ASSERT_CORRECTNESS(m_contSmaller.empty());
@@ -70,7 +79,6 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
 
 
     // MemFunc-version of percentileInSorted_enclosingElem, i.e. a functor that remembers "enclosingElem" percentile of it's call parameters.
-    // TODO: test with integer Data_T.
     template <class Data_T, class Percentile_T = Data_T, class Cont_T = std::vector<Data_T>>
     class MemFuncPercentile_enclosingElem
     {
@@ -84,6 +92,10 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
         {
             // Always keeping m_contSmaller and m_contGreater so that m_contGreater.top() is the result (if any items have been added)
             //      -As an exception case m_ratiotile >= 1 is treated differently: then the result with non-empty memory is always m_max.
+
+            // NaN's are ignored.
+            if (::DFG_MODULE_NS(math)::isNan(val))
+                return;
 
             const auto nOldN = (m_contSmaller.size() + m_contGreater.size());
             const auto nNewN = nOldN + 1u;
@@ -120,7 +132,12 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
         Percentile_T percentile() const
         {
             if (m_contGreater.empty())
-                return std::numeric_limits<Percentile_T>::quiet_NaN();
+            {
+                if constexpr (std::numeric_limits<Percentile_T>::has_quiet_NaN)
+                    return std::numeric_limits<Percentile_T>::quiet_NaN();
+                else
+                    return std::numeric_limits<Percentile_T>::lowest();
+            }
             else if (m_ratiotile >= 1)
                 return m_max.value();
             else
@@ -150,7 +167,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(func) {
         std::priority_queue<Data_T, Cont_T> m_contSmaller; // Top element is greatest
         std::priority_queue<Data_T, Cont_T, std::greater<Data_T>> m_contGreater; // Top element is smallest
         MemFuncMax<Data_T> m_max;
-    };
+    }; // class MemFuncPercentile_enclosingElem
 
 
 } } // Module namespace
