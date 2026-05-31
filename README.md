@@ -77,16 +77,16 @@ The library consists of miscellaneous features such as algorithms, containers, m
 
 ## Third party code
 
-Summary of 3rd party code in dfglib (last revised 2024-12-15).
+Summary of 3rd party code in dfglib (last revised 2026-05-31).
 
 | Library      | Usage      | License  | Comment |
 | ------------- | ------------- | ----- | ------- |
-| [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.70.0, 1.71.0, 1.74.0 and 1.83.0 |
+| [Boost](http://www.boost.org/)  | i,m,ti (used in numerous places)          | [Boost software license](http://www.boost.org/LICENSE_1_0.txt) | Exact requirement for Boost version is unknown; unit tests have been successfully build and run with Boost versions 1.70.0, 1.71.0, 1.74.0, 1.83.0 and 1.90.0 |
 | [Colour Rendering of Spectra](dfg/colour/specRendJw.cpp) | m (used in colour handling tools) | [Public domain](dfg/colour/specRendJw.cpp) | 
 | [cppcsv](https://github.com/paulharris/cppcsv) (commit [daa3d881](https://github.com/paulharris/cppcsv/tree/daa3d881d995b6695b84dde860126fa5f773de56/include/cppcsv), 2020-01-10) | c,t | [MIT](https://github.com/paulharris/cppcsv) | 
 | [dlib](http://dlib.net/)    | m (unit-aware integration) | [Boost software license](http://www.boost.org/LICENSE_1_0.txt)  |
 | [fast-csv-cpp-parser](https://github.com/ben-strasser/fast-cpp-csv-parser/) (commit [66365610](https://github.com/ben-strasser/fast-cpp-csv-parser/blob/66365610817b929b451819e0cccdb702d46a605e/csv.h), 2020-05-19) | c,t | [BSD-3](dfg/io/fast-cpp-csv-parser/csv.h) |
-| [fmtlib](https://github.com/fmtlib/fmt) (version 4.1.0 with an adjustment related to formatting doubles as string) | m (string formatting)| [BSD-2](dfg/str/fmtlib/format.h) |
+| [{fmt}](https://github.com/fmtlib/fmt) (version 12.1.0) | m (string formatting)| [MIT](https://github.com/fmtlib/fmt/blob/12.1.0/LICENSE) |
 | [GoogleTest](https://github.com/google/googletest) (version 1.11.0) | t | [BSD-3](externals/gtest/gtest.h) | Unit test framework used in both dfgTest and dfgTestQt.
 | [LibQxt](https://bitbucket.org/libqxt/libqxt/wiki/Home) | c,t (QxtSpanSlider) | [BSD-3](dfg/qt/qxt/core/qxtglobal.h) | Qt-related utilities
 | [muparser](https://github.com/beltoforion/muparser) (version 2.3.3, commit [5ccc8878](https://github.com/beltoforion/muparser/tree/5ccc887864381aeacf1277062fcbb76475623a02), 2022-01-13) with some edits | m (math::FormulaParser) | [BSD-2](dfg/math/muparser/muParser.h) | Formula parser. Namespace of the code has been edited from _mu_ to _dfg_mu_.

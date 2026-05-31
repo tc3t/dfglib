@@ -2,8 +2,14 @@
 
 #include "../dfgDefs.hpp"
 #include "../dfgBase.hpp" // For DFG_STRING_LITERAL_BY_CHARTYPE
+
+#ifndef FMT_UNICODE
+    #define FMT_UNICODE 0
+#endif
+
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include "fmtlib/format.h"
+    #include "fmtlib/xchar.h"
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
 #include "../ReadOnlySzParam.hpp"
 #include "../cont/elementType.hpp"
@@ -31,9 +37,9 @@ template <class Str_T, class ... Args_T>
 Str_T& formatAppend_fmt(Str_T& s, const StringViewSz<typename ::DFG_MODULE_NS(cont)::template ElementType<Str_T>::type>& sFormat, Args_T&&... t)
 {
     try {
-        s += ::fmt::format(sFormat.c_str(), DFG_DETAIL_NS::adjustFmtArg(t)...);
+        s += ::fmt::format(fmt::runtime(sFormat.c_str()), DFG_DETAIL_NS::adjustFmtArg(t)...);
     }
-    catch (const ::fmt::FormatError& formatError)
+    catch (const ::fmt::format_error& formatError)
     {
         using CharT = std::decay_t<decltype(*s.begin())>;
         if constexpr (std::is_same_v<CharT, char>)

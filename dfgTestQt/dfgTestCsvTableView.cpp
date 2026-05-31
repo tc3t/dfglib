@@ -1765,9 +1765,9 @@ TEST(dfgQt, CsvTableView_regexFormat)
 
         // With invalid format string should get unspecified error string (testing it to verify that implementation works as expected)
         tableWidget.applyRegexFormat(Param(StringUtf8(DFG_UTF8("(.*)")), StringUtf8(DFG_UTF8("{")), NonMatchBehaviour::clear));
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'missing '}' in format string'>", rModel.rawStringViewAt(0, 0));
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'missing '}' in format string'>", rModel.rawStringViewAt(1, 0));
-        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'missing '}' in format string'>", rModel.rawStringViewAt(2, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'invalid format string'>", rModel.rawStringViewAt(0, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'invalid format string'>", rModel.rawStringViewAt(1, 0));
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("<Format error with '{': 'invalid format string'>", rModel.rawStringViewAt(2, 0));
     }
 }
 

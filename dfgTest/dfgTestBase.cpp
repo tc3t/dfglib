@@ -1316,14 +1316,14 @@ TEST(dfgLog, basicFmtTests)
         {
             DFG_LOG_FMT_WARNING(logger, "abc{", "123");
             // Note: only tests implementation detail: content is unspecified if format-string is invalid
-            DFGTEST_EXPECT_LEFT("abcabc123<Format error with 'abc{': 'missing '}' in format string'>", s);
+            DFGTEST_EXPECT_LEFT("abcabc123<Format error with 'abc{': 'invalid format string'>", s);
             DFGTEST_EXPECT_LEFT(3, nLogCount); // This tests interface: even if format string is invalid, logger callback is expected to be called, message can be unspecified.
         }
 
         logger.setDefaultLevel(LoggingLevel::none);
         DFG_LOG_FMT_ERROR(logger, "abc");
         // Note: only tests implementation detail: content is unspecified if format-string is invalid
-        DFGTEST_EXPECT_LEFT("abcabc123<Format error with 'abc{': 'missing '}' in format string'>", s);
+        DFGTEST_EXPECT_LEFT("abcabc123<Format error with 'abc{': 'invalid format string'>", s);
         DFGTEST_EXPECT_LEFT(3, nLogCount);
     }
 }

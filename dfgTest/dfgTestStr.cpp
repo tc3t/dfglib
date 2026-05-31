@@ -22,6 +22,8 @@
     #include <regex>
 #endif // DFGTEST_ENABLE_BENCHMARKS == 1
 
+#include <clocale>
+
 TEST(dfgStr, strLen)
 {
     using namespace DFG_ROOT_NS;
@@ -1479,7 +1481,7 @@ TEST(dfgStr, format_fmt)
     EXPECT_EQ("12345678", format_fmt("{0}{1}{2}{3}{4}{5}{6}{7}", 1, 2, 3, 4, 5, 6, 7, 8));
     EXPECT_EQ("123456789", format_fmt("{0}{1}{2}{3}{4}{5}{6}{7}{8}", 1, 2, 3, 4, 5, 6, 7, 8, 9));
 
-    EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", float(123456789)), "1234567"));
+    EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", float(123456789)), "1.234567"));
     EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", double(123456789)), "123456789"));
     EXPECT_TRUE(DFG_MODULE_NS(str)::beginsWith(format_fmt("{0}", (long double)(123456789)), "123456789"));
 
@@ -1506,7 +1508,7 @@ TEST(dfgStr, format_fmt)
         {
             const auto s = format_fmtT<std::wstring>(L"{2}", 1);
             // Note: this tests implementation detail: content in case of invalid format string is unspecified
-            DFGTEST_EXPECT_LEFT(L"<Format error: 'argument index out of range'>", s);
+            DFGTEST_EXPECT_LEFT(L"<Format error: 'argument not found'>", s);
         }
     }
 }

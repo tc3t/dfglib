@@ -219,7 +219,7 @@ long DFG_MODULE_NS(debug)::structuredExceptionHandling::unhandledExceptionHandle
     }
     else
     {
-        auto sMsg = format_fmt("Failed to create crash dump, error code {}", rv);
+        const auto sMsg = format_fmt("Failed to create crash dump, error code {}", int(rv));
         ::MessageBoxA(NULL, sMsg.c_str(), "Crash dump creation failed", MB_OK);
         return EXCEPTION_CONTINUE_SEARCH; // Typically results to normal "Application has crashed"-notification from Windows.
     }

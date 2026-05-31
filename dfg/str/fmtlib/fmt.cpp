@@ -5,6 +5,10 @@
 
 #include "../../dfgDefs.hpp"
 
+#ifndef FMT_UNICODE
+    #define FMT_UNICODE 0
+#endif
+
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include "format.cc"
 DFG_END_INCLUDE_WITH_DISABLED_WARNINGS
