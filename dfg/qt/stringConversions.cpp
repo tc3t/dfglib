@@ -229,6 +229,8 @@ double tableCellStringToDouble(const StringViewSzUtf8& svUtf8,
             else
                 return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), QString("yyyy-MM-dd%1hh:mm:ss").arg(s[10])), ChartDataType::dateAndTime);
         }
+        else if (s.size() == 16 && s[13] == ':') // Case : "yyyy-MM-ddThh:mm"
+            return dateToDoubleAndColumnTypeHandling(QDateTime::fromString(viewToQString(s), QString("yyyy-MM-dd%1hh:mm").arg(s[10])), ChartDataType::dateAndTime);
         else if (s.size() == 13 && s[10] == ' ') // Case: "yyyy-MM-dd Wd". where Wd is two char weekday indicator.
         {
             auto sQstring = viewToQString(s);
