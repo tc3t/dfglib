@@ -126,6 +126,9 @@
 #define DFG_MSVC_VER_VC18_0    1950
 #define DFG_MSVC_VER_2026_0    DFG_MSVC_VER_VC18_0
 
+#define DFG_MSVC_VER_VC18_6    1951
+#define DFG_MSVC_VER_2026_6    DFG_MSVC_VER_VC18_6
+
 #if defined(_MSC_VER)
     #define DFG_MSVC_VER	_MSC_VER
 #else
