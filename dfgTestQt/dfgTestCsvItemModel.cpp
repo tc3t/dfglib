@@ -95,6 +95,28 @@ TEST(dfgQt, CsvItemModel)
     }
 }
 
+// Miscellaneous tests for both RFC4180 compliance and documented deviations.
+TEST(dfgQt, CsvItemModel_rfc4180_general)
+{
+    ::DFG_MODULE_NS(qt)::CsvItemModel model;
+    DFGTEST_ASSERT_TRUE(model.openFile("testfiles/test_rfc4180.csv"));
+
+    const auto nCol243 = model.findColumnIndexByName("2.4.3", model.getColumnCount());
+    const auto nCol252 = model.findColumnIndexByName("2.5.2", model.getColumnCount());
+
+    // Spaces are preserved
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8(" a ", model.rawStringViewAt(0, nCol243));
+
+    // CsvItemModel deviation:
+    // "If enclosing chars appear in field but field doesn't begin with such, enclosing
+    //  chars are treated as regular field content"
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8(" \"a\"b", model.rawStringViewAt(0, nCol252));
+
+    // CsvItemModel deviation:
+    // "Any trailing chars after enclosed field and before separator or new line are ignored."
+    DFGTEST_EXPECT_EQ_LITERAL_UTF8("a\"b", model.rawStringViewAt(1, nCol252));
+}
+
 TEST(dfgQt, CsvItemModel_removeRows)
 {
     ::DFG_MODULE_NS(qt)::CsvItemModel model;
