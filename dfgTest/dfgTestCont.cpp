@@ -828,6 +828,33 @@ namespace
 
 #if DFGTEST_ENABLE_BENCHMARKS == 1
 
+// Example output from commit 5d4839bda719972876afb86d468c338287dfac21 (2026-06-21) with ASAN disabled 
+/*
+    Note: Google Test filter = dfgCont.MapToStringViews_benchmarkInOrderInsertEmptyString
+    [==========] Running 1 test from 1 test suite.
+    [----------] Global test environment set-up.
+    [----------] 1 test from dfgCont
+    [ RUN      ] dfgCont.MapToStringViews_benchmarkInOrderInsertEmptyString
+        MESSAGE: Insert of 50000000 empty strings to std::vector<std::string> (not reserved) took 2.012 s, mem usage increased by 1.601 GB
+        MESSAGE: Insert of 50000000 empty strings to std::vector<std::string> (reserved) took 0.4762 s, mem usage increased by 1.6 GB
+        MESSAGE: Insert of 50000000 empty strings to std::vector<std::string> (reserved, single insert) took 0.3599 s, mem usage increased by 1.600 GB
+        MESSAGE: Insert of 50000000 empty strings to std::map<uint32, std::string> took 6.681 s, mem usage increased by 4.014 GB
+        MESSAGE: Insert of 50000000 empty strings to std::unordered_map<uint32, std::string> took 16.04 s, mem usage increased by 4.278 GB
+        MESSAGE: Insert of 50000000 empty strings to SetVector<std::string> (reserved) took 0.7853 s, mem usage increased by 4.096 kB
+        MESSAGE: Insert of 50000000 empty strings to MapVectorAoS<uint32, std::string> (reserved) took 0.6007 s, mem usage increased by 2 GB
+        MESSAGE: Insert of 50000000 empty strings to MapVectorSoA<uint32, std::string> (reserved) took 0.5932 s, mem usage increased by 1.800 GB
+        MESSAGE: Insert of 50000000 empty strings to MapToStringViews<uint32> (szSized) took 0.9969 s, mem usage increased by 802.8 MB
+        MESSAGE: Insert of 50000000 empty strings to MapToStringViews<uint32> (key storage reserve, szSized) took 0.5695 s, mem usage increased by 799.9 MB
+        MESSAGE: Insert of 50000000 empty strings to MapToStringViews<uint32> (key storage reserve, sizeAndNullTerminated) took 0.5581 s, mem usage increased by 1.199 GB
+    [       OK ] dfgCont.MapToStringViews_benchmarkInOrderInsertEmptyString (38294 ms)
+    [----------] 1 test from dfgCont (38295 ms total)
+
+    [----------] Global test environment tear-down
+    [==========] 1 test from 1 test suite ran. (38295 ms total)
+    [  PASSED  ] 1 test.
+    Done running tests build Jul  4 2026 on MSVC_2026.6 (195136247), C++23 (202302L), MSVC standard library ver 650, Intel x86-64,
+    build type = release, ASSERTs disabled, Boost version 1_70, Peak virtual memory usage 4.452 GB
+*/
 TEST(dfgCont, MapToStringViews_benchmarkInOrderInsertEmptyString)
 {
     using namespace DFG_ROOT_NS;
