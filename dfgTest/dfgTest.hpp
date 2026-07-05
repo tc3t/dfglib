@@ -196,6 +196,26 @@ namespace dfgtest
             << ", Boost version " << getBuildTimeDetailStr<BuildTimeDetail_boostVersion>();
             if (optVmPeak.has_value())
                 ostrm << ", Peak virtual memory usage " << ByteCountFormatter_metric(*optVmPeak);
+
+            // MSVC:
+            //      https://learn.microsoft.com/en-us/cpp/sanitizers/asan-building?view=msvc-170 (2026-07-04)
+            //          "The __SANITIZE_ADDRESS__ preprocessor macro is defined as 1 when /fsanitize=address is set"
+            // GCC:
+            //      https://gcc.gnu.org/onlinedocs/gcc-4.8.0/cpp/Common-Predefined-Macros.html (2026-07-04)
+            //          __SANITIZE_ADDRESS__
+            //               "This macro is defined, with value 1, when -fsanitize=address is in use."
+            //      https://gcc.gnu.org/onlinedocs/gcc-16.1.0/cpp/Common-Predefined-Macros.html (2026-07-04)
+            //          __SANITIZE_ADDRESS__
+            //                "This macro is defined, with value 1, when -fsanitize=address or -fsanitize=kernel-address are in use."
+			//  
+#if defined(_MSC_VER) || defined(__GNUG__)
+            ostrm << ", ASAN (address sanitizer): ";
+            #if defined(__SANITIZE_ADDRESS__) && (__SANITIZE_ADDRESS__ == 1)
+                ostrm << "enabled";
+            #else
+                ostrm << "disabled";
+            #endif
+#endif
             if (additionalPrinter)
                 additionalPrinter(ostrm);
             ostrm << "\n";
