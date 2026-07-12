@@ -44,7 +44,8 @@ enum BuildTimeDetail
     BuildTimeDetail_architecture,            // Build architecture
     BuildTimeDetail_endianness,              // Architecture endianess
     BuildTimeDetail_boostVersion,            // Boost version
-    BuildTimeDetail_qtVersion                // Qt (build time) version
+    BuildTimeDetail_qtVersion,               // Qt (build time) version
+    BuildTimeDetail_ASAN                     // Whether using ASAN (address sanitizer)
 };
 
 namespace DFG_DETAIL_NS
@@ -60,7 +61,8 @@ namespace DFG_DETAIL_NS
         "Architecture",
         "Endianness",
         "Boost version",
-        "Qt version (build time)"
+        "Qt version (build time)",
+        "ASAN"
     };
 } // namespace DFG_DETAIL_NS
 
@@ -151,6 +153,30 @@ DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(qtVersion)
 #endif
 }
 
+DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(ASAN)
+{
+    // MSVC:
+    //      https://learn.microsoft.com/en-us/cpp/sanitizers/asan-building?view=msvc-170 (2026-07-04)
+    //          "The __SANITIZE_ADDRESS__ preprocessor macro is defined as 1 when /fsanitize=address is set"
+    // GCC:
+    //      https://gcc.gnu.org/onlinedocs/gcc-4.8.0/cpp/Common-Predefined-Macros.html (2026-07-04)
+    //          __SANITIZE_ADDRESS__
+    //               "This macro is defined, with value 1, when -fsanitize=address is in use."
+    //      https://gcc.gnu.org/onlinedocs/gcc-16.1.0/cpp/Common-Predefined-Macros.html (2026-07-04)
+    //          __SANITIZE_ADDRESS__
+    //                "This macro is defined, with value 1, when -fsanitize=address or -fsanitize=kernel-address are in use."
+    //  
+#if defined(_MSC_VER) || defined(__GNUG__)
+    #if defined(__SANITIZE_ADDRESS__) && (__SANITIZE_ADDRESS__ == 1)
+        return "enabled";
+    #else
+        return "disabled";
+    #endif
+#else
+    return "unknown";
+#endif
+}
+
 DFG_TEMP_DEFINE_BUILD_TIME_DETAIL_FUNC(architecture)
 {
 #if (DFG_BUILD_OPT_USE_BOOST == 1)
@@ -201,6 +227,7 @@ inline void getBuildTimeDetailStrs(Func&& func)
     DFG_TEMP_DO_FOR_BUILD_DETAIL(endianness);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(boostVersion);
     DFG_TEMP_DO_FOR_BUILD_DETAIL(qtVersion);
+    DFG_TEMP_DO_FOR_BUILD_DETAIL(ASAN);
 #undef DFG_TEMP_DO_FOR_BUILD_DETAIL
 }
 

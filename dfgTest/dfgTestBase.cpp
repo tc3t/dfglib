@@ -1238,6 +1238,19 @@ TEST(dfgBuild, buildTimeDetails)
     #elif DFG_CPLUSPLUS == 201103L
         DFGTEST_EXPECT_STREQ("C++11 (201103L)", vals[BuildTimeDetail_cppStandardVersion]);
     #endif
+
+    // ASAN
+    {
+        #if defined(_MSC_VER) || defined(__GNUG__)
+            #if defined(__SANITIZE_ADDRESS__)
+			    DFGTEST_EXPECT_STREQ("enabled", vals[BuildTimeDetail_ASAN]);
+            #else
+    			DFGTEST_EXPECT_STREQ("disabled", vals[BuildTimeDetail_ASAN]);
+            #endif
+        #else
+            DFGTEST_EXPECT_STREQ("unknown", vals[BuildTimeDetail_ASAN]);
+        #endif
+    }
 }
 
 TEST(dfgBuild, DFG_STRING_LITERAL_TO_TYPED_LITERAL)
