@@ -220,5 +220,5 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::snapshotIdImpl() const ->
 void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::onModelChanged()
 {
     DFG_OPAQUE_REF().m_anChangeCounter++;
-    Q_EMIT sigChanged();
+    Q_EMIT sigChanged(DataSourceChangedParam());
 }

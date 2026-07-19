@@ -355,6 +355,12 @@ class GraphDataSourceSnapshotIdMap : public ::DFG_MODULE_NS(cont)::MapVectorSoA<
 }; // class GraphDataSourceSnapshotIdMap
 
 
+// Parameter for GraphDataSource::sigChanged() describing what has changed, can be used to optimize cache invalidation so that don't
+// need to e.g. invalidate all columns if only one column changes.
+// Note: using QVariantMap here for simplicity so don't need to handle class registration for signals & slots.
+using DataSourceChangedParam = QVariantMap;
+
+
 // Abstract class representing graph data source.
 class GraphDataSource : public QObject
 {
@@ -439,7 +445,7 @@ public:
     static double cellStringToDouble(const StringViewSzUtf8& sv, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap, StringToDoubleConverter customConverter = nullptr);
 
 signals:
-    void sigChanged(); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.
+    void sigChanged(DataSourceChangedParam); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.
 
 protected:
     void setAvailability(const bool bAvailable) { m_bIsAvailable = bAvailable; }

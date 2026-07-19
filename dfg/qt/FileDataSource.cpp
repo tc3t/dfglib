@@ -63,7 +63,7 @@ void ::DFG_MODULE_NS(qt)::FileDataSource::onFileChanged()
 {
     m_columnIndexToColumnName.clear_noDealloc();
     privUpdateStatusAndAvailability();
-    Q_EMIT sigChanged();
+    Q_EMIT sigChanged(DataSourceChangedParam());
 }
 
 auto ::DFG_MODULE_NS(qt)::FileDataSource::columnCount() const -> DataSourceIndex

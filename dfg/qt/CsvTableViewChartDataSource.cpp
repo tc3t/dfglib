@@ -491,7 +491,7 @@ void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::setChartDefinitionViewer(
 void ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::onSelectionAnalysisCompleted()
 {
     DFG_OPAQUE_REF().m_anChangeCounter++;
-    Q_EMIT sigChanged();
+    Q_EMIT sigChanged(DataSourceChangedParam());
 }
 
 bool ::DFG_MODULE_NS(qt)::CsvTableViewChartDataSource::isSafeToQueryDataFromThreadImpl(const QThread*) const

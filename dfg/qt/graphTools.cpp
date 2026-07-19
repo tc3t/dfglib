@@ -852,7 +852,7 @@ public:
     // CacheItem is volatile if it doesn't have mechanism to know when it's source has changed.
     bool isVolatileCache() const;
 
-    void onDataSourceChanged();
+    void onDataSourceChanged(DataSourceChangedParam param);
 
     void storeMetaData(DataSourceIndex nColumn, const std::optional<ColumnMetaData>& metaData);
 
@@ -917,8 +917,9 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::hasColumnIndex(const IndexT nCo
     return m_colToValuesMap.hasKey(nCol);
 }
 
-void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged()
+void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged(DataSourceChangedParam param)
 {
+    DFG_UNUSED(param);
     // Source has changes, simply marking cache as invalid so that it gets recreated.
     this->m_bIsValid = false;
 }
