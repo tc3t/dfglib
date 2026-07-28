@@ -357,8 +357,22 @@ class GraphDataSourceSnapshotIdMap : public ::DFG_MODULE_NS(cont)::MapVectorSoA<
 
 // Parameter for GraphDataSource::sigChanged() describing what has changed, can be used to optimize cache invalidation so that don't
 // need to e.g. invalidate all columns if only one column changes.
-// Note: using QVariantMap here for simplicity so don't need to handle class registration for signals & slots.
-using DataSourceChangedParam = QVariantMap;
+// The actual signal paramater type is QString to avoid issues with qRegisterMetaType().
+class DataSourceChangedParam
+{
+public:
+    using SignalParamT = QString;
+
+    static DataSourceChangedParam fromInvalidColumnRange(DataSourceIndex nLeft, DataSourceIndex nRight);
+    static DataSourceChangedParam fromSignalParam(const SignalParamT& param);
+
+    std::optional<std::pair<DataSourceIndex, DataSourceIndex>> getInvalidatedColumnRange() const;
+
+    SignalParamT toSignalParam() const;
+
+    DataSourceIndex m_nFirstInvalidColumn = 1;
+    DataSourceIndex m_nLastInvalidColumn = 0;
+};
 
 
 // Abstract class representing graph data source.
@@ -445,10 +459,16 @@ public:
     static double cellStringToDouble(const StringViewSzUtf8& sv, const DataSourceIndex nCol, ColumnDataTypeMap* pTypeMap, StringToDoubleConverter customConverter = nullptr);
 
 signals:
-    void sigChanged(DataSourceChangedParam); // If source support signaling (see hasChangeSignaling()), emitted when data has changed.
+    // If source support signaling (see hasChangeSignaling()), emitted when data has changed.
+    // Note: to emit the signal, use emitSigChanged() and for slots parameter type should be
+    //        DataSourceChangedParam::SignalParamT
+    void sigChanged(QString);
 
 protected:
     void setAvailability(const bool bAvailable) { m_bIsAvailable = bAvailable; }
+
+    // Helper for sending sigChanged()
+    void emitSigChanged(DataSourceChangedParam parma = DataSourceChangedParam());
 
 private:
     virtual String statusDescriptionImpl() const { return String(); }

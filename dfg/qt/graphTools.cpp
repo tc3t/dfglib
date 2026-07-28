@@ -489,6 +489,54 @@ auto DataSourceContainer::findById(const GraphDataSourceId& id) -> iterator
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //
+//   DataSourceChangedParam
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+DataSourceChangedParam DataSourceChangedParam::fromInvalidColumnRange(DataSourceIndex nLeft, DataSourceIndex nRight)
+{
+    DataSourceChangedParam param;
+    param.m_nFirstInvalidColumn = nLeft;
+    param.m_nLastInvalidColumn = nRight;
+    return param;
+}
+
+DataSourceChangedParam DataSourceChangedParam::fromSignalParam(const SignalParamT& sigParam)
+{
+    DataSourceChangedParam param;
+    const auto parts = sigParam.split(",");
+    if (parts.size() == 2)
+    {
+        bool bOk1 = false;
+        bool bOk2 = false;
+        const auto nLeft = parts[0].toInt(&bOk1);
+        const auto nRight = parts[1].toInt(&bOk2);
+        if (bOk1 && bOk2)
+        {
+            param.m_nFirstInvalidColumn = nLeft;
+            param.m_nLastInvalidColumn = nRight;
+        }
+    }
+    return param;
+}
+
+auto DataSourceChangedParam::getInvalidatedColumnRange() const ->std::optional<std::pair<DataSourceIndex, DataSourceIndex>>
+{
+    if (this->m_nFirstInvalidColumn <= this->m_nLastInvalidColumn)
+        return std::make_pair(this->m_nFirstInvalidColumn, this->m_nLastInvalidColumn);
+    else
+        return std::nullopt;
+}
+
+auto DataSourceChangedParam::toSignalParam() const -> SignalParamT
+{
+    return QString("%1,%2").arg(this->m_nFirstInvalidColumn).arg(this->m_nLastInvalidColumn);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//
 //   GraphDataSource
 //
 //
@@ -556,6 +604,11 @@ bool ::DFG_MODULE_NS(qt)::GraphDataSource::isSafeToQueryDataFromCallingThread() 
 bool ::DFG_MODULE_NS(qt)::GraphDataSource::isSafeToQueryDataFromThreadImpl(const QThread* pThread) const
 {
     return this->thread() == pThread;
+}
+
+void ::DFG_MODULE_NS(qt)::GraphDataSource::emitSigChanged(DataSourceChangedParam param)
+{
+    Q_EMIT sigChanged(param.toSignalParam());
 }
 
 void ::DFG_MODULE_NS(qt)::GraphDataSource::fetchColumnNumberData(GraphDataSourceDataPipe& pipe, const DataSourceIndex nColumn, const DataQueryDetails& queryDetails)
@@ -852,7 +905,7 @@ public:
     // CacheItem is volatile if it doesn't have mechanism to know when it's source has changed.
     bool isVolatileCache() const;
 
-    void onDataSourceChanged(DataSourceChangedParam param);
+    void onDataSourceChanged(DataSourceChangedParam::SignalParamT param);
 
     void storeMetaData(DataSourceIndex nColumn, const std::optional<ColumnMetaData>& metaData);
 
@@ -917,11 +970,22 @@ bool DFG_MODULE_NS(qt)::TableSelectionCacheItem::hasColumnIndex(const IndexT nCo
     return m_colToValuesMap.hasKey(nCol);
 }
 
-void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged(DataSourceChangedParam param)
+void DFG_MODULE_NS(qt)::TableSelectionCacheItem::onDataSourceChanged(DataSourceChangedParam::SignalParamT param)
 {
-    DFG_UNUSED(param);
-    // Source has changes, simply marking cache as invalid so that it gets recreated.
-    this->m_bIsValid = false;
+    const auto dscp = DataSourceChangedParam::fromSignalParam(param);
+    const auto invalidatedColRangeOpt = dscp.getInvalidatedColumnRange();
+    if (invalidatedColRangeOpt)
+    {
+        // If invalidating range of columns, only removing invalidated columns from cache.
+        for (auto i = invalidatedColRangeOpt->first; i <= invalidatedColRangeOpt->second; ++i)
+        {
+            this->m_colToStringsMap.erase(i);
+            this->m_colToValuesMap.erase(i);
+            this->m_columnMetaDatas.erase(i);
+        }
+    }
+    else // Case: unknown changes happened to source, marking whole cache invalid so that it gets recreated.
+        this->m_bIsValid = false;
 }
 
 ::DFG_MODULE_NS(qt)::GraphDataSourceDataPipe_MapVectorSoADoubleValueVector::GraphDataSourceDataPipe_MapVectorSoADoubleValueVector(TableSelectionCacheItem::RowToValueMap* p)
@@ -1081,8 +1145,7 @@ auto DFG_MODULE_NS(qt)::TableSelectionCacheItem::releaseOrCopy(const RowToValueM
         if (iterMetaData != this->m_columnMetaDatas.end() && iterMetaData->second.efficientlyFetchable())
         {
             // If source has informed that column is efficiently fetchable (e.g. cheap to regenerate or cached already in source), always releasing the content.
-            // This effetively means that TableSelectionCacheItem does not cache this column and acts merely as proxy a interface for querying the data.
-            // Note that since validity flag is object-wide, cache doesn't support column-specific invalidation.
+            // This effetively means that TableSelectionCacheItem does not cache this column and acts merely as a proxy interface for querying the data.
             this->m_bIsValid = false; // Data gets moved out so marking this cache item invalid.
             return std::move(iter->second);
         }

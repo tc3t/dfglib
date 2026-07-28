@@ -64,7 +64,10 @@ private:
     std::optional<GraphDataSourceSnapshotId> snapshotIdImpl() const override;
     // End implementation overloads <--
 
-    void onModelChanged();
+    void onModelChanged_generic();
+    void onModelChanged_tableContent(const QModelIndex& topLeft,
+        const QModelIndex& bottomRight,
+        const QVector<int>& roles = QVector<int>());
 
 public:
     QPointer<const CsvItemModel> m_spModel;

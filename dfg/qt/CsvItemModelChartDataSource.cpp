@@ -32,17 +32,18 @@ DFG_OPAQUE_PTR_DEFINE(DFG_MODULE_NS(qt)::CsvItemModelChartDataSource)
 
 void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::setChangeSignaling(const bool bEnable)
 {
-    const auto changeHandler = &CsvItemModelChartDataSource::onModelChanged;
+    const auto changeHandler = &CsvItemModelChartDataSource::onModelChanged_generic;
+    const auto changeHandler_tableContent = &CsvItemModelChartDataSource::onModelChanged_tableContent;
     if (bEnable)
     {
-        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, changeHandler));
+        DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::dataChanged, this, changeHandler_tableContent));
         DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::headerDataChanged, this, changeHandler));
         DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::modelReset, this, changeHandler));
         DFG_QT_VERIFY_CONNECT(connect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, changeHandler));
     }
     else
     {
-        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::dataChanged, this, changeHandler));
+        DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::dataChanged, this, changeHandler_tableContent));
         DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::headerDataChanged, this, changeHandler));
         DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::modelReset, this, changeHandler));
         DFG_VERIFY(disconnect(m_spModel.data(), &CsvItemModel::sigColumnNumberDataInterpretationChanged, this, changeHandler));
@@ -217,8 +218,23 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::snapshotIdImpl() const ->
     return (DFG_OPAQUE_PTR()) ? SnapshotId(DFG_OPAQUE_PTR()->m_anChangeCounter) : std::optional<SnapshotId>(std::nullopt);
 }
 
-void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::onModelChanged()
+void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::onModelChanged_generic()
 {
     DFG_OPAQUE_REF().m_anChangeCounter++;
-    Q_EMIT sigChanged(DataSourceChangedParam());
+    emitSigChanged();
+}
+
+void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::onModelChanged_tableContent(const QModelIndex& topLeft,
+    const QModelIndex& bottomRight,
+    const QVector<int>& roles)
+{
+    DFG_OPAQUE_REF().m_anChangeCounter++;
+    if (roles.empty() || roles.contains(Qt::EditRole))
+    {
+        const auto nLeftCol = static_cast<DataSourceIndex>(topLeft.column());
+        const auto nRightCol = static_cast<DataSourceIndex>(bottomRight.column());
+        emitSigChanged(DataSourceChangedParam::fromInvalidColumnRange(nLeftCol, nRightCol));
+    }
+	else // Case: don't know what changed, signaling that all columns may have changed.
+        emitSigChanged();
 }
