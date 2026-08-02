@@ -2,6 +2,7 @@
 
 #include "../dfgDefs.hpp"
 #include "qtIncludeHelpers.hpp"
+#include "../dfgAssert.hpp"
 #include "../build/languageFeatureInfo.hpp"
 
 DFG_BEGIN_INCLUDE_QT_HEADERS
@@ -12,6 +13,7 @@ DFG_END_INCLUDE_QT_HEADERS
 
 #include <memory>
 #include <cstddef>
+#include <utility>
 
 DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 {
@@ -116,8 +118,12 @@ private:
 class LockReleaser
 {
 public:
-    LockReleaser(QReadWriteLock* pLock = nullptr) : m_pLock(pLock) {}
-    LockReleaser(LockReleaser&& other) noexcept : m_pLock(other.m_pLock) { other.m_pLock = nullptr; }
+    // Takes locks to release, if both are provided, secondary lock is released first
+    // Note: All given non-null locks must be holding a lock.
+    // Note: If secondary lock is provided, then also first must be provided.
+    LockReleaser(QReadWriteLock* pBaseLock = nullptr, QReadWriteLock* pSecondaryLock = nullptr);
+
+    LockReleaser(LockReleaser&& other) noexcept;
     ~LockReleaser();
     LockReleaser(const LockReleaser&) = delete;
     LockReleaser& operator=(LockReleaser&& other) noexcept;
@@ -126,26 +132,47 @@ public:
     void unlock();
 
     QReadWriteLock* m_pLock;
+    QReadWriteLock* m_pLockSecondary;
 }; // class LockReleaser
+
+inline LockReleaser::LockReleaser(QReadWriteLock* pBaseLock, QReadWriteLock* pSecondaryLock)
+    : m_pLock(pBaseLock)
+    , m_pLockSecondary(pSecondaryLock)
+{
+    DFG_ASSERT_CORRECTNESS(m_pLock != nullptr || m_pLockSecondary == nullptr);
+}
+
+inline LockReleaser::LockReleaser(LockReleaser&& other) noexcept
+    : m_pLock(other.m_pLock)
+    , m_pLockSecondary(other.m_pLockSecondary)
+{
+    other.m_pLock = nullptr;
+    other.m_pLockSecondary = nullptr;
+}
 
 inline LockReleaser::~LockReleaser()
 {
-    if (m_pLock)
-        m_pLock->unlock();
+    this->unlock();
 }
 
 inline auto LockReleaser::operator=(LockReleaser&& other) noexcept -> LockReleaser&
 {
-    if (this->m_pLock)
-        this->m_pLock->unlock();
-    this->m_pLock = other.m_pLock;
-    other.m_pLock = nullptr;
+    if (this == &other) // Self-assignment check
+        return *this;
+    this->unlock();
+    this->m_pLock = std::exchange(other.m_pLock, nullptr);
+    this->m_pLockSecondary = std::exchange(other.m_pLockSecondary, nullptr);
     return *this;
 }
 
 inline void LockReleaser::unlock()
 {
-    *this = LockReleaser();
+    if (m_pLockSecondary)
+        m_pLockSecondary->unlock();
+    if (m_pLock)
+        m_pLock->unlock();
+    m_pLockSecondary = nullptr;
+    m_pLock = nullptr;
 }
 
 }} // Module namespace

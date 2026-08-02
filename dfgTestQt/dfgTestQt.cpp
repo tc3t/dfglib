@@ -73,7 +73,7 @@ namespace
     };
 }
 
-TEST(dfgQt, QObjectStorage)
+TEST(dfgQtContUtil, QObjectStorage)
 {
     // Testing moving of QObject storages
     {
@@ -94,6 +94,82 @@ TEST(dfgQt, QObjectStorage)
     // Testing actual class that has std::vector<QObjectStorage<T>> as member.
     {
         QObjectStorageTestWidget widgetTest;
+    }
+}
+
+TEST(dfgQtContUtil, LockReleaser)
+{
+    using LockReleaser = ::DFG_MODULE_NS(qt)::LockReleaser;
+    // Single lock
+    {
+        QReadWriteLock lock1;
+        lock1.lockForWrite();
+        LockReleaser releaser(&lock1);
+        DFGTEST_EXPECT_TRUE(releaser.isLocked());
+        DFGTEST_EXPECT_FALSE(lock1.tryLockForWrite());
+        releaser.unlock();
+        DFGTEST_EXPECT_FALSE(releaser.isLocked());
+        DFGTEST_EXPECT_TRUE(lock1.tryLockForWrite());
+        lock1.unlock();
+    }
+
+    // Two locks
+    {
+        QReadWriteLock lock1;
+        QReadWriteLock lock2;
+        lock1.lockForRead();
+        lock2.lockForWrite();
+        LockReleaser releaser(&lock1, &lock2);
+        DFGTEST_EXPECT_TRUE(releaser.isLocked());
+        DFGTEST_EXPECT_TRUE(lock1.tryLockForRead());
+        DFGTEST_EXPECT_FALSE(lock1.tryLockForWrite());
+        DFGTEST_EXPECT_FALSE(lock2.tryLockForWrite());
+        releaser.unlock();
+        DFGTEST_EXPECT_FALSE(releaser.isLocked());
+        DFGTEST_EXPECT_FALSE(lock1.tryLockForWrite());
+        lock1.unlock();
+        DFGTEST_EXPECT_TRUE(lock1.tryLockForWrite());
+        lock1.unlock();
+    }
+
+    // Move constructor
+    {
+        QReadWriteLock lock1;
+        lock1.lockForRead();
+        LockReleaser r1(&lock1);
+        LockReleaser r2(std::move(r1));
+        DFGTEST_EXPECT_FALSE(r1.isLocked());
+        DFGTEST_EXPECT_TRUE(r2.isLocked());
+        DFGTEST_EXPECT_FALSE(lock1.tryLockForWrite());
+        r2.unlock();
+        DFGTEST_EXPECT_FALSE(r2.isLocked());
+        DFGTEST_EXPECT_TRUE(lock1.tryLockForWrite());
+        lock1.unlock();
+    }
+
+    // Move assignment
+    {
+        QReadWriteLock lock1;
+        lock1.lockForRead();
+        LockReleaser r1(&lock1);
+        LockReleaser r2;
+        r2 = std::move(r1);
+        DFGTEST_EXPECT_FALSE(r1.isLocked());
+        DFGTEST_EXPECT_TRUE(r2.isLocked());
+        DFGTEST_EXPECT_FALSE(lock1.tryLockForWrite());
+        r2.unlock();
+        DFGTEST_EXPECT_FALSE(r2.isLocked());
+        DFGTEST_EXPECT_TRUE(lock1.tryLockForWrite());
+        lock1.unlock();
+    }
+
+    // Self move-assignment
+    {
+        QReadWriteLock lock1;
+        lock1.lockForWrite();
+        LockReleaser releaser(&lock1);
+        releaser = std::move(releaser);
+        DFGTEST_EXPECT_TRUE(releaser.isLocked());
     }
 }
 

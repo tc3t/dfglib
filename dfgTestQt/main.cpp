@@ -124,6 +124,10 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_setSelectedIndexes";
     //::testing::GTEST_FLAG(filter) = "dfgQt.TableView_moveCursor";
 
+    // Container utils
+    //::testing::GTEST_FLAG(filter) = "dfgQtContUtil.QObjectStorage";
+    //::testing::GTEST_FLAG(filter) = "dfgQtContUtil.LockReleaser";
+
     const auto rv = RUN_ALL_TESTS();
     {
         using namespace ::DFG_ROOT_NS;
