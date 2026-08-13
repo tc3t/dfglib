@@ -819,6 +819,7 @@ CsvTableView::CsvTableView(std::shared_ptr<QReadWriteLock> spReadWriteLock, QWid
     m_spEditLock = std::move(spReadWriteLock);
     if (!m_spEditLock)
         m_spEditLock = std::make_shared<QReadWriteLock>(QReadWriteLock::Recursive);
+    m_spViewModelLock = std::make_shared<QReadWriteLock>(QReadWriteLock::Recursive);
     this->setItemDelegate(new CsvTableViewDelegate(this));
 
     this->setHorizontalHeader(new TableHeaderView(this));
@@ -5722,19 +5723,39 @@ void CsvTableView::privShowExecutionBlockedNotification(const QString& actionnam
     showStatusInfoTip(privCreateActionBlockedDueToLockedContentMessage(actionname));
 }
 
+template <class DataLocker_T, class ViewLocker_T>
+auto CsvTableView::tryLockImpl(DataLocker_T dataLocker, ViewLocker_T viewLocker) const -> LockReleaser
+{
+    if (!m_spEditLock || !m_spViewModelLock || !std::invoke(dataLocker, *m_spEditLock))
+        return LockReleaser();
+    if (std::invoke(viewLocker, *m_spViewModelLock))
+        return LockReleaser(m_spEditLock.get(), m_spViewModelLock.get());
+    m_spEditLock->unlock();
+    return LockReleaser();
+}
+
 auto CsvTableView::tryLockForEdit() const -> LockReleaser
 {
-    return (m_spEditLock && m_spEditLock->tryLockForWrite()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
+    return this->tryLockImpl(
+        [](QReadWriteLock& rDataLock) { return rDataLock.tryLockForWrite(); },
+        [](QReadWriteLock& rViewLock)  { return rViewLock.tryLockForWrite(); }
+    );
 }
 
 auto CsvTableView::tryLockForEditViewModel() const -> LockReleaser
 {
-    return tryLockForEdit();
+    return tryLockImpl(
+        [](QReadWriteLock& rDataLock) { return rDataLock.tryLockForRead(); },
+        [](QReadWriteLock& rViewLock)  { return rViewLock.tryLockForWrite(); }
+    );
 }
 
 auto CsvTableView::tryLockForRead() const -> LockReleaser
 {
-    return (m_spEditLock && m_spEditLock->tryLockForRead()) ? LockReleaser(m_spEditLock.get()) : LockReleaser();
+    return tryLockImpl(
+        [](QReadWriteLock& rDataLock) { return rDataLock.tryLockForRead(); },
+        [](QReadWriteLock& rViewLock)  { return rViewLock.tryLockForRead(); }
+    );
 }
 
 auto CsvTableView::horizontalTableHeader() -> TableHeaderView*
@@ -5895,7 +5916,9 @@ QVariant CsvTableView::getColumnPropertyByDataModelIndexImpl(int nDataModelCol, 
         // If acquiring read lock failed, trying write lock. This may succeed since CsvTableView may already be holding
         // write lock and recursive QReadWriteLock only allows multiple locks of the same type in the same thread.
         // Fixes #151 ('editing filter unhides hidden columns') on Qt 5
-        lockReleaser = tryLockForEditViewModel();
+        lockReleaser = tryLockForEdit();
+        if (!lockReleaser.isLocked())
+            lockReleaser = tryLockForEditViewModel();
     }
     if (!lockReleaser.isLocked())
     {
@@ -5955,13 +5978,17 @@ bool CsvTableView::isColumnVisible(const ColumnIndex_data nCol) const
     return getColumnPropertyByDataModelIndex(nCol.value(), ColumnPropertyId::visible, true).toBool();
 }
 
-void CsvTableView::invalidateSortFilterProxyModel()
+void CsvTableView::invalidateSortFilterProxyModel(LockReleaser& rExistingLock)
 {
-    auto lockReleaser = tryLockForEditViewModel();
-    if (!lockReleaser.isLocked())
+    LockReleaser lockReleaser;
+    if (!rExistingLock.isLocked())
     {
-        QTimer::singleShot(10, this, [this]() { this->invalidateSortFilterProxyModel(); });
-        return;
+        lockReleaser = tryLockForEditViewModel();
+        if (!lockReleaser.isLocked())
+        {
+            QTimer::singleShot(10, this, [this]() { this->invalidateSortFilterProxyModel(); });
+            return;
+        }
     }
     auto pProxyModel = qobject_cast<QSortFilterProxyModel*>(getProxyModelPtr());
     if (pProxyModel)
@@ -5986,7 +6013,7 @@ void CsvTableView::setColumnVisibility(const int nCol, const bool bVisible, cons
         return;
 
     if (pColInfo->setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, bVisible) && proxyInvalidation == ProxyModelInvalidation::ifNeeded)
-        invalidateSortFilterProxyModel();
+        invalidateSortFilterProxyModel(lockReleaser);
 }
 
 auto CsvTableView::getCellEditability(const RowIndex_data nRow, const ColumnIndex_data nCol) const -> CellEditability
@@ -6059,7 +6086,7 @@ void CsvTableView::unhideAllColumns()
             colInfo.setProperty(viewPropertyContextId(*this), ColumnPropertyId::visible, true);
         return true;
     });
-    invalidateSortFilterProxyModel();
+    invalidateSortFilterProxyModel(lockReleaser);
 }
 
 void CsvTableView::showSelectColumnVisibilityDialog()
@@ -6117,7 +6144,7 @@ void CsvTableView::showSelectColumnVisibilityDialog()
     {
         this->setColumnVisibility(c, visibilityFlags[c], ProxyModelInvalidation::no);
     }
-    invalidateSortFilterProxyModel();
+    invalidateSortFilterProxyModel(lockReleaser);
 }
 
 void CsvTableView::privOnCellDelegateTextChanged(const QModelIndex idxDataModel, const QString sNewText)
@@ -6449,15 +6476,15 @@ void CsvTableViewSelectionAnalyzer::addSelectionToQueueImpl(QItemSelection selec
 
 void CsvTableViewSelectionAnalyzer::onCheckAnalyzeQueue()
 {
-    QMutexLocker locker(m_spMutexAnalyzeQueue.get());
+    QMutexLocker lockerQueue(m_spMutexAnalyzeQueue.get());
     if (!m_analyzeQueue.empty())
     {
         
         // Try to lock readwrite lock, if fails, it means that someone might be editing the model so analyzers should not read the model at the same time.
         auto pView = qobject_cast<CsvTableView*>(m_spView.data());
-        auto lockReleaser = (pView) ? pView->tryLockForRead() : LockReleaser();
+        auto lockReleaserView = (pView) ? pView->tryLockForRead() : LockReleaser();
         
-        if (pView && !lockReleaser.isLocked())
+        if (pView && !lockReleaserView.isLocked())
         {
             // Ending up here means that couldn't acquire read lock, e.g. because table is being edited. Scheduling a new try in 100 ms.
             QTimer::singleShot(100, this, SLOT(onCheckAnalyzeQueue()));
@@ -6468,7 +6495,7 @@ void CsvTableViewSelectionAnalyzer::onCheckAnalyzeQueue()
         m_abNewSelectionPending = false;
         m_analyzeQueue.pop_back();
         m_bPendingCheckQueue = false;
-        locker.unlock(); // We're done with retrieving new selection -> release mutex.
+        lockerQueue.unlock(); // We're done with retrieving new selection -> releasing queue mutex.
         analyzeImpl(selection);
     }
 }

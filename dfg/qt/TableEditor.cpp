@@ -1614,7 +1614,7 @@ void TableEditor::onFilterTextChanged(const QString& text)
     if (!pProxy || !m_spFilterPanel)
         return;
 
-    auto lockReleaser = m_spTableView->tryLockForEdit();
+    auto lockReleaser = m_spTableView->tryLockForEditViewModel();
     if (!lockReleaser.isLocked())
     {
         // Couldn't acquire lock. Scheduling a new try in 200 ms.

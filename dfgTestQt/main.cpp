@@ -96,6 +96,7 @@ int main(int argc, char **argv)
     // CsvTableView
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_clear";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_columnIndexMappingWithEmptyFilteredTable";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_columnIndexMappingWithHiddenColumns";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_defaultMaximumRowCount";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_evaluateSelectionAsFormula_precision";

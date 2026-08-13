@@ -186,6 +186,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Implementation must be thread safe and must not block calling thread e.g. by starting new analysis on the calling thread.
         virtual void addSelectionToQueueImpl(QItemSelection selection);
 
+        // Called by base class guaranteeing that read lock for CsvTableView is being held.
         virtual void analyzeImpl(QItemSelection selection) = 0;
     }; // CsvTableViewSelectionAnalyzer
 
@@ -533,9 +534,11 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         // Returns selection of data model items, see also getSelectedItemIndexes_dataModel()
         ItemSelection getSelection_dataModel() const;
 
-        DFG_NODISCARD LockReleaser tryLockForEdit() const;          // Note: edits include both content edit and view edits such as changing filter.
-        DFG_NODISCARD LockReleaser tryLockForEditViewModel() const; // Currently functionally equivalent to tryLockForEdit(), but can be used as a placeholder
-                                                                    // to express the intent better guaranteeing that operation does not modify data model.
+        // Tries to take lock for both view and data models (view edits include e.g. filter changes)
+        DFG_NODISCARD LockReleaser tryLockForEdit() const;
+        // Tries to take edit lock for view model, read lock for data model.
+        DFG_NODISCARD LockReleaser tryLockForEditViewModel() const;
+        // Tries to take read lock for both view and data models.
         DFG_NODISCARD LockReleaser tryLockForRead() const;
 
               TableHeaderView* horizontalTableHeader();
@@ -578,7 +581,8 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         QVariant getColumnPropertyByDataModelIndex(int nDataModelCol, const StringViewUtf8& svKey, QVariant defaultValue = QVariant()) const;
         QVariant getColumnPropertyByDataModelIndex(int nDataModelCol, const CsvItemModelColumnProperty propertyId, QVariant defaultValue = QVariant()) const;
 
-        void invalidateSortFilterProxyModel();
+        void invalidateSortFilterProxyModel() { LockReleaser dummy; invalidateSortFilterProxyModel(dummy); }
+        void invalidateSortFilterProxyModel(LockReleaser& rExistingLock);
 
         enum class CellEditability { editable, blocked_columnReadOnly, blocked_tableReadOnly, blocked_cellReadOnly, blocked_unspecified };
         CellEditability getCellEditability(RowIndex_data nRow, ColumnIndex_data nCol) const;
@@ -827,6 +831,9 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
 
         std::optional<int> targetCellOnCtrlArrowImpl(const TargetCellOnCtrlArrowParam& param) override;
 
+        template <class DataLocker_T, class ViewLocker_T>
+        LockReleaser tryLockImpl(DataLocker_T dataLocker, ViewLocker_T viewLocker) const;
+
     public:
         std::unique_ptr<DFG_MODULE_NS(cont)::TorRef<QUndoStack>> m_spUndoStack;
         QStringList m_tempFilePathsToRemoveOnExit;
@@ -838,6 +845,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
         bool m_bUndoEnabled;
         std::vector<QObjectStorage<QThread>> m_analyzerThreads;
         mutable std::shared_ptr<QReadWriteLock> m_spEditLock; // For controlling when table can be edited.
+        mutable std::shared_ptr<QReadWriteLock> m_spViewModelLock; // For controlling when view model can be edited.
         DFG_OPAQUE_PTR_DECLARE();
     }; // class CsvTableView
 

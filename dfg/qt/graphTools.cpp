@@ -3083,6 +3083,10 @@ auto ::DFG_MODULE_NS(qt)::GraphControlAndDisplayWidget::prepareDataForBars(std::
 {
     using namespace ::DFG_MODULE_NS(charts);
 
+    // Note: this is not a particularly good solution: some source like CsvItemModel source maybe essentially be
+    //       temporarily unavailable if they fail to acquire lock for reading. If that happens, columnCount()
+    //       return 0 and in this context is indistinguishable from empty source -> kind of "silent" failure
+    //       where data is not shown but no indication for user why exactly when table source is clearly not empty.
     const auto nColumnCount = source.columnCount();
     if (nColumnCount < 1)
         return ChartData();
