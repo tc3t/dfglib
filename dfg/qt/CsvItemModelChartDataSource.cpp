@@ -174,6 +174,14 @@ auto ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::columnIndexByName(const S
 bool ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::enable(const bool b)
 {
     setChangeSignaling(b);
+    if (b)
+    {
+        // If enabling, sending changed-signal just in case CsvItemModel has changed during disable-time when
+        // not receiving change-signals from the model.
+        // This is coarse-grained: may cause redudant cache invalidation if nothing had changed during
+        // disable-time.
+        onModelChanged_generic();
+    }
     return b;
 }
 
@@ -228,13 +236,13 @@ void ::DFG_MODULE_NS(qt)::CsvItemModelChartDataSource::onModelChanged_tableConte
     const QModelIndex& bottomRight,
     const QVector<int>& roles)
 {
-    DFG_OPAQUE_REF().m_anChangeCounter++;
     if (roles.empty() || roles.contains(Qt::EditRole))
     {
+        DFG_OPAQUE_REF().m_anChangeCounter++;
         const auto nLeftCol = static_cast<DataSourceIndex>(topLeft.column());
         const auto nRightCol = static_cast<DataSourceIndex>(bottomRight.column());
         emitSigChanged(DataSourceChangedParam::fromInvalidColumnRange(nLeftCol, nRightCol));
     }
-	else // Case: don't know what changed, signaling that all columns may have changed.
-        emitSigChanged();
+    else // Case: don't know what changed, treating as generic change.
+        onModelChanged_generic();
 }
