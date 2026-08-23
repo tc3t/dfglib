@@ -1726,6 +1726,40 @@ void CsvItemModel::setDataByBatch_noUndoImpl(const RawDataTable& table, Setter_T
     if (intervalsByColumn.empty())
         return; // Nothing was changed.
 
+    // Checking for simple rectangle removal to reduce number of dataChanged-signals.
+    // Without this removing e.g. a row would trigger dataChanged for each column, but with this.
+    // need only one signal.
+    if (intervalsByColumn.frontKey() + intervalsByColumn.size() - 1 == intervalsByColumn.backKey() &&
+        !intervalsByColumn.frontValue().empty())
+    {
+        // Have simple contiguous horizontal selection, checking if it's simple also by rows
+        const auto& frontColIntervals = intervalsByColumn.frontValue();
+        const auto frontColTop = frontColIntervals.minElement();
+        const auto frontColBottom = frontColIntervals.maxElement();
+        const auto nRectRowCount = frontColIntervals.sizeOfSet();
+        if (frontColBottom - frontColTop + 1 == nRectRowCount)
+        {
+            // Have simple contiguous vertical selection, checking if it's simple also by columns
+            bool bIsSimpleRectangle = true;
+            for (const auto& kv : intervalsByColumn)
+            {
+                const auto& colIntervals = kv.second;
+                if (colIntervals.minElement() != frontColTop ||
+                    colIntervals.maxElement() != frontColBottom ||
+                    colIntervals.sizeOfSet() != nRectRowCount)
+                {
+                    bIsSimpleRectangle = false;
+                    break;
+                }
+            }
+            if (bIsSimpleRectangle)
+            {
+                Q_EMIT dataChanged(this->index(frontColTop, intervalsByColumn.frontKey()), this->index(frontColBottom, intervalsByColumn.backKey()));
+                return;
+            }
+        }
+    }
+
     // Now sending dataChanged-signal for each change block
     for (const auto& kv : intervalsByColumn)
     {
@@ -2621,6 +2655,11 @@ namespace DFG_DETAIL_NS
     void CsvItemModelTable::setElement(Index nRow, Index nCol, StringViewUtf8 sv)
     {
         impl().setElement(nRow, nCol, sv);
+    }
+
+    void CsvItemModelTable::clearCell(const Index nRow, const Index nCol)
+    {
+        impl().clearCell(nRow, nCol);
     }
 
     void CsvItemModelTable::forEachFwdRowInColumnWhile(Index nCol, std::function<bool (Index)> whileFunc, std::function<void (Index, SzPtrUtf8R)> func) const

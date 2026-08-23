@@ -92,6 +92,7 @@ int main(int argc, char **argv)
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_QAbstractItemModelTester";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_readFormatUsageOnWrite";
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_rfc4180_general";
+    //::testing::GTEST_FLAG(filter) = "dfgQt.CsvItemModel_setDataByBatch_noUndo_signalling";
 
     // CsvTableView
     //::testing::GTEST_FLAG(filter) = "dfgQt.CsvTableView_clear";

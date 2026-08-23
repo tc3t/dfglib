@@ -11,6 +11,7 @@
 #include <dfg/charts/commonChartTools.hpp>
 #include "../dfgTest/dfgTest.hpp"
 #include "dfgTestQt_gtestPrinters.hpp"
+#include <dfg/str/format_fmt.hpp>
 
 DFG_BEGIN_INCLUDE_WITH_DISABLED_WARNINGS
     #include <gtest/gtest.h>
@@ -638,4 +639,85 @@ TEST(dfgQt, CsvItemModel_defaultColumnName)
     DFGTEST_EXPECT_LEFT("4", getColDisplayName(3));
     model.setColumnName(1, QString());
     DFGTEST_EXPECT_LEFT("2", getColDisplayName(1));
+}
+
+TEST(dfgQt, CsvItemModel_setDataByBatch_noUndo_signalling)
+{
+    // Tests that setDataByBatch_noUndoImp() sends expected number of dataChanged -signals
+    using namespace DFG_ROOT_NS;
+    using namespace DFG_MODULE_NS(qt);
+
+    constexpr CsvItemModel::Index nRowCount = 5;
+    constexpr CsvItemModel::Index nColumnCount = 5;
+
+    // Empty source, expecting no signals
+    {
+        CsvItemModel model;
+        model.setSize(nRowCount, nColumnCount);
+        size_t nSignalCount = 0;
+        DFG_QT_VERIFY_CONNECT(QObject::connect(&model, &CsvItemModel::dataChanged, [&nSignalCount]() { ++nSignalCount; }));
+        nSignalCount = 0;
+        CsvItemModel::RawDataTable setterTable;
+        model.setDataByBatch_noUndo(setterTable);
+        DFGTEST_EXPECT_LEFT(0, nSignalCount);
+    }
+
+    // Full table and variations
+    {
+        const auto createSetterTable = [](const CsvItemModel& model, CsvItemModel::RawDataTable& setterTable)
+            {
+                for (CsvItemModel::Index c = 0; c < model.getColumnCount(); ++c)
+                {
+                    for (CsvItemModel::Index r = 0; r < model.getRowCount(); ++r)
+                    {
+                        setterTable.setElement(r, c, SzPtrUtf8(format_fmt("{},{}", r, c).c_str()));
+                    }
+                }
+            };
+
+        // Full table, expecting 1 signal
+        {
+            CsvItemModel model;
+            model.setSize(nRowCount, nColumnCount);
+            size_t nSignalCount = 0;
+            DFG_QT_VERIFY_CONNECT(QObject::connect(&model, &CsvItemModel::dataChanged, [&nSignalCount]() { ++nSignalCount; }));
+
+            nSignalCount = 0;
+            CsvItemModel::RawDataTable setterTable;
+            createSetterTable(model, setterTable);
+            model.setDataByBatch_noUndo(setterTable);
+            DFGTEST_EXPECT_LEFT(1, nSignalCount);
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("0,0", model.rawStringViewAt(0, 0));
+            DFGTEST_EXPECT_EQ_LITERAL_UTF8("4,4", model.rawStringViewAt(4, 4));
+        }
+
+        auto randEng = ::DFG_MODULE_NS(rand)::createDefaultRandEngineRandomSeeded();
+
+        // Removing single element on any column should cause fallback to per-column signalling.
+        // "Should" in the sense of current implementation, in better implementation could expect more
+        // intelligent signalling, for example missing corner element could be be signalled with two signals
+        // instead of falling back to per-column signalling.
+        for (CsvItemModel::Index c = 0; c < nColumnCount; ++c)
+        {
+            const auto testCase = [&](const CsvItemModel::Index removeRow, const size_t expectedSignalCount)
+                {
+                    CsvItemModel model;
+                    model.setSize(nRowCount, nColumnCount);
+                    CsvItemModel::RawDataTable setterTable;
+                    createSetterTable(model, setterTable);
+                    setterTable.clearCell(removeRow, c);
+                    size_t nSignalCount = 0;
+                    DFG_QT_VERIFY_CONNECT(QObject::connect(&model, &CsvItemModel::dataChanged, [&nSignalCount]() { ++nSignalCount; }));
+                    model.setDataByBatch_noUndo(setterTable);
+                    DFGTEST_EXPECT_LEFT(expectedSignalCount, nSignalCount);
+                };
+
+            // First row
+            testCase(0, nColumnCount);
+            // Row in the middle
+            testCase(::DFG_MODULE_NS(rand)::rand(randEng, CsvItemModel::Index(1), nRowCount - 2), nColumnCount + 1);
+            // Last row
+            testCase(nRowCount - 1, nColumnCount);
+        }
+    } // Full table and variations
 }

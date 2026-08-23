@@ -164,6 +164,7 @@ DFG_ROOT_NS_BEGIN{ DFG_SUB_NS(qt)
             SzPtrUtf8R operator()(Index nRow, Index nCol) const;
             StringViewUtf8 viewAt(Index nRow, Index nCol) const;
             void setElement(Index nRow, Index nCol, StringViewUtf8);
+            void clearCell(Index nRow, Index nCol);
 
             void forEachFwdRowInColumnWhile(Index nCol, std::function<bool (Index)> whileFunc, std::function<void (Index, SzPtrUtf8R)> func) const;
 

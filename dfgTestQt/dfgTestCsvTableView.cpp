@@ -399,7 +399,7 @@ TEST(dfgQt, CsvTableView_paste)
     view.makeSingleCellSelection(0, 0);
     nSignalCount = 0;
     view.paste();
-    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount); // Having only 1 signal would be better, but as commented above, at least making sure that there's no signal per cell.
+    DFGTEST_EXPECT_LEFT(1u, nSignalCount);
 
     // Testing signal count when pasting row
     view.selectAll();
@@ -409,7 +409,7 @@ TEST(dfgQt, CsvTableView_paste)
     view.makeSingleCellSelection(1, 0);
     nSignalCount = 0;
     view.paste();
-    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount); // Having only 1 signal would be better.
+    DFGTEST_EXPECT_LEFT(1u, nSignalCount);
 }
 
 TEST(dfgQt, CsvTableView_clear)
@@ -436,15 +436,15 @@ TEST(dfgQt, CsvTableView_clear)
     nSignalCount = 0;
     view.clearSelected();
     const auto sAfterClearing = view.makeClipboardStringForCopy();
-    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount); // Expecting signaling from clear to behave similarly to pasting.
+    DFGTEST_EXPECT_LEFT(1u, nSignalCount); // Expecting signaling from clear to behave similarly to pasting.
     nSignalCount = 0;
     view.undo();
     EXPECT_EQ(sAfterPopulating, view.makeClipboardStringForCopy());
-    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount);
+    DFGTEST_EXPECT_LEFT(1u, nSignalCount);
     nSignalCount = 0;
     view.redo();
     EXPECT_EQ(sAfterClearing, view.makeClipboardStringForCopy());
-    EXPECT_EQ(static_cast<size_t>(nColCount), nSignalCount);
+    DFGTEST_EXPECT_LEFT(1u, nSignalCount);
 }
 
 TEST(dfgQt, CsvTableView_replace)
