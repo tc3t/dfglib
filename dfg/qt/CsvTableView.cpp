@@ -6247,11 +6247,13 @@ QString CsvTableView::getAcceptableFilePathFromMimeData(const QMimeData* pMimeDa
             return getAcceptedFileTypeFilter().indexOf(QString("*.%1 ").arg(sSuffix), 0, Qt::CaseInsensitive) != -1;
         };
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)) // QFileInfo::isShortcut() is unavailable at least in 5.13.
         if (fi.isShortcut())
         {
             const auto sTarget = fi.symLinkTarget();
             fi = QFileInfo(sTarget);
         }
+#endif
         if (!fi.exists())
             return {};
         return (isAcceptableFileSuffix(fi.suffix()) || isAcceptableFileSuffix(fi.completeSuffix())) ? fi.absoluteFilePath() : QString();

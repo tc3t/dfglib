@@ -1729,7 +1729,7 @@ void CsvItemModel::setDataByBatch_noUndoImpl(const RawDataTable& table, Setter_T
     // Checking for simple rectangle removal to reduce number of dataChanged-signals.
     // Without this removing e.g. a row would trigger dataChanged for each column, but with this.
     // need only one signal.
-    if (intervalsByColumn.frontKey() + intervalsByColumn.size() - 1 == intervalsByColumn.backKey() &&
+    if (intervalsByColumn.frontKey() + Index(intervalsByColumn.size()) - Index(1) == intervalsByColumn.backKey() &&
         !intervalsByColumn.frontValue().empty())
     {
         // Have simple contiguous horizontal selection, checking if it's simple also by rows
@@ -1737,7 +1737,7 @@ void CsvItemModel::setDataByBatch_noUndoImpl(const RawDataTable& table, Setter_T
         const auto frontColTop = frontColIntervals.minElement();
         const auto frontColBottom = frontColIntervals.maxElement();
         const auto nRectRowCount = frontColIntervals.sizeOfSet();
-        if (frontColBottom - frontColTop + 1 == nRectRowCount)
+        if (frontColBottom - frontColTop + Index(1) == static_cast<Index>(nRectRowCount))
         {
             // Have simple contiguous vertical selection, checking if it's simple also by columns
             bool bIsSimpleRectangle = true;

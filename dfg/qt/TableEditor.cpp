@@ -1184,7 +1184,7 @@ void TableEditor::resizeWindowByLoadOptions()
 {
     if (!m_spTableModel)
         return;
-	resizeWindowByLoadOptions(m_spTableModel->getOpenTimeLoadOptions());
+    resizeWindowByLoadOptions(m_spTableModel->getOpenTimeLoadOptions());
 }
 
 template <class LoadOptions_T>
