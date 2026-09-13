@@ -99,4 +99,11 @@ DFG_ROOT_NS_BEGIN{
     }; // class Span
 #endif
 
+// Deduction guide, without this test case dfg.Span wouldn't compile on GCC 15.2 with C++23,
+// while it worked fine on MSVC 2026 with latest standard.
+#if defined(__cpp_lib_span)
+    template <class T, size_t Extent_T>
+    Span(std::span<T, Extent_T>) -> Span<T, Extent_T>;
+#endif
+
 } // namespace DFG_ROOT_NS
