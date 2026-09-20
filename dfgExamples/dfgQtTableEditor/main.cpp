@@ -57,11 +57,19 @@ void DiffUrlHandler::urlHandler(const QUrl& url)
         pTextDisplay->setLineWrapMode(QPlainTextEdit::NoWrap);
         pLayout->addWidget(pTextDisplay);
         QFile file(":/qmake_time_working_tree.diff");
-        file.open(QFile::ReadOnly);
-        const auto sDiff = QString::fromUtf8(file.readAll());
-        pTextDisplay->setPlainText(sDiff);
-        dlg.resize(800, 600);
-        dlg.exec();
+        if (file.open(QFile::ReadOnly))
+        {
+            const auto sDiff = QString::fromUtf8(file.readAll());
+            pTextDisplay->setPlainText(sDiff);
+            dlg.resize(800, 600);
+            dlg.exec();
+        }
+        else
+        {
+            QMessageBox::warning(nullptr,
+                QObject::tr("Diff handler error"),
+                QObject::tr("Failed to load embedded diff"));
+        }
     }
     else
         QMessageBox::information(nullptr, tr("Unexpected url"), tr("Diff handler got unexpected URL %1").arg(url.toString()));
@@ -263,9 +271,17 @@ int main(int argc, char *argv[])
     // Setting chart guide
     {
         QFile file(":/chartGuide.html");
-        file.open(QFile::ReadOnly);
-        const auto sGuide = QString::fromUtf8(file.readAll());
-        graphDisplay.setChartGuide(sGuide);
+        if (file.open(QFile::ReadOnly))
+        {
+            const auto sGuide = QString::fromUtf8(file.readAll());
+            graphDisplay.setChartGuide(sGuide);
+        }
+        else
+        {
+            QMessageBox::warning(nullptr,
+                QObject::tr("Chart guide error"),
+                QObject::tr("Failed to initialize chart guide"));
+        }
     }
 
     // Setting data sources to chart display.
