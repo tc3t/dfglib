@@ -28,7 +28,8 @@ bool QtApplication::createApplicationSettingsFile()
     if (QFileInfo::exists(getApplicationSettingsPath()))
         return true;
     QFile f(getApplicationSettingsPath());
-    f.open(QIODevice::WriteOnly);
+    if (!f.open(QIODevice::WriteOnly))
+        return false;
     f.close();
     return QFileInfo::exists(getApplicationSettingsPath());
 }
