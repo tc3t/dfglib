@@ -8,7 +8,7 @@
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
    |__|_|  /____/|   __(____  /__|  /____  >\___  >__|
 		 \/      |__|       \/           \/     \/
-   Copyright (C) 2022 Ingo Berg
+   Copyright (C) 2026 Ingo Berg
 
 	Redistribution and use in source and binary forms, with or without modification, are permitted
 	provided that the following conditions are met:
@@ -264,19 +264,43 @@ namespace dfg_mu
 		m_pTokenReader->ReInit();
 	}
 
-	//---------------------------------------------------------------------------
+
 	void ParserBase::OnDetectVar(string_type* /*pExpr*/, int& /*nStart*/, int& /*nEnd*/)
 	{}
 
-	//---------------------------------------------------------------------------
-	/** \brief Returns the bytecode of the current expression.
+
+	/** \brief Returns a copy of the bytecode of the current expression.
 	*/
 	const ParserByteCode& ParserBase::GetByteCode() const
 	{
+		// If a variable factory is defined the bytecode may contain references to implicitely 
+		// created variables. 
+//		if (m_pTokenReader->HasVarCreator())
+//			Error(ecBYTECODE_IMPORT_EXPORT_DISABLED);
+
 		return m_vRPN;
 	}
 
-	//---------------------------------------------------------------------------
+
+	/** \brief Restore a previously saved bytecode. */
+	void ParserBase::SetByteCode(const ParserByteCode& a_ByteCode)
+	{
+		// If a variable factory is defined the bytecode may contain references to dynamically
+		// created variables. 
+//		if (m_pTokenReader->HasVarCreator())
+//			Error(ecBYTECODE_IMPORT_EXPORT_DISABLED);
+
+		m_vRPN = a_ByteCode;
+
+		// restore expression environment
+		string_type expr;
+		std::tie(expr, m_vStringBuf) = a_ByteCode.RestoreEnvironment();
+		m_pTokenReader->SetFormula(expr);
+
+		m_pParseFormula = &ParserBase::ParseCmdCode;
+	}
+
+
 	/** \brief Returns the version of muparser.
 		\param eInfo A flag indicating whether the full version info should be
 					 returned or not.
@@ -539,6 +563,12 @@ namespace dfg_mu
 		AddCallback(a_sName, ParserCallback(a_pFun, a_bAllowOpt, a_iPrec, cmOPRT_INFIX), m_InfixOprtDef, ValidInfixOprtChars());
 	}
 
+
+    /** \brief Check whether a function with the given name is registered. */
+    bool ParserBase::HasFun(const string_type &a_strName) const
+    {
+	    return m_FunDef.find(a_strName) != m_FunDef.end();
+    }
 
 	//---------------------------------------------------------------------------
 	/** \brief Define a binary operator.
@@ -1049,21 +1079,31 @@ namespace dfg_mu
 		case cmVAL:		
 			return tok->Val.data2;
 
-		case cmVAR:		
+		case cmVAR:
+			if (!tok->Val.ptr)
+				throw ParserError(ecINVALID_VAR_PTR);
 			return *tok->Val.ptr;
 
-		case cmVARMUL:	
+		case cmVARMUL:
+			if (!tok->Val.ptr)
+				throw ParserError(ecINVALID_VAR_PTR);
 			return *tok->Val.ptr * tok->Val.data + tok->Val.data2;
 
-		case cmVARPOW2: 
+		case cmVARPOW2:
+			if (!tok->Val.ptr)
+				throw ParserError(ecINVALID_VAR_PTR);
 			buf = *(tok->Val.ptr);
 			return buf * buf;
 
-		case  cmVARPOW3: 				
+		case  cmVARPOW3:
+			if (!tok->Val.ptr)
+				throw ParserError(ecINVALID_VAR_PTR);
 			buf = *(tok->Val.ptr);
 			return buf * buf * buf;
 
-		case  cmVARPOW4: 				
+		case  cmVARPOW4:
+			if (!tok->Val.ptr)
+				throw ParserError(ecINVALID_VAR_PTR);
 			buf = *(tok->Val.ptr);
 			return buf * buf * buf * buf;
 
@@ -1073,6 +1113,9 @@ namespace dfg_mu
 
 		// String function without a numerical argument
 		case cmFUNC_STR:
+			if (m_vStringBuf.empty())
+				throw ParserError(ecINTERNAL_ERROR);
+
 			return tok->Fun.cb.call_strfun<1>(m_vStringBuf[0].c_str());
 
 		default:
@@ -1092,6 +1135,9 @@ namespace dfg_mu
 		// Note: The check for nOffset==0 and nThreadID here is not necessary but 
 		//       brings a minor performance gain when not in bulk mode.
 		value_type *stack = ((nOffset == 0) && (nThreadID == 0)) ? &m_vStackBuffer[0] : &m_vStackBuffer[nThreadID * (m_vStackBuffer.size() / s_MaxNumOpenMPThreads)];
+		
+		const int iStackMaxSize = (int)(m_vStackBuffer.size() / s_MaxNumOpenMPThreads);
+
 		value_type buf;
 		int sidx(0);
 		for (const SToken* pTok = m_vRPN.GetBase(); pTok->Cmd != cmEND; ++pTok)
@@ -1099,42 +1145,26 @@ namespace dfg_mu
 			switch (pTok->Cmd)
 			{
 			// built in binary operators
-			case  cmLE:   --sidx; stack[sidx] = stack[sidx] <= stack[sidx + 1]; continue;
-			case  cmGE:   --sidx; stack[sidx] = stack[sidx] >= stack[sidx + 1]; continue;
-			case  cmNEQ:  --sidx; stack[sidx] = stack[sidx] != stack[sidx + 1]; continue;
-			case  cmEQ:   --sidx; stack[sidx] = stack[sidx] == stack[sidx + 1]; continue;
-			case  cmLT:   --sidx; stack[sidx] = stack[sidx] < stack[sidx + 1];  continue;
-			case  cmGT:   --sidx; stack[sidx] = stack[sidx] > stack[sidx + 1];  continue;
-			case  cmADD:  --sidx; stack[sidx] += stack[1 + sidx]; continue;
-			case  cmSUB:  --sidx; stack[sidx] -= stack[1 + sidx]; continue;
-			case  cmMUL:  --sidx; stack[sidx] *= stack[1 + sidx]; continue;
-			case  cmDIV:  --sidx;
-				stack[sidx] /= stack[1 + sidx];
-				continue;
-
-			case  cmPOW:
-				--sidx; stack[sidx] = MathImpl<value_type>::Pow(stack[sidx], stack[1 + sidx]);
-				continue;
-
-			case  cmLAND: --sidx; stack[sidx] = stack[sidx] && stack[sidx + 1]; continue;
-			case  cmLOR:  --sidx; stack[sidx] = stack[sidx] || stack[sidx + 1]; continue;
-
-			case  cmASSIGN:
-				// Bugfix for Bulkmode:
-				// for details see:
-				//    https://groups.google.com/forum/embed/?place=forum/muparser-dev&showsearch=true&showpopout=true&showtabs=false&parenturl=http://muparser.beltoforion.de/mup_forum.html&afterlogin&pli=1#!topic/muparser-dev/szgatgoHTws
-				--sidx; 
-				stack[sidx] = *(pTok->Oprt.ptr + nOffset) = stack[sidx + 1]; 
-				continue;
-				// original code:
-				//--sidx; Stack[sidx] = *pTok->Oprt.ptr = Stack[sidx+1]; continue;
+			case  cmLE:     --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] <= stack[sidx + 1]; continue;
+			case  cmGE:     --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] >= stack[sidx + 1]; continue;
+			case  cmNEQ:    --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] != stack[sidx + 1]; continue;
+			case  cmEQ:     --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] == stack[sidx + 1]; continue;
+			case  cmLT:     --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] < stack[sidx + 1];  continue;
+			case  cmGT:     --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] > stack[sidx + 1];  continue;
+			case  cmADD:    --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] += stack[1 + sidx]; continue;
+			case  cmSUB:    --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] -= stack[1 + sidx]; continue;
+			case  cmMUL:    --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] *= stack[1 + sidx]; continue;
+			case  cmDIV:    --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] /= stack[1 + sidx]; continue;
+			case  cmPOW:    --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = MathImpl<value_type>::Pow(stack[sidx], stack[1 + sidx]); continue;
+			case  cmLAND:   --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] && stack[sidx + 1]; continue;
+			case  cmLOR:    --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = stack[sidx] || stack[sidx + 1]; continue;
+			case  cmASSIGN: --sidx; MUP_ASSERT(sidx >= 0); stack[sidx] = *(pTok->Oprt.ptr + nOffset) = stack[sidx + 1]; continue;
 
 			case  cmIF:
 				if (stack[sidx--] == 0)
-				{
-					MUP_ASSERT(sidx >= 0);
 					pTok += pTok->Oprt.offset;
-				}
+
+				MUP_ASSERT(sidx >= 0);
 				continue;
 
 			case  cmELSE:
@@ -1145,22 +1175,29 @@ namespace dfg_mu
 				continue;
 
 				// value and variable tokens
-			case  cmVAR:    stack[++sidx] = *(pTok->Val.ptr + nOffset);  continue;
-			case  cmVAL:    stack[++sidx] = pTok->Val.data2;  continue;
+			case  cmVAR:    MUP_ASSERT(sidx < iStackMaxSize); stack[++sidx] = *(pTok->Val.ptr + nOffset);  continue;
+			case  cmVAL:    MUP_ASSERT(sidx < iStackMaxSize); stack[++sidx] = pTok->Val.data2;  continue;
 
-			case  cmVARPOW2: buf = *(pTok->Val.ptr + nOffset);
+			case  cmVARPOW2: 
+				MUP_ASSERT(sidx < iStackMaxSize);
+				buf = *(pTok->Val.ptr + nOffset);
 				stack[++sidx] = buf * buf;
 				continue;
 
-			case  cmVARPOW3: buf = *(pTok->Val.ptr + nOffset);
+			case  cmVARPOW3: 
+				MUP_ASSERT(sidx < iStackMaxSize);
+				buf = *(pTok->Val.ptr + nOffset);
 				stack[++sidx] = buf * buf * buf;
 				continue;
 
-			case  cmVARPOW4: buf = *(pTok->Val.ptr + nOffset);
+			case  cmVARPOW4: 
+				MUP_ASSERT(sidx < iStackMaxSize);
+				buf = *(pTok->Val.ptr + nOffset);
 				stack[++sidx] = buf * buf * buf * buf;
 				continue;
 
 			case  cmVARMUL:  
+				MUP_ASSERT(sidx < iStackMaxSize);
 				stack[++sidx] = *(pTok->Val.ptr + nOffset) * pTok->Val.data + pTok->Val.data2;
 				continue;
 
@@ -1172,33 +1209,24 @@ namespace dfg_mu
 				// switch according to argument count
 				switch (iArgCount)
 				{
-				case 0: sidx += 1; stack[sidx] = pTok->Fun.cb.call_fun<0 >(); continue;
-				case 1:            stack[sidx] = pTok->Fun.cb.call_fun<1 >(stack[sidx]);   continue;
-				case 2: sidx -= 1; stack[sidx] = pTok->Fun.cb.call_fun<2 >(stack[sidx], stack[sidx + 1]); continue;
-				case 3: sidx -= 2; stack[sidx] = pTok->Fun.cb.call_fun<3 >(stack[sidx], stack[sidx + 1], stack[sidx + 2]); continue;
-				case 4: sidx -= 3; stack[sidx] = pTok->Fun.cb.call_fun<4 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3]); continue;
-				case 5: sidx -= 4; stack[sidx] = pTok->Fun.cb.call_fun<5 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4]); continue;
-				case 6: sidx -= 5; stack[sidx] = pTok->Fun.cb.call_fun<6 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5]); continue;
-				case 7: sidx -= 6; stack[sidx] = pTok->Fun.cb.call_fun<7 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6]); continue;
-				case 8: sidx -= 7; stack[sidx] = pTok->Fun.cb.call_fun<8 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7]); continue;
-				case 9: sidx -= 8; stack[sidx] = pTok->Fun.cb.call_fun<9 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8]); continue;
-				case 10:sidx -= 9; stack[sidx] = pTok->Fun.cb.call_fun<10>(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8], stack[sidx + 9]); continue;
+				case 0: sidx += 1; MUP_ASSERT(sidx < iStackMaxSize); stack[sidx] = pTok->Fun.cb.call_fun<0 >(); continue;
+				case 1:                                              stack[sidx] = pTok->Fun.cb.call_fun<1 >(stack[sidx]); continue;
+				case 2: sidx -= 1; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<2 >(stack[sidx], stack[sidx + 1]); continue;
+				case 3: sidx -= 2; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<3 >(stack[sidx], stack[sidx + 1], stack[sidx + 2]); continue;
+				case 4: sidx -= 3; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<4 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3]); continue;
+				case 5: sidx -= 4; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<5 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4]); continue;
+				case 6: sidx -= 5; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<6 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5]); continue;
+				case 7: sidx -= 6; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<7 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6]); continue;
+				case 8: sidx -= 7; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<8 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7]); continue;
+				case 9: sidx -= 8; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<9 >(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8]); continue;
+				case 10:sidx -= 9; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_fun<10>(stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8], stack[sidx + 9]); continue;
 				default:
 					// function with variable arguments store the number as a negative value
 					if (iArgCount > 0)
 						Error(ecINTERNAL_ERROR, -1);
 
 					sidx -= -iArgCount - 1;
-
-					// <ibg 2020-06-08> From oss-fuzz. Happend when Multiarg functions and if-then-else are used incorrectly.
-					// Expressions where this was observed:
-					//		sum(0?1,2,3,4,5:6)			-> fixed
-					//		avg(0>3?4:(""),0^3?4:(""))
-					//
-					// The final result normally lieas at position 1. If sixd is smaller there is something wrong.
-					if (sidx <= 0)
-						Error(ecINTERNAL_ERROR, -1);
-					// </ibg>
+					MUP_ASSERT(sidx>=0 && sidx < iStackMaxSize);
 
 					stack[sidx] = pTok->Fun.cb.call_multfun(&stack[sidx], -iArgCount);
 					continue;
@@ -1209,6 +1237,7 @@ namespace dfg_mu
 			case  cmFUNC_STR:
 			{
 				sidx -= pTok->Fun.argc - 1;
+				MUP_ASSERT(sidx >= 0 && sidx < iStackMaxSize);
 
 				// The index of the string argument in the string table
 				int iIdxStack = pTok->Fun.idx;
@@ -1235,17 +1264,17 @@ namespace dfg_mu
 				// switch according to argument count
 				switch (iArgCount)
 				{
-				case 0: sidx += 1; stack[sidx] = pTok->Fun.cb.call_bulkfun<0 >(nOffset, nThreadID); continue;
+				case 0: sidx += 1;  MUP_ASSERT(sidx < iStackMaxSize); stack[sidx] = pTok->Fun.cb.call_bulkfun<0 >(nOffset, nThreadID); continue;
 				case 1:            stack[sidx] = pTok->Fun.cb.call_bulkfun<1 >(nOffset, nThreadID, stack[sidx]); continue;
-				case 2: sidx -= 1; stack[sidx] = pTok->Fun.cb.call_bulkfun<2 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1]); continue;
-				case 3: sidx -= 2; stack[sidx] = pTok->Fun.cb.call_bulkfun<3 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2]); continue;
-				case 4: sidx -= 3; stack[sidx] = pTok->Fun.cb.call_bulkfun<4 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3]); continue;
-				case 5: sidx -= 4; stack[sidx] = pTok->Fun.cb.call_bulkfun<5 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4]); continue;
-				case 6: sidx -= 5; stack[sidx] = pTok->Fun.cb.call_bulkfun<6 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5]); continue;
-				case 7: sidx -= 6; stack[sidx] = pTok->Fun.cb.call_bulkfun<7 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6]); continue;
-				case 8: sidx -= 7; stack[sidx] = pTok->Fun.cb.call_bulkfun<8 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7]); continue;
-				case 9: sidx -= 8; stack[sidx] = pTok->Fun.cb.call_bulkfun<9 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8]); continue;
-				case 10:sidx -= 9; stack[sidx] = pTok->Fun.cb.call_bulkfun<10>(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8], stack[sidx + 9]); continue;
+				case 2: sidx -= 1; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<2 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1]); continue;
+				case 3: sidx -= 2; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<3 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2]); continue;
+				case 4: sidx -= 3; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<4 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3]); continue;
+				case 5: sidx -= 4; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<5 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4]); continue;
+				case 6: sidx -= 5; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<6 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5]); continue;
+				case 7: sidx -= 6; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<7 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6]); continue;
+				case 8: sidx -= 7; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<8 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7]); continue;
+				case 9: sidx -= 8; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<9 >(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8]); continue;
+				case 10:sidx -= 9; MUP_ASSERT(sidx >= 0); stack[sidx] = pTok->Fun.cb.call_bulkfun<10>(nOffset, nThreadID, stack[sidx], stack[sidx + 1], stack[sidx + 2], stack[sidx + 3], stack[sidx + 4], stack[sidx + 5], stack[sidx + 6], stack[sidx + 7], stack[sidx + 8], stack[sidx + 9]); continue;
 				default:
 					throw exception_type(ecINTERNAL_ERROR, 2, _T(""));
 				}
@@ -1290,9 +1319,7 @@ namespace dfg_mu
 				if (stOpt.empty())
 					Error(ecSTR_RESULT, m_pTokenReader->GetPos(), opt.GetAsString());
 
-				opt.SetIdx((int)m_vStringBuf.size());      // Assign buffer index to token 
 				stVal.push(opt);
-				m_vStringBuf.push_back(opt.GetAsString()); // Store string in internal buffer
 				break;
 
 			case cmVAR:
@@ -1388,6 +1415,9 @@ namespace dfg_mu
 			//
 			case cmIF:
 				ifElseCounter++;
+				if (ifElseCounter > MaxNestingDepth)
+					Error(ecNESTING_LIMIT, m_pTokenReader->GetPos());
+
 				stArgCount.push(1);
 				// Falls through.
 				// intentional (no break!)
@@ -1535,12 +1565,14 @@ namespace dfg_mu
 
 			if (m_vRPN.GetSize() == 2)
 			{
+				m_vRPN.StoreEnvironment(m_pTokenReader->GetExpr(), m_vStringBuf);
 				m_pParseFormula = &ParserBase::ParseCmdCodeShort;
 				m_vStackBuffer[1] = (this->*m_pParseFormula)();
 				return m_vStackBuffer[1];
 			}
 			else
 			{
+				m_vRPN.StoreEnvironment(m_pTokenReader->GetExpr(), m_vStringBuf);
 				m_pParseFormula = &ParserBase::ParseCmdCode;
 				return (this->*m_pParseFormula)();
 			}
@@ -1618,6 +1650,7 @@ namespace dfg_mu
 	{
 		m_ConstDef.clear();
 		m_StrVarDef.clear();
+		m_vStringVarBuf.clear();
 		ReInit();
 	}
 
@@ -1880,7 +1913,8 @@ namespace dfg_mu
 #endif
 		omp_set_num_threads(nMaxThreads);
 
-#pragma omp parallel for schedule(static, (std::max)(nBulkSize/nMaxThreads, 1)) private(nThreadID)
+		const int chunkSize = std::max(nBulkSize/nMaxThreads, 1);
+#pragma omp parallel for schedule(static, chunkSize) private(nThreadID)
 		for (i = 0; i < nBulkSize; ++i)
 		{
 			nThreadID = omp_get_thread_num();

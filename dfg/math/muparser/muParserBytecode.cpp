@@ -8,7 +8,7 @@
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
    |__|_|  /____/|   __(____  /__|  /____  >\___  >__|
 		 \/      |__|       \/           \/     \/
-   Copyright (C) 2004 - 2021 Ingo Berg
+   Copyright (C) 2026 Ingo Berg
 
 	Redistribution and use in source and binary forms, with or without modification, are permitted
 	provided that the following conditions are met:
@@ -51,7 +51,9 @@ namespace dfg_mu
 {
 	/** \brief Bytecode default constructor. */
 	ParserByteCode::ParserByteCode()
-		:m_iStackPos(0)
+		: m_iStackPos(0)
+ 		, m_stringBuffer()
+		, m_expr()
 		, m_iMaxStackSize(0)
 		, m_vRPN()
 		, m_bEnableOptimizer(true)
@@ -100,6 +102,9 @@ namespace dfg_mu
 		m_vRPN = a_ByteCode.m_vRPN;
 		m_iMaxStackSize = a_ByteCode.m_iMaxStackSize;
 		m_bEnableOptimizer = a_ByteCode.m_bEnableOptimizer;
+		
+		m_stringBuffer = a_ByteCode.m_stringBuffer;
+		m_expr = a_ByteCode.m_expr;
 	}
 
 
@@ -169,6 +174,8 @@ namespace dfg_mu
 		case cmSUB:  x = x - y;  m_vRPN.pop_back();  break;
 		case cmMUL:  x = x * y;  m_vRPN.pop_back();  break;
 		case cmDIV:
+			if (y == 0)
+				break;
 			x = x / y;
 			m_vRPN.pop_back();
 			break;
@@ -260,7 +267,7 @@ namespace dfg_mu
 							(m_vRPN[sz - 2].Val.ptr == m_vRPN[sz - 1].Val.ptr));
 
 						m_vRPN[sz - 2].Cmd = cmVARMUL;
-						m_vRPN[sz - 2].Val.ptr = (value_type*)((long long)(m_vRPN[sz - 2].Val.ptr) | (long long)(m_vRPN[sz - 1].Val.ptr));    // variable
+						m_vRPN[sz - 2].Val.ptr = m_vRPN[sz - 2].Val.ptr ? m_vRPN[sz - 2].Val.ptr : m_vRPN[sz - 1].Val.ptr;    // variable
 						m_vRPN[sz - 2].Val.data2 += ((a_Oprt == cmSUB) ? -1 : 1) * m_vRPN[sz - 1].Val.data2;  // offset
 						m_vRPN[sz - 2].Val.data += ((a_Oprt == cmSUB) ? -1 : 1) * m_vRPN[sz - 1].Val.data;   // multiplicand
 						m_vRPN.pop_back();
@@ -273,7 +280,7 @@ namespace dfg_mu
 						(m_vRPN[sz - 1].Cmd == cmVAL && m_vRPN[sz - 2].Cmd == cmVAR))
 					{
 						m_vRPN[sz - 2].Cmd = cmVARMUL;
-						m_vRPN[sz - 2].Val.ptr = (value_type*)((long long)(m_vRPN[sz - 2].Val.ptr) | (long long)(m_vRPN[sz - 1].Val.ptr));
+						m_vRPN[sz - 2].Val.ptr = m_vRPN[sz - 2].Val.ptr ? m_vRPN[sz - 2].Val.ptr : m_vRPN[sz - 1].Val.ptr;
 						m_vRPN[sz - 2].Val.data = m_vRPN[sz - 2].Val.data2 + m_vRPN[sz - 1].Val.data2;
 						m_vRPN[sz - 2].Val.data2 = 0;
 						m_vRPN.pop_back();
@@ -285,7 +292,7 @@ namespace dfg_mu
 					{
 						// Optimization: 2*(3*b+1) or (3*b+1)*2 -> 6*b+2
 						m_vRPN[sz - 2].Cmd = cmVARMUL;
-						m_vRPN[sz - 2].Val.ptr = (value_type*)((long long)(m_vRPN[sz - 2].Val.ptr) | (long long)(m_vRPN[sz - 1].Val.ptr));
+						m_vRPN[sz - 2].Val.ptr = m_vRPN[sz - 2].Val.ptr ? m_vRPN[sz - 2].Val.ptr : m_vRPN[sz - 1].Val.ptr;
 						if (m_vRPN[sz - 1].Cmd == cmVAL)
 						{
 							m_vRPN[sz - 2].Val.data *= m_vRPN[sz - 1].Val.data2;
@@ -381,7 +388,7 @@ namespace dfg_mu
 		// only optimize functions with fixed number of more than a single arguments
 		if (isFunctionOptimizable && m_bEnableOptimizer && a_iArgc > 0)
 		{
-			// <ibg 2020-06-10/> Unary Plus is a no-op
+			// <ibg 2020-06-10/> Unary Plus is a no-op, optimize it away
 			if (a_pFun == generic_callable_type{(erased_fun_type)&MathImpl<value_type>::UnaryPlus, nullptr})
 				return;
 
@@ -506,12 +513,16 @@ namespace dfg_mu
 
 			case cmELSE:
 				stElse.push(i);
+				if (stIf.empty())
+					throw ParserError(ecINTERNAL_ERROR);
 				idx = stIf.top();
 				stIf.pop();
 				m_vRPN[idx].Oprt.offset = i - idx;
 				break;
 
 			case cmENDIF:
+				if (stElse.empty())
+					throw ParserError(ecINTERNAL_ERROR);
 				idx = stElse.top();
 				stElse.pop();
 				m_vRPN[idx].Oprt.offset = i - idx;
@@ -547,7 +558,7 @@ namespace dfg_mu
 
 
 	/** \brief Dump bytecode (for debugging only!). */
-	void ParserByteCode::AsciiDump()
+	void ParserByteCode::AsciiDump() const
 	{
 		if (!m_vRPN.size())
 		{
@@ -597,7 +608,14 @@ namespace dfg_mu
 			case cmFUNC_STR:
 				dfg_mu::console() << _T("CALL STRFUNC\t");
 				dfg_mu::console() << _T("[ARG:") << std::dec << m_vRPN[i].Fun.argc << _T("]");
-				dfg_mu::console() << _T("[IDX:") << std::dec << m_vRPN[i].Fun.idx << _T("]");
+
+				{
+					int idx = m_vRPN[i].Fun.idx;
+					if (idx < 0 || idx >= (int)m_stringBuffer.size())
+						throw ParserError(ecINTERNAL_ERROR);
+
+					dfg_mu::console() << _T("[IDX:") << std::dec << idx << _T("=\"") << m_stringBuffer[idx] << ("\"]");
+				}
 				dfg_mu::console() << _T("[ADDR: 0x") << std::hex << reinterpret_cast<void*>(m_vRPN[i].Fun.cb._pRawFun) << _T("]");
 				dfg_mu::console() << _T("[USERDATA: 0x") << std::hex << reinterpret_cast<void*>(m_vRPN[i].Fun.cb._pUserData) << _T("]");
 				dfg_mu::console() << _T("\n");

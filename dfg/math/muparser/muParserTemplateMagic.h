@@ -8,7 +8,7 @@
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
    |__|_|  /____/|   __(____  /__|  /____  >\___  >__|
 		 \/      |__|       \/           \/     \/
-   Copyright (C) 2004 - 2021 Ingo Berg
+   Copyright (C) 2004 - 2026 Ingo Berg
 
 	Redistribution and use in source and binary forms, with or without modification, are permitted
 	provided that the following conditions are met:
@@ -32,6 +32,8 @@
 #ifndef MU_PARSER_TEMPLATE_MAGIC_H
 #define MU_PARSER_TEMPLATE_MAGIC_H
 
+#include <algorithm>
+#include <random>
 #include <cmath>
 #include "muParserError.h"
 
@@ -119,6 +121,7 @@ namespace dfg_mu
 		static T Sin(T v) { return sin(v); }
 		static T Cos(T v) { return cos(v); }
 		static T Tan(T v) { return tan(v); }
+		static T Cot(T v) { return 1.0 / tan(v); }
 		static T ASin(T v) { return asin(v); }
 		static T ACos(T v) { return acos(v); }
 		static T ATan(T v) { return atan(v); }
@@ -126,6 +129,7 @@ namespace dfg_mu
 		static T Sinh(T v) { return sinh(v); }
 		static T Cosh(T v) { return cosh(v); }
 		static T Tanh(T v) { return tanh(v); }
+		static T Coth(T v) { return 1.0 / tanh(v); }
 		static T ASinh(T v) { return log(v + sqrt(v * v + 1)); }
 		static T ACosh(T v) { return log(v + sqrt(v * v - 1)); }
 		static T ATanh(T v) { return ((T)0.5 * log((1 + v) / (1 - v))); }
@@ -138,6 +142,14 @@ namespace dfg_mu
 		static T Rint(T v) { return floor(v + (T)0.5); }
 		static T Sign(T v) { return (T)((v < 0) ? -1 : (v > 0) ? 1 : 0); }
 		static T Pow(T v1, T v2) { return std::pow(v1, v2); }
+		static T Rnd()
+		{
+			static std::random_device rd;  
+			static std::mt19937 gen(rd()); 
+			static std::uniform_real_distribution<T> dis(0.0, 1.0); // Range [0, 1)
+
+			return dis(gen);
+		}
 
 		static T UnaryMinus(T v) { return -v; }
 		static T UnaryPlus(T v) { return v; }

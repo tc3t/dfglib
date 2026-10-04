@@ -934,10 +934,10 @@ TEST(dfgMath, FormulaParser_forEachDefinedFunctionNameWhile)
     {
         std::vector<StringViewC> expectedFunctions {
             "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "avg", "cbrt",
-            "cos", "cosh", "erf", "erfc", "exp", "hypot", "ln", "log", "log10", "log2", "max", "min", "rand_bernoulli",
+            "cos", "cosh", "cot", "coth", "erf", "erfc", "exp", "hypot", "ln", "log", "log10", "log2", "max", "min", "rand_bernoulli",
             "rand_binomial", "rand_cauchy", "rand_chiSquared", "rand_exponential", "rand_extremeValue", "rand_fisherF",
             "rand_gamma", "rand_geometric", "rand_logNormal", "rand_negBinomial", "rand_normal", "rand_poisson", 
-            "rand_studentT", "rand_uniformInt", "rand_uniformReal", "rand_weibull",
+            "rand_studentT", "rand_uniformInt", "rand_uniformReal", "rand_weibull", "rnd",
             "rint", "sign", "sin", "sinh", "sqrt", "sum", "tan", "tanh", "tgamma",
             "time_epochMsec", "time_ISOdateToEpochSec", "time_ISOdateToYearNum", "time_ISOdateToMonthNum", "time_ISOdateToDayOfMonth",
             "time_ISOdateToDayOfWeek", "time_ISOdateToHour", "time_ISOdateToMinute", "time_ISOdateToSecond", "time_ISOdateToUtcOffsetInSeconds"

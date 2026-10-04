@@ -8,7 +8,7 @@
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
    |__|_|  /____/|   __(____  /__|  /____  >\___  >__|
 		 \/      |__|       \/           \/     \/
-   Copyright (C) 2004 - 2021 Ingo Berg
+   Copyright (C) 2026 Ingo Berg
 
 	Redistribution and use in source and binary forms, with or without modification, are permitted
 	provided that the following conditions are met:
@@ -36,6 +36,7 @@
 #include <string>
 
 #include "muParserTokenReader.h"
+#include "muParserTemplateMagic.h"
 #include "muParserBase.h"
 
 #if defined(_MSC_VER)
@@ -273,7 +274,7 @@ namespace dfg_mu
 		// Ignore all non printable characters when reading the expression
 		while (szExpr[m_iPos] > 0 && szExpr[m_iPos] <= 0x20)
 		{
-			// 14-31 are control characters. I donÄt want to have to deal with such strings at all!
+			// 14-31 are control characters. I don't want to have to deal with such strings at all!
 			// (see https://en.cppreference.com/w/cpp/string/byte/isprint)
 			if (szExpr[m_iPos] >= 14 && szExpr[m_iPos] <= 31)
 				Error(ecINVALID_CHARACTERS_FOUND, m_iPos);
@@ -474,6 +475,9 @@ namespace dfg_mu
 					else
 						m_iSynFlags = noBC | noOPT | noEND | noARG_SEP | noPOSTOP | noASSIGN | noIF | noELSE;
 
+					if ((int)m_bracketStack.size() >= MaxNestingDepth)
+						Error(ecNESTING_LIMIT, m_iPos, pOprtDef[i]);
+
 					m_bracketStack.push(cmBO);
 					break;
 
@@ -593,22 +597,11 @@ namespace dfg_mu
 			if (m_iSynFlags & noINFIXOP)
 				Error(ecUNEXPECTED_OPERATOR, m_iPos, a_Tok.GetAsString());
 
-			m_iSynFlags = noPOSTOP | noINFIXOP | noOPT | noBC | noSTR | noASSIGN | noARG_SEP;
+			m_iSynFlags |= noPOSTOP | noINFIXOP | noOPT | noBC | noSTR | noASSIGN | noARG_SEP;
 			return true;
 		}
 
 		return false;
-
-		/*
-			a_Tok.Set(item->second, sTok);
-			m_iPos = (int)iEnd;
-
-			if (m_iSynFlags & noINFIXOP)
-			  Error(ecUNEXPECTED_OPERATOR, m_iPos, a_Tok.GetAsString());
-
-			m_iSynFlags = noPOSTOP | noINFIXOP | noOPT | noBC | noSTR | noASSIGN;
-			return true;
-		*/
 	}
 
 
@@ -633,6 +626,12 @@ namespace dfg_mu
 		const char_type* szFormula = m_strFormula.c_str();
 		if (szFormula[iEnd] != '(')
 			return false;
+
+		// fix for #164: https://github.com/beltoforion/muparser/issues/164
+		if (m_lastTok.GetFuncAddr() == generic_callable_type{ (erased_fun_type)&MathImpl<value_type>::UnaryPlus, nullptr })
+		{
+			Error(ecUNARY_PLUS_IN_FRONT_OF_FUNCTION, m_iPos - (int)a_Tok.GetAsString().length(), a_Tok.GetAsString());
+		}
 
 		a_Tok.Set(item->second, strTok);
 
@@ -867,8 +866,10 @@ namespace dfg_mu
 		m_iPos = iEnd;
 		if (!m_pParser->m_vStringVarBuf.size())
 			Error(ecINTERNAL_ERROR);
-
-		a_Tok.SetString(m_pParser->m_vStringVarBuf[item->second], m_pParser->m_vStringVarBuf.size());
+		
+		auto strVal = m_pParser->m_vStringVarBuf[item->second];
+		m_pParser->m_vStringBuf.push_back(strVal);
+		a_Tok.SetString(strVal, m_pParser->m_vStringBuf.size()-1);
 
 		m_iSynFlags = noANY ^ (noBC | noOPT | noEND | noARG_SEP);
 		return true;
@@ -878,7 +879,7 @@ namespace dfg_mu
 
 	/** \brief Check wheter a token at a given position is an undefined variable.
 
-		\param a_Tok [out] If a variable tom_pParser->m_vStringBufken has been found it will be placed here.
+		\param a_Tok [out] If a variable token has been found it will be placed here.
 		  \return true if a variable token has been found.
 		\throw nothrow
 	*/
@@ -943,9 +944,11 @@ namespace dfg_mu
 		std::size_t iEnd(0), iSkip(0);
 
 		// parser over escaped '\"' end replace them with '"'
-		for (iEnd = (int)strBuf.find(_T('\"')); iEnd != 0 && iEnd != string_type::npos; iEnd = (int)strBuf.find(_T('\"'), iEnd))
+		for (iEnd = strBuf.find(_T('\"')); iEnd != string_type::npos; iEnd = strBuf.find(_T('\"'), iEnd))
 		{
-			if (strBuf[iEnd - 1] != '\\') break;
+			if (iEnd==0 || strBuf[iEnd - 1] != '\\') 
+				break;
+
 			strBuf.replace(iEnd - 1, 2, _T("\""));
 			iSkip++;
 		}
@@ -959,7 +962,7 @@ namespace dfg_mu
 			Error(ecUNEXPECTED_STR, m_iPos, strTok);
 
 		m_pParser->m_vStringBuf.push_back(strTok); // Store string in internal buffer
-		a_Tok.SetString(strTok, m_pParser->m_vStringBuf.size());
+		a_Tok.SetString(strTok, m_pParser->m_vStringBuf.size()-1);
 
 		m_iPos += (int)strTok.length() + 2 + (int)iSkip;  // +2 for quotes; +iSkip for escape characters 
 		m_iSynFlags = noANY ^ (noARG_SEP | noBC | noOPT | noEND);

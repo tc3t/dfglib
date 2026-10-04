@@ -8,7 +8,7 @@
    |  Y Y  \  |  /  |_> > __ \|  | \/\___ \\  ___/|  | \/
    |__|_|  /____/|   __(____  /__|  /____  >\___  >__|
 		 \/      |__|       \/           \/     \/
-   Copyright (C) 2004 - 2021 Ingo Berg
+   Copyright (C) 2004 - 2022 Ingo Berg
 
 	Redistribution and use in source and binary forms, with or without modification, are permitted
 	provided that the following conditions are met:
@@ -36,6 +36,8 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <cstdlib>
+
 
 using namespace std;
 
@@ -57,10 +59,36 @@ namespace dfg_mu
 	*/
 	int Parser::IsVal(const char_type* a_szExpr, int* a_iPos, value_type* a_fVal)
 	{
+		// There is an issue with libc++ where it creates an error if a double value is followed by a character which
+		// is the case when using postfix operators.
+		//
+		// http://cplusplus.github.io/LWG/lwg-defects.html#2381
+		//
+		// This happens only with libc++, not with libstdc++ (Gnu C++ standard library)
+		// It seems that Macs are using libc++. This is causing #123. The fix below will fix #123
+		// but is will break localization support and cause #136.
+
+		// I'm disabling this fix. For systems using libc++ you must put a space between floating point numbers and postfix operators.
+#if defined(__APPLE__) && defined(NEVERTRUE)
+		try
+		{
+			std::size_t charsProcessed;
+			value_type fVal = static_cast<value_type>(std::stod(string_type(a_szExpr), &charsProcessed));
+			if (charsProcessed == 0)
+				return 0;
+
+			*a_iPos += (int)charsProcessed;
+			*a_fVal = fVal;
+			return 1;
+		}
+		catch (...)
+		{
+			return 0;
+		}
+#else
 		value_type fVal(0);
 
 		stringstream_type stream(a_szExpr);
-		stream.seekg(0);        // todo:  check if this really is necessary
 		stream.imbue(Parser::s_locale);
 		stream >> fVal;
 		stringstream_type::pos_type iEnd = stream.tellg(); // Position after reading
@@ -71,6 +99,7 @@ namespace dfg_mu
 		*a_iPos += (int)iEnd;
 		*a_fVal = fVal;
 		return 1;
+#endif		
 	}
 
 
@@ -122,6 +151,7 @@ namespace dfg_mu
 			DefineFun(_T("sin"), MathImpl<value_type>::Sin);
 			DefineFun(_T("cos"), MathImpl<value_type>::Cos);
 			DefineFun(_T("tan"), MathImpl<value_type>::Tan);
+			DefineFun(_T("cot"), MathImpl<value_type>::Cot);
 			// arcus functions
 			DefineFun(_T("asin"), MathImpl<value_type>::ASin);
 			DefineFun(_T("acos"), MathImpl<value_type>::ACos);
@@ -131,6 +161,7 @@ namespace dfg_mu
 			DefineFun(_T("sinh"), MathImpl<value_type>::Sinh);
 			DefineFun(_T("cosh"), MathImpl<value_type>::Cosh);
 			DefineFun(_T("tanh"), MathImpl<value_type>::Tanh);
+			DefineFun(_T("coth"), MathImpl<value_type>::Coth);
 			// arcus hyperbolic functions
 			DefineFun(_T("asinh"), MathImpl<value_type>::ASinh);
 			DefineFun(_T("acosh"), MathImpl<value_type>::ACosh);
@@ -151,6 +182,8 @@ namespace dfg_mu
 			DefineFun(_T("avg"), MathImpl<value_type>::Avg);
 			DefineFun(_T("min"), MathImpl<value_type>::Min);
 			DefineFun(_T("max"), MathImpl<value_type>::Max);
+			// Random number
+			DefineFun(_T("rnd"), MathImpl<value_type>::Rnd, false);
 		}
 	}
 
