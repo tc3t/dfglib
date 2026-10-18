@@ -1063,4 +1063,112 @@ TEST(dfgCharts, ChartOperationPipeData)
     }
 }
 
+TEST(dfgCharts, ParenthesisItem)
+{
+    using namespace DFG_ROOT_NS;
+    using ParenthesisItem = ::DFG_MODULE_NS(charts)::DFG_DETAIL_NS::ParenthesisItem;
+
+    //ParenthesisItem(DFG_UTF8("")); // Should not compile because expecting lvalue which outlives ParenthesisItem
+    //ParenthesisItem(StringUtf8{}); // Like above
+
+    // Empty input
+    {
+        StringUtf8 s;
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", item.key());
+        DFGTEST_EXPECT_LEFT(0, item.valueCount());
+    }
+
+    // Basic case with one number argument
+    {
+        const auto s = StringUtf8::fromRawString("some_id(123, qwe)");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("some_id", item.key());
+        DFGTEST_EXPECT_LEFT(2, item.valueCount());
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("123"), item.value(0));
+        DFGTEST_EXPECT_LEFT(123, item.valueAs<int>(0));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("qwe"), item.value(1));
+        bool bGood = false;
+        DFGTEST_EXPECT_LEFT(0, item.valueAs<int>(1, &bGood));
+        DFGTEST_EXPECT_FALSE(bGood);
+    }
+
+    // Three arguments, one of which has a comma inside quotes.
+    {
+        const auto s = StringUtf8::fromRawString("some_id(arg one,\"arg two that has , in it\",arg three)");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("some_id", item.key());
+        DFGTEST_EXPECT_LEFT(3, item.valueCount());
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("arg one"), item.value(0));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("arg two that has , in it"), item.value(1));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("arg three"), item.value(2));
+    }
+
+    // No arguments
+    {
+        const auto s = StringUtf8::fromRawString("some_id()");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("some_id", item.key());
+        DFGTEST_EXPECT_LEFT(0, item.valueCount());
+    }
+
+    // Escaped quotes inside argument
+    {
+        const auto s = StringUtf8::fromRawString("some_id(\"arg one with \"\"embedded quotes\"\"\")");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("some_id", item.key());
+        DFGTEST_EXPECT_LEFT(1, item.valueCount());
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("arg one with \"embedded quotes\""), item.value(0));
+    }
+
+    // Parenthesis in arguments
+    {
+        const auto s = StringUtf8::fromRawString("some_id()(,())");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("some_id", item.key());
+        DFGTEST_EXPECT_LEFT(2, item.valueCount());
+        DFGTEST_EXPECT_LEFT(DFG_UTF8(")("), item.value(0));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("()"), item.value(1));
+    }
+
+    // Some empty arguments, also test for trimming around key
+    {
+        const auto s = StringUtf8::fromRawString(" some_id (a,,,d)");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8(" some_id ", item.key());
+        DFGTEST_EXPECT_LEFT(4, item.valueCount());
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("a"), item.value(0));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8(""), item.value(1));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8(""), item.value(2));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("d"), item.value(3));
+    }
+
+    // Empty key, but valid arguments, also test for tail whitespace trimming
+    {
+        const auto s = StringUtf8::fromRawString("(arg one, arg two)  ");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", item.key());
+        DFGTEST_EXPECT_LEFT(2, item.valueCount());
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("arg one"), item.value(0));
+        DFGTEST_EXPECT_LEFT(DFG_UTF8("arg two"), item.value(1));
+    }
+
+    // Malformed input: missing opening parenthesis
+    {
+        const auto s = StringUtf8::fromRawString("some_idarg one, arg two)");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", item.key());
+        DFGTEST_EXPECT_LEFT(0, item.valueCount());
+    }
+
+    // Malformed input: missing closing parenthesis
+    {
+        const auto s = StringUtf8::fromRawString("some_id(arg one, arg two");
+        ParenthesisItem item(s);
+        DFGTEST_EXPECT_EQ_LITERAL_UTF8("", item.key());
+        DFGTEST_EXPECT_LEFT(0, item.valueCount());
+    }
+}
+
+
 #endif

@@ -327,7 +327,7 @@ namespace DFG_DETAIL_NS
         auto iterOpen = std::find(sv.beginRaw(), sv.endRaw(), '(');
         if (iterOpen == sv.endRaw())
             return; // Didn't find opening parenthesis
-        m_key = StringView(sv.data(), SzPtrUtf8(iterOpen));
+        const auto iterStartParenthesis = iterOpen;
         iterOpen++; // Skipping opening parenthesis
         auto iterEnd = sv.endRaw();
         if (iterOpen == iterEnd)
@@ -339,6 +339,8 @@ namespace DFG_DETAIL_NS
         // Checking that items end with closing parenthesis.
         if (*iterEnd != ')')
             return;
+
+        m_key = StringView(sv.data(), SzPtrUtf8(iterStartParenthesis));
         // Parsing item inside parenthesis as standard comma-delimited item with quotes.
         using DelimitedTextReader = ::DFG_MODULE_NS(io)::DelimitedTextReader;
         DelimitedTextReader::FormatDefinitionSingleChars format('"', DelimitedTextReader::s_nMetaCharNone, ',');
