@@ -69,6 +69,8 @@ public:
     using KeyT      = typename BaseClass::KeyT;
     using size_type = typename BaseClass::size_type;
     
+    DFG_STATIC_ASSERT(BlockSize_T == 0 || sizeof(T) <= (std::numeric_limits<size_t>::max)() / BlockSize_T,
+        "Block size too big for given type T: allocating T * BlockSize_T bytes would overflow size_t");
 
     static T defaultValue() { return T(); }
 

@@ -962,6 +962,54 @@ TEST(dfgCont, TableSz_clearCell)
     }
 }
 
+namespace
+{
+    template<size_t BlockSize_T>
+    void testLastPlusBlockSizeOverflow()
+    {
+        using namespace DFG_ROOT_NS;
+        using namespace DFG_MODULE_NS(cont);
+
+        const auto memInfo = ::DFG_MODULE_NS(os)::getMemoryUsage_system();
+        const uint64 nBlockIndexOverflowMemLimit = uint64(20000000000); // 20 GB
+        const auto nMemAvailable = memInfo.available().value_or(0);
+        if (nMemAvailable > nBlockIndexOverflowMemLimit)
+        {
+            const uint32 nBlock = BlockSize_T;
+            using TableTCraftedBlock = TableSz<
+                char,
+                uint32,
+                ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown,
+                ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::TableInterfaceTypes<char, ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown>,
+                nBlock
+            >;
+            // This checks handling of empty blocks
+            {
+                TableTCraftedBlock t;
+                t.addString("abc", nBlock, 0);
+                t.clearCell(nBlock, 0);
+
+                t.clearBlock({ 0, 0 }, { TableTCraftedBlock::MapBlockIndexT::maxKey() + 1, 0 });
+            }
+            // This checks handling of non-empty blocks
+            {
+                TableTCraftedBlock t;
+                t.addString("abc", nBlock, 0);
+                t.clearBlock({ 0, 0 }, { nBlock + 1, 0 });
+            }
+        }
+        else
+        {
+            DFGTEST_MESSAGE(
+                format_fmt("Skipped block overflow test due to having only {} memory available, "
+                    "requiring at least {}.",
+                    ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(nMemAvailable).toString(),
+                    ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(nBlockIndexOverflowMemLimit).toString()
+                ));
+        }
+    }
+}
+
 TEST(dfgCont, TableSz_clearBlock)
 {
     using namespace DFG_ROOT_NS;
@@ -1175,45 +1223,10 @@ TEST(dfgCont, TableSz_clearBlock)
 #if defined(DFG_BUILD_TYPE_DEBUG)
     DFGTEST_MESSAGE("Skipped block overflow test, is available only in non-debug builds");
 #else
-    {
-        const auto memInfo = ::DFG_MODULE_NS(os)::getMemoryUsage_system();
-        const uint64 nBlockIndexOverflowMemLimit = uint64(20000000000); // 20 GB
-        const auto nMemAvailable = memInfo.available().value_or(0);
-        if (nMemAvailable > nBlockIndexOverflowMemLimit)
-        {
-            const uint32 nBlock = 2500000000; // 2.5 G
-            using TableTCraftedBlock = TableSz<
-                char,
-                uint32,
-                ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown,
-                ::DFG_MODULE_NS(cont)::DFG_DETAIL_NS::TableInterfaceTypes<char, ::DFG_MODULE_NS(io)::TextEncoding::encodingUnknown>,
-                nBlock
-            >;
-            // This checks handling of empty blocks
-            {
-                TableTCraftedBlock t;
-                t.addString("abc", nBlock, 0);
-                t.clearCell(nBlock, 0);
-
-                t.clearBlock({ 0, 0 }, { TableTCraftedBlock::MapBlockIndexT::maxKey() + 1, 0 });
-            }
-            // This checks handling of non-empty blocks
-            {
-                TableTCraftedBlock t;
-                t.addString("abc", nBlock, 0);
-                t.clearBlock({ 0, 0 }, { nBlock + 1, 0 });
-            }
-        }
-        else
-        {
-            DFGTEST_MESSAGE(
-                format_fmt("Skipped block overflow test due to having only {} memory available, "
-                    "requiring at least {}.",
-                    ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(nMemAvailable).toString(),
-                    ::DFG_MODULE_NS(str)::ByteCountFormatter_metric(nBlockIndexOverflowMemLimit).toString()
-            ));
-        }
-    }
+	if constexpr (sizeof(size_t) >= 8)
+	    testLastPlusBlockSizeOverflow<2500000000>(); // 2.5 GB
+	else
+		DFGTEST_MESSAGE("Skipped block overflow test on 32-bit platform");
 #endif
 
     // Making sure that implementation assumptions hold about column index limits.
