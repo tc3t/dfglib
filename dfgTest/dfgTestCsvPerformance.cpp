@@ -2,6 +2,12 @@
 
 #if (defined(DFGTEST_BUILD_MODULE_CSV_BENCHMARK) && DFGTEST_BUILD_MODULE_CSV_BENCHMARK == 1) || (!defined(DFGTEST_BUILD_MODULE_CSV_BENCHMARK) && DFGTEST_BUILD_MODULE_DEFAULT == 1)
 
+#if defined(_MSC_VER) || defined(__GNUG__)
+    #if defined(__SANITIZE_ADDRESS__) && (__SANITIZE_ADDRESS__ == 1)
+        #error "DFGTEST_BUILD_MODULE_CSV_BENCHMARK is true and ASAN is enabled, refusing to build as ASAN can severely impact performance"
+    #endif
+#endif
+
 #include <dfg/build/compilerDetails.hpp>
 #include <dfg/cont/tableCsv.hpp>
 #include <dfg/preprocessor/compilerInfoMsvc.hpp>
